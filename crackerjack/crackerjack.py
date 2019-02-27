@@ -77,6 +77,7 @@ def install(package):
     try:
         import_module(package)
     except ImportError:
+        print("Installing: ", m)
         call(["pip", "install", package, '--disable-pip-version-check'])
     finally:
         globals()[package] = import_module(package)
@@ -85,13 +86,14 @@ def install(package):
 def uninstall(package):
     if (package == 'pip') or (package in our_imports):
         return False
+    print("Uninstalling: ", m)
     call(["pip", "uninstall", package, '-y'])
     return True
 
 
 def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
                    verbose=False):
-    print("\nCrackerJacking...\n\n")
+    print("\nCrackerJacking...\n")
 
     module_name = fn.rstrip(".py")
 
@@ -99,14 +101,13 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
     module_imports = get_all_imports(getcwd())
 
     for m in module_imports:
-        print("Installing: ", m)
         install(m)
 
     with open(fn, "r") as f:
         text = f.read()
         f.close()
 
-    print("\n\nPre-processing text.....\n\n")
+    print("\nPre-processing text.....\n\n")
     pre = process_text(text)
     text = pre.output
 
@@ -165,7 +166,6 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
         print(f"Error formatting: {post.error}\n\n")
 
     for m in module_imports:
-        print("Uninstalling: ", m)
         uninstall(m)
 
 
