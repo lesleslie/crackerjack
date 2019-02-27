@@ -7,11 +7,13 @@ verify_ssl = true
 
 [packages]
 click = "*"
-black = "==18.9b0"
+black = "===18.9b0"
 pre-commit = "*"
-isort = "*"
 autoflake = "*"
 reorder-python-imports = "*"
+isort = "*"
+pipreqs = "*"
+pip = "*"
 
 [requires]
 python_version = "3.7"

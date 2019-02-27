@@ -1,11 +1,16 @@
 from collections import namedtuple
+from importlib import import_module
 from importlib.util import module_from_spec, spec_from_file_location
-from inspect import cleandoc, getdoc, getmembers, isclass, isfunction
+from inspect import (cleandoc, currentframe, getdoc, getfile, getmembers,
+                     isclass, isfunction)
 from os import getcwd, path as op
+from pathlib import Path
+from subprocess import call
 
 from black import InvalidInput, format_str
 from blib2to3.pgen2.tokenize import TokenError
 from click import command, help_option, option
+from pipreqs.pipreqs import get_all_imports
 
 from crackerjack.utils import pprint
 
@@ -15,6 +20,11 @@ for m in [pprint]:
 pager_delay = 0.2
 
 basedir = op.abspath(getcwd())
+
+our_path = getfile(currentframe())
+our_parent = Path(our_path).resolve().parent
+our_imports = get_all_imports(our_parent)
+
 
 docs = list()
 comments = list()
@@ -63,17 +73,40 @@ def process_text(text):
         return resp
 
 
+def install(package):
+    try:
+        import_module(package)
+    except ImportError:
+        call(["pip", "install", package, '--disable-pip-version-check'])
+    finally:
+        globals()[package] = import_module(package)
+
+
+def uninstall(package):
+    if (package == 'pip') or (package in our_imports):
+        return False
+    call(["pip", "uninstall", package, '-y'])
+    return True
+
+
 def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
                    verbose=False):
+    print("\nCrackerJacking...\n\n")
+
     module_name = fn.rstrip(".py")
 
     fn = op.join(op.abspath(getcwd()), fn)
+    module_imports = get_all_imports(getcwd())
+
+    for m in module_imports:
+        print("Installing: ", m)
+        install(m)
 
     with open(fn, "r") as f:
         text = f.read()
         f.close()
 
-    print("\n\nPre-processing text.....\n")
+    print("\n\nPre-processing text.....\n\n")
     pre = process_text(text)
     text = pre.output
 
@@ -91,7 +124,9 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
         text = text.replace(line, "")
 
     if not exclude:
-        print("Removing remaining docstrings, comments, and blank lines.....")
+        print(
+            "\nRemoving remaining docstrings, comments, and blank "
+            "lines.....\n\n")
         lines = list()
         del_lines = False
         for line in text.splitlines(True):
@@ -113,12 +148,12 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
 
         text = "".join(lines)
 
-    print("\nPost-processing text.....\n\n")
+    print("\n\nPost-processing text.....\n\n")
     post = process_text(text)
 
     if post.success:
         print(post.output)
-        print("\n\n\tSuccess!\n\n")
+        print("\n\n\t*** Success! ***\n\n")
 
         if not dry_run:
             with open(fn, "r+") as f:
@@ -127,7 +162,11 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
                 f.write(post.output)
                 f.close()
     elif post.error:
-        print("Error formatting: ", post.error)
+        print(f"Error formatting: {post.error}\n\n")
+
+    for m in module_imports:
+        print("Uninstalling: ", m)
+        uninstall(m)
 
 
 @command()
