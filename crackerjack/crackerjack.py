@@ -95,14 +95,19 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
         lines = list()
         del_lines = False
         for line in text.splitlines(True):
+            print(line)
             if len(line) < 2:
+                print(1)
                 continue
             elif '"""' in line:
+                print(2)
                 del_lines = not del_lines
                 continue
             elif del_lines:
+                print(3)
                 continue
             elif line.lstrip().startswith("#"):
+                print(4)
                 continue
             lines.append(line)
 
