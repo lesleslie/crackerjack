@@ -77,7 +77,7 @@ def install(package):
     try:
         import_module(package)
     except ImportError:
-        print("Installing: ", m)
+        print("Installing: ", package)
         call(["pip", "install", package, '--disable-pip-version-check'])
     finally:
         globals()[package] = import_module(package)
@@ -86,7 +86,7 @@ def install(package):
 def uninstall(package):
     if (package == 'pip') or (package in our_imports):
         return False
-    print("Uninstalling: ", m)
+    print("Uninstalling: ", package)
     call(["pip", "uninstall", package, '-y'])
     return True
 
