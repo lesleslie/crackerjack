@@ -59,7 +59,7 @@ def process_text(text):
         resp.error = err
         print(f"!!! TokenError  -  {err}")
     finally:
-        resp.output = cleandoc(resp.output)
+        resp.output = cleandoc(text)
         return resp
 
 
@@ -106,7 +106,6 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
                 continue
             lines.append(line)
 
-        pprint(lines)
         text = "".join(lines)
 
     print("\nPost-processing text.....\n\n")

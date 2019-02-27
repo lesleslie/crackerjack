@@ -9,6 +9,9 @@ verify_ssl = true
 click = "*"
 black = "==18.9b0"
 pre-commit = "*"
+isort = "*"
+autoflake = "*"
+reorder-python-imports = "*"
 
 [requires]
 python_version = "3.7"
