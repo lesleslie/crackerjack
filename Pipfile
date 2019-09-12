@@ -8,7 +8,6 @@ verify_ssl = true
 [packages]
 click = "*"
 black = "===18.9b0"
-pre-commit = "*"
 autoflake = "*"
 reorder-python-imports = "*"
 isort = "*"
@@ -16,6 +15,8 @@ pipreqs = "*"
 pip = "*"
 pdoc = "*"
 monkeytype = "*"
+mypy = "*"
+utils = "*"
 
 [requires]
 python_version = "3.7"

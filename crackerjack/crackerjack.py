@@ -1,8 +1,10 @@
 from collections import namedtuple
 from importlib import import_module
 from importlib.util import module_from_spec, spec_from_file_location
-from inspect import (cleandoc, currentframe, getdoc, getfile, getmembers,
-                     isclass, isfunction)
+from inspect import (
+    cleandoc, currentframe, getdoc, getfile, getmembers,
+    isclass, isfunction
+    )
 from os import getcwd, path as op
 from pathlib import Path
 from subprocess import call
@@ -11,8 +13,7 @@ from black import InvalidInput, format_str
 from blib2to3.pgen2.tokenize import TokenError
 from click import command, help_option, option
 from pipreqs.pipreqs import get_all_imports
-
-from crackerjack.utils import pprint
+from utils import pprint
 
 for m in [pprint]:
     pass
