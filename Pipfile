@@ -17,6 +17,7 @@ pdoc = "*"
 monkeytype = "*"
 mypy = "*"
 utils = "*"
+bump2version = "*"
 
 [requires]
 python_version = "3.7"
