@@ -1,0 +1,5 @@
+# Created by .ignore support plugin (hsz.mobi)
+.idea
+crackerjack/.mypy_cache
+CrackerJack.egg-info
+crackerjack/monkeytype.sqlite3
