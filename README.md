@@ -50,9 +50,16 @@ Crackjack first cleans up the codebase by removing all docstrings and comments t
         [pdoc](https://pdoc3.github.io/pdoc/), into HTML, PDF, or plain text.     
       
       
-What are the rules? (...more what you'd call "guidelines" than actual rules.
- \- Captain Barbossa )
+### **What are the rules?**
+ (...more what you'd call "guidelines" than actual rules. \- Captain Barbossa )
  
+ No spacing other than required by PEP inside classes and function - should read like
+  lines in a book 
+ you can always space it out while debugging
  
-      
-               
+ The CrackerJack community does not necessarily promote the using exceptions for flow
+  control or using exec - but we do not shun the use of them.
+  
+ Use pathlib Path not os.path
+ 
+ If a class can be a dataclass, it should be a dataclass

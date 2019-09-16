@@ -2,9 +2,14 @@ from collections import namedtuple
 from importlib import import_module
 from importlib.util import module_from_spec, spec_from_file_location
 from inspect import (
-    cleandoc, currentframe, getdoc, getfile, getmembers,
-    isclass, isfunction
-    )
+    cleandoc,
+    currentframe,
+    getdoc,
+    getfile,
+    getmembers,
+    isclass,
+    isfunction,
+)
 from os import getcwd, path as op
 from pathlib import Path
 from subprocess import call
@@ -13,7 +18,7 @@ from black import InvalidInput, format_str
 from blib2to3.pgen2.tokenize import TokenError
 from click import command, help_option, option
 from pipreqs.pipreqs import get_all_imports
-from utils import pprint
+from .utils import pprint
 
 for m in [pprint]:
     pass
@@ -79,21 +84,20 @@ def install(package):
         import_module(package)
     except ImportError:
         print("Installing: ", package)
-        call(["pip", "install", package, '--disable-pip-version-check'])
+        call(["pip", "install", package, "--disable-pip-version-check"])
     finally:
         globals()[package] = import_module(package)
 
 
 def uninstall(package):
-    if (package == 'pip') or (package in our_imports):
+    if (package == "pip") or (package in our_imports):
         return False
     print("Uninstalling: ", package)
-    call(["pip", "uninstall", package, '-y'])
+    call(["pip", "uninstall", package, "-y"])
     return True
 
 
-def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
-                   verbose=False):
+def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False, verbose=False):
     print("\nCrackerJacking...\n")
 
     module_name = fn.rstrip(".py")
@@ -126,9 +130,7 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False,
         text = text.replace(line, "")
 
     if not exclude:
-        print(
-            "\nRemoving remaining docstrings, comments, and blank "
-            "lines.....\n\n")
+        print("\nRemoving remaining docstrings, comments, and blank " "lines.....\n\n")
         lines = list()
         del_lines = False
         for line in text.splitlines(True):
