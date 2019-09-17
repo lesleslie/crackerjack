@@ -55,20 +55,20 @@ Crackjack first cleans up the codebase by removing all docstrings and comments t
  
  - Classes and functions need to be statically typed
  
- -
+ - Code needs to be [black](https://github.com/ambv/black)'ed
  
  - No spacing other than required by PEP 8 inside classes and function - should read
   like lines in a book
  
  - If a class can be a dataclass, it should be a dataclass
  
- - Use pathlib.Path not os.path. 
+ - Use pathlib.Path not os.path.
  
  - If a function of class is performing file operations it should be passed a Path
   object - not a string. 
 
  - Use of exec or exceptions for flow control - is not necessarily shunned upon if
-  used in moderation but we do not promote them either.
+  used in moderation but we do not promote their use either
   
  - Work in progress
  

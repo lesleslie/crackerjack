@@ -13,31 +13,37 @@ from inspect import (
 from os import getcwd, path as op
 from pathlib import Path
 from subprocess import call
+from dataclasses import dataclass
 
 from black import InvalidInput, format_str
 from blib2to3.pgen2.tokenize import TokenError
 from click import command, help_option, option
 from pipreqs.pipreqs import get_all_imports
+from shutil import copy2
 from .utils import pprint
 
 for m in [pprint]:
     pass
 
-pager_delay = 0.2
+tab_indent = 2
+line_spacing = 2
+pager_delay = 0.042
 
-basedir = op.abspath(getcwd())
+pd = pager_delay
+ti = "\t" * tab_indent
+ls = "\n" * line_spacing
 
 our_path = getfile(currentframe())
 our_parent = Path(our_path).resolve().parent
 our_imports = get_all_imports(our_parent)
 
 
-docs = list()
-comments = list()
+docs = []
+comments = []
 
 
 def process_doc(doc):
-    for l in [l.strip() for l in doc.splitlines() if not l.strip() in docs]:
+    for l in (l.strip() for l in doc.splitlines() if not l.strip() in docs):
         docs.append(l)
 
 
@@ -58,12 +64,16 @@ def get_doc(obj):
             process_obj(obj3)
 
 
+@dataclass
+class FormatResponse:
+    input: str = None
+    ouput: str = None
+    success: bool = False
+    error: str = None
+
+
 def process_text(text):
-    resp = namedtuple("FormatResponse", ["input", "output", "error", "success"])
-    resp.input = text
-    resp.output = text
-    resp.success = False
-    resp.err = None
+    resp = FormatResponse()
     try:
         text = cleandoc(text)
         resp.output = format_str(text, line_length=88)
@@ -97,40 +107,31 @@ def uninstall(package):
     return True
 
 
-def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False, verbose=False):
+def crackerjack_it(
+    fp: Path,
+    exclude: bool = False,
+    interactive: bool = False,
+    dry_run: bool = False,
+    verbose: bool = False,
+):
     print("\nCrackerJacking...\n")
-
-    module_name = fn.rstrip(".py")
-
-    fn = op.join(op.abspath(getcwd()), fn)
     module_imports = get_all_imports(getcwd())
-
     for m in module_imports:
         install(m)
-
-    with open(fn, "r") as f:
-        text = f.read()
-        f.close()
-
+    text = fp.read_text()
     print("\nPre-processing text.....\n\n")
-    pre = process_text(text)
-    text = pre.output
-
-    spec = spec_from_file_location(module_name, op.join(basedir, fn))
+    text = process_text(text).ouput
+    spec = spec_from_file_location(str(fp.resolve()))
     module = module_from_spec(spec)
     spec.loader.exec_module(module)
-
     functions = getmembers(module, isfunction)
     classes = getmembers(module, isclass)
-
     for obj in classes + functions:
         get_doc(obj)
-
     for line in docs:
         text = text.replace(line, "")
-
     if not exclude:
-        print("\nRemoving remaining docstrings, comments, and blank " "lines.....\n\n")
+        print("\nRemoving remaining docstrings, comments, and blank lines.....\n\n")
         lines = list()
         del_lines = False
         for line in text.splitlines(True):
@@ -149,25 +150,17 @@ def crackerjack_it(fn, exclude=False, interactive=False, dry_run=False, verbose=
                 print(4)
                 continue
             lines.append(line)
-
         text = "".join(lines)
-
-    print("\n\nPost-processing text.....\n\n")
-    post = process_text(text)
-
-    if post.success:
-        print(post.output)
+    print("\nPost-processing text.....\n\n")
+    resp = process_text(text)
+    if resp.success:
+        print(resp.output)
         print("\n\n\t*** Success! ***\n\n")
-
         if not dry_run:
-            with open(fn, "r+") as f:
-                f.seek(0)
-                f.truncate()
-                f.write(post.output)
-                f.close()
-    elif post.error:
-        print(f"Error formatting: {post.error}\n\n")
-
+            copy2(fp.name, (fp / ".old").name)
+            fp.write_text(resp.output)
+    elif resp.error:
+        print(f"Error formatting: {resp.error}\n\n")
     for m in module_imports:
         uninstall(m)
 
@@ -192,4 +185,5 @@ def crackerjack(f, x, i, d, v):
         print("-v not currently implemented.")
         options["verbose"] = v
     if f:
-        crackerjack_it(f, **options)
+        cwd = Path(Path.cwd())
+        crackerjack_it(cwd / f, **options)
