@@ -17,16 +17,16 @@ Crackerjack exists to make modern python code more elegant and readable. Let's f
    cluttered up with docstrings, doctests, and comments that it actually becomes
     really hard to find the actual code in it - nonetheless read through it. Yes, modern
      IDE's offer up options to fold the docstrings, but this doesn't help when
-      looking through code on GitHub or in an editor like vi and doesn't account for
-       either for all the different ways that developers comment up their code. There
-        must be some sanity!
+      looking through code on GitHub, or in an console based editor like vi and doesn't
+       account for either for all the different ways that developers comment up their
+        code. There must be some sanity!
         
-Enter CrackerJack. CrackerJack works on the theory that statically typed python
+Enter CrackerJack. CrackerJack works on the theory that with statically typed python
  code and explicit class, function, variable, and other object names the code should be
-  very straight forward to read and the documentation should pretty much be abe to write
-   itself (maybe with some ai assistance down the road). The CrackerJack code style
-    guidelines then exist to keep the codebase clean, elegant, standardized, and
-     easily readable.
+  straight forward to read and the documentation should pretty much be able to write
+   itself (maybe with an ai down the road). CrackerJack also has a coding style whose
+    guidelines exist to keep the codebase clean, elegant, standardized, and
+     easily readable - give to me straight basically.
  
 ### **What doe this package do?**
 
@@ -53,13 +53,23 @@ Crackjack first cleans up the codebase by removing all docstrings and comments t
 ### **What are the rules?**
  (...more what you'd call "guidelines" than actual rules. \- Captain Barbossa )
  
- No spacing other than required by PEP inside classes and function - should read like
-  lines in a book 
- you can always space it out while debugging
+ - Classes and functions need to be statically typed
  
- The CrackerJack community does not necessarily promote the using exceptions for flow
-  control or using exec - but we do not shun the use of them.
+ -
+ 
+ - No spacing other than required by PEP 8 inside classes and function - should read
+  like lines in a book
+ 
+ - If a class can be a dataclass, it should be a dataclass
+ 
+ - Use pathlib.Path not os.path. 
+ 
+ - If a function of class is performing file operations it should be passed a Path
+  object - not a string. 
+
+ - Use of exec or exceptions for flow control - is not necessarily shunned upon if
+  used in moderation but we do not promote them either.
   
- Use pathlib Path not os.path
+ - Work in progress
  
- If a class can be a dataclass, it should be a dataclass
+
