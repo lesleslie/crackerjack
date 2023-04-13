@@ -1,29 +1,24 @@
-from collections import namedtuple
-from importlib import import_module
-from importlib.util import module_from_spec, spec_from_file_location
-from inspect import (
-    cleandoc,
-    currentframe,
-    getdoc,
-    getfile,
-    getmembers,
-    isclass,
-    isfunction,
-)
-from os import getcwd, path as op
-from pathlib import Path
-from subprocess import call
 from dataclasses import dataclass
-
-from black import InvalidInput, format_str
-from blib2to3.pgen2.tokenize import TokenError
-from click import command, help_option, option
-from pipreqs.pipreqs import get_all_imports
+from importlib import import_module
+from importlib.util import module_from_spec
+from importlib.util import spec_from_file_location
+from inspect import cleandoc
+from inspect import currentframe
+from inspect import getdoc
+from inspect import getfile
+from inspect import getmembers
+from inspect import isclass
+from inspect import isfunction
+from os import getcwd
+from pathlib import Path
 from shutil import copy2
-from .utils import pprint
+from subprocess import call
 
-for m in [pprint]:
-    pass
+from black import InvalidInput
+from black import format_str
+from click import command
+from click import help_option
+from click import option
 
 tab_indent = 2
 line_spacing = 2
@@ -36,7 +31,6 @@ ls = "\n" * line_spacing
 our_path = getfile(currentframe())
 our_parent = Path(our_path).resolve().parent
 our_imports = get_all_imports(our_parent)
-
 
 docs = []
 comments = []
@@ -81,9 +75,9 @@ def process_text(text):
     except InvalidInput as err:
         resp.error = err
         print(f"!!! InvalidInput  -  {err}")
-    except TokenError as err:
-        resp.error = err
-        print(f"!!! TokenError  -  {err}")
+    # except TokenError as err:
+    #     resp.error = err
+    #     print(f"!!! TokenError  -  {err}")
     finally:
         resp.output = cleandoc(text)
         return resp

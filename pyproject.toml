@@ -1,0 +1,33 @@
+[tool.pdm]
+
+[project]
+name = "Crackerjack"
+version = "0.1.0"
+description = "Crackerjack code formatting style."
+authors = [
+    { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
+    { name = "Les Leslie", email = "les@wedgwoodwebworks.com" },
+]
+dependencies = [
+    "black>=23.3.0",
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "BSD 3-clause" }
+keywords = ["black"]
+maintainers = [
+    { name = "Les Leslie", email = "les@wedgwoodwebworks.com" },
+]
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+]
+[project.urls]
+Homepage = "https://gitlab.com/lesleslie/crackerjack"
+[project.scripts]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"

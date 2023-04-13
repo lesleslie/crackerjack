@@ -3,3 +3,4 @@
 crackerjack/.mypy_cache
 CrackerJack.egg-info
 crackerjack/monkeytype.sqlite3
+.pdm-python
