@@ -1,33 +1,70 @@
 [tool.pdm]
 
+[tool.pdm.dev-dependencies]
+dev = [
+    "pytest>=7.3.0",
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
 [project]
 name = "Crackerjack"
 version = "0.1.0"
 description = "Crackerjack code formatting style."
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
-    { name = "Les Leslie", email = "les@wedgwoodwebworks.com" },
 ]
-dependencies = [
-    "black>=23.3.0",
-]
-requires-python = ">=3.10"
-readme = "README.md"
-license = { text = "BSD 3-clause" }
-keywords = ["black"]
 maintainers = [
-    { name = "Les Leslie", email = "les@wedgwoodwebworks.com" },
+    { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
 ]
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "BSD-3-Clause" }
+keywords = ["black", "ruff", "mypy", "deptry", "refurb"]
 classifiers = [
     "Environment :: Console",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
+dependencies = [
+    "black>=23.3.0",
+    "ruff>=0.0.261",
+    "mypy>=1.2.0",
+    "deptry>=0.8.0",
+    "refurb>=1.15.0",
+    "creosote>=2.6.0",
+]
+
+[project.optional-dependencies]
+
 [project.urls]
-Homepage = "https://gitlab.com/lesleslie/crackerjack"
+homepage = "https://github.com/lesleslie/crackerjack"
+documentation = "https://github.com/lesleslie/crackerjack"
+repository = "https://github.com/lesleslie/crackerjack"
+
 [project.scripts]
 
-[build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+[project.entry-points]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.isort]
+profile = "black"
+line-length = 88
+include-trailing-comma = true
+use-parentheses = true
+multi-line-output = 3
+
+[tool.black]
+target-version = ["py311"]
+
+[tool.mypy]
+strict = true
+
+[tool.deptry]
+
+[tool.refurb]
