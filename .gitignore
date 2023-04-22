@@ -7,3 +7,4 @@ crackerjack/monkeytype.sqlite3
 /.pdm.toml
 /build/
 /__pypackages__/
+/dist/
