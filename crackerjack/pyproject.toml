@@ -33,7 +33,7 @@ inputs = ["package_name"]
 
 [project]
 name = "Crackerjack"
-version = "0.1.2"
+version = "0.1.4"
 description = "Crackerjack code formatting style."
 requires-python = ">=3.11"
 readme = "README.md"

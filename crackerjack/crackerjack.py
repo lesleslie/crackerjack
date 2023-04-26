@@ -1,6 +1,7 @@
 import sys
 from subprocess import call
 from subprocess import check_output
+from subprocess import run
 
 import pdm_bump
 import pdoc
@@ -95,16 +96,16 @@ class Crakerjack(BaseModel):
         if self.pkg_path.stem == "crackerjack":
             check_output(["pre-commit", "autoupdate"])
         await self.update_pkg_configs()
-        success = False
-        while not success:
-            print(self.pkg_path / self.pkg_name)
-            fail = call(["pre-commit", "run", "mypy", "--all-files"])
-            if fail > 0:
-                retry = await ainput("\nMyPy failed. Retry? (y/n): ")
-                if retry.lower == ("y"):
-                    continue
-                sys.exit()
-            success = True
+        if options.interactive:
+            success = False
+            while not success:
+                fail = call(["pre-commit", "run", "mypy", "--all-files"])
+                if fail > 0:
+                    retry = await ainput("\nMyPy failed. Retry? (y/n): ")
+                    if retry.lower == ("y"):
+                        continue
+                    sys.exit()
+                success = True
         check_all = call(["pre-commit", "run", "--all-files"])
         if check_all > 0:
             call(["pre-commit", "run", "--all-files"])
@@ -114,7 +115,7 @@ class Crakerjack(BaseModel):
                 commit_msg = input("Commit message: ")
                 call(["git", "commit", "-m", f"'{commit_msg}'", "--", "."])
                 call(["git", "push", "origin", "main"])
-            check_output(["pdm", "publish"])
+            run(["pdm", "publish"])
 
 
 crackerjack_it = Crakerjack().process
