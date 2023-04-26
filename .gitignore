@@ -8,3 +8,7 @@ crackerjack/monkeytype.sqlite3
 /build/
 /__pypackages__/
 /dist/
+/.mypy_cache/
+/.ruff_cache/
+/monkeytype.sqlite3
+/crackerjack/test.py
