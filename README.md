@@ -8,43 +8,35 @@ Crackerjack is a python coding style which uses a minimalist approach to produce
 
 ### **Why Crackerjack?**
 
-Let's face it, the python documentation system has been a major contributor to the
-languages popularity, but over time python code in packages and repositories has
-become so cluttered up with docstrings, doctests, and comments that it actually
-becomes really hard to find the actual code in it - nonetheless read through it.
-Yes, modern IDE's offer up options to fold the docstrings, but this doesn't help
-when looking through code on GitHub, or in an console based editor like vi and
-doesn't account for either for all the different ways that developers comment
-up their code. There must be some sanity!
-
-Enter Crackerjack. Crackerjack works on the theory that with static typing and explicit classes,
+Crackerjack works on the theory that with static typing and explicit classes,
 functions, variables, and other object names - the code should be
 straight forward to read and the documentation should pretty much be able to write
 itself. Crackerjack provides a set of guidelines and utilities to keep the codebase clean, elegant, standardized, and
-easily readable - give it to me straight basically.
+easily readable.
 
 ### **What does this package do?**
 
 This package:
 
-- removes all docstrings and comments that
-  do not conform to Crackerjack standards (see below)
-
-- identifies and removes unused dependencies with deptry
+- identifies and removes unused dependencies with creosote
 
 - reformats the code with [Black](https://github.com/ambv/black)
 
-- uses [MonkeyType](https://monkeytype.readthedocs.io/en/stable/) to add missing type
-  annotations to the code
+- uses autotype to add missing type annotations to the code
 
-- does import sorting, type checking, complexity analysis, with ruff
+- does import sorting, linting, and complexity analysis with ruff
+
+- uses mypy for type checking
 
 - streamlines code with refurb
 
-- converts all documentation to Markdown (md)
+- converts/creates documentation in Markdown (md)
+
+- installs, or updates, a projects pre-commit tools and gitignore
+  to comply with evolving crackerjack standards
 
 - removes pipenv, poetry, and hatch build, dependency management, and virtual environment
-  management packages and replace them with PDM using PEP 582 (keep it simple stupid)
+  management packages and replace them with PDM using PEP 582
 
 - generates pytest mock stubs if needed
 
@@ -60,28 +52,42 @@ This package:
 
 - use dataclasses or pydantic models whenever possible
 
-- sort imports in the style of isort multi-line-output 3 (Vertical Hanging Indent)
+- force single line imports
 
 - use PDM and PEP 582 for dependency management and package building/publishing
 
-- use pydoc and mkdocs for producing documentation
+- use pdoc and mkdocs for producing documentation
 
 - use pytest for testing
 
-- docstrings can only be one line
-
-- non-inline comments are to be single-line and in between code as
-  long as they are only a few words long and seperated by two blank lines at the top
-  and at 1-2 blank lines below
-
 - code is statically typed
 
-- variable docstrings are supported as outlined in
-  [PEP-224](https://www.python.org/dev/peps/pep-0224/) as well as the module-level
-  __pdoc__ dictionary (see [pdoc docs](
-  https://pdoc3.github.io/pdoc/doc/pdoc/#overriding-docstrings-with-__pdoc__))
+[//]: # (- variable docstrings are supported as outlined in)
 
-- do not use exec (there is always another way)
+[//]: # (  [PEP-224]&#40;https://www.python.org/dev/peps/pep-0224/&#41; as well as the module-level)
+
+[//]: # (  __pdoc__ dictionary &#40;see [pdoc docs]&#40;)
+
+[//]: # (  https://pdoc3.github.io/pdoc/doc/pdoc/#overriding-docstrings-with-__pdoc__&#41;&#41;)
 
 
--
+### **Installation**
+
+From your projects root directory:
+
+```pdm add -d crackerjack```
+
+### **Usage**
+
+From your projects root directory:
+
+```python -m crackerjack```
+
+Cracker jack will take care of the rest.
+
+When you ready to publish your project:
+
+``python -m crackerjack -p micro``
+
+The -p option not only publishes your project but will bump your
+project version for you. The options are 'micro', 'minor', and 'major'.
