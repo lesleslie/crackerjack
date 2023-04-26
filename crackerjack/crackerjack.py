@@ -44,7 +44,9 @@ class Crakerjack(BaseModel):
         pkg_toml = await load.toml(self.pkg_toml_path)
         if self.poetry_pip_env:
             del pkg_toml.tool.poetry
+        old_deps = pkg_toml.tool.pdm["dev-dependencies"]
         pkg_toml.tool = toml.tool
+        pkg_toml.tool.pdm["dev-dependencies"] = old_deps
         await dump.toml(pkg_toml, self.pkg_toml_path)
 
     async def copy_configs(self) -> None:
