@@ -11,6 +11,7 @@ from addict import Dict as adict
 from aiopath import AsyncPath
 from pydantic import BaseModel
 from aioconsole import ainput
+from inflection import underscore
 
 for mod in (pdm_bump, pdoc):
     pass
@@ -59,7 +60,7 @@ class Crakerjack(BaseModel):
             config_path = self.path.parent / config
             pkg_config_path = self.pkg_path / config
             await pkg_config_path.touch(exist_ok=True)
-            check_output(["git", "add", str(pkg_config_path)])
+            run(["git", "add", str(pkg_config_path)])
             if self.pkg_path.stem == "crackerjack":
                 await config_path.write_text(await pkg_config_path.read_text())
             elif config != "pyproject.toml":
@@ -77,14 +78,14 @@ class Crakerjack(BaseModel):
         self.toml_path = self.path.parent / toml_file
         self.pkg_toml_path = self.pkg_path / toml_file
         if not await self.pkg_toml_path.exists():
-            check_output(["pdm", "init"])
+            run(["pdm", "init"])
         installed_pkgs = check_output(
             ["pdm", "list", "--freeze"],
             universal_newlines=True,
         ).splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
-            check_output(["pdm", "add", "-d", "pre_commit"])
-            check_output(["pre-commit", "install"])
+            run(["pdm", "add", "-d", "pre_commit"])
+            run(["pre-commit", "install"])
         await self.update_pyproject_configs()
 
     async def process(
@@ -93,7 +94,7 @@ class Crakerjack(BaseModel):
     ) -> None:
         imp_dir = self.pkg_path / "__pypackages__"
         sys.path.append(str(imp_dir))
-        self.pkg_name = self.pkg_path.stem.lower()
+        self.pkg_name = underscore(self.pkg_path.stem.lower())
         print("\nCrackerjacking...\n")
         if self.pkg_path.stem == "crackerjack":
             check_output(["pre-commit", "autoupdate"])

@@ -40,7 +40,7 @@ inputs = [
 
 [project]
 name = "Crackerjack"
-version = "0.1.6"
+version = "0.1.7"
 description = "Crackerjack code formatting style."
 requires-python = ">=3.11"
 readme = "README.md"
@@ -65,6 +65,7 @@ dependencies = [
     "aiopath>=0.6.11",
     "acb>=0.1.2",
     "aioconsole>=0.6.1",
+    "inflection>=0.5.1",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },

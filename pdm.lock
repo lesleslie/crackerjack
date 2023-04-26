@@ -3,7 +3,7 @@
 
 [[package]]
 name = "acb"
-version = "0.1.2"
+version = "0.1.3"
 requires_python = ">=3.11"
 summary = "Asynchronus Code Base"
 dependencies = [
@@ -11,7 +11,6 @@ dependencies = [
     "aiopath>=0.6.11",
     "arrow>=1.2.3",
     "google-crc32c>=1.5.0",
-    "httpx>=0.24.0",
     "icecream>=2.1.3",
     "itsdangerous>=2.1.2",
     "msgspec>=0.14.1",
@@ -180,36 +179,6 @@ requires_python = ">=3.7"
 summary = "A python wrapper of the C library 'Google CRC32C'"
 
 [[package]]
-name = "h11"
-version = "0.14.0"
-requires_python = ">=3.7"
-summary = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
-
-[[package]]
-name = "httpcore"
-version = "0.17.0"
-requires_python = ">=3.7"
-summary = "A minimal low-level HTTP client."
-dependencies = [
-    "anyio<5.0,>=3.0",
-    "certifi",
-    "h11<0.15,>=0.13",
-    "sniffio==1.*",
-]
-
-[[package]]
-name = "httpx"
-version = "0.24.0"
-requires_python = ">=3.7"
-summary = "The next generation HTTP client."
-dependencies = [
-    "certifi",
-    "httpcore<0.18.0,>=0.15.0",
-    "idna",
-    "sniffio",
-]
-
-[[package]]
 name = "icecream"
 version = "2.1.3"
 summary = "Never use print() to debug again; inspect variables, expressions, and program execution with a single, simple function call."
@@ -231,6 +200,12 @@ name = "idna"
 version = "3.4"
 requires_python = ">=3.5"
 summary = "Internationalized Domain Names in Applications (IDNA)"
+
+[[package]]
+name = "inflection"
+version = "0.5.1"
+requires_python = ">=3.5"
+summary = "A port of Ruby on Rails inflector to Python"
 
 [[package]]
 name = "iniconfig"
@@ -584,12 +559,12 @@ dependencies = [
 
 [metadata]
 lock_version = "4.1"
-content_hash = "sha256:695e0b7b6396e79f3715b1f1c18bb2d235e9f4612a0e8a104a7ea65adc13aa0e"
+content_hash = "sha256:c7754fb706e4c28f97fed00f9649a34aebd53fb59a7dcd93bfdbf66d2f9989d9"
 
 [metadata.files]
-"acb 0.1.2" = [
-    {url = "https://files.pythonhosted.org/packages/92/d6/c7fb4ebc6031dda1c3e02b40890b900b11f465704b66e5e5722847f39daa/acb-0.1.2-py3-none-any.whl", hash = "sha256:8b460ab774f6d6cec72200f0a81843009e1c2c2ba41be0fefdbcd03fdb63bf23"},
-    {url = "https://files.pythonhosted.org/packages/eb/ea/09b8833e2b0dfd9400c571369e239aad6d8a90da6d4ff649879b29ecb4fb/acb-0.1.2.tar.gz", hash = "sha256:6b4ed142de8f937914bf2c8ab6f5ed3d687f3f5a713f91013b5c5827112cab1f"},
+"acb 0.1.3" = [
+    {url = "https://files.pythonhosted.org/packages/03/cd/6ad7c70558e19c72edb913e907140281285ea8546003cd5c44e5be409104/acb-0.1.3.tar.gz", hash = "sha256:cb0e247471013724530665f764d092424d36d7abee010747a673309eb86930c4"},
+    {url = "https://files.pythonhosted.org/packages/7d/78/6c37b8ba5ddcb3396063aa9e992a3d52cd6ce8e687637c3cd0bb9b33835a/acb-0.1.3-py3-none-any.whl", hash = "sha256:ff178f639875ff2c6b8f8c86bdd0353087f7ee8d4ffd0decfd6389a4deb4a0e0"},
 ]
 "addict 2.4.0" = [
     {url = "https://files.pythonhosted.org/packages/6a/00/b08f23b7d7e1e14ce01419a467b583edbb93c6cdb8654e54a9cc579cd61f/addict-2.4.0-py3-none-any.whl", hash = "sha256:249bb56bbfd3cdc2a004ea0ff4c2b6ddc84d53bc2194761636eb314d5cfa5dfc"},
@@ -833,18 +808,6 @@ content_hash = "sha256:695e0b7b6396e79f3715b1f1c18bb2d235e9f4612a0e8a104a7ea65ad
     {url = "https://files.pythonhosted.org/packages/fc/7f/b8fc0644c6eea688532a58a0d872d28ea9ffc2fdf93956ce03aa07f19c6b/google_crc32c-1.5.0-cp37-cp37m-musllinux_1_1_i686.whl", hash = "sha256:1e986b206dae4476f41bcec1faa057851f3889503a70e1bdb2378d406223994a"},
     {url = "https://files.pythonhosted.org/packages/fd/71/299a368347aeab3c89896cdfb67703161becbf5afbc1748a1850094828dc/google_crc32c-1.5.0-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:8485b340a6a9e76c62a7dce3c98e5f102c9219f4cfbf896a00cf48caf078d438"},
 ]
-"h11 0.14.0" = [
-    {url = "https://files.pythonhosted.org/packages/95/04/ff642e65ad6b90db43e668d70ffb6736436c7ce41fcc549f4e9472234127/h11-0.14.0-py3-none-any.whl", hash = "sha256:e3fe4ac4b851c468cc8363d500db52c2ead036020723024a109d37346efaa761"},
-    {url = "https://files.pythonhosted.org/packages/f5/38/3af3d3633a34a3316095b39c8e8fb4853a28a536e55d347bd8d8e9a14b03/h11-0.14.0.tar.gz", hash = "sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d"},
-]
-"httpcore 0.17.0" = [
-    {url = "https://files.pythonhosted.org/packages/41/16/c809655d32fd93e688b9e2a1aaba1008118369d1eda00818f6f65eb509f8/httpcore-0.17.0.tar.gz", hash = "sha256:cc045a3241afbf60ce056202301b4d8b6af08845e3294055eb26b09913ef903c"},
-    {url = "https://files.pythonhosted.org/packages/6c/39/05ebe30333ec66bba849d3c25c85d759b94c43bb03b2222de051c50d4390/httpcore-0.17.0-py3-none-any.whl", hash = "sha256:0fdfea45e94f0c9fd96eab9286077f9ff788dd186635ae61b312693e4d943599"},
-]
-"httpx 0.24.0" = [
-    {url = "https://files.pythonhosted.org/packages/4e/c1/692013f1e6115a061a14f6c7d05947515a1eb7b85ef6e9bf0ffbf0e92738/httpx-0.24.0-py3-none-any.whl", hash = "sha256:447556b50c1921c351ea54b4fe79d91b724ed2b027462ab9a329465d147d5a4e"},
-    {url = "https://files.pythonhosted.org/packages/ae/23/f7beaf11a8b95fc173b8979c4bfd23ea7711c5ebd458d657d24a59df7e9f/httpx-0.24.0.tar.gz", hash = "sha256:507d676fc3e26110d41df7d35ebd8b3b8585052450f4097401c9be59d928c63e"},
-]
 "icecream 2.1.3" = [
     {url = "https://files.pythonhosted.org/packages/06/4e/21e309c7087695cf500a1827597f8510641f2c9a50ed7741bf7fc38736ff/icecream-2.1.3-py2.py3-none-any.whl", hash = "sha256:757aec31ad4488b949bc4f499d18e6e5973c40cc4d4fc607229e78cfaec94c34"},
     {url = "https://files.pythonhosted.org/packages/1c/8b/ae6ebc9fc423f9397a0982990c86f1fe94077df729ef452c9a847fb16ae6/icecream-2.1.3.tar.gz", hash = "sha256:0aa4a7c3374ec36153a1d08f81e3080e83d8ac1eefd97d2f4fe9544e8f9b49de"},
@@ -856,6 +819,10 @@ content_hash = "sha256:695e0b7b6396e79f3715b1f1c18bb2d235e9f4612a0e8a104a7ea65ad
 "idna 3.4" = [
     {url = "https://files.pythonhosted.org/packages/8b/e1/43beb3d38dba6cb420cefa297822eac205a277ab43e5ba5d5c46faf96438/idna-3.4.tar.gz", hash = "sha256:814f528e8dead7d329833b91c5faa87d60bf71824cd12a7530b5526063d02cb4"},
     {url = "https://files.pythonhosted.org/packages/fc/34/3030de6f1370931b9dbb4dad48f6ab1015ab1d32447850b9fc94e60097be/idna-3.4-py3-none-any.whl", hash = "sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2"},
+]
+"inflection 0.5.1" = [
+    {url = "https://files.pythonhosted.org/packages/59/91/aa6bde563e0085a02a435aa99b49ef75b0a4b062635e606dab23ce18d720/inflection-0.5.1-py2.py3-none-any.whl", hash = "sha256:f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2"},
+    {url = "https://files.pythonhosted.org/packages/e1/7e/691d061b7329bc8d54edbf0ec22fbfb2afe61facb681f9aaa9bff7a27d04/inflection-0.5.1.tar.gz", hash = "sha256:1a29730d366e996aaacffb2f1f1cb9593dc38e2ddd30c91250c6dde09ea9b417"},
 ]
 "iniconfig 2.0.0" = [
     {url = "https://files.pythonhosted.org/packages/d7/4b/cbd8e699e64a6f16ca3a8220661b5f83792b3017d0f79807cb8708d33913/iniconfig-2.0.0.tar.gz", hash = "sha256:2d91e135bf72d31a410b17c16da610a82cb55f6b0477d1a902134b24a455b8b3"},
