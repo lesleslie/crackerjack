@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: ruff
   - repo: https://github.com/fredrikaverpil/creosote
-    rev: v2.6.0
+    rev: v2.6.1
     hooks:
       - id: creosote
         args:

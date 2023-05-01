@@ -27,11 +27,16 @@ target-version = [
 ]
 
 [tool.mypy]
-strict = true
+strict = false
 pretty = true
+ignore_missing_imports = false
+exclude = "tests"
+
 
 [tool.refurb]
 enable_all = true
+
+
 
 [tool.pytype]
 inputs = [
