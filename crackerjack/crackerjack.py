@@ -77,7 +77,7 @@ class Crakerjack(BaseModel):
     async def run_interactive(hook: str) -> None:
         success = False
         while not success:
-            fail = call(["pre-commit", "run", hook.lower()])
+            fail = call(["pre-commit", "run", hook.lower(), "--all-files"])
             if fail > 0:
                 retry = await ainput(f"\n{hook} failed. Retry? (y/n): ")
                 if retry.lower() == "y":
@@ -116,13 +116,14 @@ class Crakerjack(BaseModel):
         await self.pkg_dir.mkdir(exist_ok=True)
         print("\nCrackerjacking...\n")
         if self.pkg_path.stem == "crackerjack":
+            run(["git", "add", ".pre-commit-config.yaml"])
             run(["pre-commit", "autoupdate"])
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
         if options.interactive:
             for hook in ("refurb", "mypy"):
                 await self.run_interactive(hook)
-        check_all = call(["pre-commit", "run"])
+        check_all = call(["pre-commit", "run", "--all-files"])
         if check_all > 0:
             call(["pre-commit", "run", "--all-files"])
         if options.publish:
