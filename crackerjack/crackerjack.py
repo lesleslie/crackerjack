@@ -120,7 +120,7 @@ class Crakerjack(BaseModel):
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
         if options.interactive:
-            for hook in ("ruff", "mypy"):
+            for hook in ("refurb", "mypy"):
                 await self.run_interactive(hook)
         check_all = call(["pre-commit", "run"])
         if check_all > 0:

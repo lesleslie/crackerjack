@@ -30,7 +30,6 @@ target-version = [
 strict = false
 pretty = true
 ignore_missing_imports = false
-exclude = "tests"
 
 
 [tool.refurb]
