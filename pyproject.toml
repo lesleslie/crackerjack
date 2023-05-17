@@ -30,6 +30,9 @@ target-version = [
 strict = false
 pretty = true
 ignore_missing_imports = false
+plugins = [
+    "pydantic.mypy",
+]
 
 [tool.refurb]
 enable_all = true
@@ -41,7 +44,7 @@ inputs = [
 
 [project]
 name = "Crackerjack"
-version = "0.1.10"
+version = "0.1.11"
 description = "Crackerjack code formatting style."
 requires-python = ">=3.11"
 readme = "README.md"
