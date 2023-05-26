@@ -6,10 +6,13 @@
 
 Crackerjack is a python coding style which uses a minimalist approach to produce elegant, easy to read, code.
 
+crack·​er·​jack ˈkra-kər-ˌjak
+: a person or thing of marked excellence
+
 ### **Why Crackerjack?**
 
-Crackerjack works on the theory that with static typing and explicit classes,
-functions, variables, and other object names - the code should be
+Crackerjack works on the theory that with static typing and explicit class,
+function, variable, and other object names - the code should be
 straight forward to read and the documentation should pretty much be able to write
 itself. Crackerjack provides a set of guidelines and utilities to keep the codebase clean, elegant, standardized, and
 easily readable.
@@ -30,15 +33,17 @@ This package:
 
 - streamlines code with refurb
 
-- converts/creates documentation in Markdown (md)
-
-- installs, or updates, a projects pre-commit tools and gitignore
+- installs, or updates, a project's pre-commit tools and gitignore
   to comply with evolving crackerjack standards
 
 - removes pipenv, poetry, and hatch build, dependency management, and virtual environment
-  management packages and replace them with PDM using PEP 582
+  management packages and replaces them with PDM using PEP 582
 
-- generates pytest mock stubs if needed
+- converts/creates documentation in Markdown (md) - Coming Soon!
+
+- runs tests and generates pytest mock stubs if needed - Coming Soon!
+
+- bumps the project version and publishes it to PyPI
 
 ### **What are the rules?**
 
@@ -85,9 +90,19 @@ From your projects root directory:
 
 Cracker jack will take care of the rest.
 
+For a full list of options:
+
+```python -m crackerjack -h```
+
 When you ready to publish your project:
 
 ``python -m crackerjack -p micro``
 
 The -p option not only publishes your project but will bump your
 project version for you. The options are 'micro', 'minor', and 'major'.
+
+## Acknowledgements
+
+## License
+
+BSD-3-Clause
