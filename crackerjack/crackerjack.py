@@ -76,13 +76,10 @@ class Crakerjack(BaseModel):
             ".pre-commit-config.yaml",
             ".libcst.codemod.yaml",
             ".crackerjack-config.yaml",
-            ".pypirc",
         ):
             config_path = self.our_path.parent / config
             pkg_config_path = self.pkg_path / config
             await pkg_config_path.touch(exist_ok=True)
-            if config_path.name != ".pypirc":
-                run(["git", "add", str(pkg_config_path)])
             if self.pkg_path.stem == "crackerjack":
                 await config_path.write_text(await pkg_config_path.read_text())
             # if poetry_pip_env:
