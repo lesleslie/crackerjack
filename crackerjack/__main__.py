@@ -1,10 +1,22 @@
 import asyncio
 
-from addict import Dict
 from click import command
 from click import help_option
 from click import option
 from crackerjack import crackerjack_it
+from pydantic import BaseModel
+
+
+class Options(BaseModel):
+    commit = False
+    interactive = False
+    doc = False
+    do_not_update_configs = False
+    publish: str | bool = False
+    verbose = False
+
+
+options = Options()
 
 
 @command()
@@ -17,20 +29,19 @@ from crackerjack import crackerjack_it
 @option("-p", help="publish: -p [micro, minor, major]")
 # @option("-f", help="format: -f [module]")
 def crackerjack(c: bool, i: bool, d: bool, v: bool, x: bool, p: str) -> None:
-    options: Dict[str, str | bool] = Dict()
     if c:
-        options["commit"] = c
+        options.commit = c
     if i:
-        options["interactive"] = i
+        options.interactive = i
     if d:
-        options["doc"] = d
+        options.doc = d
     if x:
-        options["do_not_update_configs"] = x
+        options.do_not_update_configs = x
     if p in ("micro", "minor", "major"):
-        options["publish"] = p
+        options.publish = p
     if v:
-        print("-v not currently implemented.")
-        options["verbose"] = v
+        print("-v not currently implemented")
+        options.verbose = v
     asyncio.run(crackerjack_it(options))
 
 
