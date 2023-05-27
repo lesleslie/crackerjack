@@ -51,9 +51,9 @@ class Crakerjack(BaseModel):
         pkg_toml_config = await self.get_toml_config(self.pkg_toml_path)
         if self.poetry_pip_env:
             del pkg_toml_config.tool.poetry
-        old_deps = pkg_toml_config.tool.pdm["dev-dependencies"]
+        pkg_deps = pkg_toml_config.tool["pdm"]["dev-dependencies"]
         pkg_toml_config.tool = our_toml_config.tool
-        pkg_toml_config.tool.pdm["dev-dependencies"] = old_deps
+        pkg_toml_config.tool["pdm"]["dev-dependencies"] = pkg_deps
         if self.pkg_path.stem == "crackerjack":
             await dump.toml(pkg_toml_config.dict(), self.our_toml_path)
         else:
