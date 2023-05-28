@@ -33,6 +33,7 @@ ignore_missing_imports = false
 plugins = [
     "pydantic.mypy",
 ]
+python_version = 3.11
 
 [tool.refurb]
 enable_all = true
@@ -44,7 +45,7 @@ inputs = [
 
 [project]
 name = "Crackerjack"
-version = "0.2.1"
+version = "0.2.2"
 description = "Crackerjack code formatting style."
 requires-python = ">=3.11"
 readme = "README.md"
