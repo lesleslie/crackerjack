@@ -8,12 +8,13 @@ from pydantic import BaseModel
 
 
 class Options(BaseModel):
-    commit = False
-    interactive = False
-    doc = False
-    do_not_update_configs = False
+    commit: bool = False
+    interactive: bool = False
+    doc: bool = False
+    do_not_update_configs: bool = False
     publish: str | bool = False
-    verbose = False
+    verbose: bool = False
+    update_precommit: bool = False
 
 
 options = Options()
@@ -25,16 +26,19 @@ options = Options()
 @option("-i", is_flag=True, help="interactive")
 @option("-d", is_flag=True, help="doc")
 @option("-x", is_flag=True, help="do not update configs")
+@option("-u", is_flag=True, help="update pre-commit")
 @option("-v", is_flag=True, help="verbose")
 @option("-p", help="publish: -p [micro, minor, major]")
 # @option("-f", help="format: -f [module]")
-def crackerjack(c: bool, i: bool, d: bool, v: bool, x: bool, p: str) -> None:
+def crackerjack(c: bool, i: bool, d: bool, u: bool, v: bool, x: bool, p: str) -> None:
     if c:
         options.commit = c
     if i:
         options.interactive = i
     if d:
         options.doc = d
+    if u:
+        options.update_precommit = u
     if x:
         options.do_not_update_configs = x
     if p in ("micro", "minor", "major"):

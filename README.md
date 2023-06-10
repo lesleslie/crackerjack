@@ -1,8 +1,9 @@
 # Crackerjack Python
 
-[![Python: 3.7](https://img.shields.io/badge/python-3.11%2B-blue)](https://docs.python.org/3/)
+[![Python: 3.11](https://img.shields.io/badge/python-3.11%2B-blue)](https://docs.python.org/3/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![Code style: crackerjack](https://img.shields.io/badge/code%20style-crackerjack-000042)](https://github.com/lesleslie/crackerjack)
+[![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 
 Crackerjack is a python coding style which uses a minimalist approach to produce elegant, easy to read, code.
 
@@ -25,11 +26,9 @@ This package:
 
 - reformats the code with [Black](https://github.com/ambv/black)
 
-- uses autotype to add missing type annotations to the code
-
 - does import sorting, linting, and complexity analysis with ruff
 
-- uses mypy for type checking
+- uses pyright for type checking
 
 - streamlines code with refurb
 
