@@ -9,9 +9,9 @@ from acb.actions import load
 
 import pdm_bump
 import pdoc
-
 from aioconsole import ainput
 from aiopath import AsyncPath
+from inflection import underscore
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
@@ -43,7 +43,16 @@ class Crakerjack(BaseModel):
         if self.poetry_pip_env:
             del pkg_toml_config["tool"]["poetry"]
         pkg_deps = pkg_toml_config["tool"]["pdm"]["dev-dependencies"]
-        pkg_toml_config.setdefault("tool", our_toml_config.get("tool", {}))
+        pkg_toml_config["tool"] = our_toml_config["tool"]
+        for tool, settings in pkg_toml_config["tool"].items():
+            for setting, value in settings.items():
+                if isinstance(value, str | list) and "crackerjack" in value:
+                    if isinstance(value, str):
+                        value = value.replace("crackerjack", underscore(self.pkg_name))
+                    else:
+                        value.remove("crackerjack")
+                        value.append(underscore(self.pkg_name))
+                    settings[setting] = value
         pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
         if self.pkg_path.stem == "crackerjack":
             await dump.toml(pkg_toml_config, self.our_toml_path)  # type: ignore
