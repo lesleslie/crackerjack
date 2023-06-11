@@ -48,10 +48,10 @@ class Crakerjack(BaseModel):
             for setting, value in settings.items():
                 if isinstance(value, str | list) and "crackerjack" in value:
                     if isinstance(value, str):
-                        value = value.replace("crackerjack", underscore(self.pkg_name))
+                        value = value.replace("crackerjack", self.pkg_name)
                     else:
                         value.remove("crackerjack")
-                        value.append(underscore(self.pkg_name))
+                        value.append(self.pkg_name)
                     settings[setting] = value
         pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
         if self.pkg_path.stem == "crackerjack":
@@ -86,7 +86,7 @@ class Crakerjack(BaseModel):
             #     await config_pkg_path.unlink()
             config_text = await config_path.read_text()
             await pkg_config_path.write_text(
-                config_text.replace("crackerjack", underscore(self.pkg_name))
+                config_text.replace("crackerjack", self.pkg_name)
             )
             run(["git", "add", config])
 
@@ -123,8 +123,7 @@ class Crakerjack(BaseModel):
     async def process(self, options: t.Any) -> None:
         imp_dir = self.pkg_path / "__pypackages__"
         sys.path.append(str(imp_dir))
-        self.pkg_name = self.pkg_path.stem.lower()
-        # self.pkg_name = underscore(self.pkg_path.stem.lower())
+        self.pkg_name = underscore(self.pkg_path.stem.lower())
         self.pkg_dir = self.pkg_path / self.pkg_name
         await self.pkg_dir.mkdir(exist_ok=True)
         print("\nCrackerjacking...\n")
