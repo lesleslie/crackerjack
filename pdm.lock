@@ -3,7 +3,7 @@
 
 [[package]]
 name = "acb"
-version = "0.1.6"
+version = "0.1.8"
 requires_python = ">=3.11"
 summary = "Asynchronus Code Base"
 dependencies = [
@@ -745,9 +745,9 @@ groups = ["default", "dev"]
 content_hash = "sha256:8ee6df603e5a275d40c914d6bdfbb6bd2d2c72fcf673acac9539c950a1dd9793"
 
 [metadata.files]
-"acb 0.1.6" = [
-    {url = "https://files.pythonhosted.org/packages/52/15/210651ba4f4e98cef4b34d2a8d314855058b4cd6c5ef1930cd02298b082b/acb-0.1.6-py3-none-any.whl", hash = "sha256:2e5e1591d5bacd763806891c4bd225da027dee1bbbee7c033ffefc585a78cf05"},
-    {url = "https://files.pythonhosted.org/packages/75/f1/0a0c11d548b4d81a52eba48b01ae51c5c41aed69ede6b5d528678a9122b9/acb-0.1.6.tar.gz", hash = "sha256:e2b8d2d493c5b994c1297cb60e867f34f3c92c561f792a8ce986ed6483a30893"},
+"acb 0.1.8" = [
+    {url = "https://files.pythonhosted.org/packages/7a/e8/e38633b75997b5d5a43d13106afbeb401fe819413d6d82fb0c66f7346786/acb-0.1.8-py3-none-any.whl", hash = "sha256:a5d209d6c58f7e7f1d577dfab03306d16a52f764e66f493752a4e7c1bdbea056"},
+    {url = "https://files.pythonhosted.org/packages/ef/d1/3cf3b96bae040d2a206219fd8c0769045f7c0624564d32da569d5b322105/acb-0.1.8.tar.gz", hash = "sha256:ed842247c1c0af8967224cc161456376947a91131d72bc25da786002ec0c0f1f"},
 ]
 "aioconsole 0.6.1" = [
     {url = "https://files.pythonhosted.org/packages/27/a2/4bbeecceb6786a058e92469686ae1b7d3a616b3f5b99e00b96c3064349e2/aioconsole-0.6.1.tar.gz", hash = "sha256:520313bc5d7ed6bea3baf072ce7e622479afd67c01b3fdcc076bc528da354f6f"},
