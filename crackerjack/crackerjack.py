@@ -86,7 +86,7 @@ class Crakerjack(BaseModel):
             #     await config_pkg_path.unlink()
             config_text = await config_path.read_text()
             await pkg_config_path.write_text(
-                config_text.replace("crackerjack", self.pkg_name)
+                config_text.replace("crackerjack", underscore(self.pkg_name))
             )
             run(["git", "add", config])
 
