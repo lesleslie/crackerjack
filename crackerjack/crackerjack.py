@@ -19,9 +19,6 @@ for mod in (pdm_bump, pdoc):  # look ruff / isort to get rid of this
     pass
 
 
-# Crackerjack
-
-
 class Crakerjack(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     our_path: AsyncPath = AsyncPath(__file__)
@@ -38,13 +35,13 @@ class Crakerjack(BaseModel):
         toml_file = "pyproject.toml"
         self.our_toml_path = self.our_path.parent / toml_file
         self.pkg_toml_path = self.pkg_path / toml_file
-        our_toml_config = await load.toml(self.our_toml_path)  # type: ignore
-        pkg_toml_config = await load.toml(self.pkg_toml_path)  # type: ignore
+        our_toml_config: t.Any = await load.toml(self.our_toml_path)  # type: ignore
+        pkg_toml_config: t.Any = await load.toml(self.pkg_toml_path)  # type: ignore
         if self.poetry_pip_env:
-            del pkg_toml_config["tool"]["poetry"]
+            pkg_toml_config["tool"].pop("poetry")
         pkg_deps = pkg_toml_config["tool"]["pdm"]["dev-dependencies"]
         pkg_toml_config["tool"] = our_toml_config["tool"]
-        for tool, settings in pkg_toml_config["tool"].items():
+        for settings in pkg_toml_config["tool"].values():
             for setting, value in settings.items():
                 if isinstance(value, str | list) and "crackerjack" in value:
                     if isinstance(value, str):
@@ -75,7 +72,7 @@ class Crakerjack(BaseModel):
             ".gitignore",
             ".pre-commit-config.yaml",
             ".libcst.codemod.yaml",
-            ".crackerjack-config.yaml",
+            # ".crackerjack-config.yaml",
         ):
             config_path = self.our_path.parent / config
             pkg_config_path = self.pkg_path / config

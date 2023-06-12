@@ -1,5 +1,5 @@
 # Created by .ignore support plugin (hsz.mobi)
-.idea
+/.idea
 /.pdm-python
 /.pdm.toml
 /build/
@@ -8,3 +8,5 @@
 /.mypy_cache/
 /.ruff_cache/
 /.crackerjack-config.yaml
+/.pyanalyze-report.json
+/.pyanalyze-report.md

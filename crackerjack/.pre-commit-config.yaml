@@ -34,6 +34,26 @@ repos:
     rev: '0.78'
     hooks:
       - id: flynt
+  - repo: local
+    hooks:
+      - id: pyanalyze
+        name: pyanalyze
+        entry: python -m pyanalyze
+        language: python
+        files: \.py$
+        additional_dependencies:
+          - pyanalyze>=0.10.1
+  - repo: local
+    hooks:
+      - id: autotyping
+        name: autotyping
+        entry: python -m libcst.tool codemod autotyping.AutotypeCommand --aggressive --only-without-imports --show-successes --include-generated --guess-common-names --pyanalyze-report ".pyanalyze-report.json" crackerjack
+        types_or: [ python, pyi ]
+        language: python
+        files: \.py$
+        additional_dependencies:
+          - autotyping>=23.3.0
+          - libcst>=0.4.9
   - repo: https://github.com/dosisod/refurb
     rev: v1.16.0
     hooks:

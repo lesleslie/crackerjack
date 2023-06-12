@@ -29,6 +29,11 @@ target-version = [
 [tool.refurb]
 enable_all = true
 
+[tool.pyanalyze]
+paths = [
+    "crackerjack",
+]
+
 [tool.pyright]
 include = [
     "crackerjack",
@@ -39,7 +44,7 @@ pythonVersion = "3.11"
 
 [project]
 name = "Crackerjack"
-version = "0.2.14"
+version = "0.3.0"
 description = "Crackerjack code formatting style."
 requires-python = ">=3.11"
 readme = "README.md"
