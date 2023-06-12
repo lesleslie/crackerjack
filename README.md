@@ -14,49 +14,85 @@ crack·​er·​jack ˈkra-kər-ˌjak
 
 Crackerjack works on the theory that with static typing and explicit class,
 function, variable, and other object names - the code should be
-straight forward to read and the documentation should pretty much be able to write
-itself. Crackerjack provides a set of guidelines and utilities to keep the codebase clean, elegant, standardized, and
+straight forward to read. Documentation and tests should be able to write themselves using a generative ai.
+Crackerjack provides a set of guidelines and utilities to keep the codebase clean, elegant, standardized, and
 easily readable.
+
+### **Crackerjack philosophy...**
+
+#### Virutal envs:
+
+Let's face it virtual envs are a mess and a lot of time and resources are
+spent maintaining them. [This](https://miro.medium.com/v2/resize:fit:984/format:webp/1*mHrDuetdLskvNHYucD9u3g.png) pretty
+much says it all. Enough is enough.
+
+#### Regression testing:
+
+Again, here is what we believe become to be waste of time too. It takes more time to keep codebases compliant
+with previous versions of python than it does to just update your code to run the latest versions of python
+as they are released (within a liberal-ish timeline of course). Why are you running old versions of python anyway.
+There are various easy ways to keep your system python versions up-to-date and
+Docker containers for the latest versions are available immediately upon release. Most cloud providers
+will support the new versions in their virtual machines and containers shortly after release as well. If your dependencies
+break upon upgrade, file a bug report or fix it yourself. Simple enough.
+
+#### ...the Crackerjack solution:
+
+Crackerjack uses PDM with PEP 582. No more virtualenvs. Update your system python versions as they are released and start
+migrating your code. Crackerjack, and Crackerjack'd packages, should support the latest
+python release's features within 2 month after the release and depend solely on that version. Again, if
+something breaks, file a bug report or, even better, fix it yourself (maybe even learn something new things in the process).
+Easy-peasy. You just saved yourself a zillion headaches and can sleep
+better at night now.
 
 ### **What does this package do?**
 
 This package:
 
-- identifies and removes unused dependencies with creosote
-
-- reformats the code with [Black](https://github.com/ambv/black)
-
-- does import sorting, linting, and complexity analysis with ruff
-
-- uses pyright for type checking
-
-- streamlines code with refurb
-
-- installs, or updates, a project's pre-commit tools and gitignore
-  to comply with evolving crackerjack standards
+- streamlines and standardizes code style across numerous packages
 
 - removes pipenv, poetry, and hatch build, dependency management, and virtual environment
-  management packages and replaces them with PDM using PEP 582
+  management packages and replaces them with PDM using PEP 582 (work in progress)
 
-- converts/creates documentation in Markdown (md) - Coming Soon!
+- installs, or updates, a project's pre-commit tools as well as .gitignore & other config files
+  to comply with evolving crackerjack standards
 
-- runs tests and generates pytest mock stubs if needed - Coming Soon!
+- runs the following pre-commit hooks (in order):
+  * various core pre-commit hooks
+  * [black](https://github.com/ambv/black)
+  * ruff
+  * creosote
+  * flynt
+  * refurb
+  * pyright
+  * ruff (again)
+  * black (again)
+
+- converts/creates documentation in Markdown (md) (work in progress)
+
+- runs tests and generates pytest mock stubs if needed (work in progress)
 
 - bumps the project version and publishes it to PyPI
+
+- commits changes to git repositories
 
 ### **What are the rules?**
 
 (...more what you'd call "guidelines" than actual rules. -Captain Barbossa )
 
+- code is statically typed
+
 - all docstrings, README's, and other documentation is to be done in Markdown (md)
 
 - format with black
 
-- use pathlib.Path - not os.path
+- use aiopath.AsyncPath or pathlib.Path not os.path
 
-- use dataclasses or pydantic models whenever possible
+- functions that deal with path operations should get passed AsyncPaths or Paths - not strings
 
-- force single line imports
+- if a class can be a dataclasses.dataclass, pydantic.BaseModel, or msgspec.Struct it should be
+
+- force single line imports (will support isort Vertical Hanging Indent when ruff does)
 
 - use PDM and PEP 582 for dependency management and package building/publishing
 
@@ -64,7 +100,9 @@ This package:
 
 - use pytest for testing
 
-- code is statically typed
+- be compliant with the latest python version within 2 months after release
+
+
 
 [//]: # (- variable docstrings are supported as outlined in)
 
@@ -99,9 +137,9 @@ When you ready to publish your project:
 
 The -p option not only publishes your project but will bump your
 project version for you. The options are 'micro', 'minor', and 'major'.
+Put the -c option at the end and commit the bumped version to your git
+repository at the same time.
 
-## Acknowledgements
-
-## License
+### **License**
 
 BSD-3-Clause
