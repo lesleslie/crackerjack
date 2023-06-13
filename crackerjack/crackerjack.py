@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import typing as t
 from subprocess import call
@@ -7,16 +8,11 @@ from subprocess import run
 from acb.actions import dump
 from acb.actions import load
 
-import pdm_bump
-import pdoc
 from aioconsole import ainput
 from aiopath import AsyncPath
 from inflection import underscore
 from pydantic import BaseModel
 from pydantic import ConfigDict
-
-for mod in (pdm_bump, pdoc):  # look ruff / isort to get rid of this
-    pass
 
 
 class Crakerjack(BaseModel):
@@ -72,7 +68,7 @@ class Crakerjack(BaseModel):
             ".gitignore",
             ".pre-commit-config.yaml",
             ".libcst.codemod.yaml",
-            # ".crackerjack-config.yaml",
+            ".crackerjack-config.yaml",
         ):
             config_path = self.our_path.parent / config
             pkg_config_path = self.pkg_path / config
@@ -107,7 +103,6 @@ class Crakerjack(BaseModel):
             universal_newlines=True,
         ).splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
-            run(["pdm", "--pep582"])
             run(["pdm", "self", "add", "keyring"])
             run(["git", "init"])
             run(["git", "branch", "-m", "main"])
@@ -126,6 +121,7 @@ class Crakerjack(BaseModel):
         print("\nCrackerjacking...\n")
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
             run(["pre-commit", "autoupdate"])
+        await asyncio.create_subprocess_shell('eval "$(pdm --pep582)"')
         if options.publish:
             check_output(["pdm", "bump", options.publish])
         if not options.do_not_update_configs:

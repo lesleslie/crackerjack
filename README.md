@@ -63,10 +63,12 @@ This package:
   * ruff
   * creosote
   * flynt
+  * pyanalyze
+  * autotyping
   * refurb
   * pyright
-  * ruff (again)
-  * black (again)
+  * ruff (again for sanity checking)
+  * black (again for sanity checking)
 
 - converts/creates documentation in Markdown (md) (work in progress)
 

@@ -1,4 +1,8 @@
 repos:
+  - repo: https://github.com/pdm-project/pdm
+    rev: 2.7.4  # a PDM release exposing the hook
+    hooks:
+      - id: pdm-lock-check
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
@@ -34,6 +38,12 @@ repos:
     rev: '0.78'
     hooks:
       - id: flynt
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.4
+    hooks:
+    - id: codespell
+      additional_dependencies:
+        - tomli
   - repo: local
     hooks:
       - id: pyanalyze
@@ -81,3 +91,9 @@ repos:
     hooks:
       - id: black
         language_version: python3.11
+  - repo: https://github.com/pdm-project/pdm
+    rev: 2.7.4 # a PDM release exposing the hook
+    hooks:
+      - id: pdm-export
+        args: [ '-o', 'requirements.txt', '--without-hashes' ]
+        files: ^pdm.lock$
