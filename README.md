@@ -2,8 +2,9 @@
 
 [![Python: 3.11](https://img.shields.io/badge/python-3.11%2B-blue)](https://docs.python.org/3/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
-[![Code style: crackerjack](https://img.shields.io/badge/code%20style-crackerjack-000042)](https://github.com/lesleslie/crackerjack)
 [![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
+[![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)](https://pdm.fming.dev)
+[![Code style: crackerjack](https://img.shields.io/badge/code%20style-crackerjack-000042)](https://github.com/lesleslie/crackerjack)
 
 Crackerjack is a python coding style which uses a minimalist approach to produce elegant, easy to read, code.
 
@@ -20,7 +21,7 @@ easily readable.
 
 ### **Crackerjack philosophy...**
 
-#### Virutal envs:
+#### Virtual envs:
 
 Let's face it virtual envs are a mess and a lot of time and resources are
 spent maintaining them. [This](https://miro.medium.com/v2/resize:fit:984/format:webp/1*mHrDuetdLskvNHYucD9u3g.png) pretty
@@ -38,7 +39,7 @@ break upon upgrade, file a bug report or fix it yourself. Simple enough.
 
 #### ...the Crackerjack solution:
 
-Crackerjack uses PDM with PEP 582. No more virtualenvs. Update your system python versions as they are released and start
+Crackerjack uses PDM with PEP-582. No more virtualenvs. Update your system python versions as they are released and start
 migrating your code. Crackerjack, and Crackerjack'd packages, should support the latest
 python release's features within 2 month after the release and depend solely on that version. Again, if
 something breaks, file a bug report or, even better, fix it yourself (maybe even learn something new things in the process).
@@ -90,6 +91,9 @@ This package:
 
 - use aiopath.AsyncPath or pathlib.Path not os.path
 
+- do not capitalize all letters in configuration settings or constants (we diverge from PEP-8 here
+ for not other reason than it looks ugly)
+
 - functions that deal with path operations should get passed AsyncPaths or Paths - not strings
 
 - if a class can be a dataclasses.dataclass, pydantic.BaseModel, or msgspec.Struct it should be
@@ -126,8 +130,6 @@ From your projects root directory:
 From your projects root directory:
 
 ```python -m crackerjack```
-
-Cracker jack will take care of the rest.
 
 For a full list of options:
 

@@ -10,3 +10,4 @@
 /.crackerjack-config.yaml
 /.pyanalyze-report.json
 /.pyanalyze-report.md
+/.pdm-build/

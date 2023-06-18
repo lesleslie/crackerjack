@@ -64,24 +64,28 @@ class Crakerjack(BaseModel):
                 await file.unlink()
 
     async def copy_configs(self) -> None:
-        for config in (
+        config_files = (
             ".gitignore",
             ".pre-commit-config.yaml",
             ".libcst.codemod.yaml",
             ".crackerjack-config.yaml",
-        ):
+            ".pyanalyze-report.json",
+            ".pyanalyze-report.md",
+        )
+        for config in config_files:
             config_path = self.our_path.parent / config
             pkg_config_path = self.pkg_path / config
             await pkg_config_path.touch(exist_ok=True)
-            if self.pkg_path.stem == "crackerjack":
-                await config_path.write_text(await pkg_config_path.read_text())
-            # if poetry_pip_env:
-            #     await config_pkg_path.unlink()
-            config_text = await config_path.read_text()
-            await pkg_config_path.write_text(
-                config_text.replace("crackerjack", self.pkg_name)
-            )
-            run(["git", "add", config])
+            if config in config_files[:-2]:
+                if self.pkg_path.stem == "crackerjack":
+                    await config_path.write_text(await pkg_config_path.read_text())
+                # if poetry_pip_env:
+                #     await config_pkg_path.unlink()
+                config_text = await config_path.read_text()
+                await pkg_config_path.write_text(
+                    config_text.replace("crackerjack", self.pkg_name)
+                )
+                run(["git", "add", config])
 
     @staticmethod
     async def run_interactive(hook: str) -> None:
@@ -104,12 +108,14 @@ class Crakerjack(BaseModel):
         ).splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
             run(["pdm", "self", "add", "keyring"])
+            run(["pdm", "config", "python.use_venv", "false"])
             run(["git", "init"])
             run(["git", "branch", "-m", "main"])
             run(["git", "add", "pyproject.toml"])
             run(["pdm", "add", "-d", "pre_commit"])
             run(["pre-commit", "install"])
             run(["git", "add", "pdm.lock"])
+            run(["git", "config advice.addIgnoredFile", "false"])
         await self.update_pyproject_configs()
 
     async def process(self, options: t.Any) -> None:
