@@ -39,7 +39,8 @@ break upon upgrade, file a bug report or fix it yourself. Simple enough.
 
 #### ...the Crackerjack solution:
 
-Crackerjack uses PDM with PEP-582. No more virtualenvs. Update your system python versions as they are released and start
+Crackerjack uses PDM with PEP-582 (yes, PEP-582 has been rejected but PDM still supports it and Crackerjack will continue to use it!).
+No more virtualenvs. Update your system python versions as they are released and start
 migrating your code. Crackerjack, and Crackerjack'd packages, should support the latest
 python release's features within 2 month after the release and depend solely on that version. Again, if
 something breaks, file a bug report or, even better, fix it yourself (maybe even learn something new things in the process).
@@ -53,7 +54,7 @@ This package:
 - streamlines and standardizes code style across numerous packages
 
 - removes pipenv, poetry, and hatch build, dependency management, and virtual environment
-  management packages and replaces them with PDM using PEP 582 (work in progress)
+  management packages and replaces them with PDM using PEP-582 (work in progress)
 
 - installs, or updates, a project's pre-commit tools as well as .gitignore & other config files
   to comply with evolving crackerjack standards
@@ -91,6 +92,8 @@ This package:
 
 - use aiopath.AsyncPath or pathlib.Path not os.path
 
+- import typing as t
+
 - do not capitalize all letters in configuration settings or constants (we diverge from PEP-8 here
  for not other reason than it looks ugly)
 
@@ -100,7 +103,7 @@ This package:
 
 - force single line imports (will support isort Vertical Hanging Indent when ruff does)
 
-- use PDM and PEP 582 for dependency management and package building/publishing
+- use PDM and PEP-582 for dependency management and package building/publishing
 
 - use pdoc and mkdocs for producing documentation
 
@@ -143,6 +146,11 @@ The -p option not only publishes your project but will bump your
 project version for you. The options are 'micro', 'minor', and 'major'.
 Put the -c option at the end and commit the bumped version to your git
 repository at the same time.
+
+### **Contributing**
+
+Crackerjack is currently an evolving standard. If you like the idea, but don't like certain things about it, or
+would like new features added, let me know in Discussions, Issues, or email me.
 
 ### **License**
 
