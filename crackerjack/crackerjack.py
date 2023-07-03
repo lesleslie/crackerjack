@@ -139,6 +139,7 @@ class Crakerjack(BaseModel):
         if check_all > 0:
             call(["pre-commit", "run", "--all-files"])
         if options.publish:
+            run(["git", "add", "requirements.txt"])
             run(["pdm", "publish"])
         if options.commit:
             commit_msg = input("Commit message: ")

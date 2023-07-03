@@ -11,3 +11,4 @@
 /.pyanalyze-report.json
 /.pyanalyze-report.md
 /.pdm-build/
+/tmp/
