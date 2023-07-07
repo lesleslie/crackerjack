@@ -1,4 +1,5 @@
 import asyncio
+import typing as t
 
 from click import command
 from click import help_option
@@ -12,7 +13,7 @@ class Options(BaseModel):
     interactive: bool = False
     doc: bool = False
     do_not_update_configs: bool = False
-    publish: str | bool = False
+    publish: t.Literal["micro", "minor", "major"] | bool = False
     verbose: bool = False
     update_precommit: bool = False
 
@@ -30,7 +31,15 @@ options = Options()
 @option("-v", is_flag=True, help="verbose")
 @option("-p", help="publish: -p [micro, minor, major]")
 # @option("-f", help="format: -f [module]")
-def crackerjack(c: bool, i: bool, d: bool, u: bool, v: bool, x: bool, p: str) -> None:
+def crackerjack(
+    c: bool = False,
+    i: bool = False,
+    d: bool = False,
+    u: bool = False,
+    v: bool = False,
+    x: bool = False,
+    p: str | bool = False,
+) -> None:
     if c:
         options.commit = c
     if i:
