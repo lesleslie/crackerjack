@@ -12,3 +12,4 @@
 /.pyanalyze-report.md
 /.pdm-build/
 /tmp/
+/crackerjack/__pycache__/
