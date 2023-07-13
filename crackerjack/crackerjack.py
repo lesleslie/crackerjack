@@ -16,7 +16,7 @@ from pydantic import ConfigDict
 
 
 class Crakerjack(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
     our_path: AsyncPath = AsyncPath(__file__)
     pkg_path: AsyncPath = AsyncPath.cwd()
     pkg_dir: t.Optional[AsyncPath] = None
@@ -68,7 +68,6 @@ class Crakerjack(BaseModel):
             ".gitignore",
             ".pre-commit-config.yaml",
             ".libcst.codemod.yaml",
-            ".crackerjack-config.yaml",
             ".pyanalyze-report.json",
             ".pyanalyze-report.md",
         )
@@ -115,7 +114,7 @@ class Crakerjack(BaseModel):
             run(["pdm", "add", "-d", "pre_commit"])
             run(["pre-commit", "install"])
             run(["git", "add", "pdm.lock"])
-            run(["git", "config advice.addIgnoredFile", "false"])
+            run(["git", "config", "advice.addIgnoredFile", "false"])
         await self.update_pyproject_configs()
 
     async def process(self, options: t.Any) -> None:

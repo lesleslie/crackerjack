@@ -7,9 +7,9 @@
 /dist/
 /.mypy_cache/
 /.ruff_cache/
-/.crackerjack-config.yaml
 /.pyanalyze-report.json
 /.pyanalyze-report.md
 /.pdm-build/
 /tmp/
+/__pycache__/
 /crackerjack/__pycache__/
