@@ -44,7 +44,7 @@ repos:
     hooks:
       - id: pyanalyze
         name: pyanalyze
-        entry: python -m pyanalyze
+        entry: python -m pyanalyze -v -A
         language: python
         files: \.py$
         additional_dependencies:
