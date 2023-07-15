@@ -17,7 +17,7 @@ from pydantic import ConfigDict
 
 class Crakerjack(BaseModel):
     model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
-    our_path: AsyncPath = AsyncPath(__file__)
+    our_path: AsyncPath = AsyncPath(__file__).parent
     pkg_path: AsyncPath = AsyncPath.cwd()
     pkg_dir: t.Optional[AsyncPath] = None
     pkg_name: str = "crackerjack"
@@ -29,7 +29,7 @@ class Crakerjack(BaseModel):
 
     async def update_pyproject_configs(self) -> None:
         toml_file = "pyproject.toml"
-        self.our_toml_path = self.our_path.parent / toml_file
+        self.our_toml_path = self.our_path / toml_file
         self.pkg_toml_path = self.pkg_path / toml_file
         our_toml_config: t.Any = await load.toml(self.our_toml_path)  # type: ignore
         pkg_toml_config: t.Any = await load.toml(self.pkg_toml_path)  # type: ignore
@@ -72,7 +72,7 @@ class Crakerjack(BaseModel):
             ".pyanalyze-report.md",
         )
         for config in config_files:
-            config_path = self.our_path.parent / config
+            config_path = self.our_path / config
             pkg_config_path = self.pkg_path / config
             await pkg_config_path.touch(exist_ok=True)
             if config in config_files[:-2]:
@@ -112,6 +112,9 @@ class Crakerjack(BaseModel):
             run(["git", "branch", "-m", "main"])
             run(["git", "add", "pyproject.toml"])
             run(["pdm", "add", "-d", "pre_commit"])
+            run(["pdm", "add", "-d", "pytest"])
+            run(["pdm", "add", "-d", "pyanalyze"])
+            run(["pdm", "add", "-d", "autotyping"])
             run(["pre-commit", "install"])
             run(["git", "add", "pdm.lock"])
             run(["git", "config", "advice.addIgnoredFile", "false"])
@@ -138,7 +141,6 @@ class Crakerjack(BaseModel):
         if check_all > 0:
             call(["pre-commit", "run", "--all-files"])
         if options.publish:
-            run(["git", "add", "requirements.txt"])
             run(["pdm", "publish"])
         if options.commit:
             commit_msg = input("Commit message: ")

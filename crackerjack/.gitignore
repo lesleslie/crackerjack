@@ -12,4 +12,4 @@
 /.pdm-build/
 /tmp/
 /__pycache__/
-/crackerjack/__pycache__/
+/*/__pycache__/

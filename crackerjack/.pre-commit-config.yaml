@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pdm-project/pdm
-    rev: 2.8.0a2  # a PDM release exposing the hook
+    rev: 2.8.0  # a PDM release exposing the hook
     hooks:
       - id: pdm-lock-check
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -95,9 +95,3 @@ repos:
     hooks:
       - id: black
         language_version: python3.11
-  - repo: https://github.com/pdm-project/pdm
-    rev: 2.8.0a2 # a PDM release exposing the hook
-    hooks:
-      - id: pdm-export
-        args: [ '-o', 'requirements.txt', '--without-hashes' ]
-        files: ^pdm.lock$
