@@ -29,7 +29,7 @@ repos:
     rev: v2.6.3
     hooks:
       - id: creosote
-        args: [--paths, "crackerjack", --exclude-deps, "pdm-bump", "tomli-w"]
+        args: [--paths, "crackerjack", --exclude-deps, "pdm-bump", "tomli-w", "google-api-core", "python-ulid"]
   - repo: https://github.com/ikamensh/flynt/
     rev: '1.0.1'
     hooks:
@@ -40,6 +40,7 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
+        args: [--skip, "crate"]
   - repo: local
     hooks:
       - id: pyanalyze
