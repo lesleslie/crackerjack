@@ -40,7 +40,7 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
-        args: [--skip, "crate"]
+        args: [--ignore-words-list, "crate"]
   - repo: local
     hooks:
       - id: pyanalyze
