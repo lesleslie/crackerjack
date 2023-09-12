@@ -65,7 +65,6 @@ This package:
   * ruff
   * creosote
   * flynt
-  * pyanalyze
   * autotyping
   * refurb
   * pyright
