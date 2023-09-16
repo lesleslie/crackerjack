@@ -6,7 +6,7 @@ groups = ["default", "dev"]
 cross_platform = true
 static_urls = false
 lock_version = "4.3"
-content_hash = "sha256:a198ac065c1949059e6dda9fe1a7a0d9a3641ef5af6fe8d1c77c2fa217be0dda"
+content_hash = "sha256:f47fea6283a7fec92cf073fe4b50deb88f0a37651e8136e12c7f9d8eac21bf3e"
 
 [[package]]
 name = "acb"
@@ -909,6 +909,19 @@ dependencies = [
 files = [
     {file = "pyproject-metadata-0.7.1.tar.gz", hash = "sha256:0a94f18b108b9b21f3a26a3d541f056c34edcb17dc872a144a15618fed7aef67"},
     {file = "pyproject_metadata-0.7.1-py3-none-any.whl", hash = "sha256:28691fbb36266a819ec56c9fa1ecaf36f879d6944dfde5411e87fc4ff793aa60"},
+]
+
+[[package]]
+name = "pyright"
+version = "1.1.327"
+requires_python = ">=3.7"
+summary = "Command line wrapper for pyright"
+dependencies = [
+    "nodeenv>=1.6.0",
+]
+files = [
+    {file = "pyright-1.1.327-py3-none-any.whl", hash = "sha256:3462cda239e9140276238bbdbd0b59d77406f1c2e14d8cb8c20c8e25639c6b3c"},
+    {file = "pyright-1.1.327.tar.gz", hash = "sha256:ba74148ad64f22020dbbed6781c4bdb38ecb8a7ca90dc3c87a4f08d1c0e11592"},
 ]
 
 [[package]]
