@@ -9,6 +9,7 @@ from acb.actions import dump
 from acb.actions import load
 
 from aioconsole import ainput
+from aioconsole import aprint
 from aiopath import AsyncPath
 from inflection import underscore
 from pydantic import BaseModel
@@ -68,8 +69,6 @@ class Crakerjack(BaseModel):
             ".gitignore",
             ".pre-commit-config.yaml",
             ".libcst.codemod.yaml",
-            ".pyanalyze-report.json",
-            ".pyanalyze-report.md",
         )
         for config in config_files:
             config_path = self.our_path / config
@@ -92,8 +91,9 @@ class Crakerjack(BaseModel):
         while not success:
             fail = call(["pre-commit", "run", hook.lower(), "--all-files"])
             if fail > 0:
-                retry = await ainput(f"\n{hook} failed. Retry? (y/n): ")
-                if retry.lower() == "y":
+                retry = await ainput(f"\n\n{hook.title()} failed. Retry? (y/N): ")
+                await aprint()
+                if retry.strip().lower() == "y":
                     continue
                 sys.exit()
             success = True
@@ -126,7 +126,7 @@ class Crakerjack(BaseModel):
         self.pkg_name = underscore(self.pkg_path.stem.lower())
         self.pkg_dir = self.pkg_path / self.pkg_name
         await self.pkg_dir.mkdir(exist_ok=True)
-        print("\nCrackerjacking...\n")
+        await aprint("\nCrackerjacking...\n")
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
             run(["pre-commit", "autoupdate"])
         await asyncio.create_subprocess_shell('eval "$(pdm --pep582)"')
@@ -146,6 +146,7 @@ class Crakerjack(BaseModel):
             commit_msg = input("Commit message: ")
             call(["git", "commit", "-m", f"'{commit_msg}'", "--no-verify", "--", "."])
             call(["git", "push", "origin", "main"])
+        await aprint("\nCrackerjack complete!\n")
 
 
 crackerjack_it = Crakerjack().process
