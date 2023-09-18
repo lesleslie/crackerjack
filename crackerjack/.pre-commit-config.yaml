@@ -40,7 +40,6 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
-        args: [--ignore-words-list, "crate", "uptodate"]
   - repo: local
     hooks:
       - id: autotyping
