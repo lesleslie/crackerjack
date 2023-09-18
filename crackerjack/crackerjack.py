@@ -62,14 +62,13 @@ class Crakerjack(BaseModel):
             config_path = self.our_path / config
             pkg_config_path = self.pkg_path / config
             await pkg_config_path.touch(exist_ok=True)
-            if config in config_files[:-2]:
-                if self.pkg_path.stem == "crackerjack":
-                    await config_path.write_text(await pkg_config_path.read_text())
-                config_text = await config_path.read_text()
-                await pkg_config_path.write_text(
-                    config_text.replace("crackerjack", self.pkg_name)
-                )
-                run(["git", "add", config])
+            if self.pkg_path.stem == "crackerjack":
+                await config_path.write_text(await pkg_config_path.read_text())
+            config_text = await config_path.read_text()
+            await pkg_config_path.write_text(
+                config_text.replace("crackerjack", self.pkg_name)
+            )
+            run(["git", "add", config])
 
     @staticmethod
     async def run_interactive(hook: str) -> None:
