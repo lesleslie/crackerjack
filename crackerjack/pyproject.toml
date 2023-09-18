@@ -45,7 +45,7 @@ pythonVersion = "3.11"
 
 [project]
 name = "Crackerjack"
-version = "0.4.3"
+version = "0.4.4"
 description = "Crackerjack code style"
 requires-python = ">=3.11"
 readme = "README.md"
