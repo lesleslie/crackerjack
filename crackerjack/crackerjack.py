@@ -130,7 +130,6 @@ class Crakerjack(BaseModel):
         if options.commit:
             commit_msg = await ainput("Commit message: ")
             call(["git", "commit", "-m", f"{commit_msg}", "--no-verify", "--", "."])
-            # call(["git", "commit", "-m", f"'{commit_msg}'"])
             call(["git", "push", "origin", "main"])
         await aprint("\nCrackerjack complete!\n")
 
