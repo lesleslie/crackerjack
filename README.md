@@ -53,9 +53,6 @@ This package:
 
 - streamlines and standardizes code style across numerous packages
 
-- removes pipenv, poetry, and hatch build, dependency management, and virtual environment
-  management packages and replaces them with PDM using PEP-582 (work in progress)
-
 - installs, or updates, a project's pre-commit tools as well as .gitignore & other config files
   to comply with evolving crackerjack standards
 

@@ -7,7 +7,6 @@ from subprocess import run
 
 from acb.actions import dump
 from acb.actions import load
-
 from aioconsole import ainput
 from aioconsole import aprint
 from aiopath import AsyncPath
@@ -53,17 +52,6 @@ class Crakerjack(BaseModel):
         else:
             await dump.toml(pkg_toml_config, self.pkg_toml_path)  # type: ignore
 
-    async def clean_poetry_pipenv(self) -> None:
-        root_files = [
-            file
-            async for file in self.pkg_path.iterdir()
-            if ("poetry" or "Pip") in file.name
-        ]
-        if root_files:
-            self.poetry_pip_env = True
-            for file in root_files:
-                await file.unlink()
-
     async def copy_configs(self) -> None:
         config_files = (
             ".gitignore",
@@ -77,8 +65,6 @@ class Crakerjack(BaseModel):
             if config in config_files[:-2]:
                 if self.pkg_path.stem == "crackerjack":
                     await config_path.write_text(await pkg_config_path.read_text())
-                # if poetry_pip_env:
-                #     await config_pkg_path.unlink()
                 config_text = await config_path.read_text()
                 await pkg_config_path.write_text(
                     config_text.replace("crackerjack", self.pkg_name)
@@ -99,7 +85,6 @@ class Crakerjack(BaseModel):
             success = True
 
     async def update_pkg_configs(self) -> None:
-        await self.clean_poetry_pipenv()
         await self.copy_configs()
         installed_pkgs = check_output(
             ["pdm", "list", "--freeze"],
@@ -143,8 +128,9 @@ class Crakerjack(BaseModel):
         if options.publish:
             run(["pdm", "publish"])
         if options.commit:
-            commit_msg = input("Commit message: ")
-            call(["git", "commit", "-m", f"'{commit_msg}'", "--no-verify", "--", "."])
+            commit_msg = ainput("Commit message: ")
+            call(["git", "commit", "-m", f"{commit_msg}", "--no-verify", "--", "."])
+            # call(["git", "commit", "-m", f"'{commit_msg}'"])
             call(["git", "push", "origin", "main"])
         await aprint("\nCrackerjack complete!\n")
 
