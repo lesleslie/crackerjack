@@ -128,7 +128,7 @@ class Crakerjack(BaseModel):
         if options.publish:
             run(["pdm", "publish"])
         if options.commit:
-            commit_msg = ainput("Commit message: ")
+            commit_msg = await ainput("Commit message: ")
             call(["git", "commit", "-m", f"{commit_msg}", "--no-verify", "--", "."])
             # call(["git", "commit", "-m", f"'{commit_msg}'"])
             call(["git", "push", "origin", "main"])
