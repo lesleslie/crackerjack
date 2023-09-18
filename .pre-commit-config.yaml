@@ -29,7 +29,7 @@ repos:
     rev: v2.6.3
     hooks:
       - id: creosote
-        args: [--paths, "crackerjack", --exclude-deps, "pdm-bump", "pyright", "autotyping"]
+        args: [--paths, "crackerjack", --exclude-deps, "pdm-bump", "pyright", "autotyping", "python-ulid"]
   - repo: https://github.com/ikamensh/flynt/
     rev: '1.0.1'
     hooks:
@@ -52,7 +52,6 @@ repos:
           - --show-successes
           - --include-generated
           - --guess-common-names
-          - --pyanalyze-report '.pyanalyze-report.json',
           - crackerjack
         types_or: [ python, pyi ]
         language: python
