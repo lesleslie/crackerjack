@@ -31,10 +31,11 @@ class Crakerjack(BaseModel):
         toml_file = "pyproject.toml"
         self.our_toml_path = self.our_path / toml_file
         self.pkg_toml_path = self.pkg_path / toml_file
+        if self.pkg_path.stem == "crackerjack":
+            await self.our_toml_path.write_text(await self.pkg_toml_path.read_text())
+            return
         our_toml_config: t.Any = await load.toml(self.our_toml_path)  # type: ignore
         pkg_toml_config: t.Any = await load.toml(self.pkg_toml_path)  # type: ignore
-        if self.poetry_pip_env:
-            pkg_toml_config["tool"].pop("poetry")
         pkg_deps = pkg_toml_config["tool"]["pdm"]["dev-dependencies"]
         pkg_toml_config["tool"] = our_toml_config["tool"]
         for settings in pkg_toml_config["tool"].values():
@@ -47,10 +48,7 @@ class Crakerjack(BaseModel):
                         value.append(self.pkg_name)
                     settings[setting] = value
         pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
-        if self.pkg_path.stem == "crackerjack":
-            await dump.toml(pkg_toml_config, self.our_toml_path)  # type: ignore
-        else:
-            await dump.toml(pkg_toml_config, self.pkg_toml_path)  # type: ignore
+        await dump.toml(pkg_toml_config, self.pkg_toml_path)  # type: ignore
 
     async def copy_configs(self) -> None:
         config_files = (
@@ -64,6 +62,7 @@ class Crakerjack(BaseModel):
             await pkg_config_path.touch(exist_ok=True)
             if self.pkg_path.stem == "crackerjack":
                 await config_path.write_text(await pkg_config_path.read_text())
+                return
             config_text = await config_path.read_text()
             await pkg_config_path.write_text(
                 config_text.replace("crackerjack", self.pkg_name)
