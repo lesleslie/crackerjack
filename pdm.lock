@@ -10,7 +10,7 @@ content_hash = "sha256:75fc307236c07a21cbd11406674e8f63a66a0e53efc5facc3fedbba55
 
 [[package]]
 name = "acb"
-version = "0.1.12"
+version = "0.1.14"
 requires_python = ">=3.11"
 summary = "Asynchronous Code Base"
 dependencies = [
@@ -20,21 +20,19 @@ dependencies = [
     "asyncio-atexit>=1.0.1",
     "blake3>=0.3.3",
     "dill>=0.3.7",
-    "google-api-core>=2.11.1",
     "google-crc32c>=1.5.0",
     "icecream>=2.1.3",
     "itsdangerous>=2.1.2",
-    "loguru>=0.7.0",
-    "msgspec[toml]>=0.18.1",
+    "loguru>=0.7.2",
+    "msgspec[toml]>=0.18.2",
     "nest-asyncio>=1.5.7",
     "pydantic-settings>=2.0.3",
-    "pydantic>=2.2.0",
+    "pydantic>=2.3.0",
     "python-ulid>=1.1.0",
-    "tomli-w>=1.0.0",
 ]
 files = [
-    {file = "acb-0.1.12-py3-none-any.whl", hash = "sha256:b51ea5d3dd6cacc9e30c84945b8ef5529c2e38691476ac69fdb7ec9130355b12"},
-    {file = "acb-0.1.12.tar.gz", hash = "sha256:76b78dab5e1fca2a96fb2eb8c7a84bae0c4fc0bd106e8b03e085bc4e14cbac5f"},
+    {file = "acb-0.1.14-py3-none-any.whl", hash = "sha256:b18ef7722aa4d16533ab35c55e9ac56ff6cecf4df713535a9cbf4a11cfd88831"},
+    {file = "acb-0.1.14.tar.gz", hash = "sha256:79dc04777865bb00e99235c4f5c8af04c3f6ccca4637b0c10cb0b08f647268d1"},
 ]
 
 [[package]]
@@ -209,16 +207,6 @@ files = [
 ]
 
 [[package]]
-name = "cachetools"
-version = "5.3.1"
-requires_python = ">=3.7"
-summary = "Extensible memoizing collections and decorators"
-files = [
-    {file = "cachetools-5.3.1-py3-none-any.whl", hash = "sha256:95ef631eeaea14ba2e36f06437f36463aac3a096799e876ee55e5cdccb102590"},
-    {file = "cachetools-5.3.1.tar.gz", hash = "sha256:dce83f2d9b4e1f732a8cd44af8e8fab2dbe46201467fc98b3ef8f269092bf62b"},
-]
-
-[[package]]
 name = "caio"
 version = "0.9.13"
 requires_python = ">=3.7, <4"
@@ -350,38 +338,6 @@ files = [
 ]
 
 [[package]]
-name = "google-api-core"
-version = "2.11.1"
-requires_python = ">=3.7"
-summary = "Google API client core library"
-dependencies = [
-    "google-auth<3.0.dev0,>=2.14.1",
-    "googleapis-common-protos<2.0.dev0,>=1.56.2",
-    "protobuf!=3.20.0,!=3.20.1,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<5.0.0.dev0,>=3.19.5",
-    "requests<3.0.0.dev0,>=2.18.0",
-]
-files = [
-    {file = "google-api-core-2.11.1.tar.gz", hash = "sha256:25d29e05a0058ed5f19c61c0a78b1b53adea4d9364b464d014fbda941f6d1c9a"},
-    {file = "google_api_core-2.11.1-py3-none-any.whl", hash = "sha256:d92a5a92dc36dd4f4b9ee4e55528a90e432b059f93aee6ad857f9de8cc7ae94a"},
-]
-
-[[package]]
-name = "google-auth"
-version = "2.23.0"
-requires_python = ">=3.7"
-summary = "Google Authentication Library"
-dependencies = [
-    "cachetools<6.0,>=2.0.0",
-    "pyasn1-modules>=0.2.1",
-    "rsa<5,>=3.1.4",
-    "urllib3<2.0",
-]
-files = [
-    {file = "google-auth-2.23.0.tar.gz", hash = "sha256:753a26312e6f1eaeec20bc6f2644a10926697da93446e1f8e24d6d32d45a922a"},
-    {file = "google_auth-2.23.0-py2.py3-none-any.whl", hash = "sha256:2cec41407bd1e207f5b802638e32bb837df968bb5c05f413d0fa526fac4cf7a7"},
-]
-
-[[package]]
 name = "google-crc32c"
 version = "1.5.0"
 requires_python = ">=3.7"
@@ -413,19 +369,6 @@ files = [
     {file = "google_crc32c-1.5.0-pp39-pypy39_pp73-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:272d3892a1e1a2dbc39cc5cde96834c236d5327e2122d3aaa19f6614531bb6eb"},
     {file = "google_crc32c-1.5.0-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:635f5d4dd18758a1fbd1049a8e8d2fee4ffed124462d837d1a02a0e009c3ab31"},
     {file = "google_crc32c-1.5.0-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:c672d99a345849301784604bfeaeba4db0c7aae50b95be04dd651fd2a7310b93"},
-]
-
-[[package]]
-name = "googleapis-common-protos"
-version = "1.60.0"
-requires_python = ">=3.7"
-summary = "Common protobufs used in Google APIs"
-dependencies = [
-    "protobuf!=3.20.0,!=3.20.1,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<5.0.0.dev0,>=3.19.5",
-]
-files = [
-    {file = "googleapis-common-protos-1.60.0.tar.gz", hash = "sha256:e73ebb404098db405ba95d1e1ae0aa91c3e15a71da031a2eeb6b2e23e7bc3708"},
-    {file = "googleapis_common_protos-1.60.0-py2.py3-none-any.whl", hash = "sha256:69f9bbcc6acde92cab2db95ce30a70bd2b81d20b12eff3f1aabaffcbe8a93918"},
 ]
 
 [[package]]
@@ -743,44 +686,6 @@ files = [
 ]
 
 [[package]]
-name = "protobuf"
-version = "4.24.3"
-requires_python = ">=3.7"
-summary = ""
-files = [
-    {file = "protobuf-4.24.3-cp310-abi3-win32.whl", hash = "sha256:20651f11b6adc70c0f29efbe8f4a94a74caf61b6200472a9aea6e19898f9fcf4"},
-    {file = "protobuf-4.24.3-cp310-abi3-win_amd64.whl", hash = "sha256:3d42e9e4796a811478c783ef63dc85b5a104b44aaaca85d4864d5b886e4b05e3"},
-    {file = "protobuf-4.24.3-cp37-abi3-macosx_10_9_universal2.whl", hash = "sha256:6e514e8af0045be2b56e56ae1bb14f43ce7ffa0f68b1c793670ccbe2c4fc7d2b"},
-    {file = "protobuf-4.24.3-cp37-abi3-manylinux2014_aarch64.whl", hash = "sha256:ba53c2f04798a326774f0e53b9c759eaef4f6a568ea7072ec6629851c8435959"},
-    {file = "protobuf-4.24.3-cp37-abi3-manylinux2014_x86_64.whl", hash = "sha256:f6ccbcf027761a2978c1406070c3788f6de4a4b2cc20800cc03d52df716ad675"},
-    {file = "protobuf-4.24.3-py3-none-any.whl", hash = "sha256:f6f8dc65625dadaad0c8545319c2e2f0424fede988368893ca3844261342c11a"},
-    {file = "protobuf-4.24.3.tar.gz", hash = "sha256:12e9ad2ec079b833176d2921be2cb24281fa591f0b119b208b788adc48c2561d"},
-]
-
-[[package]]
-name = "pyasn1"
-version = "0.5.0"
-requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
-summary = "Pure-Python implementation of ASN.1 types and DER/BER/CER codecs (X.208)"
-files = [
-    {file = "pyasn1-0.5.0-py2.py3-none-any.whl", hash = "sha256:87a2121042a1ac9358cabcaf1d07680ff97ee6404333bacca15f76aa8ad01a57"},
-    {file = "pyasn1-0.5.0.tar.gz", hash = "sha256:97b7290ca68e62a832558ec3976f15cbf911bf5d7c7039d8b861c2a0ece69fde"},
-]
-
-[[package]]
-name = "pyasn1-modules"
-version = "0.3.0"
-requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
-summary = "A collection of ASN.1-based protocols modules"
-dependencies = [
-    "pyasn1<0.6.0,>=0.4.6",
-]
-files = [
-    {file = "pyasn1_modules-0.3.0-py2.py3-none-any.whl", hash = "sha256:d3ccd6ed470d9ffbc716be08bd90efbd44d0734bc9303818f7336070984a162d"},
-    {file = "pyasn1_modules-0.3.0.tar.gz", hash = "sha256:5bd01446b736eb9d31512a30d46c1ac3395d676c6f3cafa4c03eb54b9925631c"},
-]
-
-[[package]]
 name = "pydantic"
 version = "2.3.0"
 requires_python = ">=3.7"
@@ -1033,19 +938,6 @@ dependencies = [
 files = [
     {file = "rich-13.5.2-py3-none-any.whl", hash = "sha256:146a90b3b6b47cac4a73c12866a499e9817426423f57c5a66949c086191a8808"},
     {file = "rich-13.5.2.tar.gz", hash = "sha256:fb9d6c0a0f643c99eed3875b5377a184132ba9be4d61516a55273d3554d75a39"},
-]
-
-[[package]]
-name = "rsa"
-version = "4.9"
-requires_python = ">=3.6,<4"
-summary = "Pure-Python RSA implementation"
-dependencies = [
-    "pyasn1>=0.1.3",
-]
-files = [
-    {file = "rsa-4.9-py3-none-any.whl", hash = "sha256:90260d9058e514786967344d0ef75fa8727eed8a7d2e43ce9f4bcf1b536174f7"},
-    {file = "rsa-4.9.tar.gz", hash = "sha256:e38464a49c6c85d7f1351b0126661487a7e0a14a50f1675ec50eb34d4f20ef21"},
 ]
 
 [[package]]
