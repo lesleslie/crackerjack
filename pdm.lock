@@ -10,7 +10,7 @@ content_hash = "sha256:75fc307236c07a21cbd11406674e8f63a66a0e53efc5facc3fedbba55
 
 [[package]]
 name = "acb"
-version = "0.1.14"
+version = "0.1.16"
 requires_python = ">=3.11"
 summary = "Asynchronous Code Base"
 dependencies = [
@@ -31,8 +31,8 @@ dependencies = [
     "python-ulid>=1.1.0",
 ]
 files = [
-    {file = "acb-0.1.14-py3-none-any.whl", hash = "sha256:b18ef7722aa4d16533ab35c55e9ac56ff6cecf4df713535a9cbf4a11cfd88831"},
-    {file = "acb-0.1.14.tar.gz", hash = "sha256:79dc04777865bb00e99235c4f5c8af04c3f6ccca4637b0c10cb0b08f647268d1"},
+    {file = "acb-0.1.16-py3-none-any.whl", hash = "sha256:4a31a8b9c7ed5fd848398b365a66e921d043ab4d5d29aef9981dbcd1d1731696"},
+    {file = "acb-0.1.16.tar.gz", hash = "sha256:70d0c7ed8894783f53b35137f4dabf81e42403a85fdd21be5cfd80835a05f9fa"},
 ]
 
 [[package]]
