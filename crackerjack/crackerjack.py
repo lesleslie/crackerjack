@@ -12,17 +12,15 @@ from aioconsole import aprint
 from aiopath import AsyncPath
 from inflection import underscore
 from pydantic import BaseModel
-from pydantic import ConfigDict
 
 
-class Crakerjack(BaseModel):
-    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
+class Crakerjack(BaseModel, arbitrary_types_allowed=True):
     our_path: AsyncPath = AsyncPath(__file__).parent
     pkg_path: AsyncPath = AsyncPath.cwd()
     pkg_dir: t.Optional[AsyncPath] = None
     pkg_name: str = "crackerjack"
-    our_toml: t.Optional[dict] = None
-    pkg_toml: t.Optional[dict] = None
+    our_toml: t.Optional[dict[str, t.Any]] = None
+    pkg_toml: t.Optional[dict[str, t.Any]] = None
     our_toml_path: t.Optional[AsyncPath] = None
     pkg_toml_path: t.Optional[AsyncPath] = None
     poetry_pip_env: bool = False
@@ -41,11 +39,11 @@ class Crakerjack(BaseModel):
         for settings in pkg_toml_config["tool"].values():
             for setting, value in settings.items():
                 if isinstance(value, str | list) and "crackerjack" in value:
-                    if isinstance(value, str):
-                        value = value.replace("crackerjack", self.pkg_name)
-                    else:
+                    if isinstance(value, list):
                         value.remove("crackerjack")
                         value.append(self.pkg_name)
+                    else:
+                        value = value.replace("crackerjack", self.pkg_name)
                     settings[setting] = value
         pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
         await dump.toml(pkg_toml_config, self.pkg_toml_path)  # type: ignore
@@ -71,7 +69,7 @@ class Crakerjack(BaseModel):
 
     @staticmethod
     async def run_interactive(hook: str) -> None:
-        success = False
+        success: bool = False
         while not success:
             fail = call(["pre-commit", "run", hook.lower(), "--all-files"])
             if fail > 0:
