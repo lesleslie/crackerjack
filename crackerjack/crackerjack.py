@@ -1,7 +1,6 @@
 import asyncio
 import sys
 import typing as t
-from shlex import quote as shlex_quote
 from subprocess import run
 
 from acb.actions import dump
@@ -136,7 +135,7 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
             commit_msg = await ainput("\nCommit message: ")
             run(
                 [
-                    shlex_quote(commands.git),
+                    commands.git,
                     "commit",
                     "-m",
                     f"{commit_msg}",
@@ -145,7 +144,7 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
                     ".",
                 ]
             )
-            run([shlex_quote(commands.git), "push", "origin", "main"], shell=True)
+            run([commands.git, "push", "origin", "main"])
         await aprint("\nCrackerjack complete!\n")
 
 
