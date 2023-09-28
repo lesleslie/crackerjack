@@ -72,7 +72,7 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
             await pkg_config_path.write_text(
                 config_text.replace("crackerjack", self.pkg_name)
             )
-            run([commands.git, "add", config, ""])
+            run([commands.git, "add", config])
 
     @staticmethod
     def run_interactive(hook: str) -> None:
