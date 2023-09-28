@@ -78,10 +78,7 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
     def run_interactive(hook: str) -> None:
         success: bool = False
         while not success:
-            fail = run(
-                [commands.pre_commit, "run", hook.lower(), "--all-files"],
-                capture_output=True,
-            )
+            fail = run([commands.pre_commit, "run", hook.lower(), "--all-files"])
             if fail.returncode > 0:
                 retry = input(f"\n\n{hook.title()} failed. Retry? (y/N): ")
                 print()
