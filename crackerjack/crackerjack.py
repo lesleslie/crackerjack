@@ -75,13 +75,13 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
             run([commands.git, "add", config])
 
     @staticmethod
-    def run_interactive(hook: str) -> None:
+    async def run_interactive(hook: str) -> None:
         success: bool = False
         while not success:
             fail = run([commands.pre_commit, "run", hook.lower(), "--all-files"])
             if fail.returncode > 0:
-                retry = input(f"\n\n{hook.title()} failed. Retry? (y/N): ")
-                print()
+                retry = await ainput(f"\n\n{hook.title()} failed. Retry? (y/N): ")
+                await aprint()
                 if retry.strip().lower() == "y":
                     continue
                 sys.exit()
@@ -122,7 +122,7 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
             await self.update_pkg_configs()
         if options.interactive:
             for hook in ("refurb", "pyright"):
-                self.run_interactive(hook)
+                await self.run_interactive(hook)
         check_all = run([commands.pre_commit, "run", "--all-files"])
         if check_all.returncode > 0:
             run([commands.pre_commit, "run", "--all-files"])
