@@ -41,7 +41,6 @@ target = [
     "crackerjack",
 ]
 skips = [
-    "B602",
     "B603",
     "B404",
 ]
@@ -62,7 +61,7 @@ pythonVersion = "3.11"
 
 [project]
 name = "Crackerjack"
-version = "0.6.2"
+version = "0.6.3"
 description = "Crackerjack code style"
 requires-python = ">=3.11"
 readme = "README.md"
