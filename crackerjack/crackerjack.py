@@ -1,8 +1,7 @@
 import asyncio
 import sys
 import typing as t
-from subprocess import call
-from subprocess import check_output
+from shlex import quote as shlex_quote
 from subprocess import run
 
 from acb.actions import dump
@@ -12,6 +11,15 @@ from aioconsole import aprint
 from aiopath import AsyncPath
 from inflection import underscore
 from pydantic import BaseModel
+
+
+class Commands(BaseModel):
+    pre_commit: str = "/usr/local/bin/pre-commit"
+    git: str = "/usr/bin/git"
+    pdm: str = "/usr/local/bin/pdm"
+
+
+commands = Commands()
 
 
 class Crakerjack(BaseModel, arbitrary_types_allowed=True):
@@ -60,19 +68,22 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
             await pkg_config_path.touch(exist_ok=True)
             if self.pkg_path.stem == "crackerjack":
                 await config_path.write_text(await pkg_config_path.read_text())
-                return
+                continue
             config_text = await config_path.read_text()
             await pkg_config_path.write_text(
                 config_text.replace("crackerjack", self.pkg_name)
             )
-            run(["git", "add", config])
+            run([commands.git, "add", config, ""])
 
     @staticmethod
     def run_interactive(hook: str) -> None:
         success: bool = False
         while not success:
-            fail = call(["pre-commit", "run", hook.lower(), "--all-files"])
-            if fail > 0:
+            fail = run(
+                [commands.pre_commit, "run", hook.lower(), "--all-files"],
+                capture_output=True,
+            )
+            if fail.returncode > 0:
                 retry = input(f"\n\n{hook.title()} failed. Retry? (y/N): ")
                 print()
                 if retry.strip().lower() == "y":
@@ -82,23 +93,21 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
 
     async def update_pkg_configs(self) -> None:
         await self.copy_configs()
-        installed_pkgs = check_output(
-            ["pdm", "list", "--freeze"],
-            universal_newlines=True,
-        ).splitlines()
+        installed_pkgs = run(
+            [commands.pdm, "list", "--freeze"], capture_output=True, text=True
+        ).stdout.splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
-            run(["pdm", "self", "add", "keyring"])
-            run(["pdm", "config", "python.use_venv", "false"])
-            run(["git", "init"])
-            run(["git", "branch", "-m", "main"])
-            run(["git", "add", "pyproject.toml"])
-            run(["pdm", "add", "-d", "pre_commit"])
-            run(["pdm", "add", "-d", "pytest"])
-            run(["pdm", "add", "-d", "autotyping"])
-            run(["pdm", "add", "-d", "pyright"])
-            run(["pre-commit", "install"])
-            run(["git", "add", "pdm.lock"])
-            run(["git", "config", "advice.addIgnoredFile", "false"])
+            run([commands.pdm, "self", "add", "keyring"])
+            run([commands.pdm, "config", "python.use_venv", "false"])
+            run([commands.git, "init"])
+            run([commands.git, "branch", "-m", "main"])
+            run([commands.git, "add", "pyproject.toml"])
+            run([commands.pdm, "add", "-d", "pre_commit"])
+            run([commands.pdm, "add", "-d", "pytest"])
+            run([commands.pdm, "add", "-d", "autotyping"])
+            run([commands.pre_commit, "install"])
+            run([commands.git, "add", "pdm.lock"])
+            run([commands.git, "config", "advice.addIgnoredFile", "false"])
         await self.update_pyproject_configs()
 
     async def process(self, options: t.Any) -> None:
@@ -109,24 +118,34 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         await self.pkg_dir.mkdir(exist_ok=True)
         await aprint("\nCrackerjacking...\n")
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
-            run(["pre-commit", "autoupdate"])
+            run([commands.pre_commit, "autoupdate"])
         await asyncio.create_subprocess_shell('eval "$(pdm --pep582)"')
         if options.publish:
-            check_output(["pdm", "bump", options.publish])
+            run([commands.pdm, "bump", options.publish])
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
         if options.interactive:
             for hook in ("refurb", "pyright"):
                 self.run_interactive(hook)
-        check_all = call(["pre-commit", "run", "--all-files"])
-        if check_all > 0:
-            call(["pre-commit", "run", "--all-files"])
+        check_all = run([commands.pre_commit, "run", "--all-files"])
+        if check_all.returncode > 0:
+            run([commands.pre_commit, "run", "--all-files"])
         if options.publish:
-            run(["pdm", "publish"])
+            run([commands.pdm, "publish"])
         if options.commit:
-            commit_msg = await ainput("Commit message: ")
-            call(["git", "commit", "-m", f"{commit_msg}", "--no-verify", "--", "."])
-            call(["git", "push", "origin", "main"])
+            commit_msg = await ainput("\nCommit message: ")
+            run(
+                [
+                    shlex_quote(commands.git),
+                    "commit",
+                    "-m",
+                    f"{commit_msg}",
+                    "--no-verify",
+                    "--",
+                    ".",
+                ]
+            )
+            run([shlex_quote(commands.git), "push", "origin", "main"], shell=True)
         await aprint("\nCrackerjack complete!\n")
 
 
