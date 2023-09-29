@@ -3,8 +3,8 @@ import sys
 import typing as t
 from subprocess import run
 
-from acb.actions import dump
-from acb.actions import load
+from acb.actions.encode import dump
+from acb.actions.encode import load
 from aioconsole import ainput
 from aioconsole import aprint
 from aiopath import AsyncPath
