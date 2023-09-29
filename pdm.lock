@@ -6,11 +6,11 @@ groups = ["default", "dev"]
 cross_platform = true
 static_urls = false
 lock_version = "4.3"
-content_hash = "sha256:75fc307236c07a21cbd11406674e8f63a66a0e53efc5facc3fedbba559f79ee3"
+content_hash = "sha256:32abc7b2056bcacbe356465e864e617eeeb315854ac450de4975e0e45cc12797"
 
 [[package]]
 name = "acb"
-version = "0.2.1"
+version = "0.2.3"
 requires_python = ">=3.11"
 summary = "Asynchronous Code Base"
 dependencies = [
@@ -22,18 +22,20 @@ dependencies = [
     "blake3>=0.3.3",
     "dill>=0.3.7",
     "google-crc32c>=1.5.0",
+    "icecream>=2.1.3",
     "itsdangerous>=2.1.2",
     "loguru>=0.7.2",
     "msgspec[toml]>=0.18.2",
     "nest-asyncio>=1.5.8",
+    "pluginbase>=1.0.1",
     "pydantic-settings>=2.0.3",
     "pydantic>=2.3.0",
     "python-ulid>=2.2.0",
     "sqlalchemy==2.0.11",
 ]
 files = [
-    {file = "acb-0.2.1-py3-none-any.whl", hash = "sha256:93d5b03fda6747ed5d66e6fe965b27322b1b976893e118aa05479e037f0acefa"},
-    {file = "acb-0.2.1.tar.gz", hash = "sha256:d66e6d7753c8619ef32703a4a5387af57098716346c486d37e093bd03500ef21"},
+    {file = "acb-0.2.3-py3-none-any.whl", hash = "sha256:cbee0064297142833434e7c770cb334c387e437cb6387ff72cb496d9c81d245b"},
+    {file = "acb-0.2.3.tar.gz", hash = "sha256:44341257e7b533f38b4d9263b3f9d0d1f6a2517daa36af8c257bebeeef77fdab"},
 ]
 
 [[package]]
@@ -416,12 +418,12 @@ files = [
 
 [[package]]
 name = "identify"
-version = "2.5.28"
+version = "2.5.29"
 requires_python = ">=3.8"
 summary = "File identification library for Python"
 files = [
-    {file = "identify-2.5.28-py2.py3-none-any.whl", hash = "sha256:87816de144bf46d161bd5b3e8f5596b16cade3b80be537087334b26bc5c177f3"},
-    {file = "identify-2.5.28.tar.gz", hash = "sha256:94bb59643083ebd60dc996d043497479ee554381fbc5307763915cda49b0e78f"},
+    {file = "identify-2.5.29-py2.py3-none-any.whl", hash = "sha256:24437fbf6f4d3fe6efd0eb9d67e24dd9106db99af5ceb27996a5f7895f24bf1b"},
+    {file = "identify-2.5.29.tar.gz", hash = "sha256:d43d52b86b15918c137e3a74fff5224f60385cd0e9c38e99d07c257f02f151a5"},
 ]
 
 [[package]]
@@ -697,6 +699,14 @@ files = [
 ]
 
 [[package]]
+name = "pluginbase"
+version = "1.0.1"
+summary = "PluginBase is a module for Python that enables the development of flexible plugin systems in Python."
+files = [
+    {file = "pluginbase-1.0.1.tar.gz", hash = "sha256:ff6c33a98fce232e9c73841d787a643de574937069f0d18147028d70d7dee287"},
+]
+
+[[package]]
 name = "pre-commit"
 version = "3.4.0"
 requires_python = ">=3.8"
@@ -715,7 +725,7 @@ files = [
 
 [[package]]
 name = "pydantic"
-version = "2.4.1"
+version = "2.4.2"
 requires_python = ">=3.7"
 summary = "Data validation using Python type hints"
 dependencies = [
@@ -724,8 +734,8 @@ dependencies = [
     "typing-extensions>=4.6.1",
 ]
 files = [
-    {file = "pydantic-2.4.1-py3-none-any.whl", hash = "sha256:2b2240c8d54bb8f84b88e061fac1bdfa1761c2859c367f9d3afe0ec2966deddc"},
-    {file = "pydantic-2.4.1.tar.gz", hash = "sha256:b172505886028e4356868d617d2d1a776d7af1625d1313450fd51bdd19d9d61f"},
+    {file = "pydantic-2.4.2-py3-none-any.whl", hash = "sha256:bc3ddf669d234f4220e6e1c4d96b061abe0998185a8d7855c0126782b7abc8c1"},
+    {file = "pydantic-2.4.2.tar.gz", hash = "sha256:94f336138093a5d7f426aac732dcfe7ab4eb4da243c88f891d65deb4a2556ee7"},
 ]
 
 [[package]]
