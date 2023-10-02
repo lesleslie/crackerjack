@@ -121,7 +121,7 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
         if options.interactive:
-            for hook in ("refurb", "pyright"):
+            for hook in ("refurb", "bandit", "pyright"):
                 await self.run_interactive(hook)
         check_all = run([commands.pre_commit, "run", "--all-files"])
         if check_all.returncode > 0:
