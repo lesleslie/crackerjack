@@ -6,7 +6,7 @@ groups = ["default", "dev"]
 cross_platform = true
 static_urls = false
 lock_version = "4.3"
-content_hash = "sha256:32abc7b2056bcacbe356465e864e617eeeb315854ac450de4975e0e45cc12797"
+content_hash = "sha256:bafe8607fa2d547543bb6c3bf05b0d4e15a4d4a64c8da01c93cf6d84ac50c84d"
 
 [[package]]
 name = "acb"
