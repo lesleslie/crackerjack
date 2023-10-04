@@ -10,13 +10,12 @@ content_hash = "sha256:32abc7b2056bcacbe356465e864e617eeeb315854ac450de4975e0e45
 
 [[package]]
 name = "acb"
-version = "0.2.3"
+version = "0.2.7"
 requires_python = ">=3.11"
 summary = "Asynchronous Code Base"
 dependencies = [
     "aiopath>=0.6.11",
     "arrow>=1.2.3",
-    "async-lru>=2.0.4",
     "asyncio-atexit>=1.0.1",
     "bevy>=2.0.1",
     "blake3>=0.3.3",
@@ -34,8 +33,8 @@ dependencies = [
     "sqlalchemy==2.0.11",
 ]
 files = [
-    {file = "acb-0.2.3-py3-none-any.whl", hash = "sha256:cbee0064297142833434e7c770cb334c387e437cb6387ff72cb496d9c81d245b"},
-    {file = "acb-0.2.3.tar.gz", hash = "sha256:44341257e7b533f38b4d9263b3f9d0d1f6a2517daa36af8c257bebeeef77fdab"},
+    {file = "acb-0.2.7-py3-none-any.whl", hash = "sha256:ffd7221c53bea403e70fc6573a5cb71d463581017c1ecf535403acac675efb50"},
+    {file = "acb-0.2.7.tar.gz", hash = "sha256:9fadef2d44037b5e316f18f05162f38787b0234cf3bc2a8918bac016c7d4918b"},
 ]
 
 [[package]]
@@ -122,16 +121,6 @@ dependencies = [
 files = [
     {file = "asttokens-2.4.0-py2.py3-none-any.whl", hash = "sha256:cf8fc9e61a86461aa9fb161a14a0841a03c405fa829ac6b202670b3495d2ce69"},
     {file = "asttokens-2.4.0.tar.gz", hash = "sha256:2e0171b991b2c959acc6c49318049236844a5da1d65ba2672c4880c1c894834e"},
-]
-
-[[package]]
-name = "async-lru"
-version = "2.0.4"
-requires_python = ">=3.8"
-summary = "Simple LRU cache for asyncio"
-files = [
-    {file = "async-lru-2.0.4.tar.gz", hash = "sha256:b8a59a5df60805ff63220b2a0c5b5393da5521b113cd5465a44eb037d81a5627"},
-    {file = "async_lru-2.0.4-py3-none-any.whl", hash = "sha256:ff02944ce3c288c5be660c42dbcca0742b32c3b279d6dceda655190240b99224"},
 ]
 
 [[package]]
