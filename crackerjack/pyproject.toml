@@ -39,6 +39,8 @@ exclude-deps = [
     "python-ulid",
     "pre-commit",
     "pytest",
+    "libsass",
+    "starlette-decorouter",
 ]
 
 [tool.refurb]
@@ -71,7 +73,7 @@ pythonVersion = "3.11"
 
 [project]
 name = "Crackerjack"
-version = "0.6.18"
+version = "0.6.19"
 description = "Crackerjack code style"
 requires-python = ">=3.11"
 readme = "README.md"
