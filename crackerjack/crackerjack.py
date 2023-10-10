@@ -116,8 +116,6 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
             run([commands.pre_commit, "autoupdate"])
         await asyncio.create_subprocess_shell('eval "$(pdm --pep582)"')
-        if options.publish:
-            run([commands.pdm, "bump", options.publish])
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
         if options.interactive:
@@ -126,6 +124,8 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         check_all = run([commands.pre_commit, "run", "--all-files"])
         if check_all.returncode > 0:
             run([commands.pre_commit, "run", "--all-files"])
+        if options.publish:
+            run([commands.pdm, "bump", options.publish])
         if options.publish:
             run([commands.pdm, "publish"])
         if options.commit:
