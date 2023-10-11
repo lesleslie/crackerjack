@@ -42,8 +42,7 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         our_toml_config: t.Any = await load.toml(self.our_toml_path)  # type: ignore
         pkg_toml_config: t.Any = await load.toml(self.pkg_toml_path)  # type: ignore
         pkg_deps = pkg_toml_config["tool"]["pdm"]["dev-dependencies"]
-        pkg_toml_config["tool"] = our_toml_config["tool"]
-        for settings in pkg_toml_config["tool"].values():
+        for tool, settings in our_toml_config["tool"].items():
             for setting, value in settings.items():
                 if isinstance(value, str | list) and "crackerjack" in value:
                     if isinstance(value, list):
@@ -52,6 +51,16 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
                     else:
                         value = value.replace("crackerjack", self.pkg_name)
                     settings[setting] = value
+                if setting in (
+                    "exclude-deps",
+                    "exclude",
+                    "excluded",
+                    "skips",
+                ) and isinstance(value, list):
+                    settings[setting] = set(
+                        pkg_toml_config["tool"][tool][setting] + value
+                    )
+            pkg_toml_config["tool"][tool] = settings
         pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
         await dump.toml(pkg_toml_config, self.pkg_toml_path)  # type: ignore
 

@@ -36,11 +36,8 @@ deps-file = "pyproject.toml"
 exclude-deps = [
     "pdm-bump",
     "autotyping",
-    "python-ulid",
     "pre-commit",
     "pytest",
-    "libsass",
-    "starlette-decorouter",
 ]
 
 [tool.refurb]
@@ -51,8 +48,6 @@ target = [
     "crackerjack",
 ]
 skips = [
-    "B113",
-    "B403",
     "B404",
     "B603",
 ]
@@ -73,7 +68,7 @@ pythonVersion = "3.11"
 
 [project]
 name = "Crackerjack"
-version = "0.6.19"
+version = "0.6.20"
 description = "Crackerjack code style"
 requires-python = ">=3.11"
 readme = "README.md"
