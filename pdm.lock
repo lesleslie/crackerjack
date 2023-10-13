@@ -6,15 +6,26 @@ groups = ["default", "dev"]
 cross_platform = true
 static_urls = false
 lock_version = "4.3"
-content_hash = "sha256:18ed1b565ff9966e48a0fac5aae350d03ad93d7c36057d52ea6017b6917db10c"
+content_hash = "sha256:9b59d46af6084650d4ac22f48f69bec8ce8fb70c5806aa5b03fe849d13c19378"
+
+[[package]]
+name = "about-time"
+version = "4.2.1"
+requires_python = ">=3.7, <4"
+summary = "Easily measure timing and throughput of code blocks, with beautiful human friendly representations."
+files = [
+    {file = "about-time-4.2.1.tar.gz", hash = "sha256:6a538862d33ce67d997429d14998310e1dbfda6cb7d9bbfbf799c4709847fece"},
+    {file = "about_time-4.2.1-py3-none-any.whl", hash = "sha256:8bbf4c75fe13cbd3d72f49a03b02c5c7dca32169b6d49117c257e7eb3eaee341"},
+]
 
 [[package]]
 name = "acb"
-version = "0.2.15"
-requires_python = ">=3.11"
+version = "0.3.1"
+requires_python = ">=3.12"
 summary = "Asynchronous Code Base"
 dependencies = [
-    "aiopath>=0.6.11",
+    "aiopath>=0.7.5",
+    "alive-progress>=3.1.4",
     "arrow>=1.3.0",
     "bevy>=2.0.1",
     "blake3>=0.3.3",
@@ -22,18 +33,20 @@ dependencies = [
     "dill>=0.3.7",
     "google-crc32c>=1.5.0",
     "icecream>=2.1.3",
+    "inflection>=0.5.1",
     "itsdangerous>=2.1.2",
     "loguru>=0.7.2",
-    "msgspec[toml]>=0.18.3",
+    "msgspec[toml]>=0.18.4",
     "nest-asyncio>=1.5.8",
+    "pluginbase>=1.0.1",
     "pydantic-settings>=2.0.3",
     "pydantic>=2.4.0",
-    "sqlalchemy>=2.0.11",
+    "pyfiglet>=1.0.2",
     "ulid-py>=1.1.0",
 ]
 files = [
-    {file = "acb-0.2.15-py3-none-any.whl", hash = "sha256:14758bb6e43882bff6f87ac99854c47abf160c301fe93ab533dec57c910fab86"},
-    {file = "acb-0.2.15.tar.gz", hash = "sha256:020ad7ecc88ef2c201d4b5f5aec35cc05f5f0511c73f48643a690799b8ae04a8"},
+    {file = "acb-0.3.1-py3-none-any.whl", hash = "sha256:40390f5a85ab12c173f337415e3825d3ce3e129229e0acbcf5455c6c6fb71522"},
+    {file = "acb-0.3.1.tar.gz", hash = "sha256:827b55e9ec75b5a5924b026cfd37644e43d07d865df34360a38f155fee72d168"},
 ]
 
 [[package]]
@@ -71,6 +84,20 @@ dependencies = [
 files = [
     {file = "aiopath-0.7.5-py2.py3-none-any.whl", hash = "sha256:9675150599bffec4ff8fd0b04a08075076a34838c7abb64831fae5563ea07775"},
     {file = "aiopath-0.7.5.tar.gz", hash = "sha256:11afb8c2d56616c28e565e4d416627b67d3423f989f62fcd6c958bfe6dd23e6a"},
+]
+
+[[package]]
+name = "alive-progress"
+version = "3.1.4"
+requires_python = ">=3.7, <4"
+summary = "A new kind of Progress Bar, with real-time throughput, ETA, and very cool animations!"
+dependencies = [
+    "about-time==4.2.1",
+    "grapheme==0.6.0",
+]
+files = [
+    {file = "alive-progress-3.1.4.tar.gz", hash = "sha256:74a95d8d0d42bc99d3a3725dbd06ebb852245f1b64e301a7c375b92b22663f7b"},
+    {file = "alive_progress-3.1.4-py3-none-any.whl", hash = "sha256:c80ad87ce9c1054b01135a87fae69ecebbfc2107497ae87cbe6aec7e534903db"},
 ]
 
 [[package]]
@@ -367,22 +394,11 @@ files = [
 ]
 
 [[package]]
-name = "greenlet"
-version = "3.0.0"
-requires_python = ">=3.7"
-summary = "Lightweight in-process concurrent programming"
+name = "grapheme"
+version = "0.6.0"
+summary = "Unicode grapheme helpers"
 files = [
-    {file = "greenlet-3.0.0-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:1482fba7fbed96ea7842b5a7fc11d61727e8be75a077e603e8ab49d24e234383"},
-    {file = "greenlet-3.0.0-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:be557119bf467d37a8099d91fbf11b2de5eb1fd5fc5b91598407574848dc910f"},
-    {file = "greenlet-3.0.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:73b2f1922a39d5d59cc0e597987300df3396b148a9bd10b76a058a2f2772fc04"},
-    {file = "greenlet-3.0.0-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:d1e22c22f7826096ad503e9bb681b05b8c1f5a8138469b255eb91f26a76634f2"},
-    {file = "greenlet-3.0.0-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:1d363666acc21d2c204dd8705c0e0457d7b2ee7a76cb16ffc099d6799744ac99"},
-    {file = "greenlet-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:334ef6ed8337bd0b58bb0ae4f7f2dcc84c9f116e474bb4ec250a8bb9bd797a66"},
-    {file = "greenlet-3.0.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6672fdde0fd1a60b44fb1751a7779c6db487e42b0cc65e7caa6aa686874e79fb"},
-    {file = "greenlet-3.0.0-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:952256c2bc5b4ee8df8dfc54fc4de330970bf5d79253c863fb5e6761f00dda35"},
-    {file = "greenlet-3.0.0-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:269d06fa0f9624455ce08ae0179430eea61085e3cf6457f05982b37fd2cefe17"},
-    {file = "greenlet-3.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:9adbd8ecf097e34ada8efde9b6fec4dd2a903b1e98037adf72d12993a1c80b51"},
-    {file = "greenlet-3.0.0.tar.gz", hash = "sha256:19834e3f91f485442adc1ee440171ec5d9a4840a1f7bd5ed97833544719ce10b"},
+    {file = "grapheme-0.6.0.tar.gz", hash = "sha256:44c2b9f21bbe77cfb05835fec230bd435954275267fea1858013b102f8603cca"},
 ]
 
 [[package]]
@@ -684,6 +700,14 @@ files = [
 ]
 
 [[package]]
+name = "pluginbase"
+version = "1.0.1"
+summary = "PluginBase is a module for Python that enables the development of flexible plugin systems in Python."
+files = [
+    {file = "pluginbase-1.0.1.tar.gz", hash = "sha256:ff6c33a98fce232e9c73841d787a643de574937069f0d18147028d70d7dee287"},
+]
+
+[[package]]
 name = "pre-commit"
 version = "3.4.0"
 requires_python = ">=3.8"
@@ -783,6 +807,16 @@ dependencies = [
 files = [
     {file = "pydantic_settings-2.0.3-py3-none-any.whl", hash = "sha256:ddd907b066622bd67603b75e2ff791875540dc485b7307c4fffc015719da8625"},
     {file = "pydantic_settings-2.0.3.tar.gz", hash = "sha256:962dc3672495aad6ae96a4390fac7e593591e144625e5112d359f8f67fb75945"},
+]
+
+[[package]]
+name = "pyfiglet"
+version = "1.0.2"
+requires_python = ">=3.9"
+summary = "Pure-python FIGlet implementation"
+files = [
+    {file = "pyfiglet-1.0.2-py3-none-any.whl", hash = "sha256:889b351d79c99e50a3f619c8f8e6ffdb27fd8c939fc43ecbd7559bd57d5f93ea"},
+    {file = "pyfiglet-1.0.2.tar.gz", hash = "sha256:758788018ab8faaddc0984e1ea05ff330d3c64be663c513cc1f105f6a3066dab"},
 ]
 
 [[package]]
@@ -962,28 +996,6 @@ summary = "Sniff out which async library your code is running under"
 files = [
     {file = "sniffio-1.3.0-py3-none-any.whl", hash = "sha256:eecefdce1e5bbfb7ad2eeaabf7c1eeb404d7757c379bd1f7e5cce9d8bf425384"},
     {file = "sniffio-1.3.0.tar.gz", hash = "sha256:e60305c5e5d314f5389259b7f22aaa33d8f7dee49763119234af3755c55b9101"},
-]
-
-[[package]]
-name = "sqlalchemy"
-version = "2.0.22"
-requires_python = ">=3.7"
-summary = "Database Abstraction Library"
-dependencies = [
-    "greenlet!=0.4.17; platform_machine == \"aarch64\" or (platform_machine == \"ppc64le\" or (platform_machine == \"x86_64\" or (platform_machine == \"amd64\" or (platform_machine == \"AMD64\" or (platform_machine == \"win32\" or platform_machine == \"WIN32\")))))",
-    "typing-extensions>=4.2.0",
-]
-files = [
-    {file = "SQLAlchemy-2.0.22-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:2c9bac865ee06d27a1533471405ad240a6f5d83195eca481f9fc4a71d8b87df8"},
-    {file = "SQLAlchemy-2.0.22-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:625b72d77ac8ac23da3b1622e2da88c4aedaee14df47c8432bf8f6495e655de2"},
-    {file = "SQLAlchemy-2.0.22-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b39a6e21110204a8c08d40ff56a73ba542ec60bab701c36ce721e7990df49fb9"},
-    {file = "SQLAlchemy-2.0.22-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:53a766cb0b468223cafdf63e2d37f14a4757476157927b09300c8c5832d88560"},
-    {file = "SQLAlchemy-2.0.22-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:0e1ce8ebd2e040357dde01a3fb7d30d9b5736b3e54a94002641dfd0aa12ae6ce"},
-    {file = "SQLAlchemy-2.0.22-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:505f503763a767556fa4deae5194b2be056b64ecca72ac65224381a0acab7ebe"},
-    {file = "SQLAlchemy-2.0.22-cp312-cp312-win32.whl", hash = "sha256:154a32f3c7b00de3d090bc60ec8006a78149e221f1182e3edcf0376016be9396"},
-    {file = "SQLAlchemy-2.0.22-cp312-cp312-win_amd64.whl", hash = "sha256:129415f89744b05741c6f0b04a84525f37fbabe5dc3774f7edf100e7458c48cd"},
-    {file = "SQLAlchemy-2.0.22-py3-none-any.whl", hash = "sha256:3076740335e4aaadd7deb3fe6dcb96b3015f1613bd190a4e1634e1b99b02ec86"},
-    {file = "SQLAlchemy-2.0.22.tar.gz", hash = "sha256:5434cc601aa17570d79e5377f5fd45ff92f9379e2abed0be5e8c2fba8d353d2b"},
 ]
 
 [[package]]
