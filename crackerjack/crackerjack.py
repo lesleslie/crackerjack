@@ -7,6 +7,7 @@ from subprocess import run
 
 from acb.actions.encode import dump
 from acb.actions.encode import load
+
 from aioconsole import ainput
 from aioconsole import aprint
 from aiopath import AsyncPath
@@ -69,7 +70,9 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         our_python_version = re.search(python_version_pattern, requires_python).group(1)
         classifiers = []
         for classifier in pkg_toml_config["project"]["classifiers"]:
-            classifier = re.sub(python_version_pattern, our_python_version, classifier)
+            classifier = re.sub(
+                python_version_pattern, f" {our_python_version}", classifier
+            )
             classifiers.append(classifier)
         pkg_toml_config["project"]["classifiers"] = classifiers
         pkg_toml_config["project"]["requires-python"] = requires_python

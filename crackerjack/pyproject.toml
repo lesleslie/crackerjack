@@ -5,8 +5,7 @@ config = [
 ]
 
 [tool.pdm.dev-dependencies]
-dev = [
-]
+dev = []
 
 [tool.ruff]
 line-length = 88
@@ -69,7 +68,7 @@ pythonVersion = "3.12"
 
 [project]
 name = "Crackerjack"
-version = "0.7.0"
+version = "0.7.1"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -93,7 +92,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "License :: OSI Approved :: BSD License",
     "Typing :: Typed",
-
 ]
 dependencies = [
     "click>=8.1.7",
@@ -105,6 +103,7 @@ dependencies = [
     "pytest>=7.4.2",
     "pydantic>=2.4.0",
     "aiopath>=0.7.5",
+    "acb>=0.2.15",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
