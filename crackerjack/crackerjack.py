@@ -1,6 +1,8 @@
 import asyncio
+import re
 import sys
 import typing as t
+from pathlib import Path
 from subprocess import run
 
 from acb.actions.encode import dump
@@ -23,7 +25,7 @@ commands = Commands()
 
 class Crakerjack(BaseModel, arbitrary_types_allowed=True):
     our_path: AsyncPath = AsyncPath(__file__).parent
-    pkg_path: AsyncPath = AsyncPath.cwd()
+    pkg_path: AsyncPath = AsyncPath(Path.cwd())
     pkg_dir: t.Optional[AsyncPath] = None
     pkg_name: str = "crackerjack"
     our_toml: t.Optional[dict[str, t.Any]] = None
@@ -62,6 +64,14 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
                     )
             pkg_toml_config["tool"][tool] = settings
         pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
+        python_version_pattern = r'\s*W*(\d\.\d*)"$'
+        requires_python = our_toml_config["project"]["requires-python"]
+        our_python_version = re.match(python_version_pattern, requires_python).group(1)
+        next_minor_version = str(float(our_python_version) + 0.1)
+        for classifier in pkg_toml_config["project"]["classifiers"]:
+            re.sub(python_version_pattern, next_minor_version, classifier)
+        await aprint(pkg_toml_config["project"]["classifiers"])
+        pkg_toml_config["project"]["requires-python"] = f">={next_minor_version}"
         await dump.toml(pkg_toml_config, self.pkg_toml_path)  # type: ignore
 
     async def copy_configs(self) -> None:
@@ -127,12 +137,16 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         await asyncio.create_subprocess_shell('eval "$(pdm --pep582)"')
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
+            run([commands.pdm, "install"])
         if options.interactive:
             for hook in ("refurb", "bandit", "pyright"):
                 await self.run_interactive(hook)
         check_all = run([commands.pre_commit, "run", "--all-files"])
         if check_all.returncode > 0:
-            run([commands.pre_commit, "run", "--all-files"])
+            check_all = run([commands.pre_commit, "run", "--all-files"])
+            if check_all.returncode > 0:
+                await aprint("\n\nPre-commit failed. Please fix errors.\n")
+                raise SystemExit()
         if options.publish:
             run([commands.pdm, "bump", options.publish])
         if options.publish:
@@ -153,5 +167,9 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
             run([commands.git, "push", "origin", "main"])
         await aprint("\nCrackerjack complete!\n")
 
+    async def run(self, options: t.Any) -> None:
+        process = asyncio.create_task(self.process(options))
+        await process
 
-crackerjack_it = Crakerjack().process
+
+crackerjack_it = Crakerjack().run

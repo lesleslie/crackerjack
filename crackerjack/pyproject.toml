@@ -5,11 +5,13 @@ config = [
 ]
 
 [tool.pdm.dev-dependencies]
-dev = []
+dev = [
+    "-e file:///${PROJECT_ROOT}/../acb#egg=acb",
+]
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py312"
 fix = true
 show-fixes = true
 show-source = true
@@ -25,7 +27,7 @@ convention = "google"
 
 [tool.black]
 target-version = [
-    "py311",
+    "py312",
 ]
 
 [tool.creosote]
@@ -64,13 +66,13 @@ reportUnknownMemberType = false
 reportUnknownVariableType = false
 reportUnknownArgumentType = false
 reportPrivateUsage = "warning"
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 
 [project]
 name = "Crackerjack"
-version = "0.6.20"
+version = "0.6.21"
 description = "Crackerjack code style"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 readme = "README.md"
 keywords = [
     "black",
@@ -83,19 +85,18 @@ classifiers = [
     "Environment :: Console",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
     "click>=8.1.7",
-    "aiopath>=0.6.11",
     "aioconsole>=0.6.2",
     "inflection>=0.5.1",
     "pdm-bump>=0.7.3",
     "autotyping>=23.3.0",
     "pre-commit>=3.4.0",
     "pytest>=7.4.2",
-    "pydantic==2.4.0",
-    "acb>=0.2.11",
+    "pydantic>=2.4.0",
+    "aiopath>=0.7.5",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
