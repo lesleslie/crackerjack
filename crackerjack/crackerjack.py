@@ -64,14 +64,15 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
                     )
             pkg_toml_config["tool"][tool] = settings
         pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
-        python_version_pattern = r'\s*W*(\d\.\d*)"$'
+        python_version_pattern = r"\s*W*(\d\.\d*)"
         requires_python = our_toml_config["project"]["requires-python"]
-        our_python_version = re.match(python_version_pattern, requires_python).group(1)
-        next_minor_version = str(float(our_python_version) + 0.1)
+        our_python_version = re.search(python_version_pattern, requires_python).group(1)
+        classifiers = []
         for classifier in pkg_toml_config["project"]["classifiers"]:
-            re.sub(python_version_pattern, next_minor_version, classifier)
-        await aprint(pkg_toml_config["project"]["classifiers"])
-        pkg_toml_config["project"]["requires-python"] = f">={next_minor_version}"
+            classifier = re.sub(python_version_pattern, our_python_version, classifier)
+            classifiers.append(classifier)
+        pkg_toml_config["project"]["classifiers"] = classifiers
+        pkg_toml_config["project"]["requires-python"] = requires_python
         await dump.toml(pkg_toml_config, self.pkg_toml_path)  # type: ignore
 
     async def copy_configs(self) -> None:

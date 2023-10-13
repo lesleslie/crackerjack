@@ -6,7 +6,6 @@ config = [
 
 [tool.pdm.dev-dependencies]
 dev = [
-    "-e file:///${PROJECT_ROOT}/../acb#egg=acb",
 ]
 
 [tool.ruff]
@@ -70,7 +69,7 @@ pythonVersion = "3.12"
 
 [project]
 name = "Crackerjack"
-version = "0.6.21"
+version = "0.7.0"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -86,6 +85,15 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.12",
+    "Development Status :: 4 - Beta",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Utilities",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: BSD License",
+    "Typing :: Typed",
+
 ]
 dependencies = [
     "click>=8.1.7",
