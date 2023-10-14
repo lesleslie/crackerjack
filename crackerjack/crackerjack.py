@@ -81,7 +81,6 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
             ".gitignore",
             ".pre-commit-config.yaml",
             ".libcst.codemod.yaml",
-            ".crackerjack.yaml",
         )
         for config in config_files:
             config_path = self.our_path / config
