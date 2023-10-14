@@ -6,7 +6,7 @@ groups = ["default", "dev"]
 cross_platform = true
 static_urls = false
 lock_version = "4.3"
-content_hash = "sha256:55362e3f70d365c7d3d91698e8f74b9a176e754b1abfde30287487c04b491f91"
+content_hash = "sha256:1043bfa04e7a0fd700208980422c96945841b537c1b963cb93a1cbef1939854f"
 
 [[package]]
 name = "about-time"
@@ -20,7 +20,7 @@ files = [
 
 [[package]]
 name = "acb"
-version = "0.3.3"
+version = "0.3.4"
 requires_python = ">=3.12"
 summary = "Asynchronous Code Base"
 dependencies = [
@@ -45,8 +45,8 @@ dependencies = [
     "ulid-py>=1.1.0",
 ]
 files = [
-    {file = "acb-0.3.3-py3-none-any.whl", hash = "sha256:6fec24f0af9b24048daf9f4839eb078fdb18957c0e005f1158e62764b8ec4e5b"},
-    {file = "acb-0.3.3.tar.gz", hash = "sha256:f4e26782918611bd3efa1df4b7de21c10e722020bbc0f56270fd33700eb0c054"},
+    {file = "acb-0.3.4-py3-none-any.whl", hash = "sha256:23d07c654c7aa405afa2d8f5cb8f617e503e41536ea505311775c11357b01b94"},
+    {file = "acb-0.3.4.tar.gz", hash = "sha256:9ae34a81e89fb770abecc3b29930641e9c0f6cdc836ef0098b3702f82b8fc29e"},
 ]
 
 [[package]]
