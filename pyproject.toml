@@ -68,7 +68,7 @@ pythonVersion = "3.12"
 
 [project]
 name = "Crackerjack"
-version = "0.7.3"
+version = "0.7.4"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -103,7 +103,7 @@ dependencies = [
     "pytest>=7.4.2",
     "pydantic>=2.4.0",
     "aiopath>=0.7.5",
-    "acb>=0.3.1",
+    "acb>=0.3.3",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
