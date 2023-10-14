@@ -121,16 +121,16 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
                 f"pdm --pep582 >> {self.config.zshenv_path}"
             )
             await asyncio.create_subprocess_shell(f"source {self.config.zshenv_path}")
-            run([str(str(self.config.pdm_path)), "self", "add", "keyring"])
-            run([str(str(self.config.pdm_path)), "config", "python.use_venv", "false"])
-            run([str(str(self.config.git_path)), "init"])
-            run([str(str(self.config.git_path)), "branch", "-m", "main"])
-            run([str(str(self.config.git_path)), "add", "pyproject.toml"])
-            run([str(str(self.config.pdm_path)), "add", "-d", "pre_commit"])
-            run([str(str(self.config.pdm_path)), "add", "-d", "pytest"])
-            run([str(str(self.config.pdm_path)), "add", "-d", "autotyping"])
+            run([str(self.config.pdm_path), "self", "add", "keyring"])
+            run([str(self.config.pdm_path), "config", "python.use_venv", "false"])
+            run([str(self.config.git_path), "init"])
+            run([str(self.config.git_path), "branch", "-m", "main"])
+            run([str(self.config.git_path), "add", "pyproject.toml"])
+            run([str(self.config.pdm_path), "add", "-d", "pre_commit"])
+            run([str(self.config.pdm_path), "add", "-d", "pytest"])
+            run([str(self.config.pdm_path), "add", "-d", "autotyping"])
             run([str(self.config.pre_commit_path), "install"])
-            run([str(str(self.config.git_path)), "add", "pdm.lock"])
+            run([str(self.config.git_path), "add", "pdm.lock"])
             run(
                 [
                     str(str(self.config.git_path)),
