@@ -15,11 +15,11 @@ from pydantic import BaseModel
 
 
 class Config(BaseModel):
-    python_version: str = ""
-    pre_commit_path: Path
-    git_path: Path
-    pdm_path: Path
-    zshenv_path: Path
+    python_version: t.Optional[str] = None
+    pre_commit_path: t.Optional[Path] = None
+    git_path: t.Optional[Path] = None
+    pdm_path: t.Optional[Path] = None
+    zshenv_path: t.Optional[Path] = None
 
 
 class Crakerjack(BaseModel, arbitrary_types_allowed=True):
@@ -144,7 +144,12 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
 
     async def process(self, options: t.Any) -> None:
         await self.settings_path.touch(exist_ok=True)
-        self.config = Config(**await load.yaml(self.settings_path))
+        try:
+            self.config = Config(**await load.yaml(self.settings_path))
+        except TypeError:
+            self.config = Config()
+            await dump.yaml(self.config.model_dump(), self.settings_path)
+            raise SystemExit("\nPlease configure '.crackerjack.yaml' and try again\n")
         imp_dir = self.pkg_path / "__pypackages__" / self.config.python_version / "lib"
         sys.path.append(str(imp_dir))
         self.pkg_name = underscore(self.pkg_path.stem.lower())

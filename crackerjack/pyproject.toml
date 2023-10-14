@@ -57,7 +57,9 @@ verboseOutput = true
 include = [
     "crackerjack",
 ]
-extraPaths = ["__pypackages__/3.12/lib/"]
+extraPaths = [
+    "__pypackages__/3.12/lib/",
+]
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
 reportOptionalMemberAccess = false
@@ -69,10 +71,9 @@ reportPrivateUsage = "warning"
 pythonVersion = "3.12"
 pythonPlatform = "Darwin"
 
-
 [project]
 name = "Crackerjack"
-version = "0.7.4"
+version = "0.7.5"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
