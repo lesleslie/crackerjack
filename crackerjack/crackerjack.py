@@ -90,9 +90,10 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
                 await config_path.write_text(await pkg_config_path.read_text())
                 continue
             config_text = await config_path.read_text()
-            await pkg_config_path.write_text(
-                config_text.replace("crackerjack", self.pkg_name)
-            )
+            if config == ".gitignore":
+                await pkg_config_path.write_text(
+                    config_text.replace("crackerjack", self.pkg_name)
+                )
             run([str(str(self.config.git_path)), "add", config])
 
     async def run_interactive(self, hook: str) -> None:
@@ -117,20 +118,14 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
             text=True,
         ).stdout.splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
-            await asyncio.create_subprocess_shell(
-                f"pdm --pep582 >> {self.config.zshenv_path}"
-            )
-            await asyncio.create_subprocess_shell(f"source {self.config.zshenv_path}")
+            print('Installing "pre-commit"...')
             run([str(self.config.pdm_path), "self", "add", "keyring"])
             run([str(self.config.pdm_path), "config", "python.use_venv", "false"])
             run([str(self.config.git_path), "init"])
             run([str(self.config.git_path), "branch", "-m", "main"])
             run([str(self.config.git_path), "add", "pyproject.toml"])
-            run([str(self.config.pdm_path), "add", "-d", "pre_commit"])
-            run([str(self.config.pdm_path), "add", "-d", "pytest"])
-            run([str(self.config.pdm_path), "add", "-d", "autotyping"])
-            run([str(self.config.pre_commit_path), "install"])
             run([str(self.config.git_path), "add", "pdm.lock"])
+            run([str(self.config.pre_commit_path), "install"])
             run(
                 [
                     str(str(self.config.git_path)),
@@ -155,11 +150,11 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         self.pkg_dir = self.pkg_path / self.pkg_name
         await self.pkg_dir.mkdir(exist_ok=True)
         await aprint("\nCrackerjacking...\n")
-        if self.pkg_path.stem == "crackerjack" and options.update_precommit:
-            run([str(self.config.pre_commit_path), "autoupdate"])
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
             run([str(str(self.config.pdm_path)), "install"])
+        if self.pkg_path.stem == "crackerjack" and options.update_precommit:
+            run([str(self.config.pre_commit_path), "autoupdate"])
         if options.interactive:
             for hook in ("refurb", "bandit", "pyright"):
                 await self.run_interactive(hook)
