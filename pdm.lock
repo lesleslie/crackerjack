@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform"]
 lock_version = "4.4"
-content_hash = "sha256:905707d78a5bafc35d996f05d665d35bb0c7a3edaf997dee86addab5aa323254"
+content_hash = "sha256:c0a7d25b8dfa00a57dfbf28eb6243b63f81bce324c981029c01e71e707163b41"
 
 [[package]]
 name = "about-time"
