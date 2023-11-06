@@ -70,6 +70,14 @@ repos:
     rev: v1.1.334
     hooks:
       - id: pyright
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.1.4
+    hooks:
+      - id: ruff
+  - repo: https://github.com/psf/black
+    rev: '23.10.1'
+    hooks:
+      - id: black
   #  - repo: https://github.com/pdoc3/pdoc
   #    rev: master
   #    hooks:
@@ -80,11 +88,3 @@ repos:
   #        require_serial: true
   #        types: [ python ]
   #        always_run: true
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.1.4
-    hooks:
-      - id: ruff
-  - repo: https://github.com/psf/black
-    rev: '23.10.1'
-    hooks:
-      - id: black

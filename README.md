@@ -1,6 +1,6 @@
 # Crackerjack Python
 
-[![Python: 3.11](https://img.shields.io/badge/python-3.11%2B-blue)](https://docs.python.org/3/)
+[![Python: 3.12](https://img.shields.io/badge/python-3.12%2B-blue)](https://docs.python.org/3/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 [![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)](https://pdm.fming.dev)
@@ -58,15 +58,17 @@ This package:
   to comply with evolving crackerjack standards
 
 - runs the following pre-commit hooks (in order):
-  * various core pre-commit hooks
-  * [black](https://github.com/ambv/black)
-  * ruff
-  * creosote
-  * bandit
-  * flynt
-  * autotyping
-  * refurb
-  * pyright
+  * [pdm-lock-check](https://github.com/pdm-project/pdm)
+  * various core [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks)
+  * [black](https://github.com/psf/black)
+  * [ruff](https://github.com/charliermarsh/ruff-pre-commit)
+  * [creosote](https://github.com/fredrikaverpil/creosote)
+  * [flynt](https://github.com/ikamensh/flynt/)
+  * [codespell](https://github.com/codespell-project/codespell)
+  * [autotyping](https://github.com/JelleZijlstra/autotyping)
+  * [refurb](https://github.com/dosisod/refurb)
+  * [bandit](https://github.com/PyCQA/bandit)
+  * [pyright](https://github.com/RobertCraigie/pyright-python)
   * ruff (again for sanity checking)
   * black (again for sanity checking)
 
@@ -97,11 +99,9 @@ This package:
 
 - functions that deal with path operations should get passed AsyncPaths or Paths - not strings
 
-- if a class can be a dataclasses.dataclass, pydantic.BaseModel, or msgspec.Struct it should be
-
 - force single line imports (will support isort Vertical Hanging Indent when ruff does)
 
-- use PDM and PEP-582 for dependency management and package building/publishing
+- use PDM and PEP-582(proposed) for dependency management and package building/publishing
 
 - use pdoc and mkdocs for producing documentation
 
