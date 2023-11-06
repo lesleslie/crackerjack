@@ -7,7 +7,7 @@ repos:
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
-        name: trailing-whitspace
+        name: trailing-whitespace
       - id: end-of-file-fixer
         name: end-of-file-fixer
       - id: check-yaml
@@ -38,7 +38,6 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
-        args: [--ignore-words-list, "crate,uptodate"]
   - repo: local
     hooks:
       - id: autotyping
