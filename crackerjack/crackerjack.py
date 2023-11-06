@@ -22,7 +22,7 @@ class Config(BaseModel):
     zshenv_path: t.Optional[Path] = None
 
 
-class Crakerjack(BaseModel, arbitrary_types_allowed=True):
+class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     our_path: AsyncPath = AsyncPath(__file__).parent
     pkg_path: AsyncPath = AsyncPath(Path.cwd())
     settings_path: AsyncPath = pkg_path / ".crackerjack.yaml"
@@ -189,4 +189,4 @@ class Crakerjack(BaseModel, arbitrary_types_allowed=True):
         await process
 
 
-crackerjack_it = Crakerjack().run
+crackerjack_it = Crackerjack().run
