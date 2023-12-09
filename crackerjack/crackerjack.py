@@ -175,7 +175,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     str(str(self.config.git_path)),
                     "commit",
                     "-m",
-                    f"{commit_msg}",
+                    str(commit_msg),
                     "--no-verify",
                     "--",
                     ".",

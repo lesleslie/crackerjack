@@ -79,7 +79,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.7.14"
+version = "0.7.15"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -109,13 +109,13 @@ dependencies = [
     "aioconsole>=0.6.2",
     "inflection>=0.5.1",
     "autotyping>=23.3.0",
-    "pre-commit>=3.4.0",
-    "pytest>=7.4.2",
-    "pydantic>=2.4.0",
-    "aiopath>=0.7.5",
-    "acb>=0.3.4",
+    "pre-commit>=3.5.0",
+    "pytest>=7.4.3",
+    "pydantic>=2.5.2",
+    "aiopath>=0.7.7",
+    "acb>=0.3.5",
     "pdm-bump>=0.7.3",
-    "pdm>=2.10.0",
+    "pdm>=2.10.4",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
