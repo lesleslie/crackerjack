@@ -19,7 +19,7 @@ files = [
 
 [[package]]
 name = "acb"
-version = "0.4.0"
+version = "0.4.1"
 requires_python = ">=3.12"
 summary = "Asynchronous Component Base"
 dependencies = [
@@ -27,7 +27,7 @@ dependencies = [
     "alive-progress>=3.1.5",
     "arrow>=1.3.0",
     "bevy>=2.0.2",
-    "blake3>=0.3.3",
+    "blake3>=0.3.4",
     "brotli>=1.1.0",
     "dill>=0.3.7",
     "google-crc32c>=1.5.0",
@@ -35,17 +35,17 @@ dependencies = [
     "inflection>=0.5.1",
     "itsdangerous>=2.1.2",
     "loguru>=0.7.2",
-    "msgspec[toml]>=0.18.4",
+    "msgspec[toml]>=0.18.5",
     "nest-asyncio>=1.5.8",
     "pydantic-settings>=2.1.0",
-    "pydantic>=2.5.2",
+    "pydantic>=2.5.3",
     "pyfiglet>=1.0.2",
     "pyyaml>=6.0.1",
     "ulid-py>=1.1.0",
 ]
 files = [
-    {file = "acb-0.4.0-py3-none-any.whl", hash = "sha256:72175330005aed05bbc328a84913fce73d01ddcd76292234358b0cb4c5cfa437"},
-    {file = "acb-0.4.0.tar.gz", hash = "sha256:2fa1fb6962d6414f546145538aa64d7663d96572328104bbbf19456aa0eba3f4"},
+    {file = "acb-0.4.1-py3-none-any.whl", hash = "sha256:ff9847f1c59203f07e633094c6351929df8380c3cecfaf2723ddf6d8c77c794a"},
+    {file = "acb-0.4.1.tar.gz", hash = "sha256:b02394127986dfad79f2c13d5c8d51b5c0fc0c7364313ae2e1c135d2b458dafc"},
 ]
 
 [[package]]
@@ -174,10 +174,15 @@ files = [
 
 [[package]]
 name = "blake3"
-version = "0.3.3"
+version = "0.3.4"
 summary = "Python bindings for the Rust blake3 crate"
 files = [
-    {file = "blake3-0.3.3.tar.gz", hash = "sha256:0a78908b6299fd21dd46eb00fa4592b259ee419d586d545a3b86e1f2e4d0ee6d"},
+    {file = "blake3-0.3.4-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:22ae74485e0148be2a751e0689e74c345d209a12a8bc6332067f887cc46148c8"},
+    {file = "blake3-0.3.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:a3b3c3d596bc35bd6a56ea8554d3bc9ba3bdbc1edfa0a889a7cffd3925eaf18a"},
+    {file = "blake3-0.3.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:24868e2cb41feeb37286981afcc214242adfeba6a40ba773daf45168e80f76e0"},
+    {file = "blake3-0.3.4-cp312-none-win32.whl", hash = "sha256:4ee1b49badfcddabe9f0c557105c0efa003043efea5573873f764d9726526c26"},
+    {file = "blake3-0.3.4-cp312-none-win_amd64.whl", hash = "sha256:772899b8cc1af8703956d9c4c175318fca64edede7f0a7379db3b515925e0f34"},
+    {file = "blake3-0.3.4.tar.gz", hash = "sha256:4b7ef354144a2a19d7dbbfebce11735f68154e5190f9cc53825237bdb1bb78af"},
 ]
 
 [[package]]
@@ -568,39 +573,39 @@ files = [
 
 [[package]]
 name = "msgspec"
-version = "0.18.4"
+version = "0.18.5"
 requires_python = ">=3.8"
 summary = "A fast serialization and validation library, with builtin support for JSON, MessagePack, YAML, and TOML."
 files = [
-    {file = "msgspec-0.18.4-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:8476848f4937da8faec53700891694df2e412453cb7445991f0664cdd1e2dd16"},
-    {file = "msgspec-0.18.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:f668102958841c5bbd3ba7cf569a65d17aa3bdcf22124f394dfcfcf53cc5a9b9"},
-    {file = "msgspec-0.18.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cc2405dba5af6478dedd3512bb92197b6f9d1bc0095655afbe9b54d7a426f19f"},
-    {file = "msgspec-0.18.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d99f3c13569a5add0980b0d8c6e0bd94a656f6363b26107435b3091df979d228"},
-    {file = "msgspec-0.18.4-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:8a198409f672f93534c9c36bdc9eea9fb536827bd63ea846882365516a961356"},
-    {file = "msgspec-0.18.4-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:e21bc5aae6b80dfe4eb75dc1bb29af65483f967d5522e9e3812115a0ba285cac"},
-    {file = "msgspec-0.18.4-cp312-cp312-win_amd64.whl", hash = "sha256:44d551aee1ec8aa2d7b64762557c266bcbf7d5109f2246955718d05becc509d6"},
-    {file = "msgspec-0.18.4.tar.gz", hash = "sha256:cb62030bd6b1a00b01a2fcb09735016011696304e6b1d3321e58022548268d3e"},
+    {file = "msgspec-0.18.5-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:b3d206af4280172948d014d20b2cea7939784a99ea9a7ac943ce71100dbe8f98"},
+    {file = "msgspec-0.18.5-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:261cc6e3a687e6f31b80056ab12f6adff3255f9b68b86d92b0b497f8b289c84c"},
+    {file = "msgspec-0.18.5-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b6af133ba491a09ef8dcbc2d9904bcec220247e2067bb75d5d6daa12e0739d6c"},
+    {file = "msgspec-0.18.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d318593e0ddc11b600552a470ec27baeb0b86a8e37903ac5ce7472ba0d6f7bf8"},
+    {file = "msgspec-0.18.5-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:9a7b682cca3ba251a19cc769d38615ddd9551e086858decd950c156c2e79ecc1"},
+    {file = "msgspec-0.18.5-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:b491b2549d22e11d7cfe34a231f9bd006cb6b71adefa070a070075d2f601e75c"},
+    {file = "msgspec-0.18.5-cp312-cp312-win_amd64.whl", hash = "sha256:c79e7115f0143688c5d866359e7b6b76dd1581a81c9aeac7805a9d6320e9f2ca"},
+    {file = "msgspec-0.18.5.tar.gz", hash = "sha256:8e545651531f2d01b983d0ac0c7f3b6d99674267ff261b5f344f5016160b5608"},
 ]
 
 [[package]]
 name = "msgspec"
-version = "0.18.4"
+version = "0.18.5"
 extras = ["toml"]
 requires_python = ">=3.8"
 summary = "A fast serialization and validation library, with builtin support for JSON, MessagePack, YAML, and TOML."
 dependencies = [
-    "msgspec==0.18.4",
+    "msgspec==0.18.5",
     "tomli-w",
 ]
 files = [
-    {file = "msgspec-0.18.4-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:8476848f4937da8faec53700891694df2e412453cb7445991f0664cdd1e2dd16"},
-    {file = "msgspec-0.18.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:f668102958841c5bbd3ba7cf569a65d17aa3bdcf22124f394dfcfcf53cc5a9b9"},
-    {file = "msgspec-0.18.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cc2405dba5af6478dedd3512bb92197b6f9d1bc0095655afbe9b54d7a426f19f"},
-    {file = "msgspec-0.18.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d99f3c13569a5add0980b0d8c6e0bd94a656f6363b26107435b3091df979d228"},
-    {file = "msgspec-0.18.4-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:8a198409f672f93534c9c36bdc9eea9fb536827bd63ea846882365516a961356"},
-    {file = "msgspec-0.18.4-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:e21bc5aae6b80dfe4eb75dc1bb29af65483f967d5522e9e3812115a0ba285cac"},
-    {file = "msgspec-0.18.4-cp312-cp312-win_amd64.whl", hash = "sha256:44d551aee1ec8aa2d7b64762557c266bcbf7d5109f2246955718d05becc509d6"},
-    {file = "msgspec-0.18.4.tar.gz", hash = "sha256:cb62030bd6b1a00b01a2fcb09735016011696304e6b1d3321e58022548268d3e"},
+    {file = "msgspec-0.18.5-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:b3d206af4280172948d014d20b2cea7939784a99ea9a7ac943ce71100dbe8f98"},
+    {file = "msgspec-0.18.5-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:261cc6e3a687e6f31b80056ab12f6adff3255f9b68b86d92b0b497f8b289c84c"},
+    {file = "msgspec-0.18.5-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b6af133ba491a09ef8dcbc2d9904bcec220247e2067bb75d5d6daa12e0739d6c"},
+    {file = "msgspec-0.18.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d318593e0ddc11b600552a470ec27baeb0b86a8e37903ac5ce7472ba0d6f7bf8"},
+    {file = "msgspec-0.18.5-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:9a7b682cca3ba251a19cc769d38615ddd9551e086858decd950c156c2e79ecc1"},
+    {file = "msgspec-0.18.5-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:b491b2549d22e11d7cfe34a231f9bd006cb6b71adefa070a070075d2f601e75c"},
+    {file = "msgspec-0.18.5-cp312-cp312-win_amd64.whl", hash = "sha256:c79e7115f0143688c5d866359e7b6b76dd1581a81c9aeac7805a9d6320e9f2ca"},
+    {file = "msgspec-0.18.5.tar.gz", hash = "sha256:8e545651531f2d01b983d0ac0c7f3b6d99674267ff261b5f344f5016160b5608"},
 ]
 
 [[package]]
@@ -648,7 +653,7 @@ files = [
 
 [[package]]
 name = "pdm"
-version = "2.11.1"
+version = "2.11.2"
 requires_python = ">=3.8"
 summary = "A modern Python package and dependency manager supporting the latest PEP standards"
 dependencies = [
@@ -672,8 +677,8 @@ dependencies = [
     "virtualenv>=20",
 ]
 files = [
-    {file = "pdm-2.11.1-py3-none-any.whl", hash = "sha256:6e18eab6f92ca7a31c68ea078d09d0a64b5f2aebf4f0e60ae81b1c5ca84a4189"},
-    {file = "pdm-2.11.1.tar.gz", hash = "sha256:b10bc4e5394856f1639ddc9bc754d9c26323ec5b828a135c6ed35f935b054b83"},
+    {file = "pdm-2.11.2-py3-none-any.whl", hash = "sha256:54d70b985f545ef6bab633ea78a2dfe1f967b94c02296097c0d8482aa4e7f819"},
+    {file = "pdm-2.11.2.tar.gz", hash = "sha256:5b31255c48d4aca596c73fb872a82848cbe8ff92f008712a9a264455247063ee"},
 ]
 
 [[package]]
@@ -859,7 +864,7 @@ files = [
 
 [[package]]
 name = "pytest"
-version = "7.4.3"
+version = "7.4.4"
 requires_python = ">=3.7"
 summary = "pytest: simple powerful testing with Python"
 dependencies = [
@@ -869,8 +874,8 @@ dependencies = [
     "pluggy<2.0,>=0.12",
 ]
 files = [
-    {file = "pytest-7.4.3-py3-none-any.whl", hash = "sha256:0d009c083ea859a71b76adf7c1d502e4bc170b80a8ef002da5806527b9591fac"},
-    {file = "pytest-7.4.3.tar.gz", hash = "sha256:d989d136982de4e3b29dabcc838ad581c64e8ed52c11fbe86ddebd9da0818cd5"},
+    {file = "pytest-7.4.4-py3-none-any.whl", hash = "sha256:b090cdf5ed60bf4c45261be03239c2c1c22df034fbffe691abe93cd80cea01d8"},
+    {file = "pytest-7.4.4.tar.gz", hash = "sha256:2cf0005922c6ace4a3e2ec8b4080eb0d9753fdc93107415332f50ce9e7994280"},
 ]
 
 [[package]]
