@@ -19,7 +19,7 @@ files = [
 
 [[package]]
 name = "acb"
-version = "0.4.1"
+version = "0.4.3"
 requires_python = ">=3.12"
 summary = "Asynchronous Component Base"
 dependencies = [
@@ -44,8 +44,8 @@ dependencies = [
     "ulid-py>=1.1.0",
 ]
 files = [
-    {file = "acb-0.4.1-py3-none-any.whl", hash = "sha256:ff9847f1c59203f07e633094c6351929df8380c3cecfaf2723ddf6d8c77c794a"},
-    {file = "acb-0.4.1.tar.gz", hash = "sha256:b02394127986dfad79f2c13d5c8d51b5c0fc0c7364313ae2e1c135d2b458dafc"},
+    {file = "acb-0.4.3-py3-none-any.whl", hash = "sha256:222942c1ff9b748a0cd0f235ffda47c83b434caeb7c736b87f90214d96d1afd0"},
+    {file = "acb-0.4.3.tar.gz", hash = "sha256:8d4a59d17961c9d65b5bc185945bc32f8b81105d860694da574398439aa51f3a"},
 ]
 
 [[package]]
