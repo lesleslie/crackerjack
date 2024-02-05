@@ -17,15 +17,15 @@ line-length = 88
 target-version = "py312"
 fix = true
 show-fixes = true
-show-source = true
+output-format = "full"
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 force-single-line = true
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 10
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.black]
@@ -79,7 +79,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.7.21"
+version = "0.7.22"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -115,7 +115,7 @@ dependencies = [
     "aiopath>=0.7.7",
     "acb>=0.4.0",
     "pdm-bump>=0.7.3",
-    "pdm>=2.11.1",
+    "pdm>=2.12.3",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
