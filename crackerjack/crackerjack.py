@@ -164,8 +164,10 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             if check_all.returncode > 0:
                 await aprint("\n\nPre-commit failed. Please fix errors.\n")
                 raise SystemExit()
-        if options.publish:
-            run([str(str(self.config.pdm_path)), "bump", options.publish])
+        for option in (options.publish, options.bump):
+            if option:
+                run([str(str(self.config.pdm_path)), "bump", option])
+                break
         if options.publish:
             run([str(str(self.config.pdm_path)), "publish"])
         if options.commit:

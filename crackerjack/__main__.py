@@ -14,6 +14,7 @@ class Options(BaseModel):
     doc: bool = False
     do_not_update_configs: bool = False
     publish: t.Literal["micro", "minor", "major"] | bool = False
+    bump: t.Literal["micro", "minor", "major"] | bool = False
     verbose: bool = False
     update_precommit: bool = False
 
@@ -29,7 +30,8 @@ options = Options()
 @option("-x", is_flag=True, help="do not update configs")
 @option("-u", is_flag=True, help="update pre-commit")
 @option("-v", is_flag=True, help="verbose")
-@option("-p", help="publish: -p [micro, minor, major]")
+@option("-p", help="bump version and publish: -p [micro, minor, major]")
+@option("-b", help="bump version: -b [micro, minor, major]")
 # @option("-f", help="format: -f [module]")
 def crackerjack(
     c: bool = False,
@@ -39,6 +41,7 @@ def crackerjack(
     v: bool = False,
     x: bool = False,
     p: str | bool = False,
+    b: str | bool = False,
 ) -> None:
     if c:
         options.commit = c
@@ -52,6 +55,8 @@ def crackerjack(
         options.do_not_update_configs = x
     if p in ("micro", "minor", "major"):
         options.publish = p
+    if b in ("micro", "minor", "major"):
+        options.bump = b
     if v:
         print("-v not currently implemented")
         options.verbose = v
