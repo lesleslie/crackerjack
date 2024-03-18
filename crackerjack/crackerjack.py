@@ -94,7 +94,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 await pkg_config_path.write_text(
                     config_text.replace("crackerjack", self.pkg_name)
                 )
-            run([str(str(self.config.git_path)), "add", config])
+            run([str(self.config.git_path), "add", config])
 
     async def run_interactive(self, hook: str) -> None:
         success: bool = False
@@ -113,7 +113,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     async def update_pkg_configs(self) -> None:
         await self.copy_configs()
         installed_pkgs = run(
-            [str(str(self.config.pdm_path)), "list", "--freeze"],
+            [str(self.config.pdm_path), "list", "--freeze"],
             capture_output=True,
             text=True,
         ).stdout.splitlines()
@@ -128,7 +128,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             run([str(self.config.pre_commit_path), "install"])
             run(
                 [
-                    str(str(self.config.git_path)),
+                    str(self.config.git_path),
                     "config",
                     "advice.addIgnoredFile",
                     "false",
@@ -152,7 +152,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         await aprint("\nCrackerjacking...\n")
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
-            run([str(str(self.config.pdm_path)), "install"])
+            run([str(self.config.pdm_path), "install"])
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
             run([str(self.config.pre_commit_path), "autoupdate"])
         if options.interactive:
@@ -166,15 +166,15 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 raise SystemExit()
         for option in (options.publish, options.bump):
             if option:
-                run([str(str(self.config.pdm_path)), "bump", option])
+                run([str(self.config.pdm_path), "bump", option])
                 break
         if options.publish:
-            run([str(str(self.config.pdm_path)), "publish"])
+            run([str(self.config.pdm_path), "publish"])
         if options.commit:
             commit_msg = await ainput("\nCommit message: ")
             run(
                 [
-                    str(str(self.config.git_path)),
+                    str(self.config.git_path),
                     "commit",
                     "-m",
                     str(commit_msg),
@@ -183,7 +183,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     ".",
                 ]
             )
-            run([str(str(self.config.git_path)), "push", "origin", "main"])
+            run([str(self.config.git_path), "push", "origin", "main"])
         await aprint("\nCrackerjack complete!\n")
 
     async def run(self, options: t.Any) -> None:
