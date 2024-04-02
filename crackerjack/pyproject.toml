@@ -19,6 +19,9 @@ fix = true
 show-fixes = true
 output-format = "full"
 
+[tool.ruff.lint]
+ignore = ["F821"]
+
 [tool.ruff.lint.isort]
 force-single-line = true
 
@@ -79,7 +82,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.7.27"
+version = "0.7.28"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"

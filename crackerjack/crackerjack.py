@@ -58,6 +58,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     "exclude",
                     "excluded",
                     "skips",
+                    "ignore",
                 ) and isinstance(value, list):
                     settings[setting] = set(
                         pkg_toml_config["tool"][tool][setting] + value
