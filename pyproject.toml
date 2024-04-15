@@ -84,7 +84,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.7.30"
+version = "0.7.31"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
