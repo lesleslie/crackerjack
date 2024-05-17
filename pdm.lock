@@ -50,12 +50,12 @@ files = [
 
 [[package]]
 name = "aioconsole"
-version = "0.7.0"
+version = "0.7.1"
 requires_python = ">=3.8"
 summary = "Asynchronous console and interfaces for asyncio"
 files = [
-    {file = "aioconsole-0.7.0-py3-none-any.whl", hash = "sha256:ee799435f77e8c3a2a7207c465feae2343a2aa537c38e8f56b629c8a321a02d0"},
-    {file = "aioconsole-0.7.0.tar.gz", hash = "sha256:c702d24406378d37d9873f91e03ce71520bac503d5ab03f81d8b563ff010bd54"},
+    {file = "aioconsole-0.7.1-py3-none-any.whl", hash = "sha256:1867a7cc86897a87398e6e6fba302738548f1cf76cbc6c76e06338e091113bdc"},
+    {file = "aioconsole-0.7.1.tar.gz", hash = "sha256:a3e52428d32623c96746ec3862d97483c61c12a2f2dfba618886b709415d4533"},
 ]
 
 [[package]]
@@ -755,7 +755,7 @@ files = [
 
 [[package]]
 name = "pdm"
-version = "2.15.1"
+version = "2.15.2"
 requires_python = ">=3.8"
 summary = "A modern Python package and dependency manager supporting the latest PEP standards"
 dependencies = [
@@ -781,8 +781,8 @@ dependencies = [
     "virtualenv>=20",
 ]
 files = [
-    {file = "pdm-2.15.1-py3-none-any.whl", hash = "sha256:4a6cb2061796ac03760b2d3a546c3b9029ba6fa37e494fc0c9503b26e3fa93a5"},
-    {file = "pdm-2.15.1.tar.gz", hash = "sha256:1c9cd049c1016633a23ef92ec1fc782da8ae0743142ef33faf7d48872f874b39"},
+    {file = "pdm-2.15.2-py3-none-any.whl", hash = "sha256:04cf106fbf2cf4564eda70b40ffb33acf4637e1cee55d6cec8f8c21fe1f70b65"},
+    {file = "pdm-2.15.2.tar.gz", hash = "sha256:c08e87078c29c00e7ad9681dc6a23419dc5617dcbe6cc205024ef4b4e7e28475"},
 ]
 
 [[package]]
@@ -839,7 +839,7 @@ files = [
 
 [[package]]
 name = "pre-commit"
-version = "3.7.0"
+version = "3.7.1"
 requires_python = ">=3.9"
 summary = "A framework for managing and maintaining multi-language pre-commit hooks."
 dependencies = [
@@ -850,8 +850,8 @@ dependencies = [
     "virtualenv>=20.10.0",
 ]
 files = [
-    {file = "pre_commit-3.7.0-py2.py3-none-any.whl", hash = "sha256:5eae9e10c2b5ac51577c3452ec0a490455c45a0533f7960f993a0d01e59decab"},
-    {file = "pre_commit-3.7.0.tar.gz", hash = "sha256:e209d61b8acdcf742404408531f0c37d49d2c734fd7cff2d6076083d191cb060"},
+    {file = "pre_commit-3.7.1-py2.py3-none-any.whl", hash = "sha256:fae36fd1d7ad7d6a5a1c0b0d5adb2ed1a3bda5a21bf6c3e5372073d7a11cd4c5"},
+    {file = "pre_commit-3.7.1.tar.gz", hash = "sha256:8ca3ad567bc78a4972a3f1a477e94a79d4597e8140a6e0b651c5e33899c3654a"},
 ]
 
 [[package]]
