@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["cross_platform"]
 lock_version = "4.4.1"
-content_hash = "sha256:fd017d77ddec3a7a570754545d08bcf58779672bfa1b8e77c05b4f35dd11e38b"
+content_hash = "sha256:4bac4939731cee6a31fa46eb77d9c0e04482b845358728895ee33ea197f82537"
 
 [[package]]
 name = "about-time"
@@ -19,7 +19,7 @@ files = [
 
 [[package]]
 name = "acb"
-version = "0.5.13"
+version = "0.6.0"
 requires_python = ">=3.12"
 summary = "Asynchronous Component Base"
 dependencies = [
@@ -44,8 +44,8 @@ dependencies = [
     "pyyaml>=6.0.1",
 ]
 files = [
-    {file = "acb-0.5.13-py3-none-any.whl", hash = "sha256:74c8ef40ed6192e646db9636e7ec57ec95bde0b508fb375ad80176437dc7cce1"},
-    {file = "acb-0.5.13.tar.gz", hash = "sha256:ae01b0e9f5737f28c77d1fb4986152d421de6e9ace36b54ae47ad89fa3ff9ce1"},
+    {file = "acb-0.6.0-py3-none-any.whl", hash = "sha256:93272c2cf4b61a67720b94cb2a8ba04c43b4e1752f9276fe74caab8a2405bb70"},
+    {file = "acb-0.6.0.tar.gz", hash = "sha256:fc3018684e4662a4b68e4b3ff8a5625db6885785d6cff49cf026bdeef2a426a2"},
 ]
 
 [[package]]
@@ -994,7 +994,7 @@ files = [
 
 [[package]]
 name = "pytest"
-version = "8.2.0"
+version = "8.2.1"
 requires_python = ">=3.8"
 summary = "pytest: simple powerful testing with Python"
 dependencies = [
@@ -1004,8 +1004,8 @@ dependencies = [
     "pluggy<2.0,>=1.5",
 ]
 files = [
-    {file = "pytest-8.2.0-py3-none-any.whl", hash = "sha256:1733f0620f6cda4095bbf0d9ff8022486e91892245bb9e7d5542c018f612f233"},
-    {file = "pytest-8.2.0.tar.gz", hash = "sha256:d507d4482197eac0ba2bae2e9babf0672eb333017bcedaa5fb1a3d42c1174b3f"},
+    {file = "pytest-8.2.1-py3-none-any.whl", hash = "sha256:faccc5d332b8c3719f40283d0d44aa5cf101cec36f88cde9ed8f2bc0538612b1"},
+    {file = "pytest-8.2.1.tar.gz", hash = "sha256:5046e5b46d8e4cac199c373041f26be56fdb81eb4e67dc11d4e10811fc3408fd"},
 ]
 
 [[package]]
