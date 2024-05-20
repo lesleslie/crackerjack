@@ -19,7 +19,7 @@ files = [
 
 [[package]]
 name = "acb"
-version = "0.6.0"
+version = "0.6.1"
 requires_python = ">=3.12"
 summary = "Asynchronous Component Base"
 dependencies = [
@@ -34,18 +34,18 @@ dependencies = [
     "google-crc32c>=1.5.0",
     "icecream>=2.1.3",
     "inflection>=0.5.1",
-    "itsdangerous>=2.1.2",
+    "itsdangerous>=2.2.0",
     "loguru>=0.7.2",
     "msgspec[toml]>=0.18.6",
     "nest-asyncio>=1.6.0",
-    "pydantic-settings>=2.2.0",
-    "pydantic[email]>=2.6.1",
+    "pydantic-settings>=2.2.1",
+    "pydantic[email]>=2.7.1",
     "pyfiglet>=1.0.2",
     "pyyaml>=6.0.1",
 ]
 files = [
-    {file = "acb-0.6.0-py3-none-any.whl", hash = "sha256:93272c2cf4b61a67720b94cb2a8ba04c43b4e1752f9276fe74caab8a2405bb70"},
-    {file = "acb-0.6.0.tar.gz", hash = "sha256:fc3018684e4662a4b68e4b3ff8a5625db6885785d6cff49cf026bdeef2a426a2"},
+    {file = "acb-0.6.1-py3-none-any.whl", hash = "sha256:8dcab0b57a931e0b5f9a2f56590de006344af582cc705cffd62f571bdf2d539e"},
+    {file = "acb-0.6.1.tar.gz", hash = "sha256:fedd058b8f44254b3dddfd97d86333d04b8a9b354484e9087474f29ba05fbf75"},
 ]
 
 [[package]]
@@ -563,12 +563,12 @@ files = [
 
 [[package]]
 name = "itsdangerous"
-version = "2.1.2"
-requires_python = ">=3.7"
+version = "2.2.0"
+requires_python = ">=3.8"
 summary = "Safely pass data to untrusted environments and back."
 files = [
-    {file = "itsdangerous-2.1.2-py3-none-any.whl", hash = "sha256:2c2349112351b88699d8d4b6b075022c0808887cb7ad10069318a8b0bc88db44"},
-    {file = "itsdangerous-2.1.2.tar.gz", hash = "sha256:5dbbc68b317e5e42f327f9021763545dc3fc3bfe22e6deb96aaf1fc38874156a"},
+    {file = "itsdangerous-2.2.0-py3-none-any.whl", hash = "sha256:c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef"},
+    {file = "itsdangerous-2.2.0.tar.gz", hash = "sha256:e0050c0b7da1eea53ffaf149c0cfbb5c6e2e2b69c4bef22c81fa6eb73e5f6173"},
 ]
 
 [[package]]
