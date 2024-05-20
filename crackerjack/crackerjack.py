@@ -78,11 +78,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         await dump.toml(pkg_toml_config, self.pkg_toml_path)  # type: ignore
 
     async def copy_configs(self) -> None:
-        config_files = (
-            ".gitignore",
-            ".pre-commit-config.yaml",
-            ".libcst.codemod.yaml",
-        )
+        config_files = (".gitignore", ".pre-commit-config.yaml", ".libcst.codemod.yaml")
         for config in config_files:
             config_path = self.our_path / config
             pkg_config_path = self.pkg_path / config
@@ -90,11 +86,6 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             if self.pkg_path.stem == "crackerjack":
                 await config_path.write_text(await pkg_config_path.read_text())
                 continue
-            config_text = await config_path.read_text()
-            if config == ".gitignore":
-                await pkg_config_path.write_text(
-                    config_text.replace("crackerjack", self.pkg_name)
-                )
             run([str(self.config.git_path), "add", config])
 
     async def run_interactive(self, hook: str) -> None:
@@ -127,14 +118,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             run([str(self.config.git_path), "add", "pyproject.toml"])
             run([str(self.config.git_path), "add", "pdm.lock"])
             run([str(self.config.pre_commit_path), "install"])
-            run(
-                [
-                    str(self.config.git_path),
-                    "config",
-                    "advice.addIgnoredFile",
-                    "false",
-                ]
-            )
+            run([str(self.config.git_path), "config", "advice.addIgnoredFile", "false"])
         await self.update_pyproject_configs()
 
     async def process(self, options: t.Any) -> None:
