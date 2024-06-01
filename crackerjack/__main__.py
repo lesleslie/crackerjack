@@ -1,11 +1,10 @@
 import asyncio
 import typing as t
 
-from click import command
-from click import help_option
-from click import option
-from crackerjack import crackerjack_it
+from click import command, help_option, option
 from pydantic import BaseModel
+
+from crackerjack import crackerjack_it
 
 
 class Options(BaseModel):

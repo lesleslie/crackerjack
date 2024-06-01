@@ -16,13 +16,10 @@ repos:
         name: check-toml
       - id: check-added-large-files
         name: check-added-large-files
-  - repo: https://github.com/psf/black
-    rev: '24.4.2'
-    hooks:
-      - id: black
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.7
     hooks:
+      - id: ruff-format
       - id: ruff
   - repo: https://github.com/fredrikaverpil/creosote
     rev: v3.0.0
@@ -69,14 +66,11 @@ repos:
     rev: v1.1.365
     hooks:
       - id: pyright
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.7
     hooks:
       - id: ruff
-  - repo: https://github.com/psf/black
-    rev: '24.4.2'
-    hooks:
-      - id: black
+      - id: ruff-format
   #  - repo: https://github.com/pdoc3/pdoc
   #    rev: master
   #    hooks:

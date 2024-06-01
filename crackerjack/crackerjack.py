@@ -5,10 +5,8 @@ import typing as t
 from pathlib import Path
 from subprocess import run
 
-from acb.actions.encode import dump
-from acb.actions.encode import load
-from aioconsole import ainput
-from aioconsole import aprint
+from acb.actions.encode import dump, load
+from aioconsole import ainput, aprint
 from aiopath import AsyncPath
 from inflection import underscore
 from pydantic import BaseModel
@@ -121,7 +119,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             run([str(self.config.git_path), "config", "advice.addIgnoredFile", "false"])
         await self.update_pyproject_configs()
 
-    async def process(self, options: t.Any) -> None:
+    async def load_config(self) -> None:
         await self.settings_path.touch(exist_ok=True)
         try:
             self.config = Config(**await load.yaml(self.settings_path))
@@ -129,6 +127,17 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             self.config = Config()
             await dump.yaml(self.config.model_dump(), self.settings_path)
             raise SystemExit("\nPlease configure '.crackerjack.yaml' and try again\n")
+
+    async def run_pre_commit(self) -> None:
+        check_all = run([str(self.config.pre_commit_path), "run", "--all-files"])
+        if check_all.returncode > 0:
+            check_all = run([str(self.config.pre_commit_path), "run", "--all-files"])
+            if check_all.returncode > 0:
+                await aprint("\n\nPre-commit failed. Please fix errors.\n")
+                raise SystemExit()
+
+    async def process(self, options: t.Any) -> None:
+        await self.load_config()
         imp_dir = self.pkg_path / "__pypackages__" / self.config.python_version / "lib"
         sys.path.append(str(imp_dir))
         self.pkg_name = underscore(self.pkg_path.stem.lower())
@@ -143,12 +152,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         if options.interactive:
             for hook in ("refurb", "bandit", "pyright"):
                 await self.run_interactive(hook)
-        check_all = run([str(self.config.pre_commit_path), "run", "--all-files"])
-        if check_all.returncode > 0:
-            check_all = run([str(self.config.pre_commit_path), "run", "--all-files"])
-            if check_all.returncode > 0:
-                await aprint("\n\nPre-commit failed. Please fix errors.\n")
-                raise SystemExit()
+        await self.run_pre_commit()
         for option in (options.publish, options.bump):
             if option:
                 run([str(self.config.pdm_path), "bump", option])

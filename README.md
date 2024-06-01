@@ -1,6 +1,7 @@
 # Crackerjack Python
 
 [![Python: 3.12](https://img.shields.io/badge/python-3.12%2B-blue)](https://docs.python.org/3/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 [![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)](https://pdm.fming.dev)
@@ -60,7 +61,6 @@ This package:
 - runs the following pre-commit hooks (in order):
   * [pdm-lock-check](https://github.com/pdm-project/pdm)
   * various core [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks)
-  * [black](https://github.com/psf/black)
   * [ruff](https://github.com/charliermarsh/ruff-pre-commit)
   * [creosote](https://github.com/fredrikaverpil/creosote)
   * [flynt](https://github.com/ikamensh/flynt/)
@@ -69,8 +69,7 @@ This package:
   * [refurb](https://github.com/dosisod/refurb)
   * [bandit](https://github.com/PyCQA/bandit)
   * [pyright](https://github.com/RobertCraigie/pyright-python)
-  * ruff (again for sanity checking)
-  * black (again for sanity checking)
+  * [ruff](https://github.com/charliermarsh/ruff-pre-commit) (again for sanity checking)
 
 - converts/creates documentation in Markdown (md) (work in progress)
 
@@ -88,8 +87,6 @@ This package:
 
 - all docstrings, README's, and other documentation is to be done in Markdown (md)
 
-- format with black
-
 - use aiopath.AsyncPath or pathlib.Path not os.path
 
 - import typing as t
@@ -98,8 +95,6 @@ This package:
  for not other reason than it looks ugly)
 
 - functions that deal with path operations should get passed AsyncPaths or Paths - not strings
-
-- force single line imports (will support isort Vertical Hanging Indent when ruff does)
 
 - use PDM and PEP-582(proposed) for dependency management and package building/publishing
 

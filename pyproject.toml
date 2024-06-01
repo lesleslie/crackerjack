@@ -25,21 +25,21 @@ docstring-code-format = true
 [tool.ruff.lint]
 ignore = [
     "F821",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D107",
 ]
-
-[tool.ruff.lint.isort]
-force-single-line = true
-
-[tool.ruff.lint.mccabe]
-max-complexity = 10
+extend-select = [
+    "I",
+    "C901",
+    "D",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-
-#[tool.black]
-#target-version = [
-#    "py312",
-#]
 
 [tool.creosote]
 paths = [
@@ -87,7 +87,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.7.36"
+version = "0.8.0"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
