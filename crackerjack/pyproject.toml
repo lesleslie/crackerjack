@@ -22,10 +22,6 @@ output-format = "full"
 [tool.ruff.format]
 docstring-code-format = true
 
-[tool.ruff.lint.isort]
-no-lines-before = ["first-party", "local-folder"]
-case-sensitive = false
-
 [tool.ruff.lint]
 ignore = [
     "F821",
@@ -43,6 +39,15 @@ extend-select = [
     "C901",
     "D",
 ]
+
+[tool.ruff.lint.isort]
+no-lines-before = [
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 11
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -93,7 +98,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.8.1"
+version = "0.8.2"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
