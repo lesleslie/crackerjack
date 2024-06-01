@@ -19,6 +19,9 @@ fix = true
 show-fixes = true
 output-format = "full"
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
 ignore = [
     "F821",
@@ -33,10 +36,10 @@ max-complexity = 10
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.black]
-target-version = [
-    "py312",
-]
+#[tool.black]
+#target-version = [
+#    "py312",
+#]
 
 [tool.creosote]
 paths = [
@@ -84,7 +87,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.7.35"
+version = "0.7.36"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
