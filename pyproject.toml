@@ -40,6 +40,13 @@ extend-select = [
     "D",
 ]
 
+[tool.ruff.lint.isort]
+no-lines-before = [
+    "first-party",
+    "local-folder",
+]
+case-sensitive = false
+
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
@@ -89,7 +96,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.8.1"
+version = "0.8.2"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -121,11 +128,11 @@ dependencies = [
     "autotyping>=24.3.0",
     "pre-commit>=3.7.1",
     "pytest>=8.2.1",
-    "pydantic>=2.7.1",
+    "pydantic>=2.7.2",
     "aiopath>=0.7.7",
-    "acb>=0.6.0",
+    "acb>=0.6.2",
     "pdm-bump>=0.9.0",
-    "pdm>=2.15.2",
+    "pdm>=2.15.4",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },

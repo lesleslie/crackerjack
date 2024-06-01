@@ -22,7 +22,7 @@ repos:
       - id: ruff-format
       - id: ruff
   - repo: https://github.com/fredrikaverpil/creosote
-    rev: v3.0.0
+    rev: v3.0.1
     hooks:
       - id: creosote
   - repo: https://github.com/ikamensh/flynt/
@@ -39,20 +39,18 @@ repos:
     hooks:
       - id: autotyping
         name: autotyping
-        entry: python -m libcst.tool codemod autotyping.AutotypeCommand
+        entry: python -m autotyping
         args:
           - --aggressive
           - --only-without-imports
-          - --show-successes
-          - --include-generated
           - --guess-common-names
           - crackerjack
         types_or: [ python, pyi ]
         language: python
         files: \.py$
         additional_dependencies:
-          - autotyping>=23.3.0
-          - libcst>=0.4.9
+          - autotyping>=24.3.0
+          - libcst>=1.1.0
   - repo: https://github.com/dosisod/refurb
     rev: v2.0.0
     hooks:
