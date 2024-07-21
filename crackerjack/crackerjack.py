@@ -84,9 +84,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             if self.pkg_path.stem == "crackerjack":
                 await config_path.write_text(await pkg_config_path.read_text())
                 continue
-            await pkg_config_path.write_text(
-                (await config_path.read_text()).replace("crackerjack", self.pkg_name)
-            )
+            if config != ".gitignore":
+                await pkg_config_path.write_text(
+                    (await config_path.read_text()).replace(
+                        "crackerjack", self.pkg_name
+                    )
+                )
             run([str(self.config.git_path), "add", config])
 
     async def run_interactive(self, hook: str) -> None:
