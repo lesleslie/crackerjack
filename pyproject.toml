@@ -57,6 +57,8 @@ exclude-deps = [
     "pre-commit",
     "pytest",
     "pdm",
+    "pyfiglet",
+    "pyyaml",
 ]
 
 [tool.refurb]
@@ -98,7 +100,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.8.13"
+version = "0.8.14"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
