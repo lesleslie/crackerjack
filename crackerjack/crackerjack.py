@@ -3,7 +3,7 @@ import re
 import sys
 import typing as t
 from pathlib import Path
-from subprocess import run
+from subprocess import run as shell
 
 from acb.actions.encode import dump, load
 from aioconsole import ainput, aprint
@@ -59,7 +59,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     "ignore",
                 ) and isinstance(value, list):
                     settings[setting] = set(
-                        pkg_toml_config["tool"][tool][setting] + value
+                        our_toml_config["tool"][tool][setting] + value
                     )
             pkg_toml_config["tool"][tool] = settings
         pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
@@ -90,12 +90,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                         "crackerjack", self.pkg_name
                     )
                 )
-            run([str(self.config.git_path), "add", config])
+            shell([str(self.config.git_path), "add", config])
 
     async def run_interactive(self, hook: str) -> None:
         success: bool = False
         while not success:
-            fail = run(
+            fail = shell(
                 [str(self.config.pre_commit_path), "run", hook.lower(), "--all-files"]
             )
             if fail.returncode > 0:
@@ -108,21 +108,23 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
     async def update_pkg_configs(self) -> None:
         await self.copy_configs()
-        installed_pkgs = run(
+        installed_pkgs = shell(
             [str(self.config.pdm_path), "list", "--freeze"],
             capture_output=True,
             text=True,
         ).stdout.splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
             print('Installing "pre-commit"...')
-            run([str(self.config.pdm_path), "self", "add", "keyring"])
-            run([str(self.config.pdm_path), "config", "python.use_venv", "false"])
-            run([str(self.config.git_path), "init"])
-            run([str(self.config.git_path), "branch", "-m", "main"])
-            run([str(self.config.git_path), "add", "pyproject.toml"])
-            run([str(self.config.git_path), "add", "pdm.lock"])
-            run([str(self.config.pre_commit_path), "install"])
-            run([str(self.config.git_path), "config", "advice.addIgnoredFile", "false"])
+            shell([str(self.config.pdm_path), "self", "add", "keyring"])
+            shell([str(self.config.pdm_path), "config", "python.use_venv", "false"])
+            shell([str(self.config.git_path), "init"])
+            shell([str(self.config.git_path), "branch", "-m", "main"])
+            shell([str(self.config.git_path), "add", "pyproject.toml"])
+            shell([str(self.config.git_path), "add", "pdm.lock"])
+            shell([str(self.config.pre_commit_path), "install"])
+            shell(
+                [str(self.config.git_path), "config", "advice.addIgnoredFile", "false"]
+            )
         await self.update_pyproject_configs()
 
     async def load_config(self) -> None:
@@ -135,9 +137,9 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             raise SystemExit("\nPlease configure '.crackerjack.yaml' and try again\n")
 
     async def run_pre_commit(self) -> None:
-        check_all = run([str(self.config.pre_commit_path), "run", "--all-files"])
+        check_all = shell([str(self.config.pre_commit_path), "run", "--all-files"])
         if check_all.returncode > 0:
-            check_all = run([str(self.config.pre_commit_path), "run", "--all-files"])
+            check_all = shell([str(self.config.pre_commit_path), "run", "--all-files"])
             if check_all.returncode > 0:
                 await aprint("\n\nPre-commit failed. Please fix errors.\n")
                 raise SystemExit()
@@ -152,22 +154,22 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         await aprint("\nCrackerjacking...\n")
         if not options.do_not_update_configs:
             await self.update_pkg_configs()
-            run([str(self.config.pdm_path), "install"])
+            shell([str(self.config.pdm_path), "install"])
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
-            run([str(self.config.pre_commit_path), "autoupdate"])
+            shell([str(self.config.pre_commit_path), "autoupdate"])
         if options.interactive:
             for hook in ("refurb", "bandit", "pyright"):
                 await self.run_interactive(hook)
         await self.run_pre_commit()
         for option in (options.publish, options.bump):
             if option:
-                run([str(self.config.pdm_path), "bump", option])
+                shell([str(self.config.pdm_path), "bump", option])
                 break
         if options.publish:
-            run([str(self.config.pdm_path), "publish"])
+            shell([str(self.config.pdm_path), "publish"])
         if options.commit:
             commit_msg = await ainput("\nCommit message: ")
-            run(
+            shell(
                 [
                     str(self.config.git_path),
                     "commit",
@@ -178,7 +180,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     ".",
                 ]
             )
-            run([str(self.config.git_path), "push", "origin", "main"])
+            shell([str(self.config.git_path), "push", "origin", "main"])
         await aprint("\nCrackerjack complete!\n")
 
     async def run(self, options: t.Any) -> None:

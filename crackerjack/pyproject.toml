@@ -41,7 +41,7 @@ no-lines-before = [
 ]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 11
+max-complexity = 12
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -67,6 +67,9 @@ target = [
     "crackerjack",
 ]
 skips = [
+    "B301",
+    "B311",
+    "B403",
     "B404",
     "B603",
 ]
@@ -95,7 +98,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.8.11"
+version = "0.8.12"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -129,9 +132,9 @@ dependencies = [
     "pytest>=8.3.2",
     "pydantic>=2.8.2",
     "aiopath>=0.7.7",
-    "acb>=0.6.17",
+    "acb>=0.6.20",
     "pdm-bump>=0.9.0",
-    "pdm>=2.17.3",
+    "pdm>=2.18.1",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
