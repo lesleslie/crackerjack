@@ -102,7 +102,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "Crackerjack"
-version = "0.8.14"
+version = "0.8.15"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -136,8 +136,8 @@ dependencies = [
     "pytest>=8.3.2",
     "pydantic>=2.8.2",
     "aiopath>=0.7.7",
-    "acb>=0.6.20",
-    "pdm-bump>=0.9.0",
+    "acb>=0.6.21",
+    "pdm-bump>=0.9.8",
     "pdm>=2.18.1",
 ]
 authors = [

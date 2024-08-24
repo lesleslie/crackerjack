@@ -5,29 +5,18 @@
 groups = ["default", "dev"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:96e7ef0fdbdaa9f5cce55879d342ba3644ec208682ee12d9f5e312ba5f2e5d24"
+content_hash = "sha256:1760b48a2346b3f9c85e7e89db8c5325b767c38cf74d19c9bf69eedb974564ee"
 
 [[metadata.targets]]
 requires_python = ">=3.12"
 
 [[package]]
-name = "about-time"
-version = "4.2.1"
-requires_python = ">=3.7, <4"
-summary = "Easily measure timing and throughput of code blocks, with beautiful human friendly representations."
-files = [
-    {file = "about-time-4.2.1.tar.gz", hash = "sha256:6a538862d33ce67d997429d14998310e1dbfda6cb7d9bbfbf799c4709847fece"},
-    {file = "about_time-4.2.1-py3-none-any.whl", hash = "sha256:8bbf4c75fe13cbd3d72f49a03b02c5c7dca32169b6d49117c257e7eb3eaee341"},
-]
-
-[[package]]
 name = "acb"
-version = "0.6.20"
+version = "0.6.21"
 requires_python = ">=3.12"
 summary = "Asynchronous Component Base"
 dependencies = [
     "aiopath>=0.7.7",
-    "alive-progress>=3.1.5",
     "arrow>=1.3.0",
     "bevy>=2.0.2",
     "blake3>=0.4.1",
@@ -47,8 +36,8 @@ dependencies = [
     "pyyaml>=6.0.2",
 ]
 files = [
-    {file = "acb-0.6.20-py3-none-any.whl", hash = "sha256:433644447dcf5b50c311f0bfa23abd0b4981381cb1218bf29e86905ba4ffdb2e"},
-    {file = "acb-0.6.20.tar.gz", hash = "sha256:387a8f993ffee447ac3a40963ba65e8587657cc4a3aeb8135c52f95dd07e5bff"},
+    {file = "acb-0.6.21-py3-none-any.whl", hash = "sha256:a57f8cbda34765d24caa261319811f7860b706be16ee1efee3b073850d121130"},
+    {file = "acb-0.6.21.tar.gz", hash = "sha256:428c53dae128cd9d5cd07493bb454c74d55cdbecbccab003e577f7770081d47d"},
 ]
 
 [[package]]
@@ -87,20 +76,6 @@ dependencies = [
 files = [
     {file = "aiopath-0.7.7-py2.py3-none-any.whl", hash = "sha256:cd5d18de8ede167e1db659f02ee448fe085f923cb8e194407ccc568bffc4fe4e"},
     {file = "aiopath-0.7.7.tar.gz", hash = "sha256:ad4b9d09ae08ddf6d39dd06e7b0a353939e89528da571c0cd4f3fe071aefad4f"},
-]
-
-[[package]]
-name = "alive-progress"
-version = "3.1.5"
-requires_python = ">=3.7, <4"
-summary = "A new kind of Progress Bar, with real-time throughput, ETA, and very cool animations!"
-dependencies = [
-    "about-time==4.2.1",
-    "grapheme==0.6.0",
-]
-files = [
-    {file = "alive-progress-3.1.5.tar.gz", hash = "sha256:42e399a66c8150dc507602dff7b7953f105ef11faf97ddaa6d27b1cbf45c4c98"},
-    {file = "alive_progress-3.1.5-py3-none-any.whl", hash = "sha256:347220c1858e3abe137fa0746895668c04df09c5261a13dc03f05795e8a29be5"},
 ]
 
 [[package]]
@@ -392,14 +367,6 @@ requires_python = ">=3.7"
 summary = "A python wrapper of the C library 'Google CRC32C'"
 files = [
     {file = "google-crc32c-1.5.0.tar.gz", hash = "sha256:89284716bc6a5a415d4eaa11b1726d2d60a0cd12aadf5439828353662ede9dd7"},
-]
-
-[[package]]
-name = "grapheme"
-version = "0.6.0"
-summary = "Unicode grapheme helpers"
-files = [
-    {file = "grapheme-0.6.0.tar.gz", hash = "sha256:44c2b9f21bbe77cfb05835fec230bd435954275267fea1858013b102f8603cca"},
 ]
 
 [[package]]
@@ -741,36 +708,34 @@ files = [
 
 [[package]]
 name = "pdm-bump"
-version = "0.9.0"
+version = "0.9.8"
 requires_python = ">=3.9"
 summary = "A plugin for PDM providing the ability to modify the version according to PEP440"
 dependencies = [
     "annotated-types>=0.2.0",
-    "pdm-pfsc>=0.10.0",
+    "pdm-pfsc>=0.12.2",
     "pdm>=2.00",
     "pyproject-metadata>=0.6.1",
-    "tomli-w>=1.0.0",
     "tomli>=2.0.1; python_version <= \"3.10\"",
     "tomlkit>=0.11.6",
     "typing-extensions>=4; python_version <= \"3.9\"",
 ]
 files = [
-    {file = "pdm_bump-0.9.0-py3-none-any.whl", hash = "sha256:0de179203adb5db6fc5a8e9f23d829a59ff207099d9b8599d5f6f2beed514bbc"},
-    {file = "pdm_bump-0.9.0.tar.gz", hash = "sha256:7ce9534035ad2e7e16c47a0b7c8031303ccc1c3cdb88ef7dcedd74b683a5397a"},
+    {file = "pdm_bump-0.9.8-py3-none-any.whl", hash = "sha256:ee2e0fdafbdb0b32018153eee8a0a42c97fd6bbcb3fc4df275eb442baf8c877f"},
+    {file = "pdm_bump-0.9.8.tar.gz", hash = "sha256:92ea1cb4c568e17fd4e0e3b73c4e555ef8808bd2b7444a606b5dfbe7d2ab09bd"},
 ]
 
 [[package]]
 name = "pdm-pfsc"
-version = "0.11.3"
+version = "0.12.2"
 requires_python = ">=3.9"
 summary = "Core functionPlug-In Foundation Service Collection)"
 dependencies = [
     "pdm>=2.12.4",
     "pyproject-metadata>=0.7.1",
-    "tomli-w>=1.0.0",
 ]
 files = [
-    {file = "pdm_pfsc-0.11.3-py3-none-any.whl", hash = "sha256:97cd9a2e56fbf09f0016c786f169d7b7cf517302c4331e090192c5b9a5640b46"},
+    {file = "pdm_pfsc-0.12.2-py3-none-any.whl", hash = "sha256:fc1872e325ca61d2d98b98a87a3d22a663d4349493835801a4d3a26f24ff86dc"},
 ]
 
 [[package]]
