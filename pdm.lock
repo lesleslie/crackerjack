@@ -5,14 +5,14 @@
 groups = ["default", "dev"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:e0bde737cd18387e9a0901af8f80b817ded74d02f1f63267f4f2533a0c830975"
+content_hash = "sha256:e7efc002bc77272dd6dfe24194dbf0a1e368ffe67066e6366789d1bc597593cc"
 
 [[metadata.targets]]
 requires_python = ">=3.12"
 
 [[package]]
 name = "acb"
-version = "0.6.28"
+version = "0.6.29"
 requires_python = ">=3.12"
 summary = "Asynchronous Component Base"
 dependencies = [
@@ -31,13 +31,14 @@ dependencies = [
     "msgspec[toml]>=0.18.6",
     "nest-asyncio>=1.6.0",
     "pydantic-settings>=2.5.2",
-    "pydantic[email]>=2.9.1",
+    "pydantic[email]>=2.9.2",
     "pyfiglet>=1.0.2",
     "pyyaml>=6.0.2",
+    "typer>=0.12.5",
 ]
 files = [
-    {file = "acb-0.6.28-py3-none-any.whl", hash = "sha256:8d0b33737750f1c923edcd9914b05ce7aa9da098ca49e983fadc11318d03ffc5"},
-    {file = "acb-0.6.28.tar.gz", hash = "sha256:c4157a0114d9b619274fd5d46e5c6689cf76457cf04d7bd74c6332154590ba5d"},
+    {file = "acb-0.6.29-py3-none-any.whl", hash = "sha256:2d8277b1b6c3e720ba20aaa1cc8f24c59fd7906c7a28a3556d35c5bbf9806b86"},
+    {file = "acb-0.6.29.tar.gz", hash = "sha256:904f40cd0626291e4e25730f9134cb3e024b72d6e6f4a305a9f3832e18f7a20a"},
 ]
 
 [[package]]
@@ -136,15 +137,16 @@ files = [
 
 [[package]]
 name = "autotyping"
-version = "24.3.0"
+version = "24.9.0"
 requires_python = ">=3.8"
 summary = "A tool for autoadding simple type annotations."
 dependencies = [
     "libcst",
+    "typing-extensions",
 ]
 files = [
-    {file = "autotyping-24.3.0-py3-none-any.whl", hash = "sha256:0637343190b858be19e00ff20a2f0344426357b9f8b849e28862d1a01cf12fe7"},
-    {file = "autotyping-24.3.0.tar.gz", hash = "sha256:bce5bffec7033b6487d45d57c409adf4065a1835f60113a6186c180bc61da4e4"},
+    {file = "autotyping-24.9.0-py3-none-any.whl", hash = "sha256:9c16b0bcab310a2dfe5228bb01c4d1dd5499e7bf67fc6b7915c35267c665b498"},
+    {file = "autotyping-24.9.0.tar.gz", hash = "sha256:d7e9787aca0f69b089431581f703c53210d2cf39e792e2106759d04034c1251b"},
 ]
 
 [[package]]
@@ -681,7 +683,7 @@ files = [
 
 [[package]]
 name = "pdm"
-version = "2.18.2"
+version = "2.19.1"
 requires_python = ">=3.8"
 summary = "A modern Python package and dependency manager supporting the latest PEP standards"
 dependencies = [
@@ -710,8 +712,8 @@ dependencies = [
     "virtualenv>=20",
 ]
 files = [
-    {file = "pdm-2.18.2-py3-none-any.whl", hash = "sha256:cb794c3d7c4d57494b039662932ac758babafb047e3c49cb18fa7bff30687262"},
-    {file = "pdm-2.18.2.tar.gz", hash = "sha256:6d93a18d52edca056fafed7b262fe48ddc61984dabf73eb9365ad61a90caebb6"},
+    {file = "pdm-2.19.1-py3-none-any.whl", hash = "sha256:3b63ef645aaa4f4010ed9390550bda5cdfa7a9e70bc7780a555c8496cedfccc2"},
+    {file = "pdm-2.19.1.tar.gz", hash = "sha256:7fe235a9cb27b7ec17b762dc85bc9ae71e0776e4b7a8b6f64203f24bb915aa2c"},
 ]
 
 [[package]]
@@ -1067,6 +1069,22 @@ summary = "Verify certificates using native system trust stores"
 files = [
     {file = "truststore-0.9.1-py3-none-any.whl", hash = "sha256:7f5b447d68318d966428131fc1c00442cca3a2d581a3986143558f007efba0b4"},
     {file = "truststore-0.9.1.tar.gz", hash = "sha256:8f7312d70cc33e9003b748a80a04ead1fcb2ed856a7c6c9ca5a02482901a90be"},
+]
+
+[[package]]
+name = "typer"
+version = "0.12.5"
+requires_python = ">=3.7"
+summary = "Typer, build great CLIs. Easy to code. Based on Python type hints."
+dependencies = [
+    "click>=8.0.0",
+    "rich>=10.11.0",
+    "shellingham>=1.3.0",
+    "typing-extensions>=3.7.4.3",
+]
+files = [
+    {file = "typer-0.12.5-py3-none-any.whl", hash = "sha256:62fe4e471711b147e3365034133904df3e235698399bc4de2b36c8579298d52b"},
+    {file = "typer-0.12.5.tar.gz", hash = "sha256:f592f089bedcc8ec1b974125d64851029c3b1af145f04aca64d69410f0c9b722"},
 ]
 
 [[package]]
