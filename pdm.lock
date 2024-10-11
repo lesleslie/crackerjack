@@ -5,14 +5,14 @@
 groups = ["default", "dev"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:e7efc002bc77272dd6dfe24194dbf0a1e368ffe67066e6366789d1bc597593cc"
+content_hash = "sha256:820b8576479ae2b75279cb5e8b211e2c93e3c9f3e1a636951d82f21a8728f6f3"
 
 [[metadata.targets]]
 requires_python = ">=3.12"
 
 [[package]]
 name = "acb"
-version = "0.6.29"
+version = "0.6.31"
 requires_python = ">=3.12"
 summary = "Asynchronous Component Base"
 dependencies = [
@@ -37,8 +37,8 @@ dependencies = [
     "typer>=0.12.5",
 ]
 files = [
-    {file = "acb-0.6.29-py3-none-any.whl", hash = "sha256:2d8277b1b6c3e720ba20aaa1cc8f24c59fd7906c7a28a3556d35c5bbf9806b86"},
-    {file = "acb-0.6.29.tar.gz", hash = "sha256:904f40cd0626291e4e25730f9134cb3e024b72d6e6f4a305a9f3832e18f7a20a"},
+    {file = "acb-0.6.31-py3-none-any.whl", hash = "sha256:2b96355c6436b9657998546367acc86c8ccad84b490d4aa04fd357194f4b33a8"},
+    {file = "acb-0.6.31.tar.gz", hash = "sha256:c858d0a0fe280a92a22fc59e5c7fd31b70fd3b4a4f85684e926f3543295ab3c1"},
 ]
 
 [[package]]
@@ -394,7 +394,7 @@ files = [
 
 [[package]]
 name = "hishel"
-version = "0.0.30"
+version = "0.0.33"
 requires_python = ">=3.8"
 summary = "Persistent cache implementation for httpx and httpcore"
 dependencies = [
@@ -402,8 +402,8 @@ dependencies = [
     "typing-extensions>=4.8.0",
 ]
 files = [
-    {file = "hishel-0.0.30-py3-none-any.whl", hash = "sha256:0c73a779a6b554b52dff75e5962057df25764fd798c31b9435ce6398b1b171c8"},
-    {file = "hishel-0.0.30.tar.gz", hash = "sha256:656393ee77e9c39a0d6c527c74810e15d96e598dcb9b191f20a788608ceaca99"},
+    {file = "hishel-0.0.33-py3-none-any.whl", hash = "sha256:6e6c6cdaf432ff4c4981e7792ef7d1fa4c8ede58b9dbbcefb9ab3fc9770f2a07"},
+    {file = "hishel-0.0.33.tar.gz", hash = "sha256:ab5b2661d5e2252f305fd0fb20e8c76bfab3ea73458f20f2591c53c37b270089"},
 ]
 
 [[package]]
@@ -683,7 +683,7 @@ files = [
 
 [[package]]
 name = "pdm"
-version = "2.19.1"
+version = "2.19.2"
 requires_python = ">=3.8"
 summary = "A modern Python package and dependency manager supporting the latest PEP standards"
 dependencies = [
@@ -691,7 +691,7 @@ dependencies = [
     "dep-logic>=0.4.4",
     "filelock>=3.13",
     "findpython<1.0.0a0,>=0.6.0",
-    "hishel<0.1.0,>=0.0.24",
+    "hishel<0.1.0,>=0.0.32",
     "httpx[socks]<1,>0.20",
     "importlib-metadata>=3.6; python_version < \"3.10\"",
     "importlib-resources>=5; python_version < \"3.9\"",
@@ -712,8 +712,8 @@ dependencies = [
     "virtualenv>=20",
 ]
 files = [
-    {file = "pdm-2.19.1-py3-none-any.whl", hash = "sha256:3b63ef645aaa4f4010ed9390550bda5cdfa7a9e70bc7780a555c8496cedfccc2"},
-    {file = "pdm-2.19.1.tar.gz", hash = "sha256:7fe235a9cb27b7ec17b762dc85bc9ae71e0776e4b7a8b6f64203f24bb915aa2c"},
+    {file = "pdm-2.19.2-py3-none-any.whl", hash = "sha256:42af4e0897b139656e003767e99c4f77014bf36d9a7b759d3e09b49ee5979143"},
+    {file = "pdm-2.19.2.tar.gz", hash = "sha256:efb39264569181d0375536ef81c556648f16b540d429a53715730490a2283567"},
 ]
 
 [[package]]
@@ -770,7 +770,7 @@ files = [
 
 [[package]]
 name = "pre-commit"
-version = "3.8.0"
+version = "4.0.1"
 requires_python = ">=3.9"
 summary = "A framework for managing and maintaining multi-language pre-commit hooks."
 dependencies = [
@@ -781,8 +781,8 @@ dependencies = [
     "virtualenv>=20.10.0",
 ]
 files = [
-    {file = "pre_commit-3.8.0-py2.py3-none-any.whl", hash = "sha256:9a90a53bf82fdd8778d58085faf8d83df56e40dfe18f45b19446e26bf1b3a63f"},
-    {file = "pre_commit-3.8.0.tar.gz", hash = "sha256:8bb6494d4a20423842e198980c9ecf9f96607a07ea29549e180eef9ae80fe7af"},
+    {file = "pre_commit-4.0.1-py2.py3-none-any.whl", hash = "sha256:efde913840816312445dc98787724647c65473daefe420785f885e8ed9a06878"},
+    {file = "pre_commit-4.0.1.tar.gz", hash = "sha256:80905ac375958c0444c65e9cebebd948b3cdb518f335a091a670a89d652139d2"},
 ]
 
 [[package]]
