@@ -46,7 +46,6 @@ convention = "google"
 [tool.vulture]
 min_confidence = 84
 paths = ["crackerjack",]
-verbose = true
 
 [tool.creosote]
 paths = [
@@ -105,7 +104,7 @@ pythonPlatform = "Darwin"
 [tool.pdm]
 [project]
 name = "Crackerjack"
-version = "0.9.0"
+version = "0.9.1"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
