@@ -5,14 +5,14 @@
 groups = ["default", "dev"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:820b8576479ae2b75279cb5e8b211e2c93e3c9f3e1a636951d82f21a8728f6f3"
+content_hash = "sha256:41277afdcd986e7c9aa322c18c1b0aeae9f75e57b12cdfdbfb3fcce331106acf"
 
 [[metadata.targets]]
 requires_python = ">=3.12"
 
 [[package]]
 name = "acb"
-version = "0.6.31"
+version = "0.6.32"
 requires_python = ">=3.12"
 summary = "Asynchronous Component Base"
 dependencies = [
@@ -22,7 +22,7 @@ dependencies = [
     "blake3>=0.4.1",
     "brotli>=1.1.0",
     "devtools>=0.12.2",
-    "dill>=0.3.8",
+    "dill>=0.3.9",
     "google-crc32c>=1.6.0",
     "icecream>=2.1.3",
     "inflection>=0.5.1",
@@ -37,8 +37,8 @@ dependencies = [
     "typer>=0.12.5",
 ]
 files = [
-    {file = "acb-0.6.31-py3-none-any.whl", hash = "sha256:2b96355c6436b9657998546367acc86c8ccad84b490d4aa04fd357194f4b33a8"},
-    {file = "acb-0.6.31.tar.gz", hash = "sha256:c858d0a0fe280a92a22fc59e5c7fd31b70fd3b4a4f85684e926f3543295ab3c1"},
+    {file = "acb-0.6.32-py3-none-any.whl", hash = "sha256:17d6401200d1ee440bca8094c94fc0fecf3459e03b065d57fc182ab5c2aa8565"},
+    {file = "acb-0.6.32.tar.gz", hash = "sha256:7659e50ffced6ab0487d6cb4c8c57dd0e9e114dd14c9d195643d2114c8f60bd6"},
 ]
 
 [[package]]
@@ -288,12 +288,12 @@ files = [
 
 [[package]]
 name = "dill"
-version = "0.3.8"
+version = "0.3.9"
 requires_python = ">=3.8"
 summary = "serialize all of Python"
 files = [
-    {file = "dill-0.3.8-py3-none-any.whl", hash = "sha256:c36ca9ffb54365bdd2f8eb3eff7d2a21237f8452b57ace88b1ac615b7e815bd7"},
-    {file = "dill-0.3.8.tar.gz", hash = "sha256:3ebe3c479ad625c4553aca177444d89b486b1d84982eeacded644afc0cf797ca"},
+    {file = "dill-0.3.9-py3-none-any.whl", hash = "sha256:468dff3b89520b474c0397703366b7b95eebe6303f108adf9b19da1f702be87a"},
+    {file = "dill-0.3.9.tar.gz", hash = "sha256:81aa267dddf68cbfe8029c42ca9ec6a4ab3b22371d1c450abc54422577b4512c"},
 ]
 
 [[package]]
@@ -683,7 +683,7 @@ files = [
 
 [[package]]
 name = "pdm"
-version = "2.19.2"
+version = "2.19.3"
 requires_python = ">=3.8"
 summary = "A modern Python package and dependency manager supporting the latest PEP standards"
 dependencies = [
@@ -712,8 +712,8 @@ dependencies = [
     "virtualenv>=20",
 ]
 files = [
-    {file = "pdm-2.19.2-py3-none-any.whl", hash = "sha256:42af4e0897b139656e003767e99c4f77014bf36d9a7b759d3e09b49ee5979143"},
-    {file = "pdm-2.19.2.tar.gz", hash = "sha256:efb39264569181d0375536ef81c556648f16b540d429a53715730490a2283567"},
+    {file = "pdm-2.19.3-py3-none-any.whl", hash = "sha256:80594e5d6167fb17ea724df09b68cdfe9c601ad7f218f1beea2c032b61bf30e9"},
+    {file = "pdm-2.19.3.tar.gz", hash = "sha256:a9cc7f2078cd3b25ac645ffb5eca9d6b3d5dfcd788eaddfb6083432da71c97c2"},
 ]
 
 [[package]]

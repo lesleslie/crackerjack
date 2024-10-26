@@ -43,6 +43,11 @@ max-complexity = 12
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.vulture]
+min_confidence = 84
+paths = ["crackerjack",]
+verbose = true
+
 [tool.creosote]
 paths = [
     "crackerjack",
@@ -100,7 +105,7 @@ pythonPlatform = "Darwin"
 [tool.pdm]
 [project]
 name = "Crackerjack"
-version = "0.8.20"
+version = "0.9.0"
 description = "Crackerjack code style"
 requires-python = ">=3.12"
 readme = "README.md"
@@ -134,9 +139,9 @@ dependencies = [
     "pytest>=8.3.3",
     "pydantic>=2.9.2",
     "aiopath>=0.7.7",
-    "acb>=0.6.31",
+    "acb>=0.6.32",
     "pdm-bump>=0.9.8",
-    "pdm>=2.19.2",
+    "pdm>=2.19.3",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
