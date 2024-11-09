@@ -5,14 +5,14 @@
 groups = ["default"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:4c42ab3b9b77249dbfe3df9093c7f920b1a695e7ea22d43e8674e70750356f83"
+content_hash = "sha256:de71f1ce6a3ef3e3605261232163c65a2222ba83211465b48b57400ba3b4868a"
 
 [[metadata.targets]]
 requires_python = ">=3.13"
 
 [[package]]
 name = "acb"
-version = "0.8.6"
+version = "0.8.8"
 summary = ""
 dependencies = [
     "aiopath",
@@ -33,11 +33,12 @@ dependencies = [
     "pydantic-settings",
     "pyfiglet",
     "pyyaml",
+    "tomli-w",
     "typer",
 ]
 files = [
-    {file = "acb-0.8.6-py3-none-any.whl", hash = "sha256:60ec5ab5fd6357d54fe0da5414df942b3a647000b3689cf5c2bbea7786dc76cb"},
-    {file = "acb-0.8.6.tar.gz", hash = "sha256:09fb1a6271c0daa4bc446939cb9a105f48b544b3fa5dffc6114f4f6a5ddae396"},
+    {file = "acb-0.8.8-py3-none-any.whl", hash = "sha256:752e802cadc01dded3bfbd857626fd004a17eb2789e3bbe848b474b2bb61778a"},
+    {file = "acb-0.8.8.tar.gz", hash = "sha256:2303a9882b981d617b6dac95f4406bac8cb117bb13edd807ed5cb322a8ad9aec"},
 ]
 
 [[package]]
