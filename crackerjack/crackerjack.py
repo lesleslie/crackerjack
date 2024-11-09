@@ -37,7 +37,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             return
         our_toml_config: t.Any = await load.toml(self.our_toml_path)  # type: ignore
         pkg_toml_config: t.Any = await load.toml(self.pkg_toml_path)  # type: ignore
-        pkg_deps = pkg_toml_config["tool"]["pdm"]["dev-dependencies"]
+        pkg_deps = pkg_toml_config["dependency-groups"]
         for tool, settings in our_toml_config["tool"].items():
             for setting, value in settings.items():
                 if isinstance(value, str | list) and "crackerjack" in value:
@@ -58,7 +58,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                         our_toml_config["tool"][tool][setting] + value
                     )
             pkg_toml_config["tool"][tool] = settings
-        pkg_toml_config["tool"]["pdm"]["dev-dependencies"] = pkg_deps
+        pkg_toml_config["dependency-groups"] = pkg_deps
         python_version_pattern = r"\s*W*(\d\.\d*)"
         requires_python = our_toml_config["project"]["requires-python"]
         classifiers = []
@@ -155,7 +155,13 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 execute(["pdm", "bump", option])
                 break
         if options.publish:
-            execute(["pdm", "publish"])
+            build = execute(["pdm", "build"], capture_output=True, text=True)
+            await aprint(build.stdout)
+            if build.returncode > 0:
+                await aprint(build.stderr)
+                await aprint("\n\nBuild failed. Please fix errors.\n")
+                raise SystemExit()
+            execute(["pdm", "publish", "--no-build"])
         if options.commit:
             commit_msg = await ainput("\nCommit message: ")
             execute(

@@ -60,6 +60,7 @@ exclude-deps = [
     "pdm",
     "pyfiglet",
     "pyyaml",
+    "uv",
 ]
 
 [tool.refurb]
@@ -103,7 +104,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.10.0"
+version = "0.10.2"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -140,6 +141,7 @@ dependencies = [
     "pdm-bump>=0.9.8",
     "pdm>=2.20.1",
     "acb>=0.8.6",
+    "uv>=0.5.1",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
