@@ -55,7 +55,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     "ignore",
                 ) and isinstance(value, list):
                     settings[setting] = set(
-                        our_toml_config["tool"][tool][setting] + value
+                        pkg_toml_config["tool"][tool][setting] + value
                     )
             pkg_toml_config["tool"][tool] = settings
         pkg_toml_config["dependency-groups"] = pkg_deps
