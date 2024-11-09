@@ -88,7 +88,7 @@ exclude = [
     "scratch",
 ]
 extraPaths = [
-    "__pypackages__/3.13/lib/",
+    ".venv/lib/python3.13/site-packages/",
 ]
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
@@ -101,11 +101,10 @@ reportPrivateUsage = "warning"
 pythonVersion = "3.13"
 pythonPlatform = "Darwin"
 
-[tool.pdm]
 [project]
-name = "Crackerjack"
-version = "0.9.1"
-description = "Crackerjack code style"
+name = "crackerjack"
+version = "0.9.2"
+description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
 keywords = [
@@ -131,16 +130,16 @@ classifiers = [
 ]
 dependencies = [
     "click>=8.1.7",
-    "aioconsole>=0.8.0",
+    "aioconsole>=0.8.1",
     "inflection>=0.5.1",
     "autotyping>=24.9.0",
     "pre-commit>=4.0.1",
     "pytest>=8.3.3",
     "pydantic>=2.9.2",
     "aiopath>=0.7.7",
-    "acb>=0.8.0",
     "pdm-bump>=0.9.8",
-    "pdm>=2.19.3",
+    "pdm>=2.20.1",
+    "acb>=0.8.6",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
@@ -150,15 +149,14 @@ maintainers = [
 ]
 
 [project.license]
-text = "BSD-3-Clause"
+text = "BSD-3-CLAUSE"
 
 [project.urls]
 homepage = "https://github.com/lesleslie/crackerjack"
 documentation = "https://github.com/lesleslie/crackerjack"
 repository = "https://github.com/lesleslie/crackerjack"
 
+
 [build-system]
-requires = [
-    "pdm-backend",
-]
+requires = ["pdm-backend"]
 build-backend = "pdm.backend"

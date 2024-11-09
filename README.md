@@ -1,10 +1,11 @@
 # Crackerjack Python
 
-[![Python: 3.12](https://img.shields.io/badge/python-3.12%2B-blue)](https://docs.python.org/3/)
+[![Python: 3.13](https://img.shields.io/badge/python-3.13%2B-blue)](https://docs.python.org/3/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 [![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)](https://pdm.fming.dev)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
 [![Code style: crackerjack](https://img.shields.io/badge/code%20style-crackerjack-000042)](https://github.com/lesleslie/crackerjack)
 
@@ -21,34 +22,6 @@ straight forward to read. Documentation and tests should be able to write themse
 Crackerjack provides a set of guidelines and utilities to keep the codebase clean, elegant, standardized, and
 easily readable.
 
-### **Crackerjack philosophy...**
-
-#### Virtual envs:
-
-Let's face it virtual envs are a mess and a lot of time and resources are
-spent maintaining them. [This](https://miro.medium.com/v2/resize:fit:984/format:webp/1*mHrDuetdLskvNHYucD9u3g.png) pretty
-much says it all. Enough is enough.
-
-#### Regression testing:
-
-Again, here is what we believe become to be waste of time too. It takes more time to keep codebases compliant
-with previous versions of python than it does to just update your code to run the latest versions of python
-as they are released (within a liberal-ish timeline of course). Why are you running old versions of python anyway.
-There are various easy ways to keep your system python versions up-to-date and
-Docker containers for the latest versions are available immediately upon release. Most cloud providers
-will support the new versions in their virtual machines and containers shortly after release as well. If your dependencies
-break upon upgrade, file a bug report or fix it yourself. Simple enough.
-
-#### ...the Crackerjack solution:
-
-Crackerjack uses PDM with PEP-582 (yes, PEP-582 has been rejected but PDM still supports it and Crackerjack will continue to use it!).
-No more virtualenvs. Update your system python versions as they are released and start
-migrating your code. Crackerjack, and Crackerjack'd packages, should support the latest
-python release's features within 2 month after the release and depend solely on that version. Again, if
-something breaks, file a bug report or, even better, fix it yourself (maybe even learn something new things in the process).
-Easy-peasy. You just saved yourself a zillion headaches and can sleep
-better at night now.
-
 ### **What does this package do?**
 
 This package:
@@ -62,6 +35,7 @@ This package:
   * [pdm-lock-check](https://github.com/pdm-project/pdm)
   * various core [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks)
   * [ruff](https://github.com/charliermarsh/ruff-pre-commit)
+  * [vulture](https://github.com/jendrikseipp/vulture)
   * [creosote](https://github.com/fredrikaverpil/creosote)
   * [flynt](https://github.com/ikamensh/flynt/)
   * [codespell](https://github.com/codespell-project/codespell)
@@ -96,13 +70,13 @@ This package:
 
 - functions that deal with path operations should get passed AsyncPaths or Paths - not strings
 
-- use PDM and PEP-582(proposed) for dependency management and package building/publishing
+- use PDM (uv support enabled) for dependency management and package building/publishing
 
 - use pdoc and mkdocs for producing documentation
 
 - use pytest for testing
 
-- be compliant with the latest python version within 2 months after release
+- be compliant with, and only support, the latest python version within 2 months after release
 
 
 
@@ -138,7 +112,9 @@ When you ready to publish your project:
 The -p option not only publishes your project but will bump your
 project version for you. The options are 'micro', 'minor', and 'major'.
 Put the -c option at the end and commit the bumped version to your git
-repository at the same time.
+repository at the same time:
+
+``python -m crackerjack -p micro -c``
 
 ### **Contributing**
 
