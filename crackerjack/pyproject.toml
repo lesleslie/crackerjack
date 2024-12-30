@@ -105,7 +105,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.10.3"
+version = "0.10.4"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -131,18 +131,18 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "click>=8.1.7",
+    "click>=8.1.8",
     "aioconsole>=0.8.1",
     "inflection>=0.5.1",
     "autotyping>=24.9.0",
     "pre-commit>=4.0.1",
-    "pytest>=8.3.3",
-    "pydantic>=2.9.2",
+    "pytest>=8.3.4",
+    "pydantic>=2.10.4",
     "aiopath>=0.7.7",
-    "pdm-bump>=0.9.8",
-    "pdm>=2.20.1",
-    "acb>=0.8.8",
-    "uv>=0.5.1",
+    "pdm-bump>=0.9.10",
+    "pdm>=2.22.1",
+    "acb>=0.8.9",
+    "uv>=0.5.13",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
