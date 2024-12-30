@@ -5,14 +5,14 @@
 groups = ["default"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:61905a8005c197cadd88c6b765e37a8d76eb7c3d3ec78788e5cd4dcd0ca1897f"
+content_hash = "sha256:405c450ec55d8561b4696f4b161b86c78d8a20704fe91a91ca8709a168db64f7"
 
 [[metadata.targets]]
 requires_python = ">=3.13"
 
 [[package]]
 name = "acb"
-version = "0.8.9"
+version = "0.8.0"
 summary = ""
 dependencies = [
     "aiopath",
@@ -27,18 +27,17 @@ dependencies = [
     "inflection",
     "itsdangerous",
     "loguru",
-    "msgspec-python313-pre",
+    "msgspec",
     "nest-asyncio",
     "pydantic",
     "pydantic-settings",
     "pyfiglet",
     "pyyaml",
-    "tomli-w",
     "typer",
 ]
 files = [
-    {file = "acb-0.8.9-py3-none-any.whl", hash = "sha256:1d1898cecd17a6a733a398b7f3c5d5574fb9fa66fec5a07b400d62157c52dbd4"},
-    {file = "acb-0.8.9.tar.gz", hash = "sha256:0608b78b915ac1e80255ee38b5eb1393d172d5081779adb2d944168146ab7fc4"},
+    {file = "acb-0.8.0-py3-none-any.whl", hash = "sha256:6e78f4ef21d94705d744a2dca496633b8eb77f00339bfcc3a7badd6df53dc02a"},
+    {file = "acb-0.8.0.tar.gz", hash = "sha256:294eb10723e736ab3ff426212f7d8ccbb5f6d47c305ff4adedc0fe6dad4143a8"},
 ]
 
 [[package]]
@@ -550,43 +549,38 @@ files = [
 ]
 
 [[package]]
-name = "msgspec-python313-pre"
-version = "0.19.3"
+name = "msgspec"
+version = "0.19.0"
 summary = ""
-dependencies = [
-    "setuptools",
-]
 files = [
-    {file = "msgspec_python313_pre-0.19.3-cp313-cp313-macosx_15_0_x86_64.whl", hash = "sha256:42318174762a931fe550371d8e618cbe05b66a24190ea3dfec456b473678ba11"},
-    {file = "msgspec_python313_pre-0.19.3.tar.gz", hash = "sha256:14394993ce7d149652067ebc77d2889727974af06975fce5d572658ac9f5136e"},
+    {file = "msgspec-0.19.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:f12d30dd6266557aaaf0aa0f9580a9a8fbeadfa83699c487713e355ec5f0bd86"},
+    {file = "msgspec-0.19.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:82b2c42c1b9ebc89e822e7e13bbe9d17ede0c23c187469fdd9505afd5a481314"},
+    {file = "msgspec-0.19.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:19746b50be214a54239aab822964f2ac81e38b0055cca94808359d779338c10e"},
+    {file = "msgspec-0.19.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:60ef4bdb0ec8e4ad62e5a1f95230c08efb1f64f32e6e8dd2ced685bcc73858b5"},
+    {file = "msgspec-0.19.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:ac7f7c377c122b649f7545810c6cd1b47586e3aa3059126ce3516ac7ccc6a6a9"},
+    {file = "msgspec-0.19.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:a5bc1472223a643f5ffb5bf46ccdede7f9795078194f14edd69e3aab7020d327"},
+    {file = "msgspec-0.19.0-cp313-cp313-win_amd64.whl", hash = "sha256:317050bc0f7739cb30d257ff09152ca309bf5a369854bbf1e57dffc310c1f20f"},
+    {file = "msgspec-0.19.0.tar.gz", hash = "sha256:604037e7cd475345848116e89c553aa9a233259733ab51986ac924ab1b976f8e"},
 ]
 
 [[package]]
-name = "msgspec-python313-pre"
-version = "0.19.3"
+name = "msgspec"
+version = "0.19.0"
 extras = ["toml"]
 summary = ""
 dependencies = [
-    "msgspec-python313-pre==0.19.3",
+    "msgspec==0.19.0",
     "tomli-w",
 ]
 files = [
-    {file = "msgspec_python313_pre-0.19.3-cp313-cp313-macosx_15_0_x86_64.whl", hash = "sha256:42318174762a931fe550371d8e618cbe05b66a24190ea3dfec456b473678ba11"},
-    {file = "msgspec_python313_pre-0.19.3.tar.gz", hash = "sha256:14394993ce7d149652067ebc77d2889727974af06975fce5d572658ac9f5136e"},
-]
-
-[[package]]
-name = "msgspec-python313-pre"
-version = "0.19.3"
-extras = ["yaml"]
-summary = ""
-dependencies = [
-    "msgspec-python313-pre==0.19.3",
-    "pyyaml",
-]
-files = [
-    {file = "msgspec_python313_pre-0.19.3-cp313-cp313-macosx_15_0_x86_64.whl", hash = "sha256:42318174762a931fe550371d8e618cbe05b66a24190ea3dfec456b473678ba11"},
-    {file = "msgspec_python313_pre-0.19.3.tar.gz", hash = "sha256:14394993ce7d149652067ebc77d2889727974af06975fce5d572658ac9f5136e"},
+    {file = "msgspec-0.19.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:f12d30dd6266557aaaf0aa0f9580a9a8fbeadfa83699c487713e355ec5f0bd86"},
+    {file = "msgspec-0.19.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:82b2c42c1b9ebc89e822e7e13bbe9d17ede0c23c187469fdd9505afd5a481314"},
+    {file = "msgspec-0.19.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:19746b50be214a54239aab822964f2ac81e38b0055cca94808359d779338c10e"},
+    {file = "msgspec-0.19.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:60ef4bdb0ec8e4ad62e5a1f95230c08efb1f64f32e6e8dd2ced685bcc73858b5"},
+    {file = "msgspec-0.19.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:ac7f7c377c122b649f7545810c6cd1b47586e3aa3059126ce3516ac7ccc6a6a9"},
+    {file = "msgspec-0.19.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:a5bc1472223a643f5ffb5bf46ccdede7f9795078194f14edd69e3aab7020d327"},
+    {file = "msgspec-0.19.0-cp313-cp313-win_amd64.whl", hash = "sha256:317050bc0f7739cb30d257ff09152ca309bf5a369854bbf1e57dffc310c1f20f"},
+    {file = "msgspec-0.19.0.tar.gz", hash = "sha256:604037e7cd475345848116e89c553aa9a233259733ab51986ac924ab1b976f8e"},
 ]
 
 [[package]]
@@ -898,15 +892,6 @@ dependencies = [
 files = [
     {file = "rich-13.9.4-py3-none-any.whl", hash = "sha256:6049d5e6ec054bf2779ab3358186963bac2ea89175919d699e378b99738c2a90"},
     {file = "rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098"},
-]
-
-[[package]]
-name = "setuptools"
-version = "75.6.0"
-summary = ""
-files = [
-    {file = "setuptools-75.6.0-py3-none-any.whl", hash = "sha256:ce74b49e8f7110f9bf04883b730f4765b774ef3ef28f722cce7c273d253aaf7d"},
-    {file = "setuptools-75.6.0.tar.gz", hash = "sha256:8199222558df7c86216af4f84c30e9b34a61d8ba19366cc914424cdbd28252f6"},
 ]
 
 [[package]]

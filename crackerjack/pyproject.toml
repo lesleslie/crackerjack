@@ -105,7 +105,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.10.4"
+version = "0.10.5"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -141,7 +141,7 @@ dependencies = [
     "aiopath>=0.7.7",
     "pdm-bump>=0.9.10",
     "pdm>=2.22.1",
-    "acb>=0.8.9",
+    "acb>=0.8.0",
     "uv>=0.5.13",
 ]
 authors = [
