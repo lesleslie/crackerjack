@@ -1,3 +1,6 @@
+[tool.pytest.ini_options]
+addopts = "--cov=crackerjack --cov-report="
+
 [tool.codespell]
 skip = "*/data/*"
 quiet-level = 3
@@ -9,6 +12,7 @@ target-version = "py313"
 fix = true
 show-fixes = true
 output-format = "full"
+unsafe-fixes = true
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -58,6 +62,8 @@ exclude-deps = [
     "pre-commit",
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
     "pdm",
     "pyfiglet",
     "pyyaml",
@@ -73,6 +79,7 @@ target = [
     "crackerjack",
 ]
 skips = [
+    "B101",
     "B301",
     "B311",
     "B403",
@@ -107,7 +114,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.10.8"
+version = "2.0.0"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -134,18 +141,16 @@ classifiers = [
 ]
 dependencies = [
     "click>=8.1.8",
-    "aioconsole>=0.8.1",
-    "inflection>=0.5.1",
     "autotyping>=24.9.0",
     "pre-commit>=4.0.1",
     "pytest>=8.3.4",
     "pydantic>=2.10.4",
-    "aiopath>=0.7.7",
     "pdm-bump>=0.9.10",
     "pdm>=2.22.1",
-    "acb>=0.8.0",
     "uv>=0.5.13",
-    "pytest-asyncio>=0.25.3",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "tomli-w>=1.2.0",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },

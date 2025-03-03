@@ -1,4 +1,3 @@
-import asyncio
 import typing as t
 
 from click import command, help_option, option
@@ -58,7 +57,7 @@ def crackerjack(
     if v:
         print("-v not currently implemented")
         options.verbose = v
-    asyncio.run(crackerjack_it(options=options))
+    crackerjack_it(options=options)
 
 
 if __name__ == "__main__":
