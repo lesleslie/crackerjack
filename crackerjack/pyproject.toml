@@ -57,6 +57,7 @@ exclude-deps = [
     "autotyping",
     "pre-commit",
     "pytest",
+    "pytest-asyncio",
     "pdm",
     "pyfiglet",
     "pyyaml",
@@ -79,6 +80,7 @@ skips = [
     "B602",
     "B603",
     "B607",
+    "B704",
 ]
 
 [tool.pyright]
@@ -105,7 +107,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.10.7"
+version = "0.10.8"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -143,6 +145,7 @@ dependencies = [
     "pdm>=2.22.1",
     "acb>=0.8.0",
     "uv>=0.5.13",
+    "pytest-asyncio>=0.25.3",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
