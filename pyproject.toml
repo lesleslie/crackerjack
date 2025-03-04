@@ -1,5 +1,6 @@
 [tool.pytest.ini_options]
 addopts = "--cov=crackerjack"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.codespell]
 skip = "*/data/*"
@@ -114,7 +115,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.11.1"
+version = "0.11.2"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -151,6 +152,7 @@ dependencies = [
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
     "tomli-w>=1.2.0",
+    "pytest-asyncio>=0.25.3",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },

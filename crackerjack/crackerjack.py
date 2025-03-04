@@ -28,6 +28,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             return
         our_toml_config: t.Any = loads(self.our_toml_path.read_text())
         pkg_toml_config: t.Any = loads(self.pkg_toml_path.read_text())
+        pkg_toml_config.setdefault("tool", {})
+        pkg_toml_config.setdefault("project", {})
         for tool, settings in our_toml_config["tool"].items():
             for setting, value in settings.items():
                 if isinstance(value, str | list) and "crackerjack" in value:
@@ -44,14 +46,13 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     "skips",
                     "ignore",
                 ) and isinstance(value, list):
-                    settings[setting] = set(
-                        pkg_toml_config["tool"][tool][setting] + value
-                    )
+                    conf = pkg_toml_config["tool"].get(tool, {}).get(setting, [])
+                    settings[setting] = list(set(conf + value))
             pkg_toml_config["tool"][tool] = settings
         python_version_pattern = r"\s*W*(\d\.\d*)"
         requires_python = our_toml_config["project"]["requires-python"]
         classifiers = []
-        for classifier in pkg_toml_config["project"]["classifiers"]:
+        for classifier in pkg_toml_config["project"].get("classifiers", []):
             classifier = re.sub(
                 python_version_pattern, f" {self.python_version}", classifier
             )

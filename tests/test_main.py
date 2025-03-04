@@ -2,15 +2,13 @@ import typing as t
 
 import pytest
 from click.testing import CliRunner
-from crackerjack.__main__ import crackerjack, options  # Import crackerjack and options
+from crackerjack.__main__ import crackerjack, options
 from crackerjack.crackerjack import Crackerjack
 
 
-# Mock crackerjack_it before test suite
 @pytest.fixture(autouse=True)
 def mock_crackerjack_it(monkeypatch: pytest.MonkeyPatch) -> None:
     def mock_process(self: Crackerjack, options: t.Any) -> None:
-        """Mock implementation for crackerjack_it process function."""
         pass
 
     monkeypatch.setattr(Crackerjack, "process", mock_process)
@@ -23,7 +21,6 @@ def runner() -> CliRunner:
 
 @pytest.fixture(autouse=True)
 def reset_options() -> None:
-    """Resets the options before each test."""
     options.commit = False
     options.interactive = False
     options.doc = False
