@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-addopts = "--cov=crackerjack --cov-report="
+addopts = "--cov=crackerjack"
 
 [tool.codespell]
 skip = "*/data/*"
@@ -114,7 +114,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.10.8"
+version = "0.11.0"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"

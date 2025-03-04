@@ -28,7 +28,6 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             return
         our_toml_config: t.Any = loads(self.our_toml_path.read_text())
         pkg_toml_config: t.Any = loads(self.pkg_toml_path.read_text())
-        # pkg_deps = pkg_toml_config.get("dependency-groups")
         for tool, settings in our_toml_config["tool"].items():
             for setting, value in settings.items():
                 if isinstance(value, str | list) and "crackerjack" in value:
@@ -49,7 +48,6 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                         pkg_toml_config["tool"][tool][setting] + value
                     )
             pkg_toml_config["tool"][tool] = settings
-        # pkg_toml_config["dependency-groups"] = pkg_deps
         python_version_pattern = r"\s*W*(\d\.\d*)"
         requires_python = our_toml_config["project"]["requires-python"]
         classifiers = []
@@ -86,7 +84,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 print()
                 if retry.strip().lower() == "y":
                     continue
-                raise SystemExit()
+                raise SystemExit(1)
             success = True
 
     def update_pkg_configs(self) -> None:
@@ -114,7 +112,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             check_all = execute(["pre-commit", "run", "--all-files"])
             if check_all.returncode > 0:
                 print("\n\nPre-commit failed. Please fix errors.\n")
-                raise SystemExit()
+                raise SystemExit(1)
 
     def process(self, options: t.Any) -> None:
         self.pkg_name = self.pkg_path.stem.lower().replace("-", "_")
@@ -140,7 +138,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             if build.returncode > 0:
                 print(build.stderr)
                 print("\n\nBuild failed. Please fix errors.\n")
-                raise SystemExit()
+                raise SystemExit(1)
             execute(["pdm", "publish", "--no-build"])
         if options.commit:
             commit_msg = input("\nCommit message: ")
