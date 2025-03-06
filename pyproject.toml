@@ -70,6 +70,7 @@ exclude-deps = [
     "pyyaml",
     "uv",
     "tomli-w",
+    "google-crc32c",
 ]
 
 [tool.refurb]
@@ -109,13 +110,16 @@ reportOptionalCall = false
 reportUnknownMemberType = false
 reportUnknownVariableType = false
 reportUnknownArgumentType = false
+reportInvalidTypeForm = false
+reportUnknownLambdaType = false
+reportUnknownParameterType = "warning"
 reportPrivateUsage = "warning"
 pythonVersion = "3.13"
 pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.11.2"
+version = "0.11.3"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
