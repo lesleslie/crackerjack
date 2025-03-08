@@ -19,6 +19,14 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     pkg_toml_path: t.Optional[Path] = None
     python_version: str = "3.13"
 
+    def swap_package_name(self, value: t.Any) -> t.Any:
+        if isinstance(value, list):
+            value.remove("crackerjack")
+            value.append(self.pkg_name)
+        elif isinstance(value, str):
+            value = value.replace("crackerjack", self.pkg_name)
+        return value
+
     def update_pyproject_configs(self) -> None:
         toml_file = "pyproject.toml"
         self.our_toml_path = self.our_path / toml_file
@@ -32,12 +40,15 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         pkg_toml_config.setdefault("project", {})
         for tool, settings in our_toml_config["tool"].items():
             for setting, value in settings.items():
-                if isinstance(value, str | list) and "crackerjack" in value:
-                    if isinstance(value, list):
-                        value.remove("crackerjack")
-                        value.append(self.pkg_name)
-                    else:
-                        value = value.replace("crackerjack", self.pkg_name)
+                if isinstance(value, dict):
+                    for k, v in {
+                        x: self.swap_package_name(y)
+                        for x, y in value.items()
+                        if isinstance(y, str | list) and "crackerjack" in y
+                    }.items():
+                        settings[setting][k] = v
+                elif isinstance(value, str | list) and "crackerjack" in value:
+                    value = self.swap_package_name(value)
                     settings[setting] = value
                 if setting in (
                     "exclude-deps",
