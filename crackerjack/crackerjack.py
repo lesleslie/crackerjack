@@ -1,4 +1,5 @@
 import ast
+import platform
 import re
 import subprocess
 import typing as t
@@ -395,6 +396,15 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
     def _publish_project(self, options: t.Any) -> None:
         if options.publish:
+            if platform.system() == "Darwin":
+                authorize = self.execute_command(
+                    ["pdm", "self", "add", "keyring"], capture_output=True, text=True
+                )
+                if authorize.returncode > 0:
+                    self.console.print(
+                        "\n\nAuthorization failed. Please add your keyring credentials to PDM. Run `pdm self add keyring` and try again.\n\n"
+                    )
+                    raise SystemExit(1)
             build = self.execute_command(
                 ["pdm", "build"], capture_output=True, text=True
             )
