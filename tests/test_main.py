@@ -1,6 +1,5 @@
 import typing as t
 from unittest.mock import MagicMock, patch
-
 import pytest
 from typer.testing import CliRunner
 from crackerjack.__main__ import BumpOption, Options, app, create_options
@@ -217,6 +216,7 @@ def test_create_options() -> None:
         bump=BumpOption.major,
         clean=True,
         test=True,
+        all=BumpOption.minor,
     )
     assert test_options.commit
     assert test_options.interactive
@@ -228,6 +228,7 @@ def test_create_options() -> None:
     assert test_options.bump == BumpOption.major
     assert test_options.clean
     assert test_options.test
+    assert test_options.all == BumpOption.minor
 
 
 def test_conflicting_options(
@@ -238,3 +239,38 @@ def test_conflicting_options(
     options = mock_crackerjack_process.call_args[0][0]
     assert options.publish == BumpOption.micro
     assert options.bump == BumpOption.minor
+
+
+def test_all_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app, ["-a", "micro"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.all == BumpOption.micro
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--all", "minor"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.all == BumpOption.minor
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--all", "major"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.all == BumpOption.major
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--all", "MICRO"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.all == BumpOption.micro
+
+
+def test_all_option_with_other_options(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["-a", "micro", "-c", "-t"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.all == BumpOption.micro
+    assert options.commit
+    assert options.test

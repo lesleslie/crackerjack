@@ -13,6 +13,31 @@
 
 Crackerjack is an opinionated Python project management tool designed to help you create, maintain, and publish high-quality Python projects with ease. It combines best-in-class tools and a streamlined workflow to ensure code quality, consistency, and reliability.
 
+---
+
+## Getting Started
+
+### Quick Start
+
+If you're new to Crackerjack, follow these steps:
+1. **Install Python 3.13:** Ensure you have Python 3.13 installed.
+2. **Install PDM:**
+    ```
+    pipx install pdm
+    ```
+3. **Install Crackerjack:**
+    ```
+    pip install crackerjack
+    ```
+
+4. **Initialize a New Project:**
+    Navigate to your project's root directory and run:
+    ```
+    python -m crackerjack
+    ```
+
+---
+
 ## The Crackerjack Philosophy
 
 Crackerjack is built on the following core principles:
@@ -22,7 +47,7 @@ Crackerjack is built on the following core principles:
 -   **Consistency:** Code style, formatting, and project structure should be consistent across projects.
 -   **Reliability:** Tests are essential, and code should be checked rigorously.
 -   **Tool Integration:** Leverage powerful existing tools instead of reinventing the wheel.
-- **Static Typing:** Static typing is essential for all development.
+-   **Static Typing:** Static typing is essential for all development.
 
 ## Key Features
 
@@ -37,7 +62,7 @@ Crackerjack provides:
 -   **Built-in Testing:** Automatically runs tests using `pytest`.
 -   **Easy Version Bumping:** Provides commands to bump the project version (micro, minor, or major).
 -   **Simplified Publishing:** Automates publishing to PyPI via PDM.
-- **Commit and Push:** Commits and pushes your changes.
+-   **Commit and Push:** Commits and pushes your changes.
 
 ## Pre-commit Hooks
 
@@ -62,7 +87,7 @@ Crackerjack projects adhere to these guidelines:
 
 -   **Static Typing:** Use type hints consistently throughout your code.
 -   **Explicit Naming:** Choose clear, descriptive names for classes, functions, variables, and other identifiers.
--   **Markdown for Documentation:** Use Markdown (`.md`) for all documentation, including docstrings, READMEs, etc.
+-   **Markdown for Documentation:** Use Markdown (`.md`) for all documentation, READMEs, etc.
 -   **Pathlib:** Use `pathlib.Path` for handling file and directory paths instead of `os.path`.
 -   **Consistent Imports:** Use `import typing as t` for type hinting.
 -   **Constants and Config:** Do not use all-caps for constants or configuration settings.
@@ -102,12 +127,14 @@ Run Crackerjack from the root of your Python project using:
 -   `-i`, `--interactive`: Run pre-commit hooks interactively when possible.
 -   `-n`, `--no-config-updates`: Skip updating configuration files (e.g., `pyproject.toml`).
 -   `-u`, `--update-precommit`: Update pre-commit hooks to the latest versions.
--   `-v`, `--verbose`: Enable verbose output.
+-   `-d`, `--doc`: Generate documentation.  (not yet implemented)
+-   `-v`, `--verbose`: Enable verbose output. (not yet implemented)
 -   `-p`, `--publish <micro|minor|major>`: Bump the project version and publish to PyPI using PDM.
 -   `-b`, `--bump <micro|minor|major>`: Bump the project version without publishing.
 -   `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.
 -   `-t`, `--test`: Run tests using `pytest`.
--   `-h`, `--help`: Display help.
+-   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
+-   `--help`: Display help.
 
 ### Example Workflows
 
@@ -117,7 +144,7 @@ Run Crackerjack from the root of your Python project using:
     ```
 
 -   **Clean code, run checks, run tests, then commit:**
-    ````
+    ```
     python -m crackerjack -c -x -t
     ```
 
@@ -135,14 +162,26 @@ Run Crackerjack from the root of your Python project using:
     ```
     python -m crackerjack -b major
     ```
+
 - **Update pre-commit hooks:**
     ```
     python -m crackerjack -u
     ```
+
 - **Get help:**
     ```
-    python -m crackerjack -h
+    python -m crackerjack --help
     ```
+
+- **Clean code, run checks, run tests, bump version, publish, then commit:**
+    ```
+  python -m crackerjack -x -t -p minor -c
+
+  # or even easier
+
+  python -m crackerjack -a minor
+  ```
+
 
 ## Contributing
 

@@ -1,6 +1,5 @@
 import typing as t
 from enum import Enum
-
 import typer
 from pydantic import BaseModel, field_validator
 from rich.console import Console
@@ -32,6 +31,7 @@ class Options(BaseModel):
     update_precommit: bool = False
     clean: bool = False
     test: bool = False
+    all: t.Optional[BumpOption] = None
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -81,6 +81,13 @@ cli_options = {
         help="Remove docstrings, line comments, and unnecessary whitespace.",
     ),
     "test": typer.Option(False, "-t", "--test", help="Run tests."),
+    "all": typer.Option(
+        None,
+        "-a",
+        "--all",
+        help="Run with `-x -t -p <micro|minor|major> -c` development options).",
+        case_sensitive=False,
+    ),
 }
 
 
@@ -97,6 +104,7 @@ def main(
     update_precommit: bool = cli_options["update_precommit"],
     verbose: bool = cli_options["verbose"],
     publish: t.Optional[BumpOption] = cli_options["publish"],
+    all: t.Optional[BumpOption] = cli_options["all"],
     bump: t.Optional[BumpOption] = cli_options["bump"],
     clean: bool = cli_options["clean"],
     test: bool = cli_options["test"],
@@ -112,6 +120,7 @@ def main(
         bump=bump,
         clean=clean,
         test=test,
+        all=all,
     )
     crackerjack_it(options)
 

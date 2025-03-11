@@ -1,0 +1,7 @@
+def test_func():
+    # This comment should be removed
+    return True  # remove this inline comment
+
+# Full line comment
+x = 1  # type: ignore
+y = 2  # noqa

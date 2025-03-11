@@ -1,0 +1,10 @@
+"""def test_func():
+    \"\"\"This is a docstring.\"\"\"
+    return True
+
+class TestClass:
+    \"\"\"Class docstring.\"\"\"
+    def method(self):
+        \"\"\"Method docstring.\"\"\"
+        pass
+"""

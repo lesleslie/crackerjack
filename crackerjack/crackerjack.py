@@ -8,7 +8,6 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from subprocess import run as execute
 from tomllib import loads
-
 from pydantic import BaseModel
 from rich.console import Console
 from tomli_w import dumps
@@ -369,11 +368,10 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         if options.clean:
             if self.pkg_dir:
                 self.code_cleaner.clean_files(self.pkg_dir)
-            if self.pkg_path.stem == "crackerjack":
-                tests_dir = self.pkg_path / "tests"
-                if tests_dir.exists() and tests_dir.is_dir():
-                    self.console.print("\nCleaning tests directory...\n")
-                    self.code_cleaner.clean_files(tests_dir)
+            tests_dir = self.pkg_path / "tests"
+            if tests_dir.exists() and tests_dir.is_dir():
+                self.console.print("\nCleaning tests directory...\n")
+                self.code_cleaner.clean_files(tests_dir)
 
     def _run_tests(self, options: t.Any) -> None:
         if options.test:
@@ -432,6 +430,11 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         return execute(cmd, **kwargs)
 
     def process(self, options: t.Any) -> None:
+        if options.all:
+            options.clean = True
+            options.test = True
+            options.publish = options.all
+            options.commit = True
         self._setup_package()
         self._update_project(options)
         self._update_precommit(options)
