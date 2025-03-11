@@ -1,17 +1,15 @@
 import typing as t
+from unittest.mock import MagicMock, patch
 
 import pytest
-from click.testing import CliRunner
-from crackerjack.__main__ import crackerjack, options
-from crackerjack.crackerjack import Crackerjack
+from typer.testing import CliRunner
+from crackerjack.__main__ import BumpOption, Options, app, create_options
 
 
-@pytest.fixture(autouse=True)
-def mock_crackerjack_it(monkeypatch: pytest.MonkeyPatch) -> None:
-    def mock_process(self: Crackerjack, options: t.Any) -> None:
-        pass
-
-    monkeypatch.setattr(Crackerjack, "process", mock_process)
+@pytest.fixture
+def mock_crackerjack_process() -> t.Generator[MagicMock, None, None]:
+    with patch("crackerjack.__main__.crackerjack_it") as mock_process:
+        yield mock_process
 
 
 @pytest.fixture
@@ -19,124 +17,224 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-@pytest.fixture(autouse=True)
-def reset_options() -> None:
-    options.commit = False
-    options.interactive = False
-    options.doc = False
-    options.update_precommit = False
-    options.do_not_update_configs = False
-    options.publish = False
-    options.bump = False
-    options.verbose = False
-
-
-def test_no_options(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack)
+def test_no_options(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app)
     assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert isinstance(options, Options)
     assert not options.commit
     assert not options.interactive
     assert not options.doc
     assert not options.update_precommit
-    assert not options.do_not_update_configs
-    assert options.publish is False
-    assert options.bump is False
+    assert not options.no_config_updates
+    assert options.publish is None
+    assert options.bump is None
     assert not options.verbose
+    assert not options.clean
+    assert not options.test
 
 
-def test_commit_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-c"])
-    assert result.exit_code == 1
+def test_commit_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app, ["-c"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.commit
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--commit"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
     assert options.commit
 
 
-def test_interactive_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-i"])
+def test_interactive_option(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["-i"])
     assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.interactive
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--interactive"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
     assert options.interactive
 
 
-def test_doc_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-d"])
+def test_doc_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app, ["-d"])
     assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.doc
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--doc"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
     assert options.doc
 
 
-def test_update_precommit_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-u"])
+def test_update_precommit_option(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["-u"])
     assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.update_precommit
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--update-precommit"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
     assert options.update_precommit
 
 
-def test_do_not_update_configs_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-x"])
+def test_verbose_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app, ["-v"])
     assert result.exit_code == 0
-    assert options.do_not_update_configs
-
-
-# def test_publish_micro_option(runner: CliRunner) -> None:
-#     result = runner.invoke(crackerjack, ["-p", "micro"])
-#     assert result.exit_code == 0
-#     assert options.publish == "micro"
-#
-#
-# def test_publish_minor_option(runner: CliRunner) -> None:
-#     result = runner.invoke(crackerjack, ["-p", "minor"])
-#     assert result.exit_code == 0
-#     assert options.publish == "minor"
-#
-#
-# def test_publish_major_option(runner: CliRunner) -> None:
-#     result = runner.invoke(crackerjack, ["-p", "major"])
-#     assert result.exit_code == 0
-#     assert options.publish == "major"
-#
-#
-# def test_bump_micro_option(runner: CliRunner) -> None:
-#     result = runner.invoke(crackerjack, ["-b", "micro"])
-#     assert result.exit_code == 0
-#     assert options.bump == "micro"
-#
-#
-# def test_bump_minor_option(runner: CliRunner) -> None:
-#     result = runner.invoke(crackerjack, ["-b", "minor"])
-#     assert result.exit_code == 0
-#     assert options.bump == "minor"
-#
-#
-# def test_bump_major_option(runner: CliRunner) -> None:
-#     result = runner.invoke(crackerjack, ["-b", "major"])
-#     assert result.exit_code == 0
-#     assert options.bump == "major"
-
-
-def test_verbose_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-v"])
-    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
     assert options.verbose
-    assert "-v not currently implemented" in result.output
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--verbose"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.verbose
 
 
-def test_multiple_options(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-c", "-i"])
-    assert result.exit_code == 1
+def test_publish_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app, ["-p", "micro"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.publish == BumpOption.micro
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--publish", "minor"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.publish == BumpOption.minor
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--publish", "major"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.publish == BumpOption.major
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--publish", "MICRO"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.publish == BumpOption.micro
+
+
+def test_bump_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app, ["-b", "micro"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.bump == BumpOption.micro
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--bump", "minor"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.bump == BumpOption.minor
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--bump", "major"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.bump == BumpOption.major
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--bump", "MICRO"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.bump == BumpOption.micro
+
+
+def test_clean_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app, ["-x"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.clean
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--clean"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.clean
+
+
+def test_no_config_updates(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["-n"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.no_config_updates
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--no-config-updates"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.no_config_updates
+
+
+def test_test_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
+    result = runner.invoke(app, ["-t"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.test
+    mock_crackerjack_process.reset_mock()
+    result = runner.invoke(app, ["--test"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.test
+
+
+def test_multiple_options(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["-c", "-i", "-d", "-t", "-x"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.assert_called_once()
+    options = mock_crackerjack_process.call_args[0][0]
     assert options.commit
     assert options.interactive
+    assert options.doc
+    assert options.test
+    assert options.clean
 
 
-def test_help_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-h"])
+def test_create_options() -> None:
+    test_options = create_options(
+        commit=True,
+        interactive=True,
+        doc=True,
+        no_config_updates=True,
+        update_precommit=True,
+        verbose=True,
+        publish=BumpOption.micro,
+        bump=BumpOption.major,
+        clean=True,
+        test=True,
+    )
+    assert test_options.commit
+    assert test_options.interactive
+    assert test_options.doc
+    assert test_options.no_config_updates
+    assert test_options.update_precommit
+    assert test_options.verbose
+    assert test_options.publish == BumpOption.micro
+    assert test_options.bump == BumpOption.major
+    assert test_options.clean
+    assert test_options.test
+
+
+def test_conflicting_options(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["-p", "micro", "-b", "minor"])
     assert result.exit_code == 0
-    assert "Usage: " in result.output
-
-
-def test_invalid_publish_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-p", "invalid"])
-    assert result.exit_code == 0
-    assert options.publish is False
-
-
-def test_invalid_bump_option(runner: CliRunner) -> None:
-    result = runner.invoke(crackerjack, ["-b", "invalid"])
-    assert result.exit_code == 0
-    assert options.bump is False
+    options = mock_crackerjack_process.call_args[0][0]
+    assert options.publish == BumpOption.micro
+    assert options.bump == BumpOption.minor

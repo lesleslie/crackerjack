@@ -13,3 +13,5 @@
 /*.pyc
 /.crackerjack.yaml
 /scratch/
+
+.qodo

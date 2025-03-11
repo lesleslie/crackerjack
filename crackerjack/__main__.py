@@ -1,64 +1,120 @@
 import typing as t
+from enum import Enum
 
-from click import command, help_option, option
-from pydantic import BaseModel
+import typer
+from pydantic import BaseModel, field_validator
+from rich.console import Console
 from crackerjack import crackerjack_it
+
+console = Console(force_terminal=True)
+app = typer.Typer(
+    help="Crackerjack: Your Python project setup and style enforcement tool."
+)
+
+
+class BumpOption(str, Enum):
+    micro = "micro"
+    minor = "minor"
+    major = "major"
+
+    def __str__(self) -> str:
+        return self.value
 
 
 class Options(BaseModel):
     commit: bool = False
     interactive: bool = False
     doc: bool = False
-    do_not_update_configs: bool = False
-    publish: t.Literal["micro", "minor", "major"] | bool = False
-    bump: t.Literal["micro", "minor", "major"] | bool = False
+    no_config_updates: bool = False
+    publish: t.Optional[BumpOption] = None
+    bump: t.Optional[BumpOption] = None
     verbose: bool = False
     update_precommit: bool = False
+    clean: bool = False
+    test: bool = False
+
+    @classmethod
+    @field_validator("publish", "bump", mode="before")
+    def validate_bump_options(cls, value: t.Optional[str]) -> t.Optional[BumpOption]:
+        if value is None:
+            return None
+        try:
+            return BumpOption(value.lower())
+        except ValueError:
+            valid_options = ", ".join([o.value for o in BumpOption])
+            raise ValueError(
+                f"Invalid bump option: {value}. Must be one of: {valid_options}"
+            )
 
 
-options = Options()
+cli_options = {
+    "commit": typer.Option(False, "-c", "--commit", help="Commit changes to Git."),
+    "interactive": typer.Option(
+        False, "-i", "--interactive", help="Run pre-commit hooks interactively."
+    ),
+    "doc": typer.Option(False, "-d", "--doc", help="Generate documentation."),
+    "no_config_updates": typer.Option(
+        False, "-n", "--no-config-updates", help="Do not update configuration files."
+    ),
+    "update_precommit": typer.Option(
+        False, "-u", "--update-precommit", help="Update pre-commit hooks."
+    ),
+    "verbose": typer.Option(False, "-v", "--verbose", help="Enable verbose output."),
+    "publish": typer.Option(
+        None,
+        "-p",
+        "--publish",
+        help="Bump version and publish to PyPI (micro, minor, major).",
+        case_sensitive=False,
+    ),
+    "bump": typer.Option(
+        None,
+        "-b",
+        "--bump",
+        help="Bump version (micro, minor, major).",
+        case_sensitive=False,
+    ),
+    "clean": typer.Option(
+        False,
+        "-x",
+        "--clean",
+        help="Remove docstrings, line comments, and unnecessary whitespace.",
+    ),
+    "test": typer.Option(False, "-t", "--test", help="Run tests."),
+}
 
 
-@command()
-@help_option("-h", is_flag=True, help="help")
-@option("-c", is_flag=True, help="commit")
-@option("-i", is_flag=True, help="interactive")
-@option("-d", is_flag=True, help="doc")
-@option("-x", is_flag=True, help="do not update configs")
-@option("-u", is_flag=True, help="update pre-commit")
-@option("-v", is_flag=True, help="verbose")
-@option("-p", help="bump version and publish: -p [micro, minor, major]")
-@option("-b", help="bump version: -b [micro, minor, major]")
-# @option("-f", help="format: -f [module]")
-def crackerjack(
-    c: bool = False,
-    i: bool = False,
-    d: bool = False,
-    u: bool = False,
-    v: bool = False,
-    x: bool = False,
-    p: str | bool = False,
-    b: str | bool = False,
+def create_options(**kwargs: t.Any) -> Options:
+    return Options(**kwargs)
+
+
+@app.command()
+def main(
+    commit: bool = cli_options["commit"],
+    interactive: bool = cli_options["interactive"],
+    doc: bool = cli_options["doc"],
+    no_config_updates: bool = cli_options["no_config_updates"],
+    update_precommit: bool = cli_options["update_precommit"],
+    verbose: bool = cli_options["verbose"],
+    publish: t.Optional[BumpOption] = cli_options["publish"],
+    bump: t.Optional[BumpOption] = cli_options["bump"],
+    clean: bool = cli_options["clean"],
+    test: bool = cli_options["test"],
 ) -> None:
-    if c:
-        options.commit = c
-    if i:
-        options.interactive = i
-    if d:
-        options.doc = d
-    if u:
-        options.update_precommit = u
-    if x:
-        options.do_not_update_configs = x
-    if p in ("micro", "minor", "major"):
-        options.publish = p
-    if b in ("micro", "minor", "major"):
-        options.bump = b
-    if v:
-        print("-v not currently implemented")
-        options.verbose = v
-    crackerjack_it(options=options)
+    options = create_options(
+        commit=commit,
+        interactive=interactive,
+        doc=doc,
+        no_config_updates=no_config_updates,
+        update_precommit=update_precommit,
+        verbose=verbose,
+        publish=publish,
+        bump=bump,
+        clean=clean,
+        test=test,
+    )
+    crackerjack_it(options)
 
 
 if __name__ == "__main__":
-    crackerjack()
+    app()

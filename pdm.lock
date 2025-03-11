@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:cf93058a7e5350dea14f29fe1642c14b34a9e6a71c4ee22498dc33c4929c8129"
+content_hash = "sha256:faf1c0112e9bb361246804f8870f4b2c96b9e3942f9b9b4c360a17f53a61fff2"
 
 [[metadata.targets]]
 requires_python = ">=3.13"
@@ -664,6 +664,21 @@ summary = ""
 files = [
     {file = "truststore-0.10.1-py3-none-any.whl", hash = "sha256:b64e6025a409a43ebdd2807b0c41c8bff49ea7ae6550b5087ac6df6619352d4c"},
     {file = "truststore-0.10.1.tar.gz", hash = "sha256:eda021616b59021812e800fa0a071e51b266721bef3ce092db8a699e21c63539"},
+]
+
+[[package]]
+name = "typer"
+version = "0.15.2"
+summary = ""
+dependencies = [
+    "click",
+    "rich",
+    "shellingham",
+    "typing-extensions",
+]
+files = [
+    {file = "typer-0.15.2-py3-none-any.whl", hash = "sha256:46a499c6107d645a9c13f7ee46c5d5096cae6f5fc57dd11eccbbb9ae3e44ddfc"},
+    {file = "typer-0.15.2.tar.gz", hash = "sha256:ab2fab47533a813c49fe1f16b1a370fd5819099c00b119e0633df65f22144ba5"},
 ]
 
 [[package]]

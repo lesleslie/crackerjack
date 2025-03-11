@@ -49,8 +49,9 @@ max-complexity = 12
 convention = "google"
 
 [tool.vulture]
-min_confidence = 84
+min_confidence = 86
 paths = ["crackerjack",]
+ignore_names = ["cls"]
 
 [tool.creosote]
 paths = [
@@ -119,7 +120,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.11.4"
+version = "0.12.0"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -145,7 +146,6 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "click>=8.1.8",
     "autotyping>=24.9.0",
     "pre-commit>=4.1.0",
     "pytest>=8.3.5",
@@ -157,6 +157,8 @@ dependencies = [
     "pytest-mock>=3.14.0",
     "tomli-w>=1.2.0",
     "pytest-asyncio>=0.25.3",
+    "rich>=13.9.4",
+    "typer>=0.15.2",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
