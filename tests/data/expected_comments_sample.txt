@@ -1,10 +1,8 @@
 def test_func():
-    # This comment should be removed
-    return True  # remove this inline comment
+    return True
 
     async def load_bytecode(self, bucket: Bucket) -> t.Optional[bytes]:  # type: ignore[override]
         code = await self.client.get(self.get_bucket_name(bucket.key))  # type: ignore
 
-# Full line comment
 x = 1  # type: ignore
 y = 2  # noqa

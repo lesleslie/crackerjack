@@ -905,6 +905,7 @@ class TestCrackerjackProcess:
         assert '"""Method docstring."""' not in cleaned_code, f"Got: {cleaned_code!r}"
 
     def test_code_cleaner_remove_line_comments(self) -> None:
+        from pathlib import Path
         from rich.console import Console
         from crackerjack.crackerjack import CodeCleaner
 
@@ -913,18 +914,12 @@ class TestCrackerjackProcess:
             Path(__file__).parent / "data" / "comments_sample.txt"
         ).read_text()
         cleaned_code = code_cleaner.remove_line_comments(code_with_comments)
-        assert "x = 1  # type: ignore" in cleaned_code, f"Got: {cleaned_code!r}"
-        assert "y = 2  # noqa" in cleaned_code, f"Got: {cleaned_code!r}"
-        assert "# This comment should be removed" not in cleaned_code, (
-            f"Got: {cleaned_code!r}"
+        expected_cleaned = (
+            Path(__file__).parent / "data" / "expected_comments_sample.txt"
+        ).read_text()
+        assert cleaned_code == expected_cleaned, (
+            f"Cleaned code does not match expected.\nExpected:\n{expected_cleaned}\nGot:\n{cleaned_code}"
         )
-        assert "# remove this inline comment" not in cleaned_code, (
-            f"Got: {cleaned_code!r}"
-        )
-        assert (
-            "def test_func():\n    return True\n\nx = 1  # type: ignore\ny = 2  # noqa\n"
-            in cleaned_code
-        ), f"Got: {cleaned_code!r}"
 
     def test_code_cleaner_remove_extra_whitespace(self) -> None:
         from rich.console import Console

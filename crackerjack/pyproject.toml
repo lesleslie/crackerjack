@@ -120,7 +120,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.13.0"
+version = "0.13.1"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"

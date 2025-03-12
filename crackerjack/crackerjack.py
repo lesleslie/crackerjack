@@ -66,11 +66,10 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             comment_start = comment_match.start()
             code_part = line[:comment_start].rstrip()
             comment = line[comment_start:].strip()
-            if code_part:
-                if re.match("^#(?: type: ignore| noqa)(.*)?$", comment):
-                    cleaned_lines.append(line)
-                else:
-                    cleaned_lines.append(code_part)
+            if re.match("^#\\s*(?:type: ignore|noqa)(?:\\[[^\\]]*\\])?", comment):
+                cleaned_lines.append(line)
+            elif code_part:
+                cleaned_lines.append(code_part)
         return "\n".join(cleaned_lines)
 
     def remove_extra_whitespace(self, code: str) -> str:
