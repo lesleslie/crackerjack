@@ -1,13 +1,16 @@
-import ast
+import io
 import platform
 import re
 import subprocess
+import tokenize
 import typing as t
 from contextlib import suppress
 from pathlib import Path
 from subprocess import CompletedProcess
 from subprocess import run as execute
+from token import STRING
 from tomllib import loads
+
 from pydantic import BaseModel
 from rich.console import Console
 from tomli_w import dumps
@@ -31,6 +34,12 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
 
     def clean_file(self, file_path: Path) -> None:
         try:
+            if file_path.resolve() == Path(__file__).resolve():
+                print(f"Skipping cleaning of {file_path} (self file).")
+                return
+        except Exception as e:
+            print(f"Error comparing file paths: {e}")
+        try:
             code = file_path.read_text()
             code = self.remove_docstrings(code)
             code = self.remove_line_comments(code)
@@ -41,36 +50,50 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         except Exception as e:
             print(f"Error cleaning {file_path}: {e}")
 
-    def remove_docstrings(self, code: str) -> str:
-        tree = ast.parse(code)
-        for node in ast.walk(tree):
-            if isinstance(
-                node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)
-            ):
-                if ast.get_docstring(node):
-                    node.body = (
-                        node.body[1:]
-                        if isinstance(node.body[0], ast.Expr)
-                        else node.body
-                    )
-        return ast.unparse(tree)
-
     def remove_line_comments(self, code: str) -> str:
-        lines = code.split("\n")
-        cleaned_lines = []
-        for line in lines:
-            comment_match = re.search("(?<!\\S)#(.*)", line)
-            if comment_match is None:
-                cleaned_lines.append(line)
+        new_lines = []
+        for line in code.splitlines():
+            if "#" not in line:
+                new_lines.append(line)
                 continue
-            comment_start = comment_match.start()
-            code_part = line[:comment_start].rstrip()
-            comment = line[comment_start:].strip()
-            if re.match("^#\\s*(?:type: ignore|noqa)(?:\\[[^\\]]*\\])?", comment):
-                cleaned_lines.append(line)
-            elif code_part:
-                cleaned_lines.append(code_part)
-        return "\n".join(cleaned_lines)
+            idx = line.find("#")
+            code_part = line[:idx].rstrip()
+            comment_part = line[idx:]
+            if "type: ignore" in comment_part or "noqa" in comment_part:
+                new_lines.append(line)
+            else:
+                if code_part:
+                    new_lines.append(code_part)
+        return "\n".join(new_lines)
+
+    def remove_docstrings(self, source: str) -> str:
+        try:
+            io_obj = io.StringIO(source)
+            output_tokens = []
+            first_token_stack = [True]
+            tokens = list(tokenize.generate_tokens(io_obj.readline))
+            for tok in tokens:
+                token_type = tok.type
+                if token_type == tokenize.INDENT:
+                    first_token_stack.append(True)
+                elif token_type == tokenize.DEDENT:
+                    if len(first_token_stack) > 1:
+                        first_token_stack.pop()
+                if token_type == STRING and first_token_stack[-1]:
+                    first_token_stack[-1] = False
+                    continue
+                else:
+                    if token_type not in (
+                        tokenize.NEWLINE,
+                        tokenize.NL,
+                        tokenize.COMMENT,
+                    ):
+                        first_token_stack[-1] = False
+                output_tokens.append(tok)
+            return tokenize.untokenize(output_tokens)
+        except Exception as e:
+            self.console.print(f"Error removing docstrings: {e}")
+            return source
 
     def remove_extra_whitespace(self, code: str) -> str:
         lines = code.split("\n")
@@ -375,7 +398,10 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _run_tests(self, options: t.Any) -> None:
         if options.test:
             self.console.print("\n\nRunning tests...\n")
-            result = self.execute_command(["pytest"], capture_output=True, text=True)
+            test = ["pytest"]
+            if options.verbose:
+                test.append("-v")
+            result = self.execute_command(test, capture_output=True, text=True)
             if result.stdout:
                 self.console.print(result.stdout)
             if result.returncode > 0:

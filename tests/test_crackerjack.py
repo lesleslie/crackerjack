@@ -3,6 +3,7 @@ import typing as t
 from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 from pydantic import BaseModel
 from rich.console import Console
@@ -906,17 +907,22 @@ class TestCrackerjackProcess:
 
     def test_code_cleaner_remove_line_comments(self) -> None:
         from pathlib import Path
+
         from rich.console import Console
         from crackerjack.crackerjack import CodeCleaner
 
         code_cleaner = CodeCleaner(console=Console())
         code_with_comments = (
-            Path(__file__).parent / "data" / "comments_sample.txt"
-        ).read_text()
+            (Path(__file__).parent / "data" / "comments_sample.txt")
+            .read_text()
+            .rstrip()
+        )
         cleaned_code = code_cleaner.remove_line_comments(code_with_comments)
         expected_cleaned = (
-            Path(__file__).parent / "data" / "expected_comments_sample.txt"
-        ).read_text()
+            (Path(__file__).parent / "data" / "expected_comments_sample.txt")
+            .read_text()
+            .rstrip()
+        )
         assert cleaned_code == expected_cleaned, (
             f"Cleaned code does not match expected.\nExpected:\n{expected_cleaned}\nGot:\n{cleaned_code}"
         )

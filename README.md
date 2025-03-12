@@ -128,7 +128,7 @@ Run Crackerjack from the root of your Python project using:
 -   `-n`, `--no-config-updates`: Skip updating configuration files (e.g., `pyproject.toml`).
 -   `-u`, `--update-precommit`: Update pre-commit hooks to the latest versions.
 -   `-d`, `--doc`: Generate documentation.  (not yet implemented)
--   `-v`, `--verbose`: Enable verbose output. (not yet implemented)
+-   `-v`, `--verbose`: Enable verbose output.
 -   `-p`, `--publish <micro|minor|major>`: Bump the project version and publish to PyPI using PDM.
 -   `-b`, `--bump <micro|minor|major>`: Bump the project version without publishing.
 -   `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.

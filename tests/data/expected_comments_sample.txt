@@ -1,8 +1,54 @@
 def test_func():
     return True
 
-    async def load_bytecode(self, bucket: Bucket) -> t.Optional[bytes]:  # type: ignore[override]
-        code = await self.client.get(self.get_bucket_name(bucket.key))  # type: ignore
-
 x = 1  # type: ignore
-y = 2  # noqa
+y = 2 # noqa
+
+
+class AsyncRedisBytecodeCache(AsyncBytecodeCache):
+    prefix: str | None
+    client: Redis | RedisCluster  # type: ignore
+    configs: MappingProxyType[str, t.Any]
+
+    def __init__(
+        self,
+        prefix: str | None = None,
+        client: Redis | RedisCluster | None = None,   # type: ignore
+        **configs: t.Any,
+    ) -> None:
+        self.prefix = prefix
+        self.client = client or Redis(**configs)
+        self.configs = MappingProxyType(configs)
+
+    def get_cache_key(self, name: str, filename: str | None = None) -> str:
+        return filename or name
+
+    def get_source_checksum(self, source: str) -> str:
+        return str(hash(source))
+
+    def get_bucket_name(self, key: str) -> str:
+        return ":".join([self.prefix, key]) if self.prefix else key
+
+    async def load_bytecode(self, bucket: Bucket) -> t.Optional[bytes]:  # type: ignore[override]
+        code = await self.client.get(self.get_bucket_name(bucket.key)) # type: ignore
+        if code:
+            bucket.bytecode_from_string(code)
+            return code
+        return None
+
+    async def dump_bytecode(self, bucket: Bucket) -> None:  # type: ignore[override]
+        await self.client.set(  # type: ignore
+            self.get_bucket_name(bucket.key), bucket.bytecode_to_string()
+        )
+
+    async def get_bucket(  # type: ignore[override]
+        self, environment: Environment, name: str, filename: str | None, source: str
+    ) -> Bucket:
+        key = self.get_cache_key(name, filename or name)
+        checksum = self.get_source_checksum(source)
+        bucket = Bucket(environment, key, checksum)
+        await self.load_bytecode(bucket)
+        return bucket
+
+    async def set_bucket(self, bucket: Bucket) -> None:  # type: ignore[override]
+        await self.dump_bytecode(bucket)

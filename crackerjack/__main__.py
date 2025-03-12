@@ -1,5 +1,6 @@
 import typing as t
 from enum import Enum
+
 import typer
 from pydantic import BaseModel, field_validator
 from rich.console import Console
