@@ -1,5 +1,6 @@
 import os
 import typing as t
+from contextlib import suppress
 from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -497,7 +498,8 @@ class TestCrackerjackProcess:
             mock_cj_execute.return_value = failed_result
             with patch.object(Crackerjack, "_update_project"):
                 cj = Crackerjack(dry_run=True)
-                cj.process(options)
+                with suppress(SystemExit):
+                    cj.process(options)
         mock_console_print.assert_any_call("\n\n❌ Tests failed. Please fix errors.\n")
 
     def test_process_with_failed_build(

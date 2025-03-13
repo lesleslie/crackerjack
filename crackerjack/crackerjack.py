@@ -408,7 +408,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 if result.stderr:
                     self.console.print(result.stderr)
                 self.console.print("\n\n❌ Tests failed. Please fix errors.\n")
-                return
+                raise SystemExit(1)
             self.console.print("\n\n✅ Tests passed successfully!\n")
 
     def _bump_version(self, options: t.Any) -> None:
