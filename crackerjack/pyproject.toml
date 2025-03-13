@@ -39,7 +39,6 @@ extend-select = [
 [tool.ruff.lint.isort]
 no-lines-before = [
     "first-party",
-    "local-folder",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -120,7 +119,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.13.2"
+version = "0.14.0"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -152,7 +151,7 @@ dependencies = [
     "pydantic>=2.10.6",
     "pdm-bump>=0.9.10",
     "pdm>=2.22.4",
-    "uv>=0.6.5",
+    "uv>=0.6.6",
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
     "tomli-w>=1.2.0",
