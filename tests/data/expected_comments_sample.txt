@@ -1,7 +1,6 @@
 def test_func():
     return True
 
-# Full line comment
 x = 1  # type: ignore
 y = 2 # noqa
 
