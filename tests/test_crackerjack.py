@@ -1,12 +1,12 @@
 import os
 import typing as t
 from contextlib import suppress
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
 from rich.console import Console
 from crackerjack.crackerjack import (
     CodeCleaner,
@@ -25,18 +25,19 @@ class BumpOption(str, Enum):
         return self.value
 
 
-class OptionsForTesting(BaseModel):
+@dataclass
+class OptionsForTesting:
     commit: bool = False
     interactive: bool = False
     doc: bool = False
     no_config_updates: bool = False
-    publish: t.Optional[BumpOption] = None
-    bump: t.Optional[BumpOption] = None
+    publish: BumpOption | None = None
+    bump: BumpOption | None = None
     verbose: bool = False
     update_precommit: bool = False
     clean: bool = False
     test: bool = False
-    all: t.Optional[BumpOption] = None
+    all: BumpOption | None = None
 
 
 @pytest.fixture
@@ -98,6 +99,8 @@ class TestCrackerjackProcess:
                 kwargs["publish"] = BumpOption(kwargs["publish"])
             if "bump" in kwargs and isinstance(kwargs["bump"], str):
                 kwargs["bump"] = BumpOption(kwargs["bump"])
+            if "all" in kwargs and isinstance(kwargs["all"], str):
+                kwargs["all"] = BumpOption(kwargs["all"])
             return OptionsForTesting(**kwargs)
 
         return _create_options
@@ -901,11 +904,15 @@ class TestCrackerjackProcess:
             Path(__file__).parent / "data" / "docstrings_sample.txt"
         ).read_text()
         cleaned_code = code_cleaner.remove_docstrings(code_with_docstrings)
+        print(cleaned_code)
         assert '"""This is a docstring."""' not in cleaned_code, (
             f"Got: {cleaned_code!r}"
         )
         assert '"""Class docstring."""' not in cleaned_code, f"Got: {cleaned_code!r}"
-        assert '"""Method docstring."""' not in cleaned_code, f"Got: {cleaned_code!r}"
+        assert "'''Method docstring.'''" not in cleaned_code, f"Got: {cleaned_code!r}"
+        assert "This is a multi-line docstring." not in cleaned_code, (
+            f"Got: {cleaned_code!r}"
+        )
 
     def test_code_cleaner_remove_line_comments(self) -> None:
         from pathlib import Path
@@ -961,16 +968,25 @@ class TestCrackerjackProcess:
     def test_code_cleaner_reformat_code_failure(
         self, mock_execute: MagicMock, mock_console_print: MagicMock, tmp_path: Path
     ) -> None:
-        code_cleaner = CodeCleaner(console=Console())
+        from rich.console import Console
+
+        console = Console()
+
+        code_cleaner = CodeCleaner(console=console)
         code_to_format = "def test_func():\n    return True\n"
+
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stderr="Formatting error")
-            with patch("builtins.print") as mock_print:
-                with patch("pathlib.Path.write_text"):
+
+            with patch("pathlib.Path.write_text"):
+                with patch.object(console, "print") as mock_console_print_method:
                     formatted_code = code_cleaner.reformat_code(code_to_format)
+
                     assert formatted_code == code_to_format
+
                     mock_run.assert_called_once()
-                    mock_print.assert_any_call(
+
+                    mock_console_print_method.assert_any_call(
                         "Ruff formatting failed: Formatting error"
                     )
 

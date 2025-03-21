@@ -5,13 +5,13 @@ import subprocess
 import tokenize
 import typing as t
 from contextlib import suppress
+from dataclasses import dataclass, field
 from pathlib import Path
 from subprocess import CompletedProcess
 from subprocess import run as execute
 from token import STRING
 from tomllib import loads
 
-from pydantic import BaseModel
 from rich.console import Console
 from tomli_w import dumps
 
@@ -20,7 +20,8 @@ interactive_hooks = ("refurb", "bandit", "pyright")
 default_python_version = "3.13"
 
 
-class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
+@dataclass
+class CodeCleaner:
     console: Console
 
     def clean_files(self, pkg_dir: Path | None) -> None:
@@ -35,20 +36,20 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
     def clean_file(self, file_path: Path) -> None:
         try:
             if file_path.resolve() == Path(__file__).resolve():
-                print(f"Skipping cleaning of {file_path} (self file).")
+                self.console.print(f"Skipping cleaning of {file_path} (self file).")
                 return
         except Exception as e:
-            print(f"Error comparing file paths: {e}")
+            self.console.print(f"Error comparing file paths: {e}")
         try:
             code = file_path.read_text()
             code = self.remove_docstrings(code)
             code = self.remove_line_comments(code)
             code = self.remove_extra_whitespace(code)
             code = self.reformat_code(code)
-            file_path.write_text(code)
-            print(f"Cleaned: {file_path}")
+            file_path.write_text(code)  # type: ignore
+            self.console.print(f"Cleaned: {file_path}")
         except Exception as e:
-            print(f"Error cleaning {file_path}: {e}")
+            self.console.print(f"Error cleaning {file_path}: {e}")
 
     def remove_line_comments(self, code: str) -> str:
         new_lines = []
@@ -66,31 +67,87 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     new_lines.append(code_part)
         return "\n".join(new_lines)
 
+    def _is_triple_quoted(self, token_string: str) -> bool:
+        triple_quote_patterns = [
+            ('"""', '"""'),
+            ("'''", "'''"),
+            ('r"""', '"""'),
+            ("r'''", "'''"),
+        ]
+        return any(
+            token_string.startswith(start) and token_string.endswith(end)
+            for start, end in triple_quote_patterns
+        )
+
+    def _is_module_docstring(
+        self, tokens: list[tokenize.TokenInfo], i: int, indent_level: int
+    ) -> bool:
+        if i <= 0 or indent_level != 0:
+            return False
+        preceding_tokens = tokens[:i]
+        return not preceding_tokens
+
+    def _is_function_or_class_docstring(
+        self,
+        tokens: list[tokenize.TokenInfo],
+        i: int,
+        last_token_type: t.Any,
+        last_token_string: str,
+    ) -> bool:
+        if last_token_type != tokenize.OP or last_token_string != ":":  # nosec B105
+            return False
+        for prev_idx in range(i - 1, max(0, i - 20), -1):
+            prev_token = tokens[prev_idx]
+            if prev_token[1] in ("def", "class") and prev_token[0] == tokenize.NAME:
+                return True
+            elif prev_token[0] == tokenize.DEDENT:
+                break
+        return False
+
+    def _is_variable_docstring(
+        self, tokens: list[tokenize.TokenInfo], i: int, indent_level: int
+    ) -> bool:
+        if indent_level <= 0:
+            return False
+        for prev_idx in range(i - 1, max(0, i - 10), -1):
+            if tokens[prev_idx][0]:
+                return True
+        return False
+
     def remove_docstrings(self, source: str) -> str:
         try:
             io_obj = io.StringIO(source)
-            output_tokens = []
-            first_token_stack = [True]
             tokens = list(tokenize.generate_tokens(io_obj.readline))
-            for tok in tokens:
-                token_type = tok.type
+            result_tokens = []
+            indent_level = 0
+            last_non_ws_token_type = None
+            last_non_ws_token_string = ""  # nosec B105
+            for i, token in enumerate(tokens):
+                token_type, token_string, _, _, _ = token
                 if token_type == tokenize.INDENT:
-                    first_token_stack.append(True)
+                    indent_level += 1
                 elif token_type == tokenize.DEDENT:
-                    if len(first_token_stack) > 1:
-                        first_token_stack.pop()
-                if token_type == STRING and first_token_stack[-1]:
-                    first_token_stack[-1] = False
-                    continue
-                else:
-                    if token_type not in (
-                        tokenize.NEWLINE,
-                        tokenize.NL,
-                        tokenize.COMMENT,
-                    ):
-                        first_token_stack[-1] = False
-                output_tokens.append(tok)
-            return tokenize.untokenize(output_tokens)
+                    indent_level -= 1
+                if token_type == STRING and self._is_triple_quoted(token_string):
+                    is_docstring = (
+                        self._is_module_docstring(tokens, i, indent_level)
+                        or self._is_function_or_class_docstring(
+                            tokens, i, last_non_ws_token_type, last_non_ws_token_string
+                        )
+                        or self._is_variable_docstring(tokens, i, indent_level)
+                    )
+                    if is_docstring:
+                        continue
+                if token_type not in (
+                    tokenize.NL,
+                    tokenize.NEWLINE,
+                    tokenize.INDENT,
+                    tokenize.DEDENT,
+                ):
+                    last_non_ws_token_type = token_type
+                    last_non_ws_token_string = token_string
+                result_tokens.append(token)
+            return tokenize.untokenize(result_tokens)
         except Exception as e:
             self.console.print(f"Error removing docstrings: {e}")
             return source
@@ -105,7 +162,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             cleaned_lines.append(line)
         return "\n".join(cleaned_lines)
 
-    def reformat_code(self, code: str) -> str:
+    def reformat_code(self, code: str) -> str | None:
         try:
             import tempfile
 
@@ -124,21 +181,22 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 if result.returncode == 0:
                     formatted_code = temp_path.read_text()
                 else:
-                    print(f"Ruff formatting failed: {result.stderr}")
+                    self.console.print(f"Ruff formatting failed: {result.stderr}")
                     formatted_code = code
             except Exception as e:
-                print(f"Error running Ruff: {e}")
+                self.console.print(f"Error running Ruff: {e}")
                 formatted_code = code
             finally:
                 with suppress(FileNotFoundError):
                     temp_path.unlink()
             return formatted_code
         except Exception as e:
-            print(f"Error during reformatting: {e}")
+            self.console.print(f"Error during reformatting: {e}")
             return code
 
 
-class ConfigManager(BaseModel, arbitrary_types_allowed=True):
+@dataclass
+class ConfigManager:
     our_path: Path
     pkg_path: Path
     pkg_name: str
@@ -262,14 +320,15 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         return execute(cmd, **kwargs)
 
 
-class ProjectManager(BaseModel, arbitrary_types_allowed=True):
+@dataclass
+class ProjectManager:
     our_path: Path
     pkg_path: Path
-    pkg_dir: Path | None = None
-    pkg_name: str = "crackerjack"
     console: Console
     code_cleaner: CodeCleaner
     config_manager: ConfigManager
+    pkg_dir: Path | None = None
+    pkg_name: str = "crackerjack"
     dry_run: bool = False
 
     def run_interactive(self, hook: str) -> None:
@@ -321,39 +380,42 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         return execute(cmd, **kwargs)
 
 
-class Crackerjack(BaseModel, arbitrary_types_allowed=True):
-    our_path: Path = Path(__file__).parent
-    pkg_path: Path = Path(Path.cwd())
+@dataclass
+class Crackerjack:
+    our_path: Path = field(default_factory=lambda: Path(__file__).parent)
+    pkg_path: Path = field(default_factory=lambda: Path(Path.cwd()))
     pkg_dir: Path | None = None
     pkg_name: str = "crackerjack"
     python_version: str = default_python_version
-    console: Console = Console(force_terminal=True)
+    console: Console = field(default_factory=lambda: Console(force_terminal=True))
     dry_run: bool = False
     code_cleaner: CodeCleaner | None = None
     config_manager: ConfigManager | None = None
     project_manager: ProjectManager | None = None
 
-    def __init__(self, **data: t.Any) -> None:
-        super().__init__(**data)
-        self.code_cleaner = CodeCleaner(console=self.console)
-        self.config_manager = ConfigManager(
-            our_path=self.our_path,
-            pkg_path=self.pkg_path,
-            pkg_name=self.pkg_name,
-            console=self.console,
-            python_version=self.python_version,
-            dry_run=self.dry_run,
-        )
-        self.project_manager = ProjectManager(
-            our_path=self.our_path,
-            pkg_path=self.pkg_path,
-            pkg_dir=self.pkg_dir,
-            pkg_name=self.pkg_name,
-            console=self.console,
-            code_cleaner=self.code_cleaner,
-            config_manager=self.config_manager,
-            dry_run=self.dry_run,
-        )
+    def __post_init__(self) -> None:
+        if self.code_cleaner is None:
+            self.code_cleaner = CodeCleaner(console=self.console)
+        if self.config_manager is None:
+            self.config_manager = ConfigManager(
+                our_path=self.our_path,
+                pkg_path=self.pkg_path,
+                pkg_name=self.pkg_name,
+                console=self.console,
+                python_version=self.python_version,
+                dry_run=self.dry_run,
+            )
+        if self.project_manager is None:
+            self.project_manager = ProjectManager(
+                our_path=self.our_path,
+                pkg_path=self.pkg_path,
+                pkg_dir=self.pkg_dir,
+                pkg_name=self.pkg_name,
+                console=self.console,
+                code_cleaner=self.code_cleaner,
+                config_manager=self.config_manager,
+                dry_run=self.dry_run,
+            )
 
     def _setup_package(self) -> None:
         self.pkg_name = self.pkg_path.stem.lower().replace("-", "_")
