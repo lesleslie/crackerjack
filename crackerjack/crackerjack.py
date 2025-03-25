@@ -60,7 +60,11 @@ class CodeCleaner:
             idx = line.find("#")
             code_part = line[:idx].rstrip()
             comment_part = line[idx:]
-            if "type: ignore" in comment_part or "noqa" in comment_part:
+            if (
+                "type: ignore" in comment_part
+                or "noqa" in comment_part
+                or "nosec" in comment_part
+            ):
                 new_lines.append(line)
             else:
                 if code_part:
