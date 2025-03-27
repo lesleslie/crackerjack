@@ -54,7 +54,7 @@ class CodeCleaner:
     def remove_line_comments(self, code: str) -> str:
         new_lines = []
         for line in code.splitlines():
-            if "#" not in line:
+            if "#" not in line or line.endswith("# skip"):
                 new_lines.append(line)
                 continue
             idx = line.find("#")
