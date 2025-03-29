@@ -86,15 +86,17 @@ Crackerjack automatically installs and manages these pre-commit hooks:
 Crackerjack projects adhere to these guidelines:
 
 -   **Static Typing:** Use type hints consistently throughout your code.
+-   **Modern Type Hints:** Use the pipe operator (`|`) for union types (e.g., `Path | None` instead of `Optional[Path]`).
 -   **Explicit Naming:** Choose clear, descriptive names for classes, functions, variables, and other identifiers.
 -   **Markdown for Documentation:** Use Markdown (`.md`) for all documentation, READMEs, etc.
 -   **Pathlib:** Use `pathlib.Path` for handling file and directory paths instead of `os.path`.
--   **Consistent Imports:** Use `import typing as t` for type hinting.
+-   **Consistent Imports:** Use `import typing as t` for type hinting and prefix all typing references with `t.`.
+-   **Protocol-Based Design:** Use `t.Protocol` for interface definitions instead of abstract base classes.
 -   **Constants and Config:** Do not use all-caps for constants or configuration settings.
 -   **Path Parameters:** Functions that handle file operations should accept `pathlib.Path` objects as parameters.
 -   **Dependency Management:** Use PDM for dependency management, package building, and publishing.
 -   **Testing:** Use pytest as your testing framework.
--   **Python Version:** Crackerjack projects support the latest Python versions.
+-   **Python Version:** Crackerjack projects target Python 3.13+ and use the latest language features.
 -   **Clear Code:** Avoid overly complex code.
 -   **Modular:** Functions should do one thing well.
 
@@ -116,9 +118,47 @@ Crackerjack projects adhere to these guidelines:
 
 ## Usage
 
+### Command Line
+
 Run Crackerjack from the root of your Python project using:
 
     python -m crackerjack
+
+### Programmatic API
+
+You can also use Crackerjack programmatically in your Python code:
+
+```python
+import typing as t
+from pathlib import Path
+from rich.console import Console
+from crackerjack import create_crackerjack_runner
+
+# Create a custom options object
+class MyOptions:
+    def __init__(self):
+        self.commit = False
+        self.interactive = True
+        self.doc = False
+        self.no_config_updates = False
+        self.verbose = True
+        self.update_precommit = False
+        self.clean = True
+        self.test = True
+        self.publish = None
+        self.bump = "micro"
+        self.all = None
+
+# Create a Crackerjack runner with custom settings
+runner = create_crackerjack_runner(
+    console=Console(force_terminal=True),
+    pkg_path=Path.cwd(),
+    python_version="3.13"
+)
+
+# Run Crackerjack with your options
+runner.process(MyOptions())
+```
 
 
 ### Command-Line Options
@@ -205,6 +245,17 @@ This ensures your code meets all quality standards before submission.
 
 This project is licensed under the terms of the BSD 3-Clause license.
 
+## Architecture
+
+Crackerjack is designed with modern Python principles in mind:
+
+- **Factory Pattern:** Uses a factory function (`create_crackerjack_runner`) to create instances with proper dependency injection
+- **Protocol-Based Design:** Defines clear interfaces using `t.Protocol` for better flexibility and testability
+- **Dependency Injection:** Components can be easily replaced with custom implementations
+- **Separation of Concerns:** CLI interface is separate from core logic
+- **Type Safety:** Comprehensive type hints throughout the codebase
+- **Testability:** Designed to be easily testable with mock objects
+
 ## Acknowledgments
 
 -   **PDM:** For excellent dependency and virtual environment management.
@@ -212,14 +263,14 @@ This project is licensed under the terms of the BSD 3-Clause license.
 -   **pre-commit:** For the robust hook management system.
 -   **pytest:** For the flexible and powerful testing framework.
 -   **uv:** For greatly improving PDM speeds.
-- **bandit:** For finding security vulnerabilities.
-- **vulture:** for dead code detection.
-- **creosote:** For unused dependency detection.
-- **flynt:** For f-string conversion.
-- **codespell:** For spelling correction.
-- **autotyping:** For automatically adding type hints.
-- **refurb:** For code improvement suggestions.
-- **pyright:** For static type checking.
-- **Typer:** For the creation of the CLI.
+-   **bandit:** For finding security vulnerabilities.
+-   **vulture:** For dead code detection.
+-   **creosote:** For unused dependency detection.
+-   **flynt:** For f-string conversion.
+-   **codespell:** For spelling correction.
+-   **autotyping:** For automatically adding type hints.
+-   **refurb:** For code improvement suggestions.
+-   **pyright:** For static type checking.
+-   **Typer:** For the creation of the CLI.
 
 ---

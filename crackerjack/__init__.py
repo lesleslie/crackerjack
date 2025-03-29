@@ -1,5 +1,5 @@
-from typing import Sequence
+import typing as t
 
-from .crackerjack import Crackerjack, crackerjack_it
+from .crackerjack import Crackerjack, create_crackerjack_runner
 
-__all__: Sequence[str] = ["crackerjack_it", "Crackerjack"]
+__all__: t.Sequence[str] = ["create_crackerjack_runner", "Crackerjack"]

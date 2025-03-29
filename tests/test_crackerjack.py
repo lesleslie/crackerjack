@@ -311,7 +311,7 @@ class TestCrackerjackProcess:
                                 mock_tests.assert_called_once()
                                 mock_publish.assert_called_once()
                                 mock_commit.assert_called_once()
-        mock_console_print.assert_any_call("\nCrackerjack complete!\n")
+        mock_console_print.assert_any_call("\n🍺 Crackerjack complete!\n")
 
     def test_process_with_all_option_sets_flags(
         self,

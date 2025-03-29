@@ -1,10 +1,9 @@
-import typing as t
 from enum import Enum
 
 import typer
 from pydantic import BaseModel, field_validator
 from rich.console import Console
-from crackerjack import crackerjack_it
+from crackerjack import create_crackerjack_runner
 
 console = Console(force_terminal=True)
 app = typer.Typer(
@@ -26,17 +25,17 @@ class Options(BaseModel):
     interactive: bool = False
     doc: bool = False
     no_config_updates: bool = False
-    publish: t.Optional[BumpOption] = None
-    bump: t.Optional[BumpOption] = None
+    publish: BumpOption | None = None
+    bump: BumpOption | None = None
     verbose: bool = False
     update_precommit: bool = False
     clean: bool = False
     test: bool = False
-    all: t.Optional[BumpOption] = None
+    all: BumpOption | None = None
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
-    def validate_bump_options(cls, value: t.Optional[str]) -> t.Optional[BumpOption]:
+    def validate_bump_options(cls, value: str | None) -> BumpOption | None:
         if value is None:
             return None
         try:
@@ -92,10 +91,6 @@ cli_options = {
 }
 
 
-def create_options(**kwargs: t.Any) -> Options:
-    return Options(**kwargs)
-
-
 @app.command()
 def main(
     commit: bool = cli_options["commit"],
@@ -104,13 +99,13 @@ def main(
     no_config_updates: bool = cli_options["no_config_updates"],
     update_precommit: bool = cli_options["update_precommit"],
     verbose: bool = cli_options["verbose"],
-    publish: t.Optional[BumpOption] = cli_options["publish"],
-    all: t.Optional[BumpOption] = cli_options["all"],
-    bump: t.Optional[BumpOption] = cli_options["bump"],
+    publish: BumpOption | None = cli_options["publish"],
+    all: BumpOption | None = cli_options["all"],
+    bump: BumpOption | None = cli_options["bump"],
     clean: bool = cli_options["clean"],
     test: bool = cli_options["test"],
 ) -> None:
-    options = create_options(
+    options = Options(
         commit=commit,
         interactive=interactive,
         doc=doc,
@@ -123,7 +118,9 @@ def main(
         test=test,
         all=all,
     )
-    crackerjack_it(options)
+
+    runner = create_crackerjack_runner(console=console)
+    runner.process(options)
 
 
 if __name__ == "__main__":

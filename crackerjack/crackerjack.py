@@ -20,6 +20,28 @@ interactive_hooks = ("refurb", "bandit", "pyright")
 default_python_version = "3.13"
 
 
+@t.runtime_checkable
+class CommandRunner(t.Protocol):
+    def execute_command(
+        self, cmd: list[str], **kwargs: t.Any
+    ) -> subprocess.CompletedProcess[str]: ...
+
+
+@t.runtime_checkable
+class OptionsProtocol(t.Protocol):
+    commit: bool
+    interactive: bool
+    doc: bool
+    no_config_updates: bool
+    verbose: bool
+    update_precommit: bool
+    clean: bool
+    test: bool
+    publish: t.Any | None
+    bump: t.Any | None
+    all: t.Any | None
+
+
 @dataclass
 class CodeCleaner:
     console: Console
@@ -430,7 +452,7 @@ class Crackerjack:
         self.project_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_dir = self.pkg_dir
 
-    def _update_project(self, options: t.Any) -> None:
+    def _update_project(self, options: OptionsProtocol) -> None:
         if not options.no_config_updates:
             self.project_manager.update_pkg_configs()
             result: CompletedProcess[str] = self.execute_command(
@@ -443,16 +465,16 @@ class Crackerjack:
                     "\n\n❌ PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.\n\n"
                 )
 
-    def _update_precommit(self, options: t.Any) -> None:
+    def _update_precommit(self, options: OptionsProtocol) -> None:
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
             self.execute_command(["pre-commit", "autoupdate"])
 
-    def _run_interactive_hooks(self, options: t.Any) -> None:
+    def _run_interactive_hooks(self, options: OptionsProtocol) -> None:
         if options.interactive:
             for hook in interactive_hooks:
                 self.project_manager.run_interactive(hook)
 
-    def _clean_project(self, options: t.Any) -> None:
+    def _clean_project(self, options: OptionsProtocol) -> None:
         if options.clean:
             if self.pkg_dir:
                 self.code_cleaner.clean_files(self.pkg_dir)
@@ -461,7 +483,7 @@ class Crackerjack:
                 self.console.print("\nCleaning tests directory...\n")
                 self.code_cleaner.clean_files(tests_dir)
 
-    def _run_tests(self, options: t.Any) -> None:
+    def _run_tests(self, options: OptionsProtocol) -> None:
         if options.test:
             self.console.print("\n\nRunning tests...\n")
             test = ["pytest"]
@@ -477,13 +499,13 @@ class Crackerjack:
                 raise SystemExit(1)
             self.console.print("\n\n✅ Tests passed successfully!\n")
 
-    def _bump_version(self, options: t.Any) -> None:
+    def _bump_version(self, options: OptionsProtocol) -> None:
         for option in (options.publish, options.bump):
             if option:
                 self.execute_command(["pdm", "bump", option])
                 break
 
-    def _publish_project(self, options: t.Any) -> None:
+    def _publish_project(self, options: OptionsProtocol) -> None:
         if options.publish:
             if platform.system() == "Darwin":
                 authorize = self.execute_command(
@@ -504,7 +526,7 @@ class Crackerjack:
                 raise SystemExit(1)
             self.execute_command(["pdm", "publish", "--no-build"])
 
-    def _commit_and_push(self, options: t.Any) -> None:
+    def _commit_and_push(self, options: OptionsProtocol) -> None:
         if options.commit:
             commit_msg = input("\nCommit message: ")
             self.execute_command(
@@ -520,7 +542,7 @@ class Crackerjack:
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
-    def process(self, options: t.Any) -> None:
+    def process(self, options: OptionsProtocol) -> None:
         if options.all:
             options.clean = True
             options.test = True
@@ -536,7 +558,20 @@ class Crackerjack:
         self._bump_version(options)
         self._publish_project(options)
         self._commit_and_push(options)
-        self.console.print("\nCrackerjack complete!\n")
+        self.console.print("\n🍺 Crackerjack complete!\n")
 
 
-crackerjack_it = Crackerjack().process
+def create_crackerjack_runner(
+    console: Console | None = None,
+    our_path: Path | None = None,
+    pkg_path: Path | None = None,
+    python_version: str = default_python_version,
+    dry_run: bool = False,
+) -> Crackerjack:
+    return Crackerjack(
+        console=console or Console(force_terminal=True),
+        our_path=our_path or Path(__file__).parent,
+        pkg_path=pkg_path or Path.cwd(),
+        python_version=python_version,
+        dry_run=dry_run,
+    )
