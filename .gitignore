@@ -13,5 +13,4 @@
 /*.pyc
 /.crackerjack.yaml
 /scratch/
-
-.qodo
+/.zencoder/
