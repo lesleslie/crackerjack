@@ -79,7 +79,7 @@ class CodeCleaner:
             if "#" not in line or line.endswith("# skip"):
                 new_lines.append(line)
                 continue
-            idx = line.find("#")
+            idx = line.find("# ")
             code_part = line[:idx].rstrip()
             comment_part = line[idx:]
             if (
