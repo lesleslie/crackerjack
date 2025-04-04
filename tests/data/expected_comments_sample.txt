@@ -52,3 +52,9 @@ class AsyncRedisBytecodeCache(AsyncBytecodeCache):
 
     async def set_bucket(self, bucket: Bucket) -> None:  # type: ignore[override]
         await self.dump_bytecode(bucket)
+
+        assert "$primary-color:#007bff" in minified_scss
+
+        str1 = "$primary-color: #007bff;\n"
+
+        str2 = "    color: #333;"

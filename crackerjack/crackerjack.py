@@ -79,18 +79,21 @@ class CodeCleaner:
             if "#" not in line or line.endswith("# skip"):
                 new_lines.append(line)
                 continue
-            idx = line.find("# ")
-            code_part = line[:idx].rstrip()
-            comment_part = line[idx:]
-            if (
-                " type: ignore" in comment_part
-                or " noqa" in comment_part
-                or " nosec" in comment_part
-            ):
-                new_lines.append(line)
+            if re.search(r"#\s", line):
+                idx = line.find("#")
+                code_part = line[:idx].rstrip()
+                comment_part = line[idx:]
+                if (
+                    " type: ignore" in comment_part
+                    or " noqa" in comment_part
+                    or " nosec" in comment_part
+                ):
+                    new_lines.append(line)
+                else:
+                    if code_part:
+                        new_lines.append(code_part)
             else:
-                if code_part:
-                    new_lines.append(code_part)
+                new_lines.append(line)
         return "\n".join(new_lines)
 
     def _is_triple_quoted(self, token_string: str) -> bool:
