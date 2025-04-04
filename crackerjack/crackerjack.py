@@ -83,9 +83,9 @@ class CodeCleaner:
             code_part = line[:idx].rstrip()
             comment_part = line[idx:]
             if (
-                "type: ignore" in comment_part
-                or "noqa" in comment_part
-                or "nosec" in comment_part
+                " type: ignore" in comment_part
+                or " noqa" in comment_part
+                or " nosec" in comment_part
             ):
                 new_lines.append(line)
             else:
