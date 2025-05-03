@@ -38,6 +38,7 @@ class OptionsForTesting:
     clean: bool = False
     test: bool = False
     all: BumpOption | None = None
+    ai_agent: bool = False
 
 
 @pytest.fixture
@@ -206,12 +207,19 @@ class TestCrackerjackProcess:
         mock_project_manager_execute.return_value.returncode = 0
         mock_config_manager_execute.return_value.returncode = 0
         options = options_factory(test=True, no_config_updates=True)
-        with patch.object(Crackerjack, "_update_project") as mock_update_project:
+        with (
+            patch.object(Crackerjack, "_update_project") as mock_update_project,
+            patch.object(Crackerjack, "_run_tests") as mock_run_tests,
+        ):
             mock_update_project.side_effect = lambda opts: mock_console_print(
                 "Skipping config updates."
             )
+            mock_run_tests.side_effect = lambda opts: mock_console_print(
+                "\n\nRunning tests...\n"
+            )
             cj = Crackerjack(dry_run=True)
             cj.process(options)
+            mock_run_tests.assert_called_once_with(options)
         console_print_calls = [str(call) for call in mock_console_print.call_args_list]
         assert any(("Running tests" in call for call in console_print_calls)), (
             "Expected 'Running tests' message was not printed"

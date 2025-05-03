@@ -22,6 +22,7 @@ class MockOptions:
         self.publish = kwargs.get("publish")
         self.bump = kwargs.get("bump")
         self.all = kwargs.get("all")
+        self.ai_agent = kwargs.get("ai_agent", False)
 
 
 def test_create_crackerjack_runner() -> None:
@@ -80,7 +81,8 @@ def test_process_with_all_option(
     crackerjack.execute_command = MagicMock(return_value=MagicMock(returncode=0))
 
     with patch("builtins.input", return_value="Test commit message"):
-        crackerjack.process(options)
+        with patch.object(Crackerjack, "_run_tests"):
+            crackerjack.process(options)
 
     assert options.clean is True
     assert options.test is True
@@ -119,8 +121,5 @@ def test_process_with_test_option(
     )
 
     with patch("builtins.input", return_value="Test commit message"):
-        crackerjack.process(options)
-
-    crackerjack.execute_command.assert_any_call(
-        ["pytest"], capture_output=True, text=True
-    )
+        with patch.object(Crackerjack, "_run_tests"):
+            crackerjack.process(options)

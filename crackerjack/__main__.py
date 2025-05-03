@@ -32,6 +32,7 @@ class Options(BaseModel):
     clean: bool = False
     test: bool = False
     all: BumpOption | None = None
+    ai_agent: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -88,6 +89,12 @@ cli_options = {
         help="Run with `-x -t -p <micro|minor|major> -c` development options).",
         case_sensitive=False,
     ),
+    "ai_agent": typer.Option(
+        False,
+        "--ai-agent",
+        help="Enable AI agent mode with structured output.",
+        hidden=True,
+    ),
 }
 
 
@@ -104,6 +111,7 @@ def main(
     bump: BumpOption | None = cli_options["bump"],
     clean: bool = cli_options["clean"],
     test: bool = cli_options["test"],
+    ai_agent: bool = cli_options["ai_agent"],
 ) -> None:
     options = Options(
         commit=commit,
@@ -117,7 +125,13 @@ def main(
         clean=clean,
         test=test,
         all=all,
+        ai_agent=ai_agent,
     )
+
+    if ai_agent:
+        import os
+
+        os.environ["AI_AGENT"] = "1"
 
     runner = create_crackerjack_runner(console=console)
     runner.process(options)

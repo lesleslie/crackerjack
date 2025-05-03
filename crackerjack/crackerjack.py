@@ -1,7 +1,9 @@
 import io
+import os
 import platform
 import re
 import subprocess
+import time
 import tokenize
 import typing as t
 from contextlib import suppress
@@ -40,6 +42,7 @@ class OptionsProtocol(t.Protocol):
     publish: t.Any | None
     bump: t.Any | None
     all: t.Any | None
+    ai_agent: bool = False
 
 
 @dataclass
@@ -53,7 +56,7 @@ class CodeCleaner:
             if not str(file_path.parent).startswith("__"):
                 self.clean_file(file_path)
         if pkg_dir.parent.joinpath("__pycache__").exists():
-            pkg_dir.parent.joinpath("__pycache__").rmdir()
+            pkg_dir.parent.joinpath("__pycache__").unlink()
 
     def clean_file(self, file_path: Path) -> None:
         try:
@@ -486,21 +489,160 @@ class Crackerjack:
                 self.console.print("\nCleaning tests directory...\n")
                 self.code_cleaner.clean_files(tests_dir)
 
-    def _run_tests(self, options: OptionsProtocol) -> None:
-        if options.test:
-            self.console.print("\n\nRunning tests...\n")
-            test = ["pytest"]
-            if options.verbose:
-                test.append("-v")
-            result = self.execute_command(test, capture_output=True, text=True)
-            if result.stdout:
-                self.console.print(result.stdout)
-            if result.returncode > 0:
-                if result.stderr:
-                    self.console.print(result.stderr)
+    def _prepare_pytest_command(self, options: OptionsProtocol) -> list[str]:
+        """Prepare the pytest command with appropriate options."""
+        test = ["pytest"]
+        if options.verbose:
+            test.append("-v")
+
+        # Add optimized options for all packages to prevent hanging
+        test.extend(
+            [
+                "--no-cov",  # Disable coverage which can cause hanging
+                "--capture=fd",  # Capture stdout/stderr at file descriptor level
+                "--tb=short",  # Shorter traceback format
+                "--no-header",  # Reduce output noise
+                "--disable-warnings",  # Disable warning capture
+                "--durations=0",  # Show slowest tests to identify potential hanging tests
+                "--timeout=300",  # 5-minute timeout for tests
+            ]
+        )
+        return test
+
+    def _setup_test_environment(self) -> None:
+        """Set environment variables for test execution."""
+        # Set environment variables to improve asyncio behavior
+        os.environ["PYTHONASYNCIO_DEBUG"] = "0"  # Disable asyncio debug mode
+        os.environ["RUNNING_UNDER_CRACKERJACK"] = "1"  # Signal to conftest.py
+
+        # Set asyncio mode to strict to help prevent hanging
+        if "PYTEST_ASYNCIO_MODE" not in os.environ:
+            os.environ["PYTEST_ASYNCIO_MODE"] = "strict"
+
+    def _run_pytest_process(
+        self, test_command: list[str]
+    ) -> subprocess.CompletedProcess[str]:
+        """Run pytest as a subprocess with timeout handling and output capture."""
+        try:
+            # Use a timeout to ensure the process doesn't hang indefinitely
+            process = subprocess.Popen(
+                test_command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+
+            # Set a timeout (5 minutes)
+            timeout = 300
+            start_time = time.time()
+
+            stdout_data = []
+            stderr_data = []
+
+            # Read output while process is running, with timeout
+            while process.poll() is None:
+                if time.time() - start_time > timeout:
+                    self.console.print(
+                        "[red]Test execution timed out after 5 minutes. Terminating...[/red]"
+                    )
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                    break
+
+                # Read output without blocking
+                if process.stdout:
+                    line = process.stdout.readline()
+                    if line:
+                        stdout_data.append(line)
+                        self.console.print(line, end="")
+
+                if process.stderr:
+                    line = process.stderr.readline()
+                    if line:
+                        stderr_data.append(line)
+                        self.console.print(f"[red]{line}[/red]", end="")
+
+                time.sleep(0.1)
+
+            # Get any remaining output
+            if process.stdout:
+                for line in process.stdout:
+                    stdout_data.append(line)
+                    self.console.print(line, end="")
+
+            if process.stderr:
+                for line in process.stderr:
+                    stderr_data.append(line)
+                    self.console.print(f"[red]{line}[/red]", end="")
+
+            returncode = process.returncode or 0
+            stdout = "".join(stdout_data)
+            stderr = "".join(stderr_data)
+
+            # Create a CompletedProcess object to match the expected interface
+            return subprocess.CompletedProcess(
+                args=test_command, returncode=returncode, stdout=stdout, stderr=stderr
+            )
+
+        except Exception as e:
+            self.console.print(f"[red]Error running tests: {e}[/red]")
+            return subprocess.CompletedProcess(test_command, 1, "", str(e))
+
+    def _report_test_results(
+        self, result: subprocess.CompletedProcess[str], ai_agent: str
+    ) -> None:
+        """Report test results and handle AI agent output if needed."""
+        if result.returncode > 0:
+            if result.stderr:
+                self.console.print(result.stderr)
+
+            if ai_agent:
+                # Use structured output for AI agents
+                self.console.print(
+                    '[json]{"status": "failed", "action": "tests", "returncode": '
+                    + str(result.returncode)
+                    + "}[/json]"
+                )
+            else:
                 self.console.print("\n\n❌ Tests failed. Please fix errors.\n")
-                raise SystemExit(1)
+            raise SystemExit(1)
+
+        if ai_agent:
+            # Use structured output for AI agents
+            self.console.print('[json]{"status": "success", "action": "tests"}[/json]')
+        else:
             self.console.print("\n\n✅ Tests passed successfully!\n")
+
+    def _run_tests(self, options: OptionsProtocol) -> None:
+        """Run tests if the test option is enabled."""
+        if options.test:
+            # Check if we're being called by an AI agent
+            ai_agent = os.environ.get("AI_AGENT", "")
+
+            if ai_agent:
+                # Use structured output for AI agents
+                self.console.print(
+                    '[json]{"status": "running", "action": "tests"}[/json]'
+                )
+            else:
+                self.console.print("\n\nRunning tests...\n")
+
+            # Prepare the test command
+            test_command = self._prepare_pytest_command(options)
+
+            # Set up the test environment
+            self._setup_test_environment()
+
+            # Run the tests
+            result = self._run_pytest_process(test_command)
+
+            # Report the results
+            self._report_test_results(result, ai_agent)
 
     def _bump_version(self, options: OptionsProtocol) -> None:
         for option in (options.publish, options.bump):
@@ -546,22 +688,65 @@ class Crackerjack:
         return execute(cmd, **kwargs)
 
     def process(self, options: OptionsProtocol) -> None:
+        # Track actions performed for AI agent output
+        actions_performed = []
+
         if options.all:
             options.clean = True
             options.test = True
             options.publish = options.all
             options.commit = True
+
         self._setup_package()
+        actions_performed.append("setup_package")
+
         self._update_project(options)
+        actions_performed.append("update_project")
+
         self._update_precommit(options)
+        if options.update_precommit:
+            actions_performed.append("update_precommit")
+
         self._run_interactive_hooks(options)
+        if options.interactive:
+            actions_performed.append("run_interactive_hooks")
+
         self._clean_project(options)
+        if options.clean:
+            actions_performed.append("clean_project")
+
         self.project_manager.run_pre_commit()
+        actions_performed.append("run_pre_commit")
+
         self._run_tests(options)
+        if options.test:
+            actions_performed.append("run_tests")
+
         self._bump_version(options)
+        if options.bump or options.publish:
+            actions_performed.append("bump_version")
+
         self._publish_project(options)
+        if options.publish:
+            actions_performed.append("publish_project")
+
         self._commit_and_push(options)
-        self.console.print("\n🍺 Crackerjack complete!\n")
+        if options.commit:
+            actions_performed.append("commit_and_push")
+
+        # Check if we're being called by an AI agent
+        if getattr(options, "ai_agent", False):
+            # Use structured output for AI agents
+            import json
+
+            result = {
+                "status": "complete",
+                "package": self.pkg_name,
+                "actions": actions_performed,
+            }
+            self.console.print(f"[json]{json.dumps(result)}[/json]")
+        else:
+            self.console.print("\n🍺 Crackerjack complete!\n")
 
 
 def create_crackerjack_runner(
