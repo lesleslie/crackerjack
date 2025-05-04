@@ -491,12 +491,9 @@ class Crackerjack:
                 self.code_cleaner.clean_files(tests_dir)
 
     def _prepare_pytest_command(self, options: OptionsProtocol) -> list[str]:
-        """Prepare the pytest command with appropriate options."""
         test = ["pytest"]
         if options.verbose:
             test.append("-v")
-
-        # Add optimized options for all packages to prevent hanging
         test.extend(
             [
                 "--no-cov",  # Disable coverage which can cause hanging
@@ -511,21 +508,15 @@ class Crackerjack:
         return test
 
     def _setup_test_environment(self) -> None:
-        """Set environment variables for test execution."""
-        # Set environment variables to improve asyncio behavior
         os.environ["PYTHONASYNCIO_DEBUG"] = "0"  # Disable asyncio debug mode
         os.environ["RUNNING_UNDER_CRACKERJACK"] = "1"  # Signal to conftest.py
-
-        # Set asyncio mode to strict to help prevent hanging
         if "PYTEST_ASYNCIO_MODE" not in os.environ:
             os.environ["PYTEST_ASYNCIO_MODE"] = "strict"
 
     def _run_pytest_process(
         self, test_command: list[str]
     ) -> subprocess.CompletedProcess[str]:
-        """Run pytest as a subprocess with timeout handling and output capture."""
         try:
-            # Use a timeout to ensure the process doesn't hang indefinitely
             process = subprocess.Popen(
                 test_command,
                 stdout=subprocess.PIPE,
@@ -534,15 +525,10 @@ class Crackerjack:
                 bufsize=1,
                 universal_newlines=True,
             )
-
-            # Set a timeout (5 minutes)
             timeout = 300
             start_time = time.time()
-
             stdout_data = []
             stderr_data = []
-
-            # Read output while process is running, with timeout
             while process.poll() is None:
                 if time.time() - start_time > timeout:
                     self.console.print(
@@ -554,38 +540,28 @@ class Crackerjack:
                     except subprocess.TimeoutExpired:
                         process.kill()
                     break
-
-                # Read output without blocking
                 if process.stdout:
                     line = process.stdout.readline()
                     if line:
                         stdout_data.append(line)
                         self.console.print(line, end="")
-
                 if process.stderr:
                     line = process.stderr.readline()
                     if line:
                         stderr_data.append(line)
                         self.console.print(f"[red]{line}[/red]", end="")
-
                 time.sleep(0.1)
-
-            # Get any remaining output
             if process.stdout:
                 for line in process.stdout:
                     stdout_data.append(line)
                     self.console.print(line, end="")
-
             if process.stderr:
                 for line in process.stderr:
                     stderr_data.append(line)
                     self.console.print(f"[red]{line}[/red]", end="")
-
             returncode = process.returncode or 0
             stdout = "".join(stdout_data)
             stderr = "".join(stderr_data)
-
-            # Create a CompletedProcess object to match the expected interface
             return subprocess.CompletedProcess(
                 args=test_command, returncode=returncode, stdout=stdout, stderr=stderr
             )
@@ -597,13 +573,10 @@ class Crackerjack:
     def _report_test_results(
         self, result: subprocess.CompletedProcess[str], ai_agent: str
     ) -> None:
-        """Report test results and handle AI agent output if needed."""
         if result.returncode > 0:
             if result.stderr:
                 self.console.print(result.stderr)
-
             if ai_agent:
-                # Use structured output for AI agents
                 self.console.print(
                     '[json]{"status": "failed", "action": "tests", "returncode": '
                     + str(result.returncode)
@@ -614,35 +587,22 @@ class Crackerjack:
             raise SystemExit(1)
 
         if ai_agent:
-            # Use structured output for AI agents
             self.console.print('[json]{"status": "success", "action": "tests"}[/json]')
         else:
             self.console.print("\n\n✅ Tests passed successfully!\n")
 
     def _run_tests(self, options: OptionsProtocol) -> None:
-        """Run tests if the test option is enabled."""
         if options.test:
-            # Check if we're being called by an AI agent
             ai_agent = os.environ.get("AI_AGENT", "")
-
             if ai_agent:
-                # Use structured output for AI agents
                 self.console.print(
                     '[json]{"status": "running", "action": "tests"}[/json]'
                 )
             else:
                 self.console.print("\n\nRunning tests...\n")
-
-            # Prepare the test command
             test_command = self._prepare_pytest_command(options)
-
-            # Set up the test environment
             self._setup_test_environment()
-
-            # Run the tests
             result = self._run_pytest_process(test_command)
-
-            # Report the results
             self._report_test_results(result, ai_agent)
 
     def _bump_version(self, options: OptionsProtocol) -> None:
@@ -683,30 +643,21 @@ class Crackerjack:
     def _create_pull_request(self, options: OptionsProtocol) -> None:
         if options.create_pr:
             self.console.print("\nCreating pull request...")
-
-            # Get the current branch name
             current_branch = self.execute_command(
                 ["git", "branch", "--show-current"], capture_output=True, text=True
             ).stdout.strip()
-
-            # Get the remote URL to determine if it's GitHub or GitLab
             remote_url = self.execute_command(
                 ["git", "remote", "get-url", "origin"], capture_output=True, text=True
             ).stdout.strip()
-
-            # Determine if we're using GitHub or GitLab
             is_github = "github.com" in remote_url
             is_gitlab = "gitlab.com" in remote_url
-
             if is_github:
-                # Check if GitHub CLI is installed
                 gh_installed = (
                     self.execute_command(
                         ["which", "gh"], capture_output=True, text=True
                     ).returncode
                     == 0
                 )
-
                 if not gh_installed:
                     self.console.print(
                         "\n[red]GitHub CLI (gh) is not installed. Please install it first:[/red]\n"
@@ -714,20 +665,15 @@ class Crackerjack:
                         "  or visit https://cli.github.com/ for other installation methods"
                     )
                     return
-
-                # Check if user is authenticated with GitHub
                 auth_status = self.execute_command(
                     ["gh", "auth", "status"], capture_output=True, text=True
                 ).returncode
-
                 if auth_status != 0:
                     self.console.print(
                         "\n[red]You need to authenticate with GitHub first. Run:[/red]\n"
                         "  gh auth login"
                     )
                     return
-
-                # Prompt for PR title and description
                 pr_title = input("\nEnter a title for your pull request: ")
                 self.console.print(
                     "Enter a description for your pull request (press Ctrl+D when done):"
@@ -735,8 +681,6 @@ class Crackerjack:
                 pr_description = ""
                 with suppress(EOFError):
                     pr_description = "".join(iter(input, ""))
-
-                # Create the pull request
                 self.console.print("Creating pull request to GitHub repository...")
                 result = self.execute_command(
                     [
@@ -751,7 +695,6 @@ class Crackerjack:
                     capture_output=True,
                     text=True,
                 )
-
                 if result.returncode == 0:
                     self.console.print(
                         f"\n[green]Pull request created successfully![/green]\n{result.stdout}"
@@ -760,16 +703,13 @@ class Crackerjack:
                     self.console.print(
                         f"\n[red]Failed to create pull request:[/red]\n{result.stderr}"
                     )
-
             elif is_gitlab:
-                # Check if GitLab CLI is installed
                 glab_installed = (
                     self.execute_command(
                         ["which", "glab"], capture_output=True, text=True
                     ).returncode
                     == 0
                 )
-
                 if not glab_installed:
                     self.console.print(
                         "\n[red]GitLab CLI (glab) is not installed. Please install it first:[/red]\n"
@@ -777,20 +717,15 @@ class Crackerjack:
                         "  or visit https://gitlab.com/gitlab-org/cli for other installation methods"
                     )
                     return
-
-                # Check if user is authenticated with GitLab
                 auth_status = self.execute_command(
                     ["glab", "auth", "status"], capture_output=True, text=True
                 ).returncode
-
                 if auth_status != 0:
                     self.console.print(
                         "\n[red]You need to authenticate with GitLab first. Run:[/red]\n"
                         "  glab auth login"
                     )
                     return
-
-                # Prompt for MR title and description
                 mr_title = input("\nEnter a title for your merge request: ")
                 self.console.print(
                     "Enter a description for your merge request (press Ctrl+D when done):"
@@ -798,8 +733,6 @@ class Crackerjack:
                 mr_description = ""
                 with suppress(EOFError):
                     mr_description = "".join(iter(input, ""))
-
-                # Create the merge request
                 self.console.print("Creating merge request to GitLab repository...")
                 result = self.execute_command(
                     [
@@ -818,7 +751,6 @@ class Crackerjack:
                     capture_output=True,
                     text=True,
                 )
-
                 if result.returncode == 0:
                     self.console.print(
                         f"\n[green]Merge request created successfully![/green]\n{result.stdout}"
@@ -842,9 +774,7 @@ class Crackerjack:
         return execute(cmd, **kwargs)
 
     def process(self, options: OptionsProtocol) -> None:
-        # Track actions performed for AI agent output
         actions_performed = []
-
         if options.all:
             options.clean = True
             options.test = True
@@ -892,9 +822,7 @@ class Crackerjack:
         if options.create_pr:
             actions_performed.append("create_pull_request")
 
-        # Check if we're being called by an AI agent
         if getattr(options, "ai_agent", False):
-            # Use structured output for AI agents
             import json
 
             result = {

@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-addopts = "--cov=crackerjack"
+addopts = "--cov=crackerjack --cov-report=term"
 asyncio_default_fixture_loop_scope = "function"
 python_files = ["test_*.py", "*_test.py"]
 asyncio_mode = "auto"
@@ -8,8 +8,10 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.coverage.run]
-branch = true
+branch = false
 source = ["crackerjack"]
+data_file = ".coverage"
+parallel = false
 omit = [
     "*/tests/*",
     "*/site-packages/*",
@@ -150,7 +152,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.15.10"
+version = "0.16.0"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
