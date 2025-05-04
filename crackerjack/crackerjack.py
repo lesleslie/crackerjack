@@ -43,6 +43,7 @@ class OptionsProtocol(t.Protocol):
     bump: t.Any | None
     all: t.Any | None
     ai_agent: bool = False
+    create_pr: bool = False
 
 
 @dataclass
@@ -679,6 +680,159 @@ class Crackerjack:
             )
             self.execute_command(["git", "push", "origin", "main"])
 
+    def _create_pull_request(self, options: OptionsProtocol) -> None:
+        if options.create_pr:
+            self.console.print("\nCreating pull request...")
+
+            # Get the current branch name
+            current_branch = self.execute_command(
+                ["git", "branch", "--show-current"], capture_output=True, text=True
+            ).stdout.strip()
+
+            # Get the remote URL to determine if it's GitHub or GitLab
+            remote_url = self.execute_command(
+                ["git", "remote", "get-url", "origin"], capture_output=True, text=True
+            ).stdout.strip()
+
+            # Determine if we're using GitHub or GitLab
+            is_github = "github.com" in remote_url
+            is_gitlab = "gitlab.com" in remote_url
+
+            if is_github:
+                # Check if GitHub CLI is installed
+                gh_installed = (
+                    self.execute_command(
+                        ["which", "gh"], capture_output=True, text=True
+                    ).returncode
+                    == 0
+                )
+
+                if not gh_installed:
+                    self.console.print(
+                        "\n[red]GitHub CLI (gh) is not installed. Please install it first:[/red]\n"
+                        "  brew install gh  # for macOS\n"
+                        "  or visit https://cli.github.com/ for other installation methods"
+                    )
+                    return
+
+                # Check if user is authenticated with GitHub
+                auth_status = self.execute_command(
+                    ["gh", "auth", "status"], capture_output=True, text=True
+                ).returncode
+
+                if auth_status != 0:
+                    self.console.print(
+                        "\n[red]You need to authenticate with GitHub first. Run:[/red]\n"
+                        "  gh auth login"
+                    )
+                    return
+
+                # Prompt for PR title and description
+                pr_title = input("\nEnter a title for your pull request: ")
+                self.console.print(
+                    "Enter a description for your pull request (press Ctrl+D when done):"
+                )
+                pr_description = ""
+                with suppress(EOFError):
+                    pr_description = "".join(iter(input, ""))
+
+                # Create the pull request
+                self.console.print("Creating pull request to GitHub repository...")
+                result = self.execute_command(
+                    [
+                        "gh",
+                        "pr",
+                        "create",
+                        "--title",
+                        pr_title,
+                        "--body",
+                        pr_description,
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+
+                if result.returncode == 0:
+                    self.console.print(
+                        f"\n[green]Pull request created successfully![/green]\n{result.stdout}"
+                    )
+                else:
+                    self.console.print(
+                        f"\n[red]Failed to create pull request:[/red]\n{result.stderr}"
+                    )
+
+            elif is_gitlab:
+                # Check if GitLab CLI is installed
+                glab_installed = (
+                    self.execute_command(
+                        ["which", "glab"], capture_output=True, text=True
+                    ).returncode
+                    == 0
+                )
+
+                if not glab_installed:
+                    self.console.print(
+                        "\n[red]GitLab CLI (glab) is not installed. Please install it first:[/red]\n"
+                        "  brew install glab  # for macOS\n"
+                        "  or visit https://gitlab.com/gitlab-org/cli for other installation methods"
+                    )
+                    return
+
+                # Check if user is authenticated with GitLab
+                auth_status = self.execute_command(
+                    ["glab", "auth", "status"], capture_output=True, text=True
+                ).returncode
+
+                if auth_status != 0:
+                    self.console.print(
+                        "\n[red]You need to authenticate with GitLab first. Run:[/red]\n"
+                        "  glab auth login"
+                    )
+                    return
+
+                # Prompt for MR title and description
+                mr_title = input("\nEnter a title for your merge request: ")
+                self.console.print(
+                    "Enter a description for your merge request (press Ctrl+D when done):"
+                )
+                mr_description = ""
+                with suppress(EOFError):
+                    mr_description = "".join(iter(input, ""))
+
+                # Create the merge request
+                self.console.print("Creating merge request to GitLab repository...")
+                result = self.execute_command(
+                    [
+                        "glab",
+                        "mr",
+                        "create",
+                        "--title",
+                        mr_title,
+                        "--description",
+                        mr_description,
+                        "--source-branch",
+                        current_branch,
+                        "--target-branch",
+                        "main",
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+
+                if result.returncode == 0:
+                    self.console.print(
+                        f"\n[green]Merge request created successfully![/green]\n{result.stdout}"
+                    )
+                else:
+                    self.console.print(
+                        f"\n[red]Failed to create merge request:[/red]\n{result.stderr}"
+                    )
+            else:
+                self.console.print(
+                    f"\n[red]Unsupported git hosting service: {remote_url}[/red]\n"
+                    "This command currently supports GitHub and GitLab."
+                )
+
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
@@ -733,6 +887,10 @@ class Crackerjack:
         self._commit_and_push(options)
         if options.commit:
             actions_performed.append("commit_and_push")
+
+        self._create_pull_request(options)
+        if options.create_pr:
+            actions_performed.append("create_pull_request")
 
         # Check if we're being called by an AI agent
         if getattr(options, "ai_agent", False):

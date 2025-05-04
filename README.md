@@ -63,6 +63,7 @@ Crackerjack provides:
 -   **Easy Version Bumping:** Provides commands to bump the project version (micro, minor, or major).
 -   **Simplified Publishing:** Automates publishing to PyPI via PDM.
 -   **Commit and Push:** Commits and pushes your changes.
+-   **Pull Request Creation:** Creates pull requests to upstream repositories on GitHub or GitLab.
 
 ## Pre-commit Hooks
 
@@ -148,6 +149,7 @@ class MyOptions:
         self.publish = None
         self.bump = "micro"
         self.all = None
+        self.create_pr = False
 
 # Create a Crackerjack runner with custom settings
 runner = create_crackerjack_runner(
@@ -171,6 +173,7 @@ runner.process(MyOptions())
 -   `-v`, `--verbose`: Enable verbose output.
 -   `-p`, `--publish <micro|minor|major>`: Bump the project version and publish to PyPI using PDM.
 -   `-b`, `--bump <micro|minor|major>`: Bump the project version without publishing.
+-   `-r`, `--pr`: Create a pull request to the upstream repository.
 -   `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.
 -   `-t`, `--test`: Run tests using `pytest`.
 -   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
@@ -206,6 +209,11 @@ runner.process(MyOptions())
 - **Update pre-commit hooks:**
     ```
     python -m crackerjack -u
+    ```
+
+- **Create a pull request to the upstream repository:**
+    ```
+    python -m crackerjack -r
     ```
 
 - **Get help:**

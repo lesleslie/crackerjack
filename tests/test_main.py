@@ -36,6 +36,7 @@ def test_no_options(runner: CliRunner, mock_crackerjack_process: MagicMock) -> N
     assert not options.verbose
     assert not options.clean
     assert not options.test
+    assert not options.create_pr
 
 
 def test_commit_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
@@ -221,6 +222,7 @@ def test_create_options() -> None:
         clean=True,
         test=True,
         all=BumpOption.minor,
+        create_pr=True,
     )
     assert test_options.commit
     assert test_options.interactive
@@ -233,6 +235,7 @@ def test_create_options() -> None:
     assert test_options.clean
     assert test_options.test
     assert test_options.all == BumpOption.minor
+    assert test_options.create_pr
 
 
 def test_conflicting_options(
@@ -278,3 +281,18 @@ def test_all_option_with_other_options(
     assert options.all == BumpOption.micro
     assert options.commit
     assert options.test
+
+
+def test_create_pr_option(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["-r"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.process.assert_called_once()
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert options.create_pr
+    mock_crackerjack_process.process.reset_mock()
+    result = runner.invoke(app, ["--pr"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert options.create_pr

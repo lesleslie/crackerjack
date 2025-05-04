@@ -39,6 +39,7 @@ class OptionsForTesting:
     test: bool = False
     all: BumpOption | None = None
     ai_agent: bool = False
+    create_pr: bool = False
 
 
 @pytest.fixture

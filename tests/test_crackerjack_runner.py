@@ -23,6 +23,7 @@ class MockOptions:
         self.bump = kwargs.get("bump")
         self.all = kwargs.get("all")
         self.ai_agent = kwargs.get("ai_agent", False)
+        self.create_pr = kwargs.get("create_pr", False)
 
 
 def test_create_crackerjack_runner() -> None:

@@ -33,6 +33,7 @@ class Options(BaseModel):
     test: bool = False
     all: BumpOption | None = None
     ai_agent: bool = False
+    create_pr: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -89,6 +90,12 @@ cli_options = {
         help="Run with `-x -t -p <micro|minor|major> -c` development options).",
         case_sensitive=False,
     ),
+    "create_pr": typer.Option(
+        False,
+        "-r",
+        "--pr",
+        help="Create a pull request to the upstream repository.",
+    ),
     "ai_agent": typer.Option(
         False,
         "--ai-agent",
@@ -111,6 +118,7 @@ def main(
     bump: BumpOption | None = cli_options["bump"],
     clean: bool = cli_options["clean"],
     test: bool = cli_options["test"],
+    create_pr: bool = cli_options["create_pr"],
     ai_agent: bool = cli_options["ai_agent"],
 ) -> None:
     options = Options(
@@ -126,6 +134,7 @@ def main(
         test=test,
         all=all,
         ai_agent=ai_agent,
+        create_pr=create_pr,
     )
 
     if ai_agent:
