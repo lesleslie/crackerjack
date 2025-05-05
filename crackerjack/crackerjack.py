@@ -496,7 +496,6 @@ class Crackerjack:
             test.append("-v")
         test.extend(
             [
-                "--no-cov",  # Disable coverage which can cause hanging
                 "--capture=fd",  # Capture stdout/stderr at file descriptor level
                 "--tb=short",  # Shorter traceback format
                 "--no-header",  # Reduce output noise
