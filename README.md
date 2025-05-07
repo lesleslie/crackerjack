@@ -11,7 +11,20 @@
 
 **Crackerjack** (`ˈkra-kər-ˌjak`): *a person or thing of marked excellence.*
 
-Crackerjack is an opinionated Python project management tool designed to help you create, maintain, and publish high-quality Python projects with ease. It combines best-in-class tools and a streamlined workflow to ensure code quality, consistency, and reliability.
+## What is Crackerjack?
+
+Crackerjack is an opinionated Python project management tool designed to solve common challenges in Python development:
+
+- **Problem**: Setting up Python projects with best practices is time-consuming and requires knowledge of many tools
+- **Solution**: Crackerjack automates project setup with pre-configured best practices and tools
+
+- **Problem**: Maintaining consistent code quality across a project is difficult
+- **Solution**: Crackerjack enforces a consistent style and quality standard through integrated linting, formatting, and pre-commit hooks
+
+- **Problem**: Publishing Python packages involves many manual steps
+- **Solution**: Crackerjack streamlines the entire development lifecycle from code cleaning to testing to version bumping to publishing
+
+Crackerjack combines best-in-class tools (Ruff, PDM, pre-commit, pytest, and more) into a single, streamlined workflow to ensure code quality, consistency, and reliability. It's designed for Python developers who want to focus on writing code rather than configuring tools.
 
 ---
 
@@ -177,6 +190,7 @@ runner.process(MyOptions())
 -   `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.
 -   `-t`, `--test`: Run tests using `pytest`.
 -   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
+-   `--ai-agent`: Enable AI agent mode with structured output (see [AI Agent Integration](#ai-agent-integration)).
 -   `--help`: Display help.
 
 ### Example Workflows
@@ -230,6 +244,21 @@ runner.process(MyOptions())
   python -m crackerjack -a minor
   ```
 
+## AI Agent Integration
+
+Crackerjack includes special features for integration with AI agents like Claude, ChatGPT, and other LLM-based assistants:
+
+- **Structured JSON Output:** When run with `--ai-agent`, Crackerjack outputs results in JSON format that's easy for AI agents to parse
+- **Clear Status Indicators:** Provides clear status indicators (running, success, failed, complete) to track progress
+- **Action Tracking:** Includes a list of actions performed to help AI agents understand what happened
+
+### Example AI Agent Usage
+
+```bash
+python -m crackerjack --ai-agent --test
+```
+
+For detailed information about using Crackerjack with AI agents, including the structured output format and programmatic usage, see [README-AI-AGENT.md](README-AI-AGENT.md).
 
 ## Contributing
 
