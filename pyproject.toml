@@ -152,7 +152,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.17.1"
+version = "0.17.2"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -184,7 +184,7 @@ dependencies = [
     "pydantic>=2.11.4",
     "pdm-bump>=0.9.12",
     "pdm>=2.24.1",
-    "uv>=0.7.2",
+    "uv>=0.7.3",
     "pytest-cov>=6.1.1",
     "pytest-mock>=3.14.0",
     "tomli-w>=1.2.0",
