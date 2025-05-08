@@ -56,8 +56,6 @@ class CodeCleaner:
         for file_path in pkg_dir.rglob("*.py"):
             if not str(file_path.parent).startswith("__"):
                 self.clean_file(file_path)
-        if pkg_dir.parent.joinpath("__pycache__").exists():
-            pkg_dir.parent.joinpath("__pycache__").unlink()
 
     def clean_file(self, file_path: Path) -> None:
         try:
