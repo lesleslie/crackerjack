@@ -499,7 +499,7 @@ class Crackerjack:
                 "--no-header",  # Reduce output noise
                 "--disable-warnings",  # Disable warning capture
                 "--durations=0",  # Show slowest tests to identify potential hanging tests
-                "--timeout=300",  # 5-minute timeout for tests
+                "--timeout=60",  # 1-minute timeout for tests
             ]
         )
         return test
