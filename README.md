@@ -13,18 +13,25 @@
 
 ## What is Crackerjack?
 
-Crackerjack is an opinionated Python project management tool designed to solve common challenges in Python development:
+Crackerjack is an opinionated Python project management tool that streamlines the entire development lifecycle. It combines best-in-class tools into a unified workflow, allowing you to focus on writing code rather than configuring tools.
 
-- **Problem**: Setting up Python projects with best practices is time-consuming and requires knowledge of many tools
-- **Solution**: Crackerjack automates project setup with pre-configured best practices and tools
+### Why Choose Crackerjack?
 
-- **Problem**: Maintaining consistent code quality across a project is difficult
-- **Solution**: Crackerjack enforces a consistent style and quality standard through integrated linting, formatting, and pre-commit hooks
+Crackerjack solves three critical challenges in Python development:
 
-- **Problem**: Publishing Python packages involves many manual steps
-- **Solution**: Crackerjack streamlines the entire development lifecycle from code cleaning to testing to version bumping to publishing
+1. **Project Setup & Configuration**
+   - **Challenge**: Setting up Python projects with best practices requires knowledge of numerous tools and configurations
+   - **Solution**: Crackerjack automates project initialization with pre-configured templates and industry best practices
 
-Crackerjack combines best-in-class tools (Ruff, PDM, pre-commit, pytest, and more) into a single, streamlined workflow to ensure code quality, consistency, and reliability. It's designed for Python developers who want to focus on writing code rather than configuring tools.
+2. **Code Quality & Consistency**
+   - **Challenge**: Maintaining consistent code quality across a project and team requires constant vigilance
+   - **Solution**: Crackerjack enforces a unified style through integrated linting, formatting, and pre-commit hooks
+
+3. **Streamlined Publishing**
+   - **Challenge**: Publishing Python packages involves many manual, error-prone steps
+   - **Solution**: Crackerjack automates the entire release process from testing to version bumping to publishing
+
+Crackerjack integrates powerful tools like Ruff, PDM, pre-commit, pytest, and more into a cohesive system that ensures code quality, consistency, and reliability. It's designed for developers who value both productivity and excellence.
 
 ---
 
@@ -64,19 +71,33 @@ Crackerjack is built on the following core principles:
 
 ## Key Features
 
-Crackerjack provides:
+### Project Management
+- **Effortless Project Setup:** Initializes new Python projects with a standard directory structure, `pyproject.toml`, and essential configuration files
+- **PDM Integration:** Manages dependencies and virtual environments using [PDM](https://pdm.fming.dev/) with [uv](https://github.com/astral-sh/uv) for lightning-fast package operations
+- **Dependency Management:** Automatically detects and manages project dependencies
 
--   **Effortless Project Setup:** Initializes new Python projects with a standard directory structure, `pyproject.toml`, and essential configuration files.
--   **PDM Integration:** Manages dependencies and virtual environments using [PDM](https://pdm.fming.dev/) (with [uv](https://github.com/astral-sh/uv) enabled for speed).
--   **Automated Code Cleaning:** Removes unnecessary docstrings, line comments, and trailing whitespace.
--   **Consistent Code Formatting:** Enforces a consistent style using [Ruff](https://github.com/astral-sh/ruff), the lightning-fast Python linter and formatter.
--   **Comprehensive Pre-commit Hooks:** Installs and manages a robust suite of pre-commit hooks to ensure code quality (see the "Pre-commit Hooks" section below).
--   **Interactive Checks:** Supports interactive pre-commit hooks (like `refurb`, `bandit`, and `pyright`) to allow you to fix issues in real-time.
--   **Built-in Testing:** Automatically runs tests using `pytest`.
--   **Easy Version Bumping:** Provides commands to bump the project version (micro, minor, or major).
--   **Simplified Publishing:** Automates publishing to PyPI via PDM.
--   **Commit and Push:** Commits and pushes your changes.
--   **Pull Request Creation:** Creates pull requests to upstream repositories on GitHub or GitLab.
+### Code Quality
+- **Automated Code Cleaning:** Removes unnecessary docstrings, line comments, and trailing whitespace
+- **Consistent Code Formatting:** Enforces a unified style using [Ruff](https://github.com/astral-sh/ruff), the lightning-fast Python linter and formatter
+- **Comprehensive Pre-commit Hooks:** Installs and manages a robust suite of pre-commit hooks (see the "Pre-commit Hooks" section below)
+- **Interactive Checks:** Supports interactive pre-commit hooks (like `refurb`, `bandit`, and `pyright`) to fix issues in real-time
+- **Static Type Checking:** Enforces type safety with Pyright integration
+
+### Testing & Deployment
+- **Built-in Testing:** Automatically runs tests using `pytest`
+- **Easy Version Bumping:** Provides commands to bump the project version (micro, minor, or major)
+- **Simplified Publishing:** Automates publishing to PyPI via PDM
+
+### Git Integration
+- **Commit and Push:** Commits and pushes your changes with standardized commit messages
+- **Pull Request Creation:** Creates pull requests to upstream repositories on GitHub or GitLab
+- **Pre-commit Integration:** Ensures code quality before commits
+
+### Developer Experience
+- **Command-Line Interface:** Simple, intuitive CLI with comprehensive options
+- **Programmatic API:** Can be integrated into your own Python scripts and workflows
+- **AI Agent Integration:** Structured output format for integration with AI assistants
+- **Verbose Mode:** Detailed output for debugging and understanding what's happening
 
 ## Pre-commit Hooks
 
@@ -151,24 +172,38 @@ from crackerjack import create_crackerjack_runner
 # Create a custom options object
 class MyOptions:
     def __init__(self):
-        self.commit = False
-        self.interactive = True
-        self.doc = False
-        self.no_config_updates = False
-        self.verbose = True
-        self.update_precommit = False
-        self.clean = True
-        self.test = True
-        self.publish = None
-        self.bump = "micro"
-        self.all = None
-        self.create_pr = False
+        # Core options
+        self.commit = False          # Commit changes to Git
+        self.interactive = True      # Run pre-commit hooks interactively
+        self.verbose = True          # Enable verbose output
+
+        # Configuration options
+        self.no_config_updates = False  # Skip updating config files
+        self.update_precommit = False   # Update pre-commit hooks
+        self.doc = False                # Generate documentation (not implemented yet)
+
+        # Process options
+        self.clean = True            # Clean code (remove docstrings, comments, etc.)
+        self.test = True             # Run tests using pytest
+        self.skip_hooks = False      # Skip running pre-commit hooks
+
+        # Version and publishing options
+        self.publish = None          # Publish to PyPI (micro, minor, major)
+        self.bump = "micro"          # Bump version (micro, minor, major)
+        self.all = None              # Run with -x -t -p <version> -c
+
+        # Git options
+        self.create_pr = False       # Create a pull request
+
+        # Integration options
+        self.ai_agent = False        # Enable AI agent structured output
 
 # Create a Crackerjack runner with custom settings
 runner = create_crackerjack_runner(
-    console=Console(force_terminal=True),
-    pkg_path=Path.cwd(),
-    python_version="3.13"
+    console=Console(force_terminal=True),  # Rich console for pretty output
+    pkg_path=Path.cwd(),                   # Path to your project
+    python_version="3.13",                 # Target Python version
+    dry_run=False                          # Set to True to simulate without changes
 )
 
 # Run Crackerjack with your options
@@ -187,6 +222,7 @@ runner.process(MyOptions())
 -   `-p`, `--publish <micro|minor|major>`: Bump the project version and publish to PyPI using PDM.
 -   `-b`, `--bump <micro|minor|major>`: Bump the project version without publishing.
 -   `-r`, `--pr`: Create a pull request to the upstream repository.
+-   `-s`, `--skip-hooks`: Skip running pre-commit hooks (useful with `-t`).
 -   `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.
 -   `-t`, `--test`: Run tests using `pytest`.
 -   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
@@ -195,53 +231,84 @@ runner.process(MyOptions())
 
 ### Example Workflows
 
--   **Run checks, bump version, publish, then commit:**
-    ```
-    python -m crackerjack -p minor -c
-    ```
+#### Development Workflows
 
--   **Clean code, run checks, run tests, then commit:**
-    ```
-    python -m crackerjack -c -x -t
-    ```
+- **Quick Check** - Run basic checks on your code:
+  ```bash
+  python -m crackerjack
+  ```
 
--   **Run checks skipping config updates:**
-    ```
-    python -m crackerjack -n
-    ```
+- **Full Development Cycle** - Clean, test, bump version, publish, and commit:
+  ```bash
+  python -m crackerjack -a minor  # All-in-one command
 
--   **Bump the version and publish to PyPI:**
-    ```
-    python -m crackerjack -p micro
-    ```
-
--   **Bump the version without publishing:**
-    ```
-    python -m crackerjack -b major
-    ```
-
-- **Update pre-commit hooks:**
-    ```
-    python -m crackerjack -u
-    ```
-
-- **Create a pull request to the upstream repository:**
-    ```
-    python -m crackerjack -r
-    ```
-
-- **Get help:**
-    ```
-    python -m crackerjack --help
-    ```
-
-- **Clean code, run checks, run tests, bump version, publish, then commit:**
-    ```
+  # Equivalent to:
   python -m crackerjack -x -t -p minor -c
+  ```
 
-  # or even easier
+- **Development with Tests** - Clean code, run checks, run tests, then commit:
+  ```bash
+  python -m crackerjack -c -x -t
+  ```
 
-  python -m crackerjack -a minor
+- **Fast Testing** - Run tests without running pre-commit hooks:
+  ```bash
+  python -m crackerjack -t -s
+  ```
+
+#### Version Management
+
+- **Bump and Publish** - Bump version and publish to PyPI:
+  ```bash
+  python -m crackerjack -p micro  # For patch version
+  python -m crackerjack -p minor  # For minor version
+  python -m crackerjack -p major  # For major version
+  ```
+
+- **Version Bump Only** - Bump version without publishing:
+  ```bash
+  python -m crackerjack -b major
+  ```
+
+#### Configuration Management
+
+- **Skip Config Updates** - Run checks without updating configuration files:
+  ```bash
+  python -m crackerjack -n
+  ```
+
+- **Update Hooks** - Update pre-commit hooks to latest versions:
+  ```bash
+  python -m crackerjack -u
+  ```
+
+#### Git Operations
+
+- **Commit Changes** - Run checks and commit changes:
+  ```bash
+  python -m crackerjack -c
+  ```
+
+- **Create PR** - Create a pull request to the upstream repository:
+  ```bash
+  python -m crackerjack -r
+  ```
+
+#### Other Operations
+
+- **Interactive Mode** - Run pre-commit hooks interactively:
+  ```bash
+  python -m crackerjack -i
+  ```
+
+- **AI Integration** - Run with structured output for AI tools:
+  ```bash
+  python -m crackerjack --ai-agent --test
+  ```
+
+- **Help** - Display command help:
+  ```bash
+  python -m crackerjack --help
   ```
 
 ## AI Agent Integration
