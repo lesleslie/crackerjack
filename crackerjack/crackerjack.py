@@ -44,6 +44,7 @@ class OptionsProtocol(t.Protocol):
     all: t.Any | None
     ai_agent: bool = False
     create_pr: bool = False
+    skip_hooks: bool = False
 
 
 @dataclass
@@ -796,8 +797,14 @@ class Crackerjack:
         if options.clean:
             actions_performed.append("clean_project")
 
-        self.project_manager.run_pre_commit()
-        actions_performed.append("run_pre_commit")
+        if not options.skip_hooks:
+            self.project_manager.run_pre_commit()
+            actions_performed.append("run_pre_commit")
+        else:
+            self.console.print(
+                "\n[yellow]Skipping pre-commit hooks as requested[/yellow]\n"
+            )
+            actions_performed.append("skip_pre_commit")
 
         self._run_tests(options)
         if options.test:

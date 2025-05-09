@@ -34,6 +34,7 @@ class Options(BaseModel):
     all: BumpOption | None = None
     ai_agent: bool = False
     create_pr: bool = False
+    skip_hooks: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -83,6 +84,12 @@ cli_options = {
         help="Remove docstrings, line comments, and unnecessary whitespace.",
     ),
     "test": typer.Option(False, "-t", "--test", help="Run tests."),
+    "skip_hooks": typer.Option(
+        False,
+        "-s",
+        "--skip-hooks",
+        help="Skip running pre-commit hooks (useful with -t).",
+    ),
     "all": typer.Option(
         None,
         "-a",
@@ -118,6 +125,7 @@ def main(
     bump: BumpOption | None = cli_options["bump"],
     clean: bool = cli_options["clean"],
     test: bool = cli_options["test"],
+    skip_hooks: bool = cli_options["skip_hooks"],
     create_pr: bool = cli_options["create_pr"],
     ai_agent: bool = cli_options["ai_agent"],
 ) -> None:
@@ -132,6 +140,7 @@ def main(
         bump=bump,
         clean=clean,
         test=test,
+        skip_hooks=skip_hooks,
         all=all,
         ai_agent=ai_agent,
         create_pr=create_pr,

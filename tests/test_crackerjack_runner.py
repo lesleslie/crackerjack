@@ -24,6 +24,7 @@ class MockOptions:
         self.all = kwargs.get("all")
         self.ai_agent = kwargs.get("ai_agent", False)
         self.create_pr = kwargs.get("create_pr", False)
+        self.skip_hooks = kwargs.get("skip_hooks", False)
 
 
 def test_create_crackerjack_runner() -> None:
@@ -124,3 +125,25 @@ def test_process_with_test_option(
     with patch("builtins.input", return_value="Test commit message"):
         with patch.object(Crackerjack, "_run_tests"):
             crackerjack.process(options)
+
+
+def test_process_with_test_and_skip_hooks_options(
+    mock_crackerjack: tuple[Crackerjack, dict[str, MagicMock]],
+) -> None:
+    crackerjack, mocks = mock_crackerjack
+
+    options = MockOptions(test=True, skip_hooks=True)
+
+    crackerjack.execute_command = MagicMock(
+        return_value=MagicMock(returncode=0, stdout="All tests passed", stderr="")
+    )
+
+    with patch("builtins.input", return_value="Test commit message"):
+        with patch.object(Crackerjack, "_run_tests"):
+            crackerjack.process(options)
+
+    mocks["project_manager"].run_pre_commit.assert_not_called()
+
+    mocks["console"].print.assert_any_call(
+        "\n[yellow]Skipping pre-commit hooks as requested[/yellow]\n"
+    )

@@ -223,6 +223,7 @@ def test_create_options() -> None:
         test=True,
         all=BumpOption.minor,
         create_pr=True,
+        skip_hooks=True,
     )
     assert test_options.commit
     assert test_options.interactive
@@ -236,6 +237,7 @@ def test_create_options() -> None:
     assert test_options.test
     assert test_options.all == BumpOption.minor
     assert test_options.create_pr
+    assert test_options.skip_hooks
 
 
 def test_conflicting_options(
@@ -296,3 +298,18 @@ def test_create_pr_option(
     assert result.exit_code == 0
     options = mock_crackerjack_process.process.call_args[0][0]
     assert options.create_pr
+
+
+def test_skip_hooks_option(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["-s"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.process.assert_called_once()
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert options.skip_hooks
+    mock_crackerjack_process.process.reset_mock()
+    result = runner.invoke(app, ["--skip-hooks"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert options.skip_hooks

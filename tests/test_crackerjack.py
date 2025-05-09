@@ -40,6 +40,7 @@ class OptionsForTesting:
     all: BumpOption | None = None
     ai_agent: bool = False
     create_pr: bool = False
+    skip_hooks: bool = False
 
 
 @pytest.fixture
@@ -228,6 +229,45 @@ class TestCrackerjackProcess:
         assert any(
             ("Skipping config updates" in call for call in console_print_calls)
         ), "Expected 'Skipping config updates' message was not printed"
+
+    def test_process_with_skip_hooks_option(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        mock_input: MagicMock,
+        mock_project_manager_execute: MagicMock,
+        mock_config_manager_execute: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        mock_execute.return_value.returncode = 0
+        mock_project_manager_execute.return_value.returncode = 0
+        mock_config_manager_execute.return_value.returncode = 0
+        options = options_factory(test=True, skip_hooks=True)
+
+        with (
+            patch.object(Crackerjack, "_run_tests") as mock_run_tests,
+            patch.object(ProjectManager, "run_pre_commit") as mock_run_pre_commit,
+        ):
+            mock_run_tests.side_effect = lambda opts: mock_console_print(
+                "\n\nRunning tests...\n"
+            )
+            cj = Crackerjack(dry_run=True)
+            cj.process(options)
+
+            mock_run_pre_commit.assert_not_called()
+
+            mock_run_tests.assert_called_once_with(options)
+
+        console_print_calls = [str(call) for call in mock_console_print.call_args_list]
+        assert any(("Running tests" in call for call in console_print_calls)), (
+            "Expected 'Running tests' message was not printed"
+        )
+        assert any(
+            ("Skipping pre-commit hooks" in call for call in console_print_calls)
+        ), "Expected 'Skipping pre-commit hooks' message was not printed"
 
     def test_process_with_bump_option(
         self,
