@@ -90,6 +90,7 @@ class CodeCleaner:
                     " type: ignore" in comment_part
                     or " noqa" in comment_part
                     or " nosec" in comment_part
+                    or " codespell:ignore" in comment_part
                 ):
                     new_lines.append(line)
                 else:
