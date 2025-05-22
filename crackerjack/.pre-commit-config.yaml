@@ -26,7 +26,7 @@ repos:
     rev: v0.11.11
     hooks:
       - id: ruff-format
-      - id: ruff
+      - id: ruff-check
   - repo: https://github.com/jendrikseipp/vulture
     rev: 'v2.14'
     hooks:
@@ -77,7 +77,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.11
     hooks:
-      - id: ruff
+      - id: ruff-check
       - id: ruff-format
   #  - repo: https://github.com/pdoc3/pdoc
   #    rev: master
