@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-addopts = "--cov=crackerjack --cov-report=term"
+addopts = "--cov=crackerjack --cov-report=term --timeout=120 --timeout-method=thread -n auto"
 asyncio_default_fixture_loop_scope = "function"
 python_files = ["test_*.py", "*_test.py"]
 asyncio_mode = "auto"
@@ -99,6 +99,7 @@ exclude-deps = [
     "pytest-asyncio",
     "pytest-cov",
     "pytest-mock",
+    "pytest-xdist",
     "pdm",
     "pyfiglet",
     "pyyaml",
@@ -154,7 +155,7 @@ pythonPlatform = "Darwin"
 
 [project]
 name = "crackerjack"
-version = "0.18.7"
+version = "0.18.8"
 description = "Default template for PDM package"
 requires-python = ">=3.13"
 readme = "README.md"
@@ -197,6 +198,7 @@ dependencies = [
     "rich>=14.0.0",
     "typer>=0.15.4",
     "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.5.0",
 ]
 authors = [
     { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
