@@ -96,7 +96,7 @@ Crackerjack is built on the following core principles:
 ### Developer Experience
 - **Command-Line Interface:** Simple, intuitive CLI with comprehensive options
 - **Programmatic API:** Can be integrated into your own Python scripts and workflows
-- **AI Agent Integration:** Structured output format for integration with AI assistants
+- **AI Agent Integration:** Structured output format for integration with AI assistants, with complete style rules available in [RULES.md](RULES.md) for AI tool customization
 - **Verbose Mode:** Detailed output for debugging and understanding what's happening
 
 ## Pre-commit Hooks
