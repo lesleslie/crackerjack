@@ -32,6 +32,8 @@ class Options(BaseModel):
     clean: bool = False
     test: bool = False
     benchmark: bool = False
+    benchmark_regression: bool = False
+    benchmark_regression_threshold: float = 5.0
     all: BumpOption | None = None
     ai_agent: bool = False
     create_pr: bool = False
@@ -90,6 +92,16 @@ cli_options = {
         "--benchmark",
         help="Run tests in benchmark mode (disables parallel execution).",
     ),
+    "benchmark_regression": typer.Option(
+        False,
+        "--benchmark-regression",
+        help="Fail tests if benchmarks regress beyond threshold.",
+    ),
+    "benchmark_regression_threshold": typer.Option(
+        5.0,
+        "--benchmark-regression-threshold",
+        help="Maximum allowed performance regression percentage (default: 5.0%).",
+    ),
     "skip_hooks": typer.Option(
         False,
         "-s",
@@ -132,6 +144,10 @@ def main(
     clean: bool = cli_options["clean"],
     test: bool = cli_options["test"],
     benchmark: bool = cli_options["benchmark"],
+    benchmark_regression: bool = cli_options["benchmark_regression"],
+    benchmark_regression_threshold: float = cli_options[
+        "benchmark_regression_threshold"
+    ],
     skip_hooks: bool = cli_options["skip_hooks"],
     create_pr: bool = cli_options["create_pr"],
     ai_agent: bool = cli_options["ai_agent"],
@@ -148,6 +164,8 @@ def main(
         clean=clean,
         test=test,
         benchmark=benchmark,
+        benchmark_regression=benchmark_regression,
+        benchmark_regression_threshold=benchmark_regression_threshold,
         skip_hooks=skip_hooks,
         all=all,
         ai_agent=ai_agent,

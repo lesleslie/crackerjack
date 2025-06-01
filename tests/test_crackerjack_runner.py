@@ -26,6 +26,10 @@ class MockOptions:
         self.create_pr = kwargs.get("create_pr", False)
         self.skip_hooks = kwargs.get("skip_hooks", False)
         self.benchmark = kwargs.get("benchmark", False)
+        self.benchmark_regression = kwargs.get("benchmark_regression", False)
+        self.benchmark_regression_threshold = kwargs.get(
+            "benchmark_regression_threshold", 5.0
+        )
 
 
 def test_create_crackerjack_runner() -> None:

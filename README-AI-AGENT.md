@@ -14,6 +14,15 @@ You can enable AI agent mode by adding the `--ai-agent` flag to any Crackerjack 
 # Run tests with AI agent mode enabled
 python -m crackerjack --ai-agent --test
 
+# Run benchmark tests with AI agent mode
+python -m crackerjack --ai-agent --test --benchmark
+
+# Run benchmark regression tests with AI agent mode
+python -m crackerjack --ai-agent --test --benchmark-regression
+
+# Run benchmark regression tests with custom threshold (10%)
+python -m crackerjack --ai-agent --test --benchmark-regression --benchmark-regression-threshold=10.0
+
 # Run a full development cycle with AI agent mode
 python -m crackerjack --ai-agent -a minor
 ```
@@ -77,9 +86,11 @@ At the end of all operations, Crackerjack provides a comprehensive summary:
     {"action": "setup_package", "status": "success", "duration": 0.21},
     {"action": "update_project", "status": "success", "duration": 1.54},
     {"action": "run_tests", "status": "success", "duration": 3.42},
+    {"action": "run_benchmarks", "status": "success", "duration": 2.18, "details": "All benchmarks passed. Average improvement: 3.2%"},
+    {"action": "benchmark_regression", "status": "success", "duration": 1.75, "details": "No significant regressions detected (threshold: 5.0%)"},
     {"action": "clean_code", "status": "success", "duration": 0.87}
   ],
-  "total_duration": 6.04,
+  "total_duration": 9.97,
   "success": true
 }
 ```
@@ -121,6 +132,11 @@ class AIAssistantOptions:
         self.test = True
         self.clean = True
         self.verbose = True
+
+        # Benchmark options
+        self.benchmark = False  # Run tests in benchmark mode
+        self.benchmark_regression = False  # Fail tests if benchmarks regress
+        self.benchmark_regression_threshold = 5.0  # Threshold for regression (%)
 
         # Other options as needed
         self.skip_hooks = False

@@ -1,5 +1,6 @@
-"""Pytest configuration file with hooks for detecting slow and hanging tests."""
+"""Pytest configuration file with hooks for benchmark regression testing and test monitoring."""
 
+import os
 import time
 import typing as t
 from pathlib import Path
@@ -13,6 +14,14 @@ def pytest_configure(config: Config) -> None:
         "markers", "benchmark: mark test as a benchmark (disables parallel execution)"
     )
 
+    if not hasattr(config, "workerinput"):
+        benchmark_regression = config.getoption("--benchmark-regression")
+        if benchmark_regression:
+            threshold_str = str(config.getoption("--benchmark-regression-threshold"))
+            threshold = float(threshold_str) / 100.0
+
+            os.environ["BENCHMARK_THRESHOLD"] = str(threshold)
+
 
 def pytest_addoption(parser: Parser) -> None:
     parser.addoption(
@@ -20,6 +29,19 @@ def pytest_addoption(parser: Parser) -> None:
         action="store_true",
         default=False,
         help="Run benchmark tests and disable parallelism",
+    )
+    parser.addoption(
+        "--benchmark-regression",
+        action="store_true",
+        default=False,
+        help="Fail tests if benchmarks regress beyond threshold",
+    )
+    group = parser.getgroup("benchmark")
+    group.addoption(
+        "--benchmark-regression-threshold",
+        action="store",
+        default="5.0",
+        help="Regression threshold in percent (default: 5.0%%)",
     )
 
 
@@ -62,3 +84,17 @@ def pytest_runtest_teardown(item: t.Any) -> None:
 @pytest.hookimpl(trylast=True)
 def pytest_runtest_protocol(item: t.Any) -> None:
     Path(".current_test").write_text(f"Current test: {item.name}")
+
+
+def pytest_benchmark_compare_machine_info(
+    machine_info: dict[str, t.Any], compared_benchmark: t.Any
+) -> bool:
+    return True
+
+
+def pytest_benchmark_generate_commit_info(config: Config) -> dict[str, t.Any]:
+    return {
+        "id": "current",
+        "time": time.time(),
+        "project_name": "crackerjack",
+    }

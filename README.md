@@ -135,6 +135,44 @@ Crackerjack projects adhere to these guidelines:
 -   **Clear Code:** Avoid overly complex code.
 -   **Modular:** Functions should do one thing well.
 
+## Testing Features
+
+Crackerjack provides advanced testing capabilities powered by pytest:
+
+### Standard Testing
+
+- **Parallel Test Execution:** Tests run in parallel by default using pytest-xdist for faster execution
+- **Timeout Protection:** All tests have a default 60-second timeout to prevent hanging tests
+- **Coverage Reports:** Automatically generates test coverage reports with configurable thresholds
+
+### Benchmark Testing
+
+Crackerjack includes benchmark testing capabilities:
+
+- **Performance Measurement:** Run tests with `--benchmark` to measure execution time and performance
+- **Regression Testing:** Use `--benchmark-regression` to detect performance regressions
+- **Configurable Thresholds:** Set custom regression thresholds with `--benchmark-regression-threshold`
+- **Compatibility Management:** Automatically disables parallel execution when running benchmarks
+- **CI Integration:** Track performance across commits with benchmark history
+
+When benchmarks are run, Crackerjack:
+1. Disables parallel test execution (as pytest-benchmark is incompatible with pytest-xdist)
+2. Configures the pytest-benchmark plugin with optimized settings
+3. Compares benchmark results against previous runs when regression testing is enabled
+4. Fails tests if performance decreases beyond the specified threshold
+
+Example benchmark usage:
+```bash
+# Run benchmarks
+python -m crackerjack -t --benchmark
+
+# Run benchmarks with regression testing (fail if >5% slower)
+python -m crackerjack -t --benchmark-regression
+
+# Run benchmarks with custom regression threshold (10%)
+python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold=10.0
+```
+
 ## Installation
 
 1.  **Python:** Ensure you have Python 3.13 installed.
@@ -185,6 +223,9 @@ class MyOptions:
         # Process options
         self.clean = True            # Clean code (remove docstrings, comments, etc.)
         self.test = True             # Run tests using pytest
+        self.benchmark = False       # Run tests in benchmark mode
+        self.benchmark_regression = False  # Fail tests if benchmarks regress beyond threshold
+        self.benchmark_regression_threshold = 5.0  # Threshold percentage for benchmark regression
         self.skip_hooks = False      # Skip running pre-commit hooks
 
         # Version and publishing options
@@ -225,6 +266,9 @@ runner.process(MyOptions())
 -   `-s`, `--skip-hooks`: Skip running pre-commit hooks (useful with `-t`).
 -   `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.
 -   `-t`, `--test`: Run tests using `pytest`.
+-   `--benchmark`: Run tests in benchmark mode (disables parallel execution).
+-   `--benchmark-regression`: Fail tests if benchmarks regress beyond threshold.
+-   `--benchmark-regression-threshold`: Set threshold percentage for benchmark regression (default 5.0%).
 -   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
 -   `--ai-agent`: Enable AI agent mode with structured output (see [AI Agent Integration](#ai-agent-integration)).
 -   `--help`: Display help.

@@ -1,147 +1,174 @@
-[tool.pytest.ini_options]
-addopts = "--cov=crackerjack --cov-report=term --timeout=120 --timeout-method=thread -n auto"
-asyncio_default_fixture_loop_scope = "function"
-python_files = ["test_*.py", "*_test.py"]
-asyncio_mode = "auto"
-testpaths = ["tests", "crackerjack"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-markers = [
-    "unit: marks test as a unit test",
-    "benchmark: mark test as a benchmark (disables parallel execution)",
+[build-system]
+build-backend = "pdm.backend"
+requires = [ "pdm-backend" ]
+
+[project]
+name = "crackerjack"
+version = "0.19.0"
+description = "Crackerjack: code quality toolkit"
+readme = "README.md"
+keywords = [
+  "bandit",
+  "black",
+  "creosote",
+  "mypy",
+  "pyright",
+  "pytest",
+  "refurb",
+  "ruff",
+]
+license.text = "BSD-3-CLAUSE"
+maintainers = [
+  { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
 ]
 
-[tool.coverage.run]
-branch = false
-source = ["crackerjack"]
-data_file = ".coverage"
-parallel = false
-omit = [
-    "*/tests/*",
-    "*/site-packages/*",
-    "*/__pycache__/*",
-    "*/__init__.py",
-    "*/_version.py", "*/conftest.py", "*/test_*.py", "*/_test.py"
-    ]
+authors = [
+  { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
+]
+requires-python = ">=3.13"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: POSIX",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Testing",
+  "Topic :: Utilities",
+  "Typing :: Typed",
+]
+dependencies = [
+  "autotyping>=24.9",
+  "pdm>=2.24.2",
+  "pdm-bump>=0.9.12",
+  "pre-commit>=4.2",
+  "pydantic>=2.11.5",
+  "pytest>=8.3.5",
+  "pytest-asyncio>=1",
+  "pytest-benchmark>=5.1",
+  "pytest-cov>=6.1.1",
+  "pytest-mock>=3.14.1",
+  "pytest-timeout>=2.4",
+  "pytest-xdist>=3.7",
+  "rich>=14",
+  "tomli-w>=1.2",
+  "typer>=0.16",
+  "uv>=0.7.9",
+]
+urls.documentation = "https://github.com/lesleslie/crackerjack"
+urls.homepage = "https://github.com/lesleslie/crackerjack"
+urls.repository = "https://github.com/lesleslie/crackerjack"
 
-[tool.coverage.report]
-exclude_also = [
-    "pragma: no cover",
-    "def __repr__",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "pass",
-    "raise ImportError",
-    "except ImportError",
-    "def __str__",
-    "@abstractmethod",
-    ]
-ignore_errors = false
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+fix = true
+unsafe-fixes = true
+
+show-fixes = true
+output-format = "full"
+format.docstring-code-format = true
+lint.extend-select = [
+  "C901",
+  "D",
+  "F",    # pyflakes
+  "I",
+  "UP",   # pyupgrade (includes F-string conversion)
+]
+lint.ignore = [
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D106",
+  "D107",
+  "F821",
+]
+lint.fixable = [ "ALL" ]
+lint.unfixable = [  ]
+lint.isort.no-lines-before = [
+  "first-party",
+]
+lint.mccabe.max-complexity = 13
+lint.pydocstyle.convention = "google"
 
 [tool.codespell]
 skip = "*/data/*"
 quiet-level = 3
 ignore-words-list = "crate,uptodate,nd"
 
-[tool.ruff]
-line-length = 88
-target-version = "py313"
-fix = true
-show-fixes = true
-output-format = "full"
-unsafe-fixes = true
+[tool.pytest.ini_options]
+# Core pytest configuration
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+python_files = [ "test_*.py", "*_test.py" ]
+testpaths = [ "tests", "crackerjack" ]
+python_classes = [ "Test*" ]
+python_functions = [ "test_*" ]
 
-[tool.ruff.format]
-docstring-code-format = true
-
-[tool.ruff.lint]
-ignore = [
-    "F821",
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D105",
-    "D106",
-    "D107",
-]
-extend-select = [
-    "I",
-    "C901",
-    "D",
-]
-fixable = ["ALL"]
-unfixable = []
-
-[tool.ruff.lint.isort]
-no-lines-before = [
-    "first-party",
+# Markers
+markers = [
+  "unit: marks test as a unit test",
+  "benchmark: mark test as a benchmark (disables parallel execution)",
 ]
 
-[tool.ruff.lint.mccabe]
-max-complexity = 13
+# Default timeout settings
+timeout = 60
+timeout_method = "thread"
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
+# Test command options
+addopts = "--cov=crackerjack --cov-report=term --cov-fail-under=80"
 
-[tool.vulture]
-min_confidence = 86
-paths = ["crackerjack",]
-ignore_names = ["cls"]
+[tool.pytest.benchmark]
+disable_gc = true
+warmup = false
+warmup_iterations = 0
 
-[tool.creosote]
-paths = [
-    "crackerjack",
-]
-deps-file = "pyproject.toml"
-exclude-deps = [
-    "pdm-bump",
-    "autotyping",
-    "pre-commit",
-    "pytest",
-    "pytest-asyncio",
-    "pytest-cov",
-    "pytest-mock",
-    "pytest-xdist",
-    "pdm",
-    "pyfiglet",
-    "pyyaml",
-    "uv",
-    "tomli-w",
-    "google-crc32c",
-    "pytest-timeout",
+[tool.coverage.run]
+branch = false
+source = [ "crackerjack" ]
+data_file = ".coverage"
+parallel = false
+omit = [
+  "*/tests/*",
+  "*/site-packages/*",
+  "*/__pycache__/*",
+  "*/__init__.py",
+  "*/_version.py",
+  "*/conftest.py",
+  "*/test_*.py",
+  "*/_test.py",
 ]
 
-[tool.refurb]
-enable_all = true
-
-[tool.bandit]
-target = [
-    "crackerjack",
+[tool.coverage.report]
+exclude_also = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "pass",
+  "raise ImportError",
+  "except ImportError",
+  "def __str__",
+  "@abstractmethod",
 ]
-skips = [
-    "B101",
-    "B301",
-    "B311",
-    "B403",
-    "B404",
-    "B602",
-    "B603",
-    "B607",
-    "B704",
-]
+ignore_errors = false
 
 [tool.pyright]
 verboseOutput = true
 include = [
-    "crackerjack",
+  "crackerjack",
 ]
 exclude = [
-    "scratch",
+  "scratch",
 ]
 extraPaths = [
-    ".venv/lib/python3.13/site-packages/",
+  ".venv/lib/python3.13/site-packages/",
 ]
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
@@ -157,69 +184,50 @@ reportPrivateUsage = false
 pythonVersion = "3.13"
 pythonPlatform = "Darwin"
 
-[project]
-name = "crackerjack"
-version = "0.18.12"
-description = "Default template for PDM package"
-requires-python = ">=3.13"
-readme = "README.md"
-keywords = [
-    "black",
-    "ruff",
-    "mypy",
-    "creosote",
-    "refurb",
-    "pyright",
-    "bandit",
-    "pytest",
+[tool.vulture]
+min_confidence = 86
+paths = [ "crackerjack" ]
+ignore_names = [ "cls" ]
+
+[tool.creosote]
+paths = [
+  "crackerjack",
 ]
-classifiers = [
-    "Environment :: Console",
-    "Operating System :: POSIX",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3.13",
-    "Development Status :: 4 - Beta",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Software Development :: Quality Assurance",
-    "Topic :: Software Development :: Testing",
-    "Topic :: Utilities",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "License :: OSI Approved :: BSD License",
-    "Typing :: Typed",
-]
-dependencies = [
-    "autotyping>=24.9.0",
-    "pre-commit>=4.2.0",
-    "pytest>=8.3.5",
-    "pydantic>=2.11.5",
-    "pdm-bump>=0.9.12",
-    "pdm>=2.24.2",
-    "uv>=0.7.9",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.1",
-    "tomli-w>=1.2.0",
-    "pytest-asyncio>=1.0.0",
-    "rich>=14.0.0",
-    "typer>=0.16.0",
-    "pytest-timeout>=2.4.0",
-    "pytest-xdist>=3.7.0",
-]
-authors = [
-    { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
-]
-maintainers = [
-    { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
+deps-file = "pyproject.toml"
+exclude-deps = [
+  "pdm-bump",
+  "autotyping",
+  "pre-commit",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "pytest-mock",
+  "pytest-xdist",
+  "pytest-benchmark",
+  "pdm",
+  "pyfiglet",
+  "pyyaml",
+  "uv",
+  "tomli-w",
+  "google-crc32c",
+  "pytest-timeout",
 ]
 
-[project.license]
-text = "BSD-3-CLAUSE"
+[tool.refurb]
+enable_all = true
 
-[project.urls]
-homepage = "https://github.com/lesleslie/crackerjack"
-documentation = "https://github.com/lesleslie/crackerjack"
-repository = "https://github.com/lesleslie/crackerjack"
-
-
-[build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+[tool.bandit]
+target = [
+  "crackerjack",
+]
+skips = [
+  "B101",
+  "B301",
+  "B311",
+  "B403",
+  "B404",
+  "B602",
+  "B603",
+  "B607",
+  "B704",
+]

@@ -7,7 +7,7 @@ from crackerjack.__main__ import BumpOption, Options, app
 
 
 @pytest.fixture
-def mock_crackerjack_process() -> t.Generator[MagicMock, None, None]:
+def mock_crackerjack_process() -> t.Generator[MagicMock]:
     mock_runner = MagicMock()
     mock_create = MagicMock(return_value=mock_runner)
 
@@ -313,3 +313,58 @@ def test_skip_hooks_option(
     assert result.exit_code == 0
     options = mock_crackerjack_process.process.call_args[0][0]
     assert options.skip_hooks
+
+
+def test_benchmark_option(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["--benchmark"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.process.assert_called_once()
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert options.benchmark
+    assert not options.benchmark_regression
+    assert options.benchmark_regression_threshold == 5.0
+    mock_crackerjack_process.process.reset_mock()
+
+    result = runner.invoke(app, ["--benchmark"])
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert options.benchmark
+
+
+def test_benchmark_regression_option(
+    runner: CliRunner, mock_crackerjack_process: MagicMock
+) -> None:
+    result = runner.invoke(app, ["--benchmark-regression"])
+    assert result.exit_code == 0
+    mock_crackerjack_process.process.assert_called_once()
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert not options.benchmark
+    assert options.benchmark_regression
+    assert options.benchmark_regression_threshold == 5.0
+    mock_crackerjack_process.process.reset_mock()
+
+    result = runner.invoke(
+        app, ["--benchmark-regression", "--benchmark-regression-threshold", "10.0"]
+    )
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert options.benchmark_regression
+    assert options.benchmark_regression_threshold == 10.0
+    mock_crackerjack_process.process.reset_mock()
+
+    result = runner.invoke(
+        app,
+        [
+            "--benchmark",
+            "--benchmark-regression",
+            "--benchmark-regression-threshold",
+            "7.5",
+        ],
+    )
+    assert result.exit_code == 0
+    options = mock_crackerjack_process.process.call_args[0][0]
+    assert options.benchmark
+    assert options.benchmark_regression
+    assert options.benchmark_regression_threshold == 7.5

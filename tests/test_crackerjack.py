@@ -38,6 +38,8 @@ class OptionsForTesting:
     clean: bool = False
     test: bool = False
     benchmark: bool = False
+    benchmark_regression: bool = False
+    benchmark_regression_threshold: float = 5.0
     all: BumpOption | None = None
     ai_agent: bool = False
     create_pr: bool = False
@@ -45,34 +47,34 @@ class OptionsForTesting:
 
 
 @pytest.fixture
-def mock_execute() -> t.Generator[MagicMock, None, None]:
+def mock_execute() -> t.Generator[MagicMock]:
     with patch("crackerjack.crackerjack.execute") as mock:
         mock.return_value = MagicMock(returncode=0, stdout="Success")
         yield mock
 
 
 @pytest.fixture
-def mock_console_print() -> t.Generator[MagicMock, None, None]:
+def mock_console_print() -> t.Generator[MagicMock]:
     with patch.object(Console, "print") as mock:
         yield mock
 
 
 @pytest.fixture
-def mock_input() -> t.Generator[MagicMock, None, None]:
+def mock_input() -> t.Generator[MagicMock]:
     with patch("builtins.input") as mock:
         mock.return_value = "y"
         yield mock
 
 
 @pytest.fixture
-def mock_config_manager_execute() -> t.Generator[MagicMock, None, None]:
+def mock_config_manager_execute() -> t.Generator[MagicMock]:
     with patch.object(ConfigManager, "execute_command") as mock:
         mock.return_value = MagicMock(returncode=0, stdout="Success")
         yield mock
 
 
 @pytest.fixture
-def mock_project_manager_execute() -> t.Generator[MagicMock, None, None]:
+def mock_project_manager_execute() -> t.Generator[MagicMock]:
     with patch.object(ProjectManager, "execute_command") as mock:
         mock.return_value = MagicMock(returncode=0, stdout="Success")
         yield mock
@@ -224,12 +226,12 @@ class TestCrackerjackProcess:
             cj.process(options)
             mock_run_tests.assert_called_once_with(options)
         console_print_calls = [str(call) for call in mock_console_print.call_args_list]
-        assert any(("Running tests" in call for call in console_print_calls)), (
+        assert any("Running tests" in call for call in console_print_calls), (
             "Expected 'Running tests' message was not printed"
         )
-        assert any(
-            ("Skipping config updates" in call for call in console_print_calls)
-        ), "Expected 'Skipping config updates' message was not printed"
+        assert any("Skipping config updates" in call for call in console_print_calls), (
+            "Expected 'Skipping config updates' message was not printed"
+        )
 
     def test_process_with_skip_hooks_option(
         self,
@@ -263,11 +265,11 @@ class TestCrackerjackProcess:
             mock_run_tests.assert_called_once_with(options)
 
         console_print_calls = [str(call) for call in mock_console_print.call_args_list]
-        assert any(("Running tests" in call for call in console_print_calls)), (
+        assert any("Running tests" in call for call in console_print_calls), (
             "Expected 'Running tests' message was not printed"
         )
         assert any(
-            ("Skipping pre-commit hooks" in call for call in console_print_calls)
+            "Skipping pre-commit hooks" in call for call in console_print_calls
         ), "Expected 'Skipping pre-commit hooks' message was not printed"
 
     def test_process_with_bump_option(
@@ -295,9 +297,9 @@ class TestCrackerjackProcess:
                 cj.process(options)
                 mock_cj_execute.assert_any_call(["pdm", "bump", "minor"])
         console_print_calls = [str(call) for call in mock_console_print.call_args_list]
-        assert any(
-            ("Skipping config updates" in call for call in console_print_calls)
-        ), "Expected 'Skipping config updates' message was not printed"
+        assert any("Skipping config updates" in call for call in console_print_calls), (
+            "Expected 'Skipping config updates' message was not printed"
+        )
 
     def test_process_with_publish_option(
         self,
@@ -325,9 +327,9 @@ class TestCrackerjackProcess:
                 mock_cj_execute.assert_any_call(["pdm", "bump", "micro"])
                 mock_cj_execute.assert_any_call(["pdm", "publish", "--no-build"])
         console_print_calls = [str(call) for call in mock_console_print.call_args_list]
-        assert any(
-            ("Skipping config updates" in call for call in console_print_calls)
-        ), "Expected 'Skipping config updates' message was not printed"
+        assert any("Skipping config updates" in call for call in console_print_calls), (
+            "Expected 'Skipping config updates' message was not printed"
+        )
 
     def test_process_with_all_option(
         self,
@@ -1164,10 +1166,40 @@ class TestCrackerjackProcess:
             console=Console(force_terminal=True),
         )
 
-        options = options_factory(test=True, benchmark=False)
+        options = options_factory(
+            test=True, benchmark=False, benchmark_regression=False
+        )
         test_command = crackerjack._prepare_pytest_command(options)
         assert "--benchmark" not in test_command
+        assert "--benchmark-regression" not in test_command
+        assert "-xvs" in test_command
 
-        options = options_factory(test=True, benchmark=True)
+        options = options_factory(test=True, benchmark=True, benchmark_regression=False)
         test_command = crackerjack._prepare_pytest_command(options)
         assert "--benchmark" in test_command
+        assert "--benchmark-regression" not in test_command
+        assert "-xvs" not in test_command
+
+        options = options_factory(
+            test=True,
+            benchmark=False,
+            benchmark_regression=True,
+            benchmark_regression_threshold=5.0,
+        )
+        test_command = crackerjack._prepare_pytest_command(options)
+        assert "--benchmark" not in test_command
+        assert "--benchmark-regression" in test_command
+        assert "--benchmark-regression-threshold=5.0" in test_command
+        assert "-xvs" not in test_command
+
+        options = options_factory(
+            test=True,
+            benchmark=True,
+            benchmark_regression=True,
+            benchmark_regression_threshold=10.0,
+        )
+        test_command = crackerjack._prepare_pytest_command(options)
+        assert "--benchmark" in test_command
+        assert "--benchmark-regression" in test_command
+        assert "--benchmark-regression-threshold=10.0" in test_command
+        assert "-xvs" not in test_command

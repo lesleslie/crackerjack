@@ -3,12 +3,14 @@ repos:
     rev: 2.24.2  # a PDM release exposing the hook
     hooks:
       - id: pdm-lock-check
-#      - id: pdm-export
-#        args: [ '-o', 'requirements.txt', '--without-hashes' ]
-#        files: ^pdm.lock$
       - id: pdm-sync
         additional_dependencies:
           - keyring
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.7.9
+    hooks:
+      - id: uv-lock
+        files: ^pyproject\.toml$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -22,11 +24,24 @@ repos:
         name: check-toml
       - id: check-added-large-files
         name: check-added-large-files
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        exclude: "pdm.lock"
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.24.1
+    hooks:
+      - id: validate-pyproject
+  - repo: https://github.com/tox-dev/pyproject-fmt
+    rev: "v2.6.0"
+    hooks:
+      - id: pyproject-fmt
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.12
     hooks:
-      - id: ruff-format
       - id: ruff-check
+      - id: ruff-format
   - repo: https://github.com/jendrikseipp/vulture
     rev: 'v2.14'
     hooks:
@@ -35,10 +50,6 @@ repos:
     rev: v4.0.3
     hooks:
       - id: creosote
-  - repo: https://github.com/ikamensh/flynt/
-    rev: '1.0.1'
-    hooks:
-      - id: flynt
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
@@ -74,11 +85,6 @@ repos:
     rev: v1.1.401
     hooks:
       - id: pyright
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.12
-    hooks:
-      - id: ruff-check
-      - id: ruff-format
   #  - repo: https://github.com/pdoc3/pdoc
   #    rev: master
   #    hooks:

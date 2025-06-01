@@ -39,7 +39,9 @@ class OptionsProtocol(t.Protocol):
     update_precommit: bool
     clean: bool
     test: bool
-    benchmark: bool = False
+    benchmark: bool
+    benchmark_regression: bool
+    benchmark_regression_threshold: float
     publish: t.Any | None
     bump: t.Any | None
     all: t.Any | None
@@ -295,10 +297,10 @@ class ConfigManager:
                     for k, v in {
                         x: self.swap_package_name(y)
                         for x, y in value.items()
-                        if isinstance(y, (str, list)) and "crackerjack" in str(y)
+                        if isinstance(y, str | list) and "crackerjack" in str(y)
                     }.items():
                         settings[setting][k] = v
-                elif isinstance(value, (str, list)) and "crackerjack" in str(value):
+                elif isinstance(value, str | list) and "crackerjack" in str(value):
                     value = self.swap_package_name(value)
                     settings[setting] = value
                 if setting in (
@@ -492,9 +494,27 @@ class Crackerjack:
                 self.code_cleaner.clean_files(tests_dir)
 
     def _prepare_pytest_command(self, options: OptionsProtocol) -> list[str]:
+        """Prepare pytest command with appropriate options.
+
+        Configures pytest command with:
+        - Standard options for formatting and output control
+        - Benchmark options when benchmark mode is enabled
+        - Benchmark regression options when regression testing is enabled
+        - Parallel execution via xdist for non-benchmark tests
+
+        Benchmark and parallel execution (xdist) are incompatible, so the command
+        automatically disables parallelism when benchmarks are enabled.
+
+        Args:
+            options: Command options with benchmark and test settings
+
+        Returns:
+            List of command-line arguments for pytest
+        """
         test = ["pytest"]
         if options.verbose:
             test.append("-v")
+
         test.extend(
             [
                 "--capture=fd",  # Capture stdout/stderr at file descriptor level
@@ -505,9 +525,27 @@ class Crackerjack:
                 "--timeout=60",  # 1-minute timeout for tests
             ]
         )
-        # Add benchmark flag if enabled (disables parallel execution)
-        if options.benchmark:
-            test.append("--benchmark")
+
+        # Benchmarks and parallel testing are incompatible
+        # Handle them mutually exclusively
+        if options.benchmark or options.benchmark_regression:
+            # When running benchmarks, avoid parallel execution
+            # and apply specific benchmark options
+            if options.benchmark:
+                test.append("--benchmark")
+
+            # Add benchmark regression testing options if enabled
+            if options.benchmark_regression:
+                test.extend(
+                    [
+                        "--benchmark-regression",
+                        f"--benchmark-regression-threshold={options.benchmark_regression_threshold}",
+                    ]
+                )
+        else:
+            # No benchmarks - use parallel execution for speed
+            test.append("-xvs")
+
         return test
 
     def _setup_test_environment(self) -> None:
