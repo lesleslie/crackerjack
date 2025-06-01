@@ -1159,19 +1159,15 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        """Test that the benchmark option adds the --benchmark flag to pytest command."""
-        # Create Crackerjack instance
         crackerjack = Crackerjack(
             pkg_path=tmp_path_package,
             console=Console(force_terminal=True),
         )
 
-        # Test with benchmark=False (default)
         options = options_factory(test=True, benchmark=False)
         test_command = crackerjack._prepare_pytest_command(options)
         assert "--benchmark" not in test_command
 
-        # Test with benchmark=True
         options = options_factory(test=True, benchmark=True)
         test_command = crackerjack._prepare_pytest_command(options)
         assert "--benchmark" in test_command
