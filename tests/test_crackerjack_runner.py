@@ -25,6 +25,7 @@ class MockOptions:
         self.ai_agent = kwargs.get("ai_agent", False)
         self.create_pr = kwargs.get("create_pr", False)
         self.skip_hooks = kwargs.get("skip_hooks", False)
+        self.benchmark = kwargs.get("benchmark", False)
 
 
 def test_create_crackerjack_runner() -> None:

@@ -39,6 +39,7 @@ class OptionsProtocol(t.Protocol):
     update_precommit: bool
     clean: bool
     test: bool
+    benchmark: bool = False
     publish: t.Any | None
     bump: t.Any | None
     all: t.Any | None
@@ -504,6 +505,9 @@ class Crackerjack:
                 "--timeout=60",  # 1-minute timeout for tests
             ]
         )
+        # Add benchmark flag if enabled (disables parallel execution)
+        if options.benchmark:
+            test.append("--benchmark")
         return test
 
     def _setup_test_environment(self) -> None:

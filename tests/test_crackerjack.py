@@ -37,6 +37,7 @@ class OptionsForTesting:
     update_precommit: bool = False
     clean: bool = False
     test: bool = False
+    benchmark: bool = False
     all: BumpOption | None = None
     ai_agent: bool = False
     create_pr: bool = False
@@ -1148,3 +1149,29 @@ class TestCrackerjackProcess:
                         assert "crackerjack" not in (pkg_path / config).read_text()
                         assert "test_package" in (pkg_path / config).read_text()
                     mock_cm_execute.assert_any_call(["git", "add", config])
+
+    def test_prepare_pytest_command_with_benchmark(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        """Test that the benchmark option adds the --benchmark flag to pytest command."""
+        # Create Crackerjack instance
+        crackerjack = Crackerjack(
+            pkg_path=tmp_path_package,
+            console=Console(force_terminal=True),
+        )
+
+        # Test with benchmark=False (default)
+        options = options_factory(test=True, benchmark=False)
+        test_command = crackerjack._prepare_pytest_command(options)
+        assert "--benchmark" not in test_command
+
+        # Test with benchmark=True
+        options = options_factory(test=True, benchmark=True)
+        test_command = crackerjack._prepare_pytest_command(options)
+        assert "--benchmark" in test_command

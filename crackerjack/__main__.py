@@ -31,6 +31,7 @@ class Options(BaseModel):
     update_precommit: bool = False
     clean: bool = False
     test: bool = False
+    benchmark: bool = False
     all: BumpOption | None = None
     ai_agent: bool = False
     create_pr: bool = False
@@ -84,6 +85,11 @@ cli_options = {
         help="Remove docstrings, line comments, and unnecessary whitespace.",
     ),
     "test": typer.Option(False, "-t", "--test", help="Run tests."),
+    "benchmark": typer.Option(
+        False,
+        "--benchmark",
+        help="Run tests in benchmark mode (disables parallel execution).",
+    ),
     "skip_hooks": typer.Option(
         False,
         "-s",
@@ -125,6 +131,7 @@ def main(
     bump: BumpOption | None = cli_options["bump"],
     clean: bool = cli_options["clean"],
     test: bool = cli_options["test"],
+    benchmark: bool = cli_options["benchmark"],
     skip_hooks: bool = cli_options["skip_hooks"],
     create_pr: bool = cli_options["create_pr"],
     ai_agent: bool = cli_options["ai_agent"],
@@ -140,6 +147,7 @@ def main(
         bump=bump,
         clean=clean,
         test=test,
+        benchmark=benchmark,
         skip_hooks=skip_hooks,
         all=all,
         ai_agent=ai_agent,
