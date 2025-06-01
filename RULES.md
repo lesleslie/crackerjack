@@ -80,6 +80,12 @@
   - Write comprehensive tests using pytest
   - Add appropriate timeouts to prevent hanging tests
   - Use parallel test execution when appropriate
+  - Never create files directly on the filesystem in tests
+    - Always use `tempfile` module for temporary files and directories
+    - Use pytest's `tmp_path` and `tmp_path_factory` fixtures
+    - Clean up any generated resources after tests complete
+    - Tests should be isolated and not affect the surrounding environment
+    - Avoid hard-coded paths in tests that point to the real filesystem
 
 - **Code Quality Validation**
   - Code should pass all quality checks when run through crackerjack
