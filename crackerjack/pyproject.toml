@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.19.1"
+version = "0.19.2"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -46,7 +46,7 @@ dependencies = [
   "pdm-bump>=0.9.12",
   "pre-commit>=4.2",
   "pydantic>=2.11.5",
-  "pytest>=8.3.5",
+  "pytest>=8.4",
   "pytest-asyncio>=1",
   "pytest-benchmark>=5.1",
   "pytest-cov>=6.1.1",
@@ -56,7 +56,7 @@ dependencies = [
   "rich>=14",
   "tomli-w>=1.2",
   "typer>=0.16",
-  "uv>=0.7.9",
+  "uv>=0.7.10",
 ]
 urls.documentation = "https://github.com/lesleslie/crackerjack"
 urls.homepage = "https://github.com/lesleslie/crackerjack"
@@ -101,6 +101,10 @@ lint.pydocstyle.convention = "google"
 skip = "*/data/*"
 quiet-level = 3
 ignore-words-list = "crate,uptodate,nd"
+
+[tool.pyproject-fmt]
+column_width = 120
+indent = 2
 
 [tool.pytest.ini_options]
 # Core pytest configuration
