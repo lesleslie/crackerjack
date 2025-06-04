@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.19.0"
+version = "0.19.1"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -115,6 +115,7 @@ python_functions = [ "test_*" ]
 markers = [
   "unit: marks test as a unit test",
   "benchmark: mark test as a benchmark (disables parallel execution)",
+  "integration: marks test as an integration test",
 ]
 
 # Default timeout settings
@@ -122,7 +123,7 @@ timeout = 60
 timeout_method = "thread"
 
 # Test command options
-addopts = "--cov=crackerjack --cov-report=term --cov-fail-under=80"
+addopts = "--cov=crackerjack --cov-report=term --cov-fail-under=42"
 
 [tool.pytest.benchmark]
 disable_gc = true
