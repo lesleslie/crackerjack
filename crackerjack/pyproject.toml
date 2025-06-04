@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.19.4"
+version = "0.19.5"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -220,7 +220,6 @@ exclude-deps = [
 [tool.refurb]
 enable_all = true
 quiet = true
-python_version = "3.13"
 
 [tool.bandit]
 target = [
