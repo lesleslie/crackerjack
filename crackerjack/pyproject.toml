@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.19.5"
+version = "0.19.6"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -88,6 +88,7 @@ lint.ignore = [
   "D106",
   "D107",
   "F821",
+  "UP040",
 ]
 lint.fixable = [ "ALL" ]
 lint.unfixable = [  ]
