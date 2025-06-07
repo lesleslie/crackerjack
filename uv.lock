@@ -158,7 +158,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.20.9"
+version = "0.20.10"
 source = { editable = "." }
 dependencies = [
     { name = "autotyping" },

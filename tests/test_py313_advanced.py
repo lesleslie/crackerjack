@@ -54,11 +54,11 @@ class TestPy313Advanced:
         weird_result: HookResult = {
             "status": HookStatus.ERROR,
             "hook_id": "custom",
-            "output": "",
+            "output": "some error",
             "files": [],
         }
         result = analyze_hook_result(weird_result)
-        assert result == "Hook failed"
+        assert result == "💥 Hook custom encountered an error: some error"
 
     def test_process_hook_results(self) -> None:
         hook_results: list[HookResult] = [
