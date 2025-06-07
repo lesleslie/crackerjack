@@ -2,7 +2,6 @@ import tempfile
 import typing as t
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
 import pytest
 from rich.console import Console
 from crackerjack import create_crackerjack_runner
@@ -37,7 +36,6 @@ class MockOptions:
 def test_create_crackerjack_runner() -> None:
     console = Console(force_terminal=False)
     runner = create_crackerjack_runner(console=console)
-
     assert isinstance(runner, Crackerjack)
     assert runner.console == console
     assert runner.our_path == Path(__file__).parent.parent / "crackerjack"
@@ -49,33 +47,36 @@ def test_create_crackerjack_runner() -> None:
 def mock_crackerjack():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
-        console = MagicMock(spec=Console)
-
+        mock_console = MagicMock(spec=Console)
+        mock_console.print = MagicMock()
         with (
-            patch("crackerjack.crackerjack.CodeCleaner") as mock_cleaner,
-            patch("crackerjack.crackerjack.ConfigManager") as mock_config,
-            patch("crackerjack.crackerjack.ProjectManager") as mock_project,
+            patch("crackerjack.crackerjack.CodeCleaner") as mock_cleaner_cls,
+            patch("crackerjack.crackerjack.ConfigManager") as mock_config_cls,
+            patch("crackerjack.crackerjack.ProjectManager") as mock_project_cls,
+            patch.object(Crackerjack, "execute_command") as mock_execute_command,
         ):
-            mock_cleaner_instance = mock_cleaner.return_value
-            mock_config_instance = mock_config.return_value
-            mock_project_instance = mock_project.return_value
-
+            mock_cleaner = MagicMock()
+            mock_config = MagicMock()
+            mock_project = MagicMock()
+            mock_cleaner_cls.return_value = mock_cleaner
+            mock_config_cls.return_value = mock_config
+            mock_project_cls.return_value = mock_project
+            mock_execute_command.return_value = MagicMock(returncode=0)
             crackerjack = Crackerjack(
-                our_path=tmp_path,
-                pkg_path=tmp_path,
-                console=console,
-                code_cleaner=mock_cleaner_instance,
-                config_manager=mock_config_instance,
-                project_manager=mock_project_instance,
+                our_path=tmp_path, pkg_path=tmp_path, console=mock_console
             )
-
+            mock_cleaner.console = mock_console
+            mock_config.console = mock_console
+            mock_project.console = mock_console
+            mock_project.run_pre_commit.return_value = None
             yield (
                 crackerjack,
                 {
-                    "console": console,
-                    "code_cleaner": mock_cleaner_instance,
-                    "config_manager": mock_config_instance,
-                    "project_manager": mock_project_instance,
+                    "console": mock_console,
+                    "code_cleaner": mock_cleaner,
+                    "config_manager": mock_config,
+                    "project_manager": mock_project,
+                    "execute_command": mock_execute_command,
                 },
             )
 
@@ -84,20 +85,14 @@ def test_process_with_all_option(
     mock_crackerjack: tuple[Crackerjack, dict[str, MagicMock]],
 ) -> None:
     crackerjack, mocks = mock_crackerjack
-
     options = MockOptions(all="minor")
-
-    crackerjack.execute_command = MagicMock(return_value=MagicMock(returncode=0))
-
-    with patch("builtins.input", return_value="Test commit message"):
-        with patch.object(Crackerjack, "_run_tests"):
+    with patch.object(Crackerjack, "_run_tests"):
+        with patch("builtins.input", return_value="Test commit message"):
             crackerjack.process(options)
-
     assert options.clean is True
     assert options.test is True
     assert options.publish == "minor"
     assert options.commit is True
-
     mocks["project_manager"].run_pre_commit.assert_called_once()
 
 
@@ -105,16 +100,10 @@ def test_process_with_clean_option(
     mock_crackerjack: tuple[Crackerjack, dict[str, MagicMock]],
 ) -> None:
     crackerjack, mocks = mock_crackerjack
-
     options = MockOptions(clean=True)
-
     crackerjack.pkg_dir = crackerjack.pkg_path / "test_pkg"
-
-    crackerjack.execute_command = MagicMock(return_value=MagicMock(returncode=0))
-
     with patch("builtins.input", return_value="Test commit message"):
         crackerjack.process(options)
-
     mocks["code_cleaner"].clean_files.assert_called_with(crackerjack.pkg_dir)
 
 
@@ -122,35 +111,26 @@ def test_process_with_test_option(
     mock_crackerjack: tuple[Crackerjack, dict[str, MagicMock]],
 ) -> None:
     crackerjack, _ = mock_crackerjack
-
     options = MockOptions(test=True)
-
-    crackerjack.execute_command = MagicMock(
-        return_value=MagicMock(returncode=0, stdout="All tests passed", stderr="")
-    )
-
-    with patch("builtins.input", return_value="Test commit message"):
-        with patch.object(Crackerjack, "_run_tests"):
+    with patch.object(Crackerjack, "_run_tests") as mock_run_tests:
+        with patch("builtins.input", return_value="Test commit message"):
             crackerjack.process(options)
+    mock_run_tests.assert_called_once_with(options)
 
 
 def test_process_with_test_and_skip_hooks_options(
     mock_crackerjack: tuple[Crackerjack, dict[str, MagicMock]],
 ) -> None:
     crackerjack, mocks = mock_crackerjack
-
     options = MockOptions(test=True, skip_hooks=True)
-
-    crackerjack.execute_command = MagicMock(
-        return_value=MagicMock(returncode=0, stdout="All tests passed", stderr="")
-    )
-
-    with patch("builtins.input", return_value="Test commit message"):
-        with patch.object(Crackerjack, "_run_tests"):
+    with patch.object(Crackerjack, "_run_tests") as mock_run_tests:
+        with patch("builtins.input", return_value="Test commit message"):
             crackerjack.process(options)
-
+    mock_run_tests.assert_called_once_with(options)
     mocks["project_manager"].run_pre_commit.assert_not_called()
-
-    mocks["console"].print.assert_any_call(
-        "\n[yellow]Skipping pre-commit hooks as requested[/yellow]\n"
+    assert any(
+        (
+            "Skipping pre-commit hooks" in str(call)
+            for call in mocks["console"].print.call_args_list
+        )
     )

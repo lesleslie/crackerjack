@@ -1,15 +1,7 @@
-"""Error handling module for Crackerjack.
-
-This module defines a structured error system with error codes, detailed error messages,
-and recovery suggestions. It provides a consistent way to handle errors throughout
-the application.
-"""
-
 import sys
 import typing as t
 from enum import Enum
 from pathlib import Path
-
 from rich.console import Console
 from rich.panel import Panel
 
@@ -19,34 +11,27 @@ class ErrorCode(Enum):
     CONFIG_PARSE_ERROR = 1002
     INVALID_CONFIG = 1003
     MISSING_CONFIG_FIELD = 1004
-
     COMMAND_EXECUTION_ERROR = 2001
     COMMAND_TIMEOUT = 2002
     EXTERNAL_TOOL_ERROR = 2003
     PDM_INSTALL_ERROR = 2004
     PRE_COMMIT_ERROR = 2005
-
     TEST_EXECUTION_ERROR = 3001
     TEST_FAILURE = 3002
     BENCHMARK_REGRESSION = 3003
-
     BUILD_ERROR = 4001
     PUBLISH_ERROR = 4002
     VERSION_BUMP_ERROR = 4003
     AUTHENTICATION_ERROR = 4004
-
     GIT_COMMAND_ERROR = 5001
     PULL_REQUEST_ERROR = 5002
     COMMIT_ERROR = 5003
-
     FILE_NOT_FOUND = 6001
     PERMISSION_ERROR = 6002
     FILE_READ_ERROR = 6003
     FILE_WRITE_ERROR = 6004
-
     CODE_CLEANING_ERROR = 7001
     FORMATTING_ERROR = 7002
-
     UNKNOWN_ERROR = 9001
     NOT_IMPLEMENTED = 9002
     UNEXPECTED_ERROR = 9999
@@ -122,15 +107,12 @@ def handle_error(
     else:
         title = f"❌ Error {error.error_code.value}: {error.error_code.name}"
         content = [error.message]
-
         if verbose and error.details:
             content.extend(("\n[bold]Details:[/bold]", str(error.details)))
-
         if error.recovery:
             content.extend(
                 ("\n[bold green]Recovery suggestion:[/bold green]", str(error.recovery))
             )
-
         console.print(
             Panel(
                 "\n".join(content),
@@ -140,7 +122,6 @@ def handle_error(
                 expand=False,
             )
         )
-
     if exit_on_error:
         sys.exit(error.exit_code)
 
@@ -167,7 +148,6 @@ def check_command_result(
         details = f"Command '{command}' failed with return code {result.returncode}."
         if stderr:
             details += f"\nStandard error output:\n{stderr}"
-
         raise ExecutionError(
             message=error_message,
             error_code=error_code,

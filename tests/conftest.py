@@ -1,10 +1,7 @@
-"""Pytest configuration file with hooks for benchmark regression testing and test monitoring."""
-
 import os
 import time
 import typing as t
 from pathlib import Path
-
 import pytest
 from pytest import Config, Item, Parser
 
@@ -13,13 +10,11 @@ def pytest_configure(config: Config) -> None:
     config.addinivalue_line(
         "markers", "benchmark: mark test as a benchmark (disables parallel execution)"
     )
-
     if not hasattr(config, "workerinput"):
         benchmark_regression = config.getoption("--benchmark-regression")
         if benchmark_regression:
             threshold_str = str(config.getoption("--benchmark-regression-threshold"))
             threshold = float(threshold_str) / 100.0
-
             os.environ["BENCHMARK_THRESHOLD"] = str(threshold)
 
 
@@ -47,17 +42,14 @@ def pytest_addoption(parser: Parser) -> None:
 
 def pytest_collection_modifyitems(config: Config, items: list[Item]) -> None:
     benchmark_mode = t.cast(bool, config.getoption("--benchmark"))
-    has_benchmark_tests = any(item.get_closest_marker("benchmark") for item in items)
-
+    has_benchmark_tests = any((item.get_closest_marker("benchmark") for item in items))
     if benchmark_mode or has_benchmark_tests:
         has_worker = hasattr(config, "workerinput")
-
         try:
             num_processes = t.cast(int, config.getoption("numprocesses"))
             has_multi_processes = num_processes > 0
         except Exception:
             has_multi_processes = False
-
         if has_worker or has_multi_processes:
             config.option.numprocesses = 0
             print(
@@ -93,8 +85,4 @@ def pytest_benchmark_compare_machine_info(
 
 
 def pytest_benchmark_generate_commit_info(config: Config) -> dict[str, t.Any]:
-    return {
-        "id": "current",
-        "time": time.time(),
-        "project_name": "crackerjack",
-    }
+    return {"id": "current", "time": time.time(), "project_name": "crackerjack"}

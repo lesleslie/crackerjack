@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.20.2"
+version = "0.20.10"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -42,6 +42,7 @@ classifiers = [
 ]
 dependencies = [
     "autotyping>=24.9",
+    "keyring>=25.6",
     "pdm>=2.24.2",
     "pdm-bump>=0.9.12",
     "pre-commit>=4.2",
@@ -216,6 +217,7 @@ exclude-deps = [
     "tomli-w",
     "google-crc32c",
     "pytest-timeout",
+    "keyring",
 ]
 
 [tool.refurb]

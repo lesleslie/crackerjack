@@ -1,7 +1,4 @@
-"""Tests for interactive.py run_interactive method with full coverage."""
-
 from unittest.mock import MagicMock, patch
-
 import pytest
 from rich.console import Console
 from crackerjack.errors import ErrorCode, ExecutionError
@@ -19,7 +16,6 @@ class TestInteractiveRun:
         task1 = cli.workflow.add_task("task1", "Task 1")
         task2 = cli.workflow.add_task("task2", "Task 2")
         task3 = cli.workflow.add_task("task3", "Task 3", dependencies=["task2"])
-
         layout_mock = {
             "header": MagicMock(),
             "main": MagicMock(),
@@ -31,12 +27,10 @@ class TestInteractiveRun:
         main_layout["tasks"] = MagicMock()
         main_layout["details"] = MagicMock()
         layout_mock["main"] = main_layout
-
         live_mock = MagicMock()
         progress_mock = MagicMock()
         progress_task_mock = MagicMock()
         progress_mock.add_task.return_value = progress_task_mock
-
         tasks_to_return = [task1, task2, task3, None]
         task_index = 0
 
@@ -56,7 +50,6 @@ class TestInteractiveRun:
             patch("rich.prompt.Confirm.ask", return_value=True),
         ):
             cli.run_interactive()
-
             assert task1.status == TaskStatus.SUCCESS
             assert task2.status == TaskStatus.SUCCESS
             assert task3.status == TaskStatus.FAILED
@@ -65,7 +58,6 @@ class TestInteractiveRun:
 
     def test_run_interactive_with_task_skipping(self, cli: InteractiveCLI) -> None:
         task = cli.workflow.add_task("test_task", "Test Task")
-
         layout_mock = {
             "header": MagicMock(),
             "main": MagicMock(),
@@ -77,7 +69,6 @@ class TestInteractiveRun:
         main_layout["tasks"] = MagicMock()
         main_layout["details"] = MagicMock()
         layout_mock["main"] = main_layout
-
         tasks_to_return = [task, None]
         task_index = 0
 
@@ -96,23 +87,19 @@ class TestInteractiveRun:
             patch("rich.prompt.Confirm.ask", return_value=False),
         ):
             cli.run_interactive()
-
             assert task.status == TaskStatus.SKIPPED
 
     def test_run_interactive_with_task_summary(self, cli: InteractiveCLI) -> None:
         task1 = cli.workflow.add_task("success", "Successful Task")
         task1.start()
         task1.complete()
-
         task2 = cli.workflow.add_task("failed", "Failed Task")
         task2.start()
         task2.fail(
             ExecutionError(message="Failed", error_code=ErrorCode.UNEXPECTED_ERROR)
         )
-
         task3 = cli.workflow.add_task("skipped", "Skipped Task")
         task3.skip()
-
         layout_mock = {
             "header": MagicMock(),
             "main": MagicMock(),
@@ -124,7 +111,6 @@ class TestInteractiveRun:
         main_layout["tasks"] = MagicMock()
         main_layout["details"] = MagicMock()
         layout_mock["main"] = main_layout
-
         with (
             patch.object(cli, "setup_layout", return_value=layout_mock),
             patch("rich.live.Live", return_value=MagicMock()),
@@ -134,29 +120,34 @@ class TestInteractiveRun:
             patch("rich.prompt.Confirm.ask", return_value=True),
         ):
             cli.run_interactive()
-
             assert len(cli.workflow.tasks) == 3
             assert (
                 sum(
-                    1
-                    for t in cli.workflow.tasks.values()
-                    if t.status == TaskStatus.SUCCESS
+                    (
+                        1
+                        for t in cli.workflow.tasks.values()
+                        if t.status == TaskStatus.SUCCESS
+                    )
                 )
                 == 1
             )
             assert (
                 sum(
-                    1
-                    for t in cli.workflow.tasks.values()
-                    if t.status == TaskStatus.FAILED
+                    (
+                        1
+                        for t in cli.workflow.tasks.values()
+                        if t.status == TaskStatus.FAILED
+                    )
                 )
                 == 1
             )
             assert (
                 sum(
-                    1
-                    for t in cli.workflow.tasks.values()
-                    if t.status == TaskStatus.SKIPPED
+                    (
+                        1
+                        for t in cli.workflow.tasks.values()
+                        if t.status == TaskStatus.SKIPPED
+                    )
                 )
                 == 1
             )

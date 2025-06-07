@@ -1,5 +1,4 @@
 from enum import Enum
-
 import typer
 from pydantic import BaseModel, field_validator
 from rich.console import Console
@@ -129,15 +128,10 @@ cli_options = {
         case_sensitive=False,
     ),
     "create_pr": typer.Option(
-        False,
-        "-r",
-        "--pr",
-        help="Create a pull request to the upstream repository.",
+        False, "-r", "--pr", help="Create a pull request to the upstream repository."
     ),
     "rich_ui": typer.Option(
-        False,
-        "--rich-ui",
-        help="Use the interactive Rich UI for a better experience.",
+        False, "--rich-ui", help="Use the interactive Rich UI for a better experience."
     ),
     "ai_agent": typer.Option(
         False,
@@ -195,12 +189,10 @@ def main(
         create_pr=create_pr,
         rich_ui=rich_ui,
     )
-
     if ai_agent:
         import os
 
         os.environ["AI_AGENT"] = "1"
-
     if rich_ui:
         from crackerjack.interactive import launch_interactive_cli
 
@@ -210,7 +202,6 @@ def main(
             pkg_version = version("crackerjack")
         except (ImportError, ModuleNotFoundError):
             pkg_version = "0.19.8"
-
         launch_interactive_cli(pkg_version)
     else:
         runner = create_crackerjack_runner(console=console)

@@ -1,7 +1,4 @@
-"""Tests for pytest timeout and parallel execution features."""
-
 import time
-
 import pytest
 
 
@@ -62,5 +59,4 @@ class TestBenchmarkClass:
             sum(range(10000))
             end = time.time()
             results.append(end - start)
-
         assert max(results) - min(results) < 0.1

@@ -1,23 +1,16 @@
-import io
-import os
-import platform
-import queue
+import ast
 import re
 import subprocess
-import threading
-import time
-import tokenize
 import typing as t
 from contextlib import suppress
-from dataclasses import dataclass, field
 from pathlib import Path
 from subprocess import CompletedProcess
 from subprocess import run as execute
-from token import STRING
 from tomllib import loads
-
+from pydantic import BaseModel
 from rich.console import Console
 from tomli_w import dumps
+from crackerjack.errors import ErrorCode, ExecutionError
 
 config_files = (".gitignore", ".pre-commit-config.yaml", ".libcst.codemod.yaml")
 interactive_hooks = ("refurb", "bandit", "pyright")
@@ -54,8 +47,7 @@ class OptionsProtocol(t.Protocol):
     skip_hooks: bool = False
 
 
-@dataclass
-class CodeCleaner:
+class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
     console: Console
 
     def clean_files(self, pkg_dir: Path | None) -> None:
@@ -64,188 +56,79 @@ class CodeCleaner:
         for file_path in pkg_dir.rglob("*.py"):
             if not str(file_path.parent).startswith("__"):
                 self.clean_file(file_path)
+        with suppress(PermissionError, OSError):
+            pycache_dir = pkg_dir / "__pycache__"
+            if pycache_dir.exists():
+                for cache_file in pycache_dir.iterdir():
+                    with suppress(PermissionError, OSError):
+                        cache_file.unlink()
+                pycache_dir.rmdir()
+            parent_pycache = pkg_dir.parent / "__pycache__"
+            if parent_pycache.exists():
+                for cache_file in parent_pycache.iterdir():
+                    with suppress(PermissionError, OSError):
+                        cache_file.unlink()
+                parent_pycache.rmdir()
 
     def clean_file(self, file_path: Path) -> None:
-        from .errors import CleaningError, ErrorCode, FileError, handle_error
-
         try:
-            if file_path.resolve() == Path(__file__).resolve():
-                self.console.print(f"Skipping cleaning of {file_path} (self file).")
-                return
-        except Exception as e:
-            error = FileError(
-                message="Error comparing file paths",
-                error_code=ErrorCode.FILE_READ_ERROR,
-                details=f"Failed to compare {file_path} with the current file: {e}",
-                recovery="This is likely a file system permission issue. Check file permissions.",
-                exit_code=0,  # Non-fatal error
-            )
-            handle_error(error, self.console, verbose=True, exit_on_error=False)
-            return
-
-        try:
-            # Check if file exists and is readable
-            if not file_path.exists():
-                error = FileError(
-                    message="File not found",
-                    error_code=ErrorCode.FILE_NOT_FOUND,
-                    details=f"The file {file_path} does not exist.",
-                    recovery="Check the file path and ensure the file exists.",
-                    exit_code=0,  # Non-fatal error
-                )
-                handle_error(error, self.console, verbose=True, exit_on_error=False)
-                return
-
-            try:
-                code = file_path.read_text()
-            except Exception as e:
-                error = FileError(
-                    message="Error reading file",
-                    error_code=ErrorCode.FILE_READ_ERROR,
-                    details=f"Failed to read {file_path}: {e}",
-                    recovery="Check file permissions and ensure the file is not locked by another process.",
-                    exit_code=0,  # Non-fatal error
-                )
-                handle_error(error, self.console, verbose=True, exit_on_error=False)
-                return
-
-            # Process the file content
+            code = file_path.read_text()
             code = self.remove_docstrings(code)
             code = self.remove_line_comments(code)
             code = self.remove_extra_whitespace(code)
             code = self.reformat_code(code)
-
-            try:
-                file_path.write_text(code)  # type: ignore
-                self.console.print(f"Cleaned: {file_path}")
-            except Exception as e:
-                error = FileError(
-                    message="Error writing file",
-                    error_code=ErrorCode.FILE_WRITE_ERROR,
-                    details=f"Failed to write to {file_path}: {e}",
-                    recovery="Check file permissions and ensure the file is not locked by another process.",
-                    exit_code=0,  # Non-fatal error
-                )
-                handle_error(error, self.console, verbose=True, exit_on_error=False)
-
+            file_path.write_text(code)
+            print(f"Cleaned: {file_path}")
         except Exception as e:
-            error = CleaningError(
-                message="Error cleaning file",
-                error_code=ErrorCode.CODE_CLEANING_ERROR,
-                details=f"Failed to clean {file_path}: {e}",
-                recovery="This could be due to syntax errors in the file. Try manually checking the file for syntax errors.",
-                exit_code=0,  # Non-fatal error
-            )
-            handle_error(error, self.console, verbose=True, exit_on_error=False)
+            print(f"Error cleaning {file_path}: {e}")
+
+    def remove_docstrings(self, code: str) -> str:
+        tree = ast.parse(code)
+        for node in ast.walk(tree):
+            if isinstance(
+                node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | ast.Module
+            ):
+                if ast.get_docstring(node):
+                    node.body = (
+                        node.body[1:]
+                        if isinstance(node.body[0], ast.Expr)
+                        else node.body
+                    )
+        return ast.unparse(tree)
 
     def remove_line_comments(self, code: str) -> str:
-        new_lines = []
-        for line in code.splitlines():
-            if "#" not in line or line.endswith("# skip"):
-                new_lines.append(line)
+        lines = code.split("\n")
+        cleaned_lines = []
+        for line in lines:
+            if not line.strip():
+                cleaned_lines.append(line)
                 continue
-            if re.search(r"#\s", line):
-                idx = line.find("#")
-                code_part = line[:idx].rstrip()
-                comment_part = line[idx:]
-                if (
-                    " type: ignore" in comment_part
-                    or " noqa" in comment_part
-                    or " nosec" in comment_part
-                    or " codespell:ignore" in comment_part
-                ):
-                    new_lines.append(line)
+            in_string = None
+            result = []
+            i = 0
+            n = len(line)
+            while i < n:
+                char = line[i]
+                if char in ("'", '"') and (i == 0 or line[i - 1] != "\\"):
+                    if in_string is None:
+                        in_string = char
+                    elif in_string == char:
+                        in_string = None
+                    result.append(char)
+                    i += 1
+                elif char == "#" and in_string is None:
+                    comment = line[i:].strip()
+                    if re.match("^#\\s*(?:type:\\s*ignore|noqa)\\b", comment):
+                        result.append(line[i:])
+                        break
+                    break
                 else:
-                    if code_part:
-                        new_lines.append(code_part)
-            else:
-                new_lines.append(line)
-        return "\n".join(new_lines)
-
-    def _is_triple_quoted(self, token_string: str) -> bool:
-        triple_quote_patterns = [
-            ('"""', '"""'),
-            ("'''", "'''"),
-            ('r"""', '"""'),
-            ("r'''", "'''"),
-        ]
-        return any(
-            token_string.startswith(start) and token_string.endswith(end)
-            for start, end in triple_quote_patterns
-        )
-
-    def _is_module_docstring(
-        self, tokens: list[tokenize.TokenInfo], i: int, indent_level: int
-    ) -> bool:
-        if i <= 0 or indent_level != 0:
-            return False
-        preceding_tokens = tokens[:i]
-        return not preceding_tokens
-
-    def _is_function_or_class_docstring(
-        self,
-        tokens: list[tokenize.TokenInfo],
-        i: int,
-        last_token_type: t.Any,
-        last_token_string: str,
-    ) -> bool:
-        if last_token_type != tokenize.OP or last_token_string != ":":  # nosec B105
-            return False
-        for prev_idx in range(i - 1, max(0, i - 20), -1):
-            prev_token = tokens[prev_idx]
-            if prev_token[1] in ("def", "class") and prev_token[0] == tokenize.NAME:
-                return True
-            elif prev_token[0] == tokenize.DEDENT:
-                break
-        return False
-
-    def _is_variable_docstring(
-        self, tokens: list[tokenize.TokenInfo], i: int, indent_level: int
-    ) -> bool:
-        if indent_level <= 0:
-            return False
-        for prev_idx in range(i - 1, max(0, i - 10), -1):
-            if tokens[prev_idx][0]:
-                return True
-        return False
-
-    def remove_docstrings(self, source: str) -> str:
-        try:
-            io_obj = io.StringIO(source)
-            tokens = list(tokenize.generate_tokens(io_obj.readline))
-            result_tokens = []
-            indent_level = 0
-            last_non_ws_token_type = None
-            last_non_ws_token_string = ""  # nosec B105
-            for i, token in enumerate(tokens):
-                token_type, token_string, _, _, _ = token
-                if token_type == tokenize.INDENT:
-                    indent_level += 1
-                elif token_type == tokenize.DEDENT:
-                    indent_level -= 1
-                if token_type == STRING and self._is_triple_quoted(token_string):
-                    is_docstring = (
-                        self._is_module_docstring(tokens, i, indent_level)
-                        or self._is_function_or_class_docstring(
-                            tokens, i, last_non_ws_token_type, last_non_ws_token_string
-                        )
-                        or self._is_variable_docstring(tokens, i, indent_level)
-                    )
-                    if is_docstring:
-                        continue
-                if token_type not in (
-                    tokenize.NL,
-                    tokenize.NEWLINE,
-                    tokenize.INDENT,
-                    tokenize.DEDENT,
-                ):
-                    last_non_ws_token_type = token_type
-                    last_non_ws_token_string = token_string
-                result_tokens.append(token)
-            return tokenize.untokenize(result_tokens)
-        except Exception as e:
-            self.console.print(f"Error removing docstrings: {e}")
-            return source
+                    result.append(char)
+                    i += 1
+            cleaned_line = "".join(result).rstrip()
+            if cleaned_line or not line.strip():
+                cleaned_lines.append(cleaned_line or line)
+        return "\n".join(cleaned_lines)
 
     def remove_extra_whitespace(self, code: str) -> str:
         lines = code.split("\n")
@@ -257,31 +140,17 @@ class CodeCleaner:
             cleaned_lines.append(line)
         return "\n".join(cleaned_lines)
 
-    def reformat_code(self, code: str) -> str | None:
-        from .errors import CleaningError, ErrorCode, handle_error
+    def reformat_code(self, code: str) -> str:
+        from crackerjack.errors import handle_error
 
         try:
             import tempfile
 
-            # Create a temporary file for formatting
-            try:
-                with tempfile.NamedTemporaryFile(
-                    suffix=".py", mode="w+", delete=False
-                ) as temp:
-                    temp_path = Path(temp.name)
-                    temp_path.write_text(code)
-            except Exception as e:
-                error = CleaningError(
-                    message="Failed to create temporary file for formatting",
-                    error_code=ErrorCode.FORMATTING_ERROR,
-                    details=f"Error: {e}",
-                    recovery="Check disk space and permissions for the temp directory.",
-                    exit_code=0,  # Non-fatal
-                )
-                handle_error(error, self.console, verbose=True, exit_on_error=False)
-                return code
-
-            # Run Ruff to format the code
+            with tempfile.NamedTemporaryFile(
+                suffix=".py", mode="w+", delete=False
+            ) as temp:
+                temp_path = Path(temp.name)
+                temp_path.write_text(code)
             try:
                 result = subprocess.run(
                     ["ruff", "format", str(temp_path)],
@@ -289,63 +158,53 @@ class CodeCleaner:
                     capture_output=True,
                     text=True,
                 )
-
                 if result.returncode == 0:
-                    try:
-                        formatted_code = temp_path.read_text()
-                    except Exception as e:
-                        error = CleaningError(
-                            message="Failed to read formatted code",
-                            error_code=ErrorCode.FORMATTING_ERROR,
-                            details=f"Error reading temporary file after formatting: {e}",
-                            recovery="This might be a permissions issue. Check if Ruff is installed properly.",
-                            exit_code=0,  # Non-fatal
-                        )
-                        handle_error(
-                            error, self.console, verbose=True, exit_on_error=False
-                        )
-                        formatted_code = code
+                    formatted_code = temp_path.read_text()
                 else:
-                    error = CleaningError(
-                        message="Ruff formatting failed",
-                        error_code=ErrorCode.FORMATTING_ERROR,
-                        details=f"Ruff output: {result.stderr}",
-                        recovery="The file might contain syntax errors. Check the file manually.",
-                        exit_code=0,  # Non-fatal
+                    self.console.print(
+                        f"[yellow]Ruff formatting failed: {result.stderr}[/yellow]"
                     )
-                    handle_error(error, self.console, exit_on_error=False)
+                    handle_error(
+                        ExecutionError(
+                            message="Code formatting failed",
+                            error_code=ErrorCode.FORMATTING_ERROR,
+                            details=result.stderr,
+                            recovery="Check Ruff configuration and formatting rules",
+                        ),
+                        console=self.console,
+                    )
                     formatted_code = code
             except Exception as e:
-                error = CleaningError(
-                    message="Error running Ruff formatter",
-                    error_code=ErrorCode.FORMATTING_ERROR,
-                    details=f"Error: {e}",
-                    recovery="Ensure Ruff is installed correctly. Run 'pip install ruff' to install it.",
-                    exit_code=0,  # Non-fatal
+                self.console.print(f"[red]Error running Ruff: {e}[/red]")
+                handle_error(
+                    ExecutionError(
+                        message="Error running Ruff",
+                        error_code=ErrorCode.FORMATTING_ERROR,
+                        details=str(e),
+                        recovery="Verify Ruff is installed and configured correctly",
+                    ),
+                    console=self.console,
                 )
-                handle_error(error, self.console, verbose=True, exit_on_error=False)
                 formatted_code = code
             finally:
-                # Clean up temporary file
                 with suppress(FileNotFoundError):
                     temp_path.unlink()
-
             return formatted_code
-
         except Exception as e:
-            error = CleaningError(
-                message="Unexpected error during code formatting",
-                error_code=ErrorCode.FORMATTING_ERROR,
-                details=f"Error: {e}",
-                recovery="This is an unexpected error. Please report this issue.",
-                exit_code=0,  # Non-fatal
+            self.console.print(f"[red]Error during reformatting: {e}[/red]")
+            handle_error(
+                ExecutionError(
+                    message="Error during reformatting",
+                    error_code=ErrorCode.FORMATTING_ERROR,
+                    details=str(e),
+                    recovery="Check file permissions and disk space",
+                ),
+                console=self.console,
             )
-            handle_error(error, self.console, verbose=True, exit_on_error=False)
             return code
 
 
-@dataclass
-class ConfigManager:
+class ConfigManager(BaseModel, arbitrary_types_allowed=True):
     our_path: Path
     pkg_path: Path
     pkg_name: str
@@ -469,64 +328,29 @@ class ConfigManager:
         return execute(cmd, **kwargs)
 
 
-@dataclass
-class ProjectManager:
+class ProjectManager(BaseModel, arbitrary_types_allowed=True):
     our_path: Path
     pkg_path: Path
+    pkg_dir: Path | None = None
+    pkg_name: str = "crackerjack"
     console: Console
     code_cleaner: CodeCleaner
     config_manager: ConfigManager
-    pkg_dir: Path | None = None
-    pkg_name: str = "crackerjack"
     dry_run: bool = False
 
     def run_interactive(self, hook: str) -> None:
-        from .errors import ErrorCode, ExecutionError, handle_error
-
         success: bool = False
-        attempts = 0
-        max_attempts = 3
-
-        while not success and attempts < max_attempts:
-            attempts += 1
-            result = self.execute_command(
+        while not success:
+            fail = self.execute_command(
                 ["pre-commit", "run", hook.lower(), "--all-files"]
             )
-
-            if result.returncode > 0:
-                self.console.print(
-                    f"\n\n[yellow]Hook '{hook}' failed (attempt {attempts}/{max_attempts})[/yellow]"
-                )
-
-                # Give more detailed information about the failure
-                if result.stderr:
-                    self.console.print(f"[red]Error details:[/red]\n{result.stderr}")
-
-                retry = input(f"Retry running {hook.title()}? (y/N): ")
+            if fail.returncode > 0:
+                retry = input(f"\n\n{hook.title()} failed. Retry? (y/N): ")
                 self.console.print()
-
-                if retry.strip().lower() != "y":
-                    error = ExecutionError(
-                        message=f"Interactive hook '{hook}' failed",
-                        error_code=ErrorCode.PRE_COMMIT_ERROR,
-                        details=f"Hook execution output:\n{result.stderr or result.stdout}",
-                        recovery=f"Try running the hook manually: pre-commit run {hook.lower()} --all-files",
-                        exit_code=1,
-                    )
-                    handle_error(error=error, console=self.console)
-            else:
-                self.console.print(f"[green]✅ Hook '{hook}' succeeded![/green]")
-                success = True
-
-        if not success:
-            error = ExecutionError(
-                message=f"Interactive hook '{hook}' failed after {max_attempts} attempts",
-                error_code=ErrorCode.PRE_COMMIT_ERROR,
-                details="The hook continued to fail after multiple attempts.",
-                recovery=f"Fix the issues manually and run: pre-commit run {hook.lower()} --all-files",
-                exit_code=1,
-            )
-            handle_error(error=error, console=self.console)
+                if retry.strip().lower() == "y":
+                    continue
+                raise SystemExit(1)
+            success = True
 
     def update_pkg_configs(self) -> None:
         self.config_manager.copy_configs()
@@ -546,25 +370,13 @@ class ProjectManager:
         self.config_manager.update_pyproject_configs()
 
     def run_pre_commit(self) -> None:
-        from .errors import ErrorCode, ExecutionError, handle_error
-
         self.console.print("\nRunning pre-commit hooks...\n")
         check_all = self.execute_command(["pre-commit", "run", "--all-files"])
-
         if check_all.returncode > 0:
-            # First retry
-            self.console.print("\nSome pre-commit hooks failed. Retrying once...\n")
             check_all = self.execute_command(["pre-commit", "run", "--all-files"])
-
             if check_all.returncode > 0:
-                error = ExecutionError(
-                    message="Pre-commit hooks failed",
-                    error_code=ErrorCode.PRE_COMMIT_ERROR,
-                    details="Pre-commit hooks failed even after a retry. Check the output above for specific hook failures.",
-                    recovery="Review the error messages above. Manually fix the issues or run specific hooks interactively with 'pre-commit run <hook-id>'.",
-                    exit_code=1,
-                )
-                handle_error(error=error, console=self.console, verbose=True)
+                self.console.print("\n\nPre-commit failed. Please fix errors.\n")
+                raise SystemExit(1)
 
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
@@ -575,42 +387,39 @@ class ProjectManager:
         return execute(cmd, **kwargs)
 
 
-@dataclass
-class Crackerjack:
-    our_path: Path = field(default_factory=lambda: Path(__file__).parent)
-    pkg_path: Path = field(default_factory=lambda: Path(Path.cwd()))
+class Crackerjack(BaseModel, arbitrary_types_allowed=True):
+    our_path: Path = Path(__file__).parent
+    pkg_path: Path = Path(Path.cwd())
     pkg_dir: Path | None = None
     pkg_name: str = "crackerjack"
     python_version: str = default_python_version
-    console: Console = field(default_factory=lambda: Console(force_terminal=True))
+    console: Console = Console(force_terminal=True)
     dry_run: bool = False
     code_cleaner: CodeCleaner | None = None
     config_manager: ConfigManager | None = None
     project_manager: ProjectManager | None = None
 
-    def __post_init__(self) -> None:
-        if self.code_cleaner is None:
-            self.code_cleaner = CodeCleaner(console=self.console)
-        if self.config_manager is None:
-            self.config_manager = ConfigManager(
-                our_path=self.our_path,
-                pkg_path=self.pkg_path,
-                pkg_name=self.pkg_name,
-                console=self.console,
-                python_version=self.python_version,
-                dry_run=self.dry_run,
-            )
-        if self.project_manager is None:
-            self.project_manager = ProjectManager(
-                our_path=self.our_path,
-                pkg_path=self.pkg_path,
-                pkg_dir=self.pkg_dir,
-                pkg_name=self.pkg_name,
-                console=self.console,
-                code_cleaner=self.code_cleaner,
-                config_manager=self.config_manager,
-                dry_run=self.dry_run,
-            )
+    def __init__(self, **data: t.Any) -> None:
+        super().__init__(**data)
+        self.code_cleaner = CodeCleaner(console=self.console)
+        self.config_manager = ConfigManager(
+            our_path=self.our_path,
+            pkg_path=self.pkg_path,
+            pkg_name=self.pkg_name,
+            console=self.console,
+            python_version=self.python_version,
+            dry_run=self.dry_run,
+        )
+        self.project_manager = ProjectManager(
+            our_path=self.our_path,
+            pkg_path=self.pkg_path,
+            pkg_dir=self.pkg_dir,
+            pkg_name=self.pkg_name,
+            console=self.console,
+            code_cleaner=self.code_cleaner,
+            config_manager=self.config_manager,
+            dry_run=self.dry_run,
+        )
 
     def _setup_package(self) -> None:
         self.pkg_name = self.pkg_path.stem.lower().replace("-", "_")
@@ -621,9 +430,7 @@ class Crackerjack:
         self.project_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_dir = self.pkg_dir
 
-    def _update_project(self, options: OptionsProtocol) -> None:
-        from .errors import ErrorCode, ExecutionError, handle_error
-
+    def _update_project(self, options: t.Any) -> None:
         if not options.no_config_updates:
             self.project_manager.update_pkg_configs()
             result: CompletedProcess[str] = self.execute_command(
@@ -632,69 +439,35 @@ class Crackerjack:
             if result.returncode == 0:
                 self.console.print("PDM installed: ✅\n")
             else:
-                error = ExecutionError(
-                    message="PDM installation failed",
-                    error_code=ErrorCode.PDM_INSTALL_ERROR,
-                    details=f"Command output:\n{result.stderr}",
-                    recovery="Ensure PDM is installed. Run `pipx install pdm` and try again. Check for network issues or package conflicts.",
-                    exit_code=1,
+                self.console.print(
+                    "\n\n❌ PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.\n\n"
                 )
 
-                # Don't exit immediately - this isn't always fatal
-                handle_error(
-                    error=error,
-                    console=self.console,
-                    verbose=options.verbose,
-                    ai_agent=options.ai_agent,
-                    exit_on_error=False,
-                )
-
-    def _update_precommit(self, options: OptionsProtocol) -> None:
+    def _update_precommit(self, options: t.Any) -> None:
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
             self.execute_command(["pre-commit", "autoupdate"])
 
-    def _run_interactive_hooks(self, options: OptionsProtocol) -> None:
+    def _run_interactive_hooks(self, options: t.Any) -> None:
         if options.interactive:
             for hook in interactive_hooks:
                 self.project_manager.run_interactive(hook)
 
-    def _clean_project(self, options: OptionsProtocol) -> None:
+    def _clean_project(self, options: t.Any) -> None:
         if options.clean:
             if self.pkg_dir:
                 self.code_cleaner.clean_files(self.pkg_dir)
-            # Skip cleaning test files as they may contain test data in docstrings and comments
-            # that are necessary for the tests to function properly
+            if self.pkg_path.stem == "crackerjack":
+                tests_dir = self.pkg_path / "tests"
+                if tests_dir.exists() and tests_dir.is_dir():
+                    self.console.print("\nCleaning tests directory...\n")
+                    self.code_cleaner.clean_files(tests_dir)
 
     def _prepare_pytest_command(self, options: OptionsProtocol) -> list[str]:
-        """Prepare pytest command with appropriate options.
-
-        Configures pytest command with:
-        - Standard options for formatting and output control
-        - Benchmark options when benchmark mode is enabled
-        - Benchmark regression options when regression testing is enabled
-        - Parallel execution via xdist for non-benchmark tests
-
-        Benchmark and parallel execution (xdist) are incompatible, so the command
-        automatically disables parallelism when benchmarks are enabled.
-
-        Args:
-            options: Command options with benchmark and test settings
-
-        Returns:
-            List of command-line arguments for pytest
-        """
         test = ["pytest"]
-        if options.verbose:
-            test.append("-v")
-
-        # Detect project size to adjust timeouts and parallelization
         project_size = self._detect_project_size()
-
-        # User can override the timeout, otherwise use project size to determine
         if options.test_timeout > 0:
             test_timeout = options.test_timeout
         else:
-            # Use a longer timeout for larger projects
             test_timeout = (
                 300
                 if project_size == "large"
@@ -702,27 +475,19 @@ class Crackerjack:
                 if project_size == "medium"
                 else 60
             )
-
         test.extend(
             [
-                "--capture=fd",  # Capture stdout/stderr at file descriptor level
-                "--tb=short",  # Shorter traceback format
-                "--no-header",  # Reduce output noise
-                "--disable-warnings",  # Disable warning capture
-                "--durations=0",  # Show slowest tests to identify potential hanging tests
-                f"--timeout={test_timeout}",  # Dynamic timeout based on project size or user override
+                "--capture=fd",
+                "--tb=short",
+                "--no-header",
+                "--disable-warnings",
+                "--durations=0",
+                f"--timeout={test_timeout}",
             ]
         )
-
-        # Benchmarks and parallel testing are incompatible
-        # Handle them mutually exclusively
         if options.benchmark or options.benchmark_regression:
-            # When running benchmarks, avoid parallel execution
-            # and apply specific benchmark options
             if options.benchmark:
                 test.append("--benchmark")
-
-            # Add benchmark regression testing options if enabled
             if options.benchmark_regression:
                 test.extend(
                     [
@@ -730,51 +495,27 @@ class Crackerjack:
                         f"--benchmark-regression-threshold={options.benchmark_regression_threshold}",
                     ]
                 )
-        else:
-            # Use user-specified number of workers if provided
-            if options.test_workers > 0:
-                # User explicitly set number of workers
-                if options.test_workers == 1:
-                    # Single worker means no parallelism, just use normal pytest mode
-                    test.append("-vs")
-                else:
-                    # Use specified number of workers
-                    test.extend(["-xvs", "-n", str(options.test_workers)])
+        elif options.test_workers > 0:
+            if options.test_workers == 1:
+                test.append("-vs")
             else:
-                # Auto-detect based on project size
-                if project_size == "large":
-                    # For large projects, use a fixed number of workers to avoid overwhelming the system
-                    test.extend(
-                        ["-xvs", "-n", "2"]
-                    )  # Only 2 parallel processes for large projects
-                elif project_size == "medium":
-                    test.extend(
-                        ["-xvs", "-n", "auto"]
-                    )  # Auto-detect number of processes but limit it
-                else:
-                    test.append("-xvs")  # Default behavior for small projects
-
+                test.extend(["-xvs", "-n", str(options.test_workers)])
+        elif project_size == "large":
+            test.extend(["-xvs", "-n", "2"])
+        elif project_size == "medium":
+            test.extend(["-xvs", "-n", "auto"])
+        else:
+            test.append("-xvs")
         return test
 
     def _detect_project_size(self) -> str:
-        """Detect the approximate size of the project to adjust test parameters.
-
-        Returns:
-            "small", "medium", or "large" based on codebase size
-        """
-        # Check for known large projects by name
         if self.pkg_name in ("acb", "fastblocks"):
             return "large"
-
-        # Count Python files to estimate project size
         try:
             py_files = list(self.pkg_path.rglob("*.py"))
             test_files = list(self.pkg_path.rglob("test_*.py"))
-
             total_files = len(py_files)
             num_test_files = len(test_files)
-
-            # Rough heuristics for project size
             if total_files > 100 or num_test_files > 50:
                 return "large"
             elif total_files > 50 or num_test_files > 20:
@@ -782,234 +523,21 @@ class Crackerjack:
             else:
                 return "small"
         except Exception:
-            # Default to medium in case of error
             return "medium"
 
-    def _setup_test_environment(self) -> None:
-        os.environ["PYTHONASYNCIO_DEBUG"] = "0"  # Disable asyncio debug mode
-        os.environ["RUNNING_UNDER_CRACKERJACK"] = "1"  # Signal to conftest.py
-        if "PYTEST_ASYNCIO_MODE" not in os.environ:
-            os.environ["PYTEST_ASYNCIO_MODE"] = "strict"
-
-    def _run_pytest_process(
-        self, test_command: list[str]
-    ) -> subprocess.CompletedProcess[str]:
-        import queue
-
-        from .errors import ErrorCode, ExecutionError, handle_error
-
-        try:
-            # Detect project size to determine appropriate timeout
-            project_size = self._detect_project_size()
-            # Longer timeouts for larger projects
-            global_timeout = (
-                1200
-                if project_size == "large"
-                else 600
-                if project_size == "medium"
-                else 300
-            )
-
-            # Show timeout information
-            self.console.print(f"[blue]Project size detected as: {project_size}[/blue]")
-            self.console.print(
-                f"[blue]Using global timeout of {global_timeout} seconds[/blue]"
-            )
-
-            # Use non-blocking IO to avoid deadlocks
-            process = subprocess.Popen(
-                test_command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-            )
-
-            stdout_data = []
-            stderr_data = []
-
-            # Output collection queues
-            stdout_queue = queue.Queue()
-            stderr_queue = queue.Queue()
-
-            # Use separate threads to read from stdout and stderr to prevent deadlocks
-            def read_output(
-                pipe: t.TextIO,
-                output_queue: "queue.Queue[str]",
-                data_collector: list[str],
-            ) -> None:
-                try:
-                    for line in iter(pipe.readline, ""):
-                        output_queue.put(line)
-                        data_collector.append(line)
-                except (OSError, ValueError):
-                    # Pipe has been closed
-                    pass
-                finally:
-                    pipe.close()
-
-            # Start output reader threads
-            stdout_thread = threading.Thread(
-                target=read_output,
-                args=(process.stdout, stdout_queue, stdout_data),
-                daemon=True,
-            )
-            stderr_thread = threading.Thread(
-                target=read_output,
-                args=(process.stderr, stderr_queue, stderr_data),
-                daemon=True,
-            )
-
-            stdout_thread.start()
-            stderr_thread.start()
-
-            # Start time for timeout tracking
-            start_time = time.time()
-
-            # Process is running, monitor and display output until completion or timeout
-            while process.poll() is None:
-                # Check for timeout
-                elapsed = time.time() - start_time
-                if elapsed > global_timeout:
-                    error = ExecutionError(
-                        message=f"Test execution timed out after {global_timeout // 60} minutes.",
-                        error_code=ErrorCode.COMMAND_TIMEOUT,
-                        details=f"Command: {' '.join(test_command)}\nTimeout: {global_timeout} seconds",
-                        recovery="Check for infinite loops or deadlocks in your tests. Consider increasing the timeout or optimizing your tests.",
-                    )
-
-                    self.console.print(
-                        f"[red]Test execution timed out after {global_timeout // 60} minutes. Terminating...[/red]"
-                    )
-                    process.terminate()
-                    try:
-                        process.wait(timeout=5)
-                    except subprocess.TimeoutExpired:
-                        process.kill()
-                        stderr_data.append(
-                            "Process had to be forcefully terminated after timeout."
-                        )
-                    break
-
-                # Print any available output
-                self._process_output_queue(stdout_queue, stderr_queue)
-
-                # Small sleep to avoid CPU spinning but still be responsive
-                time.sleep(0.05)
-
-                # Periodically output a heartbeat for very long-running tests
-                if elapsed > 60 and elapsed % 60 < 0.1:  # Roughly every minute
-                    self.console.print(
-                        f"[blue]Tests still running, elapsed time: {int(elapsed)} seconds...[/blue]"
-                    )
-
-            # Process has exited, get remaining output
-            time.sleep(0.1)  # Allow threads to flush final output
-            self._process_output_queue(stdout_queue, stderr_queue)
-
-            # Ensure threads are done
-            if stdout_thread.is_alive():
-                stdout_thread.join(1.0)
-            if stderr_thread.is_alive():
-                stderr_thread.join(1.0)
-
-            returncode = process.returncode or 0
-            stdout = "".join(stdout_data)
-            stderr = "".join(stderr_data)
-
-            return subprocess.CompletedProcess(
-                args=test_command, returncode=returncode, stdout=stdout, stderr=stderr
-            )
-
-        except Exception as e:
-            error = ExecutionError(
-                message=f"Error running tests: {e}",
-                error_code=ErrorCode.TEST_EXECUTION_ERROR,
-                details=f"Command: {' '.join(test_command)}\nError: {e}",
-                recovery="Check if pytest is installed and that your test files are properly formatted.",
-                exit_code=1,
-            )
-
-            # Don't exit here, let the caller handle it
-            handle_error(
-                error=error, console=self.console, verbose=True, exit_on_error=False
-            )
-
-            return subprocess.CompletedProcess(test_command, 1, "", str(e))
-
-    def _process_output_queue(
-        self, stdout_queue: "queue.Queue[str]", stderr_queue: "queue.Queue[str]"
-    ) -> None:
-        """Process and display output from the queues without blocking."""
-        # Process stdout
-        while not stdout_queue.empty():
-            try:
-                line = stdout_queue.get_nowait()
-                if line:
-                    self.console.print(line, end="")
-            except queue.Empty:
-                break
-
-        # Process stderr
-        while not stderr_queue.empty():
-            try:
-                line = stderr_queue.get_nowait()
-                if line:
-                    self.console.print(f"[red]{line}[/red]", end="")
-            except queue.Empty:
-                break
-
-    def _report_test_results(
-        self, result: subprocess.CompletedProcess[str], ai_agent: str
-    ) -> None:
-        from .errors import ErrorCode, TestError, handle_error
-
-        if result.returncode > 0:
-            error_details = None
-            if result.stderr:
-                self.console.print(result.stderr)
-                error_details = result.stderr
-
-            if ai_agent:
-                self.console.print(
-                    '[json]{"status": "failed", "action": "tests", "returncode": '
-                    + str(result.returncode)
-                    + "}[/json]"
-                )
-            else:
-                # Use the structured error handler
-                error = TestError(
-                    message="Tests failed. Please fix the errors.",
-                    error_code=ErrorCode.TEST_FAILURE,
-                    details=error_details,
-                    recovery="Review the test output above for specific failures. Fix the issues in your code and run tests again.",
-                    exit_code=1,
-                )
-                handle_error(
-                    error=error,
-                    console=self.console,
-                    ai_agent=(ai_agent != ""),
-                )
-
-        if ai_agent:
-            self.console.print('[json]{"status": "success", "action": "tests"}[/json]')
-        else:
-            self.console.print("\n\n✅ Tests passed successfully!\n")
-
-    def _run_tests(self, options: OptionsProtocol) -> None:
+    def _run_tests(self, options: t.Any) -> None:
         if options.test:
-            ai_agent = os.environ.get("AI_AGENT", "")
-            if ai_agent:
-                self.console.print(
-                    '[json]{"status": "running", "action": "tests"}[/json]'
-                )
-            else:
-                self.console.print("\n\nRunning tests...\n")
+            self.console.print("\n\nRunning tests...\n")
             test_command = self._prepare_pytest_command(options)
-            self._setup_test_environment()
-            result = self._run_pytest_process(test_command)
-            self._report_test_results(result, ai_agent)
+            result = self.execute_command(test_command, capture_output=True, text=True)
+            if result.stdout:
+                self.console.print(result.stdout)
+            if result.returncode > 0:
+                if result.stderr:
+                    self.console.print(result.stderr)
+                self.console.print("\n\n❌ Tests failed. Please fix errors.\n")
+                return
+            self.console.print("\n\n✅ Tests passed successfully!\n")
 
     def _bump_version(self, options: OptionsProtocol) -> None:
         for option in (options.publish, options.bump):
@@ -1018,68 +546,16 @@ class Crackerjack:
                 break
 
     def _publish_project(self, options: OptionsProtocol) -> None:
-        from .errors import ErrorCode, PublishError, handle_error
-
         if options.publish:
-            if platform.system() == "Darwin":
-                authorize = self.execute_command(
-                    ["pdm", "self", "add", "keyring"], capture_output=True, text=True
-                )
-                if authorize.returncode > 0:
-                    error = PublishError(
-                        message="Authentication setup failed",
-                        error_code=ErrorCode.AUTHENTICATION_ERROR,
-                        details=f"Failed to add keyring support to PDM.\nCommand output:\n{authorize.stderr}",
-                        recovery="Please manually add your keyring credentials to PDM. Run `pdm self add keyring` and try again.",
-                        exit_code=1,
-                    )
-                    handle_error(
-                        error=error,
-                        console=self.console,
-                        verbose=options.verbose,
-                        ai_agent=options.ai_agent,
-                    )
-
             build = self.execute_command(
                 ["pdm", "build"], capture_output=True, text=True
             )
             self.console.print(build.stdout)
-
             if build.returncode > 0:
-                error = PublishError(
-                    message="Package build failed",
-                    error_code=ErrorCode.BUILD_ERROR,
-                    details=f"Command output:\n{build.stderr}",
-                    recovery="Review the error message above for details. Common issues include missing dependencies, invalid project structure, or incorrect metadata in pyproject.toml.",
-                    exit_code=1,
-                )
-                handle_error(
-                    error=error,
-                    console=self.console,
-                    verbose=options.verbose,
-                    ai_agent=options.ai_agent,
-                )
-
-            publish_result = self.execute_command(
-                ["pdm", "publish", "--no-build"], capture_output=True, text=True
-            )
-
-            if publish_result.returncode > 0:
-                error = PublishError(
-                    message="Package publication failed",
-                    error_code=ErrorCode.PUBLISH_ERROR,
-                    details=f"Command output:\n{publish_result.stderr}",
-                    recovery="Ensure you have the correct PyPI credentials configured. Check your internet connection and that the package name is available on PyPI.",
-                    exit_code=1,
-                )
-                handle_error(
-                    error=error,
-                    console=self.console,
-                    verbose=options.verbose,
-                    ai_agent=options.ai_agent,
-                )
-            else:
-                self.console.print("[green]✅ Package published successfully![/green]")
+                self.console.print(build.stderr)
+                self.console.print("\n\nBuild failed. Please fix errors.\n")
+                raise SystemExit(1)
+            self.execute_command(["pdm", "publish", "--no-build"])
 
     def _commit_and_push(self, options: OptionsProtocol) -> None:
         if options.commit:
@@ -1088,131 +564,6 @@ class Crackerjack:
                 ["git", "commit", "-m", commit_msg, "--no-verify", "--", "."]
             )
             self.execute_command(["git", "push", "origin", "main"])
-
-    def _create_pull_request(self, options: OptionsProtocol) -> None:
-        if options.create_pr:
-            self.console.print("\nCreating pull request...")
-            current_branch = self.execute_command(
-                ["git", "branch", "--show-current"], capture_output=True, text=True
-            ).stdout.strip()
-            remote_url = self.execute_command(
-                ["git", "remote", "get-url", "origin"], capture_output=True, text=True
-            ).stdout.strip()
-            is_github = "github.com" in remote_url
-            is_gitlab = "gitlab.com" in remote_url
-            if is_github:
-                gh_installed = (
-                    self.execute_command(
-                        ["which", "gh"], capture_output=True, text=True
-                    ).returncode
-                    == 0
-                )
-                if not gh_installed:
-                    self.console.print(
-                        "\n[red]GitHub CLI (gh) is not installed. Please install it first:[/red]\n"
-                        "  brew install gh  # for macOS\n"
-                        "  or visit https://cli.github.com/ for other installation methods"
-                    )
-                    return
-                auth_status = self.execute_command(
-                    ["gh", "auth", "status"], capture_output=True, text=True
-                ).returncode
-                if auth_status != 0:
-                    self.console.print(
-                        "\n[red]You need to authenticate with GitHub first. Run:[/red]\n"
-                        "  gh auth login"
-                    )
-                    return
-                pr_title = input("\nEnter a title for your pull request: ")
-                self.console.print(
-                    "Enter a description for your pull request (press Ctrl+D when done):"
-                )
-                pr_description = ""
-                with suppress(EOFError):
-                    pr_description = "".join(iter(input, ""))
-                self.console.print("Creating pull request to GitHub repository...")
-                result = self.execute_command(
-                    [
-                        "gh",
-                        "pr",
-                        "create",
-                        "--title",
-                        pr_title,
-                        "--body",
-                        pr_description,
-                    ],
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode == 0:
-                    self.console.print(
-                        f"\n[green]Pull request created successfully![/green]\n{result.stdout}"
-                    )
-                else:
-                    self.console.print(
-                        f"\n[red]Failed to create pull request:[/red]\n{result.stderr}"
-                    )
-            elif is_gitlab:
-                glab_installed = (
-                    self.execute_command(
-                        ["which", "glab"], capture_output=True, text=True
-                    ).returncode
-                    == 0
-                )
-                if not glab_installed:
-                    self.console.print(
-                        "\n[red]GitLab CLI (glab) is not installed. Please install it first:[/red]\n"
-                        "  brew install glab  # for macOS\n"
-                        "  or visit https://gitlab.com/gitlab-org/cli for other installation methods"
-                    )
-                    return
-                auth_status = self.execute_command(
-                    ["glab", "auth", "status"], capture_output=True, text=True
-                ).returncode
-                if auth_status != 0:
-                    self.console.print(
-                        "\n[red]You need to authenticate with GitLab first. Run:[/red]\n"
-                        "  glab auth login"
-                    )
-                    return
-                mr_title = input("\nEnter a title for your merge request: ")
-                self.console.print(
-                    "Enter a description for your merge request (press Ctrl+D when done):"
-                )
-                mr_description = ""
-                with suppress(EOFError):
-                    mr_description = "".join(iter(input, ""))
-                self.console.print("Creating merge request to GitLab repository...")
-                result = self.execute_command(
-                    [
-                        "glab",
-                        "mr",
-                        "create",
-                        "--title",
-                        mr_title,
-                        "--description",
-                        mr_description,
-                        "--source-branch",
-                        current_branch,
-                        "--target-branch",
-                        "main",
-                    ],
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode == 0:
-                    self.console.print(
-                        f"\n[green]Merge request created successfully![/green]\n{result.stdout}"
-                    )
-                else:
-                    self.console.print(
-                        f"\n[red]Failed to create merge request:[/red]\n{result.stderr}"
-                    )
-            else:
-                self.console.print(
-                    f"\n[red]Unsupported git hosting service: {remote_url}[/red]\n"
-                    "This command currently supports GitHub and GitLab."
-                )
 
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
@@ -1223,71 +574,28 @@ class Crackerjack:
         return execute(cmd, **kwargs)
 
     def process(self, options: OptionsProtocol) -> None:
-        actions_performed = []
         if options.all:
             options.clean = True
             options.test = True
             options.publish = options.all
             options.commit = True
-
         self._setup_package()
-        actions_performed.append("setup_package")
-
         self._update_project(options)
-        actions_performed.append("update_project")
-
         self._update_precommit(options)
-        if options.update_precommit:
-            actions_performed.append("update_precommit")
-
         self._run_interactive_hooks(options)
-        if options.interactive:
-            actions_performed.append("run_interactive_hooks")
-
         self._clean_project(options)
-        if options.clean:
-            actions_performed.append("clean_project")
-
         if not options.skip_hooks:
             self.project_manager.run_pre_commit()
-            actions_performed.append("run_pre_commit")
         else:
-            self.console.print(
-                "\n[yellow]Skipping pre-commit hooks as requested[/yellow]\n"
-            )
-            actions_performed.append("skip_pre_commit")
-
+            self.console.print("Skipping pre-commit hooks")
         self._run_tests(options)
-        if options.test:
-            actions_performed.append("run_tests")
-
         self._bump_version(options)
-        if options.bump or options.publish:
-            actions_performed.append("bump_version")
-
         self._publish_project(options)
-        if options.publish:
-            actions_performed.append("publish_project")
-
         self._commit_and_push(options)
-        if options.commit:
-            actions_performed.append("commit_and_push")
+        self.console.print("\n🍺 Crackerjack complete!\n")
 
-        self._create_pull_request(options)
-        if options.create_pr:
-            actions_performed.append("create_pull_request")
 
-        if getattr(options, "ai_agent", False):
-            import json
-
-            result = {
-                "status": "complete",
-                "package": self.pkg_name,
-                "actions": actions_performed,
-            }
-            self.console.print(f"[json]{json.dumps(result)}[/json]")
-        else:
-            self.console.print("\n🍺 Crackerjack complete!\n")
+crackerjack_it = Crackerjack().process
 
 
 def create_crackerjack_runner(

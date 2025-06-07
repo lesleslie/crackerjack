@@ -1,6 +1,5 @@
 import typing as t
 from unittest.mock import MagicMock, patch
-
 import pytest
 from typer.testing import CliRunner
 from crackerjack.__main__ import BumpOption, Options, app
@@ -10,7 +9,6 @@ from crackerjack.__main__ import BumpOption, Options, app
 def mock_crackerjack_process() -> t.Generator[MagicMock]:
     mock_runner = MagicMock()
     mock_create = MagicMock(return_value=mock_runner)
-
     with patch("crackerjack.__main__.create_crackerjack_runner", mock_create):
         yield mock_runner
 
@@ -326,7 +324,6 @@ def test_benchmark_option(
     assert not options.benchmark_regression
     assert options.benchmark_regression_threshold == 5.0
     mock_crackerjack_process.process.reset_mock()
-
     result = runner.invoke(app, ["--benchmark"])
     assert result.exit_code == 0
     options = mock_crackerjack_process.process.call_args[0][0]
@@ -344,7 +341,6 @@ def test_benchmark_regression_option(
     assert options.benchmark_regression
     assert options.benchmark_regression_threshold == 5.0
     mock_crackerjack_process.process.reset_mock()
-
     result = runner.invoke(
         app, ["--benchmark-regression", "--benchmark-regression-threshold", "10.0"]
     )
@@ -353,7 +349,6 @@ def test_benchmark_regression_option(
     assert options.benchmark_regression
     assert options.benchmark_regression_threshold == 10.0
     mock_crackerjack_process.process.reset_mock()
-
     result = runner.invoke(
         app,
         [

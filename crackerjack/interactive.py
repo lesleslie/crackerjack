@@ -1,14 +1,7 @@
-"""Interactive CLI module using Rich for enhanced user experience.
-
-This module provides an enhanced interactive CLI experience using Rich library components.
-It includes progress tracking, interactive prompts, and detailed error reporting.
-"""
-
 import time
 import typing as t
 from enum import Enum, auto
 from pathlib import Path
-
 from rich.box import ROUNDED
 from rich.console import Console
 from rich.layout import Layout
@@ -25,7 +18,6 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
-
 from .errors import CrackerjackError, ErrorCode, handle_error
 
 
@@ -39,10 +31,7 @@ class TaskStatus(Enum):
 
 class Task:
     def __init__(
-        self,
-        name: str,
-        description: str,
-        dependencies: list["Task"] | None = None,
+        self, name: str, description: str, dependencies: list["Task"] | None = None
     ) -> None:
         self.name = name
         self.description = description
@@ -77,8 +66,10 @@ class Task:
 
     def can_run(self) -> bool:
         return all(
-            dep.status in (TaskStatus.SUCCESS, TaskStatus.SKIPPED)
-            for dep in self.dependencies
+            (
+                dep.status in (TaskStatus.SUCCESS, TaskStatus.SKIPPED)
+                for dep in self.dependencies
+            )
         )
 
     def __str__(self) -> str:
@@ -92,10 +83,7 @@ class WorkflowManager:
         self.current_task: Task | None = None
 
     def add_task(
-        self,
-        name: str,
-        description: str,
-        dependencies: list[str] | None = None,
+        self, name: str, description: str, dependencies: list[str] | None = None
     ) -> Task:
         dep_tasks = []
         if dependencies:
@@ -103,7 +91,6 @@ class WorkflowManager:
                 if dep_name not in self.tasks:
                     raise ValueError(f"Dependency task '{dep_name}' not found")
                 dep_tasks.append(self.tasks[dep_name])
-
         task = Task(name, description, dep_tasks)
         self.tasks[name] = task
         return task
@@ -113,21 +100,23 @@ class WorkflowManager:
             if (
                 task.status == TaskStatus.PENDING
                 and task.can_run()
-                and task != self.current_task
+                and (task != self.current_task)
             ):
                 return task
         return None
 
     def all_tasks_completed(self) -> bool:
         return all(
-            task.status in (TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.SKIPPED)
-            for task in self.tasks.values()
+            (
+                task.status
+                in (TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.SKIPPED)
+                for task in self.tasks.values()
+            )
         )
 
     def run_task(self, task: Task, func: t.Callable[[], t.Any]) -> bool:
         self.current_task = task
         task.start()
-
         try:
             func()
             task.complete()
@@ -151,11 +140,9 @@ class WorkflowManager:
 
     def display_task_tree(self) -> None:
         tree = Tree("Workflow")
-
         for task in self.tasks.values():
             if not task.dependencies:
                 self._add_task_to_tree(task, tree)
-
         self.console.print(tree)
 
     def _add_task_to_tree(self, task: Task, parent: Tree) -> None:
@@ -169,9 +156,7 @@ class WorkflowManager:
             status = "[blue]⏩[/blue]"
         else:
             status = "[grey]⏸️[/grey]"
-
         branch = parent.add(f"{status} {task.name} - {task.description}")
-
         for dependent in self.tasks.values():
             if task in dependent.dependencies:
                 self._add_task_to_tree(dependent, branch)
@@ -186,14 +171,12 @@ class InteractiveCLI:
         title = Text("Crackerjack", style="bold cyan")
         version_text = Text(f"v{version}", style="dim cyan")
         subtitle = Text("Your Python project management toolkit", style="italic")
-
         panel = Panel(
             f"{title} {version_text}\n{subtitle}",
             box=ROUNDED,
             border_style="cyan",
             expand=False,
         )
-
         self.console.print(panel)
         self.console.print()
 
@@ -213,18 +196,14 @@ class InteractiveCLI:
 
     def setup_layout(self) -> Layout:
         layout = Layout()
-
         layout.split(
             Layout(name="header", size=3),
             Layout(name="main"),
             Layout(name="footer", size=3),
         )
-
         layout["main"].split_row(
-            Layout(name="tasks", ratio=1),
-            Layout(name="details", ratio=2),
+            Layout(name="tasks", ratio=1), Layout(name="details", ratio=2)
         )
-
         return layout
 
     def show_task_status(self, task: Task) -> Panel:
@@ -243,25 +222,16 @@ class InteractiveCLI:
         else:
             status = "[grey]⏸️ Pending[/grey]"
             style = "dim"
-
         duration = task.duration
         duration_text = f"Duration: {duration:.2f}s" if duration else ""
-
         content = f"{task.name}: {task.description}\nStatus: {status}\n{duration_text}"
-
         if task.error:
             content += f"\n[red]Error: {task.error.message}[/red]"
             if task.error.details:
                 content += f"\n[dim red]Details: {task.error.details}[/dim red]"
             if task.error.recovery:
                 content += f"\n[yellow]Recovery: {task.error.recovery}[/yellow]"
-
-        return Panel(
-            content,
-            title=task.name,
-            border_style=style,
-            expand=False,
-        )
+        return Panel(content, title=task.name, border_style=style, expand=False)
 
     def show_task_table(self) -> Table:
         table = Table(
@@ -270,12 +240,10 @@ class InteractiveCLI:
             show_header=True,
             header_style="bold cyan",
         )
-
         table.add_column("Task", style="cyan")
         table.add_column("Status")
         table.add_column("Duration")
         table.add_column("Dependencies")
-
         for task in self.workflow.tasks.values():
             if task.status == TaskStatus.RUNNING:
                 status = "[yellow]⏳ Running[/yellow]"
@@ -287,36 +255,19 @@ class InteractiveCLI:
                 status = "[blue]⏩ Skipped[/blue]"
             else:
                 status = "[grey]⏸️ Pending[/grey]"
-
             duration = task.duration
             duration_text = f"{duration:.2f}s" if duration else "-"
-
-            deps = ", ".join(dep.name for dep in task.dependencies) or "-"
-
+            deps = ", ".join((dep.name for dep in task.dependencies)) or "-"
             table.add_row(task.name, status, duration_text, deps)
-
         return table
 
     def run_interactive(self) -> None:
         self.console.clear()
         layout = self.setup_layout()
-
         layout["header"].update(
-            Panel(
-                "Crackerjack Interactive Mode",
-                style="bold cyan",
-                box=ROUNDED,
-            )
+            Panel("Crackerjack Interactive Mode", style="bold cyan", box=ROUNDED)
         )
-
-        layout["footer"].update(
-            Panel(
-                "Press Ctrl+C to exit",
-                style="dim",
-                box=ROUNDED,
-            )
-        )
-
+        layout["footer"].update(Panel("Press Ctrl+C to exit", style="dim", box=ROUNDED))
         progress = Progress(
             SpinnerColumn(),
             TextColumn("[bold blue]{task.description}"),
@@ -324,41 +275,31 @@ class InteractiveCLI:
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
             TimeElapsedColumn(),
         )
-
         total_tasks = len(self.workflow.tasks)
         progress_task = progress.add_task("Running workflow", total=total_tasks)
         completed_tasks = 0
-
         with Live(layout, refresh_per_second=4, screen=True) as live:
             try:
                 while not self.workflow.all_tasks_completed():
                     layout["tasks"].update(self.show_task_table())
-
                     next_task = self.workflow.get_next_task()
                     if not next_task:
                         break
-
                     layout["details"].update(self.show_task_status(next_task))
-
                     live.stop()
                     should_run = Confirm.ask(
-                        f"Run task '{next_task.name}'?",
-                        default=True,
+                        f"Run task '{next_task.name}'?", default=True
                     )
                     live.start()
-
                     if not should_run:
                         next_task.skip()
                         continue
-
                     next_task.start()
                     layout["details"].update(self.show_task_status(next_task))
                     time.sleep(1)
-
                     import random
 
                     success = random.choice([True, True, True, False])
-
                     if success:
                         next_task.complete(True)
                         completed_tasks += 1
@@ -372,48 +313,40 @@ class InteractiveCLI:
                             recovery=f"Retry the '{next_task.name}' task.",
                         )
                         next_task.fail(error)
-
                     progress.update(progress_task, completed=completed_tasks)
-
                     layout["details"].update(self.show_task_status(next_task))
-
                 layout["tasks"].update(self.show_task_table())
-
                 successful = sum(
-                    1
-                    for task in self.workflow.tasks.values()
-                    if task.status == TaskStatus.SUCCESS
+                    (
+                        1
+                        for task in self.workflow.tasks.values()
+                        if task.status == TaskStatus.SUCCESS
+                    )
                 )
                 failed = sum(
-                    1
-                    for task in self.workflow.tasks.values()
-                    if task.status == TaskStatus.FAILED
+                    (
+                        1
+                        for task in self.workflow.tasks.values()
+                        if task.status == TaskStatus.FAILED
+                    )
                 )
                 skipped = sum(
-                    1
-                    for task in self.workflow.tasks.values()
-                    if task.status == TaskStatus.SKIPPED
+                    (
+                        1
+                        for task in self.workflow.tasks.values()
+                        if task.status == TaskStatus.SKIPPED
+                    )
                 )
-
                 summary = Panel(
-                    f"Workflow completed!\n\n"
-                    f"[green]✅ Successful tasks: {successful}[/green]\n"
-                    f"[red]❌ Failed tasks: {failed}[/red]\n"
-                    f"[blue]⏩ Skipped tasks: {skipped}[/blue]",
+                    f"Workflow completed!\n\n[green]✅ Successful tasks: {successful}[/green]\n[red]❌ Failed tasks: {failed}[/red]\n[blue]⏩ Skipped tasks: {skipped}[/blue]",
                     title="Summary",
                     border_style="cyan",
                 )
                 layout["details"].update(summary)
-
             except KeyboardInterrupt:
                 layout["footer"].update(
-                    Panel(
-                        "Interrupted by user",
-                        style="yellow",
-                        box=ROUNDED,
-                    )
+                    Panel("Interrupted by user", style="yellow", box=ROUNDED)
                 )
-
         self.console.print("\nWorkflow Status:")
         self.workflow.display_task_tree()
 
@@ -421,53 +354,38 @@ class InteractiveCLI:
         self, prompt: str, directory: Path, default: str | None = None
     ) -> Path:
         self.console.print(f"\n[bold]{prompt}[/bold]")
-
         files = list(directory.iterdir())
         files.sort()
-
         table = Table(title=f"Files in {directory}", box=ROUNDED)
         table.add_column("#", style="cyan")
         table.add_column("Filename", style="green")
         table.add_column("Size", style="blue")
         table.add_column("Modified", style="yellow")
-
         for i, file in enumerate(files, 1):
             if file.is_file():
                 size = f"{file.stat().st_size / 1024:.1f} KB"
                 mtime = time.strftime(
-                    "%Y-%m-%d %H:%M:%S",
-                    time.localtime(file.stat().st_mtime),
+                    "%Y-%m-%d %H:%M:%S", time.localtime(file.stat().st_mtime)
                 )
                 table.add_row(str(i), file.name, size, mtime)
-
         self.console.print(table)
-
-        selection = Prompt.ask(
-            "Enter file number or name",
-            default=default or "",
-        )
-
+        selection = Prompt.ask("Enter file number or name", default=default or "")
         if selection.isdigit() and 1 <= int(selection) <= len(files):
             return files[int(selection) - 1]
         else:
             for file in files:
                 if file.name == selection:
                     return file
-
             return directory / selection
 
     def confirm_dangerous_action(self, action: str, details: str) -> bool:
         panel = Panel(
-            f"[bold red]WARNING: {action}[/bold red]\n\n{details}\n\n"
-            "This action cannot be undone. Please type the action name to confirm.",
+            f"[bold red]WARNING: {action}[/bold red]\n\n{details}\n\nThis action cannot be undone. Please type the action name to confirm.",
             title="Confirmation Required",
             border_style="red",
         )
-
         self.console.print(panel)
-
         confirmation = Prompt.ask("Type the action name to confirm")
-
         return confirmation.lower() == action.lower()
 
     def show_error(self, error: CrackerjackError, verbose: bool = False) -> None:
@@ -477,7 +395,6 @@ class InteractiveCLI:
 def launch_interactive_cli(version: str) -> None:
     console = Console()
     cli = InteractiveCLI(console)
-
     cli.show_banner(version)
     cli.create_standard_workflow()
     cli.run_interactive()

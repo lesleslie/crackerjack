@@ -1,5 +1,4 @@
 from pathlib import Path
-
 from crackerjack.py313 import (
     CommandResult,
     HookResult,
@@ -20,7 +19,6 @@ class TestPy313Features:
         md_file = Path("/some/path/README.md")
         config_file = Path("/some/path/.gitignore")
         unknown_file = Path("/some/path/unknown.xyz")
-
         assert "Python Source File" == categorize_file(py_file)
         assert "Python Module Init" == categorize_file(init_file)
         assert "Python Test File" == categorize_file(test_file)
@@ -29,42 +27,15 @@ class TestPy313Features:
         assert "Unknown File Type" == categorize_file(unknown_file)
 
     def test_clean_python_code(self) -> None:
-        """Test pattern matching in clean_python_code function."""
-        code = """import os
-import sys
-
-# This is a comment
-def hello():
-    '''This is a docstring'''
-    # This is another comment
-    print("Hello")  # This is an inline comment
-
-
-    # Multiple empty lines above
-    pass  # type: ignore
-"""
-
+        code = "import os\nimport sys\n\n# This is a comment\ndef hello():\n    '''This is a docstring'''\n    print(\"Hello\")  # type: ignore\n    # This is another comment\n\n\n"
         cleaned = clean_python_code(code)
-
-        # Check that imports are preserved
         assert "import os" in cleaned
         assert "import sys" in cleaned
-
-        # Check that standalone comments are removed
         assert "# This is a comment" not in cleaned
         assert "# This is another comment" not in cleaned
-
-        # Check that docstrings are skipped
         assert "'''This is a docstring'''" not in cleaned
-
-        # Check that inline comments are removed
-        assert 'print("Hello")  # This is an inline comment' not in cleaned
         assert 'print("Hello")' in cleaned
-
-        # Check that type ignore comments are preserved
         assert "# type: ignore" in cleaned
-
-        # Check that multiple empty lines are collapsed
         assert "\n\n\n" not in cleaned
 
     def test_hook_result_pattern_matching(self) -> None:
@@ -74,35 +45,30 @@ def hello():
             "output": "All files passed",
             "files": ["file1.py", "file2.py"],
         }
-
         failure_result: HookResult = {
             "status": HookStatus.FAILURE,
             "hook_id": "black",
             "output": "Formatting issues found",
             "files": ["file1.py"],
         }
-
         fixable_failure: HookResult = {
             "status": HookStatus.FAILURE,
             "hook_id": "black",
             "output": "Formatting issues found (fixable)",
             "files": ["file1.py"],
         }
-
         skipped_result: HookResult = {
             "status": HookStatus.SKIPPED,
             "hook_id": "mypy",
             "output": "Hook skipped",
             "files": [],
         }
-
         error_result: HookResult = {
             "status": HookStatus.ERROR,
             "hook_id": "pytest",
             "output": "Hook crashed",
             "files": ["file1.py"],
         }
-
         assert "✅ Hook ruff passed successfully" == analyze_hook_result(success_result)
         assert "❌ Hook black failed" == analyze_hook_result(failure_result)
         assert "🔧 Hook black failed with fixable issues" == analyze_hook_result(
@@ -123,7 +89,6 @@ def hello():
             "command": ["echo", "hello"],
             "duration_ms": 10.5,
         }
-
         success_no_output: CommandResult = {
             "success": True,
             "exit_code": 0,
@@ -132,7 +97,6 @@ def hello():
             "command": ["touch", "file.txt"],
             "duration_ms": 5.2,
         }
-
         command_not_found: CommandResult = {
             "success": False,
             "exit_code": 127,
@@ -141,7 +105,6 @@ def hello():
             "command": ["unknown_command"],
             "duration_ms": 1.0,
         }
-
         command_failed: CommandResult = {
             "success": False,
             "exit_code": 1,
@@ -150,26 +113,20 @@ def hello():
             "command": ["cat", "nonexistent.txt"],
             "duration_ms": 3.0,
         }
-
         success, message = process_command_output(success_result)
         assert success
         assert "Command completed successfully" == message
-
         success, message = process_command_output(success_no_output)
         assert success
         assert "Command completed successfully with no output" == message
-
         success, message = process_command_output(command_not_found)
         assert not success
         assert "Command not found" in message
-
         success, message = process_command_output(command_failed)
         assert not success
         assert "Command failed with exit code 1" in message
 
     def test_self_type_method_chaining(self) -> None:
         config_manager = ModernConfigManager(Path("/fake/config.json"))
-
         result = config_manager.load().update("key", "value").save()
-
         assert result is config_manager

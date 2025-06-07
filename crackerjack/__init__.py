@@ -1,5 +1,4 @@
 import typing as t
-
 from .crackerjack import Crackerjack, create_crackerjack_runner
 from .errors import (
     CleaningError,
@@ -22,7 +21,6 @@ try:
     __version__ = version("crackerjack")
 except (ImportError, ModuleNotFoundError):
     __version__ = "0.19.8"
-
 __all__: t.Sequence[str] = [
     "create_crackerjack_runner",
     "Crackerjack",

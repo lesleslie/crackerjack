@@ -1,6 +1,5 @@
 import typing as t
 from unittest.mock import MagicMock, patch
-
 import pytest
 from rich.console import Console
 from crackerjack.errors import (
@@ -26,7 +25,6 @@ class TestErrorClasses:
             recovery="Test recovery",
             exit_code=2,
         )
-
         assert error.message == "Test error"
         assert error.error_code == ErrorCode.UNKNOWN_ERROR
         assert error.details == "Test details"
@@ -44,11 +42,9 @@ class TestErrorClasses:
             FileError,
             CleaningError,
         ]
-
         for error_class in error_classes:
             error = error_class(
-                message="Test error",
-                error_code=ErrorCode.UNKNOWN_ERROR,
+                message="Test error", error_code=ErrorCode.UNKNOWN_ERROR
             )
             assert isinstance(error, CrackerjackError)
             assert error.message == "Test error"
@@ -75,24 +71,17 @@ class TestErrorHandling:
             details="Test details",
             recovery="Fix the test",
         )
-
         console = Console()
         handle_error(error, console, verbose=True)
-
         console_mock.assert_called_once()
         mock_sys_exit.assert_called_once_with(1)
 
     def test_handle_error_without_exit(
         self, console_mock: MagicMock, mock_sys_exit: MagicMock
     ) -> None:
-        error = TestError(
-            message="Test failed",
-            error_code=ErrorCode.TEST_FAILURE,
-        )
-
+        error = TestError(message="Test failed", error_code=ErrorCode.TEST_FAILURE)
         console = Console()
         handle_error(error, console, exit_on_error=False)
-
         console_mock.assert_called_once()
         mock_sys_exit.assert_not_called()
 
@@ -105,10 +94,8 @@ class TestErrorHandling:
             details="Test details",
             recovery="Fix the test",
         )
-
         console = Console()
         handle_error(error, console, verbose=True, ai_agent=True)
-
         console_mock.assert_called_once()
         call_args = console_mock.call_args[0][0]
         assert "[json]" in str(call_args)
@@ -118,14 +105,9 @@ class TestErrorHandling:
     def test_handle_error_without_details_or_recovery(
         self, console_mock: MagicMock
     ) -> None:
-        error = TestError(
-            message="Test failed",
-            error_code=ErrorCode.TEST_FAILURE,
-        )
-
+        error = TestError(message="Test failed", error_code=ErrorCode.TEST_FAILURE)
         console = Console()
         handle_error(error, console, verbose=True, exit_on_error=False)
-
         console_mock.assert_called_once()
 
 
@@ -139,20 +121,23 @@ class TestErrorCodes:
     def test_error_codes_categories(self) -> None:
         for code in ErrorCode:
             value = code.value
-
             if 1000 <= value < 2000:
                 assert "CONFIG" in code.name
             elif 2000 <= value < 3000:
                 assert any(
-                    prefix in code.name
-                    for prefix in ("COMMAND", "EXTERNAL", "PDM", "PRE_COMMIT")
+                    (
+                        prefix in code.name
+                        for prefix in ("COMMAND", "EXTERNAL", "PDM", "PRE_COMMIT")
+                    )
                 )
             elif 3000 <= value < 4000:
                 assert "TEST" in code.name or "BENCHMARK" in code.name
             elif 4000 <= value < 5000:
                 assert any(
-                    prefix in code.name
-                    for prefix in ("BUILD", "PUBLISH", "VERSION", "AUTHENTICATION")
+                    (
+                        prefix in code.name
+                        for prefix in ("BUILD", "PUBLISH", "VERSION", "AUTHENTICATION")
+                    )
                 )
             elif 5000 <= value < 6000:
                 assert (
@@ -166,6 +151,8 @@ class TestErrorCodes:
                 assert "CODE" in code.name or "FORMATTING" in code.name
             elif 9000 <= value < 10000:
                 assert any(
-                    prefix in code.name
-                    for prefix in ("UNKNOWN", "NOT_IMPLEMENTED", "UNEXPECTED")
+                    (
+                        prefix in code.name
+                        for prefix in ("UNKNOWN", "NOT_IMPLEMENTED", "UNEXPECTED")
+                    )
                 )
