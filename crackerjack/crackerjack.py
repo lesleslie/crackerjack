@@ -62,22 +62,77 @@ class CodeCleaner:
                 self.clean_file(file_path)
 
     def clean_file(self, file_path: Path) -> None:
+        from .errors import CleaningError, ErrorCode, FileError, handle_error
+
         try:
             if file_path.resolve() == Path(__file__).resolve():
                 self.console.print(f"Skipping cleaning of {file_path} (self file).")
                 return
         except Exception as e:
-            self.console.print(f"Error comparing file paths: {e}")
+            error = FileError(
+                message="Error comparing file paths",
+                error_code=ErrorCode.FILE_READ_ERROR,
+                details=f"Failed to compare {file_path} with the current file: {e}",
+                recovery="This is likely a file system permission issue. Check file permissions.",
+                exit_code=0,  # Non-fatal error
+            )
+            handle_error(error, self.console, verbose=True, exit_on_error=False)
+            return
+
         try:
-            code = file_path.read_text()
+            # Check if file exists and is readable
+            if not file_path.exists():
+                error = FileError(
+                    message="File not found",
+                    error_code=ErrorCode.FILE_NOT_FOUND,
+                    details=f"The file {file_path} does not exist.",
+                    recovery="Check the file path and ensure the file exists.",
+                    exit_code=0,  # Non-fatal error
+                )
+                handle_error(error, self.console, verbose=True, exit_on_error=False)
+                return
+
+            try:
+                code = file_path.read_text()
+            except Exception as e:
+                error = FileError(
+                    message="Error reading file",
+                    error_code=ErrorCode.FILE_READ_ERROR,
+                    details=f"Failed to read {file_path}: {e}",
+                    recovery="Check file permissions and ensure the file is not locked by another process.",
+                    exit_code=0,  # Non-fatal error
+                )
+                handle_error(error, self.console, verbose=True, exit_on_error=False)
+                return
+
+            # Process the file content
             code = self.remove_docstrings(code)
             code = self.remove_line_comments(code)
             code = self.remove_extra_whitespace(code)
             code = self.reformat_code(code)
-            file_path.write_text(code)  # type: ignore
-            self.console.print(f"Cleaned: {file_path}")
+
+            try:
+                file_path.write_text(code)  # type: ignore
+                self.console.print(f"Cleaned: {file_path}")
+            except Exception as e:
+                error = FileError(
+                    message="Error writing file",
+                    error_code=ErrorCode.FILE_WRITE_ERROR,
+                    details=f"Failed to write to {file_path}: {e}",
+                    recovery="Check file permissions and ensure the file is not locked by another process.",
+                    exit_code=0,  # Non-fatal error
+                )
+                handle_error(error, self.console, verbose=True, exit_on_error=False)
+
         except Exception as e:
-            self.console.print(f"Error cleaning {file_path}: {e}")
+            error = CleaningError(
+                message="Error cleaning file",
+                error_code=ErrorCode.CODE_CLEANING_ERROR,
+                details=f"Failed to clean {file_path}: {e}",
+                recovery="This could be due to syntax errors in the file. Try manually checking the file for syntax errors.",
+                exit_code=0,  # Non-fatal error
+            )
+            handle_error(error, self.console, verbose=True, exit_on_error=False)
 
     def remove_line_comments(self, code: str) -> str:
         new_lines = []
@@ -199,14 +254,30 @@ class CodeCleaner:
         return "\n".join(cleaned_lines)
 
     def reformat_code(self, code: str) -> str | None:
+        from .errors import CleaningError, ErrorCode, handle_error
+
         try:
             import tempfile
 
-            with tempfile.NamedTemporaryFile(
-                suffix=".py", mode="w+", delete=False
-            ) as temp:
-                temp_path = Path(temp.name)
-                temp_path.write_text(code)
+            # Create a temporary file for formatting
+            try:
+                with tempfile.NamedTemporaryFile(
+                    suffix=".py", mode="w+", delete=False
+                ) as temp:
+                    temp_path = Path(temp.name)
+                    temp_path.write_text(code)
+            except Exception as e:
+                error = CleaningError(
+                    message="Failed to create temporary file for formatting",
+                    error_code=ErrorCode.FORMATTING_ERROR,
+                    details=f"Error: {e}",
+                    recovery="Check disk space and permissions for the temp directory.",
+                    exit_code=0,  # Non-fatal
+                )
+                handle_error(error, self.console, verbose=True, exit_on_error=False)
+                return code
+
+            # Run Ruff to format the code
             try:
                 result = subprocess.run(
                     ["ruff", "format", str(temp_path)],
@@ -214,20 +285,58 @@ class CodeCleaner:
                     capture_output=True,
                     text=True,
                 )
+
                 if result.returncode == 0:
-                    formatted_code = temp_path.read_text()
+                    try:
+                        formatted_code = temp_path.read_text()
+                    except Exception as e:
+                        error = CleaningError(
+                            message="Failed to read formatted code",
+                            error_code=ErrorCode.FORMATTING_ERROR,
+                            details=f"Error reading temporary file after formatting: {e}",
+                            recovery="This might be a permissions issue. Check if Ruff is installed properly.",
+                            exit_code=0,  # Non-fatal
+                        )
+                        handle_error(
+                            error, self.console, verbose=True, exit_on_error=False
+                        )
+                        formatted_code = code
                 else:
-                    self.console.print(f"Ruff formatting failed: {result.stderr}")
+                    error = CleaningError(
+                        message="Ruff formatting failed",
+                        error_code=ErrorCode.FORMATTING_ERROR,
+                        details=f"Ruff output: {result.stderr}",
+                        recovery="The file might contain syntax errors. Check the file manually.",
+                        exit_code=0,  # Non-fatal
+                    )
+                    handle_error(error, self.console, exit_on_error=False)
                     formatted_code = code
             except Exception as e:
-                self.console.print(f"Error running Ruff: {e}")
+                error = CleaningError(
+                    message="Error running Ruff formatter",
+                    error_code=ErrorCode.FORMATTING_ERROR,
+                    details=f"Error: {e}",
+                    recovery="Ensure Ruff is installed correctly. Run 'pip install ruff' to install it.",
+                    exit_code=0,  # Non-fatal
+                )
+                handle_error(error, self.console, verbose=True, exit_on_error=False)
                 formatted_code = code
             finally:
+                # Clean up temporary file
                 with suppress(FileNotFoundError):
                     temp_path.unlink()
+
             return formatted_code
+
         except Exception as e:
-            self.console.print(f"Error during reformatting: {e}")
+            error = CleaningError(
+                message="Unexpected error during code formatting",
+                error_code=ErrorCode.FORMATTING_ERROR,
+                details=f"Error: {e}",
+                recovery="This is an unexpected error. Please report this issue.",
+                exit_code=0,  # Non-fatal
+            )
+            handle_error(error, self.console, verbose=True, exit_on_error=False)
             return code
 
 
@@ -368,18 +477,52 @@ class ProjectManager:
     dry_run: bool = False
 
     def run_interactive(self, hook: str) -> None:
+        from .errors import ErrorCode, ExecutionError, handle_error
+
         success: bool = False
-        while not success:
-            fail = self.execute_command(
+        attempts = 0
+        max_attempts = 3
+
+        while not success and attempts < max_attempts:
+            attempts += 1
+            result = self.execute_command(
                 ["pre-commit", "run", hook.lower(), "--all-files"]
             )
-            if fail.returncode > 0:
-                retry = input(f"\n\n{hook.title()} failed. Retry? (y/N): ")
+
+            if result.returncode > 0:
+                self.console.print(
+                    f"\n\n[yellow]Hook '{hook}' failed (attempt {attempts}/{max_attempts})[/yellow]"
+                )
+
+                # Give more detailed information about the failure
+                if result.stderr:
+                    self.console.print(f"[red]Error details:[/red]\n{result.stderr}")
+
+                retry = input(f"Retry running {hook.title()}? (y/N): ")
                 self.console.print()
-                if retry.strip().lower() == "y":
-                    continue
-                raise SystemExit(1)
-            success = True
+
+                if retry.strip().lower() != "y":
+                    error = ExecutionError(
+                        message=f"Interactive hook '{hook}' failed",
+                        error_code=ErrorCode.PRE_COMMIT_ERROR,
+                        details=f"Hook execution output:\n{result.stderr or result.stdout}",
+                        recovery=f"Try running the hook manually: pre-commit run {hook.lower()} --all-files",
+                        exit_code=1,
+                    )
+                    handle_error(error=error, console=self.console)
+            else:
+                self.console.print(f"[green]✅ Hook '{hook}' succeeded![/green]")
+                success = True
+
+        if not success:
+            error = ExecutionError(
+                message=f"Interactive hook '{hook}' failed after {max_attempts} attempts",
+                error_code=ErrorCode.PRE_COMMIT_ERROR,
+                details="The hook continued to fail after multiple attempts.",
+                recovery=f"Fix the issues manually and run: pre-commit run {hook.lower()} --all-files",
+                exit_code=1,
+            )
+            handle_error(error=error, console=self.console)
 
     def update_pkg_configs(self) -> None:
         self.config_manager.copy_configs()
@@ -399,13 +542,25 @@ class ProjectManager:
         self.config_manager.update_pyproject_configs()
 
     def run_pre_commit(self) -> None:
+        from .errors import ErrorCode, ExecutionError, handle_error
+
         self.console.print("\nRunning pre-commit hooks...\n")
         check_all = self.execute_command(["pre-commit", "run", "--all-files"])
+
         if check_all.returncode > 0:
+            # First retry
+            self.console.print("\nSome pre-commit hooks failed. Retrying once...\n")
             check_all = self.execute_command(["pre-commit", "run", "--all-files"])
+
             if check_all.returncode > 0:
-                self.console.print("\n\nPre-commit failed. Please fix errors.\n")
-                raise SystemExit(1)
+                error = ExecutionError(
+                    message="Pre-commit hooks failed",
+                    error_code=ErrorCode.PRE_COMMIT_ERROR,
+                    details="Pre-commit hooks failed even after a retry. Check the output above for specific hook failures.",
+                    recovery="Review the error messages above. Manually fix the issues or run specific hooks interactively with 'pre-commit run <hook-id>'.",
+                    exit_code=1,
+                )
+                handle_error(error=error, console=self.console, verbose=True)
 
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
@@ -463,6 +618,8 @@ class Crackerjack:
         self.project_manager.pkg_dir = self.pkg_dir
 
     def _update_project(self, options: OptionsProtocol) -> None:
+        from .errors import ErrorCode, ExecutionError, handle_error
+
         if not options.no_config_updates:
             self.project_manager.update_pkg_configs()
             result: CompletedProcess[str] = self.execute_command(
@@ -471,8 +628,21 @@ class Crackerjack:
             if result.returncode == 0:
                 self.console.print("PDM installed: ✅\n")
             else:
-                self.console.print(
-                    "\n\n❌ PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.\n\n"
+                error = ExecutionError(
+                    message="PDM installation failed",
+                    error_code=ErrorCode.PDM_INSTALL_ERROR,
+                    details=f"Command output:\n{result.stderr}",
+                    recovery="Ensure PDM is installed. Run `pipx install pdm` and try again. Check for network issues or package conflicts.",
+                    exit_code=1,
+                )
+
+                # Don't exit immediately - this isn't always fatal
+                handle_error(
+                    error=error,
+                    console=self.console,
+                    verbose=options.verbose,
+                    ai_agent=options.ai_agent,
+                    exit_on_error=False,
                 )
 
     def _update_precommit(self, options: OptionsProtocol) -> None:
@@ -488,10 +658,8 @@ class Crackerjack:
         if options.clean:
             if self.pkg_dir:
                 self.code_cleaner.clean_files(self.pkg_dir)
-            tests_dir = self.pkg_path / "tests"
-            if tests_dir.exists() and tests_dir.is_dir():
-                self.console.print("\nCleaning tests directory...\n")
-                self.code_cleaner.clean_files(tests_dir)
+            # Skip cleaning test files as they may contain test data in docstrings and comments
+            # that are necessary for the tests to function properly
 
     def _prepare_pytest_command(self, options: OptionsProtocol) -> list[str]:
         """Prepare pytest command with appropriate options.
@@ -557,6 +725,8 @@ class Crackerjack:
     def _run_pytest_process(
         self, test_command: list[str]
     ) -> subprocess.CompletedProcess[str]:
+        from .errors import ErrorCode, ExecutionError, handle_error
+
         try:
             process = subprocess.Popen(
                 test_command,
@@ -572,6 +742,13 @@ class Crackerjack:
             stderr_data = []
             while process.poll() is None:
                 if time.time() - start_time > timeout:
+                    error = ExecutionError(
+                        message="Test execution timed out after 5 minutes.",
+                        error_code=ErrorCode.COMMAND_TIMEOUT,
+                        details=f"Command: {' '.join(test_command)}\nTimeout: {timeout} seconds",
+                        recovery="Check for infinite loops or deadlocks in your tests. Consider increasing the timeout or optimizing your tests.",
+                    )
+
                     self.console.print(
                         "[red]Test execution timed out after 5 minutes. Terminating...[/red]"
                     )
@@ -580,7 +757,11 @@ class Crackerjack:
                         process.wait(timeout=5)
                     except subprocess.TimeoutExpired:
                         process.kill()
+                        stderr_data.append(
+                            "Process had to be forcefully terminated after timeout."
+                        )
                     break
+
                 if process.stdout:
                     line = process.stdout.readline()
                     if line:
@@ -592,6 +773,7 @@ class Crackerjack:
                         stderr_data.append(line)
                         self.console.print(f"[red]{line}[/red]", end="")
                 time.sleep(0.1)
+
             if process.stdout:
                 for line in process.stdout:
                     stdout_data.append(line)
@@ -600,23 +782,42 @@ class Crackerjack:
                 for line in process.stderr:
                     stderr_data.append(line)
                     self.console.print(f"[red]{line}[/red]", end="")
+
             returncode = process.returncode or 0
             stdout = "".join(stdout_data)
             stderr = "".join(stderr_data)
+
             return subprocess.CompletedProcess(
                 args=test_command, returncode=returncode, stdout=stdout, stderr=stderr
             )
 
         except Exception as e:
-            self.console.print(f"[red]Error running tests: {e}[/red]")
+            error = ExecutionError(
+                message=f"Error running tests: {e}",
+                error_code=ErrorCode.TEST_EXECUTION_ERROR,
+                details=f"Command: {' '.join(test_command)}\nError: {e}",
+                recovery="Check if pytest is installed and that your test files are properly formatted.",
+                exit_code=1,
+            )
+
+            # Don't exit here, let the caller handle it
+            handle_error(
+                error=error, console=self.console, verbose=True, exit_on_error=False
+            )
+
             return subprocess.CompletedProcess(test_command, 1, "", str(e))
 
     def _report_test_results(
         self, result: subprocess.CompletedProcess[str], ai_agent: str
     ) -> None:
+        from .errors import ErrorCode, TestError, handle_error
+
         if result.returncode > 0:
+            error_details = None
             if result.stderr:
                 self.console.print(result.stderr)
+                error_details = result.stderr
+
             if ai_agent:
                 self.console.print(
                     '[json]{"status": "failed", "action": "tests", "returncode": '
@@ -624,8 +825,19 @@ class Crackerjack:
                     + "}[/json]"
                 )
             else:
-                self.console.print("\n\n❌ Tests failed. Please fix errors.\n")
-            raise SystemExit(1)
+                # Use the structured error handler
+                error = TestError(
+                    message="Tests failed. Please fix the errors.",
+                    error_code=ErrorCode.TEST_FAILURE,
+                    details=error_details,
+                    recovery="Review the test output above for specific failures. Fix the issues in your code and run tests again.",
+                    exit_code=1,
+                )
+                handle_error(
+                    error=error,
+                    console=self.console,
+                    ai_agent=(ai_agent != ""),
+                )
 
         if ai_agent:
             self.console.print('[json]{"status": "success", "action": "tests"}[/json]')
@@ -653,25 +865,68 @@ class Crackerjack:
                 break
 
     def _publish_project(self, options: OptionsProtocol) -> None:
+        from .errors import ErrorCode, PublishError, handle_error
+
         if options.publish:
             if platform.system() == "Darwin":
                 authorize = self.execute_command(
                     ["pdm", "self", "add", "keyring"], capture_output=True, text=True
                 )
                 if authorize.returncode > 0:
-                    self.console.print(
-                        "\n\nAuthorization failed. Please add your keyring credentials to PDM. Run `pdm self add keyring` and try again.\n\n"
+                    error = PublishError(
+                        message="Authentication setup failed",
+                        error_code=ErrorCode.AUTHENTICATION_ERROR,
+                        details=f"Failed to add keyring support to PDM.\nCommand output:\n{authorize.stderr}",
+                        recovery="Please manually add your keyring credentials to PDM. Run `pdm self add keyring` and try again.",
+                        exit_code=1,
                     )
-                    raise SystemExit(1)
+                    handle_error(
+                        error=error,
+                        console=self.console,
+                        verbose=options.verbose,
+                        ai_agent=options.ai_agent,
+                    )
+
             build = self.execute_command(
                 ["pdm", "build"], capture_output=True, text=True
             )
             self.console.print(build.stdout)
+
             if build.returncode > 0:
-                self.console.print(build.stderr)
-                self.console.print("\n\nBuild failed. Please fix errors.\n")
-                raise SystemExit(1)
-            self.execute_command(["pdm", "publish", "--no-build"])
+                error = PublishError(
+                    message="Package build failed",
+                    error_code=ErrorCode.BUILD_ERROR,
+                    details=f"Command output:\n{build.stderr}",
+                    recovery="Review the error message above for details. Common issues include missing dependencies, invalid project structure, or incorrect metadata in pyproject.toml.",
+                    exit_code=1,
+                )
+                handle_error(
+                    error=error,
+                    console=self.console,
+                    verbose=options.verbose,
+                    ai_agent=options.ai_agent,
+                )
+
+            publish_result = self.execute_command(
+                ["pdm", "publish", "--no-build"], capture_output=True, text=True
+            )
+
+            if publish_result.returncode > 0:
+                error = PublishError(
+                    message="Package publication failed",
+                    error_code=ErrorCode.PUBLISH_ERROR,
+                    details=f"Command output:\n{publish_result.stderr}",
+                    recovery="Ensure you have the correct PyPI credentials configured. Check your internet connection and that the package name is available on PyPI.",
+                    exit_code=1,
+                )
+                handle_error(
+                    error=error,
+                    console=self.console,
+                    verbose=options.verbose,
+                    ai_agent=options.ai_agent,
+                )
+            else:
+                self.console.print("[green]✅ Package published successfully![/green]")
 
     def _commit_and_push(self, options: OptionsProtocol) -> None:
         if options.commit:

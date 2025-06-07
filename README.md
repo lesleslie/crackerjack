@@ -40,7 +40,7 @@ Crackerjack integrates powerful tools like Ruff, PDM, pre-commit, pytest, and mo
 ### Quick Start
 
 If you're new to Crackerjack, follow these steps:
-1. **Install Python 3.13:** Ensure you have Python 3.13 installed.
+1. **Install Python 3.13:** Ensure you have Python 3.13 or higher installed.
 2. **Install PDM:**
     ```
     pipx install pdm
@@ -54,6 +54,11 @@ If you're new to Crackerjack, follow these steps:
     Navigate to your project's root directory and run:
     ```
     python -m crackerjack
+    ```
+
+    Or use the interactive Rich UI:
+    ```
+    python -m crackerjack --rich-ui
     ```
 
 ---
@@ -95,9 +100,12 @@ Crackerjack is built on the following core principles:
 
 ### Developer Experience
 - **Command-Line Interface:** Simple, intuitive CLI with comprehensive options
+- **Interactive Rich UI:** Visual workflow with real-time task tracking, progress visualization, and interactive prompts
+- **Structured Error Handling:** Clear error messages with error codes, detailed explanations, and recovery suggestions
 - **Programmatic API:** Can be integrated into your own Python scripts and workflows
 - **AI Agent Integration:** Structured output format for integration with AI assistants, with complete style rules available in [RULES.md](RULES.md) for AI tool customization
 - **Verbose Mode:** Detailed output for debugging and understanding what's happening
+- **Python 3.13+ Features:** Leverages the latest Python language features including PEP 695 type parameter syntax, Self type annotations, and structural pattern matching
 
 ## Pre-commit Hooks
 
@@ -175,7 +183,7 @@ python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold
 
 ## Installation
 
-1.  **Python:** Ensure you have Python 3.13 installed.
+1.  **Python:** Ensure you have Python 3.13 or higher installed.
 2.  **PDM:** Install [PDM](https://pdm.fming.dev/) using `pipx`:
 
     ```
@@ -187,6 +195,11 @@ python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold
     pip install crackerjack
     cd your_project_root
     python -m crackerjack
+    ```
+
+    Or with the interactive Rich UI:
+    ```
+    python -m crackerjack --rich-ui
     ```
 
 ## Usage
@@ -270,6 +283,7 @@ runner.process(MyOptions())
 -   `--benchmark-regression`: Fail tests if benchmarks regress beyond threshold.
 -   `--benchmark-regression-threshold`: Set threshold percentage for benchmark regression (default 5.0%).
 -   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
+-   `--rich-ui`: Enable the interactive Rich UI for a more user-friendly experience with visual progress tracking and interactive prompts.
 -   `--ai-agent`: Enable AI agent mode with structured output (see [AI Agent Integration](#ai-agent-integration)).
 -   `--help`: Display help.
 
@@ -345,6 +359,11 @@ runner.process(MyOptions())
   python -m crackerjack -i
   ```
 
+- **Rich Interactive Mode** - Run with the interactive Rich UI:
+  ```bash
+  python -m crackerjack --rich-ui
+  ```
+
 - **AI Integration** - Run with structured output for AI tools:
   ```bash
   python -m crackerjack --ai-agent --test
@@ -370,6 +389,79 @@ python -m crackerjack --ai-agent --test
 ```
 
 For detailed information about using Crackerjack with AI agents, including the structured output format and programmatic usage, see [README-AI-AGENT.md](README-AI-AGENT.md).
+
+## Interactive Rich UI
+
+Crackerjack now offers an enhanced interactive experience through its Rich UI:
+
+- **Visual Workflow:** See a visual representation of the entire task workflow with dependencies
+- **Real-time Progress:** Track task progress with interactive progress bars and status indicators
+- **Task Management:** Confirm tasks before execution and view detailed status information
+- **Error Visualization:** Errors are presented in a structured, easy-to-understand format with recovery suggestions
+- **File Selection:** Interactive file browser for operations that require selecting files
+
+To use the Rich UI, run Crackerjack with the `--rich-ui` flag:
+
+```bash
+python -m crackerjack --rich-ui
+```
+
+This launches an interactive terminal interface where you can:
+1. View all available tasks and their dependencies
+2. Confirm each task before execution
+3. Get detailed status information for running tasks
+4. See a summary of completed, failed, and skipped tasks
+5. Visualize error details with recovery suggestions
+
+## Structured Error Handling
+
+Crackerjack implements a comprehensive error handling system that provides:
+
+- **Error Categories:** Errors are categorized by type (configuration, execution, testing, etc.)
+- **Error Codes:** Each error has a unique numeric code for easy reference
+- **Detailed Messages:** Clear, descriptive messages explain what went wrong
+- **Recovery Suggestions:** Where possible, errors include recovery suggestions to help resolve issues
+- **Rich Formatting:** Errors are presented with clear visual formatting (when using Rich UI or verbose mode)
+
+Error types include:
+- Configuration errors (1000-1999)
+- Execution errors (2000-2999)
+- Test errors (3000-3999)
+- Publishing errors (4000-4999)
+- Git errors (5000-5999)
+- File operation errors (6000-6999)
+- Code cleaning errors (7000-7999)
+- Generic errors (9000-9999)
+
+Use the `-v` or `--verbose` flag to see more detailed error information:
+
+```bash
+python -m crackerjack -v
+```
+
+For the most comprehensive error details with visual formatting, combine verbose mode with the Rich UI:
+
+```bash
+python -m crackerjack --rich-ui -v
+```
+
+## Python 3.13+ Features
+
+Crackerjack is designed to leverage the latest Python 3.13+ language features:
+
+- **Type Parameter Syntax (PEP 695):** Uses the new, more concise syntax for generic type parameters
+- **Self Type:** Leverages the `Self` type for better method chaining and builder patterns
+- **Structural Pattern Matching:** Uses pattern matching for cleaner code, especially in configuration and command processing
+- **Enhanced Type Hints:** More precise type hints with union types using the pipe operator
+- **Modern Dictionary Patterns:** Leverages structural pattern matching with dictionaries for cleaner data handling
+
+These modern Python features contribute to:
+- More readable and maintainable code
+- Better static type checking with tools like pyright
+- Cleaner, more concise implementations
+- Enhanced error handling and pattern recognition
+
+Crackerjack provides examples of these features in action, serving as a reference for modern Python development practices.
 
 ## Contributing
 

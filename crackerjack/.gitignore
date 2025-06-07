@@ -12,3 +12,5 @@
 /*.pyc
 /scratch/
 /.zencoder/
+
+**/.claude/settings.local.json

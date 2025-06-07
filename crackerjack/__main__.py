@@ -38,6 +38,7 @@ class Options(BaseModel):
     ai_agent: bool = False
     create_pr: bool = False
     skip_hooks: bool = False
+    rich_ui: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -84,7 +85,7 @@ cli_options = {
         False,
         "-x",
         "--clean",
-        help="Remove docstrings, line comments, and unnecessary whitespace.",
+        help="Remove docstrings, line comments, and unnecessary whitespace from source code (doesn't affect test files).",
     ),
     "test": typer.Option(False, "-t", "--test", help="Run tests."),
     "benchmark": typer.Option(
@@ -121,6 +122,11 @@ cli_options = {
         "--pr",
         help="Create a pull request to the upstream repository.",
     ),
+    "rich_ui": typer.Option(
+        False,
+        "--rich-ui",
+        help="Use the interactive Rich UI for a better experience.",
+    ),
     "ai_agent": typer.Option(
         False,
         "--ai-agent",
@@ -150,6 +156,7 @@ def main(
     ],
     skip_hooks: bool = cli_options["skip_hooks"],
     create_pr: bool = cli_options["create_pr"],
+    rich_ui: bool = cli_options["rich_ui"],
     ai_agent: bool = cli_options["ai_agent"],
 ) -> None:
     options = Options(
@@ -170,6 +177,7 @@ def main(
         all=all,
         ai_agent=ai_agent,
         create_pr=create_pr,
+        rich_ui=rich_ui,
     )
 
     if ai_agent:
@@ -177,8 +185,20 @@ def main(
 
         os.environ["AI_AGENT"] = "1"
 
-    runner = create_crackerjack_runner(console=console)
-    runner.process(options)
+    if rich_ui:
+        from crackerjack.interactive import launch_interactive_cli
+
+        try:
+            from importlib.metadata import version
+
+            pkg_version = version("crackerjack")
+        except (ImportError, ModuleNotFoundError):
+            pkg_version = "0.19.8"
+
+        launch_interactive_cli(pkg_version)
+    else:
+        runner = create_crackerjack_runner(console=console)
+        runner.process(options)
 
 
 if __name__ == "__main__":

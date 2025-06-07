@@ -312,24 +312,19 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        mock_execute.return_value.returncode = 0
-        mock_project_manager_execute.return_value.returncode = 0
-        mock_config_manager_execute.return_value.returncode = 0
         options = options_factory(publish="micro", no_config_updates=True)
-        with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
-            mock_cj_execute.return_value = MagicMock(returncode=0, stdout="Success")
-            with patch.object(Crackerjack, "_update_project") as mock_update_project:
-                mock_update_project.side_effect = lambda opts: mock_console_print(
-                    "Skipping config updates."
-                )
-                cj = Crackerjack(dry_run=True)
-                cj.process(options)
-                mock_cj_execute.assert_any_call(["pdm", "bump", "micro"])
-                mock_cj_execute.assert_any_call(["pdm", "publish", "--no-build"])
-        console_print_calls = [str(call) for call in mock_console_print.call_args_list]
-        assert any("Skipping config updates" in call for call in console_print_calls), (
-            "Expected 'Skipping config updates' message was not printed"
-        )
+
+        with (
+            patch.object(Crackerjack, "_bump_version") as mock_bump,
+            patch.object(Crackerjack, "_publish_project") as mock_publish,
+            patch.object(Crackerjack, "_update_project") as mock_update,
+        ):
+            cj = Crackerjack(dry_run=True)
+            cj.process(options)
+
+            mock_bump.assert_called_once_with(options)
+            mock_publish.assert_called_once_with(options)
+            mock_update.assert_called_once_with(options)
 
     def test_process_with_all_option(
         self,
@@ -555,7 +550,19 @@ class TestCrackerjackProcess:
                 cj = Crackerjack(dry_run=True)
                 with suppress(SystemExit):
                     cj.process(options)
-        mock_console_print.assert_any_call("\n\n❌ Tests failed. Please fix errors.\n")
+        with patch("crackerjack.errors.handle_error") as mock_handle_error:
+            options = options_factory(test=True, no_config_updates=True)
+            failed_result = MagicMock(
+                returncode=1, stdout="Test failed", stderr="Error in test"
+            )
+            with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
+                mock_cj_execute.return_value = failed_result
+                with patch.object(Crackerjack, "_update_project"):
+                    cj = Crackerjack(dry_run=True)
+                    with suppress(SystemExit):
+                        cj.process(options)
+
+            mock_handle_error.assert_called()
 
     def test_process_with_failed_build(
         self,
@@ -566,29 +573,26 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        options = options_factory(publish="micro", no_config_updates=True)
-        with patch("platform.system", return_value="Linux"):
-            with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
+        with patch("crackerjack.errors.handle_error") as mock_handle_error:
+            options = options_factory(publish="micro", no_config_updates=True)
+            with patch("platform.system", return_value="Linux"):
+                with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
 
-                def mock_execute_side_effect(*args: t.Any, **kwargs: t.Any):
-                    cmd = args[0][0]
-                    if cmd == "pdm" and "build" in args[0]:
-                        return MagicMock(returncode=1, stdout="", stderr="Build failed")
-                    return MagicMock(returncode=0, stdout="Success")
+                    def mock_execute_side_effect(*args: t.Any, **kwargs: t.Any):
+                        cmd = args[0][0]
+                        if cmd == "pdm" and "build" in args[0]:
+                            return MagicMock(
+                                returncode=1, stdout="", stderr="Build failed"
+                            )
+                        return MagicMock(returncode=0, stdout="Success")
 
-                mock_cj_execute.side_effect = mock_execute_side_effect
-                with patch.object(Crackerjack, "_update_project"):
-                    with pytest.raises(SystemExit) as excinfo:
-                        cj = Crackerjack(dry_run=True)
-                        cj.process(options)
-                    assert excinfo.value.code == 1
-        build_failed_printed = False
-        for call in mock_console_print.call_args_list:
-            args = call[0]
-            if args and isinstance(args[0], str) and ("Build failed" in args[0]):
-                build_failed_printed = True
-                break
-        assert build_failed_printed, "Expected 'Build failed' message was not printed"
+                    mock_cj_execute.side_effect = mock_execute_side_effect
+                    with patch.object(Crackerjack, "_update_project"):
+                        with suppress(SystemExit):
+                            cj = Crackerjack(dry_run=True)
+                            cj.process(options)
+
+            mock_handle_error.assert_called()
 
     def test_process_with_darwin_platform(
         self,
@@ -626,20 +630,19 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        options = options_factory(publish="micro", no_config_updates=True)
-        with patch("platform.system", return_value="Darwin"):
-            with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
-                mock_cj_execute.return_value = MagicMock(
-                    returncode=1, stdout="", stderr="Authorization failed"
-                )
-                with patch.object(Crackerjack, "_update_project"):
-                    with pytest.raises(SystemExit) as excinfo:
-                        cj = Crackerjack(dry_run=True)
-                        cj.process(options)
-                    assert excinfo.value.code == 1
-        mock_console_print.assert_any_call(
-            "\n\nAuthorization failed. Please add your keyring credentials to PDM. Run `pdm self add keyring` and try again.\n\n"
-        )
+        with patch("crackerjack.errors.handle_error") as mock_handle_error:
+            options = options_factory(publish="micro", no_config_updates=True)
+            with patch("platform.system", return_value="Darwin"):
+                with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
+                    mock_cj_execute.return_value = MagicMock(
+                        returncode=1, stdout="", stderr="Authorization failed"
+                    )
+                    with patch.object(Crackerjack, "_update_project"):
+                        with suppress(SystemExit):
+                            cj = Crackerjack(dry_run=True)
+                            cj.process(options)
+
+            mock_handle_error.assert_called()
 
     def test_process_with_commit_input(
         self,
@@ -679,17 +682,18 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        options = options_factory(no_config_updates=False)
-        with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
-            mock_cj_execute.return_value = MagicMock(
-                returncode=1, stdout="", stderr="PDM installation failed"
-            )
-            with patch.object(ProjectManager, "update_pkg_configs"):
-                cj = Crackerjack(dry_run=True)
-                cj.process(options)
-        mock_console_print.assert_any_call(
-            "\n\n❌ PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.\n\n"
-        )
+        with patch("crackerjack.errors.handle_error") as mock_handle_error:
+            options = options_factory(no_config_updates=False)
+            with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
+                mock_cj_execute.return_value = MagicMock(
+                    returncode=1, stdout="", stderr="PDM installation failed"
+                )
+                with patch.object(ProjectManager, "update_pkg_configs"):
+                    with suppress(SystemExit):
+                        cj = Crackerjack(dry_run=True)
+                        cj.process(options)
+
+            mock_handle_error.assert_called()
 
     def test_process_with_crackerjack_project(
         self,
@@ -1022,25 +1026,25 @@ class TestCrackerjackProcess:
     ) -> None:
         from rich.console import Console
 
-        console = Console()
+        with patch("crackerjack.errors.handle_error") as mock_handle_error:
+            console = Console()
 
-        code_cleaner = CodeCleaner(console=console)
-        code_to_format = "def test_func():\n    return True\n"
+            code_cleaner = CodeCleaner(console=console)
+            code_to_format = "def test_func():\n    return True\n"
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=1, stderr="Formatting error")
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=1, stderr="Formatting error"
+                )
 
-            with patch("pathlib.Path.write_text"):
-                with patch.object(console, "print") as mock_console_print_method:
+                with patch("pathlib.Path.write_text"):
                     formatted_code = code_cleaner.reformat_code(code_to_format)
 
                     assert formatted_code == code_to_format
 
                     mock_run.assert_called_once()
 
-                    mock_console_print_method.assert_any_call(
-                        "Ruff formatting failed: Formatting error"
-                    )
+                    mock_handle_error.assert_called()
 
     def test_config_manager_is_crackerjack_project(
         self, mock_execute: MagicMock, mock_console_print: MagicMock, tmp_path: Path

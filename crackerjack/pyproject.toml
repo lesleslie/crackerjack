@@ -4,59 +4,59 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.19.7"
+version = "0.20.0"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
-  "bandit",
-  "black",
-  "creosote",
-  "mypy",
-  "pyright",
-  "pytest",
-  "refurb",
-  "ruff",
+    "bandit",
+    "black",
+    "creosote",
+    "mypy",
+    "pyright",
+    "pytest",
+    "refurb",
+    "ruff",
 ]
 license.text = "BSD-3-CLAUSE"
 maintainers = [
-  { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
+    { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
 ]
 
 authors = [
-  { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
+    { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
 ]
 requires-python = ">=3.13"
 classifiers = [
-  "Development Status :: 4 - Beta",
-  "Environment :: Console",
-  "License :: OSI Approved :: BSD License",
-  "Operating System :: POSIX",
-  "Programming Language :: Python",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.13",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "Topic :: Software Development :: Quality Assurance",
-  "Topic :: Software Development :: Testing",
-  "Topic :: Utilities",
-  "Typing :: Typed",
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Utilities",
+    "Typing :: Typed",
 ]
 dependencies = [
-  "autotyping>=24.9",
-  "pdm>=2.24.2",
-  "pdm-bump>=0.9.12",
-  "pre-commit>=4.2",
-  "pydantic>=2.11.5",
-  "pytest>=8.4",
-  "pytest-asyncio>=1",
-  "pytest-benchmark>=5.1",
-  "pytest-cov>=6.1.1",
-  "pytest-mock>=3.14.1",
-  "pytest-timeout>=2.4",
-  "pytest-xdist>=3.7",
-  "rich>=14",
-  "tomli-w>=1.2",
-  "typer>=0.16",
-  "uv>=0.7.10",
+    "autotyping>=24.9",
+    "pdm>=2.24.2",
+    "pdm-bump>=0.9.12",
+    "pre-commit>=4.2",
+    "pydantic>=2.11.5",
+    "pytest>=8.4",
+    "pytest-asyncio>=1",
+    "pytest-benchmark>=5.1",
+    "pytest-cov>=6.1.1",
+    "pytest-mock>=3.14.1",
+    "pytest-timeout>=2.4",
+    "pytest-xdist>=3.7",
+    "rich>=14",
+    "tomli-w>=1.2",
+    "typer>=0.16",
+    "uv>=0.7.10",
 ]
 urls.documentation = "https://github.com/lesleslie/crackerjack"
 urls.homepage = "https://github.com/lesleslie/crackerjack"
@@ -72,28 +72,28 @@ show-fixes = true
 output-format = "full"
 format.docstring-code-format = true
 lint.extend-select = [
-  "C901",
-  "D",
-  "F",    # pyflakes
-  "I",
-  "UP",   # pyupgrade (includes F-string conversion)
+    "C901",
+    "D",
+    "F",    # pyflakes
+    "I",
+    "UP",   # pyupgrade (includes F-string conversion)
 ]
 lint.ignore = [
-  "D100",
-  "D101",
-  "D102",
-  "D103",
-  "D104",
-  "D105",
-  "D106",
-  "D107",
-  "F821",
-  "UP040",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "F821",
+    "UP040",
 ]
 lint.fixable = [ "ALL" ]
 lint.unfixable = [  ]
 lint.isort.no-lines-before = [
-  "first-party",
+    "first-party",
 ]
 lint.mccabe.max-complexity = 13
 lint.pydocstyle.convention = "google"
@@ -105,7 +105,7 @@ ignore-words-list = "crate,uptodate,nd"
 
 [tool.pyproject-fmt]
 column_width = 120
-indent = 2
+indent = 4
 
 [tool.pytest.ini_options]
 # Core pytest configuration
@@ -118,9 +118,9 @@ python_functions = [ "test_*" ]
 
 # Markers
 markers = [
-  "unit: marks test as a unit test",
-  "benchmark: mark test as a benchmark (disables parallel execution)",
-  "integration: marks test as an integration test",
+    "unit: marks test as a unit test",
+    "benchmark: mark test as a benchmark (disables parallel execution)",
+    "integration: marks test as an integration test",
 ]
 
 # Default timeout settings
@@ -141,40 +141,40 @@ source = [ "crackerjack" ]
 data_file = ".coverage"
 parallel = false
 omit = [
-  "*/tests/*",
-  "*/site-packages/*",
-  "*/__pycache__/*",
-  "*/__init__.py",
-  "*/_version.py",
-  "*/conftest.py",
-  "*/test_*.py",
-  "*/_test.py",
+    "*/tests/*",
+    "*/site-packages/*",
+    "*/__pycache__/*",
+    "*/__init__.py",
+    "*/_version.py",
+    "*/conftest.py",
+    "*/test_*.py",
+    "*/_test.py",
 ]
 
 [tool.coverage.report]
 exclude_also = [
-  "pragma: no cover",
-  "def __repr__",
-  "raise NotImplementedError",
-  "if __name__ == .__main__.:",
-  "pass",
-  "raise ImportError",
-  "except ImportError",
-  "def __str__",
-  "@abstractmethod",
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError",
+    "except ImportError",
+    "def __str__",
+    "@abstractmethod",
 ]
 ignore_errors = false
 
 [tool.pyright]
 verboseOutput = true
 include = [
-  "crackerjack",
+    "crackerjack",
 ]
 exclude = [
-  "scratch",
+    "scratch",
 ]
 extraPaths = [
-  ".venv/lib/python3.13/site-packages/",
+    ".venv/lib/python3.13/site-packages/",
 ]
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
@@ -196,26 +196,26 @@ ignore_names = [ "cls" ]
 
 [tool.creosote]
 paths = [
-  "crackerjack",
+    "crackerjack",
 ]
 deps-file = "pyproject.toml"
 exclude-deps = [
-  "pdm-bump",
-  "autotyping",
-  "pre-commit",
-  "pytest",
-  "pytest-asyncio",
-  "pytest-cov",
-  "pytest-mock",
-  "pytest-xdist",
-  "pytest-benchmark",
-  "pdm",
-  "pyfiglet",
-  "pyyaml",
-  "uv",
-  "tomli-w",
-  "google-crc32c",
-  "pytest-timeout",
+    "pdm-bump",
+    "autotyping",
+    "pre-commit",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-xdist",
+    "pytest-benchmark",
+    "pdm",
+    "pyfiglet",
+    "pyyaml",
+    "uv",
+    "tomli-w",
+    "google-crc32c",
+    "pytest-timeout",
 ]
 
 [tool.refurb]
@@ -224,16 +224,16 @@ quiet = true
 
 [tool.bandit]
 target = [
-  "crackerjack",
+    "crackerjack",
 ]
 skips = [
-  "B101",
-  "B301",
-  "B311",
-  "B403",
-  "B404",
-  "B602",
-  "B603",
-  "B607",
-  "B704",
+    "B101",
+    "B301",
+    "B311",
+    "B403",
+    "B404",
+    "B602",
+    "B603",
+    "B607",
+    "B704",
 ]
