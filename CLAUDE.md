@@ -43,6 +43,18 @@ python -m crackerjack -t
 # Run tests without pre-commit hooks (faster)
 python -m crackerjack -t -s
 
+# Run tests with a single worker (no parallelization)
+python -m crackerjack -t --test-workers=1
+
+# Run tests with a specific number of workers
+python -m crackerjack -t --test-workers=4
+
+# Run tests with a custom timeout (5 minutes per test)
+python -m crackerjack -t --test-timeout=300
+
+# Optimize for large projects (fewer workers, longer timeout)
+python -m crackerjack -t --test-workers=2 --test-timeout=300
+
 # Run tests in benchmark mode
 python -m crackerjack -t --benchmark
 
@@ -131,8 +143,11 @@ Crackerjack has a robust testing setup with:
 
 - **Test Configuration**: Customizes pytest through conftest.py
 - **Benchmark Support**: Special handling for benchmark tests
-- **Parallel Test Execution**: Automatic parallel test execution when appropriate
-- **Timeout Protection**: Tests have a default timeout to prevent hanging
+- **Smart Parallelization**: Adjusts the number of workers based on project size
+- **Project Size Detection**: Automatically detects project size to optimize test execution
+- **Timeout Protection**: Tests have dynamic timeouts based on project size
+- **Deadlock Prevention**: Advanced threading techniques to prevent deadlocks
+- **Progress Tracking**: Shows periodic heartbeat messages for long-running tests
 
 ## Development Guidelines
 

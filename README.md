@@ -150,8 +150,34 @@ Crackerjack provides advanced testing capabilities powered by pytest:
 ### Standard Testing
 
 - **Parallel Test Execution:** Tests run in parallel by default using pytest-xdist for faster execution
-- **Timeout Protection:** All tests have a default 60-second timeout to prevent hanging tests
+- **Smart Parallelization:** Automatically adjusts the number of worker processes based on project size
+- **Timeout Protection:** Tests have dynamic timeouts based on project size to prevent hanging tests
 - **Coverage Reports:** Automatically generates test coverage reports with configurable thresholds
+
+### Advanced Test Configuration
+
+Crackerjack offers fine-grained control over test execution:
+
+- **Worker Control:** Set the number of parallel workers with `--test-workers` (0 = auto-detect, 1 = disable parallelization)
+- **Timeout Control:** Customize test timeouts with `--test-timeout` (in seconds)
+- **Project Size Detection:** Automatically detects project size and adjusts timeout and parallelization settings
+- **Deadlock Prevention:** Uses advanced threading techniques to prevent deadlocks in test output processing
+- **Progress Tracking:** Shows periodic heartbeat messages for long-running tests
+
+Example test execution options:
+```bash
+# Run tests with a single worker (no parallelization)
+python -m crackerjack -t --test-workers=1
+
+# Run tests with a specific number of workers (e.g., 4)
+python -m crackerjack -t --test-workers=4
+
+# Run tests with a custom timeout (5 minutes per test)
+python -m crackerjack -t --test-timeout=300
+
+# Combine options for maximum control
+python -m crackerjack -t --test-workers=2 --test-timeout=600
+```
 
 ### Benchmark Testing
 
@@ -236,10 +262,16 @@ class MyOptions:
         # Process options
         self.clean = True            # Clean code (remove docstrings, comments, etc.)
         self.test = True             # Run tests using pytest
+        self.skip_hooks = False      # Skip running pre-commit hooks
+
+        # Test execution options
+        self.test_workers = 2        # Number of parallel workers (0 = auto-detect, 1 = disable parallelization)
+        self.test_timeout = 120      # Timeout in seconds for individual tests (0 = use default based on project size)
+
+        # Benchmark options
         self.benchmark = False       # Run tests in benchmark mode
         self.benchmark_regression = False  # Fail tests if benchmarks regress beyond threshold
         self.benchmark_regression_threshold = 5.0  # Threshold percentage for benchmark regression
-        self.skip_hooks = False      # Skip running pre-commit hooks
 
         # Version and publishing options
         self.publish = None          # Publish to PyPI (micro, minor, major)
@@ -279,6 +311,8 @@ runner.process(MyOptions())
 -   `-s`, `--skip-hooks`: Skip running pre-commit hooks (useful with `-t`).
 -   `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.
 -   `-t`, `--test`: Run tests using `pytest`.
+-   `--test-workers`: Set the number of parallel workers for testing (0 = auto-detect, 1 = disable parallelization).
+-   `--test-timeout`: Set the timeout in seconds for individual tests (0 = use default based on project size).
 -   `--benchmark`: Run tests in benchmark mode (disables parallel execution).
 -   `--benchmark-regression`: Fail tests if benchmarks regress beyond threshold.
 -   `--benchmark-regression-threshold`: Set threshold percentage for benchmark regression (default 5.0%).
@@ -312,6 +346,28 @@ runner.process(MyOptions())
 - **Fast Testing** - Run tests without running pre-commit hooks:
   ```bash
   python -m crackerjack -t -s
+  ```
+
+#### Test Execution Options
+
+- **Single-Process Testing** - Run tests sequentially (no parallelization):
+  ```bash
+  python -m crackerjack -t --test-workers=1
+  ```
+
+- **Customized Parallel Testing** - Run tests with a specific number of workers:
+  ```bash
+  python -m crackerjack -t --test-workers=4
+  ```
+
+- **Long-Running Tests** - Increase test timeout for complex tests:
+  ```bash
+  python -m crackerjack -t --test-timeout=600
+  ```
+
+- **Optimized for Large Projects** - Reduce workers and increase timeout for large codebases:
+  ```bash
+  python -m crackerjack -t --test-workers=2 --test-timeout=300
   ```
 
 #### Version Management
