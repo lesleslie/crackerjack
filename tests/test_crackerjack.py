@@ -40,6 +40,8 @@ class OptionsForTesting:
     benchmark: bool = False
     benchmark_regression: bool = False
     benchmark_regression_threshold: float = 5.0
+    test_workers: int = 0
+    test_timeout: int = 0
     all: BumpOption | None = None
     ai_agent: bool = False
     create_pr: bool = False

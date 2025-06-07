@@ -30,6 +30,8 @@ class MockOptions:
         self.benchmark_regression_threshold = kwargs.get(
             "benchmark_regression_threshold", 5.0
         )
+        self.test_workers = kwargs.get("test_workers", 0)
+        self.test_timeout = kwargs.get("test_timeout", 0)
 
 
 def test_create_crackerjack_runner() -> None:

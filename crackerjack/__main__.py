@@ -34,6 +34,8 @@ class Options(BaseModel):
     benchmark: bool = False
     benchmark_regression: bool = False
     benchmark_regression_threshold: float = 5.0
+    test_workers: int = 0
+    test_timeout: int = 0
     all: BumpOption | None = None
     ai_agent: bool = False
     create_pr: bool = False
@@ -103,6 +105,16 @@ cli_options = {
         "--benchmark-regression-threshold",
         help="Maximum allowed performance regression percentage (default: 5.0%).",
     ),
+    "test_workers": typer.Option(
+        0,
+        "--test-workers",
+        help="Number of parallel workers for running tests (0 = auto-detect, 1 = disable parallelization).",
+    ),
+    "test_timeout": typer.Option(
+        0,
+        "--test-timeout",
+        help="Timeout in seconds for individual tests (0 = use default based on project size).",
+    ),
     "skip_hooks": typer.Option(
         False,
         "-s",
@@ -154,6 +166,8 @@ def main(
     benchmark_regression_threshold: float = cli_options[
         "benchmark_regression_threshold"
     ],
+    test_workers: int = cli_options["test_workers"],
+    test_timeout: int = cli_options["test_timeout"],
     skip_hooks: bool = cli_options["skip_hooks"],
     create_pr: bool = cli_options["create_pr"],
     rich_ui: bool = cli_options["rich_ui"],
@@ -173,6 +187,8 @@ def main(
         benchmark=benchmark,
         benchmark_regression=benchmark_regression,
         benchmark_regression_threshold=benchmark_regression_threshold,
+        test_workers=test_workers,
+        test_timeout=test_timeout,
         skip_hooks=skip_hooks,
         all=all,
         ai_agent=ai_agent,

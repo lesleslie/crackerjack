@@ -1,8 +1,10 @@
 import io
 import os
 import platform
+import queue
 import re
 import subprocess
+import threading
 import time
 import tokenize
 import typing as t
@@ -42,6 +44,8 @@ class OptionsProtocol(t.Protocol):
     benchmark: bool
     benchmark_regression: bool
     benchmark_regression_threshold: float
+    test_workers: int = 0
+    test_timeout: int = 0
     publish: t.Any | None
     bump: t.Any | None
     all: t.Any | None
@@ -683,6 +687,22 @@ class Crackerjack:
         if options.verbose:
             test.append("-v")
 
+        # Detect project size to adjust timeouts and parallelization
+        project_size = self._detect_project_size()
+
+        # User can override the timeout, otherwise use project size to determine
+        if options.test_timeout > 0:
+            test_timeout = options.test_timeout
+        else:
+            # Use a longer timeout for larger projects
+            test_timeout = (
+                300
+                if project_size == "large"
+                else 120
+                if project_size == "medium"
+                else 60
+            )
+
         test.extend(
             [
                 "--capture=fd",  # Capture stdout/stderr at file descriptor level
@@ -690,7 +710,7 @@ class Crackerjack:
                 "--no-header",  # Reduce output noise
                 "--disable-warnings",  # Disable warning capture
                 "--durations=0",  # Show slowest tests to identify potential hanging tests
-                "--timeout=60",  # 1-minute timeout for tests
+                f"--timeout={test_timeout}",  # Dynamic timeout based on project size or user override
             ]
         )
 
@@ -711,10 +731,59 @@ class Crackerjack:
                     ]
                 )
         else:
-            # No benchmarks - use parallel execution for speed
-            test.append("-xvs")
+            # Use user-specified number of workers if provided
+            if options.test_workers > 0:
+                # User explicitly set number of workers
+                if options.test_workers == 1:
+                    # Single worker means no parallelism, just use normal pytest mode
+                    test.append("-vs")
+                else:
+                    # Use specified number of workers
+                    test.extend(["-xvs", "-n", str(options.test_workers)])
+            else:
+                # Auto-detect based on project size
+                if project_size == "large":
+                    # For large projects, use a fixed number of workers to avoid overwhelming the system
+                    test.extend(
+                        ["-xvs", "-n", "2"]
+                    )  # Only 2 parallel processes for large projects
+                elif project_size == "medium":
+                    test.extend(
+                        ["-xvs", "-n", "auto"]
+                    )  # Auto-detect number of processes but limit it
+                else:
+                    test.append("-xvs")  # Default behavior for small projects
 
         return test
+
+    def _detect_project_size(self) -> str:
+        """Detect the approximate size of the project to adjust test parameters.
+
+        Returns:
+            "small", "medium", or "large" based on codebase size
+        """
+        # Check for known large projects by name
+        if self.pkg_name in ("acb", "fastblocks"):
+            return "large"
+
+        # Count Python files to estimate project size
+        try:
+            py_files = list(self.pkg_path.rglob("*.py"))
+            test_files = list(self.pkg_path.rglob("test_*.py"))
+
+            total_files = len(py_files)
+            num_test_files = len(test_files)
+
+            # Rough heuristics for project size
+            if total_files > 100 or num_test_files > 50:
+                return "large"
+            elif total_files > 50 or num_test_files > 20:
+                return "medium"
+            else:
+                return "small"
+        except Exception:
+            # Default to medium in case of error
+            return "medium"
 
     def _setup_test_environment(self) -> None:
         os.environ["PYTHONASYNCIO_DEBUG"] = "0"  # Disable asyncio debug mode
@@ -725,9 +794,29 @@ class Crackerjack:
     def _run_pytest_process(
         self, test_command: list[str]
     ) -> subprocess.CompletedProcess[str]:
+        import queue
+
         from .errors import ErrorCode, ExecutionError, handle_error
 
         try:
+            # Detect project size to determine appropriate timeout
+            project_size = self._detect_project_size()
+            # Longer timeouts for larger projects
+            global_timeout = (
+                1200
+                if project_size == "large"
+                else 600
+                if project_size == "medium"
+                else 300
+            )
+
+            # Show timeout information
+            self.console.print(f"[blue]Project size detected as: {project_size}[/blue]")
+            self.console.print(
+                f"[blue]Using global timeout of {global_timeout} seconds[/blue]"
+            )
+
+            # Use non-blocking IO to avoid deadlocks
             process = subprocess.Popen(
                 test_command,
                 stdout=subprocess.PIPE,
@@ -736,21 +825,62 @@ class Crackerjack:
                 bufsize=1,
                 universal_newlines=True,
             )
-            timeout = 300
-            start_time = time.time()
+
             stdout_data = []
             stderr_data = []
+
+            # Output collection queues
+            stdout_queue = queue.Queue()
+            stderr_queue = queue.Queue()
+
+            # Use separate threads to read from stdout and stderr to prevent deadlocks
+            def read_output(
+                pipe: t.TextIO,
+                output_queue: "queue.Queue[str]",
+                data_collector: list[str],
+            ) -> None:
+                try:
+                    for line in iter(pipe.readline, ""):
+                        output_queue.put(line)
+                        data_collector.append(line)
+                except (OSError, ValueError):
+                    # Pipe has been closed
+                    pass
+                finally:
+                    pipe.close()
+
+            # Start output reader threads
+            stdout_thread = threading.Thread(
+                target=read_output,
+                args=(process.stdout, stdout_queue, stdout_data),
+                daemon=True,
+            )
+            stderr_thread = threading.Thread(
+                target=read_output,
+                args=(process.stderr, stderr_queue, stderr_data),
+                daemon=True,
+            )
+
+            stdout_thread.start()
+            stderr_thread.start()
+
+            # Start time for timeout tracking
+            start_time = time.time()
+
+            # Process is running, monitor and display output until completion or timeout
             while process.poll() is None:
-                if time.time() - start_time > timeout:
+                # Check for timeout
+                elapsed = time.time() - start_time
+                if elapsed > global_timeout:
                     error = ExecutionError(
-                        message="Test execution timed out after 5 minutes.",
+                        message=f"Test execution timed out after {global_timeout // 60} minutes.",
                         error_code=ErrorCode.COMMAND_TIMEOUT,
-                        details=f"Command: {' '.join(test_command)}\nTimeout: {timeout} seconds",
+                        details=f"Command: {' '.join(test_command)}\nTimeout: {global_timeout} seconds",
                         recovery="Check for infinite loops or deadlocks in your tests. Consider increasing the timeout or optimizing your tests.",
                     )
 
                     self.console.print(
-                        "[red]Test execution timed out after 5 minutes. Terminating...[/red]"
+                        f"[red]Test execution timed out after {global_timeout // 60} minutes. Terminating...[/red]"
                     )
                     process.terminate()
                     try:
@@ -762,26 +892,27 @@ class Crackerjack:
                         )
                     break
 
-                if process.stdout:
-                    line = process.stdout.readline()
-                    if line:
-                        stdout_data.append(line)
-                        self.console.print(line, end="")
-                if process.stderr:
-                    line = process.stderr.readline()
-                    if line:
-                        stderr_data.append(line)
-                        self.console.print(f"[red]{line}[/red]", end="")
-                time.sleep(0.1)
+                # Print any available output
+                self._process_output_queue(stdout_queue, stderr_queue)
 
-            if process.stdout:
-                for line in process.stdout:
-                    stdout_data.append(line)
-                    self.console.print(line, end="")
-            if process.stderr:
-                for line in process.stderr:
-                    stderr_data.append(line)
-                    self.console.print(f"[red]{line}[/red]", end="")
+                # Small sleep to avoid CPU spinning but still be responsive
+                time.sleep(0.05)
+
+                # Periodically output a heartbeat for very long-running tests
+                if elapsed > 60 and elapsed % 60 < 0.1:  # Roughly every minute
+                    self.console.print(
+                        f"[blue]Tests still running, elapsed time: {int(elapsed)} seconds...[/blue]"
+                    )
+
+            # Process has exited, get remaining output
+            time.sleep(0.1)  # Allow threads to flush final output
+            self._process_output_queue(stdout_queue, stderr_queue)
+
+            # Ensure threads are done
+            if stdout_thread.is_alive():
+                stdout_thread.join(1.0)
+            if stderr_thread.is_alive():
+                stderr_thread.join(1.0)
 
             returncode = process.returncode or 0
             stdout = "".join(stdout_data)
@@ -806,6 +937,28 @@ class Crackerjack:
             )
 
             return subprocess.CompletedProcess(test_command, 1, "", str(e))
+
+    def _process_output_queue(
+        self, stdout_queue: "queue.Queue[str]", stderr_queue: "queue.Queue[str]"
+    ) -> None:
+        """Process and display output from the queues without blocking."""
+        # Process stdout
+        while not stdout_queue.empty():
+            try:
+                line = stdout_queue.get_nowait()
+                if line:
+                    self.console.print(line, end="")
+            except queue.Empty:
+                break
+
+        # Process stderr
+        while not stderr_queue.empty():
+            try:
+                line = stderr_queue.get_nowait()
+                if line:
+                    self.console.print(f"[red]{line}[/red]", end="")
+            except queue.Empty:
+                break
 
     def _report_test_results(
         self, result: subprocess.CompletedProcess[str], ai_agent: str
