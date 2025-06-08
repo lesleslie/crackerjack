@@ -1,0 +1,188 @@
+# Windsurf AI Rules for Crackerjack Projects
+
+## Project Context
+This is a Crackerjack project - an opinionated Python project management tool that streamlines development workflow by combining best-in-class tools. When working on this codebase or projects that use Crackerjack, follow these rules strictly.
+
+## Code Quality & Style
+
+### Static Typing Requirements
+- Always include comprehensive type hints for all functions, methods, and variables
+- Import typing as `import typing as t` and prefix all typing references with `t.`
+- Never import individual types directly from typing (avoid `from typing import List, Dict, Optional`)
+- Use modern typing syntax with pipe operator (`|`) for unions instead of `Optional[T]`
+- Use built-in collection types: `list[str]` not `t.List[str]`, `dict[str, int]` not `t.Dict[str, int]`
+- Use `t.Protocol` instead of abstract base classes
+- Apply `@t.runtime_checkable` decorator to protocols when runtime checking is needed
+
+### Modern Python Standards
+- Target Python 3.13+ features and syntax exclusively
+- Use f-strings for all string formatting
+- Prefer `pathlib.Path` over `os.path` for file operations
+- Use dataclasses for structured data
+- Adopt latest language features immediately
+
+### Code Architecture
+- Write modular functions that do one thing well
+- Avoid unnecessary docstrings and line comments unless they explain "why" not "what"
+- Choose clear, descriptive variable and function names
+- Group related functionality into well-defined classes
+- Structure projects with clear separation of concerns
+
+## Tool Integration & Commands
+
+### PDM Usage
+- Always use `pdm run` to execute tools within the project's virtual environment
+- Run pytest with `pdm run pytest` instead of calling pytest directly
+- Execute all tools through PDM: `pdm run pyright`, `pdm run ruff`, `pdm run crackerjack`
+- Install dependencies with `pdm install`
+
+### Crackerjack Commands
+- Run basic process: `python -m crackerjack`
+- Clean, test, and commit: `python -m crackerjack -x -t -c`
+- Auto bump and commit: `python -m crackerjack -a micro`
+- Interactive mode: `python -m crackerjack -i`
+- Test only: `python -m crackerjack -t`
+- Skip pre-commit during testing: `python -m crackerjack -t -s`
+- Optimize for large projects: `python -m crackerjack -t --test-workers=2 --test-timeout=300`
+
+### Quality Validation
+- Code is incomplete until it passes: `python -m crackerjack -x -t`
+- This validates typing, formatting, linting, and test success
+- Run `pre-commit run --all-files` during development
+- All code must pass pre-commit checks before submission
+
+## Testing Standards
+
+### Test Environment
+- Use pytest with asyncio_mode="auto" for async testing
+- Never create files directly on filesystem in tests
+- Always use `tempfile` module or pytest's `tmp_path` fixtures
+- Tests must be isolated and not affect surrounding environment
+- Avoid hard-coded paths pointing to real filesystem
+
+### Test Configuration
+- Write tests for behavior, not implementation details
+- Focus on testing public interfaces rather than private functions
+- Use parallel test execution when appropriate
+- Add timeouts to prevent hanging tests
+- Separate unit tests, integration tests, and benchmarks
+- Aim for complete coverage of critical paths
+
+### Benchmark Testing
+- Run benchmarks: `python -m crackerjack -t --benchmark`
+- Regression detection: `python -m crackerjack -t --benchmark-regression`
+- Custom threshold: `python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold=10.0`
+
+## Error Handling & Output
+
+### Exception Management
+- Use structured exception handling with specific exception types
+- Provide meaningful error messages with context
+- Handle errors gracefully and provide actionable feedback
+
+### Console Output
+- Use Rich library for all console output
+- Provide clear status indicators for operations
+- Format output for readability and user experience
+
+## Development Workflow
+
+### Pre-commit Hooks
+Configure comprehensive pre-commit hooks:
+- Pyright for static type checking
+- Ruff for linting and formatting
+- Vulture for detecting unused code
+- Creosote for identifying large files
+- Flynt for string formatting conversion
+- Codespell for spell checking
+- Autotyping for type annotation
+- Refurb for Python code modernization
+- Bandit for security vulnerabilities
+
+### Version Management
+- Use semantic versioning
+- Bump versions through Crackerjack: `-b micro|minor|major`
+- Publish to PyPI: `-p micro|minor|major`
+- Version bumping handled through PDM
+
+### Git Operations
+- Commit after pre-commit: `python -m crackerjack -c`
+- Create pull requests: `python -m crackerjack -r`
+- Never commit changes unless explicitly requested
+
+## Dependency Management
+
+### Package Management
+- Use PDM with uv for dependency management
+- Keep external dependencies minimal
+- Pin exact versions in lockfiles
+- Use range specifications in pyproject.toml
+- Regularly audit dependencies for security
+- Prefer standard library solutions when reasonable
+
+### Configuration
+- Use pyproject.toml for all project configuration
+- Follow standard package layout conventions
+- Configure all tools through pyproject.toml when possible
+
+## Performance & Optimization
+
+### Code Performance
+- Use profiling tools for critical code paths
+- Benchmark alternative implementations
+- Favor readability over micro-optimizations
+- Document non-obvious optimizations with rationale
+
+### Test Performance
+- Adjust test workers based on project size
+- Use appropriate timeouts for test execution
+- Implement deadlock prevention for threading
+- Show progress tracking for long-running tests
+
+## Documentation Philosophy
+
+### Minimalist Approach
+- Focus documentation on "why" rather than "what"
+- Document APIs at module/class level, not individual functions
+- Use type hints to replace parameter documentation
+- Create examples for complex functionality
+- Avoid verbose explanations
+
+## Security & Best Practices
+
+### Security Standards
+- Never expose or log secrets and keys
+- Never commit secrets to repository
+- Use Bandit for security vulnerability scanning
+- Follow security best practices consistently
+
+### Code Review
+- All code must be reviewed before merging
+- Automate style checks to focus reviews on substance
+- Look for edge cases and error handling
+- Ensure tests adequately cover changes
+
+## Project-Specific Guidelines
+
+### For Crackerjack Core Development
+- Maintain the opinionated nature of the tool
+- Enforce single correct way to accomplish tasks
+- Remove unnecessary flexibility that leads to inconsistency
+- Value clarity over brevity
+
+### For Projects Using Crackerjack
+- Follow all Crackerjack style rules
+- Use Crackerjack for all development workflow tasks
+- Configure projects to pass `python -m crackerjack -x -t`
+- Adopt Crackerjack's opinionated choices consistently
+
+## AI Assistant Instructions
+
+When working on Crackerjack or projects using Crackerjack:
+1. Always check code against these rules before suggesting changes
+2. Run appropriate Crackerjack commands to validate changes
+3. Ensure all code follows the typing and style guidelines
+4. Use PDM for all tool execution
+5. Test changes thoroughly with appropriate timeouts
+6. Never compromise on code quality standards
+7. Maintain the opinionated, high-quality nature of the project

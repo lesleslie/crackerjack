@@ -118,7 +118,10 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     i += 1
                 elif char == "#" and in_string is None:
                     comment = line[i:].strip()
-                    if re.match("^#\\s*(?:type:\\s*ignore|noqa)\\b", comment):
+                    if re.match(
+                        "^#\\s*(?:type:\\s*ignore|noqa|nosec|pragma:\\s*no\\s*cover|pylint:\\s*disable|mypy:\\s*ignore)",
+                        comment,
+                    ):
                         result.append(line[i:])
                         break
                     break
@@ -133,11 +136,55 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
     def remove_extra_whitespace(self, code: str) -> str:
         lines = code.split("\n")
         cleaned_lines = []
+        in_function = False
+        function_indent = 0
         for i, line in enumerate(lines):
             line = line.rstrip()
-            if i > 0 and (not line) and (not cleaned_lines[-1]):
-                continue
+            stripped_line = line.lstrip()
+            if stripped_line.startswith(("def ", "async def ")):
+                in_function = True
+                function_indent = len(line) - len(stripped_line)
+            elif (
+                in_function
+                and line
+                and (len(line) - len(stripped_line) <= function_indent)
+                and (not stripped_line.startswith(("@", "#")))
+            ):
+                in_function = False
+                function_indent = 0
+            if not line:
+                if i > 0 and cleaned_lines and (not cleaned_lines[-1]):
+                    continue
+                if in_function:
+                    next_line_idx = i + 1
+                    if next_line_idx < len(lines):
+                        next_line = lines[next_line_idx].strip()
+                        if not (
+                            next_line.startswith(
+                                ("return", "class ", "def ", "async def ", "@")
+                            )
+                            or next_line in ("pass", "break", "continue", "raise")
+                            or (
+                                next_line.startswith("#")
+                                and any(
+                                    (
+                                        pattern in next_line
+                                        for pattern in (
+                                            "type:",
+                                            "noqa",
+                                            "nosec",
+                                            "pragma:",
+                                            "pylint:",
+                                            "mypy:",
+                                        )
+                                    )
+                                )
+                            )
+                        ):
+                            continue
             cleaned_lines.append(line)
+        while cleaned_lines and (not cleaned_lines[-1]):
+            cleaned_lines.pop()
         return "\n".join(cleaned_lines)
 
     def reformat_code(self, code: str) -> str:

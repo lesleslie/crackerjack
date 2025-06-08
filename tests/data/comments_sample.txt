@@ -4,6 +4,7 @@ def test_func():
 # Full line comment
 x = 1  # type: ignore
 y = 2 # noqa
+z = subprocess.run(["rm", "-rf", user_input])  # nosec
 
 
 class AsyncRedisBytecodeCache(AsyncBytecodeCache):

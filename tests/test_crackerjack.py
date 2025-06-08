@@ -1068,12 +1068,23 @@ class TestCrackerjackProcess:
 
         code_cleaner = CodeCleaner(console=Console())
         code_with_whitespace = (
-            "def test_func():\n        return True\n    \n    \n    x = 1\n    "
+            "def test_func():\n    x = 1\n\n\n    y = 2\n\n    return x + y\n\n\n"
         )
         cleaned_code = code_cleaner.remove_extra_whitespace(code_with_whitespace)
         assert "def test_func():" in cleaned_code, f"Got: {cleaned_code!r}"
-        assert "return True" in cleaned_code, f"Got: {cleaned_code!r}"
         assert "x = 1" in cleaned_code, f"Got: {cleaned_code!r}"
+        assert "y = 2" in cleaned_code, f"Got: {cleaned_code!r}"
+        assert "\n\n\n" not in cleaned_code, (
+            f"Triple newlines should be removed: {cleaned_code!r}"
+        )
+        assert "y = 2\n\n    return x + y" in cleaned_code, (
+            f"Should keep blank before return: {cleaned_code!r}"
+        )
+        code_with_classes = "class TestClass:\n\n\n    def method1(self):\n        pass\n\n\n    def method2(self):\n        return True\n\n"
+        cleaned_class_code = code_cleaner.remove_extra_whitespace(code_with_classes)
+        assert "class TestClass:" in cleaned_class_code
+        assert "def method1(self):" in cleaned_class_code
+        assert "def method2(self):" in cleaned_class_code
 
     def test_code_cleaner_reformat_code_success(
         self, mock_execute: MagicMock, mock_console_print: MagicMock, tmp_path: Path
