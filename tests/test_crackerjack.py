@@ -1062,6 +1062,30 @@ class TestCrackerjackProcess:
             f"Cleaned code does not match expected.\nExpected:\n{expected_cleaned}\nGot:\n{cleaned_code}"
         )
 
+    def test_code_cleaner_preserve_special_comments(self) -> None:
+        from rich.console import Console
+        from crackerjack.crackerjack import CodeCleaner
+
+        code_cleaner = CodeCleaner(console=Console())
+        test_code = "def test_func():\n    x = 1  # type: ignore\n    y = 2  # noqa\n    z = 3  # nosec\n    a = 4  # type: ignore[arg-type]\n    b = 5  # noqa: E501\n    c = 6  # nosec: B101\n    d = 7  # pragma: no cover\n    e = 8  # pylint: disable=line-too-long\n    f = 9  # mypy: ignore\n    g = 10  # regular comment that should be removed\n    h = 11 #type:ignore\n    i = 12#noqa\n    j = 13 #nosec\n    return x + y + z"
+        expected_code = "def test_func():\n    x = 1  # type: ignore\n    y = 2  # noqa\n    z = 3  # nosec\n    a = 4  # type: ignore[arg-type]\n    b = 5  # noqa: E501\n    c = 6  # nosec: B101\n    d = 7  # pragma: no cover\n    e = 8  # pylint: disable=line-too-long\n    f = 9  # mypy: ignore\n    g = 10\n    h = 11 #type:ignore\n    i = 12#noqa\n    j = 13 #nosec\n    return x + y + z"
+        cleaned_code = code_cleaner.remove_line_comments(test_code)
+        assert cleaned_code == expected_code, (
+            f"Special comments not preserved correctly.\nExpected:\n{expected_code}\nGot:\n{cleaned_code}"
+        )
+
+    def test_code_cleaner_special_comments_in_strings(self) -> None:
+        from rich.console import Console
+        from crackerjack.crackerjack import CodeCleaner
+
+        code_cleaner = CodeCleaner(console=Console())
+        test_code = 'def test_func():\n    s1 = "# type: ignore"  # should keep comment outside string but preserve string\n    s2 = \'# noqa\'  # type: ignore\n    s3 = "test"  # regular comment should be removed\n    return s1 + s2'
+        expected_code = 'def test_func():\n    s1 = "# type: ignore"\n    s2 = \'# noqa\'  # type: ignore\n    s3 = "test"\n    return s1 + s2'
+        cleaned_code = code_cleaner.remove_line_comments(test_code)
+        assert cleaned_code == expected_code, (
+            f"String handling with special comments failed.\nExpected:\n{expected_code}\nGot:\n{cleaned_code}"
+        )
+
     def test_code_cleaner_remove_extra_whitespace(self) -> None:
         from rich.console import Console
         from crackerjack.crackerjack import CodeCleaner
