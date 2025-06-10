@@ -2,6 +2,7 @@ import tempfile
 import typing as t
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 from rich.console import Console
 from crackerjack import create_crackerjack_runner
@@ -129,8 +130,6 @@ def test_process_with_test_and_skip_hooks_options(
     mock_run_tests.assert_called_once_with(options)
     mocks["project_manager"].run_pre_commit.assert_not_called()
     assert any(
-        (
-            "Skipping pre-commit hooks" in str(call)
-            for call in mocks["console"].print.call_args_list
-        )
+        "Skipping pre-commit hooks" in str(call)
+        for call in mocks["console"].print.call_args_list
     )

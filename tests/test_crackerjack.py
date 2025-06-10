@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 from rich.console import Console
 from crackerjack.crackerjack import (
@@ -229,12 +230,12 @@ class TestCrackerjackProcess:
             cj.process(options)
             mock_run_tests.assert_called_once_with(options)
         console_print_calls = [str(call) for call in mock_console_print.call_args_list]
-        assert any(("Running tests" in call for call in console_print_calls)), (
+        assert any("Running tests" in call for call in console_print_calls), (
             "Expected 'Running tests' message was not printed"
         )
-        assert any(
-            ("Skipping config updates" in call for call in console_print_calls)
-        ), "Expected 'Skipping config updates' message was not printed"
+        assert any("Skipping config updates" in call for call in console_print_calls), (
+            "Expected 'Skipping config updates' message was not printed"
+        )
 
     def test_process_with_skip_hooks_option(
         self,
@@ -264,11 +265,11 @@ class TestCrackerjackProcess:
             mock_run_pre_commit.assert_not_called()
             mock_run_tests.assert_called_once_with(options)
         console_print_calls = [str(call) for call in mock_console_print.call_args_list]
-        assert any(("Running tests" in call for call in console_print_calls)), (
+        assert any("Running tests" in call for call in console_print_calls), (
             "Expected 'Running tests' message was not printed"
         )
         assert any(
-            ("Skipping pre-commit hooks" in call for call in console_print_calls)
+            "Skipping pre-commit hooks" in call for call in console_print_calls
         ), "Expected 'Skipping pre-commit hooks' message was not printed"
 
     def test_process_with_bump_option(
@@ -296,9 +297,9 @@ class TestCrackerjackProcess:
                 cj.process(options)
                 mock_cj_execute.assert_any_call(["pdm", "bump", "minor"])
         console_print_calls = [str(call) for call in mock_console_print.call_args_list]
-        assert any(
-            ("Skipping config updates" in call for call in console_print_calls)
-        ), "Expected 'Skipping config updates' message was not printed"
+        assert any("Skipping config updates" in call for call in console_print_calls), (
+            "Expected 'Skipping config updates' message was not printed"
+        )
 
     def test_process_with_publish_option(
         self,
@@ -704,10 +705,8 @@ class TestCrackerjackProcess:
                         assert ["pdm", "build"] in actual_calls
                         assert ["pdm", "publish", "--no-build"] in actual_calls
                         assert any(
-                            (
-                                "build output" in str(call)
-                                for call in mock_print.mock_calls
-                            )
+                            "build output" in str(call)
+                            for call in mock_print.mock_calls
                         )
 
     def test_process_with_commit_input(
@@ -760,10 +759,8 @@ class TestCrackerjackProcess:
                 cj.process(options)
                 mock_update_configs.assert_called_once()
                 assert any(
-                    (
-                        "PDM installation failed" in str(call)
-                        for call in mock_console_print.mock_calls
-                    )
+                    "PDM installation failed" in str(call)
+                    for call in mock_console_print.mock_calls
                 )
 
     def test_process_with_crackerjack_project(

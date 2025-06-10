@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+
 import pytest
 from rich.console import Console
 from crackerjack.errors import ErrorCode, ExecutionError
@@ -123,31 +124,25 @@ class TestInteractiveRun:
             assert len(cli.workflow.tasks) == 3
             assert (
                 sum(
-                    (
-                        1
-                        for t in cli.workflow.tasks.values()
-                        if t.status == TaskStatus.SUCCESS
-                    )
+                    1
+                    for t in cli.workflow.tasks.values()
+                    if t.status == TaskStatus.SUCCESS
                 )
                 == 1
             )
             assert (
                 sum(
-                    (
-                        1
-                        for t in cli.workflow.tasks.values()
-                        if t.status == TaskStatus.FAILED
-                    )
+                    1
+                    for t in cli.workflow.tasks.values()
+                    if t.status == TaskStatus.FAILED
                 )
                 == 1
             )
             assert (
                 sum(
-                    (
-                        1
-                        for t in cli.workflow.tasks.values()
-                        if t.status == TaskStatus.SKIPPED
-                    )
+                    1
+                    for t in cli.workflow.tasks.values()
+                    if t.status == TaskStatus.SKIPPED
                 )
                 == 1
             )

@@ -2,6 +2,7 @@ import os
 import time
 import typing as t
 from pathlib import Path
+
 import pytest
 from pytest import Config, Item, Parser
 
@@ -42,7 +43,7 @@ def pytest_addoption(parser: Parser) -> None:
 
 def pytest_collection_modifyitems(config: Config, items: list[Item]) -> None:
     benchmark_mode = t.cast(bool, config.getoption("--benchmark"))
-    has_benchmark_tests = any((item.get_closest_marker("benchmark") for item in items))
+    has_benchmark_tests = any(item.get_closest_marker("benchmark") for item in items)
     if benchmark_mode or has_benchmark_tests:
         has_worker = hasattr(config, "workerinput")
         try:

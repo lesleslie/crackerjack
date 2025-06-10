@@ -1,4 +1,3 @@
-import ast
 import re
 import subprocess
 import typing as t
@@ -7,6 +6,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from subprocess import run as execute
 from tomllib import loads
+
 from pydantic import BaseModel
 from rich.console import Console
 from tomli_w import dumps
@@ -73,8 +73,8 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
     def clean_file(self, file_path: Path) -> None:
         try:
             code = file_path.read_text()
-            code = self.remove_docstrings(code)
             code = self.remove_line_comments(code)
+            code = self.remove_docstrings(code)
             code = self.remove_extra_whitespace(code)
             code = self.reformat_code(code)
             file_path.write_text(code)
@@ -83,18 +83,44 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             print(f"Error cleaning {file_path}: {e}")
 
     def remove_docstrings(self, code: str) -> str:
-        tree = ast.parse(code)
-        for node in ast.walk(tree):
-            if isinstance(
-                node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | ast.Module
-            ):
-                if ast.get_docstring(node):
-                    node.body = (
-                        node.body[1:]
-                        if isinstance(node.body[0], ast.Expr)
-                        else node.body
-                    )
-        return ast.unparse(tree)
+        lines = code.split("\n")
+        cleaned_lines = []
+        in_docstring = False
+        docstring_delimiter = None
+        waiting_for_docstring = False
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith(("def ", "class ", "async def ")):
+                waiting_for_docstring = True
+                cleaned_lines.append(line)
+                continue
+            if waiting_for_docstring and stripped:
+                if stripped.startswith(('"""', "'''", '"', "'")):
+                    if stripped.startswith(('"""', "'''")):
+                        docstring_delimiter = stripped[:3]
+                    else:
+                        docstring_delimiter = stripped[0]
+                    if stripped.endswith(docstring_delimiter) and len(stripped) > len(
+                        docstring_delimiter
+                    ):
+                        waiting_for_docstring = False
+                        continue
+                    else:
+                        in_docstring = True
+                        waiting_for_docstring = False
+                        continue
+                else:
+                    waiting_for_docstring = False
+            if in_docstring:
+                if docstring_delimiter and stripped.endswith(docstring_delimiter):
+                    in_docstring = False
+                    docstring_delimiter = None
+                    continue
+                else:
+                    continue
+            cleaned_lines.append(line)
+
+        return "\n".join(cleaned_lines)
 
     def remove_line_comments(self, code: str) -> str:
         lines = code.split("\n")
@@ -119,7 +145,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 elif char == "#" and in_string is None:
                     comment = line[i:].strip()
                     if re.match(
-                        "^#\\s*(?:type:\\s*ignore|noqa|nosec|pragma:\\s*no\\s*cover|pylint:\\s*disable|mypy:\\s*ignore)",
+                        r"^#\s*(?:type:\s*ignore(?:\[.*?\])?|noqa|nosec|pragma:\s*no\s*cover|pylint:\s*disable|mypy:\s*ignore)",
                         comment,
                     ):
                         result.append(line[i:])
@@ -167,16 +193,14 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                             or (
                                 next_line.startswith("#")
                                 and any(
-                                    (
-                                        pattern in next_line
-                                        for pattern in (
-                                            "type:",
-                                            "noqa",
-                                            "nosec",
-                                            "pragma:",
-                                            "pylint:",
-                                            "mypy:",
-                                        )
+                                    pattern in next_line
+                                    for pattern in (
+                                        "type:",
+                                        "noqa",
+                                        "nosec",
+                                        "pragma:",
+                                        "pylint:",
+                                        "mypy:",
                                     )
                                 )
                             )

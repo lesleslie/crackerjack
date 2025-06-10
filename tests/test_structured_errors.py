@@ -2,6 +2,7 @@ import io
 import typing as t
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 from rich.console import Console
 

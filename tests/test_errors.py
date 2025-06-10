@@ -1,5 +1,6 @@
 import typing as t
 from unittest.mock import MagicMock, patch
+
 import pytest
 from rich.console import Console
 from crackerjack.errors import (
@@ -125,19 +126,15 @@ class TestErrorCodes:
                 assert "CONFIG" in code.name
             elif 2000 <= value < 3000:
                 assert any(
-                    (
-                        prefix in code.name
-                        for prefix in ("COMMAND", "EXTERNAL", "PDM", "PRE_COMMIT")
-                    )
+                    prefix in code.name
+                    for prefix in ("COMMAND", "EXTERNAL", "PDM", "PRE_COMMIT")
                 )
             elif 3000 <= value < 4000:
                 assert "TEST" in code.name or "BENCHMARK" in code.name
             elif 4000 <= value < 5000:
                 assert any(
-                    (
-                        prefix in code.name
-                        for prefix in ("BUILD", "PUBLISH", "VERSION", "AUTHENTICATION")
-                    )
+                    prefix in code.name
+                    for prefix in ("BUILD", "PUBLISH", "VERSION", "AUTHENTICATION")
                 )
             elif 5000 <= value < 6000:
                 assert (
@@ -151,8 +148,6 @@ class TestErrorCodes:
                 assert "CODE" in code.name or "FORMATTING" in code.name
             elif 9000 <= value < 10000:
                 assert any(
-                    (
-                        prefix in code.name
-                        for prefix in ("UNKNOWN", "NOT_IMPLEMENTED", "UNEXPECTED")
-                    )
+                    prefix in code.name
+                    for prefix in ("UNKNOWN", "NOT_IMPLEMENTED", "UNEXPECTED")
                 )

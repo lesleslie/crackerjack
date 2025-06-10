@@ -2,6 +2,7 @@ import time
 import typing as t
 from enum import Enum, auto
 from pathlib import Path
+
 from rich.box import ROUNDED
 from rich.console import Console
 from rich.layout import Layout
@@ -18,6 +19,7 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
+
 from .errors import CrackerjackError, ErrorCode, handle_error
 
 
@@ -66,10 +68,8 @@ class Task:
 
     def can_run(self) -> bool:
         return all(
-            (
-                dep.status in (TaskStatus.SUCCESS, TaskStatus.SKIPPED)
-                for dep in self.dependencies
-            )
+            dep.status in (TaskStatus.SUCCESS, TaskStatus.SKIPPED)
+            for dep in self.dependencies
         )
 
     def __str__(self) -> str:
@@ -107,11 +107,8 @@ class WorkflowManager:
 
     def all_tasks_completed(self) -> bool:
         return all(
-            (
-                task.status
-                in (TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.SKIPPED)
-                for task in self.tasks.values()
-            )
+            task.status in (TaskStatus.SUCCESS, TaskStatus.FAILED, TaskStatus.SKIPPED)
+            for task in self.tasks.values()
         )
 
     def run_task(self, task: Task, func: t.Callable[[], t.Any]) -> bool:
@@ -257,7 +254,7 @@ class InteractiveCLI:
                 status = "[grey]⏸️ Pending[/grey]"
             duration = task.duration
             duration_text = f"{duration:.2f}s" if duration else "-"
-            deps = ", ".join((dep.name for dep in task.dependencies)) or "-"
+            deps = ", ".join(dep.name for dep in task.dependencies) or "-"
             table.add_row(task.name, status, duration_text, deps)
         return table
 
@@ -317,25 +314,19 @@ class InteractiveCLI:
                     layout["details"].update(self.show_task_status(next_task))
                 layout["tasks"].update(self.show_task_table())
                 successful = sum(
-                    (
-                        1
-                        for task in self.workflow.tasks.values()
-                        if task.status == TaskStatus.SUCCESS
-                    )
+                    1
+                    for task in self.workflow.tasks.values()
+                    if task.status == TaskStatus.SUCCESS
                 )
                 failed = sum(
-                    (
-                        1
-                        for task in self.workflow.tasks.values()
-                        if task.status == TaskStatus.FAILED
-                    )
+                    1
+                    for task in self.workflow.tasks.values()
+                    if task.status == TaskStatus.FAILED
                 )
                 skipped = sum(
-                    (
-                        1
-                        for task in self.workflow.tasks.values()
-                        if task.status == TaskStatus.SKIPPED
-                    )
+                    1
+                    for task in self.workflow.tasks.values()
+                    if task.status == TaskStatus.SKIPPED
                 )
                 summary = Panel(
                     f"Workflow completed!\n\n[green]✅ Successful tasks: {successful}[/green]\n[red]❌ Failed tasks: {failed}[/red]\n[blue]⏩ Skipped tasks: {skipped}[/blue]",

@@ -158,7 +158,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.20.13"
+version = "0.20.14"
 source = { editable = "." }
 dependencies = [
     { name = "autotyping" },
@@ -174,6 +174,7 @@ dependencies = [
     { name = "pytest-mock" },
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
+    { name = "pyyaml" },
     { name = "rich" },
     { name = "tomli-w" },
     { name = "typer" },
@@ -195,6 +196,7 @@ requires-dist = [
     { name = "pytest-mock", specifier = ">=3.14.1" },
     { name = "pytest-timeout", specifier = ">=2.4" },
     { name = "pytest-xdist", specifier = ">=3.7" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "rich", specifier = ">=14" },
     { name = "tomli-w", specifier = ">=1.2" },
     { name = "typer", specifier = ">=0.16" },
