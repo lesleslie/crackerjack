@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.20.15"
+version = "0.20.16"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
