@@ -12,5 +12,6 @@
 /*.pyc
 /scratch/
 /.zencoder/
+/.benchmarks/
 
 **/.claude/settings.local.json

@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.20.17"
+version = "0.20.18"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -50,7 +50,7 @@ dependencies = [
     "pytest>=8.4",
     "pytest-asyncio>=1",
     "pytest-benchmark>=5.1",
-    "pytest-cov>=6.1.1",
+    "pytest-cov>=6.2",
     "pytest-mock>=3.14.1",
     "pytest-timeout>=2.4",
     "pytest-xdist>=3.7",

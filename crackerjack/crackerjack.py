@@ -560,7 +560,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         )
         if options.benchmark or options.benchmark_regression:
             if options.benchmark:
-                test.append("--benchmark")
+                test.extend(["--benchmark", "--benchmark-autosave"])
             if options.benchmark_regression:
                 test.extend(
                     [
