@@ -542,11 +542,11 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             test_timeout = options.test_timeout
         else:
             test_timeout = (
-                300
+                360
                 if project_size == "large"
-                else 120
+                else 240
                 if project_size == "medium"
-                else 60
+                else 120
             )
         test.extend(
             [
