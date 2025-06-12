@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.20.17"
+version = "0.20.18"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -136,6 +136,8 @@ addopts = "--cov=crackerjack --cov-report=term --cov-fail-under=42"
 disable_gc = true
 warmup = false
 warmup_iterations = 0
+min_rounds = 1
+max_time = 5.0
 
 [tool.coverage.run]
 branch = false
