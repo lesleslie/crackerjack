@@ -535,20 +535,6 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
     config_manager: ConfigManager
     dry_run: bool = False
 
-    def run_interactive(self, hook: str) -> None:
-        success: bool = False
-        while not success:
-            fail = self.execute_command(
-                ["pre-commit", "run", hook.lower(), "--all-files"]
-            )
-            if fail.returncode > 0:
-                retry = input(f"\n\n{hook.title()} failed. Retry? (y/N): ")
-                self.console.print()
-                if retry.strip().lower() == "y":
-                    continue
-                raise SystemExit(1)
-            success = True
-
     def update_pkg_configs(self) -> None:
         self.config_manager.copy_configs()
         installed_pkgs = self.execute_command(
@@ -736,6 +722,17 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _bump_version(self, options: OptionsProtocol) -> None:
         for option in (options.publish, options.bump):
             if option:
+                if str(option) in ("minor", "major"):
+                    from rich.prompt import Confirm
+
+                    if not Confirm.ask(
+                        f"Are you sure you want to bump the {option} version?",
+                        default=False,
+                    ):
+                        self.console.print(
+                            f"[yellow]Skipping {option} version bump[/yellow]"
+                        )
+                        return
                 self.execute_command(["pdm", "bump", option])
                 break
 

@@ -287,19 +287,110 @@ class TestCrackerjackProcess:
         mock_project_manager_execute.return_value.returncode = 0
         mock_config_manager_execute.return_value.returncode = 0
         options = options_factory(bump="minor", no_config_updates=True)
-        with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
-            mock_cj_execute.return_value = MagicMock(returncode=0, stdout="Success")
-            with patch.object(Crackerjack, "_update_project") as mock_update_project:
-                mock_update_project.side_effect = lambda opts: mock_console_print(
-                    "Skipping config updates."
-                )
-                cj = Crackerjack(dry_run=True)
-                cj.process(options)
-                mock_cj_execute.assert_any_call(["pdm", "bump", "minor"])
-        console_print_calls = [str(call) for call in mock_console_print.call_args_list]
+        with patch("rich.prompt.Confirm.ask", return_value=True):
+            with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
+                mock_cj_execute.return_value = MagicMock(returncode=0, stdout="Success")
+                with patch.object(
+                    Crackerjack, "_update_project"
+                ) as mock_update_project:
+                    mock_update_project.side_effect = lambda opts: mock_console_print(
+                        "Skipping config updates."
+                    )
+                    cj = Crackerjack(dry_run=True)
+                    cj.process(options)
+                    mock_cj_execute.assert_any_call(["pdm", "bump", "minor"])
+            console_print_calls = [
+                str(call) for call in mock_console_print.call_args_list
+            ]
         assert any("Skipping config updates" in call for call in console_print_calls), (
             "Expected 'Skipping config updates' message was not printed"
         )
+
+    def test_bump_version_confirmation_minor_accepted(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        options = options_factory(bump="minor", no_config_updates=True)
+        cj = Crackerjack(dry_run=True)
+
+        with patch("rich.prompt.Confirm.ask", return_value=True) as mock_confirm:
+            with patch.object(Crackerjack, "execute_command") as mock_exec:
+                mock_exec.return_value = MagicMock(returncode=0)
+                cj._bump_version(options)
+
+                mock_confirm.assert_called_once_with(
+                    "Are you sure you want to bump the minor version?", default=False
+                )
+                mock_exec.assert_called_once_with(["pdm", "bump", "minor"])
+
+    def test_bump_version_confirmation_minor_declined(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        options = options_factory(bump="minor", no_config_updates=True)
+        cj = Crackerjack(dry_run=True)
+
+        with patch("rich.prompt.Confirm.ask", return_value=False) as mock_confirm:
+            with patch.object(Crackerjack, "execute_command") as mock_exec:
+                mock_exec.return_value = MagicMock(returncode=0)
+                cj._bump_version(options)
+
+                mock_confirm.assert_called_once_with(
+                    "Are you sure you want to bump the minor version?", default=False
+                )
+                mock_exec.assert_not_called()
+
+    def test_bump_version_confirmation_major(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        options = options_factory(bump="major", no_config_updates=True)
+        cj = Crackerjack(dry_run=True)
+
+        with patch("rich.prompt.Confirm.ask", return_value=True) as mock_confirm:
+            with patch.object(Crackerjack, "execute_command") as mock_exec:
+                mock_exec.return_value = MagicMock(returncode=0)
+                cj._bump_version(options)
+
+                mock_confirm.assert_called_once_with(
+                    "Are you sure you want to bump the major version?", default=False
+                )
+                mock_exec.assert_called_once_with(["pdm", "bump", "major"])
+
+    def test_bump_version_no_confirmation_micro(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        options = options_factory(bump="micro", no_config_updates=True)
+        cj = Crackerjack(dry_run=True)
+
+        with patch("rich.prompt.Confirm.ask") as mock_confirm:
+            with patch.object(Crackerjack, "execute_command") as mock_exec:
+                mock_exec.return_value = MagicMock(returncode=0)
+                cj._bump_version(options)
+
+                mock_confirm.assert_not_called()
+                mock_exec.assert_called_once_with(["pdm", "bump", "micro"])
 
     def test_process_with_publish_option(
         self,
@@ -793,118 +884,6 @@ class TestCrackerjackProcess:
         with patch.object(Crackerjack, "_update_project"):
             cj = Crackerjack(dry_run=True)
             cj.process(options)
-
-    def test_project_manager_run_interactive_success(
-        self,
-        mock_execute: MagicMock,
-        mock_console_print: MagicMock,
-        tmp_path: Path,
-        tmp_path_package: Path,
-        create_package_dir: None,
-    ) -> None:
-        with patch.object(ProjectManager, "execute_command") as mock_pm_execute:
-            mock_pm_execute.return_value = MagicMock(returncode=0, stdout="Success")
-            code_cleaner = CodeCleaner(console=Console())
-            config_manager = ConfigManager(
-                our_path=Path(),
-                pkg_path=Path(),
-                pkg_name="test",
-                console=Console(),
-                python_version="3.9",
-                dry_run=True,
-            )
-            pm = ProjectManager(
-                our_path=Path(),
-                pkg_path=Path(),
-                pkg_dir=Path(),
-                pkg_name="test",
-                console=Console(),
-                code_cleaner=code_cleaner,
-                config_manager=config_manager,
-                dry_run=True,
-            )
-            pm.run_interactive("black")
-            mock_pm_execute.assert_called_once_with(
-                ["pre-commit", "run", "black", "--all-files"]
-            )
-
-    def test_project_manager_run_interactive_failure_retry(
-        self,
-        mock_execute: MagicMock,
-        mock_console_print: MagicMock,
-        tmp_path: Path,
-        tmp_path_package: Path,
-        create_package_dir: None,
-    ) -> None:
-        with patch.object(ProjectManager, "execute_command") as mock_pm_execute:
-            mock_pm_execute.side_effect = [
-                MagicMock(returncode=1, stdout="", stderr="Failed"),
-                MagicMock(returncode=0, stdout="Success"),
-            ]
-            with patch("builtins.input", return_value="y"):
-                code_cleaner = CodeCleaner(console=Console())
-                config_manager = ConfigManager(
-                    our_path=Path(),
-                    pkg_path=Path(),
-                    pkg_name="test",
-                    console=Console(),
-                    python_version="3.9",
-                    dry_run=True,
-                )
-                pm = ProjectManager(
-                    our_path=Path(),
-                    pkg_path=Path(),
-                    pkg_dir=Path(),
-                    pkg_name="test",
-                    console=Console(),
-                    code_cleaner=code_cleaner,
-                    config_manager=config_manager,
-                    dry_run=True,
-                )
-                pm.run_interactive("black")
-                assert mock_pm_execute.call_count == 2
-                mock_pm_execute.assert_called_with(
-                    ["pre-commit", "run", "black", "--all-files"]
-                )
-
-    def test_project_manager_run_interactive_failure_exit(
-        self,
-        mock_execute: MagicMock,
-        mock_console_print: MagicMock,
-        tmp_path: Path,
-        tmp_path_package: Path,
-        create_package_dir: None,
-    ) -> None:
-        with patch.object(ProjectManager, "execute_command") as mock_pm_execute:
-            mock_pm_execute.return_value = MagicMock(
-                returncode=1, stdout="", stderr="Failed"
-            )
-            with patch("builtins.input", return_value="n"):
-                code_cleaner = CodeCleaner(console=Console())
-                config_manager = ConfigManager(
-                    our_path=Path(),
-                    pkg_path=Path(),
-                    pkg_name="test",
-                    console=Console(),
-                    python_version="3.9",
-                    dry_run=True,
-                )
-                pm = ProjectManager(
-                    our_path=Path(),
-                    pkg_path=Path(),
-                    pkg_dir=Path(),
-                    pkg_name="test",
-                    console=Console(),
-                    code_cleaner=code_cleaner,
-                    config_manager=config_manager,
-                    dry_run=True,
-                )
-                with pytest.raises(SystemExit) as excinfo:
-                    pm.run_interactive("black")
-                assert excinfo.value.code == 1
-                mock_pm_execute.assert_called_once_with(
-                    ["pre-commit", "run", "black", "--all-files"]
-                )
 
     def test_config_manager_swap_package_name(
         self, mock_execute: MagicMock, mock_console_print: MagicMock, tmp_path: Path

@@ -88,8 +88,9 @@ def test_process_with_all_option(
     crackerjack, mocks = mock_crackerjack
     options = MockOptions(all="minor")
     with patch.object(Crackerjack, "_run_tests"):
-        with patch("builtins.input", return_value="Test commit message"):
-            crackerjack.process(options)
+        with patch("rich.prompt.Confirm.ask", return_value=True):
+            with patch("builtins.input", return_value="Test commit message"):
+                crackerjack.process(options)
     assert options.clean is True
     assert options.test is True
     assert options.publish == "minor"
