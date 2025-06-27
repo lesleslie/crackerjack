@@ -633,7 +633,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             )
             if result.returncode == 0:
                 self.console.print("PDM installed: ✅\n")
-                self.execute_command(["pdm", "lock"])
+                self.execute_command(["pdm", "sync"])
                 self.console.print("Lock file updated: ✅\n")
             else:
                 self.console.print(
