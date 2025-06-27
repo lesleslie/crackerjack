@@ -392,6 +392,71 @@ class TestCrackerjackProcess:
                 mock_confirm.assert_not_called()
                 mock_exec.assert_called_once_with(["pdm", "bump", "micro"])
 
+    def test_prepare_pytest_command_ai_agent_mode(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        options = options_factory(test=True, ai_agent=True, no_config_updates=True)
+        pytest_command = (_cj := Crackerjack(dry_run=True))._prepare_pytest_command(
+            options
+        )
+
+        assert "--junitxml=test-results.xml" in pytest_command
+        assert "--cov-report=json:coverage.json" in pytest_command
+        assert "--quiet" in pytest_command
+        assert "--tb=short" in pytest_command
+        assert "--no-header" in pytest_command
+
+    def test_prepare_pytest_command_ai_agent_with_benchmark(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        options = options_factory(
+            test=True, ai_agent=True, benchmark=True, no_config_updates=True
+        )
+        pytest_command = (_cj := Crackerjack(dry_run=True))._prepare_pytest_command(
+            options
+        )
+
+        assert "--junitxml=test-results.xml" in pytest_command
+        assert "--cov-report=json:coverage.json" in pytest_command
+        assert "--benchmark-json=benchmark.json" in pytest_command
+        assert "--benchmark" in pytest_command
+        assert "--benchmark-autosave" in pytest_command
+
+    def test_prepare_pytest_command_normal_mode(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        options = options_factory(test=True, ai_agent=False, no_config_updates=True)
+        pytest_command = (_cj := Crackerjack(dry_run=True))._prepare_pytest_command(
+            options
+        )
+
+        assert "--junitxml=test-results.xml" not in pytest_command
+        assert "--cov-report=json:coverage.json" not in pytest_command
+        assert "--benchmark-json=benchmark.json" not in pytest_command
+        assert "--quiet" not in pytest_command
+
+        assert "--capture=fd" in pytest_command
+        assert "--disable-warnings" in pytest_command
+        assert "--durations=0" in pytest_command
+
     def test_process_with_publish_option(
         self,
         mock_execute: MagicMock,

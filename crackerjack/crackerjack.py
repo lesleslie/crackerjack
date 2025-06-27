@@ -657,19 +657,30 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     self.console.print("\nCleaning tests directory...\n")
                     self.code_cleaner.clean_files(tests_dir)
 
-    def _prepare_pytest_command(self, options: OptionsProtocol) -> list[str]:
-        test = ["pytest"]
-        project_size = self._detect_project_size()
+    def _get_test_timeout(self, options: OptionsProtocol, project_size: str) -> int:
         if options.test_timeout > 0:
-            test_timeout = options.test_timeout
-        else:
-            test_timeout = (
-                360
-                if project_size == "large"
-                else 240
-                if project_size == "medium"
-                else 120
-            )
+            return options.test_timeout
+        return (
+            360 if project_size == "large" else 240 if project_size == "medium" else 120
+        )
+
+    def _add_ai_agent_flags(
+        self, test: list[str], options: OptionsProtocol, test_timeout: int
+    ) -> None:
+        test.extend(
+            [
+                "--junitxml=test-results.xml",
+                "--cov-report=json:coverage.json",
+                "--tb=short",
+                "--no-header",
+                "--quiet",
+                f"--timeout={test_timeout}",
+            ]
+        )
+        if options.benchmark or options.benchmark_regression:
+            test.append("--benchmark-json=benchmark.json")
+
+    def _add_standard_flags(self, test: list[str], test_timeout: int) -> None:
         test.extend(
             [
                 "--capture=fd",
@@ -680,17 +691,22 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 f"--timeout={test_timeout}",
             ]
         )
-        if options.benchmark or options.benchmark_regression:
-            if options.benchmark:
-                test.extend(["--benchmark", "--benchmark-autosave"])
-            if options.benchmark_regression:
-                test.extend(
-                    [
-                        "--benchmark-regression",
-                        f"--benchmark-regression-threshold={options.benchmark_regression_threshold}",
-                    ]
-                )
-        elif options.test_workers > 0:
+
+    def _add_benchmark_flags(self, test: list[str], options: OptionsProtocol) -> None:
+        if options.benchmark:
+            test.extend(["--benchmark", "--benchmark-autosave"])
+        if options.benchmark_regression:
+            test.extend(
+                [
+                    "--benchmark-regression",
+                    f"--benchmark-regression-threshold={options.benchmark_regression_threshold}",
+                ]
+            )
+
+    def _add_worker_flags(
+        self, test: list[str], options: OptionsProtocol, project_size: str
+    ) -> None:
+        if options.test_workers > 0:
             if options.test_workers == 1:
                 test.append("-vs")
             else:
@@ -701,6 +717,20 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             test.extend(["-xvs", "-n", "auto"])
         else:
             test.append("-xvs")
+
+    def _prepare_pytest_command(self, options: OptionsProtocol) -> list[str]:
+        test = ["pytest"]
+        project_size = self._detect_project_size()
+        test_timeout = self._get_test_timeout(options, project_size)
+        if getattr(options, "ai_agent", False):
+            self._add_ai_agent_flags(test, options, test_timeout)
+        else:
+            self._add_standard_flags(test, test_timeout)
+        if options.benchmark or options.benchmark_regression:
+            self._add_benchmark_flags(test, options)
+        else:
+            self._add_worker_flags(test, options, project_size)
+
         return test
 
     def _detect_project_size(self) -> str:
@@ -717,22 +747,39 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 return "medium"
             else:
                 return "small"
-        except Exception:
+        except (OSError, PermissionError):
             return "medium"
 
+    def _print_ai_agent_files(self, options: t.Any) -> None:
+        if getattr(options, "ai_agent", False):
+            self.console.print("📄 Structured test results: test-results.xml")
+            self.console.print("📊 Coverage report: coverage.json")
+            if options.benchmark or options.benchmark_regression:
+                self.console.print("⏱️  Benchmark results: benchmark.json")
+
+    def _handle_test_failure(self, result: t.Any, options: t.Any) -> None:
+        if result.stderr:
+            self.console.print(result.stderr)
+        self.console.print("\n\n❌ Tests failed. Please fix errors.\n")
+        self._print_ai_agent_files(options)
+        raise SystemExit(1)
+
+    def _handle_test_success(self, options: t.Any) -> None:
+        self.console.print("\n\n✅ Tests passed successfully!\n")
+        self._print_ai_agent_files(options)
+
     def _run_tests(self, options: t.Any) -> None:
-        if options.test:
-            self.console.print("\n\nRunning tests...\n")
-            test_command = self._prepare_pytest_command(options)
-            result = self.execute_command(test_command, capture_output=True, text=True)
-            if result.stdout:
-                self.console.print(result.stdout)
-            if result.returncode > 0:
-                if result.stderr:
-                    self.console.print(result.stderr)
-                self.console.print("\n\n❌ Tests failed. Please fix errors.\n")
-                raise SystemExit(1)
-            self.console.print("\n\n✅ Tests passed successfully!\n")
+        if not options.test:
+            return
+        self.console.print("\n\nRunning tests...\n")
+        test_command = self._prepare_pytest_command(options)
+        result = self.execute_command(test_command, capture_output=True, text=True)
+        if result.stdout:
+            self.console.print(result.stdout)
+        if result.returncode > 0:
+            self._handle_test_failure(result, options)
+        else:
+            self._handle_test_success(options)
 
     def _bump_version(self, options: OptionsProtocol) -> None:
         for option in (options.publish, options.bump):
