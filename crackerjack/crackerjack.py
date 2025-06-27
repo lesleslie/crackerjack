@@ -12,7 +12,12 @@ from rich.console import Console
 from tomli_w import dumps
 from crackerjack.errors import ErrorCode, ExecutionError
 
-config_files = (".gitignore", ".pre-commit-config.yaml", ".libcst.codemod.yaml")
+config_files = (
+    ".gitignore",
+    ".pre-commit-config.yaml",
+    ".pre-commit-config-ai.yaml",
+    ".libcst.codemod.yaml",
+)
 default_python_version = "3.13"
 
 
@@ -534,6 +539,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
     code_cleaner: CodeCleaner
     config_manager: ConfigManager
     dry_run: bool = False
+    options: t.Any = None
 
     def update_pkg_configs(self) -> None:
         self.config_manager.copy_configs()
@@ -548,15 +554,21 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             self.execute_command(["git", "branch", "-m", "main"])
             self.execute_command(["git", "add", "pyproject.toml"])
             self.execute_command(["git", "add", "pdm.lock"])
-            self.execute_command(["pre-commit", "install"])
+            install_cmd = ["pre-commit", "install"]
+            if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
+                install_cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
+            self.execute_command(install_cmd)
             self.execute_command(["git", "config", "advice.addIgnoredFile", "false"])
         self.config_manager.update_pyproject_configs()
 
     def run_pre_commit(self) -> None:
         self.console.print("\nRunning pre-commit hooks...\n")
-        check_all = self.execute_command(["pre-commit", "run", "--all-files"])
+        cmd = ["pre-commit", "run", "--all-files"]
+        if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
+            cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
+        check_all = self.execute_command(cmd)
         if check_all.returncode > 0:
-            check_all = self.execute_command(["pre-commit", "run", "--all-files"])
+            check_all = self.execute_command(cmd)
             if check_all.returncode > 0:
                 self.console.print("\n\nPre-commit failed. Please fix errors.\n")
                 raise SystemExit(1)
@@ -630,7 +642,10 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
     def _update_precommit(self, options: t.Any) -> None:
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
-            self.execute_command(["pre-commit", "autoupdate"])
+            update_cmd = ["pre-commit", "autoupdate"]
+            if options.ai_agent:
+                update_cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
+            self.execute_command(update_cmd)
 
     def _clean_project(self, options: t.Any) -> None:
         if options.clean:
@@ -774,6 +789,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self._update_project(options)
         self._update_precommit(options)
         self._clean_project(options)
+        self.project_manager.options = options
         if not options.skip_hooks:
             self.project_manager.run_pre_commit()
         else:

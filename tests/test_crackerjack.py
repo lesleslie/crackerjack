@@ -852,6 +852,75 @@ class TestCrackerjackProcess:
                     cj.process(options)
                     mock_cj_execute.assert_any_call(["pre-commit", "autoupdate"])
 
+    def test_update_precommit_ai_agent(
+        self,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        crackerjack_path = tmp_path / "crackerjack"
+        crackerjack_path.mkdir(exist_ok=True)
+        options = options_factory(update_precommit=True, ai_agent=True)
+        with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
+            mock_cj_execute.return_value = MagicMock(returncode=0, stdout="Success")
+            cj = Crackerjack(pkg_path=crackerjack_path, dry_run=True)
+            with patch.object(cj, "_setup_package"):
+                with patch.object(cj, "_update_project"):
+                    cj.process(options)
+                    mock_cj_execute.assert_any_call(
+                        ["pre-commit", "autoupdate", "-c", ".pre-commit-config-ai.yaml"]
+                    )
+
+    def test_run_pre_commit_ai_agent(
+        self,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        mock_project = MagicMock()
+
+        options = options_factory(ai_agent=True)
+        mock_project.options = options
+
+        mock_project.console = MagicMock()
+
+        mock_project.execute_command.return_value = MagicMock(returncode=0)
+
+        ProjectManager.run_pre_commit(mock_project)
+
+        mock_project.execute_command.assert_called_with(
+            ["pre-commit", "run", "--all-files", "-c", ".pre-commit-config-ai.yaml"]
+        )
+
+    def test_pre_commit_install_ai_agent(
+        self,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        mock_project = MagicMock(spec=ProjectManager)
+
+        options = options_factory(ai_agent=True)
+        mock_project.options = options
+
+        mock_project.console = MagicMock()
+
+        mock_project.config_manager = MagicMock()
+
+        with patch.object(mock_project, "execute_command") as mock_execute:
+            mock_execute.return_value = MagicMock(
+                returncode=0,
+                stdout="package1\npackage2\n",
+            )
+
+            original_method = ProjectManager.update_pkg_configs
+
+            original_method(mock_project)
+
+            mock_execute.assert_any_call(
+                ["pre-commit", "install", "-c", ".pre-commit-config-ai.yaml"]
+            )
+
     def test_process_with_precommit_failure(
         self,
         mock_execute: MagicMock,
