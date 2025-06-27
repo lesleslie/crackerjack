@@ -372,27 +372,24 @@ class TestCrackerjackProcess:
         with patch.object(cj, "_setup_package"):
             with patch.object(cj, "_update_project"):
                 with patch.object(cj, "_update_precommit"):
-                    with patch.object(cj, "_run_interactive_hooks"):
-                        with patch.object(cj, "_clean_project") as mock_clean:
-                            with patch.object(cj, "_run_tests") as mock_tests:
-                                with patch.object(cj, "_bump_version"):
+                    with patch.object(cj, "_clean_project") as mock_clean:
+                        with patch.object(cj, "_run_tests") as mock_tests:
+                            with patch.object(cj, "_bump_version"):
+                                with patch.object(
+                                    cj, "_publish_project"
+                                ) as mock_publish:
                                     with patch.object(
-                                        cj, "_publish_project"
-                                    ) as mock_publish:
-                                        with patch.object(
-                                            cj, "_commit_and_push"
-                                        ) as mock_commit:
-                                            cj.process(options)
-                                            assert options.clean
-                                            assert options.test
-                                            assert options.publish == options.all
-                                            assert options.commit
-                                            mock_clean.assert_called_once_with(options)
-                                            mock_tests.assert_called_once_with(options)
-                                            mock_publish.assert_called_once_with(
-                                                options
-                                            )
-                                            mock_commit.assert_called_once_with(options)
+                                        cj, "_commit_and_push"
+                                    ) as mock_commit:
+                                        cj.process(options)
+                                        assert options.clean
+                                        assert options.test
+                                        assert options.publish == options.all
+                                        assert options.commit
+                                        mock_clean.assert_called_once_with(options)
+                                        mock_tests.assert_called_once_with(options)
+                                        mock_publish.assert_called_once_with(options)
+                                        mock_commit.assert_called_once_with(options)
 
     def test_process_with_all_option_invalid_value(
         self,
@@ -435,36 +432,27 @@ class TestCrackerjackProcess:
         with patch.object(cj, "_setup_package"):
             with patch.object(cj, "_update_project"):
                 with patch.object(cj, "_update_precommit"):
-                    with patch.object(cj, "_run_interactive_hooks"):
-                        with patch.object(cj, "_clean_project") as mock_clean:
-                            with patch.object(cj, "project_manager"):
-                                with patch.object(cj, "_run_tests") as mock_tests:
-                                    with patch.object(cj, "_bump_version"):
+                    with patch.object(cj, "_clean_project") as mock_clean:
+                        with patch.object(cj, "project_manager"):
+                            with patch.object(cj, "_run_tests") as mock_tests:
+                                with patch.object(cj, "_bump_version"):
+                                    with patch.object(
+                                        cj, "_publish_project"
+                                    ) as mock_publish:
                                         with patch.object(
-                                            cj, "_publish_project"
-                                        ) as mock_publish:
-                                            with patch.object(
-                                                cj, "_commit_and_push"
-                                            ) as mock_commit:
-                                                cj.process(options)
-                                                assert options.clean
-                                                assert options.test
-                                                assert (
-                                                    options.publish == BumpOption.major
-                                                )
-                                                assert options.commit
-                                                mock_clean.assert_called_once_with(
-                                                    options
-                                                )
-                                                mock_tests.assert_called_once_with(
-                                                    options
-                                                )
-                                                mock_publish.assert_called_once_with(
-                                                    options
-                                                )
-                                                mock_commit.assert_called_once_with(
-                                                    options
-                                                )
+                                            cj, "_commit_and_push"
+                                        ) as mock_commit:
+                                            cj.process(options)
+                                            assert options.clean
+                                            assert options.test
+                                            assert options.publish == BumpOption.major
+                                            assert options.commit
+                                            mock_clean.assert_called_once_with(options)
+                                            mock_tests.assert_called_once_with(options)
+                                            mock_publish.assert_called_once_with(
+                                                options
+                                            )
+                                            mock_commit.assert_called_once_with(options)
 
     def test_process_with_all_option_bump_conflict(
         self,
@@ -480,21 +468,16 @@ class TestCrackerjackProcess:
         with patch.object(cj, "_setup_package"):
             with patch.object(cj, "_update_project"):
                 with patch.object(cj, "_update_precommit"):
-                    with patch.object(cj, "_run_interactive_hooks"):
-                        with patch.object(cj, "_clean_project"):
-                            with patch.object(cj, "project_manager"):
-                                with patch.object(cj, "_run_tests"):
-                                    with patch.object(cj, "_bump_version") as mock_bump:
-                                        with patch.object(cj, "_publish_project"):
-                                            with patch.object(cj, "_commit_and_push"):
-                                                cj.process(options)
-                                                assert options.bump == BumpOption.minor
-                                                assert (
-                                                    options.publish == BumpOption.major
-                                                )
-                                                mock_bump.assert_called_once_with(
-                                                    options
-                                                )
+                    with patch.object(cj, "_clean_project"):
+                        with patch.object(cj, "project_manager"):
+                            with patch.object(cj, "_run_tests"):
+                                with patch.object(cj, "_bump_version") as mock_bump:
+                                    with patch.object(cj, "_publish_project"):
+                                        with patch.object(cj, "_commit_and_push"):
+                                            cj.process(options)
+                                            assert options.bump == BumpOption.minor
+                                            assert options.publish == BumpOption.major
+                                            mock_bump.assert_called_once_with(options)
 
     def test_process_implementation_of_all_option(
         self,
@@ -514,20 +497,17 @@ class TestCrackerjackProcess:
         with patch.object(cj, "_setup_package"):
             with patch.object(cj, "_update_project"):
                 with patch.object(cj, "_update_precommit"):
-                    with patch.object(cj, "_run_interactive_hooks"):
-                        with patch.object(cj, "_clean_project"):
-                            with patch.object(cj, "project_manager"):
-                                with patch.object(cj, "_run_tests"):
-                                    with patch.object(cj, "_bump_version"):
-                                        with patch.object(cj, "_publish_project"):
-                                            with patch.object(cj, "_commit_and_push"):
-                                                cj.process(options)
-                                                assert options.clean is True
-                                                assert options.test is True
-                                                assert (
-                                                    options.publish == BumpOption.micro
-                                                )
-                                                assert options.commit is True
+                    with patch.object(cj, "_clean_project"):
+                        with patch.object(cj, "project_manager"):
+                            with patch.object(cj, "_run_tests"):
+                                with patch.object(cj, "_bump_version"):
+                                    with patch.object(cj, "_publish_project"):
+                                        with patch.object(cj, "_commit_and_push"):
+                                            cj.process(options)
+                                            assert options.clean is True
+                                            assert options.test is True
+                                            assert options.publish == BumpOption.micro
+                                            assert options.commit is True
 
     def test_process_with_failed_tests(
         self,
@@ -800,7 +780,7 @@ class TestCrackerjackProcess:
                 assert excinfo.value.code == 1
                 mock_run_precommit.assert_called_once()
 
-    def test_process_with_interactive_hooks(
+    def test_process_with_interactive_option(
         self,
         mock_execute: MagicMock,
         mock_console_print: MagicMock,
@@ -810,31 +790,9 @@ class TestCrackerjackProcess:
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
         options = options_factory(interactive=True, no_config_updates=True)
-        with patch.object(Crackerjack, "_run_interactive_hooks") as mock_run_hooks:
-            with patch.object(Crackerjack, "_update_project"):
-                cj = Crackerjack(dry_run=True)
-                cj.process(options)
-                mock_run_hooks.assert_called_once_with(options)
-
-    def test_run_interactive_hooks(
-        self,
-        mock_execute: MagicMock,
-        mock_console_print: MagicMock,
-        tmp_path: Path,
-        tmp_path_package: Path,
-        create_package_dir: None,
-    ) -> None:
-        with patch("crackerjack.crackerjack.interactive_hooks", ["black", "isort"]):
-            with patch.object(
-                ProjectManager, "run_interactive"
-            ) as mock_run_interactive:
-                cj = Crackerjack(dry_run=True)
-                options = MagicMock()
-                options.interactive = True
-                cj._run_interactive_hooks(options)
-                assert mock_run_interactive.call_count == 2
-                mock_run_interactive.assert_any_call("black")
-                mock_run_interactive.assert_any_call("isort")
+        with patch.object(Crackerjack, "_update_project"):
+            cj = Crackerjack(dry_run=True)
+            cj.process(options)
 
     def test_project_manager_run_interactive_success(
         self,

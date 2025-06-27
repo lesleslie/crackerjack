@@ -260,11 +260,26 @@ class InteractiveCLI:
 
     def run_interactive(self) -> None:
         self.console.clear()
+        layout = self._setup_interactive_layout()
+        progress_tracker = self._create_progress_tracker()
+        with Live(layout, refresh_per_second=4, screen=True) as live:
+            try:
+                self._execute_workflow_loop(layout, progress_tracker, live)
+                self._display_final_summary(layout)
+            except KeyboardInterrupt:
+                self._handle_user_interruption(layout)
+        self.console.print("\nWorkflow Status:")
+        self.workflow.display_task_tree()
+
+    def _setup_interactive_layout(self) -> Layout:
         layout = self.setup_layout()
         layout["header"].update(
             Panel("Crackerjack Interactive Mode", style="bold cyan", box=ROUNDED)
         )
         layout["footer"].update(Panel("Press Ctrl+C to exit", style="dim", box=ROUNDED))
+        return layout
+
+    def _create_progress_tracker(self) -> dict[str, t.Any]:
         progress = Progress(
             SpinnerColumn(),
             TextColumn("[bold blue]{task.description}"),
@@ -274,72 +289,110 @@ class InteractiveCLI:
         )
         total_tasks = len(self.workflow.tasks)
         progress_task = progress.add_task("Running workflow", total=total_tasks)
-        completed_tasks = 0
-        with Live(layout, refresh_per_second=4, screen=True) as live:
-            try:
-                while not self.workflow.all_tasks_completed():
-                    layout["tasks"].update(self.show_task_table())
-                    next_task = self.workflow.get_next_task()
-                    if not next_task:
-                        break
-                    layout["details"].update(self.show_task_status(next_task))
-                    live.stop()
-                    should_run = Confirm.ask(
-                        f"Run task '{next_task.name}'?", default=True
-                    )
-                    live.start()
-                    if not should_run:
-                        next_task.skip()
-                        continue
-                    next_task.start()
-                    layout["details"].update(self.show_task_status(next_task))
-                    time.sleep(1)
-                    import random
 
-                    success = random.choice([True, True, True, False])
-                    if success:
-                        next_task.complete(True)
-                        completed_tasks += 1
-                    else:
-                        from .errors import ExecutionError
+        return {
+            "progress": progress,
+            "progress_task": progress_task,
+            "completed_tasks": 0,
+        }
 
-                        error = ExecutionError(
-                            message=f"Task '{next_task.name}' failed",
-                            error_code=ErrorCode.COMMAND_EXECUTION_ERROR,
-                            details="This is a simulated failure for demonstration.",
-                            recovery=f"Retry the '{next_task.name}' task.",
-                        )
-                        next_task.fail(error)
-                    progress.update(progress_task, completed=completed_tasks)
-                    layout["details"].update(self.show_task_status(next_task))
-                layout["tasks"].update(self.show_task_table())
-                successful = sum(
-                    1
-                    for task in self.workflow.tasks.values()
-                    if task.status == TaskStatus.SUCCESS
-                )
-                failed = sum(
-                    1
-                    for task in self.workflow.tasks.values()
-                    if task.status == TaskStatus.FAILED
-                )
-                skipped = sum(
-                    1
-                    for task in self.workflow.tasks.values()
-                    if task.status == TaskStatus.SKIPPED
-                )
-                summary = Panel(
-                    f"Workflow completed!\n\n[green]✅ Successful tasks: {successful}[/green]\n[red]❌ Failed tasks: {failed}[/red]\n[blue]⏩ Skipped tasks: {skipped}[/blue]",
-                    title="Summary",
-                    border_style="cyan",
-                )
-                layout["details"].update(summary)
-            except KeyboardInterrupt:
-                layout["footer"].update(
-                    Panel("Interrupted by user", style="yellow", box=ROUNDED)
-                )
-        self.console.print("\nWorkflow Status:")
-        self.workflow.display_task_tree()
+    def _execute_workflow_loop(
+        self, layout: Layout, progress_tracker: dict[str, t.Any], live: Live
+    ) -> None:
+        """Execute the main workflow loop."""
+        while not self.workflow.all_tasks_completed():
+            layout["tasks"].update(self.show_task_table())
+            next_task = self.workflow.get_next_task()
+
+            if not next_task:
+                break
+
+            if self._should_execute_task(layout, next_task, live):
+                self._execute_task(layout, next_task, progress_tracker)
+            else:
+                next_task.skip()
+
+    def _should_execute_task(self, layout: Layout, task: Task, live: Live) -> bool:
+        layout["details"].update(self.show_task_status(task))
+        live.stop()
+        should_run = Confirm.ask(f"Run task '{task.name}'?", default=True)
+        live.start()
+        return should_run
+
+    def _execute_task(
+        self, layout: Layout, task: Task, progress_tracker: dict[str, t.Any]
+    ) -> None:
+        """Execute a single task and update progress."""
+        task.start()
+        layout["details"].update(self.show_task_status(task))
+        time.sleep(1)
+
+        success = self._simulate_task_execution()
+
+        if success:
+            task.complete()
+            progress_tracker["completed_tasks"] += 1
+        else:
+            error = self._create_task_error(task.name)
+            task.fail(error)
+
+        progress_tracker["progress"].update(
+            progress_tracker["progress_task"],
+            completed=progress_tracker["completed_tasks"],
+        )
+        layout["details"].update(self.show_task_status(task))
+
+    def _simulate_task_execution(self) -> bool:
+        import random
+
+        return random.choice([True, True, True, False])
+
+    def _create_task_error(self, task_name: str) -> t.Any:
+        from .errors import ExecutionError
+
+        return ExecutionError(
+            message=f"Task '{task_name}' failed",
+            error_code=ErrorCode.COMMAND_EXECUTION_ERROR,
+            details="This is a simulated failure for demonstration.",
+            recovery=f"Retry the '{task_name}' task.",
+        )
+
+    def _display_final_summary(self, layout: Layout) -> None:
+        layout["tasks"].update(self.show_task_table())
+        task_counts = self._count_tasks_by_status()
+        summary = Panel(
+            f"Workflow completed!\n\n"
+            f"[green]✅ Successful tasks: {task_counts['successful']}[/green]\n"
+            f"[red]❌ Failed tasks: {task_counts['failed']}[/red]\n"
+            f"[blue]⏩ Skipped tasks: {task_counts['skipped']}[/blue]",
+            title="Summary",
+            border_style="cyan",
+        )
+        layout["details"].update(summary)
+
+    def _count_tasks_by_status(self) -> dict[str, int]:
+        return {
+            "successful": sum(
+                1
+                for task in self.workflow.tasks.values()
+                if task.status == TaskStatus.SUCCESS
+            ),
+            "failed": sum(
+                1
+                for task in self.workflow.tasks.values()
+                if task.status == TaskStatus.FAILED
+            ),
+            "skipped": sum(
+                1
+                for task in self.workflow.tasks.values()
+                if task.status == TaskStatus.SKIPPED
+            ),
+        }
+
+    def _handle_user_interruption(self, layout: Layout) -> None:
+        layout["footer"].update(
+            Panel("Interrupted by user", style="yellow", box=ROUNDED)
+        )
 
     def ask_for_file(
         self, prompt: str, directory: Path, default: str | None = None

@@ -13,7 +13,6 @@ from tomli_w import dumps
 from crackerjack.errors import ErrorCode, ExecutionError
 
 config_files = (".gitignore", ".pre-commit-config.yaml", ".libcst.codemod.yaml")
-interactive_hooks = ("refurb", "bandit", "pyright")
 default_python_version = "3.13"
 
 
@@ -85,42 +84,55 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
     def remove_docstrings(self, code: str) -> str:
         lines = code.split("\n")
         cleaned_lines = []
-        in_docstring = False
-        docstring_delimiter = None
-        waiting_for_docstring = False
+        docstring_state = {"in_docstring": False, "delimiter": None, "waiting": False}
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith(("def ", "class ", "async def ")):
-                waiting_for_docstring = True
+            if self._is_function_or_class_definition(stripped):
+                docstring_state["waiting"] = True
                 cleaned_lines.append(line)
                 continue
-            if waiting_for_docstring and stripped:
-                if stripped.startswith(('"""', "'''", '"', "'")):
-                    if stripped.startswith(('"""', "'''")):
-                        docstring_delimiter = stripped[:3]
-                    else:
-                        docstring_delimiter = stripped[0]
-                    if stripped.endswith(docstring_delimiter) and len(stripped) > len(
-                        docstring_delimiter
-                    ):
-                        waiting_for_docstring = False
-                        continue
-                    else:
-                        in_docstring = True
-                        waiting_for_docstring = False
-                        continue
+            if docstring_state["waiting"] and stripped:
+                if self._handle_docstring_start(stripped, docstring_state):
+                    continue
                 else:
-                    waiting_for_docstring = False
-            if in_docstring:
-                if docstring_delimiter and stripped.endswith(docstring_delimiter):
-                    in_docstring = False
-                    docstring_delimiter = None
+                    docstring_state["waiting"] = False
+            if docstring_state["in_docstring"]:
+                if self._handle_docstring_end(stripped, docstring_state):
                     continue
                 else:
                     continue
             cleaned_lines.append(line)
 
         return "\n".join(cleaned_lines)
+
+    def _is_function_or_class_definition(self, stripped_line: str) -> bool:
+        return stripped_line.startswith(("def ", "class ", "async def "))
+
+    def _handle_docstring_start(self, stripped: str, state: dict[str, t.Any]) -> bool:
+        if not stripped.startswith(('"""', "'''", '"', "'")):
+            return False
+        if stripped.startswith(('"""', "'''")):
+            delimiter = stripped[:3]
+        else:
+            delimiter = stripped[0]
+        state["delimiter"] = delimiter
+        if self._is_single_line_docstring(stripped, delimiter):
+            state["waiting"] = False
+            return True
+        else:
+            state["in_docstring"] = True
+            state["waiting"] = False
+            return True
+
+    def _is_single_line_docstring(self, stripped: str, delimiter: str) -> bool:
+        return stripped.endswith(delimiter) and len(stripped) > len(delimiter)
+
+    def _handle_docstring_end(self, stripped: str, state: dict[str, t.Any]) -> bool:
+        if state["delimiter"] and stripped.endswith(state["delimiter"]):
+            state["in_docstring"] = False
+            state["delimiter"] = None
+            return True
+        return True
 
     def remove_line_comments(self, code: str) -> str:
         lines = code.split("\n")
@@ -129,87 +141,153 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             if not line.strip():
                 cleaned_lines.append(line)
                 continue
-            in_string = None
-            result = []
-            i = 0
-            n = len(line)
-            while i < n:
-                char = line[i]
-                if char in ("'", '"') and (i == 0 or line[i - 1] != "\\"):
-                    if in_string is None:
-                        in_string = char
-                    elif in_string == char:
-                        in_string = None
-                    result.append(char)
-                    i += 1
-                elif char == "#" and in_string is None:
-                    comment = line[i:].strip()
-                    if re.match(
-                        r"^#\s*(?:type:\s*ignore(?:\[.*?\])?|noqa|nosec|pragma:\s*no\s*cover|pylint:\s*disable|mypy:\s*ignore)",
-                        comment,
-                    ):
-                        result.append(line[i:])
-                        break
-                    break
-                else:
-                    result.append(char)
-                    i += 1
-            cleaned_line = "".join(result).rstrip()
+            cleaned_line = self._process_line_for_comments(line)
             if cleaned_line or not line.strip():
                 cleaned_lines.append(cleaned_line or line)
+
         return "\n".join(cleaned_lines)
+
+    def _process_line_for_comments(self, line: str) -> str:
+        result = []
+        string_state = {"in_string": None}
+        for i, char in enumerate(line):
+            if self._handle_string_character(char, i, line, string_state, result):
+                continue
+            elif self._handle_comment_character(char, i, line, string_state, result):
+                break
+            else:
+                result.append(char)
+
+        return "".join(result).rstrip()
+
+    def _handle_string_character(
+        self,
+        char: str,
+        index: int,
+        line: str,
+        string_state: dict[str, t.Any],
+        result: list[str],
+    ) -> bool:
+        """Handle string quote characters. Returns True if character was handled."""
+        if char not in ("'", '"'):
+            return False
+
+        if index > 0 and line[index - 1] == "\\":
+            return False
+
+        if string_state["in_string"] is None:
+            string_state["in_string"] = char
+        elif string_state["in_string"] == char:
+            string_state["in_string"] = None
+
+        result.append(char)
+        return True
+
+    def _handle_comment_character(
+        self,
+        char: str,
+        index: int,
+        line: str,
+        string_state: dict[str, t.Any],
+        result: list[str],
+    ) -> bool:
+        """Handle comment character. Returns True if comment was found."""
+        if char != "#" or string_state["in_string"] is not None:
+            return False
+
+        comment = line[index:].strip()
+        if self._is_special_comment_line(comment):
+            result.append(line[index:])
+
+        return True
+
+    def _is_special_comment_line(self, comment: str) -> bool:
+        special_comment_pattern = (
+            r"^#\s*(?:type:\s*ignore(?:\[.*?\])?|noqa|nosec|pragma:\s*no\s*cover"
+            r"|pylint:\s*disable|mypy:\s*ignore)"
+        )
+        return bool(re.match(special_comment_pattern, comment))
 
     def remove_extra_whitespace(self, code: str) -> str:
         lines = code.split("\n")
         cleaned_lines = []
-        in_function = False
-        function_indent = 0
+        function_tracker = {"in_function": False, "function_indent": 0}
         for i, line in enumerate(lines):
             line = line.rstrip()
             stripped_line = line.lstrip()
-            if stripped_line.startswith(("def ", "async def ")):
-                in_function = True
-                function_indent = len(line) - len(stripped_line)
-            elif (
-                in_function
-                and line
-                and (len(line) - len(stripped_line) <= function_indent)
-                and (not stripped_line.startswith(("@", "#")))
-            ):
-                in_function = False
-                function_indent = 0
+            self._update_function_state(line, stripped_line, function_tracker)
             if not line:
-                if i > 0 and cleaned_lines and (not cleaned_lines[-1]):
+                if self._should_skip_empty_line(
+                    i, lines, cleaned_lines, function_tracker
+                ):
                     continue
-                if in_function:
-                    next_line_idx = i + 1
-                    if next_line_idx < len(lines):
-                        next_line = lines[next_line_idx].strip()
-                        if not (
-                            next_line.startswith(
-                                ("return", "class ", "def ", "async def ", "@")
-                            )
-                            or next_line in ("pass", "break", "continue", "raise")
-                            or (
-                                next_line.startswith("#")
-                                and any(
-                                    pattern in next_line
-                                    for pattern in (
-                                        "type:",
-                                        "noqa",
-                                        "nosec",
-                                        "pragma:",
-                                        "pylint:",
-                                        "mypy:",
-                                    )
-                                )
-                            )
-                        ):
-                            continue
             cleaned_lines.append(line)
-        while cleaned_lines and (not cleaned_lines[-1]):
-            cleaned_lines.pop()
-        return "\n".join(cleaned_lines)
+
+        return "\n".join(self._remove_trailing_empty_lines(cleaned_lines))
+
+    def _update_function_state(
+        self, line: str, stripped_line: str, function_tracker: dict[str, t.Any]
+    ) -> None:
+        """Update function tracking state based on current line."""
+        if stripped_line.startswith(("def ", "async def ")):
+            function_tracker["in_function"] = True
+            function_tracker["function_indent"] = len(line) - len(stripped_line)
+        elif self._is_function_end(line, stripped_line, function_tracker):
+            function_tracker["in_function"] = False
+            function_tracker["function_indent"] = 0
+
+    def _is_function_end(
+        self, line: str, stripped_line: str, function_tracker: dict[str, t.Any]
+    ) -> bool:
+        """Check if current line marks the end of a function."""
+        return (
+            function_tracker["in_function"]
+            and bool(line)
+            and (len(line) - len(stripped_line) <= function_tracker["function_indent"])
+            and (not stripped_line.startswith(("@", "#")))
+        )
+
+    def _should_skip_empty_line(
+        self,
+        line_idx: int,
+        lines: list[str],
+        cleaned_lines: list[str],
+        function_tracker: dict[str, t.Any],
+    ) -> bool:
+        """Determine if an empty line should be skipped."""
+        if line_idx > 0 and cleaned_lines and (not cleaned_lines[-1]):
+            return True
+
+        if function_tracker["in_function"]:
+            return self._should_skip_function_empty_line(line_idx, lines)
+
+        return False
+
+    def _should_skip_function_empty_line(self, line_idx: int, lines: list[str]) -> bool:
+        next_line_idx = line_idx + 1
+        if next_line_idx >= len(lines):
+            return False
+        next_line = lines[next_line_idx].strip()
+        return not self._is_significant_next_line(next_line)
+
+    def _is_significant_next_line(self, next_line: str) -> bool:
+        if next_line.startswith(("return", "class ", "def ", "async def ", "@")):
+            return True
+        if next_line in ("pass", "break", "continue", "raise"):
+            return True
+
+        return self._is_special_comment(next_line)
+
+    def _is_special_comment(self, line: str) -> bool:
+        if not line.startswith("#"):
+            return False
+        special_patterns = ("type:", "noqa", "nosec", "pragma:", "pylint:", "mypy:")
+        return any(pattern in line for pattern in special_patterns)
+
+    def _remove_trailing_empty_lines(self, lines: list[str]) -> list[str]:
+        while lines and (not lines[-1]):
+            lines.pop()
+        return lines
 
     def reformat_code(self, code: str) -> str:
         from crackerjack.errors import handle_error
@@ -335,27 +413,75 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         self, our_toml_config: dict[str, t.Any], pkg_toml_config: dict[str, t.Any]
     ) -> None:
         for tool, settings in our_toml_config.get("tool", {}).items():
-            for setting, value in settings.items():
-                if isinstance(value, dict):
-                    for k, v in {
-                        x: self.swap_package_name(y)
-                        for x, y in value.items()
-                        if isinstance(y, str | list) and "crackerjack" in str(y)
-                    }.items():
-                        settings[setting][k] = v
-                elif isinstance(value, str | list) and "crackerjack" in str(value):
-                    value = self.swap_package_name(value)
-                    settings[setting] = value
-                if setting in (
-                    "exclude-deps",
-                    "exclude",
-                    "excluded",
-                    "skips",
-                    "ignore",
-                ) and isinstance(value, list):
-                    conf = pkg_toml_config["tool"].get(tool, {}).get(setting, [])
-                    settings[setting] = list(set(conf + value))
-            pkg_toml_config["tool"][tool] = settings
+            if tool not in pkg_toml_config["tool"]:
+                pkg_toml_config["tool"][tool] = {}
+
+            pkg_tool_config = pkg_toml_config["tool"][tool]
+
+            self._merge_tool_config(settings, pkg_tool_config, tool)
+
+    def _merge_tool_config(
+        self, our_config: dict[str, t.Any], pkg_config: dict[str, t.Any], tool: str
+    ) -> None:
+        """Recursively merge tool configuration, preserving existing project settings."""
+        for setting, value in our_config.items():
+            if isinstance(value, dict):
+                self._merge_nested_config(setting, value, pkg_config)
+            else:
+                self._merge_direct_config(setting, value, pkg_config)
+
+    def _merge_nested_config(
+        self, setting: str, value: dict[str, t.Any], pkg_config: dict[str, t.Any]
+    ) -> None:
+        """Handle nested configuration merging."""
+        if setting not in pkg_config:
+            pkg_config[setting] = {}
+        elif not isinstance(pkg_config[setting], dict):
+            pkg_config[setting] = {}
+
+        self._merge_tool_config(value, pkg_config[setting], "")
+
+        for k, v in value.items():
+            self._merge_nested_value(k, v, pkg_config[setting])
+
+    def _merge_nested_value(
+        self, key: str, value: t.Any, nested_config: dict[str, t.Any]
+    ) -> None:
+        """Merge individual nested values."""
+        if isinstance(value, str | list) and "crackerjack" in str(value):
+            nested_config[key] = self.swap_package_name(value)
+        elif self._is_mergeable_list(key, value):
+            existing = nested_config.get(key, [])
+            if isinstance(existing, list) and isinstance(value, list):
+                nested_config[key] = list(set(existing + value))
+            else:
+                nested_config[key] = value
+        elif key not in nested_config:
+            nested_config[key] = value
+
+    def _merge_direct_config(
+        self, setting: str, value: t.Any, pkg_config: dict[str, t.Any]
+    ) -> None:
+        """Handle direct configuration merging."""
+        if isinstance(value, str | list) and "crackerjack" in str(value):
+            pkg_config[setting] = self.swap_package_name(value)
+        elif self._is_mergeable_list(setting, value):
+            existing = pkg_config.get(setting, [])
+            if isinstance(existing, list) and isinstance(value, list):
+                pkg_config[setting] = list(set(existing + value))
+            else:
+                pkg_config[setting] = value
+        elif setting not in pkg_config:
+            pkg_config[setting] = value
+
+    def _is_mergeable_list(self, key: str, value: t.Any) -> bool:
+        return key in (
+            "exclude-deps",
+            "exclude",
+            "excluded",
+            "skips",
+            "ignore",
+        ) and isinstance(value, list)
 
     def _update_python_version(
         self, our_toml_config: dict[str, t.Any], pkg_toml_config: dict[str, t.Any]
@@ -520,11 +646,6 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
             self.execute_command(["pre-commit", "autoupdate"])
 
-    def _run_interactive_hooks(self, options: t.Any) -> None:
-        if options.interactive:
-            for hook in interactive_hooks:
-                self.project_manager.run_interactive(hook)
-
     def _clean_project(self, options: t.Any) -> None:
         if options.clean:
             if self.pkg_dir:
@@ -655,7 +776,6 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self._setup_package()
         self._update_project(options)
         self._update_precommit(options)
-        self._run_interactive_hooks(options)
         self._clean_project(options)
         if not options.skip_hooks:
             self.project_manager.run_pre_commit()

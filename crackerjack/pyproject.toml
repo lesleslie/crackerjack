@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.20.19"
+version = "0.20.20"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -43,11 +43,11 @@ classifiers = [
 dependencies = [
     "autotyping>=24.9",
     "keyring>=25.6",
-    "pdm>=2.25.2",
+    "pdm>=2.25.3",
     "pdm-bump>=0.9.12",
     "pre-commit>=4.2",
     "pydantic>=2.11.7",
-    "pytest>=8.4",
+    "pytest>=8.4.1",
     "pytest-asyncio>=1",
     "pytest-benchmark>=5.1",
     "pytest-cov>=6.2.1",
@@ -58,7 +58,7 @@ dependencies = [
     "rich>=14",
     "tomli-w>=1.2",
     "typer>=0.16",
-    "uv>=0.7.13",
+    "uv>=0.7.15",
 ]
 urls.documentation = "https://github.com/lesleslie/crackerjack"
 urls.homepage = "https://github.com/lesleslie/crackerjack"
@@ -89,6 +89,7 @@ lint.ignore = [
     "D105",
     "D106",
     "D107",
+    "E402",
     "F821",
     "UP040",
 ]
@@ -221,6 +222,8 @@ exclude-deps = [
     "google-crc32c",
     "pytest-timeout",
     "keyring",
+    "inflection",
+    "pydantic-settings",
 ]
 
 [tool.refurb]

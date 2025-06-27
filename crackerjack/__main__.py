@@ -40,7 +40,6 @@ class Options(BaseModel):
     ai_agent: bool = False
     create_pr: bool = False
     skip_hooks: bool = False
-    rich_ui: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -59,7 +58,10 @@ class Options(BaseModel):
 cli_options = {
     "commit": typer.Option(False, "-c", "--commit", help="Commit changes to Git."),
     "interactive": typer.Option(
-        False, "-i", "--interactive", help="Run pre-commit hooks interactively."
+        False,
+        "-i",
+        "--interactive",
+        help="Use the interactive Rich UI for a better experience.",
     ),
     "doc": typer.Option(False, "-d", "--doc", help="Generate documentation."),
     "no_config_updates": typer.Option(
@@ -131,9 +133,6 @@ cli_options = {
     "create_pr": typer.Option(
         False, "-r", "--pr", help="Create a pull request to the upstream repository."
     ),
-    "rich_ui": typer.Option(
-        False, "--rich-ui", help="Use the interactive Rich UI for a better experience."
-    ),
     "ai_agent": typer.Option(
         False,
         "--ai-agent",
@@ -165,7 +164,6 @@ def main(
     test_timeout: int = cli_options["test_timeout"],
     skip_hooks: bool = cli_options["skip_hooks"],
     create_pr: bool = cli_options["create_pr"],
-    rich_ui: bool = cli_options["rich_ui"],
     ai_agent: bool = cli_options["ai_agent"],
 ) -> None:
     options = Options(
@@ -188,13 +186,12 @@ def main(
         all=all,
         ai_agent=ai_agent,
         create_pr=create_pr,
-        rich_ui=rich_ui,
     )
     if ai_agent:
         import os
 
         os.environ["AI_AGENT"] = "1"
-    if rich_ui:
+    if interactive:
         from crackerjack.interactive import launch_interactive_cli
 
         try:

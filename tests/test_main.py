@@ -54,16 +54,17 @@ def test_commit_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -
 def test_interactive_option(
     runner: CliRunner, mock_crackerjack_process: MagicMock
 ) -> None:
-    result = runner.invoke(app, ["-i"])
-    assert result.exit_code == 0
-    mock_crackerjack_process.process.assert_called_once()
-    options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.interactive
-    mock_crackerjack_process.process.reset_mock()
-    result = runner.invoke(app, ["--interactive"])
-    assert result.exit_code == 0
-    options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.interactive
+    with patch("crackerjack.interactive.launch_interactive_cli") as mock_interactive:
+        result = runner.invoke(app, ["-i"])
+        assert result.exit_code == 0
+        mock_interactive.assert_called_once()
+        mock_crackerjack_process.process.assert_not_called()
+
+        mock_interactive.reset_mock()
+        result = runner.invoke(app, ["--interactive"])
+        assert result.exit_code == 0
+        mock_interactive.assert_called_once()
+        mock_crackerjack_process.process.assert_not_called()
 
 
 def test_doc_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
@@ -197,12 +198,18 @@ def test_test_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> 
 def test_multiple_options(
     runner: CliRunner, mock_crackerjack_process: MagicMock
 ) -> None:
-    result = runner.invoke(app, ["-c", "-i", "-d", "-t", "-x"])
+    with patch("crackerjack.interactive.launch_interactive_cli") as mock_interactive:
+        result = runner.invoke(app, ["-c", "-i", "-d", "-t", "-x"])
+        assert result.exit_code == 0
+        mock_interactive.assert_called_once()
+        mock_crackerjack_process.process.assert_not_called()
+
+    result = runner.invoke(app, ["-c", "-d", "-t", "-x"])
     assert result.exit_code == 0
     mock_crackerjack_process.process.assert_called_once()
     options = mock_crackerjack_process.process.call_args[0][0]
     assert options.commit
-    assert options.interactive
+    assert not options.interactive
     assert options.doc
     assert options.test
     assert options.clean
