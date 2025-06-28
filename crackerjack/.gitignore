@@ -13,5 +13,8 @@
 /scratch/
 /.zencoder/
 /.benchmarks/
-
 **/.claude/settings.local.json
+/complexipy.json
+/coverage.json
+/test-results.xml
+/.coverage

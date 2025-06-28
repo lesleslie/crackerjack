@@ -1091,6 +1091,7 @@ class TestCrackerjackProcess:
             mock_clean_file.assert_called_once_with(py_file)
 
     def test_code_cleaner_remove_docstrings(self) -> None:
+        import ast
         from rich.console import Console
         from crackerjack.crackerjack import CodeCleaner
 
@@ -1108,6 +1109,51 @@ class TestCrackerjackProcess:
         assert "This is a multi-line docstring." not in cleaned_code, (
             f"Got: {cleaned_code!r}"
         )
+        try:
+            ast.parse(cleaned_code)
+        except SyntaxError as e:
+            raise AssertionError(
+                f"Cleaned code is not valid Python syntax: {e}\nCode: {cleaned_code!r}"
+            )
+
+    def test_code_cleaner_remove_docstrings_empty_functions(self) -> None:
+        import ast
+        from rich.console import Console
+        from crackerjack.crackerjack import CodeCleaner
+
+        code_cleaner = CodeCleaner(console=Console())
+        test_code = """
+def empty_function():
+    pass
+
+class TestClass:
+
+    def method_with_docstring_only(self):
+        pass
+
+    def method_with_code(self):
+        return True
+"""
+
+        cleaned_code = code_cleaner.remove_docstrings(test_code)
+        print(f"Cleaned code: {cleaned_code!r}")
+
+        assert '"""This function has only a docstring."""' not in cleaned_code
+        assert '"""Class docstring."""' not in cleaned_code
+        assert '"""Method with only docstring."""' not in cleaned_code
+        assert '"""This method has code after docstring."""' not in cleaned_code
+
+        assert "def empty_function():\n    pass" in cleaned_code
+        assert "def method_with_docstring_only(self):\n        pass" in cleaned_code
+
+        assert "def method_with_code(self):\n        return True" in cleaned_code
+
+        try:
+            ast.parse(cleaned_code)
+        except SyntaxError as e:
+            raise AssertionError(
+                f"Cleaned code is not valid Python syntax: {e}\nCode: {cleaned_code!r}"
+            )
 
     def test_code_cleaner_remove_line_comments(self) -> None:
         from pathlib import Path

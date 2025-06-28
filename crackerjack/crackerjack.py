@@ -89,23 +89,50 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
     def remove_docstrings(self, code: str) -> str:
         lines = code.split("\n")
         cleaned_lines = []
-        docstring_state = {"in_docstring": False, "delimiter": None, "waiting": False}
-        for line in lines:
+        docstring_state = {
+            "in_docstring": False,
+            "delimiter": None,
+            "waiting": False,
+            "function_indent": 0,
+            "removed_docstring": False,
+        }
+        for i, line in enumerate(lines):
             stripped = line.strip()
             if self._is_function_or_class_definition(stripped):
                 docstring_state["waiting"] = True
+                docstring_state["function_indent"] = len(line) - len(line.lstrip())
+                docstring_state["removed_docstring"] = False
                 cleaned_lines.append(line)
                 continue
             if docstring_state["waiting"] and stripped:
                 if self._handle_docstring_start(stripped, docstring_state):
+                    if not docstring_state["in_docstring"]:
+                        if self._needs_pass_statement(
+                            lines, i + 1, docstring_state["function_indent"]
+                        ):
+                            pass_line = (
+                                " " * (docstring_state["function_indent"] + 4) + "pass"
+                            )
+                            cleaned_lines.append(pass_line)
+                    docstring_state["removed_docstring"] = True
                     continue
                 else:
                     docstring_state["waiting"] = False
             if docstring_state["in_docstring"]:
                 if self._handle_docstring_end(stripped, docstring_state):
+                    if self._needs_pass_statement(
+                        lines, i + 1, docstring_state["function_indent"]
+                    ):
+                        pass_line = (
+                            " " * (docstring_state["function_indent"] + 4) + "pass"
+                        )
+                        cleaned_lines.append(pass_line)
+                    docstring_state["removed_docstring"] = False
                     continue
                 else:
                     continue
+            if docstring_state["removed_docstring"] and stripped:
+                docstring_state["removed_docstring"] = False
             cleaned_lines.append(line)
 
         return "\n".join(cleaned_lines)
@@ -137,6 +164,22 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             state["in_docstring"] = False
             state["delimiter"] = None
             return True
+        return False
+
+    def _needs_pass_statement(
+        self, lines: list[str], start_index: int, function_indent: int
+    ) -> bool:
+        for i in range(start_index, len(lines)):
+            line = lines[i]
+            stripped = line.strip()
+            if not stripped:
+                continue
+            line_indent = len(line) - len(line.lstrip())
+            if line_indent <= function_indent:
+                return True
+            if line_indent == function_indent + 4:
+                return False
+
         return True
 
     def remove_line_comments(self, code: str) -> str:
@@ -633,7 +676,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             )
             if result.returncode == 0:
                 self.console.print("PDM installed: ✅\n")
-                self.execute_command(["pdm", "sync"])
+                self.execute_command(["pdm", "lock"])
                 self.console.print("Lock file updated: ✅\n")
             else:
                 self.console.print(
