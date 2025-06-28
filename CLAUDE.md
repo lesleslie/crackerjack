@@ -63,6 +63,9 @@ python -m crackerjack -t --benchmark-regression
 
 # Run tests with custom benchmark regression threshold
 python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold=10.0
+
+# Run tests with AI agent mode for structured output
+python -m crackerjack --ai-agent -t
 ```
 
 ### Linting and Code Quality
@@ -148,6 +151,7 @@ Crackerjack has a robust testing setup with:
 - **Timeout Protection**: Tests have dynamic timeouts based on project size
 - **Deadlock Prevention**: Advanced threading techniques to prevent deadlocks
 - **Progress Tracking**: Shows periodic heartbeat messages for long-running tests
+- **AI Agent Integration**: Generates structured output files (JUnit XML, JSON coverage, benchmark JSON) when `--ai-agent` flag is used
 
 ## Development Guidelines
 

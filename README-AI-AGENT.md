@@ -35,10 +35,43 @@ When AI agent mode is enabled, Crackerjack:
 2. Provides clear status indicators for each operation (running, success, failed)
 3. Includes detailed action tracking to help AI assistants understand the workflow
 4. Reduces noise and formats output specifically for machine consumption
+5. Generates machine-readable output files for test results, coverage, and benchmarks
 
 ## Structured Output Format
 
-Crackerjack's AI agent mode produces a series of JSON objects that follow a consistent schema, making it easy for AI assistants to track progress and understand results.
+Crackerjack's AI agent mode produces both console output and structured files that AI assistants can easily parse and analyze.
+
+### Generated Output Files
+
+When running tests with `--ai-agent`, Crackerjack automatically generates the following machine-readable files:
+
+- **`test-results.xml`**: JUnit XML format test results with detailed test outcomes, timing, and failure information
+- **`coverage.json`**: JSON coverage report with line-by-line coverage data and summary statistics  
+- **`benchmark.json`**: Benchmark results in JSON format (when `--benchmark` or `--benchmark-regression` is used)
+
+These files enable AI assistants to:
+- Parse test results programmatically without regex parsing of console output
+- Access detailed coverage information for each source file
+- Analyze benchmark performance data and trends
+- Generate targeted recommendations based on test failures and coverage gaps
+
+#### Example Console Output
+
+When tests complete in AI agent mode, Crackerjack displays the generated file locations:
+
+```
+✅ Tests passed successfully!
+
+📄 Structured test results: test-results.xml
+📊 Coverage report: coverage.json
+⏱️  Benchmark results: benchmark.json
+```
+
+This clear indication helps AI assistants locate and process the structured data files.
+
+### Console Output Schema
+
+In addition to the generated files, Crackerjack's AI agent mode produces a series of JSON objects that follow a consistent schema, making it easy for AI assistants to track progress and understand results.
 
 ### Operation Status Updates
 
@@ -165,11 +198,13 @@ else:
 
 ### Parsing Crackerjack Output in AI Applications
 
-For AI systems that execute Crackerjack as a subprocess, the JSON output can be easily parsed:
+For AI systems that execute Crackerjack as a subprocess, both the console output and generated files can be easily parsed:
 
 ```python
 import json
 import subprocess
+import xml.etree.ElementTree as ET
+from pathlib import Path
 
 def run_crackerjack_with_ai(command):
     """Run a Crackerjack command and parse the structured output."""
@@ -191,10 +226,44 @@ def run_crackerjack_with_ai(command):
     # The last JSON object is the summary
     summary = operations[-1] if operations else None
 
+    # Parse generated files if they exist
+    structured_data = {}
+    
+    # Parse JUnit XML test results
+    if Path("test-results.xml").exists():
+        tree = ET.parse("test-results.xml")
+        root = tree.getroot()
+        structured_data["test_results"] = {
+            "tests": int(root.get("tests", 0)),
+            "failures": int(root.get("failures", 0)),
+            "errors": int(root.get("errors", 0)),
+            "time": float(root.get("time", 0.0)),
+            "test_cases": [
+                {
+                    "name": case.get("name"),
+                    "classname": case.get("classname"),
+                    "time": float(case.get("time", 0.0)),
+                    "status": "failed" if case.find("failure") is not None else "passed"
+                }
+                for case in root.findall(".//testcase")
+            ]
+        }
+    
+    # Parse JSON coverage report
+    if Path("coverage.json").exists():
+        with open("coverage.json") as f:
+            structured_data["coverage"] = json.load(f)
+    
+    # Parse benchmark results
+    if Path("benchmark.json").exists():
+        with open("benchmark.json") as f:
+            structured_data["benchmarks"] = json.load(f)
+
     return {
         "success": summary.get("success", False) if summary else False,
         "operations": operations,
-        "summary": summary
+        "summary": summary,
+        "structured_data": structured_data
     }
 ```
 
@@ -213,8 +282,10 @@ Crackerjack's AI agent mode enables powerful workflows for AI-assisted developme
 
 1. **Test Creation**: AI helps write tests for new functionality
 2. **Verification**: `python -m crackerjack --ai-agent --test -s`
-3. **Failure Analysis**: AI parses test failures and suggests fixes
-4. **Implementation Guidance**: AI provides targeted implementation advice based on test results
+3. **Structured Analysis**: AI parses `test-results.xml` and `coverage.json` files for detailed insights
+4. **Failure Analysis**: AI analyzes test failures from JUnit XML with precise file locations and error details
+5. **Coverage-Driven Implementation**: AI uses coverage data to identify untested code paths and suggest implementation priorities
+6. **Implementation Guidance**: AI provides targeted implementation advice based on structured test results
 
 ### Continuous Improvement
 
