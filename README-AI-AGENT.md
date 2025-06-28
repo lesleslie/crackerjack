@@ -46,7 +46,7 @@ Crackerjack's AI agent mode produces both console output and structured files th
 When running tests with `--ai-agent`, Crackerjack automatically generates the following machine-readable files:
 
 - **`test-results.xml`**: JUnit XML format test results with detailed test outcomes, timing, and failure information
-- **`coverage.json`**: JSON coverage report with line-by-line coverage data and summary statistics  
+- **`coverage.json`**: JSON coverage report with line-by-line coverage data and summary statistics
 - **`benchmark.json`**: Benchmark results in JSON format (when `--benchmark` or `--benchmark-regression` is used)
 
 These files enable AI assistants to:
@@ -228,7 +228,7 @@ def run_crackerjack_with_ai(command):
 
     # Parse generated files if they exist
     structured_data = {}
-    
+
     # Parse JUnit XML test results
     if Path("test-results.xml").exists():
         tree = ET.parse("test-results.xml")
@@ -248,12 +248,12 @@ def run_crackerjack_with_ai(command):
                 for case in root.findall(".//testcase")
             ]
         }
-    
+
     # Parse JSON coverage report
     if Path("coverage.json").exists():
         with open("coverage.json") as f:
             structured_data["coverage"] = json.load(f)
-    
+
     # Parse benchmark results
     if Path("benchmark.json").exists():
         with open("benchmark.json") as f:

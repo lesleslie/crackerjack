@@ -58,7 +58,7 @@ If you're new to Crackerjack, follow these steps:
 
     Or use the interactive Rich UI:
     ```
-    python -m crackerjack --rich-ui
+    python -m crackerjack --interactive
     ```
 
 ---
@@ -225,7 +225,7 @@ python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold
 
     Or with the interactive Rich UI:
     ```
-    python -m crackerjack --rich-ui
+    python -m crackerjack --interactive
     ```
 
 ## Usage
@@ -317,7 +317,7 @@ runner.process(MyOptions())
 -   `--benchmark-regression`: Fail tests if benchmarks regress beyond threshold.
 -   `--benchmark-regression-threshold`: Set threshold percentage for benchmark regression (default 5.0%).
 -   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
--   `--rich-ui`: Enable the interactive Rich UI for a more user-friendly experience with visual progress tracking and interactive prompts.
+-   `--interactive`: Enable the interactive Rich UI for a more user-friendly experience with visual progress tracking and interactive prompts.
 -   `--ai-agent`: Enable AI agent mode with structured output (see [AI Agent Integration](#ai-agent-integration)).
 -   `--help`: Display help.
 
@@ -417,7 +417,7 @@ runner.process(MyOptions())
 
 - **Rich Interactive Mode** - Run with the interactive Rich UI:
   ```bash
-  python -m crackerjack --rich-ui
+  python -m crackerjack --interactive
   ```
 
 - **AI Integration** - Run with structured output for AI tools:
@@ -456,10 +456,10 @@ Crackerjack now offers an enhanced interactive experience through its Rich UI:
 - **Error Visualization:** Errors are presented in a structured, easy-to-understand format with recovery suggestions
 - **File Selection:** Interactive file browser for operations that require selecting files
 
-To use the Rich UI, run Crackerjack with the `--rich-ui` flag:
+To use the Rich UI, run Crackerjack with the `--interactive` flag:
 
 ```bash
-python -m crackerjack --rich-ui
+python -m crackerjack --interactive
 ```
 
 This launches an interactive terminal interface where you can:
@@ -498,7 +498,7 @@ python -m crackerjack -v
 For the most comprehensive error details with visual formatting, combine verbose mode with the Rich UI:
 
 ```bash
-python -m crackerjack --rich-ui -v
+python -m crackerjack --interactive -v
 ```
 
 ## Python 3.13+ Features

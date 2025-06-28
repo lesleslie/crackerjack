@@ -1,6 +1,5 @@
 import typing as t
 from unittest.mock import MagicMock, patch
-
 import pytest
 from rich.console import Console
 from crackerjack.errors import (

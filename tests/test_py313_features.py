@@ -1,5 +1,4 @@
 from pathlib import Path
-
 from crackerjack.py313 import (
     CommandResult,
     HookResult,

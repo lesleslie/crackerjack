@@ -2,7 +2,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 from unittest import mock
-
 from crackerjack.py313 import (
     CommandResult,
     CommandRunner,

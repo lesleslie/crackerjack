@@ -1,6 +1,5 @@
 import typing as t
 from unittest.mock import MagicMock, patch
-
 import pytest
 from typer.testing import CliRunner
 from crackerjack.__main__ import BumpOption, Options, app
@@ -59,7 +58,6 @@ def test_interactive_option(
         assert result.exit_code == 0
         mock_interactive.assert_called_once()
         mock_crackerjack_process.process.assert_not_called()
-
         mock_interactive.reset_mock()
         result = runner.invoke(app, ["--interactive"])
         assert result.exit_code == 0
@@ -203,7 +201,6 @@ def test_multiple_options(
         assert result.exit_code == 0
         mock_interactive.assert_called_once()
         mock_crackerjack_process.process.assert_not_called()
-
     result = runner.invoke(app, ["-c", "-d", "-t", "-x"])
     assert result.exit_code == 0
     mock_crackerjack_process.process.assert_called_once()

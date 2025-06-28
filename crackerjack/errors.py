@@ -2,7 +2,6 @@ import sys
 import typing as t
 from enum import Enum
 from pathlib import Path
-
 from rich.console import Console
 from rich.panel import Panel
 

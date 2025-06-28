@@ -1,5 +1,4 @@
 import typing as t
-
 from .crackerjack import Crackerjack, create_crackerjack_runner
 from .errors import (
     CleaningError,

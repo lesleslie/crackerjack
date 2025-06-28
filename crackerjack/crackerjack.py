@@ -6,7 +6,6 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from subprocess import run as execute
 from tomllib import loads
-
 from pydantic import BaseModel
 from rich.console import Console
 from tomli_w import dumps
@@ -86,55 +85,93 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         except Exception as e:
             print(f"Error cleaning {file_path}: {e}")
 
-    def remove_docstrings(self, code: str) -> str:
-        lines = code.split("\n")
-        cleaned_lines = []
-        docstring_state = {
+    def _initialize_docstring_state(self) -> dict[str, t.Any]:
+        return {
             "in_docstring": False,
             "delimiter": None,
             "waiting": False,
             "function_indent": 0,
             "removed_docstring": False,
+            "in_multiline_def": False,
         }
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-            if self._is_function_or_class_definition(stripped):
-                docstring_state["waiting"] = True
-                docstring_state["function_indent"] = len(line) - len(line.lstrip())
-                docstring_state["removed_docstring"] = False
-                cleaned_lines.append(line)
-                continue
-            if docstring_state["waiting"] and stripped:
-                if self._handle_docstring_start(stripped, docstring_state):
-                    if not docstring_state["in_docstring"]:
-                        if self._needs_pass_statement(
-                            lines, i + 1, docstring_state["function_indent"]
-                        ):
-                            pass_line = (
-                                " " * (docstring_state["function_indent"] + 4) + "pass"
-                            )
-                            cleaned_lines.append(pass_line)
-                    docstring_state["removed_docstring"] = True
-                    continue
-                else:
-                    docstring_state["waiting"] = False
-            if docstring_state["in_docstring"]:
-                if self._handle_docstring_end(stripped, docstring_state):
-                    if self._needs_pass_statement(
-                        lines, i + 1, docstring_state["function_indent"]
-                    ):
-                        pass_line = (
-                            " " * (docstring_state["function_indent"] + 4) + "pass"
-                        )
-                        cleaned_lines.append(pass_line)
-                    docstring_state["removed_docstring"] = False
-                    continue
-                else:
-                    continue
-            if docstring_state["removed_docstring"] and stripped:
-                docstring_state["removed_docstring"] = False
-            cleaned_lines.append(line)
 
+    def _handle_function_definition(
+        self, line: str, stripped: str, state: dict[str, t.Any]
+    ) -> bool:
+        if self._is_function_or_class_definition(stripped):
+            state["waiting"] = True
+            state["function_indent"] = len(line) - len(line.lstrip())
+            state["removed_docstring"] = False
+            state["in_multiline_def"] = not stripped.endswith(":")
+            return True
+        return False
+
+    def _handle_multiline_definition(
+        self, line: str, stripped: str, state: dict[str, t.Any]
+    ) -> bool:
+        if state["in_multiline_def"]:
+            if stripped.endswith(":"):
+                state["in_multiline_def"] = False
+            return True
+        return False
+
+    def _handle_waiting_docstring(
+        self, lines: list[str], i: int, stripped: str, state: dict[str, t.Any]
+    ) -> tuple[bool, str | None]:
+        if state["waiting"] and stripped:
+            if self._handle_docstring_start(stripped, state):
+                pass_line = None
+                if not state["in_docstring"]:
+                    function_indent: int = state["function_indent"]
+                    if self._needs_pass_statement(lines, i + 1, function_indent):
+                        pass_line = " " * (function_indent + 4) + "pass"
+                state["removed_docstring"] = True
+                return True, pass_line
+            else:
+                state["waiting"] = False
+        return False, None
+
+    def _handle_docstring_content(
+        self, lines: list[str], i: int, stripped: str, state: dict[str, t.Any]
+    ) -> tuple[bool, str | None]:
+        if state["in_docstring"]:
+            if self._handle_docstring_end(stripped, state):
+                pass_line = None
+                function_indent: int = state["function_indent"]
+                if self._needs_pass_statement(lines, i + 1, function_indent):
+                    pass_line = " " * (function_indent + 4) + "pass"
+                state["removed_docstring"] = False
+                return True, pass_line
+            else:
+                return True, None
+        return False, None
+
+    def _process_line(
+        self, lines: list[str], i: int, line: str, state: dict[str, t.Any]
+    ) -> tuple[bool, str | None]:
+        stripped = line.strip()
+        if self._handle_function_definition(line, stripped, state):
+            return True, line
+        if self._handle_multiline_definition(line, stripped, state):
+            return True, line
+        handled, pass_line = self._handle_waiting_docstring(lines, i, stripped, state)
+        if handled:
+            return True, pass_line
+        handled, pass_line = self._handle_docstring_content(lines, i, stripped, state)
+        if handled:
+            return True, pass_line
+        if state["removed_docstring"] and stripped:
+            state["removed_docstring"] = False
+        return False, line
+
+    def remove_docstrings(self, code: str) -> str:
+        lines = code.split("\n")
+        cleaned_lines = []
+        docstring_state = self._initialize_docstring_state()
+        for i, line in enumerate(lines):
+            _, result_line = self._process_line(lines, i, line, docstring_state)
+            if result_line:
+                cleaned_lines.append(result_line)
         return "\n".join(cleaned_lines)
 
     def _is_function_or_class_definition(self, stripped_line: str) -> bool:
@@ -177,9 +214,8 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             line_indent = len(line) - len(line.lstrip())
             if line_indent <= function_indent:
                 return True
-            if line_indent == function_indent + 4:
+            if line_indent > function_indent:
                 return False
-
         return True
 
     def remove_line_comments(self, code: str) -> str:
@@ -192,7 +228,6 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             cleaned_line = self._process_line_for_comments(line)
             if cleaned_line or not line.strip():
                 cleaned_lines.append(cleaned_line or line)
-
         return "\n".join(cleaned_lines)
 
     def _process_line_for_comments(self, line: str) -> str:
@@ -205,7 +240,6 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 break
             else:
                 result.append(char)
-
         return "".join(result).rstrip()
 
     def _handle_string_character(
@@ -216,18 +250,14 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         string_state: dict[str, t.Any],
         result: list[str],
     ) -> bool:
-        """Handle string quote characters. Returns True if character was handled."""
         if char not in ("'", '"'):
             return False
-
         if index > 0 and line[index - 1] == "\\":
             return False
-
         if string_state["in_string"] is None:
             string_state["in_string"] = char
         elif string_state["in_string"] == char:
             string_state["in_string"] = None
-
         result.append(char)
         return True
 
@@ -239,14 +269,11 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         string_state: dict[str, t.Any],
         result: list[str],
     ) -> bool:
-        """Handle comment character. Returns True if comment was found."""
         if char != "#" or string_state["in_string"] is not None:
             return False
-
         comment = line[index:].strip()
         if self._is_special_comment_line(comment):
             result.append(line[index:])
-
         return True
 
     def _is_special_comment_line(self, comment: str) -> bool:
@@ -270,13 +297,11 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 ):
                     continue
             cleaned_lines.append(line)
-
         return "\n".join(self._remove_trailing_empty_lines(cleaned_lines))
 
     def _update_function_state(
         self, line: str, stripped_line: str, function_tracker: dict[str, t.Any]
     ) -> None:
-        """Update function tracking state based on current line."""
         if stripped_line.startswith(("def ", "async def ")):
             function_tracker["in_function"] = True
             function_tracker["function_indent"] = len(line) - len(stripped_line)
@@ -287,7 +312,6 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
     def _is_function_end(
         self, line: str, stripped_line: str, function_tracker: dict[str, t.Any]
     ) -> bool:
-        """Check if current line marks the end of a function."""
         return (
             function_tracker["in_function"]
             and bool(line)
@@ -302,13 +326,10 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         cleaned_lines: list[str],
         function_tracker: dict[str, t.Any],
     ) -> bool:
-        """Determine if an empty line should be skipped."""
         if line_idx > 0 and cleaned_lines and (not cleaned_lines[-1]):
             return True
-
         if function_tracker["in_function"]:
             return self._should_skip_function_empty_line(line_idx, lines)
-
         return False
 
     def _should_skip_function_empty_line(self, line_idx: int, lines: list[str]) -> bool:
@@ -323,7 +344,6 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             return True
         if next_line in ("pass", "break", "continue", "raise"):
             return True
-
         return self._is_special_comment(next_line)
 
     def _is_special_comment(self, line: str) -> bool:
@@ -463,15 +483,12 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         for tool, settings in our_toml_config.get("tool", {}).items():
             if tool not in pkg_toml_config["tool"]:
                 pkg_toml_config["tool"][tool] = {}
-
             pkg_tool_config = pkg_toml_config["tool"][tool]
-
             self._merge_tool_config(settings, pkg_tool_config, tool)
 
     def _merge_tool_config(
         self, our_config: dict[str, t.Any], pkg_config: dict[str, t.Any], tool: str
     ) -> None:
-        """Recursively merge tool configuration, preserving existing project settings."""
         for setting, value in our_config.items():
             if isinstance(value, dict):
                 self._merge_nested_config(setting, value, pkg_config)
@@ -481,21 +498,17 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
     def _merge_nested_config(
         self, setting: str, value: dict[str, t.Any], pkg_config: dict[str, t.Any]
     ) -> None:
-        """Handle nested configuration merging."""
         if setting not in pkg_config:
             pkg_config[setting] = {}
         elif not isinstance(pkg_config[setting], dict):
             pkg_config[setting] = {}
-
         self._merge_tool_config(value, pkg_config[setting], "")
-
         for k, v in value.items():
             self._merge_nested_value(k, v, pkg_config[setting])
 
     def _merge_nested_value(
         self, key: str, value: t.Any, nested_config: dict[str, t.Any]
     ) -> None:
-        """Merge individual nested values."""
         if isinstance(value, str | list) and "crackerjack" in str(value):
             nested_config[key] = self.swap_package_name(value)
         elif self._is_mergeable_list(key, value):
@@ -510,7 +523,6 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
     def _merge_direct_config(
         self, setting: str, value: t.Any, pkg_config: dict[str, t.Any]
     ) -> None:
-        """Handle direct configuration merging."""
         if isinstance(value, str | list) and "crackerjack" in str(value):
             pkg_config[setting] = self.swap_package_name(value)
         elif self._is_mergeable_list(setting, value):
@@ -773,7 +785,6 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             self._add_benchmark_flags(test, options)
         else:
             self._add_worker_flags(test, options, project_size)
-
         return test
 
     def _detect_project_size(self) -> str:

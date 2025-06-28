@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
 import pytest
 from rich.console import Console
 from crackerjack.crackerjack import (
@@ -317,12 +316,10 @@ class TestCrackerjackProcess:
     ) -> None:
         options = options_factory(bump="minor", no_config_updates=True)
         cj = Crackerjack(dry_run=True)
-
         with patch("rich.prompt.Confirm.ask", return_value=True) as mock_confirm:
             with patch.object(Crackerjack, "execute_command") as mock_exec:
                 mock_exec.return_value = MagicMock(returncode=0)
                 cj._bump_version(options)
-
                 mock_confirm.assert_called_once_with(
                     "Are you sure you want to bump the minor version?", default=False
                 )
@@ -339,12 +336,10 @@ class TestCrackerjackProcess:
     ) -> None:
         options = options_factory(bump="minor", no_config_updates=True)
         cj = Crackerjack(dry_run=True)
-
         with patch("rich.prompt.Confirm.ask", return_value=False) as mock_confirm:
             with patch.object(Crackerjack, "execute_command") as mock_exec:
                 mock_exec.return_value = MagicMock(returncode=0)
                 cj._bump_version(options)
-
                 mock_confirm.assert_called_once_with(
                     "Are you sure you want to bump the minor version?", default=False
                 )
@@ -361,12 +356,10 @@ class TestCrackerjackProcess:
     ) -> None:
         options = options_factory(bump="major", no_config_updates=True)
         cj = Crackerjack(dry_run=True)
-
         with patch("rich.prompt.Confirm.ask", return_value=True) as mock_confirm:
             with patch.object(Crackerjack, "execute_command") as mock_exec:
                 mock_exec.return_value = MagicMock(returncode=0)
                 cj._bump_version(options)
-
                 mock_confirm.assert_called_once_with(
                     "Are you sure you want to bump the major version?", default=False
                 )
@@ -383,12 +376,10 @@ class TestCrackerjackProcess:
     ) -> None:
         options = options_factory(bump="micro", no_config_updates=True)
         cj = Crackerjack(dry_run=True)
-
         with patch("rich.prompt.Confirm.ask") as mock_confirm:
             with patch.object(Crackerjack, "execute_command") as mock_exec:
                 mock_exec.return_value = MagicMock(returncode=0)
                 cj._bump_version(options)
-
                 mock_confirm.assert_not_called()
                 mock_exec.assert_called_once_with(["pdm", "bump", "micro"])
 
@@ -405,7 +396,6 @@ class TestCrackerjackProcess:
         pytest_command = (_cj := Crackerjack(dry_run=True))._prepare_pytest_command(
             options
         )
-
         assert "--junitxml=test-results.xml" in pytest_command
         assert "--cov-report=json:coverage.json" in pytest_command
         assert "--quiet" in pytest_command
@@ -427,7 +417,6 @@ class TestCrackerjackProcess:
         pytest_command = (_cj := Crackerjack(dry_run=True))._prepare_pytest_command(
             options
         )
-
         assert "--junitxml=test-results.xml" in pytest_command
         assert "--cov-report=json:coverage.json" in pytest_command
         assert "--benchmark-json=benchmark.json" in pytest_command
@@ -447,12 +436,10 @@ class TestCrackerjackProcess:
         pytest_command = (_cj := Crackerjack(dry_run=True))._prepare_pytest_command(
             options
         )
-
         assert "--junitxml=test-results.xml" not in pytest_command
         assert "--cov-report=json:coverage.json" not in pytest_command
         assert "--benchmark-json=benchmark.json" not in pytest_command
         assert "--quiet" not in pytest_command
-
         assert "--capture=fd" in pytest_command
         assert "--disable-warnings" in pytest_command
         assert "--durations=0" in pytest_command
@@ -943,16 +930,11 @@ class TestCrackerjackProcess:
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
         mock_project = MagicMock()
-
         options = options_factory(ai_agent=True)
         mock_project.options = options
-
         mock_project.console = MagicMock()
-
         mock_project.execute_command.return_value = MagicMock(returncode=0)
-
         ProjectManager.run_pre_commit(mock_project)
-
         mock_project.execute_command.assert_called_with(
             ["pre-commit", "run", "--all-files", "-c", ".pre-commit-config-ai.yaml"]
         )
@@ -964,24 +946,17 @@ class TestCrackerjackProcess:
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
         mock_project = MagicMock(spec=ProjectManager)
-
         options = options_factory(ai_agent=True)
         mock_project.options = options
-
         mock_project.console = MagicMock()
-
         mock_project.config_manager = MagicMock()
-
         with patch.object(mock_project, "execute_command") as mock_execute:
             mock_execute.return_value = MagicMock(
                 returncode=0,
                 stdout="package1\npackage2\n",
             )
-
             original_method = ProjectManager.update_pkg_configs
-
             original_method(mock_project)
-
             mock_execute.assert_any_call(
                 ["pre-commit", "install", "-c", ".pre-commit-config-ai.yaml"]
             )
@@ -1125,29 +1100,21 @@ class TestCrackerjackProcess:
         test_code = """
 def empty_function():
     pass
-
 class TestClass:
-
     def method_with_docstring_only(self):
         pass
-
     def method_with_code(self):
         return True
 """
-
         cleaned_code = code_cleaner.remove_docstrings(test_code)
         print(f"Cleaned code: {cleaned_code!r}")
-
         assert '"""This function has only a docstring."""' not in cleaned_code
         assert '"""Class docstring."""' not in cleaned_code
         assert '"""Method with only docstring."""' not in cleaned_code
         assert '"""This method has code after docstring."""' not in cleaned_code
-
         assert "def empty_function():\n    pass" in cleaned_code
         assert "def method_with_docstring_only(self):\n        pass" in cleaned_code
-
         assert "def method_with_code(self):\n        return True" in cleaned_code
-
         try:
             ast.parse(cleaned_code)
         except SyntaxError as e:

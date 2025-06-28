@@ -296,7 +296,7 @@ def empty_function():
 
 class TestClass:
     """Class docstring."""
-    
+
     def method_with_docstring_only(self):
         """Method with only docstring."""
 ```
@@ -306,7 +306,7 @@ class TestClass:
 def empty_function():
 
 class TestClass:
-    
+
     def method_with_docstring_only(self):
 ```
 
@@ -333,8 +333,8 @@ The fix involved a comprehensive rewrite of the docstring removal algorithm with
 **Enhanced State Management:**
 ```python
 docstring_state = {
-    "in_docstring": False, 
-    "delimiter": None, 
+    "in_docstring": False,
+    "delimiter": None,
     "waiting": False,
     "function_indent": 0,        # NEW: Track function indentation
     "removed_docstring": False   # NEW: Track if we just removed a docstring
@@ -375,7 +375,7 @@ def empty_function():
 class TestClass:
     """Class docstring."""
     # Becomes: class TestClass:\n    (no pass needed for classes)
-    
+
     def method_with_docstring_only(self):
         """Method with only docstring."""
         # Becomes: def method_with_docstring_only(self):\n        pass

@@ -2,7 +2,6 @@ import time
 import typing as t
 from enum import Enum, auto
 from pathlib import Path
-
 from rich.box import ROUNDED
 from rich.console import Console
 from rich.layout import Layout
@@ -19,7 +18,6 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
-
 from .errors import CrackerjackError, ErrorCode, handle_error
 
 
@@ -289,7 +287,6 @@ class InteractiveCLI:
         )
         total_tasks = len(self.workflow.tasks)
         progress_task = progress.add_task("Running workflow", total=total_tasks)
-
         return {
             "progress": progress,
             "progress_task": progress_task,
@@ -299,14 +296,11 @@ class InteractiveCLI:
     def _execute_workflow_loop(
         self, layout: Layout, progress_tracker: dict[str, t.Any], live: Live
     ) -> None:
-        """Execute the main workflow loop."""
         while not self.workflow.all_tasks_completed():
             layout["tasks"].update(self.show_task_table())
             next_task = self.workflow.get_next_task()
-
             if not next_task:
                 break
-
             if self._should_execute_task(layout, next_task, live):
                 self._execute_task(layout, next_task, progress_tracker)
             else:
@@ -322,20 +316,16 @@ class InteractiveCLI:
     def _execute_task(
         self, layout: Layout, task: Task, progress_tracker: dict[str, t.Any]
     ) -> None:
-        """Execute a single task and update progress."""
         task.start()
         layout["details"].update(self.show_task_status(task))
         time.sleep(1)
-
         success = self._simulate_task_execution()
-
         if success:
             task.complete()
             progress_tracker["completed_tasks"] += 1
         else:
             error = self._create_task_error(task.name)
             task.fail(error)
-
         progress_tracker["progress"].update(
             progress_tracker["progress_task"],
             completed=progress_tracker["completed_tasks"],
