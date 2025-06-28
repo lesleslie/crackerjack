@@ -6,6 +6,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from subprocess import run as execute
 from tomllib import loads
+
 from pydantic import BaseModel
 from rich.console import Console
 from tomli_w import dumps
@@ -169,9 +170,12 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         cleaned_lines = []
         docstring_state = self._initialize_docstring_state()
         for i, line in enumerate(lines):
-            _, result_line = self._process_line(lines, i, line, docstring_state)
-            if result_line:
-                cleaned_lines.append(result_line)
+            handled, result_line = self._process_line(lines, i, line, docstring_state)
+            if handled:
+                if result_line is not None:
+                    cleaned_lines.append(result_line)
+            else:
+                cleaned_lines.append(line)
         return "\n".join(cleaned_lines)
 
     def _is_function_or_class_definition(self, stripped_line: str) -> bool:
@@ -287,13 +291,15 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         lines = code.split("\n")
         cleaned_lines = []
         function_tracker = {"in_function": False, "function_indent": 0}
+        import_tracker = {"in_imports": False, "last_import_type": None}
         for i, line in enumerate(lines):
             line = line.rstrip()
             stripped_line = line.lstrip()
             self._update_function_state(line, stripped_line, function_tracker)
+            self._update_import_state(line, stripped_line, import_tracker)
             if not line:
                 if self._should_skip_empty_line(
-                    i, lines, cleaned_lines, function_tracker
+                    i, lines, cleaned_lines, function_tracker, import_tracker
                 ):
                     continue
             cleaned_lines.append(line)
@@ -308,6 +314,113 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         elif self._is_function_end(line, stripped_line, function_tracker):
             function_tracker["in_function"] = False
             function_tracker["function_indent"] = 0
+
+    def _update_import_state(
+        self, line: str, stripped_line: str, import_tracker: dict[str, t.Any]
+    ) -> None:
+        if stripped_line.startswith(("import ", "from ")):
+            import_tracker["in_imports"] = True
+            if self._is_stdlib_import(stripped_line):
+                current_type = "stdlib"
+            elif self._is_local_import(stripped_line):
+                current_type = "local"
+            else:
+                current_type = "third_party"
+            import_tracker["last_import_type"] = current_type
+        elif stripped_line and not stripped_line.startswith("#"):
+            import_tracker["in_imports"] = False
+            import_tracker["last_import_type"] = None
+
+    def _is_stdlib_import(self, stripped_line: str) -> bool:
+        try:
+            if stripped_line.startswith("from "):
+                module = stripped_line.split()[1].split(".")[0]
+            else:
+                module = stripped_line.split()[1].split(".")[0]
+        except IndexError:
+            return False
+        stdlib_modules = {
+            "os",
+            "sys",
+            "re",
+            "json",
+            "datetime",
+            "time",
+            "pathlib",
+            "typing",
+            "collections",
+            "itertools",
+            "functools",
+            "operator",
+            "math",
+            "random",
+            "uuid",
+            "urllib",
+            "http",
+            "html",
+            "xml",
+            "email",
+            "csv",
+            "sqlite3",
+            "subprocess",
+            "threading",
+            "multiprocessing",
+            "asyncio",
+            "contextlib",
+            "dataclasses",
+            "enum",
+            "abc",
+            "io",
+            "tempfile",
+            "shutil",
+            "glob",
+            "pickle",
+            "copy",
+            "heapq",
+            "bisect",
+            "array",
+            "struct",
+            "zlib",
+            "hashlib",
+            "hmac",
+            "secrets",
+            "base64",
+            "binascii",
+            "codecs",
+            "locale",
+            "platform",
+            "socket",
+            "ssl",
+            "ipaddress",
+            "logging",
+            "warnings",
+            "inspect",
+            "ast",
+            "dis",
+            "tokenize",
+            "keyword",
+            "linecache",
+            "traceback",
+            "weakref",
+            "gc",
+            "ctypes",
+            "unittest",
+            "doctest",
+            "pdb",
+            "profile",
+            "cProfile",
+            "timeit",
+            "trace",
+            "calendar",
+            "decimal",
+            "fractions",
+            "statistics",
+            "tomllib",
+        }
+        return module in stdlib_modules
+
+    def _is_local_import(self, stripped_line: str) -> bool:
+        return stripped_line.startswith("from .") or " . " in stripped_line
 
     def _is_function_end(
         self, line: str, stripped_line: str, function_tracker: dict[str, t.Any]
@@ -325,12 +438,43 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         lines: list[str],
         cleaned_lines: list[str],
         function_tracker: dict[str, t.Any],
+        import_tracker: dict[str, t.Any],
     ) -> bool:
         if line_idx > 0 and cleaned_lines and (not cleaned_lines[-1]):
             return True
+
+        if self._is_import_section_separator(line_idx, lines, import_tracker):
+            return False
+
         if function_tracker["in_function"]:
             return self._should_skip_function_empty_line(line_idx, lines)
         return False
+
+    def _is_import_section_separator(
+        self, line_idx: int, lines: list[str], import_tracker: dict[str, t.Any]
+    ) -> bool:
+        if not import_tracker["in_imports"]:
+            return False
+
+        next_line_idx = line_idx + 1
+        while next_line_idx < len(lines) and not lines[next_line_idx].strip():
+            next_line_idx += 1
+
+        if next_line_idx >= len(lines):
+            return False
+
+        next_line = lines[next_line_idx].strip()
+        if not next_line.startswith(("import ", "from ")):
+            return False
+
+        if self._is_stdlib_import(next_line):
+            next_type = "stdlib"
+        elif self._is_local_import(next_line):
+            next_type = "local"
+        else:
+            next_type = "third_party"
+
+        return import_tracker["last_import_type"] != next_type
 
     def _should_skip_function_empty_line(self, line_idx: int, lines: list[str]) -> bool:
         next_line_idx = line_idx + 1

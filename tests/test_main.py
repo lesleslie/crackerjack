@@ -1,5 +1,6 @@
 import typing as t
 from unittest.mock import MagicMock, patch
+
 import pytest
 from typer.testing import CliRunner
 from crackerjack.__main__ import BumpOption, Options, app

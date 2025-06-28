@@ -1,6 +1,7 @@
 """Test cases for multiline function definitions in docstring removal."""
 
 import ast
+
 from rich.console import Console
 from crackerjack.crackerjack import CodeCleaner
 

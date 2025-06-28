@@ -2,6 +2,7 @@ import time
 import typing as t
 from enum import Enum, auto
 from pathlib import Path
+
 from rich.box import ROUNDED
 from rich.console import Console
 from rich.layout import Layout
@@ -18,6 +19,7 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
+
 from .errors import CrackerjackError, ErrorCode, handle_error
 
 

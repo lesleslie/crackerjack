@@ -2,6 +2,7 @@ import io
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 from rich.console import Console
 from rich.panel import Panel

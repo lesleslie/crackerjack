@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 from rich.console import Console
 from crackerjack.crackerjack import (
@@ -1067,6 +1068,7 @@ class TestCrackerjackProcess:
 
     def test_code_cleaner_remove_docstrings(self) -> None:
         import ast
+
         from rich.console import Console
         from crackerjack.crackerjack import CodeCleaner
 
@@ -1093,6 +1095,7 @@ class TestCrackerjackProcess:
 
     def test_code_cleaner_remove_docstrings_empty_functions(self) -> None:
         import ast
+
         from rich.console import Console
         from crackerjack.crackerjack import CodeCleaner
 
@@ -1124,6 +1127,7 @@ class TestClass:
 
     def test_code_cleaner_remove_line_comments(self) -> None:
         from pathlib import Path
+
         from rich.console import Console
         from crackerjack.crackerjack import CodeCleaner
 
