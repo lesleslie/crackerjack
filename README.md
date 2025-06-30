@@ -58,7 +58,7 @@ If you're new to Crackerjack, follow these steps:
 
     Or use the interactive Rich UI:
     ```
-    python -m crackerjack --interactive
+    python -m crackerjack -i
     ```
 
 ---
@@ -116,7 +116,7 @@ Crackerjack automatically installs and manages these pre-commit hooks:
 3.  **Ruff:** [Ruff](https://github.com/astral-sh/ruff) for linting, code formatting, and general code style enforcement.
 4.  **Vulture:** [Vulture](https://github.com/jendrikseipp/vulture) to identify dead code.
 5.  **Creosote:** [Creosote](https://github.com/fredrikaverpil/creosote) to detect unused dependencies.
-6.  **Flynt:** [Flynt](https://github.com/ikamensh/flynt/) for converting string formatting to f-strings.
+6.  **Complexipy:** [Complexipy](https://github.com/rohaquinlop/complexipy-pre-commit) for analyzing code complexity.
 7.  **Codespell:** [Codespell](https://github.com/codespell-project/codespell) for correcting typos in the code.
 8.  **Autotyping:** [Autotyping](https://github.com/JelleZijlstra/autotyping) for adding type hints.
 9.  **Refurb:** [Refurb](https://github.com/dosisod/refurb) to suggest code improvements.
@@ -225,7 +225,7 @@ python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold
 
     Or with the interactive Rich UI:
     ```
-    python -m crackerjack --interactive
+    python -m crackerjack -i
     ```
 
 ## Usage
@@ -257,7 +257,6 @@ class MyOptions:
         # Configuration options
         self.no_config_updates = False  # Skip updating config files
         self.update_precommit = False   # Update pre-commit hooks
-        self.doc = False                # Generate documentation (not implemented yet)
 
         # Process options
         self.clean = True            # Clean code (remove docstrings, comments, etc.)
@@ -303,7 +302,6 @@ runner.process(MyOptions())
 -   `-i`, `--interactive`: Run pre-commit hooks interactively when possible.
 -   `-n`, `--no-config-updates`: Skip updating configuration files (e.g., `pyproject.toml`).
 -   `-u`, `--update-precommit`: Update pre-commit hooks to the latest versions.
--   `-d`, `--doc`: Generate documentation.  (not yet implemented)
 -   `-v`, `--verbose`: Enable verbose output.
 -   `-p`, `--publish <micro|minor|major>`: Bump the project version and publish to PyPI using PDM.
 -   `-b`, `--bump <micro|minor|major>`: Bump the project version without publishing.
@@ -317,7 +315,7 @@ runner.process(MyOptions())
 -   `--benchmark-regression`: Fail tests if benchmarks regress beyond threshold.
 -   `--benchmark-regression-threshold`: Set threshold percentage for benchmark regression (default 5.0%).
 -   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
--   `--interactive`: Enable the interactive Rich UI for a more user-friendly experience with visual progress tracking and interactive prompts.
+-   `-i`, `--interactive`: Enable the interactive Rich UI for a more user-friendly experience with visual progress tracking and interactive prompts.
 -   `--ai-agent`: Enable AI agent mode with structured output (see [AI Agent Integration](#ai-agent-integration)).
 -   `--help`: Display help.
 
@@ -417,7 +415,7 @@ runner.process(MyOptions())
 
 - **Rich Interactive Mode** - Run with the interactive Rich UI:
   ```bash
-  python -m crackerjack --interactive
+  python -m crackerjack -i
   ```
 
 - **AI Integration** - Run with structured output for AI tools:
@@ -456,10 +454,10 @@ Crackerjack now offers an enhanced interactive experience through its Rich UI:
 - **Error Visualization:** Errors are presented in a structured, easy-to-understand format with recovery suggestions
 - **File Selection:** Interactive file browser for operations that require selecting files
 
-To use the Rich UI, run Crackerjack with the `--interactive` flag:
+To use the Rich UI, run Crackerjack with the `-i` flag:
 
 ```bash
-python -m crackerjack --interactive
+python -m crackerjack -i
 ```
 
 This launches an interactive terminal interface where you can:
@@ -498,7 +496,7 @@ python -m crackerjack -v
 For the most comprehensive error details with visual formatting, combine verbose mode with the Rich UI:
 
 ```bash
-python -m crackerjack --interactive -v
+python -m crackerjack -i -v
 ```
 
 ## Python 3.13+ Features
@@ -562,7 +560,7 @@ Crackerjack is designed with modern Python principles in mind:
 -   **bandit:** For finding security vulnerabilities.
 -   **vulture:** For dead code detection.
 -   **creosote:** For unused dependency detection.
--   **flynt:** For f-string conversion.
+-   **complexipy:** For code complexity analysis.
 -   **codespell:** For spelling correction.
 -   **autotyping:** For automatically adding type hints.
 -   **refurb:** For code improvement suggestions.

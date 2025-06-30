@@ -32,7 +32,6 @@ class CommandRunner(t.Protocol):
 class OptionsProtocol(t.Protocol):
     commit: bool
     interactive: bool
-    doc: bool
     no_config_updates: bool
     verbose: bool
     update_precommit: bool

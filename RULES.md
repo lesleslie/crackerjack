@@ -54,8 +54,8 @@
     - Pyright for static type checking
     - Ruff for linting and formatting
     - Vulture for detecting unused code
-    - Creosote for identifying large files
-    - Flynt for string formatting conversion
+    - Creosote for identifying unused dependencies
+    - Complexipy for code complexity analysis
     - Codespell for spell checking
     - Autotyping for type annotation
     - Refurb for Python code modernization

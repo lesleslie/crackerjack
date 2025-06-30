@@ -30,8 +30,14 @@ python -m crackerjack -x -t -c
 # Clean code, run tests, bump version (micro), and commit changes
 python -m crackerjack -a micro
 
-# Run specific pre-commit hooks interactively
+# Launch interactive workflow interface
 python -m crackerjack -i
+
+# Create a pull request
+python -m crackerjack -r
+
+# Enable verbose output
+python -m crackerjack -v
 ```
 
 ### Testing
@@ -152,6 +158,63 @@ Crackerjack has a robust testing setup with:
 - **Deadlock Prevention**: Advanced threading techniques to prevent deadlocks
 - **Progress Tracking**: Shows periodic heartbeat messages for long-running tests
 - **AI Agent Integration**: Generates structured output files (JUnit XML, JSON coverage, benchmark JSON) when `--ai-agent` flag is used
+
+### Interactive Mode
+
+Crackerjack includes a Rich-based interactive UI that provides:
+
+- **Visual Task Management**: Progress tracking with status indicators (✅❌⏳⏩⏸️)
+- **Workflow Confirmation**: Confirm each step in the development workflow
+- **Real-time Feedback**: Live updates on task completion with duration tracking
+- **Enhanced User Experience**: Modern terminal UI with colors, panels, and tables
+- **Task Dependencies**: Visual display of task relationships and execution order
+
+The interactive mode runs a predefined workflow with tasks:
+1. **Setup** - Initialize project structure
+2. **Config** - Update configuration files
+3. **Clean** - Remove docstrings and comments
+4. **Hooks** - Run pre-commit hooks
+5. **Test** - Execute test suite
+6. **Version** - Bump version numbers
+7. **Publish** - Publish to PyPI
+8. **Commit** - Commit changes to Git
+
+Access interactive mode with: `python -m crackerjack -i`
+
+## CLI Reference
+
+### Core Options
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| `-c` | `--commit` | Commit changes to Git |
+| `-i` | `--interactive` | Launch Rich interactive UI |
+| `-t` | `--test` | Run tests |
+| `-x` | `--clean` | Remove docstrings, comments, and whitespace |
+| `-u` | `--update-precommit` | Update pre-commit hooks |
+| `-r` | `--pr` | Create pull request |
+| `-v` | `--verbose` | Enable verbose output |
+| `-s` | `--skip-hooks` | Skip pre-commit hooks |
+| `-n` | `--no-config-updates` | Skip configuration updates |
+
+### Version Management
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| `-p` | `--publish` | Bump version and publish to PyPI |
+| `-b` | `--bump` | Bump version only (no publish) |
+| `-a` | `--all` | Run full workflow: clean, test, publish, commit |
+
+### Testing Options
+
+| Flag | Description |
+|------|-------------|
+| `--benchmark` | Run tests in benchmark mode |
+| `--benchmark-regression` | Fail on performance regression |
+| `--benchmark-regression-threshold` | Set regression threshold (default: 5.0%) |
+| `--test-workers` | Number of parallel workers (0=auto, 1=disable) |
+| `--test-timeout` | Test timeout in seconds (0=auto) |
+| `--ai-agent` | Generate structured output files (hidden flag) |
 
 ## Development Guidelines
 
@@ -279,6 +342,14 @@ These standards align with the project's pre-commit hooks:
 - **Bandit**: Scans for security vulnerabilities
 - **Pyright**: Enforces type safety
 - **Ruff**: Handles formatting and additional linting
+- **pyproject-fmt**: Validates and formats pyproject.toml files
+- **Vulture**: Detects unused code (dead code detection)
+- **Creosote**: Identifies unused dependencies
+- **Complexipy**: Analyzes code complexity
+- **Autotyping**: Automatically adds type annotations
+- **Codespell**: Fixes common spelling mistakes
+- **Detect-secrets**: Prevents credential leaks
+- **Standard hooks**: File formatting (trailing whitespace, end-of-file fixes, YAML/TOML validation)
 
 By following these guidelines during code generation, AI assistants will produce code that passes all quality checks without requiring manual fixes.
 

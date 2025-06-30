@@ -13,7 +13,6 @@ class MockOptions:
     def __init__(self, **kwargs: t.Any) -> None:
         self.commit = kwargs.get("commit", False)
         self.interactive = kwargs.get("interactive", False)
-        self.doc = kwargs.get("doc", False)
         self.no_config_updates = kwargs.get("no_config_updates", False)
         self.verbose = kwargs.get("verbose", False)
         self.update_precommit = kwargs.get("update_precommit", False)

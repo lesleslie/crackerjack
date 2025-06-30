@@ -27,7 +27,6 @@ def test_no_options(runner: CliRunner, mock_crackerjack_process: MagicMock) -> N
     assert isinstance(options, Options)
     assert not options.commit
     assert not options.interactive
-    assert not options.doc
     assert not options.update_precommit
     assert not options.no_config_updates
     assert options.publish is None
@@ -64,19 +63,6 @@ def test_interactive_option(
         assert result.exit_code == 0
         mock_interactive.assert_called_once()
         mock_crackerjack_process.process.assert_not_called()
-
-
-def test_doc_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
-    result = runner.invoke(app, ["-d"])
-    assert result.exit_code == 0
-    mock_crackerjack_process.process.assert_called_once()
-    options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.doc
-    mock_crackerjack_process.process.reset_mock()
-    result = runner.invoke(app, ["--doc"])
-    assert result.exit_code == 0
-    options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.doc
 
 
 def test_update_precommit_option(
@@ -198,17 +184,16 @@ def test_multiple_options(
     runner: CliRunner, mock_crackerjack_process: MagicMock
 ) -> None:
     with patch("crackerjack.interactive.launch_interactive_cli") as mock_interactive:
-        result = runner.invoke(app, ["-c", "-i", "-d", "-t", "-x"])
+        result = runner.invoke(app, ["-c", "-i", "-t", "-x"])
         assert result.exit_code == 0
         mock_interactive.assert_called_once()
         mock_crackerjack_process.process.assert_not_called()
-    result = runner.invoke(app, ["-c", "-d", "-t", "-x"])
+    result = runner.invoke(app, ["-c", "-t", "-x"])
     assert result.exit_code == 0
     mock_crackerjack_process.process.assert_called_once()
     options = mock_crackerjack_process.process.call_args[0][0]
     assert options.commit
     assert not options.interactive
-    assert options.doc
     assert options.test
     assert options.clean
 
@@ -217,7 +202,6 @@ def test_create_options() -> None:
     test_options = Options(
         commit=True,
         interactive=True,
-        doc=True,
         no_config_updates=True,
         update_precommit=True,
         verbose=True,
@@ -231,7 +215,6 @@ def test_create_options() -> None:
     )
     assert test_options.commit
     assert test_options.interactive
-    assert test_options.doc
     assert test_options.no_config_updates
     assert test_options.update_precommit
     assert test_options.verbose

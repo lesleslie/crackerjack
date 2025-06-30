@@ -23,7 +23,6 @@ class BumpOption(str, Enum):
 class Options(BaseModel):
     commit: bool = False
     interactive: bool = False
-    doc: bool = False
     no_config_updates: bool = False
     publish: BumpOption | None = None
     bump: BumpOption | None = None
@@ -63,7 +62,6 @@ cli_options = {
         "--interactive",
         help="Use the interactive Rich UI for a better experience.",
     ),
-    "doc": typer.Option(False, "-d", "--doc", help="Generate documentation."),
     "no_config_updates": typer.Option(
         False, "-n", "--no-config-updates", help="Do not update configuration files."
     ),
@@ -146,7 +144,6 @@ cli_options = {
 def main(
     commit: bool = cli_options["commit"],
     interactive: bool = cli_options["interactive"],
-    doc: bool = cli_options["doc"],
     no_config_updates: bool = cli_options["no_config_updates"],
     update_precommit: bool = cli_options["update_precommit"],
     verbose: bool = cli_options["verbose"],
@@ -169,7 +166,6 @@ def main(
     options = Options(
         commit=commit,
         interactive=interactive,
-        doc=doc,
         no_config_updates=no_config_updates,
         update_precommit=update_precommit,
         verbose=verbose,
