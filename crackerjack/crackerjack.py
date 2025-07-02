@@ -74,16 +74,83 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 parent_pycache.rmdir()
 
     def clean_file(self, file_path: Path) -> None:
+        from crackerjack.errors import ExecutionError, handle_error
+
         try:
-            code = file_path.read_text()
-            code = self.remove_line_comments(code)
-            code = self.remove_docstrings(code)
-            code = self.remove_extra_whitespace(code)
-            code = self.reformat_code(code)
-            file_path.write_text(code)
-            print(f"Cleaned: {file_path}")
+            code = file_path.read_text(encoding="utf-8")
+            original_code = code
+            try:
+                code = self.remove_line_comments(code)
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]Warning: Failed to remove line comments from {file_path}: {e}[/yellow]"
+                )
+                code = original_code
+            try:
+                code = self.remove_docstrings(code)
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]Warning: Failed to remove docstrings from {file_path}: {e}[/yellow]"
+                )
+                code = original_code
+            try:
+                code = self.remove_extra_whitespace(code)
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]Warning: Failed to remove extra whitespace from {file_path}: {e}[/yellow]"
+                )
+            try:
+                code = self.reformat_code(code)
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]Warning: Failed to reformat {file_path}: {e}[/yellow]"
+                )
+            file_path.write_text(code, encoding="utf-8")
+            self.console.print(f"Cleaned: {file_path}")
+        except PermissionError as e:
+            handle_error(
+                ExecutionError(
+                    message=f"Permission denied while cleaning {file_path}",
+                    error_code=ErrorCode.PERMISSION_ERROR,
+                    details=str(e),
+                    recovery=f"Check file permissions for {file_path} and ensure you have write access",
+                ),
+                console=self.console,
+                exit_on_error=False,
+            )
+        except OSError as e:
+            handle_error(
+                ExecutionError(
+                    message=f"File system error while cleaning {file_path}",
+                    error_code=ErrorCode.FILE_WRITE_ERROR,
+                    details=str(e),
+                    recovery=f"Check that {file_path} exists and is not being used by another process",
+                ),
+                console=self.console,
+                exit_on_error=False,
+            )
+        except UnicodeDecodeError as e:
+            handle_error(
+                ExecutionError(
+                    message=f"Encoding error while reading {file_path}",
+                    error_code=ErrorCode.FILE_READ_ERROR,
+                    details=str(e),
+                    recovery=f"File {file_path} contains non-UTF-8 characters. Please check the file encoding.",
+                ),
+                console=self.console,
+                exit_on_error=False,
+            )
         except Exception as e:
-            print(f"Error cleaning {file_path}: {e}")
+            handle_error(
+                ExecutionError(
+                    message=f"Unexpected error while cleaning {file_path}",
+                    error_code=ErrorCode.UNEXPECTED_ERROR,
+                    details=str(e),
+                    recovery="This is an unexpected error. Please report this issue with the file content if possible.",
+                ),
+                console=self.console,
+                exit_on_error=False,
+            )
 
     def _initialize_docstring_state(self) -> dict[str, t.Any]:
         return {

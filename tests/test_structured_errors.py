@@ -91,9 +91,9 @@ class TestErrorHandlingIntegration:
             cleaner.clean_file(test_path)
             captured = capsys.readouterr()
             output = captured.out.strip()
-            assert "Error cleaning" in output
+            assert "FILE_WRITE_ERROR" in output
             assert str(test_path) in output
-            assert "No such file or directory" in output
+            assert "File system error while cleaning" in output
 
     def test_error_handling_in_publish_project(self) -> None:
         from crackerjack.crackerjack import Crackerjack

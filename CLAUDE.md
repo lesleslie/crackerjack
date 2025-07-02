@@ -476,3 +476,58 @@ This fix is fully backward compatible:
 - `tests/test_crackerjack.py`: Added syntax validation and comprehensive test cases
 
 This fix ensures that the code cleaning functionality (`-x` flag) works reliably in all scenarios while maintaining the quality and functionality of the docstring removal feature.
+
+### Enhanced Error Handling (December 2024)
+
+#### Problem Description
+The original code cleaner had basic error handling but would stop processing if any individual file encountered an error during cleaning. This could prevent the tool from cleaning other files in the project, particularly in cases involving:
+- File permission issues
+- Encoding problems (non-UTF-8 files)
+- File system errors (file locks, disk space)
+- Malformed Python code that causes parsing issues
+
+#### Solution Implementation
+Enhanced the `clean_file` method with comprehensive error handling that:
+
+1. **Graceful Degradation**: Each cleaning step (remove comments, remove docstrings, remove whitespace, reformat) is wrapped in individual try-catch blocks
+2. **Step-by-Step Recovery**: If one cleaning step fails, the cleaner falls back to the previous state and continues with remaining steps
+3. **Detailed Error Reporting**: Uses the structured error handling system with specific error codes:
+   - `PERMISSION_ERROR (6002)`: File permission issues
+   - `FILE_WRITE_ERROR (6004)`: File system errors
+   - `FILE_READ_ERROR (6003)`: Encoding or read errors
+   - `UNEXPECTED_ERROR (9999)`: Unexpected errors with detailed context
+4. **Non-Fatal Errors**: All errors are handled gracefully without stopping the overall cleaning process (`exit_on_error=False`)
+5. **UTF-8 Encoding**: Explicit UTF-8 encoding for file operations to prevent encoding issues
+
+#### Key Improvements
+- **Resilient Processing**: The cleaner continues processing other files even if individual files fail
+- **Clear Diagnostics**: Detailed error messages with recovery suggestions help users understand and fix issues
+- **Fallback Mechanism**: Each cleaning step can fall back to the original code if specific operations fail
+- **Step Isolation**: Failure in one cleaning step doesn't prevent other steps from running
+
+#### Example Error Handling Flow
+```python
+try:
+    code = self.remove_line_comments(code)
+except Exception as e:
+    self.console.print(f"[yellow]Warning: Failed to remove line comments: {e}[/yellow]")
+    code = original_code  # Fallback to original
+
+try:
+    code = self.remove_docstrings(code)
+except Exception as e:
+    self.console.print(f"[yellow]Warning: Failed to remove docstrings: {e}[/yellow]")
+    code = original_code  # Fallback to original
+```
+
+#### Benefits
+- **Robustness**: Code cleaning continues even when encountering problematic files
+- **Better User Experience**: Clear error messages with actionable recovery suggestions
+- **Debugging Support**: Detailed error information helps identify and fix underlying issues
+- **Compatibility**: Handles various file encoding and permission scenarios gracefully
+- **Project-Wide Cleaning**: Ensures that cleaning doesn't stop due to individual file issues
+
+#### Files Modified
+- `crackerjack/crackerjack.py`: Enhanced `clean_file` method with comprehensive error handling
+
+This enhancement ensures that the code cleaner (`-x` flag) can handle edge cases and problematic files while continuing to process the rest of the project successfully.
