@@ -79,6 +79,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         try:
             code = file_path.read_text(encoding="utf-8")
             original_code = code
+            cleaning_failed = False
             try:
                 code = self.remove_line_comments(code)
             except Exception as e:
@@ -86,6 +87,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     f"[yellow]Warning: Failed to remove line comments from {file_path}: {e}[/yellow]"
                 )
                 code = original_code
+                cleaning_failed = True
             try:
                 code = self.remove_docstrings(code)
             except Exception as e:
@@ -93,6 +95,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     f"[yellow]Warning: Failed to remove docstrings from {file_path}: {e}[/yellow]"
                 )
                 code = original_code
+                cleaning_failed = True
             try:
                 code = self.remove_extra_whitespace(code)
             except Exception as e:
@@ -100,6 +103,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     f"[yellow]Warning: Failed to remove extra whitespace from {file_path}: {e}[/yellow]"
                 )
                 code = original_code
+                cleaning_failed = True
             try:
                 code = self.reformat_code(code)
             except Exception as e:
@@ -107,9 +111,18 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     f"[yellow]Warning: Failed to reformat {file_path}: {e}[/yellow]"
                 )
                 code = original_code
+                cleaning_failed = True
             file_path.write_text(code, encoding="utf-8")
-            self.console.print(f"Cleaned: {file_path}")
+            if cleaning_failed:
+                self.console.print(
+                    f"[yellow]⚠️  Partially cleaned: {file_path}[/yellow]"
+                )
+            else:
+                self.console.print(f"[green]✅ Cleaned: {file_path}[/green]")
         except PermissionError as e:
+            self.console.print(
+                f"[red]❌ Failed to clean: {file_path} (Permission denied)[/red]"
+            )
             handle_error(
                 ExecutionError(
                     message=f"Permission denied while cleaning {file_path}",
@@ -121,6 +134,9 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 exit_on_error=False,
             )
         except OSError as e:
+            self.console.print(
+                f"[red]❌ Failed to clean: {file_path} (File system error)[/red]"
+            )
             handle_error(
                 ExecutionError(
                     message=f"File system error while cleaning {file_path}",
@@ -132,6 +148,9 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 exit_on_error=False,
             )
         except UnicodeDecodeError as e:
+            self.console.print(
+                f"[red]❌ Failed to clean: {file_path} (Encoding error)[/red]"
+            )
             handle_error(
                 ExecutionError(
                     message=f"Encoding error while reading {file_path}",
@@ -143,6 +162,9 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 exit_on_error=False,
             )
         except Exception as e:
+            self.console.print(
+                f"[red]❌ Failed to clean: {file_path} (Unexpected error)[/red]"
+            )
             handle_error(
                 ExecutionError(
                     message=f"Unexpected error while cleaning {file_path}",
@@ -601,6 +623,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                             recovery="Check Ruff configuration and formatting rules",
                         ),
                         console=self.console,
+                        exit_on_error=False,
                     )
                     formatted_code = code
             except Exception as e:
@@ -613,6 +636,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                         recovery="Verify Ruff is installed and configured correctly",
                     ),
                     console=self.console,
+                    exit_on_error=False,
                 )
                 formatted_code = code
             finally:
