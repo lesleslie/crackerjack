@@ -99,12 +99,14 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 self.console.print(
                     f"[yellow]Warning: Failed to remove extra whitespace from {file_path}: {e}[/yellow]"
                 )
+                code = original_code
             try:
                 code = self.reformat_code(code)
             except Exception as e:
                 self.console.print(
                     f"[yellow]Warning: Failed to reformat {file_path}: {e}[/yellow]"
                 )
+                code = original_code
             file_path.write_text(code, encoding="utf-8")
             self.console.print(f"Cleaned: {file_path}")
         except PermissionError as e:
