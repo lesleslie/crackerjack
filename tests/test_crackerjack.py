@@ -500,7 +500,9 @@ class TestCrackerjackProcess:
                                 mock_tests.assert_called_once()
                                 mock_publish.assert_called_once()
                                 mock_commit.assert_called_once()
-        mock_console_print.assert_any_call("\n🍺 Crackerjack complete!\n")
+        mock_console_print.assert_any_call(
+            "\n[bright_green]🍺 Crackerjack complete![/bright_green]\n"
+        )
 
     def test_process_with_all_option_sets_flags(
         self,
@@ -672,7 +674,9 @@ class TestCrackerjackProcess:
                 cj = Crackerjack(dry_run=True)
                 with suppress(SystemExit):
                     cj.process(options)
-        mock_console_print.assert_any_call("\n\nRunning tests...\n")
+        mock_console_print.assert_any_call(
+            "\n\n[bright_red]❌ Tests failed. Please fix errors.[/bright_red]\n"
+        )
         mock_cj_execute.assert_called_once()
 
     def test_process_with_failed_build(
@@ -701,7 +705,9 @@ class TestCrackerjackProcess:
                     cj = Crackerjack(dry_run=True)
                     with suppress(SystemExit):
                         cj.process(options)
-        mock_console_print.assert_any_call("\n\nBuild failed. Please fix errors.\n")
+        mock_console_print.assert_any_call(
+            "\n\n[bright_red]❌ Build failed. Please fix errors.[/bright_red]\n"
+        )
 
     def test_publish_project_darwin(self) -> None:
         options = OptionsForTesting(publish=BumpOption.micro)

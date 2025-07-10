@@ -84,7 +84,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.remove_line_comments(code)
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Failed to remove line comments from {file_path}: {e}[/yellow]"
+                    f"[bright_yellow]⚠️  Warning: Failed to remove line comments from {file_path}: {e}[/bright_yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
@@ -92,7 +92,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.remove_docstrings(code)
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Failed to remove docstrings from {file_path}: {e}[/yellow]"
+                    f"[bright_yellow]⚠️  Warning: Failed to remove docstrings from {file_path}: {e}[/bright_yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
@@ -100,7 +100,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.remove_extra_whitespace(code)
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Failed to remove extra whitespace from {file_path}: {e}[/yellow]"
+                    f"[bright_yellow]⚠️  Warning: Failed to remove extra whitespace from {file_path}: {e}[/bright_yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
@@ -108,20 +108,22 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.reformat_code(code)
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Failed to reformat {file_path}: {e}[/yellow]"
+                    f"[bright_yellow]⚠️  Warning: Failed to reformat {file_path}: {e}[/bright_yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
             file_path.write_text(code, encoding="utf-8")
             if cleaning_failed:
                 self.console.print(
-                    f"[yellow]⚠️  Partially cleaned: {file_path}[/yellow]"
+                    f"[bright_yellow]⚠️  Partially cleaned: {file_path}[/bright_yellow]"
                 )
             else:
-                self.console.print(f"[green]✅ Cleaned: {file_path}[/green]")
+                self.console.print(
+                    f"[bright_green]🧹 Cleaned: {file_path}[/bright_green]"
+                )
         except PermissionError as e:
             self.console.print(
-                f"[red]❌ Failed to clean: {file_path} (Permission denied)[/red]"
+                f"[bright_red]❌ Failed to clean: {file_path} (Permission denied)[/bright_red]"
             )
             handle_error(
                 ExecutionError(
@@ -135,7 +137,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             )
         except OSError as e:
             self.console.print(
-                f"[red]❌ Failed to clean: {file_path} (File system error)[/red]"
+                f"[bright_red]❌ Failed to clean: {file_path} (File system error)[/bright_red]"
             )
             handle_error(
                 ExecutionError(
@@ -149,7 +151,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             )
         except UnicodeDecodeError as e:
             self.console.print(
-                f"[red]❌ Failed to clean: {file_path} (Encoding error)[/red]"
+                f"[bright_red]❌ Failed to clean: {file_path} (Encoding error)[/bright_red]"
             )
             handle_error(
                 ExecutionError(
@@ -163,7 +165,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             )
         except Exception as e:
             self.console.print(
-                f"[red]❌ Failed to clean: {file_path} (Unexpected error)[/red]"
+                f"[bright_red]❌ Failed to clean: {file_path} (Unexpected error)[/bright_red]"
             )
             handle_error(
                 ExecutionError(
@@ -613,7 +615,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     formatted_code = temp_path.read_text()
                 else:
                     self.console.print(
-                        f"[yellow]Ruff formatting failed: {result.stderr}[/yellow]"
+                        f"[bright_yellow]⚠️  Ruff formatting failed: {result.stderr}[/bright_yellow]"
                     )
                     handle_error(
                         ExecutionError(
@@ -627,7 +629,9 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     )
                     formatted_code = code
             except Exception as e:
-                self.console.print(f"[red]Error running Ruff: {e}[/red]")
+                self.console.print(
+                    f"[bright_red]❌ Error running Ruff: {e}[/bright_red]"
+                )
                 handle_error(
                     ExecutionError(
                         message="Error running Ruff",
@@ -644,7 +648,9 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     temp_path.unlink()
             return formatted_code
         except Exception as e:
-            self.console.print(f"[red]Error during reformatting: {e}[/red]")
+            self.console.print(
+                f"[bright_red]❌ Error during reformatting: {e}[/bright_red]"
+            )
             handle_error(
                 ExecutionError(
                     message="Error during reformatting",
@@ -816,7 +822,7 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[yellow]Would run: {' '.join(cmd)}[/yellow]")
+            self.console.print(f"[dim cyan]🔍 Would run: {' '.join(cmd)}[/dim cyan]")
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
@@ -838,7 +844,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             ["pdm", "list", "--freeze"], capture_output=True, text=True
         ).stdout.splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
-            self.console.print("Initializing project...")
+            self.console.print("[bright_blue]🚀 Initializing project...[/bright_blue]")
             self.execute_command(["pdm", "self", "add", "keyring"])
             self.execute_command(["pdm", "config", "python.use_uv", "true"])
             self.execute_command(["git", "init"])
@@ -853,7 +859,9 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         self.config_manager.update_pyproject_configs()
 
     def run_pre_commit(self) -> None:
-        self.console.print("\nRunning pre-commit hooks...\n")
+        self.console.print(
+            "\n[bright_blue]🔍 Running pre-commit hooks...[/bright_blue]\n"
+        )
         cmd = ["pre-commit", "run", "--all-files"]
         if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
             cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
@@ -861,14 +869,16 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         if check_all.returncode > 0:
             check_all = self.execute_command(cmd)
             if check_all.returncode > 0:
-                self.console.print("\n\nPre-commit failed. Please fix errors.\n")
+                self.console.print(
+                    "\n\n[bright_red]❌ Pre-commit failed. Please fix errors.[/bright_red]\n"
+                )
                 raise SystemExit(1)
 
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[yellow]Would run: {' '.join(cmd)}[/yellow]")
+            self.console.print(f"[dim cyan]🔍 Would run: {' '.join(cmd)}[/dim cyan]")
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
@@ -911,7 +921,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self.pkg_name = self.pkg_path.stem.lower().replace("-", "_")
         self.pkg_dir = self.pkg_path / self.pkg_name
         self.pkg_dir.mkdir(exist_ok=True)
-        self.console.print("\nCrackerjacking...\n")
+        self.console.print("\n[bright_magenta]🎯 Crackerjacking...[/bright_magenta]\n")
         self.config_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_dir = self.pkg_dir
@@ -923,9 +933,11 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 ["pdm", "install"], capture_output=True, text=True
             )
             if result.returncode == 0:
-                self.console.print("PDM installed: ✅\n")
+                self.console.print("[bright_green]✅ PDM installed[/bright_green]\n")
                 self.execute_command(["pdm", "lock"])
-                self.console.print("Lock file updated: ✅\n")
+                self.console.print(
+                    "[bright_green]✅ Lock file updated[/bright_green]\n"
+                )
             else:
                 self.console.print(
                     "\n\n❌ PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.\n\n"
@@ -945,7 +957,9 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             if self.pkg_path.stem == "crackerjack":
                 tests_dir = self.pkg_path / "tests"
                 if tests_dir.exists() and tests_dir.is_dir():
-                    self.console.print("\nCleaning tests directory...\n")
+                    self.console.print(
+                        "\n[bright_blue]🧹 Cleaning tests directory...[/bright_blue]\n"
+                    )
                     self.code_cleaner.clean_files(tests_dir)
 
     def _get_test_timeout(self, options: OptionsProtocol, project_size: str) -> int:
@@ -1042,26 +1056,34 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
     def _print_ai_agent_files(self, options: t.Any) -> None:
         if getattr(options, "ai_agent", False):
-            self.console.print("📄 Structured test results: test-results.xml")
-            self.console.print("📊 Coverage report: coverage.json")
+            self.console.print(
+                "[dim cyan]📄 Structured test results: test-results.xml[/dim cyan]"
+            )
+            self.console.print("[dim cyan]📊 Coverage report: coverage.json[/dim cyan]")
             if options.benchmark or options.benchmark_regression:
-                self.console.print("⏱️  Benchmark results: benchmark.json")
+                self.console.print(
+                    "[dim cyan]⏱️  Benchmark results: benchmark.json[/dim cyan]"
+                )
 
     def _handle_test_failure(self, result: t.Any, options: t.Any) -> None:
         if result.stderr:
             self.console.print(result.stderr)
-        self.console.print("\n\n❌ Tests failed. Please fix errors.\n")
+        self.console.print(
+            "\n\n[bright_red]❌ Tests failed. Please fix errors.[/bright_red]\n"
+        )
         self._print_ai_agent_files(options)
         raise SystemExit(1)
 
     def _handle_test_success(self, options: t.Any) -> None:
-        self.console.print("\n\n✅ Tests passed successfully!\n")
+        self.console.print(
+            "\n\n[bright_green]✅ Tests passed successfully![/bright_green]\n"
+        )
         self._print_ai_agent_files(options)
 
     def _run_tests(self, options: t.Any) -> None:
         if not options.test:
             return
-        self.console.print("\n\nRunning tests...\n")
+        self.console.print("\n\n[bright_blue]🧪 Running tests...[/bright_blue]\n")
         test_command = self._prepare_pytest_command(options)
         result = self.execute_command(test_command, capture_output=True, text=True)
         if result.stdout:
@@ -1082,7 +1104,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                         default=False,
                     ):
                         self.console.print(
-                            f"[yellow]Skipping {option} version bump[/yellow]"
+                            f"[dim yellow]⏭️  Skipping {option} version bump[/dim yellow]"
                         )
                         return
                 self.execute_command(["pdm", "bump", option])
@@ -1096,7 +1118,9 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             self.console.print(build.stdout)
             if build.returncode > 0:
                 self.console.print(build.stderr)
-                self.console.print("\n\nBuild failed. Please fix errors.\n")
+                self.console.print(
+                    "\n\n[bright_red]❌ Build failed. Please fix errors.[/bright_red]\n"
+                )
                 raise SystemExit(1)
             self.execute_command(["pdm", "publish", "--no-build"])
 
@@ -1112,7 +1136,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[yellow]Would run: {' '.join(cmd)}[/yellow]")
+            self.console.print(f"[dim cyan]🔍 Would run: {' '.join(cmd)}[/dim cyan]")
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
@@ -1130,12 +1154,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         if not options.skip_hooks:
             self.project_manager.run_pre_commit()
         else:
-            self.console.print("Skipping pre-commit hooks")
+            self.console.print("[dim yellow]⏭️  Skipping pre-commit hooks[/dim yellow]")
         self._run_tests(options)
         self._bump_version(options)
         self._publish_project(options)
         self._commit_and_push(options)
-        self.console.print("\n🍺 Crackerjack complete!\n")
+        self.console.print("\n[bright_green]🍺 Crackerjack complete![/bright_green]\n")
 
 
 crackerjack_it = Crackerjack().process
