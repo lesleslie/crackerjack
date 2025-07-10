@@ -867,6 +867,8 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
         check_all = self.execute_command(cmd)
         if check_all.returncode > 0:
+            self.execute_command(["pdm", "lock"])
+            self.console.print("\n[bright_green]✅ Lock file updated[/bright_green]\n")
             check_all = self.execute_command(cmd)
             if check_all.returncode > 0:
                 self.console.print(
@@ -934,10 +936,6 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             )
             if result.returncode == 0:
                 self.console.print("[bright_green]✅ PDM installed[/bright_green]\n")
-                self.execute_command(["pdm", "lock"])
-                self.console.print(
-                    "[bright_green]✅ Lock file updated[/bright_green]\n"
-                )
             else:
                 self.console.print(
                     "\n\n❌ PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.\n\n"
