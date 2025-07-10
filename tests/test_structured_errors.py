@@ -156,7 +156,7 @@ class TestErrorHandlingIntegration:
         with patch("sys.exit"):
             handle_error(error, console, verbose=True)
         output = output_io.getvalue()
-        assert "❌ Error 3002: TEST_FAILURE" in output
+        assert "Error 3002: TEST_FAILURE" in output
         assert "Test failed" in output
         assert "Details:" in output
         assert "Test details" in output

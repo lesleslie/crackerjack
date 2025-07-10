@@ -106,13 +106,13 @@ def handle_error(
         formatted_json = json.dumps(error_data)
         console.print(f"[json]{formatted_json}[/json]")
     else:
-        title = f"❌ Error {error.error_code.value}: {error.error_code.name}"
+        title = f"Error {error.error_code.value}: {error.error_code.name}"
         content = [error.message]
         if verbose and error.details:
-            content.extend(("\n[bold]Details:[/bold]", str(error.details)))
+            content.extend(("\n[white]Details:[/white]", str(error.details)))
         if error.recovery:
             content.extend(
-                ("\n[bold green]Recovery suggestion:[/bold green]", str(error.recovery))
+                ("\n[green]Recovery suggestion:[/green]", str(error.recovery))
             )
         console.print(
             Panel(

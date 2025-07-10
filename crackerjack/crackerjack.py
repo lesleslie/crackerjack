@@ -84,7 +84,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.remove_line_comments(code)
             except Exception as e:
                 self.console.print(
-                    f"[bright_yellow]⚠️  Warning: Failed to remove line comments from {file_path}: {e}[/bright_yellow]"
+                    f"[yellow]Warning: Failed to remove line comments from {file_path}: {e}[/yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
@@ -92,7 +92,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.remove_docstrings(code)
             except Exception as e:
                 self.console.print(
-                    f"[bright_yellow]⚠️  Warning: Failed to remove docstrings from {file_path}: {e}[/bright_yellow]"
+                    f"[yellow]Warning: Failed to remove docstrings from {file_path}: {e}[/yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
@@ -822,7 +822,7 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[dim cyan]🔍 Would run: {' '.join(cmd)}[/dim cyan]")
+            self.console.print(f"[dim white]→ {' '.join(cmd)}[/dim white]")
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
@@ -844,7 +844,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             ["pdm", "list", "--freeze"], capture_output=True, text=True
         ).stdout.splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
-            self.console.print("[bright_blue]🚀 Initializing project...[/bright_blue]")
+            self.console.print("[dim cyan]Initializing project...[/dim cyan]")
             self.execute_command(["pdm", "self", "add", "keyring"])
             self.execute_command(["pdm", "config", "python.use_uv", "true"])
             self.execute_command(["git", "init"])
@@ -868,11 +868,11 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         check_all = self.execute_command(cmd)
         if check_all.returncode > 0:
             self.execute_command(["pdm", "lock"])
-            self.console.print("\n[bright_green]✅ Lock file updated[/bright_green]\n")
+            self.console.print("\n[green]Lock file updated[/green]\n")
             check_all = self.execute_command(cmd)
             if check_all.returncode > 0:
                 self.console.print(
-                    "\n\n[bright_red]❌ Pre-commit failed. Please fix errors.[/bright_red]\n"
+                    "\n\n[red]Pre-commit failed. Please fix errors.[/red]\n"
                 )
                 raise SystemExit(1)
 
@@ -880,7 +880,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[dim cyan]🔍 Would run: {' '.join(cmd)}[/dim cyan]")
+            self.console.print(f"[dim white]→ {' '.join(cmd)}[/dim white]")
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
@@ -923,7 +923,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self.pkg_name = self.pkg_path.stem.lower().replace("-", "_")
         self.pkg_dir = self.pkg_path / self.pkg_name
         self.pkg_dir.mkdir(exist_ok=True)
-        self.console.print("\n[bright_magenta]🎯 Crackerjacking...[/bright_magenta]\n")
+        self.console.print("\n[magenta]Crackerjacking...[/magenta]\n")
         self.config_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_dir = self.pkg_dir
@@ -935,10 +935,10 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 ["pdm", "install"], capture_output=True, text=True
             )
             if result.returncode == 0:
-                self.console.print("[bright_green]✅ PDM installed[/bright_green]\n")
+                self.console.print("[green]PDM installed[/green]\n")
             else:
                 self.console.print(
-                    "\n\n❌ PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.\n\n"
+                    "\n\n[red]PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.[/red]\n\n"
                 )
 
     def _update_precommit(self, options: t.Any) -> None:
@@ -1055,12 +1055,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _print_ai_agent_files(self, options: t.Any) -> None:
         if getattr(options, "ai_agent", False):
             self.console.print(
-                "[dim cyan]📄 Structured test results: test-results.xml[/dim cyan]"
+                "[dim white]Structured test results: test-results.xml[/dim white]"
             )
-            self.console.print("[dim cyan]📊 Coverage report: coverage.json[/dim cyan]")
+            self.console.print("[dim white]Coverage report: coverage.json[/dim white]")
             if options.benchmark or options.benchmark_regression:
                 self.console.print(
-                    "[dim cyan]⏱️  Benchmark results: benchmark.json[/dim cyan]"
+                    "[dim white]Benchmark results: benchmark.json[/dim white]"
                 )
 
     def _handle_test_failure(self, result: t.Any, options: t.Any) -> None:
@@ -1081,7 +1081,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _run_tests(self, options: t.Any) -> None:
         if not options.test:
             return
-        self.console.print("\n\n[bright_blue]🧪 Running tests...[/bright_blue]\n")
+        self.console.print("\n\n[blue]Running tests...[/blue]\n")
         test_command = self._prepare_pytest_command(options)
         result = self.execute_command(test_command, capture_output=True, text=True)
         if result.stdout:
@@ -1134,7 +1134,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[dim cyan]🔍 Would run: {' '.join(cmd)}[/dim cyan]")
+            self.console.print(f"[dim white]→ {' '.join(cmd)}[/dim white]")
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
@@ -1152,12 +1152,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         if not options.skip_hooks:
             self.project_manager.run_pre_commit()
         else:
-            self.console.print("[dim yellow]⏭️  Skipping pre-commit hooks[/dim yellow]")
+            self.console.print("[yellow]Skipping pre-commit hooks[/yellow]")
         self._run_tests(options)
         self._bump_version(options)
         self._publish_project(options)
         self._commit_and_push(options)
-        self.console.print("\n[bright_green]🍺 Crackerjack complete![/bright_green]\n")
+        self.console.print("\n[green]Crackerjack complete![/green]\n")
 
 
 crackerjack_it = Crackerjack().process

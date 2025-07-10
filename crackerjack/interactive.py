@@ -205,19 +205,19 @@ class InteractiveCLI:
 
     def show_task_status(self, task: Task) -> Panel:
         if task.status == TaskStatus.RUNNING:
-            status = "[yellow]⏳ Running[/yellow]"
+            status = "[yellow]Running[/yellow]"
             style = "yellow"
         elif task.status == TaskStatus.SUCCESS:
-            status = "[green]✅ Success[/green]"
+            status = "[green]Success[/green]"
             style = "green"
         elif task.status == TaskStatus.FAILED:
-            status = "[red]❌ Failed[/red]"
+            status = "[red]Failed[/red]"
             style = "red"
         elif task.status == TaskStatus.SKIPPED:
-            status = "[blue]⏩ Skipped[/blue]"
+            status = "[blue]Skipped[/blue]"
             style = "blue"
         else:
-            status = "[grey]⏸️ Pending[/grey]"
+            status = "[dim white]Pending[/dim white]"
             style = "dim"
         duration = task.duration
         duration_text = f"Duration: {duration:.2f}s" if duration else ""
@@ -235,23 +235,23 @@ class InteractiveCLI:
             title="Workflow Tasks",
             box=ROUNDED,
             show_header=True,
-            header_style="bold cyan",
+            header_style="bold white",
         )
-        table.add_column("Task", style="cyan")
+        table.add_column("Task", style="white")
         table.add_column("Status")
         table.add_column("Duration")
         table.add_column("Dependencies")
         for task in self.workflow.tasks.values():
             if task.status == TaskStatus.RUNNING:
-                status = "[yellow]⏳ Running[/yellow]"
+                status = "[yellow]Running[/yellow]"
             elif task.status == TaskStatus.SUCCESS:
-                status = "[green]✅ Success[/green]"
+                status = "[green]Success[/green]"
             elif task.status == TaskStatus.FAILED:
-                status = "[red]❌ Failed[/red]"
+                status = "[red]Failed[/red]"
             elif task.status == TaskStatus.SKIPPED:
-                status = "[blue]⏩ Skipped[/blue]"
+                status = "[blue]Skipped[/blue]"
             else:
-                status = "[grey]⏸️ Pending[/grey]"
+                status = "[dim white]Pending[/dim white]"
             duration = task.duration
             duration_text = f"{duration:.2f}s" if duration else "-"
             deps = ", ".join(dep.name for dep in task.dependencies) or "-"
@@ -274,7 +274,7 @@ class InteractiveCLI:
     def _setup_interactive_layout(self) -> Layout:
         layout = self.setup_layout()
         layout["header"].update(
-            Panel("Crackerjack Interactive Mode", style="bold cyan", box=ROUNDED)
+            Panel("Crackerjack Interactive Mode", style="bold white", box=ROUNDED)
         )
         layout["footer"].update(Panel("Press Ctrl+C to exit", style="dim", box=ROUNDED))
         return layout
@@ -282,7 +282,7 @@ class InteractiveCLI:
     def _create_progress_tracker(self) -> dict[str, t.Any]:
         progress = Progress(
             SpinnerColumn(),
-            TextColumn("[bold blue]{task.description}"),
+            TextColumn("[white]{task.description}"),
             BarColumn(),
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
             TimeElapsedColumn(),
