@@ -500,7 +500,7 @@ class TestCrackerjackProcess:
                                 mock_tests.assert_called_once()
                                 mock_publish.assert_called_once()
                                 mock_commit.assert_called_once()
-        mock_console_print.assert_any_call("\n[green]Crackerjack complete![/green]\n")
+        mock_console_print.assert_any_call("-" * 60 + "\n")
 
     def test_process_with_all_option_sets_flags(
         self,
@@ -673,7 +673,7 @@ class TestCrackerjackProcess:
                 with suppress(SystemExit):
                     cj.process(options)
         mock_console_print.assert_any_call(
-            "\n\n[bright_red]❌ Tests failed. Please fix errors.[/bright_red]\n"
+            "\n\n[bold bright_red]❌ Tests failed. Please fix errors.[/bold bright_red]\n"
         )
         mock_cj_execute.assert_called_once()
 
@@ -704,7 +704,7 @@ class TestCrackerjackProcess:
                     with suppress(SystemExit):
                         cj.process(options)
         mock_console_print.assert_any_call(
-            "\n\n[bright_red]❌ Build failed. Please fix errors.[/bright_red]\n"
+            "[bold bright_red]❌ Build failed. Please fix errors.[/bold bright_red]"
         )
 
     def test_publish_project_darwin(self) -> None:

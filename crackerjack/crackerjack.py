@@ -84,7 +84,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.remove_line_comments(code)
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Failed to remove line comments from {file_path}: {e}[/yellow]"
+                    f"[bold bright_yellow]⚠️  Warning: Failed to remove line comments from {file_path}: {e}[/bold bright_yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
@@ -92,7 +92,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.remove_docstrings(code)
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Failed to remove docstrings from {file_path}: {e}[/yellow]"
+                    f"[bold bright_yellow]⚠️  Warning: Failed to remove docstrings from {file_path}: {e}[/bold bright_yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
@@ -100,7 +100,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.remove_extra_whitespace(code)
             except Exception as e:
                 self.console.print(
-                    f"[bright_yellow]⚠️  Warning: Failed to remove extra whitespace from {file_path}: {e}[/bright_yellow]"
+                    f"[bold bright_yellow]⚠️  Warning: Failed to remove extra whitespace from {file_path}: {e}[/bold bright_yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
@@ -108,22 +108,22 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 code = self.reformat_code(code)
             except Exception as e:
                 self.console.print(
-                    f"[bright_yellow]⚠️  Warning: Failed to reformat {file_path}: {e}[/bright_yellow]"
+                    f"[bold bright_yellow]⚠️  Warning: Failed to reformat {file_path}: {e}[/bold bright_yellow]"
                 )
                 code = original_code
                 cleaning_failed = True
             file_path.write_text(code, encoding="utf-8")
             if cleaning_failed:
                 self.console.print(
-                    f"[bright_yellow]⚠️  Partially cleaned: {file_path}[/bright_yellow]"
+                    f"[bold yellow]⚡ Partially cleaned:[/bold yellow] [dim bright_white]{file_path}[/dim bright_white]"
                 )
             else:
                 self.console.print(
-                    f"[bright_green]🧹 Cleaned: {file_path}[/bright_green]"
+                    f"[bold green]✨ Cleaned:[/bold green] [dim bright_white]{file_path}[/dim bright_white]"
                 )
         except PermissionError as e:
             self.console.print(
-                f"[bright_red]❌ Failed to clean: {file_path} (Permission denied)[/bright_red]"
+                f"[red]Failed to clean: {file_path} (Permission denied)[/red]"
             )
             handle_error(
                 ExecutionError(
@@ -137,7 +137,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             )
         except OSError as e:
             self.console.print(
-                f"[bright_red]❌ Failed to clean: {file_path} (File system error)[/bright_red]"
+                f"[red]Failed to clean: {file_path} (File system error)[/red]"
             )
             handle_error(
                 ExecutionError(
@@ -151,7 +151,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             )
         except UnicodeDecodeError as e:
             self.console.print(
-                f"[bright_red]❌ Failed to clean: {file_path} (Encoding error)[/bright_red]"
+                f"[red]Failed to clean: {file_path} (Encoding error)[/red]"
             )
             handle_error(
                 ExecutionError(
@@ -165,7 +165,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             )
         except Exception as e:
             self.console.print(
-                f"[bright_red]❌ Failed to clean: {file_path} (Unexpected error)[/bright_red]"
+                f"[red]Failed to clean: {file_path} (Unexpected error)[/red]"
             )
             handle_error(
                 ExecutionError(
@@ -615,7 +615,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     formatted_code = temp_path.read_text()
                 else:
                     self.console.print(
-                        f"[bright_yellow]⚠️  Ruff formatting failed: {result.stderr}[/bright_yellow]"
+                        f"[bold bright_yellow]⚠️  Ruff formatting failed: {result.stderr}[/bold bright_yellow]"
                     )
                     handle_error(
                         ExecutionError(
@@ -630,7 +630,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     formatted_code = code
             except Exception as e:
                 self.console.print(
-                    f"[bright_red]❌ Error running Ruff: {e}[/bright_red]"
+                    f"[bold bright_red]❌ Error running Ruff: {e}[/bold bright_red]"
                 )
                 handle_error(
                     ExecutionError(
@@ -649,7 +649,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             return formatted_code
         except Exception as e:
             self.console.print(
-                f"[bright_red]❌ Error during reformatting: {e}[/bright_red]"
+                f"[bold bright_red]❌ Error during reformatting: {e}[/bold bright_red]"
             )
             handle_error(
                 ExecutionError(
@@ -822,7 +822,9 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[dim white]→ {' '.join(cmd)}[/dim white]")
+            self.console.print(
+                f"[bold bright_black]→ {' '.join(cmd)}[/bold bright_black]"
+            )
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
@@ -844,7 +846,11 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             ["pdm", "list", "--freeze"], capture_output=True, text=True
         ).stdout.splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
-            self.console.print("[dim cyan]Initializing project...[/dim cyan]")
+            self.console.print("\n" + "─" * 60)
+            self.console.print(
+                "[bold bright_blue]⚡ INIT[/bold bright_blue] [bold bright_white]First-time project setup[/bold bright_white]"
+            )
+            self.console.print("─" * 60 + "\n")
             self.execute_command(["pdm", "self", "add", "keyring"])
             self.execute_command(["pdm", "config", "python.use_uv", "true"])
             self.execute_command(["git", "init"])
@@ -859,20 +865,22 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         self.config_manager.update_pyproject_configs()
 
     def run_pre_commit(self) -> None:
+        self.console.print("\n" + "-" * 60)
         self.console.print(
-            "\n[bright_blue]🔍 Running pre-commit hooks...[/bright_blue]\n"
+            "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks[/bold bright_white]"
         )
+        self.console.print("-" * 60 + "\n")
         cmd = ["pre-commit", "run", "--all-files"]
         if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
             cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
         check_all = self.execute_command(cmd)
         if check_all.returncode > 0:
             self.execute_command(["pdm", "lock"])
-            self.console.print("\n[green]Lock file updated[/green]\n")
+            self.console.print("\n[bold green]✓ Dependencies locked[/bold green]\n")
             check_all = self.execute_command(cmd)
             if check_all.returncode > 0:
                 self.console.print(
-                    "\n\n[red]Pre-commit failed. Please fix errors.[/red]\n"
+                    "\n\n[bold red]❌ Pre-commit failed. Please fix errors.[/bold red]\n"
                 )
                 raise SystemExit(1)
 
@@ -880,7 +888,9 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[dim white]→ {' '.join(cmd)}[/dim white]")
+            self.console.print(
+                f"[bold bright_black]→ {' '.join(cmd)}[/bold bright_black]"
+            )
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
@@ -923,7 +933,11 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self.pkg_name = self.pkg_path.stem.lower().replace("-", "_")
         self.pkg_dir = self.pkg_path / self.pkg_name
         self.pkg_dir.mkdir(exist_ok=True)
-        self.console.print("\n[magenta]Crackerjacking...[/magenta]\n")
+        self.console.print("\n" + "-" * 60)
+        self.console.print(
+            "[bold bright_magenta]🛠️  SETUP[/bold bright_magenta] [bold bright_white]Initializing project structure[/bold bright_white]"
+        )
+        self.console.print("-" * 60 + "\n")
         self.config_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_dir = self.pkg_dir
@@ -935,10 +949,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 ["pdm", "install"], capture_output=True, text=True
             )
             if result.returncode == 0:
-                self.console.print("[green]PDM installed[/green]\n")
+                self.console.print(
+                    "[bold green]✓ Dependencies installed[/bold green]\n"
+                )
             else:
                 self.console.print(
-                    "\n\n[red]PDM installation failed. Is PDM is installed? Run `pipx install pdm` and try again.[/red]\n\n"
+                    "\n\n[bold red]❌ PDM installation failed. Is PDM installed? Run `pipx install pdm` and try again.[/bold red]\n\n"
                 )
 
     def _update_precommit(self, options: t.Any) -> None:
@@ -951,13 +967,20 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _clean_project(self, options: t.Any) -> None:
         if options.clean:
             if self.pkg_dir:
+                self.console.print("\n" + "-" * 60)
+                self.console.print(
+                    "[bold bright_blue]🧹 CLEAN[/bold bright_blue] [bold bright_white]Removing docstrings and comments[/bold bright_white]"
+                )
+                self.console.print("-" * 60 + "\n")
                 self.code_cleaner.clean_files(self.pkg_dir)
             if self.pkg_path.stem == "crackerjack":
                 tests_dir = self.pkg_path / "tests"
                 if tests_dir.exists() and tests_dir.is_dir():
+                    self.console.print("\n" + "─" * 60)
                     self.console.print(
-                        "\n[bright_blue]🧹 Cleaning tests directory...[/bright_blue]\n"
+                        "[bold bright_blue]🧪 TESTS[/bold bright_blue] [bold bright_white]Cleaning test files[/bold bright_white]"
                     )
+                    self.console.print("─" * 60 + "\n")
                     self.code_cleaner.clean_files(tests_dir)
 
     def _get_test_timeout(self, options: OptionsProtocol, project_size: str) -> int:
@@ -1055,33 +1078,39 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _print_ai_agent_files(self, options: t.Any) -> None:
         if getattr(options, "ai_agent", False):
             self.console.print(
-                "[dim white]Structured test results: test-results.xml[/dim white]"
+                "[bold bright_black]→ Structured test results: test-results.xml[/bold bright_black]"
             )
-            self.console.print("[dim white]Coverage report: coverage.json[/dim white]")
+            self.console.print(
+                "[bold bright_black]→ Coverage report: coverage.json[/bold bright_black]"
+            )
             if options.benchmark or options.benchmark_regression:
                 self.console.print(
-                    "[dim white]Benchmark results: benchmark.json[/dim white]"
+                    "[bold bright_black]→ Benchmark results: benchmark.json[/bold bright_black]"
                 )
 
     def _handle_test_failure(self, result: t.Any, options: t.Any) -> None:
         if result.stderr:
             self.console.print(result.stderr)
         self.console.print(
-            "\n\n[bright_red]❌ Tests failed. Please fix errors.[/bright_red]\n"
+            "\n\n[bold bright_red]❌ Tests failed. Please fix errors.[/bold bright_red]\n"
         )
         self._print_ai_agent_files(options)
         raise SystemExit(1)
 
     def _handle_test_success(self, options: t.Any) -> None:
         self.console.print(
-            "\n\n[bright_green]✅ Tests passed successfully![/bright_green]\n"
+            "\n\n[bold bright_green]✅ Tests passed successfully![/bold bright_green]\n"
         )
         self._print_ai_agent_files(options)
 
     def _run_tests(self, options: t.Any) -> None:
         if not options.test:
             return
-        self.console.print("\n\n[blue]Running tests...[/blue]\n")
+        self.console.print("\n" + "-" * 60)
+        self.console.print(
+            "[bold bright_green]🧪 TESTING[/bold bright_green] [bold bright_white]Executing test suite[/bold bright_white]"
+        )
+        self.console.print("-" * 60 + "\n")
         test_command = self._prepare_pytest_command(options)
         result = self.execute_command(test_command, capture_output=True, text=True)
         if result.stdout:
@@ -1094,6 +1123,11 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _bump_version(self, options: OptionsProtocol) -> None:
         for option in (options.publish, options.bump):
             if option:
+                self.console.print("\n" + "-" * 60)
+                self.console.print(
+                    f"[bold bright_magenta]📦 VERSION[/bold bright_magenta] [bold bright_white]Bumping {option} version[/bold bright_white]"
+                )
+                self.console.print("-" * 60 + "\n")
                 if str(option) in ("minor", "major"):
                     from rich.prompt import Confirm
 
@@ -1102,7 +1136,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                         default=False,
                     ):
                         self.console.print(
-                            f"[dim yellow]⏭️  Skipping {option} version bump[/dim yellow]"
+                            f"[bold yellow]⏭️  Skipping {option} version bump[/bold yellow]"
                         )
                         return
                 self.execute_command(["pdm", "bump", option])
@@ -1110,6 +1144,11 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
     def _publish_project(self, options: OptionsProtocol) -> None:
         if options.publish:
+            self.console.print("\n" + "-" * 60)
+            self.console.print(
+                "[bold bright_cyan]🚀 PUBLISH[/bold bright_cyan] [bold bright_white]Building and publishing package[/bold bright_white]"
+            )
+            self.console.print("-" * 60 + "\n")
             build = self.execute_command(
                 ["pdm", "build"], capture_output=True, text=True
             )
@@ -1117,13 +1156,18 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             if build.returncode > 0:
                 self.console.print(build.stderr)
                 self.console.print(
-                    "\n\n[bright_red]❌ Build failed. Please fix errors.[/bright_red]\n"
+                    "[bold bright_red]❌ Build failed. Please fix errors.[/bold bright_red]"
                 )
                 raise SystemExit(1)
             self.execute_command(["pdm", "publish", "--no-build"])
 
     def _commit_and_push(self, options: OptionsProtocol) -> None:
         if options.commit:
+            self.console.print("\n" + "-" * 60)
+            self.console.print(
+                "[bold bright_white]📝 COMMIT[/bold bright_white] [bold bright_white]Saving changes to git[/bold bright_white]"
+            )
+            self.console.print("-" * 60 + "\n")
             commit_msg = input("\nCommit message: ")
             self.execute_command(
                 ["git", "commit", "-m", commit_msg, "--no-verify", "--", "."]
@@ -1134,11 +1178,18 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
         if self.dry_run:
-            self.console.print(f"[dim white]→ {' '.join(cmd)}[/dim white]")
+            self.console.print(
+                f"[bold bright_black]→ {' '.join(cmd)}[/bold bright_black]"
+            )
             return CompletedProcess(cmd, 0, "", "")
         return execute(cmd, **kwargs)
 
     def process(self, options: OptionsProtocol) -> None:
+        self.console.print("\n" + "-" * 60)
+        self.console.print(
+            "[bold bright_cyan]⚒️ CRACKERJACKING[/bold bright_cyan] [bold bright_white]Starting workflow execution[/bold bright_white]"
+        )
+        self.console.print("-" * 60 + "\n")
         if options.all:
             options.clean = True
             options.test = True
@@ -1152,12 +1203,18 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         if not options.skip_hooks:
             self.project_manager.run_pre_commit()
         else:
-            self.console.print("[yellow]Skipping pre-commit hooks[/yellow]")
+            self.console.print(
+                "\n[bold bright_yellow]⏭️  Skipping pre-commit hooks...[/bold bright_yellow]\n"
+            )
         self._run_tests(options)
         self._bump_version(options)
         self._publish_project(options)
         self._commit_and_push(options)
-        self.console.print("\n[green]Crackerjack complete![/green]\n")
+        self.console.print("\n" + "-" * 60)
+        self.console.print(
+            "[bold bright_green]✨ CRACKERJACK COMPLETE[/bold bright_green] [bold bright_white]Workflow completed successfully![/bold bright_white]"
+        )
+        self.console.print("-" * 60 + "\n")
 
 
 crackerjack_it = Crackerjack().process
