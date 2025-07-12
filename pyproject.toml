@@ -4,7 +4,7 @@ requires = [ "pdm-backend" ]
 
 [project]
 name = "crackerjack"
-version = "0.22.7"
+version = "0.22.8"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -104,7 +104,7 @@ lint.pydocstyle.convention = "google"
 [tool.codespell]
 skip = "*/data/*"
 quiet-level = 3
-ignore-words-list = "crate,uptodate,nd"
+ignore-words-list = "crate,uptodate,nd,nin"
 
 [tool.pyproject-fmt]
 column_width = 120
