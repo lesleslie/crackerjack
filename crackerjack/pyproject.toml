@@ -1,10 +1,10 @@
 [build-system]
-build-backend = "pdm.backend"
-requires = [ "pdm-backend" ]
+build-backend = "hatchling.build"
+requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.22.7"
+version = "0.22.8"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -42,9 +42,8 @@ classifiers = [
 ]
 dependencies = [
     "autotyping>=24.9",
+    "hatchling>=1.25",
     "keyring>=25.6",
-    "pdm>=2.25.4",
-    "pdm-bump>=0.9.12",
     "pre-commit>=4.2",
     "pydantic>=2.11.7",
     "pytest>=8.4.1",
@@ -205,8 +204,8 @@ paths = [
 ]
 deps-file = "pyproject.toml"
 exclude-deps = [
-    "pdm-bump",
     "autotyping",
+    "hatchling",
     "pre-commit",
     "pytest",
     "pytest-asyncio",
@@ -214,7 +213,6 @@ exclude-deps = [
     "pytest-mock",
     "pytest-xdist",
     "pytest-benchmark",
-    "pdm",
     "pyfiglet",
     "pyyaml",
     "uv",

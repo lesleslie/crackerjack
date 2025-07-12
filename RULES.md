@@ -40,13 +40,13 @@
 - **Integrate with Quality Tools**
   - Configure code with Ruff for linting and formatting
   - Set up pre-commit hooks for consistent code quality
-  - Use PDM with uv for dependency management
+  - Use UV for dependency management
   - Implement pytest for testing with timeout handling
 
-- **Use PDM for Tool Execution**
-  - Always use `pdm run` to execute tools within the project's virtual environment
-  - Run pytest with `pdm run pytest` instead of calling pytest directly
-  - Execute tools like pyright, ruff, and crackerjack through PDM: `pdm run pyright`
+- **Use UV for Tool Execution**
+  - Always use `uv run` to execute tools within the project's virtual environment
+  - Run pytest with `uv run pytest` instead of calling pytest directly
+  - Execute tools like pyright, ruff, and crackerjack through UV: `uv run pyright`
   - Ensures consistent tool versions and environment isolation
 
 - **Pre-Commit Hook Configuration**
@@ -60,7 +60,7 @@
     - Autotyping for type annotation
     - Refurb for Python code modernization
     - Bandit for security vulnerabilities
-  - Run hooks with `pdm run pre-commit run --all-files` during development
+  - Run hooks with `uv run pre-commit run --all-files` during development
   - Configure hooks in `.pre-commit-config.yaml` with exact versions
   - Ensure all code passes pre-commit checks before submitting
 

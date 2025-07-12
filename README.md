@@ -5,7 +5,6 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
-[![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)](https://pdm.fming.dev)
 [![security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
@@ -31,7 +30,7 @@ Crackerjack solves three critical challenges in Python development:
    - **Challenge**: Publishing Python packages involves many manual, error-prone steps
    - **Solution**: Crackerjack automates the entire release process from testing to version bumping to publishing
 
-Crackerjack integrates powerful tools like Ruff, PDM, pre-commit, pytest, and more into a cohesive system that ensures code quality, consistency, and reliability. It's designed for developers who value both productivity and excellence.
+Crackerjack integrates powerful tools like Ruff, UV, pre-commit, pytest, and more into a cohesive system that ensures code quality, consistency, and reliability. It's designed for developers who value both productivity and excellence.
 
 ---
 
@@ -41,9 +40,9 @@ Crackerjack integrates powerful tools like Ruff, PDM, pre-commit, pytest, and mo
 
 If you're new to Crackerjack, follow these steps:
 1. **Install Python 3.13:** Ensure you have Python 3.13 or higher installed.
-2. **Install PDM:**
+2. **Install UV:**
     ```
-    pipx install pdm
+    pipx install uv
     ```
 3. **Install Crackerjack:**
     ```
@@ -78,7 +77,7 @@ Crackerjack is built on the following core principles:
 
 ### Project Management
 - **Effortless Project Setup:** Initializes new Python projects with a standard directory structure, `pyproject.toml`, and essential configuration files
-- **PDM Integration:** Manages dependencies and virtual environments using [PDM](https://pdm.fming.dev/) with [uv](https://github.com/astral-sh/uv) for lightning-fast package operations
+- **UV Integration:** Manages dependencies and virtual environments using [UV](https://github.com/astral-sh/uv) for lightning-fast package operations
 - **Dependency Management:** Automatically detects and manages project dependencies
 
 ### Code Quality
@@ -91,7 +90,7 @@ Crackerjack is built on the following core principles:
 ### Testing & Deployment
 - **Built-in Testing:** Automatically runs tests using `pytest`
 - **Easy Version Bumping:** Provides commands to bump the project version (micro, minor, or major)
-- **Simplified Publishing:** Automates publishing to PyPI via PDM
+- **Simplified Publishing:** Automates publishing to PyPI via UV
 
 ### Git Integration
 - **Commit and Push:** Commits and pushes your changes with standardized commit messages
@@ -111,7 +110,7 @@ Crackerjack is built on the following core principles:
 
 Crackerjack automatically installs and manages these pre-commit hooks:
 
-1.  **pdm-lock-check:** Ensures the `pdm.lock` file is up to date.
+1.  **uv-lock:** Ensures the `uv.lock` file is up to date.
 2.  **Core pre-commit-hooks:** Essential hooks from [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks) (e.g., `trailing-whitespace`, `end-of-file-fixer`).
 3.  **Ruff:** [Ruff](https://github.com/astral-sh/ruff) for linting, code formatting, and general code style enforcement.
 4.  **Vulture:** [Vulture](https://github.com/jendrikseipp/vulture) to identify dead code.
@@ -137,7 +136,7 @@ Crackerjack projects adhere to these guidelines:
 -   **Protocol-Based Design:** Use `t.Protocol` for interface definitions instead of abstract base classes.
 -   **Constants and Config:** Do not use all-caps for constants or configuration settings.
 -   **Path Parameters:** Functions that handle file operations should accept `pathlib.Path` objects as parameters.
--   **Dependency Management:** Use PDM for dependency management, package building, and publishing.
+-   **Dependency Management:** Use UV for dependency management, package building, and publishing.
 -   **Testing:** Use pytest as your testing framework.
 -   **Python Version:** Crackerjack projects target Python 3.13+ and use the latest language features.
 -   **Clear Code:** Avoid overly complex code.
@@ -210,10 +209,10 @@ python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold
 ## Installation
 
 1.  **Python:** Ensure you have Python 3.13 or higher installed.
-2.  **PDM:** Install [PDM](https://pdm.fming.dev/) using `pipx`:
+2.  **UV:** Install [UV](https://github.com/astral-sh/uv) using `pipx`:
 
     ```
-    pipx install pdm
+    pipx install uv
     ```
 
 3.  **Crackerjack:** Install Crackerjack and initialize in your project root using:
@@ -303,7 +302,7 @@ runner.process(MyOptions())
 -   `-n`, `--no-config-updates`: Skip updating configuration files (e.g., `pyproject.toml`).
 -   `-u`, `--update-precommit`: Update pre-commit hooks to the latest versions.
 -   `-v`, `--verbose`: Enable verbose output.
--   `-p`, `--publish <micro|minor|major>`: Bump the project version and publish to PyPI using PDM.
+-   `-p`, `--publish <micro|minor|major>`: Bump the project version and publish to PyPI using UV.
 -   `-b`, `--bump <micro|minor|major>`: Bump the project version without publishing.
 -   `-r`, `--pr`: Create a pull request to the upstream repository.
 -   `-s`, `--skip-hooks`: Skip running pre-commit hooks (useful with `-t`).
@@ -525,7 +524,7 @@ To contribute:
 
 1. Add Crackerjack as a development dependency to your project:
   ```
-  pdm add -G dev crackerjack
+  uv add --dev crackerjack
   ```
 
 2. Run checks and tests before submitting:
@@ -552,11 +551,11 @@ Crackerjack is designed with modern Python principles in mind:
 
 ## Acknowledgments
 
--   **PDM:** For excellent dependency and virtual environment management.
+-   **UV:** For excellent dependency and virtual environment management.
 -   **Ruff:** For lightning-fast linting and code formatting.
 -   **pre-commit:** For the robust hook management system.
 -   **pytest:** For the flexible and powerful testing framework.
--   **uv:** For greatly improving PDM speeds.
+-   **PDM:** For the original inspiration for dependency management patterns.
 -   **bandit:** For finding security vulnerabilities.
 -   **vulture:** For dead code detection.
 -   **creosote:** For unused dependency detection.

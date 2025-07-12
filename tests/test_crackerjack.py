@@ -298,7 +298,9 @@ class TestCrackerjackProcess:
                     )
                     cj = Crackerjack(dry_run=True)
                     cj.process(options)
-                    mock_cj_execute.assert_any_call(["pdm", "bump", "minor"])
+                    mock_cj_execute.assert_any_call(
+                        ["uv", "version", "--bump", "minor"]
+                    )
             console_print_calls = [
                 str(call) for call in mock_console_print.call_args_list
             ]
@@ -324,7 +326,7 @@ class TestCrackerjackProcess:
                 mock_confirm.assert_called_once_with(
                     "Are you sure you want to bump the minor version?", default=False
                 )
-                mock_exec.assert_called_once_with(["pdm", "bump", "minor"])
+                mock_exec.assert_called_once_with(["uv", "version", "--bump", "minor"])
 
     def test_bump_version_confirmation_minor_declined(
         self,
@@ -364,7 +366,7 @@ class TestCrackerjackProcess:
                 mock_confirm.assert_called_once_with(
                     "Are you sure you want to bump the major version?", default=False
                 )
-                mock_exec.assert_called_once_with(["pdm", "bump", "major"])
+                mock_exec.assert_called_once_with(["uv", "version", "--bump", "major"])
 
     def test_bump_version_no_confirmation_micro(
         self,
@@ -382,7 +384,7 @@ class TestCrackerjackProcess:
                 mock_exec.return_value = MagicMock(returncode=0)
                 cj._bump_version(options)
                 mock_confirm.assert_not_called()
-                mock_exec.assert_called_once_with(["pdm", "bump", "micro"])
+                mock_exec.assert_called_once_with(["uv", "version", "--bump", "micro"])
 
     def test_prepare_pytest_command_ai_agent_mode(
         self,
@@ -694,7 +696,7 @@ class TestCrackerjackProcess:
                     *args: t.Any, **kwargs: t.Any
                 ) -> subprocess.CompletedProcess[str]:
                     cmd = args[0][0]
-                    if cmd == "pdm" and "build" in args[0]:
+                    if cmd == "uv" and "build" in args[0]:
                         return MagicMock(returncode=1, stdout="", stderr="Build failed")
                     return MagicMock(returncode=0, stdout="Success")
 
@@ -715,7 +717,7 @@ class TestCrackerjackProcess:
             self: Crackerjack, cmd: list[str], **kwargs: t.Any
         ) -> subprocess.CompletedProcess[str]:
             actual_calls.append(cmd)
-            if cmd == ["pdm", "build"]:
+            if cmd == ["uv", "build"]:
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="build output", stderr=""
                 )
@@ -734,8 +736,8 @@ class TestCrackerjackProcess:
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print"):
                         crackerjack._publish_project(options)
-        assert ["pdm", "build"] in actual_calls
-        assert ["pdm", "publish", "--no-build"] in actual_calls
+        assert ["uv", "build"] in actual_calls
+        assert ["uv", "publish"] in actual_calls
 
     def test_publish_with_authentication(self) -> None:
         options = OptionsForTesting(publish=BumpOption.micro)
@@ -745,11 +747,11 @@ class TestCrackerjackProcess:
             self: Crackerjack, cmd: list[str], **kwargs: t.Any
         ) -> subprocess.CompletedProcess[str]:
             actual_calls.append(cmd)
-            if cmd == ["pdm", "build"]:
+            if cmd == ["uv", "build"]:
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="build output", stderr=""
                 )
-            elif cmd == ["pdm", "publish", "--no-build"]:
+            elif cmd == ["uv", "publish"]:
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="publish output", stderr=""
                 )
@@ -768,8 +770,8 @@ class TestCrackerjackProcess:
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print"):
                         crackerjack._publish_project(options)
-        assert ["pdm", "build"] in actual_calls
-        assert ["pdm", "publish", "--no-build"] in actual_calls
+        assert ["uv", "build"] in actual_calls
+        assert ["uv", "publish"] in actual_calls
 
     def test_build_failure(self) -> None:
         options = OptionsForTesting(publish=BumpOption.micro)
@@ -779,7 +781,7 @@ class TestCrackerjackProcess:
             self: Crackerjack, cmd: list[str], **kwargs: t.Any
         ) -> subprocess.CompletedProcess[str]:
             actual_calls.append(cmd)
-            if cmd == ["pdm", "build"]:
+            if cmd == ["uv", "build"]:
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=1, stdout="", stderr="Build failed"
                 )
@@ -800,8 +802,8 @@ class TestCrackerjackProcess:
                         with pytest.raises(SystemExit) as exc_info:
                             crackerjack._publish_project(options)
         assert exc_info.value.code == 1
-        assert ["pdm", "build"] in actual_calls
-        assert ["pdm", "publish", "--no-build"] not in actual_calls
+        assert ["uv", "build"] in actual_calls
+        assert ["uv", "publish"] not in actual_calls
 
     def test_publish_failure(self) -> None:
         options = OptionsForTesting(publish=BumpOption.micro)
@@ -811,9 +813,9 @@ class TestCrackerjackProcess:
             self: Crackerjack, cmd: list[str], **kwargs: t.Any
         ) -> subprocess.CompletedProcess[str]:
             actual_calls.append(cmd)
-            if cmd == ["pdm", "build"]:
+            if cmd == ["uv", "build"]:
                 return MagicMock(returncode=0, stdout="build output")
-            elif cmd == ["pdm", "publish", "--no-build"]:
+            elif cmd == ["uv", "publish"]:
                 return MagicMock(
                     returncode=1, stdout="publish output", stderr="Publish failed"
                 )
@@ -830,8 +832,8 @@ class TestCrackerjackProcess:
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print") as mock_print:
                         crackerjack._publish_project(options)
-                        assert ["pdm", "build"] in actual_calls
-                        assert ["pdm", "publish", "--no-build"] in actual_calls
+                        assert ["uv", "build"] in actual_calls
+                        assert ["uv", "publish"] in actual_calls
                         assert any(
                             "build output" in str(call)
                             for call in mock_print.mock_calls
@@ -866,7 +868,7 @@ class TestCrackerjackProcess:
                     )
                     mock_cj_execute.assert_any_call(["git", "push", "origin", "main"])
 
-    def test_process_with_pdm_install_failure(
+    def test_process_with_uv_sync_failure(
         self,
         mock_execute: MagicMock,
         mock_console_print: MagicMock,
@@ -878,7 +880,7 @@ class TestCrackerjackProcess:
         options = options_factory(no_config_updates=False)
         with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
             mock_cj_execute.return_value = MagicMock(
-                returncode=1, stdout="", stderr="PDM installation failed"
+                returncode=1, stdout="", stderr="UV sync failed"
             )
             with patch.object(
                 ProjectManager, "update_pkg_configs"
@@ -887,7 +889,7 @@ class TestCrackerjackProcess:
                 cj.process(options)
                 mock_update_configs.assert_called_once()
                 assert any(
-                    "PDM installation failed" in str(call)
+                    "UV sync failed" in str(call)
                     for call in mock_console_print.mock_calls
                 )
 
@@ -1342,7 +1344,12 @@ class TestClass:
                     if config != ".gitignore":
                         assert "crackerjack" not in (pkg_path / config).read_text()
                         assert "test_package" in (pkg_path / config).read_text()
-                    mock_cm_execute.assert_any_call(["git", "add", config])
+
+                configs_to_add = [
+                    config for config in config_files if config != ".gitignore"
+                ]
+                if configs_to_add:
+                    mock_cm_execute.assert_any_call(["git", "add"] + configs_to_add)
 
     def test_prepare_pytest_command_with_benchmark(
         self,

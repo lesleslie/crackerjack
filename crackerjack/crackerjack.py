@@ -1,7 +1,9 @@
 import re
 import subprocess
 import typing as t
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import suppress
+from functools import lru_cache
 from pathlib import Path
 from subprocess import CompletedProcess
 from subprocess import run as execute
@@ -56,9 +58,30 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
     def clean_files(self, pkg_dir: Path | None) -> None:
         if pkg_dir is None:
             return
-        for file_path in pkg_dir.rglob("*.py"):
-            if not str(file_path.parent).startswith("__"):
-                self.clean_file(file_path)
+        python_files = [
+            file_path
+            for file_path in pkg_dir.rglob("*.py")
+            if not str(file_path.parent).startswith("__")
+        ]
+        if not python_files:
+            return
+        max_workers = min(len(python_files), 4)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_file = {
+                executor.submit(self.clean_file, file_path): file_path
+                for file_path in python_files
+            }
+            for future in as_completed(future_to_file):
+                file_path = future_to_file[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    self.console.print(
+                        f"[bold bright_red]❌ Error cleaning {file_path}: {e}[/bold bright_red]"
+                    )
+        self._cleanup_cache_directories(pkg_dir)
+
+    def _cleanup_cache_directories(self, pkg_dir: Path) -> None:
         with suppress(PermissionError, OSError):
             pycache_dir = pkg_dir / "__pycache__"
             if pycache_dir.exists():
@@ -423,14 +446,9 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             import_tracker["in_imports"] = False
             import_tracker["last_import_type"] = None
 
-    def _is_stdlib_import(self, stripped_line: str) -> bool:
-        try:
-            if stripped_line.startswith("from "):
-                module = stripped_line.split()[1].split(".")[0]
-            else:
-                module = stripped_line.split()[1].split(".")[0]
-        except IndexError:
-            return False
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _is_stdlib_module(module: str) -> bool:
         stdlib_modules = {
             "os",
             "sys",
@@ -510,6 +528,16 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             "tomllib",
         }
         return module in stdlib_modules
+
+    def _is_stdlib_import(self, stripped_line: str) -> bool:
+        try:
+            if stripped_line.startswith("from "):
+                module = stripped_line.split()[1].split(".")[0]
+            else:
+                module = stripped_line.split()[1].split(".")[0]
+        except IndexError:
+            return False
+        return CodeCleaner._is_stdlib_module(module)
 
     def _is_local_import(self, stripped_line: str) -> bool:
         return stripped_line.startswith("from .") or " . " in stripped_line
@@ -805,6 +833,7 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
             self.pkg_toml_path.write_text(dumps(pkg_toml_config))
 
     def copy_configs(self) -> None:
+        configs_to_add = []
         for config in config_files:
             config_path = self.our_path / config
             pkg_config_path = self.pkg_path / config
@@ -816,7 +845,9 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
                 pkg_config_path.write_text(
                     config_path.read_text().replace("crackerjack", self.pkg_name)
                 )
-            self.execute_command(["git", "add", config])
+                configs_to_add.append(config)
+        if configs_to_add:
+            self.execute_command(["git", "add"] + configs_to_add)
 
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
@@ -843,7 +874,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
     def update_pkg_configs(self) -> None:
         self.config_manager.copy_configs()
         installed_pkgs = self.execute_command(
-            ["pdm", "list", "--freeze"], capture_output=True, text=True
+            ["uv", "pip", "list", "--freeze"], capture_output=True, text=True
         ).stdout.splitlines()
         if not len([pkg for pkg in installed_pkgs if "pre-commit" in pkg]):
             self.console.print("\n" + "─" * 60)
@@ -851,17 +882,15 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
                 "[bold bright_blue]⚡ INIT[/bold bright_blue] [bold bright_white]First-time project setup[/bold bright_white]"
             )
             self.console.print("─" * 60 + "\n")
-            self.execute_command(["pdm", "self", "add", "keyring"])
-            self.execute_command(["pdm", "config", "python.use_uv", "true"])
+            self.execute_command(["uv", "tool", "install", "keyring"])
             self.execute_command(["git", "init"])
             self.execute_command(["git", "branch", "-m", "main"])
-            self.execute_command(["git", "add", "pyproject.toml"])
-            self.execute_command(["git", "add", "pdm.lock"])
+            self.execute_command(["git", "add", "pyproject.toml", "pdm.lock"])
+            self.execute_command(["git", "config", "advice.addIgnoredFile", "false"])
             install_cmd = ["pre-commit", "install"]
             if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
                 install_cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
             self.execute_command(install_cmd)
-            self.execute_command(["git", "config", "advice.addIgnoredFile", "false"])
         self.config_manager.update_pyproject_configs()
 
     def run_pre_commit(self) -> None:
@@ -875,7 +904,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
         check_all = self.execute_command(cmd)
         if check_all.returncode > 0:
-            self.execute_command(["pdm", "lock"])
+            self.execute_command(["uv", "lock"])
             self.console.print("\n[bold green]✓ Dependencies locked[/bold green]\n")
             check_all = self.execute_command(cmd)
             if check_all.returncode > 0:
@@ -906,9 +935,11 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     code_cleaner: CodeCleaner | None = None
     config_manager: ConfigManager | None = None
     project_manager: ProjectManager | None = None
+    _file_cache: dict[str, list[Path]] = {}
 
     def __init__(self, **data: t.Any) -> None:
         super().__init__(**data)
+        self._file_cache = {}
         self.code_cleaner = CodeCleaner(console=self.console)
         self.config_manager = ConfigManager(
             our_path=self.our_path,
@@ -946,7 +977,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         if not options.no_config_updates:
             self.project_manager.update_pkg_configs()
             result: CompletedProcess[str] = self.execute_command(
-                ["pdm", "install"], capture_output=True, text=True
+                ["uv", "sync"], capture_output=True, text=True
             )
             if result.returncode == 0:
                 self.console.print(
@@ -954,7 +985,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 )
             else:
                 self.console.print(
-                    "\n\n[bold red]❌ PDM installation failed. Is PDM installed? Run `pipx install pdm` and try again.[/bold red]\n\n"
+                    "\n\n[bold red]❌ UV sync failed. Is UV installed? Run `pipx install uv` and try again.[/bold red]\n\n"
                 )
 
     def _update_precommit(self, options: t.Any) -> None:
@@ -1058,12 +1089,21 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             self._add_worker_flags(test, options, project_size)
         return test
 
+    def _get_cached_files(self, pattern: str) -> list[Path]:
+        cache_key = f"{self.pkg_path}:{pattern}"
+        if cache_key not in self._file_cache:
+            try:
+                self._file_cache[cache_key] = list(self.pkg_path.rglob(pattern))
+            except (OSError, PermissionError):
+                self._file_cache[cache_key] = []
+        return self._file_cache[cache_key]
+
     def _detect_project_size(self) -> str:
         if self.pkg_name in ("acb", "fastblocks"):
             return "large"
         try:
-            py_files = list(self.pkg_path.rglob("*.py"))
-            test_files = list(self.pkg_path.rglob("test_*.py"))
+            py_files = self._get_cached_files("*.py")
+            test_files = self._get_cached_files("test_*.py")
             total_files = len(py_files)
             num_test_files = len(test_files)
             if total_files > 100 or num_test_files > 50:
@@ -1139,7 +1179,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                             f"[bold yellow]⏭️  Skipping {option} version bump[/bold yellow]"
                         )
                         return
-                self.execute_command(["pdm", "bump", option])
+                self.execute_command(["uv", "version", "--bump", option])
                 break
 
     def _publish_project(self, options: OptionsProtocol) -> None:
@@ -1150,7 +1190,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             )
             self.console.print("-" * 60 + "\n")
             build = self.execute_command(
-                ["pdm", "build"], capture_output=True, text=True
+                ["uv", "build"], capture_output=True, text=True
             )
             self.console.print(build.stdout)
             if build.returncode > 0:
@@ -1159,7 +1199,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     "[bold bright_red]❌ Build failed. Please fix errors.[/bold bright_red]"
                 )
                 raise SystemExit(1)
-            self.execute_command(["pdm", "publish", "--no-build"])
+            self.execute_command(["uv", "publish"])
 
     def _commit_and_push(self, options: OptionsProtocol) -> None:
         if options.commit:

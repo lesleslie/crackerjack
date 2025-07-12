@@ -11,11 +11,11 @@ Crackerjack is an opinionated Python project management tool that streamlines th
 ### Environment Setup
 
 ```bash
-# Install PDM (required dependency manager)
-pipx install pdm
+# Install UV (required dependency manager)
+pipx install uv
 
 # Install project dependencies
-pdm install
+uv sync
 ```
 
 ### Running Crackerjack
@@ -230,12 +230,12 @@ Access interactive mode with: `python -m crackerjack -i`
    - Tests are run in parallel by default
 
 3. **Dependencies**:
-   - PDM for dependency management
+   - UV for dependency management
    - Ruff for linting and formatting
    - Pytest for testing
 
 4. **Version Management**:
-   - Version bumping is handled through PDM
+   - Version bumping is handled through UV
    - Follows semantic versioning
 
 ## Code Quality Compliance

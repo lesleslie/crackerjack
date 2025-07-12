@@ -141,7 +141,7 @@ class TestErrorHandlingIntegration:
                         runner._publish_project(options)
                     assert exc_info.value.code == 1
                     mock_execute.assert_called_once_with(
-                        ["pdm", "build"], capture_output=True, text=True
+                        ["uv", "build"], capture_output=True, text=True
                     )
 
     def test_handle_error_output_format(self) -> None:
