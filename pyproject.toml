@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.24.7"
+version = "0.24.8"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -136,6 +136,11 @@ timeout_method = "thread"
 
 # Test command options
 addopts = "--cov=crackerjack --cov-report=term --cov-fail-under=42"
+
+# Filter out benchmark warnings when xdist is active
+filterwarnings = [
+    "ignore::pytest_benchmark.logger.PytestBenchmarkWarning",
+]
 
 [tool.pytest.benchmark]
 disable_gc = true
