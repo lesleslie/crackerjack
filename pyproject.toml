@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.24.2"
+version = "0.24.4"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -62,6 +62,11 @@ dependencies = [
 urls.documentation = "https://github.com/lesleslie/crackerjack"
 urls.homepage = "https://github.com/lesleslie/crackerjack"
 urls.repository = "https://github.com/lesleslie/crackerjack"
+
+[dependency-groups]
+dev = [
+    "pyyaml>=6.0.2",
+]
 
 [tool.ruff]
 target-version = "py313"
@@ -196,6 +201,11 @@ pythonVersion = "3.13"
 [tool.uv]
 keyring-provider = "subprocess"
 index-url = "https://pypi.org/simple/"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://upload.pypi.org/legacy/"
+check-url = "https://pypi.org/simple/"
 
 [tool.vulture]
 min_confidence = 86
