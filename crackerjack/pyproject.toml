@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.24.3"
+version = "0.24.5"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -200,11 +200,7 @@ pythonVersion = "3.13"
 
 [tool.uv]
 keyring-provider = "subprocess"
-index-url = "https://pypi.org/simple/"
-
-[[tool.uv.index]]
-name = "pypi"
-url = "https://upload.pypi.org/legacy/"
+publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
 
 [tool.vulture]

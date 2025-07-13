@@ -1199,7 +1199,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     "[bold bright_red]❌ Build failed. Please fix errors.[/bold bright_red]"
                 )
                 raise SystemExit(1)
-            self.execute_command(["uv", "publish", "--check-url"])
+            self.execute_command(["uv", "publish"])
 
     def _commit_and_push(self, options: OptionsProtocol) -> None:
         if options.commit:

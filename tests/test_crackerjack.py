@@ -737,7 +737,7 @@ class TestCrackerjackProcess:
                     with patch.object(crackerjack.console, "print"):
                         crackerjack._publish_project(options)
         assert ["uv", "build"] in actual_calls
-        assert ["uv", "publish", "--check-url"] in actual_calls
+        assert ["uv", "publish"] in actual_calls
 
     def test_publish_with_authentication(self) -> None:
         options = OptionsForTesting(publish=BumpOption.patch)
@@ -751,7 +751,7 @@ class TestCrackerjackProcess:
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="build output", stderr=""
                 )
-            elif cmd == ["uv", "publish", "--check-url"]:
+            elif cmd == ["uv", "publish"]:
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="publish output", stderr=""
                 )
@@ -771,7 +771,7 @@ class TestCrackerjackProcess:
                     with patch.object(crackerjack.console, "print"):
                         crackerjack._publish_project(options)
         assert ["uv", "build"] in actual_calls
-        assert ["uv", "publish", "--check-url"] in actual_calls
+        assert ["uv", "publish"] in actual_calls
 
     def test_build_failure(self) -> None:
         options = OptionsForTesting(publish=BumpOption.patch)
@@ -803,7 +803,7 @@ class TestCrackerjackProcess:
                             crackerjack._publish_project(options)
         assert exc_info.value.code == 1
         assert ["uv", "build"] in actual_calls
-        assert ["uv", "publish", "--check-url"] not in actual_calls
+        assert ["uv", "publish"] not in actual_calls
 
     def test_publish_failure(self) -> None:
         options = OptionsForTesting(publish=BumpOption.patch)
@@ -815,7 +815,7 @@ class TestCrackerjackProcess:
             actual_calls.append(cmd)
             if cmd == ["uv", "build"]:
                 return MagicMock(returncode=0, stdout="build output")
-            elif cmd == ["uv", "publish", "--check-url"]:
+            elif cmd == ["uv", "publish"]:
                 return MagicMock(
                     returncode=1, stdout="publish output", stderr="Publish failed"
                 )
@@ -833,7 +833,7 @@ class TestCrackerjackProcess:
                     with patch.object(crackerjack.console, "print") as mock_print:
                         crackerjack._publish_project(options)
                         assert ["uv", "build"] in actual_calls
-                        assert ["uv", "publish", "--check-url"] in actual_calls
+                        assert ["uv", "publish"] in actual_calls
                         assert any(
                             "build output" in str(call)
                             for call in mock_print.mock_calls
