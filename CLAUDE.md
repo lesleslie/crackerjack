@@ -219,10 +219,11 @@ Access interactive mode with: `python -m crackerjack -i`
 ## Development Guidelines
 
 1. **Code Style**: Follow the Crackerjack style guide:
-   - Use static typing throughout
+   - **Target Python 3.13+** - Use latest Python features
+   - Use static typing throughout with modern syntax
    - Use pathlib for file operations
    - Prefer Protocol over ABC
-   - Use modern Python features (Python 3.13+)
+   - Leverage Python 3.13+ performance and language improvements
 
 2. **Testing Approach**:
    - Write unit tests for all functionality
@@ -234,7 +235,12 @@ Access interactive mode with: `python -m crackerjack -i`
    - Ruff for linting and formatting
    - Pytest for testing
 
-4. **Version Management**:
+4. **Python Version**:
+   - **Target: Python 3.13+** - Crackerjack requires Python 3.13 or newer
+   - Use modern Python 3.13+ features and syntax
+   - Code must be compatible with Python 3.13+ only
+
+5. **Version Management**:
    - Version bumping is handled through UV
    - Follows semantic versioning
 
@@ -242,7 +248,9 @@ Access interactive mode with: `python -m crackerjack -i`
 
 When generating code, AI assistants MUST follow these standards to ensure compliance with Refurb and Bandit pre-commit hooks:
 
-### Refurb Standards (Modern Python Patterns)
+**IMPORTANT: Target Python 3.13+** - All code must be compatible with Python 3.13 or newer. Use the latest Python features and syntax.
+
+### Refurb Standards (Modern Python Patterns up to 3.12)
 
 **Use modern syntax and built-ins:**
 - Use `pathlib.Path` instead of `os.path` operations
@@ -275,7 +283,7 @@ if config_file.exists():
 if name.startswith("test_"):
     name = name.removeprefix("test_")
 
-# Good: Union types (Python 3.10+)
+# Good: Union types (Python 3.13+)
 def process_data(data: str | bytes) -> dict[str, Any]:
     pass
 
@@ -333,6 +341,81 @@ if not api_key:
 
 # Good: Parameterized database queries
 cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+```
+
+### Pyright Type Safety Standards
+
+**Always use explicit type annotations:**
+- Function parameters must have type hints
+- Function return types must be annotated
+- Class attributes should have type annotations
+- Use `from __future__ import annotations` for forward references
+
+**Handle Optional types properly:**
+- Use `str | None` instead of `Optional[str]` (required for Python 3.13+)
+- Always check for None before using optional values
+- Use explicit `assert` statements or type guards when narrowing types
+
+**Generic types and collections:**
+- Use `list[str]` instead of `List[str]` (required for Python 3.13+)
+- Use `dict[str, Any]` instead of `Dict[str, Any]` (required for Python 3.13+)
+- Properly type generic classes with `TypeVar` when needed
+- Use `Sequence` or `Iterable` for function parameters when appropriate
+
+**Protocol and ABC usage:**
+- Prefer `typing.Protocol` over abstract base classes for duck typing
+- Use `@runtime_checkable` when protocols need runtime checks
+- Define clear interfaces with protocols
+
+**Python 3.13+ specific features:**
+- Leverage improved error messages and performance optimizations
+- Use enhanced type system features available in 3.13+
+- Take advantage of improved pathlib and asyncio features
+- Use any new syntax or standard library improvements
+
+**Import and module organization:**
+- Import types in TYPE_CHECKING blocks when needed for forward references
+- Use proper module-level `__all__` declarations
+- Organize imports: standard library, third-party, local imports
+
+**Example of proper typing:**
+```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from pathlib import Path
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+@runtime_checkable
+class Writable(Protocol):
+    def write(self, data: str) -> None: ...
+
+def process_files(
+    paths: Sequence[Path],
+    output: Writable,
+    encoding: str = "utf-8",
+) -> dict[str, int]:
+    """Process files and return statistics."""
+    stats: dict[str, int] = {}
+
+    for path in paths:
+        if path.exists():
+            content = path.read_text(encoding=encoding)
+            stats[str(path)] = len(content)
+            output.write(f"Processed {path}\n")
+
+    return stats
+
+# Good: Type narrowing with assertion
+def validate_config(config: dict[str, str | None]) -> dict[str, str]:
+    """Validate that all config values are non-None."""
+    validated: dict[str, str] = {}
+    for key, value in config.items():
+        assert value is not None, f"Config key {key} cannot be None"
+        validated[key] = value
+    return validated
 ```
 
 ### Integration with Pre-commit Hooks
