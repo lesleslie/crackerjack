@@ -89,7 +89,7 @@ Crackerjack is built on the following core principles:
 
 ### Testing & Deployment
 - **Built-in Testing:** Automatically runs tests using `pytest`
-- **Easy Version Bumping:** Provides commands to bump the project version (micro, minor, or major)
+- **Easy Version Bumping:** Provides commands to bump the project version (patch, minor, or major)
 - **Simplified Publishing:** Automates publishing to PyPI via UV
 
 ### Git Integration
@@ -272,8 +272,8 @@ class MyOptions:
         self.benchmark_regression_threshold = 5.0  # Threshold percentage for benchmark regression
 
         # Version and publishing options
-        self.publish = None          # Publish to PyPI (micro, minor, major)
-        self.bump = "micro"          # Bump version (micro, minor, major)
+        self.publish = None          # Publish to PyPI (patch, minor, major)
+        self.bump = "patch"          # Bump version (patch, minor, major)
         self.all = None              # Run with -x -t -p <version> -c
 
         # Git options
@@ -302,8 +302,8 @@ runner.process(MyOptions())
 -   `-n`, `--no-config-updates`: Skip updating configuration files (e.g., `pyproject.toml`).
 -   `-u`, `--update-precommit`: Update pre-commit hooks to the latest versions.
 -   `-v`, `--verbose`: Enable verbose output.
--   `-p`, `--publish <micro|minor|major>`: Bump the project version and publish to PyPI using UV.
--   `-b`, `--bump <micro|minor|major>`: Bump the project version without publishing.
+-   `-p`, `--publish <patch|minor|major>`: Bump the project version and publish to PyPI using UV.
+-   `-b`, `--bump <patch|minor|major>`: Bump the project version without publishing.
 -   `-r`, `--pr`: Create a pull request to the upstream repository.
 -   `-s`, `--skip-hooks`: Skip running pre-commit hooks (useful with `-t`).
 -   `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.
@@ -313,7 +313,7 @@ runner.process(MyOptions())
 -   `--benchmark`: Run tests in benchmark mode (disables parallel execution).
 -   `--benchmark-regression`: Fail tests if benchmarks regress beyond threshold.
 -   `--benchmark-regression-threshold`: Set threshold percentage for benchmark regression (default 5.0%).
--   `-a`, `--all`: Run with `-x -t -p <micro|minor|major> -c` development options.
+-   `-a`, `--all`: Run with `-x -t -p <patch|minor|major> -c` development options.
 -   `-i`, `--interactive`: Enable the interactive Rich UI for a more user-friendly experience with visual progress tracking and interactive prompts.
 -   `--ai-agent`: Enable AI agent mode with structured output (see [AI Agent Integration](#ai-agent-integration)).
 -   `--help`: Display help.
@@ -371,7 +371,7 @@ runner.process(MyOptions())
 
 - **Bump and Publish** - Bump version and publish to PyPI:
   ```bash
-  python -m crackerjack -p micro  # For patch version
+  python -m crackerjack -p patch  # For patch version
   python -m crackerjack -p minor  # For minor version
   python -m crackerjack -p major  # For major version
   ```

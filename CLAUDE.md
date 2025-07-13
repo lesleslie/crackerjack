@@ -27,8 +27,8 @@ python -m crackerjack
 # Clean code, run tests, and commit changes
 python -m crackerjack -x -t -c
 
-# Clean code, run tests, bump version (micro), and commit changes
-python -m crackerjack -a micro
+# Clean code, run tests, bump version (patch), and commit changes
+python -m crackerjack -a patch
 
 # Launch interactive workflow interface
 python -m crackerjack -i
@@ -90,13 +90,13 @@ python -m crackerjack -x
 ### Publishing
 
 ```bash
-# Bump version (micro/minor/major) and publish to PyPI
-python -m crackerjack -p micro
+# Bump version (patch/minor/major) and publish to PyPI
+python -m crackerjack -p patch
 python -m crackerjack -p minor
 python -m crackerjack -p major
 
 # Bump version without publishing
-python -m crackerjack -b micro
+python -m crackerjack -b patch
 python -m crackerjack -b minor
 python -m crackerjack -b major
 ```

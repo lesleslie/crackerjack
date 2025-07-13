@@ -12,7 +12,7 @@ app = typer.Typer(
 
 
 class BumpOption(str, Enum):
-    micro = "micro"
+    patch = "patch"
     minor = "minor"
     major = "major"
 
@@ -73,14 +73,14 @@ cli_options = {
         None,
         "-p",
         "--publish",
-        help="Bump version and publish to PyPI (micro, minor, major).",
+        help="Bump version and publish to PyPI (patch, minor, major).",
         case_sensitive=False,
     ),
     "bump": typer.Option(
         None,
         "-b",
         "--bump",
-        help="Bump version (micro, minor, major).",
+        help="Bump version (patch, minor, major).",
         case_sensitive=False,
     ),
     "clean": typer.Option(
@@ -125,7 +125,7 @@ cli_options = {
         None,
         "-a",
         "--all",
-        help="Run with `-x -t -p <micro|minor|major> -c` development options).",
+        help="Run with `-x -t -p <patch|minor|major> -c` development options).",
         case_sensitive=False,
     ),
     "create_pr": typer.Option(

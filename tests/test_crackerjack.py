@@ -19,7 +19,7 @@ from crackerjack.crackerjack import (
 
 
 class BumpOption(str, Enum):
-    micro = "micro"
+    patch = "patch"
     minor = "minor"
     major = "major"
 
@@ -134,7 +134,7 @@ class TestCrackerjackProcess:
         options = options_factory(
             commit=True,
             interactive=True,
-            publish="micro",
+            publish="patch",
             bump="major",
             clean=True,
             update_precommit=True,
@@ -368,7 +368,7 @@ class TestCrackerjackProcess:
                 )
                 mock_exec.assert_called_once_with(["uv", "version", "--bump", "major"])
 
-    def test_bump_version_no_confirmation_micro(
+    def test_bump_version_no_confirmation_patch(
         self,
         mock_execute: MagicMock,
         mock_console_print: MagicMock,
@@ -377,14 +377,14 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        options = options_factory(bump="micro", no_config_updates=True)
+        options = options_factory(bump="patch", no_config_updates=True)
         cj = Crackerjack(dry_run=True)
         with patch("rich.prompt.Confirm.ask") as mock_confirm:
             with patch.object(Crackerjack, "execute_command") as mock_exec:
                 mock_exec.return_value = MagicMock(returncode=0)
                 cj._bump_version(options)
                 mock_confirm.assert_not_called()
-                mock_exec.assert_called_once_with(["uv", "version", "--bump", "micro"])
+                mock_exec.assert_called_once_with(["uv", "version", "--bump", "patch"])
 
     def test_prepare_pytest_command_ai_agent_mode(
         self,
@@ -458,7 +458,7 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        options = options_factory(publish="micro", no_config_updates=True)
+        options = options_factory(publish="patch", no_config_updates=True)
         with (
             patch.object(Crackerjack, "_bump_version") as mock_bump,
             patch.object(Crackerjack, "_publish_project") as mock_publish,
@@ -484,7 +484,7 @@ class TestCrackerjackProcess:
         mock_execute.return_value.returncode = 0
         mock_project_manager_execute.return_value.returncode = 0
         mock_config_manager_execute.return_value.returncode = 0
-        options = options_factory(all="micro", publish="micro")
+        options = options_factory(all="patch", publish="patch")
         with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
             mock_cj_execute.return_value = MagicMock(returncode=0, stdout="Success")
             with patch.object(Crackerjack, "_update_project"):
@@ -513,7 +513,7 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        options = options_factory(all=BumpOption.micro)
+        options = options_factory(all=BumpOption.patch)
         cj = Crackerjack(dry_run=True)
         with patch.object(cj, "_setup_package"):
             with patch.object(cj, "_update_project"):
@@ -569,7 +569,7 @@ class TestCrackerjackProcess:
     ) -> None:
         options = options_factory(
             all=BumpOption.major,
-            publish=BumpOption.micro,
+            publish=BumpOption.patch,
             clean=False,
             test=False,
             commit=False,
@@ -635,7 +635,7 @@ class TestCrackerjackProcess:
     ) -> None:
         cj = Crackerjack(dry_run=True)
         options = MagicMock()
-        options.all = BumpOption.micro
+        options.all = BumpOption.patch
         options.clean = False
         options.test = False
         options.publish = None
@@ -652,7 +652,7 @@ class TestCrackerjackProcess:
                                             cj.process(options)
                                             assert options.clean is True
                                             assert options.test is True
-                                            assert options.publish == BumpOption.micro
+                                            assert options.publish == BumpOption.patch
                                             assert options.commit is True
 
     def test_process_with_failed_tests(
@@ -688,7 +688,7 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        options = options_factory(publish="micro", no_config_updates=True)
+        options = options_factory(publish="patch", no_config_updates=True)
         with patch("platform.system", return_value="Linux"):
             with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
 
@@ -710,7 +710,7 @@ class TestCrackerjackProcess:
         )
 
     def test_publish_project_darwin(self) -> None:
-        options = OptionsForTesting(publish=BumpOption.micro)
+        options = OptionsForTesting(publish=BumpOption.patch)
         actual_calls: list[list[str]] = []
 
         def mock_execute_side_effect(
@@ -740,7 +740,7 @@ class TestCrackerjackProcess:
         assert ["uv", "publish"] in actual_calls
 
     def test_publish_with_authentication(self) -> None:
-        options = OptionsForTesting(publish=BumpOption.micro)
+        options = OptionsForTesting(publish=BumpOption.patch)
         actual_calls: list[list[str]] = []
 
         def mock_execute_side_effect(
@@ -774,7 +774,7 @@ class TestCrackerjackProcess:
         assert ["uv", "publish"] in actual_calls
 
     def test_build_failure(self) -> None:
-        options = OptionsForTesting(publish=BumpOption.micro)
+        options = OptionsForTesting(publish=BumpOption.patch)
         actual_calls: list[list[str]] = []
 
         def mock_execute_side_effect(
@@ -806,7 +806,7 @@ class TestCrackerjackProcess:
         assert ["uv", "publish"] not in actual_calls
 
     def test_publish_failure(self) -> None:
-        options = OptionsForTesting(publish=BumpOption.micro)
+        options = OptionsForTesting(publish=BumpOption.patch)
         actual_calls: list[list[str]] = []
 
         def mock_execute_side_effect(

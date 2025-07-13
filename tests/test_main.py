@@ -94,11 +94,11 @@ def test_verbose_option(runner: CliRunner, mock_crackerjack_process: MagicMock) 
 
 
 def test_publish_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
-    result = runner.invoke(app, ["-p", "micro"])
+    result = runner.invoke(app, ["-p", "patch"])
     assert result.exit_code == 0
     mock_crackerjack_process.process.assert_called_once()
     options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.publish == BumpOption.micro
+    assert options.publish == BumpOption.patch
     mock_crackerjack_process.process.reset_mock()
     result = runner.invoke(app, ["--publish", "minor"])
     assert result.exit_code == 0
@@ -110,18 +110,18 @@ def test_publish_option(runner: CliRunner, mock_crackerjack_process: MagicMock) 
     options = mock_crackerjack_process.process.call_args[0][0]
     assert options.publish == BumpOption.major
     mock_crackerjack_process.process.reset_mock()
-    result = runner.invoke(app, ["--publish", "MICRO"])
+    result = runner.invoke(app, ["--publish", "PATCH"])
     assert result.exit_code == 0
     options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.publish == BumpOption.micro
+    assert options.publish == BumpOption.patch
 
 
 def test_bump_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
-    result = runner.invoke(app, ["-b", "micro"])
+    result = runner.invoke(app, ["-b", "patch"])
     assert result.exit_code == 0
     mock_crackerjack_process.process.assert_called_once()
     options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.bump == BumpOption.micro
+    assert options.bump == BumpOption.patch
     mock_crackerjack_process.process.reset_mock()
     result = runner.invoke(app, ["--bump", "minor"])
     assert result.exit_code == 0
@@ -133,10 +133,10 @@ def test_bump_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> 
     options = mock_crackerjack_process.process.call_args[0][0]
     assert options.bump == BumpOption.major
     mock_crackerjack_process.process.reset_mock()
-    result = runner.invoke(app, ["--bump", "MICRO"])
+    result = runner.invoke(app, ["--bump", "PATCH"])
     assert result.exit_code == 0
     options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.bump == BumpOption.micro
+    assert options.bump == BumpOption.patch
 
 
 def test_clean_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
@@ -205,7 +205,7 @@ def test_create_options() -> None:
         no_config_updates=True,
         update_precommit=True,
         verbose=True,
-        publish=BumpOption.micro,
+        publish=BumpOption.patch,
         bump=BumpOption.major,
         clean=True,
         test=True,
@@ -218,7 +218,7 @@ def test_create_options() -> None:
     assert test_options.no_config_updates
     assert test_options.update_precommit
     assert test_options.verbose
-    assert test_options.publish == BumpOption.micro
+    assert test_options.publish == BumpOption.patch
     assert test_options.bump == BumpOption.major
     assert test_options.clean
     assert test_options.test
@@ -230,19 +230,19 @@ def test_create_options() -> None:
 def test_conflicting_options(
     runner: CliRunner, mock_crackerjack_process: MagicMock
 ) -> None:
-    result = runner.invoke(app, ["-p", "micro", "-b", "minor"])
+    result = runner.invoke(app, ["-p", "patch", "-b", "minor"])
     assert result.exit_code == 0
     options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.publish == BumpOption.micro
+    assert options.publish == BumpOption.patch
     assert options.bump == BumpOption.minor
 
 
 def test_all_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> None:
-    result = runner.invoke(app, ["-a", "micro"])
+    result = runner.invoke(app, ["-a", "patch"])
     assert result.exit_code == 0
     mock_crackerjack_process.process.assert_called_once()
     options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.all == BumpOption.micro
+    assert options.all == BumpOption.patch
     mock_crackerjack_process.process.reset_mock()
     result = runner.invoke(app, ["--all", "minor"])
     assert result.exit_code == 0
@@ -254,20 +254,20 @@ def test_all_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> N
     options = mock_crackerjack_process.process.call_args[0][0]
     assert options.all == BumpOption.major
     mock_crackerjack_process.process.reset_mock()
-    result = runner.invoke(app, ["--all", "MICRO"])
+    result = runner.invoke(app, ["--all", "PATCH"])
     assert result.exit_code == 0
     options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.all == BumpOption.micro
+    assert options.all == BumpOption.patch
 
 
 def test_all_option_with_other_options(
     runner: CliRunner, mock_crackerjack_process: MagicMock
 ) -> None:
-    result = runner.invoke(app, ["-a", "micro", "-c", "-t"])
+    result = runner.invoke(app, ["-a", "patch", "-c", "-t"])
     assert result.exit_code == 0
     mock_crackerjack_process.process.assert_called_once()
     options = mock_crackerjack_process.process.call_args[0][0]
-    assert options.all == BumpOption.micro
+    assert options.all == BumpOption.patch
     assert options.commit
     assert options.test
 

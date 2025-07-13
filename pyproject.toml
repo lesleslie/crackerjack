@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.23.0"
+version = "0.24.2"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -192,6 +192,10 @@ reportUnknownLambdaType = false
 reportUnknownParameterType = "warning"
 reportPrivateUsage = false
 pythonVersion = "3.13"
+
+[tool.uv]
+keyring-provider = "subprocess"
+index-url = "https://pypi.org/simple/"
 
 [tool.vulture]
 min_confidence = 86

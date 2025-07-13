@@ -885,7 +885,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             self.execute_command(["uv", "tool", "install", "keyring"])
             self.execute_command(["git", "init"])
             self.execute_command(["git", "branch", "-m", "main"])
-            self.execute_command(["git", "add", "pyproject.toml", "pdm.lock"])
+            self.execute_command(["git", "add", "pyproject.toml", "uv.lock"])
             self.execute_command(["git", "config", "advice.addIgnoredFile", "false"])
             install_cmd = ["pre-commit", "install"]
             if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
