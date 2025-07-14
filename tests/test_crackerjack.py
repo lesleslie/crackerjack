@@ -909,7 +909,9 @@ class TestCrackerjackProcess:
             with patch.object(cj, "_setup_package"):
                 with patch.object(cj, "_update_project"):
                     cj.process(options)
-                    mock_cj_execute.assert_any_call(["pre-commit", "autoupdate"])
+                    mock_cj_execute.assert_any_call(
+                        ["uv", "run", "pre-commit", "autoupdate"]
+                    )
 
     def test_update_precommit_ai_agent(
         self,
@@ -927,7 +929,14 @@ class TestCrackerjackProcess:
                 with patch.object(cj, "_update_project"):
                     cj.process(options)
                     mock_cj_execute.assert_any_call(
-                        ["pre-commit", "autoupdate", "-c", ".pre-commit-config-ai.yaml"]
+                        [
+                            "uv",
+                            "run",
+                            "pre-commit",
+                            "autoupdate",
+                            "-c",
+                            ".pre-commit-config-ai.yaml",
+                        ]
                     )
 
     def test_run_pre_commit_ai_agent(
@@ -943,7 +952,15 @@ class TestCrackerjackProcess:
         mock_project.execute_command.return_value = MagicMock(returncode=0)
         ProjectManager.run_pre_commit(mock_project)
         mock_project.execute_command.assert_called_with(
-            ["pre-commit", "run", "--all-files", "-c", ".pre-commit-config-ai.yaml"]
+            [
+                "uv",
+                "run",
+                "pre-commit",
+                "run",
+                "--all-files",
+                "-c",
+                ".pre-commit-config-ai.yaml",
+            ]
         )
 
     def test_pre_commit_install_ai_agent(
@@ -965,7 +982,14 @@ class TestCrackerjackProcess:
             original_method = ProjectManager.update_pkg_configs
             original_method(mock_project)
             mock_execute.assert_any_call(
-                ["pre-commit", "install", "-c", ".pre-commit-config-ai.yaml"]
+                [
+                    "uv",
+                    "run",
+                    "pre-commit",
+                    "install",
+                    "-c",
+                    ".pre-commit-config-ai.yaml",
+                ]
             )
 
     def test_process_with_precommit_failure(

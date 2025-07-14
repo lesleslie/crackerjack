@@ -634,7 +634,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 temp_path.write_text(code)
             try:
                 result = subprocess.run(
-                    ["ruff", "format", str(temp_path)],
+                    ["uv", "run", "ruff", "format", str(temp_path)],
                     check=False,
                     capture_output=True,
                     text=True,
@@ -887,7 +887,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             self.execute_command(["git", "branch", "-m", "main"])
             self.execute_command(["git", "add", "pyproject.toml", "uv.lock"])
             self.execute_command(["git", "config", "advice.addIgnoredFile", "false"])
-            install_cmd = ["pre-commit", "install"]
+            install_cmd = ["uv", "run", "pre-commit", "install"]
             if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
                 install_cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
             self.execute_command(install_cmd)
@@ -899,7 +899,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks[/bold bright_white]"
         )
         self.console.print("-" * 60 + "\n")
-        cmd = ["pre-commit", "run", "--all-files"]
+        cmd = ["uv", "run", "pre-commit", "run", "--all-files"]
         if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
             cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
         check_all = self.execute_command(cmd)
@@ -990,7 +990,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
     def _update_precommit(self, options: t.Any) -> None:
         if self.pkg_path.stem == "crackerjack" and options.update_precommit:
-            update_cmd = ["pre-commit", "autoupdate"]
+            update_cmd = ["uv", "run", "pre-commit", "autoupdate"]
             if options.ai_agent:
                 update_cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
             self.execute_command(update_cmd)
@@ -1076,7 +1076,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             test.append("-xvs")
 
     def _prepare_pytest_command(self, options: OptionsProtocol) -> list[str]:
-        test = ["pytest"]
+        test = ["uv", "run", "pytest"]
         project_size = self._detect_project_size()
         test_timeout = self._get_test_timeout(options, project_size)
         if getattr(options, "ai_agent", False):
