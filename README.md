@@ -551,19 +551,51 @@ Crackerjack is designed with modern Python principles in mind:
 
 ## Acknowledgments
 
--   **UV:** For excellent dependency and virtual environment management.
--   **Ruff:** For lightning-fast linting and code formatting.
--   **pre-commit:** For the robust hook management system.
--   **pytest:** For the flexible and powerful testing framework.
--   **PDM:** For the original inspiration for dependency management patterns.
--   **bandit:** For finding security vulnerabilities.
--   **vulture:** For dead code detection.
--   **creosote:** For unused dependency detection.
--   **complexipy:** For code complexity analysis.
--   **codespell:** For spelling correction.
--   **autotyping:** For automatically adding type hints.
--   **refurb:** For code improvement suggestions.
--   **pyright:** For static type checking.
--   **Typer:** For the creation of the CLI.
+Crackerjack stands on the shoulders of giants. We're grateful to the maintainers and contributors of these outstanding tools that make modern Python development possible:
+
+### Core Development Tools
+- **[UV](https://docs.astral.sh/uv/)** - Next-generation Python package and project management
+- **[Ruff](https://docs.astral.sh/ruff/)** - Lightning-fast Python linter and formatter written in Rust
+- **[pyright](https://microsoft.github.io/pyright/)** - Fast, feature-rich static type checker for Python
+- **[pytest](https://pytest.org/)** - Flexible and powerful testing framework
+
+### Code Quality & Security
+- **[pre-commit](https://pre-commit.com/)** - Multi-language pre-commit hooks framework
+- **[bandit](https://bandit.readthedocs.io/)** - Security vulnerability scanner for Python
+- **[vulture](https://github.com/jendrikseipp/vulture)** - Dead code detection tool
+- **[refurb](https://github.com/dosisod/refurb)** - Code modernization and improvement suggestions
+- **[codespell](https://github.com/codespell-project/codespell)** - Spelling mistake detection and correction
+- **[detect-secrets](https://github.com/Yelp/detect-secrets)** - Prevention of secrets in repositories
+
+### Dependencies & Project Management
+- **[creosote](https://github.com/fredrikaverpil/creosote)** - Unused dependency detection
+- **[autotyping](https://github.com/JelleZijlstra/autotyping)** - Automatic type hint generation
+- **[complexipy](https://github.com/rohaquinlop/complexipy)** - Code complexity analysis
+
+### CLI & User Interface
+- **[Typer](https://typer.tiangolo.com/)** - Modern CLI framework for building command-line interfaces
+- **[Rich](https://rich.readthedocs.io/)** - Rich text and beautiful formatting in the terminal
+- **[click](https://click.palletsprojects.com/)** - Python package for creating command line interfaces
+
+### Performance & Development Tools
+- **[icecream](https://github.com/gruns/icecream)** - Sweet and creamy print debugging
+- **[bevy](https://github.com/ZeroIntensity/bevy)** - Lightweight dependency injection framework
+- **[msgspec](https://github.com/jcrist/msgspec)** - High-performance message serialization
+- **[attrs](https://github.com/python-attrs/attrs)** - Classes without boilerplate
+
+### Development Environment
+- **[PyCharm](https://www.jetbrains.com/pycharm/)** - The premier Python IDE that powered the development of Crackerjack
+- **[Claude Code](https://claude.ai/code)** - AI-powered development assistant that accelerated development and ensured code quality
+
+### Legacy Inspiration
+- **[PDM](https://pdm.fming.dev/)** - Original inspiration for modern Python dependency management patterns
+
+### Special Recognition
+
+We extend special thanks to the **Astral team** for their groundbreaking work on UV and Ruff, which have revolutionized Python tooling. Their commitment to performance, reliability, and developer experience has set new standards for the Python ecosystem.
+
+The integration of these tools into Crackerjack's unified workflow demonstrates the power of the modern Python toolchain when thoughtfully combined. Each tool excels in its domain, and together they create a development experience that is both powerful and delightful.
+
+We're honored to build upon this foundation and contribute to the Python community's continued evolution toward better development practices and tools.
 
 ---

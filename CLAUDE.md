@@ -16,6 +16,12 @@ pipx install uv
 
 # Install project dependencies
 uv sync
+
+# Run individual tools through UV (ensures proper environment isolation)
+uv run pytest
+uv run pyright
+uv run ruff check
+uv run pre-commit run --all-files
 ```
 
 ### Running Crackerjack
@@ -120,25 +126,34 @@ Crackerjack is designed with modern Python principles and consists of several ke
 1. **Crackerjack** (`crackerjack.py`): Main class that orchestrates the entire workflow
    - Manages configuration updates
    - Runs pre-commit hooks
-   - Handles code cleaning
-   - Executes tests
+   - Handles code cleaning (with enhanced error handling)
+   - Executes tests with dynamic parallelization
    - Manages version bumping and publishing
    - Handles Git operations
+   - Integrates with Rich console for status output
 
 2. **CodeCleaner**: Responsible for cleaning code
-   - Removes docstrings
+   - Removes docstrings (with syntax-aware pass statement insertion)
    - Removes line comments
    - Removes extra whitespace
    - Reformats code using Ruff
+   - Handles file encoding issues gracefully
 
 3. **ConfigManager**: Handles configuration file management
    - Updates pyproject.toml settings
    - Manages configuration files (.gitignore, .pre-commit-config.yaml)
+   - Supports dynamic configuration based on project size
 
 4. **ProjectManager**: Manages project-level operations
    - Runs pre-commit hooks
    - Updates package configurations
    - Runs interactive hooks
+   - Detects project size for optimization
+
+5. **ErrorHandler** (`errors.py`): Structured error handling system
+   - Provides consistent error codes and messages
+   - Handles graceful degradation on failures
+   - Supports both fatal and non-fatal error patterns
 
 ### Key Design Patterns
 
@@ -150,14 +165,15 @@ Crackerjack is designed with modern Python principles and consists of several ke
 
 Crackerjack has a robust testing setup with:
 
-- **Test Configuration**: Customizes pytest through conftest.py
-- **Benchmark Support**: Special handling for benchmark tests
+- **Test Configuration**: Customizes pytest through conftest.py with asyncio_mode="auto"
+- **Benchmark Support**: Special handling for benchmark tests (disabled in parallel execution)
 - **Smart Parallelization**: Adjusts the number of workers based on project size
 - **Project Size Detection**: Automatically detects project size to optimize test execution
-- **Timeout Protection**: Tests have dynamic timeouts based on project size
+- **Timeout Protection**: Tests have dynamic timeouts based on project size (default 300s)
 - **Deadlock Prevention**: Advanced threading techniques to prevent deadlocks
 - **Progress Tracking**: Shows periodic heartbeat messages for long-running tests
 - **AI Agent Integration**: Generates structured output files (JUnit XML, JSON coverage, benchmark JSON) when `--ai-agent` flag is used
+- **Async Testing**: Configured for asyncio-based tests with automatic mode detection
 
 ### Interactive Mode
 
@@ -180,6 +196,24 @@ The interactive mode runs a predefined workflow with tasks:
 8. **Commit** - Commit changes to Git
 
 Access interactive mode with: `python -m crackerjack -i`
+
+## Module Organization
+
+Crackerjack follows a single-file architecture for simplicity and maintainability:
+
+### File Structure
+- `crackerjack.py` - Main module (~3000 lines) containing all core functionality
+- `errors.py` - Structured error handling system
+- `interactive.py` - Rich-based interactive UI implementation
+- `py313.py` - Python 3.13+ specific feature detection
+- `__main__.py` - Entry point for `python -m crackerjack`
+
+### Key Implementation Details
+- **Single-file Design**: Most functionality concentrated in `crackerjack.py` for easier maintenance
+- **Type Safety**: Extensive use of protocols and type hints throughout
+- **Error Handling**: Comprehensive error handling with structured error codes
+- **Dynamic Configuration**: Project size detection affects worker count, timeouts, and other settings
+- **Rich Integration**: All console output uses Rich for enhanced terminal UI
 
 ## CLI Reference
 
@@ -218,22 +252,27 @@ Access interactive mode with: `python -m crackerjack -i`
 
 ## Development Guidelines
 
-1. **Code Style**: Follow the Crackerjack style guide:
+1. **Code Style**: Follow the Crackerjack style guide (see RULES.md):
    - **Target Python 3.13+** - Use latest Python features
-   - Use static typing throughout with modern syntax
+   - Use static typing throughout with modern syntax (import typing as `t`)
    - Use pathlib for file operations
    - Prefer Protocol over ABC
+   - Use built-in collection types (`list[str]`, `dict[str, int]`) instead of typing equivalents
    - Leverage Python 3.13+ performance and language improvements
 
 2. **Testing Approach**:
    - Write unit tests for all functionality
    - Add benchmark tests for performance-critical code
    - Tests are run in parallel by default
+   - **CRITICAL**: Use tempfile module for temporary files in tests (never create files directly on filesystem)
+   - Use pytest's `tmp_path` and `tmp_path_factory` fixtures
+   - Tests should be isolated and not affect the surrounding environment
 
 3. **Dependencies**:
-   - UV for dependency management
+   - UV for dependency management and tool execution
    - Ruff for linting and formatting
    - Pytest for testing
+   - All tools should be run through UV for environment isolation
 
 4. **Python Version**:
    - **Target: Python 3.13+** - Crackerjack requires Python 3.13 or newer
