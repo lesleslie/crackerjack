@@ -7,9 +7,9 @@ This document provides information about running tests with Crackerjack.
 Crackerjack uses an optimized test setup for all packages to prevent hanging issues. This setup:
 
 1. Avoids aggressive process killing that could cause issues with test reporting and cleanup
-2. Uses a more targeted approach to cleaning up asyncio tasks
-3. Reduces excessive mocking that could cause stability issues
-4. Sets appropriate environment variables to control asyncio behavior
+1. Uses a more targeted approach to cleaning up asyncio tasks
+1. Reduces excessive mocking that could cause stability issues
+1. Sets appropriate environment variables to control asyncio behavior
 
 ## Running Tests
 
@@ -26,9 +26,9 @@ This command applies the same optimized settings to all packages, ensuring consi
 Crackerjack uses a modular approach to test execution, broken down into several specialized components:
 
 1. **Test Command Preparation** - Builds the pytest command with appropriate options
-2. **Environment Setup** - Configures environment variables for optimal test execution
-3. **Process Execution** - Manages the subprocess with timeout handling and output streaming
-4. **Results Reporting** - Processes and displays test results with appropriate formatting
+1. **Environment Setup** - Configures environment variables for optimal test execution
+1. **Process Execution** - Manages the subprocess with timeout handling and output streaming
+1. **Results Reporting** - Processes and displays test results with appropriate formatting
 
 This modular design improves maintainability and makes the testing process more robust.
 
@@ -63,9 +63,9 @@ The test configuration is standardized across all packages and includes the foll
 Crackerjack uses a custom process management approach that:
 
 1. Runs pytest with a timeout to ensure tests don't run indefinitely
-2. Streams output in real-time to provide feedback during test execution
-3. Properly handles process termination and cleanup
-4. Ensures proper process cleanup even if tests hang
+1. Streams output in real-time to provide feedback during test execution
+1. Properly handles process termination and cleanup
+1. Ensures proper process cleanup even if tests hang
 
 ### Environment Variables
 
@@ -80,9 +80,9 @@ Crackerjack sets several environment variables to control test behavior:
 If you encounter issues with tests:
 
 1. Make sure you're using the latest version of crackerjack
-2. Try running with the `--verbose` flag to see more detailed output
-3. Check the test logs for any specific errors or warnings
-4. Look for timeout messages that might indicate which tests are hanging
+1. Try running with the `--verbose` flag to see more detailed output
+1. Check the test logs for any specific errors or warnings
+1. Look for timeout messages that might indicate which tests are hanging
 
 ### Common Issues
 
@@ -91,23 +91,23 @@ If you encounter issues with tests:
 If tests are hanging, the built-in timeout (5 minutes) will eventually terminate the process. The output will include a message indicating that the test execution timed out. To debug:
 
 1. Run with `--verbose` to see more detailed output
-2. Check for tests that might be creating infinite loops or waiting indefinitely for resources
-3. Look for asyncio-related issues, which are a common cause of hanging tests
+1. Check for tests that might be creating infinite loops or waiting indefinitely for resources
+1. Look for asyncio-related issues, which are a common cause of hanging tests
 
 #### Environment Variable Conflicts
 
 If you have environment variables set in your shell that conflict with those set by Crackerjack, you might experience unexpected behavior. To troubleshoot:
 
 1. Check your environment for variables like `PYTEST_ASYNCIO_MODE` or `PYTHONASYNCIO_DEBUG`
-2. Consider running in a clean environment if necessary
+1. Consider running in a clean environment if necessary
 
 #### Process Management Issues
 
 If you encounter issues with process management (e.g., zombie processes or resource leaks):
 
 1. Make sure you're using the latest version of Crackerjack
-2. Check for any system-specific issues that might affect process management
-3. Consider running with fewer concurrent tests if your system has limited resources
+1. Check for any system-specific issues that might affect process management
+1. Consider running with fewer concurrent tests if your system has limited resources
 
 ## Extending Test Functionality
 

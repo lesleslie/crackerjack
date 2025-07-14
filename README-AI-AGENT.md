@@ -32,10 +32,10 @@ python -m crackerjack --ai-agent -a minor
 When AI agent mode is enabled, Crackerjack:
 
 1. Outputs results in structured JSON format for reliable parsing
-2. Provides clear status indicators for each operation (running, success, failed)
-3. Includes detailed action tracking to help AI assistants understand the workflow
-4. Reduces noise and formats output specifically for machine consumption
-5. Generates machine-readable output files for test results, coverage, and benchmarks
+1. Provides clear status indicators for each operation (running, success, failed)
+1. Includes detailed action tracking to help AI assistants understand the workflow
+1. Reduces noise and formats output specifically for machine consumption
+1. Generates machine-readable output files for test results, coverage, and benchmarks
 
 ## Structured Output Format
 
@@ -50,6 +50,7 @@ When running tests with `--ai-agent`, Crackerjack automatically generates the fo
 - **`benchmark.json`**: Benchmark results in JSON format (when `--benchmark` or `--benchmark-regression` is used)
 
 These files enable AI assistants to:
+
 - Parse test results programmatically without regex parsing of console output
 - Access detailed coverage information for each source file
 - Analyze benchmark performance data and trends
@@ -86,6 +87,7 @@ During execution, Crackerjack emits status updates for each operation:
 When an operation completes, Crackerjack reports the outcome:
 
 #### Success Example
+
 ```json
 {
   "status": "success",
@@ -96,6 +98,7 @@ When an operation completes, Crackerjack reports the outcome:
 ```
 
 #### Failure Example
+
 ```json
 {
   "status": "failed",
@@ -129,6 +132,7 @@ At the end of all operations, Crackerjack provides a comprehensive summary:
 ```
 
 This structured format allows AI assistants to:
+
 - Track the progress of long-running operations
 - Identify which specific actions succeeded or failed
 - Provide targeted assistance based on detailed error information
@@ -156,6 +160,7 @@ from pathlib import Path
 from rich.console import Console
 from crackerjack import create_crackerjack_runner
 
+
 class AIAssistantOptions:
     def __init__(self):
         # Enable AI agent mode
@@ -175,12 +180,13 @@ class AIAssistantOptions:
         self.skip_hooks = False
         self.no_config_updates = False
 
+
 # Create a runner with custom output handling
 runner = create_crackerjack_runner(
     console=Console(force_terminal=True),
     pkg_path=Path.cwd(),
     python_version="3.13",
-    output_format="json"  # Ensure JSON output even for non-AI-agent operations
+    output_format="json",  # Ensure JSON output even for non-AI-agent operations
 )
 
 # Process with structured result handling
@@ -206,12 +212,13 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+
 def run_crackerjack_with_ai(command):
     """Run a Crackerjack command and parse the structured output."""
     result = subprocess.run(
         ["python", "-m", "crackerjack", "--ai-agent"] + command.split(),
         capture_output=True,
-        text=True
+        text=True,
     )
 
     # Parse the JSON output lines
@@ -243,10 +250,12 @@ def run_crackerjack_with_ai(command):
                     "name": case.get("name"),
                     "classname": case.get("classname"),
                     "time": float(case.get("time", 0.0)),
-                    "status": "failed" if case.find("failure") is not None else "passed"
+                    "status": "failed"
+                    if case.find("failure") is not None
+                    else "passed",
                 }
                 for case in root.findall(".//testcase")
-            ]
+            ],
         }
 
     # Parse JSON coverage report
@@ -263,7 +272,7 @@ def run_crackerjack_with_ai(command):
         "success": summary.get("success", False) if summary else False,
         "operations": operations,
         "summary": summary,
-        "structured_data": structured_data
+        "structured_data": structured_data,
     }
 ```
 
@@ -274,25 +283,25 @@ Crackerjack's AI agent mode enables powerful workflows for AI-assisted developme
 ### Code Quality Improvement
 
 1. **AI Analysis**: AI assistant analyzes code and suggests improvements
-2. **Targeted Execution**: `python -m crackerjack --ai-agent --clean`
-3. **Structured Feedback**: AI parses results to identify which files were modified
-4. **Intelligent Review**: AI explains the changes made and why they improve the code
+1. **Targeted Execution**: `python -m crackerjack --ai-agent --clean`
+1. **Structured Feedback**: AI parses results to identify which files were modified
+1. **Intelligent Review**: AI explains the changes made and why they improve the code
 
 ### Test-Driven Development
 
 1. **Test Creation**: AI helps write tests for new functionality
-2. **Verification**: `python -m crackerjack --ai-agent --test -s`
-3. **Structured Analysis**: AI parses `test-results.xml` and `coverage.json` files for detailed insights
-4. **Failure Analysis**: AI analyzes test failures from JUnit XML with precise file locations and error details
-5. **Coverage-Driven Implementation**: AI uses coverage data to identify untested code paths and suggest implementation priorities
-6. **Implementation Guidance**: AI provides targeted implementation advice based on structured test results
+1. **Verification**: `python -m crackerjack --ai-agent --test -s`
+1. **Structured Analysis**: AI parses `test-results.xml` and `coverage.json` files for detailed insights
+1. **Failure Analysis**: AI analyzes test failures from JUnit XML with precise file locations and error details
+1. **Coverage-Driven Implementation**: AI uses coverage data to identify untested code paths and suggest implementation priorities
+1. **Implementation Guidance**: AI provides targeted implementation advice based on structured test results
 
 ### Continuous Improvement
 
 1. **Project Scan**: `python -m crackerjack --ai-agent --verbose`
-2. **Opportunity Identification**: AI analyzes output to find improvement opportunities
-3. **Recommendation**: AI suggests specific improvements with rationale
-4. **Implementation**: AI assists with implementing the suggested changes
+1. **Opportunity Identification**: AI analyzes output to find improvement opportunities
+1. **Recommendation**: AI suggests specific improvements with rationale
+1. **Implementation**: AI assists with implementing the suggested changes
 
 These workflows demonstrate how Crackerjack's structured output enables AI assistants to provide more contextual, accurate, and helpful guidance throughout the development process.
 

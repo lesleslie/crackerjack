@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.24.10"
+version = "0.25.0"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -46,6 +46,7 @@ dependencies = [
     "keyring>=25.6",
     "pre-commit>=4.2",
     "pydantic>=2.11.7",
+    "pyleak>=0.1.14",
     "pytest>=8.4.1",
     "pytest-asyncio>=1",
     "pytest-benchmark>=5.1",
@@ -128,6 +129,7 @@ markers = [
     "unit: marks test as a unit test",
     "benchmark: mark test as a benchmark (disables parallel execution)",
     "integration: marks test as an integration test",
+    "no_leaks: detect asyncio task leaks, thread leaks, and event loop blocking",
 ]
 
 # Default timeout settings
@@ -237,6 +239,7 @@ exclude-deps = [
     "keyring",
     "inflection",
     "pydantic-settings",
+    "pyleak",
 ]
 
 [tool.refurb]

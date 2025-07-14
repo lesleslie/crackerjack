@@ -66,6 +66,13 @@ repos:
       - id: ruff-format
         verbose: true
 
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.18
+    hooks:
+      - id: mdformat
+        additional_dependencies:
+          - mdformat-ruff
+
   # Code quality tier 2 - analysis
   - repo: https://github.com/jendrikseipp/vulture
     rev: 'v2.14'
