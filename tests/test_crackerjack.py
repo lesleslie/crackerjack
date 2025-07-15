@@ -48,6 +48,7 @@ class OptionsForTesting:
     ai_agent: bool = False
     create_pr: bool = False
     skip_hooks: bool = False
+    comprehensive: bool = False
 
 
 @pytest.fixture
@@ -502,7 +503,7 @@ class TestCrackerjackProcess:
                                 mock_tests.assert_called_once()
                                 mock_publish.assert_called_once()
                                 mock_commit.assert_called_once()
-        mock_console_print.assert_any_call("-" * 60 + "\n")
+        mock_console_print.assert_any_call("-" * 80 + "\n")
 
     def test_process_with_all_option_sets_flags(
         self,
@@ -950,18 +951,27 @@ class TestCrackerjackProcess:
         mock_project.options = options
         mock_project.console = MagicMock()
         mock_project.execute_command.return_value = MagicMock(returncode=0)
-        ProjectManager.run_pre_commit(mock_project)
-        mock_project.execute_command.assert_called_with(
-            [
-                "uv",
-                "run",
-                "pre-commit",
-                "run",
-                "--all-files",
-                "-c",
-                ".pre-commit-config-ai.yaml",
-            ]
+        mock_project._select_precommit_config.return_value = (
+            ".pre-commit-config-ai.yaml"
         )
+        mock_project._analyze_precommit_workload.return_value = {
+            "total_files": 10,
+            "complexity": "low",
+        }
+        mock_project._optimize_precommit_execution.return_value = {
+            "PRE_COMMIT_CONCURRENCY": "4"
+        }
+        ProjectManager.run_pre_commit(mock_project)
+        call_args = mock_project.execute_command.call_args
+        assert call_args[0][0] == [
+            "uv",
+            "run",
+            "pre-commit",
+            "run",
+            "--all-files",
+            "-c",
+            ".pre-commit-config-ai.yaml",
+        ]
 
     def test_pre_commit_install_ai_agent(
         self,

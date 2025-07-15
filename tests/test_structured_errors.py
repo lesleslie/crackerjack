@@ -30,6 +30,7 @@ class OptionsProtocol(t.Protocol):
     update_precommit: bool
     clean: bool
     test: bool
+    comprehensive: bool
 
 
 class TestErrorHandlingIntegration:
@@ -134,6 +135,7 @@ class TestErrorHandlingIntegration:
                     all = False
                     create_pr = False
                     skip_hooks = False
+                    comprehensive = False
 
                 options = Options()
                 with patch("platform.system", return_value="Linux"):

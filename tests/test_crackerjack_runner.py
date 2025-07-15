@@ -31,6 +31,7 @@ class MockOptions:
         )
         self.test_workers = kwargs.get("test_workers", 0)
         self.test_timeout = kwargs.get("test_timeout", 0)
+        self.comprehensive = kwargs.get("comprehensive", False)
 
 
 def test_create_crackerjack_runner() -> None:

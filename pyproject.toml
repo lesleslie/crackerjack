@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.26.0"
+version = "0.27.0"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -41,6 +41,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "aiofiles>=24.1",
     "autotyping>=24.9",
     "hatchling>=1.25",
     "keyring>=25.6",
@@ -86,17 +87,15 @@ lint.extend-select = [
     "UP",   # pyupgrade (includes F-string conversion)
 ]
 lint.ignore = [
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D105",
-    "D106",
-    "D107",
-    "E402",
-    "F821",
-    "UP040",
+    "D100", # Missing docstring in public module - can be safely enabled
+    "D101", # Missing docstring in public class - conflicts with code cleaning
+    "D102", # Missing docstring in public method - conflicts with code cleaning
+    "D103", # Missing docstring in public function - conflicts with code cleaning
+    "D104", # Missing docstring in public package - package level docs
+    "D105", # Missing docstring in magic method - conflicts with code cleaning
+    "D107", # Missing docstring in __init__ - conflicts with code cleaning
+    "E402", # Module level import not at top - sometimes necessary
+    "F821", # Undefined name - can be resolved with proper imports
 ]
 lint.fixable = [ "ALL" ]
 lint.unfixable = [  ]
@@ -185,24 +184,32 @@ ignore_errors = false
 verboseOutput = true
 include = [
     "crackerjack",
+    "tests",
 ]
 exclude = [
     "scratch",
+    ".venv",
+    "build",
+    "dist",
 ]
 extraPaths = [
     ".venv/lib/python3.13/site-packages/",
 ]
 typeCheckingMode = "strict"
-reportMissingTypeStubs = false
-reportOptionalMemberAccess = false
-reportOptionalCall = false
-reportUnknownMemberType = false
-reportUnknownVariableType = false
-reportUnknownArgumentType = false
-reportInvalidTypeForm = false
-reportUnknownLambdaType = false
+# Enhanced strictness - only disable what's absolutely necessary
+reportMissingTypeStubs = false                 # Third-party libraries often lack stubs
+reportOptionalMemberAccess = "warning"         # Upgrade from false to warning
+reportOptionalCall = "warning"                 # Upgrade from false to warning
+reportUnknownMemberType = "warning"            # Upgrade from false to warning
+reportUnknownVariableType = false              # Too noisy for dynamic code
+reportUnknownArgumentType = "warning"          # Upgrade from false to warning
+reportInvalidTypeForm = "warning"              # Upgrade from false to warning
+reportUnknownLambdaType = "warning"            # Upgrade from false to warning
 reportUnknownParameterType = "warning"
-reportPrivateUsage = false
+reportPrivateUsage = "warning"                 # Upgrade from false to warning
+reportUnnecessaryTypeIgnoreComment = "warning" # New - catch unused ignores
+reportUnnecessaryComparison = "warning"        # New - catch unnecessary comparisons
+reportConstantRedefinition = "warning"         # New - catch constant redefinitions
 pythonVersion = "3.13"
 
 [tool.uv]
@@ -245,19 +252,50 @@ exclude-deps = [
 [tool.refurb]
 enable_all = true
 quiet = true
+# Enable Python 3.13+ specific modernizations
+python_version = "3.13"
 
 [tool.bandit]
 target = [
     "crackerjack",
+    "tests",       # Include tests for security analysis
 ]
+# Minimal skips - only skip what's absolutely necessary for this codebase
 skips = [
-    "B101",
-    "B301",
-    "B311",
-    "B403",
-    "B404",
-    "B602",
-    "B603",
-    "B607",
-    "B704",
+    "B101", # assert_used - tests legitimately use assert
+    "B603", # subprocess_without_shell_equals_true - we use shell=False safely
+    "B607", # start_process_with_partial_path - controlled subprocess calls
 ]
+# Enhanced security scanning
+exclude_dirs = [
+    "tests/data", # Test data might contain examples
+]
+
+# Enhanced documentation quality
+
+[tool.pydocstyle]
+convention = "google"
+add-ignore = [
+    "D100", # Missing docstring in public module
+    "D104", # Missing docstring in public package
+]
+
+# Autotyping optimization
+
+[tool.autotyping]
+exclude = [
+    "tests/data/*",
+    "*/conftest.py",
+]
+safe = true
+aggressive = true
+
+# Code complexity monitoring
+
+[tool.complexipy]
+default_pattern = "**/*.py"
+exclude_patterns = [
+    "**/tests/**",
+    "**/test_*.py",
+]
+max_complexity = 13

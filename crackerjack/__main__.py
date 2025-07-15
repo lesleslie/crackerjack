@@ -1,3 +1,4 @@
+import asyncio
 from enum import Enum
 
 import typer
@@ -39,6 +40,8 @@ class Options(BaseModel):
     ai_agent: bool = False
     create_pr: bool = False
     skip_hooks: bool = False
+    comprehensive: bool = False
+    async_mode: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -137,6 +140,17 @@ cli_options = {
         help="Enable AI agent mode with structured output.",
         hidden=True,
     ),
+    "comprehensive": typer.Option(
+        False,
+        "--comprehensive",
+        help="Use comprehensive pre-commit hooks (slower but thorough).",
+    ),
+    "async_mode": typer.Option(
+        False,
+        "--async",
+        help="Enable async mode for faster file operations (experimental).",
+        hidden=True,
+    ),
 }
 
 
@@ -162,6 +176,8 @@ def main(
     skip_hooks: bool = cli_options["skip_hooks"],
     create_pr: bool = cli_options["create_pr"],
     ai_agent: bool = cli_options["ai_agent"],
+    comprehensive: bool = cli_options["comprehensive"],
+    async_mode: bool = cli_options["async_mode"],
 ) -> None:
     options = Options(
         commit=commit,
@@ -181,7 +197,9 @@ def main(
         skip_hooks=skip_hooks,
         all=all,
         ai_agent=ai_agent,
+        comprehensive=comprehensive,
         create_pr=create_pr,
+        async_mode=async_mode,
     )
     if ai_agent:
         import os
@@ -199,7 +217,10 @@ def main(
         launch_interactive_cli(pkg_version)
     else:
         runner = create_crackerjack_runner(console=console)
-        runner.process(options)
+        if async_mode:
+            asyncio.run(runner.process_async(options))
+        else:
+            runner.process(options)
 
 
 if __name__ == "__main__":
