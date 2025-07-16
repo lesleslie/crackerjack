@@ -2638,7 +2638,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             self.execute_command(
                 ["git", "commit", "-m", commit_msg, "--no-verify", "--", "."]
             )
-            self.execute_command(["git", "push", "origin", "main"])
+            self.execute_command(["git", "push", "origin", "main", "--no-verify"])
 
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
