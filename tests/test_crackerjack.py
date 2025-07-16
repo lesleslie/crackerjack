@@ -868,7 +868,9 @@ class TestCrackerjackProcess:
                             ".",
                         ]
                     )
-                    mock_cj_execute.assert_any_call(["git", "push", "origin", "main"])
+                    mock_cj_execute.assert_any_call(
+                        ["git", "push", "origin", "main", "--no-verify"]
+                    )
 
     def test_process_with_uv_sync_failure(
         self,
