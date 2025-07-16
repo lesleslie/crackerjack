@@ -85,7 +85,7 @@ class WorkflowManager:
     def add_task(
         self, name: str, description: str, dependencies: list[str] | None = None
     ) -> Task:
-        dep_tasks = []
+        dep_tasks: list[Task] = []
         if dependencies:
             for dep_name in dependencies:
                 if dep_name not in self.tasks:

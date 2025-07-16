@@ -4,7 +4,8 @@ from enum import Enum
 import typer
 from pydantic import BaseModel, field_validator
 from rich.console import Console
-from crackerjack import create_crackerjack_runner
+
+from .crackerjack import create_crackerjack_runner
 
 console = Console(force_terminal=True)
 app = typer.Typer(
@@ -206,7 +207,7 @@ def main(
 
         os.environ["AI_AGENT"] = "1"
     if interactive:
-        from crackerjack.interactive import launch_interactive_cli
+        from .interactive import launch_interactive_cli
 
         try:
             from importlib.metadata import version

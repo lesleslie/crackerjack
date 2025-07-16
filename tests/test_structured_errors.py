@@ -136,6 +136,7 @@ class TestErrorHandlingIntegration:
                     create_pr = False
                     skip_hooks = False
                     comprehensive = False
+                    async_mode = False
 
                 options = Options()
                 with patch("platform.system", return_value="Linux"):

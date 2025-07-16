@@ -23,9 +23,10 @@
 - **Clean Code Architecture**
 
   - Write modular functions that do one thing well
-  - Avoid unnecessary docstrings and line comments
+  - **NO DOCSTRINGS**: Never add docstrings to any code - the codebase standard is to have no docstrings (they are automatically removed by the `-x` flag)
+  - Avoid unnecessary line comments - use them sparingly only for complex logic
   - Use protocols (`t.Protocol`) instead of abstract base classes
-  - Choose clear, descriptive variable and function names
+  - Choose clear, descriptive variable and function names that make the code self-documenting
 
 - **Code Organization**
 

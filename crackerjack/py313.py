@@ -109,7 +109,7 @@ def process_hook_results[T, R](
     success_handler: typing.Callable[[T], R],
     failure_handler: typing.Callable[[T], R],
 ) -> list[R]:
-    processed_results = []
+    processed_results: list[R] = []
     for result in results:
         if isinstance(result, dict) and result.get("status") == HookStatus.SUCCESS:
             processed_results.append(success_handler(result))
@@ -156,7 +156,7 @@ class EnhancedCommandRunner:
 
 def clean_python_code(code: str) -> str:
     lines = code.splitlines()
-    cleaned_lines = []
+    cleaned_lines: list[str] = []
     for line in lines:
         match line.strip():
             case "":

@@ -333,6 +333,7 @@ Crackerjack follows a single-file architecture for simplicity and maintainabilit
 1. **Code Style**: Follow the Crackerjack style guide (see RULES.md):
 
    - **Target Python 3.13+** - Use latest Python features
+   - **NO DOCSTRINGS** - The codebase standard is to have no docstrings (they are removed by the `-x` flag)
    - Use static typing throughout with modern syntax (import typing as `t`)
    - Use pathlib for file operations
    - Prefer Protocol over ABC
@@ -371,6 +372,13 @@ Crackerjack follows a single-file architecture for simplicity and maintainabilit
 When generating code, AI assistants MUST follow these standards to ensure compliance with Refurb and Bandit pre-commit hooks:
 
 **IMPORTANT: Target Python 3.13+** - All code must be compatible with Python 3.13 or newer. Use the latest Python features and syntax.
+
+**CRITICAL: NO DOCSTRINGS** - Crackerjack's standard is to have NO docstrings in the package code. The `-x` (clean) flag removes all docstrings to reduce noise and keep the codebase clean. When generating code:
+
+- **DO NOT** add docstrings to functions, methods, classes, or modules
+- **DO NOT** add triple-quoted string documentation anywhere
+- Use inline comments sparingly only when absolutely necessary for complex logic
+- The codebase prioritizes clean, self-documenting code over documentation strings
 
 ### Refurb Standards (Modern Python Patterns up to 3.12)
 

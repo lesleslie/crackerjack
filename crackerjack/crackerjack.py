@@ -18,7 +18,8 @@ import aiofiles
 from pydantic import BaseModel
 from rich.console import Console
 from tomli_w import dumps
-from crackerjack.errors import ErrorCode, ExecutionError
+
+from .errors import ErrorCode, ExecutionError
 
 
 @dataclass
@@ -361,7 +362,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
 
     def remove_docstrings(self, code: str) -> str:
         lines = code.split("\n")
-        cleaned_lines = []
+        cleaned_lines: list[str] = []
         docstring_state = self._initialize_docstring_state()
         for i, line in enumerate(lines):
             handled, result_line = self._process_line(lines, i, line, docstring_state)
@@ -418,7 +419,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
 
     def remove_line_comments(self, code: str) -> str:
         lines = code.split("\n")
-        cleaned_lines = []
+        cleaned_lines: list[str] = []
         for line in lines:
             if not line.strip():
                 cleaned_lines.append(line)
@@ -429,7 +430,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         return "\n".join(cleaned_lines)
 
     def _process_line_for_comments(self, line: str) -> str:
-        result = []
+        result: list[str] = []
         string_state = {"in_string": None}
         for i, char in enumerate(line):
             if self._handle_string_character(char, i, line, string_state, result):
@@ -483,7 +484,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
 
     def remove_extra_whitespace(self, code: str) -> str:
         lines = code.split("\n")
-        cleaned_lines = []
+        cleaned_lines: list[str] = []
         function_tracker = {"in_function": False, "function_indent": 0}
         import_tracker = {"in_imports": False, "last_import_type": None}
         for i, line in enumerate(lines):
@@ -854,8 +855,8 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
         from crackerjack.errors import ExecutionError, handle_error
 
         try:
-            async with aiofiles.open(file_path, encoding="utf-8") as f:
-                code = await f.read()
+            async with aiofiles.open(file_path, encoding="utf-8") as f:  # type: ignore[misc]
+                code = await f.read()  # type: ignore[misc]
             original_code = code
             cleaning_failed = False
             try:
@@ -890,8 +891,8 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 )
                 code = original_code
                 cleaning_failed = True
-            async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
-                await f.write(code)
+            async with aiofiles.open(file_path, "w", encoding="utf-8") as f:  # type: ignore[misc]
+                await f.write(code)  # type: ignore[misc]
             if cleaning_failed:
                 self.console.print(
                     f"[bold yellow]⚡ Partially cleaned:[/bold yellow] [dim bright_white]{file_path}[/dim bright_white]"
@@ -965,8 +966,8 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                 suffix=".py", mode="w+", delete=False
             ) as temp:
                 temp_path = Path(temp.name)
-            async with aiofiles.open(temp_path, "w", encoding="utf-8") as f:
-                await f.write(code)
+            async with aiofiles.open(temp_path, "w", encoding="utf-8") as f:  # type: ignore[misc]
+                await f.write(code)  # type: ignore[misc]
             try:
                 proc = await asyncio.create_subprocess_exec(
                     "uv",
@@ -977,10 +978,10 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
-                stdout, stderr = await proc.communicate()
+                _, stderr = await proc.communicate()
                 if proc.returncode == 0:
-                    async with aiofiles.open(temp_path, encoding="utf-8") as f:
-                        formatted_code = await f.read()
+                    async with aiofiles.open(temp_path, encoding="utf-8") as f:  # type: ignore[misc]
+                        formatted_code = await f.read()  # type: ignore[misc]
                 else:
                     self.console.print(
                         f"[bold bright_yellow]⚠️  Warning: Ruff format failed with return code {proc.returncode}[/bold bright_yellow]"
@@ -1025,7 +1026,7 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
             return code
 
     async def _cleanup_cache_directories_async(self, pkg_dir: Path) -> None:
-        def cleanup_sync():
+        def cleanup_sync() -> None:
             with suppress(PermissionError, OSError):
                 pycache_dir = pkg_dir / "__pycache__"
                 if pycache_dir.exists():
@@ -1171,7 +1172,7 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
     ) -> None:
         python_version_pattern = "\\s*W*(\\d\\.\\d*)"
         requires_python = our_toml_config.get("project", {}).get("requires-python", "")
-        classifiers = []
+        classifiers: list[str] = []
         for classifier in pkg_toml_config.get("project", {}).get("classifiers", []):
             classifier = re.sub(
                 python_version_pattern, f" {self.python_version}", classifier
@@ -1186,7 +1187,7 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
             self.pkg_toml_path.write_text(dumps(pkg_toml_config))
 
     def copy_configs(self) -> None:
-        configs_to_add = []
+        configs_to_add: list[str] = []
         for config in config_files:
             config_path = self.our_path / config
             pkg_config_path = self.pkg_path / config
@@ -1238,7 +1239,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
                 len(py_files) + len(js_files) + len(yaml_files) + len(md_files)
             )
             total_size = 0
-            for files in [py_files, js_files, yaml_files, md_files]:
+            for files in (py_files, js_files, yaml_files, md_files):
                 for file_path in files:
                     try:
                         total_size += file_path.stat().st_size
@@ -1395,7 +1396,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         return hook_results
 
     def _parse_hook_output(self, stdout: str, stderr: str) -> list[HookResult]:
-        hook_results = []
+        hook_results: list[HookResult] = []
         lines = stdout.split("\n")
         for line in lines:
             if "..." in line and (
@@ -1482,7 +1483,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
     def _generate_optimization_suggestions(
         self, hook_results: list[HookResult]
     ) -> list[str]:
-        suggestions = []
+        suggestions: list[str] = []
 
         for hook in hook_results:
             if hook.duration > 5.0:
@@ -1578,35 +1579,40 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
     def _parse_refurb_results(self) -> dict[str, t.Any]:
         return {"suggestions": 0, "patterns_modernized": []}
 
+    def _parse_complexity_list(
+        self, complexity_data: list[dict[str, t.Any]]
+    ) -> dict[str, t.Any]:
+        if not complexity_data:
+            return {
+                "average_complexity": 0,
+                "max_complexity": 0,
+                "total_functions": 0,
+            }
+        complexities = [item.get("complexity", 0) for item in complexity_data]
+        return {
+            "average_complexity": sum(complexities) / len(complexities)
+            if complexities
+            else 0,
+            "max_complexity": max(complexities) if complexities else 0,
+            "total_functions": len(complexities),
+        }
+
+    def _parse_complexity_dict(
+        self, complexity_data: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
+        return {
+            "average_complexity": complexity_data.get("average", 0),
+            "max_complexity": complexity_data.get("max", 0),
+            "total_functions": complexity_data.get("total", 0),
+        }
+
     def _parse_complexity_results(self) -> dict[str, t.Any]:
         try:
             with open("complexipy.json", encoding="utf-8") as f:
                 complexity_data = json.load(f)
                 if isinstance(complexity_data, list):
-                    if not complexity_data:
-                        return {
-                            "average_complexity": 0,
-                            "max_complexity": 0,
-                            "total_functions": 0,
-                        }
-                    complexities = [
-                        item.get("complexity", 0)
-                        for item in complexity_data
-                        if isinstance(item, dict)
-                    ]
-                    return {
-                        "average_complexity": sum(complexities) / len(complexities)
-                        if complexities
-                        else 0,
-                        "max_complexity": max(complexities) if complexities else 0,
-                        "total_functions": len(complexities),
-                    }
-                else:
-                    return {
-                        "average_complexity": complexity_data.get("average", 0),
-                        "max_complexity": complexity_data.get("max", 0),
-                        "total_functions": complexity_data.get("total", 0),
-                    }
+                    return self._parse_complexity_list(complexity_data)
+                return self._parse_complexity_dict(complexity_data)
         except (FileNotFoundError, json.JSONDecodeError):
             return {"status": "complexity_analysis_not_available"}
 
@@ -1653,7 +1659,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         return 95.0
 
     def _generate_quality_recommendations(self) -> list[str]:
-        recommendations = []
+        recommendations: list[str] = []
         recommendations.extend(
             [
                 "Consider adding more integration tests",
@@ -1749,18 +1755,16 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         return "unknown"
 
     def _analyze_directory_structure(self) -> dict[str, t.Any]:
-        directories = []
-        for item in self.pkg_path.iterdir():
-            if item.is_dir() and not item.name.startswith(
-                (".git", "__pycache__", ".venv")
-            ):
-                directories.append(
-                    {
-                        "name": item.name,
-                        "type": self._classify_directory(item),
-                        "file_count": len(list(item.rglob("*"))),
-                    }
-                )
+        directories = [
+            {
+                "name": item.name,
+                "type": self._classify_directory(item),
+                "file_count": len(list(item.rglob("*"))),
+            }
+            for item in self.pkg_path.iterdir()
+            if item.is_dir()
+            and not item.name.startswith((".git", "__pycache__", ".venv"))
+        ]
         return {"directories": directories, "total_directories": len(directories)}
 
     def _analyze_file_distribution(self) -> dict[str, t.Any]:
@@ -1778,17 +1782,15 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
 
     def _analyze_dependencies(self) -> dict[str, t.Any]:
         deps = {"status": "analysis_not_implemented"}
-        try:
+        with suppress(Exception):
             pyproject_path = self.pkg_path / "pyproject.toml"
             if pyproject_path.exists():
                 pyproject_path.read_text(encoding="utf-8")
                 deps = {"source": "pyproject.toml", "status": "detected"}
-        except Exception:
-            pass
         return deps
 
     def _analyze_configuration_files(self) -> list[str]:
-        config_files = []
+        config_files: list[str] = []
         config_patterns = ["*.toml", "*.yaml", "*.yml", "*.ini", "*.cfg", ".env*"]
         for pattern in config_patterns:
             config_files.extend([f.name for f in self.pkg_path.glob(pattern)])
@@ -1859,8 +1861,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             return "hidden"
         elif (directory / "__init__.py").exists():
             return "python_package"
-        else:
-            return "general"
+        return "general"
 
     def _collect_environment_info(self) -> dict[str, t.Any]:
         return {
@@ -1871,7 +1872,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         }
 
     def _identify_common_issues(self) -> list[str]:
-        issues = []
+        issues: list[str] = []
         if not (self.pkg_path / "pyproject.toml").exists():
             issues.append("Missing pyproject.toml configuration")
         if not (self.pkg_path / ".gitignore").exists():
@@ -2048,6 +2049,58 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
 
         return hook_results
 
+    def _get_analysis_files(self) -> list[str]:
+        analysis_files: list[str] = []
+        if (
+            hasattr(self, "options")
+            and self.options
+            and getattr(self.options, "ai_agent", False)
+        ):
+            analysis_files.extend(
+                [
+                    "test-results.xml",
+                    "coverage.json",
+                    "benchmark.json",
+                    "ai-agent-summary.json",
+                ]
+            )
+        return analysis_files
+
+    def _generate_analysis_files(self, hook_results: list[HookResult]) -> None:
+        if not (
+            hasattr(self, "options")
+            and self.options
+            and getattr(self.options, "ai_agent", False)
+        ):
+            return
+        try:
+            import json
+
+            summary = {
+                "status": "success"
+                if all(hr.status == "Passed" for hr in hook_results)
+                else "failed",
+                "hook_results": [
+                    {
+                        "name": hr.name,
+                        "status": hr.status,
+                        "duration": hr.duration,
+                        "issues": hr.issues_found
+                        if hasattr(hr, "issues_found")
+                        else [],
+                    }
+                    for hr in hook_results
+                ],
+                "total_duration": sum(hr.duration for hr in hook_results),
+                "files_analyzed": len(hook_results),
+            }
+            with open("ai-agent-summary.json", "w") as f:
+                json.dump(summary, f, indent=2)
+        except Exception as e:
+            self.console.print(
+                f"[yellow]Warning: Failed to generate AI summary: {e}[/yellow]"
+            )
+
 
 class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     our_path: Path = Path(__file__).parent
@@ -2096,6 +2149,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             "[bold bright_magenta]🛠️  SETUP[/bold bright_magenta] [bold bright_white]Initializing project structure[/bold bright_white]"
         )
         self.console.print("-" * 80 + "\n")
+        assert self.config_manager is not None
+        assert self.project_manager is not None
         self.config_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_name = self.pkg_name
         self.project_manager.pkg_dir = self.pkg_dir
@@ -2309,31 +2364,38 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         except (OSError, PermissionError):
             return "medium"
 
+    def _calculate_test_metrics(self, test_files: list[Path]) -> tuple[int, int]:
+        total_test_size = 0
+        slow_tests = 0
+        for test_file in test_files:
+            try:
+                size = test_file.stat().st_size
+                total_test_size += size
+                if size > 30_000 or "integration" in test_file.name.lower():
+                    slow_tests += 1
+            except (OSError, PermissionError):
+                continue
+        return total_test_size, slow_tests
+
+    def _determine_test_complexity(
+        self, test_count: int, avg_size: float, slow_ratio: float
+    ) -> str:
+        if test_count > 100 or avg_size > 25_000 or slow_ratio > 0.4:
+            return "high"
+        elif test_count > 50 or avg_size > 15_000 or slow_ratio > 0.2:
+            return "medium"
+        return "low"
+
     def _analyze_test_workload(self) -> dict[str, t.Any]:
         try:
             test_files = self._get_cached_files_with_mtime("test_*.py")
             py_files = self._get_cached_files_with_mtime("*.py")
-            total_test_size = 0
-            slow_tests = 0
-            for test_file in test_files:
-                try:
-                    size = test_file.stat().st_size
-                    total_test_size += size
-                    if size > 30_000 or "integration" in test_file.name.lower():
-                        slow_tests += 1
-                except (OSError, PermissionError):
-                    continue
+            total_test_size, slow_tests = self._calculate_test_metrics(test_files)
             avg_test_size = total_test_size / len(test_files) if test_files else 0
             slow_test_ratio = slow_tests / len(test_files) if test_files else 0
-            if len(test_files) > 100 or avg_test_size > 25_000 or slow_test_ratio > 0.4:
-                complexity = "high"
-            elif (
-                len(test_files) > 50 or avg_test_size > 15_000 or slow_test_ratio > 0.2
-            ):
-                complexity = "medium"
-            else:
-                complexity = "low"
-
+            complexity = self._determine_test_complexity(
+                len(test_files), avg_test_size, slow_test_ratio
+            )
             return {
                 "total_files": len(py_files),
                 "test_files": len(test_files),
@@ -2354,8 +2416,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             return min(cpu_count // 3, 2)
         elif workload["complexity"] == "medium":
             return min(cpu_count // 2, 4)
-        else:
-            return min(cpu_count, 8)
+        return min(cpu_count, 8)
 
     def _print_ai_agent_files(self, options: t.Any) -> None:
         if getattr(options, "ai_agent", False):
@@ -2507,6 +2568,99 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             stderr.decode() if stderr else "",
         )
 
+    def _run_comprehensive_quality_checks(self, options: OptionsProtocol) -> None:
+        if options.skip_hooks or (
+            options.test
+            and not any([options.publish, options.bump, options.commit, options.all])
+        ):
+            return
+        needs_comprehensive = any(
+            [options.publish, options.bump, options.commit, options.all]
+        )
+        if not needs_comprehensive:
+            return
+        self.console.print("\n" + "-" * 80)
+        self.console.print(
+            "[bold bright_magenta]🔍 COMPREHENSIVE QUALITY[/bold bright_magenta] [bold bright_white]Running all quality checks before publish/commit[/bold bright_white]"
+        )
+        self.console.print("-" * 80 + "\n")
+        cmd = [
+            "uv",
+            "run",
+            "pre-commit",
+            "run",
+            "--all-files",
+            "--hook-stage=manual",
+            "-c",
+            ".pre-commit-config.yaml",
+        ]
+        result = self.execute_command(cmd, capture_output=True, text=True)
+        if result.returncode > 0:
+            self.console.print(
+                "\n[bold bright_red]❌ Comprehensive quality checks failed![/bold bright_red]"
+            )
+            self.console.print(f"[dim]STDOUT:[/dim]\n{result.stdout}")
+            if result.stderr:
+                self.console.print(f"[dim]STDERR:[/dim]\n{result.stderr}")
+            self.console.print(
+                "\n[bold red]Cannot proceed with publishing/committing until all quality checks pass.  [/bold red]"
+            )
+            raise SystemExit(1)
+        else:
+            self.console.print(
+                "[bold bright_green]✅ All comprehensive quality checks passed![/bold bright_green]"
+            )
+
+    async def _run_comprehensive_quality_checks_async(
+        self, options: OptionsProtocol
+    ) -> None:
+        if options.skip_hooks or (
+            options.test
+            and not any([options.publish, options.bump, options.commit, options.all])
+        ):
+            return
+
+        needs_comprehensive = any(
+            [options.publish, options.bump, options.commit, options.all]
+        )
+
+        if not needs_comprehensive:
+            return
+
+        self.console.print("\n" + "-" * 80)
+        self.console.print(
+            "[bold bright_magenta]🔍 COMPREHENSIVE QUALITY[/bold bright_magenta] [bold bright_white]Running all quality checks before publish/commit[/bold bright_white]"
+        )
+        self.console.print("-" * 80 + "\n")
+
+        cmd = [
+            "uv",
+            "run",
+            "pre-commit",
+            "run",
+            "--all-files",
+            "--hook-stage=manual",
+            "-c",
+            ".pre-commit-config.yaml",
+        ]
+
+        result = await self.execute_command_async(cmd)
+
+        if result.returncode > 0:
+            self.console.print(
+                "\n[bold bright_red]❌ Comprehensive quality checks failed![/bold bright_red]"
+            )
+            if result.stderr:
+                self.console.print(f"[dim]Error details: {result.stderr}[/dim]")
+            self.console.print(
+                "\n[bold red]Cannot proceed with publishing/committing until all quality checks pass.  [/bold red]"
+            )
+            raise SystemExit(1)
+        else:
+            self.console.print(
+                "[bold bright_green]✅ All comprehensive quality checks passed![/bold bright_green]"
+            )
+
     def process(self, options: OptionsProtocol) -> None:
         self.console.print("\n" + "-" * 80)
         self.console.print(
@@ -2533,6 +2687,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 "\n[bold bright_yellow]⏭️  Skipping pre-commit hooks...[/bold bright_yellow]\n"
             )
         self._run_tests(options)
+        self._run_comprehensive_quality_checks(options)
         self._bump_version(options)
         self._publish_project(options)
         self._commit_and_push(options)
@@ -2568,6 +2723,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 "\n[bold bright_yellow]⏭️  Skipping pre-commit hooks...[/bold bright_yellow]\n"
             )
         await self._run_tests_async(options)
+        await self._run_comprehensive_quality_checks_async(options)
         self._bump_version(options)
         self._publish_project(options)
         self._commit_and_push(options)

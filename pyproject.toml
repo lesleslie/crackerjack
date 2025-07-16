@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.27.0"
+version = "0.27.1"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -81,19 +81,11 @@ output-format = "full"
 format.docstring-code-format = true
 lint.extend-select = [
     "C901",
-    "D",
     "F",    # pyflakes
     "I",
     "UP",   # pyupgrade (includes F-string conversion)
 ]
 lint.ignore = [
-    "D100", # Missing docstring in public module - can be safely enabled
-    "D101", # Missing docstring in public class - conflicts with code cleaning
-    "D102", # Missing docstring in public method - conflicts with code cleaning
-    "D103", # Missing docstring in public function - conflicts with code cleaning
-    "D104", # Missing docstring in public package - package level docs
-    "D105", # Missing docstring in magic method - conflicts with code cleaning
-    "D107", # Missing docstring in __init__ - conflicts with code cleaning
     "E402", # Module level import not at top - sometimes necessary
     "F821", # Undefined name - can be resolved with proper imports
 ]
@@ -103,7 +95,6 @@ lint.isort.no-lines-before = [
     "first-party",
 ]
 lint.mccabe.max-complexity = 13
-lint.pydocstyle.convention = "google"
 
 [tool.codespell]
 skip = "*/data/*"
@@ -269,15 +260,6 @@ skips = [
 # Enhanced security scanning
 exclude_dirs = [
     "tests/data", # Test data might contain examples
-]
-
-# Enhanced documentation quality
-
-[tool.pydocstyle]
-convention = "google"
-add-ignore = [
-    "D100", # Missing docstring in public module
-    "D104", # Missing docstring in public package
 ]
 
 # Autotyping optimization

@@ -49,6 +49,7 @@ class OptionsForTesting:
     create_pr: bool = False
     skip_hooks: bool = False
     comprehensive: bool = False
+    async_mode: bool = False
 
 
 @pytest.fixture
