@@ -41,6 +41,7 @@ config_files = (
     ".gitignore",
     ".pre-commit-config.yaml",
     ".pre-commit-config-ai.yaml",
+    ".pre-commit-config-fast.yaml",
     ".libcst.codemod.yaml",
 )
 default_python_version = "3.13"
