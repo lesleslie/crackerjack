@@ -29,3 +29,6 @@
 
 # Autotyping cache
 .autotyping-cache/
+
+# Crackerjack state file
+.crackerjack-state

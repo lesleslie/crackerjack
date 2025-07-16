@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.27.0"
+version = "0.27.2"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [

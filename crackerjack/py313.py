@@ -111,7 +111,11 @@ def process_hook_results[T, R](
 ) -> list[R]:
     processed_results: list[R] = []
     for result in results:
-        if isinstance(result, dict) and result.get("status") == HookStatus.SUCCESS:
+        if (
+            isinstance(result, dict)
+            and "status" in result
+            and result["status"] == HookStatus.SUCCESS
+        ):
             processed_results.append(success_handler(result))
         else:
             processed_results.append(failure_handler(result))

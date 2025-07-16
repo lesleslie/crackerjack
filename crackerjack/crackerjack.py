@@ -540,9 +540,15 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
 
         def process_lines():
             lines = code.split("\n")
-            function_tracker = {"in_function": False, "function_indent": 0}
-            import_tracker = {"in_imports": False, "last_import_type": None}
-            previous_lines = []
+            function_tracker: dict[str, t.Any] = {
+                "in_function": False,
+                "function_indent": 0,
+            }
+            import_tracker: dict[str, t.Any] = {
+                "in_imports": False,
+                "last_import_type": None,
+            }
+            previous_lines: list[str] = []
             for i, line in enumerate(lines):
                 line = line.rstrip()
                 stripped_line = line.lstrip()
@@ -856,8 +862,8 @@ class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
 
         try:
             async with aiofiles.open(file_path, encoding="utf-8") as f:  # type: ignore[misc]
-                code = await f.read()  # type: ignore[misc]
-            original_code = code
+                code: str = await f.read()  # type: ignore[misc]
+            original_code: str = code
             cleaning_failed = False
             try:
                 code = self.remove_line_comments_streaming(code)
@@ -1115,7 +1121,9 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
     ) -> None:
         for setting, value in our_config.items():
             if isinstance(value, dict):
-                self._merge_nested_config(setting, value, pkg_config)
+                self._merge_nested_config(
+                    setting, t.cast(dict[str, t.Any], value), pkg_config
+                )
             else:
                 self._merge_direct_config(setting, value, pkg_config)
 
@@ -1134,11 +1142,13 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         self, key: str, value: t.Any, nested_config: dict[str, t.Any]
     ) -> None:
         if isinstance(value, str | list) and "crackerjack" in str(value):
-            nested_config[key] = self.swap_package_name(value)
+            nested_config[key] = self.swap_package_name(t.cast(str | list[str], value))
         elif self._is_mergeable_list(key, value):
             existing = nested_config.get(key, [])
             if isinstance(existing, list) and isinstance(value, list):
-                nested_config[key] = list(set(existing + value))
+                nested_config[key] = list(
+                    set(t.cast(list[str], existing) + t.cast(list[str], value))
+                )
             else:
                 nested_config[key] = value
         elif key not in nested_config:
@@ -1148,11 +1158,13 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         self, setting: str, value: t.Any, pkg_config: dict[str, t.Any]
     ) -> None:
         if isinstance(value, str | list) and "crackerjack" in str(value):
-            pkg_config[setting] = self.swap_package_name(value)
+            pkg_config[setting] = self.swap_package_name(t.cast(str | list[str], value))
         elif self._is_mergeable_list(setting, value):
             existing = pkg_config.get(setting, [])
             if isinstance(existing, list) and isinstance(value, list):
-                pkg_config[setting] = list(set(existing + value))
+                pkg_config[setting] = list(
+                    set(t.cast(list[str], existing) + t.cast(list[str], value))
+                )
             else:
                 pkg_config[setting] = value
         elif setting not in pkg_config:
@@ -1611,7 +1623,9 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             with open("complexipy.json", encoding="utf-8") as f:
                 complexity_data = json.load(f)
                 if isinstance(complexity_data, list):
-                    return self._parse_complexity_list(complexity_data)
+                    return self._parse_complexity_list(
+                        t.cast(list[dict[str, t.Any]], complexity_data)
+                    )
                 return self._parse_complexity_dict(complexity_data)
         except (FileNotFoundError, json.JSONDecodeError):
             return {"status": "complexity_analysis_not_available"}
@@ -1768,7 +1782,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         return {"directories": directories, "total_directories": len(directories)}
 
     def _analyze_file_distribution(self) -> dict[str, t.Any]:
-        file_types = {}
+        file_types: dict[str, int] = {}
         total_files = 0
         for file_path in self.pkg_path.rglob("*"):
             if file_path.is_file() and not str(file_path).startswith(
@@ -2115,11 +2129,13 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     project_manager: ProjectManager | None = None
     _file_cache: dict[str, list[Path]] = {}
     _file_cache_with_mtime: dict[str, tuple[float, list[Path]]] = {}
+    _state_file: Path = Path(".crackerjack-state")
 
     def __init__(self, **data: t.Any) -> None:
         super().__init__(**data)
         self._file_cache = {}
         self._file_cache_with_mtime = {}
+        self._state_file = Path(".crackerjack-state")
         self.code_cleaner = CodeCleaner(console=self.console)
         self.config_manager = ConfigManager(
             our_path=self.our_path,
@@ -2140,6 +2156,73 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             dry_run=self.dry_run,
         )
 
+    def _read_state(self) -> dict[str, t.Any]:
+        import json
+
+        if self._state_file.exists():
+            try:
+                return json.loads(self._state_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                return {}
+        return {}
+
+    def _write_state(self, state: dict[str, t.Any]) -> None:
+        from contextlib import suppress
+
+        with suppress(OSError):
+            import json
+
+            self._state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+    def _clear_state(self) -> None:
+        if self._state_file.exists():
+            from contextlib import suppress
+
+            with suppress(OSError):
+                self._state_file.unlink()
+
+    def _has_version_been_bumped(self, version_type: str) -> bool:
+        state = self._read_state()
+        current_version = self._get_current_version()
+        last_bumped_version = state.get("last_bumped_version")
+        last_bump_type = state.get("last_bump_type")
+
+        return (
+            last_bumped_version == current_version
+            and last_bump_type == version_type
+            and not state.get("publish_completed", False)
+        )
+
+    def _mark_version_bumped(self, version_type: str) -> None:
+        current_version = self._get_current_version()
+        state = self._read_state()
+        state.update(
+            {
+                "last_bumped_version": current_version,
+                "last_bump_type": version_type,
+                "publish_completed": False,
+            }
+        )
+        self._write_state(state)
+
+    def _mark_publish_completed(self) -> None:
+        state = self._read_state()
+        state["publish_completed"] = True
+        self._write_state(state)
+
+    def _get_current_version(self) -> str:
+        from contextlib import suppress
+
+        with suppress(Exception):
+            import tomllib
+
+            pyproject_path = Path("pyproject.toml")
+            if pyproject_path.exists():
+                with pyproject_path.open("rb") as f:
+                    data = tomllib.load(f)
+                    return data.get("project", {}).get("version", "unknown")
+        return "unknown"
+
     def _setup_package(self) -> None:
         self.pkg_name = self.pkg_path.stem.lower().replace("-", "_")
         self.pkg_dir = self.pkg_path / self.pkg_name
@@ -2156,6 +2239,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self.project_manager.pkg_dir = self.pkg_dir
 
     def _update_project(self, options: t.Any) -> None:
+        assert self.project_manager is not None
         if not options.no_config_updates:
             self.project_manager.update_pkg_configs()
             result: CompletedProcess[str] = self.execute_command(
@@ -2178,6 +2262,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             self.execute_command(update_cmd)
 
     def _clean_project(self, options: t.Any) -> None:
+        assert self.code_cleaner is not None
         if options.clean:
             if self.pkg_dir:
                 self.console.print("\n" + "-" * 80)
@@ -2197,6 +2282,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     self.code_cleaner.clean_files(tests_dir)
 
     async def _clean_project_async(self, options: t.Any) -> None:
+        assert self.code_cleaner is not None
         if options.clean:
             if self.pkg_dir:
                 self.console.print("\n" + "-" * 80)
@@ -2483,12 +2569,20 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _bump_version(self, options: OptionsProtocol) -> None:
         for option in (options.publish, options.bump):
             if option:
+                version_type = str(option)
+                if self._has_version_been_bumped(version_type):
+                    self.console.print("\n" + "-" * 80)
+                    self.console.print(
+                        f"[bold yellow]📦 VERSION[/bold yellow] [bold bright_white]Version already bumped ({version_type}), skipping to avoid duplicate bump[/bold bright_white]"
+                    )
+                    self.console.print("-" * 80 + "\n")
+                    return
                 self.console.print("\n" + "-" * 80)
                 self.console.print(
                     f"[bold bright_magenta]📦 VERSION[/bold bright_magenta] [bold bright_white]Bumping {option} version[/bold bright_white]"
                 )
                 self.console.print("-" * 80 + "\n")
-                if str(option) in ("minor", "major"):
+                if version_type in ("minor", "major"):
                     from rich.prompt import Confirm
 
                     if not Confirm.ask(
@@ -2500,6 +2594,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                         )
                         return
                 self.execute_command(["uv", "version", "--bump", option])
+                self._mark_version_bumped(version_type)
                 break
 
     def _publish_project(self, options: OptionsProtocol) -> None:
@@ -2519,7 +2614,18 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     "[bold bright_red]❌ Build failed. Please fix errors.[/bold bright_red]"
                 )
                 raise SystemExit(1)
-            self.execute_command(["uv", "publish"])
+            try:
+                self.execute_command(["uv", "publish"])
+                self._mark_publish_completed()
+                self._clear_state()
+                self.console.print(
+                    "\n[bold bright_green]✅ Package published successfully![/bold bright_green]"
+                )
+            except SystemExit:
+                self.console.print(
+                    "\n[bold bright_red]❌ Publish failed. Run crackerjack again to retry publishing without re-bumping version.[/bold bright_red]"
+                )
+                raise
 
     def _commit_and_push(self, options: OptionsProtocol) -> None:
         if options.commit:
@@ -2594,21 +2700,18 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             "-c",
             ".pre-commit-config.yaml",
         ]
-        result = self.execute_command(cmd, capture_output=True, text=True)
+        result = self.execute_command(cmd)
         if result.returncode > 0:
             self.console.print(
                 "\n[bold bright_red]❌ Comprehensive quality checks failed![/bold bright_red]"
             )
-            self.console.print(f"[dim]STDOUT:[/dim]\n{result.stdout}")
-            if result.stderr:
-                self.console.print(f"[dim]STDERR:[/dim]\n{result.stderr}")
             self.console.print(
-                "\n[bold red]Cannot proceed with publishing/committing until all quality checks pass.  [/bold red]"
+                "\n[bold red]Cannot proceed with publishing/committing until all quality checks pass.[/bold red]\n"
             )
             raise SystemExit(1)
         else:
             self.console.print(
-                "[bold bright_green]✅ All comprehensive quality checks passed![/bold bright_green]"
+                "\n[bold bright_green]✅ All comprehensive quality checks passed![/bold bright_green]"
             )
 
     async def _run_comprehensive_quality_checks_async(
@@ -2653,7 +2756,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             if result.stderr:
                 self.console.print(f"[dim]Error details: {result.stderr}[/dim]")
             self.console.print(
-                "\n[bold red]Cannot proceed with publishing/committing until all quality checks pass.  [/bold red]"
+                "\n[bold red]Cannot proceed with publishing/committing until all quality checks pass.[/bold red]\n"
             )
             raise SystemExit(1)
         else:
@@ -2662,6 +2765,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             )
 
     def process(self, options: OptionsProtocol) -> None:
+        assert self.project_manager is not None
         self.console.print("\n" + "-" * 80)
         self.console.print(
             "[bold bright_cyan]⚒️ CRACKERJACKING[/bold bright_cyan] [bold bright_white]Starting workflow execution[/bold bright_white]"
@@ -2689,8 +2793,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self._run_tests(options)
         self._run_comprehensive_quality_checks(options)
         self._bump_version(options)
-        self._publish_project(options)
         self._commit_and_push(options)
+        self._publish_project(options)
         self.console.print("\n" + "-" * 80)
         self.console.print(
             "[bold bright_green]✨ CRACKERJACK COMPLETE[/bold bright_green] [bold bright_white]Workflow completed successfully![/bold bright_white]"
@@ -2698,6 +2802,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self.console.print("-" * 80 + "\n")
 
     async def process_async(self, options: OptionsProtocol) -> None:
+        assert self.project_manager is not None
         self.console.print("\n" + "-" * 80)
         self.console.print(
             "[bold bright_cyan]⚒️ CRACKERJACKING[/bold bright_cyan] [bold bright_white]Starting workflow execution (async optimized)[/bold bright_white]"
@@ -2725,8 +2830,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         await self._run_tests_async(options)
         await self._run_comprehensive_quality_checks_async(options)
         self._bump_version(options)
-        self._publish_project(options)
         self._commit_and_push(options)
+        self._publish_project(options)
         self.console.print("\n" + "-" * 80)
         self.console.print(
             "[bold bright_green]✨ CRACKERJACK COMPLETE[/bold bright_green] [bold bright_white]Workflow completed successfully![/bold bright_white]"
