@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "crackerjack"
-version = "0.30.0"
+version = "0.30.1"
 description = "Crackerjack: code quality toolkit"
 readme = "README.md"
 keywords = [
@@ -44,6 +44,7 @@ dependencies = [
     "aiofiles>=24.1",
     "autotyping>=24.9",
     "hatchling>=1.25",
+    "jinja2>=3.1",
     "keyring>=25.6",
     "pre-commit>=4.2",
     "pydantic>=2.11.7",

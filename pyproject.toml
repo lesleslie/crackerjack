@@ -44,6 +44,7 @@ dependencies = [
     "aiofiles>=24.1",
     "autotyping>=24.9",
     "hatchling>=1.25",
+    "jinja2>=3.1",
     "keyring>=25.6",
     "pre-commit>=4.2",
     "pydantic>=2.11.7",

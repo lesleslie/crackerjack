@@ -145,6 +145,9 @@ class TestErrorHandlingIntegration:
                     resume_from: str | None = None
                     progress_file: str | None = None
                     compress_docs = False
+                    experimental_hooks = False
+                    enable_pyrefly = False
+                    enable_ty = False
 
                 options = Options()
                 with patch("platform.system", return_value="Linux"):

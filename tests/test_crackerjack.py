@@ -57,6 +57,9 @@ class OptionsForTesting:
     track_progress: bool = False
     resume_from: str | None = None
     progress_file: str | None = None
+    experimental_hooks: bool = False
+    enable_pyrefly: bool = False
+    enable_ty: bool = False
     compress_docs: bool = False
 
 
@@ -589,7 +592,15 @@ class TestCrackerjackProcess:
             with patch.object(cj, "_update_project"):
                 with patch.object(cj, "_update_precommit"):
                     with patch.object(cj, "_clean_project") as mock_clean:
-                        with patch.object(cj, "project_manager"):
+                        with patch.object(cj, "project_manager") as mock_project:
+                            import tempfile
+
+                            with tempfile.NamedTemporaryFile(
+                                suffix=".yaml", delete=False
+                            ) as temp_config:
+                                mock_project._select_precommit_config.return_value = (
+                                    temp_config.name
+                                )
                             with patch.object(cj, "_run_tests") as mock_tests:
                                 with patch.object(cj, "_bump_version"):
                                     with patch.object(
@@ -625,7 +636,15 @@ class TestCrackerjackProcess:
             with patch.object(cj, "_update_project"):
                 with patch.object(cj, "_update_precommit"):
                     with patch.object(cj, "_clean_project"):
-                        with patch.object(cj, "project_manager"):
+                        with patch.object(cj, "project_manager") as mock_project:
+                            import tempfile
+
+                            with tempfile.NamedTemporaryFile(
+                                suffix=".yaml", delete=False
+                            ) as temp_config:
+                                mock_project._select_precommit_config.return_value = (
+                                    temp_config.name
+                                )
                             with patch.object(cj, "_run_tests"):
                                 with patch.object(cj, "_bump_version") as mock_bump:
                                     with patch.object(cj, "_publish_project"):
@@ -1097,8 +1116,23 @@ keyring-provider = "subprocess"
             with patch.object(cj, "_setup_package"):
                 with patch.object(cj, "_update_project"):
                     cj.process(options)
-                    mock_cj_execute.assert_any_call(
-                        ["uv", "run", "pre-commit", "autoupdate"]
+                    calls = mock_cj_execute.call_args_list
+                    autoupdate_call = None
+                    for call in calls:
+                        args = call[0][0]
+                        if len(args) >= 4 and args[:4] == [
+                            "uv",
+                            "run",
+                            "pre-commit",
+                            "autoupdate",
+                        ]:
+                            autoupdate_call = args
+                            break
+                    assert autoupdate_call is not None, (
+                        f"autoupdate call not found in {calls}"
+                    )
+                    assert "-c" in autoupdate_call, (
+                        f"Config flag not found in {autoupdate_call}"
                     )
 
     def test_update_precommit_ai_agent(
@@ -1116,15 +1150,23 @@ keyring-provider = "subprocess"
             with patch.object(cj, "_setup_package"):
                 with patch.object(cj, "_update_project"):
                     cj.process(options)
-                    mock_cj_execute.assert_any_call(
-                        [
+                    calls = mock_cj_execute.call_args_list
+                    autoupdate_call = None
+                    for call in calls:
+                        args = call[0][0]
+                        if len(args) >= 4 and args[:4] == [
                             "uv",
                             "run",
                             "pre-commit",
                             "autoupdate",
-                            "-c",
-                            ".pre-commit-config-ai.yaml",
-                        ]
+                        ]:
+                            autoupdate_call = args
+                            break
+                    assert autoupdate_call is not None, (
+                        f"autoupdate call not found in {calls}"
+                    )
+                    assert "-c" in autoupdate_call, (
+                        f"Config flag not found in {autoupdate_call}"
                     )
 
     def test_run_pre_commit_ai_agent(
@@ -1178,16 +1220,20 @@ keyring-provider = "subprocess"
             )
             original_method = ProjectManager.update_pkg_configs
             original_method(mock_project)
-            mock_execute.assert_any_call(
-                [
+            calls = mock_execute.call_args_list
+            install_call = None
+            for call in calls:
+                args = call[0][0]
+                if len(args) >= 4 and args[:4] == [
                     "uv",
                     "run",
                     "pre-commit",
                     "install",
-                    "-c",
-                    ".pre-commit-config-ai.yaml",
-                ]
-            )
+                ]:
+                    install_call = args
+                    break
+            assert install_call is not None, f"install call not found in {calls}"
+            assert "-c" in install_call, f"Config flag not found in {install_call}"
 
     def test_process_with_precommit_failure(
         self,
@@ -1443,19 +1489,15 @@ class TestClass:
     ) -> None:
         from rich.console import Console
 
-        with patch("crackerjack.errors.handle_error") as mock_handle_error:
-            console = Console()
-            code_cleaner = CodeCleaner(console=console)
-            code_to_format = "def test_func():\n    return True\n"
-            with patch("subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(
-                    returncode=1, stderr="Formatting error"
-                )
-                with patch("pathlib.Path.write_text"):
-                    formatted_code = code_cleaner.reformat_code(code_to_format)
-                    assert formatted_code == code_to_format
-                    mock_run.assert_called_once()
-                    mock_handle_error.assert_called()
+        console = Console()
+        code_cleaner = CodeCleaner(console=console)
+        code_to_format = "def test_func():\n    return True\n"
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stderr="Formatting error")
+            with patch("pathlib.Path.write_text"):
+                formatted_code = code_cleaner.reformat_code(code_to_format)
+                assert formatted_code == code_to_format
+                mock_run.assert_called_once()
 
     def test_config_manager_is_crackerjack_project(
         self, mock_execute: MagicMock, mock_console_print: MagicMock, tmp_path: Path

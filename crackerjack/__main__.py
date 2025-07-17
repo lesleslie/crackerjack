@@ -50,6 +50,9 @@ class Options(BaseModel):
     track_progress: bool = False
     resume_from: str | None = None
     progress_file: str | None = None
+    experimental_hooks: bool = False
+    enable_pyrefly: bool = False
+    enable_ty: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -194,6 +197,21 @@ cli_options = {
         "--progress-file",
         help="Custom path for progress file (default: SESSION-PROGRESS-{timestamp}.md).",
     ),
+    "experimental_hooks": typer.Option(
+        False,
+        "--experimental-hooks",
+        help="Enable experimental pre-commit hooks (includes pyrefly and ty).",
+    ),
+    "enable_pyrefly": typer.Option(
+        False,
+        "--enable-pyrefly",
+        help="Enable pyrefly experimental type checking (requires experimental hooks mode).",
+    ),
+    "enable_ty": typer.Option(
+        False,
+        "--enable-ty",
+        help="Enable ty experimental type verification (requires experimental hooks mode).",
+    ),
 }
 
 
@@ -227,6 +245,9 @@ def main(
     track_progress: bool = cli_options["track_progress"],
     resume_from: str | None = cli_options["resume_from"],
     progress_file: str | None = cli_options["progress_file"],
+    experimental_hooks: bool = cli_options["experimental_hooks"],
+    enable_pyrefly: bool = cli_options["enable_pyrefly"],
+    enable_ty: bool = cli_options["enable_ty"],
 ) -> None:
     options = Options(
         commit=commit,
@@ -255,6 +276,9 @@ def main(
         track_progress=track_progress,
         resume_from=resume_from,
         progress_file=progress_file,
+        experimental_hooks=experimental_hooks,
+        enable_pyrefly=enable_pyrefly,
+        enable_ty=enable_ty,
     )
     if ai_agent:
         import os

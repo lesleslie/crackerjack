@@ -39,6 +39,9 @@ class MockOptions:
         self.resume_from = kwargs.get("resume_from")
         self.progress_file = kwargs.get("progress_file")
         self.compress_docs = kwargs.get("compress_docs", False)
+        self.experimental_hooks = kwargs.get("experimental_hooks", False)
+        self.enable_pyrefly = kwargs.get("enable_pyrefly", False)
+        self.enable_ty = kwargs.get("enable_ty", False)
 
 
 def test_create_crackerjack_runner() -> None:
