@@ -544,6 +544,8 @@ class OptionsProtocol(t.Protocol):
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
+    no_git_tags: bool = False
+    skip_version_check: bool = False
 
 
 class ConfigManager(BaseModel, arbitrary_types_allowed=True):
@@ -1195,18 +1197,6 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             self.execute_command(["git", "branch", "-m", "main"])
             self.execute_command(["git", "add", "pyproject.toml", "uv.lock"])
             self.execute_command(["git", "config", "advice.addIgnoredFile", "false"])
-            config_path = self._select_precommit_config()
-            install_cmd = ["uv", "run", "pre-commit", "install", "-c", config_path]
-            self.execute_command(install_cmd)
-            push_install_cmd = [
-                "uv",
-                "run",
-                "pre-commit",
-                "install",
-                "--hook-type",
-                "pre-push",
-            ]
-            self.execute_command(push_install_cmd)
         self.config_manager.update_pyproject_configs()
 
     def run_pre_commit(self) -> None:
@@ -2150,6 +2140,79 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     return data.get("project", {}).get("version", "unknown")
         return "unknown"
 
+    def _create_git_tag(self, version: str | None = None) -> None:
+        if version is None:
+            version = self._get_current_version()
+        if version == "unknown":
+            self.console.print(
+                "[bold yellow]⚠️  Warning: Could not determine version for tagging[/bold yellow]"
+            )
+            return
+        tag_name = f"v{version}"
+        result = self.execute_command(
+            ["git", "tag", "-l", tag_name], capture_output=True, text=True
+        )
+        if result.stdout.strip():
+            self.console.print(
+                f"[bold yellow]⚠️  Tag {tag_name} already exists, skipping tag creation[/bold yellow]"
+            )
+            return
+        self.console.print(
+            f"[bold bright_cyan]🏷️  Creating git tag: {tag_name}[/bold bright_cyan]"
+        )
+        package_name = self.pkg_path.stem.lower().replace("-", "_")
+        tag_message = f"Release {package_name} v{version}"
+        self.execute_command(["git", "tag", "-a", tag_name, "-m", tag_message])
+        self.console.print(f"[bold green]✅ Created tag: {tag_name}[/bold green]")
+
+    def _push_git_tags(self) -> None:
+        self.console.print(
+            "[bold bright_cyan]🚀 Pushing tags to remote repository[/bold bright_cyan]"
+        )
+        try:
+            self.execute_command(["git", "push", "origin", "--tags"])
+            self.console.print("[bold green]✅ Tags pushed successfully[/bold green]")
+        except Exception as e:
+            self.console.print(
+                f"[bold yellow]⚠️  Warning: Failed to push tags: {e}[/bold yellow]"
+            )
+
+    def _verify_version_consistency(self) -> bool:
+        current_version = self._get_current_version()
+        if current_version == "unknown":
+            self.console.print(
+                "[bold yellow]⚠️  Warning: Could not determine current version from pyproject.toml[/bold yellow]"
+            )
+            return False
+        try:
+            result = self.execute_command(
+                ["git", "describe", "--tags", "--abbrev=0"],
+                capture_output=True,
+                text=True,
+            )
+            latest_tag = result.stdout.strip()
+            if latest_tag.startswith("v"):
+                tag_version = latest_tag[1:]
+            else:
+                tag_version = latest_tag
+        except Exception:
+            self.console.print(
+                "[bold bright_cyan]ℹ️  No git tags found - this appears to be the first release[/bold bright_cyan]"
+            )
+            return True
+        if current_version != tag_version:
+            self.console.print(
+                f"[bold red]❌ Version mismatch detected:[/bold red]\n"
+                f"   pyproject.toml version: {current_version}\n"
+                f"   Latest git tag version: {tag_version}\n"
+                f"   These should match before committing or publishing."
+            )
+            return False
+        self.console.print(
+            f"[bold green]✅ Version consistency verified: {current_version}[/bold green]"
+        )
+        return True
+
     def _setup_package(self) -> None:
         self.pkg_name = self.pkg_path.stem.lower().replace("-", "_")
         self.pkg_dir = self.pkg_path / self.pkg_name
@@ -2669,6 +2732,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                     return
                 self.execute_command(["uv", "version", "--bump", option])
                 self._mark_version_bumped(version_type)
+                if not options.no_git_tags:
+                    self._create_git_tag()
                 break
 
     def _handle_interactive_version_selection(self, options: OptionsProtocol) -> None:
@@ -3108,6 +3173,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 "[bold bright_cyan]🚀 PUBLISH[/bold bright_cyan] [bold bright_white]Building and publishing package[/bold bright_white]"
             )
             self.console.print("-" * 80 + "\n")
+            if not options.skip_version_check:
+                if not self._verify_version_consistency():
+                    self.console.print(
+                        "[bold red]❌ Publishing aborted due to version mismatch. Please ensure pyproject.toml version matches git tag.[/bold red]"
+                    )
+                    raise SystemExit(1)
             state = self._get_state()
             if not state.get("build_completed", False):
                 build = self.execute_command(
@@ -3291,6 +3362,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 "[bold bright_white]📝 COMMIT[/bold bright_white] [bold bright_white]Saving changes to git[/bold bright_white]"
             )
             self.console.print("-" * 80 + "\n")
+            if not options.skip_version_check:
+                if not self._verify_version_consistency():
+                    self.console.print(
+                        "[bold red]❌ Commit aborted due to version mismatch. Please ensure pyproject.toml version matches git tag.[/bold red]"
+                    )
+                    raise SystemExit(1)
             changes = self._analyze_git_changes()
             if changes["total_changes"] > 0:
                 self.console.print("[dim]🔍 Analyzing changes...[/dim]\n")
@@ -3328,6 +3405,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 ["git", "commit", "-m", commit_msg, "--no-verify", "--", "."]
             )
             self.execute_command(["git", "push", "origin", "main", "--no-verify"])
+            self._push_git_tags()
 
     def _update_precommit(self, options: OptionsProtocol) -> None:
         if options.update_precommit:
@@ -3609,6 +3687,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             options.test = True
             options.publish = options.all
             options.commit = True
+        if options.comprehensive:
+            options.test = True
         self._run_tracked_task(
             "setup", "Initialize project structure", self._setup_package
         )
@@ -3677,6 +3757,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             options.test = True
             options.publish = options.all
             options.commit = True
+        if options.comprehensive:
+            options.test = True
         self._setup_package()
         self._update_project(options)
         self._update_precommit(options)

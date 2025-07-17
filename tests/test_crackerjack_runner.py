@@ -42,6 +42,8 @@ class MockOptions:
         self.experimental_hooks = kwargs.get("experimental_hooks", False)
         self.enable_pyrefly = kwargs.get("enable_pyrefly", False)
         self.enable_ty = kwargs.get("enable_ty", False)
+        self.no_git_tags = kwargs.get("no_git_tags", False)
+        self.skip_version_check = kwargs.get("skip_version_check", False)
 
 
 def test_create_crackerjack_runner() -> None:
@@ -100,7 +102,10 @@ def test_process_with_all_option(
     with patch.object(Crackerjack, "_run_tests"):
         with patch("rich.prompt.Confirm.ask", return_value=True):
             with patch("builtins.input", return_value="Test commit message"):
-                crackerjack.process(options)
+                with patch.object(
+                    crackerjack, "_verify_version_consistency", return_value=True
+                ):
+                    crackerjack.process(options)
     assert options.clean is True
     assert options.test is True
     assert options.publish == "minor"

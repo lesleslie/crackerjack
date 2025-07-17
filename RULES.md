@@ -27,6 +27,7 @@
   - Avoid unnecessary line comments - use them sparingly only for complex logic
   - Use protocols (`t.Protocol`) instead of abstract base classes
   - Choose clear, descriptive variable and function names that make the code self-documenting
+  - **Keep cognitive complexity under 15 per function** - extract helper methods if needed
 
 - **Code Organization**
 
@@ -48,7 +49,72 @@
   - Configure code with Ruff for linting and formatting
   - Set up pre-commit hooks for consistent code quality
   - Use UV for dependency management
-  - Implement pytest for testing with timeout handling
+
+## Critical Error Prevention
+
+**Bandit B108 (Hardcoded Temp Directory):**
+
+```python
+# NEVER do this - causes security warnings
+config_path = "/tmp/test-config.yaml"
+
+# ALWAYS use tempfile module
+import tempfile
+
+with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as temp_file:
+    config_path = temp_file.name
+```
+
+**Refurb FURB184 (Return Statement Chaining):**
+
+```python
+# AVOID - unnecessary intermediate variable
+def create_config() -> Config:
+    generator = ConfigGenerator()
+    return generator.create_config()
+
+
+# PREFER - chained return statement
+def create_config() -> Config:
+    return ConfigGenerator().create_config()
+```
+
+**Pyright Protocol Compatibility:**
+
+```python
+# ALWAYS implement ALL protocol properties
+class TestOptions(OptionsProtocol):
+    # Missing properties cause type errors
+    verbose: bool = False
+    experimental_hooks: bool = False  # Don't forget new properties
+    enable_pyrefly: bool = False
+    enable_ty: bool = False
+    compress_docs: bool = False
+```
+
+**Complexipy Complexity (>15):**
+
+```python
+# AVOID - high complexity method
+def process_data(self, data: dict) -> Result:
+    if condition1:
+        if condition2:
+            if condition3:
+                pass  # ... many nested conditions >15 complexity
+
+
+# PREFER - extracted helper methods
+def process_data(self, data: dict) -> Result:
+    if self._should_process(data):
+        return self._handle_processing(data)
+    return self._handle_error(data)
+
+
+def _should_process(self, data: dict) -> bool:
+    return condition1 and condition2 and condition3
+```
+
+- Implement pytest for testing with timeout handling
 
 - **Use UV for Tool Execution**
 

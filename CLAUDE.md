@@ -200,6 +200,12 @@ python -m crackerjack -p major
 python -m crackerjack -b patch
 python -m crackerjack -b minor
 python -m crackerjack -b major
+
+# Skip git tag creation during version bumping
+python -m crackerjack -p patch --no-git-tags
+
+# Skip version consistency verification
+python -m crackerjack -c --skip-version-check
 ```
 
 #### PyPI Authentication Setup
@@ -281,6 +287,46 @@ python -m crackerjack -c
 python -m crackerjack -r
 ```
 
+### Git Tagging for Dependency Tracking
+
+Crackerjack automatically creates git tags when bumping versions to enable proper dependency tracking:
+
+```bash
+# Version bumping automatically creates git tags
+python -m crackerjack -p patch    # Creates tag v1.0.1
+python -m crackerjack -b minor    # Creates tag v1.1.0
+
+# Skip automatic git tagging
+python -m crackerjack -p patch --no-git-tags
+
+# Full workflow with automatic tagging
+python -m crackerjack -a patch    # Clean, test, bump, tag, commit, publish
+```
+
+**Git Tag Features:**
+
+- **Automatic creation**: Tags are created after version bumping
+- **Semantic naming**: Tags follow `v{version}` format (e.g., `v1.2.3`)
+- **Descriptive messages**: Each tag includes package name and version
+- **Duplicate prevention**: Skips tag creation if tag already exists
+- **Automatic pushing**: Tags are pushed to remote during commit workflow
+- **Dependency tracking**: Enables precise dependency management across projects
+
+**Tag Workflow:**
+
+1. Version is bumped using `uv version --bump {type}`
+1. Git tag is created with format `v{new_version}`
+1. Tag message includes package name and version
+1. During commit, tags are pushed to remote repository
+1. PyPI publishing can reference exact git commit via tag
+
+**Version Verification:**
+
+- Before committing: Verifies pyproject.toml version matches latest git tag
+- Before publishing: Ensures version consistency for reliable dependency tracking
+- Prevents publishing mismatched versions that could break dependency resolution
+- Can be disabled with `--skip-version-check` for edge cases
+
 ## Project Architecture
 
 Crackerjack is designed with modern Python principles and consists of several key components:
@@ -297,13 +343,16 @@ Crackerjack is designed with modern Python principles and consists of several ke
    - Handles Git operations
    - Integrates with Rich console for status output
 
-1. **CodeCleaner**: Responsible for cleaning code
+1. **CodeCleaner** (`code_cleaner.py`): Asynchronous code cleaning with intelligent optimization
 
    - Removes docstrings (with syntax-aware pass statement insertion)
    - Removes line comments
    - Removes extra whitespace
    - Reformats code using Ruff
    - Handles file encoding issues gracefully
+   - Analyzes workload characteristics for optimal processing
+   - Uses async I/O for efficient file operations
+   - Provides detailed progress reporting and error recovery
 
 1. **ConfigManager**: Handles configuration file management
 
@@ -329,6 +378,9 @@ Crackerjack is designed with modern Python principles and consists of several ke
 - **Protocol-Based Design**: Uses `t.Protocol` for interface definitions
 - **Factory Pattern**: Employs a factory function (`create_crackerjack_runner`) for dependency injection
 - **Command Pattern**: CLI commands are mapped to specific operations
+- **Async Processing**: `CodeCleaner` uses asyncio for efficient file operations
+- **Observer Pattern**: Progress tracking and session management for workflow monitoring
+- **Strategy Pattern**: Dynamic configuration based on project size and characteristics
 
 ### Testing Infrastructure
 
@@ -369,23 +421,27 @@ Access interactive mode with: `python -m crackerjack -i`
 
 ## Module Organization
 
-Crackerjack follows a single-file architecture for simplicity and maintainability:
+Crackerjack follows a modular architecture with clear separation of concerns:
 
 ### File Structure
 
-- `crackerjack.py` - Main module (~3000 lines) containing all core functionality
-- `errors.py` - Structured error handling system
-- `interactive.py` - Rich-based interactive UI implementation
-- `py313.py` - Python 3.13+ specific feature detection
+- `crackerjack.py` - Main orchestrator class containing core workflow logic
+- `code_cleaner.py` - Async code cleaning with workload analysis and optimization
+- `errors.py` - Structured error handling system with error codes and recovery suggestions
+- `interactive.py` - Rich-based interactive UI implementation with progress tracking
+- `py313.py` - Python 3.13+ specific feature detection and compatibility
+- `dynamic_config.py` - Dynamic configuration management based on project characteristics
 - `__main__.py` - Entry point for `python -m crackerjack`
 
 ### Key Implementation Details
 
-- **Single-file Design**: Most functionality concentrated in `crackerjack.py` for easier maintenance
+- **Modular Architecture**: Clear separation of concerns across specialized modules
+- **Async Code Processing**: `code_cleaner.py` uses asyncio for efficient file processing
 - **Type Safety**: Extensive use of protocols and type hints throughout
-- **Error Handling**: Comprehensive error handling with structured error codes
+- **Error Handling**: Comprehensive error handling with structured error codes and recovery suggestions
 - **Dynamic Configuration**: Project size detection affects worker count, timeouts, and other settings
 - **Rich Integration**: All console output uses Rich for enhanced terminal UI
+- **Performance Optimization**: Workload analysis and dynamic scaling based on project characteristics
 
 ## CLI Reference
 
@@ -413,6 +469,8 @@ Crackerjack follows a single-file architecture for simplicity and maintainabilit
 | `-p` | `--publish` | Bump version and publish to PyPI |
 | `-b` | `--bump` | Bump version only (no publish) |
 | `-a` | `--all` | Run full workflow: clean, test, publish, commit |
+| | `--no-git-tags` | Skip creating git tags during version bumping |
+| | `--skip-version-check` | Skip version consistency verification |
 
 ### Testing Options
 
@@ -479,6 +537,9 @@ Crackerjack follows a single-file architecture for simplicity and maintainabilit
    - **CRITICAL**: Use tempfile module for temporary files in tests (never create files directly on filesystem)
    - Use pytest's `tmp_path` and `tmp_path_factory` fixtures
    - Tests should be isolated and not affect the surrounding environment
+   - **Async Testing**: Use `pytest-asyncio` for testing async operations in `code_cleaner.py`
+   - **Version Consistency**: Mock `_verify_version_consistency` in tests to avoid git tag conflicts
+   - **Protocol Testing**: Ensure all test mock objects implement complete protocol interfaces
 
 1. **Dependencies**:
 
@@ -520,9 +581,11 @@ When generating code, AI assistants MUST follow these standards to ensure compli
   ```python
   # Bad
   if response in ["y", "yes", "ok"]:
+      pass
 
   # Good
   if response in ("y", "yes", "ok"):
+      pass
   ```
 
 - **FURB120**: Don't pass arguments that are the same as the default value
@@ -567,7 +630,8 @@ When generating code, AI assistants MUST follow these standards to ensure compli
   ```python
   # Bad - High complexity (>15)
   def complex_method(self, data):
-      # 50+ lines with multiple nested if/else, loops, etc.
+      pass  # 50+ lines with multiple nested if/else, loops, etc.
+
 
   # Good - Broken into helpers
   def main_method(self, data):
@@ -575,14 +639,17 @@ When generating code, AI assistants MUST follow these standards to ensure compli
       result = self._apply_transformations(processed)
       return self._finalize_result(result)
 
+
   def _preprocess_data(self, data):
-      # Single responsibility
+      pass  # Single responsibility
+
 
   def _apply_transformations(self, data):
-      # Single responsibility
+      pass  # Single responsibility
+
 
   def _finalize_result(self, data):
-      # Single responsibility
+      pass  # Single responsibility
   ```
 
 **Example of good patterns:**
@@ -679,9 +746,12 @@ cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
   ```python
   # Bad
   def _format_task_detail(self, task) -> str:
+      pass
+
 
   # Good
   def _format_task_detail(self, task: TaskStatus) -> str:
+      pass
   ```
 
 - **reportArgumentType**: Protocol implementations must match exactly
@@ -825,26 +895,77 @@ By following these guidelines during code generation, AI assistants will produce
    - Add complete type annotations to ALL function parameters
    - Keep cognitive complexity under 15 per function
    - Implement ALL protocol properties when creating test classes
+   - **CRITICAL**: Use `tempfile.NamedTemporaryFile()` for temporary files, never hardcoded `/tmp/` paths
+   - **CRITICAL**: Chain return statements when possible (avoid intermediate variables before return)
+   - **CRITICAL**: Extract helper methods when functions exceed 15 cognitive complexity
 
 1. **Common Patterns to Always Follow:**
 
    ```python
    # Membership testing - ALWAYS use tuples
    if status in ("pending", "completed", "failed"):
+       pass
 
    # Optional parameters - Don't pass None when it's the default
    value = kwargs.get("optional_param")  # Good
    value = kwargs.get("optional_param", None)  # Bad
 
+
    # Type annotations - ALWAYS complete
    def helper_method(self, task: TaskStatus, datetime_module) -> str:  # Good
+       pass
+
+
    def helper_method(self, task) -> str:  # Bad - missing type
+       pass
+
 
    # Protocol implementation - ALL properties required
    class TestOptions(OptionsProtocol):
        verbose = True
        resume_from: str | None = None  # Required
        progress_file: str | None = None  # Required
+       experimental_hooks: bool = False  # Required
+       enable_pyrefly: bool = False  # Required
+       enable_ty: bool = False  # Required
+       compress_docs: bool = False  # Required
+
+
+   # Temporary files - ALWAYS use tempfile module
+   import tempfile
+
+   with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as temp_file:
+       temp_path = temp_file.name  # Good
+   temp_path = "/tmp/test-config.yaml"  # Bad - hardcoded path
+
+
+   # Return statement chaining - avoid intermediate variables
+   def get_config() -> Config:
+       return ConfigGenerator().create_config()  # Good
+
+
+   def get_config() -> Config:  # Bad - unnecessary intermediate variable
+       generator = ConfigGenerator()
+       return generator.create_config()
+
+
+   # Complexity reduction - extract helper methods
+   def complex_function(data: dict) -> Result:
+       # Bad - high complexity (>15)
+       if condition1:
+           if condition2:
+               if condition3:
+                   pass  # ... many nested conditions
+
+
+   def complex_function(data: dict) -> Result:  # Good - extracted helpers
+       if self._should_process(data):
+           return self._process_data(data)
+       return self._handle_error(data)
+
+
+   def _should_process(self, data: dict) -> bool:
+       return condition1 and condition2 and condition3
    ```
 
 1. **Zen-Inspired Code Examples:**
@@ -900,9 +1021,73 @@ By following these guidelines during code generation, AI assistants will produce
 1. **Quality Gate Strategy:**
 
    - Write code that would pass `python -m crackerjack --comprehensive` on first try
-   - Prioritize these checks: Refurb FURB109, FURB120, Pyright reportMissingParameterType, Complexipy \<20
+   - Prioritize these checks: Refurb FURB109, FURB120, FURB184, Pyright reportMissingParameterType, Complexipy \<15, Bandit B108
    - When refactoring complex code, break into 3-5 helper methods with single responsibilities
    - **Apply Zen principles**: Every function should be easily explainable in plain English
+
+1. **Critical Error Prevention:**
+
+   **Bandit B108 (Hardcoded Temp Directory):**
+
+   ```python
+   # NEVER do this - causes security warnings
+   config_path = "/tmp/test-config.yaml"
+
+   # ALWAYS use tempfile module
+   import tempfile
+
+   with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as temp_file:
+       config_path = temp_file.name
+   ```
+
+   **Refurb FURB184 (Return Statement Chaining):**
+
+   ```python
+   # AVOID - unnecessary intermediate variable
+   def create_config() -> Config:
+       generator = ConfigGenerator()
+       return generator.create_config()
+
+
+   # PREFER - chained return statement
+   def create_config() -> Config:
+       return ConfigGenerator().create_config()
+   ```
+
+   **Pyright Protocol Compatibility:**
+
+   ```python
+   # ALWAYS implement ALL protocol properties
+   class TestOptions(OptionsProtocol):
+       # Missing properties cause type errors
+       verbose: bool = False
+       experimental_hooks: bool = False  # Don't forget new properties
+       enable_pyrefly: bool = False
+       enable_ty: bool = False
+       compress_docs: bool = False
+   ```
+
+   **Complexipy Complexity (>15):**
+
+   ```python
+   # AVOID - high complexity method
+   def process_data(self, data: dict) -> Result:
+       if condition1:
+           if condition2:
+               if condition3:
+                   pass  # ... many nested conditions >15 complexity
+
+
+   # PREFER - extracted helper methods
+   def process_data(self, data: dict) -> Result:
+       if self._should_process(data):
+           return self._handle_processing(data)
+       return self._handle_error(data)
+
+
+   def _should_process(self, data: dict) -> bool:
+       return condition1 and condition2 and condition3
+   ```
 
 1. **Testing Integration:**
 
@@ -1024,6 +1209,15 @@ git diff .pre-commit-config.yaml  # Review what changed
 By maintaining these standards proactively, AI assistants will stay ahead of quality issues and generate compliant code consistently.
 
 ## Recent Bug Fixes and Improvements
+
+### Current Project Status (July 2025)
+
+- **Test Coverage**: 74.48% (exceeds 42% minimum requirement)
+- **Code Quality**: All 172 tests passing, 1 skipped
+- **Module Structure**: Refactored from single-file to modular architecture
+- **Async Processing**: Implemented async code cleaning for better performance
+- **Error Handling**: Enhanced with structured error codes and recovery suggestions
+- **Version Consistency**: Improved git tag integration and version verification
 
 ### CodeCleaner Docstring Removal Fix (December 2024)
 
@@ -1447,12 +1641,12 @@ When you've improved coverage, report it briefly:
 - Includes: all checks + type analysis, complexity, dead code detection
 - Command: `python -m crackerjack --comprehensive`
 
-**📦 Pre-push Hooks:**
+**📦 Manual Hook Execution:**
 
-- Expensive operations automatically moved to pre-push stage
-- Runs comprehensive analysis before pushing changes
+- Expensive operations run only when explicitly called via crackerjack
 - Prevents performance bottlenecks during development
-- Install: `pre-commit install --hook-type pre-push`
+- No automatic git hooks installed - crackerjack handles all quality checks internally
+- Use `python -m crackerjack --comprehensive` to run all quality checks
 
 ### Hook Configuration Status (Last Audit: July 2025)
 
@@ -1467,6 +1661,9 @@ When you've improved coverage, report it briefly:
 
 - Non-critical type errors are still errors that need to be fixed to pass crackerjack validation
 - test directory files need to pass pyright tests as well in order for crackerjack to successfully complete
+- When fixing tests, version consistency checks may need to be mocked or disabled in test scenarios
+- The codebase now achieves 74%+ test coverage across all modules
+- Tests include comprehensive coverage of error handling, async operations, and edge cases
 
 ## AI Agent Integration
 

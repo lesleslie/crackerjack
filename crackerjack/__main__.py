@@ -53,6 +53,8 @@ class Options(BaseModel):
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
+    no_git_tags: bool = False
+    skip_version_check: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -212,6 +214,16 @@ cli_options = {
         "--enable-ty",
         help="Enable ty experimental type verification (requires experimental hooks mode).",
     ),
+    "no_git_tags": typer.Option(
+        False,
+        "--no-git-tags",
+        help="Skip creating git tags during version bumping (tags are created by default).",
+    ),
+    "skip_version_check": typer.Option(
+        False,
+        "--skip-version-check",
+        help="Skip version consistency verification between pyproject.toml and git tags.",
+    ),
 }
 
 
@@ -248,6 +260,8 @@ def main(
     experimental_hooks: bool = cli_options["experimental_hooks"],
     enable_pyrefly: bool = cli_options["enable_pyrefly"],
     enable_ty: bool = cli_options["enable_ty"],
+    no_git_tags: bool = cli_options["no_git_tags"],
+    skip_version_check: bool = cli_options["skip_version_check"],
 ) -> None:
     options = Options(
         commit=commit,
@@ -279,6 +293,8 @@ def main(
         experimental_hooks=experimental_hooks,
         enable_pyrefly=enable_pyrefly,
         enable_ty=enable_ty,
+        no_git_tags=no_git_tags,
+        skip_version_check=skip_version_check,
     )
     if ai_agent:
         import os

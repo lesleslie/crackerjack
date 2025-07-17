@@ -5,7 +5,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from rich.console import Console
@@ -61,6 +61,8 @@ class OptionsForTesting:
     enable_pyrefly: bool = False
     enable_ty: bool = False
     compress_docs: bool = False
+    no_git_tags: bool = False
+    skip_version_check: bool = False
 
 
 @pytest.fixture
@@ -166,8 +168,13 @@ class TestCrackerjackProcess:
             with patch.object(Crackerjack, "_run_tests"):
                 with patch.object(Crackerjack, "_bump_version"):
                     with patch.object(Crackerjack, "_publish_project"):
-                        cj = Crackerjack(dry_run=True)
-                        cj.process(options)
+                        with patch.object(
+                            Crackerjack,
+                            "_verify_version_consistency",
+                            return_value=True,
+                        ):
+                            cj = Crackerjack(dry_run=True)
+                            cj.process(options)
         expected_config_calls = [
             ["git", "add", ".gitignore"],
             ["git", "add", ".pre-commit-config.yaml"],
@@ -202,8 +209,9 @@ class TestCrackerjackProcess:
             mock_update_project.side_effect = side_effect
             with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
                 mock_cj_execute.return_value = MagicMock(returncode=0, stdout="Success")
-                cj = Crackerjack(dry_run=True)
-                cj.process(options)
+                with patch.object(Crackerjack, "_verify_version_consistency"):
+                    cj = Crackerjack(dry_run=True)
+                    cj.process(options)
                 commit_call_found = False
                 for call_args in mock_cj_execute.call_args_list:
                     cmd = call_args[0][0]
@@ -335,11 +343,15 @@ class TestCrackerjackProcess:
         with patch("rich.prompt.Confirm.ask", return_value=True) as mock_confirm:
             with patch.object(Crackerjack, "execute_command") as mock_exec:
                 mock_exec.return_value = MagicMock(returncode=0)
-                cj._bump_version(options)
-                mock_confirm.assert_called_once_with(
-                    "Are you sure you want to bump the minor version?", default=False
-                )
-                mock_exec.assert_called_once_with(["uv", "version", "--bump", "minor"])
+                with patch.object(cj, "_create_git_tag"):
+                    cj._bump_version(options)
+                    mock_confirm.assert_called_once_with(
+                        "Are you sure you want to bump the minor version?",
+                        default=False,
+                    )
+                    mock_exec.assert_called_once_with(
+                        ["uv", "version", "--bump", "minor"]
+                    )
 
     def test_bump_version_confirmation_minor_declined(
         self,
@@ -375,11 +387,15 @@ class TestCrackerjackProcess:
         with patch("rich.prompt.Confirm.ask", return_value=True) as mock_confirm:
             with patch.object(Crackerjack, "execute_command") as mock_exec:
                 mock_exec.return_value = MagicMock(returncode=0)
-                cj._bump_version(options)
-                mock_confirm.assert_called_once_with(
-                    "Are you sure you want to bump the major version?", default=False
-                )
-                mock_exec.assert_called_once_with(["uv", "version", "--bump", "major"])
+                with patch.object(cj, "_create_git_tag"):
+                    cj._bump_version(options)
+                    mock_confirm.assert_called_once_with(
+                        "Are you sure you want to bump the major version?",
+                        default=False,
+                    )
+                    mock_exec.assert_called_once_with(
+                        ["uv", "version", "--bump", "major"]
+                    )
 
     def test_bump_version_no_confirmation_patch(
         self,
@@ -394,10 +410,23 @@ class TestCrackerjackProcess:
         cj = Crackerjack(dry_run=True)
         with patch("rich.prompt.Confirm.ask") as mock_confirm:
             with patch.object(Crackerjack, "execute_command") as mock_exec:
-                mock_exec.return_value = MagicMock(returncode=0)
+                mock_exec.return_value = MagicMock(returncode=0, stdout="")
                 cj._bump_version(options)
                 mock_confirm.assert_not_called()
-                mock_exec.assert_called_once_with(["uv", "version", "--bump", "patch"])
+                assert mock_exec.call_count >= 2
+                assert mock_exec.call_args_list[0] == call(
+                    ["uv", "version", "--bump", "patch"]
+                )
+                git_tag_calls = [
+                    c
+                    for c in mock_exec.call_args_list
+                    if len(c[0]) > 0
+                    and isinstance(c[0][0], list)
+                    and len(c[0][0]) >= 2
+                    and c[0][0][0] == "git"
+                    and c[0][0][1] == "tag"
+                ]
+                assert len(git_tag_calls) >= 1
 
     def test_prepare_pytest_command_ai_agent_mode(
         self,
@@ -717,7 +746,9 @@ class TestCrackerjackProcess:
         create_package_dir: None,
         options_factory: t.Callable[..., OptionsForTesting],
     ) -> None:
-        options = options_factory(publish="patch", no_config_updates=True)
+        options = options_factory(
+            publish="patch", no_config_updates=True, skip_version_check=True
+        )
         with patch("platform.system", return_value="Linux"):
             with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
 
@@ -727,13 +758,20 @@ class TestCrackerjackProcess:
                     cmd = args[0][0]
                     if cmd == "uv" and "build" in args[0]:
                         return MagicMock(returncode=1, stdout="", stderr="Build failed")
+                    if (
+                        isinstance(cmd, list)
+                        and len(cmd) >= 2
+                        and cmd[:2] == ["git", "describe"]
+                    ):
+                        return MagicMock(returncode=0, stdout="v0.1.0\n")
                     return MagicMock(returncode=0, stdout="Success")
 
                 mock_cj_execute.side_effect = mock_execute_side_effect
                 with patch.object(Crackerjack, "_update_project"):
                     cj = Crackerjack(dry_run=True)
-                    with suppress(SystemExit):
-                        cj.process(options)
+                    with patch.object(cj, "_get_current_version", return_value="0.1.0"):
+                        with suppress(SystemExit):
+                            cj.process(options)
         mock_console_print.assert_any_call(
             "[bold bright_red]❌ Build failed. Please fix errors.[/bold bright_red]"
         )
@@ -765,7 +803,12 @@ class TestCrackerjackProcess:
                     crackerjack = Crackerjack(dry_run=False)
                     crackerjack._clear_state()
                     with patch.object(crackerjack.console, "print"):
-                        crackerjack._publish_project(options)
+                        with patch.object(
+                            crackerjack,
+                            "_verify_version_consistency",
+                            return_value=True,
+                        ):
+                            crackerjack._publish_project(options)
         assert ["uv", "build"] in actual_calls
         assert any(cmd[:2] == ["uv", "publish"] for cmd in actual_calls)
 
@@ -799,7 +842,8 @@ class TestCrackerjackProcess:
                 ):
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print"):
-                        crackerjack._publish_project(options)
+                        with patch.object(crackerjack, "_verify_version_consistency"):
+                            crackerjack._publish_project(options)
         assert ["uv", "build"] in actual_calls
         any_publish_command = any(cmd[:2] == ["uv", "publish"] for cmd in actual_calls)
         assert any_publish_command
@@ -836,7 +880,8 @@ class TestCrackerjackProcess:
                 ):
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print"):
-                        crackerjack._publish_project(options)
+                        with patch.object(crackerjack, "_verify_version_consistency"):
+                            crackerjack._publish_project(options)
 
         assert ["uv", "build"] in actual_calls
         assert any(
@@ -876,7 +921,8 @@ class TestCrackerjackProcess:
                 ):
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print"):
-                        crackerjack._publish_project(options)
+                        with patch.object(crackerjack, "_verify_version_consistency"):
+                            crackerjack._publish_project(options)
 
         assert ["uv", "build"] in actual_calls
         publish_with_keyring = ["uv", "publish", "--keyring-provider", "subprocess"]
@@ -988,6 +1034,10 @@ keyring-provider = "subprocess"
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=1, stdout="", stderr="Build failed"
                 )
+            if cmd == ["git", "describe", "--tags", "--abbrev=0"]:
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout="v0.1.0\n", stderr=""
+                )
             return subprocess.CompletedProcess(
                 args=cmd, returncode=0, stdout="", stderr=""
             )
@@ -1002,8 +1052,11 @@ keyring-provider = "subprocess"
                 ):
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print"):
-                        with pytest.raises(SystemExit) as exc_info:
-                            crackerjack._publish_project(options)
+                        with patch.object(
+                            crackerjack, "_get_current_version", return_value="0.1.0"
+                        ):
+                            with pytest.raises(SystemExit) as exc_info:
+                                crackerjack._publish_project(options)
         assert exc_info.value.code == 1
         assert ["uv", "build"] in actual_calls
         assert ["uv", "publish"] not in actual_calls
@@ -1022,6 +1075,8 @@ keyring-provider = "subprocess"
                 return MagicMock(
                     returncode=1, stdout="publish output", stderr="Publish failed"
                 )
+            if cmd == ["git", "describe", "--tags", "--abbrev=0"]:
+                return MagicMock(returncode=0, stdout="v0.1.0\n")
             return MagicMock(returncode=0, stdout="")
 
         with patch("platform.system", return_value="Linux"):
@@ -1034,8 +1089,11 @@ keyring-provider = "subprocess"
                 ):
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print") as mock_print:
-                        with pytest.raises(SystemExit) as exc_info:
-                            crackerjack._publish_project(options)
+                        with patch.object(
+                            crackerjack, "_get_current_version", return_value="0.1.0"
+                        ):
+                            with pytest.raises(SystemExit) as exc_info:
+                                crackerjack._publish_project(options)
                         assert exc_info.value.code == 1
                         assert ["uv", "build"] in actual_calls
                         assert any(cmd[:2] == ["uv", "publish"] for cmd in actual_calls)
@@ -1056,10 +1114,19 @@ keyring-provider = "subprocess"
         options = options_factory(commit=True, no_config_updates=True)
         with patch("builtins.input", return_value="Test commit message"):
             with patch.object(Crackerjack, "execute_command") as mock_cj_execute:
-                mock_cj_execute.return_value = MagicMock(returncode=0, stdout="Success")
+
+                def mock_side_effect(cmd, **kwargs):
+                    if cmd == ["git", "status", "--porcelain"]:
+                        return MagicMock(returncode=0, stdout="M file.py\n")
+                    return MagicMock(returncode=0, stdout="Success")
+
+                mock_cj_execute.side_effect = mock_side_effect
                 with patch.object(Crackerjack, "_update_project"):
                     cj = Crackerjack(dry_run=True)
-                    cj.process(options)
+                    with patch.object(
+                        cj, "_verify_version_consistency", return_value=True
+                    ):
+                        cj.process(options)
                     mock_cj_execute.assert_any_call(
                         [
                             "git",
@@ -1221,19 +1288,27 @@ keyring-provider = "subprocess"
             original_method = ProjectManager.update_pkg_configs
             original_method(mock_project)
             calls = mock_execute.call_args_list
-            install_call = None
+            git_init_call = None
             for call in calls:
                 args = call[0][0]
-                if len(args) >= 4 and args[:4] == [
-                    "uv",
-                    "run",
-                    "pre-commit",
-                    "install",
-                ]:
-                    install_call = args
+                if args == ["git", "init"]:
+                    git_init_call = args
                     break
-            assert install_call is not None, f"install call not found in {calls}"
-            assert "-c" in install_call, f"Config flag not found in {install_call}"
+            assert git_init_call is not None, f"git init call not found in {calls}"
+
+            keyring_call = None
+            for call in calls:
+                args = call[0][0]
+                if (
+                    len(args) >= 3
+                    and args[:3] == ["uv", "tool", "install"]
+                    and "keyring" in args
+                ):
+                    keyring_call = args
+                    break
+            assert keyring_call is not None, (
+                f"keyring install call not found in {calls}"
+            )
 
     def test_process_with_precommit_failure(
         self,
@@ -1785,7 +1860,10 @@ class TestClass:
             with patch("builtins.input", return_value="y"):
                 with patch.object(Crackerjack, "_update_project"):
                     cj = Crackerjack(dry_run=False)
-                    cj.process(options)
+                    with patch.object(
+                        cj, "_verify_version_consistency", return_value=True
+                    ):
+                        cj.process(options)
 
                     commit_call = None
                     for call in mock_execute_cmd.call_args_list:

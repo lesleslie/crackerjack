@@ -148,6 +148,8 @@ class TestErrorHandlingIntegration:
                     experimental_hooks = False
                     enable_pyrefly = False
                     enable_ty = False
+                    no_git_tags = False
+                    skip_version_check = True
 
                 options = Options()
                 with patch("platform.system", return_value="Linux"):
