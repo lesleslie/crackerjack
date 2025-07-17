@@ -162,6 +162,32 @@ python -m crackerjack -u
 python -m crackerjack -x
 ```
 
+### Documentation Template Management
+
+Crackerjack can automatically propagate its quality standards to other Python projects by creating or updating their CLAUDE.md and RULES.md files. This ensures consistent AI code generation across all projects.
+
+```bash
+# Update CLAUDE.md and RULES.md with latest quality standards (only if they don't exist)
+python -m crackerjack --update-docs
+
+# Force update CLAUDE.md and RULES.md even if they already exist
+python -m crackerjack --force-update-docs
+```
+
+**When to Use:**
+
+- **New Projects**: Use `--update-docs` to create initial documentation templates
+- **Quality Standard Updates**: Use `--force-update-docs` weekly to keep standards current
+- **AI Integration**: Ensures Claude Code generates compliant code on first pass across all projects
+- **Team Synchronization**: Keeps all team projects using the same quality standards
+
+**How It Works:**
+
+- Copies the latest Refurb, Pyright, Complexipy, and Bandit standards from Crackerjack
+- Customizes project-specific sections (project name, overview)
+- Preserves the core quality standards and AI generation guidelines
+- Automatically adds files to git for easy committing
+
 ### Publishing
 
 ```bash
@@ -303,6 +329,8 @@ Crackerjack follows a single-file architecture for simplicity and maintainabilit
 | `-t` | `--test` | Run tests |
 | `-x` | `--clean` | Remove docstrings, comments, and whitespace |
 | `-u` | `--update-precommit` | Update pre-commit hooks |
+| | `--update-docs` | Update CLAUDE.md and RULES.md with latest quality standards |
+| | `--force-update-docs` | Force update CLAUDE.md and RULES.md even if they exist |
 | `-r` | `--pr` | Create pull request |
 | `-v` | `--verbose` | Enable verbose output |
 | `-s` | `--skip-hooks` | Skip pre-commit hooks |
@@ -327,6 +355,14 @@ Crackerjack follows a single-file architecture for simplicity and maintainabilit
 | `--test-workers` | Number of parallel workers (0=auto, 1=disable) |
 | `--test-timeout` | Test timeout in seconds (0=auto) |
 | `--ai-agent` | Generate structured output files (hidden flag) |
+
+### Session Progress Tracking
+
+| Flag | Description |
+|------|-------------|
+| `--track-progress` | Enable session progress tracking with detailed markdown output |
+| `--resume-from <file>` | Resume session from existing progress file |
+| `--progress-file <path>` | Custom path for progress file (default: SESSION-PROGRESS-{timestamp}.md) |
 
 ## Development Guidelines
 
@@ -380,7 +416,29 @@ When generating code, AI assistants MUST follow these standards to ensure compli
 - Use inline comments sparingly only when absolutely necessary for complex logic
 - The codebase prioritizes clean, self-documenting code over documentation strings
 
-### Refurb Standards (Modern Python Patterns up to 3.12)
+### Refurb Standards (Modern Python Patterns up to 3.13+)
+
+**CRITICAL: Collection and Membership Testing:**
+
+- **FURB109**: Use tuples instead of lists for `in` membership testing
+
+  ```python
+  # Bad
+  if response in ["y", "yes", "ok"]:
+
+  # Good
+  if response in ("y", "yes", "ok"):
+  ```
+
+- **FURB120**: Don't pass arguments that are the same as the default value
+
+  ```python
+  # Bad
+  kwargs.get("resume_from", None)
+
+  # Good
+  kwargs.get("resume_from")
+  ```
 
 **Use modern syntax and built-ins:**
 
@@ -403,6 +461,34 @@ When generating code, AI assistants MUST follow these standards to ensure compli
 - Always use context managers (`with` statements) for file operations
 - Use `tempfile` module for temporary files instead of manual paths
 - Prefer `subprocess.run()` over `subprocess.Popen()` when possible
+
+**Code Complexity Management (Complexipy):**
+
+- **CRITICAL**: Keep cognitive complexity under 20 per function/method
+- Break complex methods into smaller helper functions (3-5 helper functions are better than 1 complex function)
+- Use descriptive function names that explain their purpose
+- Prefer multiple small functions over one large function
+- **Pattern for refactoring complex methods:**
+  ```python
+  # Bad - High complexity (>20)
+  def complex_method(self, data):
+      # 50+ lines with multiple nested if/else, loops, etc.
+
+  # Good - Broken into helpers
+  def main_method(self, data):
+      processed = self._preprocess_data(data)
+      result = self._apply_transformations(processed)
+      return self._finalize_result(result)
+
+  def _preprocess_data(self, data):
+      # Single responsibility
+
+  def _apply_transformations(self, data):
+      # Single responsibility
+
+  def _finalize_result(self, data):
+      # Single responsibility
+  ```
 
 **Example of good patterns:**
 
@@ -491,6 +577,34 @@ cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
 
 ### Pyright Type Safety Standards
 
+**CRITICAL: Complete Type Annotations:**
+
+- **reportMissingParameterType**: ALL function parameters MUST have type hints
+
+  ```python
+  # Bad
+  def _format_task_detail(self, task) -> str:
+
+  # Good
+  def _format_task_detail(self, task: TaskStatus) -> str:
+  ```
+
+- **reportArgumentType**: Protocol implementations must match exactly
+
+  ```python
+  # Bad - Missing properties in protocol implementation
+  class Options(OptionsProtocol):
+      verbose = True
+      # Missing: resume_from, progress_file
+
+
+  # Good - Complete protocol implementation
+  class Options(OptionsProtocol):
+      verbose = True
+      resume_from: str | None = None
+      progress_file: str | None = None
+  ```
+
 **Always use explicit type annotations:**
 
 - Function parameters must have type hints
@@ -516,6 +630,7 @@ cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
 - Prefer `typing.Protocol` over abstract base classes for duck typing
 - Use `@runtime_checkable` when protocols need runtime checks
 - Define clear interfaces with protocols
+- **CRITICAL**: When implementing protocols, ensure ALL properties are included with correct types
 
 **Python 3.13+ specific features:**
 
@@ -592,6 +707,164 @@ These standards align with the project's pre-commit hooks:
 - **Standard hooks**: File formatting (trailing whitespace, end-of-file fixes, YAML/TOML validation)
 
 By following these guidelines during code generation, AI assistants will produce code that passes all quality checks without requiring manual fixes.
+
+### AI Code Generation Best Practices
+
+**MANDATORY: Always Apply These Standards When Generating Code**
+
+1. **Pre-Generation Checklist:**
+
+   - Use tuples `()` for `in` membership testing, never lists `[]`
+   - Don't pass default values that match the function's default (e.g., `None` for optional parameters)
+   - Add complete type annotations to ALL function parameters
+   - Keep cognitive complexity under 20 per function
+   - Implement ALL protocol properties when creating test classes
+
+1. **Common Patterns to Always Follow:**
+
+   ```python
+   # Membership testing - ALWAYS use tuples
+   if status in ("pending", "completed", "failed"):
+
+   # Optional parameters - Don't pass None when it's the default
+   value = kwargs.get("optional_param")  # Good
+   value = kwargs.get("optional_param", None)  # Bad
+
+   # Type annotations - ALWAYS complete
+   def helper_method(self, task: TaskStatus, datetime_module) -> str:  # Good
+   def helper_method(self, task) -> str:  # Bad - missing type
+
+   # Protocol implementation - ALL properties required
+   class TestOptions(OptionsProtocol):
+       verbose = True
+       resume_from: str | None = None  # Required
+       progress_file: str | None = None  # Required
+   ```
+
+1. **Quality Gate Strategy:**
+
+   - Write code that would pass `python -m crackerjack --comprehensive` on first try
+   - Prioritize these checks: Refurb FURB109, FURB120, Pyright reportMissingParameterType, Complexipy \<20
+   - When refactoring complex code, break into 3-5 helper methods with single responsibilities
+
+1. **Testing Integration:**
+
+   - All generated test classes MUST implement complete protocols
+   - Use proper type annotations in test helper classes
+   - Follow the same standards in test code as production code
+
+By following these AI-specific guidelines, code generation will consistently pass all pre-commit hooks without manual intervention.
+
+## Self-Maintenance Protocol for AI Assistants
+
+**IMPORTANT: AI assistants should proactively maintain and update these quality standards to stay current with evolving tools.**
+
+### Weekly Standards Update Process
+
+**When to Update (any of these triggers):**
+
+- Weekly basis (if working on the project regularly)
+- After pre-commit hook failures reveal new rule violations
+- When tools are updated (`pre-commit autoupdate` runs)
+- When new error patterns emerge from quality checks
+
+**Update Process:**
+
+1. **Analyze Recent Quality Failures:**
+
+   ```bash
+   # Run comprehensive analysis to identify current issues
+   python -m crackerjack --comprehensive --ai-agent
+
+   # Check for new Refurb rules
+   uv run python -c "import refurb; print('Refurb available')" 2>/dev/null || echo "Check refurb rules manually"
+
+   # Review recent pre-commit failures
+   git log --oneline -20 | grep -i "fix.*refurb\|fix.*pyright\|fix.*complex"
+   ```
+
+1. **Update CLAUDE.md Standards:**
+
+   - Add any new FURB rules discovered (e.g., FURB150, FURB200, etc.)
+   - Include new Pyright error codes (reportXxxType patterns)
+   - Update complexity thresholds if Complexipy settings change
+   - Add new Bandit security patterns as they emerge
+
+1. **Update RULES.md:**
+
+   - Sync any contradictory patterns between CLAUDE.md and RULES.md
+   - Ensure RULES.md reflects the same quality standards
+   - Add project-specific patterns that emerge from development
+
+1. **Test Updated Standards:**
+
+   ```bash
+   # Verify updates don't conflict with existing code
+   python -m crackerjack --comprehensive
+
+   # Ensure documentation examples still work
+   python -m crackerjack -t
+   ```
+
+### Self-Learning Pattern Recognition
+
+**When encountering pre-commit failures, AI assistants should:**
+
+1. **Pattern Analysis:**
+
+   - Identify the specific tool (Refurb, Pyright, Complexipy, etc.)
+   - Extract the error code (FURB109, reportMissingParameterType, etc.)
+   - Note the violation pattern and correct pattern
+
+1. **Documentation Update:**
+
+   - Add the new pattern to the appropriate section in CLAUDE.md
+   - Include both "bad" and "good" code examples
+   - Mark as **CRITICAL** if it's a frequent failure pattern
+
+1. **Validation:**
+
+   - Test the fix resolves the issue
+   - Ensure it doesn't conflict with existing standards
+   - Update the "AI Code Generation Best Practices" checklist
+
+### Example Update Entry Format
+
+When adding new patterns, use this format:
+
+````markdown
+**Tool Update (Date): New Pattern Discovered**
+
+- **ERROR_CODE**: Brief description
+  ```python
+  # Bad
+  problematic_pattern()
+
+  # Good
+  correct_pattern()
+````
+
+- **Context**: When this typically occurs
+- **Priority**: CRITICAL/HIGH/MEDIUM based on frequency
+
+````
+
+### Hook Version Monitoring
+
+**AI assistants should track when these tools are updated:**
+- Refurb: New FURB rules often added
+- Pyright: New reportXxx error types
+- Complexipy: Threshold or analysis changes
+- Bandit: New security patterns
+
+**Update Check Command:**
+```bash
+# Check current versions and available updates
+pre-commit autoupdate --config .pre-commit-config.yaml
+git diff .pre-commit-config.yaml  # Review what changed
+````
+
+By maintaining these standards proactively, AI assistants will stay ahead of quality issues and generate compliant code consistently.
 
 ## Recent Bug Fixes and Improvements
 
@@ -914,6 +1187,191 @@ python -m crackerjack --ai-agent -t --benchmark
 
 See README-AI-AGENT.md for detailed information about AI agent integration.
 
+## Session Progress Tracking
+
+Crackerjack includes robust session progress tracking that helps maintain continuity during long-running development sessions, especially when working with AI assistants that may experience interruptions.
+
+### Key Features
+
+- **Automatic Progress Logging**: Tracks each step of the crackerjack workflow with timestamps
+- **Markdown Output**: Generates human-readable progress files with detailed status information
+- **Session Recovery**: Resume interrupted sessions from where they left off
+- **Task Status Tracking**: Monitors pending, in-progress, completed, failed, and skipped tasks
+- **File Change Tracking**: Records which files were modified during each task
+- **Error Recovery**: Provides detailed error information and recovery suggestions
+
+### Usage Examples
+
+```bash
+# Enable session tracking with automatic detection and recovery
+python -m crackerjack --track-progress -x -t -c
+
+# Use custom progress file location
+python -m crackerjack --track-progress --progress-file my-session.md -t
+
+# Resume from a specific session file
+python -m crackerjack --resume-from SESSION-PROGRESS-20240716-143052.md
+
+# Combine with AI agent mode for structured output
+python -m crackerjack --track-progress --ai-agent -a patch
+```
+
+### Automatic Session Detection
+
+**🚀 New Feature**: Crackerjack now automatically detects interrupted sessions and offers to resume them!
+
+When you use `--track-progress`, crackerjack will:
+
+1. **Scan for incomplete sessions** in the current directory
+1. **Analyze session status** to determine if resumption is possible
+1. **Prompt for user confirmation** with session details
+1. **Automatically resume** from the most recent incomplete session
+
+Example workflow:
+
+```bash
+# First run - session gets interrupted
+python -m crackerjack --track-progress -a patch
+# ... session interrupted during testing phase ...
+
+# Second run - automatic detection
+python -m crackerjack --track-progress -a patch
+# 📋 Found incomplete session: SESSION-PROGRESS-20240716-143052.md
+#    Session ID: abc123def
+#    Progress: 3/8 tasks completed
+#    Failed tasks: Run tests
+# ❓ Resume this session? [y/N]: y
+# 🔄 Resumed session from: SESSION-PROGRESS-20240716-143052.md
+```
+
+### Progress File Structure
+
+Progress files are generated in markdown format with the following structure:
+
+````markdown
+# Crackerjack Session Progress: {session_id}
+
+**Session ID**: abc123def
+**Started**: 2024-07-16 14:30:52
+**Status**: In Progress
+**Progress**: 3/8 tasks completed
+
+## Session Metadata
+- **Working Directory**: /Users/dev/my-project
+- **Python Version**: 3.13
+- **Crackerjack Version**: 0.19.8
+- **CLI Options**: Options(clean=True, test=True, commit=True, ...)
+
+## Task Progress Overview
+| Task | Status | Duration | Details |
+|------|--------|----------|---------|
+| Setup | ✅ completed | 0.15s | Project structure initialized |
+| Clean | ⏳ in_progress | - | Removing docstrings and comments |
+| Tests | ⏸️ pending | - | - |
+
+## Detailed Task Log
+### ✅ Setup - COMPLETED
+- **Started**: 2024-07-16 14:30:52
+- **Completed**: 2024-07-16 14:30:52
+- **Duration**: 0.15s
+- **Files Changed**: None
+- **Details**: Project structure initialized
+
+### ⏳ Clean - IN PROGRESS
+- **Started**: 2024-07-16 14:30:53
+- **Current Status**: Removing docstrings and comments
+
+## Session Recovery Information
+If this session was interrupted, you can resume from where you left off:
+
+```bash
+python -m crackerjack --resume-from SESSION-PROGRESS-20240716-143052.md
+````
+
+## Files Modified This Session
+
+- src/main.py
+- tests/test_main.py
+
+## Next Steps
+
+🔄 Currently working on:
+
+- Clean project code
+
+````
+
+### Integration with AI Assistants
+
+Session progress tracking is particularly valuable when working with AI assistants:
+
+1. **Continuity**: If an AI session is interrupted, the assistant can read the progress file to understand what was completed
+2. **Context**: Progress files provide detailed context about the current state of the project
+3. **Recovery**: Clear instructions for resuming work from the exact point of interruption
+4. **Transparency**: Detailed logs help both users and AI assistants understand what happened
+
+### Best Practices
+
+1. **Always use progress tracking for complex workflows**:
+   ```bash
+   python -m crackerjack --track-progress -a patch
+   ```
+
+2. **Let automatic detection handle resumption**:
+   - Simply use `--track-progress` again after interruption
+   - Crackerjack will automatically detect and offer to resume incomplete sessions
+   - No need to manually specify `--resume-from` in most cases
+
+3. **Combine with AI agent mode for maximum visibility**:
+   ```bash
+   python -m crackerjack --track-progress --ai-agent -x -t -c
+   ```
+
+4. **Keep progress files for debugging**:
+   - Progress files help diagnose issues that occur during workflow execution
+   - They provide valuable debugging information for support requests
+   - Automatic detection only considers sessions from the last 24 hours
+
+5. **Use custom progress file names for important sessions**:
+   ```bash
+   python -m crackerjack --track-progress --progress-file release-v1.0.md -p major
+   ```
+
+### Error Handling and Recovery
+
+When tasks fail, progress files include:
+
+- Detailed error messages
+- Recovery suggestions
+- Context about what was being attempted
+- Information about which files were being modified
+
+Example failed task entry:
+
+```markdown
+### ❌ Pre-commit Hooks - FAILED
+- **Started**: 2024-07-16 14:35:22
+- **Failed**: 2024-07-16 14:35:45
+- **Error**: ruff check failed with exit code 1
+- **Recovery Suggestions**: Check error details and retry the failed operation
+```
+
+### File Management
+
+- Progress files are automatically named with timestamps: `SESSION-PROGRESS-YYYYMMDD-HHMMSS.md`
+- Files are created in the current working directory by default
+- Use `--progress-file` to specify custom locations or names
+- Progress files are updated in real-time as tasks complete
+
+### Integration with Other Features
+
+Session progress tracking works seamlessly with:
+
+- **AI Agent Mode**: Structured output files reference progress tracking
+- **Interactive Mode**: Progress is displayed in the Rich UI
+- **Benchmark Mode**: Performance metrics are included in progress files
+- **Version Bumping**: Version changes are tracked in session history
+
 ## Test Execution Details
 
 ### Test Configuration (pytest.ini_options)
@@ -981,3 +1439,4 @@ For expensive operations that should run before pushing:
 - Install with: `pre-commit install --hook-type pre-push`
 - Runs comprehensive analysis automatically
 - Prevents pushing code that doesn't meet quality standards
+````

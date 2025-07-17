@@ -37,12 +37,474 @@ class HookResult:
             self.issues_found = []
 
 
+@dataclass
+class TaskStatus:
+    id: str
+    name: str
+    status: str
+    start_time: float | None = None
+    end_time: float | None = None
+    duration: float | None = None
+    details: str | None = None
+    error_message: str | None = None
+    files_changed: list[str] | None = None
+
+    def __post_init__(self) -> None:
+        if self.files_changed is None:
+            self.files_changed = []
+        if self.start_time is not None and self.end_time is not None:
+            self.duration = self.end_time - self.start_time
+
+
+class SessionTracker(BaseModel, arbitrary_types_allowed=True):
+    console: Console
+    session_id: str
+    start_time: float
+    progress_file: Path
+    tasks: dict[str, TaskStatus] = {}
+    current_task: str | None = None
+    metadata: dict[str, t.Any] = {}
+
+    def __init__(self, **data: t.Any) -> None:
+        super().__init__(**data)
+        if not self.tasks:
+            self.tasks = {}
+        if not self.metadata:
+            self.metadata = {}
+
+    def start_task(
+        self, task_id: str, task_name: str, details: str | None = None
+    ) -> None:
+        task = TaskStatus(
+            id=task_id,
+            name=task_name,
+            status="in_progress",
+            start_time=time.time(),
+            details=details,
+        )
+        self.tasks[task_id] = task
+        self.current_task = task_id
+        self._update_progress_file()
+        self.console.print(f"[yellow]⏳[/yellow] Started: {task_name}")
+
+    def complete_task(
+        self,
+        task_id: str,
+        details: str | None = None,
+        files_changed: list[str] | None = None,
+    ) -> None:
+        if task_id in self.tasks:
+            task = self.tasks[task_id]
+            task.status = "completed"
+            task.end_time = time.time()
+            task.duration = task.end_time - (task.start_time or task.end_time)
+            if details:
+                task.details = details
+            if files_changed:
+                task.files_changed = files_changed
+            self._update_progress_file()
+            self.console.print(f"[green]✅[/green] Completed: {task.name}")
+            if self.current_task == task_id:
+                self.current_task = None
+
+    def fail_task(
+        self,
+        task_id: str,
+        error_message: str,
+        details: str | None = None,
+    ) -> None:
+        if task_id in self.tasks:
+            task = self.tasks[task_id]
+            task.status = "failed"
+            task.end_time = time.time()
+            task.duration = task.end_time - (task.start_time or task.end_time)
+            task.error_message = error_message
+            if details:
+                task.details = details
+            self._update_progress_file()
+            self.console.print(f"[red]❌[/red] Failed: {task.name} - {error_message}")
+            if self.current_task == task_id:
+                self.current_task = None
+
+    def skip_task(self, task_id: str, reason: str) -> None:
+        if task_id in self.tasks:
+            task = self.tasks[task_id]
+            task.status = "skipped"
+            task.end_time = time.time()
+            task.details = f"Skipped: {reason}"
+            self._update_progress_file()
+            self.console.print(f"[blue]⏩[/blue] Skipped: {task.name} - {reason}")
+            if self.current_task == task_id:
+                self.current_task = None
+
+    def _update_progress_file(self) -> None:
+        try:
+            content = self._generate_markdown_content()
+            self.progress_file.write_text(content, encoding="utf-8")
+        except OSError as e:
+            self.console.print(
+                f"[yellow]Warning: Failed to update progress file: {e}[/yellow]"
+            )
+
+    def _generate_header_section(self) -> str:
+        from datetime import datetime
+
+        completed_tasks = sum(
+            1 for task in self.tasks.values() if task.status == "completed"
+        )
+        total_tasks = len(self.tasks)
+        overall_status = "In Progress"
+        if completed_tasks == total_tasks and total_tasks > 0:
+            overall_status = "Completed"
+        elif any(task.status == "failed" for task in self.tasks.values()):
+            overall_status = "Failed"
+        start_datetime = datetime.fromtimestamp(self.start_time)
+
+        return f"""# Crackerjack Session Progress: {self.session_id}
+**Session ID**: {self.session_id}
+**Started**: {start_datetime.strftime("%Y-%m-%d %H:%M:%S")}
+**Status**: {overall_status}
+**Progress**: {completed_tasks}/{total_tasks} tasks completed
+
+- **Working Directory**: {self.metadata.get("working_dir", Path.cwd())}
+- **Python Version**: {self.metadata.get("python_version", "Unknown")}
+- **Crackerjack Version**: {self.metadata.get("crackerjack_version", "Unknown")}
+- **CLI Options**: {self.metadata.get("cli_options", "Unknown")}
+
+"""
+
+    def _generate_task_overview_section(self) -> str:
+        content = """## Task Progress Overview
+| Task | Status | Duration | Details |
+|------|--------|----------|---------|
+"""
+
+        for task in self.tasks.values():
+            status_emoji = {
+                "pending": "⏸️",
+                "in_progress": "⏳",
+                "completed": "✅",
+                "failed": "❌",
+                "skipped": "⏩",
+            }.get(task.status, "❓")
+
+            duration_str = f"{task.duration:.2f}s" if task.duration else "N/A"
+            details_str = (
+                task.details[:50] + "..."
+                if task.details and len(task.details) > 50
+                else (task.details or "")
+            )
+
+            content += f"| {task.name} | {status_emoji} {task.status} | {duration_str} | {details_str} |\n"
+
+        return content + "\n"
+
+    def _generate_task_details_section(self) -> str:
+        content = "## Detailed Task Log\n\n"
+        for task in self.tasks.values():
+            content += self._format_task_detail(task)
+        return content
+
+    def _format_task_detail(self, task: TaskStatus) -> str:
+        from datetime import datetime
+
+        if task.status == "completed":
+            return self._format_completed_task(task, datetime)
+        elif task.status == "in_progress":
+            return self._format_in_progress_task(task, datetime)
+        elif task.status == "failed":
+            return self._format_failed_task(task, datetime)
+        elif task.status == "skipped":
+            return self._format_skipped_task(task)
+        return ""
+
+    def _format_completed_task(self, task: TaskStatus, datetime: t.Any) -> str:
+        start_time = (
+            datetime.fromtimestamp(task.start_time) if task.start_time else "Unknown"
+        )
+        end_time = datetime.fromtimestamp(task.end_time) if task.end_time else "Unknown"
+        files_list = ", ".join(task.files_changed) if task.files_changed else "None"
+        return f"""### ✅ {task.name} - COMPLETED
+- **Started**: {start_time}
+- **Completed**: {end_time}
+- **Duration**: {task.duration:.2f}s
+- **Files Changed**: {files_list}
+- **Details**: {task.details or "N/A"}
+
+"""
+
+    def _format_in_progress_task(self, task: TaskStatus, datetime: t.Any) -> str:
+        start_time = (
+            datetime.fromtimestamp(task.start_time) if task.start_time else "Unknown"
+        )
+        return f"""### ⏳ {task.name} - IN PROGRESS
+- **Started**: {start_time}
+- **Current Status**: {task.details or "Processing..."}
+
+"""
+
+    def _format_failed_task(self, task: TaskStatus, datetime: t.Any) -> str:
+        start_time = (
+            datetime.fromtimestamp(task.start_time) if task.start_time else "Unknown"
+        )
+        fail_time = (
+            datetime.fromtimestamp(task.end_time) if task.end_time else "Unknown"
+        )
+        return f"""### ❌ {task.name} - FAILED
+- **Started**: {start_time}
+- **Failed**: {fail_time}
+- **Error**: {task.error_message or "Unknown error"}
+- **Recovery Suggestions**: Check error details and retry the failed operation
+
+"""
+
+    def _format_skipped_task(self, task: TaskStatus) -> str:
+        return f"""### ⏩ {task.name} - SKIPPED
+- **Reason**: {task.details or "No reason provided"}
+
+"""
+
+    def _generate_footer_section(self) -> str:
+        content = f"""## Session Recovery Information
+If this session was interrupted, you can resume from where you left off:
+
+```bash
+python -m crackerjack --resume-from {self.progress_file.name}
+```
+
+"""
+
+        all_files = set()
+        for task in self.tasks.values():
+            if task.files_changed:
+                all_files.update(task.files_changed)
+
+        if all_files:
+            for file_path in sorted(all_files):
+                content += f"- {file_path}\n"
+        else:
+            content += "- No files modified yet\n"
+
+        content += "\n## Next Steps\n\n"
+
+        pending_tasks = [
+            task for task in self.tasks.values() if task.status == "pending"
+        ]
+        in_progress_tasks = [
+            task for task in self.tasks.values() if task.status == "in_progress"
+        ]
+        failed_tasks = [task for task in self.tasks.values() if task.status == "failed"]
+
+        if failed_tasks:
+            content += "⚠️ Address failed tasks:\n"
+            for task in failed_tasks:
+                content += f"- Fix {task.name}: {task.error_message}\n"
+        elif in_progress_tasks:
+            content += "🔄 Currently working on:\n"
+            for task in in_progress_tasks:
+                content += f"- {task.name}\n"
+        elif pending_tasks:
+            content += "📋 Next tasks to complete:\n"
+            for task in pending_tasks:
+                content += f"- {task.name}\n"
+        else:
+            content += "🎉 All tasks completed successfully!\n"
+
+        return content
+
+    def _generate_markdown_content(self) -> str:
+        return (
+            self._generate_header_section()
+            + self._generate_task_overview_section()
+            + self._generate_task_details_section()
+            + self._generate_footer_section()
+        )
+
+    @classmethod
+    def create_session(
+        cls,
+        console: Console,
+        session_id: str | None = None,
+        progress_file: Path | None = None,
+        metadata: dict[str, t.Any] | None = None,
+    ) -> "SessionTracker":
+        import uuid
+
+        if session_id is None:
+            session_id = str(uuid.uuid4())[:8]
+
+        if progress_file is None:
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            progress_file = Path(f"SESSION-PROGRESS-{timestamp}.md")
+
+        tracker = cls(
+            console=console,
+            session_id=session_id,
+            start_time=time.time(),
+            progress_file=progress_file,
+            metadata=metadata or {},
+        )
+
+        tracker._update_progress_file()
+        console.print(f"[green]📋[/green] Session tracking started: {progress_file}")
+        return tracker
+
+    @classmethod
+    def find_recent_progress_files(cls, directory: Path = Path.cwd()) -> list[Path]:
+        progress_files = []
+        for file_path in directory.glob("SESSION-PROGRESS-*.md"):
+            try:
+                if file_path.is_file():
+                    progress_files.append(file_path)
+            except (OSError, PermissionError):
+                continue
+
+        return sorted(progress_files, key=lambda p: p.stat().st_mtime, reverse=True)
+
+    @classmethod
+    def is_session_incomplete(cls, progress_file: Path) -> bool:
+        if not progress_file.exists():
+            return False
+        try:
+            content = progress_file.read_text(encoding="utf-8")
+            has_in_progress = "⏳" in content or "in_progress" in content
+            has_failed = "❌" in content or "failed" in content
+            has_pending = "⏸️" in content or "pending" in content
+            stat = progress_file.stat()
+            age_hours = (time.time() - stat.st_mtime) / 3600
+            is_recent = age_hours < 24
+
+            return (has_in_progress or has_failed or has_pending) and is_recent
+        except (OSError, UnicodeDecodeError):
+            return False
+
+    @classmethod
+    def find_incomplete_session(cls, directory: Path = Path.cwd()) -> Path | None:
+        recent_files = cls.find_recent_progress_files(directory)
+        for progress_file in recent_files:
+            if cls.is_session_incomplete(progress_file):
+                return progress_file
+
+        return None
+
+    @classmethod
+    def auto_detect_session(
+        cls, console: Console, directory: Path = Path.cwd()
+    ) -> "SessionTracker | None":
+        incomplete_session = cls.find_incomplete_session(directory)
+        if incomplete_session:
+            return cls._handle_incomplete_session(console, incomplete_session)
+        return None
+
+    @classmethod
+    def _handle_incomplete_session(
+        cls, console: Console, incomplete_session: Path
+    ) -> "SessionTracker | None":
+        console.print(
+            f"[yellow]📋[/yellow] Found incomplete session: {incomplete_session.name}"
+        )
+        try:
+            content = incomplete_session.read_text(encoding="utf-8")
+            session_info = cls._parse_session_info(content)
+            cls._display_session_info(console, session_info)
+            return cls._prompt_resume_session(console, incomplete_session)
+        except Exception as e:
+            console.print(f"[yellow]⚠️[/yellow] Could not parse session file: {e}")
+            return None
+
+    @classmethod
+    def _parse_session_info(cls, content: str) -> dict[str, str | list[str] | None]:
+        import re
+
+        session_match = re.search(r"Session ID\*\*:\s*(.+)", content)
+        session_id: str = session_match.group(1).strip() if session_match else "unknown"
+        progress_match = re.search(r"Progress\*\*:\s*(\d+)/(\d+)", content)
+        progress_info: str | None = None
+        if progress_match:
+            completed = progress_match.group(1)
+            total = progress_match.group(2)
+            progress_info = f"{completed}/{total} tasks completed"
+        failed_tasks: list[str] = []
+        for line in content.split("\n"):
+            if "❌" in line and "- FAILED" in line:
+                task_match = re.search(r"### ❌ (.+?) - FAILED", line)
+                if task_match:
+                    task_name: str = task_match.group(1)
+                    failed_tasks.append(task_name)
+
+        return {
+            "session_id": session_id,
+            "progress_info": progress_info,
+            "failed_tasks": failed_tasks,
+        }
+
+    @classmethod
+    def _display_session_info(
+        cls, console: Console, session_info: dict[str, str | list[str] | None]
+    ) -> None:
+        console.print(f"[cyan]   Session ID:[/cyan] {session_info['session_id']}")
+        if session_info["progress_info"]:
+            console.print(f"[cyan]   Progress:[/cyan] {session_info['progress_info']}")
+        if session_info["failed_tasks"]:
+            console.print(
+                f"[red]   Failed tasks:[/red] {', '.join(session_info['failed_tasks'])}"
+            )
+
+    @classmethod
+    def _prompt_resume_session(
+        cls, console: Console, incomplete_session: Path
+    ) -> "SessionTracker | None":
+        try:
+            import sys
+
+            console.print("[yellow]❓[/yellow] Resume this session? [y/N]: ", end="")
+            sys.stdout.flush()
+            response = input().strip().lower()
+            if response in ("y", "yes"):
+                return cls.resume_session(console, incomplete_session)
+            else:
+                console.print("[blue]ℹ️[/blue] Starting new session instead")
+                return None
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[blue]ℹ️[/blue] Starting new session instead")
+            return None
+
+    @classmethod
+    def resume_session(cls, console: Console, progress_file: Path) -> "SessionTracker":
+        if not progress_file.exists():
+            raise FileNotFoundError(f"Progress file not found: {progress_file}")
+        try:
+            content = progress_file.read_text(encoding="utf-8")
+            session_id = "resumed"
+            import re
+
+            session_match = re.search(r"Session ID\*\*:\s*(.+)", content)
+            if session_match:
+                session_id = session_match.group(1).strip()
+            tracker = cls(
+                console=console,
+                session_id=session_id,
+                start_time=time.time(),
+                progress_file=progress_file,
+                metadata={},
+            )
+            console.print(f"[green]🔄[/green] Resumed session from: {progress_file}")
+            return tracker
+        except Exception as e:
+            raise RuntimeError(f"Failed to resume session: {e}") from e
+
+
 config_files = (
     ".gitignore",
     ".pre-commit-config.yaml",
     ".pre-commit-config-ai.yaml",
     ".pre-commit-config-fast.yaml",
     ".libcst.codemod.yaml",
+)
+
+documentation_files = (
+    "CLAUDE.md",
+    "RULES.md",
 )
 default_python_version = "3.13"
 
@@ -61,6 +523,8 @@ class OptionsProtocol(t.Protocol):
     no_config_updates: bool
     verbose: bool
     update_precommit: bool
+    update_docs: bool
+    force_update_docs: bool
     clean: bool
     test: bool
     benchmark: bool
@@ -76,6 +540,9 @@ class OptionsProtocol(t.Protocol):
     skip_hooks: bool = False
     comprehensive: bool = False
     async_mode: bool = False
+    track_progress: bool = False
+    resume_from: str | None = None
+    progress_file: str | None = None
 
 
 class CodeCleaner(BaseModel, arbitrary_types_allowed=True):
@@ -1216,6 +1683,76 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         if configs_to_add:
             self.execute_command(["git", "add"] + configs_to_add)
 
+    def copy_documentation_templates(self, force_update: bool = False) -> None:
+        docs_to_add: list[str] = []
+        for doc_file in documentation_files:
+            doc_path = self.our_path / doc_file
+            pkg_doc_path = self.pkg_path / doc_file
+            if not doc_path.exists():
+                continue
+            if self.pkg_path.stem == "crackerjack":
+                continue
+            should_update = force_update or not pkg_doc_path.exists()
+            if should_update:
+                pkg_doc_path.touch()
+                content = doc_path.read_text(encoding="utf-8")
+                updated_content = self._customize_documentation_content(
+                    content, doc_file
+                )
+                pkg_doc_path.write_text(updated_content, encoding="utf-8")
+                docs_to_add.append(doc_file)
+                self.console.print(
+                    f"[green]📋[/green] Updated {doc_file} with latest Crackerjack quality standards"
+                )
+        if docs_to_add:
+            self.execute_command(["git", "add"] + docs_to_add)
+
+    def _customize_documentation_content(self, content: str, filename: str) -> str:
+        if filename == "CLAUDE.md":
+            return self._customize_claude_md(content)
+        elif filename == "RULES.md":
+            return self._customize_rules_md(content)
+        return content
+
+    def _customize_claude_md(self, content: str) -> str:
+        project_name = self.pkg_name
+        content = content.replace("crackerjack", project_name).replace(
+            "Crackerjack", project_name.title()
+        )
+        header = f"""# {project_name.upper()}.md
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+*This file was automatically generated by Crackerjack and contains the latest Python quality standards.*
+
+{project_name.title()} is a Python project that follows modern development practices and maintains high code quality standards using automated tools and best practices.
+
+"""
+
+        lines = content.split("\n")
+        start_idx = 0
+        for i, line in enumerate(lines):
+            if line.startswith(("## Development Guidelines", "## Code Quality")):
+                start_idx = i
+                break
+
+        if start_idx > 0:
+            relevant_content = "\n".join(lines[start_idx:])
+            return header + relevant_content
+
+        return header + content
+
+    def _customize_rules_md(self, content: str) -> str:
+        project_name = self.pkg_name
+        content = content.replace("crackerjack", project_name).replace(
+            "Crackerjack", project_name.title()
+        )
+        header = f"""# {project_name.title()} Style Rules
+*This file was automatically generated by Crackerjack and contains the latest Python quality standards.*
+
+"""
+
+        return header + content
+
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
@@ -2116,6 +2653,26 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
                 f"[yellow]Warning: Failed to generate AI summary: {e}[/yellow]"
             )
 
+    def update_precommit_hooks(self) -> None:
+        try:
+            result = self.execute_command(
+                ["uv", "run", "pre-commit", "autoupdate"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                self.console.print(
+                    "[green]✅ Pre-commit hooks updated successfully[/green]"
+                )
+                if result.stdout.strip():
+                    self.console.print(f"[dim]{result.stdout}[/dim]")
+            else:
+                self.console.print(
+                    f"[red]❌ Failed to update pre-commit hooks: {result.stderr}[/red]"
+                )
+        except Exception as e:
+            self.console.print(f"[red]❌ Error updating pre-commit hooks: {e}[/red]")
+
 
 class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     our_path: Path = Path(__file__).parent
@@ -2128,6 +2685,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     code_cleaner: CodeCleaner | None = None
     config_manager: ConfigManager | None = None
     project_manager: ProjectManager | None = None
+    session_tracker: SessionTracker | None = None
     _file_cache: dict[str, list[Path]] = {}
     _file_cache_with_mtime: dict[str, tuple[float, list[Path]]] = {}
     _state_file: Path = Path(".crackerjack-state")
@@ -2254,13 +2812,6 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 self.console.print(
                     "\n\n[bold red]❌ UV sync failed. Is UV installed? Run `pipx install uv` and try again.[/bold red]\n\n"
                 )
-
-    def _update_precommit(self, options: t.Any) -> None:
-        if self.pkg_path.stem == "crackerjack" and options.update_precommit:
-            update_cmd = ["uv", "run", "pre-commit", "autoupdate"]
-            if options.ai_agent:
-                update_cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
-            self.execute_command(update_cmd)
 
     def _clean_project(self, options: t.Any) -> None:
         assert self.code_cleaner is not None
@@ -2641,6 +3192,32 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             )
             self.execute_command(["git", "push", "origin", "main", "--no-verify"])
 
+    def _update_precommit(self, options: OptionsProtocol) -> None:
+        if options.update_precommit:
+            self.console.print("\n" + "-" * 80)
+            self.console.print(
+                "[bold bright_blue]🔄 UPDATE[/bold bright_blue] [bold bright_white]Updating pre-commit hooks[/bold bright_white]"
+            )
+            self.console.print("-" * 80 + "\n")
+            if self.pkg_path.stem == "crackerjack":
+                update_cmd = ["uv", "run", "pre-commit", "autoupdate"]
+                if getattr(options, "ai_agent", False):
+                    update_cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
+                self.execute_command(update_cmd)
+            else:
+                self.project_manager.update_precommit_hooks()
+
+    def _update_docs(self, options: OptionsProtocol) -> None:
+        if options.update_docs or options.force_update_docs:
+            self.console.print("\n" + "-" * 80)
+            self.console.print(
+                "[bold bright_blue]📋 DOCS UPDATE[/bold bright_blue] [bold bright_white]Updating documentation with quality standards[/bold bright_white]"
+            )
+            self.console.print("-" * 80 + "\n")
+            self.config_manager.copy_documentation_templates(
+                force_update=options.force_update_docs
+            )
+
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
     ) -> subprocess.CompletedProcess[str]:
@@ -2765,8 +3342,83 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 "[bold bright_green]✅ All comprehensive quality checks passed![/bold bright_green]"
             )
 
+    def _run_tracked_task(
+        self, task_id: str, task_name: str, task_func: t.Callable[[], None]
+    ) -> None:
+        if self.session_tracker:
+            self.session_tracker.start_task(task_id, task_name)
+        try:
+            task_func()
+            if self.session_tracker:
+                self.session_tracker.complete_task(task_id, f"{task_name} completed")
+        except Exception as e:
+            if self.session_tracker:
+                self.session_tracker.fail_task(task_id, str(e))
+            raise
+
+    def _run_pre_commit_task(self, options: OptionsProtocol) -> None:
+        if not options.skip_hooks:
+            if getattr(options, "ai_agent", False):
+                self.project_manager.run_pre_commit_with_analysis()
+            else:
+                self.project_manager.run_pre_commit()
+        else:
+            self.console.print(
+                "\n[bold bright_yellow]⏭️  Skipping pre-commit hooks...[/bold bright_yellow]\n"
+            )
+            if self.session_tracker:
+                self.session_tracker.skip_task("pre_commit", "Skipped by user request")
+
+    def _initialize_session_tracking(self, options: OptionsProtocol) -> None:
+        if options.resume_from:
+            try:
+                progress_file = Path(options.resume_from)
+                self.session_tracker = SessionTracker.resume_session(
+                    console=self.console,
+                    progress_file=progress_file,
+                )
+                return
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]Warning: Failed to resume from {options.resume_from}: {e}[/yellow]"
+                )
+                self.session_tracker = None
+                return
+        if options.track_progress:
+            try:
+                auto_tracker = SessionTracker.auto_detect_session(self.console)
+                if auto_tracker:
+                    self.session_tracker = auto_tracker
+                    return
+                progress_file = (
+                    Path(options.progress_file) if options.progress_file else None
+                )
+                try:
+                    from importlib.metadata import version
+
+                    crackerjack_version = version("crackerjack")
+                except (ImportError, ModuleNotFoundError):
+                    crackerjack_version = "unknown"
+                metadata = {
+                    "working_dir": str(self.pkg_path),
+                    "python_version": self.python_version,
+                    "crackerjack_version": crackerjack_version,
+                    "cli_options": str(options),
+                }
+                self.session_tracker = SessionTracker.create_session(
+                    console=self.console,
+                    progress_file=progress_file,
+                    metadata=metadata,
+                )
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]Warning: Failed to initialize session tracking: {e}[/yellow]"
+                )
+                self.session_tracker = None
+
     def process(self, options: OptionsProtocol) -> None:
         assert self.project_manager is not None
+        self._initialize_session_tracking(options)
         self.console.print("\n" + "-" * 80)
         self.console.print(
             "[bold bright_cyan]⚒️ CRACKERJACKING[/bold bright_cyan] [bold bright_white]Starting workflow execution[/bold bright_white]"
@@ -2777,25 +3429,55 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             options.test = True
             options.publish = options.all
             options.commit = True
-        self._setup_package()
-        self._update_project(options)
-        self._update_precommit(options)
-        self._clean_project(options)
+        self._run_tracked_task(
+            "setup", "Initialize project structure", self._setup_package
+        )
+        self._run_tracked_task(
+            "update_project",
+            "Update project configuration",
+            lambda: self._update_project(options),
+        )
+        self._run_tracked_task(
+            "update_precommit",
+            "Update pre-commit hooks",
+            lambda: self._update_precommit(options),
+        )
+        self._run_tracked_task(
+            "update_docs",
+            "Update documentation templates",
+            lambda: self._update_docs(options),
+        )
+        self._run_tracked_task(
+            "clean_project", "Clean project code", lambda: self._clean_project(options)
+        )
         self.project_manager.options = options
         if not options.skip_hooks:
-            if getattr(options, "ai_agent", False):
-                self.project_manager.run_pre_commit_with_analysis()
-            else:
-                self.project_manager.run_pre_commit()
-        else:
-            self.console.print(
-                "\n[bold bright_yellow]⏭️  Skipping pre-commit hooks...[/bold bright_yellow]\n"
+            self._run_tracked_task(
+                "pre_commit",
+                "Run pre-commit hooks",
+                lambda: self._run_pre_commit_task(options),
             )
-        self._run_tests(options)
-        self._run_comprehensive_quality_checks(options)
-        self._bump_version(options)
-        self._commit_and_push(options)
-        self._publish_project(options)
+        else:
+            self._run_pre_commit_task(options)
+        self._run_tracked_task(
+            "run_tests", "Execute test suite", lambda: self._run_tests(options)
+        )
+        self._run_tracked_task(
+            "quality_checks",
+            "Run comprehensive quality checks",
+            lambda: self._run_comprehensive_quality_checks(options),
+        )
+        self._run_tracked_task(
+            "bump_version", "Bump version numbers", lambda: self._bump_version(options)
+        )
+        self._run_tracked_task(
+            "commit_push",
+            "Commit and push changes",
+            lambda: self._commit_and_push(options),
+        )
+        self._run_tracked_task(
+            "publish", "Publish project", lambda: self._publish_project(options)
+        )
         self.console.print("\n" + "-" * 80)
         self.console.print(
             "[bold bright_green]✨ CRACKERJACK COMPLETE[/bold bright_green] [bold bright_white]Workflow completed successfully![/bold bright_white]"

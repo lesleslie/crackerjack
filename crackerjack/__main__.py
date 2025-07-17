@@ -30,6 +30,8 @@ class Options(BaseModel):
     bump: BumpOption | None = None
     verbose: bool = False
     update_precommit: bool = False
+    update_docs: bool = False
+    force_update_docs: bool = False
     clean: bool = False
     test: bool = False
     benchmark: bool = False
@@ -43,6 +45,9 @@ class Options(BaseModel):
     skip_hooks: bool = False
     comprehensive: bool = False
     async_mode: bool = False
+    track_progress: bool = False
+    resume_from: str | None = None
+    progress_file: str | None = None
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -71,6 +76,16 @@ cli_options = {
     ),
     "update_precommit": typer.Option(
         False, "-u", "--update-precommit", help="Update pre-commit hooks."
+    ),
+    "update_docs": typer.Option(
+        False,
+        "--update-docs",
+        help="Update CLAUDE.md and RULES.md with latest quality standards.",
+    ),
+    "force_update_docs": typer.Option(
+        False,
+        "--force-update-docs",
+        help="Force update CLAUDE.md and RULES.md even if they exist.",
     ),
     "verbose": typer.Option(False, "-v", "--verbose", help="Enable verbose output."),
     "publish": typer.Option(
@@ -152,6 +167,21 @@ cli_options = {
         help="Enable async mode for faster file operations (experimental).",
         hidden=True,
     ),
+    "track_progress": typer.Option(
+        False,
+        "--track-progress",
+        help="Enable session progress tracking with detailed markdown output.",
+    ),
+    "resume_from": typer.Option(
+        None,
+        "--resume-from",
+        help="Resume session from existing progress file.",
+    ),
+    "progress_file": typer.Option(
+        None,
+        "--progress-file",
+        help="Custom path for progress file (default: SESSION-PROGRESS-{timestamp}.md).",
+    ),
 }
 
 
@@ -161,6 +191,8 @@ def main(
     interactive: bool = cli_options["interactive"],
     no_config_updates: bool = cli_options["no_config_updates"],
     update_precommit: bool = cli_options["update_precommit"],
+    update_docs: bool = cli_options["update_docs"],
+    force_update_docs: bool = cli_options["force_update_docs"],
     verbose: bool = cli_options["verbose"],
     publish: BumpOption | None = cli_options["publish"],
     all: BumpOption | None = cli_options["all"],
@@ -179,12 +211,17 @@ def main(
     ai_agent: bool = cli_options["ai_agent"],
     comprehensive: bool = cli_options["comprehensive"],
     async_mode: bool = cli_options["async_mode"],
+    track_progress: bool = cli_options["track_progress"],
+    resume_from: str | None = cli_options["resume_from"],
+    progress_file: str | None = cli_options["progress_file"],
 ) -> None:
     options = Options(
         commit=commit,
         interactive=interactive,
         no_config_updates=no_config_updates,
         update_precommit=update_precommit,
+        update_docs=update_docs,
+        force_update_docs=force_update_docs,
         verbose=verbose,
         publish=publish,
         bump=bump,
@@ -201,6 +238,9 @@ def main(
         comprehensive=comprehensive,
         create_pr=create_pr,
         async_mode=async_mode,
+        track_progress=track_progress,
+        resume_from=resume_from,
+        progress_file=progress_file,
     )
     if ai_agent:
         import os

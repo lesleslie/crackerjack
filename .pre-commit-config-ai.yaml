@@ -96,7 +96,7 @@ repos:
     rev: v3.0.0
     hooks:
       - id: complexipy
-        args: ["-d", "low", "--output", "complexipy.json"]
+        args: ["-d", "low", "--output-json", "complexipy.json"]
         stages: [pre-commit]
 
   - repo: https://github.com/dosisod/refurb
@@ -116,10 +116,6 @@ repos:
           - --aggressive
           - --only-without-imports
           - --guess-common-names
-          - --cache-dir=.autotyping-cache
-          - --workers=4
-          - --max-line-length=88
-          - --exclude-name=test_*,conftest
           - crackerjack
         types_or: [ python, pyi ]
         language: python

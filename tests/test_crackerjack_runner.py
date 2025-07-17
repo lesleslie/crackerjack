@@ -16,6 +16,8 @@ class MockOptions:
         self.no_config_updates = kwargs.get("no_config_updates", False)
         self.verbose = kwargs.get("verbose", False)
         self.update_precommit = kwargs.get("update_precommit", False)
+        self.update_docs = kwargs.get("update_docs", False)
+        self.force_update_docs = kwargs.get("force_update_docs", False)
         self.clean = kwargs.get("clean", False)
         self.test = kwargs.get("test", False)
         self.publish = kwargs.get("publish")
@@ -33,6 +35,9 @@ class MockOptions:
         self.test_timeout = kwargs.get("test_timeout", 0)
         self.comprehensive = kwargs.get("comprehensive", False)
         self.async_mode = kwargs.get("async_mode", False)
+        self.track_progress = kwargs.get("track_progress", False)
+        self.resume_from = kwargs.get("resume_from")
+        self.progress_file = kwargs.get("progress_file")
 
 
 def test_create_crackerjack_runner() -> None:

@@ -73,6 +73,32 @@
   - Configure hooks in `.pre-commit-config.yaml` with exact versions
   - Ensure all code passes pre-commit checks before submitting
 
+- **Specific Tool Compliance Standards**
+
+  - **Refurb (FURB Rules):**
+
+    - **FURB109**: ALWAYS use tuples `()` instead of lists `[]` for `in` membership testing
+    - **FURB120**: Never pass default values that match the function's default (e.g., `None` for optional parameters)
+    - Use modern Python patterns and built-ins consistently
+
+  - **Pyright Type Checking:**
+
+    - **reportMissingParameterType**: ALL function parameters MUST have complete type annotations
+    - **reportArgumentType**: Protocol implementations must include ALL required properties with correct types
+    - Use explicit type annotations for all function parameters and return types
+
+  - **Complexipy Code Complexity:**
+
+    - Keep cognitive complexity under 20 per function/method
+    - Break complex methods into 3-5 smaller helper functions with single responsibilities
+    - Use descriptive function names that explain their purpose
+
+  - **Bandit Security:**
+
+    - Never use dangerous functions like `eval()`, `exec()`, or `subprocess.shell=True`
+    - Use `secrets` module for cryptographic operations, never `random`
+    - Always specify encoding when opening files
+
 - **Automation Focus**
 
   - Automate repetitive tasks whenever possible
@@ -172,3 +198,31 @@
   - Automate style and formatting checks to focus reviews on substance
   - Look for edge cases and error handling in reviews
   - Ensure tests adequately cover the changes
+
+- **Session Progress Tracking**
+
+  - Use `--track-progress` flag for complex development workflows
+  - Always enable progress tracking when working with AI assistants
+  - Keep progress files for debugging and session recovery
+  - Use descriptive progress file names for important sessions: `--progress-file release-v1.0.md`
+  - Combine with AI agent mode for maximum visibility: `--track-progress --ai-agent`
+  - Progress files should be included in .gitignore to avoid committing session state
+  - Use `--resume-from` to continue interrupted sessions rather than starting over
+
+## AI Assistant Self-Maintenance
+
+- **Quality Standards Maintenance**
+
+  - AI assistants should update CLAUDE.md and RULES.md weekly or after pre-commit failures
+  - Learn from new Refurb rules (FURB codes), Pyright errors (reportXxx), and Complexipy thresholds
+  - Add newly discovered error patterns to documentation with code examples
+  - Test all documentation updates by running `python -m crackerjack --comprehensive`
+  - Prioritize frequently occurring error patterns as **CRITICAL** standards
+
+- **Self-Learning Protocol**
+
+  - When encountering new pre-commit failures, extract the error pattern and add to standards
+  - Format new patterns with "Bad" and "Good" code examples
+  - Update the "AI Code Generation Best Practices" checklist in CLAUDE.md
+  - Ensure RULES.md stays synchronized with CLAUDE.md standards
+  - Monitor tool version updates and incorporate new rules as they emerge

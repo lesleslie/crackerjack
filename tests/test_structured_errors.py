@@ -28,6 +28,8 @@ class OptionsProtocol(t.Protocol):
     doc: bool
     no_config_updates: bool
     update_precommit: bool
+    update_docs: bool
+    force_update_docs: bool
     clean: bool
     test: bool
     comprehensive: bool
@@ -124,6 +126,8 @@ class TestErrorHandlingIntegration:
                     doc = False
                     no_config_updates = False
                     update_precommit = False
+                    update_docs = False
+                    force_update_docs = False
                     clean = False
                     test = False
                     benchmark = False
@@ -137,6 +141,9 @@ class TestErrorHandlingIntegration:
                     skip_hooks = False
                     comprehensive = False
                     async_mode = False
+                    track_progress = False
+                    resume_from: str | None = None
+                    progress_file: str | None = None
 
                 options = Options()
                 with patch("platform.system", return_value="Linux"):

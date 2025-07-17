@@ -15,6 +15,8 @@ from crackerjack.crackerjack import (
     Crackerjack,
     OptionsProtocol,
     ProjectManager,
+    SessionTracker,
+    TaskStatus,
 )
 
 
@@ -37,6 +39,8 @@ class OptionsForTesting:
     bump: BumpOption | None = None
     verbose: bool = False
     update_precommit: bool = False
+    update_docs: bool = False
+    force_update_docs: bool = False
     clean: bool = False
     test: bool = False
     benchmark: bool = False
@@ -50,6 +54,9 @@ class OptionsForTesting:
     skip_hooks: bool = False
     comprehensive: bool = False
     async_mode: bool = False
+    track_progress: bool = False
+    resume_from: str | None = None
+    progress_file: str | None = None
 
 
 @pytest.fixture
@@ -1434,3 +1441,221 @@ class TestClass:
         assert "--benchmark-regression" in test_command
         assert "--benchmark-regression-threshold=10.0" in test_command
         assert "-xvs" not in test_command
+
+
+class TestSessionTracker:
+    def test_task_status_initialization(self) -> None:
+        task = TaskStatus(
+            id="test-task",
+            name="Test Task",
+            status="pending",
+        )
+        assert task.id == "test-task"
+        assert task.name == "Test Task"
+        assert task.status == "pending"
+        assert task.files_changed == []
+        assert task.duration is None
+
+    def test_task_status_duration_calculation(self) -> None:
+        import time
+
+        start_time = time.time()
+        end_time = start_time + 2.5
+        task = TaskStatus(
+            id="test-task",
+            name="Test Task",
+            status="completed",
+            start_time=start_time,
+            end_time=end_time,
+        )
+        assert task.duration == 2.5
+
+    def test_session_tracker_creation(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        progress_file = tmp_path / "test-progress.md"
+        tracker = SessionTracker.create_session(
+            console=console,
+            session_id="test-session",
+            progress_file=progress_file,
+            metadata={"test": "data"},
+        )
+        assert tracker.session_id == "test-session"
+        assert tracker.progress_file == progress_file
+        assert tracker.metadata == {"test": "data"}
+        assert progress_file.exists()
+        content = progress_file.read_text(encoding="utf-8")
+        assert "test-session" in content
+        assert "Session Progress" in content
+
+    def test_session_tracker_start_task(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        progress_file = tmp_path / "test-progress.md"
+        tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=progress_file,
+        )
+        tracker.start_task("setup", "Initialize project", "Setting up structure")
+        assert "setup" in tracker.tasks
+        task = tracker.tasks["setup"]
+        assert task.name == "Initialize project"
+        assert task.status == "in_progress"
+        assert task.details == "Setting up structure"
+        assert task.start_time is not None
+        assert tracker.current_task == "setup"
+
+    def test_session_tracker_complete_task(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        progress_file = tmp_path / "test-progress.md"
+        tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=progress_file,
+        )
+        tracker.start_task("setup", "Initialize project")
+        tracker.complete_task("setup", "Project initialized", ["file1.py", "file2.py"])
+        task = tracker.tasks["setup"]
+        assert task.status == "completed"
+        assert task.details == "Project initialized"
+        assert task.files_changed == ["file1.py", "file2.py"]
+        assert task.end_time is not None
+        assert task.duration is not None
+        assert tracker.current_task is None
+
+    def test_session_tracker_fail_task(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        progress_file = tmp_path / "test-progress.md"
+        tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=progress_file,
+        )
+        tracker.start_task("setup", "Initialize project")
+        tracker.fail_task("setup", "Setup failed", "Permission denied")
+        task = tracker.tasks["setup"]
+        assert task.status == "failed"
+        assert task.error_message == "Setup failed"
+        assert task.details == "Permission denied"
+        assert task.end_time is not None
+        assert tracker.current_task is None
+
+    def test_session_tracker_skip_task(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        progress_file = tmp_path / "test-progress.md"
+        tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=progress_file,
+        )
+        tracker.start_task("setup", "Initialize project")
+        tracker.skip_task("setup", "User requested skip")
+        task = tracker.tasks["setup"]
+        assert task.status == "skipped"
+        assert task.details == "Skipped: User requested skip"
+        assert task.end_time is not None
+        assert tracker.current_task is None
+
+    def test_session_tracker_resume_session(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        progress_file = tmp_path / "test-progress.md"
+        SessionTracker.create_session(
+            console=console,
+            session_id="original-session",
+            progress_file=progress_file,
+        )
+        resumed_tracker = SessionTracker.resume_session(
+            console=console,
+            progress_file=progress_file,
+        )
+        assert resumed_tracker.progress_file == progress_file
+        assert resumed_tracker.session_id == "original-session"
+
+    def test_session_tracker_markdown_generation(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        progress_file = tmp_path / "test-progress.md"
+        tracker = SessionTracker.create_session(
+            console=console,
+            session_id="test-session",
+            progress_file=progress_file,
+            metadata={"working_dir": "/test/dir"},
+        )
+        tracker.start_task("setup", "Initialize project")
+        tracker.complete_task("setup", "Project initialized", ["file1.py"])
+        tracker.start_task("test", "Run tests")
+        tracker.fail_task("test", "Test failed", "Syntax error")
+        content = progress_file.read_text(encoding="utf-8")
+        assert "test-session" in content
+        assert "2/2 tasks completed" in content or "1/2 tasks completed" in content
+        assert "Initialize project" in content
+        assert "✅ Initialize project - COMPLETED" in content
+        assert "❌ Run tests - FAILED" in content
+        assert "file1.py" in content
+        assert "Test failed" in content
+
+    def test_find_recent_progress_files(self, tmp_path: Path) -> None:
+        file1 = tmp_path / "SESSION-PROGRESS-20240101-120000.md"
+        file2 = tmp_path / "SESSION-PROGRESS-20240102-120000.md"
+        file3 = tmp_path / "other-file.md"
+        file1.write_text("test content 1")
+        file2.write_text("test content 2")
+        file3.write_text("not a progress file")
+        import time
+
+        time.sleep(0.1)
+        file2.touch()
+        files = SessionTracker.find_recent_progress_files(tmp_path)
+        assert len(files) == 2
+        assert files[0] == file2
+        assert files[1] == file1
+
+    def test_is_session_incomplete(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        complete_file = tmp_path / "complete-session.md"
+        complete_tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=complete_file,
+        )
+        complete_tracker.start_task("setup", "Setup")
+        complete_tracker.complete_task("setup", "Setup done")
+        incomplete_file = tmp_path / "incomplete-session.md"
+        incomplete_tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=incomplete_file,
+        )
+        incomplete_tracker.start_task("setup", "Setup")
+        assert not SessionTracker.is_session_incomplete(complete_file)
+        assert SessionTracker.is_session_incomplete(incomplete_file)
+        failed_file = tmp_path / "failed-session.md"
+        failed_tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=failed_file,
+        )
+        failed_tracker.start_task("setup", "Setup")
+        failed_tracker.fail_task("setup", "Setup failed")
+        assert SessionTracker.is_session_incomplete(failed_file)
+
+    def test_find_incomplete_session(self, tmp_path: Path) -> None:
+        console = Console(force_terminal=True)
+        complete_file = tmp_path / "SESSION-PROGRESS-20240101-120000.md"
+        complete_tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=complete_file,
+        )
+        complete_tracker.start_task("setup", "Setup")
+        complete_tracker.complete_task("setup", "Setup done")
+        incomplete_file = tmp_path / "SESSION-PROGRESS-20240102-120000.md"
+        incomplete_tracker = SessionTracker.create_session(
+            console=console,
+            progress_file=incomplete_file,
+        )
+        incomplete_tracker.start_task("setup", "Setup")
+        import time
+
+        time.sleep(0.1)
+        incomplete_file.touch()
+        found_session = SessionTracker.find_incomplete_session(tmp_path)
+        assert found_session == incomplete_file
+        complete_tracker2 = SessionTracker.create_session(
+            console=console,
+            progress_file=incomplete_file,
+        )
+        complete_tracker2.start_task("setup", "Setup")
+        complete_tracker2.complete_task("setup", "Setup done")
+        found_session = SessionTracker.find_incomplete_session(tmp_path)
+        assert found_session is None
