@@ -17,6 +17,7 @@ class BumpOption(str, Enum):
     patch = "patch"
     minor = "minor"
     major = "major"
+    interactive = "interactive"
 
     def __str__(self) -> str:
         return self.value
@@ -55,6 +56,8 @@ class Options(BaseModel):
     def validate_bump_options(cls, value: str | None) -> BumpOption | None:
         if value is None:
             return None
+        if value == "":
+            return BumpOption.interactive
         try:
             return BumpOption(value.lower())
         except ValueError:
@@ -76,7 +79,10 @@ cli_options = {
         False, "-n", "--no-config-updates", help="Do not update configuration files."
     ),
     "update_precommit": typer.Option(
-        False, "-u", "--update-precommit", help="Update pre-commit hooks."
+        False,
+        "-u",
+        "--update-precommit",
+        help="[DEPRECATED] Pre-commit hooks are now updated automatically weekly.",
     ),
     "update_docs": typer.Option(
         False,
@@ -98,7 +104,7 @@ cli_options = {
         None,
         "-p",
         "--publish",
-        help="Bump version and publish to PyPI (patch, minor, major).",
+        help="Bump version and publish to PyPI (patch, minor, major). Use 'interactive' to be prompted for version selection.",
         case_sensitive=False,
     ),
     "bump": typer.Option(

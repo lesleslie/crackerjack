@@ -184,6 +184,37 @@
   - Use asyncio exclusively for async testing; do not test with trio compatibility
   - Configure pytest with asyncio_mode="auto" for simpler async testing
 
+- **Test Coverage Improvement (MANDATORY)**
+
+  - **Always improve coverage incrementally** when working on projects with pytest coverage below 100%
+  - **Check coverage first**: Run `uv run pytest --cov=<package_name> --cov-report=term-missing` to see current status
+  - **Target 2-5% improvement per session**: Add 1-3 focused tests that cover uncovered lines
+  - **Prioritize easy wins**: Test simple functions, error paths, edge cases, and validation logic
+  - **3-attempt rule**: If a test doesn't work after 3 debugging attempts, skip it and move on
+  - **Time-boxed effort**: Spend maximum 10-15 minutes on coverage improvement per session
+  - **Focus on low-hanging fruit**: Property getters, simple validation, string formatting, error handling
+  - **Avoid complex coverage improvements**: Skip async operations, external integrations, and complex state management
+  - **Write focused tests**: Each test should cover 1-3 lines of uncovered code
+  - **Quality over quantity**: Tests should be simple, reliable, and fast (< 1 second each)
+  - **Example incremental approach**:
+    ```python
+    # Target: Cover error handling in Options validation
+    def test_options_invalid_bump_option():
+        with pytest.raises(ValueError, match="Invalid bump option"):
+            Options(publish="invalid")
+
+
+    # Target: Cover string representation
+    def test_bump_option_str():
+        assert str(BumpOption.patch) == "patch"
+
+
+    # Target: Cover edge case in validation
+    def test_validate_empty_string():
+        result = Options.validate_bump_options("")
+        assert result == BumpOption.interactive
+    ```
+
 - **Dependency Management**
 
   - Keep external dependencies to a minimum

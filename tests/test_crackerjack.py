@@ -744,6 +744,7 @@ class TestCrackerjackProcess:
                     autospec=True,
                 ):
                     crackerjack = Crackerjack(dry_run=False)
+                    crackerjack._clear_state()
                     with patch.object(crackerjack.console, "print"):
                         crackerjack._publish_project(options)
         assert ["uv", "build"] in actual_calls
@@ -998,7 +999,7 @@ keyring-provider = "subprocess"
             actual_calls.append(cmd)
             if cmd == ["uv", "build"]:
                 return MagicMock(returncode=0, stdout="build output")
-            elif cmd == ["uv", "publish"]:
+            elif cmd[:2] == ["uv", "publish"]:
                 return MagicMock(
                     returncode=1, stdout="publish output", stderr="Publish failed"
                 )
@@ -1014,7 +1015,9 @@ keyring-provider = "subprocess"
                 ):
                     crackerjack = Crackerjack(dry_run=False)
                     with patch.object(crackerjack.console, "print") as mock_print:
-                        crackerjack._publish_project(options)
+                        with pytest.raises(SystemExit) as exc_info:
+                            crackerjack._publish_project(options)
+                        assert exc_info.value.code == 1
                         assert ["uv", "build"] in actual_calls
                         assert any(cmd[:2] == ["uv", "publish"] for cmd in actual_calls)
                         assert any(

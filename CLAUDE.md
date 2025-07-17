@@ -1251,6 +1251,156 @@ This enhancement ensures that the code cleaner (`-x` flag) can handle edge cases
 
 **Never skip crackerjack verification** - it's the project's standard quality gate.
 
+## Test Coverage Improvement
+
+**MANDATORY: AI assistants should incrementally improve test coverage when working on crackerjack projects.**
+
+### Coverage Improvement Strategy
+
+When working on any Python project with crackerjack, AI assistants should:
+
+1. **Check current coverage**: Run `uv run pytest --cov=<package_name> --cov-report=term-missing` to see current coverage percentage
+1. **Identify improvement opportunities**: Look for uncovered lines in modules you're working on
+1. **Apply incremental improvements**: Add 1-3 tests per session that increase coverage by 2-5%
+1. **Focus on low-hanging fruit**: Prioritize easy wins like testing simple functions, error paths, and edge cases
+
+### Coverage Improvement Guidelines
+
+**When to improve coverage:**
+
+- Coverage is below 100% for any package
+- You're working on or near code that lacks test coverage
+- You're debugging or fixing issues in untested areas
+- You're adding new features (always include tests)
+
+**How to improve coverage efficiently:**
+
+1. **Start with simple wins**: Test basic functions, property getters, simple methods
+1. **Test error paths**: Add tests for exception handling and error conditions
+1. **Test edge cases**: Cover boundary conditions, empty inputs, None values
+1. **Test integration points**: Cover method interactions and data flow
+
+**Coverage improvement limits:**
+
+- **Maximum 3 debugging attempts** per test: If a test doesn't work after 3 debugging passes, skip it and move on
+- **Time-boxed effort**: Don't spend more than 10-15 minutes on coverage improvement per session
+- **Incremental progress**: Aim for 2-5% coverage improvement per session, not perfection
+
+### Example Coverage Improvement Workflow
+
+```bash
+# Check current coverage
+uv run pytest --cov=mypackage --cov-report=term-missing
+
+# Identify uncovered lines (look for lines marked with "Missing")
+# Example output:
+# mypackage/core.py    45    10    78%   23-25, 67-70, 89-92
+
+# Add tests for uncovered lines:
+# - Line 23-25: Error handling in validate_input()
+# - Line 67-70: Edge case in process_data()
+# - Line 89-92: Exception path in save_results()
+
+# Write focused tests
+def test_validate_input_empty_string():
+    with pytest.raises(ValueError):
+        validate_input("")
+
+def test_process_data_none_input():
+    result = process_data(None)
+    assert result == []
+
+def test_save_results_file_not_found():
+    with pytest.raises(FileNotFoundError):
+        save_results("/nonexistent/path")
+
+# Re-run coverage to confirm improvement
+uv run pytest --cov=mypackage --cov-report=term-missing
+```
+
+### Coverage Improvement Patterns
+
+**Easy wins (prioritize these):**
+
+- Property getters and setters
+- Simple validation functions
+- String formatting methods
+- Basic mathematical operations
+- Default parameter handling
+
+**Medium effort:**
+
+- Error handling paths
+- Conditional logic branches
+- Loop edge cases
+- File I/O operations
+- Configuration parsing
+
+**Skip if complex (save for dedicated sessions):**
+
+- Complex async operations
+- Integration with external services
+- Complex state management
+- Performance-critical paths
+- Legacy code with many dependencies
+
+### Coverage Quality Standards
+
+**Good coverage improvement:**
+
+- Tests are simple and focused
+- Each test covers 1-3 lines of uncovered code
+- Tests are reliable and don't flake
+- Tests run quickly (< 1 second each)
+- Tests improve understanding of the code
+
+**Poor coverage improvement (avoid):**
+
+- Tests that are complex or hard to understand
+- Tests that mock too heavily or don't test real behavior
+- Tests that are flaky or timing-dependent
+- Tests that take a long time to run
+- Tests that duplicate existing coverage
+
+### Coverage Improvement Examples
+
+**✅ Good coverage improvement:**
+
+```python
+def test_format_error_message_with_code():
+    """Test error message formatting with error code."""
+    result = format_error_message("Invalid input", code="E001")
+    assert result == "[E001] Invalid input"
+
+
+def test_format_error_message_without_code():
+    """Test error message formatting without error code."""
+    result = format_error_message("Invalid input")
+    assert result == "Invalid input"
+```
+
+**❌ Avoid complex coverage improvements:**
+
+```python
+# Don't spend time on complex setups like this during regular work
+def test_complex_async_workflow_with_multiple_mocks():
+    """This test is too complex for incremental coverage improvement."""
+    # 50+ lines of complex mocking and setup
+    # Multiple async operations
+    # Complex state management
+    # Skip this during regular coverage improvement
+```
+
+### Coverage Reporting
+
+When you've improved coverage, report it briefly:
+
+- "Improved coverage from 73% to 76% by adding tests for error handling paths"
+- "Added 3 tests covering previously untested validation functions"
+- "Coverage increased 4% with tests for edge cases in data processing"
+
+**Remember**: The goal is steady, incremental improvement, not perfection. Focus on sustainable progress that makes the codebase more robust without derailing primary development tasks.
+
 ## Pre-commit Hook Maintenance
 
 ### Monthly Maintenance Tasks

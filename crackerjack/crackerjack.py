@@ -3031,6 +3031,12 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
             self._state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
+    def _get_state(self) -> dict[str, t.Any]:
+        return self._read_state()
+
+    def _save_state(self, state: dict[str, t.Any]) -> None:
+        self._write_state(state)
+
     def _clear_state(self) -> None:
         if self._state_file.exists():
             from contextlib import suppress
@@ -3099,6 +3105,9 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         assert self.project_manager is not None
         if not options.no_config_updates:
             self.project_manager.update_pkg_configs()
+            self._run_automatic_updates()
+            if self.pkg_path.stem != "crackerjack":
+                self._check_and_update_crackerjack()
             result: CompletedProcess[str] = self.execute_command(
                 ["uv", "sync"], capture_output=True, text=True
             )
@@ -3110,6 +3119,133 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 self.console.print(
                     "\n\n[bold red]❌ UV sync failed. Is UV installed? Run `pipx install uv` and try again.[/bold red]\n\n"
                 )
+
+    def _run_automatic_updates(self) -> None:
+        self.console.print("[dim]🔄 Checking for updates...[/dim]")
+        self._upgrade_dependencies()
+        self._update_hooks_if_needed()
+
+    def _upgrade_dependencies(self) -> None:
+        try:
+            result = self.execute_command(
+                ["uv", "sync", "--upgrade"], capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                self._handle_upgrade_success(result)
+            else:
+                self.console.print(
+                    f"[yellow]⚠️  Dependency upgrade failed: {result.stderr}[/yellow]"
+                )
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️  Error upgrading dependencies: {e}[/yellow]")
+
+    def _handle_upgrade_success(
+        self, result: "subprocess.CompletedProcess[str]"
+    ) -> None:
+        if "no changes" not in result.stdout.lower():
+            self.console.print("[green]✅ Dependencies upgraded[/green]")
+            self._show_upgrade_summary(result.stdout)
+        else:
+            self.console.print("[dim]✓ Dependencies already up to date[/dim]")
+
+    def _show_upgrade_summary(self, stdout: str) -> None:
+        if stdout.strip():
+            upgrade_lines = [line for line in stdout.split("\n") if "->" in line]
+            if upgrade_lines:
+                self.console.print(f"[dim]{len(upgrade_lines)} packages upgraded[/dim]")
+
+    def _update_hooks_if_needed(self) -> None:
+        import time
+        from pathlib import Path
+
+        marker_file = Path(".crackerjack-hooks-updated")
+        current_time = time.time()
+        week_seconds = 7 * 24 * 60 * 60
+        should_update = True
+        if marker_file.exists():
+            try:
+                last_update = float(marker_file.read_text().strip())
+                if current_time - last_update < week_seconds:
+                    should_update = False
+            except (ValueError, OSError):
+                should_update = True
+        if should_update:
+            self._update_precommit_hooks()
+            from contextlib import suppress
+
+            with suppress(OSError):
+                marker_file.write_text(str(current_time))
+        else:
+            self.console.print("[dim]✓ Pre-commit hooks recently updated[/dim]")
+
+    def _update_precommit_hooks(self) -> None:
+        try:
+            result = self.execute_command(
+                ["uv", "run", "pre-commit", "autoupdate"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                if "updated" in result.stdout.lower():
+                    self.console.print("[green]✅ Pre-commit hooks updated[/green]")
+                    update_lines = [
+                        line for line in result.stdout.split("\n") if "->" in line
+                    ]
+                    if update_lines:
+                        self.console.print(
+                            f"[dim]{len(update_lines)} hooks updated[/dim]"
+                        )
+                else:
+                    self.console.print(
+                        "[dim]✓ Pre-commit hooks already up to date[/dim]"
+                    )
+            else:
+                self.console.print(
+                    f"[yellow]⚠️  Pre-commit update failed: {result.stderr}[/yellow]"
+                )
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️  Error updating pre-commit hooks: {e}[/yellow]"
+            )
+
+    def _check_and_update_crackerjack(self) -> None:
+        try:
+            import tomllib
+            from pathlib import Path
+
+            pyproject_path = Path("pyproject.toml")
+            if not pyproject_path.exists():
+                return
+            with pyproject_path.open("rb") as f:
+                config = tomllib.load(f)
+            dependencies = config.get("project", {}).get("dependencies", [])
+            dev_dependencies = config.get("dependency-groups", {}).get("dev", [])
+            has_crackerjack = any(
+                dep.startswith("crackerjack") for dep in dependencies + dev_dependencies
+            )
+            if has_crackerjack:
+                result = self.execute_command(
+                    ["uv", "sync", "--upgrade", "--upgrade-package", "crackerjack"],
+                    capture_output=True,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    if "crackerjack" in result.stdout:
+                        self.console.print(
+                            "[green]✅ Crackerjack upgraded to latest version[/green]"
+                        )
+                    else:
+                        self.console.print(
+                            "[dim]✓ Crackerjack already up to date[/dim]"
+                        )
+                else:
+                    self.console.print(
+                        f"[yellow]⚠️  Crackerjack update check failed: {result.stderr}[/yellow]"
+                    )
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️  Error checking crackerjack updates: {e}[/yellow]"
+            )
 
     def _clean_project(self, options: t.Any) -> None:
         assert self.code_cleaner is not None
@@ -3416,36 +3552,100 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         else:
             self._handle_test_success(options)
 
+    def _prompt_version_selection(self) -> str:
+        from rich.prompt import Prompt
+
+        if self.options and getattr(self.options, "ai_agent", False):
+            self.console.print(
+                "[dim]AI agent mode: defaulting to patch version bump[/dim]"
+            )
+            return "patch"
+        self.console.print(
+            "\n[bold bright_yellow]📦 VERSION SELECTION[/bold bright_yellow]"
+        )
+        self.console.print("[dim]Select the type of version bump to perform:[/dim]\n")
+        choices = {
+            "1": ("patch", "Bug fixes and minor changes (0.1.0 → 0.1.1)"),
+            "2": ("minor", "New features, backwards compatible (0.1.0 → 0.2.0)"),
+            "3": ("major", "Breaking changes, major updates (0.1.0 → 1.0.0)"),
+        }
+        for key, (bump_type, description) in choices.items():
+            self.console.print(
+                f"  [bold bright_cyan]{key}[/bold bright_cyan] {bump_type:<6} - {description}"
+            )
+        while True:
+            choice = Prompt.ask(
+                "\n[bold]Select version bump type",
+                choices=list(choices.keys()),
+                default="1",
+                show_choices=False,
+            )
+            if choice in choices:
+                selected_type = choices[choice][0]
+                self.console.print(
+                    f"[green]✓ Selected: {selected_type} version bump[/green]"
+                )
+                return selected_type
+            else:
+                self.console.print(
+                    "[red]Invalid choice. Please select 1, 2, or 3.[/red]"
+                )
+
     def _bump_version(self, options: OptionsProtocol) -> None:
+        if options.publish and str(options.publish) == "interactive":
+            return self._handle_interactive_version_selection(options)
         for option in (options.publish, options.bump):
             if option:
                 version_type = str(option)
                 if self._has_version_been_bumped(version_type):
-                    self.console.print("\n" + "-" * 80)
-                    self.console.print(
-                        f"[bold yellow]📦 VERSION[/bold yellow] [bold bright_white]Version already bumped ({version_type}), skipping to avoid duplicate bump[/bold bright_white]"
-                    )
-                    self.console.print("-" * 80 + "\n")
+                    self._display_version_already_bumped_message(version_type)
                     return
-                self.console.print("\n" + "-" * 80)
-                self.console.print(
-                    f"[bold bright_magenta]📦 VERSION[/bold bright_magenta] [bold bright_white]Bumping {option} version[/bold bright_white]"
-                )
-                self.console.print("-" * 80 + "\n")
-                if version_type in ("minor", "major"):
-                    from rich.prompt import Confirm
-
-                    if not Confirm.ask(
-                        f"Are you sure you want to bump the {option} version?",
-                        default=False,
-                    ):
-                        self.console.print(
-                            f"[bold yellow]⏭️  Skipping {option} version bump[/bold yellow]"
-                        )
-                        return
+                self._display_version_bump_message(option)
+                if not self._confirm_version_bump_if_needed(option, version_type):
+                    return
                 self.execute_command(["uv", "version", "--bump", option])
                 self._mark_version_bumped(version_type)
                 break
+
+    def _handle_interactive_version_selection(self, options: OptionsProtocol) -> None:
+        selected_version = self._prompt_version_selection()
+        from crackerjack.__main__ import BumpOption
+
+        options_dict = vars(options).copy()
+        options_dict["publish"] = BumpOption(selected_version)
+        from types import SimpleNamespace
+
+        temp_options = SimpleNamespace(**options_dict)
+
+        return self._bump_version(temp_options)  # type: ignore[arg-type]
+
+    def _display_version_already_bumped_message(self, version_type: str) -> None:
+        self.console.print("\n" + "-" * 80)
+        self.console.print(
+            f"[bold yellow]📦 VERSION[/bold yellow] [bold bright_white]Version already bumped ({version_type}), skipping to avoid duplicate bump[/bold bright_white]"
+        )
+        self.console.print("-" * 80 + "\n")
+
+    def _display_version_bump_message(self, option: t.Any) -> None:
+        self.console.print("\n" + "-" * 80)
+        self.console.print(
+            f"[bold bright_magenta]📦 VERSION[/bold bright_magenta] [bold bright_white]Bumping {option} version[/bold bright_white]"
+        )
+        self.console.print("-" * 80 + "\n")
+
+    def _confirm_version_bump_if_needed(self, option: t.Any, version_type: str) -> bool:
+        if version_type in ("minor", "major"):
+            from rich.prompt import Confirm
+
+            if not Confirm.ask(
+                f"Are you sure you want to bump the {option} version?",
+                default=False,
+            ):
+                self.console.print(
+                    f"[bold yellow]⏭️  Skipping {option} version bump[/bold yellow]"
+                )
+                return False
+        return True
 
     def _validate_authentication_setup(self) -> None:
         import os
@@ -3540,6 +3740,120 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
         return cmd
 
+    def _publish_with_retry(self) -> None:
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                result = self._attempt_publish()
+                if result.returncode == 0:
+                    return
+                if not self._handle_publish_failure(result, attempt, max_retries):
+                    raise SystemExit(1)
+            except SystemExit:
+                if attempt < max_retries - 1:
+                    continue
+                raise
+
+    def _attempt_publish(self) -> "subprocess.CompletedProcess[str]":
+        self._validate_authentication_setup()
+        publish_cmd = self._build_publish_command()
+        return self.execute_command(publish_cmd, capture_output=True, text=True)
+
+    def _handle_publish_failure(
+        self, result: "subprocess.CompletedProcess[str]", attempt: int, max_retries: int
+    ) -> bool:
+        if self._is_auth_error(result):
+            return self._handle_auth_error(attempt, max_retries)
+        else:
+            self._handle_non_auth_error(result)
+            return False
+
+    def _handle_auth_error(self, attempt: int, max_retries: int) -> bool:
+        if attempt < max_retries - 1:
+            self.console.print(
+                f"[yellow]⚠️  Authentication failed (attempt {attempt + 1}/{max_retries})[/yellow]"
+            )
+            return self._prompt_for_token()
+        self._display_authentication_help()
+        return False
+
+    def _handle_non_auth_error(
+        self, result: "subprocess.CompletedProcess[str]"
+    ) -> None:
+        self.console.print(result.stdout)
+        self.console.print(result.stderr)
+
+    def _is_auth_error(self, result: "subprocess.CompletedProcess[str]") -> bool:
+        error_text = (result.stdout + result.stderr).lower()
+        auth_indicators = (
+            "authentication",
+            "unauthorized",
+            "403",
+            "401",
+            "invalid credentials",
+            "token",
+            "password",
+            "username",
+        )
+        return any(indicator in error_text for indicator in auth_indicators)
+
+    def _prompt_for_token(self) -> bool:
+        import getpass
+        import os
+        import shutil
+
+        if self.options and getattr(self.options, "ai_agent", False):
+            return False
+        self.console.print("\n[bold yellow]🔐 PyPI Token Required[/bold yellow]")
+        self.console.print(
+            "[dim]Please enter your PyPI token (starts with 'pypi-'):[/dim]"
+        )
+        try:
+            token = getpass.getpass("PyPI Token: ")
+            if not token or not token.startswith("pypi-"):
+                self.console.print(
+                    "[red]❌ Invalid token format. Token must start with 'pypi-'[/red]"
+                )
+                return False
+            if shutil.which("keyring"):
+                try:
+                    result = self.execute_command(
+                        [
+                            "keyring",
+                            "set",
+                            "https://upload.pypi.org/legacy/",
+                            "__token__",
+                        ],
+                        input=token,
+                        capture_output=True,
+                        text=True,
+                    )
+                    if result.returncode == 0:
+                        self.console.print("[green]✅ Token stored in keyring[/green]")
+                    else:
+                        os.environ["UV_PUBLISH_TOKEN"] = token
+                        self.console.print(
+                            "[yellow]⚠️  Keyring storage failed, using environment variable[/yellow]"
+                        )
+                except Exception:
+                    os.environ["UV_PUBLISH_TOKEN"] = token
+                    self.console.print(
+                        "[yellow]⚠️  Keyring storage failed, using environment variable[/yellow]"
+                    )
+            else:
+                os.environ["UV_PUBLISH_TOKEN"] = token
+                self.console.print(
+                    "[yellow]⚠️  Keyring not available, using environment variable[/yellow]"
+                )
+
+            return True
+        except KeyboardInterrupt:
+            self.console.print("\n[yellow]⚠️  Token entry cancelled[/yellow]")
+            return False
+        except Exception as e:
+            self.console.print(f"[red]❌ Error storing token: {e}[/red]")
+            return False
+
     def _display_authentication_help(self) -> None:
         self.console.print(
             "\n[bold bright_red]❌ Publish failed. Run crackerjack again to retry publishing without re-bumping version.[/bold bright_red]"
@@ -3569,28 +3883,30 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 "[bold bright_cyan]🚀 PUBLISH[/bold bright_cyan] [bold bright_white]Building and publishing package[/bold bright_white]"
             )
             self.console.print("-" * 80 + "\n")
-            build = self.execute_command(
-                ["uv", "build"], capture_output=True, text=True
+            state = self._get_state()
+            if not state.get("build_completed", False):
+                build = self.execute_command(
+                    ["uv", "build"], capture_output=True, text=True
+                )
+                self.console.print(build.stdout)
+                if build.returncode > 0:
+                    self.console.print(build.stderr)
+                    self.console.print(
+                        "[bold bright_red]❌ Build failed. Please fix errors.[/bold bright_red]"
+                    )
+                    raise SystemExit(1)
+                state["build_completed"] = True
+                self._save_state(state)
+            else:
+                self.console.print(
+                    "[dim]📦 Using existing build artifacts (retry mode)[/dim]"
+                )
+            self._publish_with_retry()
+            self._mark_publish_completed()
+            self._clear_state()
+            self.console.print(
+                "\n[bold bright_green]🏆 Package published successfully![/bold bright_green]"
             )
-            self.console.print(build.stdout)
-            if build.returncode > 0:
-                self.console.print(build.stderr)
-                self.console.print(
-                    "[bold bright_red]❌ Build failed. Please fix errors.[/bold bright_red]"
-                )
-                raise SystemExit(1)
-            try:
-                self._validate_authentication_setup()
-                publish_cmd = self._build_publish_command()
-                self.execute_command(publish_cmd)
-                self._mark_publish_completed()
-                self._clear_state()
-                self.console.print(
-                    "\n[bold bright_green]🏆 Package published successfully![/bold bright_green]"
-                )
-            except SystemExit:
-                self._display_authentication_help()
-                raise
 
     def _analyze_git_changes(self) -> dict[str, t.Any]:
         diff_result = self._get_git_diff_output()
@@ -3790,6 +4106,11 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
     def _update_precommit(self, options: OptionsProtocol) -> None:
         if options.update_precommit:
+            self.console.print(
+                "\n[bold yellow]⚠️  DEPRECATION WARNING[/bold yellow]: The --update-precommit (-u) flag is deprecated.\n"
+                "   Pre-commit hooks are now updated automatically on a weekly basis.\n"
+                "   This manual update will still work but is no longer needed.\n"
+            )
             self.console.print("\n" + "-" * 80)
             self.console.print(
                 "[bold bright_blue]🔄 UPDATE[/bold bright_blue] [bold bright_white]Updating pre-commit hooks[/bold bright_white]"
