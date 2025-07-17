@@ -3746,6 +3746,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             try:
                 result = self._attempt_publish()
                 if result.returncode == 0:
+                    self._verify_pypi_upload()
                     return
                 if not self._handle_publish_failure(result, attempt, max_retries):
                     raise SystemExit(1)
@@ -3757,7 +3758,167 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     def _attempt_publish(self) -> "subprocess.CompletedProcess[str]":
         self._validate_authentication_setup()
         publish_cmd = self._build_publish_command()
-        return self.execute_command(publish_cmd, capture_output=True, text=True)
+        self.console.print("[dim]📤 Uploading package to PyPI...[/dim]")
+        import subprocess
+        import time
+        from threading import Thread
+
+        from rich.live import Live
+        from rich.spinner import Spinner
+
+        result: subprocess.CompletedProcess[str] | None = None
+        start_time = time.time()
+
+        def run_publish() -> None:
+            nonlocal result
+            result = self.execute_command(publish_cmd, capture_output=True, text=True)
+
+        publish_thread = Thread(target=run_publish)
+        publish_thread.start()
+
+        elapsed_time = 0
+        while publish_thread.is_alive():
+            elapsed_time = time.time() - start_time
+
+            if elapsed_time < 5:
+                text = "[dim]📤 Uploading to PyPI...[/dim]"
+            elif elapsed_time < 15:
+                text = "[dim]📤 Uploading to PyPI... (this may take a moment)[/dim]"
+            else:
+                text = "[dim]📤 Uploading to PyPI... (large package or slow connection)[/dim]"
+
+            spinner = Spinner("dots", text=text)
+            with Live(spinner, refresh_per_second=10, transient=True):
+                time.sleep(0.5)
+
+            if not publish_thread.is_alive():
+                break
+
+        publish_thread.join()
+
+        elapsed_time = time.time() - start_time
+
+        if result and result.returncode == 0:
+            self.console.print(
+                f"[green]✅ Package uploaded successfully! ({elapsed_time:.1f}s)[/green]"
+            )
+        elif result and result.returncode != 0:
+            self.console.print(f"[red]❌ Upload failed after {elapsed_time:.1f}s[/red]")
+            if result.stdout:
+                self.console.print(f"[dim]stdout: {result.stdout}[/dim]")
+            if result.stderr:
+                self.console.print(f"[red]stderr: {result.stderr}[/red]")
+
+        if result is None:
+            return subprocess.CompletedProcess(
+                args=publish_cmd,
+                returncode=1,
+                stdout="",
+                stderr="Thread execution failed",
+            )
+
+        return result
+
+    def _verify_pypi_upload(self) -> None:
+        if self.options and getattr(self.options, "ai_agent", False):
+            return
+        import time
+
+        package_name = self._get_package_name()
+        current_version = self._get_current_version()
+        self.console.print(
+            f"[dim]🔍 Verifying upload of {package_name} v{current_version}...[/dim]"
+        )
+        time.sleep(2)
+        self._retry_pypi_verification(package_name, current_version)
+
+    def _retry_pypi_verification(self, package_name: str, current_version: str) -> None:
+        import time
+
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                if self._check_pypi_package_exists(package_name, current_version):
+                    self._show_pypi_success(package_name, current_version)
+                    return
+                if attempt < max_attempts - 1:
+                    self._show_pypi_retry_message(attempt, max_attempts)
+                    time.sleep(5)
+                    continue
+                else:
+                    self._show_pypi_not_visible(package_name, current_version)
+                    return
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    self._show_pypi_error_retry(attempt, max_attempts, e)
+                    time.sleep(5)
+                    continue
+                else:
+                    self._show_pypi_final_error(package_name, current_version, e)
+                    return
+
+    def _check_pypi_package_exists(
+        self, package_name: str, current_version: str
+    ) -> bool:
+        import json
+        import urllib.error
+        import urllib.request
+
+        url = f"https://pypi.org/pypi/{package_name}/{current_version}/json"
+        try:
+            with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
+                data = json.loads(response.read().decode())
+                return data.get("info", {}).get("version") == current_version
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return False
+            raise
+
+    def _show_pypi_success(self, package_name: str, current_version: str) -> None:
+        self.console.print(
+            f"[green]✅ Verified: {package_name} v{current_version} is available on PyPI![/green]"
+        )
+        pypi_url = f"https://pypi.org/project/{package_name}/{current_version}/"
+        self.console.print(f"[dim]   📦 Package URL: {pypi_url}[/dim]")
+
+    def _show_pypi_retry_message(self, attempt: int, max_attempts: int) -> None:
+        self.console.print(
+            f"[yellow]⏳ Package not yet available on PyPI (attempt {attempt + 1}/{max_attempts}), retrying...[/yellow]"
+        )
+
+    def _show_pypi_not_visible(self, package_name: str, current_version: str) -> None:
+        self.console.print(
+            "[yellow]⚠️  Package uploaded but not yet visible on PyPI (this is normal)[/yellow]"
+        )
+        self.console.print(
+            f"[dim]   Check later at: https://pypi.org/project/{package_name}/{current_version}/[/dim]"
+        )
+
+    def _show_pypi_error_retry(
+        self, attempt: int, max_attempts: int, error: Exception
+    ) -> None:
+        self.console.print(
+            f"[yellow]⏳ Error checking PyPI (attempt {attempt + 1}/{max_attempts}): {error}[/yellow]"
+        )
+
+    def _show_pypi_final_error(
+        self, package_name: str, current_version: str, error: Exception
+    ) -> None:
+        self.console.print(f"[yellow]⚠️  Could not verify PyPI upload: {error}[/yellow]")
+        self.console.print(
+            f"[dim]   Check manually at: https://pypi.org/project/{package_name}/{current_version}/[/dim]"
+        )
+
+    def _get_package_name(self) -> str:
+        import tomllib
+        from pathlib import Path
+
+        pyproject_path = Path("pyproject.toml")
+        if pyproject_path.exists():
+            with pyproject_path.open("rb") as f:
+                data = tomllib.load(f)
+                return data.get("project", {}).get("name", "unknown")
+        return "unknown"
 
     def _handle_publish_failure(
         self, result: "subprocess.CompletedProcess[str]", attempt: int, max_retries: int
