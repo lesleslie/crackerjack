@@ -202,6 +202,75 @@ python -m crackerjack -b minor
 python -m crackerjack -b major
 ```
 
+#### PyPI Authentication Setup
+
+Crackerjack provides enhanced PyPI authentication with automatic validation and helpful error messages. Choose one of these authentication methods:
+
+**Method 1: Environment Variable (Recommended)**
+
+```bash
+# Set PyPI token as environment variable
+export UV_PUBLISH_TOKEN=pypi-your-token-here
+
+# Publish with token authentication
+python -m crackerjack -p patch
+```
+
+**Method 2: Keyring Integration**
+
+```bash
+# Install keyring globally or in current environment
+uv tool install keyring
+
+# Store PyPI token in keyring
+keyring set https://upload.pypi.org/legacy/ __token__
+# Enter your PyPI token when prompted
+
+# Ensure keyring provider is configured in pyproject.toml
+[tool.uv]
+keyring-provider = "subprocess"
+
+# Publish with keyring authentication
+python -m crackerjack -p patch
+```
+
+**Method 3: Environment Variable for Keyring Provider**
+
+```bash
+# Set keyring provider via environment
+export UV_KEYRING_PROVIDER=subprocess
+
+# Publish (will use keyring for authentication)
+python -m crackerjack -p patch
+```
+
+#### Authentication Validation
+
+Crackerjack automatically validates your authentication setup before publishing and provides helpful feedback:
+
+- ✅ **Token Found**: When UV_PUBLISH_TOKEN is set
+- ✅ **Keyring Ready**: When keyring is configured and token is stored
+- ⚠️ **Setup Needed**: When authentication needs configuration
+
+If publishing fails due to authentication issues, crackerjack will display helpful setup instructions.
+
+#### PyPI Token Best Practices
+
+1. **Generate Project-Specific Tokens**: Create separate PyPI tokens for each project
+1. **Use Scoped Tokens**: Limit token scope to the specific package you're publishing
+1. **Secure Storage**: Use environment variables or keyring - never hardcode tokens
+1. **Token Format**: PyPI tokens start with `pypi-` (e.g., `pypi-AgEIcHlwaS5vcmcCJGZm...`)
+
+#### Troubleshooting Authentication
+
+If you encounter authentication issues:
+
+1. **Check Token Format**: Ensure your token starts with `pypi-`
+1. **Verify Environment Variable**: `echo $UV_PUBLISH_TOKEN` should show your token
+1. **Test Keyring**: `keyring get https://upload.pypi.org/legacy/ __token__` should return your token
+1. **Check Configuration**: Ensure `keyring-provider = "subprocess"` in pyproject.toml
+1. **Install Keyring**: `uv tool install keyring` if using keyring authentication
+
 ### Git Operations
 
 ```bash
@@ -376,6 +445,32 @@ Crackerjack follows a single-file architecture for simplicity and maintainabilit
    - Use built-in collection types (`list[str]`, `dict[str, int]`) instead of typing equivalents
    - Leverage Python 3.13+ performance and language improvements
 
+1. **Zen of Python Philosophy**: Follow the Zen of Python principles (PEP 20) in all code:
+
+   - **Beautiful is better than ugly** - Write clean, readable code with clear intent
+   - **Explicit is better than implicit** - Be clear about what code does, avoid magic
+   - **Simple is better than complex** - Choose simple solutions over complex ones
+   - **Complex is better than complicated** - When complexity is needed, keep it organized
+   - **Flat is better than nested** - Avoid deep nesting, prefer flat structure
+   - **Sparse is better than dense** - Use whitespace and clear formatting
+   - **Readability counts** - Prioritize code that humans can easily understand
+   - **Special cases aren't special enough to break the rules** - Apply standards consistently
+   - **Practicality beats purity** - Favor working solutions over theoretical perfection
+   - **Errors should never pass silently** - Handle exceptions explicitly
+   - **In the face of ambiguity, refuse the temptation to guess** - Be explicit about assumptions
+   - **There should be one obvious way to do it** - Prefer established patterns
+   - **Now is better than never** - Don't postpone necessary improvements
+   - **If the implementation is hard to explain, it's a bad idea** - Keep solutions understandable
+   - **Namespaces are one honking great idea** - Use clear, descriptive names and organization
+
+   **Apply these principles to:**
+
+   - **Crackerjack development**: All contributions should embody Zen principles
+   - **Generated code**: AI assistants should generate Zen-compliant code
+   - **Project templates**: Code created by crackerjack should follow Zen principles
+   - **Documentation**: Examples and templates should demonstrate Zen philosophy
+   - **Code reviews**: Evaluate code against Zen principles for quality
+
 1. **Testing Approach**:
 
    - Write unit tests for all functionality
@@ -464,13 +559,13 @@ When generating code, AI assistants MUST follow these standards to ensure compli
 
 **Code Complexity Management (Complexipy):**
 
-- **CRITICAL**: Keep cognitive complexity under 20 per function/method
+- **CRITICAL**: Keep cognitive complexity under 15 per function/method
 - Break complex methods into smaller helper functions (3-5 helper functions are better than 1 complex function)
 - Use descriptive function names that explain their purpose
 - Prefer multiple small functions over one large function
 - **Pattern for refactoring complex methods:**
   ```python
-  # Bad - High complexity (>20)
+  # Bad - High complexity (>15)
   def complex_method(self, data):
       # 50+ lines with multiple nested if/else, loops, etc.
 
@@ -712,12 +807,23 @@ By following these guidelines during code generation, AI assistants will produce
 
 **MANDATORY: Always Apply These Standards When Generating Code**
 
+1. **Zen of Python Compliance**: Ensure all generated code follows Zen principles:
+
+   - **Readability first**: Code should be immediately understandable
+   - **Explicit over implicit**: Clear intent, no hidden behavior or magic
+   - **Simple solutions**: Choose the most straightforward approach that works
+   - **Consistent patterns**: Use established Python idioms and conventions
+   - **Proper error handling**: Never ignore exceptions, handle them explicitly
+   - **Clear naming**: Use descriptive names that explain purpose and intent
+   - **Flat structure**: Avoid deep nesting, prefer early returns and flat logic
+   - **One obvious way**: Use well-known Python patterns over clever alternatives
+
 1. **Pre-Generation Checklist:**
 
    - Use tuples `()` for `in` membership testing, never lists `[]`
    - Don't pass default values that match the function's default (e.g., `None` for optional parameters)
    - Add complete type annotations to ALL function parameters
-   - Keep cognitive complexity under 20 per function
+   - Keep cognitive complexity under 15 per function
    - Implement ALL protocol properties when creating test classes
 
 1. **Common Patterns to Always Follow:**
@@ -741,11 +847,62 @@ By following these guidelines during code generation, AI assistants will produce
        progress_file: str | None = None  # Required
    ```
 
+1. **Zen-Inspired Code Examples:**
+
+   ```python
+   # Beautiful is better than ugly - Clean, clear intent
+   def process_user_data(user_id: str, data: dict[str, Any]) -> ProcessResult:
+       if not user_id:
+           raise ValueError("User ID is required")
+
+       return ProcessResult(
+           user_id=user_id,
+           processed_data=_transform_data(data),
+           timestamp=datetime.now(UTC),
+       )
+
+
+   # Explicit is better than implicit - Clear about what happens
+   def send_notification(user: User, *, force_send: bool = False) -> bool:
+       if not user.email:
+           if force_send:
+               raise ValueError("Cannot force send without email")
+           return False
+
+       return _email_service.send(user.email, template="welcome")
+
+
+   # Simple is better than complex - Direct, understandable logic
+   def validate_config(config: dict[str, Any]) -> None:
+       required_keys = ("database_url", "api_key", "redis_url")
+
+       for key in required_keys:
+           if key not in config:
+               raise ConfigError(f"Missing required config: {key}")
+
+
+   # Flat is better than nested - Early returns, avoid deep nesting
+   def process_request(request: Request) -> Response:
+       if not request.user.is_authenticated:
+           return Response.unauthorized()
+
+       if not request.has_permission("read"):
+           return Response.forbidden()
+
+       if not request.data:
+           return Response.bad_request("No data provided")
+
+       # Main logic here, not nested 4 levels deep
+       result = _process_data(request.data)
+       return Response.success(result)
+   ```
+
 1. **Quality Gate Strategy:**
 
    - Write code that would pass `python -m crackerjack --comprehensive` on first try
    - Prioritize these checks: Refurb FURB109, FURB120, Pyright reportMissingParameterType, Complexipy \<20
    - When refactoring complex code, break into 3-5 helper methods with single responsibilities
+   - **Apply Zen principles**: Every function should be easily explainable in plain English
 
 1. **Testing Integration:**
 

@@ -32,6 +32,7 @@ class Options(BaseModel):
     update_precommit: bool = False
     update_docs: bool = False
     force_update_docs: bool = False
+    compress_docs: bool = False
     clean: bool = False
     test: bool = False
     benchmark: bool = False
@@ -86,6 +87,11 @@ cli_options = {
         False,
         "--force-update-docs",
         help="Force update CLAUDE.md and RULES.md even if they exist.",
+    ),
+    "compress_docs": typer.Option(
+        False,
+        "--compress-docs",
+        help="Automatically compress CLAUDE.md to optimize for Claude Code (enabled by default for other projects).",
     ),
     "verbose": typer.Option(False, "-v", "--verbose", help="Enable verbose output."),
     "publish": typer.Option(
@@ -193,6 +199,7 @@ def main(
     update_precommit: bool = cli_options["update_precommit"],
     update_docs: bool = cli_options["update_docs"],
     force_update_docs: bool = cli_options["force_update_docs"],
+    compress_docs: bool = cli_options["compress_docs"],
     verbose: bool = cli_options["verbose"],
     publish: BumpOption | None = cli_options["publish"],
     all: BumpOption | None = cli_options["all"],
@@ -222,6 +229,7 @@ def main(
         update_precommit=update_precommit,
         update_docs=update_docs,
         force_update_docs=force_update_docs,
+        compress_docs=compress_docs,
         verbose=verbose,
         publish=publish,
         bump=bump,

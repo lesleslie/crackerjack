@@ -274,7 +274,7 @@ python -m crackerjack --resume-from {self.progress_file.name}
 
 """
 
-        all_files = set()
+        all_files: set[str] = set()
         for task in self.tasks.values():
             if task.files_changed:
                 all_files.update(task.files_changed)
@@ -351,7 +351,7 @@ python -m crackerjack --resume-from {self.progress_file.name}
 
     @classmethod
     def find_recent_progress_files(cls, directory: Path = Path.cwd()) -> list[Path]:
-        progress_files = []
+        progress_files: list[Path] = []
         for file_path in directory.glob("SESSION-PROGRESS-*.md"):
             try:
                 if file_path.is_file():
@@ -525,6 +525,7 @@ class OptionsProtocol(t.Protocol):
     update_precommit: bool
     update_docs: bool
     force_update_docs: bool
+    compress_docs: bool
     clean: bool
     test: bool
     benchmark: bool
@@ -1683,38 +1684,321 @@ class ConfigManager(BaseModel, arbitrary_types_allowed=True):
         if configs_to_add:
             self.execute_command(["git", "add"] + configs_to_add)
 
-    def copy_documentation_templates(self, force_update: bool = False) -> None:
+    def copy_documentation_templates(
+        self, force_update: bool = False, compress_docs: bool = False
+    ) -> None:
         docs_to_add: list[str] = []
         for doc_file in documentation_files:
-            doc_path = self.our_path / doc_file
-            pkg_doc_path = self.pkg_path / doc_file
-            if not doc_path.exists():
-                continue
-            if self.pkg_path.stem == "crackerjack":
-                continue
-            should_update = force_update or not pkg_doc_path.exists()
-            if should_update:
-                pkg_doc_path.touch()
-                content = doc_path.read_text(encoding="utf-8")
-                updated_content = self._customize_documentation_content(
-                    content, doc_file
+            if self._should_process_doc_file(doc_file):
+                self._process_single_doc_file(
+                    doc_file, force_update, compress_docs, docs_to_add
                 )
-                pkg_doc_path.write_text(updated_content, encoding="utf-8")
-                docs_to_add.append(doc_file)
-                self.console.print(
-                    f"[green]📋[/green] Updated {doc_file} with latest Crackerjack quality standards"
-                )
+
         if docs_to_add:
             self.execute_command(["git", "add"] + docs_to_add)
 
-    def _customize_documentation_content(self, content: str, filename: str) -> str:
+    def _should_process_doc_file(self, doc_file: str) -> bool:
+        doc_path = self.our_path / doc_file
+        if not doc_path.exists():
+            return False
+        if self.pkg_path.stem == "crackerjack":
+            return False
+        return True
+
+    def _process_single_doc_file(
+        self,
+        doc_file: str,
+        force_update: bool,
+        compress_docs: bool,
+        docs_to_add: list[str],
+    ) -> None:
+        doc_path = self.our_path / doc_file
+        pkg_doc_path = self.pkg_path / doc_file
+        should_update = force_update or not pkg_doc_path.exists()
+
+        if should_update:
+            pkg_doc_path.touch()
+            content = doc_path.read_text(encoding="utf-8")
+
+            auto_compress = self._should_compress_doc(doc_file, compress_docs)
+            updated_content = self._customize_documentation_content(
+                content, doc_file, auto_compress
+            )
+            pkg_doc_path.write_text(updated_content, encoding="utf-8")
+            docs_to_add.append(doc_file)
+
+            self._print_doc_update_message(doc_file, auto_compress)
+
+    def _should_compress_doc(self, doc_file: str, compress_docs: bool) -> bool:
+        return compress_docs or (
+            self.pkg_path.stem != "crackerjack" and doc_file == "CLAUDE.md"
+        )
+
+    def _print_doc_update_message(self, doc_file: str, auto_compress: bool) -> None:
+        compression_note = (
+            " (compressed for Claude Code)"
+            if auto_compress and doc_file == "CLAUDE.md"
+            else ""
+        )
+        self.console.print(
+            f"[green]📋[/green] Updated {doc_file} with latest Crackerjack quality standards{compression_note}"
+        )
+
+    def _customize_documentation_content(
+        self, content: str, filename: str, compress: bool = False
+    ) -> str:
         if filename == "CLAUDE.md":
-            return self._customize_claude_md(content)
+            return self._customize_claude_md(content, compress)
         elif filename == "RULES.md":
             return self._customize_rules_md(content)
         return content
 
-    def _customize_claude_md(self, content: str) -> str:
+    def _compress_claude_md(self, content: str, target_size: int = 30000) -> str:
+        content.split("\n")
+        current_size = len(content)
+        if current_size <= target_size:
+            return content
+        essential_sections = [
+            "# ",
+            "## Project Overview",
+            "## Key Commands",
+            "## Development Guidelines",
+            "## Code Quality Compliance",
+            "### Refurb Standards",
+            "### Bandit Security Standards",
+            "### Pyright Type Safety Standards",
+            "## AI Code Generation Best Practices",
+            "## Task Completion Requirements",
+        ]
+        compression_strategies = [
+            self._remove_redundant_examples,
+            self._compress_command_examples,
+            self._remove_verbose_sections,
+            self._compress_repeated_patterns,
+            self._summarize_long_sections,
+        ]
+        compressed_content = content
+        for strategy in compression_strategies:
+            compressed_content = strategy(compressed_content)
+            if len(compressed_content) <= target_size:
+                break
+        if len(compressed_content) > target_size:
+            compressed_content = self._extract_essential_sections(
+                compressed_content, essential_sections, target_size
+            )
+
+        return self._add_compression_notice(compressed_content)
+
+    def _remove_redundant_examples(self, content: str) -> str:
+        lines = content.split("\n")
+        result = []
+        in_example_block = False
+        example_count = 0
+        max_examples_per_section = 2
+        for line in lines:
+            if line.strip().startswith("```"):
+                if not in_example_block:
+                    example_count += 1
+                    if example_count <= max_examples_per_section:
+                        result.append(line)
+                        in_example_block = True
+                    else:
+                        in_example_block = "skip"
+                else:
+                    if in_example_block != "skip":
+                        result.append(line)
+                    in_example_block = False
+            elif in_example_block == "skip":
+                continue
+            elif line.startswith(("## ", "### ")):
+                example_count = 0
+                result.append(line)
+            else:
+                result.append(line)
+
+        return "\n".join(result)
+
+    def _compress_command_examples(self, content: str) -> str:
+        import re
+
+        content = re.sub(
+            r"```bash\n((?:[^`]+\n){3,})```",
+            lambda m: "```bash\n"
+            + "\n".join(m.group(1).split("\n")[:3])
+            + "\n# ... (additional commands available)\n```",
+            content,
+            flags=re.MULTILINE,
+        )
+
+        return content
+
+    def _remove_verbose_sections(self, content: str) -> str:
+        sections_to_compress = [
+            "## Recent Bug Fixes and Improvements",
+            "## Development Memories",
+            "## Self-Maintenance Protocol for AI Assistants",
+            "## Pre-commit Hook Maintenance",
+        ]
+        lines = content.split("\n")
+        result = []
+        skip_section = False
+        for line in lines:
+            if any(line.startswith(section) for section in sections_to_compress):
+                skip_section = True
+                result.extend(
+                    (line, "*[Detailed information available in full CLAUDE.md]*")
+                )
+                result.append("")
+            elif line.startswith("## ") and skip_section:
+                skip_section = False
+                result.append(line)
+            elif not skip_section:
+                result.append(line)
+
+        return "\n".join(result)
+
+    def _compress_repeated_patterns(self, content: str) -> str:
+        import re
+
+        content = re.sub(r"\n{3,}", "\n\n", content)
+        content = re.sub(
+            r"(\*\*[A-Z][^*]+:\*\*[^\n]+\n){3,}",
+            lambda m: m.group(0)[:200]
+            + "...\n*[Additional patterns available in full documentation]*\n",
+            content,
+        )
+
+        return content
+
+    def _summarize_long_sections(self, content: str) -> str:
+        lines = content.split("\n")
+        result = []
+        current_section = []
+        section_header = ""
+        for line in lines:
+            if line.startswith(("### ", "## ")):
+                if current_section and len("\n".join(current_section)) > 1000:
+                    summary = self._create_section_summary(
+                        section_header, current_section
+                    )
+                    result.extend(summary)
+                else:
+                    result.extend(current_section)
+                current_section = [line]
+                section_header = line
+            else:
+                current_section.append(line)
+        if current_section:
+            if len("\n".join(current_section)) > 1000:
+                summary = self._create_section_summary(section_header, current_section)
+                result.extend(summary)
+            else:
+                result.extend(current_section)
+
+        return "\n".join(result)
+
+    def _create_section_summary(
+        self, header: str, section_lines: list[str]
+    ) -> list[str]:
+        summary = [header, ""]
+
+        key_points = []
+        for line in section_lines[2:]:
+            if line.strip().startswith(("- ", "* ", "1. ", "2. ")):
+                key_points.append(line)
+            elif line.strip().startswith("**") and ":" in line:
+                key_points.append(line)
+
+            if len(key_points) >= 5:
+                break
+
+        if key_points:
+            summary.extend(key_points[:5])
+            summary.append("*[Complete details available in full CLAUDE.md]*")
+        else:
+            content_preview = " ".join(
+                line.strip()
+                for line in section_lines[2:10]
+                if line.strip() and not line.startswith("#")
+            )[:200]
+            summary.extend(
+                (
+                    f"{content_preview}...",
+                    "*[Full section available in complete documentation]*",
+                )
+            )
+
+        summary.append("")
+        return summary
+
+    def _extract_essential_sections(
+        self, content: str, essential_sections: list[str], target_size: int
+    ) -> str:
+        lines = content.split("\n")
+        result = []
+        current_section = []
+        keep_section = False
+
+        for line in lines:
+            new_section_started = self._process_line_for_section(
+                line, essential_sections, current_section, keep_section, result
+            )
+            if new_section_started is not None:
+                current_section, keep_section = new_section_started
+            else:
+                current_section.append(line)
+
+            if self._should_stop_extraction(result, target_size):
+                break
+
+        self._finalize_extraction(current_section, keep_section, result, target_size)
+        return "\n".join(result)
+
+    def _process_line_for_section(
+        self,
+        line: str,
+        essential_sections: list[str],
+        current_section: list[str],
+        keep_section: bool,
+        result: list[str],
+    ) -> tuple[list[str], bool] | None:
+        if any(line.startswith(section) for section in essential_sections):
+            if current_section and keep_section:
+                result.extend(current_section)
+            return ([line], True)
+        elif line.startswith(("## ", "### ")):
+            if current_section and keep_section:
+                result.extend(current_section)
+            return ([line], False)
+        return None
+
+    def _should_stop_extraction(self, result: list[str], target_size: int) -> bool:
+        return len("\n".join(result)) > target_size
+
+    def _finalize_extraction(
+        self,
+        current_section: list[str],
+        keep_section: bool,
+        result: list[str],
+        target_size: int,
+    ) -> None:
+        if current_section and keep_section and len("\n".join(result)) < target_size:
+            result.extend(current_section)
+
+    def _add_compression_notice(self, content: str) -> str:
+        notice = """
+*Note: This CLAUDE.md has been automatically compressed by Crackerjack to optimize for Claude Code usage.
+Complete documentation is available in the source repository.*
+
+"""
+
+        lines = content.split("\n")
+        if len(lines) > 5:
+            lines.insert(5, notice)
+
+        return "\n".join(lines)
+
+    def _customize_claude_md(self, content: str, compress: bool = False) -> str:
         project_name = self.pkg_name
         content = content.replace("crackerjack", project_name).replace(
             "Crackerjack", project_name.title()
@@ -1737,9 +2021,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
         if start_idx > 0:
             relevant_content = "\n".join(lines[start_idx:])
-            return header + relevant_content
+            full_content = header + relevant_content
+        else:
+            full_content = header + content
 
-        return header + content
+        if compress:
+            return self._compress_claude_md(full_content)
+        return full_content
 
     def _customize_rules_md(self, content: str) -> str:
         project_name = self.pkg_name
@@ -1844,13 +2132,22 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
                 "[bold bright_blue]⚡ INIT[/bold bright_blue] [bold bright_white]First-time project setup[/bold bright_white]"
             )
             self.console.print("─" * 80 + "\n")
-            self.execute_command(["uv", "tool", "install", "keyring"])
+            if self.options and getattr(self.options, "ai_agent", False):
+                import subprocess
+
+                self.execute_command(
+                    ["uv", "tool", "install", "keyring"],
+                    capture_output=True,
+                    stderr=subprocess.DEVNULL,
+                )
+            else:
+                self.execute_command(["uv", "tool", "install", "keyring"])
             self.execute_command(["git", "init"])
             self.execute_command(["git", "branch", "-m", "main"])
             self.execute_command(["git", "add", "pyproject.toml", "uv.lock"])
             self.execute_command(["git", "config", "advice.addIgnoredFile", "false"])
             install_cmd = ["uv", "run", "pre-commit", "install"]
-            if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
+            if self.options and getattr(self.options, "ai_agent", False):
                 install_cmd.extend(["-c", ".pre-commit-config-ai.yaml"])
             else:
                 install_cmd.extend(["-c", ".pre-commit-config-fast.yaml"])
@@ -1927,7 +2224,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         result = self.execute_command(cmd, capture_output=True, text=True)
         total_duration = time.time() - start_time
         hook_results = self._parse_hook_output(result.stdout, result.stderr)
-        if hasattr(self, "options") and getattr(self.options, "ai_agent", False):
+        if self.options and getattr(self.options, "ai_agent", False):
             self._generate_hooks_analysis(hook_results, total_duration)
             self._generate_quality_metrics()
             self._generate_project_structure_analysis()
@@ -2049,7 +2346,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         return suggestions
 
     def _generate_quality_metrics(self) -> None:
-        if not (hasattr(self, "options") and getattr(self.options, "ai_agent", False)):
+        if not (self.options and getattr(self.options, "ai_agent", False)):
             return
         metrics = {
             "project_info": {
@@ -2224,7 +2521,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         return recommendations
 
     def _generate_project_structure_analysis(self) -> None:
-        if not (hasattr(self, "options") and getattr(self.options, "ai_agent", False)):
+        if not (self.options and getattr(self.options, "ai_agent", False)):
             return
         structure = {
             "project_overview": {
@@ -2248,7 +2545,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         )
 
     def _generate_error_context_analysis(self) -> None:
-        if not (hasattr(self, "options") and getattr(self.options, "ai_agent", False)):
+        if not (self.options and getattr(self.options, "ai_agent", False)):
             return
         context = {
             "analysis_info": {
@@ -2269,7 +2566,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
         )
 
     def _generate_ai_agent_summary(self) -> None:
-        if not (hasattr(self, "options") and getattr(self.options, "ai_agent", False)):
+        if not (self.options and getattr(self.options, "ai_agent", False)):
             return
         summary = {
             "analysis_summary": {
@@ -2549,7 +2846,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             raise SystemExit(1)
         else:
             self.console.print(
-                "\n[bold bright_green]✅ Pre-commit passed all checks![/bold bright_green]"
+                "\n[bold bright_green]🏆 Pre-commit passed all checks![/bold bright_green]"
             )
 
     async def run_pre_commit_with_analysis_async(self) -> list[HookResult]:
@@ -2595,7 +2892,7 @@ class ProjectManager(BaseModel, arbitrary_types_allowed=True):
             raise SystemExit(1)
         else:
             self.console.print(
-                "\n[bold bright_green]✅ Pre-commit passed all checks![/bold bright_green]"
+                "\n[bold bright_green]🏆 Pre-commit passed all checks![/bold bright_green]"
             )
         self._generate_analysis_files(hook_results)
 
@@ -2686,6 +2983,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
     config_manager: ConfigManager | None = None
     project_manager: ProjectManager | None = None
     session_tracker: SessionTracker | None = None
+    options: t.Any = None
     _file_cache: dict[str, list[Path]] = {}
     _file_cache_with_mtime: dict[str, tuple[float, list[Path]]] = {}
     _state_file: Path = Path(".crackerjack-state")
@@ -3080,7 +3378,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
 
     def _handle_test_success(self, options: t.Any) -> None:
         self.console.print(
-            "\n\n[bold bright_green]✅ Tests passed successfully![/bold bright_green]\n"
+            "\n\n[bold bright_green]🏆 Tests passed successfully![/bold bright_green]\n"
         )
         self._print_ai_agent_files(options)
 
@@ -3149,6 +3447,121 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 self._mark_version_bumped(version_type)
                 break
 
+    def _validate_authentication_setup(self) -> None:
+        import os
+        import shutil
+
+        keyring_provider = self._get_keyring_provider()
+        has_publish_token = bool(os.environ.get("UV_PUBLISH_TOKEN"))
+        has_keyring = shutil.which("keyring") is not None
+        self.console.print("[dim]🔐 Validating authentication setup...[/dim]")
+        if has_publish_token:
+            self._handle_publish_token_found()
+            return
+        if keyring_provider == "subprocess" and has_keyring:
+            self._handle_keyring_validation()
+            return
+        if keyring_provider == "subprocess" and not has_keyring:
+            self._handle_missing_keyring()
+        if not keyring_provider:
+            self._handle_no_keyring_provider()
+
+    def _handle_publish_token_found(self) -> None:
+        self.console.print(
+            "[dim]  ✅ UV_PUBLISH_TOKEN environment variable found[/dim]"
+        )
+
+    def _handle_keyring_validation(self) -> None:
+        self.console.print(
+            "[dim]  ✅ Keyring provider configured and keyring executable found[/dim]"
+        )
+        try:
+            result = self.execute_command(
+                ["keyring", "get", "https://upload.pypi.org/legacy/", "__token__"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                self.console.print("[dim]  ✅ PyPI token found in keyring[/dim]")
+            else:
+                self.console.print(
+                    "[yellow]  ⚠️  No PyPI token found in keyring - will prompt during publish[/yellow]"
+                )
+        except Exception:
+            self.console.print(
+                "[yellow]  ⚠️  Could not check keyring - will attempt publish anyway[/yellow]"
+            )
+
+    def _handle_missing_keyring(self) -> None:
+        if not (self.options and getattr(self.options, "ai_agent", False)):
+            self.console.print(
+                "[yellow]  ⚠️  Keyring provider set to 'subprocess' but keyring executable not found[/yellow]"
+            )
+            self.console.print(
+                "[yellow]      Install keyring: uv tool install keyring[/yellow]"
+            )
+
+    def _handle_no_keyring_provider(self) -> None:
+        if not (self.options and getattr(self.options, "ai_agent", False)):
+            self.console.print(
+                "[yellow]  ⚠️  No keyring provider configured and no UV_PUBLISH_TOKEN set[/yellow]"
+            )
+
+    def _get_keyring_provider(self) -> str | None:
+        import os
+        import tomllib
+        from pathlib import Path
+
+        env_provider = os.environ.get("UV_KEYRING_PROVIDER")
+        if env_provider:
+            return env_provider
+        for config_file in ("pyproject.toml", "uv.toml"):
+            config_path = Path(config_file)
+            if config_path.exists():
+                try:
+                    with config_path.open("rb") as f:
+                        config = tomllib.load(f)
+                    return config.get("tool", {}).get("uv", {}).get("keyring-provider")
+                except Exception:
+                    continue
+
+        return None
+
+    def _build_publish_command(self) -> list[str]:
+        import os
+
+        cmd = ["uv", "publish"]
+        publish_token = os.environ.get("UV_PUBLISH_TOKEN")
+        if publish_token:
+            cmd.extend(["--token", publish_token])
+        keyring_provider = self._get_keyring_provider()
+        if keyring_provider:
+            cmd.extend(["--keyring-provider", keyring_provider])
+
+        return cmd
+
+    def _display_authentication_help(self) -> None:
+        self.console.print(
+            "\n[bold bright_red]❌ Publish failed. Run crackerjack again to retry publishing without re-bumping version.[/bold bright_red]"
+        )
+        if not (self.options and getattr(self.options, "ai_agent", False)):
+            self.console.print("\n[bold yellow]🔐 Authentication Help:[/bold yellow]")
+            self.console.print("  [dim]To fix authentication issues, you can:[/dim]")
+            self.console.print(
+                "  [dim]1. Set PyPI token: export UV_PUBLISH_TOKEN=pypi-your-token-here[/dim]"
+            )
+            self.console.print(
+                "  [dim]2. Install keyring: uv tool install keyring[/dim]"
+            )
+            self.console.print(
+                "  [dim]3. Store token in keyring: keyring set https://upload.pypi.org/legacy/ __token__[/dim]"
+            )
+            self.console.print(
+                "  [dim]4. Ensure keyring-provider is set in pyproject.toml:[/dim]"
+            )
+            self.console.print("  [dim]     [tool.uv][/dim]")
+            self.console.print('  [dim]     keyring-provider = "subprocess"[/dim]')
+
     def _publish_project(self, options: OptionsProtocol) -> None:
         if options.publish:
             self.console.print("\n" + "-" * 80)
@@ -3167,17 +3580,168 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 )
                 raise SystemExit(1)
             try:
-                self.execute_command(["uv", "publish"])
+                self._validate_authentication_setup()
+                publish_cmd = self._build_publish_command()
+                self.execute_command(publish_cmd)
                 self._mark_publish_completed()
                 self._clear_state()
                 self.console.print(
-                    "\n[bold bright_green]✅ Package published successfully![/bold bright_green]"
+                    "\n[bold bright_green]🏆 Package published successfully![/bold bright_green]"
                 )
             except SystemExit:
-                self.console.print(
-                    "\n[bold bright_red]❌ Publish failed. Run crackerjack again to retry publishing without re-bumping version.[/bold bright_red]"
-                )
+                self._display_authentication_help()
                 raise
+
+    def _analyze_git_changes(self) -> dict[str, t.Any]:
+        diff_result = self._get_git_diff_output()
+        changes = self._parse_git_diff_output(diff_result)
+        changes["stats"] = self._get_git_stats()
+        return changes
+
+    def _get_git_diff_output(self) -> t.Any:
+        diff_cmd = ["git", "diff", "--cached", "--name-status"]
+        diff_result = self.execute_command(diff_cmd, capture_output=True, text=True)
+        if not diff_result.stdout and diff_result.returncode == 0:
+            diff_cmd = ["git", "diff", "--name-status"]
+            diff_result = self.execute_command(diff_cmd, capture_output=True, text=True)
+        return diff_result
+
+    def _parse_git_diff_output(self, diff_result: t.Any) -> dict[str, t.Any]:
+        changes = {
+            "added": [],
+            "modified": [],
+            "deleted": [],
+            "renamed": [],
+            "total_changes": 0,
+        }
+        if diff_result.returncode == 0 and diff_result.stdout:
+            self._process_diff_lines(diff_result.stdout, changes)
+        return changes
+
+    def _process_diff_lines(self, stdout: str, changes: dict[str, t.Any]) -> None:
+        for line in stdout.strip().split("\n"):
+            if not line:
+                continue
+            self._process_single_diff_line(line, changes)
+
+    def _process_single_diff_line(self, line: str, changes: dict[str, t.Any]) -> None:
+        parts = line.split("\t")
+        if len(parts) >= 2:
+            status, filename = parts[0], parts[1]
+            self._categorize_file_change(status, filename, parts, changes)
+            changes["total_changes"] += 1
+
+    def _categorize_file_change(
+        self, status: str, filename: str, parts: list[str], changes: dict[str, t.Any]
+    ) -> None:
+        if status == "A":
+            changes["added"].append(filename)
+        elif status == "M":
+            changes["modified"].append(filename)
+        elif status == "D":
+            changes["deleted"].append(filename)
+        elif status.startswith("R"):
+            if len(parts) >= 3:
+                changes["renamed"].append((parts[1], parts[2]))
+            else:
+                changes["renamed"].append((filename, "unknown"))
+
+    def _get_git_stats(self) -> str:
+        stat_cmd = ["git", "diff", "--cached", "--stat"]
+        stat_result = self.execute_command(stat_cmd, capture_output=True, text=True)
+        if not stat_result.stdout and stat_result.returncode == 0:
+            stat_cmd = ["git", "diff", "--stat"]
+            stat_result = self.execute_command(stat_cmd, capture_output=True, text=True)
+        return stat_result.stdout if stat_result.returncode == 0 else ""
+
+    def _categorize_changes(self, changes: dict[str, t.Any]) -> dict[str, list[str]]:
+        categories = {
+            "docs": [],
+            "tests": [],
+            "config": [],
+            "core": [],
+            "ci": [],
+            "deps": [],
+        }
+        file_patterns = {
+            "docs": ["README.md", "CLAUDE.md", "RULES.md", "docs/", ".md"],
+            "tests": ["test_", "_test.py", "tests/", "conftest.py"],
+            "config": ["pyproject.toml", ".yaml", ".yml", ".json", ".gitignore"],
+            "ci": [".github/", "ci/", ".pre-commit"],
+            "deps": ["requirements", "pyproject.toml", "uv.lock"],
+        }
+        for file_list in ("added", "modified", "deleted"):
+            for filename in changes.get(file_list, []):
+                categorized = False
+                for category, patterns in file_patterns.items():
+                    if any(pattern in filename for pattern in patterns):
+                        categories[category].append(filename)
+                        categorized = True
+                        break
+                if not categorized:
+                    categories["core"].append(filename)
+
+        return categories
+
+    def _get_primary_changes(self, categories: dict[str, list[str]]) -> list[str]:
+        primary_changes = []
+        category_mapping = [
+            ("core", "core functionality"),
+            ("tests", "tests"),
+            ("docs", "documentation"),
+            ("config", "configuration"),
+            ("deps", "dependencies"),
+        ]
+        for key, label in category_mapping:
+            if categories[key]:
+                primary_changes.append(label)
+
+        return primary_changes or ["project files"]
+
+    def _determine_primary_action(self, changes: dict[str, t.Any]) -> str:
+        added_count = len(changes["added"])
+        modified_count = len(changes["modified"])
+        deleted_count = len(changes["deleted"])
+        if added_count > modified_count + deleted_count:
+            return "Add"
+        elif deleted_count > modified_count + added_count:
+            return "Remove"
+        elif changes["renamed"]:
+            return "Refactor"
+        return "Update"
+
+    def _generate_body_lines(self, changes: dict[str, t.Any]) -> list[str]:
+        body_lines = []
+        change_types = [
+            ("added", "Added"),
+            ("modified", "Modified"),
+            ("deleted", "Deleted"),
+            ("renamed", "Renamed"),
+        ]
+        for change_type, label in change_types:
+            items = changes.get(change_type, [])
+            if items:
+                count = len(items)
+                body_lines.append(f"- {label} {count} file(s)")
+                if change_type not in ("deleted", "renamed"):
+                    for file in items[:3]:
+                        body_lines.append(f"  * {file}")
+                    if count > 3:
+                        body_lines.append(f"  * ... and {count - 3} more")
+
+        return body_lines
+
+    def _generate_commit_message(self, changes: dict[str, t.Any]) -> str:
+        if changes["total_changes"] == 0:
+            return "Update project files"
+        categories = self._categorize_changes(changes)
+        primary_changes = self._get_primary_changes(categories)
+        primary_action = self._determine_primary_action(changes)
+        commit_subject = f"{primary_action} {' and '.join(primary_changes[:2])}"
+        body_lines = self._generate_body_lines(changes)
+        if body_lines:
+            return f"{commit_subject}\n\n" + "\n".join(body_lines)
+        return commit_subject
 
     def _commit_and_push(self, options: OptionsProtocol) -> None:
         if options.commit:
@@ -3186,7 +3750,39 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
                 "[bold bright_white]📝 COMMIT[/bold bright_white] [bold bright_white]Saving changes to git[/bold bright_white]"
             )
             self.console.print("-" * 80 + "\n")
-            commit_msg = input("\nCommit message: ")
+            changes = self._analyze_git_changes()
+            if changes["total_changes"] > 0:
+                self.console.print("[dim]🔍 Analyzing changes...[/dim]\n")
+                if changes["stats"]:
+                    self.console.print(changes["stats"])
+                suggested_msg = self._generate_commit_message(changes)
+                self.console.print(
+                    "\n[bold cyan]📋 Suggested commit message:[/bold cyan]"
+                )
+                self.console.print(f"[cyan]{suggested_msg}[/cyan]\n")
+                user_choice = (
+                    input("Use suggested message? [Y/n/e to edit]: ").strip().lower()
+                )
+                if user_choice in ("", "y"):
+                    commit_msg = suggested_msg
+                elif user_choice == "e":
+                    import os
+                    import tempfile
+
+                    with tempfile.NamedTemporaryFile(
+                        mode="w", suffix=".txt", delete=False
+                    ) as f:
+                        f.write(suggested_msg)
+                        temp_path = f.name
+                    editor = os.environ.get("EDITOR", "vi")
+                    self.execute_command([editor, temp_path])
+                    with open(temp_path) as f:
+                        commit_msg = f.read().strip()
+                    Path(temp_path).unlink()
+                else:
+                    commit_msg = input("\nEnter custom commit message: ")
+            else:
+                commit_msg = input("\nCommit message: ")
             self.execute_command(
                 ["git", "commit", "-m", commit_msg, "--no-verify", "--", "."]
             )
@@ -3215,7 +3811,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             )
             self.console.print("-" * 80 + "\n")
             self.config_manager.copy_documentation_templates(
-                force_update=options.force_update_docs
+                force_update=options.force_update_docs,
+                compress_docs=options.compress_docs,
             )
 
     def execute_command(
@@ -3289,7 +3886,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             raise SystemExit(1)
         else:
             self.console.print(
-                "\n[bold bright_green]✅ All comprehensive quality checks passed![/bold bright_green]"
+                "\n[bold bright_green]🏆 All comprehensive quality checks passed![/bold bright_green]"
             )
 
     async def _run_comprehensive_quality_checks_async(
@@ -3339,7 +3936,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
             raise SystemExit(1)
         else:
             self.console.print(
-                "[bold bright_green]✅ All comprehensive quality checks passed![/bold bright_green]"
+                "[bold bright_green]🏆 All comprehensive quality checks passed![/bold bright_green]"
             )
 
     def _run_tracked_task(
@@ -3450,7 +4047,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self._run_tracked_task(
             "clean_project", "Clean project code", lambda: self._clean_project(options)
         )
-        self.project_manager.options = options
+        if self.project_manager is not None:
+            self.project_manager.options = options
         if not options.skip_hooks:
             self._run_tracked_task(
                 "pre_commit",
@@ -3480,7 +4078,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         )
         self.console.print("\n" + "-" * 80)
         self.console.print(
-            "[bold bright_green]✨ CRACKERJACK COMPLETE[/bold bright_green] [bold bright_white]Workflow completed successfully![/bold bright_white]"
+            "[bold bright_green]🏆 CRACKERJACK COMPLETE[/bold bright_green] [bold bright_white]Workflow completed successfully![/bold bright_white]"
         )
         self.console.print("-" * 80 + "\n")
 
@@ -3500,7 +4098,8 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self._update_project(options)
         self._update_precommit(options)
         await self._clean_project_async(options)
-        self.project_manager.options = options
+        if self.project_manager is not None:
+            self.project_manager.options = options
         if not options.skip_hooks:
             if getattr(options, "ai_agent", False):
                 await self.project_manager.run_pre_commit_with_analysis_async()
@@ -3517,7 +4116,7 @@ class Crackerjack(BaseModel, arbitrary_types_allowed=True):
         self._publish_project(options)
         self.console.print("\n" + "-" * 80)
         self.console.print(
-            "[bold bright_green]✨ CRACKERJACK COMPLETE[/bold bright_green] [bold bright_white]Workflow completed successfully![/bold bright_white]"
+            "[bold bright_green]🏆 CRACKERJACK COMPLETE[/bold bright_green] [bold bright_white]Workflow completed successfully![/bold bright_white]"
         )
         self.console.print("-" * 80 + "\n")
 

@@ -107,6 +107,7 @@ Crackerjack is built on the following core principles:
 
 ### Git Integration
 
+- **Intelligent Commit Messages:** Analyzes git changes and suggests descriptive commit messages based on file types and modifications
 - **Commit and Push:** Commits and pushes your changes with standardized commit messages
 - **Pull Request Creation:** Creates pull requests to upstream repositories on GitHub or GitLab
 - **Pre-commit Integration:** Ensures code quality before commits
@@ -118,25 +119,106 @@ Crackerjack is built on the following core principles:
 - **Structured Error Handling:** Clear error messages with error codes, detailed explanations, and recovery suggestions
 - **Programmatic API:** Can be integrated into your own Python scripts and workflows
 - **AI Agent Integration:** Structured output format for integration with AI assistants, with complete style rules available in [RULES.md](RULES.md) for AI tool customization
+- **Celebratory Success Messages:** Trophy emoji (🏆) celebrates achieving crackerjack quality when all checks pass
 - **Verbose Mode:** Detailed output for debugging and understanding what's happening
 - **Python 3.13+ Features:** Leverages the latest Python language features including PEP 695 type parameter syntax, Self type annotations, and structural pattern matching
 
-## Pre-commit Hooks
+## Pre-commit Hooks & Performance Optimization
 
-Crackerjack automatically installs and manages these pre-commit hooks:
+Crackerjack provides dual-mode pre-commit hook configuration optimized for different development scenarios:
 
-1. **uv-lock:** Ensures the `uv.lock` file is up to date.
-1. **Core pre-commit-hooks:** Essential hooks from [pre-commit-hooks](https://github.com/pre-commit/pre-commit-hooks) (e.g., `trailing-whitespace`, `end-of-file-fixer`).
-1. **Ruff:** [Ruff](https://github.com/astral-sh/ruff) for linting, code formatting, and general code style enforcement.
-1. **Vulture:** [Vulture](https://github.com/jendrikseipp/vulture) to identify dead code.
-1. **Creosote:** [Creosote](https://github.com/fredrikaverpil/creosote) to detect unused dependencies.
-1. **Complexipy:** [Complexipy](https://github.com/rohaquinlop/complexipy-pre-commit) for analyzing code complexity.
-1. **Codespell:** [Codespell](https://github.com/codespell-project/codespell) for correcting typos in the code.
-1. **Autotyping:** [Autotyping](https://github.com/JelleZijlstra/autotyping) for adding type hints.
-1. **Refurb:** [Refurb](https://github.com/dosisod/refurb) to suggest code improvements.
-1. **Bandit:** [Bandit](https://github.com/PyCQA/bandit) to identify potential security vulnerabilities.
-1. **Pyright:** [Pyright](https://github.com/RobertCraigie/pyright-python) for static type checking.
-1. **Ruff (again):** A final Ruff pass to ensure all changes comply with the enforced style.
+### ⚡ Fast Development Mode (Default)
+
+**Target Execution Time: \<5 seconds**
+
+Uses `.pre-commit-config-fast.yaml` for regular development work:
+
+- **Structure Validation**: Basic file structure checks
+- **UV Lock Updates**: Keeps dependency lock files current
+- **Security Checks**: Essential security scanning with detect-secrets
+- **Quick Formatting**: Fast formatting with codespell and ruff
+- **Markdown Formatting**: mdformat with ruff integration
+
+```bash
+# Default fast mode (automatically selected)
+python -m crackerjack
+
+# Explicitly use fast mode
+python -m crackerjack --fast  # Uses fast pre-commit configuration
+```
+
+### 🔍 Comprehensive Analysis Mode
+
+**Target Execution Time: \<30 seconds**
+
+Uses `.pre-commit-config.yaml` for thorough analysis before releases or important commits:
+
+- **All Fast Mode Checks**: Includes everything from fast mode
+- **Type Checking**: Complete static analysis with Pyright
+- **Code Modernization**: Advanced suggestions with Refurb
+- **Security Scanning**: Comprehensive vulnerability detection with Bandit
+- **Dead Code Detection**: Unused code identification with Vulture
+- **Dependency Analysis**: Unused dependency detection with Creosote
+- **Complexity Analysis**: Code complexity checking with Complexipy
+- **Auto Type Hints**: Automatic type annotation with Autotyping
+
+```bash
+# Run comprehensive analysis
+python -m crackerjack --comprehensive
+
+# Use comprehensive mode for releases
+python -m crackerjack --comprehensive -a patch
+```
+
+### 📦 Pre-push Hooks (CI/CD Integration)
+
+For expensive operations that should run before pushing to remote repositories:
+
+```bash
+# Install pre-push hooks for comprehensive checks
+pre-commit install --hook-type pre-push
+
+# Manual pre-push validation
+python -m crackerjack --comprehensive --test
+```
+
+### Performance Comparison
+
+| Mode | Execution Time | Use Case | Hooks Count |
+|------|---------------|----------|-------------|
+| **Fast** | \<5s | Regular development | 8 essential hooks |
+| **Comprehensive** | \<30s | Pre-release, important commits | 15+ thorough hooks |
+| **Pre-push** | Variable | CI/CD, remote push | All hooks + extended analysis |
+
+### Hook Categories
+
+**Fast Mode Hooks:**
+
+1. **uv-lock:** Ensures the `uv.lock` file is up to date
+1. **Core pre-commit-hooks:** Essential hooks (trailing-whitespace, end-of-file-fixer)
+1. **Ruff:** Fast linting and formatting
+1. **Detect-secrets:** Security credential detection
+1. **Codespell:** Spelling mistake correction
+1. **mdformat:** Markdown formatting
+
+**Additional Comprehensive Mode Hooks:**
+7\. **Vulture:** Dead code detection
+8\. **Creosote:** Unused dependency detection
+9\. **Complexipy:** Code complexity analysis
+10\. **Autotyping:** Automatic type hint generation
+11\. **Refurb:** Code modernization suggestions
+12\. **Bandit:** Security vulnerability scanning
+13\. **Pyright:** Static type checking
+14\. **Extended Ruff:** Additional formatting passes
+
+### Smart Hook Selection
+
+Crackerjack automatically selects the appropriate hook configuration based on:
+
+- **Operation Type**: Fast for regular development, comprehensive for releases
+- **User Preference**: Explicit `--fast` or `--comprehensive` flags
+- **CI/CD Context**: Pre-push hooks for remote operations
+- **Project Size**: Larger projects may benefit from fast mode during development
 
 ## The Crackerjack Style Guide
 
@@ -194,35 +276,104 @@ python -m crackerjack -t --test-timeout=300
 python -m crackerjack -t --test-workers=2 --test-timeout=600
 ```
 
-### Benchmark Testing
+### Benchmark Testing & Performance Monitoring
 
-Crackerjack includes benchmark testing capabilities:
+Crackerjack includes comprehensive benchmark testing capabilities designed for continuous performance monitoring and regression detection:
 
-- **Performance Measurement:** Run tests with `--benchmark` to measure execution time and performance
-- **Regression Testing:** Use `--benchmark-regression` to detect performance regressions
-- **Configurable Thresholds:** Set custom regression thresholds with `--benchmark-regression-threshold`
-- **Compatibility Management:** Automatically disables parallel execution when running benchmarks
-- **CI Integration:** Track performance across commits with benchmark history
+#### 📊 Core Benchmark Features
 
-When benchmarks are run, Crackerjack:
+- **Performance Measurement:** Accurately measure execution time, memory usage, and function calls
+- **Regression Detection:** Automatic detection of performance degradation between code changes
+- **Statistical Analysis:** Statistical validation of performance differences with confidence intervals
+- **Historical Tracking:** Track performance trends across commits and releases
+- **CI/CD Integration:** Seamless integration with continuous integration pipelines
+- **AI Agent Output:** JSON format benchmark results for automated analysis
 
-1. Disables parallel test execution (as pytest-benchmark is incompatible with pytest-xdist)
-1. Configures the pytest-benchmark plugin with optimized settings
-1. Compares benchmark results against previous runs when regression testing is enabled
-1. Fails tests if performance decreases beyond the specified threshold
+#### 🚀 Benchmark Execution Modes
 
-Example benchmark usage:
+**Basic Benchmarking:**
 
 ```bash
-# Run benchmarks
+# Run tests with performance measurement
 python -m crackerjack -t --benchmark
 
-# Run benchmarks with regression testing (fail if >5% slower)
+# Combine with AI agent mode for structured output
+python -m crackerjack -t --benchmark --ai-agent
+```
+
+**Regression Testing:**
+
+```bash
+# Run benchmarks with regression detection (5% threshold)
 python -m crackerjack -t --benchmark-regression
 
-# Run benchmarks with custom regression threshold (10%)
+# Custom regression threshold (fail if >10% slower)
 python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold=10.0
+
+# Strict regression testing for critical performance paths (2% threshold)
+python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold=2.0
 ```
+
+#### 📈 Strategic Benchmark Scheduling
+
+**🚀 Critical Scenarios (Always Run Benchmarks):**
+
+- Before major releases
+- After significant algorithmic changes
+- When performance-critical code is modified
+
+**📊 Regular Monitoring (Weekly):**
+
+- Automated CI/CD pipeline execution
+- Performance drift detection
+- Long-term trend analysis
+
+**🎲 Random Sampling (10% of commits):**
+
+- Stochastic performance monitoring
+- Gradual performance regression detection
+- Statistical baseline maintenance
+
+#### ⚙️ Technical Implementation
+
+When benchmarks are executed, Crackerjack:
+
+1. **Disables Parallel Execution**: Ensures accurate timing measurements (pytest-benchmark incompatible with pytest-xdist)
+1. **Optimizes Configuration**: Configures pytest-benchmark with performance-optimized settings
+1. **Baseline Comparison**: Compares results against previous runs for regression detection
+1. **Statistical Validation**: Uses statistical methods to determine significant performance changes
+1. **JSON Export**: Generates machine-readable results for automated analysis (with `--ai-agent`)
+
+#### 🎯 Benchmark Best Practices
+
+**Threshold Guidelines:**
+
+- **2-5% threshold**: For release candidates and critical performance paths
+- **5-10% threshold**: For regular development and monitoring
+- **10%+ threshold**: For experimental features and early development
+
+**Execution Strategy:**
+
+```bash
+# Development workflow with benchmarks
+python -m crackerjack -t --benchmark --test-workers=1
+
+# Release validation with strict thresholds
+python -m crackerjack -t --benchmark-regression --benchmark-regression-threshold=2.0
+
+# CI/CD integration with structured output
+python -m crackerjack --ai-agent -t --benchmark-regression --benchmark-regression-threshold=5.0
+```
+
+#### 📁 Benchmark Output Files
+
+When using `--ai-agent` mode, benchmark results are exported to:
+
+- **`benchmark.json`**: Detailed performance metrics and statistical analysis
+- **`test-results.xml`**: JUnit XML format with benchmark integration
+- **`ai-agent-summary.json`**: Summary including benchmark status and regression analysis
+
+This comprehensive approach ensures that performance regressions are caught early while maintaining development velocity.
 
 ## Installation
 
@@ -323,28 +474,183 @@ runner = create_crackerjack_runner(
 runner.process(MyOptions())
 ```
 
+## Intelligent Commit Messages
+
+Crackerjack includes a smart commit message generation system that analyzes your git changes and suggests descriptive commit messages based on the files modified and the type of changes made.
+
+### How It Works
+
+When you use the `-c` (commit) flag, Crackerjack automatically:
+
+1. **Analyzes Changes**: Scans `git diff` to understand what files were added, modified, deleted, or renamed
+1. **Categorizes Files**: Groups changes by type (documentation, tests, core functionality, configuration, dependencies)
+1. **Suggests Message**: Generates a descriptive commit message with appropriate action verbs and categorization
+1. **Interactive Choice**: Offers options to use the suggestion, edit it, or write a custom message
+
+### Message Format
+
+Generated commit messages follow this structure:
+
+```
+[Action] [primary changes] and [secondary changes]
+
+- Added N file(s)
+  * path/to/new/file.py
+  * path/to/another/file.py
+- Modified N file(s)
+  * path/to/changed/file.py
+- Deleted N file(s)
+- Renamed N file(s)
+```
+
+### Examples
+
+**Documentation Updates:**
+
+```
+Update documentation
+
+- Modified 3 file(s)
+  * README.md
+  * CLAUDE.md
+  * docs/guide.md
+```
+
+**New Feature Addition:**
+
+```
+Add core functionality and tests
+
+- Added 2 file(s)
+  * src/new_feature.py
+  * tests/test_feature.py
+- Modified 1 file(s)
+  * README.md
+```
+
+**Configuration Changes:**
+
+```
+Update configuration
+
+- Modified 2 file(s)
+  * pyproject.toml
+  * .pre-commit-config.yaml
+```
+
+### Usage Options
+
+When committing, you'll see:
+
+```bash
+🔍 Analyzing changes...
+
+ README.md | 10 ++++
+ tests/test_new.py | 50 ++++
+ 2 files changed, 60 insertions(+)
+
+📋 Suggested commit message:
+Update documentation and tests
+
+- Modified 1 file(s)
+  * README.md
+- Added 1 file(s)
+  * tests/test_new.py
+
+Use suggested message? [Y/n/e to edit]:
+```
+
+**Options:**
+
+- **Y** or **Enter**: Use the suggested message as-is
+- **n**: Enter a completely custom commit message
+- **e**: Edit the suggested message in your default editor (`$EDITOR`)
+
+### Smart Categorization
+
+The system intelligently categorizes files:
+
+- **Documentation**: `README.md`, `CLAUDE.md`, `docs/`, `.md` files
+- **Tests**: `test_`, `tests/`, `conftest.py`
+- **Configuration**: `pyproject.toml`, `.yaml`, `.yml`, `.json`, `.gitignore`
+- **CI/CD**: `.github/`, `ci/`, `.pre-commit`
+- **Dependencies**: `requirements`, `pyproject.toml`, `uv.lock`
+- **Core**: All other Python files and application code
+
+This intelligent commit message system helps maintain consistent, descriptive commit history while saving time during development workflows.
+
 ### Command-Line Options
 
-- `-c`, `--commit`: Commit changes to Git.
-- `-i`, `--interactive`: Run pre-commit hooks interactively when possible.
-- `-n`, `--no-config-updates`: Skip updating configuration files (e.g., `pyproject.toml`).
-- `-u`, `--update-precommit`: Update pre-commit hooks to the latest versions.
-- `-v`, `--verbose`: Enable verbose output.
-- `-p`, `--publish <patch|minor|major>`: Bump the project version and publish to PyPI using UV.
-- `-b`, `--bump <patch|minor|major>`: Bump the project version without publishing.
-- `-r`, `--pr`: Create a pull request to the upstream repository.
-- `-s`, `--skip-hooks`: Skip running pre-commit hooks (useful with `-t`).
-- `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace.
-- `-t`, `--test`: Run tests using `pytest`.
-- `--test-workers`: Set the number of parallel workers for testing (0 = auto-detect, 1 = disable parallelization).
-- `--test-timeout`: Set the timeout in seconds for individual tests (0 = use default based on project size).
-- `--benchmark`: Run tests in benchmark mode (disables parallel execution).
-- `--benchmark-regression`: Fail tests if benchmarks regress beyond threshold.
-- `--benchmark-regression-threshold`: Set threshold percentage for benchmark regression (default 5.0%).
-- `-a`, `--all`: Run with `-x -t -p <patch|minor|major> -c` development options.
-- `-i`, `--interactive`: Enable the interactive Rich UI for a more user-friendly experience with visual progress tracking and interactive prompts.
-- `--ai-agent`: Enable AI agent mode with structured output (see [AI Agent Integration](#ai-agent-integration)).
-- `--help`: Display help.
+#### Core Workflow Options
+
+- `-c`, `--commit`: Commit changes to Git
+- `-i`, `--interactive`: Launch the interactive Rich UI with visual progress tracking
+- `-v`, `--verbose`: Enable detailed verbose output for debugging
+- `-a`, `--all <patch|minor|major>`: Run complete workflow: clean, test, publish, commit
+
+#### Configuration & Setup
+
+- `-n`, `--no-config-updates`: Skip updating configuration files (e.g., `pyproject.toml`)
+- `-u`, `--update-precommit`: Update pre-commit hooks to the latest versions
+- `--update-docs`: Create CLAUDE.md and RULES.md templates (only if they don't exist)
+- `--force-update-docs`: Force update CLAUDE.md and RULES.md even if they exist
+
+#### Code Quality & Testing
+
+- `-x`, `--clean`: Clean code by removing docstrings, line comments, and extra whitespace
+- `-t`, `--test`: Run tests using pytest with intelligent parallelization
+- `-s`, `--skip-hooks`: Skip running pre-commit hooks (useful with `-t`)
+- `--comprehensive`: Use comprehensive pre-commit analysis mode (\<30s, thorough)
+
+#### Test Execution Control
+
+- `--test-workers <N>`: Set parallel workers (0=auto-detect, 1=disable, N=specific count)
+- `--test-timeout <seconds>`: Set timeout per test (0=auto-detect based on project size)
+
+#### Performance & Benchmarking
+
+- `--benchmark`: Run tests in benchmark mode (disables parallel execution)
+- `--benchmark-regression`: Fail tests if benchmarks regress beyond threshold
+- `--benchmark-regression-threshold <percentage>`: Set regression threshold (default: 5.0%)
+
+#### Version Management & Publishing
+
+- `-p`, `--publish <patch|minor|major>`: Bump version and publish to PyPI with enhanced authentication
+- `-b`, `--bump <patch|minor|major>`: Bump version without publishing
+
+#### Git Integration
+
+- `-r`, `--pr`: Create a pull request to the upstream repository
+
+#### Session Management
+
+- `--track-progress`: Enable session progress tracking with automatic recovery
+- `--progress-file <path>`: Custom path for progress file (default: SESSION-PROGRESS-{timestamp}.md)
+- `--resume-from <file>`: Resume session from existing progress file
+
+#### AI & Integration
+
+- `--ai-agent`: Enable AI agent mode with structured JSON output
+- `--help`: Display comprehensive help information
+
+#### Example Flag Combinations
+
+```bash
+# Complete development workflow with session tracking
+python -m crackerjack --track-progress -a patch
+
+# Fast development cycle
+python -m crackerjack -x -t -c
+
+# Comprehensive pre-release validation
+python -m crackerjack --comprehensive --benchmark-regression -p minor
+
+# AI-optimized workflow with progress tracking
+python -m crackerjack --ai-agent --track-progress -t --benchmark
+
+# Interactive mode with comprehensive analysis
+python -m crackerjack -i --comprehensive
+```
 
 ### Example Workflows
 
@@ -403,7 +709,79 @@ runner.process(MyOptions())
   python -m crackerjack -t --test-workers=2 --test-timeout=300
   ```
 
-#### Version Management
+#### Version Management & PyPI Publishing
+
+Crackerjack provides comprehensive PyPI publishing with enhanced authentication and validation.
+
+**🔐 PyPI Authentication Setup**
+
+Crackerjack automatically validates your authentication setup before publishing and provides helpful error messages. Choose one of these authentication methods:
+
+**Method 1: Environment Variable (Recommended)**
+
+```bash
+# Set PyPI token as environment variable
+export UV_PUBLISH_TOKEN=pypi-your-token-here
+
+# Publish with automatic token authentication
+python -m crackerjack -p patch
+```
+
+**Method 2: Keyring Integration**
+
+```bash
+# Install keyring globally or in current environment
+uv tool install keyring
+
+# Store PyPI token in keyring (you'll be prompted for the token)
+keyring set https://upload.pypi.org/legacy/ __token__
+
+# Ensure keyring provider is configured in pyproject.toml
+[tool.uv]
+keyring-provider = "subprocess"
+
+# Publish with keyring authentication
+python -m crackerjack -p patch
+```
+
+**Method 3: Environment Variable for Keyring Provider**
+
+```bash
+# Set keyring provider via environment
+export UV_KEYRING_PROVIDER=subprocess
+
+# Publish (will use keyring for authentication)
+python -m crackerjack -p patch
+```
+
+**Authentication Validation**
+
+Crackerjack automatically validates your authentication setup before publishing:
+
+- ✅ **Token Found**: When `UV_PUBLISH_TOKEN` is set
+- ✅ **Keyring Ready**: When keyring is configured and token is stored
+- ⚠️ **Setup Needed**: When authentication needs configuration
+
+If publishing fails due to authentication issues, crackerjack displays helpful setup instructions.
+
+**PyPI Token Best Practices**
+
+1. **Generate Project-Specific Tokens**: Create separate PyPI tokens for each project
+1. **Use Scoped Tokens**: Limit token scope to the specific package you're publishing
+1. **Secure Storage**: Use environment variables or keyring - never hardcode tokens
+1. **Token Format**: PyPI tokens start with `pypi-` (e.g., `pypi-AgEIcHlwaS5vcmcCJGZm...`)
+
+**Troubleshooting Authentication**
+
+If you encounter authentication issues:
+
+1. **Check Token Format**: Ensure your token starts with `pypi-`
+1. **Verify Environment Variable**: `echo $UV_PUBLISH_TOKEN` should show your token
+1. **Test Keyring**: `keyring get https://upload.pypi.org/legacy/ __token__` should return your token
+1. **Check Configuration**: Ensure `keyring-provider = "subprocess"` in pyproject.toml
+1. **Install Keyring**: `uv tool install keyring` if using keyring authentication
+
+**Version Management Commands**
 
 - **Bump and Publish** - Bump version and publish to PyPI:
 
@@ -418,6 +796,36 @@ runner.process(MyOptions())
   ```bash
   python -m crackerjack -b major
   ```
+
+#### Documentation Template Management
+
+Crackerjack can automatically propagate its quality standards to other Python projects by creating or updating their CLAUDE.md and RULES.md files. This ensures consistent AI code generation across all projects.
+
+**📄 Template Propagation Commands**
+
+```bash
+# Update CLAUDE.md and RULES.md with latest quality standards (only if they don't exist)
+python -m crackerjack --update-docs
+
+# Force update CLAUDE.md and RULES.md even if they already exist
+python -m crackerjack --force-update-docs
+```
+
+**When to Use Documentation Templates**
+
+- **New Projects**: Use `--update-docs` to create initial documentation templates
+- **Quality Standard Updates**: Use `--force-update-docs` weekly to keep standards current
+- **AI Integration**: Ensures Claude Code generates compliant code on first pass across all projects
+- **Team Synchronization**: Keeps all team projects using the same quality standards
+
+**How Template Management Works**
+
+- **Quality Standards**: Copies the latest Refurb, Pyright, Complexipy, and Bandit standards from Crackerjack
+- **Project Customization**: Customizes project-specific sections (project name, overview)
+- **Standard Preservation**: Preserves the core quality standards and AI generation guidelines
+- **Git Integration**: Automatically adds files to git for easy committing
+
+This feature is particularly valuable for teams maintaining multiple Python projects, ensuring that AI assistants generate consistent, high-quality code across all repositories.
 
 #### Configuration Management
 
@@ -489,6 +897,106 @@ python -m crackerjack --ai-agent --test
 
 For detailed information about using Crackerjack with AI agents, including the structured output format and programmatic usage, see [README-AI-AGENT.md](README-AI-AGENT.md).
 
+## Session Progress Tracking
+
+Crackerjack includes robust session progress tracking to maintain continuity during long-running development sessions and enable seamless collaboration with AI assistants.
+
+### Key Features
+
+- **Automatic Progress Logging:** Tracks each step of the crackerjack workflow with detailed timestamps and status information
+- **Markdown Output:** Generates human-readable progress files with comprehensive task status and file change tracking
+- **Session Recovery:** Automatically detects and resumes interrupted sessions from where they left off
+- **Task Status Tracking:** Monitors pending, in-progress, completed, failed, and skipped tasks with detailed context
+- **File Change Tracking:** Records which files were modified during each task for easy debugging and rollback
+- **Error Recovery:** Provides detailed error information with recovery suggestions and continuation instructions
+- **AI Assistant Integration:** Optimized for AI workflows with structured progress information and session continuity
+
+### Usage Examples
+
+**Enable automatic session tracking:**
+
+```bash
+# Basic session tracking with automatic detection
+python -m crackerjack --track-progress -x -t -c
+
+# Session tracking with custom progress file
+python -m crackerjack --track-progress --progress-file my-session.md -a patch
+
+# Resume from interrupted session (automatic detection)
+python -m crackerjack --track-progress -a patch
+# 📋 Found incomplete session: SESSION-PROGRESS-20240716-143052.md
+# ❓ Resume this session? [y/N]: y
+
+# Manual session resumption
+python -m crackerjack --resume-from SESSION-PROGRESS-20240716-143052.md
+
+# Combine with AI agent mode for maximum visibility
+python -m crackerjack --track-progress --ai-agent -x -t -c
+```
+
+### Automatic Session Detection
+
+**🚀 Smart Recovery:** Crackerjack automatically detects interrupted sessions and offers to resume them! When you use `--track-progress`, crackerjack will:
+
+1. **Scan for incomplete sessions** in the current directory (last 24 hours)
+1. **Analyze session status** to determine if resumption is possible
+1. **Prompt for user confirmation** with detailed session information
+1. **Automatically resume** from the most recent incomplete task
+
+### Progress File Structure
+
+Progress files are generated in markdown format with comprehensive information:
+
+````markdown
+# Crackerjack Session Progress: abc123def
+
+**Session ID**: abc123def
+**Started**: 2024-07-16 14:30:52
+**Status**: In Progress
+**Progress**: 3/8 tasks completed
+
+## Task Progress Overview
+| Task | Status | Duration | Details |
+|------|--------|----------|---------|
+| Setup | ✅ completed | 0.15s | Project structure initialized |
+| Clean | ⏳ in_progress | - | Removing docstrings and comments |
+| Tests | ⏸️ pending | - | - |
+
+## Detailed Task Log
+### ✅ Setup - COMPLETED
+- **Started**: 2024-07-16 14:30:52
+- **Completed**: 2024-07-16 14:30:52
+- **Duration**: 0.15s
+- **Files Changed**: None
+- **Details**: Project structure initialized
+
+## Files Modified This Session
+- src/main.py
+- tests/test_main.py
+
+## Session Recovery Information
+If this session was interrupted, you can resume from where you left off:
+```bash
+python -m crackerjack --resume-from SESSION-PROGRESS-20240716-143052.md
+````
+
+### Benefits for Development Workflows
+
+- **Long-running Sessions:** Perfect for complex development workflows that may be interrupted
+- **Team Collaboration:** Share session files with team members to show exactly what was done
+- **Debugging Support:** Detailed logs help diagnose issues and understand workflow execution
+- **AI Assistant Continuity:** AI assistants can read progress files to understand current project state
+- **Audit Trail:** Complete record of all changes and operations performed during development
+
+### Integration with Other Features
+
+Session progress tracking works seamlessly with:
+
+- **AI Agent Mode:** Structured output files reference progress tracking for enhanced AI workflows
+- **Interactive Mode:** Progress is displayed in the Rich UI with real-time updates
+- **Benchmark Mode:** Performance metrics are included in progress files for analysis
+- **Version Bumping:** Version changes are tracked in session history for rollback support
+
 ## Interactive Rich UI
 
 Crackerjack now offers an enhanced interactive experience through its Rich UI:
@@ -545,6 +1053,82 @@ For the most comprehensive error details with visual formatting, combine verbose
 ```bash
 python -m crackerjack -i -v
 ```
+
+## Performance Optimization
+
+Crackerjack is optimized for performance across different project sizes and development scenarios:
+
+### ⚡ Development Speed Optimization
+
+**Fast Mode Execution:**
+
+- **Target Time**: \<5 seconds for most operations
+- **Smart Hook Selection**: Essential hooks only during development
+- **Parallel Processing**: Intelligent worker allocation based on system resources
+- **Incremental Updates**: Only processes changed files when possible
+
+**Adaptive Configuration:**
+
+```bash
+# Automatic optimization based on project size
+python -m crackerjack  # Auto-detects and optimizes
+
+# Force fast mode for development
+python -m crackerjack --fast
+
+# Override for large projects
+python -m crackerjack --test-workers=2 --test-timeout=300
+```
+
+### 🔍 Quality vs Speed Balance
+
+| Operation | Fast Mode (\<5s) | Comprehensive Mode (\<30s) | Use Case |
+|-----------|----------------|---------------------------|----------|
+| **Pre-commit** | Essential hooks | All hooks + analysis | Development vs Release |
+| **Testing** | Parallel execution | Full suite + benchmarks | Quick check vs Validation |
+| **Code Cleaning** | Basic formatting | Deep analysis + refactoring | Daily work vs Refactoring |
+
+### 📊 Project Size Adaptation
+
+**Small Projects (\<1000 lines):**
+
+- Default: Maximum parallelization
+- Fast hooks with minimal overhead
+- Quick test execution
+
+**Medium Projects (1000-10000 lines):**
+
+- Balanced worker allocation
+- Selective comprehensive checks
+- Optimized timeout settings
+
+**Large Projects (>10000 lines):**
+
+- Conservative parallelization
+- Extended timeouts
+- Strategic hook selection
+- Session progress tracking recommended
+
+### 🚀 CI/CD Optimization
+
+**Pre-push Hooks:**
+
+```bash
+# Install optimized pre-push hooks
+pre-commit install --hook-type pre-push
+
+# Comprehensive validation before push
+python -m crackerjack --comprehensive --ai-agent -t
+```
+
+**Performance Monitoring:**
+
+- Benchmark regression detection
+- Statistical performance analysis
+- Automated performance alerts
+- Long-term trend tracking
+
+This multi-layered optimization approach ensures that Crackerjack remains fast during development while providing thorough analysis when needed.
 
 ## Python 3.13+ Features
 

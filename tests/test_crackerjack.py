@@ -57,6 +57,7 @@ class OptionsForTesting:
     track_progress: bool = False
     resume_from: str | None = None
     progress_file: str | None = None
+    compress_docs: bool = False
 
 
 @pytest.fixture
@@ -746,7 +747,7 @@ class TestCrackerjackProcess:
                     with patch.object(crackerjack.console, "print"):
                         crackerjack._publish_project(options)
         assert ["uv", "build"] in actual_calls
-        assert ["uv", "publish"] in actual_calls
+        assert any(cmd[:2] == ["uv", "publish"] for cmd in actual_calls)
 
     def test_publish_with_authentication(self) -> None:
         options = OptionsForTesting(publish=BumpOption.patch)
@@ -760,7 +761,7 @@ class TestCrackerjackProcess:
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="build output", stderr=""
                 )
-            elif cmd == ["uv", "publish"]:
+            elif cmd[:2] == ["uv", "publish"]:
                 return subprocess.CompletedProcess(
                     args=cmd, returncode=0, stdout="publish output", stderr=""
                 )
@@ -780,7 +781,180 @@ class TestCrackerjackProcess:
                     with patch.object(crackerjack.console, "print"):
                         crackerjack._publish_project(options)
         assert ["uv", "build"] in actual_calls
-        assert ["uv", "publish"] in actual_calls
+        any_publish_command = any(cmd[:2] == ["uv", "publish"] for cmd in actual_calls)
+        assert any_publish_command
+
+    def test_publish_with_uv_token_environment_variable(self) -> None:
+        options = OptionsForTesting(publish=BumpOption.patch)
+        actual_calls: list[list[str]] = []
+
+        def mock_execute_side_effect(
+            self: Crackerjack, cmd: list[str], **kwargs: t.Any
+        ) -> subprocess.CompletedProcess[str]:
+            actual_calls.append(cmd)
+            if cmd == ["uv", "build"]:
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout="build output", stderr=""
+                )
+            elif cmd[:2] == ["uv", "publish"]:
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout="publish output", stderr=""
+                )
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
+
+        with patch("platform.system", return_value="Darwin"):
+            with patch.dict(
+                "os.environ", {"UV_PUBLISH_TOKEN": "pypi-test-token"}, clear=True
+            ):
+                with patch.object(
+                    Crackerjack,
+                    "execute_command",
+                    side_effect=mock_execute_side_effect,
+                    autospec=True,
+                ):
+                    crackerjack = Crackerjack(dry_run=False)
+                    with patch.object(crackerjack.console, "print"):
+                        crackerjack._publish_project(options)
+
+        assert ["uv", "build"] in actual_calls
+        assert any(
+            cmd[:4] == ["uv", "publish", "--token", "pypi-test-token"]
+            for cmd in actual_calls
+        )
+
+    def test_publish_with_keyring_provider_configuration(self) -> None:
+        options = OptionsForTesting(publish=BumpOption.patch)
+        actual_calls: list[list[str]] = []
+
+        def mock_execute_side_effect(
+            self: Crackerjack, cmd: list[str], **kwargs: t.Any
+        ) -> subprocess.CompletedProcess[str]:
+            actual_calls.append(cmd)
+            if cmd == ["uv", "build"]:
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout="build output", stderr=""
+                )
+            elif cmd[:2] == ["uv", "publish"]:
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout="publish output", stderr=""
+                )
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
+
+        with patch("platform.system", return_value="Darwin"):
+            with patch.dict(
+                "os.environ", {"UV_KEYRING_PROVIDER": "subprocess"}, clear=True
+            ):
+                with patch.object(
+                    Crackerjack,
+                    "execute_command",
+                    side_effect=mock_execute_side_effect,
+                    autospec=True,
+                ):
+                    crackerjack = Crackerjack(dry_run=False)
+                    with patch.object(crackerjack.console, "print"):
+                        crackerjack._publish_project(options)
+
+        assert ["uv", "build"] in actual_calls
+        publish_with_keyring = ["uv", "publish", "--keyring-provider", "subprocess"]
+        assert publish_with_keyring in actual_calls
+
+    def test_authentication_validation_with_token(self) -> None:
+        with patch("platform.system", return_value="Darwin"):
+            with patch.dict(
+                "os.environ", {"UV_PUBLISH_TOKEN": "pypi-test-token"}, clear=True
+            ):
+                crackerjack = Crackerjack(dry_run=False)
+                with patch.object(crackerjack.console, "print") as mock_print:
+                    crackerjack._validate_authentication_setup()
+                mock_print.assert_any_call(
+                    "[dim]🔐 Validating authentication setup...[/dim]"
+                )
+                mock_print.assert_any_call(
+                    "[dim]  ✅ UV_PUBLISH_TOKEN environment variable found[/dim]"
+                )
+
+    def test_authentication_validation_with_keyring(self) -> None:
+        def mock_execute_side_effect(
+            self: Crackerjack, cmd: list[str], **kwargs: t.Any
+        ) -> subprocess.CompletedProcess[str]:
+            if cmd == [
+                "keyring",
+                "get",
+                "https://upload.pypi.org/legacy/",
+                "__token__",
+            ]:
+                return subprocess.CompletedProcess(
+                    args=cmd, returncode=0, stdout="pypi-test-token", stderr=""
+                )
+            return subprocess.CompletedProcess(
+                args=cmd, returncode=0, stdout="", stderr=""
+            )
+
+        with patch("platform.system", return_value="Darwin"):
+            with patch.dict("os.environ", {}, clear=True):
+                with patch("shutil.which", return_value="/usr/local/bin/keyring"):
+                    with patch.object(
+                        Crackerjack, "_get_keyring_provider", return_value="subprocess"
+                    ):
+                        with patch.object(
+                            Crackerjack,
+                            "execute_command",
+                            side_effect=mock_execute_side_effect,
+                            autospec=True,
+                        ):
+                            crackerjack = Crackerjack(dry_run=False)
+                            with patch.object(
+                                crackerjack.console, "print"
+                            ) as mock_print:
+                                crackerjack._validate_authentication_setup()
+
+                            mock_print.assert_any_call(
+                                "[dim]🔐 Validating authentication setup...[/dim]"
+                            )
+                            mock_print.assert_any_call(
+                                "[dim]  ✅ Keyring provider configured and keyring executable found[/dim]"
+                            )
+                            mock_print.assert_any_call(
+                                "[dim]  ✅ PyPI token found in keyring[/dim]"
+                            )
+
+    def test_get_keyring_provider_from_environment(self) -> None:
+        with patch.dict(
+            "os.environ", {"UV_KEYRING_PROVIDER": "subprocess"}, clear=True
+        ):
+            crackerjack = Crackerjack(dry_run=False)
+            provider = crackerjack._get_keyring_provider()
+            assert provider == "subprocess"
+
+    def test_get_keyring_provider_from_pyproject_toml(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pyproject_path = Path(temp_dir) / "pyproject.toml"
+            pyproject_content = """
+[tool.uv]
+keyring-provider = "subprocess"
+"""
+            pyproject_path.write_text(pyproject_content)
+
+            with patch.dict("os.environ", {}, clear=True):
+                with patch("pathlib.Path.cwd", return_value=Path(temp_dir)):
+                    with patch("pathlib.Path.exists", return_value=True):
+                        with patch("pathlib.Path.open") as mock_open:
+                            mock_open.return_value.__enter__.return_value.read.return_value = pyproject_content.encode()
+                            crackerjack = Crackerjack(dry_run=False)
+
+                            with patch("tomllib.load") as mock_load:
+                                mock_load.return_value = {
+                                    "tool": {"uv": {"keyring-provider": "subprocess"}}
+                                }
+                                provider = crackerjack._get_keyring_provider()
+                                assert provider == "subprocess"
 
     def test_build_failure(self) -> None:
         options = OptionsForTesting(publish=BumpOption.patch)
@@ -842,7 +1016,7 @@ class TestCrackerjackProcess:
                     with patch.object(crackerjack.console, "print") as mock_print:
                         crackerjack._publish_project(options)
                         assert ["uv", "build"] in actual_calls
-                        assert ["uv", "publish"] in actual_calls
+                        assert any(cmd[:2] == ["uv", "publish"] for cmd in actual_calls)
                         assert any(
                             "build output" in str(call)
                             for call in mock_print.mock_calls
@@ -1441,6 +1615,288 @@ class TestClass:
         assert "--benchmark-regression" in test_command
         assert "--benchmark-regression-threshold=10.0" in test_command
         assert "-xvs" not in test_command
+
+    def test_analyze_git_changes(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+    ) -> None:
+        with patch.object(Crackerjack, "execute_command") as mock_execute:
+            mock_execute.return_value = MagicMock(
+                returncode=0,
+                stdout="A\tcrackerjack/new_feature.py\nM\tREADME.md\nD\toldfile.py\nR100\told_name.py\tnew_name.py",
+            )
+            cj = Crackerjack(dry_run=False)
+            changes = cj._analyze_git_changes()
+
+            assert changes["added"] == ["crackerjack/new_feature.py"]
+            assert changes["modified"] == ["README.md"]
+            assert changes["deleted"] == ["oldfile.py"]
+            assert changes["renamed"] == [("old_name.py", "new_name.py")]
+            assert changes["total_changes"] == 4
+
+    def test_categorize_changes(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+    ) -> None:
+        cj = Crackerjack(dry_run=False)
+        changes = {
+            "added": ["README.md", "tests/test_new.py", "src/core.py"],
+            "modified": ["pyproject.toml", ".pre-commit-config.yaml"],
+            "deleted": ["old_test.py"],
+        }
+
+        categories = cj._categorize_changes(changes)
+
+        assert "README.md" in categories["docs"]
+        assert "tests/test_new.py" in categories["tests"]
+        assert "src/core.py" in categories["core"]
+        assert (
+            "pyproject.toml" in categories["config"]
+            or "pyproject.toml" in categories["deps"]
+        )
+        assert ".pre-commit-config.yaml" in categories["config"]
+
+    def test_generate_commit_message(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+    ) -> None:
+        cj = Crackerjack(dry_run=False)
+
+        changes = {
+            "added": ["src/new_feature.py", "tests/test_feature.py"],
+            "modified": ["README.md"],
+            "deleted": [],
+            "renamed": [],
+            "total_changes": 3,
+            "stats": "",
+        }
+
+        message = cj._generate_commit_message(changes)
+        assert message.startswith("Add")
+        assert "core functionality" in message or "tests" in message
+        assert "Added 2 file(s)" in message
+
+        changes = {
+            "added": [],
+            "modified": ["README.md", "CLAUDE.md", "docs/guide.md"],
+            "deleted": [],
+            "renamed": [],
+            "total_changes": 3,
+            "stats": "",
+        }
+
+        message = cj._generate_commit_message(changes)
+        assert message.startswith("Update")
+        assert "documentation" in message
+
+        changes = {
+            "added": [],
+            "modified": [],
+            "deleted": ["old_file.py", "deprecated.py"],
+            "renamed": [],
+            "total_changes": 2,
+            "stats": "",
+        }
+
+        message = cj._generate_commit_message(changes)
+        assert message.startswith("Remove")
+
+    def test_commit_with_suggested_message(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+        options_factory: t.Callable[..., OptionsForTesting],
+    ) -> None:
+        options = options_factory(commit=True, no_config_updates=True)
+
+        with patch.object(Crackerjack, "execute_command") as mock_execute_cmd:
+            mock_execute_cmd.side_effect = [
+                MagicMock(returncode=0, stdout=""),
+                MagicMock(returncode=0, stdout="M\tREADME.md\nA\ttests/test_new.py"),
+                MagicMock(returncode=0, stdout=""),
+                MagicMock(
+                    returncode=0,
+                    stdout=" README.md | 10 ++++\n tests/test_new.py | 50 ++++\n 2 files changed, 60 insertions(+)",
+                ),
+                MagicMock(returncode=0, stdout=""),
+                MagicMock(returncode=0, stdout=""),
+            ]
+
+            with patch("builtins.input", return_value="y"):
+                with patch.object(Crackerjack, "_update_project"):
+                    cj = Crackerjack(dry_run=False)
+                    cj.process(options)
+
+                    commit_call = None
+                    for call in mock_execute_cmd.call_args_list:
+                        if call[0][0][0:2] == ["git", "commit"]:
+                            commit_call = call
+                            break
+
+                    assert commit_call is not None
+                    commit_msg = commit_call[0][0][3]
+                    assert "Update" in commit_msg or "Add" in commit_msg
+                    assert any(
+                        keyword in commit_msg
+                        for keyword in ("documentation", "tests", "core functionality")
+                    )
+
+    def test_claude_md_compression(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+    ) -> None:
+        config_manager = ConfigManager(
+            our_path=tmp_path / "source",
+            pkg_path=tmp_path_package,
+            pkg_name="test_package",
+            console=Console(),
+            dry_run=True,
+        )
+
+        large_content = (
+            """# CLAUDE.md
+
+This file provides guidance to Claude Code when working with code in this repository.
+
+A detailed project overview with lots of information that will be compressed.
+
+```bash
+pipx install uv
+
+uv sync
+
+uv run pytest
+uv run pyright
+uv run ruff check
+uv run pre-commit run --all-files
+```
+
+```bash
+python -m crackerjack
+
+python -m crackerjack -x -t -c
+
+python -m crackerjack -i
+```
+
+This is a very long section with detailed development guidelines that would normally be quite verbose and contain many examples and explanations that could be compressed while retaining the essential information.
+
+- Use static typing throughout
+- Follow PEP 8 style guidelines
+- Write comprehensive tests
+- Document public APIs
+- Use modern Python features
+
+This section contains detailed information about recent bug fixes and improvements that is useful but not essential for basic operation.
+
+Detailed explanation of a bug fix with lots of technical details that could be summarized.
+
+Another detailed explanation with implementation details.
+
+Essential information for AI assistants that should be preserved during compression.
+
+- Always use type hints
+- Follow project conventions
+- Write clean, readable code
+- Test thoroughly
+- Document important decisions
+
+Critical information that must be preserved:
+
+- Run quality checks before completion
+- Verify all tests pass
+- Update documentation as needed
+- Follow project standards
+
+Very detailed section about self-maintenance that could be compressed significantly while preserving key points.
+"""
+            * 3
+        )
+
+        compressed = config_manager._compress_claude_md(large_content, target_size=3000)
+
+        assert len(compressed) < len(large_content)
+        assert "automatically compressed by Crackerjack" in compressed
+        assert len(compressed) <= 3000
+
+    def test_claude_md_customization_with_compression(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+    ) -> None:
+        config_manager = ConfigManager(
+            our_path=tmp_path / "source",
+            pkg_path=tmp_path_package,
+            pkg_name="test_package",
+            console=Console(),
+            dry_run=True,
+        )
+
+        content = """# CLAUDE.md
+
+This file provides guidance to Claude Code.
+
+Essential development guidelines for the project.
+
+Important quality standards that must be preserved.
+"""
+
+        result = config_manager._customize_claude_md(content, compress=True)
+
+        assert "TEST_PACKAGE.md" in result
+        assert "Test_Package" in result
+        assert "automatically generated by Crackerjack" in result
+        assert "Essential development guidelines" in result
+
+    def test_claude_md_no_compression_when_small(
+        self,
+        mock_execute: MagicMock,
+        mock_console_print: MagicMock,
+        tmp_path: Path,
+        tmp_path_package: Path,
+        create_package_dir: None,
+    ) -> None:
+        config_manager = ConfigManager(
+            our_path=tmp_path / "source",
+            pkg_path=tmp_path_package,
+            pkg_name="test_package",
+            console=Console(),
+            dry_run=True,
+        )
+
+        small_content = """# CLAUDE.md
+
+Short content that doesn't need compression.
+
+Brief overview.
+"""
+
+        result = config_manager._compress_claude_md(small_content)
+
+        assert result == small_content
+        assert "automatically compressed" not in result
 
 
 class TestSessionTracker:

@@ -38,6 +38,7 @@ class MockOptions:
         self.track_progress = kwargs.get("track_progress", False)
         self.resume_from = kwargs.get("resume_from")
         self.progress_file = kwargs.get("progress_file")
+        self.compress_docs = kwargs.get("compress_docs", False)
 
 
 def test_create_crackerjack_runner() -> None:

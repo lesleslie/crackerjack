@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from rich.console import Console
+from rich.layout import Layout
 from crackerjack.errors import ErrorCode, ExecutionError
 from crackerjack.interactive import InteractiveCLI, TaskStatus
 
@@ -11,23 +12,27 @@ class TestInteractiveRun:
     def cli(self) -> InteractiveCLI:
         return InteractiveCLI(Console(width=100, height=50))
 
+    def _create_mock_layout(self) -> Layout:
+        layout = Layout()
+        layout.split(
+            Layout(name="header", size=3),
+            Layout(name="main"),
+            Layout(name="footer", size=3),
+        )
+        layout["main"].split_row(Layout(name="tasks"), Layout(name="details", ratio=2))
+        layout["header"].update("Mock Header")
+        layout["footer"].update("Mock Footer")
+        layout["tasks"].update("Mock Tasks")
+        layout["details"].update("Mock Details")
+        return layout
+
     def test_run_interactive_with_tasks_success_and_failure(
         self, cli: InteractiveCLI
     ) -> None:
         task1 = cli.workflow.add_task("task1", "Task 1")
         task2 = cli.workflow.add_task("task2", "Task 2")
         task3 = cli.workflow.add_task("task3", "Task 3", dependencies=["task2"])
-        layout_mock = {
-            "header": MagicMock(),
-            "main": MagicMock(),
-            "footer": MagicMock(),
-            "tasks": MagicMock(),
-            "details": MagicMock(),
-        }
-        main_layout = MagicMock()
-        main_layout["tasks"] = MagicMock()
-        main_layout["details"] = MagicMock()
-        layout_mock["main"] = main_layout
+        layout_mock = self._create_mock_layout()
         live_mock = MagicMock()
         progress_mock = MagicMock()
         progress_task_mock = MagicMock()
@@ -42,7 +47,7 @@ class TestInteractiveRun:
             return result
 
         with (
-            patch.object(cli, "setup_layout", return_value=layout_mock),
+            patch.object(cli, "_setup_interactive_layout", return_value=layout_mock),
             patch("rich.live.Live", return_value=live_mock),
             patch("rich.progress.Progress", return_value=progress_mock),
             patch.object(cli.workflow, "get_next_task", side_effect=mock_get_next_task),
@@ -59,17 +64,7 @@ class TestInteractiveRun:
 
     def test_run_interactive_with_task_skipping(self, cli: InteractiveCLI) -> None:
         task = cli.workflow.add_task("test_task", "Test Task")
-        layout_mock = {
-            "header": MagicMock(),
-            "main": MagicMock(),
-            "footer": MagicMock(),
-            "tasks": MagicMock(),
-            "details": MagicMock(),
-        }
-        main_layout = MagicMock()
-        main_layout["tasks"] = MagicMock()
-        main_layout["details"] = MagicMock()
-        layout_mock["main"] = main_layout
+        layout_mock = self._create_mock_layout()
         tasks_to_return = [task, None]
         task_index = 0
 
@@ -80,7 +75,7 @@ class TestInteractiveRun:
             return result
 
         with (
-            patch.object(cli, "setup_layout", return_value=layout_mock),
+            patch.object(cli, "_setup_interactive_layout", return_value=layout_mock),
             patch("rich.live.Live", return_value=MagicMock()),
             patch("rich.progress.Progress", return_value=MagicMock()),
             patch.object(cli.workflow, "get_next_task", side_effect=mock_get_next_task),
@@ -101,19 +96,9 @@ class TestInteractiveRun:
         )
         task3 = cli.workflow.add_task("skipped", "Skipped Task")
         task3.skip()
-        layout_mock = {
-            "header": MagicMock(),
-            "main": MagicMock(),
-            "footer": MagicMock(),
-            "tasks": MagicMock(),
-            "details": MagicMock(),
-        }
-        main_layout = MagicMock()
-        main_layout["tasks"] = MagicMock()
-        main_layout["details"] = MagicMock()
-        layout_mock["main"] = main_layout
+        layout_mock = self._create_mock_layout()
         with (
-            patch.object(cli, "setup_layout", return_value=layout_mock),
+            patch.object(cli, "_setup_interactive_layout", return_value=layout_mock),
             patch("rich.live.Live", return_value=MagicMock()),
             patch("rich.progress.Progress", return_value=MagicMock()),
             patch.object(cli.workflow, "get_next_task", return_value=None),

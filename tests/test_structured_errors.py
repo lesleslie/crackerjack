@@ -144,6 +144,7 @@ class TestErrorHandlingIntegration:
                     track_progress = False
                     resume_from: str | None = None
                     progress_file: str | None = None
+                    compress_docs = False
 
                 options = Options()
                 with patch("platform.system", return_value="Linux"):

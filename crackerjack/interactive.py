@@ -169,10 +169,7 @@ class InteractiveCLI:
         version_text = Text(f"v{version}", style="dim cyan")
         subtitle = Text("Your Python project management toolkit", style="italic")
         panel = Panel(
-            f"{title} {version_text}\n{subtitle}",
-            box=ROUNDED,
-            border_style="cyan",
-            expand=False,
+            f"{title} {version_text}\n{subtitle}", border_style="cyan", expand=False
         )
         self.console.print(panel)
         self.console.print()
@@ -198,9 +195,7 @@ class InteractiveCLI:
             Layout(name="main"),
             Layout(name="footer", size=3),
         )
-        layout["main"].split_row(
-            Layout(name="tasks", ratio=1), Layout(name="details", ratio=2)
-        )
+        layout["main"].split_row(Layout(name="tasks"), Layout(name="details", ratio=2))
         return layout
 
     def show_task_status(self, task: Task) -> Panel:
@@ -233,8 +228,6 @@ class InteractiveCLI:
     def show_task_table(self) -> Table:
         table = Table(
             title="Workflow Tasks",
-            box=ROUNDED,
-            show_header=True,
             header_style="bold white",
         )
         table.add_column("Task", style="white")
@@ -262,7 +255,7 @@ class InteractiveCLI:
         self.console.clear()
         layout = self._setup_interactive_layout()
         progress_tracker = self._create_progress_tracker()
-        with Live(layout, refresh_per_second=4, screen=True) as live:
+        with Live(layout) as live:
             try:
                 self._execute_workflow_loop(layout, progress_tracker, live)
                 self._display_final_summary(layout)
@@ -274,9 +267,9 @@ class InteractiveCLI:
     def _setup_interactive_layout(self) -> Layout:
         layout = self.setup_layout()
         layout["header"].update(
-            Panel("Crackerjack Interactive Mode", style="bold white", box=ROUNDED)
+            Panel("Crackerjack Interactive Mode", style="bold white")
         )
-        layout["footer"].update(Panel("Press Ctrl+C to exit", style="dim", box=ROUNDED))
+        layout["footer"].update(Panel("Press Ctrl+C to exit", style="dim"))
         return layout
 
     def _create_progress_tracker(self) -> dict[str, t.Any]:
@@ -353,7 +346,7 @@ class InteractiveCLI:
         layout["tasks"].update(self.show_task_table())
         task_counts = self._count_tasks_by_status()
         summary = Panel(
-            f"Workflow completed!\n\n"
+            f"🏆 Workflow completed!\n\n"
             f"[green]✅ Successful tasks: {task_counts['successful']}[/green]\n"
             f"[red]❌ Failed tasks: {task_counts['failed']}[/red]\n"
             f"[blue]⏩ Skipped tasks: {task_counts['skipped']}[/blue]",
@@ -382,9 +375,7 @@ class InteractiveCLI:
         }
 
     def _handle_user_interruption(self, layout: Layout) -> None:
-        layout["footer"].update(
-            Panel("Interrupted by user", style="yellow", box=ROUNDED)
-        )
+        layout["footer"].update(Panel("Interrupted by user", style="yellow"))
 
     def ask_for_file(
         self, prompt: str, directory: Path, default: str | None = None
