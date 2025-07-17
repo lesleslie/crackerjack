@@ -476,6 +476,20 @@ class DynamicConfigGenerator:
     def __init__(self) -> None:
         self.template = jinja2.Template(PRE_COMMIT_TEMPLATE)
 
+    def _should_include_hook(
+        self, hook: HookMetadata, config: ConfigMode, enabled_experimental: list[str]
+    ) -> bool:
+        if hook["tier"] not in config["tiers"]:
+            return False
+        if hook["experimental"]:
+            if not config["experimental"]:
+                return False
+            if enabled_experimental and hook["id"] not in enabled_experimental:
+                return False
+        if hook["time_estimate"] > config["max_time"]:
+            return False
+        return True
+
     def filter_hooks_for_mode(
         self, mode: str, enabled_experimental: list[str] | None = None
     ) -> list[HookMetadata]:
@@ -484,16 +498,8 @@ class DynamicConfigGenerator:
         enabled_experimental = enabled_experimental or []
         for category_hooks in HOOKS_REGISTRY.values():
             for hook in category_hooks:
-                if hook["tier"] not in config["tiers"]:
-                    continue
-                if hook["experimental"]:
-                    if not config["experimental"]:
-                        continue
-                    if enabled_experimental and hook["id"] not in enabled_experimental:
-                        continue
-                if hook["time_estimate"] > config["max_time"]:
-                    continue
-                filtered_hooks.append(hook)
+                if self._should_include_hook(hook, config, enabled_experimental):
+                    filtered_hooks.append(hook)
 
         return filtered_hooks
 
@@ -509,6 +515,21 @@ class DynamicConfigGenerator:
 
         return repo_groups
 
+    def _get_repo_comment(self, repo_url: str) -> str | None:
+        if repo_url == "https://github.com/pre-commit/pre-commit-hooks":
+            return "File structure and format validators"
+        elif (
+            "security" in repo_url
+            or "bandit" in repo_url
+            or "detect-secrets" in repo_url
+        ):
+            return "Security checks"
+        elif "ruff" in repo_url or "mdformat" in repo_url or "codespell" in repo_url:
+            return "Code formatting and quality"
+        elif repo_url == "local":
+            return "Local tools and custom hooks"
+        return None
+
     def generate_config(
         self, mode: str, enabled_experimental: list[str] | None = None
     ) -> str:
@@ -520,22 +541,8 @@ class DynamicConfigGenerator:
                 "repo": repo_url,
                 "rev": rev,
                 "hooks": hooks,
-                "comment": None,
+                "comment": self._get_repo_comment(repo_url),
             }
-            if repo_url == "https://github.com/pre-commit/pre-commit-hooks":
-                repo_data["comment"] = "File structure and format validators"
-            elif (
-                "security" in repo_url
-                or "bandit" in repo_url
-                or "detect-secrets" in repo_url
-            ):
-                repo_data["comment"] = "Security checks"
-            elif (
-                "ruff" in repo_url or "mdformat" in repo_url or "codespell" in repo_url
-            ):
-                repo_data["comment"] = "Code formatting and quality"
-            elif repo_url == "local":
-                repo_data["comment"] = "Local tools and custom hooks"
             repos.append(repo_data)
 
         return self.template.render(repos=repos)
