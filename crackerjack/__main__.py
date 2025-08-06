@@ -14,7 +14,10 @@ from .cli.handlers import (
     handle_mcp_server,
     handle_monitor_mode,
     handle_restart_mcp_server,
+    handle_restart_websocket_server,
+    handle_start_websocket_server,
     handle_stop_mcp_server,
+    handle_stop_websocket_server,
     handle_watchdog_mode,
     handle_websocket_server_mode,
 )
@@ -53,6 +56,9 @@ def main(
     no_git_tags: bool = CLI_OPTIONS["no_git_tags"],
     skip_version_check: bool = CLI_OPTIONS["skip_version_check"],
     websocket_server: bool = CLI_OPTIONS["websocket_server"],
+    start_websocket_server: bool = CLI_OPTIONS["start_websocket_server"],
+    stop_websocket_server: bool = CLI_OPTIONS["stop_websocket_server"],
+    restart_websocket_server: bool = CLI_OPTIONS["restart_websocket_server"],
     websocket_port: int | None = CLI_OPTIONS["websocket_port"],
     watchdog: bool = CLI_OPTIONS["watchdog"],
     monitor: bool = CLI_OPTIONS["monitor"],
@@ -115,6 +121,20 @@ def main(
 
     if websocket_server:
         handle_websocket_server_mode()
+        return
+
+    if start_websocket_server:
+        port = websocket_port if websocket_port else 8675
+        handle_start_websocket_server(port)
+        return
+
+    if stop_websocket_server:
+        handle_stop_websocket_server()
+        return
+
+    if restart_websocket_server:
+        port = websocket_port if websocket_port else 8675
+        handle_restart_websocket_server(port)
         return
 
     if start_mcp_server:

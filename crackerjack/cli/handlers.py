@@ -88,6 +88,24 @@ def handle_websocket_server_mode() -> None:
     start_websocket_server()
 
 
+def handle_start_websocket_server(port: int = 8675) -> None:
+    from ..mcp.websocket.server import handle_websocket_server_command
+
+    handle_websocket_server_command(start=True, port=port)
+
+
+def handle_stop_websocket_server() -> None:
+    from ..mcp.websocket.server import handle_websocket_server_command
+
+    handle_websocket_server_command(stop=True)
+
+
+def handle_restart_websocket_server(port: int = 8675) -> None:
+    from ..mcp.websocket.server import handle_websocket_server_command
+
+    handle_websocket_server_command(restart=True, port=port)
+
+
 def handle_stop_mcp_server() -> None:
     from ..services.server_manager import list_server_status, stop_all_servers
 
