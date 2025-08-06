@@ -172,7 +172,7 @@ def clean_python_code(code: str) -> str:
                 continue
             case s if "#" in s and (
                 not any(
-                    skip in s for skip in ("# noqa", "# type:", "# pragma", "# skip")
+                    skip in s for skip in ("# noqa", "# type: ", "# pragma", "# skip")
                 )
             ):
                 code_part = line.split("#", 1)[0].rstrip()

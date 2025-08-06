@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Final
 
 from rich.console import Console
-
 try:
     from mcp.server.fastmcp import FastMCP
 
@@ -32,7 +31,6 @@ from .tools import (
 )
 
 console = Console()
-
 
 class MCPOptions:
     def __init__(self, **kwargs: t.Any) -> None:

@@ -14,12 +14,12 @@ from crackerjack.py313 import (
 
 class TestPy313Features:
     def test_pattern_matching_categorize_file(self) -> None:
-        py_file = Path("/some/path/module.py")
-        init_file = Path("/some/path/__init__.py")
-        test_file = Path("/some/path/tests/test_module.py")
-        md_file = Path("/some/path/README.md")
-        config_file = Path("/some/path/.gitignore")
-        unknown_file = Path("/some/path/unknown.xyz")
+        py_file = Path(" / some / path / module.py")
+        init_file = Path(" / some / path / __init__.py")
+        test_file = Path(" / some / path / tests / test_module.py")
+        md_file = Path(" / some / path / README.md")
+        config_file = Path(" / some / path / .gitignore")
+        unknown_file = Path(" / some / path / unknown.xyz")
         assert "Python Source File" == categorize_file(py_file)
         assert "Python Module Init" == categorize_file(init_file)
         assert "Python Test File" == categorize_file(test_file)
@@ -28,7 +28,7 @@ class TestPy313Features:
         assert "Unknown File Type" == categorize_file(unknown_file)
 
     def test_clean_python_code(self) -> None:
-        code = "import os\nimport sys\n\n# This is a comment\ndef hello():\n    '''This is a docstring'''\n    print(\"Hello\")  # type: ignore\n    # This is another comment\n\n\n"
+        code = "import os\nimport sys\n\n# This is a comment\ndef hello(): \n '''This is a docstring'''\n print(\"Hello\") # type: ignore\n # This is another comment\n\n\n"
         cleaned = clean_python_code(code)
         assert "import os" in cleaned
         assert "import sys" in cleaned
@@ -128,6 +128,6 @@ class TestPy313Features:
         assert "Command failed with exit code 1" in message
 
     def test_self_type_method_chaining(self) -> None:
-        config_manager = ModernConfigManager(Path("/fake/config.json"))
+        config_manager = ModernConfigManager(Path(" / fake / config.json"))
         result = config_manager.load().update("key", "value").save()
         assert result is config_manager

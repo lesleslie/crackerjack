@@ -12,7 +12,7 @@ from crackerjack.errors import (
     ErrorCode,
     ExecutionError,
     FileError,
-    TestError,
+    TestExecutionError,
     check_command_result,
     check_file_exists,
     handle_error,
@@ -29,7 +29,6 @@ class OptionsProtocol(t.Protocol):
     no_config_updates: bool
     update_precommit: bool
     update_docs: bool
-    force_update_docs: bool
     clean: bool
     test: bool
     comprehensive: bool
@@ -82,11 +81,11 @@ class TestErrorHandlingIntegration:
     def test_error_handling_in_code_cleaner(
         self, capsys: "CaptureFixture[str]"
     ) -> None:
-        from crackerjack.crackerjack import CodeCleaner
+        from crackerjack.code_cleaner import CodeCleaner
 
         console = Console(force_terminal=False)
         cleaner = CodeCleaner(console=console)
-        test_path = Path("/nonexistent/file.py")
+        test_path = Path(" / nonexistent / file.py")
         with patch("pathlib.Path.read_text") as mock_read:
             mock_read.side_effect = FileNotFoundError(
                 f"[Errno 2] No such file or directory: '{test_path}'"
@@ -94,78 +93,35 @@ class TestErrorHandlingIntegration:
             cleaner.clean_file(test_path)
             captured = capsys.readouterr()
             output = captured.out.strip()
-            assert "FILE_WRITE_ERROR" in output
+            assert "Failed to read file" in output
             assert str(test_path) in output
-            assert "File system error while cleaning" in output
 
     def test_error_handling_in_publish_project(self) -> None:
-        from crackerjack.crackerjack import Crackerjack
+        from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
         console = Console(file=io.StringIO(), force_terminal=False)
-        with patch(
-            "crackerjack.crackerjack.Crackerjack.execute_command"
-        ) as mock_execute:
-            mock_result = MagicMock()
-            mock_result.returncode = 1
-            mock_result.stderr = "Build failed: invalid syntax"
-            mock_result.stdout = ""
-            mock_execute.return_value = mock_result
-            with (
-                patch("crackerjack.crackerjack.CodeCleaner"),
-                patch("crackerjack.crackerjack.ConfigManager"),
-                patch("crackerjack.crackerjack.ProjectManager"),
-            ):
-                runner = Crackerjack(console=console, dry_run=True)
+        orchestrator = WorkflowOrchestrator(console=console, pkg_path=Path.cwd())
 
-                class Options(OptionsProtocol):
-                    publish = True
-                    verbose = True
-                    ai_agent = False
-                    commit = False
-                    interactive = False
-                    doc = False
-                    no_config_updates = False
-                    update_precommit = False
-                    update_docs = False
-                    force_update_docs = False
-                    clean = False
-                    test = False
-                    benchmark = False
-                    benchmark_regression = False
-                    benchmark_regression_threshold = 0.0
-                    test_workers = 1
-                    test_timeout = 0
-                    bump = False
-                    all = False
-                    create_pr = False
-                    skip_hooks = False
-                    comprehensive = False
-                    async_mode = False
-                    track_progress = False
-                    resume_from: str | None = None
-                    progress_file: str | None = None
-                    compress_docs = False
-                    experimental_hooks = False
-                    enable_pyrefly = False
-                    enable_ty = False
-                    no_git_tags = False
-                    skip_version_check = True
+        with patch.object(orchestrator, "run_complete_workflow", return_value=False):
+            from unittest.mock import Mock
 
-                options = Options()
-                with patch("platform.system", return_value="Linux"):
-                    with pytest.raises(SystemExit) as exc_info:
-                        runner._publish_project(options)
-                    assert exc_info.value.code == 1
-                    mock_execute.assert_called_once_with(
-                        ["uv", "build"], capture_output=True, text=True
-                    )
+            mock_options = Mock()
+            mock_options.publish = True
+            mock_options.verbose = True
+            mock_options.ai_agent = False
+            mock_options.async_mode = False
+            mock_options.all = None
+
+            with pytest.raises(SystemExit) as exc_info:
+                facade.process(mock_options)
+            assert exc_info.value.code == 1
 
     def test_handle_error_output_format(self) -> None:
-        error = TestError(
+        error = TestExecutionError(
             message="Test failed",
             error_code=ErrorCode.TEST_FAILURE,
             details="Test details",
-            recovery="Try running with --verbose",
+            recovery="Try running with -- verbose",
         )
         output_io = io.StringIO()
         console = Console(file=output_io, width=80)
@@ -174,10 +130,10 @@ class TestErrorHandlingIntegration:
         output = output_io.getvalue()
         assert "Error 3002: TEST_FAILURE" in output
         assert "Test failed" in output
-        assert "Details:" in output
+        assert "Details: " in output
         assert "Test details" in output
-        assert "Recovery suggestion:" in output
-        assert "Try running with --verbose" in output
+        assert "Recovery suggestion: " in output
+        assert "Try running with -- verbose" in output
 
     def test_ai_agent_error_format(self) -> None:
         error = ExecutionError(

@@ -1,26 +1,18 @@
 import time
 import typing as t
+from dataclasses import dataclass
 from enum import Enum, auto
-from pathlib import Path
+from functools import partial
+from typing import Protocol
 
-from rich.box import ROUNDED
 from rich.console import Console
-from rich.layout import Layout
-from rich.live import Live
 from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Confirm
 from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
-from .errors import CrackerjackError, ErrorCode, handle_error
+from .errors import CrackerjackError, ErrorCode
 
 
 class TaskStatus(Enum):
@@ -31,17 +23,93 @@ class TaskStatus(Enum):
     SKIPPED = auto()
 
 
+@dataclass
+class WorkflowOptions:
+    clean: bool = False
+    test: bool = False
+    publish: str | None = None
+    bump: str | None = None
+    commit: bool = False
+    create_pr: bool = False
+    interactive: bool = True
+    dry_run: bool = False
+
+    @classmethod
+    def from_args(cls, args: t.Any) -> "WorkflowOptions":
+        return cls(
+            clean=getattr(args, "clean", False),
+            test=getattr(args, "test", False),
+            publish=getattr(args, "publish", None),
+            bump=getattr(args, "bump", None),
+            commit=getattr(args, "commit", False),
+            create_pr=getattr(args, "create_pr", False),
+            interactive=getattr(args, "interactive", True),
+            dry_run=getattr(args, "dry_run", False),
+        )
+
+
+class TaskExecutor(Protocol):
+    def __call__(self) -> bool: ...
+
+
+@dataclass
+class TaskDefinition:
+    id: str
+    name: str
+    description: str
+    dependencies: list[str]
+    optional: bool = False
+    estimated_duration: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not self.dependencies:
+            self.dependencies = []
+
+
 class Task:
     def __init__(
-        self, name: str, description: str, dependencies: list["Task"] | None = None
+        self,
+        definition: TaskDefinition,
+        executor: TaskExecutor | None = None,
+        workflow_tasks: dict[str, "Task"] | None = None,
     ) -> None:
-        self.name = name
-        self.description = description
-        self.dependencies = dependencies or []
+        self.definition = definition
+        self.executor = executor
         self.status = TaskStatus.PENDING
         self.start_time: float | None = None
         self.end_time: float | None = None
         self.error: CrackerjackError | None = None
+        self._workflow_tasks = workflow_tasks
+        import logging
+
+        self.logger = logging.getLogger(f"crackerjack.task.{definition.id}")
+
+    @property
+    def name(self) -> str:
+        return self.definition.name
+
+    @property
+    def description(self) -> str:
+        return self.definition.description
+
+    @property
+    def dependencies(self) -> list["Task"] | list[str]:
+        if self._workflow_tasks:
+            return [
+                self._workflow_tasks[dep_name]
+                for dep_name in self.definition.dependencies
+                if dep_name in self._workflow_tasks
+            ]
+        return self.definition.dependencies
+
+    def get_resolved_dependencies(
+        self, workflow_tasks: dict[str, "Task"]
+    ) -> list["Task"]:
+        return [
+            workflow_tasks[dep_name]
+            for dep_name in self.definition.dependencies
+            if dep_name in workflow_tasks
+        ]
 
     @property
     def duration(self) -> float | None:
@@ -53,56 +121,177 @@ class Task:
     def start(self) -> None:
         self.status = TaskStatus.RUNNING
         self.start_time = time.time()
+        self.logger.info("Task started", extra={"task_id": self.definition.id})
 
     def complete(self, success: bool = True) -> None:
         self.end_time = time.time()
         self.status = TaskStatus.SUCCESS if success else TaskStatus.FAILED
 
-    def skip(self) -> None:
-        self.status = TaskStatus.SKIPPED
-
-    def fail(self, error: CrackerjackError) -> None:
-        self.end_time = time.time()
-        self.status = TaskStatus.FAILED
-        self.error = error
-
-    def can_run(self) -> bool:
-        return all(
-            dep.status in (TaskStatus.SUCCESS, TaskStatus.SKIPPED)
-            for dep in self.dependencies
+        self.logger.info(
+            "Task completed",
+            extra={
+                "task_id": self.definition.id,
+                "success": success,
+                "duration": self.duration,
+            },
         )
 
-    def __str__(self) -> str:
-        return f"{self.name} ({self.status.name})"
+    def skip(self) -> None:
+        self.status = TaskStatus.SKIPPED
+        self.end_time = time.time()
+        self.logger.info("Task skipped", extra={"task_id": self.definition.id})
+
+    def fail(self, error: CrackerjackError) -> None:
+        self.status = TaskStatus.FAILED
+        self.end_time = time.time()
+        self.error = error
+
+        self.logger.error(
+            "Task failed",
+            extra={
+                "task_id": self.definition.id,
+                "error": str(error),
+                "duration": self.duration,
+            },
+        )
+
+    def can_run(self, completed_tasks: set[str]) -> bool:
+        if self._workflow_tasks:
+            resolved_deps = self.get_resolved_dependencies(self._workflow_tasks)
+            return all(
+                dep.status in (TaskStatus.SUCCESS, TaskStatus.SKIPPED)
+                for dep in resolved_deps
+            )
+
+        return all(dep in completed_tasks for dep in self.definition.dependencies)
+
+
+class WorkflowBuilder:
+    def __init__(self, console: Console) -> None:
+        self.console = console
+        self.tasks: dict[str, TaskDefinition] = {}
+        import logging
+
+        self.logger = logging.getLogger("crackerjack.workflow.builder")
+
+    def add_task(
+        self,
+        task_id: str,
+        name: str,
+        description: str,
+        dependencies: list[str] | None = None,
+        optional: bool = False,
+        estimated_duration: float = 0.0,
+    ) -> "WorkflowBuilder":
+        task_def = TaskDefinition(
+            id=task_id,
+            name=name,
+            description=description,
+            dependencies=dependencies or [],
+            optional=optional,
+            estimated_duration=estimated_duration,
+        )
+
+        self.tasks[task_id] = task_def
+        self.logger.debug("Task added to workflow", extra={"task_id": task_id})
+        return self
+
+    def add_conditional_task(
+        self,
+        condition: bool,
+        task_id: str,
+        name: str,
+        description: str,
+        dependencies: list[str] | None = None,
+        estimated_duration: float = 0.0,
+    ) -> str:
+        if condition:
+            self.add_task(
+                task_id=task_id,
+                name=name,
+                description=description,
+                dependencies=dependencies,
+                estimated_duration=estimated_duration,
+            )
+            return task_id
+
+        return dependencies[-1] if dependencies else ""
+
+    def build(self) -> dict[str, TaskDefinition]:
+        self._validate_workflow()
+        return self.tasks.copy()
+
+    def _validate_workflow(self) -> None:
+        self._validate_dependencies()
+        self._check_circular_dependencies()
+
+    def _validate_dependencies(self) -> None:
+        for task_id, task_def in self.tasks.items():
+            for dep in task_def.dependencies:
+                if dep not in self.tasks:
+                    raise ValueError(f"Task {task_id} depends on unknown task {dep}")
+
+    def _check_circular_dependencies(self) -> None:
+        visited: set[str] = set()
+        rec_stack: set[str] = set()
+
+        def has_cycle(task_id: str) -> bool:
+            visited.add(task_id)
+            rec_stack.add(task_id)
+
+            for dep in self.tasks[task_id].dependencies:
+                if dep not in visited:
+                    if has_cycle(dep):
+                        return True
+                elif dep in rec_stack:
+                    return True
+
+            rec_stack.remove(task_id)
+            return False
+
+        for task_id in self.tasks:
+            if task_id not in visited and has_cycle(task_id):
+                raise ValueError(
+                    f"Circular dependency detected involving task {task_id}"
+                )
 
 
 class WorkflowManager:
     def __init__(self, console: Console) -> None:
         self.console = console
         self.tasks: dict[str, Task] = {}
-        self.current_task: Task | None = None
+        self.task_definitions: dict[str, TaskDefinition] = {}
+        import logging
 
-    def add_task(
-        self, name: str, description: str, dependencies: list[str] | None = None
-    ) -> Task:
-        dep_tasks: list[Task] = []
-        if dependencies:
-            for dep_name in dependencies:
-                if dep_name not in self.tasks:
-                    raise ValueError(f"Dependency task '{dep_name}' not found")
-                dep_tasks.append(self.tasks[dep_name])
-        task = Task(name, description, dep_tasks)
-        self.tasks[name] = task
-        return task
+        self.logger = logging.getLogger("crackerjack.workflow.manager")
+
+    def load_workflow(self, task_definitions: dict[str, TaskDefinition]) -> None:
+        self.task_definitions = task_definitions
+        self.tasks = {
+            task_id: Task(definition)
+            for task_id, definition in task_definitions.items()
+        }
+
+        for task in self.tasks.values():
+            task._workflow_tasks = self.tasks
+
+        self.logger.info("Workflow loaded", extra={"task_count": len(self.tasks)})
+
+    def set_task_executor(self, task_id: str, executor: TaskExecutor) -> None:
+        if task_id in self.tasks:
+            self.tasks[task_id].executor = executor
 
     def get_next_task(self) -> Task | None:
+        completed_tasks = {
+            task_id
+            for task_id, task in self.tasks.items()
+            if task.status == TaskStatus.SUCCESS
+        }
+
         for task in self.tasks.values():
-            if (
-                task.status == TaskStatus.PENDING
-                and task.can_run()
-                and (task != self.current_task)
-            ):
+            if task.status == TaskStatus.PENDING and task.can_run(completed_tasks):
                 return task
+
         return None
 
     def all_tasks_completed(self) -> bool:
@@ -111,320 +300,361 @@ class WorkflowManager:
             for task in self.tasks.values()
         )
 
-    def run_task(self, task: Task, func: t.Callable[[], t.Any]) -> bool:
-        self.current_task = task
-        task.start()
-        try:
-            func()
-            task.complete()
-            return True
-        except CrackerjackError as e:
-            task.fail(e)
-            return False
-        except Exception as e:
-            from .errors import ExecutionError
+    def run_task(self, task: Task) -> bool:
+        if not task.executor:
+            return self._handle_task_without_executor(task)
 
-            error = ExecutionError(
-                message=f"Unexpected error in task '{task.name}'",
-                error_code=ErrorCode.UNEXPECTED_ERROR,
-                details=str(e),
-                recovery=f"This is an unexpected error in task '{task.name}'. Please report this issue.",
-            )
-            task.fail(error)
-            return False
-        finally:
-            self.current_task = None
+        return self._execute_task_with_executor(task)
+
+    def _handle_task_without_executor(self, task: Task) -> bool:
+        task.skip()
+        self.console.print(f"[yellow]⏭️ Skipped {task.name} (no executor)[/yellow]")
+        return True
+
+    def _execute_task_with_executor(self, task: Task) -> bool:
+        task.start()
+        self.console.print(f"[blue]🔄 Running {task.name}...[/blue]")
+
+        try:
+            return self._try_execute_task(task)
+        except Exception as e:
+            return self._handle_task_exception(task, e)
+
+    def _try_execute_task(self, task: Task) -> bool:
+        self.logger.info(f"Executing task: {task.definition.id}")
+        success = task.executor() if task.executor else False
+        task.complete(success)
+
+        self._display_task_result(task, success)
+        return success
+
+    def _display_task_result(self, task: Task, success: bool) -> None:
+        if success:
+            duration_str = f" ({task.duration: .1f}s)" if task.duration else ""
+            self.console.print(f"[green]✅ {task.name}{duration_str}[/green]")
+        else:
+            self.console.print(f"[red]❌ {task.name} failed[/red]")
+
+    def _handle_task_exception(self, task: Task, e: Exception) -> bool:
+        error = CrackerjackError(
+            message=f"Task {task.name} failed: {e}",
+            error_code=ErrorCode.COMMAND_EXECUTION_ERROR,
+        )
+        task.fail(error)
+        self.console.print(f"[red]💥 {task.name} crashed: {e}[/red]")
+        return False
 
     def display_task_tree(self) -> None:
-        tree = Tree("Workflow")
-        for task in self.tasks.values():
-            if not task.dependencies:
-                self._add_task_to_tree(task, tree)
+        tree = Tree("🚀 Workflow Tasks")
+        status_groups = self._get_status_groups()
+
+        for status, (label, color) in status_groups.items():
+            self._add_status_branch(tree, status, label, color)
+
         self.console.print(tree)
 
-    def _add_task_to_tree(self, task: Task, parent: Tree) -> None:
-        if task.status == TaskStatus.SUCCESS:
-            status = "[green]✅[/green]"
-        elif task.status == TaskStatus.FAILED:
-            status = "[red]❌[/red]"
-        elif task.status == TaskStatus.RUNNING:
-            status = "[yellow]⏳[/yellow]"
-        elif task.status == TaskStatus.SKIPPED:
-            status = "[blue]⏩[/blue]"
-        else:
-            status = "[grey]⏸️[/grey]"
-        branch = parent.add(f"{status} {task.name} - {task.description}")
-        for dependent in self.tasks.values():
-            if task in dependent.dependencies:
-                self._add_task_to_tree(dependent, branch)
+    def _get_status_groups(self) -> dict[TaskStatus, tuple[str, str]]:
+        return {
+            TaskStatus.SUCCESS: ("✅ Completed", "green"),
+            TaskStatus.RUNNING: ("🔄 Running", "blue"),
+            TaskStatus.FAILED: ("❌ Failed", "red"),
+            TaskStatus.SKIPPED: ("⏭️ Skipped", "yellow"),
+            TaskStatus.PENDING: ("⏳ Pending", "white"),
+        }
+
+    def _add_status_branch(
+        self, tree: Tree, status: TaskStatus, label: str, color: str
+    ) -> None:
+        status_tasks = [task for task in self.tasks.values() if task.status == status]
+
+        if not status_tasks:
+            return
+
+        status_branch = tree.add(f"[{color}]{label}[/{color}]")
+        for task in status_tasks:
+            duration_str = f" ({task.duration: .1f}s)" if task.duration else ""
+            status_branch.add(f"{task.name}{duration_str}")
+
+    def get_workflow_summary(self) -> dict[str, int]:
+        summary = {status.name.lower(): 0 for status in TaskStatus}
+
+        for task in self.tasks.values():
+            summary[task.status.name.lower()] += 1
+
+        return summary
 
 
 class InteractiveCLI:
     def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
         self.workflow = WorkflowManager(self.console)
+        import logging
 
-    def show_banner(self, version: str) -> None:
-        title = Text("Crackerjack", style="bold cyan")
-        version_text = Text(f"v{version}", style="dim cyan")
-        subtitle = Text("Your Python project management toolkit", style="italic")
-        panel = Panel(
-            f"{title} {version_text}\n{subtitle}", border_style="cyan", expand=False
+        self.logger = logging.getLogger("crackerjack.interactive.cli")
+
+    def create_dynamic_workflow(self, options: WorkflowOptions) -> None:
+        builder = WorkflowBuilder(self.console)
+
+        workflow_steps = [
+            self._add_setup_phase,
+            self._add_config_phase,
+            partial(self._add_cleaning_phase, enabled=options.clean),
+            self._add_fast_hooks_phase,
+            partial(self._add_testing_phase, enabled=options.test),
+            self._add_comprehensive_hooks_phase,
+            partial(
+                self._add_version_phase, enabled=bool(options.publish or options.bump)
+            ),
+            partial(self._add_publish_phase, enabled=bool(options.publish)),
+            partial(self._add_commit_phase, enabled=options.commit),
+            partial(self._add_pr_phase, enabled=options.create_pr),
+        ]
+
+        last_task = ""
+        for step in workflow_steps:
+            last_task = step(builder, last_task)
+
+        workflow_def = builder.build()
+        self.workflow.load_workflow(workflow_def)
+
+        self.logger.info(
+            "Dynamic workflow created", extra={"task_count": len(workflow_def)}
         )
-        self.console.print(panel)
-        self.console.print()
 
-    def create_standard_workflow(self) -> None:
-        self.workflow.add_task("setup", "Initialize project structure")
-        self.workflow.add_task(
-            "config", "Update configuration files", dependencies=["setup"]
+    def _add_setup_phase(self, builder: WorkflowBuilder, last_task: str) -> str:
+        builder.add_task(
+            "setup",
+            "Initialize",
+            "Initialize project structure",
+            estimated_duration=2.0,
         )
-        self.workflow.add_task(
-            "clean", "Clean code (remove docstrings, comments)", dependencies=["config"]
+        return "setup"
+
+    def _add_config_phase(self, builder: WorkflowBuilder, last_task: str) -> str:
+        builder.add_task(
+            "config",
+            "Configure",
+            "Update configuration files",
+            dependencies=[last_task],
+            estimated_duration=3.0,
         )
-        self.workflow.add_task("hooks", "Run pre-commit hooks", dependencies=["clean"])
-        self.workflow.add_task("test", "Run tests", dependencies=["hooks"])
-        self.workflow.add_task("version", "Bump version", dependencies=["test"])
-        self.workflow.add_task("publish", "Publish package", dependencies=["version"])
-        self.workflow.add_task("commit", "Commit changes", dependencies=["publish"])
+        return "config"
 
-    def setup_layout(self) -> Layout:
-        layout = Layout()
-        layout.split(
-            Layout(name="header", size=3),
-            Layout(name="main"),
-            Layout(name="footer", size=3),
+    def _add_cleaning_phase(
+        self, builder: WorkflowBuilder, last_task: str, enabled: bool
+    ) -> str:
+        return (
+            builder.add_conditional_task(
+                condition=enabled,
+                task_id="clean",
+                name="Clean Code",
+                description="Clean code (remove docstrings, comments)",
+                dependencies=[last_task],
+                estimated_duration=10.0,
+            )
+            or last_task
         )
-        layout["main"].split_row(Layout(name="tasks"), Layout(name="details", ratio=2))
-        return layout
 
-    def show_task_status(self, task: Task) -> Panel:
-        if task.status == TaskStatus.RUNNING:
-            status = "[yellow]Running[/yellow]"
-            style = "yellow"
-        elif task.status == TaskStatus.SUCCESS:
-            status = "[green]Success[/green]"
-            style = "green"
-        elif task.status == TaskStatus.FAILED:
-            status = "[red]Failed[/red]"
-            style = "red"
-        elif task.status == TaskStatus.SKIPPED:
-            status = "[blue]Skipped[/blue]"
-            style = "blue"
-        else:
-            status = "[dim white]Pending[/dim white]"
-            style = "dim"
-        duration = task.duration
-        duration_text = f"Duration: {duration:.2f}s" if duration else ""
-        content = f"{task.name}: {task.description}\nStatus: {status}\n{duration_text}"
-        if task.error:
-            content += f"\n[red]Error: {task.error.message}[/red]"
-            if task.error.details:
-                content += f"\n[dim red]Details: {task.error.details}[/dim red]"
-            if task.error.recovery:
-                content += f"\n[yellow]Recovery: {task.error.recovery}[/yellow]"
-        return Panel(content, title=task.name, border_style=style, expand=False)
-
-    def show_task_table(self) -> Table:
-        table = Table(
-            title="Workflow Tasks",
-            header_style="bold white",
+    def _add_fast_hooks_phase(self, builder: WorkflowBuilder, last_task: str) -> str:
+        builder.add_task(
+            "fast_hooks",
+            "Format",
+            "Run formatting hooks",
+            dependencies=[last_task],
+            estimated_duration=15.0,
         )
-        table.add_column("Task", style="white")
-        table.add_column("Status")
-        table.add_column("Duration")
-        table.add_column("Dependencies")
-        for task in self.workflow.tasks.values():
-            if task.status == TaskStatus.RUNNING:
-                status = "[yellow]Running[/yellow]"
-            elif task.status == TaskStatus.SUCCESS:
-                status = "[green]Success[/green]"
-            elif task.status == TaskStatus.FAILED:
-                status = "[red]Failed[/red]"
-            elif task.status == TaskStatus.SKIPPED:
-                status = "[blue]Skipped[/blue]"
-            else:
-                status = "[dim white]Pending[/dim white]"
-            duration = task.duration
-            duration_text = f"{duration:.2f}s" if duration else "-"
-            deps = ", ".join(dep.name for dep in task.dependencies) or "-"
-            table.add_row(task.name, status, duration_text, deps)
-        return table
+        return "fast_hooks"
 
-    def run_interactive(self) -> None:
-        self.console.clear()
-        layout = self._setup_interactive_layout()
-        progress_tracker = self._create_progress_tracker()
-        with Live(layout) as live:
-            try:
-                self._execute_workflow_loop(layout, progress_tracker, live)
-                self._display_final_summary(layout)
-            except KeyboardInterrupt:
-                self._handle_user_interruption(layout)
-        self.console.print("\nWorkflow Status:")
+    def _add_testing_phase(
+        self, builder: WorkflowBuilder, last_task: str, enabled: bool
+    ) -> str:
+        return (
+            builder.add_conditional_task(
+                condition=enabled,
+                task_id="test",
+                name="Test",
+                description="Run tests with coverage",
+                dependencies=[last_task],
+                estimated_duration=30.0,
+            )
+            or last_task
+        )
+
+    def _add_comprehensive_hooks_phase(
+        self, builder: WorkflowBuilder, last_task: str
+    ) -> str:
+        builder.add_task(
+            "comprehensive_hooks",
+            "Quality Check",
+            "Run comprehensive hooks",
+            dependencies=[last_task],
+            estimated_duration=45.0,
+        )
+        return "comprehensive_hooks"
+
+    def _add_version_phase(
+        self, builder: WorkflowBuilder, last_task: str, enabled: bool
+    ) -> str:
+        return (
+            builder.add_conditional_task(
+                condition=enabled,
+                task_id="version",
+                name="Version",
+                description="Bump version",
+                dependencies=[last_task],
+                estimated_duration=5.0,
+            )
+            or last_task
+        )
+
+    def _add_publish_phase(
+        self, builder: WorkflowBuilder, last_task: str, enabled: bool
+    ) -> str:
+        return (
+            builder.add_conditional_task(
+                condition=enabled,
+                task_id="publish",
+                name="Publish",
+                description="Publish package",
+                dependencies=[last_task],
+                estimated_duration=20.0,
+            )
+            or last_task
+        )
+
+    def _add_commit_phase(
+        self, builder: WorkflowBuilder, last_task: str, enabled: bool
+    ) -> str:
+        return (
+            builder.add_conditional_task(
+                condition=enabled,
+                task_id="commit",
+                name="Commit",
+                description="Commit changes",
+                dependencies=[last_task],
+                estimated_duration=3.0,
+            )
+            or last_task
+        )
+
+    def _add_pr_phase(
+        self, builder: WorkflowBuilder, last_task: str, enabled: bool
+    ) -> str:
+        return (
+            builder.add_conditional_task(
+                condition=enabled,
+                task_id="pr",
+                name="Pull Request",
+                description="Create pull request",
+                dependencies=[last_task],
+                estimated_duration=5.0,
+            )
+            or last_task
+        )
+
+    def run_interactive_workflow(self, options: WorkflowOptions) -> bool:
+        self.logger.info(
+            f"Starting interactive workflow with options: {options.__dict__}"
+        )
+        self.create_dynamic_workflow(options)
+
+        self.console.print("[bold blue]🚀 Starting Interactive Workflow[/bold blue]")
         self.workflow.display_task_tree()
 
-    def _setup_interactive_layout(self) -> Layout:
-        layout = self.setup_layout()
-        layout["header"].update(
-            Panel("Crackerjack Interactive Mode", style="bold white")
-        )
-        layout["footer"].update(Panel("Press Ctrl+C to exit", style="dim"))
-        return layout
+        if not Confirm.ask("Continue with workflow?"):
+            self.console.print("[yellow]Workflow cancelled by user[/yellow]")
+            return False
 
-    def _create_progress_tracker(self) -> dict[str, t.Any]:
-        progress = Progress(
-            SpinnerColumn(),
-            TextColumn("[white]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-        )
-        total_tasks = len(self.workflow.tasks)
-        progress_task = progress.add_task("Running workflow", total=total_tasks)
-        return {
-            "progress": progress,
-            "progress_task": progress_task,
-            "completed_tasks": 0,
-        }
+        return self._execute_workflow_loop()
 
-    def _execute_workflow_loop(
-        self, layout: Layout, progress_tracker: dict[str, t.Any], live: Live
-    ) -> None:
+    def _execute_workflow_loop(self) -> bool:
+        overall_success = True
+
         while not self.workflow.all_tasks_completed():
-            layout["tasks"].update(self.show_task_table())
             next_task = self.workflow.get_next_task()
-            if not next_task:
+
+            if next_task is None:
+                overall_success = self._handle_stuck_workflow()
                 break
-            if self._should_execute_task(layout, next_task, live):
-                self._execute_task(layout, next_task, progress_tracker)
-            else:
-                next_task.skip()
 
-    def _should_execute_task(self, layout: Layout, task: Task, live: Live) -> bool:
-        layout["details"].update(self.show_task_status(task))
-        live.stop()
-        should_run = Confirm.ask(f"Run task '{task.name}'?", default=True)
-        live.start()
-        return should_run
+            if not self._should_run_task(next_task):
+                continue
 
-    def _execute_task(
-        self, layout: Layout, task: Task, progress_tracker: dict[str, t.Any]
-    ) -> None:
-        task.start()
-        layout["details"].update(self.show_task_status(task))
-        time.sleep(1)
-        success = self._simulate_task_execution()
-        if success:
-            task.complete()
-            progress_tracker["completed_tasks"] += 1
-        else:
-            error = self._create_task_error(task.name)
-            task.fail(error)
-        progress_tracker["progress"].update(
-            progress_tracker["progress_task"],
-            completed=progress_tracker["completed_tasks"],
-        )
-        layout["details"].update(self.show_task_status(task))
+            success = self._execute_single_task(next_task)
+            if not success:
+                overall_success = False
+                if not self._should_continue_after_failure():
+                    break
 
-    def _simulate_task_execution(self) -> bool:
-        import random
+        self._display_workflow_summary()
+        return overall_success
 
-        return random.choice([True, True, True, False])
+    def _handle_stuck_workflow(self) -> bool:
+        pending_tasks = [
+            task
+            for task in self.workflow.tasks.values()
+            if task.status == TaskStatus.PENDING
+        ]
 
-    def _create_task_error(self, task_name: str) -> t.Any:
-        from .errors import ExecutionError
+        if pending_tasks:
+            self.console.print("[red]❌ Workflow stuck - unresolved dependencies[/red]")
+            return False
+        return True
 
-        return ExecutionError(
-            message=f"Task '{task_name}' failed",
-            error_code=ErrorCode.COMMAND_EXECUTION_ERROR,
-            details="This is a simulated failure for demonstration.",
-            recovery=f"Retry the '{task_name}' task.",
-        )
+    def _should_run_task(self, task: Task) -> bool:
+        if not Confirm.ask(f"Run {task.name}?", default=True):
+            task.skip()
+            return False
+        return True
 
-    def _display_final_summary(self, layout: Layout) -> None:
-        layout["tasks"].update(self.show_task_table())
-        task_counts = self._count_tasks_by_status()
-        summary = Panel(
-            f"🏆 Workflow completed!\n\n"
-            f"[green]✅ Successful tasks: {task_counts['successful']}[/green]\n"
-            f"[red]❌ Failed tasks: {task_counts['failed']}[/red]\n"
-            f"[blue]⏩ Skipped tasks: {task_counts['skipped']}[/blue]",
-            title="Summary",
-            border_style="cyan",
-        )
-        layout["details"].update(summary)
+    def _execute_single_task(self, task: Task) -> bool:
+        return self.workflow.run_task(task)
 
-    def _count_tasks_by_status(self) -> dict[str, int]:
-        return {
-            "successful": sum(
-                1
-                for task in self.workflow.tasks.values()
-                if task.status == TaskStatus.SUCCESS
-            ),
-            "failed": sum(
-                1
-                for task in self.workflow.tasks.values()
-                if task.status == TaskStatus.FAILED
-            ),
-            "skipped": sum(
-                1
-                for task in self.workflow.tasks.values()
-                if task.status == TaskStatus.SKIPPED
-            ),
+    def _should_continue_after_failure(self) -> bool:
+        return Confirm.ask("Continue despite failure?", default=True)
+
+    def _display_workflow_summary(self) -> None:
+        summary = self.workflow.get_workflow_summary()
+
+        self.console.print("\n[bold]📊 Workflow Summary[/bold]")
+
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Status", style="cyan")
+        table.add_column("Count", justify="right")
+
+        status_styles = {
+            "success": "green",
+            "failed": "red",
+            "skipped": "yellow",
+            "pending": "white",
         }
 
-    def _handle_user_interruption(self, layout: Layout) -> None:
-        layout["footer"].update(Panel("Interrupted by user", style="yellow"))
+        for status, count in summary.items():
+            if count > 0:
+                style = status_styles.get(status, "white")
+                table.add_row(f"[{style}]{status.title()}[/{style}]", str(count))
 
-    def ask_for_file(
-        self, prompt: str, directory: Path, default: str | None = None
-    ) -> Path:
-        self.console.print(f"\n[bold]{prompt}[/bold]")
-        files = list(directory.iterdir())
-        files.sort()
-        table = Table(title=f"Files in {directory}", box=ROUNDED)
-        table.add_column("#", style="cyan")
-        table.add_column("Filename", style="green")
-        table.add_column("Size", style="blue")
-        table.add_column("Modified", style="yellow")
-        for i, file in enumerate(files, 1):
-            if file.is_file():
-                size = f"{file.stat().st_size / 1024:.1f} KB"
-                mtime = time.strftime(
-                    "%Y-%m-%d %H:%M:%S", time.localtime(file.stat().st_mtime)
-                )
-                table.add_row(str(i), file.name, size, mtime)
         self.console.print(table)
-        selection = Prompt.ask("Enter file number or name", default=default or "")
-        if selection.isdigit() and 1 <= int(selection) <= len(files):
-            return files[int(selection) - 1]
-        else:
-            for file in files:
-                if file.name == selection:
-                    return file
-            return directory / selection
-
-    def confirm_dangerous_action(self, action: str, details: str) -> bool:
-        panel = Panel(
-            f"[bold red]WARNING: {action}[/bold red]\n\n{details}\n\nThis action cannot be undone. Please type the action name to confirm.",
-            title="Confirmation Required",
-            border_style="red",
-        )
-        self.console.print(panel)
-        confirmation = Prompt.ask("Type the action name to confirm")
-        return confirmation.lower() == action.lower()
-
-    def show_error(self, error: CrackerjackError, verbose: bool = False) -> None:
-        handle_error(error, self.console, verbose, exit_on_error=False)
 
 
-def launch_interactive_cli(version: str) -> None:
+def launch_interactive_cli(version: str, options: t.Any = None) -> None:
     console = Console()
     cli = InteractiveCLI(console)
-    cli.show_banner(version)
-    cli.create_standard_workflow()
-    cli.run_interactive()
+
+    title = Text("Crackerjack", style="bold cyan")
+    version_text = Text(f"v{version}", style="dim cyan")
+    subtitle = Text("Your Python project management toolkit", style="italic")
+    panel = Panel(
+        f"{title} {version_text}\n{subtitle}", border_style="cyan", expand=False
+    )
+    console.print(panel)
+    console.print()
+
+    workflow_options = (
+        WorkflowOptions.from_args(options) if options else WorkflowOptions()
+    )
+    cli.create_dynamic_workflow(workflow_options)
+    cli.run_interactive_workflow(workflow_options)
 
 
 if __name__ == "__main__":

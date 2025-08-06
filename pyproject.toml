@@ -1,35 +1,13 @@
-[build-system]
-build-backend = "hatchling.build"
-requires = [ "hatchling" ]
-
 [project]
 name = "crackerjack"
-version = "0.30.2"
-description = "Crackerjack: code quality toolkit"
+version = "0.30.3"
+description = "Opinionated Python project management tool"
 readme = "README.md"
-keywords = [
-    "bandit",
-    "black",
-    "creosote",
-    "mypy",
-    "pyright",
-    "pytest",
-    "refurb",
-    "ruff",
-]
-license.text = "BSD-3-CLAUSE"
-maintainers = [
-    { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
-]
-
 authors = [
-    { name = "lesleslie", email = "les@wedgwoodwebworks.com" },
+    { name = "Les Leslie", email = "les@lesleslie.com" },
 ]
 requires-python = ">=3.13"
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Environment :: Console",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: POSIX",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
@@ -42,13 +20,21 @@ classifiers = [
 ]
 dependencies = [
     "aiofiles>=24.1",
-    "autotyping>=24.9",
+    "aiohttp>=3.12.14",
+    "bandit>=1.8.6",
+    "codespell>=2.4.1",
+    "complexipy>=3.3",
+    "creosote>=4.0.3",
+    "fastapi>=0.116.1",
+    "fastmcp>=2.10.6",
     "hatchling>=1.25",
     "jinja2>=3.1",
     "keyring>=25.6",
+    "mcp>=1.12.2",
     "pre-commit>=4.2",
     "pydantic>=2.11.7",
     "pyleak>=0.1.14",
+    "pyright>=1.1.403",
     "pytest>=8.4.1",
     "pytest-asyncio>=1",
     "pytest-benchmark>=5.1",
@@ -57,84 +43,80 @@ dependencies = [
     "pytest-timeout>=2.4",
     "pytest-xdist>=3.8",
     "pyyaml>=6.0.2",
-    "rich>=14",
+    "refurb>=2.1",
+    "rich>=14.1",
+    "structlog>=24.4",
+    "textual>=0.89",
     "tomli-w>=1.2",
     "typer>=0.16",
     "uv>=0.7.20",
+    "uvicorn>=0.32.1",
+    "vulture>=2.14",
+    "watchdog>=6",
+    "websockets>=15.0.1",
 ]
-urls.documentation = "https://github.com/lesleslie/crackerjack"
-urls.homepage = "https://github.com/lesleslie/crackerjack"
-urls.repository = "https://github.com/lesleslie/crackerjack"
 
-[dependency-groups]
-dev = [
-    "complexipy>=3.3",
-    "pyyaml>=6.0.2",
-    "refurb>=2.1",
-]
+[project.license]
+text = "BSD-3-CLAUSE"
+
+[project.urls]
+documentation = "https://github.com/lesleslie/crackerjack"
+homepage = "https://github.com/lesleslie/crackerjack"
+repository = "https://github.com/lesleslie/crackerjack"
 
 [tool.ruff]
 target-version = "py313"
 line-length = 88
 fix = true
 unsafe-fixes = true
-
 show-fixes = true
 output-format = "full"
-format.docstring-code-format = true
-lint.extend-select = [
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+extend-select = [
     "C901",
-    "F",    # pyflakes
+    "F",
     "I",
-    "UP",   # pyupgrade (includes F-string conversion)
+    "UP",
 ]
-lint.ignore = [
-    "E402", # Module level import not at top - sometimes necessary
-    "F821", # Undefined name - can be resolved with proper imports
+ignore = [
+    "E402",
+    "F821",
 ]
-lint.fixable = [ "ALL" ]
-lint.unfixable = [  ]
-lint.isort.no-lines-before = [
-    "first-party",
+fixable = [
+    "ALL",
 ]
-lint.mccabe.max-complexity = 13
 
 [tool.codespell]
 skip = "*/data/*"
 quiet-level = 3
 ignore-words-list = "crate,uptodate,nd,nin"
 
-[tool.pyproject-fmt]
-column_width = 120
-indent = 4
-
 [tool.pytest.ini_options]
-# Core pytest configuration
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
-python_files = [ "test_*.py", "*_test.py" ]
-testpaths = [ "tests", "crackerjack" ]
-python_classes = [ "Test*" ]
-python_functions = [ "test_*" ]
-
-# Markers
+timeout = 300
+addopts = "--cov=crackerjack --cov-report=term --cov-fail-under=42"
+testpaths = [
+    "tests",
+]
+norecursedirs = [
+    "~",
+    ".git",
+    "*.egg",
+    "build",
+    "dist",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+]
 markers = [
     "unit: marks test as a unit test",
-    "benchmark: mark test as a benchmark (disables parallel execution)",
+    "benchmark: mark test as a benchmark",
     "integration: marks test as an integration test",
-    "no_leaks: detect asyncio task leaks, thread leaks, and event loop blocking",
-]
-
-# Default timeout settings
-timeout = 300
-timeout_method = "thread"
-
-# Test command options
-addopts = "--cov=crackerjack --cov-report=term --cov-fail-under=42"
-
-# Filter out benchmark warnings when xdist is active
-filterwarnings = [
-    "ignore::pytest_benchmark.logger.PytestBenchmarkWarning",
+    "no_leaks: detect asyncio task leaks",
 ]
 
 [tool.pytest.benchmark]
@@ -146,7 +128,9 @@ max_time = 5.0
 
 [tool.coverage.run]
 branch = false
-source = [ "crackerjack" ]
+source = [
+    "crackerjack",
+]
 data_file = ".coverage"
 parallel = false
 omit = [
@@ -178,32 +162,34 @@ ignore_errors = false
 verboseOutput = true
 include = [
     "crackerjack",
-    "tests",
 ]
 exclude = [
     "scratch",
     ".venv",
     "build",
     "dist",
+    "tests/*",
+    "examples/*",
+    "crackerjack/mcp/*",
+    "crackerjack/plugins/*",
 ]
 extraPaths = [
     ".venv/lib/python3.13/site-packages/",
 ]
 typeCheckingMode = "strict"
-# Enhanced strictness - only disable what's absolutely necessary
-reportMissingTypeStubs = false                 # Third-party libraries often lack stubs
-reportOptionalMemberAccess = "warning"         # Upgrade from false to warning
-reportOptionalCall = "warning"                 # Upgrade from false to warning
-reportUnknownMemberType = "warning"            # Upgrade from false to warning
-reportUnknownVariableType = false              # Too noisy for dynamic code
-reportUnknownArgumentType = "warning"          # Upgrade from false to warning
-reportInvalidTypeForm = "warning"              # Upgrade from false to warning
-reportUnknownLambdaType = "warning"            # Upgrade from false to warning
+reportMissingTypeStubs = false
+reportOptionalMemberAccess = "warning"
+reportOptionalCall = "warning"
+reportUnknownMemberType = "warning"
+reportUnknownVariableType = false
+reportUnknownArgumentType = "warning"
+reportInvalidTypeForm = "warning"
+reportUnknownLambdaType = "warning"
 reportUnknownParameterType = "warning"
-reportPrivateUsage = "warning"                 # Upgrade from false to warning
-reportUnnecessaryTypeIgnoreComment = "warning" # New - catch unused ignores
-reportUnnecessaryComparison = "warning"        # New - catch unnecessary comparisons
-reportConstantRedefinition = "warning"         # New - catch constant redefinitions
+reportPrivateUsage = "warning"
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportUnnecessaryComparison = "warning"
+reportConstantRedefinition = "warning"
 pythonVersion = "3.13"
 
 [tool.uv]
@@ -213,8 +199,12 @@ check-url = "https://pypi.org/simple/"
 
 [tool.vulture]
 min_confidence = 86
-paths = [ "crackerjack" ]
-ignore_names = [ "cls" ]
+paths = [
+    "crackerjack",
+]
+ignore_names = [
+    "cls",
+]
 
 [tool.creosote]
 paths = [
@@ -222,7 +212,6 @@ paths = [
 ]
 deps-file = "pyproject.toml"
 exclude-deps = [
-    "autotyping",
     "hatchling",
     "pre-commit",
     "pytest",
@@ -241,41 +230,37 @@ exclude-deps = [
     "inflection",
     "pydantic-settings",
     "pyleak",
+    "bandit",
+    "vulture",
+    "pyright",
+    "creosote",
+    "refurb",
+    "complexipy",
+    "codespell",
+    "fastapi",
+    "fastmcp",
+    "uvicorn",
+    "websockets",
+    "watchdog",
 ]
 
 [tool.refurb]
 enable_all = true
 quiet = true
-# Enable Python 3.13+ specific modernizations
 python_version = "3.13"
 
 [tool.bandit]
 target = [
     "crackerjack",
-    "tests",       # Include tests for security analysis
 ]
-# Minimal skips - only skip what's absolutely necessary for this codebase
 skips = [
-    "B101", # assert_used - tests legitimately use assert
-    "B603", # subprocess_without_shell_equals_true - we use shell=False safely
-    "B607", # start_process_with_partial_path - controlled subprocess calls
+    "B101",
+    "B603",
+    "B607",
 ]
-# Enhanced security scanning
 exclude_dirs = [
-    "tests/data", # Test data might contain examples
+    "tests/data",
 ]
-
-# Autotyping optimization
-
-[tool.autotyping]
-exclude = [
-    "tests/data/*",
-    "*/conftest.py",
-]
-safe = true
-aggressive = true
-
-# Code complexity monitoring
 
 [tool.complexipy]
 default_pattern = "**/*.py"

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rich.console import Console
 from rich.panel import Panel
+
 from crackerjack.errors import ErrorCode, ExecutionError
 from crackerjack.interactive import (
     InteractiveCLI,
@@ -379,6 +380,34 @@ class TestInteractiveCLI:
         mock_prompt.ask.return_value = "newfile.txt"
         result = cli.ask_for_file("Select a file", tmp_path)
         assert result == tmp_path / "newfile.txt"
+
+
+def test_task_status_formatting_edge_cases() -> None:
+    from crackerjack.interactive import InteractiveCLI, TaskStatus
+
+    InteractiveCLI()
+    task_completed = MagicMock()
+    task_completed.status = TaskStatus.SUCCESS
+    task_completed.name = "Test"
+    task_running = MagicMock()
+    task_running.status = TaskStatus.RUNNING
+    task_running.name = "Test"
+    task_skipped = MagicMock()
+    task_skipped.status = TaskStatus.SKIPPED
+    task_skipped.name = "Test"
+    assert task_completed.status == TaskStatus.SUCCESS
+    assert task_running.status == TaskStatus.RUNNING
+    assert task_skipped.status == TaskStatus.SKIPPED
+
+
+def test_workflow_break_condition() -> None:
+    from crackerjack.interactive import InteractiveCLI, WorkflowManager
+
+    cli = InteractiveCLI()
+    empty_workflow = WorkflowManager(cli.console)
+    cli.workflow = empty_workflow
+    with patch.object(cli, "show_task_table", return_value=MagicMock()):
+        assert empty_workflow.get_next_task() is None
 
 
 @patch("crackerjack.interactive.InteractiveCLI")

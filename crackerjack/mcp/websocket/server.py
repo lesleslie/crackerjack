@@ -100,7 +100,6 @@ def handle_websocket_server_command(
         except Exception as e:
             console.print(f"[red]Failed to start WebSocket server: {e}[/red]")
 
-
 def main(port: int = 8675) -> None:
     server = WebSocketServer(port)
     server.run()

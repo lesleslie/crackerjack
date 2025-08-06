@@ -1,0 +1,235 @@
+import re
+from pathlib import Path
+
+from .base import (
+    AgentContext,
+    FixResult,
+    Issue,
+    IssueType,
+    SubAgent,
+    agent_registry,
+)
+
+
+class FormattingAgent(SubAgent):
+    def __init__(self, context: AgentContext) -> None:
+        super().__init__(context)
+        self.supported_tools = [
+            "ruff",
+            "trailing - whitespace",
+            "end - of - file - fixer",
+        ]
+
+    def get_supported_types(self) -> set[IssueType]:
+        return {IssueType.FORMATTING, IssueType.IMPORT_ERROR}
+
+    async def can_handle(self, issue: Issue) -> float:
+        if issue.type not in self.get_supported_types():
+            return 0.0
+
+        message_lower = issue.message.lower()
+
+        if any(
+            keyword in message_lower
+            for keyword in [
+                "would reformat",
+                "trailing whitespace",
+                "missing newline",
+                "import sorting",
+                "unused import",
+                "ruff",
+                "format",
+            ]
+        ):
+            return 1.0
+
+        if any(
+            keyword in message_lower
+            for keyword in [
+                "whitespace",
+                "indent",
+                "spacing",
+                "line length",
+                "import",
+                "style",
+                "format",
+            ]
+        ):
+            return 0.8
+
+        if issue.type == IssueType.FORMATTING:
+            return 0.6
+
+        return 0.0
+
+    async def analyze_and_fix(self, issue: Issue) -> FixResult:
+        self.log(f"Analyzing formatting issue: {issue.message}")
+
+        fixes_applied = []
+        files_modified = []
+
+        try:
+            ruff_fixes = await self._apply_ruff_fixes()
+            fixes_applied.extend(ruff_fixes)
+
+            whitespace_fixes = await self._apply_whitespace_fixes()
+            fixes_applied.extend(whitespace_fixes)
+
+            import_fixes = await self._apply_import_fixes()
+            fixes_applied.extend(import_fixes)
+
+            if issue.file_path:
+                file_fixes = await self._fix_specific_file(issue.file_path, issue)
+                fixes_applied.extend(file_fixes)
+                if file_fixes:
+                    files_modified.append(issue.file_path)
+
+            success = len(fixes_applied) > 0
+            confidence = 0.9 if success else 0.3
+
+            return FixResult(
+                success=success,
+                confidence=confidence,
+                fixes_applied=fixes_applied,
+                files_modified=files_modified,
+                recommendations=[
+                    "Run ruff format regularly for consistent styling",
+                    "Configure pre - commit hooks for automatic formatting",
+                ]
+                if not success
+                else [],
+            )
+
+        except Exception as e:
+            self.log(f"Error fixing formatting issue: {e}", "ERROR")
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Failed to apply formatting fixes: {e}"],
+            )
+
+    async def _apply_ruff_fixes(self) -> list[str]:
+        fixes = []
+
+        returncode, stdout, stderr = await self.run_command(
+            ["uv", "run", "ruff", "format", "."]
+        )
+
+        if returncode == 0:
+            fixes.append("Applied ruff code formatting")
+            self.log("Successfully applied ruff formatting")
+        else:
+            self.log(f"Ruff format failed: {stderr}", "WARN")
+
+        returncode, stdout, stderr = await self.run_command(
+            ["uv", "run", "ruff", "check", ".", " -- fix"]
+        )
+
+        if returncode == 0:
+            fixes.append("Applied ruff linting fixes")
+            self.log("Successfully applied ruff linting fixes")
+        else:
+            self.log(f"Ruff check -- fix had issues: {stderr}", "WARN")
+
+        return fixes
+
+    async def _apply_whitespace_fixes(self) -> list[str]:
+        fixes = []
+
+        returncode, stdout, stderr = await self.run_command(
+            [
+                "uv",
+                "run",
+                "pre - commit",
+                "run",
+                "trailing - whitespace",
+                " -- all - files",
+            ]
+        )
+
+        if returncode == 0:
+            fixes.append("Fixed trailing whitespace")
+            self.log("Fixed trailing whitespace")
+
+        returncode, stdout, stderr = await self.run_command(
+            [
+                "uv",
+                "run",
+                "pre - commit",
+                "run",
+                "end - of - file - fixer",
+                " -- all - files",
+            ]
+        )
+
+        if returncode == 0:
+            fixes.append("Fixed end - of - file formatting")
+            self.log("Fixed end - of - file formatting")
+
+        return fixes
+
+    async def _apply_import_fixes(self) -> list[str]:
+        fixes = []
+
+        returncode, stdout, stderr = await self.run_command(
+            [
+                "uv",
+                "run",
+                "ruff",
+                "check",
+                ".",
+                " -- select",
+                "I, F401",
+                " -- fix",
+            ]
+        )
+
+        if returncode == 0:
+            fixes.append("Organized imports and removed unused imports")
+            self.log("Fixed import organization")
+
+        return fixes
+
+    async def _fix_specific_file(self, file_path: str, issue: Issue) -> list[str]:
+        fixes = []
+
+        try:
+            path = Path(file_path)
+            if not path.exists() or not path.is_file():
+                return fixes
+
+            content = self.context.get_file_content(path)
+            if not content:
+                return fixes
+
+            original_content = content
+
+            content = re.sub(r"[ \t] + $", "", content, flags=re.MULTILINE)
+
+            if content and not content.endswith("\n"):
+                content += "\n"
+
+            content = re.sub(r"\n{3, }", "\n\n", content)
+
+            lines = content.split("\n")
+            fixed_lines = []
+
+            for line in lines:
+                if "\t" in line:
+                    line = line.expandtabs(4)
+                fixed_lines.append(line)
+
+            content = "\n".join(fixed_lines)
+
+            if content != original_content:
+                if self.context.write_file_content(path, content):
+                    fixes.append(f"Fixed formatting in {file_path}")
+                    self.log(f"Applied file - specific fixes to {file_path}")
+
+        except Exception as e:
+            self.log(f"Error fixing file {file_path}: {e}", "ERROR")
+
+        return fixes
+
+
+agent_registry.register(FormattingAgent)

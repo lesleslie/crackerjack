@@ -1,0 +1,165 @@
+import subprocess
+from pathlib import Path
+
+from rich.console import Console
+
+
+class GitService:
+    def __init__(self, console: Console, pkg_path: Path | None = None) -> None:
+        self.console = console
+        self.pkg_path = pkg_path or Path.cwd()
+
+    def _run_git_command(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+        cmd = ["git"] + args
+        return subprocess.run(
+            cmd, cwd=self.pkg_path, capture_output=True, text=True, timeout=60
+        )
+
+    def is_git_repo(self) -> bool:
+        try:
+            result = self._run_git_command(["rev - parse", " -- git - dir"])
+            return result.returncode == 0
+        except (subprocess.SubprocessError, OSError, FileNotFoundError):
+            return False
+
+    def get_changed_files(self) -> list[str]:
+        try:
+            staged_result = self._run_git_command(
+                ["diff", " -- cached", " -- name - only"]
+            )
+            staged_files = (
+                staged_result.stdout.strip().split("\n")
+                if staged_result.stdout.strip()
+                else []
+            )
+            unstaged_result = self._run_git_command(["diff", " -- name - only"])
+            unstaged_files = (
+                unstaged_result.stdout.strip().split("\n")
+                if unstaged_result.stdout.strip()
+                else []
+            )
+            untracked_result = self._run_git_command(
+                ["ls - files", " -- others", " -- exclude - standard"]
+            )
+            untracked_files = (
+                untracked_result.stdout.strip().split("\n")
+                if untracked_result.stdout.strip()
+                else []
+            )
+            all_files = set(staged_files + unstaged_files + untracked_files)
+            return [f for f in all_files if f]
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️[/yellow] Error getting changed files: {e}")
+            return []
+
+    def get_staged_files(self) -> list[str]:
+        try:
+            result = self._run_git_command(["diff", " -- cached", " -- name - only"])
+            return result.stdout.strip().split("\n") if result.stdout.strip() else []
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️[/yellow] Error getting staged files: {e}")
+            return []
+
+    def add_files(self, files: list[str]) -> bool:
+        try:
+            for file in files:
+                result = self._run_git_command(["add", file])
+                if result.returncode != 0:
+                    self.console.print(
+                        f"[red]❌[/red] Failed to add {file}: {result.stderr}"
+                    )
+                    return False
+            return True
+        except Exception as e:
+            self.console.print(f"[red]❌[/red] Error adding files: {e}")
+            return False
+
+    def commit(self, message: str) -> bool:
+        try:
+            result = self._run_git_command(["commit", " - m", message])
+            if result.returncode == 0:
+                self.console.print(f"[green]✅[/green] Committed: {message}")
+                return True
+            else:
+                self.console.print(f"[red]❌[/red] Commit failed: {result.stderr}")
+                return False
+        except Exception as e:
+            self.console.print(f"[red]❌[/red] Error committing: {e}")
+            return False
+
+    def push(self) -> bool:
+        try:
+            result = self._run_git_command(["push"])
+            if result.returncode == 0:
+                self.console.print("[green]✅[/green] Pushed to remote")
+                return True
+            else:
+                self.console.print(f"[red]❌[/red] Push failed: {result.stderr}")
+                return False
+        except Exception as e:
+            self.console.print(f"[red]❌[/red] Error pushing: {e}")
+            return False
+
+    def get_current_branch(self) -> str | None:
+        try:
+            result = self._run_git_command(["branch", " -- show - current"])
+            return result.stdout.strip() if result.returncode == 0 else None
+        except (subprocess.SubprocessError, OSError, FileNotFoundError):
+            return None
+
+    def get_commit_message_suggestions(self, files: list[str]) -> list[str]:
+        if not files:
+            return ["Update project files"]
+        file_categories = self._categorize_files(files)
+        messages = self._generate_category_messages(file_categories)
+        messages.extend(self._generate_specific_messages(files))
+
+        return messages[:5]
+
+    def _categorize_files(self, files: list[str]) -> set[str]:
+        categories = {
+            "docs": ["README", "CLAUDE", "docs / ", ".md"],
+            "tests": ["test_", "tests / ", "conftest.py"],
+            "config": ["pyproject.toml", ".yaml", ".yml", ".json", ".gitignore"],
+            "ci": [".github / ", "ci / ", ".pre - commit"],
+            "deps": ["requirements", "uv.lock", "Pipfile"],
+        }
+        file_categories: set[str] = set()
+        for file in files:
+            category = self._get_file_category(file, categories)
+            file_categories.add(category)
+
+        return file_categories
+
+    def _get_file_category(self, file: str, categories: dict[str, list[str]]) -> str:
+        for category, patterns in categories.items():
+            if any(pattern in file for pattern in patterns):
+                return category
+        return "core"
+
+    def _generate_category_messages(self, file_categories: set[str]) -> list[str]:
+        if len(file_categories) == 1:
+            return self._generate_single_category_message(list(file_categories)[0])
+        return [f"Update {', '.join(sorted(file_categories))}"]
+
+    def _generate_single_category_message(self, category: str) -> list[str]:
+        category_messages = {
+            "docs": "Update documentation",
+            "tests": "Update tests",
+            "config": "Update configuration",
+            "ci": "Update CI / CD configuration",
+            "deps": "Update dependencies",
+        }
+        message = category_messages.get(category, "Update core functionality")
+        return [message]
+
+    def _generate_specific_messages(self, files: list[str]) -> list[str]:
+        messages: list[str] = []
+        if "pyproject.toml" in files:
+            messages.append("Update project configuration")
+        if any("test_" in f for f in files):
+            messages.append("Improve test coverage")
+        if "README.md" in files:
+            messages.append("Update README documentation")
+
+        return messages

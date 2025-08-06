@@ -8,27 +8,30 @@
 /.ruff_cache/
 /.pdm-build/
 /tmp/
+/.venv/
 /__pycache__/
 /*.pyc
 /scratch/
-/.zencoder/
 /.benchmarks/
 **/.claude/settings.local.json
 /complexipy.json
 /coverage.json
 /test-results.xml
-/.coverage
-
-# AI agent output files
+/.coverage*
+/.DS_STORE
+/crackerjack-debug-*.log
+/crackerjack-ai-debug-*.log
 /hooks-analysis.json
 /quality-metrics.json
 /project-structure.json
 /error-context.json
 /ai-agent-summary.json
 /bandit-report.json
-
-# Autotyping cache
-.autotyping-cache/
-
-# Crackerjack state file
-.crackerjack-state
+/.autotyping-cache/
+/.crackerjack-state
+/.crackerjack-hooks-updated
+/.crackerjack-mcp/
+/.crackerjack_cache
+/.envrc
+/htmlcov/
+/examples/

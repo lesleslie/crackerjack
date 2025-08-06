@@ -102,7 +102,7 @@ class TestPy313Advanced:
         assert processed[2] == "Failure object: None"
 
     def test_enhanced_command_runner(self) -> None:
-        test_dir = Path.home() / ".cache" / "crackerjack-tests"
+        test_dir = Path.home() / ".cache" / "crackerjack - tests"
         test_dir.mkdir(parents=True, exist_ok=True)
         runner = EnhancedCommandRunner(test_dir)
         with mock.patch("subprocess.run") as mock_run:

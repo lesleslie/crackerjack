@@ -1,0 +1,110 @@
+/* Clean, modern styling with proper spacing */
+Screen {
+    layout: vertical;
+    background: $background;
+}
+
+#header {
+    height: 3;
+    background: $primary;
+    color: $text;
+    content-align: center middle;
+    text-style: bold;
+}
+
+#main-content {
+    layout: grid;
+    grid-size: 2 2;
+    grid-gutter: 1;
+    padding: 1;
+}
+
+/* Agent panel - top left */
+#agent-panel {
+    row-span: 1;
+    column-span: 1;
+    border: round $primary;
+    padding: 1;
+}
+
+/* Service panel - top right */
+#service-panel {
+    row-span: 1;
+    column-span: 1;
+    border: round $warning;
+    padding: 1;
+}
+
+/* Jobs panel - bottom full width */
+#jobs-container {
+    row-span: 1;
+    column-span: 2;
+    layout: vertical;
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+/* Individual job panels */
+.job-panel {
+    border: round $accent;
+    margin-bottom: 1;
+    padding: 1;
+    transition: opacity 300ms;
+}
+
+.job-panel.fading {
+    opacity: 0.5;
+}
+
+/* Metric cards */
+MetricCard {
+    width: 1fr;
+    height: 4;
+    padding: 0 1;
+    content-align: center middle;
+    border: tall $surface;
+}
+
+/* Progress bars */
+ProgressBar {
+    height: 1;
+    color: $success;
+}
+
+/* Tables */
+DataTable {
+    background: $surface;
+}
+
+/* Labels */
+.stage-label {
+    color: $primary;
+    text-style: bold;
+}
+
+.status-label {
+    color: $secondary;
+}
+
+.success-rate {
+    color: $success;
+    text-style: bold;
+    content-align: center middle;
+    margin-top: 1;
+}
+
+/* Horizontal layouts */
+Horizontal {
+    height: auto;
+    align: center middle;
+}
+
+.metrics-grid {
+    height: 5;
+    margin: 1 0;
+}
+
+/* Footer */
+Footer {
+    background: $panel;
+}

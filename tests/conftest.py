@@ -1,4 +1,3 @@
-import os
 import time
 import typing as t
 from pathlib import Path
@@ -12,11 +11,7 @@ def pytest_configure(config: Config) -> None:
         "markers", "benchmark: mark test as a benchmark (disables parallel execution)"
     )
     if not hasattr(config, "workerinput"):
-        benchmark_regression = config.getoption("--benchmark-regression")
-        if benchmark_regression:
-            threshold_str = str(config.getoption("--benchmark-regression-threshold"))
-            threshold = float(threshold_str) / 100.0
-            os.environ["BENCHMARK_THRESHOLD"] = str(threshold)
+        pass
 
 
 def pytest_addoption(parser: Parser) -> None:
@@ -25,19 +20,6 @@ def pytest_addoption(parser: Parser) -> None:
         action="store_true",
         default=False,
         help="Run benchmark tests and disable parallelism",
-    )
-    parser.addoption(
-        "--benchmark-regression",
-        action="store_true",
-        default=False,
-        help="Fail tests if benchmarks regress beyond threshold",
-    )
-    group = parser.getgroup("benchmark")
-    group.addoption(
-        "--benchmark-regression-threshold",
-        action="store",
-        default="5.0",
-        help="Regression threshold in percent (default: 5.0%%)",
     )
 
 
@@ -69,9 +51,9 @@ def pytest_runtest_teardown(item: t.Any) -> None:
     if hasattr(item, "_start_time"):
         duration = time.time() - item._start_time
         if duration > 10:
-            print(f"SLOW TEST: {item.name} took {duration:.2f}s")
+            print(f"SLOW TEST: {item.name} took {duration: .2f}s")
         else:
-            print(f"Test completed: {item.name} in {duration:.2f}s")
+            print(f"Test completed: {item.name} in {duration: .2f}s")
 
 
 @pytest.hookimpl(trylast=True)

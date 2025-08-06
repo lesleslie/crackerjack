@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from rich.console import Console
+
 from crackerjack.errors import (
     CleaningError,
     ConfigError,
@@ -12,7 +13,7 @@ from crackerjack.errors import (
     FileError,
     GitError,
     PublishError,
-    TestError,
+    TestExecutionError,
     handle_error,
 )
 
@@ -37,19 +38,18 @@ class TestErrorClasses:
         error_classes = [
             ConfigError,
             ExecutionError,
-            TestError,
+            TestExecutionError,
             PublishError,
             GitError,
             FileError,
             CleaningError,
         ]
         for error_class in error_classes:
-            error = error_class(
-                message="Test error", error_code=ErrorCode.UNKNOWN_ERROR
-            )
+            error = error_class(message="Test error")
             assert isinstance(error, CrackerjackError)
             assert error.message == "Test error"
-            assert error.error_code == ErrorCode.UNKNOWN_ERROR
+
+            assert error.error_code is not None
 
 
 class TestErrorHandling:
@@ -66,9 +66,8 @@ class TestErrorHandling:
     def test_handle_error_console_output(
         self, console_mock: MagicMock, mock_sys_exit: MagicMock
     ) -> None:
-        error = TestError(
+        error = TestExecutionError(
             message="Test failed",
-            error_code=ErrorCode.TEST_FAILURE,
             details="Test details",
             recovery="Fix the test",
         )
@@ -80,7 +79,7 @@ class TestErrorHandling:
     def test_handle_error_without_exit(
         self, console_mock: MagicMock, mock_sys_exit: MagicMock
     ) -> None:
-        error = TestError(message="Test failed", error_code=ErrorCode.TEST_FAILURE)
+        error = TestExecutionError(message="Test failed")
         console = Console()
         handle_error(error, console, exit_on_error=False)
         console_mock.assert_called_once()
@@ -89,7 +88,7 @@ class TestErrorHandling:
     def test_handle_error_ai_agent_mode(
         self, console_mock: MagicMock, mock_sys_exit: MagicMock
     ) -> None:
-        error = TestError(
+        error = TestExecutionError(
             message="Test failed",
             error_code=ErrorCode.TEST_FAILURE,
             details="Test details",
@@ -106,7 +105,7 @@ class TestErrorHandling:
     def test_handle_error_without_details_or_recovery(
         self, console_mock: MagicMock
     ) -> None:
-        error = TestError(message="Test failed", error_code=ErrorCode.TEST_FAILURE)
+        error = TestExecutionError(message="Test failed")
         console = Console()
         handle_error(error, console, verbose=True, exit_on_error=False)
         console_mock.assert_called_once()

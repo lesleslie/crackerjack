@@ -1,9 +1,8 @@
-"""Test cases for multiline function definitions in docstring removal."""
-
 import ast
 
 from rich.console import Console
-from crackerjack.crackerjack import CodeCleaner
+
+from crackerjack.code_cleaner import CodeCleaner
 
 
 class TestMultilineFunctions:
@@ -82,8 +81,8 @@ class TestMultilineFunctions:
         code = """class TestClass:
     @property
     @some_decorator(
-        param1="value1",
-        param2="value2"
+        param1 = "value1",
+        param2 = "value2"
     )
     def complex_property(
         self,

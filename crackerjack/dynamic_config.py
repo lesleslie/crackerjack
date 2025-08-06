@@ -42,7 +42,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -59,7 +59,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -76,7 +76,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -93,7 +93,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -110,7 +110,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -119,23 +119,6 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         },
     ],
     "package_management": [
-        {
-            "id": "pyproject-fmt",
-            "name": None,
-            "repo": "https://github.com/tox-dev/pyproject-fmt",
-            "rev": "v2.6.0",
-            "tier": 1,
-            "time_estimate": 0.5,
-            "stages": None,
-            "args": ["-n"],
-            "files": None,
-            "exclude": None,
-            "additional_dependencies": None,
-            "types_or": None,
-            "language": None,
-            "entry": None,
-            "experimental": False,
-        },
         {
             "id": "uv-lock",
             "name": None,
@@ -181,7 +164,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "time_estimate": 3.0,
             "stages": ["pre-push", "manual"],
             "args": ["-c", "pyproject.toml", "-r", "-ll"],
-            "files": None,
+            "files": "^crackerjack/.*\\.py$",
             "exclude": None,
             "additional_dependencies": None,
             "types_or": None,
@@ -201,7 +184,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": ["tomli"],
             "types_or": None,
             "language": None,
@@ -218,7 +201,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -235,7 +218,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -252,7 +235,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": ["mdformat-ruff"],
             "types_or": None,
             "language": None,
@@ -270,7 +253,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "time_estimate": 2.0,
             "stages": ["pre-push", "manual"],
             "args": None,
-            "files": None,
+            "files": "^crackerjack/.*\\.py$",
             "exclude": None,
             "additional_dependencies": None,
             "types_or": None,
@@ -288,7 +271,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": ["pre-push", "manual"],
             "args": None,
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -305,7 +288,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": ["pre-push", "manual"],
             "args": ["-d", "low"],
             "files": None,
-            "exclude": None,
+            "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -320,35 +303,13 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "tier": 3,
             "time_estimate": 3.0,
             "stages": ["pre-push", "manual"],
-            "args": None,
-            "files": None,
-            "exclude": None,
+            "args": ["--ignore", "FURB184", "--ignore", "FURB120"],
+            "files": "^crackerjack/.*\\.py$",
+            "exclude": "^tests/.*\\.py$",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
             "entry": None,
-            "experimental": False,
-        },
-        {
-            "id": "autotyping",
-            "name": "autotyping",
-            "repo": "local",
-            "rev": "",
-            "tier": 3,
-            "time_estimate": 7.0,
-            "stages": ["pre-push", "manual"],
-            "args": [
-                "--aggressive",
-                "--only-without-imports",
-                "--guess-common-names",
-                "crackerjack",
-            ],
-            "files": "^crackerjack/.*\\.py$",
-            "exclude": None,
-            "additional_dependencies": ["autotyping>=24.3.0", "libcst>=1.1.0"],
-            "types_or": ["python", "pyi"],
-            "language": "python",
-            "entry": "python -m autotyping",
             "experimental": False,
         },
         {
@@ -360,8 +321,8 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "time_estimate": 5.0,
             "stages": ["pre-push", "manual"],
             "args": None,
-            "files": None,
-            "exclude": None,
+            "files": "^crackerjack/.*\\.py$",
+            "exclude": "^crackerjack/(mcp|plugins)/.*\\.py$",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -381,7 +342,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "args": ["--check"],
             "files": "^crackerjack/.*\\.py$",
             "exclude": None,
-            "additional_dependencies": ["pyrefly>=0.1.0"],
+            "additional_dependencies": ["pyrefly >= 0.1.0"],
             "types_or": ["python"],
             "language": "python",
             "entry": "python -m pyrefly",
@@ -398,7 +359,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "args": ["--check"],
             "files": "^crackerjack/.*\\.py$",
             "exclude": None,
-            "additional_dependencies": ["ty>=0.1.0"],
+            "additional_dependencies": ["ty >= 0.1.0"],
             "types_or": ["python"],
             "language": "python",
             "entry": "python -m ty",
@@ -429,15 +390,16 @@ CONFIG_MODES: dict[str, ConfigMode] = {
 }
 
 PRE_COMMIT_TEMPLATE = """repos:
-{%- for repo_group in repos %}
-  {%- if repo_group.comment %}
+{%- for repo in repos %}
+  {%- if repo.comment %}
+  # {{ repo.comment }}
   {%- endif %}
-  - repo: {{ repo_group.repo }}
-    {%- if repo_group.rev %}
-    rev: {{ repo_group.rev }}
+  - repo: {{ repo.repo }}
+    {%- if repo.rev %}
+    rev: {{ repo.rev }}
     {%- endif %}
     hooks:
-    {%- for hook in repo_group.hooks %}
+    {%- for hook in repo.hooks %}
       - id: {{ hook.id }}
         {%- if hook.name %}
         name: {{ hook.name }}
@@ -494,7 +456,7 @@ class DynamicConfigGenerator:
         self, mode: str, enabled_experimental: list[str] | None = None
     ) -> list[HookMetadata]:
         config = CONFIG_MODES[mode]
-        filtered_hooks = []
+        filtered_hooks: list[HookMetadata] = []
         enabled_experimental = enabled_experimental or []
         for category_hooks in HOOKS_REGISTRY.values():
             for hook in category_hooks:
@@ -516,26 +478,44 @@ class DynamicConfigGenerator:
         return repo_groups
 
     def _get_repo_comment(self, repo_url: str) -> str | None:
-        if repo_url == "https://github.com/pre-commit/pre-commit-hooks":
-            return "File structure and format validators"
-        elif (
-            "security" in repo_url
-            or "bandit" in repo_url
-            or "detect-secrets" in repo_url
-        ):
+        repo_comments = {
+            "https://github.com/pre-commit/pre-commit-hooks": "File structure and format validators",
+            "local": "Local tools and custom hooks",
+        }
+        if repo_url in repo_comments:
+            return repo_comments[repo_url]
+        security_keywords = ["security", "bandit", "detect-secrets"]
+        if any(keyword in repo_url for keyword in security_keywords):
             return "Security checks"
-        elif "ruff" in repo_url or "mdformat" in repo_url or "codespell" in repo_url:
+        formatting_keywords = ["ruff", "mdformat", "codespell"]
+        if any(keyword in repo_url for keyword in formatting_keywords):
             return "Code formatting and quality"
-        elif repo_url == "local":
-            return "Local tools and custom hooks"
+
         return None
+
+    def _merge_configs(
+        self, base_config: dict[str, t.Any], new_config: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
+        result = base_config.copy()
+
+        for key, value in new_config.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = self._merge_configs(result[key], value)
+            else:
+                result[key] = value
+
+        return result
 
     def generate_config(
         self, mode: str, enabled_experimental: list[str] | None = None
     ) -> str:
         filtered_hooks = self.filter_hooks_for_mode(mode, enabled_experimental)
         repo_groups = self.group_hooks_by_repo(filtered_hooks)
-        repos = []
+        repos: list[dict[str, t.Any]] = []
         for (repo_url, rev), hooks in repo_groups.items():
             repo_data = {
                 "repo": repo_url,
