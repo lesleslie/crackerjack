@@ -1,0 +1,48 @@
+sources:
+#  mysql-local:
+#    kind:
+#    host: 127.0.0.1
+#    port: 3306
+#    database: ${APP_NAME}
+#    user: ${USER_NAME}
+#    password: ${PASSWORD}
+#  mysql-gcloud:
+#    kind: cloud-sql-mysql
+#    project: my-project-id
+#    region: us-central1
+#    instance: my-instance
+#    database: my_db
+#    user: ${USER_NAME}
+#    password: ${PASSWORD}
+#    # ipType: "private"
+#  sqlite-local:
+#    kind: "sqlite"
+#    database: "/path/to/database.db"
+  sqlite-memory:
+    kind: "sqlite"
+    database: ":memory:"
+#  valkey-local:
+#    kind: valkey
+#    address:
+#      - 127.0.0.1:6379
+#    username: ${YOUR_USERNAME}
+#    password: ${YOUR_PASSWORD}
+#    # database: 0
+#    # useGCPIAM: false
+#    # disableCache: false
+#  redis-local:
+#    kind: redis
+#    address:
+#      - 127.0.0.1:6379
+#    username: ${MY_USER_NAME}
+#    password: ${MY_AUTH_STRING} # Omit this field if you don't have a password.
+#    # database: 0
+#    # clusterEnabled: false
+#    # useGCPIAM: false
+#  redis-gcloud:
+#       kind: memorystore-redis
+#       address:
+#         - 127.0.0.1:6379
+#       password: ${MY_AUTH_STRING}
+#       # useGCPIAM: false
+#       # clusterEnabled: false

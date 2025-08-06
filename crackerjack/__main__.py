@@ -55,6 +55,16 @@ class Options(BaseModel):
     enable_ty: bool = False
     no_git_tags: bool = False
     skip_version_check: bool = False
+    start_mcp_server: bool = False
+    stop_mcp_server: bool = False
+    restart_mcp_server: bool = False
+    start_websocket_server: bool = False
+    stop_websocket_server: bool = False
+    restart_websocket_server: bool = False
+    websocket_port: int = 8675
+    watchdog: bool = False
+    monitor: bool = False
+    enhanced_monitor: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -224,6 +234,56 @@ cli_options = {
         "--skip-version-check",
         help="Skip version consistency verification between pyproject.toml and git tags.",
     ),
+    "start_mcp_server": typer.Option(
+        False,
+        "--start-mcp-server",
+        help="Start MCP server for AI agent integration.",
+    ),
+    "stop_mcp_server": typer.Option(
+        False,
+        "--stop-mcp-server",
+        help="Stop all running MCP servers.",
+    ),
+    "restart_mcp_server": typer.Option(
+        False,
+        "--restart-mcp-server",
+        help="Restart MCP server (stop and start again).",
+    ),
+    "start_websocket_server": typer.Option(
+        False,
+        "--start-websocket-server",
+        help="Start dedicated WebSocket progress server (runs on localhost:8675).",
+    ),
+    "stop_websocket_server": typer.Option(
+        False,
+        "--stop-websocket-server",
+        help="Stop all running WebSocket servers.",
+    ),
+    "restart_websocket_server": typer.Option(
+        False,
+        "--restart-websocket-server",
+        help="Restart WebSocket server (stop and start again).",
+    ),
+    "websocket_port": typer.Option(
+        8675,
+        "--websocket-port",
+        help="Custom port for WebSocket server (default: 8675).",
+    ),
+    "watchdog": typer.Option(
+        False,
+        "--watchdog",
+        help="Start service watchdog to monitor and auto-restart MCP and WebSocket servers.",
+    ),
+    "monitor": typer.Option(
+        False,
+        "--monitor",
+        help="Start enhanced multi-project progress monitor with Textual TUI.",
+    ),
+    "enhanced_monitor": typer.Option(
+        False,
+        "--enhanced-monitor",
+        help="Start advanced dashboard monitor with MetricCard widgets.",
+    ),
 }
 
 
@@ -262,6 +322,16 @@ def main(
     enable_ty: bool = cli_options["enable_ty"],
     no_git_tags: bool = cli_options["no_git_tags"],
     skip_version_check: bool = cli_options["skip_version_check"],
+    start_mcp_server: bool = cli_options["start_mcp_server"],
+    stop_mcp_server: bool = cli_options["stop_mcp_server"],
+    restart_mcp_server: bool = cli_options["restart_mcp_server"],
+    start_websocket_server: bool = cli_options["start_websocket_server"],
+    stop_websocket_server: bool = cli_options["stop_websocket_server"],
+    restart_websocket_server: bool = cli_options["restart_websocket_server"],
+    websocket_port: int = cli_options["websocket_port"],
+    watchdog: bool = cli_options["watchdog"],
+    monitor: bool = cli_options["monitor"],
+    enhanced_monitor: bool = cli_options["enhanced_monitor"],
 ) -> None:
     options = Options(
         commit=commit,
@@ -295,7 +365,54 @@ def main(
         enable_ty=enable_ty,
         no_git_tags=no_git_tags,
         skip_version_check=skip_version_check,
+        start_mcp_server=start_mcp_server,
+        stop_mcp_server=stop_mcp_server,
+        restart_mcp_server=restart_mcp_server,
+        start_websocket_server=start_websocket_server,
+        stop_websocket_server=stop_websocket_server,
+        restart_websocket_server=restart_websocket_server,
+        websocket_port=websocket_port,
+        watchdog=watchdog,
+        monitor=monitor,
+        enhanced_monitor=enhanced_monitor,
     )
+    
+    # Handle server operations first - these are standalone operations
+    if start_mcp_server or stop_mcp_server or restart_mcp_server:
+        from .mcp.server_core import handle_mcp_server_command
+        handle_mcp_server_command(
+            start=start_mcp_server,
+            stop=stop_mcp_server, 
+            restart=restart_mcp_server,
+            websocket_port=websocket_port if start_mcp_server or restart_mcp_server else None
+        )
+        return
+    
+    if start_websocket_server or stop_websocket_server or restart_websocket_server:
+        from .mcp.websocket.server import handle_websocket_server_command
+        handle_websocket_server_command(
+            start=start_websocket_server,
+            stop=stop_websocket_server,
+            restart=restart_websocket_server,
+            port=websocket_port
+        )
+        return
+    
+    if watchdog:
+        from .services.server_manager import start_service_watchdog
+        start_service_watchdog()
+        return
+        
+    if monitor:
+        from .mcp.progress_monitor import run_progress_monitor
+        asyncio.run(run_progress_monitor(enable_watchdog=True))
+        return
+        
+    if enhanced_monitor:
+        from .mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
+        asyncio.run(run_enhanced_progress_monitor())
+        return
+    
     if ai_agent:
         import os
 
