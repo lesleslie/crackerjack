@@ -50,10 +50,10 @@ class TestSessionCoordinator:
         self, coordinator, mock_options
     ) -> None:
         with patch.object(uuid, "uuid4") as mock_uuid:
-            mock_uuid.return_value.hex = "test - session - id"
-            mock_uuid.return_value.__str__ = lambda self: "test - session - id"
+            mock_uuid.return_value.hex = "test-session-id"
+            mock_uuid.return_value.__str__ = lambda self: "test-session-id"
             mock_uuid.return_value.__getitem__ = (
-                lambda self, idx: "test - session - id"[:idx]
+                lambda self, idx: "test-session-id"[:idx]
             )
 
             coordinator.initialize_session_tracking(mock_options)
@@ -61,7 +61,7 @@ class TestSessionCoordinator:
             assert coordinator.session_tracker is not None
             assert isinstance(coordinator.session_tracker, SessionTracker)
             coordinator.console.print.assert_called_with(
-                "[cyan]📊[ / cyan] Session tracking enabled"
+                "[cyan]📊[/cyan] Session tracking enabled"
             )
 
     def test_initialize_session_tracking_disabled(
@@ -315,7 +315,7 @@ class TestSessionCoordinator:
     def test_cleanup_coverage_files_with_files(self, coordinator, temp_dir) -> None:
         coverage_files = []
         for i in range(15):
-            coverage_file = temp_dir / f".coverage.{i: 03d}"
+            coverage_file = temp_dir / f".coverage.{i:03d}"
             coverage_file.write_text(f"Coverage data {i}")
             coverage_files.append(coverage_file)
 
@@ -323,7 +323,7 @@ class TestSessionCoordinator:
 
         coordinator._cleanup_coverage_files(keep_recent=5)
 
-        remaining_files = list(temp_dir.glob(".coverage. * "))
+        remaining_files = list(temp_dir.glob(".coverage.*"))
         assert len(remaining_files) == 5
 
         for coverage_file in coverage_files[-5:]:

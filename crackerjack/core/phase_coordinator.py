@@ -67,7 +67,7 @@ class PhaseCoordinator:
         self.console.print("[yellow]🧹[/yellow] Starting code cleaning...")
 
     def _execute_cleaning_process(self) -> bool:
-        python_files = list(self.pkg_path.rglob(" * .py"))
+        python_files = list(self.pkg_path.rglob("*.py"))
 
         if not python_files:
             return self._handle_no_files_to_clean()
@@ -241,7 +241,7 @@ class PhaseCoordinator:
                 coverage_info = self.test_manager.get_coverage()
                 self.session.complete_task(
                     "testing",
-                    f"Tests passed, coverage: {coverage_info.get('total_coverage', 0): .1f} % ",
+                    f"Tests passed, coverage: {coverage_info.get('total_coverage', 0):.1f}%",
                 )
             else:
                 self.session.fail_task("testing", "Tests failed")
@@ -293,7 +293,7 @@ class PhaseCoordinator:
     def _handle_successful_publish(
         self, options: OptionsProtocol, new_version: str
     ) -> None:
-        self.console.print(f"[green]🚀[/green] Successfully published {new_version} ! ")
+        self.console.print(f"[green]🚀[/green] Successfully published {new_version}!")
 
         if options.cleanup_pypi:
             self.publish_manager.cleanup_old_releases(options.keep_releases)

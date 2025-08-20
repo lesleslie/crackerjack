@@ -108,7 +108,7 @@ class ErrorCache:
             pattern = self.patterns.get(result.pattern_id)
             if pattern and result.success:
                 pattern.auto_fixable = True
-                fix_command = f"Auto - fix applied for {result.pattern_id}"
+                fix_command = f"Auto-fix applied for {result.pattern_id}"
                 if pattern.common_fixes is None:
                     pattern.common_fixes = []
                 if fix_command not in pattern.common_fixes:

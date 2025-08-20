@@ -305,7 +305,7 @@ class RefactoringAgent(SubAgent):
                     f"_is_{func_info['name']}_condition_{len(extracted_methods) + 1}"
                 )
 
-                helper_method = f""" def {method_name}(self) -> bool:
+                helper_method = f"""def {method_name}(self) -> bool:
         \"\"\"Helper method for complex condition.\"\"\"
         return {condition}"""
 

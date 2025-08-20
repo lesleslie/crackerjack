@@ -77,14 +77,14 @@ class AgentContext:
                 return None
             if path.stat().st_size > self.max_file_size:
                 return None
-            return path.read_text(encoding="utf - 8")
+            return path.read_text(encoding="utf-8")
         except Exception:
             return None
 
     def write_file_content(self, file_path: str | Path, content: str) -> bool:
         try:
             path = Path(file_path)
-            path.write_text(content, encoding="utf - 8")
+            path.write_text(content, encoding="utf-8")
             return True
         except Exception:
             return False

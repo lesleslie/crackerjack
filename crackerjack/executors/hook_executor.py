@@ -177,7 +177,7 @@ class HookExecutor:
                 name=hook.name,
                 status="timeout",
                 duration=duration,
-                issues_found=[f"Hook timed out after {duration: .1f}s"],
+                issues_found=[f"Hook timed out after {duration:.1f}s"],
                 stage=hook.stage.value,
             )
         except Exception as e:
@@ -208,7 +208,7 @@ class HookExecutor:
         status_text = "PASSED" if result.status == "passed" else "FAILED"
 
         self.console.print(
-            f"{status_icon} {result.name}: {status_text} ({result.duration: .1f}s)"
+            f"{status_icon} {result.name}: {status_text} ({result.duration:.1f}s)"
         )
 
     def _handle_retries(
@@ -269,16 +269,16 @@ class HookExecutor:
             "HOME": os.environ.get("HOME", ""),
             "USER": os.environ.get("USER", ""),
             "SHELL": os.environ.get("SHELL", "/bin/bash"),
-            "LANG": os.environ.get("LANG", "en_US.UTF - 8"),
+            "LANG": os.environ.get("LANG", "en_US.UTF-8"),
             "LC_ALL": os.environ.get("LC_ALL", ""),
-            "TERM": os.environ.get("TERM", "xterm - 256color"),
+            "TERM": os.environ.get("TERM", "xterm-256color"),
         }
 
         system_path = os.environ.get("PATH", "")
         if system_path:
             venv_bin = str(Path(self.pkg_path) / ".venv" / "bin")
-            path_parts = [p for p in system_path.split(": ") if p != venv_bin]
-            clean_env["PATH"] = ": ".join(path_parts)
+            path_parts = [p for p in system_path.split(":") if p != venv_bin]
+            clean_env["PATH"] = ":".join(path_parts)
 
         python_vars_to_exclude = {
             "VIRTUAL_ENV",

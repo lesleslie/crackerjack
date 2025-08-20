@@ -647,7 +647,7 @@ class TestMCPIntegration:
 
     def test_session_state_workflow(self):
         """Test complete session state workflow."""
-        manager = SessionManager()
+        manager = StateManager()
 
         # Create session
         manager.create_session()

@@ -271,7 +271,7 @@ class TestManagementImpl:
             coverage_data = self.get_coverage()
             if coverage_data:
                 total = coverage_data.get("total", 0)
-                return f"Total coverage: {total} % "
+                return f"Total coverage: {total}%"
             return None
         except Exception:
             return None

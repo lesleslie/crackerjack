@@ -44,7 +44,7 @@ class SecurityAgent(SubAgent):
                 "security",
                 "vulnerability",
                 "hardcoded",
-                "shell = true",
+                "shell=true",
                 "b108",
                 "b602",
                 "b301",
@@ -149,7 +149,7 @@ class SecurityAgent(SubAgent):
     def _get_security_recommendations(self) -> list[str]:
         return [
             "Use tempfile module for temporary file creation",
-            "Avoid shell = True in subprocess calls",
+            "Avoid shell=True in subprocess calls",
             "Use environment variables for secrets",
             "Implement proper input validation",
             "Use safe_load() instead of load() for YAML",
@@ -164,7 +164,7 @@ class SecurityAgent(SubAgent):
             recommendations=[
                 "Manual security review may be required",
                 "Consider running bandit security scanner",
-                "Review code for common security anti - patterns",
+                "Review code for common security anti-patterns",
             ],
         )
 
@@ -173,7 +173,7 @@ class SecurityAgent(SubAgent):
 
         if "B108" in message:
             return "hardcoded_temp_paths"
-        elif "B602" in message or "shell = True" in message:
+        elif "B602" in message or "shell=True" in message:
             return "shell_injection"
         elif "B301" in message or "pickle" in message.lower():
             return "pickle_usage"
@@ -242,15 +242,15 @@ class SecurityAgent(SubAgent):
 
     def _replace_hardcoded_temp_paths(self, lines: list[str]) -> tuple[list[str], bool]:
         replacements = [
-            (r'Path\(" / tmp / ([ ^ "] + )"\)', r'Path(tempfile.gettempdir()) / "\1"'),
-            (r'" / tmp / ([ ^ "] + )"', r'str(Path(tempfile.gettempdir()) / "\1")'),
-            (r"' / tmp / ([ ^ '] + )'", r"str(Path(tempfile.gettempdir()) / '\1')"),
+            (r'Path\("/tmp/([^"]+)"\)', r'Path(tempfile.gettempdir()) / "\1"'),
+            (r'"/tmp/([^"]+)"', r'str(Path(tempfile.gettempdir()) / "\1")'),
+            (r"'/tmp/([^']+)'", r"str(Path(tempfile.gettempdir()) / '\1')"),
             (
-                r'Path\(" / test / path"\)',
-                r"Path(tempfile.gettempdir()) / 'test - path'",
+                r'Path\("/test/path"\)',
+                r"Path(tempfile.gettempdir()) / 'test-path'",
             ),
-            (r'" / test / path"', r'str(Path(tempfile.gettempdir()) / "test - path")'),
-            (r"' / test / path'", r"str(Path(tempfile.gettempdir()) / 'test - path')"),
+            (r'"/test/path"', r'str(Path(tempfile.gettempdir()) / "test-path")'),
+            (r"'/test/path'", r"str(Path(tempfile.gettempdir()) / 'test-path')"),
         ]
 
         modified = False
@@ -278,15 +278,15 @@ class SecurityAgent(SubAgent):
 
         patterns = [
             (
-                r"subprocess\.run\(([ ^ , ] + ), \s * shell = True\)",
+                r"subprocess\.run\(([^,]+),\s*shell=True\)",
                 r"subprocess.run(\1.split())",
             ),
             (
-                r"subprocess\.call\(([ ^ , ] + ), \s * shell = True\)",
+                r"subprocess\.call\(([^,]+),\s*shell=True\)",
                 r"subprocess.call(\1.split())",
             ),
             (
-                r"subprocess\.Popen\(([ ^ , ] + ), \s * shell = True\)",
+                r"subprocess\.Popen\(([^,]+),\s*shell=True\)",
                 r"subprocess.Popen(\1.split())",
             ),
         ]
@@ -498,7 +498,7 @@ class SecurityAgent(SubAgent):
         content = self._add_secrets_import_if_needed(content)
 
         content = re.sub(
-            r"random\.choice\(([ ^ )] + )\)", r"secrets.choice(\1)", content
+            r"random\.choice\(([^)]+)\)", r"secrets.choice(\1)", content
         )
 
         return content

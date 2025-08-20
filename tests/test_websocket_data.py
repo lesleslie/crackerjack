@@ -1,4 +1,4 @@
-# !/ usr / bin / env python3
+#!/usr/bin/env python3
 
 import asyncio
 import json
@@ -17,11 +17,11 @@ async def test_websocket_flow():
     job_id = "websocket-test-123"
     progress_file = progress_dir / f"job-{job_id}.json"
 
-    console.print("[cyan]Testing WebSocket Data Flow[ / cyan]")
+    console.print("[cyan]Testing WebSocket Data Flow[/cyan]")
     console.print(f"Progress directory: {progress_dir}")
     console.print(f"Progress file: {progress_file}")
 
-    console.print("\n[yellow]1. Writing initial progress data...[ / yellow]")
+    console.print("\n[yellow]1. Writing initial progress data...[/yellow]")
     progress_data = {
         "job_id": job_id,
         "status": "running",
@@ -53,7 +53,7 @@ async def test_websocket_flow():
 
     console.print("✅ Written initial progress data")
 
-    console.print("\n[yellow]2. Instructions to test: [ / yellow]")
+    console.print("\n[yellow]2. Instructions to test:[/yellow]")
     console.print("1. Start WebSocket server in another terminal: ")
     console.print(" python -m crackerjack --websocket-server")
     console.print("\n2. Start progress monitor in another terminal: ")
@@ -67,17 +67,17 @@ async def test_websocket_flow():
     stages = [
         ("fast_hooks", 50, 20, "Running ruff checks..."),
         ("fast_hooks", 75, 25, "Running trailing whitespace fixes..."),
-        ("fast_hooks", 100, 30, "Fast hooks completed ! "),
+        ("fast_hooks", 100, 30, "Fast hooks completed!"),
         ("tests", 25, 40, "Starting pytest..."),
         ("tests", 50, 50, "Running test suite..."),
         ("tests", 75, 60, "Tests almost done..."),
-        ("tests", 100, 70, "Tests completed ! "),
+        ("tests", 100, 70, "Tests completed!"),
         ("comprehensive_hooks", 50, 85, "Running pyright..."),
-        ("comprehensive_hooks", 100, 100, "All checks passed ! "),
+        ("comprehensive_hooks", 100, 100, "All checks passed!"),
     ]
 
     for stage, stage_progress, overall_progress, message in stages:
-        console.print(f"\n[cyan]Updating: {message}[ / cyan]")
+        console.print(f"\n[cyan]Updating: {message}[/cyan]")
 
         if stage == "fast_hooks" and stage_progress == 100:
             progress_data["stage_status"]["fast_hooks"] = "passed"
@@ -103,13 +103,13 @@ async def test_websocket_flow():
         await asyncio.sleep(2)
 
     progress_data["status"] = "completed"
-    progress_data["message"] = "🎉 All checks passed ! "
+    progress_data["message"] = "🎉 All checks passed!"
 
     with progress_file.open("w") as f:
         json.dump(progress_data, f, indent=2)
 
     console.print(
-        "\n[green]✅ Test completed ! Check if the monitor showed the updates.[ / green]"
+        "\n[green]✅ Test completed! Check if the monitor showed the updates.[/green]"
     )
     console.print("\nPress Enter to clean up...")
     input()

@@ -169,7 +169,7 @@ class TestHandleError:
             printed_content = console.print.call_args[0][0]
 
             assert printed_content.startswith("[json]")
-            assert printed_content.endswith("[ / json]")
+            assert printed_content.endswith("[/json]")
 
             json_str = printed_content[6:-7]
             error_data = json.loads(json_str)

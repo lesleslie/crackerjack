@@ -58,8 +58,8 @@ class PublishManagerImpl:
             content = self.filesystem.read_file(pyproject_path)
             import re
 
-            pattern = r'(version\s *= \s * ["\'])([ ^ "\'] + )(["\'])'
-            replacement = f"\\g < 1 > {new_version}\\g < 3 > "
+            pattern = r'(version\s*=\s*["\'])([^"\']+)(["\'])'
+            replacement = f"\\g<1>{new_version}\\g<3>"
             new_content = re.sub(pattern, replacement, content)
             if content != new_content:
                 if not self.dry_run:
@@ -157,7 +157,7 @@ class PublishManagerImpl:
     def _check_keyring_auth(self) -> str | None:
         try:
             result = self._run_command(
-                ["keyring", "get", "https: // upload.pypi.org / legacy / ", "__token__"]
+                ["keyring", "get", "https://upload.pypi.org/legacy/", "__token__"]
             )
             if result.returncode == 0 and result.stdout.strip():
                 keyring_token = result.stdout.strip()
@@ -226,7 +226,7 @@ class PublishManagerImpl:
         if not dist_dir.exists():
             return
 
-        artifacts = list(dist_dir.glob(" * "))
+        artifacts = list(dist_dir.glob("*"))
         self.console.print(f"[cyan]📦[/cyan] Build artifacts ({len(artifacts)}): ")
 
         for artifact in artifacts[-5:]:
@@ -235,8 +235,8 @@ class PublishManagerImpl:
 
     def _format_file_size(self, size: int) -> str:
         if size < 1024 * 1024:
-            return f"{size / 1024: .1f}KB"
-        return f"{size / (1024 * 1024): .1f}MB"
+            return f"{size / 1024:.1f}KB"
+        return f"{size / (1024 * 1024):.1f}MB"
 
     def publish_package(self) -> bool:
         if not self._validate_prerequisites():
@@ -279,7 +279,7 @@ class PublishManagerImpl:
         self.console.print(f"[red]❌[/red] Publish failed: {error_msg}")
 
     def _handle_publish_success(self) -> None:
-        self.console.print("[green]🎉[/green] Package published successfully ! ")
+        self.console.print("[green]🎉[/green] Package published successfully!")
         self._display_package_url()
 
     def _display_package_url(self) -> None:
@@ -288,7 +288,7 @@ class PublishManagerImpl:
 
         if package_name and current_version:
             url = (
-                f"https: // pypi.org / project / {package_name} / {current_version} / "
+                f"https://pypi.org/project/{package_name}/{current_version}/"
             )
             self.console.print(f"[cyan]🔗[/cyan] Package URL: {url}")
 

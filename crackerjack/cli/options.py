@@ -154,7 +154,7 @@ CLI_OPTIONS = {
         None,
         "-a",
         "--all",
-        help="Run with `-x -t -p < patch | minor | major > -c` development options).",
+        help="Run with `-x -t -p <patch|minor|major> -c` development options).",
         case_sensitive=False,
     ),
     "create_pr": typer.Option(

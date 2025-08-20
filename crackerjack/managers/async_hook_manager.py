@@ -49,7 +49,7 @@ class AsyncHookManager:
     async def install_hooks_async(self) -> bool:
         try:
             process = await asyncio.create_subprocess_exec(
-                "pre - commit",
+                "pre-commit",
                 "install",
                 cwd=self.pkg_path,
                 stdout=asyncio.subprocess.PIPE,
@@ -62,7 +62,7 @@ class AsyncHookManager:
                 self.console.print("[green]✅[/green] Pre-commit hooks installed")
                 return True
             else:
-                error_msg = stderr.decode("utf - 8") if stderr else "Unknown error"
+                error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
                 self.console.print(
                     f"[red]❌[/red] Failed to install hooks: {error_msg}"
                 )
@@ -81,7 +81,7 @@ class AsyncHookManager:
     async def update_hooks_async(self) -> bool:
         try:
             process = await asyncio.create_subprocess_exec(
-                "pre - commit",
+                "pre-commit",
                 "autoupdate",
                 cwd=self.pkg_path,
                 stdout=asyncio.subprocess.PIPE,
@@ -94,7 +94,7 @@ class AsyncHookManager:
                 self.console.print("[green]✅[/green] Pre-commit hooks updated")
                 return True
             else:
-                error_msg = stderr.decode("utf - 8") if stderr else "Unknown error"
+                error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
                 self.console.print(f"[red]❌[/red] Failed to update hooks: {error_msg}")
                 return False
 

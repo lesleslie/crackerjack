@@ -48,7 +48,7 @@ async def ensure_mcp_server_running() -> subprocess.Popen | None:
     raise RuntimeError("Failed to start MCP server within timeout period")
 
 
-async def run_with_mcp_server(command: str = " / crackerjack: run") -> None:
+async def run_with_mcp_server(command: str = "/crackerjack:run") -> None:
     console = Console()
 
     server_process = await ensure_mcp_server_running()
@@ -56,7 +56,7 @@ async def run_with_mcp_server(command: str = " / crackerjack: run") -> None:
     try:
         server_script = Path(__file__).parent.parent / "__main__.py"
         async with stdio_client(
-            sys.executable, str(server_script), " -- start - mcp - server"
+            sys.executable, str(server_script), "--start-mcp-server"
         ) as (read_stream, write_stream):
             async with read_stream.session(
                 read_stream=read_stream, write_stream=write_stream
@@ -82,8 +82,8 @@ def main() -> None:
     parser.add_argument(
         "command",
         nargs="?",
-        default=" / crackerjack: run",
-        help="Command to execute (default: / crackerjack: run)",
+        default="/crackerjack:run",
+        help="Command to execute (default: /crackerjack:run)",
     )
     args = parser.parse_args()
 

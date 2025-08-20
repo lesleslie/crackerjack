@@ -54,7 +54,7 @@ class ImportOptimizationAgent(SubAgent):
             return ImportAnalysis(file_path, [], [], [])
 
         try:
-            with file_path.open(encoding="utf - 8") as f:
+            with file_path.open(encoding="utf-8") as f:
                 tree = ast.parse(f.read())
         except (SyntaxError, OSError) as e:
             self.logger.warning(f"Could not parse {file_path}: {e}")
@@ -136,7 +136,7 @@ class ImportOptimizationAgent(SubAgent):
             if len(standard_imports) >= 2:
                 opportunities.append(
                     f"Consider consolidating {len(standard_imports)} standard imports "
-                    f"from {module} to from - imports"
+                    f"from {module} to from-imports"
                 )
 
         return opportunities
@@ -163,12 +163,12 @@ class ImportOptimizationAgent(SubAgent):
             )
 
         try:
-            with file_path.open(encoding="utf - 8") as f:
+            with file_path.open(encoding="utf-8") as f:
                 original_content = f.read()
 
             optimized_content = await self._optimize_imports(original_content, analysis)
 
-            with file_path.open("w", encoding="utf - 8") as f:
+            with file_path.open("w", encoding="utf-8") as f:
                 f.write(optimized_content)
 
             changes = []
@@ -225,8 +225,8 @@ class ImportOptimizationAgent(SubAgent):
                 if insert_position is None:
                     insert_position = i
             elif stripped.startswith("from typing import "):
-                import_part = stripped[len("from typing import ") :].strip()
-                items = [item.strip() for item in import_part.split(", ")]
+                import_part = stripped[len("from typing import "):].strip()
+                items = [item.strip() for item in import_part.split(",")]
                 typing_imports.update(items)
                 lines_to_remove.append(i)
                 if insert_position is None:
@@ -250,7 +250,7 @@ class ImportOptimizationAgent(SubAgent):
             "optimization_opportunities": 0,
         }
 
-        for py_file in self.context.project_path.rglob(" * .py"):
+        for py_file in self.context.project_path.rglob("*.py"):
             if py_file.name.startswith("."):
                 continue
 

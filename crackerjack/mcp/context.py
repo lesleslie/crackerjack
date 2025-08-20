@@ -272,7 +272,7 @@ class MCPServerContext:
 
             if self.console:
                 self.console.print(
-                    f"🚀 Starting WebSocket server on localhost: {self.websocket_server_port}..."
+                    f"🚀 Starting WebSocket server on localhost:{self.websocket_server_port}..."
                 )
 
             try:

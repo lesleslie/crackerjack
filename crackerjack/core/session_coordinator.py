@@ -142,11 +142,11 @@ class SessionCoordinator:
         total_time = time.time() - start_time
         if success:
             self.complete_task(
-                "workflow", f"Completed successfully in {total_time: .1f}s"
+                "workflow", f"Completed successfully in {total_time:.1f}s"
             )
         else:
             self.complete_task(
-                "workflow", f"Completed with issues in {total_time: .1f}s"
+                "workflow", f"Completed with issues in {total_time:.1f}s"
             )
 
     def register_cleanup(self, cleanup_handler: t.Callable[[], None]) -> None:
@@ -166,11 +166,13 @@ class SessionCoordinator:
         if not hasattr(self, "_cleanup_config") or self._cleanup_config is None:
             self._cleanup_debug_logs()
             self._cleanup_coverage_files()
+            self._cleanup_pycache_directories()
         elif self._cleanup_config.auto_cleanup:
             self._cleanup_debug_logs(keep_recent=self._cleanup_config.keep_debug_logs)
             self._cleanup_coverage_files(
                 keep_recent=self._cleanup_config.keep_coverage_files
             )
+            self._cleanup_pycache_directories()
 
     def set_cleanup_config(self, cleanup_config: t.Any) -> None:
         self._cleanup_config = cleanup_config
@@ -183,7 +185,7 @@ class SessionCoordinator:
 
             log_manager.rotate_logs(
                 log_manager.debug_dir,
-                "debug -* .log",
+                "debug-*.log",
                 max_files=keep_recent,
                 max_age_days=7,
             )
@@ -220,6 +222,17 @@ class SessionCoordinator:
             for old_file in coverage_files:
                 with suppress(FileNotFoundError, PermissionError):
                     old_file.unlink()
+
+    def _cleanup_pycache_directories(self) -> None:
+        """Remove __pycache__ directories from the package to keep repo clean."""
+        with suppress(Exception):
+            import shutil
+            
+            # Clean __pycache__ directories in package
+            for pycache_dir in self.pkg_path.rglob("__pycache__"):
+                if pycache_dir.is_dir():
+                    with suppress(FileNotFoundError, PermissionError):
+                        shutil.rmtree(pycache_dir)
 
     def _setup_logging(self) -> None:
         logger = logging.getLogger("crackerjack")

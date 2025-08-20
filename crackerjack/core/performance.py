@@ -79,9 +79,9 @@ class PerformanceMonitor:
             if stats:
                 self.console.print(
                     f"[cyan]📊 {name}: [/cyan] "
-                    f"avg = {stats['avg']: .3f}s, "
-                    f"min = {stats['min']: .3f}s, "
-                    f"max = {stats['max']: .3f}s, "
+                    f"avg = {stats['avg']:.3f}s, "
+                    f"min = {stats['min']:.3f}s, "
+                    f"max = {stats['max']:.3f}s, "
                     f"count = {stats['count']}"
                 )
         else:
@@ -142,7 +142,7 @@ class OptimizedFileWatcher:
 
     @memoize_with_ttl(ttl=30.0)
     def get_python_files(self) -> list[Path]:
-        return list(self.root_path.rglob(" * .py"))
+        return list(self.root_path.rglob("*.py"))
 
     def get_modified_files(self, since: float) -> list[Path]:
         cache_key = f"modified_since_{since}"

@@ -12,20 +12,20 @@ from crackerjack.models.task import HookResult, SessionTracker, TaskStatus
 class TestHookResult:
     def test_hook_result_creation_minimal(self) -> None:
         result = HookResult(
-            id="test - hook", name="Test Hook", status="passed", duration=1.5
+            id="test-hook", name="Test Hook", status="passed", duration=1.5
         )
 
-        assert result.id == "test - hook"
+        assert result.id == "test-hook"
         assert result.name == "Test Hook"
         assert result.status == "passed"
         assert result.duration == 1.5
         assert result.files_processed == 0
         assert result.issues_found == []
-        assert result.stage == "pre - commit"
+        assert result.stage == "pre-commit"
 
     def test_hook_result_creation_full(self) -> None:
         result = HookResult(
-            id="full - hook",
+            id="full-hook",
             name="Full Hook",
             status="failed",
             duration=2.3,
@@ -34,7 +34,7 @@ class TestHookResult:
             stage="comprehensive",
         )
 
-        assert result.id == "full - hook"
+        assert result.id == "full-hook"
         assert result.name == "Full Hook"
         assert result.status == "failed"
         assert result.duration == 2.3
@@ -61,9 +61,9 @@ class TestHookResult:
 
 class TestTaskStatus:
     def test_task_status_creation_minimal(self) -> None:
-        status = TaskStatus(id="task - 1", name="Test Task", status="pending")
+        status = TaskStatus(id="task-1", name="Test Task", status="pending")
 
-        assert status.id == "task - 1"
+        assert status.id == "task-1"
         assert status.name == "Test Task"
         assert status.status == "pending"
         assert status.start_time is None
@@ -79,7 +79,7 @@ class TestTaskStatus:
         files = ["file1.py", "file2.py"]
 
         status = TaskStatus(
-            id="full - task",
+            id="full-task",
             name="Full Task",
             status="completed",
             start_time=start_time,
@@ -90,7 +90,7 @@ class TestTaskStatus:
             files_changed=files,
         )
 
-        assert status.id == "full - task"
+        assert status.id == "full-task"
         assert status.name == "Full Task"
         assert status.status == "completed"
         assert status.start_time == start_time
@@ -172,7 +172,7 @@ class TestSessionTracker:
     def session_tracker(self, console, temp_dir):
         return SessionTracker(
             console=console,
-            session_id="test - session",
+            session_id="test-session",
             start_time=time.time(),
             progress_file=temp_dir / "progress.json",
         )
@@ -183,13 +183,13 @@ class TestSessionTracker:
 
         tracker = SessionTracker(
             console=console,
-            session_id="test - session",
+            session_id="test-session",
             start_time=start_time,
             progress_file=progress_file,
         )
 
         assert tracker.console == console
-        assert tracker.session_id == "test - session"
+        assert tracker.session_id == "test-session"
         assert tracker.start_time == start_time
         assert tracker.progress_file == progress_file
         assert tracker.tasks == {}
@@ -202,7 +202,7 @@ class TestSessionTracker:
 
         tracker = SessionTracker(
             console=console,
-            session_id="test - session",
+            session_id="test-session",
             start_time=time.time(),
             progress_file=temp_dir / "progress.json",
             tasks=existing_tasks,
@@ -215,7 +215,7 @@ class TestSessionTracker:
     def test_session_tracker_init_empty_collections(self, console, temp_dir) -> None:
         tracker = SessionTracker(
             console=console,
-            session_id="test - session",
+            session_id="test-session",
             start_time=time.time(),
             progress_file=temp_dir / "progress.json",
         )
@@ -236,7 +236,7 @@ class TestSessionTracker:
         assert session_tracker.current_task == "task1"
 
         session_tracker.console.print.assert_called_with(
-            "[yellow]⏳[ / yellow] Started: Test Task"
+            "[yellow]⏳[/yellow] Started: Test Task"
         )
 
     def test_start_task_with_details(self, session_tracker) -> None:
@@ -260,7 +260,7 @@ class TestSessionTracker:
         assert session_tracker.current_task is None
 
         session_tracker.console.print.assert_called_with(
-            "[green]✅[ / green] Completed: Test Task"
+            "[green]✅[/green] Completed: Test Task"
         )
 
     def test_complete_task_with_files_changed(self, session_tracker) -> None:
@@ -303,7 +303,7 @@ class TestSessionTracker:
         assert session_tracker.current_task is None
 
         session_tracker.console.print.assert_called_with(
-            "[red]❌[ / red] Failed: Test Task - Task failed"
+            "[red]❌[/red] Failed: Test Task - Task failed"
         )
 
     def test_fail_task_nonexistent(self, session_tracker) -> None:
@@ -327,7 +327,7 @@ class TestSessionTracker:
     def test_get_summary_empty(self, session_tracker) -> None:
         summary = session_tracker.get_summary()
 
-        assert summary["session_id"] == "test - session"
+        assert summary["session_id"] == "test-session"
         assert summary["duration"] >= 0
         assert summary["total_tasks"] == 0
         assert summary["completed"] == 0
@@ -346,7 +346,7 @@ class TestSessionTracker:
 
         summary = session_tracker.get_summary()
 
-        assert summary["session_id"] == "test - session"
+        assert summary["session_id"] == "test-session"
         assert summary["total_tasks"] == 3
         assert summary["completed"] == 1
         assert summary["failed"] == 1
@@ -388,7 +388,7 @@ class TestSessionTrackerIntegration:
         with tempfile.TemporaryDirectory() as temp_dir:
             tracker = SessionTracker(
                 console=console,
-                session_id="integration - test",
+                session_id="integration-test",
                 start_time=time.time(),
                 progress_file=Path(temp_dir) / "progress.json",
             )
@@ -420,7 +420,7 @@ class TestSessionTrackerIntegration:
         with tempfile.TemporaryDirectory() as temp_dir:
             tracker = SessionTracker(
                 console=console,
-                session_id="multi - test",
+                session_id="multi-test",
                 start_time=time.time(),
                 progress_file=Path(temp_dir) / "progress.json",
             )

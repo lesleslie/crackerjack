@@ -200,7 +200,7 @@ class AdvancedWorkflowOrchestrator:
 
     def _initialize_multi_agent_system(self) -> None:
         self.console.print(
-            "[bold cyan]🤖 Initializing Multi - Agent AI System[/bold cyan]"
+            "[bold cyan]🤖 Initializing Multi-Agent AI System[/bold cyan]"
         )
 
         agent_context = AgentContext(
@@ -274,7 +274,7 @@ class AdvancedWorkflowOrchestrator:
 
             if iteration_success:
                 self.console.print(
-                    f"\n[bold green]🎉 WORKFLOW COMPLETED SUCCESSFULLY IN {iteration} ITERATIONS ! [/bold green]"
+                    f"\n[bold green]🎉 WORKFLOW COMPLETED SUCCESSFULLY IN {iteration} ITERATIONS![/bold green]"
                 )
                 success = True
                 break
@@ -497,7 +497,7 @@ class AdvancedWorkflowOrchestrator:
         failed_individual_tests: list[t.Any],
         correlation_data: dict[str, t.Any],
     ) -> list[str]:
-        self.console.print("[bold cyan]🤖 Multi - Agent Analysis Started[/bold cyan]")
+        self.console.print("[bold cyan]🤖 Multi-Agent Analysis Started[/bold cyan]")
 
         issues = []
 
@@ -531,7 +531,7 @@ class AdvancedWorkflowOrchestrator:
             issues.append(issue)
 
         if not issues:
-            return ["No issues identified for multi - agent analysis"]
+            return ["No issues identified for multi-agent analysis"]
 
         self.console.print(
             f"[cyan]Processing {len(issues)} issues with specialized agents...[/cyan]"
@@ -545,7 +545,7 @@ class AdvancedWorkflowOrchestrator:
             ai_fixes.extend(result.fixes_applied)
         else:
             ai_fixes.append(
-                f"Multi - agent analysis completed with {result.confidence: .2f} confidence"
+                f"Multi-agent analysis completed with {result.confidence:.2f} confidence"
             )
 
         if result.remaining_issues:
@@ -557,7 +557,7 @@ class AdvancedWorkflowOrchestrator:
             )
 
         self.console.print(
-            f"[green]✅ Multi - agent analysis completed: {len(result.fixes_applied)} fixes applied[/green]"
+            f"[green]✅ Multi-agent analysis completed: {len(result.fixes_applied)} fixes applied[/green]"
         )
         return ai_fixes
 
@@ -579,16 +579,16 @@ class AdvancedWorkflowOrchestrator:
 
     def _map_hook_to_issue_type(self, hook_name: str) -> IssueType:
         hook_type_mapping = {
-            "ruff - format": IssueType.FORMATTING,
-            "ruff - check": IssueType.FORMATTING,
+            "ruff-format": IssueType.FORMATTING,
+            "ruff-check": IssueType.FORMATTING,
             "pyright": IssueType.TYPE_ERROR,
             "bandit": IssueType.SECURITY,
             "vulture": IssueType.DEAD_CODE,
             "refurb": IssueType.COMPLEXITY,
             "creosote": IssueType.DEPENDENCY,
-            "detect - secrets": IssueType.SECURITY,
-            "trailing - whitespace": IssueType.FORMATTING,
-            "end - of - file - fixer": IssueType.FORMATTING,
+            "detect-secrets": IssueType.SECURITY,
+            "trailing-whitespace": IssueType.FORMATTING,
+            "end-of-file-fixer": IssueType.FORMATTING,
         }
 
         return hook_type_mapping.get(hook_name, IssueType.FORMATTING)
@@ -624,11 +624,11 @@ class AdvancedWorkflowOrchestrator:
         if correlation_data["iteration_count"] == 0:
             return
 
-        self.console.print("\n" + " = " * 80)
+        self.console.print("\n" + "=" * 80)
         self.console.print(
             "[bold bright_magenta]🔍 CORRELATION ANALYSIS[/bold bright_magenta]"
         )
-        self.console.print(" = " * 80)
+        self.console.print("=" * 80)
 
         self.console.print(f"Total iterations: {correlation_data['iteration_count']}")
 
@@ -649,4 +649,4 @@ class AdvancedWorkflowOrchestrator:
                     f"{trend['total_errors']} total errors"
                 )
 
-        self.console.print(" = " * 80)
+        self.console.print("=" * 80)

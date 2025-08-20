@@ -16,8 +16,8 @@ class FormattingAgent(SubAgent):
         super().__init__(context)
         self.supported_tools = [
             "ruff",
-            "trailing - whitespace",
-            "end - of - file - fixer",
+            "trailing-whitespace",
+            "end-of-file-fixer",
         ]
 
     def get_supported_types(self) -> set[IssueType]:
@@ -94,7 +94,7 @@ class FormattingAgent(SubAgent):
                 files_modified=files_modified,
                 recommendations=[
                     "Run ruff format regularly for consistent styling",
-                    "Configure pre - commit hooks for automatic formatting",
+                    "Configure pre-commit hooks for automatic formatting",
                 ]
                 if not success
                 else [],
@@ -122,14 +122,14 @@ class FormattingAgent(SubAgent):
             self.log(f"Ruff format failed: {stderr}", "WARN")
 
         returncode, stdout, stderr = await self.run_command(
-            ["uv", "run", "ruff", "check", ".", " -- fix"]
+            ["uv", "run", "ruff", "check", ".", "--fix"]
         )
 
         if returncode == 0:
             fixes.append("Applied ruff linting fixes")
             self.log("Successfully applied ruff linting fixes")
         else:
-            self.log(f"Ruff check -- fix had issues: {stderr}", "WARN")
+            self.log(f"Ruff check --fix had issues: {stderr}", "WARN")
 
         return fixes
 
@@ -140,10 +140,10 @@ class FormattingAgent(SubAgent):
             [
                 "uv",
                 "run",
-                "pre - commit",
+                "pre-commit",
                 "run",
-                "trailing - whitespace",
-                " -- all - files",
+                "trailing-whitespace",
+                "--all-files",
             ]
         )
 
@@ -155,16 +155,16 @@ class FormattingAgent(SubAgent):
             [
                 "uv",
                 "run",
-                "pre - commit",
+                "pre-commit",
                 "run",
-                "end - of - file - fixer",
-                " -- all - files",
+                "end-of-file-fixer",
+                "--all-files",
             ]
         )
 
         if returncode == 0:
-            fixes.append("Fixed end - of - file formatting")
-            self.log("Fixed end - of - file formatting")
+            fixes.append("Fixed end-of-file formatting")
+            self.log("Fixed end-of-file formatting")
 
         return fixes
 
@@ -178,9 +178,9 @@ class FormattingAgent(SubAgent):
                 "ruff",
                 "check",
                 ".",
-                " -- select",
-                "I, F401",
-                " -- fix",
+                "--select",
+                "I,F401",
+                "--fix",
             ]
         )
 
@@ -204,12 +204,12 @@ class FormattingAgent(SubAgent):
 
             original_content = content
 
-            content = re.sub(r"[ \t] + $", "", content, flags=re.MULTILINE)
+            content = re.sub(r"[ \t]+$", "", content, flags=re.MULTILINE)
 
             if content and not content.endswith("\n"):
                 content += "\n"
 
-            content = re.sub(r"\n{3, }", "\n\n", content)
+            content = re.sub(r"\n{3,}", "\n\n", content)
 
             lines = content.split("\n")
             fixed_lines = []
@@ -224,7 +224,7 @@ class FormattingAgent(SubAgent):
             if content != original_content:
                 if self.context.write_file_content(path, content):
                     fixes.append(f"Fixed formatting in {file_path}")
-                    self.log(f"Applied file - specific fixes to {file_path}")
+                    self.log(f"Applied file-specific fixes to {file_path}")
 
         except Exception as e:
             self.log(f"Error fixing file {file_path}: {e}", "ERROR")

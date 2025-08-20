@@ -102,9 +102,9 @@ class AgentTracker:
 
             if activity.current_issue:
                 agent_data["current_issue"] = {
-                    "type": activity.current_issue.issue_type.value,
+                    "type": activity.current_issue.type.value,
                     "message": activity.current_issue.message,
-                    "priority": activity.current_issue.priority.value,
+                    "priority": activity.current_issue.severity.value,
                     "file_path": activity.current_issue.file_path,
                 }
 
@@ -157,7 +157,7 @@ class AgentTracker:
 
             active_summary.append(
                 {
-                    "display": f"{emoji} {agent_type}: {activity.status.title()} ({processing_time: .1f}s)",
+                    "display": f"{emoji} {agent_type}: {activity.status.title()} ({processing_time:.1f}s)",
                     "agent_type": agent_type,
                     "status": activity.status,
                     "processing_time": processing_time,

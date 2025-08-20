@@ -41,7 +41,7 @@ class TestHookManagerImpl:
         with patch.object(hook_manager.executor, "execute_strategy") as mock_exec:
             mock_exec.return_value = Mock(results=[])
 
-            hook_manager.set_config_path(Path(" / test / config.yaml"))
+            hook_manager.set_config_path(Path("/test/config.yaml"))
             results = hook_manager.run_fast_hooks()
 
             assert isinstance(results, list)
@@ -74,7 +74,7 @@ class TestHookManagerImpl:
         assert result is False
 
     def test_set_config_path(self, hook_manager) -> None:
-        config_path = Path(" / test / config.yaml")
+        config_path = Path("/test/config.yaml")
 
         hook_manager.set_config_path(config_path)
 

@@ -17,7 +17,7 @@ class TestSpecialistAgent(SubAgent):
         self.common_test_patterns = {
             "fixture_not_found": r"fixture '(\w+)' not found",
             "import_error": r"ImportError|ModuleNotFoundError",
-            "assertion_error": r"AssertionError|assert .+ == ",
+            "assertion_error": r"AssertionError|assert .+ ==",
             "attribute_error": r"AttributeError: .+ has no attribute",
             "mock_spec_error": r"MockSpec|spec.*Mock",
             "hardcoded_path": r"'/test/path'|/test/path",

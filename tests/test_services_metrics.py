@@ -58,7 +58,7 @@ class TestMetricsCollector:
             db_path = Path(temp_dir) / "test_metrics.db"
             collector = MetricsCollector(db_path=db_path)
 
-            job_id = "test - job - 123"
+            job_id = "test-job-123"
             collector.start_job(job_id, ai_agent=True, metadata={"test": "data"})
 
             with sqlite3.connect(db_path) as conn:
@@ -80,7 +80,7 @@ class TestMetricsCollector:
             db_path = Path(temp_dir) / "test_metrics.db"
             collector = MetricsCollector(db_path=db_path)
 
-            job_id = "test - job - 456"
+            job_id = "test-job-456"
             collector.start_job(job_id)
             collector.end_job(job_id, status="success", iterations=3)
 
@@ -102,7 +102,7 @@ class TestMetricsCollector:
             db_path = Path(temp_dir) / "test_metrics.db"
             collector = MetricsCollector(db_path=db_path)
 
-            job_id = "test - job - error"
+            job_id = "test-job-error"
             error_msg = "Test error occurred"
 
             collector.start_job(job_id)
@@ -124,7 +124,7 @@ class TestMetricsCollector:
             db_path = Path(temp_dir) / "test_metrics.db"
             collector = MetricsCollector(db_path=db_path)
 
-            job_id = "test - job - error"
+            job_id = "test-job-error"
             collector.start_job(job_id)
 
             collector.record_error(
@@ -156,12 +156,12 @@ class TestMetricsCollector:
             db_path = Path(temp_dir) / "test_metrics.db"
             collector = MetricsCollector(db_path=db_path)
 
-            job_id = "test - job - hooks"
+            job_id = "test-job-hooks"
             collector.start_job(job_id)
 
             collector.record_hook_execution(
                 job_id=job_id,
-                hook_name="ruff - check",
+                hook_name="ruff-check",
                 hook_type="fast",
                 execution_time_ms=1500,
                 status="success",
@@ -176,7 +176,7 @@ class TestMetricsCollector:
                 row = cursor.fetchone()
 
                 assert row is not None
-                assert row[0] == "ruff - check"
+                assert row[0] == "ruff-check"
                 assert row[1] == "fast"
                 assert row[2] == 1500
                 assert row[3] == "success"
@@ -186,7 +186,7 @@ class TestMetricsCollector:
             db_path = Path(temp_dir) / "test_metrics.db"
             collector = MetricsCollector(db_path=db_path)
 
-            job_id = "test - job - tests"
+            job_id = "test-job-tests"
             collector.start_job(job_id)
 
             collector.record_test_execution(
@@ -241,7 +241,7 @@ class TestMetricsCollector:
 
             def create_jobs(start_idx: int, count: int):
                 for i in range(start_idx, start_idx + count):
-                    job_id = f"thread - job - {i}"
+                    job_id = f"thread-job-{i}"
                     collector.start_job(job_id)
                     collector.end_job(job_id, status="success", iterations=1)
 
@@ -264,6 +264,6 @@ class TestMetricsCollector:
 
             with collector._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT COUNT( * ) FROM jobs")
+                cursor.execute("SELECT COUNT(*) FROM jobs")
                 result = cursor.fetchone()
                 assert result[0] == 0

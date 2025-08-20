@@ -131,6 +131,8 @@ def _detect_errors_and_suggestions(
 
     return detected_errors, suggestions
 
+
+def register_analyze_errors_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def analyze_errors(output: str = "", include_suggestions: bool = True) -> str:
         context = get_context()

@@ -45,7 +45,7 @@ class TestCreationAgent(SubAgent):
             "no tests found",
             "test coverage",
             "coverage requirement",
-            "42 % ",
+            "42%",
             "coverage gap",
         ]
         return (
@@ -114,7 +114,7 @@ class TestCreationAgent(SubAgent):
 
         if coverage_analysis["below_threshold"]:
             self.log(
-                f"Coverage below threshold: {coverage_analysis['current_coverage']: .1 % }"
+                f"Coverage below threshold: {coverage_analysis['current_coverage']:.1%}"
             )
 
             for module_path in coverage_analysis["uncovered_modules"]:
@@ -162,10 +162,10 @@ class TestCreationAgent(SubAgent):
 
     def _get_test_creation_recommendations(self) -> list[str]:
         return [
-            "Run pytest -- cov to identify coverage gaps",
+            "Run pytest --cov to identify coverage gaps",
             "Focus on testing core business logic functions",
             "Add parametrized tests for edge cases",
-            "Consider property - based testing for complex logic",
+            "Consider property-based testing for complex logic",
         ]
 
     def _create_error_result(self, error: Exception) -> FixResult:
@@ -198,11 +198,11 @@ class TestCreationAgent(SubAgent):
                 "uv",
                 "run",
                 "python",
-                " - m",
+                "-m",
                 "pytest",
-                " -- cov = crackerjack",
-                " -- cov - report = json",
-                " - q",
+                "--cov=crackerjack",
+                "--cov-report=json",
+                "-q",
             ]
         )
 
@@ -238,7 +238,7 @@ class TestCreationAgent(SubAgent):
         if not package_dir.exists():
             return uncovered[:10]
 
-        for py_file in package_dir.rglob(" * .py"):
+        for py_file in package_dir.rglob("*.py"):
             if self._should_skip_module_for_coverage(py_file):
                 continue
 
@@ -259,7 +259,7 @@ class TestCreationAgent(SubAgent):
         test_patterns = [
             f"test_{path.stem}.py",
             f"{path.stem}_test.py",
-            f"test_{path.stem}_ * .py",
+            f"test_{path.stem}_*.py",
         ]
 
         tests_dir = self.context.project_path / "tests"
@@ -313,7 +313,7 @@ class TestCreationAgent(SubAgent):
         if not package_dir.exists():
             return untested[:10]
 
-        for py_file in package_dir.rglob(" * .py"):
+        for py_file in package_dir.rglob("*.py"):
             if self._should_skip_file_for_testing(py_file):
                 continue
 
