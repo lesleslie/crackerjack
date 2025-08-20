@@ -314,9 +314,7 @@ class HealthMetricsService:
                 return None
 
             try:
-                upload_date = datetime.fromisoformat(
-                    upload_time.replace("Z", "+00:00")
-                )
+                upload_date = datetime.fromisoformat(upload_time.replace("Z", "+00:00"))
                 age = (datetime.now(upload_date.tzinfo) - upload_date).days
                 return age
             except Exception:
@@ -472,9 +470,7 @@ class HealthMetricsService:
             avg_age = sum(health.dependency_age.values()) / len(health.dependency_age)
             self.console.print(f"📦 Avg Dependency Age: {avg_age:.0f} days")
 
-        self.console.print(
-            f"⚙️ Config Completeness: {health.config_completeness:.1%}"
-        )
+        self.console.print(f"⚙️ Config Completeness: {health.config_completeness:.1%}")
 
         recommendations = health.get_recommendations()
         if recommendations:

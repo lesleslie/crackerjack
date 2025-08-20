@@ -225,7 +225,7 @@ class ImportOptimizationAgent(SubAgent):
                 if insert_position is None:
                     insert_position = i
             elif stripped.startswith("from typing import "):
-                import_part = stripped[len("from typing import "):].strip()
+                import_part = stripped[len("from typing import ") :].strip()
                 items = [item.strip() for item in import_part.split(",")]
                 typing_imports.update(items)
                 lines_to_remove.append(i)

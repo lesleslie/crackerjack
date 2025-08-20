@@ -23,9 +23,7 @@ async def test_progress_flow():
         console.print(f"Progress directory: {progress_dir}")
         console.print(f"Progress file: {progress_file}")
 
-        console.print(
-            "\n[yellow]1. Simulating MCP server writing progress...[/yellow]"
-        )
+        console.print("\n[yellow]1. Simulating MCP server writing progress...[/yellow]")
         progress_data = {
             "job_id": job_id,
             "status": "running",
@@ -126,9 +124,7 @@ async def test_progress_flow():
         console.print(
             "1. Start WebSocket server: python -m crackerjack --websocket-server"
         )
-        console.print(
-            "2. Connect to: ws://localhost:8675/ws/progress/test-job-123"
-        )
+        console.print("2. Connect to: ws://localhost:8675/ws/progress/test-job-123")
         console.print("3. You should receive the progress updates")
 
 

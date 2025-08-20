@@ -46,7 +46,7 @@ def handle_monitor_mode(dev_mode: bool = False) -> None:
     from ..mcp.progress_monitor import run_progress_monitor
 
     console = Console()
-    console.print("[bold cyan]🌟 Starting Enhanced Multi-Project Monitor[/bold cyan]")
+    console.print("[bold cyan]🌟 Starting Multi-Project Progress Monitor[/bold cyan]")
     console.print(
         "[bold yellow]🐕 With integrated Service Watchdog and WebSocket polling[/bold yellow]"
     )
@@ -61,15 +61,30 @@ def handle_enhanced_monitor_mode(dev_mode: bool = False) -> None:
     from ..mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
 
     console = Console()
-    console.print("[bold magenta]✨ Starting Advanced Dashboard Monitor[/bold magenta]")
+    console.print("[bold magenta]✨ Starting Enhanced Progress Monitor[/bold magenta]")
     console.print(
-        "[bold cyan]📊 With MetricCard widgets and modern web UI patterns[/bold cyan]"
+        "[bold cyan]📊 With advanced MetricCard widgets and modern web UI patterns[/bold cyan]"
     )
 
     try:
         asyncio.run(run_enhanced_progress_monitor(dev_mode=dev_mode))
     except KeyboardInterrupt:
         console.print("\n[yellow]🛑 Enhanced Monitor stopped[/yellow]")
+
+
+def handle_dashboard_mode(dev_mode: bool = False) -> None:
+    from ..mcp.dashboard import run_dashboard
+
+    console = Console()
+    console.print("[bold green]🎯 Starting Comprehensive Dashboard[/bold green]")
+    console.print(
+        "[bold cyan]📈 With system metrics, job tracking, and performance monitoring[/bold cyan]"
+    )
+
+    try:
+        run_dashboard()
+    except KeyboardInterrupt:
+        console.print("\n[yellow]🛑 Dashboard stopped[/yellow]")
 
 
 def handle_watchdog_mode() -> None:

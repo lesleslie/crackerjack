@@ -287,9 +287,7 @@ class PublishManagerImpl:
         package_name = self._get_package_name()
 
         if package_name and current_version:
-            url = (
-                f"https://pypi.org/project/{package_name}/{current_version}/"
-            )
+            url = f"https://pypi.org/project/{package_name}/{current_version}/"
             self.console.print(f"[cyan]🔗[/cyan] Package URL: {url}")
 
     def _get_package_name(self) -> str | None:

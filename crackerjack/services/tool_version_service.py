@@ -1096,9 +1096,7 @@ class GitHookService:
             return True
 
         except OSError as e:
-            self.console.print(
-                f"[red]❌ Failed to install pre-commit hook: {e}[/red]"
-            )
+            self.console.print(f"[red]❌ Failed to install pre-commit hook: {e}[/red]")
             return False
 
     def check_init_needed_quick(self) -> int:
@@ -1172,9 +1170,7 @@ sys.exit(exit_code)
                 return False
 
         except OSError as e:
-            self.console.print(
-                f"[red]❌ Failed to remove pre-commit hook: {e}[/red]"
-            )
+            self.console.print(f"[red]❌ Failed to remove pre-commit hook: {e}[/red]")
             return False
 
     def is_hook_installed(self) -> bool:

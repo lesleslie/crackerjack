@@ -392,20 +392,14 @@ class DependencyMonitorService:
     def _report_vulnerabilities(
         self, vulnerabilities: list[DependencyVulnerability]
     ) -> None:
-        self.console.print(
-            "\n[bold red]🚨 Security Vulnerabilities Found![/bold red]"
-        )
+        self.console.print("\n[bold red]🚨 Security Vulnerabilities Found![/bold red]")
         self.console.print(
             "[red]Please update the following packages immediately:[/red]\n"
         )
 
         for vuln in vulnerabilities:
-            self.console.print(
-                f"[red]• {vuln.package} {vuln.installed_version}[/red]"
-            )
-            self.console.print(
-                f" [dim]Vulnerability ID: {vuln.vulnerability_id}[/dim]"
-            )
+            self.console.print(f"[red]• {vuln.package} {vuln.installed_version}[/red]")
+            self.console.print(f" [dim]Vulnerability ID: {vuln.vulnerability_id}[/dim]")
             self.console.print(f" [dim]Severity: {vuln.severity.upper()}[/dim]")
             if vuln.patched_version:
                 self.console.print(

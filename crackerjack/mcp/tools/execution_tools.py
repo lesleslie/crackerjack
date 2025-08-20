@@ -64,12 +64,11 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
     if not context:
         return '{"error": "Server context not available"}'
 
-    if not context.rate_limiter:
-        return '{"error": "Rate limiter not initialized", "success": false}'
-
-    allowed, details = await context.rate_limiter.check_request_allowed("default")
-    if not allowed:
-        return f'{{"error": "Rate limit exceeded: {details.get("reason", "unknown")}", "success": false}}'
+    # Rate limiting is optional - skip if not configured
+    if context.rate_limiter:
+        allowed, details = await context.rate_limiter.check_request_allowed("default")
+        if not allowed:
+            return f'{{"error": "Rate limit exceeded: {details.get("reason", "unknown")}", "success": false}}'
 
     return None
 

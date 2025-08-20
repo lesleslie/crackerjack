@@ -405,7 +405,7 @@ class CrackerjackDashboard(App):
         try:
             timeout = aiohttp.ClientTimeout(total=5.0)
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get("http: // localhost: 8675 / ") as response:
+                async with session.get("http://localhost:8675/") as response:
                     return response.status == 200
         except Exception:
             return False
@@ -451,7 +451,7 @@ class CrackerjackDashboard(App):
             timeout = aiohttp.ClientTimeout(total=10.0)
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(
-                    "http: // localhost: 8675 / api / jobs"
+                    "http://localhost:8675/api/jobs"
                 ) as response:
                     if response.status == 200:
                         return await response.json()
@@ -467,12 +467,12 @@ class CrackerjackDashboard(App):
             import tempfile
 
             temp_dir = Path(tempfile.gettempdir())
-            debug_files = temp_dir.glob("crackerjack - debug -* .log")
+            debug_files = temp_dir.glob("crackerjack-debug-*.log")
             for debug_file in debug_files:
                 try:
                     if debug_file.stat().st_mtime > (time.time() - 3600):
                         debug_file.read_text()
-                        job_id = debug_file.stem.replace("crackerjack - debug - ", "")
+                        job_id = debug_file.stem.replace("crackerjack-debug-", "")
                         jobs[job_id] = {
                             "id": job_id,
                             "status": "completed",
@@ -505,10 +505,10 @@ class CrackerjackDashboard(App):
                 reverse=True,
             ):
                 status = job_data.get("status", "unknown")
-                stage = job_data.get("current_stage", "N / A")
+                stage = job_data.get("current_stage", "N/A")
                 progress = job_data.get("progress", 0)
                 started = datetime.fromtimestamp(job_data.get("timestamp", 0)).strftime(
-                    " % H: % M: % S"
+                    "%H:%M:%S"
                 )
                 duration = self._format_duration(job_data.get("duration", 0))
                 issues = job_data.get("issues_found", 0)
@@ -569,7 +569,7 @@ class CrackerjackDashboard(App):
         try:
             log_display = self.query_one("#log_display", Log)
 
-            current_time = datetime.now().strftime(" % H: % M: % S")
+            current_time = datetime.now().strftime("%H:%M:%S")
             if len(self.logs_buffer) % 10 == 0:
                 log_display.write_line(f"[{current_time}] Dashboard refresh completed")
 

@@ -227,7 +227,7 @@ class SessionCoordinator:
         """Remove __pycache__ directories from the package to keep repo clean."""
         with suppress(Exception):
             import shutil
-            
+
             # Clean __pycache__ directories in package
             for pycache_dir in self.pkg_path.rglob("__pycache__"):
                 if pycache_dir.is_dir():

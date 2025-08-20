@@ -52,9 +52,9 @@ class TestSessionCoordinator:
         with patch.object(uuid, "uuid4") as mock_uuid:
             mock_uuid.return_value.hex = "test-session-id"
             mock_uuid.return_value.__str__ = lambda self: "test-session-id"
-            mock_uuid.return_value.__getitem__ = (
-                lambda self, idx: "test-session-id"[:idx]
-            )
+            mock_uuid.return_value.__getitem__ = lambda self, idx: "test-session-id"[
+                :idx
+            ]
 
             coordinator.initialize_session_tracking(mock_options)
 

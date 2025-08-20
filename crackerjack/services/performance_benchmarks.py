@@ -351,9 +351,7 @@ class PerformanceBenchmarkService:
             )
 
     def display_performance_report(self, report: PerformanceReport) -> None:
-        self.console.print(
-            "\n[bold cyan]🚀 Performance Benchmark Report[/bold cyan]\n"
-        )
+        self.console.print("\n[bold cyan]🚀 Performance Benchmark Report[/bold cyan]\n")
 
         self._display_overall_stats(report)
         self._display_workflow_components(report)
@@ -380,9 +378,7 @@ class PerformanceBenchmarkService:
         table.add_column("Metadata", style="dim")
 
         for benchmark in report.workflow_benchmarks:
-            metadata_str = ", ".join(
-                f"{k}={v}" for k, v in benchmark.metadata.items()
-            )
+            metadata_str = ", ".join(f"{k}={v}" for k, v in benchmark.metadata.items())
             table.add_row(
                 benchmark.name, f"{benchmark.duration_seconds:.3f}", metadata_str
             )

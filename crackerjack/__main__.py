@@ -10,6 +10,7 @@ from .cli import (
     setup_ai_agent_env,
 )
 from .cli.handlers import (
+    handle_dashboard_mode,
     handle_enhanced_monitor_mode,
     handle_mcp_server,
     handle_monitor_mode,
@@ -29,7 +30,7 @@ app = typer.Typer(
 
 
 def _handle_monitoring_commands(
-    monitor: bool, enhanced_monitor: bool, watchdog: bool, dev: bool
+    monitor: bool, enhanced_monitor: bool, dashboard: bool, watchdog: bool, dev: bool
 ) -> bool:
     """Handle monitoring commands."""
     if monitor:
@@ -37,6 +38,9 @@ def _handle_monitoring_commands(
         return True
     if enhanced_monitor:
         handle_enhanced_monitor_mode(dev_mode=dev)
+        return True
+    if dashboard:
+        handle_dashboard_mode(dev_mode=dev)
         return True
     if watchdog:
         handle_watchdog_mode()
@@ -91,6 +95,7 @@ def _handle_mcp_commands(
 def _handle_server_commands(
     monitor: bool,
     enhanced_monitor: bool,
+    dashboard: bool,
     watchdog: bool,
     websocket_server: bool,
     start_websocket_server: bool,
@@ -104,7 +109,7 @@ def _handle_server_commands(
 ) -> bool:
     """Handle server-related commands. Returns True if a server command was handled."""
     return (
-        _handle_monitoring_commands(monitor, enhanced_monitor, watchdog, dev)
+        _handle_monitoring_commands(monitor, enhanced_monitor, dashboard, watchdog, dev)
         or _handle_websocket_commands(
             websocket_server,
             start_websocket_server,
@@ -162,6 +167,8 @@ def main(
     orchestration_progress: str = CLI_OPTIONS["orchestration_progress"],
     orchestration_ai_mode: str = CLI_OPTIONS["orchestration_ai_mode"],
     dev: bool = CLI_OPTIONS["dev"],
+    dashboard: bool = CLI_OPTIONS["dashboard"],
+    max_iterations: int = CLI_OPTIONS["max_iterations"],
 ) -> None:
     options = create_options(
         commit,
@@ -193,6 +200,8 @@ def main(
         orchestration_progress,
         orchestration_ai_mode,
         dev,
+        dashboard,
+        max_iterations,
     )
 
     if ai_debug:
@@ -205,6 +214,7 @@ def main(
     if _handle_server_commands(
         monitor,
         enhanced_monitor,
+        dashboard,
         watchdog,
         websocket_server,
         start_websocket_server,

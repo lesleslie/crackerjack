@@ -60,6 +60,8 @@ class Options(BaseModel):
     restart_websocket_server: bool = False
     websocket_port: int | None = None
     dev: bool = False
+    dashboard: bool = False
+    max_iterations: int = 10
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -78,7 +80,8 @@ class Options(BaseModel):
 
 
 CLI_OPTIONS = {
-    "commit": typer.Option(False, "-c", "--commit", help="Commit changes to Git."),
+    "commit": typer.Option(False, "-c", "--commit",
+                           help="Commit and push changes to Git."),
     "interactive": typer.Option(
         False,
         "-i",
@@ -248,17 +251,27 @@ CLI_OPTIONS = {
     "monitor": typer.Option(
         False,
         "--monitor",
-        help="Start enhanced multi-project progress monitor with WebSocket polling, watchdog services, and autodiscovery.",
+        help="Start multi-project progress monitor with WebSocket polling, watchdog services, and autodiscovery.",
     ),
     "enhanced_monitor": typer.Option(
         False,
         "--enhanced-monitor",
-        help="Start advanced dashboard monitor with MetricCard widgets and modern web UI patterns.",
+        help="Start enhanced progress monitor with advanced MetricCard widgets and modern web UI patterns.",
     ),
     "dev": typer.Option(
         False,
         "--dev",
         help="Enable development mode for progress monitors (enables textual --dev mode).",
+    ),
+    "dashboard": typer.Option(
+        False,
+        "--dashboard",
+        help="Start the comprehensive dashboard with system metrics, job tracking, and performance monitoring.",
+    ),
+    "max_iterations": typer.Option(
+        10,
+        "--max-iterations",
+        help="Maximum number of iterations for AI agent auto-fixing workflows (default: 10).",
     ),
     "ai_debug": typer.Option(
         False,
@@ -324,6 +337,8 @@ def create_options(
     orchestration_progress: str,
     orchestration_ai_mode: str,
     dev: bool,
+    dashboard: bool,
+    max_iterations: int,
 ) -> Options:
     return Options(
         commit=commit,
@@ -355,4 +370,6 @@ def create_options(
         orchestration_progress=orchestration_progress,
         orchestration_ai_mode=orchestration_ai_mode,
         dev=dev,
+        dashboard=dashboard,
+        max_iterations=max_iterations,
     )

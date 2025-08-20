@@ -497,9 +497,7 @@ class SecurityAgent(SubAgent):
 
         content = self._add_secrets_import_if_needed(content)
 
-        content = re.sub(
-            r"random\.choice\(([^)]+)\)", r"secrets.choice(\1)", content
-        )
+        content = re.sub(r"random\.choice\(([^)]+)\)", r"secrets.choice(\1)", content)
 
         return content
 

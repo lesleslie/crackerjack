@@ -45,10 +45,6 @@ class OptionsAdapter:
             testing=TestConfig(
                 test=getattr(options, "test", False),
                 benchmark=getattr(options, "benchmark", False),
-                benchmark_regression=getattr(options, "benchmark_regression", False),
-                benchmark_regression_threshold=getattr(
-                    options, "benchmark_regression_threshold", 0.1
-                ),
                 test_workers=getattr(options, "test_workers", 0),
                 test_timeout=getattr(options, "test_timeout", 0),
             ),
@@ -56,8 +52,6 @@ class OptionsAdapter:
                 publish=getattr(options, "publish", None),
                 bump=getattr(options, "bump", None),
                 all=getattr(options, "all", None),
-                cleanup_pypi=getattr(options, "cleanup_pypi", False),
-                keep_releases=getattr(options, "keep_releases", 10),
                 no_git_tags=getattr(options, "no_git_tags", False),
                 skip_version_check=getattr(options, "skip_version_check", False),
             ),
@@ -70,6 +64,7 @@ class OptionsAdapter:
                 autofix=getattr(options, "autofix", True),  # Default true per CLAUDE.md
                 ai_agent_autofix=getattr(options, "ai_agent_autofix", False),
                 start_mcp_server=getattr(options, "start_mcp_server", False),
+                max_iterations=getattr(options, "max_iterations", 10),
             ),
             execution=ExecutionConfig(
                 interactive=getattr(options, "interactive", False),
@@ -78,13 +73,12 @@ class OptionsAdapter:
                 no_config_updates=getattr(options, "no_config_updates", False),
             ),
             progress=ProgressConfig(
-                track_progress=getattr(options, "track_progress", False),
-                resume_from=getattr(options, "resume_from", None),
-                progress_file=getattr(options, "progress_file", None),
+                enabled=getattr(options, "track_progress", False),
             ),
             enterprise=EnterpriseConfig(
-                enterprise_batch=getattr(options, "enterprise_batch", None),
-                monitor_dashboard=getattr(options, "monitor_dashboard", None),
+                enabled=getattr(options, "enterprise_batch", None) is not None,
+                license_key=getattr(options, "license_key", None),
+                organization=getattr(options, "organization", None),
             ),
         )
 
@@ -137,14 +131,6 @@ class LegacyOptionsWrapper:
         return self._options.cleaning.auto_compress_docs
 
     @property
-    def cleanup_pypi(self) -> bool:
-        return self._options.publishing.cleanup_pypi
-
-    @property
-    def keep_releases(self) -> int:
-        return self._options.publishing.keep_releases
-
-    @property
     def clean(self) -> bool:
         return self._options.cleaning.clean
 
@@ -155,14 +141,6 @@ class LegacyOptionsWrapper:
     @property
     def benchmark(self) -> bool:
         return self._options.testing.benchmark
-
-    @property
-    def benchmark_regression(self) -> bool:
-        return self._options.testing.benchmark_regression
-
-    @property
-    def benchmark_regression_threshold(self) -> float:
-        return self._options.testing.benchmark_regression_threshold
 
     @property
     def test_workers(self) -> int:
@@ -201,6 +179,10 @@ class LegacyOptionsWrapper:
         return self._options.ai.start_mcp_server
 
     @property
+    def max_iterations(self) -> int:
+        return self._options.ai.max_iterations
+
+    @property
     def create_pr(self) -> bool:
         return self._options.git.create_pr
 
@@ -218,15 +200,7 @@ class LegacyOptionsWrapper:
 
     @property
     def track_progress(self) -> bool:
-        return self._options.progress.track_progress
-
-    @property
-    def resume_from(self) -> str | None:
-        return self._options.progress.resume_from
-
-    @property
-    def progress_file(self) -> str | None:
-        return self._options.progress.progress_file
+        return self._options.progress.enabled
 
     @property
     def experimental_hooks(self) -> bool:
@@ -250,8 +224,8 @@ class LegacyOptionsWrapper:
 
     @property
     def enterprise_batch(self) -> str | None:
-        return self._options.enterprise.enterprise_batch
+        return None  # Deprecated field
 
     @property
     def monitor_dashboard(self) -> str | None:
-        return self._options.enterprise.monitor_dashboard
+        return None  # Deprecated field

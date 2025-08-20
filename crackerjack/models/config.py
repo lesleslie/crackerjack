@@ -47,6 +47,9 @@ class GitConfig:
 class AIConfig:
     ai_agent: bool = False
     start_mcp_server: bool = False
+    max_iterations: int = 10
+    autofix: bool = True
+    ai_agent_autofix: bool = False
 
 
 @dataclass

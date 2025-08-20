@@ -1,15 +1,17 @@
 import typing as t
 
 from ..context import get_context
-from ..rate_limiter import RateLimitConfig
 
 
 async def _validate_stage_request(context, rate_limiter) -> str | None:
     if not context:
         return '{"error": "Server context not available", "success": false}'
-    allowed, details = await rate_limiter.check_request_allowed()
-    if not allowed:
-        return f'{{"error": "Rate limit exceeded: {details.get("reason", "unknown")}", "success": false}}'
+
+    # Skip rate limiting if not configured
+    if rate_limiter and hasattr(rate_limiter, "check_request_allowed"):
+        allowed, details = await rate_limiter.check_request_allowed()
+        if not allowed:
+            return f'{{"error": "Rate limit exceeded: {details.get("reason", "unknown")}", "success": false}}'
     return None
 
 
@@ -63,7 +65,7 @@ def register_core_tools(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def run_crackerjack_stage(args: str, kwargs: str) -> str:
         context = get_context()
-        rate_limiter = context.rate_limiter or RateLimitConfig() if context else None
+        rate_limiter = context.rate_limiter if context else None
 
         validation_error = await _validate_stage_request(context, rate_limiter)
         if validation_error:

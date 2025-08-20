@@ -340,9 +340,7 @@ class ContextualAIAssistant:
                 project_data = data.get("project", {})
                 scripts = project_data.get("scripts", {})
 
-                if scripts or "console_scripts" in project_data.get(
-                    "entry-points", {}
-                ):
+                if scripts or "console_scripts" in project_data.get("entry-points", {}):
                     return "cli"
 
                 dependencies = project_data.get("dependencies", [])
