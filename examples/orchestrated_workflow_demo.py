@@ -2,23 +2,20 @@
 
 import asyncio
 from pathlib import Path
-from unittest.mock import Mock
 
 from rich.console import Console
 
-from crackerjack.config.hooks import HookConfigLoader
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.orchestration.advanced_orchestrator import AdvancedWorkflowOrchestrator
 from crackerjack.orchestration.execution_strategies import (
-    OrchestrationConfig,
-    ExecutionStrategy,
-    ProgressLevel,
     AIMode,
+    ExecutionStrategy,
+    OrchestrationConfig,
+    ProgressLevel,
 )
 
 
 class MockOptions:
-
     def __init__(self):
         self.tests = True
         self.coverage = True
@@ -28,32 +25,31 @@ class MockOptions:
 
 
 async def demonstrate_orchestrated_workflow():
-
     console = Console()
     pkg_path = Path.cwd()
     session = SessionCoordinator(console, pkg_path)
 
-
     config = OrchestrationConfig(
-        execution_strategy = ExecutionStrategy.INDIVIDUAL,
-        progress_level = ProgressLevel.GRANULAR,
-        ai_mode = AIMode.SINGLE_AGENT,
-        correlation_tracking = True,
-        failure_analysis = True,
-        intelligent_retry = True,
-        debug_level = "verbose",
-        log_individual_outputs = True,
+        execution_strategy=ExecutionStrategy.INDIVIDUAL,
+        progress_level=ProgressLevel.GRANULAR,
+        ai_mode=AIMode.SINGLE_AGENT,
+        correlation_tracking=True,
+        failure_analysis=True,
+        intelligent_retry=True,
+        debug_level="verbose",
+        log_individual_outputs=True,
     )
-
 
     orchestrator = AdvancedWorkflowOrchestrator(
-        console = console,
-        pkg_path = pkg_path,
-        session = session,
-        config = config,
+        console=console,
+        pkg_path=pkg_path,
+        session=session,
+        config=config,
     )
 
-    console.print("\n[bold bright_cyan]🎯 ORCHESTRATED WORKFLOW DEMONSTRATION[ / bold bright_cyan]")
+    console.print(
+        "\n[bold bright_cyan]🎯 ORCHESTRATED WORKFLOW DEMONSTRATION[ / bold bright_cyan]"
+    )
     console.print("This demo shows the enhanced / crackerjack: run capabilities: \n")
 
     console.print("[bold]✨ New Features: [ / bold]")
@@ -64,33 +60,40 @@ async def demonstrate_orchestrated_workflow():
     console.print(" 📈 Advanced progress streaming")
     console.print(" 🎯 Adaptive execution strategies")
 
-
     options = MockOptions()
 
     try:
-
-        console.print(f"\n[bold yellow]⚡ Starting orchestrated execution...[ / bold yellow]")
+        console.print(
+            "\n[bold yellow]⚡ Starting orchestrated execution...[ / bold yellow]"
+        )
 
         success = await orchestrator.execute_orchestrated_workflow(
-            options = options,
-            max_iterations = 3,
+            options=options,
+            max_iterations=3,
         )
 
         if success:
-            console.print(f"\n[bold green]🎉 Workflow completed successfully ! [ / bold green]")
+            console.print(
+                "\n[bold green]🎉 Workflow completed successfully ! [ / bold green]"
+            )
         else:
-            console.print(f"\n[bold yellow]⚠️ Workflow incomplete (demo mode)[ / bold yellow]")
+            console.print(
+                "\n[bold yellow]⚠️ Workflow incomplete (demo mode)[ / bold yellow]"
+            )
 
     except Exception as e:
         console.print(f"\n[bold red]❌ Demo error: {e}[ / bold red]")
-        console.print("[dim]This is expected in demo mode without a full project setup[ / dim]")
+        console.print(
+            "[dim]This is expected in demo mode without a full project setup[ / dim]"
+        )
 
 
 def demonstrate_execution_strategies():
-
     console = Console()
 
-    console.print("\n[bold bright_magenta]🎯 EXECUTION STRATEGIES[ / bold bright_magenta]")
+    console.print(
+        "\n[bold bright_magenta]🎯 EXECUTION STRATEGIES[ / bold bright_magenta]"
+    )
     console.print("The orchestrated system supports multiple execution modes: \n")
 
     strategies = [
@@ -126,17 +129,18 @@ def demonstrate_execution_strategies():
 
 
 def main():
-
     console = Console()
 
-    console.print("[bold bright_blue]🚀 CRACKERJACK ORCHESTRATED WORKFLOW DEMO[ / bold bright_blue]")
+    console.print(
+        "[bold bright_blue]🚀 CRACKERJACK ORCHESTRATED WORKFLOW DEMO[ / bold bright_blue]"
+    )
     console.print(" = " * 60)
-
 
     demonstrate_execution_strategies()
 
-
-    console.print("\n[bold yellow]Press Enter to run orchestrated workflow demo...[ / bold yellow]")
+    console.print(
+        "\n[bold yellow]Press Enter to run orchestrated workflow demo...[ / bold yellow]"
+    )
     input()
 
     try:

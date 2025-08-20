@@ -16,7 +16,7 @@ class TestHookManagerImpl:
 
     @pytest.fixture
     def mock_pkg_path(self):
-        return Path(" / test / hook_manager")
+        return Path("/test / hook_manager")
 
     @pytest.fixture
     def hook_manager(self, mock_console, mock_pkg_path):
@@ -75,7 +75,7 @@ class TestHookManagerImpl:
                 mock_execute.assert_called_once_with(mock_strategy)
 
     def test_set_config_path(self, hook_manager) -> None:
-        config_path = Path(" / test / config.yaml")
+        config_path = Path("/test / config.yaml")
         hook_manager.set_config_path(config_path)
         assert hook_manager._config_path == config_path
 
@@ -135,7 +135,7 @@ class TestHookExecutorComponents:
 
     @pytest.fixture
     def mock_pkg_path(self):
-        return Path(" / test / hook_executor")
+        return Path("/test / hook_executor")
 
     @pytest.fixture
     def hook_executor(self, mock_console, mock_pkg_path):
@@ -197,7 +197,7 @@ class TestServicesIntegration:
         from crackerjack.services.git import GitService
 
         mock_console = Mock()
-        mock_pkg_path = Path(" / test")
+        mock_pkg_path = Path("/test")
 
         git_service = GitService(console=mock_console, pkg_path=mock_pkg_path)
         assert hasattr(git_service, "commit")
@@ -207,7 +207,7 @@ class TestServicesIntegration:
         from crackerjack.services.config import ConfigurationService
 
         mock_console = Mock()
-        mock_pkg_path = Path(" / test")
+        mock_pkg_path = Path("/test")
 
         config_service = ConfigurationService(
             console=mock_console, pkg_path=mock_pkg_path
@@ -223,7 +223,7 @@ class TestTestManagementImpl:
 
     @pytest.fixture
     def mock_pkg_path(self):
-        return Path(" / test / test_manager")
+        return Path("/test / test_manager")
 
     @pytest.fixture
     def mock_options(self):
@@ -360,7 +360,7 @@ class TestTestManagementImpl:
 class TestManagerErrorHandling:
     def test_hook_manager_error_handling(self) -> None:
         mock_console = Mock()
-        mock_pkg_path = Path(" / test / error")
+        mock_pkg_path = Path("/test / error")
 
         with patch("crackerjack.managers.hook_manager.HookExecutor"):
             with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
@@ -374,7 +374,7 @@ class TestManagerErrorHandling:
 
     def test_test_manager_error_handling(self, mock_options) -> None:
         mock_console = Mock()
-        mock_pkg_path = Path(" / test / error")
+        mock_pkg_path = Path("/test / error")
 
         manager = TestManagementImpl(console=mock_console, pkg_path=mock_pkg_path)
 
@@ -397,7 +397,7 @@ class TestManagerErrorHandling:
 class TestCoverageIntegration:
     def test_manager_coverage_methods(self) -> None:
         mock_console = Mock()
-        mock_pkg_path = Path(" / test / coverage")
+        mock_pkg_path = Path("/test / coverage")
 
         test_manager = TestManagementImpl(console=mock_console, pkg_path=mock_pkg_path)
         assert hasattr(test_manager, "get_coverage")
@@ -405,7 +405,7 @@ class TestCoverageIntegration:
 
     def test_coverage_data_processing(self) -> None:
         mock_console = Mock()
-        mock_pkg_path = Path(" / test / coverage_data")
+        mock_pkg_path = Path("/test / coverage_data")
 
         test_manager = TestManagementImpl(console=mock_console, pkg_path=mock_pkg_path)
 
@@ -422,7 +422,7 @@ class TestCoverageIntegration:
 
     def test_coverage_error_handling(self) -> None:
         mock_console = Mock()
-        mock_pkg_path = Path(" / test / coverage_error")
+        mock_pkg_path = Path("/test / coverage_error")
 
         test_manager = TestManagementImpl(console=mock_console, pkg_path=mock_pkg_path)
 
@@ -437,7 +437,7 @@ class TestCoverageIntegration:
 class TestUtilityFunctions:
     def test_hook_manager_utilities(self) -> None:
         mock_console = Mock()
-        mock_pkg_path = Path(" / test / utilities")
+        mock_pkg_path = Path("/test / utilities")
 
         with patch("crackerjack.managers.hook_manager.HookExecutor"):
             with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
@@ -449,7 +449,7 @@ class TestUtilityFunctions:
 
     def test_test_manager_utilities(self) -> None:
         mock_console = Mock()
-        mock_pkg_path = Path(" / test / test_utilities")
+        mock_pkg_path = Path("/test / test_utilities")
 
         manager = TestManagementImpl(console=mock_console, pkg_path=mock_pkg_path)
 
@@ -464,7 +464,7 @@ class TestUtilityFunctions:
 
     def test_optimal_workers_calculation(self) -> None:
         mock_console = Mock()
-        mock_pkg_path = Path(" / test / workers")
+        mock_pkg_path = Path("/test / workers")
 
         manager = TestManagementImpl(console=mock_console, pkg_path=mock_pkg_path)
 

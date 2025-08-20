@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from rich.console import Console
+
 from crackerjack.code_cleaner import CodeCleaner
 
 

@@ -185,7 +185,7 @@ class LogManager:
             ("audit", self.audit_dir),
         ]:
             if log_dir.exists():
-                files = list(log_dir.glob(" * .log"))
+                files = list(log_dir.glob("*.log"))
                 total_size = sum(f.stat().st_size for f in files if f.exists())
 
                 stats[log_type] = {
@@ -224,11 +224,11 @@ class LogManager:
             log_file,
             maxBytes=max_bytes,
             backupCount=backup_count,
-            encoding="utf - 8",
+            encoding="utf-8",
         )
 
         formatter = logging.Formatter(
-            " % (asctime)s - % (name)s - % (levelname)s - % (message)s"
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         handler.setFormatter(formatter)
 
@@ -259,7 +259,7 @@ class LogManager:
 
         if total_files > 0:
             console.print(
-                f"\n[bold]Total: {total_files} files, {total_size: .2f}MB[/bold]"
+                f"\n[bold]Total: {total_files} files, {total_size:.2f}MB[/bold]"
             )
         else:
             console.print("\n[dim]No log files found[/dim]")

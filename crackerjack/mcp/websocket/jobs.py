@@ -88,6 +88,31 @@ class JobManager:
         except (json.JSONDecodeError, OSError):
             return None
 
+    async def _process_progress_file(self, progress_file: Path) -> None:
+        """Process a single progress file and handle new job detection."""
+        job_id = self.extract_job_id_from_file(progress_file)
+        if not (job_id and self.validate_job_id(job_id)):
+            return
+
+        progress_data = self.get_job_progress(job_id)
+        if progress_data and job_id not in self.known_jobs:
+            self.known_jobs.add(job_id)
+            console.print(f"[green]New job detected: {job_id}[/green]")
+            await self.broadcast_to_job(job_id, progress_data)
+
+    async def _monitor_directory_changes(self) -> None:
+        """Monitor the progress directory for new job files."""
+        while self.is_running:
+            try:
+                if self.progress_dir.exists():
+                    for progress_file in self.progress_dir.glob("job-*.json"):
+                        await self._process_progress_file(progress_file)
+
+                await asyncio.sleep(1)  # Check every second
+            except Exception as e:
+                console.print(f"[red]Progress monitoring error: {e}[/red]")
+                await asyncio.sleep(5)  # Wait longer on error
+
     async def monitor_progress_files(self) -> None:
         from ..file_monitor import create_progress_monitor
 
@@ -107,29 +132,8 @@ class JobManager:
                         self.known_jobs.add(job_id)
                         console.print(f"[green]New job detected: {job_id}[/green]")
 
-            # Subscribe to all job updates using a generic callback
-            # Note: This is a simplified approach - we could make it more sophisticated
-            # by subscribing to specific job IDs as they're discovered
-
             # Monitor for new job files by checking the directory periodically
-            while self.is_running:
-                try:
-                    if self.progress_dir.exists():
-                        for progress_file in self.progress_dir.glob("job-*.json"):
-                            job_id = self.extract_job_id_from_file(progress_file)
-                            if job_id and self.validate_job_id(job_id):
-                                progress_data = self.get_job_progress(job_id)
-                                if progress_data and job_id not in self.known_jobs:
-                                    self.known_jobs.add(job_id)
-                                    console.print(
-                                        f"[green]New job detected: {job_id}[/green]"
-                                    )
-                                    await self.broadcast_to_job(job_id, progress_data)
-
-                    await asyncio.sleep(1)  # Check every second
-                except Exception as e:
-                    console.print(f"[red]Progress monitoring error: {e}[/red]")
-                    await asyncio.sleep(5)  # Wait longer on error
+            await self._monitor_directory_changes()
 
         except Exception as e:
             console.print(f"[red]Progress monitoring setup error: {e}[/red]")

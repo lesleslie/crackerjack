@@ -2,16 +2,13 @@
 
 import time
 
-
 from crackerjack.mcp.progress_monitor import display_progress_update
 
 
 def simulate_mcp_progress_polling(job_id: str) -> None:
     print("🚀 Starting Crackerjack AI Agent Auto - Fix\n")
 
-
     progress_sequence = [
-
         {
             "status": "running",
             "iteration": 1,
@@ -53,7 +50,6 @@ def simulate_mcp_progress_polling(job_id: str) -> None:
             "stage_percentage": 83,
             "message": "Running pytest with coverage...",
         },
-
         {
             "status": "running",
             "iteration": 2,
@@ -92,7 +88,6 @@ def simulate_mcp_progress_polling(job_id: str) -> None:
             "stage_percentage": 100,
             "message": "All tests passing ! ",
         },
-
         {
             "status": "completed",
             "iteration": 2,
@@ -106,16 +101,11 @@ def simulate_mcp_progress_polling(job_id: str) -> None:
         },
     ]
 
-
     for progress_data in progress_sequence:
-
-
         display_progress_update(progress_data)
-
 
         if progress_data["status"] in ("completed", "failed"):
             break
-
 
         time.sleep(1.5)
 
@@ -123,5 +113,4 @@ def simulate_mcp_progress_polling(job_id: str) -> None:
 
 
 if __name__ == "__main__":
-
     simulate_mcp_progress_polling("example - job - id")

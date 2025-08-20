@@ -80,7 +80,7 @@ class MetricsCollector:
                     timestamp TIMESTAMP NOT NULL,
                     execution_strategy TEXT NOT NULL, -- 'batch', 'individual', 'adaptive', 'selective'
                     progress_level TEXT NOT NULL, -- 'basic', 'detailed', 'granular', 'streaming'
-                    ai_mode TEXT NOT NULL, -- 'single - agent', 'multi - agent', 'coordinator'
+                    ai_mode TEXT NOT NULL, -- 'single-agent', 'multi-agent', 'coordinator'
                     iteration_count INTEGER DEFAULT 1,
                     strategy_switches INTEGER DEFAULT 0, -- How many times strategy changed
                     correlation_insights TEXT, -- JSON of correlation analysis results
@@ -101,7 +101,7 @@ class MetricsCollector:
                     selected_strategy TEXT NOT NULL,
                     decision_reason TEXT, -- Why this strategy was chosen
                     context_data TEXT, -- JSON of execution context
-                    effectiveness_score REAL, -- How well the strategy worked (0 - 1)
+                    effectiveness_score REAL, -- How well the strategy worked (0-1)
                     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
                 );
 
@@ -397,7 +397,7 @@ class MetricsCollector:
             strategy_stats = conn.execute("""
                 SELECT
                     selected_strategy,
-                    COUNT( * ) as usage_count,
+                    COUNT(*) as usage_count,
                     AVG(effectiveness_score) as avg_effectiveness,
                     AVG(
                         SELECT iteration_count
@@ -413,7 +413,7 @@ class MetricsCollector:
             correlation_patterns = conn.execute("""
                 SELECT
                     json_extract(correlation_insights, '$.problematic_hooks') as problematic_hooks,
-                    COUNT( * ) as frequency
+                    COUNT(*) as frequency
                 FROM orchestration_executions
                 WHERE correlation_insights != 'null'
                 AND correlation_insights != '{}'
@@ -425,7 +425,7 @@ class MetricsCollector:
             performance_stats = conn.execute("""
                 SELECT
                     execution_strategy,
-                    COUNT( * ) as executions,
+                    COUNT(*) as executions,
                     AVG(total_execution_time_ms) as avg_total_time,
                     AVG(hooks_execution_time_ms) as avg_hooks_time,
                     AVG(tests_execution_time_ms) as avg_tests_time,
@@ -440,7 +440,7 @@ class MetricsCollector:
                     test_file,
                     test_class,
                     test_method,
-                    COUNT( * ) as failure_count,
+                    COUNT(*) as failure_count,
                     AVG(execution_time_ms) as avg_execution_time
                 FROM individual_test_executions
                 WHERE status = 'failed'
@@ -462,7 +462,7 @@ class MetricsCollector:
         job_stats = conn.execute(
             """
             SELECT
-                COUNT( * ) as total_jobs,
+                COUNT(*) as total_jobs,
                 SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_jobs,
                 SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_jobs,
                 AVG(CASE
@@ -480,7 +480,7 @@ class MetricsCollector:
         error_stats = conn.execute(
             """
             SELECT
-                COUNT( * ) as total_errors,
+                COUNT(*) as total_errors,
                 SUM(CASE WHEN error_type = 'hook' THEN 1 ELSE 0 END) as hook_errors,
                 SUM(CASE WHEN error_type = 'test' THEN 1 ELSE 0 END) as test_errors,
                 SUM(CASE WHEN error_type = 'lint' THEN 1 ELSE 0 END) as lint_errors,
@@ -494,13 +494,13 @@ class MetricsCollector:
         orchestration_stats = conn.execute(
             """
             SELECT
-                COUNT( * ) as orchestrated_jobs,
+                COUNT(*) as orchestrated_jobs,
                 AVG(iteration_count) as avg_iterations,
                 (SELECT selected_strategy
                  FROM strategy_decisions sd2
                  WHERE DATE(sd2.timestamp) = ?
                  GROUP BY selected_strategy
-                 ORDER BY COUNT( * ) DESC
+                 ORDER BY COUNT(*) DESC
                  LIMIT 1) as most_effective_strategy
             FROM orchestration_executions
             WHERE DATE(timestamp) = ?
@@ -539,7 +539,7 @@ class MetricsCollector:
         with self._get_connection() as conn:
             job_stats = conn.execute("""
                 SELECT
-                    COUNT( * ) as total_jobs,
+                    COUNT(*) as total_jobs,
                     SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_jobs,
                     SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_jobs,
                     SUM(CASE WHEN ai_agent = 1 THEN 1 ELSE 0 END) as ai_agent_jobs,

@@ -59,7 +59,7 @@ class TestPluginManager:
     @pytest.fixture
     def plugin_manager(self):
         mock_console = Mock()
-        mock_project_path = Path(" / test / project")
+        mock_project_path = Path("/test / project")
         return PluginManager(console=mock_console, project_path=mock_project_path)
 
     def test_plugin_manager_initialization(self, plugin_manager) -> None:

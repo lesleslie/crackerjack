@@ -2,12 +2,11 @@
 
 import inspect
 import threading
-import typing as t
-from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
+from typing import Any, TypeVar
 
 from rich.console import Console
 
@@ -20,13 +19,13 @@ from ..models.protocols import (
 )
 from ..services.logging import get_logger
 
-
-T = TypeVar('T')
+T = TypeVar("T")
 FactoryFunc = Callable[..., T]
 
 
 class ServiceLifetime(Enum):
     """Service lifetime enumeration."""
+
     SINGLETON = "singleton"
     TRANSIENT = "transient"
     SCOPED = "scoped"
@@ -35,79 +34,87 @@ class ServiceLifetime(Enum):
 @dataclass
 class ServiceDescriptor:
     """Describes how to create a service instance."""
-    
+
     interface: type
-    implementation: Optional[type] = None
-    factory: Optional[Callable] = None
+    implementation: type | None = None
+    factory: Callable | None = None
     lifetime: ServiceLifetime = ServiceLifetime.TRANSIENT
-    instance: Optional[Any] = None
+    instance: Any | None = None
     created_count: int = 0
-    dependencies: List[type] = field(default_factory=list)
-    
+    dependencies: list[type] = field(default_factory=list)
+
     def __post_init__(self):
-        if self.implementation is None and self.factory is None and self.instance is None:
+        if (
+            self.implementation is None
+            and self.factory is None
+            and self.instance is None
+        ):
             raise ValueError("Must provide either implementation, factory, or instance")
 
 
 class ServiceScope:
     """Represents a service scope for scoped services."""
-    
+
     def __init__(self, name: str):
         self.name = name
-        self._instances: Dict[str, Any] = {}
+        self._instances: dict[str, Any] = {}
         self._lock = threading.Lock()
         self.logger = get_logger("crackerjack.container.scope")
-    
-    def get_instance(self, key: str) -> Optional[Any]:
+
+    def get_instance(self, key: str) -> Any | None:
         """Get scoped instance."""
         with self._lock:
             return self._instances.get(key)
-    
+
     def set_instance(self, key: str, instance: Any) -> None:
         """Set scoped instance."""
         with self._lock:
             self._instances[key] = instance
             self.logger.debug("Scoped instance created", scope=self.name, service=key)
-    
+
     def dispose(self) -> None:
         """Dispose of all scoped instances."""
         with self._lock:
             for key, instance in self._instances.items():
-                if hasattr(instance, 'dispose'):
+                if hasattr(instance, "dispose"):
                     try:
                         instance.dispose()
                     except Exception as e:
-                        self.logger.error("Error disposing service", service=key, error=str(e))
-            
+                        self.logger.error(
+                            "Error disposing service", service=key, error=str(e)
+                        )
+
             self._instances.clear()
             self.logger.info("Service scope disposed", scope=self.name)
 
 
 class DependencyResolver:
     """Resolves service dependencies through constructor injection."""
-    
-    def __init__(self, container: 'EnhancedDependencyContainer'):
+
+    def __init__(self, container: "EnhancedDependencyContainer"):
         self.container = container
         self.logger = get_logger("crackerjack.container.resolver")
-    
-    def create_instance(self, descriptor: ServiceDescriptor, scope: Optional[ServiceScope] = None) -> Any:
+
+    def create_instance(
+        self, descriptor: ServiceDescriptor, scope: ServiceScope | None = None
+    ) -> Any:
         """Create service instance with dependency injection."""
         if descriptor.instance is not None:
             return descriptor.instance
-        
+
         if descriptor.factory is not None:
             return self._create_from_factory(descriptor.factory)
-        
+
         if descriptor.implementation is not None:
             return self._create_from_class(descriptor.implementation)
-        
+
         raise ValueError(f"Cannot create instance for {descriptor.interface}")
-    
+
     def _create_from_factory(self, factory: Callable) -> Any:
         """Create instance using factory function."""
         sig = inspect.signature(factory)
         kwargs = {}
-        
+
         for param_name, param in sig.parameters.items():
             if param.annotation != inspect.Parameter.empty:
                 try:
@@ -118,21 +125,21 @@ class DependencyResolver:
                         "Could not inject dependency",
                         parameter=param_name,
                         type=param.annotation,
-                        error=str(e)
+                        error=str(e),
                     )
-        
+
         return factory(**kwargs)
-    
+
     def _create_from_class(self, implementation: type) -> Any:
         """Create instance using class constructor with dependency injection."""
         try:
             init_sig = inspect.signature(implementation.__init__)
             kwargs = {}
-            
+
             for param_name, param in init_sig.parameters.items():
-                if param_name == 'self':
+                if param_name == "self":
                     continue
-                    
+
                 if param.annotation != inspect.Parameter.empty:
                     try:
                         dependency = self.container.get(param.annotation)
@@ -144,174 +151,186 @@ class DependencyResolver:
                                 implementation_class=implementation.__name__,
                                 parameter=param_name,
                                 type=param.annotation,
-                                error=str(e)
+                                error=str(e),
                             )
                             raise
                         else:
                             self.logger.debug(
                                 "Optional dependency not available, using default",
                                 parameter=param_name,
-                                type=param.annotation
+                                type=param.annotation,
                             )
-            
+
             instance = implementation(**kwargs)
-            self.logger.debug("Instance created with DI", implementation_class=implementation.__name__)
+            self.logger.debug(
+                "Instance created with DI", implementation_class=implementation.__name__
+            )
             return instance
-            
+
         except Exception as e:
-            self.logger.error("Failed to create instance", implementation_class=implementation.__name__, error=str(e))
+            self.logger.error(
+                "Failed to create instance",
+                implementation_class=implementation.__name__,
+                error=str(e),
+            )
             raise
 
 
 class EnhancedDependencyContainer:
     """Enhanced dependency injection container with lifecycle management."""
-    
+
     def __init__(self, name: str = "default"):
         self.name = name
-        self._services: Dict[str, ServiceDescriptor] = {}
-        self._singletons: Dict[str, Any] = {}
+        self._services: dict[str, ServiceDescriptor] = {}
+        self._singletons: dict[str, Any] = {}
         self._lock = threading.Lock()
-        self._current_scope: Optional[ServiceScope] = None
+        self._current_scope: ServiceScope | None = None
         self.resolver = DependencyResolver(self)
         self.logger = get_logger("crackerjack.container")
-    
+
     def register_singleton(
-        self, 
-        interface: type, 
-        implementation: Optional[type] = None,
-        factory: Optional[Callable] = None,
-        instance: Optional[Any] = None
-    ) -> 'EnhancedDependencyContainer':
+        self,
+        interface: type,
+        implementation: type | None = None,
+        factory: Callable | None = None,
+        instance: Any | None = None,
+    ) -> "EnhancedDependencyContainer":
         """Register a singleton service."""
         key = self._get_service_key(interface)
-        
+
         descriptor = ServiceDescriptor(
             interface=interface,
             implementation=implementation,
             factory=factory,
             instance=instance,
-            lifetime=ServiceLifetime.SINGLETON
+            lifetime=ServiceLifetime.SINGLETON,
         )
-        
+
         with self._lock:
             self._services[key] = descriptor
-        
+
         self.logger.debug("Singleton registered", interface=interface.__name__)
         return self
-    
+
     def register_transient(
         self,
         interface: type,
-        implementation: Optional[type] = None,
-        factory: Optional[Callable] = None
-    ) -> 'EnhancedDependencyContainer':
+        implementation: type | None = None,
+        factory: Callable | None = None,
+    ) -> "EnhancedDependencyContainer":
         """Register a transient service."""
         key = self._get_service_key(interface)
-        
+
         descriptor = ServiceDescriptor(
             interface=interface,
             implementation=implementation,
             factory=factory,
-            lifetime=ServiceLifetime.TRANSIENT
+            lifetime=ServiceLifetime.TRANSIENT,
         )
-        
+
         with self._lock:
             self._services[key] = descriptor
-        
+
         self.logger.debug("Transient registered", interface=interface.__name__)
         return self
-    
+
     def register_scoped(
         self,
         interface: type,
-        implementation: Optional[type] = None,
-        factory: Optional[Callable] = None
-    ) -> 'EnhancedDependencyContainer':
+        implementation: type | None = None,
+        factory: Callable | None = None,
+    ) -> "EnhancedDependencyContainer":
         """Register a scoped service."""
         key = self._get_service_key(interface)
-        
+
         descriptor = ServiceDescriptor(
             interface=interface,
             implementation=implementation,
             factory=factory,
-            lifetime=ServiceLifetime.SCOPED
+            lifetime=ServiceLifetime.SCOPED,
         )
-        
+
         with self._lock:
             self._services[key] = descriptor
-        
+
         self.logger.debug("Scoped registered", interface=interface.__name__)
         return self
-    
-    def get(self, interface: type, scope: Optional[ServiceScope] = None) -> Any:
+
+    def get(self, interface: type, scope: ServiceScope | None = None) -> Any:
         """Get service instance."""
         key = self._get_service_key(interface)
-        
+
         with self._lock:
             if key not in self._services:
                 raise ValueError(f"Service {interface.__name__} not registered")
-            
+
             descriptor = self._services[key]
-        
+
         return self._create_service_instance(descriptor, scope or self._current_scope)
-    
+
     def get_optional(self, interface: type, default: Any = None) -> Any:
         """Get service instance or return default if not registered."""
         try:
             return self.get(interface)
         except ValueError:
             return default
-    
+
     def is_registered(self, interface: type) -> bool:
         """Check if service is registered."""
         key = self._get_service_key(interface)
         return key in self._services
-    
+
     def create_scope(self, name: str = "scope") -> ServiceScope:
         """Create a new service scope."""
         return ServiceScope(name)
-    
-    def set_current_scope(self, scope: Optional[ServiceScope]) -> None:
+
+    def set_current_scope(self, scope: ServiceScope | None) -> None:
         """Set the current service scope."""
         self._current_scope = scope
-    
-    def get_service_info(self) -> Dict[str, Any]:
+
+    def get_service_info(self) -> dict[str, Any]:
         """Get information about registered services."""
         info = {}
-        
+
         with self._lock:
             for key, descriptor in self._services.items():
                 info[key] = {
-                    'interface': descriptor.interface.__name__,
-                    'implementation': descriptor.implementation.__name__ if descriptor.implementation else None,
-                    'lifetime': descriptor.lifetime.value,
-                    'created_count': descriptor.created_count,
-                    'has_instance': descriptor.instance is not None
+                    "interface": descriptor.interface.__name__,
+                    "implementation": descriptor.implementation.__name__
+                    if descriptor.implementation
+                    else None,
+                    "lifetime": descriptor.lifetime.value,
+                    "created_count": descriptor.created_count,
+                    "has_instance": descriptor.instance is not None,
                 }
-        
+
         return info
-    
+
     def dispose(self) -> None:
         """Dispose of container and all singletons."""
         with self._lock:
             # Dispose singletons
             for key, instance in self._singletons.items():
-                if hasattr(instance, 'dispose'):
+                if hasattr(instance, "dispose"):
                     try:
                         instance.dispose()
                     except Exception as e:
-                        self.logger.error("Error disposing singleton", service=key, error=str(e))
-            
+                        self.logger.error(
+                            "Error disposing singleton", service=key, error=str(e)
+                        )
+
             self._singletons.clear()
-            
+
             # Dispose current scope
             if self._current_scope:
                 self._current_scope.dispose()
                 self._current_scope = None
-        
+
         self.logger.info("Container disposed", name=self.name)
-    
-    def _create_service_instance(self, descriptor: ServiceDescriptor, scope: Optional[ServiceScope] = None) -> Any:
+
+    def _create_service_instance(
+        self, descriptor: ServiceDescriptor, scope: ServiceScope | None = None
+    ) -> Any:
         """Create service instance based on lifetime."""
         if descriptor.lifetime == ServiceLifetime.SINGLETON:
             return self._get_or_create_singleton(descriptor)
@@ -319,155 +338,163 @@ class EnhancedDependencyContainer:
             return self._get_or_create_scoped(descriptor, scope)
         else:  # Transient
             return self._create_transient_instance(descriptor)
-    
+
     def _get_or_create_singleton(self, descriptor: ServiceDescriptor) -> Any:
         """Get or create singleton instance."""
         key = self._get_service_key(descriptor.interface)
-        
+
         if key in self._singletons:
             return self._singletons[key]
-        
+
         instance = self.resolver.create_instance(descriptor)
         self._singletons[key] = instance
         descriptor.created_count += 1
-        
+
         self.logger.debug("Singleton created", interface=descriptor.interface.__name__)
         return instance
-    
-    def _get_or_create_scoped(self, descriptor: ServiceDescriptor, scope: Optional[ServiceScope]) -> Any:
+
+    def _get_or_create_scoped(
+        self, descriptor: ServiceDescriptor, scope: ServiceScope | None
+    ) -> Any:
         """Get or create scoped instance."""
         if scope is None:
-            raise ValueError(f"Scoped service {descriptor.interface.__name__} requires an active scope")
-        
+            raise ValueError(
+                f"Scoped service {descriptor.interface.__name__} requires an active scope"
+            )
+
         key = self._get_service_key(descriptor.interface)
         instance = scope.get_instance(key)
-        
+
         if instance is None:
             instance = self.resolver.create_instance(descriptor, scope)
             scope.set_instance(key, instance)
             descriptor.created_count += 1
-        
+
         return instance
-    
+
     def _create_transient_instance(self, descriptor: ServiceDescriptor) -> Any:
         """Create new transient instance."""
         instance = self.resolver.create_instance(descriptor)
         descriptor.created_count += 1
         return instance
-    
+
     def _get_service_key(self, interface: type) -> str:
         """Get service key from interface type."""
         return f"{interface.__module__}.{interface.__name__}"
-    
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.dispose()
 
 
 class ServiceCollectionBuilder:
     """Builder pattern for configuring services."""
-    
+
     def __init__(self, container: EnhancedDependencyContainer):
         self.container = container
-        self.console: Optional[Console] = None
-        self.pkg_path: Optional[Path] = None
+        self.console: Console | None = None
+        self.pkg_path: Path | None = None
         self.dry_run: bool = False
-    
-    def with_console(self, console: Console) -> 'ServiceCollectionBuilder':
+
+    def with_console(self, console: Console) -> "ServiceCollectionBuilder":
         """Set console for services that need it."""
         self.console = console
         return self
-    
-    def with_package_path(self, pkg_path: Path) -> 'ServiceCollectionBuilder':
+
+    def with_package_path(self, pkg_path: Path) -> "ServiceCollectionBuilder":
         """Set package path for services that need it."""
         self.pkg_path = pkg_path
         return self
-    
-    def with_dry_run(self, dry_run: bool) -> 'ServiceCollectionBuilder':
+
+    def with_dry_run(self, dry_run: bool) -> "ServiceCollectionBuilder":
         """Set dry run mode."""
         self.dry_run = dry_run
         return self
-    
-    def add_core_services(self) -> 'ServiceCollectionBuilder':
+
+    def add_core_services(self) -> "ServiceCollectionBuilder":
         """Add core Crackerjack services."""
         console = self.console or Console(force_terminal=True)
         pkg_path = self.pkg_path or Path.cwd()
-        
+
         # Enhanced filesystem service
         from ..services.enhanced_filesystem import EnhancedFileSystemService
+
         self.container.register_singleton(
-            FileSystemInterface,
-            factory=lambda: EnhancedFileSystemService()
+            FileSystemInterface, factory=lambda: EnhancedFileSystemService()
         )
-        
+
         # Git service
         from ..services.git import GitService
+
         self.container.register_transient(
-            GitInterface,
-            factory=lambda: GitService(console=console, pkg_path=pkg_path)
+            GitInterface, factory=lambda: GitService(console=console, pkg_path=pkg_path)
         )
-        
+
         # Async hook manager
         from ..managers.async_hook_manager import AsyncHookManager
+
         self.container.register_scoped(
             HookManager,
-            factory=lambda: AsyncHookManager(console=console, pkg_path=pkg_path)
+            factory=lambda: AsyncHookManager(console=console, pkg_path=pkg_path),
         )
-        
+
         # Test manager
         from ..managers.test_manager import TestManagementImpl
+
         self.container.register_transient(
             TestManager,
-            factory=lambda: TestManagementImpl(console=console, pkg_path=pkg_path)
+            factory=lambda: TestManagementImpl(console=console, pkg_path=pkg_path),
         )
-        
+
         # Publish manager
         from ..managers.publish_manager import PublishManagerImpl
+
         self.container.register_transient(
             PublishManager,
             factory=lambda: PublishManagerImpl(
                 console=console, pkg_path=pkg_path, dry_run=self.dry_run
-            )
+            ),
         )
-        
+
         return self
-    
-    def add_configuration_services(self) -> 'ServiceCollectionBuilder':
+
+    def add_configuration_services(self) -> "ServiceCollectionBuilder":
         """Add configuration services."""
         console = self.console or Console(force_terminal=True)
         pkg_path = self.pkg_path or Path.cwd()
-        
+
         # Unified configuration service
         from ..services.unified_config import UnifiedConfigurationService
+
         self.container.register_singleton(
             UnifiedConfigurationService,
-            factory=lambda: UnifiedConfigurationService(console, pkg_path)
+            factory=lambda: UnifiedConfigurationService(console, pkg_path),
         )
-        
+
         return self
-    
+
     def build(self) -> EnhancedDependencyContainer:
         """Build the configured container."""
         return self.container
 
 
 def create_enhanced_container(
-    console: Optional[Console] = None,
-    pkg_path: Optional[Path] = None,
+    console: Console | None = None,
+    pkg_path: Path | None = None,
     dry_run: bool = False,
-    name: str = "crackerjack"
+    name: str = "crackerjack",
 ) -> EnhancedDependencyContainer:
     """Create enhanced dependency injection container with default services."""
     container = EnhancedDependencyContainer(name)
-    
+
     builder = ServiceCollectionBuilder(container)
     builder.with_console(console or Console(force_terminal=True))
     builder.with_package_path(pkg_path or Path.cwd())
     builder.with_dry_run(dry_run)
-    
+
     builder.add_core_services()
     builder.add_configuration_services()
-    
+
     return builder.build()

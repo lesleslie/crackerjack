@@ -30,13 +30,13 @@ class AgentStatusPanel(Widget):
         self.border_title_align = "left"
 
     def compose(self) -> ComposeResult:
-        yield DataTable(id="agents - table")
-        yield Label("Coordinator: Loading...", id="coordinator - status")
-        yield Label("Stats: Loading...", id="agent - stats")
+        yield DataTable(id="agents-table")
+        yield Label("Coordinator: Loading...", id="coordinator-status")
+        yield Label("Stats: Loading...", id="agent-stats")
 
     def on_mount(self) -> None:
         with suppress(Exception):
-            agents_table = self.query_one("#agents - table", DataTable)
+            agents_table = self.query_one("#agents-table", DataTable)
             agents_table.add_columns(
                 "Agent", "Status", "Issue Type", "Confidence", "Time"
             )
@@ -59,14 +59,14 @@ class AgentStatusPanel(Widget):
             total_agents = registry.get("total_agents", 6)
 
             status_emoji = "✅" if coordinator_status == "active" else "⏸️"
-            status_label = self.query_one("#coordinator - status", Label)
+            status_label = self.query_one("#coordinator-status", Label)
             status_label.update(
                 f"Coordinator: {status_emoji} {coordinator_status.title()} ({total_agents} agents)"
             )
 
     def _update_agents_table(self, data: dict) -> None:
         with suppress(Exception):
-            agents_table = self.query_one("#agents - table", DataTable)
+            agents_table = self.query_one("#agents-table", DataTable)
             agents_table.clear()
 
             activity = data.get("agent_activity", {})
@@ -109,7 +109,7 @@ class AgentStatusPanel(Widget):
             avg_time = performance.get("average_processing_time", 0)
             cache_hits = performance.get("cache_hits", 0)
 
-            stats_label = self.query_one("#agent - stats", Label)
+            stats_label = self.query_one("#agent-stats", Label)
             stats_text = f"Stats: {total_issues} issues | {success_rate: .0 % } success"
             if avg_time > 0:
                 stats_text += f" | {avg_time: .1f}s avg"
@@ -208,11 +208,11 @@ class JobPanel(Widget):
 
     def _setup_errors_table(self) -> None:
         with suppress(Exception):
-            errors_container = self.query_one(".job - errors")
+            errors_container = self.query_one(".job-errors")
             errors_container.border_title = "❌ Errors"
 
             errors_table = self.query_one(
-                f"#job - errors - {self.job_data.get('job_id', 'unknown')}", DataTable
+                f"#job-errors-{self.job_data.get('job_id', 'unknown')}", DataTable
             )
             errors_table.add_columns("", "", "", "")
 
@@ -221,7 +221,7 @@ class JobPanel(Widget):
     def _update_errors_table(self) -> None:
         with suppress(Exception):
             errors_table = self.query_one(
-                f"#job - errors - {self.job_data.get('job_id', 'unknown')}", DataTable
+                f"#job-errors-{self.job_data.get('job_id', 'unknown')}", DataTable
             )
             errors_table.clear()
 
@@ -274,7 +274,7 @@ class JobPanel(Widget):
     def _update_progress_bar(self) -> None:
         with suppress(Exception):
             progress_bar = self.query_one(
-                f"#job - progress - {self.job_data.get('job_id', 'unknown')}",
+                f"#job-progress-{self.job_data.get('job_id', 'unknown')}",
                 ProgressBar,
             )
             progress_value = self.iteration_count / max(self.max_iterations, 1) * 100
@@ -284,13 +284,13 @@ class JobPanel(Widget):
         self.fade_level += 1
 
         if self.fade_level == 1:
-            self.add_class("fade - 1")
+            self.add_class("fade-1")
         elif self.fade_level == 2:
-            self.add_class("fade - 2")
+            self.add_class("fade-2")
         elif self.fade_level == 3:
-            self.add_class("fade - 3")
+            self.add_class("fade-3")
         elif self.fade_level >= 4:
-            self.add_class("fade - 4")
+            self.add_class("fade-4")
 
         if self.fade_level < 4:
             self.fade_timer = self.set_timer(300.0, self._start_fade)
@@ -332,17 +332,17 @@ class JobPanel(Widget):
         self.remove()
 
     def compose(self) -> ComposeResult:
-        with Container(classes="job - panel"):
+        with Container(classes="job-panel"):
             yield from self._compose_status_column()
             yield from self._compose_errors_column()
             yield from self._compose_mcp_message()
 
     def _compose_mcp_message(self) -> ComposeResult:
         mcp_message = self.job_data.get("message", "Processing...")
-        yield Label(f"💬 {mcp_message}", classes="mcp - message")
+        yield Label(f"💬 {mcp_message}", classes="mcp-message")
 
     def _compose_status_column(self) -> ComposeResult:
-        with Container(classes="job - status"):
+        with Container(classes="job-status"):
             yield from self._compose_job_identifiers()
             yield from self._compose_progress_info()
             yield from self._compose_stage_and_status()
@@ -362,7 +362,7 @@ class JobPanel(Widget):
             total=100,
             show_eta=False,
             show_percentage=False,
-            id=f"job - progress - {self.job_data.get('job_id', 'unknown')}",
+            id=f"job-progress-{self.job_data.get('job_id', 'unknown')}",
         )
 
     def _compose_stage_and_status(self) -> ComposeResult:
@@ -396,9 +396,9 @@ class JobPanel(Widget):
             yield Label("⚠️ Max iterations reached")
 
     def _compose_errors_column(self) -> ComposeResult:
-        with Container(classes="job - errors"):
+        with Container(classes="job-errors"):
             yield DataTable(
-                id=f"job - errors - {self.job_data.get('job_id', 'unknown')}",
+                id=f"job-errors-{self.job_data.get('job_id', 'unknown')}",
                 show_header=False,
                 zebra_stripes=False,
                 show_cursor=False,
@@ -430,56 +430,56 @@ class CrackerjackDashboard(App):
         self.terminal_restorer = TerminalRestorer()
 
     def compose(self) -> ComposeResult:
-        with Container(id="main - container"):
+        with Container(id="main-container"):
             yield from self._compose_top_section()
             yield from self._compose_discovery_section()
         yield Footer()
 
     def _compose_top_section(self) -> ComposeResult:
-        with Container(id="top - section"):
+        with Container(id="top-section"):
             yield from self._compose_left_column()
             yield from self._compose_right_column()
 
     def _compose_left_column(self) -> ComposeResult:
-        with Container(id="left - column"):
+        with Container(id="left-column"):
             yield from self._compose_jobs_panel()
-            yield AgentStatusPanel(id="agent - status - panel")
+            yield AgentStatusPanel(id="agent-status-panel")
 
     def _compose_right_column(self) -> ComposeResult:
-        with Container(id="right - column"):
+        with Container(id="right-column"):
             yield from self._compose_errors_panel()
             yield from self._compose_services_panel()
 
     def _compose_jobs_panel(self) -> ComposeResult:
-        with Container(id="jobs - panel"):
+        with Container(id="jobs-panel"):
             yield DataTable(
-                id="jobs - table",
+                id="jobs-table",
                 show_header=False,
                 zebra_stripes=False,
                 show_cursor=False,
             )
 
     def _compose_errors_panel(self) -> ComposeResult:
-        with Container(id="errors - panel"):
+        with Container(id="errors-panel"):
             yield DataTable(
-                id="errors - table",
+                id="errors-table",
                 show_header=False,
                 zebra_stripes=False,
                 show_cursor=False,
             )
 
     def _compose_services_panel(self) -> ComposeResult:
-        with Container(id="services - panel"):
+        with Container(id="services-panel"):
             yield DataTable(
-                id="services - table",
+                id="services-table",
                 show_header=True,
                 zebra_stripes=True,
                 show_cursor=False,
             )
 
     def _compose_discovery_section(self) -> ComposeResult:
-        with Container(id="discovery - section"):
-            yield Container(id="job - discovery - container")
+        with Container(id="discovery-section"):
+            yield Container(id="job-discovery-container")
 
     def on_mount(self) -> None:
         self._setup_border_titles()
@@ -498,20 +498,20 @@ class CrackerjackDashboard(App):
             self._cleanup_started_services()
 
     def _setup_border_titles(self) -> None:
-        self.query_one("#top - section").border_title = "🚀 Crackerjack Dashboard"
-        self.query_one("#jobs - panel").border_title = "📊 Issue Metrics"
-        self.query_one("#errors - panel").border_title = "❌ Error Tracking"
-        self.query_one("#services - panel").border_title = "🔧 Service Health"
-        self.query_one("#discovery - section").border_title = "🔍 Active Jobs"
+        self.query_one("#top-section").border_title = "🚀 Crackerjack Dashboard"
+        self.query_one("#jobs-panel").border_title = "📊 Issue Metrics"
+        self.query_one("#errors-panel").border_title = "❌ Error Tracking"
+        self.query_one("#services-panel").border_title = "🔧 Service Health"
+        self.query_one("#discovery-section").border_title = "🔍 Active Jobs"
 
     def _setup_datatables(self) -> None:
-        jobs_table = self.query_one("#jobs - table", DataTable)
+        jobs_table = self.query_one("#jobs-table", DataTable)
         jobs_table.add_columns("", "", "", "")
 
-        services_table = self.query_one("#services - table", DataTable)
+        services_table = self.query_one("#services-table", DataTable)
         services_table.add_columns("Service", "Status", "Restarts")
 
-        errors_table = self.query_one("#errors - table", DataTable)
+        errors_table = self.query_one("#errors-table", DataTable)
         errors_table.add_columns("", "", "", "")
 
         self._show_default_values()
@@ -555,7 +555,7 @@ class CrackerjackDashboard(App):
             if jobs_data["individual_jobs"]:
                 jobs_data["individual_jobs"][0].get("project", "crackerjack")
 
-            self.query_one("#services - panel").border_title = "🔧 Services"
+            self.query_one("#services-panel").border_title = "🔧 Services"
 
             self._update_jobs_table(jobs_data)
             self._update_services_table(services_data)
@@ -577,7 +577,7 @@ class CrackerjackDashboard(App):
 
     def _update_jobs_table(self, jobs_data: dict) -> None:
         with suppress(Exception):
-            jobs_table = self.query_one("#jobs - table", DataTable)
+            jobs_table = self.query_one("#jobs-table", DataTable)
             jobs_table.clear()
 
             total_issues = jobs_data.get("total_issues", 0)
@@ -619,7 +619,7 @@ class CrackerjackDashboard(App):
 
     def _update_services_table(self, services_data: list) -> None:
         with suppress(Exception):
-            services_table = self.query_one("#services - table", DataTable)
+            services_table = self.query_one("#services-table", DataTable)
             services_table.clear()
 
             for service in services_data:
@@ -643,7 +643,7 @@ class CrackerjackDashboard(App):
 
     def _update_errors_table(self, errors_data: list) -> None:
         with suppress(Exception):
-            errors_table = self.query_one("#errors - table", DataTable)
+            errors_table = self.query_one("#errors-table", DataTable)
             errors_table.clear()
 
             job_errors = (
@@ -705,7 +705,7 @@ class CrackerjackDashboard(App):
 
     def _update_agent_panel(self, jobs_data: dict) -> None:
         with suppress(Exception):
-            agent_panel = self.query_one("#agent - status - panel", AgentStatusPanel)
+            agent_panel = self.query_one("#agent-status-panel", AgentStatusPanel)
 
             agent_data = {}
             for job in jobs_data.get("individual_jobs", []):
@@ -718,7 +718,7 @@ class CrackerjackDashboard(App):
 
     def _update_job_panels(self, jobs_data: dict) -> None:
         with suppress(Exception):
-            container = self.query_one("#job - discovery - container")
+            container = self.query_one("#job-discovery-container")
             current_job_ids = self._get_current_job_ids(jobs_data)
 
             self._remove_obsolete_panels(current_job_ids)
@@ -801,17 +801,17 @@ class CrackerjackDashboard(App):
         container.mount(job_panel)
 
     def _handle_placeholder_visibility(self, container) -> None:
-        has_placeholder = bool(container.query("#no - jobs - label"))
+        has_placeholder = bool(container.query("#no-jobs-label"))
 
         if not self.active_jobs and not has_placeholder:
             container.mount(
                 Label(
                     "No active jobs detected. Start a Crackerjack job to see progress here.",
-                    id="no - jobs - label",
+                    id="no-jobs-label",
                 )
             )
         elif self.active_jobs and has_placeholder:
-            container.query("#no - jobs - label").remove()
+            container.query("#no-jobs-label").remove()
 
     def _update_status_bars(self, jobs_data: dict) -> None:
         pass
@@ -821,11 +821,11 @@ class CrackerjackDashboard(App):
 
     def action_clear(self) -> None:
         with suppress(Exception):
-            for table_id in ("#jobs - table", "#services - table", "#errors - table"):
+            for table_id in ("#jobs-table", "#services-table", "#errors-table"):
                 table = self.query_one(table_id, DataTable)
                 table.clear()
 
-            container = self.query_one("#job - discovery - container")
+            container = self.query_one("#job-discovery-container")
             container.query("JobPanel").remove()
             container.query("Label").remove()
             self.active_jobs.clear()

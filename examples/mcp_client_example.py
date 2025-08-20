@@ -6,7 +6,6 @@ import httpx
 
 
 class CrackerjackMCPClient:
-
     def __init__(self, server_url: str = "http: // localhost: 8000") -> None:
         self.server_url = server_url
         self.client = httpx.AsyncClient()
@@ -20,7 +19,6 @@ class CrackerjackMCPClient:
         }
 
         try:
-
             print("🚀 Running fast hooks...")
             fast_result = await self.run_stage("fast")
             results["stages_completed"].append(fast_result)
@@ -30,13 +28,11 @@ class CrackerjackMCPClient:
                 fix_result = await self.apply_fixes("formatting")
                 results["fixes_applied"].append(fix_result)
 
-
                 fast_result = await self.run_stage("fast")
                 results["stages_completed"].append(fast_result)
 
             if fast_result["success"]:
                 print("✅ Fast hooks passed ! ")
-
 
                 print("🧪 Running tests...")
                 test_result = await self.run_stage("tests")
@@ -44,7 +40,6 @@ class CrackerjackMCPClient:
 
                 if test_result["success"]:
                     print("✅ Tests passed ! ")
-
 
                     print("🔍 Running comprehensive hooks...")
                     comp_result = await self.run_stage("comprehensive")
@@ -76,7 +71,7 @@ class CrackerjackMCPClient:
             "arguments": {"stage": stage, "max_retries": max_retries},
         }
 
-        response = await self.client.post(f"{self.server_url} / execute", json = payload)
+        response = await self.client.post(f"{self.server_url} / execute", json=payload)
         return response.json()
 
     async def apply_fixes(self, fix_type: str, files: list[str] = None) -> dict:
@@ -85,19 +80,19 @@ class CrackerjackMCPClient:
             "arguments": {"fix_type": fix_type, "files": files},
         }
 
-        response = await self.client.post(f"{self.server_url} / execute", json = payload)
+        response = await self.client.post(f"{self.server_url} / execute", json=payload)
         return response.json()
 
     async def analyze_errors(self, stage: str) -> dict:
         payload = {"tool": "analyze_errors", "arguments": {"stage": stage}}
 
-        response = await self.client.post(f"{self.server_url} / execute", json = payload)
+        response = await self.client.post(f"{self.server_url} / execute", json=payload)
         return response.json()
 
     async def get_project_status(self) -> dict:
         payload = {"tool": "get_stage_status", "arguments": {}}
 
-        response = await self.client.post(f"{self.server_url} / execute", json = payload)
+        response = await self.client.post(f"{self.server_url} / execute", json=payload)
         return response.json()
 
     async def close(self) -> None:
@@ -111,16 +106,13 @@ async def main() -> None:
     client = CrackerjackMCPClient()
 
     try:
-
         print("📊 Getting project status...")
         status = await client.get_project_status()
         print(f"Project: {status.get('project_path', 'unknown')}")
         print(f"Auto - fix enabled: {status.get('autofix_enabled', False)}")
 
-
         print("\n🔄 Starting autonomous quality workflow...")
         results = await client.run_quality_workflow()
-
 
         print("\n📋 Workflow Results: ")
         print(f"Final Status: {results['final_status']}")

@@ -11,13 +11,11 @@ from crackerjack.services.metrics import MetricsCollector
 class TestMetricsCollector:
     def test_init_with_default_path(self):
         with patch("pathlib.Path.home") as mock_home:
-            mock_home.return_value = Path(" / fake / home")
+            mock_home.return_value = Path("/fake/home")
 
             collector = MetricsCollector()
 
-            expected_path = (
-                Path(" / fake / home") / ".cache" / "crackerjack" / "metrics.db"
-            )
+            expected_path = Path("/fake/home") / ".cache" / "crackerjack" / "metrics.db"
             assert collector.db_path == expected_path
 
     def test_init_with_custom_path(self):

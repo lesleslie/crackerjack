@@ -1,9 +1,33 @@
 import time
 import typing as t
 from dataclasses import dataclass
+from enum import Enum
 
 from pydantic import BaseModel
 from rich.console import Console
+
+
+class TaskStatus(Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+@dataclass
+class Task:
+    id: str
+    name: str
+    status: TaskStatus
+    details: str | None = None
+
+    def to_dict(self) -> dict[str, t.Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "status": self.status.value,
+            "details": self.details,
+        }
 
 
 @dataclass
@@ -22,7 +46,7 @@ class HookResult:
 
 
 @dataclass
-class TaskStatus:
+class TaskStatusData:
     id: str
     name: str
     status: str
@@ -44,7 +68,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     console: Console
     session_id: str
     start_time: float
-    tasks: dict[str, TaskStatus] = {}
+    tasks: dict[str, TaskStatusData] = {}
     current_task: str | None = None
     metadata: dict[str, t.Any] = {}
 
@@ -58,7 +82,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     def start_task(
         self, task_id: str, task_name: str, details: str | None = None
     ) -> None:
-        task = TaskStatus(
+        task = TaskStatusData(
             id=task_id,
             name=task_name,
             status="in_progress",

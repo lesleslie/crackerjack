@@ -5,6 +5,10 @@ from dataclasses import dataclass, field
 @dataclass
 class CleaningConfig:
     clean: bool = True
+    update_docs: bool = False
+    force_update_docs: bool = False
+    compress_docs: bool = False
+    auto_compress_docs: bool = False
 
 
 @dataclass
@@ -66,6 +70,13 @@ class CleanupConfig:
 
 
 @dataclass
+class EnterpriseConfig:
+    enabled: bool = False
+    license_key: str | None = None
+    organization: str | None = None
+
+
+@dataclass
 class WorkflowOptions:
     cleaning: CleaningConfig = field(default_factory=CleaningConfig)
     hooks: HookConfig = field(default_factory=HookConfig)
@@ -76,3 +87,4 @@ class WorkflowOptions:
     execution: ExecutionConfig = field(default_factory=ExecutionConfig)
     progress: ProgressConfig = field(default_factory=ProgressConfig)
     cleanup: CleanupConfig = field(default_factory=CleanupConfig)
+    enterprise: EnterpriseConfig = field(default_factory=EnterpriseConfig)

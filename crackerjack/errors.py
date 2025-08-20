@@ -40,6 +40,7 @@ class ErrorCode(Enum):
     DEPENDENCY_ERROR = 8004
     VALIDATION_ERROR = 8005
     SECURITY_ERROR = 8006
+    GENERAL_ERROR = 9000
     UNKNOWN_ERROR = 9001
     NOT_IMPLEMENTED = 9002
     UNEXPECTED_ERROR = 9999
@@ -371,3 +372,8 @@ def check_command_result(
             details=details,
             recovery=recovery,
         )
+
+
+def format_error_report(error: CrackerjackError) -> str:
+    """Format an error for reporting purposes."""
+    return f"Error {error.error_code.value}: {error.message}"

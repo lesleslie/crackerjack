@@ -16,7 +16,7 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def execute_crackerjack(args: str, kwargs: str) -> str:
         context = get_context()
-        validation_error = _validate_context_and_rate_limit(context)
+        validation_error = await _validate_context_and_rate_limit(context)
         if validation_error:
             return validation_error
 
@@ -67,7 +67,7 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
     if not context.rate_limiter:
         return '{"error": "Rate limiter not initialized", "success": false}'
 
-    allowed, details = await context.rate_limiter.check_request_allowed()
+    allowed, details = await context.rate_limiter.check_request_allowed("default")
     if not allowed:
         return f'{{"error": "Rate limit exceeded: {details.get("reason", "unknown")}", "success": false}}'
 

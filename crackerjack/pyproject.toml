@@ -45,6 +45,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "refurb>=2.1",
     "rich>=14.1",
+    "ruff>=0.12.9",
     "structlog>=24.4",
     "textual>=0.89",
     "tomli-w>=1.2",
@@ -89,6 +90,9 @@ ignore = [
 fixable = [
     "ALL",
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 13
 
 [tool.codespell]
 skip = "*/data/*"
@@ -242,6 +246,7 @@ exclude-deps = [
     "uvicorn",
     "websockets",
     "watchdog",
+    "ruff",
 ]
 
 [tool.refurb]

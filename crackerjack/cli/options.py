@@ -35,6 +35,8 @@ class Options(BaseModel):
     restart_mcp_server: bool = False
     create_pr: bool = False
     skip_hooks: bool = False
+    fast: bool = False
+    comp: bool = False
     async_mode: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
@@ -137,6 +139,16 @@ CLI_OPTIONS = {
         "-s",
         "--skip-hooks",
         help="Skip running pre-commit hooks (useful with -t).",
+    ),
+    "fast": typer.Option(
+        False,
+        "--fast",
+        help="Run only fast hooks (formatting and basic checks).",
+    ),
+    "comp": typer.Option(
+        False,
+        "--comp",
+        help="Run only comprehensive hooks (type checking, security, complexity analysis).",
     ),
     "all": typer.Option(
         None,
@@ -297,6 +309,8 @@ def create_options(
     test_workers: int,
     test_timeout: int,
     skip_hooks: bool,
+    fast: bool,
+    comp: bool,
     create_pr: bool,
     ai_agent: bool,
     async_mode: bool,
@@ -325,6 +339,8 @@ def create_options(
         test_workers=test_workers,
         test_timeout=test_timeout,
         skip_hooks=skip_hooks,
+        fast=fast,
+        comp=comp,
         all=all,
         ai_agent=ai_agent,
         create_pr=create_pr,

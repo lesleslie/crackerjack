@@ -111,7 +111,7 @@ class TestPytestOutputParser:
 class TestTestProgressStreamer:
     def test_streamer_initialization(self):
         console = Console()
-        pkg_path = Path(" / test / path")
+        pkg_path = Path("/test / path")
 
         streamer = TestProgressStreamer(console, pkg_path)
 
@@ -121,7 +121,7 @@ class TestTestProgressStreamer:
 
     def test_progress_callback_setup(self):
         console = Console()
-        pkg_path = Path(" / test / path")
+        pkg_path = Path("/test / path")
         streamer = TestProgressStreamer(console, pkg_path)
 
         progress_callback = Mock()
@@ -135,7 +135,7 @@ class TestTestProgressStreamer:
 
     def test_build_pytest_command_basic(self):
         console = Console()
-        pkg_path = Path(" / test / path")
+        pkg_path = Path("/test / path")
         streamer = TestProgressStreamer(console, pkg_path)
 
         options = Mock()
@@ -153,7 +153,7 @@ class TestTestProgressStreamer:
 
     def test_build_pytest_command_with_coverage(self):
         console = Console()
-        pkg_path = Path(" / test / path")
+        pkg_path = Path("/test / path")
         streamer = TestProgressStreamer(console, pkg_path)
 
         options = Mock()
@@ -169,7 +169,7 @@ class TestTestProgressStreamer:
 
     def test_build_pytest_command_individual(self):
         console = Console()
-        pkg_path = Path(" / test / path")
+        pkg_path = Path("/test / path")
         streamer = TestProgressStreamer(console, pkg_path)
 
         options = Mock()

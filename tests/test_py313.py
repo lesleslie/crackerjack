@@ -235,70 +235,70 @@ class TestAnalyzeHookResult:
 
 class TestCategorizeFile:
     def test_python_test_file(self):
-        file_path = Path(" / project / tests / test_module.py")
+        file_path = Path("/project / tests / test_module.py")
 
         category = categorize_file(file_path)
 
         assert category == "Python Test File"
 
     def test_python_init_file(self):
-        file_path = Path(" / project / package / __init__.py")
+        file_path = Path("/project / package / __init__.py")
 
         category = categorize_file(file_path)
 
         assert category == "Python Module Init"
 
     def test_python_source_file(self):
-        file_path = Path(" / project / src / module.py")
+        file_path = Path("/project / src / module.py")
 
         category = categorize_file(file_path)
 
         assert category == "Python Source File"
 
     def test_markdown_documentation(self):
-        file_path = Path(" / project / README.md")
+        file_path = Path("/project / README.md")
 
         category = categorize_file(file_path)
 
         assert category == "Documentation File"
 
     def test_rst_documentation(self):
-        file_path = Path(" / project / docs / index.rst")
+        file_path = Path("/project / docs / index.rst")
 
         category = categorize_file(file_path)
 
         assert category == "Documentation File"
 
     def test_text_documentation(self):
-        file_path = Path(" / project / CHANGELOG.txt")
+        file_path = Path("/project / CHANGELOG.txt")
 
         category = categorize_file(file_path)
 
         assert category == "Documentation File"
 
     def test_gitignore_config_file(self):
-        file_path = Path(" / project / .gitignore")
+        file_path = Path("/project / .gitignore")
 
         category = categorize_file(file_path)
 
         assert category == "Configuration File"
 
     def test_precommit_config_file(self):
-        file_path = Path(" / project / .pre - commit - config.yaml")
+        file_path = Path("/project / .pre - commit - config.yaml")
 
         category = categorize_file(file_path)
 
         assert category == "Configuration File"
 
     def test_hidden_config_file(self):
-        file_path = Path(" / project / .env")
+        file_path = Path("/project / .env")
 
         category = categorize_file(file_path)
 
         assert category == "Configuration File"
 
     def test_unknown_file_type(self):
-        file_path = Path(" / project / data.csv")
+        file_path = Path("/project / data.csv")
 
         category = categorize_file(file_path)
 
@@ -378,14 +378,14 @@ class TestProcessHookResults:
 
 class TestModernConfigManager:
     def test_config_manager_initialization(self):
-        config_path = Path(" / test / config.yaml")
+        config_path = Path("/test / config.yaml")
         manager = ModernConfigManager(config_path)
 
         assert manager.config_path == config_path
         assert manager.config == {}
 
     def test_config_manager_chaining(self):
-        config_path = Path(" / test / config.yaml")
+        config_path = Path("/test / config.yaml")
         manager = ModernConfigManager(config_path)
 
         result = manager.load().update("key1", "value1").update("key2", "value2").save()
@@ -394,14 +394,14 @@ class TestModernConfigManager:
         assert manager.config == {"key1": "value1", "key2": "value2"}
 
     def test_load_returns_self(self):
-        manager = ModernConfigManager(Path(" / test / config.yaml"))
+        manager = ModernConfigManager(Path("/test / config.yaml"))
 
         result = manager.load()
 
         assert result is manager
 
     def test_update_modifies_config(self):
-        manager = ModernConfigManager(Path(" / test / config.yaml"))
+        manager = ModernConfigManager(Path("/test / config.yaml"))
 
         result = manager.update("test_key", "test_value")
 
@@ -409,7 +409,7 @@ class TestModernConfigManager:
         assert manager.config["test_key"] == "test_value"
 
     def test_save_returns_self(self):
-        manager = ModernConfigManager(Path(" / test / config.yaml"))
+        manager = ModernConfigManager(Path("/test / config.yaml"))
 
         result = manager.save()
 
@@ -418,7 +418,7 @@ class TestModernConfigManager:
 
 class TestEnhancedCommandRunner:
     def test_initialization(self):
-        working_dir = Path(" / test / dir")
+        working_dir = Path("/test / dir")
         runner = EnhancedCommandRunner(working_dir)
 
         assert runner.working_dir == working_dir
@@ -476,7 +476,7 @@ class TestEnhancedCommandRunner:
         mock_process.stderr = ""
         mock_run.return_value = mock_process
 
-        working_dir = Path(" / test / dir")
+        working_dir = Path("/test / dir")
         runner = EnhancedCommandRunner(working_dir)
         runner.run(["ls"])
 

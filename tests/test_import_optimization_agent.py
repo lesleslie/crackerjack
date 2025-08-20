@@ -10,8 +10,8 @@ from crackerjack.agents.import_optimization_agent import ImportOptimizationAgent
 @pytest.fixture
 def agent_context():
     return AgentContext(
-        project_path=Path(" / tmp / test"),
-        temp_dir=Path(" / tmp / test"),
+        project_path=Path("/tmp / test"),
+        temp_dir=Path("/tmp / test"),
         config={},
     )
 

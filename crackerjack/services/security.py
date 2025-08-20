@@ -9,11 +9,11 @@ from ..errors import FileError, SecurityError
 
 class SecurityService:
     TOKEN_PATTERNS = [
-        (r"pypi - [a - zA - Z0 - 9_ - ]{32, }", "pypi -**** "),
-        (r"ghp_[a - zA - Z0 - 9]{36}", "ghp_ **** "),
-        (r"[a - zA - Z0 - 9_ - ]{40, }", " **** "),
-        (r"(token[ = : ]\s * )['\"][ ^ '\"] + ['\"]", r"\1' **** '"),
-        (r"(password[ = : ]\s * )['\"][ ^ '\"] + ['\"]", r"\1' **** '"),
+        (r"pypi-[a-zA-Z0-9_-]{12,}", "pypi-****"),
+        (r"ghp_[a-zA-Z0-9]{20,}", "ghp_****"),
+        (r"[a-zA-Z0-9_-]{20,}", "****"),
+        (r"(token[=:]\s*)['\"][^'\"]+['\"]", r"\1'****'"),
+        (r"(password[=:]\s*)['\"][^'\"]+['\"]", r"\1'****'"),
     ]
 
     SENSITIVE_ENV_VARS = {
@@ -36,7 +36,7 @@ class SecurityService:
             value = os.getenv(env_var)
             if value and len(value) > 8:
                 masked_value = (
-                    f"{value[:4]}...{value[-4:]}" if len(value) > 12 else " **** "
+                    f"{value[:4]}...{value[-4:]}" if len(value) > 12 else "****"
                 )
                 masked_text = masked_text.replace(value, masked_value)
 
@@ -51,7 +51,7 @@ class SecurityService:
         if not token:
             raise SecurityError(
                 message="Invalid token provided",
-                details="Token must be a non - empty string",
+                details="Token must be a non-empty string",
                 recovery="Provide a valid authentication token",
             )
         if len(token) < 8:
@@ -112,7 +112,7 @@ class SecurityService:
             if any(sensitive in key.upper() for sensitive in self.SENSITIVE_ENV_VARS):
                 if value:
                     env_summary[key] = (
-                        " **** " if len(value) <= 8 else f"{value[:2]}...{value[-2:]}"
+                        "****" if len(value) <= 8 else f"{value[:2]}...{value[-2:]}"
                     )
                 else:
                     env_summary[key] = "(empty)"
@@ -127,7 +127,7 @@ class SecurityService:
         if len(token) < 8:
             return False
         if token_type and token_type.lower() == "pypi":
-            return token.startswith("pypi - ") and len(token) >= 37
+            return token.startswith("pypi-") and len(token) >= 16
         elif token_type and token_type.lower() == "github":
             return token.startswith("ghp_") and len(token) == 40
         return len(token) >= 16 and not token.isspace()

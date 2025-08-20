@@ -28,6 +28,96 @@ app = typer.Typer(
 )
 
 
+def _handle_monitoring_commands(
+    monitor: bool, enhanced_monitor: bool, watchdog: bool, dev: bool
+) -> bool:
+    """Handle monitoring commands."""
+    if monitor:
+        handle_monitor_mode(dev_mode=dev)
+        return True
+    if enhanced_monitor:
+        handle_enhanced_monitor_mode(dev_mode=dev)
+        return True
+    if watchdog:
+        handle_watchdog_mode()
+        return True
+    return False
+
+
+def _handle_websocket_commands(
+    websocket_server: bool,
+    start_websocket_server: bool,
+    stop_websocket_server: bool,
+    restart_websocket_server: bool,
+    websocket_port: int | None,
+) -> bool:
+    """Handle WebSocket server commands."""
+    if websocket_server:
+        handle_websocket_server_mode()
+        return True
+    if start_websocket_server:
+        port = websocket_port if websocket_port else 8675
+        handle_start_websocket_server(port)
+        return True
+    if stop_websocket_server:
+        handle_stop_websocket_server()
+        return True
+    if restart_websocket_server:
+        port = websocket_port if websocket_port else 8675
+        handle_restart_websocket_server(port)
+        return True
+    return False
+
+
+def _handle_mcp_commands(
+    start_mcp_server: bool,
+    stop_mcp_server: bool,
+    restart_mcp_server: bool,
+    websocket_port: int | None,
+) -> bool:
+    """Handle MCP server commands."""
+    if start_mcp_server:
+        handle_mcp_server(websocket_port)
+        return True
+    if stop_mcp_server:
+        handle_stop_mcp_server()
+        return True
+    if restart_mcp_server:
+        handle_restart_mcp_server(websocket_port)
+        return True
+    return False
+
+
+def _handle_server_commands(
+    monitor: bool,
+    enhanced_monitor: bool,
+    watchdog: bool,
+    websocket_server: bool,
+    start_websocket_server: bool,
+    stop_websocket_server: bool,
+    restart_websocket_server: bool,
+    start_mcp_server: bool,
+    stop_mcp_server: bool,
+    restart_mcp_server: bool,
+    websocket_port: int | None,
+    dev: bool,
+) -> bool:
+    """Handle server-related commands. Returns True if a server command was handled."""
+    return (
+        _handle_monitoring_commands(monitor, enhanced_monitor, watchdog, dev)
+        or _handle_websocket_commands(
+            websocket_server,
+            start_websocket_server,
+            stop_websocket_server,
+            restart_websocket_server,
+            websocket_port,
+        )
+        or _handle_mcp_commands(
+            start_mcp_server, stop_mcp_server, restart_mcp_server, websocket_port
+        )
+    )
+
+
 @app.command()
 def main(
     commit: bool = CLI_OPTIONS["commit"],
@@ -44,6 +134,8 @@ def main(
     test_workers: int = CLI_OPTIONS["test_workers"],
     test_timeout: int = CLI_OPTIONS["test_timeout"],
     skip_hooks: bool = CLI_OPTIONS["skip_hooks"],
+    fast: bool = CLI_OPTIONS["fast"],
+    comp: bool = CLI_OPTIONS["comp"],
     create_pr: bool = CLI_OPTIONS["create_pr"],
     ai_agent: bool = CLI_OPTIONS["ai_agent"],
     start_mcp_server: bool = CLI_OPTIONS["start_mcp_server"],
@@ -86,6 +178,8 @@ def main(
         test_workers,
         test_timeout,
         skip_hooks,
+        fast,
+        comp,
         create_pr,
         ai_agent,
         async_mode,
@@ -107,48 +201,24 @@ def main(
 
     setup_ai_agent_env(ai_agent, verbose or ai_debug)
 
-    if monitor:
-        handle_monitor_mode(dev_mode=dev)
+    # Handle server commands
+    if _handle_server_commands(
+        monitor,
+        enhanced_monitor,
+        watchdog,
+        websocket_server,
+        start_websocket_server,
+        stop_websocket_server,
+        restart_websocket_server,
+        start_mcp_server,
+        stop_mcp_server,
+        restart_mcp_server,
+        websocket_port,
+        dev,
+    ):
         return
 
-    if enhanced_monitor:
-        handle_enhanced_monitor_mode(dev_mode=dev)
-        return
-
-    if watchdog:
-        handle_watchdog_mode()
-        return
-
-    if websocket_server:
-        handle_websocket_server_mode()
-        return
-
-    if start_websocket_server:
-        port = websocket_port if websocket_port else 8675
-        handle_start_websocket_server(port)
-        return
-
-    if stop_websocket_server:
-        handle_stop_websocket_server()
-        return
-
-    if restart_websocket_server:
-        port = websocket_port if websocket_port else 8675
-        handle_restart_websocket_server(port)
-        return
-
-    if start_mcp_server:
-        handle_mcp_server(websocket_port)
-        return
-
-    if stop_mcp_server:
-        handle_stop_mcp_server()
-        return
-
-    if restart_mcp_server:
-        handle_restart_mcp_server(websocket_port)
-        return
-
+    # Handle main workflow
     if interactive:
         handle_interactive_mode(options)
     else:

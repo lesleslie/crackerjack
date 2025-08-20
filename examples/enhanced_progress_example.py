@@ -4,15 +4,13 @@ import asyncio
 import sys
 from pathlib import Path
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from rich.console import Console
+
     from crackerjack.mcp.progress_monitor import (
         WEBSOCKET_AVAILABLE,
-        monitor_job_standalone,
-        run_crackerjack_with_enhanced_progress,
     )
 except ImportError as e:
     print(f"❌ Import error: {e}")
@@ -41,7 +39,6 @@ async def demo_websocket_monitoring() -> None:
     console.print(" 🔄 Automatic fallback to polling mode")
     console.print(" 🛑 Graceful interrupt handling\n")
 
-
     console.print("[bold blue]Usage Examples: [ / bold blue]")
     console.print("[cyan]1. Monitor a specific job by ID: [ / cyan]")
     console.print(" python - m crackerjack.mcp.progress_monitor abc123 - def456")
@@ -57,7 +54,6 @@ async def demo_websocket_monitoring() -> None:
     )
     console.print(" await monitor_job_standalone('job_id')")
     console.print()
-
 
     console.print("[bold blue]Architecture Features: [ / bold blue]")
     console.print(
@@ -93,7 +89,6 @@ async def demo_api_integration() -> None:
         "[dim]This shows how to use the enhanced monitoring in your code[ / dim]\n"
     )
 
-
     class MockClient:
         async def call_tool(self, tool_name: str, params: dict) -> dict:
             if tool_name == "execute_crackerjack":
@@ -111,8 +106,9 @@ async def demo_api_integration() -> None:
 
     try:
         MockClient()
-        console.print("[cyan]Example: Starting enhanced progress monitoring...[ / cyan]")
-
+        console.print(
+            "[cyan]Example: Starting enhanced progress monitoring...[ / cyan]"
+        )
 
         console.print("[green]✅ Would start job with WebSocket monitoring[ / green]")
         console.print(

@@ -133,7 +133,7 @@ class TestFileConfigSource:
             config_path.unlink(missing_ok=True)
 
     def test_load_nonexistent_file(self) -> None:
-        nonexistent_path = Path(" / nonexistent / config.yaml")
+        nonexistent_path = Path("/nonexistent/config.yaml")
         source = FileConfigSource(nonexistent_path)
 
         assert source.is_available() is False

@@ -140,21 +140,32 @@ class WorkflowPipeline:
         return success
 
     def _execute_quality_phase(self, options: OptionsProtocol) -> bool:
-        if options.test:
+        if hasattr(options, "fast") and options.fast:
+            return self._run_fast_hooks_phase(options)
+        elif hasattr(options, "comp") and options.comp:
+            return self._run_comprehensive_hooks_phase(options)
+        elif options.test:
             return self._execute_test_workflow(options)
         return self._execute_standard_hooks_workflow(options)
 
     def _execute_test_workflow(self, options: OptionsProtocol) -> bool:
-        if not self._run_fast_hooks_phase(options):
-            return False
+        # Collect ALL failures before determining success
+        fast_hooks_passed = self._run_fast_hooks_phase(options)
+        if not fast_hooks_passed:
+            return False  # Fast hooks must pass before proceeding
 
-        if not self._run_testing_phase(options):
-            return False
+        # Run tests and comprehensive hooks regardless of individual failures
+        # to collect ALL issues for AI agent analysis
+        testing_passed = self._run_testing_phase(options)
+        comprehensive_passed = self._run_comprehensive_hooks_phase(options)
 
-        if not self._run_comprehensive_hooks_phase(options):
-            return False
+        # AI agent mode: Continue even with test/hook failures to collect all issues
+        if options.ai_agent:
+            # Return True if at least fast hooks passed - AI will fix remaining issues
+            return fast_hooks_passed
 
-        return True
+        # Non-AI agent mode: All phases must pass
+        return testing_passed and comprehensive_passed
 
     def _run_fast_hooks_phase(self, options: OptionsProtocol) -> bool:
         self._update_mcp_status("fast", "running")
@@ -170,25 +181,31 @@ class WorkflowPipeline:
     def _run_testing_phase(self, options: OptionsProtocol) -> bool:
         self._update_mcp_status("tests", "running")
 
-        if not self.phases.run_testing_phase(options):
+        success = self.phases.run_testing_phase(options)
+        if not success:
             self.session.fail_task("workflow", "Testing failed")
             self._handle_test_failures()
             self._update_mcp_status("tests", "failed")
-            return False
+            # In AI agent mode, continue to collect more failures
+            # In non-AI mode, this will be handled by caller
+        else:
+            self._update_mcp_status("tests", "completed")
 
-        self._update_mcp_status("tests", "completed")
-        return True
+        return success
 
     def _run_comprehensive_hooks_phase(self, options: OptionsProtocol) -> bool:
         self._update_mcp_status("comprehensive", "running")
 
-        if not self.phases.run_comprehensive_hooks_only(options):
+        success = self.phases.run_comprehensive_hooks_only(options)
+        if not success:
             self.session.fail_task("workflow", "Comprehensive hooks failed")
             self._update_mcp_status("comprehensive", "failed")
-            return False
+            # In AI agent mode, continue to collect more failures
+            # In non-AI mode, this will be handled by caller
+        else:
+            self._update_mcp_status("comprehensive", "completed")
 
-        self._update_mcp_status("comprehensive", "completed")
-        return True
+        return success
 
     def _update_mcp_status(self, stage: str, status: str) -> None:
         if hasattr(self, "_mcp_state_manager") and self._mcp_state_manager:

@@ -22,7 +22,7 @@ except ImportError:
 
 class AIAgentWorkflowTester:
     def __init__(self):
-        self.project_root = Path(" / Users / les / Projects / crackerjack")
+        self.project_root = Path("/Users / les / Projects / crackerjack")
         self.test_results = {}
         self.verification_toolkit = None
 

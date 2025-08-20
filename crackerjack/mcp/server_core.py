@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Final
 
 from rich.console import Console
+
 try:
     from mcp.server.fastmcp import FastMCP
 
@@ -31,6 +32,7 @@ from .tools import (
 )
 
 console = Console()
+
 
 class MCPOptions:
     def __init__(self, **kwargs: t.Any) -> None:
@@ -114,12 +116,12 @@ def create_mcp_server() -> t.Any | None:
 
 def handle_mcp_server_command(
     start: bool = False,
-    stop: bool = False, 
+    stop: bool = False,
     restart: bool = False,
-    websocket_port: int | None = None
+    websocket_port: int | None = None,
 ) -> None:
     """Handle MCP server start/stop/restart commands."""
-    
+
     if stop or restart:
         console.print("[yellow]Stopping MCP servers...[/yellow]")
         # Kill any existing MCP server processes
@@ -128,7 +130,7 @@ def handle_mcp_server_command(
                 ["pkill", "-f", "crackerjack-mcp-server"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
             if result.returncode == 0:
                 console.print("[green]✅ MCP servers stopped[/green]")
@@ -138,13 +140,13 @@ def handle_mcp_server_command(
             console.print("[red]Timeout stopping MCP servers[/red]")
         except Exception as e:
             console.print(f"[red]Error stopping MCP servers: {e}[/red]")
-        
+
         if stop:
             return
-        
+
         # For restart, wait a moment before starting again
         time.sleep(2)
-    
+
     if start or restart:
         console.print("[green]Starting MCP server...[/green]")
         try:

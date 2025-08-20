@@ -60,13 +60,10 @@ class WebSocketServer:
 
 
 def handle_websocket_server_command(
-    start: bool = False,
-    stop: bool = False, 
-    restart: bool = False,
-    port: int = 8675
+    start: bool = False, stop: bool = False, restart: bool = False, port: int = 8675
 ) -> None:
     """Handle WebSocket server start/stop/restart commands."""
-    
+
     if stop or restart:
         console.print("[yellow]Stopping WebSocket servers...[/yellow]")
         # Kill any existing uvicorn processes running on the port
@@ -75,7 +72,7 @@ def handle_websocket_server_command(
                 ["pkill", "-f", f"uvicorn.*:{port}"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
             if result.returncode == 0:
                 console.print("[green]✅ WebSocket servers stopped[/green]")
@@ -85,13 +82,13 @@ def handle_websocket_server_command(
             console.print("[red]Timeout stopping WebSocket servers[/red]")
         except Exception as e:
             console.print(f"[red]Error stopping WebSocket servers: {e}[/red]")
-        
+
         if stop:
             return
-        
+
         # For restart, wait a moment before starting again
         time.sleep(2)
-    
+
     if start or restart:
         console.print(f"[green]Starting WebSocket server on port {port}...[/green]")
         try:
@@ -99,6 +96,7 @@ def handle_websocket_server_command(
             server.run()
         except Exception as e:
             console.print(f"[red]Failed to start WebSocket server: {e}[/red]")
+
 
 def main(port: int = 8675) -> None:
     server = WebSocketServer(port)

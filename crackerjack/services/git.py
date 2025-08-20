@@ -17,29 +17,27 @@ class GitService:
 
     def is_git_repo(self) -> bool:
         try:
-            result = self._run_git_command(["rev - parse", " -- git - dir"])
+            result = self._run_git_command(["rev-parse", "--git-dir"])
             return result.returncode == 0
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
             return False
 
     def get_changed_files(self) -> list[str]:
         try:
-            staged_result = self._run_git_command(
-                ["diff", " -- cached", " -- name - only"]
-            )
+            staged_result = self._run_git_command(["diff", "--cached", "--name-only"])
             staged_files = (
                 staged_result.stdout.strip().split("\n")
                 if staged_result.stdout.strip()
                 else []
             )
-            unstaged_result = self._run_git_command(["diff", " -- name - only"])
+            unstaged_result = self._run_git_command(["diff", "--name-only"])
             unstaged_files = (
                 unstaged_result.stdout.strip().split("\n")
                 if unstaged_result.stdout.strip()
                 else []
             )
             untracked_result = self._run_git_command(
-                ["ls - files", " -- others", " -- exclude - standard"]
+                ["ls-files", "--others", "--exclude-standard"]
             )
             untracked_files = (
                 untracked_result.stdout.strip().split("\n")
@@ -54,7 +52,7 @@ class GitService:
 
     def get_staged_files(self) -> list[str]:
         try:
-            result = self._run_git_command(["diff", " -- cached", " -- name - only"])
+            result = self._run_git_command(["diff", "--cached", "--name-only"])
             return result.stdout.strip().split("\n") if result.stdout.strip() else []
         except Exception as e:
             self.console.print(f"[yellow]⚠️[/yellow] Error getting staged files: {e}")
@@ -76,7 +74,7 @@ class GitService:
 
     def commit(self, message: str) -> bool:
         try:
-            result = self._run_git_command(["commit", " - m", message])
+            result = self._run_git_command(["commit", "-m", message])
             if result.returncode == 0:
                 self.console.print(f"[green]✅[/green] Committed: {message}")
                 return True
@@ -102,7 +100,7 @@ class GitService:
 
     def get_current_branch(self) -> str | None:
         try:
-            result = self._run_git_command(["branch", " -- show - current"])
+            result = self._run_git_command(["branch", "--show-current"])
             return result.stdout.strip() if result.returncode == 0 else None
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
             return None
@@ -118,10 +116,10 @@ class GitService:
 
     def _categorize_files(self, files: list[str]) -> set[str]:
         categories = {
-            "docs": ["README", "CLAUDE", "docs / ", ".md"],
-            "tests": ["test_", "tests / ", "conftest.py"],
+            "docs": ["README", "CLAUDE", "docs/", ".md"],
+            "tests": ["test_", "tests/", "conftest.py"],
             "config": ["pyproject.toml", ".yaml", ".yml", ".json", ".gitignore"],
-            "ci": [".github / ", "ci / ", ".pre - commit"],
+            "ci": [".github/", "ci/", ".pre-commit"],
             "deps": ["requirements", "uv.lock", "Pipfile"],
         }
         file_categories: set[str] = set()
@@ -147,7 +145,7 @@ class GitService:
             "docs": "Update documentation",
             "tests": "Update tests",
             "config": "Update configuration",
-            "ci": "Update CI / CD configuration",
+            "ci": "Update CI/CD configuration",
             "deps": "Update dependencies",
         }
         message = category_messages.get(category, "Update core functionality")

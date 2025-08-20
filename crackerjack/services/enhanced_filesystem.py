@@ -136,7 +136,7 @@ class BatchFileOperations:
 
     async def _read_single_async(self, path: Path, future: asyncio.Future[str]) -> None:
         try:
-            async with aiofiles.open(path, encoding="utf - 8") as f:
+            async with aiofiles.open(path, encoding="utf-8") as f:
                 content = await f.read()
             future.set_result(content)
         except Exception as e:
@@ -147,7 +147,7 @@ class BatchFileOperations:
     ) -> None:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            async with aiofiles.open(path, "w", encoding="utf - 8") as f:
+            async with aiofiles.open(path, "w", encoding="utf-8") as f:
                 await f.write(content)
             future.set_result(None)
         except Exception as e:
@@ -303,7 +303,7 @@ class EnhancedFileSystemService(FileSystemInterface):
                     details=f"Attempted to read file at {path.absolute()}",
                     recovery="Check file path and ensure file exists",
                 )
-            return path.read_text(encoding="utf - 8")
+            return path.read_text(encoding="utf-8")
         except PermissionError as e:
             raise FileError(
                 message=f"Permission denied reading file: {path}",
@@ -312,9 +312,9 @@ class EnhancedFileSystemService(FileSystemInterface):
             ) from e
         except UnicodeDecodeError as e:
             raise FileError(
-                message=f"Unable to decode file as UTF - 8: {path}",
+                message=f"Unable to decode file as UTF-8: {path}",
                 details=str(e),
-                recovery="Ensure file is text - based and UTF - 8 encoded",
+                recovery="Ensure file is text-based and UTF-8 encoded",
             ) from e
         except OSError as e:
             raise FileError(
@@ -334,7 +334,7 @@ class EnhancedFileSystemService(FileSystemInterface):
                     recovery="Check directory permissions and disk space",
                 ) from e
 
-            path.write_text(content, encoding="utf - 8")
+            path.write_text(content, encoding="utf-8")
 
         except PermissionError as e:
             raise FileError(
@@ -383,7 +383,7 @@ class EnhancedFileSystemService(FileSystemInterface):
                 recovery="Check file permissions",
             ) from e
 
-    def list_files(self, path: str | Path, pattern: str = " * ") -> Iterator[Path]:
+    def list_files(self, path: str | Path, pattern: str = "*") -> Iterator[Path]:
         path_obj = Path(path) if isinstance(path, str) else path
 
         if not path_obj.is_dir():

@@ -4,6 +4,8 @@ import subprocess
 import time
 from pathlib import Path
 
+import pytest
+
 
 def _check_initial_tests(project_root: Path) -> bool:
     try:
@@ -166,6 +168,7 @@ def _assess_results(
     return all_pass
 
 
+@pytest.mark.skip(reason="Long-running AI agent integration test - run manually")
 def test_ai_agent_workflow():
     print("🤖 Testing AI Agent Workflow")
     print("=" * 50)

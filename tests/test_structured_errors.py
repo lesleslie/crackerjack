@@ -85,7 +85,7 @@ class TestErrorHandlingIntegration:
 
         console = Console(force_terminal=False)
         cleaner = CodeCleaner(console=console)
-        test_path = Path(" / nonexistent / file.py")
+        test_path = Path("/nonexistent / file.py")
         with patch("pathlib.Path.read_text") as mock_read:
             mock_read.side_effect = FileNotFoundError(
                 f"[Errno 2] No such file or directory: '{test_path}'"

@@ -6,6 +6,7 @@ Targeting 68% → 85%+ coverage (~20 statements).
 from unittest.mock import Mock
 
 import pytest
+
 from crackerjack.models.config import WorkflowOptions
 from crackerjack.models.config_adapter import LegacyOptionsWrapper, OptionsAdapter
 from crackerjack.models.protocols import OptionsProtocol
@@ -18,21 +19,21 @@ class TestOptionsAdapter:
     def mock_options(self):
         """Create a comprehensive mock OptionsProtocol object."""
         options = Mock(spec=OptionsProtocol)
-        
+
         # Cleaning options
         options.clean = True
         options.update_docs = False
         options.force_update_docs = True
         options.compress_docs = False
         options.auto_compress_docs = True
-        
+
         # Hook options
         options.skip_hooks = False
         options.update_precommit = True
         options.experimental_hooks = False
         options.enable_pyrefly = True
         options.enable_ty = False
-        
+
         # Testing options
         options.test = True
         options.benchmark = False
@@ -40,7 +41,7 @@ class TestOptionsAdapter:
         options.benchmark_regression_threshold = 0.2
         options.test_workers = 4
         options.test_timeout = 300
-        
+
         # Publishing options
         options.publish = "patch"
         options.bump = "minor"
@@ -49,38 +50,39 @@ class TestOptionsAdapter:
         options.keep_releases = 5
         options.no_git_tags = False
         options.skip_version_check = True
-        
+
         # Git options
         options.commit = True
         options.create_pr = False
-        
+
         # AI options
         options.ai_agent = True
         options.start_mcp_server = False
-        
+
         # Execution options
         options.interactive = False
         options.verbose = True
         options.async_mode = False
         options.no_config_updates = True
-        
+
         # Progress options
         options.track_progress = True
         options.resume_from = "session123"
         options.progress_file = "progress.json"
-        
+
         return options
 
     @pytest.fixture
     def minimal_options(self):
         """Create a minimal mock OptionsProtocol object with missing attributes."""
+
         # Create simple object without the problematic Mock behavior
         class MinimalOptions:
             def __init__(self):
                 self.clean = False
                 self.test = True
                 self.verbose = False
-        
+
         return MinimalOptions()
 
     def test_from_options_protocol_comprehensive(self, mock_options):
@@ -163,9 +165,9 @@ class TestOptionsAdapter:
     def test_to_options_protocol(self):
         """Test converting WorkflowOptions to LegacyOptionsWrapper."""
         workflow_options = WorkflowOptions()  # Use defaults
-        
+
         legacy_wrapper = OptionsAdapter.to_options_protocol(workflow_options)
-        
+
         assert isinstance(legacy_wrapper, LegacyOptionsWrapper)
         assert legacy_wrapper._options is workflow_options
 
@@ -182,14 +184,14 @@ class TestLegacyOptionsWrapper:
                 update_docs=True,
                 force_update_docs=False,
                 compress_docs=True,
-                auto_compress_docs=False
+                auto_compress_docs=False,
             ),
             hooks=Mock(
                 skip_hooks=True,
                 update_precommit=False,
                 experimental_hooks=True,
                 enable_pyrefly=False,
-                enable_ty=True
+                enable_ty=True,
             ),
             testing=Mock(
                 test=True,
@@ -197,7 +199,7 @@ class TestLegacyOptionsWrapper:
                 benchmark_regression=False,
                 benchmark_regression_threshold=0.5,
                 test_workers=8,
-                test_timeout=600
+                test_timeout=600,
             ),
             publishing=Mock(
                 publish="major",
@@ -206,27 +208,21 @@ class TestLegacyOptionsWrapper:
                 cleanup_pypi=False,
                 keep_releases=20,
                 no_git_tags=True,
-                skip_version_check=False
+                skip_version_check=False,
             ),
-            git=Mock(
-                commit=False,
-                create_pr=True
-            ),
-            ai=Mock(
-                ai_agent=False,
-                start_mcp_server=True
-            ),
+            git=Mock(commit=False, create_pr=True),
+            ai=Mock(ai_agent=False, start_mcp_server=True),
             execution=Mock(
                 interactive=True,
                 verbose=False,
                 async_mode=True,
-                no_config_updates=False
+                no_config_updates=False,
             ),
             progress=Mock(
                 track_progress=False,
                 resume_from="test_session",
-                progress_file="test_progress.json"
-            )
+                progress_file="test_progress.json",
+            ),
         )
 
     @pytest.fixture
@@ -382,14 +378,15 @@ class TestEdgeCasesAndDefaults:
 
     def test_empty_options_object(self):
         """Test handling of options object with no attributes."""
+
         # Create simple object without any attributes
         class EmptyOptions:
             pass
-        
+
         empty_options = EmptyOptions()
-        
+
         workflow_options = OptionsAdapter.from_options_protocol(empty_options)
-        
+
         # All values should use defaults since getattr will fall back
         assert workflow_options.cleaning.clean is True  # Default
         assert workflow_options.testing.test is False  # Default
@@ -397,20 +394,21 @@ class TestEdgeCasesAndDefaults:
 
     def test_default_value_consistency(self):
         """Test that default values are consistent across conversions."""
+
         # Create options with minimal attributes
         class MinimalOptions:
             def __init__(self):
                 self.clean = False
                 self.verbose = True
-        
+
         minimal_options = MinimalOptions()
-        
+
         workflow_options = OptionsAdapter.from_options_protocol(minimal_options)
-        
+
         # Verify explicit values are preserved
         assert workflow_options.cleaning.clean is False
         assert workflow_options.execution.verbose is True
-        
+
         # Verify defaults are used for missing attributes
         assert workflow_options.cleaning.update_docs is False  # Default
         assert workflow_options.testing.benchmark is False  # Default
@@ -419,16 +417,16 @@ class TestEdgeCasesAndDefaults:
     def test_boolean_type_safety(self):
         """Test that boolean values are properly handled."""
         options = Mock(spec=OptionsProtocol)
-        
+
         # Set various truthy/falsy values
         options.clean = 1  # Truthy
-        options.test = 0   # Falsy
+        options.test = 0  # Falsy
         options.verbose = ""  # Falsy
         options.interactive = "yes"  # Truthy
-        
+
         workflow_options = OptionsAdapter.from_options_protocol(options)
         legacy_wrapper = OptionsAdapter.to_options_protocol(workflow_options)
-        
+
         # Values should be preserved as-is (adapter doesn't convert types)
         assert legacy_wrapper.clean == 1
         assert legacy_wrapper.test == 0

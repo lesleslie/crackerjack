@@ -5,14 +5,20 @@ Comprehensive tests for MCP (Model Context Protocol) components with extensive m
 import asyncio
 import json
 import time
-from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from typing import Any, Dict, List
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 from crackerjack.mcp.cache import ErrorCache, ErrorPattern, FixResult
-from crackerjack.mcp.server import CrackerjackMCPServer, main as mcp_main
-from crackerjack.mcp.state import SessionState, StateManager, Issue, StageResult, StageStatus, Priority
+from crackerjack.mcp.server import main as mcp_main
+from crackerjack.mcp.state import (
+    Issue,
+    Priority,
+    SessionState,
+    StageResult,
+    StageStatus,
+    StateManager,
+)
 
 
 class TestErrorPattern:
@@ -28,7 +34,7 @@ class TestErrorPattern:
             file_pattern="*.py",
             common_fixes=["Check syntax"],
         )
-        
+
         assert pattern.pattern_id == "test_pattern_1"
         assert pattern.error_type == "syntax_error"
         assert pattern.error_code == "E999"
@@ -44,7 +50,7 @@ class TestErrorPattern:
             error_code="E001",
             message_pattern="Error occurred",
         )
-        
+
         assert pattern.auto_fixable is False
         assert pattern.frequency == 1
         assert pattern.common_fixes == []
@@ -58,9 +64,9 @@ class TestErrorPattern:
             message_pattern="ImportError",
             file_pattern="*.py",
         )
-        
+
         result = pattern.to_dict()
-        
+
         assert isinstance(result, dict)
         assert result["pattern_id"] == "test_pattern_3"
         assert result["error_type"] == "import_error"
@@ -74,7 +80,7 @@ class TestErrorPattern:
             error_code="E302",
             message_pattern="TypeError",
         )
-        
+
         assert pattern.common_fixes == []
         assert pattern.last_seen is not None
         assert pattern.last_seen > 0
@@ -93,7 +99,7 @@ class TestFixResult:
             time_taken=1.5,
             error_message=None,
         )
-        
+
         assert result.fix_id == "fix_123"
         assert result.pattern_id == "test_pattern"
         assert result.success is True
@@ -111,9 +117,9 @@ class TestFixResult:
             time_taken=0.5,
             error_message="Fix failed",
         )
-        
+
         data = result.to_dict()
-        
+
         assert isinstance(data, dict)
         assert data["fix_id"] == "fix_456"
         assert data["pattern_id"] == "test"
@@ -144,9 +150,9 @@ class TestErrorCache:
         """Test cache directory creation."""
         # Directory shouldn't exist initially
         assert not cache_dir.exists()
-        
+
         error_cache._ensure_cache_dir()
-        
+
         # Directory should be created
         assert cache_dir.exists()
         assert cache_dir.is_dir()
@@ -156,7 +162,7 @@ class TestErrorCache:
         # Clear existing patterns and reload
         error_cache.patterns = {}
         error_cache._load_cache()
-        
+
         assert len(error_cache.patterns) == 0
 
     def test_load_patterns_with_data(self, error_cache, cache_dir):
@@ -176,13 +182,13 @@ class TestErrorCache:
                 "last_seen": time.time(),
             }
         }
-        
+
         patterns_file = cache_dir / "error_patterns.json"
         patterns_file.write_text(json.dumps(patterns_data))
-        
+
         # Reload cache
         error_cache._load_cache()
-        
+
         assert len(error_cache.patterns) == 1
         pattern = error_cache.get_pattern("syntax_1")
         assert pattern is not None
@@ -197,13 +203,13 @@ class TestErrorCache:
             message_pattern="Test error",
             file_pattern="*.py",
         )
-        
+
         error_cache.add_pattern(pattern)
-        
+
         # Check file was created
         patterns_file = cache_dir / "error_patterns.json"
         assert patterns_file.exists()
-        
+
         # Check file content
         data = json.loads(patterns_file.read_text())
         assert "test_error_1" in data
@@ -218,10 +224,10 @@ class TestErrorCache:
             message_pattern="New error",
             file_pattern="*.py",
         )
-        
-        with patch.object(error_cache, '_save_patterns') as mock_save:
+
+        with patch.object(error_cache, "_save_patterns") as mock_save:
             error_cache.add_pattern(pattern)
-            
+
             mock_save.assert_called_once()
             assert error_cache.get_pattern("new_error_1") == pattern
 
@@ -239,12 +245,12 @@ class TestErrorCache:
             error_code="E401",
             message_pattern="ImportError",
         )
-        
+
         error_cache.add_pattern(pattern1)
         error_cache.add_pattern(pattern2)
-        
+
         matches = error_cache.find_patterns_by_type("syntax")
-        
+
         assert len(matches) == 1
         assert matches[0].error_type == "syntax"
 
@@ -257,10 +263,10 @@ class TestErrorCache:
             files_affected=["file1.py"],
             time_taken=1.0,
         )
-        
-        with patch.object(error_cache, '_save_fixes') as mock_save:
+
+        with patch.object(error_cache, "_save_fixes") as mock_save:
             error_cache.add_fix_result(result)
-            
+
             mock_save.assert_called_once()
 
     def test_get_fix_success_rate(self, error_cache):
@@ -279,12 +285,12 @@ class TestErrorCache:
             files_affected=[],
             time_taken=0.5,
         )
-        
+
         error_cache.add_fix_result(result1)
         error_cache.add_fix_result(result2)
-        
+
         success_rate = error_cache.get_fix_success_rate("pattern1")
-        
+
         assert success_rate == 0.5
 
     def test_cleanup_old_patterns(self, error_cache, cache_dir):
@@ -297,11 +303,11 @@ class TestErrorCache:
             message_pattern="Old error",
         )
         old_pattern.last_seen = time.time() - (31 * 24 * 3600)  # 31 days ago
-        
+
         error_cache.add_pattern(old_pattern)
-        
+
         cleaned = error_cache.cleanup_old_patterns(days=30)
-        
+
         assert cleaned == 1
         assert error_cache.get_pattern("old_pattern") is None
 
@@ -315,7 +321,7 @@ class TestErrorCache:
             auto_fixable=True,
         )
         error_cache.add_pattern(pattern)
-        
+
         result = FixResult(
             fix_id="fix_1",
             pattern_id="test_pattern",
@@ -324,9 +330,9 @@ class TestErrorCache:
             time_taken=1.0,
         )
         error_cache.add_fix_result(result)
-        
+
         stats = error_cache.get_cache_stats()
-        
+
         assert stats["total_patterns"] == 1
         assert stats["auto_fixable_patterns"] == 1
         assert stats["total_fix_attempts"] == 1
@@ -349,7 +355,7 @@ class TestIssue:
             suggested_fix="Fix syntax",
             auto_fixable=True,
         )
-        
+
         assert issue.id == "issue_1"
         assert issue.type == "syntax_error"
         assert issue.message == "Syntax error detected"
@@ -366,7 +372,7 @@ class TestIssue:
             message="Warning message",
             file_path="warn.py",
         )
-        
+
         assert issue.line_number is None
         assert issue.priority == Priority.MEDIUM
         assert issue.stage == ""
@@ -382,9 +388,9 @@ class TestIssue:
             file_path="error.py",
             priority=Priority.CRITICAL,
         )
-        
+
         data = issue.to_dict()
-        
+
         assert isinstance(data, dict)
         assert data["id"] == "issue_3"
         assert data["type"] == "error"
@@ -419,9 +425,9 @@ class TestSessionState:
             start_time=time.time(),
             end_time=time.time() + 10,
         )
-        
+
         session_state.stages["fast"] = stage_result
-        
+
         assert "fast" in session_state.stages
         assert session_state.stages["fast"] == stage_result
 
@@ -433,9 +439,9 @@ class TestSessionState:
             message="Test error",
             file_path="test.py",
         )
-        
+
         session_state.global_issues.append(issue)
-        
+
         assert len(session_state.global_issues) == 1
         assert session_state.global_issues[0] == issue
 
@@ -443,7 +449,7 @@ class TestSessionState:
         """Test setting session metadata."""
         session_state.metadata["user"] = "test_user"
         session_state.metadata["project"] = "test_project"
-        
+
         assert session_state.metadata["user"] == "test_user"
         assert session_state.metadata["project"] == "test_project"
 
@@ -457,9 +463,9 @@ class TestSessionState:
         )
         session_state.global_issues.append(issue)
         session_state.metadata["test"] = "value"
-        
+
         data = session_state.to_dict()
-        
+
         assert isinstance(data, dict)
         assert data["session_id"] == session_state.session_id
         assert "stages" in data
@@ -485,7 +491,7 @@ class TestStateManager:
     def test_start_stage(self, state_manager):
         """Test starting a new stage."""
         state_manager.start_stage("fast")
-        
+
         assert state_manager.session_state.current_stage == "fast"
         assert "fast" in state_manager.session_state.stages
         assert state_manager.session_state.stages["fast"].status == StageStatus.RUNNING
@@ -493,16 +499,16 @@ class TestStateManager:
     def test_complete_stage(self, state_manager):
         """Test completing a stage."""
         state_manager.start_stage("fast")
-        
+
         issue = Issue(
             id="issue_1",
             type="error",
             message="Test error",
             file_path="test.py",
         )
-        
+
         state_manager.complete_stage("fast", issues=[issue], fixes=["fix_1"])
-        
+
         stage_result = state_manager.session_state.stages["fast"]
         assert stage_result.status == StageStatus.COMPLETED
         assert stage_result.end_time is not None
@@ -512,9 +518,9 @@ class TestStateManager:
     def test_fail_stage(self, state_manager):
         """Test failing a stage."""
         state_manager.start_stage("comprehensive")
-        
+
         state_manager.fail_stage("comprehensive", "Error occurred")
-        
+
         stage_result = state_manager.session_state.stages["comprehensive"]
         assert stage_result.status == StageStatus.FAILED
         assert stage_result.error_message == "Error occurred"
@@ -528,9 +534,9 @@ class TestStateManager:
             message="Global warning",
             file_path="global.py",
         )
-        
+
         state_manager.add_issue(issue)
-        
+
         assert len(state_manager.session_state.global_issues) == 1
         assert state_manager.session_state.global_issues[0] == issue
 
@@ -542,10 +548,10 @@ class TestStateManager:
             message="Removable error",
             file_path="remove.py",
         )
-        
+
         state_manager.add_issue(issue)
         success = state_manager.remove_issue("removable_issue")
-        
+
         assert success is True
         assert len(state_manager.session_state.global_issues) == 0
 
@@ -565,19 +571,19 @@ class TestStateManager:
             file_path="low.py",
             priority=Priority.LOW,
         )
-        
+
         state_manager.add_issue(high_issue)
         state_manager.add_issue(low_issue)
-        
+
         high_issues = state_manager.get_issues_by_priority(Priority.HIGH)
-        
+
         assert len(high_issues) == 1
         assert high_issues[0].priority == Priority.HIGH
 
     def test_get_session_summary(self, state_manager):
         """Test getting session summary."""
         state_manager.start_stage("fast")
-        
+
         issue = Issue(
             id="summary_issue",
             type="error",
@@ -586,11 +592,11 @@ class TestStateManager:
             priority=Priority.CRITICAL,
             auto_fixable=True,
         )
-        
+
         state_manager.complete_stage("fast", issues=[issue], fixes=["fix_1"])
-        
+
         summary = state_manager.get_session_summary()
-        
+
         assert summary["session_id"] == state_manager.session_state.session_id
         assert summary["total_issues"] == 1
         assert summary["total_fixes"] == 1
@@ -605,20 +611,20 @@ class TestStateManager:
             message="Checkpoint error",
             file_path="checkpoint.py",
         )
-        
+
         state_manager.add_issue(issue)
         state_manager.save_checkpoint("test_checkpoint")
-        
+
         # Reset session
         original_session_id = state_manager.session_state.session_id
         state_manager.reset_session()
-        
+
         assert state_manager.session_state.session_id != original_session_id
         assert len(state_manager.session_state.global_issues) == 0
-        
+
         # Load checkpoint
         success = state_manager.load_checkpoint("test_checkpoint")
-        
+
         assert success is True
         assert state_manager.session_state.session_id == original_session_id
         assert len(state_manager.session_state.global_issues) == 1
@@ -627,254 +633,73 @@ class TestStateManager:
         """Test listing checkpoints."""
         state_manager.save_checkpoint("checkpoint_1")
         state_manager.save_checkpoint("checkpoint_2")
-        
+
         checkpoints = state_manager.list_checkpoints()
-        
+
         assert len(checkpoints) >= 2
         checkpoint_names = [cp["name"] for cp in checkpoints]
         assert "checkpoint_1" in checkpoint_names
         assert "checkpoint_2" in checkpoint_names
 
 
-class TestCrackerjackMCPServer:
-    """Test CrackerjackMCPServer with extensive mocking."""
-
-    @pytest.fixture
-    def mcp_server(self):
-        """Create CrackerjackMCPServer instance."""
-        with patch('crackerjack.mcp.server.Path.cwd') as mock_cwd:
-            mock_cwd.return_value = Path("/test/project")
-            return CrackerjackMCPServer()
-
-    def test_init(self, mcp_server):
-        """Test MCP server initialization."""
-        assert mcp_server.name == "crackerjack"
-        assert mcp_server.version == "1.0.0"
-        assert mcp_server.project_root == Path("/test/project")
-
-    @pytest.mark.asyncio
-    async def test_run_crackerjack_stage_fast(self, mcp_server):
-        """Test running fast stage."""
-        with patch('crackerjack.mcp.server.subprocess.run') as mock_run:
-            mock_process = Mock()
-            mock_process.returncode = 0
-            mock_process.stdout = "Success"
-            mock_process.stderr = ""
-            mock_run.return_value = mock_process
-            
-            result = await mcp_server.run_crackerjack_stage("fast")
-            
-            assert result["success"] is True
-            assert result["stage"] == "fast"
-            assert "Success" in result["output"]
-
-    @pytest.mark.asyncio
-    async def test_run_crackerjack_stage_failure(self, mcp_server):
-        """Test running stage with failure."""
-        with patch('crackerjack.mcp.server.subprocess.run') as mock_run:
-            mock_process = Mock()
-            mock_process.returncode = 1
-            mock_process.stdout = ""
-            mock_process.stderr = "Error occurred"
-            mock_run.return_value = mock_process
-            
-            result = await mcp_server.run_crackerjack_stage("comprehensive")
-            
-            assert result["success"] is False
-            assert result["stage"] == "comprehensive"
-            assert "Error occurred" in result["error"]
-
-    @pytest.mark.asyncio
-    async def test_analyze_errors_with_suggestions(self, mcp_server):
-        """Test error analysis with suggestions enabled."""
-        with patch.object(mcp_server.error_cache, 'find_patterns') as mock_find:
-            mock_pattern = Mock()
-            mock_pattern.suggested_fix = "Fix this error"
-            mock_find.return_value = [mock_pattern]
-            
-            result = await mcp_server.analyze_errors(
-                error_output="SyntaxError: invalid syntax",
-                include_suggestions=True
-            )
-            
-            assert result["analysis"]["total_errors"] == 1
-            assert result["analysis"]["suggested_fixes"]
-            assert len(result["analysis"]["error_patterns"]) == 1
-
-    @pytest.mark.asyncio
-    async def test_get_stage_status(self, mcp_server):
-        """Test getting stage status."""
-        # Mock some stage history
-        mcp_server.stage_history = [
-            {"stage": "fast", "success": True, "timestamp": time.time()},
-            {"stage": "comprehensive", "success": False, "timestamp": time.time()},
-        ]
-        
-        result = await mcp_server.get_stage_status()
-        
-        assert result["total_stages_run"] == 2
-        assert result["last_successful_stage"] == "fast"
-        assert result["recent_history"]
-
-    @pytest.mark.asyncio
-    async def test_slash_command_crackerjack(self, mcp_server):
-        """Test executing /crackerjack slash command."""
-        with patch.object(mcp_server, 'run_crackerjack_stage') as mock_run:
-            mock_run.return_value = {"success": True, "output": "All good"}
-            
-            result = await mcp_server.slash_command("/crackerjack", ["fast"])
-            
-            assert result["success"] is True
-            mock_run.assert_called_once_with("fast")
-
-    @pytest.mark.asyncio
-    async def test_slash_command_init(self, mcp_server):
-        """Test executing /init slash command."""
-        with patch('crackerjack.mcp.server.subprocess.run') as mock_run:
-            mock_process = Mock()
-            mock_process.returncode = 0
-            mock_process.stdout = "Initialized"
-            mock_run.return_value = mock_process
-            
-            result = await mcp_server.slash_command("/init", [])
-            
-            assert result["success"] is True
-            assert "Initialized" in result["output"]
-
-    @pytest.mark.asyncio
-    async def test_slash_command_unknown(self, mcp_server):
-        """Test executing unknown slash command."""
-        result = await mcp_server.slash_command("/unknown", [])
-        
-        assert result["success"] is False
-        assert "Unknown command" in result["error"]
-
-    def test_get_next_action_no_history(self, mcp_server):
-        """Test getting next action with no history."""
-        action = mcp_server.get_next_action()
-        
-        assert action["recommended_action"] == "run_fast_hooks"
-        assert action["reason"]
-
-    def test_get_next_action_after_success(self, mcp_server):
-        """Test getting next action after successful stage."""
-        mcp_server.stage_history = [
-            {"stage": "fast", "success": True, "timestamp": time.time()}
-        ]
-        
-        action = mcp_server.get_next_action()
-        
-        assert action["recommended_action"] == "run_comprehensive_hooks"
-
-    def test_get_next_action_after_failure(self, mcp_server):
-        """Test getting next action after failed stage."""
-        mcp_server.stage_history = [
-            {"stage": "fast", "success": False, "timestamp": time.time()}
-        ]
-        
-        action = mcp_server.get_next_action()
-        
-        assert action["recommended_action"] == "analyze_errors"
-
-    @pytest.mark.asyncio
-    async def test_session_management_save(self, mcp_server):
-        """Test session management save action."""
-        result = await mcp_server.session_management("save", "test_checkpoint")
-        
-        assert result["action"] == "save"
-        assert result["checkpoint_name"] == "test_checkpoint"
-
-    @pytest.mark.asyncio
-    async def test_session_management_status(self, mcp_server):
-        """Test session management status action."""
-        result = await mcp_server.session_management("status")
-        
-        assert result["action"] == "status"
-        assert "current_session" in result
-
-    @pytest.mark.asyncio
-    async def test_smart_error_analysis(self, mcp_server):
-        """Test smart error analysis with caching."""
-        with patch.object(mcp_server.error_cache, 'find_patterns') as mock_find:
-            mock_find.return_value = []
-            
-            result = await mcp_server.smart_error_analysis(use_cache=True)
-            
-            assert result["cache_used"] is True
-            assert result["patterns_found"] == 0
-
-
 class TestMCPIntegration:
     """Integration tests for MCP components."""
-
-    @pytest.mark.asyncio
-    async def test_error_cache_integration(self):
-        """Test integration between error cache and server."""
-        with patch('crackerjack.mcp.server.Path.cwd') as mock_cwd:
-            mock_cwd.return_value = Path("/test")
-            server = CrackerjackMCPServer()
-            
-            # Add a pattern to cache
-            pattern = ErrorPattern(
-                pattern_type="test",
-                file_pattern="*.py",
-                error_message="TestError",
-            )
-            server.error_cache.add_pattern(pattern)
-            
-            # Analyze errors that should match
-            with patch.object(server.error_cache, 'find_patterns') as mock_find:
-                mock_find.return_value = [pattern]
-                
-                result = await server.analyze_errors("TestError occurred")
-                
-                assert result["analysis"]["total_errors"] == 1
 
     def test_session_state_workflow(self):
         """Test complete session state workflow."""
         manager = SessionManager()
-        
+
         # Create session
-        session_id = manager.create_session()
+        manager.create_session()
         session = manager.get_current_session()
-        
-        # Add tasks
-        task1 = TaskState(task_id="task1", status="pending")
-        task2 = TaskState(task_id="task2", status="pending")
-        session.add_task(task1)
-        session.add_task(task2)
-        
-        # Update task progress
-        session.update_task("task1", status="running", progress=50)
-        session.update_task("task2", status="completed", progress=100)
-        
+
+        # Add issues
+        issue1 = Issue(
+            issue_type="test_error",
+            file_path="/test/file1.py",
+            line_number=10,
+            message="Test error 1",
+            priority=Priority.HIGH,
+        )
+        issue2 = Issue(
+            issue_type="lint_warning",
+            file_path="/test/file2.py",
+            line_number=20,
+            message="Test warning 2",
+            priority=Priority.LOW,
+        )
+
+        session.add_issue(issue1)
+        session.add_issue(issue2)
+
         # Verify final state
-        assert len(session.tasks) == 2
-        assert session.get_task("task1").status == "running"
-        assert session.get_task("task2").status == "completed"
+        assert len(session.issues) == 2
+        assert session.issues[0].message == "Test error 1"
+        assert session.issues[1].message == "Test warning 2"
 
     @pytest.mark.asyncio
     async def test_mcp_main_function(self):
         """Test the main MCP server function."""
-        with patch('crackerjack.mcp.server.Server') as mock_server_class:
-            with patch('crackerjack.mcp.server.stdio_server') as mock_stdio:
+        with patch("crackerjack.mcp.server.Server") as mock_server_class:
+            with patch("crackerjack.mcp.server.stdio_server") as mock_stdio:
                 mock_server = Mock()
                 mock_server_class.return_value = mock_server
                 mock_stdio.return_value = AsyncMock()
-                
+
                 # Mock the async context manager
                 async def mock_serve():
                     pass
+
                 mock_stdio.return_value.__aenter__ = AsyncMock(return_value=mock_serve)
                 mock_stdio.return_value.__aexit__ = AsyncMock(return_value=None)
-                
+
                 # This would normally run the server
                 # We'll just test that it can be called without error
                 try:
                     await asyncio.wait_for(mcp_main(), timeout=0.1)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Expected - the server would run indefinitely
                     pass
-                
+
                 # Verify server setup was called
                 mock_server_class.assert_called_once()

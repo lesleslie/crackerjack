@@ -4,7 +4,6 @@ import asyncio
 import sys
 from pathlib import Path
 
-
 sys.path.insert(0, str(Path(__file__).parent / "crackerjack"))
 
 from crackerjack.mcp.enhanced_progress_monitor import run_enhanced_monitor
@@ -14,19 +13,23 @@ async def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description = "Enhanced Multi - Project Crackerjack Progress Monitor Demo"
+        description="Enhanced Multi - Project Crackerjack Progress Monitor Demo"
     )
     parser.add_argument(
-        " -- no - clear", action = "store_true", help = "Don't clear terminal before displaying"
+        " -- no - clear",
+        action="store_true",
+        help="Don't clear terminal before displaying",
     )
     parser.add_argument(
-        " -- textual", action = "store_true", help = "Use Textual TUI instead of Rich display"
+        " -- textual",
+        action="store_true",
+        help="Use Textual TUI instead of Rich display",
     )
     parser.add_argument(
         " -- refresh",
-        type = float,
-        default = 0.5,
-        help = "Refresh interval in seconds (default: 0.5 for lively updates)",
+        type=float,
+        default=0.5,
+        help="Refresh interval in seconds (default: 0.5 for lively updates)",
     )
 
     args = parser.parse_args()
@@ -46,7 +49,7 @@ async def main():
 
     if args.textual:
         try:
-            from textual.app import App
+            import textual.app  # noqa: F401
 
             print("🎨 Using Textual TUI interface...")
         except ImportError:
@@ -62,9 +65,9 @@ async def main():
 
     try:
         await run_enhanced_monitor(
-            clear_terminal = not args.no_clear,
-            use_textual = args.textual,
-            refresh_interval = args.refresh,
+            clear_terminal=not args.no_clear,
+            use_textual=args.textual,
+            refresh_interval=args.refresh,
         )
     except KeyboardInterrupt:
         print("\n🛑 Monitor stopped by user")

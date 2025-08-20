@@ -1,15 +1,33 @@
 {
   "mcpServers": {
-    "session-management": {
-      "command": "python",
+    "session-mgmt": {
+      "command": "uv",
       "args": [
-        "-m",
-        "claude_session_management.server"
+        "run",
+        "--directory",
+        "/Users/les/Projects/claude/mcp-servers/session-mgmt",
+        "python",
+        "session_mgmt/server.py"
+      ]
+    },
+    "claude-simone": {
+      "command": "node",
+      "args": [
+        "/Users/les/Projects/claude/mcp-servers/claude-simone/mcp-server/dist/index.js"
       ],
-      "cwd": "/Users/les/Projects/claude/mcp-servers/claude-session-management",
       "env": {
-        "PYTHONPATH": "/Users/les/Projects/claude/mcp-servers/claude-session-management:/Users/les/Projects/claude/toolkits:/Users/les/Projects/claude"
+        "PROJECT_PATH": "/Users/les/Projects/crackerjack"
       }
+    },
+    "ast-grep-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/les/Projects/claude/mcp-servers/ast-grep-mcp",
+        "python",
+        "main.py"
+      ]
     },
     "crackerjack": {
       "command": "python",
@@ -145,6 +163,24 @@
         "-y",
         "mcp-turso-cloud"
       ]
+    },
+    "motherduck": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-motherduck",
+        "--db-path",
+        "~/Projects/claude/shared_analytics.duckdb",
+        "--read-only",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "HOME": "/Users/les"
+      }
+    },
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
     }
   }
 }

@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from crackerjack.models.protocols import OptionsProtocol
@@ -13,48 +12,47 @@ from crackerjack.plugins import (
 
 
 class ExampleHookPlugin(HookPluginBase):
-
     def __init__(self) -> None:
         metadata = PluginMetadata(
-            name = "example - hooks",
-            version = "1.0.0",
-            plugin_type = PluginType.HOOK,
-            description = "Example custom hooks for demonstration",
-            author = "Crackerjack Team",
-            license = "MIT",
+            name="example - hooks",
+            version="1.0.0",
+            plugin_type=PluginType.HOOK,
+            description="Example custom hooks for demonstration",
+            author="Crackerjack Team",
+            license="MIT",
         )
         super().__init__(metadata)
 
     def get_hook_definitions(self) -> list[CustomHookDefinition]:
         return [
             CustomHookDefinition(
-                name = "check - todos",
-                description = "Check for TODO / FIXME comments in code",
-                command = ["grep", " - n", " - E", "(TODO | FIXME | XXX)"],
-                file_patterns = [" * .py", " * .js", " * .ts", " * .go", " * .rs"],
-                timeout = 30,
-                stage = HookStage.FAST,
-                requires_files = True,
-                parallel_safe = True,
+                name="check - todos",
+                description="Check for TODO / FIXME comments in code",
+                command=["grep", " - n", " - E", "(TODO | FIXME | XXX)"],
+                file_patterns=[" * .py", " * .js", " * .ts", " * .go", " * .rs"],
+                timeout=30,
+                stage=HookStage.FAST,
+                requires_files=True,
+                parallel_safe=True,
             ),
             CustomHookDefinition(
-                name = "check - print - statements",
-                description = "Check for debug print statements",
-                command = ["grep", " - n", "print("],
-                file_patterns = [" * .py"],
-                timeout = 15,
-                stage = HookStage.FAST,
-                requires_files = True,
-                parallel_safe = True,
+                name="check - print - statements",
+                description="Check for debug print statements",
+                command=["grep", " - n", "print("],
+                file_patterns=[" * .py"],
+                timeout=15,
+                stage=HookStage.FAST,
+                requires_files=True,
+                parallel_safe=True,
             ),
             CustomHookDefinition(
-                name = "validate - json",
-                description = "Validate JSON files are well - formed",
-                file_patterns = [" * .json"],
-                timeout = 30,
-                stage = HookStage.COMPREHENSIVE,
-                requires_files = True,
-                parallel_safe = True,
+                name="validate - json",
+                description="Validate JSON files are well - formed",
+                file_patterns=[" * .json"],
+                timeout=30,
+                stage=HookStage.COMPREHENSIVE,
+                requires_files=True,
+                parallel_safe=True,
             ),
         ]
 
@@ -67,7 +65,6 @@ class ExampleHookPlugin(HookPluginBase):
         if hook_name == "validate - json":
             return self._validate_json_files(files)
         else:
-
             return super().execute_hook(hook_name, files, options)
 
     def _validate_json_files(self, files: list[Path]) -> HookResult:
@@ -92,19 +89,19 @@ class ExampleHookPlugin(HookPluginBase):
 
         if errors:
             return HookResult(
-                name = "validate - json",
-                status = "failed",
-                duration = duration,
-                output = "\n".join(errors),
-                error_message = f"Found {len(errors)} JSON validation errors",
+                name="validate - json",
+                status="failed",
+                duration=duration,
+                output="\n".join(errors),
+                error_message=f"Found {len(errors)} JSON validation errors",
             )
         else:
             return HookResult(
-                name = "validate - json",
-                status = "passed",
-                duration = duration,
-                output = f"Validated {len(json_files)} JSON files",
-                error_message = "",
+                name="validate - json",
+                status="passed",
+                duration=duration,
+                output=f"Validated {len(json_files)} JSON files",
+                error_message="",
             )
 
     def activate(self) -> bool:

@@ -30,7 +30,7 @@ class HookDefinition:
         if self.config_path:
             cmd.extend(["-c", str(self.config_path)])
         if self.manual_stage:
-            cmd.extend([" -- hook-stage", "manual"])
+            cmd.extend(["--hook-stage", "manual"])
         cmd.extend([self.name, "--all-files"])
         return cmd
 

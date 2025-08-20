@@ -78,7 +78,11 @@ class AsyncWorkflowPipeline:
         return await asyncio.to_thread(self.phases.run_cleaning_phase, options)
 
     async def _execute_quality_phase_async(self, options: OptionsProtocol) -> bool:
-        if options.test:
+        if hasattr(options, "fast") and options.fast:
+            return await self._run_fast_hooks_async(options)
+        elif hasattr(options, "comp") and options.comp:
+            return await self._run_comprehensive_hooks_async(options)
+        elif options.test:
             return await self._execute_test_workflow_async(options)
         return await self._execute_standard_hooks_workflow_async(options)
 

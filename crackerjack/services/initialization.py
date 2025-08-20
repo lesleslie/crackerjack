@@ -168,7 +168,7 @@ class InitializationService:
     def check_uv_installed(self) -> bool:
         try:
             result = subprocess.run(
-                ["uv", " -- version"],
+                ["uv", "--version"],
                 capture_output=True,
                 text=True,
                 timeout=10,

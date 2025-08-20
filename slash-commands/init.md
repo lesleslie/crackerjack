@@ -16,7 +16,7 @@ This slash command initializes a new Python project with crackerjack's best prac
 ## What It Does
 
 1. **Checks Project State**: Verifies which configuration files exist
-2. **Creates Missing Files**: 
+2. **Creates Missing Files**:
    - `pyproject.toml` - Project metadata and dependencies
    - `.pre-commit-config.yaml` - Code quality hooks
    - `CLAUDE.md` - AI assistant guidelines
