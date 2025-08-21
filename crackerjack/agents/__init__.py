@@ -15,6 +15,17 @@ from .coordinator import AgentCoordinator
 from .tracker import AgentTracker, get_agent_tracker, reset_agent_tracker
 
 __all__ = [
+    # Agent modules (imported for registration)
+    "documentation_agent",
+    "dry_agent",
+    "formatting_agent",
+    "import_optimization_agent",
+    "performance_agent",
+    "refactoring_agent",
+    "security_agent",
+    "test_creation_agent",
+    "test_specialist_agent",
+    # Exported classes
     "Issue",
     "FixResult",
     "SubAgent",

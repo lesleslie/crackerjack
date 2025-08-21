@@ -32,6 +32,16 @@ This slash command runs Crackerjack with AI agent mode for autonomous code quali
 
 **Iterative AI-Powered Auto-Fixing Process (up to 10 iterations):**
 
+### Pre-Execution Safety Checks:
+
+0. 🔍 **Comprehensive Status Check** (automatic conflict prevention)
+
+   - Check for active crackerjack jobs in the same project to prevent file conflicts
+   - Verify MCP and WebSocket server health status
+   - Identify beneficial cleanup opportunities (stale temp files, old debug logs)
+   - Auto-start missing services if needed
+   - Report resource usage and system health
+
 ### Each Iteration Cycle:
 
 1. ⚡ **Fast Hooks** (formatting & basic fixes)

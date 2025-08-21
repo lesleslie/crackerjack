@@ -1,8 +1,7 @@
 """Consolidated error testing module."""
 
-import typing as t
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from rich.console import Console
@@ -75,7 +74,9 @@ class TestCrackerjackError:
 
     def test_error_repr(self) -> None:
         """Test error representation."""
-        error = CrackerjackError(message="Test error", error_code=ErrorCode.CONFIG_ERROR)
+        error = CrackerjackError(
+            message="Test error", error_code=ErrorCode.CONFIG_ERROR
+        )
         repr_str = repr(error)
         assert "CrackerjackError" in repr_str
         assert "Test error" in repr_str
@@ -154,7 +155,7 @@ class TestErrorHandling:
         """Test handle_error function."""
         console = Console()
         error = CrackerjackError(message="Test error")
-        
+
         with patch.object(console, "print") as mock_print:
             handle_error(error, console)
             mock_print.assert_called()
@@ -167,7 +168,7 @@ class TestErrorHandling:
             details="Additional details",
             recovery="Try this fix",
         )
-        
+
         with patch.object(console, "print") as mock_print:
             handle_error(error, console)
             mock_print.assert_called()
@@ -182,7 +183,7 @@ class TestErrorHandling:
             error_code=ErrorCode.CONFIG_ERROR,
             details="Error details",
         )
-        
+
         report = format_error_report(error)
         assert isinstance(report, str)
         assert "Test error" in report
@@ -205,7 +206,7 @@ class TestErrorIntegration:
     def test_error_chaining(self) -> None:
         """Test error chaining functionality."""
         original_error = ValueError("Original error")
-        
+
         try:
             raise ConfigError(
                 message="Config error",
@@ -219,7 +220,7 @@ class TestErrorIntegration:
         """Test error handling in context managers."""
         with pytest.raises(CrackerjackError) as exc_info:
             raise CrackerjackError(message="Context error")
-        
+
         assert exc_info.value.message == "Context error"
 
 
@@ -239,9 +240,9 @@ class TestErrorRecovery:
         """Test different error severity handling."""
         # Test that different error types have appropriate exit codes
         config_error = ConfigError(message="Config error")
-        execution_error = ExecutionError(message="Execution error") 
+        execution_error = ExecutionError(message="Execution error")
         test_error = TestExecutionError(message="Test error")
-        
+
         # All should inherit the base exit code of 1
         assert config_error.exit_code == 1
         assert execution_error.exit_code == 1
@@ -268,7 +269,7 @@ class TestErrorValidation:
         """Test that error details are optional."""
         error = CrackerjackError(message="Test error")
         assert error.details is None
-        
+
         error_with_details = CrackerjackError(
             message="Test error",
             details="Additional information",

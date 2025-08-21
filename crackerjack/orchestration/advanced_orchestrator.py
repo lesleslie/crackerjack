@@ -2,7 +2,9 @@ import time
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from rich.console import Console, Group
+from rich.panel import Panel
+from rich.table import Table
 
 from ..agents import AgentContext, AgentCoordinator, Issue, IssueType, Priority
 from ..config.hooks import HookConfigLoader
@@ -86,6 +88,22 @@ class CorrelationTracker:
             if len(self.iteration_data) >= 3
             else self.iteration_data,
         }
+
+
+class MinimalProgressStreamer:
+    """Fallback progress streamer that provides minimal functionality."""
+
+    def __init__(self) -> None:
+        pass
+
+    def update_stage(self, stage: str, substage: str = "") -> None:
+        pass
+
+    def update_hook_progress(self, progress: HookProgress) -> None:
+        pass
+
+    def _stream_update(self, data: dict[str, t.Any]) -> None:
+        pass
 
 
 class ProgressStreamer:
@@ -179,15 +197,19 @@ class AdvancedWorkflowOrchestrator:
         self.test_manager = TestManagementImpl(console, pkg_path)
         self.test_streamer = TestProgressStreamer(console, pkg_path)
         self.planner = OrchestrationPlanner(console)
-        
+
+        # Initialize progress_streamer early (needed by _detect_and_configure_mcp_mode)
+        self.correlation_tracker = CorrelationTracker()
+        try:
+            self.progress_streamer = ProgressStreamer(self.config, session)
+        except Exception as e:
+            # Fallback to a minimal progress streamer if there's an issue
+            console.print(f"[yellow]Warning: ProgressStreamer initialization failed: {e}[/yellow]")
+            self.progress_streamer = MinimalProgressStreamer()
+        self.metrics = get_metrics_collector()
+
         # Detect if running in MCP mode and configure accordingly
         self._detect_and_configure_mcp_mode()
-
-        self.correlation_tracker = CorrelationTracker()
-        self.progress_streamer = ProgressStreamer(
-            config or OrchestrationConfig(), session
-        )
-        self.metrics = get_metrics_collector()
 
         self.agent_coordinator: AgentCoordinator | None = None
 
@@ -196,17 +218,19 @@ class AdvancedWorkflowOrchestrator:
         # Check for MCP context indicators
         is_mcp_mode = (
             # Console is using StringIO (stdio mode)
-            hasattr(self.console.file, 'getvalue')
+            hasattr(self.console.file, "getvalue")
             # Or console is not attached to a real terminal
             or not self.console.is_terminal
             # Or we have a web job ID (indicates MCP execution)
-            or hasattr(self.session, 'job_id')
+            or hasattr(self.session, "job_id")
         )
-        
+
         if is_mcp_mode:
             # Configure individual executor for MCP mode to prevent terminal lockup
             self.individual_executor.set_mcp_mode(True)
-            self.console.print("[dim]🔧 MCP mode detected - using minimal output mode[/dim]")
+            self.console.print(
+                "[dim]🔧 MCP mode detected - using minimal output mode[/dim]"
+            )
         if self.config.ai_coordination_mode in (
             AICoordinationMode.MULTI_AGENT,
             AICoordinationMode.COORDINATOR,
@@ -242,6 +266,82 @@ class AdvancedWorkflowOrchestrator:
         self.console.print(
             f"[cyan]AI Coordination Mode: {self.config.ai_coordination_mode.value}[/cyan]"
         )
+
+    def _display_iteration_stats(
+        self,
+        iteration: int,
+        max_iterations: int,
+        iteration_times: dict[str, float],
+        hooks_time: float,
+        tests_time: float,
+        ai_time: float,
+        context: "OrchestrationContext",
+    ) -> None:
+        """Display rich iteration statistics panel."""
+        # Create timing table
+        timing_table = Table(show_header=True, header_style="bold cyan")
+        timing_table.add_column("Phase", style="cyan")
+        timing_table.add_column("This Iteration", justify="right", style="yellow")
+        timing_table.add_column("Cumulative", justify="right", style="green")
+        
+        # Add timing rows
+        timing_table.add_row(
+            "🔧 Hooks", 
+            f"{iteration_times.get('hooks', 0):.1f}s",
+            f"{hooks_time:.1f}s"
+        )
+        timing_table.add_row(
+            "🧪 Tests", 
+            f"{iteration_times.get('tests', 0):.1f}s",
+            f"{tests_time:.1f}s"
+        )
+        timing_table.add_row(
+            "🤖 AI Analysis", 
+            f"{iteration_times.get('ai', 0):.1f}s",
+            f"{ai_time:.1f}s"
+        )
+        
+        total_iteration_time = sum(iteration_times.values())
+        total_cumulative_time = hooks_time + tests_time + ai_time
+        timing_table.add_row(
+            "📊 Total",
+            f"{total_iteration_time:.1f}s",
+            f"{total_cumulative_time:.1f}s",
+            style="bold"
+        )
+
+        # Create status table
+        status_table = Table(show_header=True, header_style="bold magenta")
+        status_table.add_column("Metric", style="magenta")
+        status_table.add_column("Value", justify="right", style="white")
+        
+        status_table.add_row("🔄 Iteration", f"{iteration}/{max_iterations}")
+        status_table.add_row("📈 Progress", f"{(iteration/max_iterations)*100:.1f}%")
+        
+        if hasattr(context, 'hook_failures'):
+            status_table.add_row("❌ Hook Failures", str(len(context.hook_failures)))
+        if hasattr(context, 'test_failures'):
+            status_table.add_row("🧪 Test Failures", str(len(context.test_failures)))
+
+        # Create the panel with properly rendered tables
+        panel_content = Group(
+            "[bold white]Timing Breakdown[/bold white]",
+            timing_table,
+            "",
+            "[bold white]Status Summary[/bold white]",
+            status_table
+        )
+        
+        iteration_panel = Panel(
+            panel_content,
+            title=f"[bold bright_blue]📊 Iteration {iteration} Statistics[/bold bright_blue]",
+            border_style="bright_blue",
+            padding=(1, 2),
+        )
+        
+        self.console.print()
+        self.console.print(iteration_panel)
+        self.console.print()
 
     async def execute_orchestrated_workflow(
         self,
@@ -291,6 +391,12 @@ class AdvancedWorkflowOrchestrator:
             hooks_time += iteration_times.get("hooks", 0)
             tests_time += iteration_times.get("tests", 0)
             ai_time += iteration_times.get("ai", 0)
+
+            # Display iteration statistics panel
+            self._display_iteration_stats(
+                iteration, max_iterations, iteration_times, 
+                hooks_time, tests_time, ai_time, context
+            )
 
             if iteration_success:
                 self.console.print(

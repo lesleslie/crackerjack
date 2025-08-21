@@ -1,4 +1,3 @@
-import asyncio
 import tempfile
 import time
 from pathlib import Path
@@ -7,7 +6,6 @@ import pytest
 
 from crackerjack.errors import FileError
 from crackerjack.services.enhanced_filesystem import (
-    BatchFileOperations,
     EnhancedFileSystemService,
     FileCache,
 )
@@ -98,9 +96,6 @@ class TestBatchFileOperations:
             yield Path(tmp_dir)
 
 
-
-
-
 class TestEnhancedFileSystemService:
     @pytest.fixture
     def temp_dir(self):
@@ -169,10 +164,6 @@ class TestEnhancedFileSystemService:
 
         content2 = fs_service.read_file(test_file)
         assert content2 == modified_content
-
-
-
-
 
     def test_file_operations_sync_fallback(self, sync_fs_service, temp_dir) -> None:
         test_file = temp_dir / "sync_fallback.txt"
@@ -264,9 +255,7 @@ class TestEnhancedFileSystemService:
         assert stats_after["entries"] == 0
 
 
-
 class TestPerformanceAndIntegration:
-
     def test_cache_memory_efficiency(self) -> None:
         fs_service = EnhancedFileSystemService(cache_size=100, cache_ttl=3600)
 

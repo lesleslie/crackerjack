@@ -4,6 +4,8 @@ from pathlib import Path
 
 from rich.console import Console
 
+from ..agents.base import AgentContext, Issue, IssueType, Priority
+from ..agents.coordinator import AgentCoordinator
 from ..models.protocols import OptionsProtocol
 from ..services.debug import get_ai_agent_debugger
 from ..services.logging import LoggingContext, get_logger, setup_structured_logging
@@ -48,7 +50,7 @@ class WorkflowPipeline:
 
         return os.environ.get("AI_AGENT_DEBUG", "0") == "1"
 
-    def run_complete_workflow(self, options: OptionsProtocol) -> bool:
+    async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
         with LoggingContext(
             "workflow_execution",
             testing=getattr(options, "testing", False),
@@ -80,7 +82,7 @@ class WorkflowPipeline:
             )
 
             try:
-                success = self._execute_workflow_phases(options)
+                success = await self._execute_workflow_phases(options)
                 self.session.finalize_session(start_time, success)
 
                 duration = time.time() - start_time
@@ -120,14 +122,14 @@ class WorkflowPipeline:
             finally:
                 self.session.cleanup_resources()
 
-    def _execute_workflow_phases(self, options: OptionsProtocol) -> bool:
+    async def _execute_workflow_phases(self, options: OptionsProtocol) -> bool:
         success = True
         self.phases.run_configuration_phase(options)
         if not self.phases.run_cleaning_phase(options):
             success = False
             self.session.fail_task("workflow", "Cleaning phase failed")
             return False
-        if not self._execute_quality_phase(options):
+        if not await self._execute_quality_phase(options):
             success = False
             return False
         if not self.phases.run_publishing_phase(options):
@@ -139,16 +141,16 @@ class WorkflowPipeline:
 
         return success
 
-    def _execute_quality_phase(self, options: OptionsProtocol) -> bool:
+    async def _execute_quality_phase(self, options: OptionsProtocol) -> bool:
         if hasattr(options, "fast") and options.fast:
             return self._run_fast_hooks_phase(options)
         elif hasattr(options, "comp") and options.comp:
             return self._run_comprehensive_hooks_phase(options)
         elif options.test:
-            return self._execute_test_workflow(options)
+            return await self._execute_test_workflow(options)
         return self._execute_standard_hooks_workflow(options)
 
-    def _execute_test_workflow(self, options: OptionsProtocol) -> bool:
+    async def _execute_test_workflow(self, options: OptionsProtocol) -> bool:
         # Collect ALL failures before determining success
         fast_hooks_passed = self._run_fast_hooks_phase(options)
         if not fast_hooks_passed:
@@ -159,10 +161,11 @@ class WorkflowPipeline:
         testing_passed = self._run_testing_phase(options)
         comprehensive_passed = self._run_comprehensive_hooks_phase(options)
 
-        # AI agent mode: Continue even with test/hook failures to collect all issues
+        # AI agent mode: Collect failures and let agents fix them
         if options.ai_agent:
-            # Return True if at least fast hooks passed - AI will fix remaining issues
-            return fast_hooks_passed
+            if not testing_passed or not comprehensive_passed:
+                return await self._run_ai_agent_fixing_phase(options)
+            return True  # All phases passed, no fixes needed
 
         # Non-AI agent mode: All phases must pass
         return testing_passed and comprehensive_passed
@@ -255,6 +258,116 @@ class WorkflowPipeline:
                     "comprehensive", "completed"
                 )
         return True
+
+    async def _run_ai_agent_fixing_phase(self, options: OptionsProtocol) -> bool:
+        """Run AI agent fixing phase to analyze and fix collected failures."""
+        self._update_mcp_status("ai_fixing", "running")
+        self.logger.info("Starting AI agent fixing phase")
+
+        if self._should_debug():
+            self.debugger.log_workflow_phase(
+                "ai_agent_fixing", "started", details={"ai_agent": True}
+            )
+
+        try:
+            # Create AI agent context
+            agent_context = AgentContext(
+                project_path=self.pkg_path,
+                session_id=getattr(self.session, "session_id", None),
+            )
+
+            # Initialize agent coordinator
+            agent_coordinator = AgentCoordinator(agent_context)
+            agent_coordinator.initialize_agents()
+
+            # Collect issues from failures
+            issues = await self._collect_issues_from_failures()
+
+            if not issues:
+                self.logger.info("No issues collected for AI agent fixing")
+                self._update_mcp_status("ai_fixing", "completed")
+                return True
+
+            self.logger.info(f"AI agents will attempt to fix {len(issues)} issues")
+
+            # Let agents handle the issues
+            fix_result = await agent_coordinator.handle_issues(issues)
+
+            success = fix_result.success
+            if success:
+                self.logger.info("AI agents successfully fixed all issues")
+                self._update_mcp_status("ai_fixing", "completed")
+            else:
+                self.logger.warning(
+                    f"AI agents could not fix all issues: {fix_result.remaining_issues}"
+                )
+                self._update_mcp_status("ai_fixing", "failed")
+
+            if self._should_debug():
+                self.debugger.log_workflow_phase(
+                    "ai_agent_fixing",
+                    "completed" if success else "failed",
+                    details={
+                        "confidence": fix_result.confidence,
+                        "fixes_applied": len(fix_result.fixes_applied),
+                        "remaining_issues": len(fix_result.remaining_issues),
+                    },
+                )
+
+            return success
+
+        except Exception as e:
+            self.logger.error(f"AI agent fixing phase failed: {e}")
+            self.session.fail_task("ai_fixing", f"AI agent fixing failed: {e}")
+            self._update_mcp_status("ai_fixing", "failed")
+
+            if self._should_debug():
+                self.debugger.log_workflow_phase(
+                    "ai_agent_fixing", "failed", details={"error": str(e)}
+                )
+
+            return False
+
+    async def _collect_issues_from_failures(self) -> list[Issue]:
+        """Collect issues from test and comprehensive hook failures."""
+        issues: list[Issue] = []
+
+        # Collect test failures
+        if hasattr(self.phases, "test_manager") and hasattr(
+            self.phases.test_manager, "get_test_failures"
+        ):
+            test_failures = self.phases.test_manager.get_test_failures()
+            for i, failure in enumerate(
+                test_failures[:20]
+            ):  # Limit to prevent overload
+                issue = Issue(
+                    id=f"test_failure_{i}",
+                    type=IssueType.TEST_FAILURE,
+                    severity=Priority.HIGH,
+                    message=failure.strip(),
+                    stage="tests",
+                )
+                issues.append(issue)
+
+        # Collect hook failures from session
+        if hasattr(self.session, "_failed_tasks"):
+            for task_id, error_msg in self.session._failed_tasks.items():
+                if task_id in ["fast_hooks", "comprehensive_hooks"]:
+                    issue_type = (
+                        IssueType.FORMATTING
+                        if "fast" in task_id
+                        else IssueType.TYPE_ERROR
+                    )
+                    issue = Issue(
+                        id=f"hook_failure_{task_id}",
+                        type=issue_type,
+                        severity=Priority.MEDIUM,
+                        message=error_msg,
+                        stage=task_id.replace("_hooks", ""),
+                    )
+                    issues.append(issue)
+
+        return issues
 
 
 class WorkflowOrchestrator:
@@ -359,8 +472,8 @@ class WorkflowOrchestrator:
     def run_configuration_phase(self, options: OptionsProtocol) -> bool:
         return self.phases.run_configuration_phase(options)
 
-    def run_complete_workflow(self, options: OptionsProtocol) -> bool:
-        return self.pipeline.run_complete_workflow(options)
+    async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
+        return await self.pipeline.run_complete_workflow(options)
 
     def _cleanup_resources(self) -> None:
         self.session.cleanup_resources()
@@ -377,11 +490,11 @@ class WorkflowOrchestrator:
         except Exception:
             return "unknown"
 
-    def process(self, options: OptionsProtocol) -> bool:
+    async def process(self, options: OptionsProtocol) -> bool:
         self.session.start_session("process_workflow")
 
         try:
-            result = self.run_complete_workflow(options)
+            result = await self.run_complete_workflow(options)
             self.session.end_session(success=result)
             return result
         except Exception:

@@ -292,11 +292,11 @@ class ExecutionPlan:
     estimated_total_duration: float
 
     def print_plan_summary(self, console: Console) -> None:
-        console.print("\n" + " = " * 80)
+        console.print("\n" + "=" * 80)
         console.print(
             "[bold bright_blue]🎯 ORCHESTRATED EXECUTION PLAN[/bold bright_blue]"
         )
-        console.print(" = " * 80)
+        console.print("=" * 80)
 
         console.print(f"[bold]Strategy: [/bold] {self.execution_strategy.value}")
         console.print(
@@ -329,4 +329,4 @@ class ExecutionPlan:
             f" Batch Processing: {'✅' if self.ai_plan['batch_processing'] else '❌'}"
         )
 
-        console.print(" = " * 80)
+        console.print("=" * 80)

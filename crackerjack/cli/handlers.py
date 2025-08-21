@@ -176,7 +176,7 @@ def handle_standard_mode(
             orchestrator = WorkflowOrchestrator(
                 console=console, pkg_path=pkg_path, web_job_id=job_id
             )
-            success = orchestrator.run_complete_workflow(options)
+            success = asyncio.run(orchestrator.run_complete_workflow(options))
 
         if not success:
             raise SystemExit(1)

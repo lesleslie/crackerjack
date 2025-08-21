@@ -284,16 +284,20 @@ class IndividualHookExecutor:
         self.parser = HookOutputParser()
         self.progress_callback: t.Callable[[HookProgress], None] | None = None
         self.suppress_realtime_output = False
-        self.progress_callback_interval = 1  # Only callback every N lines to reduce overhead
+        self.progress_callback_interval = (
+            1  # Only callback every N lines to reduce overhead
+        )
 
     def set_progress_callback(self, callback: t.Callable[[HookProgress], None]) -> None:
         self.progress_callback = callback
-    
+
     def set_mcp_mode(self, enable: bool = True) -> None:
         """Enable MCP mode which suppresses real-time output to prevent terminal lockup."""
         self.suppress_realtime_output = enable
         if enable:
-            self.progress_callback_interval = 10  # Reduce callback frequency in MCP mode
+            self.progress_callback_interval = (
+                10  # Reduce callback frequency in MCP mode
+            )
 
     async def execute_strategy_individual(
         self, strategy: HookStrategy
@@ -425,7 +429,9 @@ class IndividualHookExecutor:
                         self.console.print(f"[dim] {line_str}[/dim]")
 
                     # Throttle progress callbacks to reduce overhead
-                    if self.progress_callback and (line_count % self.progress_callback_interval == 0):
+                    if self.progress_callback and (
+                        line_count % self.progress_callback_interval == 0
+                    ):
                         self.progress_callback(progress)
 
                 except Exception:

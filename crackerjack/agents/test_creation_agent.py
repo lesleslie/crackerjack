@@ -19,7 +19,11 @@ class TestCreationAgent(SubAgent):
         self.coverage_threshold = 0.42
 
     def get_supported_types(self) -> set[IssueType]:
-        return {IssueType.TEST_FAILURE, IssueType.DEPENDENCY, IssueType.TEST_ORGANIZATION}
+        return {
+            IssueType.TEST_FAILURE,
+            IssueType.DEPENDENCY,
+            IssueType.TEST_ORGANIZATION,
+        }
 
     async def can_handle(self, issue: Issue) -> float:
         if issue.type not in self.get_supported_types():
@@ -45,7 +49,7 @@ class TestCreationAgent(SubAgent):
         """Check confidence for test organization issues."""
         organization_keywords = [
             "redundant tests",
-            "duplicate tests", 
+            "duplicate tests",
             "overlapping tests",
             "consolidate tests",
             "test suite optimization",
@@ -53,10 +57,12 @@ class TestCreationAgent(SubAgent):
             "broken tests",
             "coverage booster",
             "victory test",
-            "test cleanup"
+            "test cleanup",
         ]
         return (
-            0.9 if any(keyword in message_lower for keyword in organization_keywords) else 0.7
+            0.9
+            if any(keyword in message_lower for keyword in organization_keywords)
+            else 0.7
         )
 
     def _check_perfect_test_creation_matches(self, message_lower: str) -> float:

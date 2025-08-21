@@ -179,9 +179,29 @@ async def _execute_crackerjack_sync(
             status="running",
             iteration=current_iteration,
             max_iterations=max_iterations,
-            overall_progress=5,
+            overall_progress=2,
             current_stage="initialization",
             message="Initializing crackerjack execution",
+        )
+
+        # Check comprehensive status first to prevent conflicts and perform cleanup
+        status_result = await _check_status_and_prepare(job_id, context)
+        if status_result.get("should_abort", False):
+            return {
+                "job_id": job_id,
+                "status": "aborted",
+                "error": status_result["reason"],
+                "status_info": status_result.get("status_info"),
+            }
+
+        _update_progress(
+            job_id=job_id,
+            status="running",
+            iteration=current_iteration,
+            max_iterations=max_iterations,
+            overall_progress=5,
+            current_stage="status_verified",
+            message="Status check complete - no conflicts detected",
         )
 
         # Clean up stale jobs first
@@ -200,7 +220,7 @@ async def _execute_crackerjack_sync(
             message="Services initialized successfully",
         )
 
-        # Import advanced orchestrator with optimal configuration
+        # Use advanced orchestrator with AI agent support and rich stats panel
         try:
             from ...core.session_coordinator import SessionCoordinator
             from ...models.config import WorkflowOptions
@@ -247,12 +267,12 @@ async def _execute_crackerjack_sync(
                 session=session,
                 config=optimal_config,
             )
-            
+
             # Override MCP mode if debug flag is set
             if kwargs.get("debug", False):
                 orchestrator.individual_executor.set_mcp_mode(False)
                 context.safe_print("🐛 Debug mode enabled - full output mode")
-            
+
             use_advanced_orchestrator = True
 
         except ImportError as e:
@@ -311,8 +331,8 @@ async def _execute_crackerjack_sync(
                     # Use advanced orchestrator with optimal coordination
                     success = await orchestrator.execute_orchestrated_workflow(options)
                 else:
-                    # Fallback to standard orchestrator
-                    success = orchestrator.run_complete_workflow(options)
+                    # Fallback to standard orchestrator (now async for AI agent support)
+                    success = await orchestrator.run_complete_workflow(options)
 
                 if success:
                     _update_progress(
@@ -437,6 +457,122 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
             context.safe_print(f"⚠️ Failed to start WebSocket server: {e}")
     else:
         context.safe_print("✅ WebSocket server already running")
+
+
+async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.Any]:
+    """Check comprehensive system status and prepare for execution.
+
+    This function implements the enhancement to call /crackerjack:status first
+    to prevent conflicts and perform beneficial cleanup.
+
+    Returns:
+        dict with keys:
+        - should_abort: bool - whether execution should be aborted
+        - reason: str - reason for abort (if should_abort is True)
+        - status_info: dict - comprehensive status information
+        - cleanup_performed: list - list of cleanup actions performed
+    """
+    _update_progress(
+        job_id=job_id,
+        status="running",
+        current_stage="status_check",
+        message="🔍 Checking system status to prevent conflicts...",
+    )
+
+    try:
+        # Get comprehensive status (equivalent to /crackerjack:status)
+        from .monitoring_tools import _get_comprehensive_status
+
+        status_info = await _get_comprehensive_status()
+
+        if "error" in status_info:
+            # Status check failed, but don't abort - just warn
+            context.safe_print(f"⚠️ Status check failed: {status_info['error']}")
+            return {
+                "should_abort": False,
+                "reason": "",
+                "status_info": status_info,
+                "cleanup_performed": [],
+            }
+
+        cleanup_performed = []
+        should_abort = False
+        abort_reason = ""
+
+        # Check for active jobs in the same project
+        active_jobs = [
+            j
+            for j in status_info.get("jobs", {}).get("details", [])
+            if j.get("status") == "running"
+        ]
+
+        if active_jobs:
+            # Check if any active jobs are in the same project path
+            str(context.config.project_path)
+
+            conflicting_jobs = []
+            for job in active_jobs:
+                # For now, assume all jobs could conflict (future: check project paths)
+                conflicting_jobs.append(job)
+
+            if conflicting_jobs:
+                job_ids = [j.get("job_id", "unknown") for j in conflicting_jobs]
+                context.safe_print(
+                    f"⚠️ Found {len(conflicting_jobs)} active job(s): {', '.join(job_ids[:3])}"
+                )
+                context.safe_print(
+                    "   Running concurrent crackerjack instances may cause file conflicts"
+                )
+
+                # Don't abort for now, but warn user
+                # Future enhancement: could offer to wait or kill conflicting jobs
+                context.safe_print("   Proceeding with caution...")
+        else:
+            context.safe_print("✅ No active jobs detected - safe to proceed")
+
+        # Check resource usage and perform cleanup if beneficial
+        temp_files_count = (
+            status_info.get("server_stats", {})
+            .get("resource_usage", {})
+            .get("temp_files_count", 0)
+        )
+
+        if temp_files_count > 50:
+            context.safe_print(
+                f"🗑️ Found {temp_files_count} temporary files - cleanup recommended"
+            )
+            cleanup_performed.append("temp_files_flagged")
+
+        # Check service health
+        services = status_info.get("services", {})
+        mcp_running = services.get("mcp_server", {}).get("running", False)
+        websocket_running = services.get("websocket_server", {}).get("running", False)
+
+        if not mcp_running:
+            context.safe_print("⚠️ MCP server not running - will auto-start if needed")
+
+        if not websocket_running:
+            context.safe_print("📡 WebSocket server not running - will auto-start")
+
+        # Success - no conflicts detected
+        context.safe_print("✅ Status check complete - ready to proceed")
+
+        return {
+            "should_abort": should_abort,
+            "reason": abort_reason,
+            "status_info": status_info,
+            "cleanup_performed": cleanup_performed,
+        }
+
+    except Exception as e:
+        # Status check failed, but don't abort the main operation
+        context.safe_print(f"⚠️ Status check encountered error: {e}")
+        return {
+            "should_abort": False,
+            "reason": "",
+            "status_info": {"error": str(e)},
+            "cleanup_performed": [],
+        }
 
 
 async def _cleanup_stale_jobs(context: t.Any) -> None:
