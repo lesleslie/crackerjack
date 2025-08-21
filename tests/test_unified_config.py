@@ -234,16 +234,6 @@ log_level = "DEBUG"
         assert "level" in logging_config
         assert "json_output" in logging_config
 
-    def test_save_config_template_not_implemented(
-        self, basic_service, temp_dir
-    ) -> None:
-        # save_config_template now raises NotImplementedError
-        # Configuration should be done through pyproject.toml
-        with pytest.raises(NotImplementedError) as exc_info:
-            basic_service.save_config_template()
-
-        assert "Configuration templates are no longer supported" in str(exc_info.value)
-        assert "pyproject.toml" in str(exc_info.value)
 
     def test_config_validation(self, basic_service) -> None:
         assert basic_service.validate_current_config() is True

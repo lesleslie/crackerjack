@@ -63,7 +63,7 @@ The `CrackerjackDashboard` (in `progress_monitor.py`) currently displays:
       }
     ],
     "agent_registry": {
-      "total_agents": 8,
+      "total_agents": 9,
       "initialized_agents": 8,
       "agent_types": ["FormattingAgent", "TestSpecialistAgent", "TestCreationAgent", "SecurityAgent", "PerformanceAgent", "RefactoringAgent", "DRYAgent", "ImportOptimizationAgent"]
     },
@@ -86,7 +86,7 @@ Add a new collapsible panel titled "🤖 AI Agents" with:
 
 ```
 ┌─ 🤖 AI Agents ─────────────────────────────────────────┐
-│ Coordinator: ✅ Active (8 agents)                      │
+│ Coordinator: ✅ Active (9 agents)                      │
 │                                                        │
 │ Agent          Status      Issue Type    Confidence    │
 │ ──────────────────────────────────────────────────────│

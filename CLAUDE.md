@@ -256,7 +256,7 @@ python -m crackerjack --ai-agent -t
 
 ```python
 # Automatic integration - all agents are registered and coordinated
-# 9 total agents: DocumentationAgent, RefactoringAgent, PerformanceAgent, FormattingAgent, 
+# 9 total agents: DocumentationAgent, RefactoringAgent, PerformanceAgent, FormattingAgent,
 #                SecurityAgent, TestCreationAgent, TestSpecialistAgent, ImportOptimizationAgent, DRYAgent
 
 # Agent confidence scoring examples:

@@ -1,5 +1,4 @@
 import ast
-import re
 import typing as t
 from pathlib import Path
 
@@ -52,7 +51,7 @@ class PerformanceAgent(SubAgent):
 
             # Analyze for performance issues
             performance_issues = self._detect_performance_issues(content, file_path)
-            
+
             if not performance_issues:
                 return FixResult(
                     success=True,
@@ -61,7 +60,9 @@ class PerformanceAgent(SubAgent):
                 )
 
             # Apply performance optimizations
-            optimized_content = self._apply_performance_optimizations(content, performance_issues)
+            optimized_content = self._apply_performance_optimizations(
+                content, performance_issues
+            )
 
             if optimized_content == content:
                 return FixResult(
@@ -102,283 +103,339 @@ class PerformanceAgent(SubAgent):
                 remaining_issues=[f"Error processing file: {e}"],
             )
 
-    def _detect_performance_issues(self, content: str, file_path: Path) -> list[dict[str, t.Any]]:
+    def _detect_performance_issues(
+        self, content: str, file_path: Path
+    ) -> list[dict[str, t.Any]]:
         """Detect various performance anti-patterns in the code."""
         issues = []
-        
+
         try:
             tree = ast.parse(content)
-            
+
             # Detect nested loops
             issues.extend(self._detect_nested_loops(tree))
-            
+
             # Detect inefficient list operations
             issues.extend(self._detect_inefficient_list_ops(content, tree))
-            
+
             # Detect repeated expensive operations
             issues.extend(self._detect_repeated_operations(content, tree))
-            
+
             # Detect inefficient string operations
             issues.extend(self._detect_string_inefficiencies(content))
-            
+
         except SyntaxError:
             # Can't analyze files with syntax errors
             pass
-            
+
         return issues
 
     def _detect_nested_loops(self, tree: ast.AST) -> list[dict[str, t.Any]]:
         """Detect nested loops that might have O(n²) or worse complexity."""
         issues = []
-        
+
         class NestedLoopAnalyzer(ast.NodeVisitor):
             def __init__(self):
                 self.loop_stack = []
                 self.nested_loops = []
-            
+
             def visit_For(self, node):
-                self.loop_stack.append(('for', node))
+                self.loop_stack.append(("for", node))
                 if len(self.loop_stack) > 1:
-                    self.nested_loops.append({
-                        'line_number': node.lineno,
-                        'type': 'nested_for_loop',
-                        'depth': len(self.loop_stack),
-                        'node': node,
-                    })
+                    self.nested_loops.append(
+                        {
+                            "line_number": node.lineno,
+                            "type": "nested_for_loop",
+                            "depth": len(self.loop_stack),
+                            "node": node,
+                        }
+                    )
                 self.generic_visit(node)
                 self.loop_stack.pop()
-            
+
             def visit_While(self, node):
-                self.loop_stack.append(('while', node))
+                self.loop_stack.append(("while", node))
                 if len(self.loop_stack) > 1:
-                    self.nested_loops.append({
-                        'line_number': node.lineno,
-                        'type': 'nested_while_loop',
-                        'depth': len(self.loop_stack),
-                        'node': node,
-                    })
+                    self.nested_loops.append(
+                        {
+                            "line_number": node.lineno,
+                            "type": "nested_while_loop",
+                            "depth": len(self.loop_stack),
+                            "node": node,
+                        }
+                    )
                 self.generic_visit(node)
                 self.loop_stack.pop()
-        
+
         analyzer = NestedLoopAnalyzer()
         analyzer.visit(tree)
-        
+
         if analyzer.nested_loops:
-            issues.append({
-                'type': 'nested_loops',
-                'instances': analyzer.nested_loops,
-                'suggestion': 'Consider flattening loops or using more efficient algorithms',
-            })
-        
+            issues.append(
+                {
+                    "type": "nested_loops",
+                    "instances": analyzer.nested_loops,
+                    "suggestion": "Consider flattening loops or using more efficient algorithms",
+                }
+            )
+
         return issues
 
-    def _detect_inefficient_list_ops(self, content: str, tree: ast.AST) -> list[dict[str, t.Any]]:
+    def _detect_inefficient_list_ops(
+        self, content: str, tree: ast.AST
+    ) -> list[dict[str, t.Any]]:
         """Detect inefficient list operations like repeated appends or concatenations."""
         issues = []
-        lines = content.split('\n')
-        
+        content.split("\n")
+
         # Pattern: list += [item] or list = list + [item] in loops
-        inefficient_patterns = []
-        
+
         class ListOpAnalyzer(ast.NodeVisitor):
             def __init__(self):
                 self.in_loop = False
                 self.list_ops = []
-            
+
             def visit_For(self, node):
                 old_in_loop = self.in_loop
                 self.in_loop = True
                 self.generic_visit(node)
                 self.in_loop = old_in_loop
-            
+
             def visit_While(self, node):
                 old_in_loop = self.in_loop
                 self.in_loop = True
                 self.generic_visit(node)
                 self.in_loop = old_in_loop
-            
+
             def visit_AugAssign(self, node):
                 if self.in_loop and isinstance(node.op, ast.Add):
                     if isinstance(node.value, ast.List):
-                        self.list_ops.append({
-                            'line_number': node.lineno,
-                            'type': 'list_concat_in_loop',
-                            'pattern': 'list += [item]',
-                        })
+                        self.list_ops.append(
+                            {
+                                "line_number": node.lineno,
+                                "type": "list_concat_in_loop",
+                                "pattern": "list += [item]",
+                            }
+                        )
                 self.generic_visit(node)
-        
+
         analyzer = ListOpAnalyzer()
         analyzer.visit(tree)
-        
+
         if analyzer.list_ops:
-            issues.append({
-                'type': 'inefficient_list_operations',
-                'instances': analyzer.list_ops,
-                'suggestion': 'Use list.append() or collect items first, then extend',
-            })
-        
+            issues.append(
+                {
+                    "type": "inefficient_list_operations",
+                    "instances": analyzer.list_ops,
+                    "suggestion": "Use list.append() or collect items first, then extend",
+                }
+            )
+
         return issues
 
-    def _detect_repeated_operations(self, content: str, tree: ast.AST) -> list[dict[str, t.Any]]:
+    def _detect_repeated_operations(
+        self, content: str, tree: ast.AST
+    ) -> list[dict[str, t.Any]]:
         """Detect repeated expensive operations that could be cached."""
         issues = []
-        lines = content.split('\n')
-        
+        lines = content.split("\n")
+
         # Look for repeated function calls in loops
         repeated_calls = []
-        
+
         for i, line in enumerate(lines):
             stripped = line.strip()
             # Pattern: expensive operations in loops
-            if any(pattern in stripped for pattern in [
-                '.exists()', '.read_text()', '.glob(', '.rglob(',
-                'Path(', 'len(', '.get('
-            ]):
+            if any(
+                pattern in stripped
+                for pattern in [
+                    ".exists()",
+                    ".read_text()",
+                    ".glob(",
+                    ".rglob(",
+                    "Path(",
+                    "len(",
+                    ".get(",
+                ]
+            ):
                 # Check if this line is in a loop context (simple heuristic)
                 context_start = max(0, i - 5)
-                context_lines = lines[context_start:i+1]
-                if any('for ' in ctx_line or 'while ' in ctx_line for ctx_line in context_lines):
-                    repeated_calls.append({
-                        'line_number': i + 1,
-                        'content': stripped,
-                        'type': 'expensive_operation_in_loop',
-                    })
-        
+                context_lines = lines[context_start : i + 1]
+                if any(
+                    "for " in ctx_line or "while " in ctx_line
+                    for ctx_line in context_lines
+                ):
+                    repeated_calls.append(
+                        {
+                            "line_number": i + 1,
+                            "content": stripped,
+                            "type": "expensive_operation_in_loop",
+                        }
+                    )
+
         if len(repeated_calls) >= 2:
-            issues.append({
-                'type': 'repeated_expensive_operations',
-                'instances': repeated_calls,
-                'suggestion': 'Cache expensive operations outside loops',
-            })
-        
+            issues.append(
+                {
+                    "type": "repeated_expensive_operations",
+                    "instances": repeated_calls,
+                    "suggestion": "Cache expensive operations outside loops",
+                }
+            )
+
         return issues
 
     def _detect_string_inefficiencies(self, content: str) -> list[dict[str, t.Any]]:
         """Detect inefficient string operations."""
         issues = []
-        lines = content.split('\n')
-        
+        lines = content.split("\n")
+
         # Pattern: String concatenation in loops
         string_concat_in_loop = []
-        
+
         for i, line in enumerate(lines):
             stripped = line.strip()
-            if '+=' in stripped and any(quote in stripped for quote in ['"', "'"]):
+            if "+=" in stripped and any(quote in stripped for quote in ['"', "'"]):
                 # Check if in loop context
                 context_start = max(0, i - 5)
-                context_lines = lines[context_start:i+1]
-                if any('for ' in ctx_line or 'while ' in ctx_line for ctx_line in context_lines):
-                    string_concat_in_loop.append({
-                        'line_number': i + 1,
-                        'content': stripped,
-                    })
-        
+                context_lines = lines[context_start : i + 1]
+                if any(
+                    "for " in ctx_line or "while " in ctx_line
+                    for ctx_line in context_lines
+                ):
+                    string_concat_in_loop.append(
+                        {
+                            "line_number": i + 1,
+                            "content": stripped,
+                        }
+                    )
+
         if len(string_concat_in_loop) >= 2:
-            issues.append({
-                'type': 'string_concatenation_in_loop',
-                'instances': string_concat_in_loop,
-                'suggestion': 'Use list.append() and "".join() for string building',
-            })
-        
+            issues.append(
+                {
+                    "type": "string_concatenation_in_loop",
+                    "instances": string_concat_in_loop,
+                    "suggestion": 'Use list.append() and "".join() for string building',
+                }
+            )
+
         return issues
 
-    def _apply_performance_optimizations(self, content: str, issues: list[dict[str, t.Any]]) -> str:
+    def _apply_performance_optimizations(
+        self, content: str, issues: list[dict[str, t.Any]]
+    ) -> str:
         """Apply performance optimizations for detected issues."""
-        lines = content.split('\n')
+        lines = content.split("\n")
         modified = False
-        
+
         for issue in issues:
-            if issue['type'] == 'inefficient_list_operations':
+            if issue["type"] == "inefficient_list_operations":
                 lines, changed = self._fix_list_operations(lines, issue)
                 modified = modified or changed
-            elif issue['type'] == 'string_concatenation_in_loop':
+            elif issue["type"] == "string_concatenation_in_loop":
                 lines, changed = self._fix_string_concatenation(lines, issue)
                 modified = modified or changed
-            elif issue['type'] == 'repeated_expensive_operations':
+            elif issue["type"] == "repeated_expensive_operations":
                 lines, changed = self._fix_repeated_operations(lines, issue)
                 modified = modified or changed
-        
-        return '\n'.join(lines) if modified else content
 
-    def _fix_list_operations(self, lines: list[str], issue: dict[str, t.Any]) -> tuple[list[str], bool]:
+        return "\n".join(lines) if modified else content
+
+    def _fix_list_operations(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> tuple[list[str], bool]:
         """Fix inefficient list operations by replacing list += [item] with list.append(item)."""
         modified = False
-        
+
         # Process instances in reverse order (highest line numbers first) to avoid line number shifts
-        instances = sorted(issue['instances'], key=lambda x: x['line_number'], reverse=True)
-        
+        instances = sorted(
+            issue["instances"], key=lambda x: x["line_number"], reverse=True
+        )
+
         for instance in instances:
-            line_idx = instance['line_number'] - 1
+            line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = lines[line_idx]
-                
+
                 # Transform: list += [item] -> list.append(item)
                 # Pattern: variable_name += [expression]
                 import re
-                pattern = r'(\s*)(\w+)\s*\+=\s*\[([^]]+)\]'
+
+                pattern = r"(\s*)(\w+)\s*\+=\s*\[([^]]+)\]"
                 match = re.match(pattern, original_line)
-                
+
                 if match:
                     indent, var_name, item_expr = match.groups()
                     optimized_line = f"{indent}{var_name}.append({item_expr})"
                     lines[line_idx] = optimized_line
                     modified = True
-                    
+
                     # Add comment explaining the optimization
-                    comment = f"{indent}# Performance: Changed += [item] to .append(item)"
+                    comment = (
+                        f"{indent}# Performance: Changed += [item] to .append(item)"
+                    )
                     lines.insert(line_idx, comment)
-        
+
         return lines, modified
 
-    def _fix_string_concatenation(self, lines: list[str], issue: dict[str, t.Any]) -> tuple[list[str], bool]:
+    def _fix_string_concatenation(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> tuple[list[str], bool]:
         """Fix inefficient string concatenation in loops by transforming to list.append + join pattern."""
         modified = False
-        
+
         # Group instances by the string variable being concatenated to
         var_groups = {}
-        for instance in issue['instances']:
-            line_idx = instance['line_number'] - 1
+        for instance in issue["instances"]:
+            line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = lines[line_idx]
-                
+
                 # Extract variable name from string concatenation pattern
                 import re
-                pattern = r'(\s*)(\w+)\s*\+=\s*(.+)'
+
+                pattern = r"(\s*)(\w+)\s*\+=\s*(.+)"
                 match = re.match(pattern, original_line)
                 if match:
                     indent, var_name, expr = match.groups()
                     if var_name not in var_groups:
                         var_groups[var_name] = []
-                    var_groups[var_name].append({
-                        'line_idx': line_idx,
-                        'indent': indent,
-                        'expr': expr.strip(),
-                        'original_line': original_line
-                    })
-        
+                    var_groups[var_name].append(
+                        {
+                            "line_idx": line_idx,
+                            "indent": indent,
+                            "expr": expr.strip(),
+                            "original_line": original_line,
+                        }
+                    )
+
         # Transform each variable's concatenation pattern
         for var_name, instances in var_groups.items():
-            if len(instances) >= 1:  # Apply optimization for any string concatenation in loop
+            if (
+                len(instances) >= 1
+            ):  # Apply optimization for any string concatenation in loop
                 # Find the loop context to apply the transformation
                 first_instance = instances[0]
-                loop_start = self._find_loop_start(lines, first_instance['line_idx'])
-                
+                loop_start = self._find_loop_start(lines, first_instance["line_idx"])
+
                 if loop_start is not None:
                     # Apply the string building optimization
-                    modified = self._apply_string_building_optimization(
-                        lines, var_name, instances, loop_start
-                    ) or modified
-        
+                    modified = (
+                        self._apply_string_building_optimization(
+                            lines, var_name, instances, loop_start
+                        )
+                        or modified
+                    )
+
         return lines, modified
 
     def _find_loop_start(self, lines: list[str], start_idx: int) -> int | None:
         """Find the start of the loop that contains the given line."""
         for i in range(start_idx, -1, -1):
             line = lines[i].strip()
-            if line.startswith('for ') or line.startswith('while '):
+            if line.startswith("for ") or line.startswith("while "):
                 return i
             # Stop if we hit a function definition or class definition
-            if line.startswith('def ') or line.startswith('class '):
+            if line.startswith("def ") or line.startswith("class "):
                 break
         return None
 
@@ -388,74 +445,78 @@ class PerformanceAgent(SubAgent):
         """Apply string building optimization using list.append + join pattern."""
         if not instances:
             return False
-        
+
         first_instance = instances[0]
-        indent = first_instance['indent']
-        
+        indent = first_instance["indent"]
+
         # Find variable initialization (look backwards from loop)
         init_line_idx = None
         for i in range(loop_start - 1, -1, -1):
             line = lines[i].strip()
-            if f'{var_name} =' in line and '""' in line:
+            if f"{var_name} =" in line and '""' in line:
                 init_line_idx = i
                 break
             # Don't search too far back
             if i < loop_start - 10:
                 break
-        
+
         if init_line_idx is not None:
             # Transform the initialization
-            lines[init_line_idx] = f"{indent}{var_name}_parts = []  # Performance: Use list for string building"
-            
+            lines[init_line_idx] = (
+                f"{indent}{var_name}_parts = []  # Performance: Use list for string building"
+            )
+
             # Replace concatenations with list appends
             for instance in instances:
-                line_idx = instance['line_idx']
-                expr = instance['expr']
+                line_idx = instance["line_idx"]
+                expr = instance["expr"]
                 lines[line_idx] = f"{indent}{var_name}_parts.append({expr})"
-            
+
             # Add join after the loop
             loop_end = self._find_loop_end(lines, loop_start)
             if loop_end is not None:
                 join_line = f"{indent}{var_name} = ''.join({var_name}_parts)  # Performance: Join string parts"
                 lines.insert(loop_end + 1, join_line)
-            
+
             return True
-        
+
         return False
 
     def _find_loop_end(self, lines: list[str], loop_start: int) -> int | None:
         """Find the end of the loop (last line with same or greater indentation)."""
         if loop_start >= len(lines):
             return None
-            
+
         loop_indent = len(lines[loop_start]) - len(lines[loop_start].lstrip())
-        
+
         for i in range(loop_start + 1, len(lines)):
             line = lines[i]
-            if line.strip() == '':  # Skip empty lines
+            if line.strip() == "":  # Skip empty lines
                 continue
-            
+
             current_indent = len(line) - len(line.lstrip())
             if current_indent <= loop_indent:
                 return i - 1
-        
+
         return len(lines) - 1
 
-    def _fix_repeated_operations(self, lines: list[str], issue: dict[str, t.Any]) -> tuple[list[str], bool]:
+    def _fix_repeated_operations(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> tuple[list[str], bool]:
         """Add comments suggesting caching for repeated expensive operations."""
         modified = False
-        
-        for instance in issue['instances']:
-            line_idx = instance['line_number'] - 1
+
+        for instance in issue["instances"]:
+            line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = lines[line_idx]
                 indent = len(original_line) - len(original_line.lstrip())
-                
+
                 # Add performance comment
                 comment = f"{indent}# Performance: Consider caching this expensive operation outside the loop"
                 lines.insert(line_idx, comment)
                 modified = True
-        
+
         return lines, modified
 
 

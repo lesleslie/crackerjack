@@ -16,7 +16,7 @@ Crackerjack includes **9 specialized sub-agents** that automatically detect and 
   - Transforms `list += [item]` → `list.append(item)`
   - Optimizes string concatenation → list.append + join patterns
   - Detects and comments on nested loops and expensive operations
-  
+
 - **RefactoringAgent**: Reduces complexity and removes dead code
   - Breaks down complex functions (cognitive complexity ≤13)
   - Removes unused imports, variables, and functions

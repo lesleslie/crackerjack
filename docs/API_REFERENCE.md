@@ -149,7 +149,7 @@ def run_tests(
 
 **Returns:** `TestResult` with detailed test execution results
 
-**🚧 Current Status**: Basic implementation - detailed test counts and coverage extraction are TODO items for future releases.
+**✅ Fully Implemented**: Returns complete test results including pass/fail counts, coverage percentage, duration, and detailed error information.
 
 **Example:**
 
@@ -179,7 +179,7 @@ def publish_package(
 
 **Returns:** `PublishResult` with publishing details
 
-**🚧 Current Status**: Basic implementation - version extraction and detailed publishing information are TODO items for future releases.
+**✅ Fully Implemented**: Returns complete publishing results including version information, target repositories, and detailed error handling with dry-run support.
 
 **Example:**
 

@@ -186,7 +186,10 @@ async def _execute_crackerjack_sync(
         # Import advanced orchestrator with optimal configuration
         try:
             from ...core.session_coordinator import SessionCoordinator
-            from ...orchestration.advanced_orchestrator import AdvancedWorkflowOrchestrator
+            from ...models.config import WorkflowOptions
+            from ...orchestration.advanced_orchestrator import (
+                AdvancedWorkflowOrchestrator,
+            )
             from ...orchestration.execution_strategies import (
                 AICoordinationMode,
                 AIIntelligence,
@@ -195,7 +198,6 @@ async def _execute_crackerjack_sync(
                 ProgressLevel,
                 StreamingMode,
             )
-            from ...models.config import WorkflowOptions
 
             # Create optimal orchestration configuration for maximum efficiency
             optimal_config = OrchestrationConfig(
@@ -204,17 +206,14 @@ async def _execute_crackerjack_sync(
                 streaming_mode=StreamingMode.WEBSOCKET,
                 ai_coordination_mode=AICoordinationMode.COORDINATOR,
                 ai_intelligence=AIIntelligence.ADAPTIVE,
-                
                 # Enable advanced features
                 correlation_tracking=True,
                 failure_analysis=True,
                 intelligent_retry=True,
-                
                 # Maximize parallelism for hook and test fixing
                 max_parallel_hooks=3,
                 max_parallel_tests=4,
                 timeout_multiplier=1.0,
-                
                 # Enhanced debugging and monitoring
                 debug_level="standard",
                 log_individual_outputs=False,
@@ -222,7 +221,9 @@ async def _execute_crackerjack_sync(
             )
 
             # Initialize advanced orchestrator with optimal config
-            session = SessionCoordinator(context.console, context.config.project_path, web_job_id=job_id)
+            session = SessionCoordinator(
+                context.console, context.config.project_path, web_job_id=job_id
+            )
             orchestrator = AdvancedWorkflowOrchestrator(
                 console=context.console,
                 pkg_path=context.config.project_path,
@@ -234,7 +235,7 @@ async def _execute_crackerjack_sync(
         except ImportError as e:
             context.safe_print(f"Advanced orchestration not available: {e}")
             context.safe_print("Falling back to standard WorkflowOrchestrator")
-            
+
             # Fallback to standard orchestrator
             from ...core.workflow_orchestrator import WorkflowOrchestrator
             from ...models.config import WorkflowOptions
@@ -248,7 +249,11 @@ async def _execute_crackerjack_sync(
             use_advanced_orchestrator = False
 
         # Update progress to show orchestrator mode
-        orchestrator_type = "Advanced Orchestrator (COORDINATOR + ADAPTIVE)" if use_advanced_orchestrator else "Standard Orchestrator"
+        orchestrator_type = (
+            "Advanced Orchestrator (COORDINATOR + ADAPTIVE)"
+            if use_advanced_orchestrator
+            else "Standard Orchestrator"
+        )
         _update_progress(
             job_id=job_id,
             status="running",

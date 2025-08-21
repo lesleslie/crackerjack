@@ -391,13 +391,6 @@ class UnifiedConfigurationService:
             "batch_size": config.file_operation_batch_size,
         }
 
-    def save_config_template(self, file_path: Path | None = None) -> Path:
-        # Configuration templates are no longer supported
-        # Configuration should be done through pyproject.toml [tool.crackerjack] section
-        raise NotImplementedError(
-            "Configuration templates are no longer supported. "
-            "Use pyproject.toml [tool.crackerjack] section for configuration."
-        )
 
     def validate_current_config(self) -> bool:
         try:
