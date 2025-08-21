@@ -64,7 +64,7 @@ def _validate_job_id(job_id: str) -> bool:
 
     import re
 
-    return bool(re.match(r"^[a-zA-Z0-9_-] + $", job_id))
+    return bool(re.match(r"^[a-zA-Z0-9_-]+$", job_id))
 
 
 async def _start_websocket_server() -> bool:
@@ -207,7 +207,15 @@ def main(project_path_arg: str = ".", websocket_port: int | None = None) -> None
         if websocket_port:
             console.print(f"WebSocket port: {websocket_port}")
 
-        mcp_app.run()
+        console.print("[yellow]MCP app created, about to run...[/yellow]")
+        try:
+            mcp_app.run()
+        except Exception as e:
+            console.print(f"[red]MCP run failed: {e}[/red]")
+            import traceback
+
+            traceback.print_exc()
+            raise
 
     except KeyboardInterrupt:
         console.print("Server stopped by user")

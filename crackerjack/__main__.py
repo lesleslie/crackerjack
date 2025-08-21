@@ -55,14 +55,14 @@ def _handle_websocket_commands(
 ) -> bool:
     """Handle WebSocket server commands."""
     if start_websocket_server:
-        port = websocket_port if websocket_port else 8675
+        port = websocket_port or 8675
         handle_start_websocket_server(port)
         return True
     if stop_websocket_server:
         handle_stop_websocket_server()
         return True
     if restart_websocket_server:
-        port = websocket_port if websocket_port else 8675
+        port = websocket_port or 8675
         handle_restart_websocket_server(port)
         return True
     return False

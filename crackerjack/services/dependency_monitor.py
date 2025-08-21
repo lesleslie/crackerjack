@@ -4,6 +4,7 @@ import tempfile
 import time
 import tomllib
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -157,10 +158,9 @@ class DependencyMonitorService:
             subprocess.CalledProcessError,
             subprocess.TimeoutExpired,
             json.JSONDecodeError,
+            Exception,
         ):
-            pass
-        except Exception:
-            pass
+            pass  # Vulnerability check failed, return empty list
 
         return []
 
@@ -208,16 +208,14 @@ class DependencyMonitorService:
             subprocess.CalledProcessError,
             subprocess.TimeoutExpired,
             json.JSONDecodeError,
+            Exception,
         ):
-            pass
-        except Exception:
-            pass
+            pass  # Vulnerability check failed, return empty list
 
         return []
 
     def _parse_safety_output(self, safety_data: t.Any) -> list[DependencyVulnerability]:
         vulnerabilities = []
-        from contextlib import suppress
 
         with suppress(Exception):
             for vuln in safety_data:
@@ -239,7 +237,6 @@ class DependencyMonitorService:
         self, audit_data: t.Any
     ) -> list[DependencyVulnerability]:
         vulnerabilities = []
-        from contextlib import suppress
 
         with suppress(Exception):
             for vuln in audit_data.get("vulnerabilities", []):
@@ -347,8 +344,6 @@ class DependencyMonitorService:
             return None
 
     def _is_major_version_update(self, current: str, latest: str) -> bool:
-        from contextlib import suppress
-
         with suppress(ValueError, IndexError):
             current_parts = current.split(".")
             latest_parts = latest.split(".")
@@ -373,8 +368,6 @@ class DependencyMonitorService:
         return False
 
     def _load_update_cache(self) -> dict[str, t.Any]:
-        from contextlib import suppress
-
         with suppress(Exception):
             if self.cache_file.exists():
                 with self.cache_file.open() as f:
@@ -382,8 +375,6 @@ class DependencyMonitorService:
         return {}
 
     def _save_update_cache(self, cache: dict[str, t.Any]) -> None:
-        from contextlib import suppress
-
         with suppress(Exception):
             self.cache_file.parent.mkdir(exist_ok=True)
             with self.cache_file.open("w") as f:

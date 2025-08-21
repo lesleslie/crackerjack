@@ -45,7 +45,9 @@ class CorrelationTracker:
             "iteration": iteration,
             "timestamp": time.time(),
             "failed_hooks": failed_hooks,
-            "test_failures": test_results.get("failed_tests", []) if isinstance(test_results, dict) else [],
+            "test_failures": test_results.get("failed_tests", [])
+            if isinstance(test_results, dict)
+            else [],
             "ai_fixes_applied": ai_fixes,
             "total_errors": sum(
                 len(getattr(r, "error_details", [])) for r in hook_results
@@ -461,7 +463,11 @@ class AdvancedWorkflowOrchestrator:
         ai_fixes = []
         if not (
             all(r.status == "passed" for r in hook_results)
-            and (test_results.get("success", False) if isinstance(test_results, dict) else False)
+            and (
+                test_results.get("success", False)
+                if isinstance(test_results, dict)
+                else False
+            )
         ):
             ai_start = time.time()
             ai_fixes = await self._execute_ai_phase(plan, hook_results, test_results)
@@ -478,7 +484,11 @@ class AdvancedWorkflowOrchestrator:
             decision_reason=f"Iteration {iteration} execution strategy",
             context_data={
                 "failed_hooks": len([r for r in hook_results if r.status == "failed"]),
-                "failed_tests": len(test_results.get("failed_tests", []) if isinstance(test_results, dict) else []),
+                "failed_tests": len(
+                    test_results.get("failed_tests", [])
+                    if isinstance(test_results, dict)
+                    else []
+                ),
                 "ai_fixes_applied": len(ai_fixes),
             },
             effectiveness_score=None,
@@ -489,7 +499,11 @@ class AdvancedWorkflowOrchestrator:
         )
 
         all_hooks_passed = all(r.status == "passed" for r in hook_results)
-        all_tests_passed = test_results.get("success", False) if isinstance(test_results, dict) else False
+        all_tests_passed = (
+            test_results.get("success", False)
+            if isinstance(test_results, dict)
+            else False
+        )
 
         return all_hooks_passed and all_tests_passed, phase_times
 
@@ -656,7 +670,11 @@ class AdvancedWorkflowOrchestrator:
     ) -> dict[str, t.Any]:
         self.progress_streamer.update_stage("tests", "starting")
 
-        test_mode = plan.test_plan.get("mode", "full_suite") if isinstance(plan.test_plan, dict) else "full_suite"
+        test_mode = (
+            plan.test_plan.get("mode", "full_suite")
+            if isinstance(plan.test_plan, dict)
+            else "full_suite"
+        )
 
         if test_mode in ("individual_with_progress", "selective"):
             test_results = await self.test_streamer.run_tests_with_streaming(
@@ -667,7 +685,11 @@ class AdvancedWorkflowOrchestrator:
                 getattr(self.session, "job_id", None)
                 or f"orchestration_{int(time.time())}"
             )
-            individual_tests = test_results.get("individual_tests", []) if isinstance(test_results, dict) else []
+            individual_tests = (
+                test_results.get("individual_tests", [])
+                if isinstance(test_results, dict)
+                else []
+            )
 
             for test in individual_tests:
                 self.metrics.record_individual_test(
@@ -709,9 +731,17 @@ class AdvancedWorkflowOrchestrator:
         self.progress_streamer.update_stage("ai_analysis", "analyzing_failures")
 
         failed_hooks = [r for r in hook_results if r.status == "failed"]
-        failed_tests = test_results.get("failed_tests", []) if isinstance(test_results, dict) else []
+        failed_tests = (
+            test_results.get("failed_tests", [])
+            if isinstance(test_results, dict)
+            else []
+        )
 
-        individual_tests = test_results.get("individual_tests", []) if isinstance(test_results, dict) else []
+        individual_tests = (
+            test_results.get("individual_tests", [])
+            if isinstance(test_results, dict)
+            else []
+        )
         failed_individual_tests = [t for t in individual_tests if t.status == "failed"]
 
         correlation_data = self.correlation_tracker.get_correlation_data()

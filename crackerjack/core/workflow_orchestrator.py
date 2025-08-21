@@ -93,6 +93,9 @@ class WorkflowPipeline:
                 )
 
                 if self._should_debug():
+                    # Set final workflow success status
+                    self.debugger.set_workflow_success(success)
+
                     self.debugger.log_workflow_phase(
                         "workflow_execution",
                         "completed" if success else "failed",
@@ -151,9 +154,16 @@ class WorkflowPipeline:
         return self._execute_standard_hooks_workflow(options)
 
     async def _execute_test_workflow(self, options: OptionsProtocol) -> bool:
+        # Start iteration tracking for AI agent mode
+        iteration = 1
+        if options.ai_agent and self._should_debug():
+            self.debugger.log_iteration_start(iteration)
+
         # Collect ALL failures before determining success
         fast_hooks_passed = self._run_fast_hooks_phase(options)
         if not fast_hooks_passed:
+            if options.ai_agent and self._should_debug():
+                self.debugger.log_iteration_end(iteration, False)
             return False  # Fast hooks must pass before proceeding
 
         # Run tests and comprehensive hooks regardless of individual failures
@@ -164,11 +174,20 @@ class WorkflowPipeline:
         # AI agent mode: Collect failures and let agents fix them
         if options.ai_agent:
             if not testing_passed or not comprehensive_passed:
-                return await self._run_ai_agent_fixing_phase(options)
-            return True  # All phases passed, no fixes needed
+                success = await self._run_ai_agent_fixing_phase(options)
+                if self._should_debug():
+                    self.debugger.log_iteration_end(iteration, success)
+                return success
+            else:
+                if self._should_debug():
+                    self.debugger.log_iteration_end(iteration, True)
+                return True  # All phases passed, no fixes needed
 
         # Non-AI agent mode: All phases must pass
-        return testing_passed and comprehensive_passed
+        success = testing_passed and comprehensive_passed
+        if options.ai_agent and self._should_debug():
+            self.debugger.log_iteration_end(iteration, success)
+        return success
 
     def _run_fast_hooks_phase(self, options: OptionsProtocol) -> bool:
         self._update_mcp_status("fast", "running")
@@ -225,6 +244,11 @@ class WorkflowPipeline:
             return
 
         failures = test_manager.get_test_failures()
+
+        # Log test failure count for debugging
+        if self._should_debug():
+            self.debugger.log_test_failures(len(failures))
+
         from ..mcp.state import Issue, Priority
 
         for i, failure in enumerate(failures[:10]):
@@ -297,6 +321,17 @@ class WorkflowPipeline:
             if success:
                 self.logger.info("AI agents successfully fixed all issues")
                 self._update_mcp_status("ai_fixing", "completed")
+
+                # Log fix counts for debugging
+                if self._should_debug():
+                    total_fixes = len(fix_result.fixes_applied)
+                    # Estimate test vs hook fixes based on original issue types
+                    test_fixes = len(
+                        [f for f in fix_result.fixes_applied if "test" in f.lower()]
+                    )
+                    hook_fixes = total_fixes - test_fixes
+                    self.debugger.log_test_fixes(test_fixes)
+                    self.debugger.log_hook_fixes(hook_fixes)
             else:
                 self.logger.warning(
                     f"AI agents could not fix all issues: {fix_result.remaining_issues}"
@@ -331,12 +366,15 @@ class WorkflowPipeline:
     async def _collect_issues_from_failures(self) -> list[Issue]:
         """Collect issues from test and comprehensive hook failures."""
         issues: list[Issue] = []
+        test_count = 0
+        hook_count = 0
 
         # Collect test failures
         if hasattr(self.phases, "test_manager") and hasattr(
             self.phases.test_manager, "get_test_failures"
         ):
             test_failures = self.phases.test_manager.get_test_failures()
+            test_count = len(test_failures)
             for i, failure in enumerate(
                 test_failures[:20]
             ):  # Limit to prevent overload
@@ -353,6 +391,7 @@ class WorkflowPipeline:
         if hasattr(self.session, "_failed_tasks"):
             for task_id, error_msg in self.session._failed_tasks.items():
                 if task_id in ["fast_hooks", "comprehensive_hooks"]:
+                    hook_count += 1
                     issue_type = (
                         IssueType.FORMATTING
                         if "fast" in task_id
@@ -366,6 +405,11 @@ class WorkflowPipeline:
                         stage=task_id.replace("_hooks", ""),
                     )
                     issues.append(issue)
+
+        # Log failure counts for debugging
+        if self._should_debug():
+            self.debugger.log_test_failures(test_count)
+            self.debugger.log_hook_failures(hook_count)
 
         return issues
 

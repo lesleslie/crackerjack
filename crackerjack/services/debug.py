@@ -37,6 +37,15 @@ class AIAgentDebugger:
         self.workflow_phases: list[dict[str, Any]] = []
         self.error_events: list[dict[str, Any]] = []
 
+        # Enhanced iteration tracking
+        self.iteration_stats: list[dict[str, Any]] = []
+        self.current_iteration = 0
+        self.total_test_failures = 0
+        self.total_test_fixes = 0
+        self.total_hook_failures = 0
+        self.total_hook_fixes = 0
+        self.workflow_success = False
+
         self._debug_logging_setup = False
 
         if self.enabled:
@@ -85,6 +94,7 @@ class AIAgentDebugger:
             border_style="cyan",
         )
         self.console.print(header)
+        self.console.print()  # Add blank line after debug panel for better formatting
 
     @contextmanager
     def debug_operation(self, operation: str, **kwargs: Any) -> t.Iterator[str]:
@@ -301,7 +311,16 @@ class AIAgentDebugger:
         if not self.enabled:
             return
 
-        table = Table(title="AI Agent Debug Summary", show_header=True)
+        # Determine border style based on workflow success
+        border_style = "green" if self.workflow_success else "red"
+        title_style = "green" if self.workflow_success else "red"
+
+        # Main debug summary table
+        table = Table(
+            title=f"[{title_style}]AI Agent Debug Summary[/{title_style}]",
+            show_header=True,
+            border_style=border_style,
+        )
         table.add_column("Category", style="cyan")
         table.add_column("Count", justify="right", style="green")
         table.add_column("Details", style="dim")
@@ -330,13 +349,27 @@ class AIAgentDebugger:
             f"Types: {len(set(err['error_type'] for err in self.error_events))}",
         )
 
+        # Add iteration statistics row
+        table.add_row(
+            "Iterations Completed",
+            str(self.current_iteration),
+            f"Total test fixes: {self.total_test_fixes}, hook fixes: {self.total_hook_fixes}",
+        )
+
         self.console.print(table)
 
+        # Print iteration breakdown if we have iterations
+        if self.iteration_stats:
+            self._print_iteration_breakdown(border_style)
+
         if self.verbose and self.agent_activities:
-            self._print_agent_activity_breakdown()
+            self._print_agent_activity_breakdown(border_style)
 
         if self.verbose and self.mcp_operations:
-            self._print_mcp_operation_breakdown()
+            self._print_mcp_operation_breakdown(border_style)
+
+        # Print total statistics
+        self._print_total_statistics(border_style)
 
         self.console.print(
             f"\n[dim]📝 Full debug log available at: {self.debug_log_path}[/dim]"
@@ -344,7 +377,36 @@ class AIAgentDebugger:
             else ""
         )
 
-    def _print_agent_activity_breakdown(self) -> None:
+    def _print_iteration_breakdown(self, border_style: str = "red") -> None:
+        """Print detailed breakdown of each iteration."""
+        if not self.iteration_stats:
+            return
+
+        table = Table(
+            title="[cyan]Iteration Breakdown[/cyan]",
+            show_header=True,
+            border_style=border_style,
+        )
+        table.add_column("Iteration", style="yellow")
+        table.add_column("Test Failures", justify="right", style="red")
+        table.add_column("Test Fixes", justify="right", style="green")
+        table.add_column("Hook Failures", justify="right", style="red")
+        table.add_column("Hook Fixes", justify="right", style="green")
+        table.add_column("Duration", justify="right", style="cyan")
+
+        for iteration in self.iteration_stats:
+            table.add_row(
+                str(iteration["iteration"]),
+                str(iteration["test_failures"]),
+                str(iteration["test_fixes"]),
+                str(iteration["hook_failures"]),
+                str(iteration["hook_fixes"]),
+                f"{iteration['duration']:.1f}s" if iteration.get("duration") else "N/A",
+            )
+
+        self.console.print(table)
+
+    def _print_agent_activity_breakdown(self, border_style: str = "red") -> None:
         agent_stats = {}
         for activity in self.agent_activities:
             agent = activity["agent"]
@@ -365,7 +427,11 @@ class AIAgentDebugger:
                     stats["confidences"]
                 )
 
-        table = Table(title="Agent Activity Breakdown", show_header=True)
+        table = Table(
+            title="[cyan]Agent Activity Breakdown[/cyan]",
+            show_header=True,
+            border_style=border_style,
+        )
         table.add_column("Agent", style="blue")
         table.add_column("Activities", justify="right", style="green")
         table.add_column("Avg Confidence", justify="right", style="yellow")
@@ -380,7 +446,48 @@ class AIAgentDebugger:
 
         self.console.print(table)
 
-    def _print_mcp_operation_breakdown(self) -> None:
+    def _print_total_statistics(self, border_style: str = "red") -> None:
+        """Print total cumulative statistics across all iterations."""
+        success_icon = "✅" if self.workflow_success else "❌"
+        status_text = "SUCCESS" if self.workflow_success else "IN PROGRESS"
+        status_style = "green" if self.workflow_success else "red"
+
+        table = Table(
+            title=f"[{status_style}]{success_icon} TOTAL WORKFLOW STATISTICS {success_icon}[/{status_style}]",
+            show_header=True,
+            border_style=border_style,
+        )
+        table.add_column("Metric", style="cyan")
+        table.add_column("Total", justify="right", style=status_style)
+        table.add_column("Status", style=status_style)
+
+        table.add_row("Iterations Completed", str(self.current_iteration), status_text)
+
+        table.add_row(
+            "Total Test Failures Found",
+            str(self.total_test_failures),
+            f"Fixed: {self.total_test_fixes}",
+        )
+
+        table.add_row(
+            "Total Hook Failures Found",
+            str(self.total_hook_failures),
+            f"Fixed: {self.total_hook_fixes}",
+        )
+
+        total_issues = self.total_test_failures + self.total_hook_failures
+        total_fixes = self.total_test_fixes + self.total_hook_fixes
+        fix_rate = (total_fixes / total_issues * 100) if total_issues > 0 else 100
+
+        table.add_row(
+            "Overall Fix Rate",
+            f"{fix_rate:.1f}%",
+            f"{total_fixes}/{total_issues} issues resolved",
+        )
+
+        self.console.print(table)
+
+    def _print_mcp_operation_breakdown(self, border_style: str = "red") -> None:
         tool_stats = {}
         for op in self.mcp_operations:
             tool = op["tool"]
@@ -393,7 +500,11 @@ class AIAgentDebugger:
             if op.get("duration"):
                 tool_stats[tool]["total_duration"] += op["duration"]
 
-        table = Table(title="MCP Tool Usage", show_header=True)
+        table = Table(
+            title="[cyan]MCP Tool Usage[/cyan]",
+            show_header=True,
+            border_style=border_style,
+        )
         table.add_column("Tool", style="cyan")
         table.add_column("Calls", justify="right", style="green")
         table.add_column("Errors", justify="right", style="red")
@@ -411,6 +522,92 @@ class AIAgentDebugger:
             )
 
         self.console.print(table)
+
+    def log_iteration_start(self, iteration_number: int) -> None:
+        """Log the start of a new iteration."""
+        if not self.enabled:
+            return
+
+        self.current_iteration = iteration_number
+        iteration_data = {
+            "iteration": iteration_number,
+            "start_time": time.time(),
+            "test_failures": 0,
+            "test_fixes": 0,
+            "hook_failures": 0,
+            "hook_fixes": 0,
+            "duration": 0.0,
+        }
+        self.iteration_stats.append(iteration_data)
+
+        if self.verbose:
+            self.console.print(
+                f"[yellow]🔄 Starting Iteration {iteration_number}[/yellow]"
+            )
+
+    def log_iteration_end(self, iteration_number: int, success: bool) -> None:
+        """Log the end of an iteration with statistics."""
+        if not self.enabled or not self.iteration_stats:
+            return
+
+        # Find the iteration data
+        iteration_data = None
+        for data in self.iteration_stats:
+            if data["iteration"] == iteration_number:
+                iteration_data = data
+                break
+
+        if iteration_data:
+            iteration_data["duration"] = time.time() - iteration_data["start_time"]
+
+        if self.verbose:
+            status = "✅ PASSED" if success else "❌ FAILED"
+            self.console.print(
+                f"[{'green' if success else 'red'}]🏁 Iteration {iteration_number} {status}[/{'green' if success else 'red'}]"
+            )
+
+    def log_test_failures(self, count: int) -> None:
+        """Log test failure count for current iteration."""
+        if not self.enabled or not self.iteration_stats:
+            return
+
+        if self.iteration_stats:
+            self.iteration_stats[-1]["test_failures"] = count
+            self.total_test_failures += count
+
+    def log_test_fixes(self, count: int) -> None:
+        """Log test fix count for current iteration."""
+        if not self.enabled or not self.iteration_stats:
+            return
+
+        if self.iteration_stats:
+            self.iteration_stats[-1]["test_fixes"] = count
+            self.total_test_fixes += count
+
+    def log_hook_failures(self, count: int) -> None:
+        """Log hook failure count for current iteration."""
+        if not self.enabled or not self.iteration_stats:
+            return
+
+        if self.iteration_stats:
+            self.iteration_stats[-1]["hook_failures"] = count
+            self.total_hook_failures += count
+
+    def log_hook_fixes(self, count: int) -> None:
+        """Log hook fix count for current iteration."""
+        if not self.enabled or not self.iteration_stats:
+            return
+
+        if self.iteration_stats:
+            self.iteration_stats[-1]["hook_fixes"] = count
+            self.total_hook_fixes += count
+
+    def set_workflow_success(self, success: bool) -> None:
+        """Set the overall workflow success status."""
+        if not self.enabled:
+            return
+
+        self.workflow_success = success
 
     def export_debug_data(self, output_path: Path | None = None) -> Path:
         if not self.enabled:
@@ -490,6 +687,27 @@ class NoOpDebugger:
 
     def export_debug_data(self, output_path: Path | None = None) -> Path:
         return Path("debug_not_enabled.json")
+
+    def log_iteration_start(self, iteration_number: int) -> None:
+        pass
+
+    def log_iteration_end(self, iteration_number: int, success: bool) -> None:
+        pass
+
+    def log_test_failures(self, count: int) -> None:
+        pass
+
+    def log_test_fixes(self, count: int) -> None:
+        pass
+
+    def log_hook_failures(self, count: int) -> None:
+        pass
+
+    def log_hook_fixes(self, count: int) -> None:
+        pass
+
+    def set_workflow_success(self, success: bool) -> None:
+        pass
 
 
 _ai_agent_debugger: AIAgentDebugger | NoOpDebugger | None = None

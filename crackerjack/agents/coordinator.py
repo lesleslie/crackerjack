@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import operator
 import typing as t
 from collections import defaultdict
 
@@ -111,7 +112,7 @@ class AgentCoordinator:
                 remaining_issues=[f"No agents for {issue_type.value} issues"],
             )
 
-        tasks = []
+        tasks: list[t.Coroutine[t.Any, t.Any, FixResult]] = []
         for issue in issues:
             best_specialist = await self._find_best_specialist(specialist_agents, issue)
             if best_specialist:
@@ -137,7 +138,7 @@ class AgentCoordinator:
     async def _evaluate_agents_for_issue(
         self, issue: Issue
     ) -> list[tuple[SubAgent, float]]:
-        evaluations = []
+        evaluations: list[tuple[SubAgent, float]] = []
 
         for agent in self.agents:
             try:
@@ -147,7 +148,7 @@ class AgentCoordinator:
             except Exception as e:
                 self.logger.error(f"Error evaluating {agent.name} for issue: {e}")
 
-        evaluations.sort(key=lambda x: x[1], reverse=True)
+        evaluations.sort(key=operator.itemgetter(1), reverse=True)
         return evaluations
 
     async def _find_best_specialist(
@@ -223,9 +224,9 @@ class AgentCoordinator:
             f"Using collaborative approach for issue: {issue.message[:100]}"
         )
 
-        results = []
+        results: list[FixResult] = []
 
-        for agent, confidence in agent_scores:
+        for agent, _ in agent_scores:
             try:
                 result = await agent.analyze_and_fix(issue)
                 results.append(result)
@@ -256,7 +257,7 @@ class AgentCoordinator:
     def _group_issues_by_type(
         self, issues: list[Issue]
     ) -> dict[IssueType, list[Issue]]:
-        grouped = defaultdict(list)
+        grouped: defaultdict[IssueType, list[Issue]] = defaultdict(list)
         for issue in issues:
             grouped[issue.type].append(issue)
         return dict(grouped)

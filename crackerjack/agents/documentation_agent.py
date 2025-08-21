@@ -347,7 +347,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
                             break  # Only report first issue per file
 
             except Exception:
-                continue
+                pass  # File reading failed, skip this file
 
         return issues
 

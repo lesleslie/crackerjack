@@ -31,7 +31,7 @@ class FormattingAgent(SubAgent):
 
         if any(
             keyword in message_lower
-            for keyword in [
+            for keyword in (
                 "would reformat",
                 "trailing whitespace",
                 "missing newline",
@@ -39,13 +39,13 @@ class FormattingAgent(SubAgent):
                 "unused import",
                 "ruff",
                 "format",
-            ]
+            )
         ):
             return 1.0
 
         if any(
             keyword in message_lower
-            for keyword in [
+            for keyword in (
                 "whitespace",
                 "indent",
                 "spacing",
@@ -53,7 +53,7 @@ class FormattingAgent(SubAgent):
                 "import",
                 "style",
                 "format",
-            ]
+            )
         ):
             return 0.8
 
