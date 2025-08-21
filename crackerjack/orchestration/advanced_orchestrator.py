@@ -45,7 +45,7 @@ class CorrelationTracker:
             "iteration": iteration,
             "timestamp": time.time(),
             "failed_hooks": failed_hooks,
-            "test_failures": test_results.get("failed_tests", []),
+            "test_failures": test_results.get("failed_tests", []) if isinstance(test_results, dict) else [],
             "ai_fixes_applied": ai_fixes,
             "total_errors": sum(
                 len(getattr(r, "error_details", [])) for r in hook_results
@@ -461,7 +461,7 @@ class AdvancedWorkflowOrchestrator:
         ai_fixes = []
         if not (
             all(r.status == "passed" for r in hook_results)
-            and test_results.get("success", False)
+            and (test_results.get("success", False) if isinstance(test_results, dict) else False)
         ):
             ai_start = time.time()
             ai_fixes = await self._execute_ai_phase(plan, hook_results, test_results)
@@ -478,7 +478,7 @@ class AdvancedWorkflowOrchestrator:
             decision_reason=f"Iteration {iteration} execution strategy",
             context_data={
                 "failed_hooks": len([r for r in hook_results if r.status == "failed"]),
-                "failed_tests": len(test_results.get("failed_tests", [])),
+                "failed_tests": len(test_results.get("failed_tests", []) if isinstance(test_results, dict) else []),
                 "ai_fixes_applied": len(ai_fixes),
             },
             effectiveness_score=None,
@@ -489,7 +489,7 @@ class AdvancedWorkflowOrchestrator:
         )
 
         all_hooks_passed = all(r.status == "passed" for r in hook_results)
-        all_tests_passed = test_results.get("success", False)
+        all_tests_passed = test_results.get("success", False) if isinstance(test_results, dict) else False
 
         return all_hooks_passed and all_tests_passed, phase_times
 
@@ -514,7 +514,9 @@ class AdvancedWorkflowOrchestrator:
                 all_results.extend(fast_results)
             else:
                 # Regular execution for non-fast hooks
-                self.progress_streamer.update_stage("hooks", f"executing_{strategy.name}")
+                self.progress_streamer.update_stage(
+                    "hooks", f"executing_{strategy.name}"
+                )
 
                 if execution_mode == ExecutionStrategy.INDIVIDUAL:
                     result = await self.individual_executor.execute_strategy_individual(
@@ -536,37 +538,53 @@ class AdvancedWorkflowOrchestrator:
     ) -> list[HookResult]:
         """Execute fast hooks with autofix cycle if they fail twice."""
         self.progress_streamer.update_stage("hooks", "fast_hooks_with_autofix")
-        
+
         max_autofix_cycles = 2
         autofix_cycle = 0
-        
+
         while autofix_cycle < max_autofix_cycles:
-            self.console.print(f"[cyan]🚀 Fast hooks execution (autofix cycle {autofix_cycle + 1}/{max_autofix_cycles})[/cyan]")
-            
+            self.console.print(
+                f"[cyan]🚀 Fast hooks execution (autofix cycle {autofix_cycle + 1}/{max_autofix_cycles})[/cyan]"
+            )
+
             # Run fast hooks twice
-            first_attempt = await self._execute_fast_hooks_attempt(strategy, execution_mode)
-            
+            first_attempt = await self._execute_fast_hooks_attempt(
+                strategy, execution_mode
+            )
+
             if all(r.status == "passed" for r in first_attempt):
-                self.console.print("[green]✅ Fast hooks passed on first attempt[/green]")
+                self.console.print(
+                    "[green]✅ Fast hooks passed on first attempt[/green]"
+                )
                 return first_attempt
-            
+
             # First attempt failed, try second attempt
-            self.console.print("[yellow]⚠️  Fast hooks failed on first attempt, retrying...[/yellow]")
-            second_attempt = await self._execute_fast_hooks_attempt(strategy, execution_mode)
-            
+            self.console.print(
+                "[yellow]⚠️  Fast hooks failed on first attempt, retrying...[/yellow]"
+            )
+            second_attempt = await self._execute_fast_hooks_attempt(
+                strategy, execution_mode
+            )
+
             if all(r.status == "passed" for r in second_attempt):
-                self.console.print("[green]✅ Fast hooks passed on second attempt[/green]")
+                self.console.print(
+                    "[green]✅ Fast hooks passed on second attempt[/green]"
+                )
                 return second_attempt
-            
+
             # Both attempts failed, check if we should run autofix
             autofix_cycle += 1
             if autofix_cycle < max_autofix_cycles:
-                self.console.print("[red]❌ Fast hooks failed twice, triggering autofix cycle...[/red]")
+                self.console.print(
+                    "[red]❌ Fast hooks failed twice, triggering autofix cycle...[/red]"
+                )
                 await self._trigger_autofix_for_fast_hooks(second_attempt)
             else:
-                self.console.print("[red]❌ Fast hooks failed after maximum autofix cycles[/red]")
+                self.console.print(
+                    "[red]❌ Fast hooks failed after maximum autofix cycles[/red]"
+                )
                 return second_attempt
-        
+
         # Should never reach here, but return last results as fallback
         return second_attempt
 
@@ -577,29 +595,57 @@ class AdvancedWorkflowOrchestrator:
     ) -> list[HookResult]:
         """Execute a single attempt of fast hooks."""
         if execution_mode == ExecutionStrategy.INDIVIDUAL:
-            result = await self.individual_executor.execute_strategy_individual(strategy)
+            result = await self.individual_executor.execute_strategy_individual(
+                strategy
+            )
             return result.hook_results
         else:
             results = self.batch_executor.execute_strategy(strategy)
             return results.results
 
-    async def _trigger_autofix_for_fast_hooks(self, failed_results: list[HookResult]) -> None:
+    async def _trigger_autofix_for_fast_hooks(
+        self, failed_results: list[HookResult]
+    ) -> None:
         """Trigger AI autofix cycle for failed fast hooks."""
-        self.console.print("[magenta]🤖 Starting AI autofix cycle for fast hooks...[/magenta]")
-        
-        # Create mock test results for AI analysis (fast hooks don't include tests)
-        mock_test_results = {"success": True, "failed_tests": [], "individual_tests": []}
-        
-        # Get correlation data
-        correlation_data = self.correlation_tracker.get_correlation_data()
-        
-        # Execute AI analysis and fixes for hook failures
-        ai_fixes = await self._execute_ai_analysis(
-            failed_results, mock_test_results, [], correlation_data
+        self.console.print(
+            "[magenta]🤖 Starting AI autofix cycle for fast hooks...[/magenta]"
         )
-        
+
+        # Create mock test results for AI analysis (fast hooks don't include tests)
+        mock_test_results = {
+            "success": True,
+            "failed_tests": [],
+            "individual_tests": [],
+        }
+
+        # Create a minimal execution plan for AI analysis
+        from .execution_strategies import ExecutionPlan, ExecutionStrategy
+
+        mock_plan = ExecutionPlan(
+            config=self.config,
+            execution_strategy=ExecutionStrategy.BATCH,
+            hook_plans=[],
+            test_plan={"mode": "full_suite", "estimated_duration": 0},
+            ai_plan={
+                "mode": self.config.ai_coordination_mode,
+                "intelligence_level": self.config.ai_intelligence,
+                "batch_processing": True,
+                "correlation_tracking": self.config.correlation_tracking,
+                "failure_analysis": self.config.failure_analysis,
+                "adaptive_retry": self.config.intelligent_retry,
+            },
+            estimated_total_duration=0,
+        )
+
+        # Execute AI analysis and fixes for hook failures
+        ai_fixes = await self._execute_ai_phase(
+            mock_plan, failed_results, mock_test_results
+        )
+
         if ai_fixes:
-            self.console.print(f"[green]✅ Applied {len(ai_fixes)} AI fixes for fast hooks[/green]")
+            self.console.print(
+                f"[green]✅ Applied {len(ai_fixes)} AI fixes for fast hooks[/green]"
+            )
         else:
             self.console.print("[yellow]⚠️  No AI fixes could be applied[/yellow]")
 
@@ -610,7 +656,7 @@ class AdvancedWorkflowOrchestrator:
     ) -> dict[str, t.Any]:
         self.progress_streamer.update_stage("tests", "starting")
 
-        test_mode = plan.test_plan.get("mode", "full_suite")
+        test_mode = plan.test_plan.get("mode", "full_suite") if isinstance(plan.test_plan, dict) else "full_suite"
 
         if test_mode in ("individual_with_progress", "selective"):
             test_results = await self.test_streamer.run_tests_with_streaming(
@@ -621,7 +667,7 @@ class AdvancedWorkflowOrchestrator:
                 getattr(self.session, "job_id", None)
                 or f"orchestration_{int(time.time())}"
             )
-            individual_tests = test_results.get("individual_tests", [])
+            individual_tests = test_results.get("individual_tests", []) if isinstance(test_results, dict) else []
 
             for test in individual_tests:
                 self.metrics.record_individual_test(
@@ -663,9 +709,9 @@ class AdvancedWorkflowOrchestrator:
         self.progress_streamer.update_stage("ai_analysis", "analyzing_failures")
 
         failed_hooks = [r for r in hook_results if r.status == "failed"]
-        failed_tests = test_results.get("failed_tests", [])
+        failed_tests = test_results.get("failed_tests", []) if isinstance(test_results, dict) else []
 
-        individual_tests = test_results.get("individual_tests", [])
+        individual_tests = test_results.get("individual_tests", []) if isinstance(test_results, dict) else []
         failed_individual_tests = [t for t in individual_tests if t.status == "failed"]
 
         correlation_data = self.correlation_tracker.get_correlation_data()
