@@ -175,7 +175,7 @@ class AIAgentDebugger:
             )
 
             if error and self.verbose:
-                self.console.print(f" [red]Error: {error}[/red]")
+                self.console.print(f" [red]Error: {error}[/red]\n\n")
 
     def log_agent_activity(
         self,

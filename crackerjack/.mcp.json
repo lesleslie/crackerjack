@@ -1,5 +1,15 @@
 {
   "mcpServers": {
+    "session-mgmt": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/les/Projects/claude/mcp-servers/session-mgmt",
+        "python",
+        "session_mgmt/server.py"
+      ]
+    },
     "crackerjack": {
       "command": "python",
       "args": [
@@ -10,17 +20,6 @@
       "env": {
         "UV_KEYRING_PROVIDER": "subprocess",
         "EDITOR": "code --wait"
-      }
-    },
-    "session-management": {
-      "command": "python",
-      "args": [
-        "-m",
-        "claude_session_management.server"
-      ],
-      "cwd": "/Users/les/Projects/claude/mcp-servers/claude-session-management",
-      "env": {
-        "PYTHONPATH": "/Users/les/Projects/claude/mcp-servers/claude-session-management:/Users/les/Projects/claude/toolkits:/Users/les/Projects/claude"
       }
     },
     "claude-simone": {

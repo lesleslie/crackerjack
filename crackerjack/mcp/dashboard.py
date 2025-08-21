@@ -450,9 +450,7 @@ class CrackerjackDashboard(App):
         try:
             timeout = aiohttp.ClientTimeout(total=10.0)
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(
-                    "http://localhost:8675/api/jobs"
-                ) as response:
+                async with session.get("http://localhost:8675/api/jobs") as response:
                     if response.status == 200:
                         return await response.json()
                     return {}

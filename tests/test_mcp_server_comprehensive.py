@@ -14,7 +14,7 @@ from crackerjack.mcp.rate_limiter import RateLimitConfig
 class TestMCPServerProtocol:
     @pytest.fixture
     def temp_project_path(self, tmp_path):
-        return tmp_path / "test_project"
+        return tmp_path/"test_project"
 
     @pytest.fixture
     def mcp_config(self, temp_project_path):

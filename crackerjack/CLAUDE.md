@@ -60,10 +60,10 @@ python -m crackerjack --restart-mcp-server
 # Start dedicated WebSocket progress server (runs on localhost:8675)
 python -m crackerjack --websocket-server
 
-# Start enhanced multi-project progress monitor with Textual TUI (recommended)
+# Start multi-project progress monitor with Textual TUI
 python -m crackerjack --monitor
 
-# Start advanced dashboard monitor with MetricCard widgets
+# Start enhanced progress monitor with advanced MetricCard widgets (recommended)
 python -m crackerjack --enhanced-monitor
 
 # Start MCP server with custom WebSocket port

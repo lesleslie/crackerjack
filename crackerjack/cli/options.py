@@ -80,8 +80,9 @@ class Options(BaseModel):
 
 
 CLI_OPTIONS = {
-    "commit": typer.Option(False, "-c", "--commit",
-                           help="Commit and push changes to Git."),
+    "commit": typer.Option(
+        False, "-c", "--commit", help="Commit and push changes to Git."
+    ),
     "interactive": typer.Option(
         False,
         "-i",

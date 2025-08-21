@@ -27,16 +27,22 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
             return json.dumps(kwargs_result)
 
         extra_kwargs = kwargs_result["kwargs"]
-        asyncio.create_task(_execute_crackerjack_background(job_id, args, extra_kwargs))
 
-        return json.dumps(
-            {
-                "job_id": job_id,
-                "status": "started",
-                "message": f"Crackerjack execution started with job ID: {job_id}",
-            },
-            indent=2,
-        )
+        # Run the workflow directly instead of in background
+        try:
+            result = await _execute_crackerjack_sync(
+                job_id, args, extra_kwargs, context
+            )
+            return json.dumps(result, indent=2)
+        except Exception as e:
+            return json.dumps(
+                {
+                    "job_id": job_id,
+                    "status": "failed",
+                    "error": f"Execution failed: {e}",
+                },
+                indent=2,
+            )
 
 
 def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
@@ -71,6 +77,40 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
             return f'{{"error": "Rate limit exceeded: {details.get("reason", "unknown")}", "success": false}}'
 
     return None
+
+
+def _handle_task_exception(job_id: str, task: asyncio.Task) -> None:
+    """Handle exceptions from background tasks"""
+    import tempfile
+    from pathlib import Path
+
+    try:
+        exception = task.exception()
+        if exception:
+            # Log the exception to a debug file
+            debug_file = (
+                Path(tempfile.gettempdir()) / f"crackerjack-task-error-{job_id}.log"
+            )
+            with debug_file.open("w") as f:
+                f.write(
+                    f"Background task {job_id} failed with exception: {exception}\n"
+                )
+                f.write(f"Exception type: {type(exception)}\n")
+                import traceback
+
+                f.write(
+                    f"Traceback:\n{traceback.format_exception(type(exception), exception, exception.__traceback__)}\n"
+                )
+    except Exception as e:
+        # If we can't even log the error, at least try to create a simple file
+        try:
+            debug_file = (
+                Path(tempfile.gettempdir()) / f"crackerjack-logging-error-{job_id}.log"
+            )
+            with debug_file.open("w") as f:
+                f.write(f"Failed to log task exception: {e}\n")
+        except Exception:
+            pass  # Give up if we can't even do that
 
 
 def _parse_kwargs(kwargs: str) -> dict[str, t.Any]:
@@ -123,12 +163,11 @@ def _build_error_analysis(
     return analysis
 
 
-async def _execute_crackerjack_background(
-    job_id: str, args: str, kwargs: dict[str, t.Any]
-) -> None:
-    context = get_context()
+async def _execute_crackerjack_sync(
+    job_id: str, args: str, kwargs: dict[str, t.Any], context: t.Any
+) -> dict[str, t.Any]:
     if not context:
-        return
+        return {"job_id": job_id, "status": "failed", "error": "No context available"}
 
     max_iterations = kwargs.get("max_iterations", 10)
     current_iteration = 1
@@ -141,17 +180,83 @@ async def _execute_crackerjack_background(
             max_iterations=max_iterations,
             overall_progress=10,
             current_stage="initialization",
-            message="Starting crackerjack execution",
+            message="Initializing crackerjack execution",
         )
 
-        from ...core.workflow_orchestrator import WorkflowOrchestrator
-        from ...models.config import WorkflowOptions
+        # Import advanced orchestrator with optimal configuration
+        try:
+            from ...core.session_coordinator import SessionCoordinator
+            from ...orchestration.advanced_orchestrator import AdvancedWorkflowOrchestrator
+            from ...orchestration.execution_strategies import (
+                AICoordinationMode,
+                AIIntelligence,
+                ExecutionStrategy,
+                OrchestrationConfig,
+                ProgressLevel,
+                StreamingMode,
+            )
+            from ...models.config import WorkflowOptions
 
-        orchestrator = WorkflowOrchestrator(
-            console=context.console,
-            pkg_path=context.project_path,
-            dry_run=kwargs.get("dry_run", False),
-            web_job_id=job_id,
+            # Create optimal orchestration configuration for maximum efficiency
+            optimal_config = OrchestrationConfig(
+                execution_strategy=ExecutionStrategy.ADAPTIVE,
+                progress_level=ProgressLevel.DETAILED,
+                streaming_mode=StreamingMode.WEBSOCKET,
+                ai_coordination_mode=AICoordinationMode.COORDINATOR,
+                ai_intelligence=AIIntelligence.ADAPTIVE,
+                
+                # Enable advanced features
+                correlation_tracking=True,
+                failure_analysis=True,
+                intelligent_retry=True,
+                
+                # Maximize parallelism for hook and test fixing
+                max_parallel_hooks=3,
+                max_parallel_tests=4,
+                timeout_multiplier=1.0,
+                
+                # Enhanced debugging and monitoring
+                debug_level="standard",
+                log_individual_outputs=False,
+                preserve_temp_files=False,
+            )
+
+            # Initialize advanced orchestrator with optimal config
+            session = SessionCoordinator(context.console, context.project_path, web_job_id=job_id)
+            orchestrator = AdvancedWorkflowOrchestrator(
+                console=context.console,
+                pkg_path=context.project_path,
+                session=session,
+                config=optimal_config,
+            )
+            use_advanced_orchestrator = True
+
+        except ImportError as e:
+            context.safe_print(f"Advanced orchestration not available: {e}")
+            context.safe_print("Falling back to standard WorkflowOrchestrator")
+            
+            # Fallback to standard orchestrator
+            from ...core.workflow_orchestrator import WorkflowOrchestrator
+            from ...models.config import WorkflowOptions
+
+            orchestrator = WorkflowOrchestrator(
+                console=context.console,
+                pkg_path=context.project_path,
+                dry_run=kwargs.get("dry_run", False),
+                web_job_id=job_id,
+            )
+            use_advanced_orchestrator = False
+
+        # Update progress to show orchestrator mode
+        orchestrator_type = "Advanced Orchestrator (COORDINATOR + ADAPTIVE)" if use_advanced_orchestrator else "Standard Orchestrator"
+        _update_progress(
+            job_id=job_id,
+            status="running",
+            iteration=current_iteration,
+            max_iterations=max_iterations,
+            overall_progress=15,
+            current_stage="orchestrator_ready",
+            message=f"Initialized {orchestrator_type}",
         )
 
         success = False
@@ -174,7 +279,12 @@ async def _execute_crackerjack_background(
             options.skip_hooks = kwargs.get("skip_hooks", False)
 
             try:
-                success = orchestrator.run_complete_workflow(options)
+                if use_advanced_orchestrator:
+                    # Use advanced orchestrator with optimal coordination
+                    success = await orchestrator.execute_orchestrated_workflow(options)
+                else:
+                    # Fallback to standard orchestrator
+                    success = orchestrator.run_complete_workflow(options)
 
                 if success:
                     _update_progress(
@@ -186,7 +296,12 @@ async def _execute_crackerjack_background(
                         current_stage="completed",
                         message=f"Successfully completed after {iteration} iterations",
                     )
-                    break
+                    return {
+                        "job_id": job_id,
+                        "status": "completed",
+                        "iteration": current_iteration,
+                        "message": f"Successfully completed after {iteration} iterations",
+                    }
                 else:
                     if iteration < max_iterations:
                         _update_progress(
@@ -217,6 +332,12 @@ async def _execute_crackerjack_background(
                 current_stage="failed",
                 message=f"Failed after {max_iterations} iterations",
             )
+            return {
+                "job_id": job_id,
+                "status": "failed",
+                "iteration": current_iteration,
+                "message": f"Failed after {max_iterations} iterations",
+            }
 
     except Exception as e:
         _update_progress(
@@ -228,4 +349,5 @@ async def _execute_crackerjack_background(
             current_stage="error",
             message=f"Execution failed: {e}",
         )
-        context.safe_print(f"Background execution failed: {e}")
+        context.safe_print(f"Execution failed: {e}")
+        return {"job_id": job_id, "status": "failed", "error": str(e)}
