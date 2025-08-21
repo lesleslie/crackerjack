@@ -131,6 +131,8 @@ The AI agent intelligently fixes:
 - **Type Errors (pyright)**: Adds missing annotations, fixes type mismatches
 - **Security Issues (bandit)**: Removes hardcoded paths, fixes vulnerabilities
 - **Dead Code (vulture)**: Removes unused imports, variables, functions
+- **Performance Issues**: Transforms inefficient patterns (list concatenation, string building, nested loops)
+- **Documentation Issues**: Auto-generates changelogs, maintains consistency across .md files
 - **Test Failures**: Fixes missing fixtures, import errors, assertions
 - **Code Quality (refurb)**: Applies refactoring, reduces complexity
 - **All Hook Failures**: Formatting, linting, style issues

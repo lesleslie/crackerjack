@@ -47,12 +47,25 @@ The `CrackerjackDashboard` (in `progress_monitor.py`) currently displays:
         },
         "start_time": 1642531205,
         "processing_time": 1.2
+      },
+      {
+        "agent_type": "PerformanceAgent",
+        "confidence": 0.85,
+        "status": "processing",
+        "current_issue": {
+          "type": "PERFORMANCE",
+          "message": "Inefficient list concatenation patterns",
+          "priority": "medium",
+          "file_count": 2
+        },
+        "start_time": 1642531210,
+        "processing_time": 1.8
       }
     ],
     "agent_registry": {
-      "total_agents": 4,
-      "initialized_agents": 4,
-      "agent_types": ["FormattingAgent", "TestSpecialistAgent", "TestCreationAgent", "SecurityAgent"]
+      "total_agents": 8,
+      "initialized_agents": 8,
+      "agent_types": ["FormattingAgent", "TestSpecialistAgent", "TestCreationAgent", "SecurityAgent", "PerformanceAgent", "RefactoringAgent", "DRYAgent", "ImportOptimizationAgent"]
     },
     "performance_stats": {
       "total_issues_processed": 15,
@@ -73,12 +86,16 @@ Add a new collapsible panel titled "🤖 AI Agents" with:
 
 ```
 ┌─ 🤖 AI Agents ─────────────────────────────────────────┐
-│ Coordinator: ✅ Active (4 agents)                      │
+│ Coordinator: ✅ Active (8 agents)                      │
 │                                                        │
 │ Agent          Status      Issue Type    Confidence    │
 │ ──────────────────────────────────────────────────────│
 │ 🎨 Format      Processing  FORMATTING    95%          │
 │ 🔒 Security    Evaluating  SECURITY      87%          │
+│ ⚡ Performance Processing  PERFORMANCE   85%          │
+│ 🔧 Refactor    Processing  COMPLEXITY    90%          │
+│ 🔄 DRY         Idle        -             -            │
+│ 📦 Import      Idle        -             -            │
 │ 🧪 Tests       Idle        -             -            │
 │ ➕ TestCreate  Idle        -             -            │
 │                                                        │
@@ -95,12 +112,14 @@ Add agent information to individual job panels:
 │ Iteration 2/10 | comprehensive_hooks  │
 │ ████████████████████████████████ 80%  │
 │                                       │
-│ 🤖 Agents: 2 active, 1 cached fix     │
+│ 🤖 Agents: 3 active, 2 cached fixes   │
 │ • SecurityAgent: Processing (2.1s)    │
+│ • PerformanceAgent: Processing (1.8s) │
 │ • FormattingAgent: Completed ✅       │
 │                                       │
-│ Errors: 3 remaining, 5 fixed         │
+│ Errors: 4 remaining, 6 fixed         │
 │ └─ Hardcoded paths: 2                 │
+│ └─ List concatenation: 1              │
 │ └─ Import issues: 1                   │
 └───────────────────────────────────────┘
 ```
@@ -184,12 +203,15 @@ class AgentTracker:
 ## Example Flow
 
 1. User runs `/crackerjack:run`
-2. Coordinator initializes 4 agents
-3. Progress TUI shows "🤖 AI Agents: 4 ready"
-4. Issues detected: 10 formatting, 3 security, 2 test failures
+2. Coordinator initializes 9 agents
+3. Progress TUI shows "🤖 AI Agents: 9 ready"
+4. Issues detected: 10 formatting, 3 security, 5 performance, 2 complexity, 1 DRY violation, 2 test failures
 5. Agent assignment displayed in real-time:
    - FormattingAgent: 10 issues (confidence 95%)
    - SecurityAgent: 3 issues (confidence 90%)
+   - PerformanceAgent: 5 issues (confidence 85%)
+   - RefactoringAgent: 2 issues (confidence 90%)
+   - DRYAgent: 1 issue (confidence 90%)
    - TestSpecialistAgent: 2 issues (confidence 88%)
 6. Processing updates show in agent panel
 7. Completion shows success rates and times

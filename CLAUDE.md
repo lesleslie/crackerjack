@@ -158,6 +158,19 @@ python -m crackerjack --ai-agent -t
 
 **Available Sub-Agents:**
 
+- **DocumentationAgent**: Documentation consistency and changelog management
+
+  - **Primary Expertise**: `IssueType.DOCUMENTATION` (documentation consistency, changelog updates)
+  - **Capabilities**:
+    - Auto-generates changelog entries from git commits during version bumps
+    - Maintains consistency across all .md files (agent counts, references)
+    - Updates README examples when APIs change
+    - Adds newly discovered error patterns to CLAUDE.md
+    - Cross-validates documentation references
+    - Integrates with publish workflow for automatic changelog updates
+  - **Philosophy Alignment**: Reduces manual documentation maintenance (YAGNI principle)
+  - **Confidence**: 0.8 for documentation issues
+
 - **RefactoringAgent**: Structural code improvements and complexity reduction
 
   - **Primary Expertise**: `IssueType.COMPLEXITY` (cognitive complexity ≤13)
@@ -169,13 +182,68 @@ python -m crackerjack --ai-agent -t
     - Applies dependency injection and Protocol patterns
   - **Philosophy Alignment**: Perfect fit with DRY, YAGNI, KISS principles
 
-- **FormattingAgent**: Code style and formatting issues (`IssueType.FORMATTING`)
+- **PerformanceAgent**: Performance optimization and algorithmic improvements
 
-- **SecurityAgent**: Security vulnerabilities and best practices (`IssueType.SECURITY`)
+  - **Primary Expertise**: `IssueType.PERFORMANCE` (performance anti-patterns and bottlenecks)
+  - **Capabilities**:
+    - Detects and fixes nested loops with O(n²) complexity
+    - Transforms inefficient list concatenation (`list += [item]` → `list.append(item)`)
+    - Optimizes string building (concatenation → list.append + join pattern)
+    - Identifies repeated expensive operations in loops (file I/O, function calls)
+    - Applies AST-based pattern recognition for accurate detection
+    - **Real Code Transformation**: Actually modifies code, not just comments
+  - **Philosophy Alignment**: KISS principle through algorithmic efficiency
 
-- **TestCreationAgent**: Test coverage and quality (`IssueType.TEST_FAILURE`)
+- **DRYAgent**: Don't Repeat Yourself violation detection and fixing
+
+  - **Primary Expertise**: `IssueType.DRY_VIOLATION` (code duplication and repetition)
+  - **Capabilities**:
+    - Detects duplicate code patterns and repeated functionality
+    - Suggests extracting common patterns to utility functions
+    - Recommends creating base classes or mixins for repeated functionality
+    - Identifies opportunities for code consolidation and refactoring
+  - **Philosophy Alignment**: Core DRY principle enforcement
+
+- **FormattingAgent**: Code style and formatting issues
+
+  - **Primary Expertise**: `IssueType.FORMATTING`, `IssueType.IMPORT_ERROR`
+  - **Capabilities**:
+    - Handles code style and formatting violations
+    - Fixes import-related formatting issues
+    - Ensures consistent code formatting standards
+
+- **SecurityAgent**: Security vulnerabilities and best practices
+
+  - **Primary Expertise**: `IssueType.SECURITY`
+  - **Capabilities**:
+    - Detects and fixes security vulnerabilities (hardcoded paths, unsafe operations)
+    - Applies security best practices
+    - Identifies potential security risks in code patterns
+
+- **ImportOptimizationAgent**: Import statement optimization and cleanup
+
+  - **Primary Expertise**: `IssueType.IMPORT_ERROR`, `IssueType.DEAD_CODE`
+  - **Capabilities**:
+    - Optimizes import statements and organization
+    - Removes unused imports and dead code
+    - Consolidates and reorganizes import patterns
+    - **Real Code Transformation**: Restructures import statements
+
+- **TestCreationAgent**: Test coverage and quality improvements
+
+  - **Primary Expertise**: `IssueType.TEST_FAILURE`, `IssueType.DEPENDENCY`
+  - **Capabilities**:
+    - Fixes test failures and missing test dependencies
+    - Improves test coverage and quality
+    - Handles dependency-related testing issues
 
 - **TestSpecialistAgent**: Advanced testing scenarios and fixtures
+
+  - **Primary Expertise**: `IssueType.IMPORT_ERROR`, `IssueType.TEST_FAILURE`
+  - **Capabilities**:
+    - Handles complex testing scenarios and fixture management
+    - Fixes advanced test failures and import issues in test files
+    - Specializes in testing framework integration
 
 **Agent Coordination:**
 
@@ -184,16 +252,24 @@ python -m crackerjack --ai-agent -t
 - **Collaborative mode**: Lower confidence issues processed by multiple agents
 - **Batch processing**: Issues grouped by type for efficient parallel processing
 
-**RefactoringAgent Integration:**
+**Agent Integration:**
 
 ```python
-# Automatic integration - agents are registered and coordinated
-# RefactoringAgent handles complexity and dead code issues during AI workflows
+# Automatic integration - all agents are registered and coordinated
+# 9 total agents: DocumentationAgent, RefactoringAgent, PerformanceAgent, FormattingAgent, 
+#                SecurityAgent, TestCreationAgent, TestSpecialistAgent, ImportOptimizationAgent, DRYAgent
 
-# Agent confidence scoring:
+# Agent confidence scoring examples:
+# DocumentationAgent:
+# - 0.8 confidence for documentation issues (primary expertise)
+# RefactoringAgent:
 # - 0.9 confidence for complexity issues (primary expertise)
 # - 0.8 confidence for dead code issues (secondary expertise)
-# - Works alongside FormattingAgent and SecurityAgent for comprehensive fixes
+# PerformanceAgent:
+# - 0.85 confidence for performance issues (primary expertise)
+# - Real code transformations with AST-based detection
+
+# Works with all agents for comprehensive code quality fixes
 ```
 
 ### Temporary File Management

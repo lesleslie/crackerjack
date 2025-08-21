@@ -23,6 +23,8 @@ class IssueType(Enum):
     DEAD_CODE = "dead_code"
     DEPENDENCY = "dependency"
     DRY_VIOLATION = "dry_violation"
+    PERFORMANCE = "performance"
+    DOCUMENTATION = "documentation"
 
 
 @dataclass

@@ -60,15 +60,20 @@ crackerjack/
 │   ├── service_watchdog.py # Service monitoring
 │   ├── state.py           # Session state management
 │   └── websocket_server.py # WebSocket server
-├── agents/                # AI agent coordination
+├── agents/                # AI agent coordination (9 specialized agents)
 │   ├── __init__.py
-│   ├── base.py           # Base agent class
-│   ├── coordinator.py    # Agent coordinator
-│   ├── formatting_agent.py # Formatting specialist
-│   ├── security_agent.py  # Security specialist
+│   ├── base.py           # Base agent class and IssueType enum
+│   ├── coordinator.py    # Agent coordinator with confidence scoring
+│   ├── documentation_agent.py # Documentation consistency and changelog specialist
+│   ├── dry_agent.py      # DRY violation detection and fixing
+│   ├── formatting_agent.py # Formatting and style specialist
+│   ├── import_optimization_agent.py # Import optimization specialist
+│   ├── performance_agent.py # Performance optimization specialist
+│   ├── refactoring_agent.py # Complexity reduction and dead code removal
+│   ├── security_agent.py  # Security vulnerability specialist
 │   ├── test_creation_agent.py # Test creation specialist
-│   ├── test_specialist_agent.py # Test specialist
-│   └── tracker.py        # Agent tracking
+│   ├── test_specialist_agent.py # Advanced test specialist
+│   └── tracker.py        # Agent tracking and metrics
 ├── executors/             # Hook execution strategies
 │   ├── __init__.py
 │   ├── async_hook_executor.py # Async execution
@@ -191,6 +196,42 @@ crackerjack/
 - Task and session tracking models
 - Progress reporting and state management
 - Hook result definitions
+
+### AI Agent Layer
+
+**`agents/base.py`**
+
+- Base SubAgent class with common interface
+- IssueType enum defining all supported issue categories
+- AgentRegistry for dynamic agent discovery and loading
+- FixResult data structures for agent response coordination
+
+**`agents/coordinator.py`**
+
+- AgentCoordinator routes issues to appropriate agents based on confidence scoring
+- Single-agent mode (≥0.7 confidence) vs collaborative mode
+- Batch processing for efficient issue resolution
+- Agent performance tracking and optimization
+
+**`agents/[specific]_agent.py`**
+
+- 9 specialized agents with domain-specific expertise:
+  - **DocumentationAgent**: Documentation consistency and changelog management
+  - **PerformanceAgent**: AST-based performance optimization (list concatenation, string building, nested loops)
+  - **RefactoringAgent**: Complexity reduction and dead code removal
+  - **DRYAgent**: Don't Repeat Yourself violation detection and fixing
+  - **SecurityAgent**: Security vulnerability detection and remediation
+  - **ImportOptimizationAgent**: Import statement optimization and cleanup
+  - **FormattingAgent**: Code style and formatting fixes
+  - **TestCreationAgent**: Test failure resolution and coverage improvement
+  - **TestSpecialistAgent**: Advanced testing scenario management
+
+**Agent Capabilities:**
+
+- **Real Code Transformation**: Agents modify source code, not just provide recommendations
+- **AST-based Analysis**: Advanced pattern detection using Python's Abstract Syntax Tree
+- **Confidence Scoring**: Each agent provides confidence ratings for issue handling
+- **Iterative Improvement**: Agents work in coordination until all issues are resolved
 
 ### MCP Layer
 
