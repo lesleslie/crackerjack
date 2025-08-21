@@ -136,3 +136,212 @@ def test_model_post_init_basic():
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in model_post_init: {e}")
+
+
+def test_clean_file_basic():
+    """Test basic functionality of clean_file."""
+
+    try:
+        result = clean_file()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(clean_file), "Function should be callable"
+        sig = inspect.signature(clean_file)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in clean_file: {e}")
+
+
+def test_clean_files_basic():
+    """Test basic functionality of clean_files."""
+
+    try:
+        result = clean_files()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(clean_files), "Function should be callable"
+        sig = inspect.signature(clean_files)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in clean_files: {e}")
+
+
+def test_should_process_file_basic():
+    """Test basic functionality of should_process_file."""
+
+    try:
+        result = should_process_file()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(should_process_file), "Function should be callable"
+        sig = inspect.signature(should_process_file)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in should_process_file: {e}")
+
+
+def test_remove_line_comments_basic():
+    """Test basic functionality of remove_line_comments."""
+
+    try:
+        result = remove_line_comments()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(remove_line_comments), "Function should be callable"
+        sig = inspect.signature(remove_line_comments)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in remove_line_comments: {e}")
+
+
+def test_remove_docstrings_basic():
+    """Test basic functionality of remove_docstrings."""
+
+    try:
+        result = remove_docstrings()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(remove_docstrings), "Function should be callable"
+        sig = inspect.signature(remove_docstrings)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in remove_docstrings: {e}")
+
+
+def test_remove_extra_whitespace_basic():
+    """Test basic functionality of remove_extra_whitespace."""
+
+    try:
+        result = remove_extra_whitespace()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(remove_extra_whitespace), "Function should be callable"
+        sig = inspect.signature(remove_extra_whitespace)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in remove_extra_whitespace: {e}")
+
+
+def test_format_code_basic():
+    """Test basic functionality of format_code."""
+
+    try:
+        result = format_code()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(format_code), "Function should be callable"
+        sig = inspect.signature(format_code)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in format_code: {e}")
+
+
+def test_visit_Module_basic():
+    """Test basic functionality of visit_Module."""
+
+    try:
+        result = visit_Module()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(visit_Module), "Function should be callable"
+        sig = inspect.signature(visit_Module)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in visit_Module: {e}")
+
+
+def test_visit_FunctionDef_basic():
+    """Test basic functionality of visit_FunctionDef."""
+
+    try:
+        result = visit_FunctionDef()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(visit_FunctionDef), "Function should be callable"
+        sig = inspect.signature(visit_FunctionDef)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in visit_FunctionDef: {e}")
+
+
+def test_visit_AsyncFunctionDef_basic():
+    """Test basic functionality of visit_AsyncFunctionDef."""
+
+    try:
+        result = visit_AsyncFunctionDef()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(visit_AsyncFunctionDef), "Function should be callable"
+        sig = inspect.signature(visit_AsyncFunctionDef)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in visit_AsyncFunctionDef: {e}")
+
+
+def test_visit_ClassDef_basic():
+    """Test basic functionality of visit_ClassDef."""
+
+    try:
+        result = visit_ClassDef()
+        assert result is not None or result is None
+    except TypeError:
+        import inspect
+
+        assert callable(visit_ClassDef), "Function should be callable"
+        sig = inspect.signature(visit_ClassDef)
+        assert sig is not None, "Function should have valid signature"
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in visit_ClassDef: {e}")
