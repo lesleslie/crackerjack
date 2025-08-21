@@ -222,10 +222,10 @@ async def _execute_crackerjack_sync(
             )
 
             # Initialize advanced orchestrator with optimal config
-            session = SessionCoordinator(context.console, context.project_path, web_job_id=job_id)
+            session = SessionCoordinator(context.console, context.config.project_path, web_job_id=job_id)
             orchestrator = AdvancedWorkflowOrchestrator(
                 console=context.console,
-                pkg_path=context.project_path,
+                pkg_path=context.config.project_path,
                 session=session,
                 config=optimal_config,
             )
@@ -241,7 +241,7 @@ async def _execute_crackerjack_sync(
 
             orchestrator = WorkflowOrchestrator(
                 console=context.console,
-                pkg_path=context.project_path,
+                pkg_path=context.config.project_path,
                 dry_run=kwargs.get("dry_run", False),
                 web_job_id=job_id,
             )

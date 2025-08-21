@@ -82,7 +82,7 @@ def register_core_tools(mcp_app: t.Any) -> None:
 
             orchestrator = WorkflowOrchestrator(
                 console=context.console,
-                pkg_path=context.project_path,
+                pkg_path=context.config.project_path,
                 dry_run=extra_kwargs.get("dry_run", False),
             )
 

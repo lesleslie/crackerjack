@@ -3,6 +3,10 @@ import time
 import typing as t
 
 from ..context import get_context
+def _create_error_response(message: str, success: bool = False) -> str:
+    """Utility function to create standardized error responses."""
+    import json
+    return json.dumps({"error": message, "success": success})
 
 
 def _get_stage_status_dict(state_manager) -> dict[str, str]:
@@ -187,12 +191,12 @@ def _register_stage_status_tool(mcp_app: t.Any) -> None:
     async def get_stage_status() -> str:
         context = get_context()
         if not context:
-            return '{"error": "Server context not available"}'
+            return _create_error_response("Server context not available")
 
         try:
             state_manager = getattr(context, "state_manager", None)
             if not state_manager:
-                return '{"error": "State manager not available"}'
+                return _create_error_response("State manager not available")
 
             result = {
                 "stages": _get_stage_status_dict(state_manager),
@@ -211,7 +215,7 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
     async def get_next_action() -> str:
         context = get_context()
         if not context:
-            return '{"error": "Server context not available"}'
+            return _create_error_response("Server context not available")
 
         try:
             state_manager = getattr(context, "state_manager", None)
@@ -230,7 +234,7 @@ def _register_server_stats_tool(mcp_app: t.Any) -> None:
     async def get_server_stats() -> str:
         context = get_context()
         if not context:
-            return '{"error": "Server context not available"}'
+            return _create_error_response("Server context not available")
 
         try:
             stats = _build_server_stats(context)
