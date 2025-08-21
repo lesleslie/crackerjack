@@ -97,51 +97,8 @@ class TestBatchFileOperations:
         with tempfile.TemporaryDirectory() as tmp_dir:
             yield Path(tmp_dir)
 
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_batch_read_operations(self, temp_dir) -> None:
-        batch_ops = BatchFileOperations(batch_size=2)
 
-        file1 = temp_dir / "file1.txt"
-        file2 = temp_dir / "file2.txt"
-        file1.write_text("content1")
-        file2.write_text("content2")
 
-        task1 = asyncio.create_task(batch_ops.queue_read(file1))
-        task2 = asyncio.create_task(batch_ops.queue_read(file2))
-
-        content1, content2 = await asyncio.gather(task1, task2)
-
-        assert content1 == "content1"
-        assert content2 == "content2"
-
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_batch_write_operations(self, temp_dir) -> None:
-        batch_ops = BatchFileOperations(batch_size=2)
-
-        file1 = temp_dir / "write1.txt"
-        file2 = temp_dir / "write2.txt"
-
-        task1 = asyncio.create_task(batch_ops.queue_write(file1, "write content1"))
-        task2 = asyncio.create_task(batch_ops.queue_write(file2, "write content2"))
-
-        await asyncio.gather(task1, task2)
-
-        assert file1.read_text() == "write content1"
-        assert file2.read_text() == "write content2"
-
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_manual_flush(self, temp_dir) -> None:
-        batch_ops = BatchFileOperations(batch_size=10)
-
-        file1 = temp_dir / "flush_test.txt"
-
-        task = asyncio.create_task(batch_ops.queue_write(file1, "flush test"))
-
-        await batch_ops.flush_all()
-
-        await task
-
-        assert file1.read_text() == "flush test"
 
 
 class TestEnhancedFileSystemService:
@@ -213,55 +170,9 @@ class TestEnhancedFileSystemService:
         content2 = fs_service.read_file(test_file)
         assert content2 == modified_content
 
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_async_read_file(self, fs_service, temp_dir) -> None:
-        test_file = temp_dir / "async_read.txt"
-        test_content = "async content"
-        test_file.write_text(test_content)
 
-        content = await fs_service.read_file_async(test_file)
-        assert content == test_content
 
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_async_write_file(self, fs_service, temp_dir) -> None:
-        test_file = temp_dir / "async_write.txt"
-        test_content = "async write content"
 
-        await fs_service.write_file_async(test_file, test_content)
-
-        assert test_file.read_text() == test_content
-
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_read_multiple_files(self, fs_service, temp_dir) -> None:
-        files = []
-        expected_contents = {}
-
-        for i in range(5):
-            file_path = temp_dir / f"multi_read_{i}.txt"
-            content = f"content {i}"
-            file_path.write_text(content)
-            files.append(file_path)
-            expected_contents[file_path] = content
-
-        results = await fs_service.read_multiple_files(files)
-
-        assert len(results) == 5
-        for file_path, content in expected_contents.items():
-            assert results[file_path] == content
-
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_write_multiple_files(self, fs_service, temp_dir) -> None:
-        file_data = {}
-
-        for i in range(5):
-            file_path = temp_dir / f"multi_write_{i}.txt"
-            content = f"write content {i}"
-            file_data[file_path] = content
-
-        await fs_service.write_multiple_files(file_data)
-
-        for file_path, expected_content in file_data.items():
-            assert file_path.read_text() == expected_content
 
     def test_file_operations_sync_fallback(self, sync_fs_service, temp_dir) -> None:
         test_file = temp_dir / "sync_fallback.txt"
@@ -352,46 +263,9 @@ class TestEnhancedFileSystemService:
         stats_after = fs_service.get_cache_stats()
         assert stats_after["entries"] == 0
 
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_flush_operations(self, fs_service, temp_dir) -> None:
-        test_file = temp_dir / "flush_ops.txt"
-        test_content = "flush content"
-
-        if fs_service.enable_async:
-            await fs_service.write_file_async(test_file, test_content)
-            await fs_service.flush_operations()
-
-        await fs_service.flush_operations()
 
 
 class TestPerformanceAndIntegration:
-    @pytest.mark.skip(reason="Temporarily disabled for performance testing")
-    async def test_large_batch_operations(self) -> None:
-        fs_service = EnhancedFileSystemService(batch_size=10)
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            temp_dir = Path(tmp_dir)
-
-            file_data = {}
-            for i in range(50):
-                file_path = temp_dir / f"batch_test_{i}.txt"
-                content = f"batch content {i}" * 100
-                file_data[file_path] = content
-
-            start_time = time.time()
-            await fs_service.write_multiple_files(file_data)
-            write_time = time.time() - start_time
-
-            start_time = time.time()
-            results = await fs_service.read_multiple_files(list(file_data.keys()))
-            read_time = time.time() - start_time
-
-            assert len(results) == 50
-            for file_path, expected_content in file_data.items():
-                assert results[file_path] == expected_content
-
-            assert write_time < 10.0
-            assert read_time < 10.0
 
     def test_cache_memory_efficiency(self) -> None:
         fs_service = EnhancedFileSystemService(cache_size=100, cache_ttl=3600)

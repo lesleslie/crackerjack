@@ -53,7 +53,7 @@ def find_websocket_server_processes() -> list[dict[str, t.Any]]:
         processes = []
 
         for line in result.stdout.splitlines():
-            if "crackerjack" in line and "--websocket-server" in line:
+            if "crackerjack" in line and "--start-websocket-server" in line:
                 parts = line.split()
                 if len(parts) >= 11:
                     try:

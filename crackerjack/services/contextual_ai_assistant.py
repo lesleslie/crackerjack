@@ -492,6 +492,6 @@ class ContextualAIAssistant:
             return "Clean code: python -m crackerjack -x\nNote: Resolve TODOs first before cleaning"
 
         if "dashboard" in query_lower or "monitor" in query_lower:
-            return "Start monitoring dashboard: python -m crackerjack --dashboard\nStart WebSocket server: python -m crackerjack --websocket-server"
+            return "Start monitoring dashboard: python -m crackerjack --dashboard\nStart WebSocket server: python -m crackerjack --start-websocket-server"
 
         return "For full help, run: python -m crackerjack --help\nFor AI assistance: python -m crackerjack --ai-agent"

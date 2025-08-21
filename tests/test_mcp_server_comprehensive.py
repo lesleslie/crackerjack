@@ -300,7 +300,7 @@ class TestMCPServerTools:
 
 class TestMCPServerIntegration:
     def test_websocket_server_option(self) -> None:
-        server_cmd = [sys.executable, "-m", "crackerjack", "--websocket-server"]
+        server_cmd = [sys.executable, "-m", "crackerjack", "--start-websocket-server"]
 
         process = subprocess.Popen(
             server_cmd,
@@ -362,7 +362,7 @@ class TestMCPServerIntegration:
         from crackerjack.__main__ import cli_options
 
         assert "start_mcp_server" in cli_options
-        assert "websocket_server" in cli_options
+        assert "start_websocket_server" in cli_options
         assert "websocket_port" in cli_options
 
         assert cli_options["start_mcp_server"].help is not None

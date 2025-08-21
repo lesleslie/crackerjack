@@ -55,7 +55,7 @@ async def test_websocket_flow():
 
     console.print("\n[yellow]2. Instructions to test:[/yellow]")
     console.print("1. Start WebSocket server in another terminal: ")
-    console.print(" python -m crackerjack --websocket-server")
+    console.print(" python -m crackerjack --start-websocket-server")
     console.print("\n2. Start progress monitor in another terminal: ")
     console.print(f" python -m crackerjack.mcp.progress_monitor {job_id}")
     console.print("\n3. Or use the Textual dashboard: ")

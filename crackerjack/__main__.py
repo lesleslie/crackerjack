@@ -20,7 +20,6 @@ from .cli.handlers import (
     handle_stop_mcp_server,
     handle_stop_websocket_server,
     handle_watchdog_mode,
-    handle_websocket_server_mode,
 )
 
 console = Console(force_terminal=True)
@@ -49,16 +48,12 @@ def _handle_monitoring_commands(
 
 
 def _handle_websocket_commands(
-    websocket_server: bool,
     start_websocket_server: bool,
     stop_websocket_server: bool,
     restart_websocket_server: bool,
     websocket_port: int | None,
 ) -> bool:
     """Handle WebSocket server commands."""
-    if websocket_server:
-        handle_websocket_server_mode()
-        return True
     if start_websocket_server:
         port = websocket_port if websocket_port else 8675
         handle_start_websocket_server(port)
@@ -97,7 +92,6 @@ def _handle_server_commands(
     enhanced_monitor: bool,
     dashboard: bool,
     watchdog: bool,
-    websocket_server: bool,
     start_websocket_server: bool,
     stop_websocket_server: bool,
     restart_websocket_server: bool,
@@ -111,7 +105,6 @@ def _handle_server_commands(
     return (
         _handle_monitoring_commands(monitor, enhanced_monitor, dashboard, watchdog, dev)
         or _handle_websocket_commands(
-            websocket_server,
             start_websocket_server,
             stop_websocket_server,
             restart_websocket_server,
@@ -152,7 +145,6 @@ def main(
     enable_ty: bool = CLI_OPTIONS["enable_ty"],
     no_git_tags: bool = CLI_OPTIONS["no_git_tags"],
     skip_version_check: bool = CLI_OPTIONS["skip_version_check"],
-    websocket_server: bool = CLI_OPTIONS["websocket_server"],
     start_websocket_server: bool = CLI_OPTIONS["start_websocket_server"],
     stop_websocket_server: bool = CLI_OPTIONS["stop_websocket_server"],
     restart_websocket_server: bool = CLI_OPTIONS["restart_websocket_server"],
@@ -216,7 +208,6 @@ def main(
         enhanced_monitor,
         dashboard,
         watchdog,
-        websocket_server,
         start_websocket_server,
         stop_websocket_server,
         restart_websocket_server,

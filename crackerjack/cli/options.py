@@ -54,7 +54,6 @@ class Options(BaseModel):
     monitor: bool = False
     enhanced_monitor: bool = False
     watchdog: bool = False
-    websocket_server: bool = False
     start_websocket_server: bool = False
     stop_websocket_server: bool = False
     restart_websocket_server: bool = False
@@ -218,11 +217,6 @@ CLI_OPTIONS = {
         False,
         "--skip-version-check",
         help="Skip version consistency verification between pyproject.toml and git tags.",
-    ),
-    "websocket_server": typer.Option(
-        False,
-        "--websocket-server",
-        help="Start standalone WebSocket progress server on port 8675.",
     ),
     "start_websocket_server": typer.Option(
         False,

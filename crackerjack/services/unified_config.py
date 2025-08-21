@@ -391,7 +391,6 @@ class UnifiedConfigurationService:
             "batch_size": config.file_operation_batch_size,
         }
 
-
     def validate_current_config(self) -> bool:
         try:
             config = self.get_config()

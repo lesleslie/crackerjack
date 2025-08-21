@@ -4,7 +4,6 @@ from .handlers import (
     handle_orchestrated_mode,
     handle_standard_mode,
     handle_watchdog_mode,
-    handle_websocket_server_mode,
     setup_ai_agent_env,
 )
 from .options import CLI_OPTIONS, BumpOption, Options, create_options
@@ -21,6 +20,5 @@ __all__ = [
     "handle_orchestrated_mode",
     "handle_standard_mode",
     "handle_watchdog_mode",
-    "handle_websocket_server_mode",
     "setup_ai_agent_env",
 ]

@@ -234,7 +234,6 @@ log_level = "DEBUG"
         assert "level" in logging_config
         assert "json_output" in logging_config
 
-
     def test_config_validation(self, basic_service) -> None:
         assert basic_service.validate_current_config() is True
 

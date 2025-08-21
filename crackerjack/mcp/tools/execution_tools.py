@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 import typing as t
 import uuid
 
@@ -178,9 +179,25 @@ async def _execute_crackerjack_sync(
             status="running",
             iteration=current_iteration,
             max_iterations=max_iterations,
-            overall_progress=10,
+            overall_progress=5,
             current_stage="initialization",
             message="Initializing crackerjack execution",
+        )
+
+        # Clean up stale jobs first
+        await _cleanup_stale_jobs(context)
+
+        # Auto-start required services
+        await _ensure_services_running(job_id, context)
+
+        _update_progress(
+            job_id=job_id,
+            status="running",
+            iteration=current_iteration,
+            max_iterations=max_iterations,
+            overall_progress=10,
+            current_stage="services_ready",
+            message="Services initialized successfully",
         )
 
         # Import advanced orchestrator with optimal configuration
@@ -230,6 +247,12 @@ async def _execute_crackerjack_sync(
                 session=session,
                 config=optimal_config,
             )
+            
+            # Override MCP mode if debug flag is set
+            if kwargs.get("debug", False):
+                orchestrator.individual_executor.set_mcp_mode(False)
+                context.safe_print("🐛 Debug mode enabled - full output mode")
+            
             use_advanced_orchestrator = True
 
         except ImportError as e:
@@ -356,3 +379,106 @@ async def _execute_crackerjack_sync(
         )
         context.safe_print(f"Execution failed: {e}")
         return {"job_id": job_id, "status": "failed", "error": str(e)}
+
+
+async def _ensure_services_running(job_id: str, context: t.Any) -> None:
+    """Ensure WebSocket server and watchdog are running before starting workflow."""
+    import subprocess
+
+    _update_progress(
+        job_id=job_id,
+        status="running",
+        current_stage="service_startup",
+        message="Checking required services...",
+    )
+
+    # Check if WebSocket server is running
+    websocket_running = False
+    try:
+        from ...services.server_manager import find_websocket_server_processes
+
+        websocket_processes = find_websocket_server_processes()
+        websocket_running = len(websocket_processes) > 0
+    except Exception:
+        pass
+
+    if not websocket_running:
+        _update_progress(
+            job_id=job_id,
+            status="running",
+            current_stage="service_startup",
+            message="Starting WebSocket server...",
+        )
+
+        try:
+            # Start WebSocket server in background
+            subprocess.Popen(
+                ["python", "-m", "crackerjack", "--start-websocket-server"],
+                cwd=context.config.project_path,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+
+            # Wait for server to start
+            for i in range(10):
+                try:
+                    websocket_processes = find_websocket_server_processes()
+                    if len(websocket_processes) > 0:
+                        context.safe_print("✅ WebSocket server started successfully")
+                        break
+                except Exception:
+                    pass
+                await asyncio.sleep(0.5)
+            else:
+                context.safe_print("⚠️ WebSocket server may not have started properly")
+
+        except Exception as e:
+            context.safe_print(f"⚠️ Failed to start WebSocket server: {e}")
+    else:
+        context.safe_print("✅ WebSocket server already running")
+
+
+async def _cleanup_stale_jobs(context: t.Any) -> None:
+    """Clean up stale job files with unknown IDs or stuck in processing state."""
+    if not context.progress_dir.exists():
+        return
+
+    current_time = time.time()
+    cleaned_count = 0
+
+    try:
+        for progress_file in context.progress_dir.glob("job-*.json"):
+            try:
+                import json
+
+                progress_data = json.loads(progress_file.read_text())
+
+                # Check if job is stale (older than 30 minutes and stuck)
+                last_update = progress_data.get("updated_at", 0)
+                age_minutes = (current_time - last_update) / 60
+
+                is_stale = (
+                    age_minutes > 30  # Older than 30 minutes
+                    or progress_data.get("job_id") == "unknown"  # Unknown job ID
+                    or "analyzing_failures: processing"
+                    in progress_data.get("status", "")  # Stuck in processing
+                )
+
+                if is_stale:
+                    progress_file.unlink()
+                    cleaned_count += 1
+
+            except (json.JSONDecodeError, OSError):
+                # Clean up malformed files
+                try:
+                    progress_file.unlink()
+                    cleaned_count += 1
+                except OSError:
+                    pass
+
+    except Exception:
+        pass
+
+    if cleaned_count > 0:
+        context.safe_print(f"🗑️ Cleaned up {cleaned_count} stale job files")

@@ -122,7 +122,7 @@ async def test_progress_flow():
         console.print("\n[yellow]4. Testing WebSocket server integration...[/yellow]")
         console.print("To test WebSocket: ")
         console.print(
-            "1. Start WebSocket server: python -m crackerjack --websocket-server"
+            "1. Start WebSocket server: python -m crackerjack --start-websocket-server"
         )
         console.print("2. Connect to: ws://localhost:8675/ws/progress/test-job-123")
         console.print("3. You should receive the progress updates")

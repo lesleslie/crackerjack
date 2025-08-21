@@ -317,7 +317,7 @@ class MCPServerContext:
                 sys.executable,
                 "-m",
                 "crackerjack",
-                "--websocket-server",
+                "--start-websocket-server",
                 "--websocket-port",
                 str(self.websocket_server_port),
             ],

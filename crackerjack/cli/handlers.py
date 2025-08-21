@@ -97,12 +97,6 @@ def handle_watchdog_mode() -> None:
         console.print("\n[yellow]🛑 Watchdog stopped[/yellow]")
 
 
-def handle_websocket_server_mode() -> None:
-    from ..mcp.websocket_server import main as start_websocket_server
-
-    start_websocket_server()
-
-
 def handle_start_websocket_server(port: int = 8675) -> None:
     from ..mcp.websocket.server import handle_websocket_server_command
 

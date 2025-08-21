@@ -375,7 +375,7 @@ class ServiceManager:
     async def _start_websocket_server(self) -> None:
         with suppress(Exception):
             process = subprocess.Popen(
-                ["python", "-m", "crackerjack", "--websocket-server"],
+                ["python", "-m", "crackerjack", "--start-websocket-server"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 start_new_session=True,

@@ -25,6 +25,7 @@ class IssueType(Enum):
     DRY_VIOLATION = "dry_violation"
     PERFORMANCE = "performance"
     DOCUMENTATION = "documentation"
+    TEST_ORGANIZATION = "test_organization"
 
 
 @dataclass

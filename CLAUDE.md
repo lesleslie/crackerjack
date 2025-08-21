@@ -58,7 +58,7 @@ python -m crackerjack --stop-mcp-server
 python -m crackerjack --restart-mcp-server
 
 # Start dedicated WebSocket progress server (runs on localhost:8675)
-python -m crackerjack --websocket-server
+python -m crackerjack --start-websocket-server
 
 # Start multi-project progress monitor with Textual TUI
 python -m crackerjack --monitor
@@ -394,7 +394,7 @@ python -m crackerjack -p patch
 - **`mcp/websocket/jobs.py`**: Job lifecycle and progress management (197 lines)
 - **`mcp/websocket/endpoints.py`**: HTTP endpoint definitions (545 lines)
 - **`mcp/websocket/websocket_handler.py`**: WebSocket connection handling (75 lines)
-- **Entry point**: `python -m crackerjack --websocket-server`
+- **Entry point**: `python -m crackerjack --start-websocket-server`
 
 ### CLI Interface (Modular Command Handling)
 
@@ -580,7 +580,7 @@ python -m pytest tests/test_crackerjack.py::TestClass::test_method -v -s
 
 ```bash
 # Step 1: Start the dedicated WebSocket server (in a separate terminal)
-python -m crackerjack --websocket-server
+python -m crackerjack --start-websocket-server
 
 # Step 2: Use /crackerjack:run in Claude - progress will be available at:
 # - WebSocket: ws://localhost:8675/ws/progress/{job_id}
@@ -700,7 +700,7 @@ python -m crackerjack --watchdog
    - No HTTP health checks (stdio-based protocol)
    - Auto-restart on process termination
 
-1. **WebSocket Server** (`--websocket-server`)
+1. **WebSocket Server** (`--start-websocket-server`)
 
    - Process monitoring (detects crashes)
    - HTTP health checks (`http://localhost:8675/`)

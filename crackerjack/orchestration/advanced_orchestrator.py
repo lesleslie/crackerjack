@@ -179,6 +179,9 @@ class AdvancedWorkflowOrchestrator:
         self.test_manager = TestManagementImpl(console, pkg_path)
         self.test_streamer = TestProgressStreamer(console, pkg_path)
         self.planner = OrchestrationPlanner(console)
+        
+        # Detect if running in MCP mode and configure accordingly
+        self._detect_and_configure_mcp_mode()
 
         self.correlation_tracker = CorrelationTracker()
         self.progress_streamer = ProgressStreamer(
@@ -187,6 +190,23 @@ class AdvancedWorkflowOrchestrator:
         self.metrics = get_metrics_collector()
 
         self.agent_coordinator: AgentCoordinator | None = None
+
+    def _detect_and_configure_mcp_mode(self) -> None:
+        """Detect if running in MCP context and configure for minimal terminal I/O."""
+        # Check for MCP context indicators
+        is_mcp_mode = (
+            # Console is using StringIO (stdio mode)
+            hasattr(self.console.file, 'getvalue')
+            # Or console is not attached to a real terminal
+            or not self.console.is_terminal
+            # Or we have a web job ID (indicates MCP execution)
+            or hasattr(self.session, 'job_id')
+        )
+        
+        if is_mcp_mode:
+            # Configure individual executor for MCP mode to prevent terminal lockup
+            self.individual_executor.set_mcp_mode(True)
+            self.console.print("[dim]🔧 MCP mode detected - using minimal output mode[/dim]")
         if self.config.ai_coordination_mode in (
             AICoordinationMode.MULTI_AGENT,
             AICoordinationMode.COORDINATOR,

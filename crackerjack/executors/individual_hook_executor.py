@@ -283,9 +283,17 @@ class IndividualHookExecutor:
         self.pkg_path = pkg_path
         self.parser = HookOutputParser()
         self.progress_callback: t.Callable[[HookProgress], None] | None = None
+        self.suppress_realtime_output = False
+        self.progress_callback_interval = 1  # Only callback every N lines to reduce overhead
 
     def set_progress_callback(self, callback: t.Callable[[HookProgress], None]) -> None:
         self.progress_callback = callback
+    
+    def set_mcp_mode(self, enable: bool = True) -> None:
+        """Enable MCP mode which suppresses real-time output to prevent terminal lockup."""
+        self.suppress_realtime_output = enable
+        if enable:
+            self.progress_callback_interval = 10  # Reduce callback frequency in MCP mode
 
     async def execute_strategy_individual(
         self, strategy: HookStrategy
@@ -397,6 +405,7 @@ class IndividualHookExecutor:
         async def read_stream(
             stream: asyncio.StreamReader, output_list: list[str]
         ) -> None:
+            line_count = 0
             while True:
                 try:
                     line = await stream.readline()
@@ -409,11 +418,14 @@ class IndividualHookExecutor:
                     output_list.append(line_str)
                     progress.output_lines = progress.output_lines or []
                     progress.output_lines.append(line_str)
+                    line_count += 1
 
-                    if line_str.strip():
+                    # Only print to console if not suppressed (prevents MCP terminal lockup)
+                    if not self.suppress_realtime_output and line_str.strip():
                         self.console.print(f"[dim] {line_str}[/dim]")
 
-                    if self.progress_callback:
+                    # Throttle progress callbacks to reduce overhead
+                    if self.progress_callback and (line_count % self.progress_callback_interval == 0):
                         self.progress_callback(progress)
 
                 except Exception:

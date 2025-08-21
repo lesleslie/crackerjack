@@ -30,6 +30,7 @@ class MockOptions:
         self.commit = getattr(self, "commit", False)
         self.dry_run = getattr(self, "dry_run", False)
         self.experimental_hooks = getattr(self, "experimental_hooks", False)
+        self.clean = getattr(self, "clean", False)
 
 
 class TestSessionCoordinator:
@@ -203,7 +204,6 @@ class TestPhaseCoordinator:
     def mock_dependencies(self):
         """Create mock dependencies."""
         session = Mock()
-        autofix = Mock()
         filesystem = Mock()
         git_service = Mock()
         hook_manager = Mock()
@@ -212,7 +212,6 @@ class TestPhaseCoordinator:
 
         return {
             "session": session,
-            "autofix": autofix,
             "filesystem": filesystem,
             "git_service": git_service,
             "hook_manager": hook_manager,
@@ -231,14 +230,16 @@ class TestPhaseCoordinator:
         assert coordinator.console == console
         assert coordinator.pkg_path == temp_path
         assert hasattr(coordinator, "session")
-        assert hasattr(coordinator, "autofix")
+        assert hasattr(coordinator, "filesystem")
 
     def test_run_configuration_phase_success(self, coordinator, mock_dependencies):
         """Test successful configuration phase."""
         options = MockOptions()
 
-        # Mock successful config update
-        with patch.object(coordinator, "_update_config", return_value=True):
+        # Mock the config service for success
+        with patch.object(
+            coordinator.config_service, "update_config", return_value=True
+        ):
             result = coordinator.run_configuration_phase(options)
             assert result is True
 
@@ -246,18 +247,19 @@ class TestPhaseCoordinator:
         """Test configuration phase failure."""
         options = MockOptions()
 
-        # Mock config update failure
-        with patch.object(coordinator, "_update_config", return_value=False):
+        # Mock config service for failure
+        with patch.object(
+            coordinator.config_service, "update_config", return_value=False
+        ):
             result = coordinator.run_configuration_phase(options)
             assert result is False
 
-    def test_run_cleaning_phase(self, coordinator):
-        """Test cleaning phase."""
-        options = MockOptions()
+    def test_run_cleaning_phase_disabled(self, coordinator):
+        """Test cleaning phase when disabled."""
+        options = MockOptions(clean=False)
 
-        with patch.object(coordinator, "_run_code_cleaning", return_value=True):
-            result = coordinator.run_cleaning_phase(options)
-            assert result is True
+        result = coordinator.run_cleaning_phase(options)
+        assert result is True  # Should succeed when disabled
 
     def test_run_hooks_phase_with_skip(self, coordinator):
         """Test hooks phase when skipped."""
