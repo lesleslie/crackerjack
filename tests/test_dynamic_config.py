@@ -149,6 +149,7 @@ def test_remove_experimental_hook() -> None:
     remaining_hooks = [h["id"] for h in HOOKS_REGISTRY["experimental"]]
     assert "test - removable" not in remaining_hooks
 
+
 def test_generate_config_for_mode_basic():
     """Test basic functionality of generate_config_for_mode."""
 
@@ -156,14 +157,17 @@ def test_generate_config_for_mode_basic():
         result = generate_config_for_mode()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(generate_config_for_mode), "Function should be callable"
         sig = inspect.signature(generate_config_for_mode)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in generate_config_for_mode: {e}")
+
 
 def test_filter_hooks_for_mode_basic():
     """Test basic functionality of filter_hooks_for_mode."""
@@ -172,14 +176,17 @@ def test_filter_hooks_for_mode_basic():
         result = filter_hooks_for_mode()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(filter_hooks_for_mode), "Function should be callable"
         sig = inspect.signature(filter_hooks_for_mode)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in filter_hooks_for_mode: {e}")
+
 
 def test_group_hooks_by_repo_basic():
     """Test basic functionality of group_hooks_by_repo."""
@@ -188,14 +195,17 @@ def test_group_hooks_by_repo_basic():
         result = group_hooks_by_repo()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(group_hooks_by_repo), "Function should be callable"
         sig = inspect.signature(group_hooks_by_repo)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in group_hooks_by_repo: {e}")
+
 
 def test_generate_config_basic():
     """Test basic functionality of generate_config."""
@@ -204,14 +214,17 @@ def test_generate_config_basic():
         result = generate_config()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(generate_config), "Function should be callable"
         sig = inspect.signature(generate_config)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in generate_config: {e}")
+
 
 def test_create_temp_config_basic():
     """Test basic functionality of create_temp_config."""
@@ -220,11 +233,13 @@ def test_create_temp_config_basic():
         result = create_temp_config()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(create_temp_config), "Function should be callable"
         sig = inspect.signature(create_temp_config)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in create_temp_config: {e}")

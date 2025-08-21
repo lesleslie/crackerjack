@@ -7,7 +7,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ..agents import AgentContext, AgentCoordinator, Issue, IssueType, Priority
-from ..config.hooks import HookConfigLoader
+from ..config.hooks import HookConfigLoader, HookStrategy
 from ..core.session_coordinator import SessionCoordinator
 from ..executors.hook_executor import HookExecutor
 from ..executors.individual_hook_executor import HookProgress, IndividualHookExecutor
@@ -204,7 +204,9 @@ class AdvancedWorkflowOrchestrator:
             self.progress_streamer = ProgressStreamer(self.config, session)
         except Exception as e:
             # Fallback to a minimal progress streamer if there's an issue
-            console.print(f"[yellow]Warning: ProgressStreamer initialization failed: {e}[/yellow]")
+            console.print(
+                f"[yellow]Warning: ProgressStreamer initialization failed: {e}[/yellow]"
+            )
             self.progress_streamer = MinimalProgressStreamer()
         self.metrics = get_metrics_collector()
 
@@ -283,44 +285,40 @@ class AdvancedWorkflowOrchestrator:
         timing_table.add_column("Phase", style="cyan")
         timing_table.add_column("This Iteration", justify="right", style="yellow")
         timing_table.add_column("Cumulative", justify="right", style="green")
-        
+
         # Add timing rows
         timing_table.add_row(
-            "🔧 Hooks", 
-            f"{iteration_times.get('hooks', 0):.1f}s",
-            f"{hooks_time:.1f}s"
+            "🔧 Hooks", f"{iteration_times.get('hooks', 0):.1f}s", f"{hooks_time:.1f}s"
         )
         timing_table.add_row(
-            "🧪 Tests", 
-            f"{iteration_times.get('tests', 0):.1f}s",
-            f"{tests_time:.1f}s"
+            "🧪 Tests", f"{iteration_times.get('tests', 0):.1f}s", f"{tests_time:.1f}s"
         )
         timing_table.add_row(
-            "🤖 AI Analysis", 
-            f"{iteration_times.get('ai', 0):.1f}s",
-            f"{ai_time:.1f}s"
+            "🤖 AI Analysis", f"{iteration_times.get('ai', 0):.1f}s", f"{ai_time:.1f}s"
         )
-        
+
         total_iteration_time = sum(iteration_times.values())
         total_cumulative_time = hooks_time + tests_time + ai_time
         timing_table.add_row(
             "📊 Total",
             f"{total_iteration_time:.1f}s",
             f"{total_cumulative_time:.1f}s",
-            style="bold"
+            style="bold",
         )
 
         # Create status table
         status_table = Table(show_header=True, header_style="bold magenta")
         status_table.add_column("Metric", style="magenta")
         status_table.add_column("Value", justify="right", style="white")
-        
+
         status_table.add_row("🔄 Iteration", f"{iteration}/{max_iterations}")
-        status_table.add_row("📈 Progress", f"{(iteration/max_iterations)*100:.1f}%")
-        
-        if hasattr(context, 'hook_failures'):
+        status_table.add_row(
+            "📈 Progress", f"{(iteration / max_iterations) * 100:.1f}%"
+        )
+
+        if hasattr(context, "hook_failures"):
             status_table.add_row("❌ Hook Failures", str(len(context.hook_failures)))
-        if hasattr(context, 'test_failures'):
+        if hasattr(context, "test_failures"):
             status_table.add_row("🧪 Test Failures", str(len(context.test_failures)))
 
         # Create the panel with properly rendered tables
@@ -329,16 +327,16 @@ class AdvancedWorkflowOrchestrator:
             timing_table,
             "",
             "[bold white]Status Summary[/bold white]",
-            status_table
+            status_table,
         )
-        
+
         iteration_panel = Panel(
             panel_content,
             title=f"[bold bright_blue]📊 Iteration {iteration} Statistics[/bold bright_blue]",
             border_style="bright_blue",
             padding=(1, 2),
         )
-        
+
         self.console.print()
         self.console.print(iteration_panel)
         self.console.print()
@@ -394,8 +392,13 @@ class AdvancedWorkflowOrchestrator:
 
             # Display iteration statistics panel
             self._display_iteration_stats(
-                iteration, max_iterations, iteration_times, 
-                hooks_time, tests_time, ai_time, context
+                iteration,
+                max_iterations,
+                iteration_times,
+                hooks_time,
+                tests_time,
+                ai_time,
+                context,
             )
 
             if iteration_success:
@@ -503,19 +506,102 @@ class AdvancedWorkflowOrchestrator:
             strategy = hook_plan["strategy"]
             execution_mode = hook_plan["execution_mode"]
 
-            self.progress_streamer.update_stage("hooks", f"executing_{strategy.name}")
-
-            if execution_mode == ExecutionStrategy.INDIVIDUAL:
-                result = await self.individual_executor.execute_strategy_individual(
-                    strategy
+            # Special handling for fast hooks with autofix cycle
+            if strategy.name == "fast":
+                fast_results = await self._execute_fast_hooks_with_autofix(
+                    strategy, execution_mode, context
                 )
-                all_results.extend(result.hook_results)
+                all_results.extend(fast_results)
             else:
-                results = self.batch_executor.execute_strategy(strategy)
-                all_results.extend(results.results)
+                # Regular execution for non-fast hooks
+                self.progress_streamer.update_stage("hooks", f"executing_{strategy.name}")
+
+                if execution_mode == ExecutionStrategy.INDIVIDUAL:
+                    result = await self.individual_executor.execute_strategy_individual(
+                        strategy
+                    )
+                    all_results.extend(result.hook_results)
+                else:
+                    results = self.batch_executor.execute_strategy(strategy)
+                    all_results.extend(results.results)
 
         self.progress_streamer.update_stage("hooks", "completed")
         return all_results
+
+    async def _execute_fast_hooks_with_autofix(
+        self,
+        strategy: HookStrategy,
+        execution_mode: ExecutionStrategy,
+        context: ExecutionContext,
+    ) -> list[HookResult]:
+        """Execute fast hooks with autofix cycle if they fail twice."""
+        self.progress_streamer.update_stage("hooks", "fast_hooks_with_autofix")
+        
+        max_autofix_cycles = 2
+        autofix_cycle = 0
+        
+        while autofix_cycle < max_autofix_cycles:
+            self.console.print(f"[cyan]🚀 Fast hooks execution (autofix cycle {autofix_cycle + 1}/{max_autofix_cycles})[/cyan]")
+            
+            # Run fast hooks twice
+            first_attempt = await self._execute_fast_hooks_attempt(strategy, execution_mode)
+            
+            if all(r.status == "passed" for r in first_attempt):
+                self.console.print("[green]✅ Fast hooks passed on first attempt[/green]")
+                return first_attempt
+            
+            # First attempt failed, try second attempt
+            self.console.print("[yellow]⚠️  Fast hooks failed on first attempt, retrying...[/yellow]")
+            second_attempt = await self._execute_fast_hooks_attempt(strategy, execution_mode)
+            
+            if all(r.status == "passed" for r in second_attempt):
+                self.console.print("[green]✅ Fast hooks passed on second attempt[/green]")
+                return second_attempt
+            
+            # Both attempts failed, check if we should run autofix
+            autofix_cycle += 1
+            if autofix_cycle < max_autofix_cycles:
+                self.console.print("[red]❌ Fast hooks failed twice, triggering autofix cycle...[/red]")
+                await self._trigger_autofix_for_fast_hooks(second_attempt)
+            else:
+                self.console.print("[red]❌ Fast hooks failed after maximum autofix cycles[/red]")
+                return second_attempt
+        
+        # Should never reach here, but return last results as fallback
+        return second_attempt
+
+    async def _execute_fast_hooks_attempt(
+        self,
+        strategy: HookStrategy,
+        execution_mode: ExecutionStrategy,
+    ) -> list[HookResult]:
+        """Execute a single attempt of fast hooks."""
+        if execution_mode == ExecutionStrategy.INDIVIDUAL:
+            result = await self.individual_executor.execute_strategy_individual(strategy)
+            return result.hook_results
+        else:
+            results = self.batch_executor.execute_strategy(strategy)
+            return results.results
+
+    async def _trigger_autofix_for_fast_hooks(self, failed_results: list[HookResult]) -> None:
+        """Trigger AI autofix cycle for failed fast hooks."""
+        self.console.print("[magenta]🤖 Starting AI autofix cycle for fast hooks...[/magenta]")
+        
+        # Create mock test results for AI analysis (fast hooks don't include tests)
+        mock_test_results = {"success": True, "failed_tests": [], "individual_tests": []}
+        
+        # Get correlation data
+        correlation_data = self.correlation_tracker.get_correlation_data()
+        
+        # Execute AI analysis and fixes for hook failures
+        ai_fixes = await self._execute_ai_analysis(
+            failed_results, mock_test_results, [], correlation_data
+        )
+        
+        if ai_fixes:
+            self.console.print(f"[green]✅ Applied {len(ai_fixes)} AI fixes for fast hooks[/green]")
+        else:
+            self.console.print("[yellow]⚠️  No AI fixes could be applied[/yellow]")
 
     async def _execute_tests_phase(
         self,

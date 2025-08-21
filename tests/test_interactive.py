@@ -572,6 +572,7 @@ def test_complete_basic():
     except Exception as e:
         pytest.fail(f"Unexpected error in complete: {e}")
 
+
 def test_skip_basic():
     """Test basic functionality of skip."""
 
@@ -579,14 +580,17 @@ def test_skip_basic():
         result = skip()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(skip), "Function should be callable"
         sig = inspect.signature(skip)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in skip: {e}")
+
 
 def test_fail_basic():
     """Test basic functionality of fail."""
@@ -595,14 +599,17 @@ def test_fail_basic():
         result = fail()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(fail), "Function should be callable"
         sig = inspect.signature(fail)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in fail: {e}")
+
 
 def test_can_run_basic():
     """Test basic functionality of can_run."""
@@ -611,14 +618,17 @@ def test_can_run_basic():
         result = can_run()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(can_run), "Function should be callable"
         sig = inspect.signature(can_run)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in can_run: {e}")
+
 
 def test_add_conditional_task_basic():
     """Test basic functionality of add_conditional_task."""
@@ -627,14 +637,17 @@ def test_add_conditional_task_basic():
         result = add_conditional_task()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(add_conditional_task), "Function should be callable"
         sig = inspect.signature(add_conditional_task)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in add_conditional_task: {e}")
+
 
 def test_build_basic():
     """Test basic functionality of build."""
@@ -643,14 +656,17 @@ def test_build_basic():
         result = build()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(build), "Function should be callable"
         sig = inspect.signature(build)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in build: {e}")
+
 
 def test_load_workflow_basic():
     """Test basic functionality of load_workflow."""
@@ -659,14 +675,17 @@ def test_load_workflow_basic():
         result = load_workflow()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(load_workflow), "Function should be callable"
         sig = inspect.signature(load_workflow)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in load_workflow: {e}")
+
 
 def test_set_task_executor_basic():
     """Test basic functionality of set_task_executor."""
@@ -675,14 +694,17 @@ def test_set_task_executor_basic():
         result = set_task_executor()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(set_task_executor), "Function should be callable"
         sig = inspect.signature(set_task_executor)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in set_task_executor: {e}")
+
 
 def test_get_workflow_summary_basic():
     """Test basic functionality of get_workflow_summary."""
@@ -691,14 +713,17 @@ def test_get_workflow_summary_basic():
         result = get_workflow_summary()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(get_workflow_summary), "Function should be callable"
         sig = inspect.signature(get_workflow_summary)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in get_workflow_summary: {e}")
+
 
 def test_create_dynamic_workflow_basic():
     """Test basic functionality of create_dynamic_workflow."""
@@ -707,14 +732,17 @@ def test_create_dynamic_workflow_basic():
         result = create_dynamic_workflow()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(create_dynamic_workflow), "Function should be callable"
         sig = inspect.signature(create_dynamic_workflow)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in create_dynamic_workflow: {e}")
+
 
 def test_run_interactive_workflow_basic():
     """Test basic functionality of run_interactive_workflow."""
@@ -723,14 +751,17 @@ def test_run_interactive_workflow_basic():
         result = run_interactive_workflow()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(run_interactive_workflow), "Function should be callable"
         sig = inspect.signature(run_interactive_workflow)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in run_interactive_workflow: {e}")
+
 
 def test_has_cycle_basic():
     """Test basic functionality of has_cycle."""
@@ -739,11 +770,13 @@ def test_has_cycle_basic():
         result = has_cycle()
         assert result is not None or result is None
     except TypeError:
-
         import inspect
+
         assert callable(has_cycle), "Function should be callable"
         sig = inspect.signature(has_cycle)
         assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in has_cycle: {e}")
