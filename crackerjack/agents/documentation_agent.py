@@ -1,5 +1,6 @@
 import re
 import subprocess
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
@@ -69,6 +70,12 @@ class DocumentationAgent(SubAgent):
         # Update or create changelog
         if changelog_path.exists():
             content = self.context.get_file_content(changelog_path)
+            if content is None:
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[f"Failed to read {changelog_path}"],
+                )
             updated_content = self._insert_changelog_entry(content, changelog_entry)
         else:
             updated_content = self._create_initial_changelog(changelog_entry)
@@ -84,25 +91,25 @@ class DocumentationAgent(SubAgent):
                 ],
                 files_modified=[str(changelog_path)],
             )
-        else:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=["Failed to write changelog updates"],
-            )
+        
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=["Failed to write changelog updates"],
+        )
 
     async def _fix_documentation_consistency(self, issue: Issue) -> FixResult:
         """Fix consistency issues across documentation files."""
         self.log("Checking documentation consistency")
 
         # Find all markdown files
-        md_files = list(Path(".").glob("*.md")) + list(Path("docs").glob("*.md"))
+        md_files = list(Path().glob("*.md")) + list(Path("docs").glob("*.md"))
 
         # Check agent count consistency
         agent_count_issues = self._check_agent_count_consistency(md_files)
 
-        files_modified = []
-        fixes_applied = []
+        files_modified: list[str] = []
+        fixes_applied: list[str] = []
 
         for file_path, current_count, expected_count in agent_count_issues:
             content = self.context.get_file_content(file_path)
@@ -126,12 +133,12 @@ class DocumentationAgent(SubAgent):
                 fixes_applied=fixes_applied,
                 files_modified=files_modified,
             )
-        else:
-            return FixResult(
-                success=True,
-                confidence=0.8,
-                recommendations=["Documentation is already consistent"],
-            )
+        
+        return FixResult(
+            success=True,
+            confidence=0.8,
+            recommendations=["Documentation is already consistent"],
+        )
 
     async def _update_api_documentation(self, issue: Issue) -> FixResult:
         """Update API documentation when public interfaces change."""
@@ -153,6 +160,12 @@ class DocumentationAgent(SubAgent):
         readme_path = Path("README.md")
         if readme_path.exists():
             content = self.context.get_file_content(readme_path)
+            if content is None:
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[f"Failed to read {readme_path}"],
+                )
             updated_content = self._update_readme_examples(content, api_changes)
 
             if updated_content != content:
@@ -218,18 +231,17 @@ class DocumentationAgent(SubAgent):
             if result.returncode != 0:
                 return []
 
-            changes = []
+            changes: list[dict[str, str]] = []
             for line in result.stdout.strip().split("\n"):
                 if line:
                     parts = line.split("|")
                     if len(parts) >= 2:
-                        changes.append(
-                            {
-                                "message": parts[0],
-                                "hash": parts[1],
-                                "author": parts[2] if len(parts) > 2 else "Unknown",
-                            }
-                        )
+                        change_info: dict[str, str] = {
+                            "message": parts[0],
+                            "hash": parts[1],
+                            "author": parts[2] if len(parts) > 2 else "Unknown",
+                        }
+                        changes.append(change_info)
 
             return changes
 
@@ -242,18 +254,18 @@ class DocumentationAgent(SubAgent):
         entry_lines = [f"## [Unreleased] - {date_str}", ""]
 
         # Categorize changes
-        features = []
-        fixes = []
-        refactors = []
-        other = []
+        features: list[str] = []
+        fixes: list[str] = []
+        refactors: list[str] = []
+        other: list[str] = []
 
         for change in changes:
             message = change["message"]
-            if message.startswith("feat:") or message.startswith("feature:"):
+            if message.startswith(("feat:", "feature:")):
                 features.append(message)
             elif message.startswith("fix:"):
                 fixes.append(message)
-            elif message.startswith("refactor:") or message.startswith("refact:"):
+            elif message.startswith(("refactor:", "refact:")):
                 refactors.append(message)
             else:
                 other.append(message)
@@ -292,7 +304,7 @@ class DocumentationAgent(SubAgent):
         # Find where to insert (after title and before first entry)
         insert_index = 0
         for i, line in enumerate(lines):
-            if line.startswith("# ") or line.startswith("## "):
+            if line.startswith(("# ", "## ")):
                 if i > 0:  # Skip the main title
                     insert_index = i
                     break
@@ -320,7 +332,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     ) -> list[tuple[Path, int, int]]:
         """Check for inconsistent agent count references across documentation."""
         expected_count = 9  # Current total with DocumentationAgent
-        issues = []
+        issues: list[tuple[Path, int, int]] = []
 
         # Patterns to detect agent count references
         patterns = [
@@ -331,7 +343,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         ]
 
         for file_path in md_files:
-            try:
+            with suppress(Exception):
                 content = self.context.get_file_content(file_path)
                 if not content:
                     continue
@@ -345,9 +357,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
                         ):  # Filter out unrelated numbers
                             issues.append((file_path, count, expected_count))
                             break  # Only report first issue per file
-
-            except Exception:
-                pass  # File reading failed, skip this file
 
         return issues
 
@@ -392,18 +401,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
                 return []
 
             changed_files = result.stdout.strip().split("\n")
-            api_changes = []
+            api_changes: list[dict[str, str]] = []
 
             for file_path in changed_files:
                 if file_path and (
                     "api" in file_path.lower() or "__init__" in file_path
                 ):
-                    api_changes.append(
-                        {
-                            "file": file_path,
-                            "type": "potential_api_change",
-                        }
-                    )
+                    change_info: dict[str, str] = {
+                        "file": file_path,
+                        "type": "potential_api_change",
+                    }
+                    api_changes.append(change_info)
 
             return api_changes
 

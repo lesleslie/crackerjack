@@ -63,7 +63,7 @@ class TestSpecialistAgent(SubAgent):
         )
 
     def _check_test_patterns(self, message: str) -> float:
-        for pattern_name, pattern in self.common_test_patterns.items():
+        for pattern in self.common_test_patterns.values():
             if re.search(pattern, message, re.IGNORECASE):
                 return 0.9
         return 0.0
@@ -134,7 +134,7 @@ class TestSpecialistAgent(SubAgent):
         return file_fixes, len(file_fixes) > 0
 
     def _get_failure_recommendations(self, fixes_applied: list[str]) -> list[str]:
-        if len(fixes_applied) > 0:
+        if fixes_applied:
             return []
 
         return [
@@ -191,7 +191,7 @@ class TestSpecialistAgent(SubAgent):
             fixes.extend(await self._add_temp_pkg_path_fixture(issue.file_path))
         elif fixture_name == "console":
             fixes.extend(await self._add_console_fixture(issue.file_path))
-        elif fixture_name in ["tmp_path", "tmpdir"]:
+        elif fixture_name in ("tmp_path", "tmpdir"):
             fixes.extend(await self._add_temp_path_fixture(issue.file_path))
 
         return fixes
@@ -280,9 +280,11 @@ class TestSpecialistAgent(SubAgent):
 
         original_content = content
 
-        content = content.replace('Path("/test/path")', "tmp_path")
-        content = content.replace('"/test/path"', "str(tmp_path)")
-        content = content.replace("'/test/path'", "str(tmp_path)")
+        content = (
+            content.replace('Path("/test/path")', "tmp_path")
+            .replace('"/test/path"', "str(tmp_path)")
+            .replace("'/test/path'", "str(tmp_path)")
+        )
 
         if content != original_content:
             if self.context.write_file_content(file_path, content):

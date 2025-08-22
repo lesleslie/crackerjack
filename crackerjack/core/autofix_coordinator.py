@@ -139,8 +139,29 @@ class AutofixCoordinator:
         output = result.stdout.lower()
         return "fixed" in output or "reformatted" in output
 
+    def _check_tool_success_patterns(self, cmd: list[str], result: t.Any) -> bool:
+        """Check if a tool command result indicates success."""
+        if not cmd or len(cmd) < 3:
+            return False
+
+        tool_name = cmd[2] if len(cmd) > 2 else ""
+
+        # Check if result is a subprocess.CompletedProcess
+        if hasattr(result, "returncode"):
+            return result.returncode == 0
+
+        # Check for specific tool success patterns
+        if isinstance(result, str):
+            output_lower = result.lower()
+            if "ruff" in tool_name:
+                return "fixed" in output_lower or "would reformat" in output_lower
+            elif "trailing-whitespace" in tool_name:
+                return "fixing" in output_lower or "fixed" in output_lower
+
+        return False
+
     def _validate_fix_command(self, cmd: list[str]) -> bool:
-        if not isinstance(cmd, list) or len(cmd) < 3:
+        if len(cmd) < 3:
             return False
         if cmd[0] != "uv" or cmd[1] != "run":
             return False

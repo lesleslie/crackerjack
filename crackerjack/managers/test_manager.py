@@ -1,11 +1,111 @@
+import re
 import subprocess
+import threading
 import time
 import typing as t
 from pathlib import Path
 
 from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
+from rich.text import Text
 
 from ..models.protocols import OptionsProtocol
+
+
+class TestProgress:
+    def __init__(self) -> None:
+        self.total_tests: int = 0
+        self.passed: int = 0
+        self.failed: int = 0
+        self.skipped: int = 0
+        self.errors: int = 0
+        self.current_test: str = ""
+        self.start_time: float = 0
+        self.is_complete: bool = False
+        self.is_collecting: bool = True
+        self.files_discovered: int = 0
+        self.collection_status: str = "Starting collection..."
+        self._lock = threading.Lock()
+
+    @property
+    def completed(self) -> int:
+        return self.passed + self.failed + self.skipped + self.errors
+
+    @property
+    def elapsed_time(self) -> float:
+        return time.time() - self.start_time if self.start_time else 0
+
+    @property
+    def eta_seconds(self) -> float | None:
+        if self.completed <= 0 or self.total_tests <= 0:
+            return None
+        progress_rate = (
+            self.completed / self.elapsed_time if self.elapsed_time > 0 else 0
+        )
+        remaining = self.total_tests - self.completed
+        return remaining / progress_rate if progress_rate > 0 else None
+
+    def update(self, **kwargs: t.Any) -> None:
+        with self._lock:
+            for key, value in kwargs.items():
+                if hasattr(self, key):
+                    setattr(self, key, value)
+
+    def format_progress(self) -> Panel:
+        with self._lock:
+            if self.is_collecting:
+                # Collection phase - show file discovery progress
+                progress_text = Text()
+                progress_text.append("🔍 ", style="bold cyan")
+                progress_text.append(self.collection_status, style="cyan")
+
+                if self.files_discovered > 0:
+                    progress_text.append("\n📁 Discovered: ", style="dim")
+                    progress_text.append(
+                        f"{self.files_discovered} test files", style="dim yellow"
+                    )
+
+                if self.total_tests > 0:
+                    progress_text.append("\n🧪 Found: ", style="dim")
+                    progress_text.append(f"{self.total_tests} tests", style="dim green")
+
+                progress_text.append(
+                    f"\n⏱️  Duration: {self.elapsed_time:.1f}s", style="dim"
+                )
+
+                return Panel(
+                    progress_text, title="Test Collection", border_style="yellow"
+                )
+            else:
+                # Execution phase - show test progress
+                progress_text = Text()
+                progress_text.append("🧪 Tests: ", style="bold cyan")
+                progress_text.append(f"{self.passed}", style="green")
+                progress_text.append(f"/{self.total_tests} passed", style="white")
+
+                if self.failed > 0:
+                    progress_text.append(f", {self.failed} failed", style="red")
+                if self.skipped > 0:
+                    progress_text.append(f", {self.skipped} skipped", style="yellow")
+                if self.errors > 0:
+                    progress_text.append(f", {self.errors} errors", style="bright_red")
+
+                # Add current test info
+                if self.current_test:
+                    progress_text.append("\n📍 Current: ", style="dim")
+                    progress_text.append(self.current_test, style="dim cyan")
+
+                # Add timing info
+                progress_text.append(
+                    f"\n⏱️  Duration: {self.elapsed_time:.1f}s", style="dim"
+                )
+                if self.eta_seconds is not None and self.eta_seconds > 0:
+                    progress_text.append(
+                        f" | ETA: ~{self.eta_seconds:.0f}s", style="dim"
+                    )
+
+                return Panel(progress_text, title="Test Execution", border_style="cyan")
 
 
 class TestManagementImpl:
@@ -13,6 +113,13 @@ class TestManagementImpl:
         self.console = console
         self.pkg_path = pkg_path
         self._last_test_failures: list[str] = []
+        self._progress_callback: t.Callable[[dict[str, t.Any]], None] | None = None
+
+    def set_progress_callback(
+        self, callback: t.Callable[[dict[str, t.Any]], None] | None
+    ) -> None:
+        """Set callback for AI mode structured progress updates."""
+        self._progress_callback = callback
 
     def _run_test_command(
         self, cmd: list[str], timeout: int = 600
@@ -35,6 +142,408 @@ class TestManagementImpl:
             timeout=timeout,
             env=env,
         )
+
+    def _run_test_command_with_progress(
+        self, cmd: list[str], timeout: int = 600, show_progress: bool = True
+    ) -> subprocess.CompletedProcess[str]:
+        if not show_progress:
+            return self._run_test_command(cmd, timeout)
+
+        try:
+            return self._execute_with_live_progress(cmd, timeout)
+        except Exception as e:
+            return self._handle_progress_error(e, cmd, timeout)
+
+    def _execute_with_live_progress(
+        self, cmd: list[str], timeout: int
+    ) -> subprocess.CompletedProcess[str]:
+        progress = self._initialize_progress()
+        stdout_lines: list[str] = []
+        stderr_lines: list[str] = []
+        # Use a mutable container to share last_activity_time between threads
+        activity_tracker = {"last_time": time.time()}
+
+        with Live(
+            progress.format_progress(),
+            refresh_per_second=2,
+            console=self.console,
+            auto_refresh=False,
+        ) as live:
+            with subprocess.Popen(
+                cmd,
+                cwd=self.pkg_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=self._setup_test_environment(),
+            ) as process:
+                threads = self._start_reader_threads(
+                    process,
+                    progress,
+                    stdout_lines,
+                    stderr_lines,
+                    live,
+                    activity_tracker,
+                )
+
+                returncode = self._wait_for_completion(process, progress, live, timeout)
+                self._cleanup_threads(threads, progress, live)
+
+                return subprocess.CompletedProcess(
+                    args=cmd,
+                    returncode=returncode,
+                    stdout="\n".join(stdout_lines),
+                    stderr="\n".join(stderr_lines),
+                )
+
+    def _initialize_progress(self) -> TestProgress:
+        progress = TestProgress()
+        progress.start_time = time.time()
+        progress.collection_status = "Initializing test collection..."
+        return progress
+
+    def _setup_test_environment(self) -> dict[str, str]:
+        import os
+        from pathlib import Path
+
+        cache_dir = Path.home() / ".cache" / "crackerjack" / "coverage"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+        env = os.environ.copy()
+        env["COVERAGE_FILE"] = str(cache_dir / ".coverage")
+        return env
+
+    def _start_reader_threads(
+        self,
+        process: subprocess.Popen[str],
+        progress: TestProgress,
+        stdout_lines: list[str],
+        stderr_lines: list[str],
+        live: Live,
+        activity_tracker: dict[str, float],
+    ) -> dict[str, threading.Thread]:
+        read_output = self._create_stdout_reader(
+            process, progress, stdout_lines, live, activity_tracker
+        )
+        read_stderr = self._create_stderr_reader(process, stderr_lines)
+        monitor_stuck = self._create_monitor_thread(
+            process, progress, live, activity_tracker
+        )
+
+        threads = {
+            "stdout": threading.Thread(target=read_output, daemon=True),
+            "stderr": threading.Thread(target=read_stderr, daemon=True),
+            "monitor": threading.Thread(target=monitor_stuck, daemon=True),
+        }
+
+        for thread in threads.values():
+            thread.start()
+
+        return threads
+
+    def _create_stdout_reader(
+        self,
+        process: subprocess.Popen[str],
+        progress: TestProgress,
+        stdout_lines: list[str],
+        live: Live,
+        activity_tracker: dict[str, float],
+    ) -> t.Callable[[], None]:
+        def read_output() -> None:
+            last_refresh = 0
+            if process.stdout:
+                for line in iter(process.stdout.readline, ""):
+                    if not line:
+                        break
+                    line = line.rstrip()
+                    if line.strip():
+                        stdout_lines.append(line)
+                        self._parse_test_line(line, progress)
+                        activity_tracker["last_time"] = time.time()
+
+                        # Only refresh display every 0.5 seconds to avoid spam
+                        current_time = time.time()
+                        if current_time - last_refresh > 0.5:
+                            live.update(progress.format_progress())
+                            last_refresh = current_time
+
+        return read_output
+
+    def _create_stderr_reader(
+        self, process: subprocess.Popen[str], stderr_lines: list[str]
+    ) -> t.Callable[[], None]:
+        def read_stderr() -> None:
+            if process.stderr:
+                for line in iter(process.stderr.readline, ""):
+                    if not line:
+                        break
+                    stderr_lines.append(line.rstrip())
+
+        return read_stderr
+
+    def _create_monitor_thread(
+        self,
+        process: subprocess.Popen[str],
+        progress: TestProgress,
+        live: Live,
+        activity_tracker: dict[str, float],
+    ) -> t.Callable[[], None]:
+        def monitor_stuck_tests() -> None:
+            while process.poll() is None:
+                time.sleep(5)
+                current_time = time.time()
+                if current_time - activity_tracker["last_time"] > 30:
+                    self._mark_test_as_stuck(
+                        progress, current_time - activity_tracker["last_time"], live
+                    )
+
+        return monitor_stuck_tests
+
+    def _mark_test_as_stuck(
+        self, progress: TestProgress, stuck_time: float, live: Live
+    ) -> None:
+        if progress.current_test and "stuck" not in progress.current_test.lower():
+            progress.update(
+                current_test=f"{progress.current_test} (possibly stuck - {stuck_time:.0f}s)"
+            )
+            live.update(progress.format_progress())
+
+    def _wait_for_completion(
+        self,
+        process: subprocess.Popen[str],
+        progress: TestProgress,
+        live: Live,
+        timeout: int,
+    ) -> int:
+        try:
+            return process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            progress.update(current_test="TIMEOUT - Process killed")
+            live.update(progress.format_progress())
+            raise
+
+    def _cleanup_threads(
+        self, threads: dict[str, threading.Thread], progress: TestProgress, live: Live
+    ) -> None:
+        threads["stdout"].join(timeout=1)
+        threads["stderr"].join(timeout=1)
+        progress.is_complete = True
+        live.update(progress.format_progress())
+
+    def _handle_progress_error(
+        self, error: Exception, cmd: list[str], timeout: int
+    ) -> subprocess.CompletedProcess[str]:
+        try:
+            self.console.print(f"[red]❌ Progress display failed: {error}[/red]")
+            self.console.print("[yellow]⚠️ Falling back to standard mode[/yellow]")
+        except Exception:
+            pass
+        return self._run_test_command(cmd, timeout)
+
+    def _parse_test_line(self, line: str, progress: TestProgress) -> None:
+        if self._handle_collection_completion(line, progress):
+            return
+        if self._handle_session_events(line, progress):
+            return
+        if self._handle_collection_progress(line, progress):
+            return
+        if self._handle_test_execution(line, progress):
+            return
+        self._handle_running_test(line, progress)
+
+    def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
+        if match := re.search(r"collected (\d+) items?", line):
+            progress.update(
+                total_tests=int(match.group(1)),
+                is_collecting=False,
+                current_test="Starting test execution...",
+            )
+            return True
+        return False
+
+    def _handle_session_events(self, line: str, progress: TestProgress) -> bool:
+        if "test session starts" in line.lower():
+            progress.update(collection_status="Session starting...")
+            return True
+        if line.startswith("collecting") or "collecting" in line.lower():
+            progress.update(collection_status="Collecting tests...")
+            return True
+        return False
+
+    def _handle_collection_progress(self, line: str, progress: TestProgress) -> bool:
+        if not progress.is_collecting or not (".py" in line or "test_" in line):
+            return False
+
+        if "::" in line or line.strip().endswith(".py"):
+            progress.update(files_discovered=progress.files_discovered + 1)
+            if ".py" in line:
+                filename = line.split("/")[-1] if "/" in line else line
+                if filename.endswith(".py"):
+                    progress.update(collection_status=f"Found: {filename}")
+        return True
+
+    def _handle_test_execution(self, line: str, progress: TestProgress) -> bool:
+        if not (
+            "::" in line
+            and any(
+                status in line for status in ("PASSED", "FAILED", "SKIPPED", "ERROR")
+            )
+        ):
+            return False
+
+        if "PASSED" in line:
+            progress.update(passed=progress.passed + 1)
+        elif "FAILED" in line:
+            progress.update(failed=progress.failed + 1)
+        elif "SKIPPED" in line:
+            progress.update(skipped=progress.skipped + 1)
+        elif "ERROR" in line:
+            progress.update(errors=progress.errors + 1)
+
+        self._extract_current_test(line, progress)
+        return True
+
+    def _handle_running_test(self, line: str, progress: TestProgress) -> None:
+        if "::" not in line or any(
+            status in line for status in ("PASSED", "FAILED", "SKIPPED", "ERROR")
+        ):
+            return
+
+        parts = line.split()
+        if parts and "::" in parts[0]:
+            test_path = parts[0]
+            if "/" in test_path:
+                test_path = test_path.split("/")[-1]
+            progress.update(current_test=f"Running: {test_path}")
+
+    def _extract_current_test(self, line: str, progress: TestProgress) -> None:
+        # Extract test name from pytest output line
+        parts = line.split()
+        if parts and "::" in parts[0]:
+            test_path = parts[0]
+            # Simplify the test path for display
+            if "/" in test_path:
+                test_path = test_path.split("/")[-1]  # Get just the filename part
+            progress.update(current_test=test_path)
+
+    def _run_test_command_with_ai_progress(
+        self, cmd: list[str], timeout: int = 600
+    ) -> subprocess.CompletedProcess[str]:
+        """Run tests with periodic structured progress updates for AI mode."""
+        import os
+        from pathlib import Path
+
+        # Set up coverage data file in cache directory
+        cache_dir = Path.home() / ".cache" / "crackerjack" / "coverage"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+        env = os.environ.copy()
+        env["COVERAGE_FILE"] = str(cache_dir / ".coverage")
+
+        progress = TestProgress()
+        progress.start_time = time.time()
+        stdout_lines: list[str] = []
+        stderr_lines: list[str] = []
+        last_update_time = time.time()
+
+        try:
+            with subprocess.Popen(
+                cmd,
+                cwd=self.pkg_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=env,
+            ) as process:
+
+                def read_output() -> None:
+                    nonlocal last_update_time
+                    if process.stdout:
+                        for line in iter(process.stdout.readline, ""):
+                            if not line:
+                                break
+                            line = line.rstrip()
+                            stdout_lines.append(line)
+                            self._parse_test_line(line, progress)
+
+                            # Emit structured progress every 10 seconds
+                            current_time = time.time()
+                            if current_time - last_update_time >= 10:
+                                self._emit_ai_progress(progress)
+                                last_update_time = current_time
+
+                def read_stderr() -> None:
+                    if process.stderr:
+                        for line in iter(process.stderr.readline, ""):
+                            if not line:
+                                break
+                            stderr_lines.append(line.rstrip())
+
+                # Start reader threads
+                stdout_thread = threading.Thread(target=read_output, daemon=True)
+                stderr_thread = threading.Thread(target=read_stderr, daemon=True)
+
+                stdout_thread.start()
+                stderr_thread.start()
+
+                # Wait for process completion with timeout
+                try:
+                    returncode = process.wait(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    raise
+
+                # Wait for threads to finish reading
+                stdout_thread.join(timeout=1)
+                stderr_thread.join(timeout=1)
+
+                # Final progress update
+                progress.is_complete = True
+                self._emit_ai_progress(progress)
+
+                return subprocess.CompletedProcess(
+                    args=cmd,
+                    returncode=returncode,
+                    stdout="\n".join(stdout_lines),
+                    stderr="\n".join(stderr_lines),
+                )
+
+        except Exception:
+            # Fallback to standard mode
+            return self._run_test_command(cmd, timeout)
+
+    def _emit_ai_progress(self, progress: TestProgress) -> None:
+        """Emit structured progress data for AI consumption."""
+        if not self._progress_callback:
+            return
+
+        progress_data = {
+            "timestamp": progress.elapsed_time,
+            "status": "complete" if progress.is_complete else "running",
+            "progress_percentage": (progress.completed / progress.total_tests * 100)
+            if progress.total_tests > 0
+            else 0,
+            "completed": progress.completed,
+            "total": progress.total_tests,
+            "passed": progress.passed,
+            "failed": progress.failed,
+            "skipped": progress.skipped,
+            "errors": progress.errors,
+            "current_test": progress.current_test,
+            "elapsed_seconds": progress.elapsed_time,
+            "eta_seconds": progress.eta_seconds,
+        }
+
+        # Include console-friendly message for periodic updates
+        if not progress.is_complete and progress.total_tests > 0:
+            percentage = progress.completed / progress.total_tests * 100
+            self.console.print(
+                f"📊 Progress update ({progress.elapsed_time:.0f}s): "
+                f"{progress.completed}/{progress.total_tests} tests completed ({percentage:.0f}%)"
+            )
+
+        self._progress_callback(progress_data)
 
     def _get_optimal_workers(self, options: OptionsProtocol) -> int:
         if options.test_workers > 0:
@@ -62,22 +571,57 @@ class TestManagementImpl:
     def run_tests(self, options: OptionsProtocol) -> bool:
         self._last_test_failures = []
         start_time = time.time()
+        
         try:
             cmd = self._build_test_command(options)
             timeout = self._get_test_timeout(options)
-            self._print_test_start_message(cmd, timeout, options)
-            result = self._run_test_command(cmd, timeout=timeout + 60)
+            result = self._execute_tests_with_appropriate_mode(cmd, timeout, options)
             duration = time.time() - start_time
-
             return self._process_test_results(result, duration)
         except subprocess.TimeoutExpired:
-            duration = time.time() - start_time
-            self.console.print(f"[red]⏰[/red] Tests timed out after {duration:.1f}s")
-            return False
+            return self._handle_test_timeout(start_time)
         except Exception as e:
-            duration = time.time() - start_time
-            self.console.print(f"[red]💥[/red] Test execution failed: {e}")
-            return False
+            return self._handle_test_error(start_time, e)
+
+    def _execute_tests_with_appropriate_mode(
+        self, cmd: list[str], timeout: int, options: OptionsProtocol
+    ) -> subprocess.CompletedProcess[str]:
+        """Execute tests using the appropriate mode based on options."""
+        execution_mode = self._determine_execution_mode(options)
+        extended_timeout = timeout + 60
+        
+        if execution_mode == "ai_progress":
+            self._print_test_start_message(cmd, timeout, options)
+            return self._run_test_command_with_ai_progress(cmd, timeout=extended_timeout)
+        elif execution_mode == "console_progress":
+            return self._run_test_command_with_progress(cmd, timeout=extended_timeout)
+        else:  # standard mode
+            self._print_test_start_message(cmd, timeout, options)
+            return self._run_test_command(cmd, timeout=extended_timeout)
+
+    def _determine_execution_mode(self, options: OptionsProtocol) -> str:
+        """Determine which execution mode to use based on options."""
+        is_ai_mode = getattr(options, "ai_agent", False)
+        is_benchmark = options.benchmark
+        
+        if is_ai_mode and self._progress_callback:
+            return "ai_progress"
+        elif not is_ai_mode and not is_benchmark:
+            return "console_progress"
+        else:
+            return "standard"
+
+    def _handle_test_timeout(self, start_time: float) -> bool:
+        """Handle test execution timeout."""
+        duration = time.time() - start_time
+        self.console.print(f"[red]⏰[/red] Tests timed out after {duration:.1f}s")
+        return False
+
+    def _handle_test_error(self, start_time: float, error: Exception) -> bool:
+        """Handle test execution errors."""
+        duration = time.time() - start_time
+        self.console.print(f"[red]💥[/red] Test execution failed: {error}")
+        return False
 
     def _build_test_command(self, options: OptionsProtocol) -> list[str]:
         cmd = ["python", "-m", "pytest"]
@@ -85,7 +629,13 @@ class TestManagementImpl:
         self._add_worker_options(cmd, options)
         self._add_benchmark_options(cmd, options)
         self._add_timeout_options(cmd, options)
-        self._add_verbosity_options(cmd, options)
+
+        # For progress modes, we need verbose output to parse test names
+        is_ai_mode = getattr(options, "ai_agent", False)
+        needs_verbose = (not is_ai_mode and not options.benchmark) or (
+            is_ai_mode and self._progress_callback
+        )
+        self._add_verbosity_options(cmd, options, force_verbose=needs_verbose)
         self._add_test_path(cmd)
 
         return cmd
@@ -112,8 +662,10 @@ class TestManagementImpl:
         timeout = self._get_test_timeout(options)
         cmd.extend(["--timeout", str(timeout)])
 
-    def _add_verbosity_options(self, cmd: list[str], options: OptionsProtocol) -> None:
-        if options.verbose:
+    def _add_verbosity_options(
+        self, cmd: list[str], options: OptionsProtocol, force_verbose: bool = False
+    ) -> None:
+        if options.verbose or force_verbose:
             cmd.append("-v")
 
     def _add_test_path(self, cmd: list[str]) -> None:

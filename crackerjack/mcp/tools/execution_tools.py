@@ -174,218 +174,15 @@ async def _execute_crackerjack_sync(
     current_iteration = 1
 
     try:
-        _update_progress(
-            job_id=job_id,
-            status="running",
-            iteration=current_iteration,
-            max_iterations=max_iterations,
-            overall_progress=2,
-            current_stage="initialization",
-            message="Initializing crackerjack execution",
+        await _initialize_execution(job_id, max_iterations, current_iteration, context)
+        
+        orchestrator, use_advanced_orchestrator = await _setup_orchestrator(
+            job_id, max_iterations, current_iteration, kwargs, context
         )
-
-        # Check comprehensive status first to prevent conflicts and perform cleanup
-        status_result = await _check_status_and_prepare(job_id, context)
-        if status_result.get("should_abort", False):
-            return {
-                "job_id": job_id,
-                "status": "aborted",
-                "error": status_result["reason"],
-                "status_info": status_result.get("status_info"),
-            }
-
-        _update_progress(
-            job_id=job_id,
-            status="running",
-            iteration=current_iteration,
-            max_iterations=max_iterations,
-            overall_progress=5,
-            current_stage="status_verified",
-            message="Status check complete - no conflicts detected",
+        
+        return await _run_workflow_iterations(
+            job_id, max_iterations, orchestrator, use_advanced_orchestrator, kwargs
         )
-
-        # Clean up stale jobs first
-        await _cleanup_stale_jobs(context)
-
-        # Auto-start required services
-        await _ensure_services_running(job_id, context)
-
-        _update_progress(
-            job_id=job_id,
-            status="running",
-            iteration=current_iteration,
-            max_iterations=max_iterations,
-            overall_progress=10,
-            current_stage="services_ready",
-            message="Services initialized successfully",
-        )
-
-        # Use advanced orchestrator with AI agent support and rich stats panel
-        try:
-            from ...core.session_coordinator import SessionCoordinator
-            from ...models.config import WorkflowOptions
-            from ...orchestration.advanced_orchestrator import (
-                AdvancedWorkflowOrchestrator,
-            )
-            from ...orchestration.execution_strategies import (
-                AICoordinationMode,
-                AIIntelligence,
-                ExecutionStrategy,
-                OrchestrationConfig,
-                ProgressLevel,
-                StreamingMode,
-            )
-
-            # Create optimal orchestration configuration for maximum efficiency
-            optimal_config = OrchestrationConfig(
-                execution_strategy=ExecutionStrategy.ADAPTIVE,
-                progress_level=ProgressLevel.DETAILED,
-                streaming_mode=StreamingMode.WEBSOCKET,
-                ai_coordination_mode=AICoordinationMode.COORDINATOR,
-                ai_intelligence=AIIntelligence.ADAPTIVE,
-                # Enable advanced features
-                correlation_tracking=True,
-                failure_analysis=True,
-                intelligent_retry=True,
-                # Maximize parallelism for hook and test fixing
-                max_parallel_hooks=3,
-                max_parallel_tests=4,
-                timeout_multiplier=1.0,
-                # Enhanced debugging and monitoring
-                debug_level="standard",
-                log_individual_outputs=False,
-                preserve_temp_files=False,
-            )
-
-            # Initialize advanced orchestrator with optimal config
-            session = SessionCoordinator(
-                context.console, context.config.project_path, web_job_id=job_id
-            )
-            orchestrator = AdvancedWorkflowOrchestrator(
-                console=context.console,
-                pkg_path=context.config.project_path,
-                session=session,
-                config=optimal_config,
-            )
-
-            # Override MCP mode if debug flag is set
-            if kwargs.get("debug", False):
-                orchestrator.individual_executor.set_mcp_mode(False)
-                context.safe_print("🐛 Debug mode enabled - full output mode")
-
-            use_advanced_orchestrator = True
-
-        except ImportError as e:
-            context.safe_print(f"Advanced orchestration not available: {e}")
-            context.safe_print("Falling back to standard WorkflowOrchestrator")
-
-            # Fallback to standard orchestrator
-            from ...core.workflow_orchestrator import WorkflowOrchestrator
-            from ...models.config import WorkflowOptions
-
-            orchestrator = WorkflowOrchestrator(
-                console=context.console,
-                pkg_path=context.config.project_path,
-                dry_run=kwargs.get("dry_run", False),
-                web_job_id=job_id,
-            )
-            use_advanced_orchestrator = False
-
-        # Update progress to show orchestrator mode
-        orchestrator_type = (
-            "Advanced Orchestrator (COORDINATOR + ADAPTIVE)"
-            if use_advanced_orchestrator
-            else "Standard Orchestrator"
-        )
-        _update_progress(
-            job_id=job_id,
-            status="running",
-            iteration=current_iteration,
-            max_iterations=max_iterations,
-            overall_progress=15,
-            current_stage="orchestrator_ready",
-            message=f"Initialized {orchestrator_type}",
-        )
-
-        success = False
-        for iteration in range(1, max_iterations + 1):
-            current_iteration = iteration
-
-            _update_progress(
-                job_id=job_id,
-                status="running",
-                iteration=current_iteration,
-                max_iterations=max_iterations,
-                overall_progress=int((iteration / max_iterations) * 80),
-                current_stage=f"iteration_{iteration}",
-                message=f"Running iteration {iteration} / {max_iterations}",
-            )
-
-            options = WorkflowOptions()
-            options.testing.test = kwargs.get("test", True)
-            options.ai_agent = kwargs.get("ai_agent", True)
-            options.skip_hooks = kwargs.get("skip_hooks", False)
-
-            try:
-                if use_advanced_orchestrator:
-                    # Use advanced orchestrator with optimal coordination
-                    success = await orchestrator.execute_orchestrated_workflow(options)
-                else:
-                    # Fallback to standard orchestrator (now async for AI agent support)
-                    success = await orchestrator.run_complete_workflow(options)
-
-                if success:
-                    _update_progress(
-                        job_id=job_id,
-                        status="completed",
-                        iteration=current_iteration,
-                        max_iterations=max_iterations,
-                        overall_progress=100,
-                        current_stage="completed",
-                        message=f"Successfully completed after {iteration} iterations",
-                    )
-                    return {
-                        "job_id": job_id,
-                        "status": "completed",
-                        "iteration": current_iteration,
-                        "message": f"Successfully completed after {iteration} iterations",
-                    }
-                else:
-                    if iteration < max_iterations:
-                        _update_progress(
-                            job_id=job_id,
-                            status="running",
-                            iteration=current_iteration,
-                            max_iterations=max_iterations,
-                            overall_progress=int((iteration / max_iterations) * 80),
-                            current_stage="retrying",
-                            message=f"Iteration {iteration} failed, retrying...",
-                        )
-                        await asyncio.sleep(1)
-                        continue
-
-            except Exception as e:
-                context.safe_print(f"Iteration {iteration} failed with error: {e}")
-                if iteration >= max_iterations:
-                    break
-                await asyncio.sleep(1)
-
-        if not success:
-            _update_progress(
-                job_id=job_id,
-                status="failed",
-                iteration=current_iteration,
-                max_iterations=max_iterations,
-                overall_progress=80,
-                current_stage="failed",
-                message=f"Failed after {max_iterations} iterations",
-            )
-            return {
-                "job_id": job_id,
-                "status": "failed",
-                "iteration": current_iteration,
-                "message": f"Failed after {max_iterations} iterations",
-            }
 
     except Exception as e:
         _update_progress(
@@ -399,6 +196,279 @@ async def _execute_crackerjack_sync(
         )
         context.safe_print(f"Execution failed: {e}")
         return {"job_id": job_id, "status": "failed", "error": str(e)}
+
+
+async def _initialize_execution(
+    job_id: str, max_iterations: int, current_iteration: int, context: t.Any
+) -> None:
+    """Initialize execution with status checks and service preparation."""
+    _update_progress(
+        job_id=job_id,
+        status="running",
+        iteration=current_iteration,
+        max_iterations=max_iterations,
+        overall_progress=2,
+        current_stage="initialization",
+        message="Initializing crackerjack execution",
+    )
+
+    # Check comprehensive status first to prevent conflicts and perform cleanup
+    status_result = await _check_status_and_prepare(job_id, context)
+    if status_result.get("should_abort", False):
+        raise RuntimeError(f"Execution aborted: {status_result['reason']}")
+
+    _update_progress(
+        job_id=job_id,
+        status="running",
+        iteration=current_iteration,
+        max_iterations=max_iterations,
+        overall_progress=5,
+        current_stage="status_verified",
+        message="Status check complete - no conflicts detected",
+    )
+
+    # Clean up stale jobs first
+    await _cleanup_stale_jobs(context)
+
+    # Auto-start required services
+    await _ensure_services_running(job_id, context)
+
+    _update_progress(
+        job_id=job_id,
+        status="running",
+        iteration=current_iteration,
+        max_iterations=max_iterations,
+        overall_progress=10,
+        current_stage="services_ready",
+        message="Services initialized successfully",
+    )
+
+
+async def _setup_orchestrator(
+    job_id: str, max_iterations: int, current_iteration: int, kwargs: dict[str, t.Any], context: t.Any
+) -> tuple[t.Any, bool]:
+    """Set up the appropriate orchestrator (advanced or standard)."""
+    try:
+        orchestrator = await _create_advanced_orchestrator(job_id, kwargs, context)
+        use_advanced_orchestrator = True
+    except ImportError as e:
+        context.safe_print(f"Advanced orchestration not available: {e}")
+        context.safe_print("Falling back to standard WorkflowOrchestrator")
+        orchestrator = _create_standard_orchestrator(job_id, kwargs, context)
+        use_advanced_orchestrator = False
+
+    # Update progress to show orchestrator mode
+    orchestrator_type = (
+        "Advanced Orchestrator (COORDINATOR + ADAPTIVE)"
+        if use_advanced_orchestrator
+        else "Standard Orchestrator"
+    )
+    _update_progress(
+        job_id=job_id,
+        status="running",
+        iteration=current_iteration,
+        max_iterations=max_iterations,
+        overall_progress=15,
+        current_stage="orchestrator_ready",
+        message=f"Initialized {orchestrator_type}",
+    )
+
+    return orchestrator, use_advanced_orchestrator
+
+
+async def _create_advanced_orchestrator(job_id: str, kwargs: dict[str, t.Any], context: t.Any) -> t.Any:
+    """Create and configure the advanced orchestrator."""
+    from ...core.session_coordinator import SessionCoordinator
+    from ...orchestration.advanced_orchestrator import AdvancedWorkflowOrchestrator
+    from ...orchestration.execution_strategies import (
+        AICoordinationMode,
+        AIIntelligence,
+        ExecutionStrategy,
+        OrchestrationConfig,
+        ProgressLevel,
+        StreamingMode,
+    )
+
+    # Create optimal orchestration configuration for maximum efficiency
+    optimal_config = OrchestrationConfig(
+        execution_strategy=ExecutionStrategy.ADAPTIVE,
+        progress_level=ProgressLevel.DETAILED,
+        streaming_mode=StreamingMode.WEBSOCKET,
+        ai_coordination_mode=AICoordinationMode.COORDINATOR,
+        ai_intelligence=AIIntelligence.ADAPTIVE,
+        # Enable advanced features
+        correlation_tracking=True,
+        failure_analysis=True,
+        intelligent_retry=True,
+        # Maximize parallelism for hook and test fixing
+        max_parallel_hooks=3,
+        max_parallel_tests=4,
+        timeout_multiplier=1.0,
+        # Enhanced debugging and monitoring
+        debug_level="standard",
+        log_individual_outputs=False,
+        preserve_temp_files=False,
+    )
+
+    # Initialize advanced orchestrator with optimal config
+    session = SessionCoordinator(
+        context.console, context.config.project_path, web_job_id=job_id
+    )
+    orchestrator = AdvancedWorkflowOrchestrator(
+        console=context.console,
+        pkg_path=context.config.project_path,
+        session=session,
+        config=optimal_config,
+    )
+
+    # Override MCP mode if debug flag is set
+    if kwargs.get("debug", False):
+        orchestrator.individual_executor.set_mcp_mode(False)
+        context.safe_print("🐛 Debug mode enabled - full output mode")
+
+    return orchestrator
+
+
+def _create_standard_orchestrator(job_id: str, kwargs: dict[str, t.Any], context: t.Any) -> t.Any:
+    """Create the standard fallback orchestrator."""
+    from ...core.workflow_orchestrator import WorkflowOrchestrator
+
+    return WorkflowOrchestrator(
+        console=context.console,
+        pkg_path=context.config.project_path,
+        dry_run=kwargs.get("dry_run", False),
+        web_job_id=job_id,
+    )
+
+
+async def _run_workflow_iterations(
+    job_id: str, max_iterations: int, orchestrator: t.Any, 
+    use_advanced_orchestrator: bool, kwargs: dict[str, t.Any]
+) -> dict[str, t.Any]:
+    """Run the main workflow iteration loop."""
+    from ...models.config import WorkflowOptions
+
+    success = False
+    current_iteration = 1
+
+    for iteration in range(1, max_iterations + 1):
+        current_iteration = iteration
+
+        _update_progress(
+            job_id=job_id,
+            status="running",
+            iteration=current_iteration,
+            max_iterations=max_iterations,
+            overall_progress=int((iteration / max_iterations) * 80),
+            current_stage=f"iteration_{iteration}",
+            message=f"Running iteration {iteration} / {max_iterations}",
+        )
+
+        options = _create_workflow_options(kwargs)
+
+        try:
+            success = await _execute_single_iteration(
+                orchestrator, use_advanced_orchestrator, options
+            )
+
+            if success:
+                return _create_success_result(job_id, current_iteration, max_iterations, iteration)
+            
+            if iteration < max_iterations:
+                await _handle_iteration_retry(job_id, current_iteration, max_iterations, iteration)
+                continue
+
+        except Exception as e:
+            if not await _handle_iteration_error(iteration, max_iterations, e):
+                break
+
+    return _create_failure_result(job_id, current_iteration, max_iterations)
+
+
+def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
+    """Create WorkflowOptions from kwargs."""
+    from ...models.config import WorkflowOptions
+    
+    options = WorkflowOptions()
+    options.testing.test = kwargs.get("test", True)
+    options.ai_agent = kwargs.get("ai_agent", True)
+    options.skip_hooks = kwargs.get("skip_hooks", False)
+    return options
+
+
+async def _execute_single_iteration(
+    orchestrator: t.Any, use_advanced_orchestrator: bool, options: t.Any
+) -> bool:
+    """Execute a single workflow iteration."""
+    if use_advanced_orchestrator:
+        return await orchestrator.execute_orchestrated_workflow(options)
+    else:
+        return await orchestrator.run_complete_workflow(options)
+
+
+def _create_success_result(
+    job_id: str, current_iteration: int, max_iterations: int, iteration: int
+) -> dict[str, t.Any]:
+    """Create success result dictionary."""
+    _update_progress(
+        job_id=job_id,
+        status="completed",
+        iteration=current_iteration,
+        max_iterations=max_iterations,
+        overall_progress=100,
+        current_stage="completed",
+        message=f"Successfully completed after {iteration} iterations",
+    )
+    return {
+        "job_id": job_id,
+        "status": "completed",
+        "iteration": current_iteration,
+        "message": f"Successfully completed after {iteration} iterations",
+    }
+
+
+async def _handle_iteration_retry(
+    job_id: str, current_iteration: int, max_iterations: int, iteration: int
+) -> None:
+    """Handle iteration retry logic."""
+    _update_progress(
+        job_id=job_id,
+        status="running",
+        iteration=current_iteration,
+        max_iterations=max_iterations,
+        overall_progress=int((iteration / max_iterations) * 80),
+        current_stage="retrying",
+        message=f"Iteration {iteration} failed, retrying...",
+    )
+    await asyncio.sleep(1)
+
+
+async def _handle_iteration_error(iteration: int, max_iterations: int, error: Exception) -> bool:
+    """Handle iteration errors. Returns True to continue, False to break."""
+    print(f"Iteration {iteration} failed with error: {error}")
+    if iteration >= max_iterations:
+        return False
+    await asyncio.sleep(1)
+    return True
+
+
+def _create_failure_result(job_id: str, current_iteration: int, max_iterations: int) -> dict[str, t.Any]:
+    """Create failure result dictionary."""
+    _update_progress(
+        job_id=job_id,
+        status="failed",
+        iteration=current_iteration,
+        max_iterations=max_iterations,
+        overall_progress=80,
+        current_stage="failed",
+        message=f"Failed after {max_iterations} iterations",
+    )
+    return {
+        "job_id": job_id,
+        "status": "failed",
+        "iteration": current_iteration,
+        "message": f"Failed after {max_iterations} iterations",
+    }
 
 
 async def _ensure_services_running(job_id: str, context: t.Any) -> None:
@@ -460,18 +530,7 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
 
 
 async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.Any]:
-    """Check comprehensive system status and prepare for execution.
-
-    This function implements the enhancement to call /crackerjack:status first
-    to prevent conflicts and perform beneficial cleanup.
-
-    Returns:
-        dict with keys:
-        - should_abort: bool - whether execution should be aborted
-        - reason: str - reason for abort (if should_abort is True)
-        - status_info: dict - comprehensive status information
-        - cleanup_performed: list - list of cleanup actions performed
-    """
+    """Check comprehensive system status and prepare for execution."""
     _update_progress(
         job_id=job_id,
         status="running",
@@ -480,99 +539,122 @@ async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.
     )
 
     try:
-        # Get comprehensive status (equivalent to /crackerjack:status)
-        from .monitoring_tools import _get_comprehensive_status
-
-        status_info = await _get_comprehensive_status()
-
+        status_info = await _get_status_info()
         if "error" in status_info:
-            # Status check failed, but don't abort - just warn
-            context.safe_print(f"⚠️ Status check failed: {status_info['error']}")
-            return {
-                "should_abort": False,
-                "reason": "",
-                "status_info": status_info,
-                "cleanup_performed": [],
-            }
+            return _handle_status_error(status_info, context)
 
         cleanup_performed = []
-        should_abort = False
-        abort_reason = ""
-
-        # Check for active jobs in the same project
-        active_jobs = [
-            j
-            for j in status_info.get("jobs", {}).get("details", [])
-            if j.get("status") == "running"
-        ]
-
-        if active_jobs:
-            # Check if any active jobs are in the same project path
-            str(context.config.project_path)
-
-            conflicting_jobs = []
-            for job in active_jobs:
-                # For now, assume all jobs could conflict (future: check project paths)
-                conflicting_jobs.append(job)
-
-            if conflicting_jobs:
-                job_ids = [j.get("job_id", "unknown") for j in conflicting_jobs]
-                context.safe_print(
-                    f"⚠️ Found {len(conflicting_jobs)} active job(s): {', '.join(job_ids[:3])}"
-                )
-                context.safe_print(
-                    "   Running concurrent crackerjack instances may cause file conflicts"
-                )
-
-                # Don't abort for now, but warn user
-                # Future enhancement: could offer to wait or kill conflicting jobs
-                context.safe_print("   Proceeding with caution...")
-        else:
-            context.safe_print("✅ No active jobs detected - safe to proceed")
-
-        # Check resource usage and perform cleanup if beneficial
-        temp_files_count = (
-            status_info.get("server_stats", {})
-            .get("resource_usage", {})
-            .get("temp_files_count", 0)
-        )
-
-        if temp_files_count > 50:
-            context.safe_print(
-                f"🗑️ Found {temp_files_count} temporary files - cleanup recommended"
-            )
-            cleanup_performed.append("temp_files_flagged")
-
+        
+        # Check for conflicting jobs
+        _check_active_jobs(status_info, context)
+        
+        # Check and flag resource cleanup needs
+        cleanup_performed.extend(_check_resource_cleanup(status_info, context))
+        
         # Check service health
-        services = status_info.get("services", {})
-        mcp_running = services.get("mcp_server", {}).get("running", False)
-        websocket_running = services.get("websocket_server", {}).get("running", False)
+        _check_service_health(status_info, context)
 
-        if not mcp_running:
-            context.safe_print("⚠️ MCP server not running - will auto-start if needed")
-
-        if not websocket_running:
-            context.safe_print("📡 WebSocket server not running - will auto-start")
-
-        # Success - no conflicts detected
         context.safe_print("✅ Status check complete - ready to proceed")
 
         return {
-            "should_abort": should_abort,
-            "reason": abort_reason,
+            "should_abort": False,
+            "reason": "",
             "status_info": status_info,
             "cleanup_performed": cleanup_performed,
         }
 
     except Exception as e:
-        # Status check failed, but don't abort the main operation
-        context.safe_print(f"⚠️ Status check encountered error: {e}")
-        return {
-            "should_abort": False,
-            "reason": "",
-            "status_info": {"error": str(e)},
-            "cleanup_performed": [],
-        }
+        return _handle_status_exception(e, context)
+
+
+async def _get_status_info() -> dict[str, t.Any]:
+    """Get comprehensive system status."""
+    from .monitoring_tools import _get_comprehensive_status
+    return await _get_comprehensive_status()
+
+
+def _handle_status_error(status_info: dict[str, t.Any], context: t.Any) -> dict[str, t.Any]:
+    """Handle status check failure."""
+    context.safe_print(f"⚠️ Status check failed: {status_info['error']}")
+    return {
+        "should_abort": False,
+        "reason": "",
+        "status_info": status_info,
+        "cleanup_performed": [],
+    }
+
+
+def _check_active_jobs(status_info: dict[str, t.Any], context: t.Any) -> None:
+    """Check for active jobs that might conflict."""
+    active_jobs = [
+        j
+        for j in status_info.get("jobs", {}).get("details", [])
+        if j.get("status") == "running"
+    ]
+
+    if active_jobs:
+        _handle_conflicting_jobs(active_jobs, context)
+    else:
+        context.safe_print("✅ No active jobs detected - safe to proceed")
+
+
+def _handle_conflicting_jobs(active_jobs: list[dict[str, t.Any]], context: t.Any) -> None:
+    """Handle conflicting active jobs."""
+    # For now, assume all jobs could conflict (future: check project paths)
+    conflicting_jobs = active_jobs
+    
+    if conflicting_jobs:
+        job_ids = [j.get("job_id", "unknown") for j in conflicting_jobs]
+        context.safe_print(
+            f"⚠️ Found {len(conflicting_jobs)} active job(s): {', '.join(job_ids[:3])}"
+        )
+        context.safe_print(
+            "   Running concurrent crackerjack instances may cause file conflicts"
+        )
+        context.safe_print("   Proceeding with caution...")
+
+
+def _check_resource_cleanup(status_info: dict[str, t.Any], context: t.Any) -> list[str]:
+    """Check if resource cleanup is needed."""
+    cleanup_performed = []
+    
+    temp_files_count = (
+        status_info.get("server_stats", {})
+        .get("resource_usage", {})
+        .get("temp_files_count", 0)
+    )
+
+    if temp_files_count > 50:
+        context.safe_print(
+            f"🗑️ Found {temp_files_count} temporary files - cleanup recommended"
+        )
+        cleanup_performed.append("temp_files_flagged")
+    
+    return cleanup_performed
+
+
+def _check_service_health(status_info: dict[str, t.Any], context: t.Any) -> None:
+    """Check health of required services."""
+    services = status_info.get("services", {})
+    mcp_running = services.get("mcp_server", {}).get("running", False)
+    websocket_running = services.get("websocket_server", {}).get("running", False)
+
+    if not mcp_running:
+        context.safe_print("⚠️ MCP server not running - will auto-start if needed")
+
+    if not websocket_running:
+        context.safe_print("📡 WebSocket server not running - will auto-start")
+
+
+def _handle_status_exception(error: Exception, context: t.Any) -> dict[str, t.Any]:
+    """Handle status check exceptions."""
+    context.safe_print(f"⚠️ Status check encountered error: {error}")
+    return {
+        "should_abort": False,
+        "reason": "",
+        "status_info": {"error": str(error)},
+        "cleanup_performed": [],
+    }
 
 
 async def _cleanup_stale_jobs(context: t.Any) -> None:

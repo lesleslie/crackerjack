@@ -834,5 +834,39 @@ result = toolkit.execute_with_verification(
 - Do not reduce coverage below 42% in config files. Instead add tests to increase coverage to the minimum 42% required.
 - **Debugging Approach Memory**: Focus on test errors first then move on to failures when debugging tests
 
+## Critical Quality Standards
+
+- **Test Quality**: Never create async tests that hang indefinitely. When testing async components like `BatchedStateSaver`, prefer simple synchronous tests that verify configuration and basic state rather than complex async workflows that can cause test suite timeouts.
+- **Honest Progress Reporting**: Always report actual coverage percentages and test results accurately. If coverage is 10.17%, report it as 10.17%, not "approaching 15%" or other optimistic estimates.
+- **Import Error Prevention**: Common import error pattern: `TestManager` vs `TestManagerProtocol` in `async_workflow_orchestrator.py`. Always use protocol interfaces from `models/protocols.py`.
+
+## Development Standards
+
+- be honest when describing the things you have accomplished. if tasks have not been completed to their full extent we need to know so sugarcoating your accomplishments for your, and especially our, benefit helps nobody.
+
+- be very critical and comprehensive when performing code or documentation reviews/audits. pride ourselves on our attention to detail and take the time to do things right the first time. always still assume failure on the first try, when making edits, so our work is double checked and bulletproof.
+
+## Common Failure Patterns to Avoid
+
+### Async Test Hangs
+```python
+# AVOID: Complex async tests that can hang
+@pytest.mark.asyncio
+async def test_batch_processing(self, batched_saver):
+    await batched_saver.start()
+    # Complex async workflow that might hang
+
+# PREFER: Simple synchronous config tests
+def test_batch_configuration(self, batched_saver):
+    assert batched_saver.max_batch_size == expected_size
+    assert not batched_saver._running
 ```
+
+### Import Error Prevention
+```python
+# WRONG: Importing concrete classes instead of protocols
+from ..managers.test_manager import TestManager
+
+# CORRECT: Use protocol interfaces for dependency injection
+from ..models.protocols import TestManagerProtocol
 ```

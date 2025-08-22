@@ -1,6 +1,6 @@
 import time
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from rich.console import Console
@@ -36,8 +36,9 @@ class TestCrackerjackAPI:
         assert api.project_path is not None
 
     def test_run_quality_checks(self, api) -> None:
+        mock_workflow = AsyncMock(return_value=True)
         with patch.object(
-            api.orchestrator.pipeline, "run_complete_workflow", return_value=True
+            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow
         ):
             result = api.run_quality_checks()
 
@@ -45,16 +46,18 @@ class TestCrackerjackAPI:
         assert result.fast_hooks_passed is True
 
     def test_run_tests(self, api) -> None:
+        mock_workflow = AsyncMock(return_value=True)
         with patch.object(
-            api.orchestrator.pipeline, "run_complete_workflow", return_value=True
+            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow
         ):
             result = api.run_tests()
 
         assert result.success is True
 
     def test_publish_package(self, api) -> None:
+        mock_workflow = AsyncMock(return_value=True)
         with patch.object(
-            api.orchestrator.pipeline, "run_complete_workflow", return_value=True
+            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow
         ):
             result = api.publish_package(version_bump="patch")
 
@@ -271,7 +274,7 @@ class TestSecurityServiceExtended:
 
         masked = security_service.mask_tokens(text_with_tokens)
 
-        assert "ghp_" not in masked or masked.count(" * ") > 0
+        assert "ghp_" not in masked or "****" in masked
 
     @patch("crackerjack.services.security.tempfile.mkstemp")
     @patch("crackerjack.services.security.Path.chmod")

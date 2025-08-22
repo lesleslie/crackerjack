@@ -2,6 +2,7 @@ import subprocess
 import typing as t
 
 
+@t.runtime_checkable
 class CommandRunner(t.Protocol):
     def execute_command(
         self, cmd: list[str], **kwargs: t.Any
@@ -37,14 +38,18 @@ class OptionsProtocol(t.Protocol):
     cleanup_pypi: bool = False
     keep_releases: int = 10
     track_progress: bool = False
+    fast: bool = False
+    comp: bool = False
 
 
+@t.runtime_checkable
 class ConsoleInterface(t.Protocol):
     def print(self, *args: t.Any, **kwargs: t.Any) -> None: ...
 
     def input(self, _: str = "") -> str: ...
 
 
+@t.runtime_checkable
 class FileSystemInterface(t.Protocol):
     def read_file(self, path: str | t.Any) -> str: ...
 
@@ -55,6 +60,7 @@ class FileSystemInterface(t.Protocol):
     def mkdir(self, path: str | t.Any, parents: bool = False) -> None: ...
 
 
+@t.runtime_checkable
 class GitInterface(t.Protocol):
     def is_git_repo(self) -> bool: ...
 
@@ -69,6 +75,7 @@ class GitInterface(t.Protocol):
     def get_commit_message_suggestions(self, changed_files: list[str]) -> list[str]: ...
 
 
+@t.runtime_checkable
 class HookManager(t.Protocol):
     def run_fast_hooks(self) -> list[t.Any]: ...
 
@@ -81,7 +88,8 @@ class HookManager(t.Protocol):
     def get_hook_summary(self, results: t.Any) -> t.Any: ...
 
 
-class TestManager(t.Protocol):
+@t.runtime_checkable
+class TestManagerProtocol(t.Protocol):
     def run_tests(self, options: OptionsProtocol) -> bool: ...
 
     def get_coverage(self) -> dict[str, t.Any]: ...
@@ -91,6 +99,7 @@ class TestManager(t.Protocol):
     def get_test_failures(self) -> list[str]: ...
 
 
+@t.runtime_checkable
 class PublishManager(t.Protocol):
     def bump_version(self, version_type: str) -> str: ...
 

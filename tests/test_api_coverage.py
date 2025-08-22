@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from rich.console import Console
@@ -136,6 +136,7 @@ class TestCrackerjackAPIQualityChecks:
         api = CrackerjackAPI(console=console)
         api.orchestrator = Mock(spec=WorkflowOrchestrator)
         api.orchestrator.pipeline = Mock()
+        api.orchestrator.pipeline.run_complete_workflow = AsyncMock()
         return api
 
     def test_run_quality_checks_success(self, api) -> None:
@@ -324,6 +325,7 @@ class TestCrackerjackAPITesting:
         api = CrackerjackAPI(console=console)
         api.orchestrator = Mock(spec=WorkflowOrchestrator)
         api.orchestrator.pipeline = Mock()
+        api.orchestrator.pipeline.run_complete_workflow = AsyncMock()
         return api
 
     def test_run_tests_success(self, api) -> None:

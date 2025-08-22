@@ -1,33 +1,13 @@
 {
   "mcpServers": {
     "session-mgmt": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/Users/les/Projects/claude/mcp-servers/session-mgmt",
-        "python",
-        "session_mgmt/server.py"
-      ]
+      "command": "uvx",
+      "args": ["session-mgmt-mcp"],
+      "env": {}
     },
-    "claude-simone": {
-      "command": "node",
-      "args": [
-        "/Users/les/Projects/claude/mcp-servers/claude-simone/mcp-server/dist/index.js"
-      ],
-      "env": {
-        "PROJECT_PATH": "/Users/les/Projects/crackerjack"
-      }
-    },
-    "ast-grep-mcp": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/Users/les/Projects/claude/mcp-servers/ast-grep-mcp",
-        "python",
-        "main.py"
-      ]
+    "ast-grep": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/ast-grep/ast-grep-mcp", "ast-grep-server"]
     },
     "crackerjack": {
       "command": "python",
@@ -45,7 +25,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@steipete/macos-automator-mcp@latest"
+        "@steipete/macos-automator-mcp@0.4.1"
       ]
     },
     "peekaboo": {
@@ -53,38 +33,39 @@
       "command": "npx",
       "args": [
         "-y",
-        "@steipete/peekaboo-mcp@beta"
-      ],
-      "env": {
-        "PEEKABOO_AI_PROVIDERS": "anthropic/claude-opus-4,anthropic/claude-sonnet-4"
-      }
-    },
-    "git": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@cyanheads/git-mcp-server"
+        "@steipete/peekaboo-mcp@3.0.0-beta.2"
       ]
     },
     "playwright": {
       "command": "npx",
       "args": [
         "-y",
-        "@executeautomation/playwright-mcp-server"
+        "@executeautomation/playwright-mcp-server@1.0.6"
+      ]
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cyanheads/git-mcp-server@2.3.2"
       ]
     },
     "github": {
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-github"
+        "@modelcontextprotocol/server-github@2025.4.8"
       ]
+    },
+    "gitlab": {
+      "command": "npx",
+      "args": ["-y", "@zereight/mcp-gitlab@2.0.3"]
     },
     "obsidian": {
       "command": "npx",
       "args": [
         "-y",
-        "mcp-remote",
+        "mcp-remote@0.1.18",
         "http://localhost:27123/sse"
       ]
     },
@@ -92,95 +73,61 @@
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-memory"
+        "@modelcontextprotocol/server-memory@2025.8.4"
       ]
     },
     "sequential-thinking": {
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
+        "@modelcontextprotocol/server-sequential-thinking@2025.7.1"
       ]
     },
     "filesystem": {
       "command": "rust-mcp-filesystem",
-      "args": [
-        "~/Projects"
-      ]
+      "args": ["-w", "~/Projects"]
     },
     "jetbrains": {
       "command": "npx",
       "args": [
         "-y",
-        "@jetbrains/mcp-proxy"
+        "@jetbrains/mcp-proxy@1.8.0"
       ]
     },
     "gemini-cli": {
       "command": "npx",
       "args": [
         "-y",
-        "gemini-mcp-tool"
-      ]
-    },
-    "upstash": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/mcp-server",
-        "run"
+        "gemini-mcp-tool@1.1.4"
       ]
     },
     "context7": {
       "command": "npx",
       "args": [
         "-y",
-        "@upstash/context7-mcp"
-      ]
-    },
-    "cloud-run": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "https://github.com/GoogleCloudPlatform/cloud-run-mcp"
-      ]
-    },
-    "logfire": {
-      "command": "uvx",
-      "args": [
-        "logfire-mcp@latest"
+        "@upstash/context7-mcp@1.0.16"
       ]
     },
     "raindrop": {
       "command": "npx",
       "args": [
         "-y",
-        "raindrop-mcp"
+        "raindrop-mcp@0.0.4"
       ]
     },
-    "turso-cloud": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-turso-cloud"
-      ]
+    "excalidraw": {
+      "command": "uvx",
+      "args": ["excalidraw-mcp"],
+      "env": {
+        "EXPRESS_SERVER_URL": "http://localhost:3031",
+        "ENABLE_CANVAS_SYNC": "true"
+      }
     },
     "motherduck": {
       "command": "uvx",
       "args": [
-        "mcp-server-motherduck",
-        "--db-path",
-        "~/Projects/claude/shared_analytics.duckdb",
-        "--read-only",
-        "--transport",
-        "stdio"
-      ],
-      "env": {
-        "HOME": "/Users/les"
-      }
-    },
-    "sentry": {
-      "type": "http",
-      "url": "https://mcp.sentry.dev/mcp"
+        "mcp-server-motherduck==0.3.1"
+      ]
     }
   }
 }

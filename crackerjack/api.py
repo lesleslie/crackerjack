@@ -1,3 +1,4 @@
+import asyncio
 import typing as t
 from dataclasses import dataclass
 from pathlib import Path
@@ -79,6 +80,7 @@ class CrackerjackAPI:
     def run_quality_checks(
         self, fast_only: bool = False, autofix: bool = True
     ) -> QualityCheckResult:
+        import asyncio
         import time
 
         start_time = time.time()
@@ -88,7 +90,9 @@ class CrackerjackAPI:
 
             options = self._create_options(autofix=autofix, skip_hooks=False)
 
-            success = self.orchestrator.pipeline.run_complete_workflow(options)
+            success = asyncio.run(
+                self.orchestrator.pipeline.run_complete_workflow(options)
+            )
 
             duration = time.time() - start_time
 
@@ -183,7 +187,9 @@ class CrackerjackAPI:
                 test=True, test_workers=workers or 0, test_timeout=timeout or 0
             )
 
-            success = self.orchestrator.pipeline.run_complete_workflow(options)
+            success = asyncio.run(
+                self.orchestrator.pipeline.run_complete_workflow(options)
+            )
 
             duration = time.time() - start_time
 
@@ -221,7 +227,9 @@ class CrackerjackAPI:
                 bump=version_bump, publish="pypi" if not dry_run else None
             )
 
-            success = self.orchestrator.pipeline.run_complete_workflow(options)
+            success = asyncio.run(
+                self.orchestrator.pipeline.run_complete_workflow(options)
+            )
 
             return PublishResult(
                 success=success,

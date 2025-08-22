@@ -5,6 +5,7 @@ import logging
 import typing as t
 from pathlib import Path
 
+from ..config.hooks import HookStage
 from .base import (
     PluginBase,
     PluginMetadata,
@@ -236,7 +237,7 @@ class PluginDiscovery:
 
         plugin_files = []
 
-        patterns = [" * .py", " * .json", " * .yaml", " * .yml"]
+        patterns = ["*.py", "*.json", "*.yaml", "*.yml"]
 
         for pattern in patterns:
             if recursive:

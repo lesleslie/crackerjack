@@ -55,7 +55,12 @@ class ConfigurationService:
             import yaml
 
             with config_file.open("r") as f:
-                _ = yaml.safe_load(f)
+                yaml_result = yaml.safe_load(f)
+                _ = (
+                    t.cast(dict[str, t.Any], yaml_result)
+                    if yaml_result is not None
+                    else {}
+                )
             self.console.print("[green]✅[/green] Pre-commit configuration is valid")
             return True
         except Exception as e:
@@ -107,9 +112,12 @@ class ConfigurationService:
             import yaml
 
             with config_file.open("r") as f:
-                config_data = yaml.safe_load(f)
-            if not isinstance(config_data, dict):
-                config_data = {}
+                yaml_result = yaml.safe_load(f)
+                config_data = (
+                    t.cast(dict[str, t.Any], yaml_result)
+                    if isinstance(yaml_result, dict)
+                    else {}
+                )
             repos = config_data.get("repos", [])
             if not isinstance(repos, list):
                 repos = []

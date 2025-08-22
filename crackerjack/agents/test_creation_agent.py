@@ -435,7 +435,7 @@ class TestCreationAgent(SubAgent):
         return functions
 
     def _is_valid_function_node(self, node: ast.FunctionDef) -> bool:
-        return not (node.name.startswith("_") or node.name.startswith("test_"))
+        return not node.name.startswith(("_", "test_"))
 
     def _create_function_info(self, node: ast.FunctionDef) -> dict[str, Any]:
         return {
@@ -480,16 +480,14 @@ class TestCreationAgent(SubAgent):
         return {"name": node.name, "line": node.lineno, "methods": methods}
 
     def _extract_public_methods_from_class(self, node: ast.ClassDef) -> list[str]:
-        methods = []
-        for item in node.body:
-            if isinstance(item, ast.FunctionDef) and not item.name.startswith("_"):
-                methods.append(item.name)
-        return methods
+        return [
+            item.name
+            for item in node.body
+            if isinstance(item, ast.FunctionDef) and not item.name.startswith("_")
+        ]
 
     def _get_function_signature(self, node: ast.FunctionDef) -> str:
-        args = []
-        for arg in node.args.args:
-            args.append(arg.arg)
+        args = [arg.arg for arg in node.args.args]
         return f"{node.name}({', '.join(args)})"
 
     def _get_return_annotation(self, node: ast.FunctionDef) -> str:

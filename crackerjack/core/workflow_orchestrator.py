@@ -432,7 +432,7 @@ class WorkflowOrchestrator:
             GitInterface,
             HookManager,
             PublishManager,
-            TestManager,
+            TestManagerProtocol,
         )
         from .container import create_container
 
@@ -448,7 +448,7 @@ class WorkflowOrchestrator:
             filesystem=self.container.get(FileSystemInterface),
             git_service=self.container.get(GitInterface),
             hook_manager=self.container.get(HookManager),
-            test_manager=self.container.get(TestManager),
+            test_manager=self.container.get(TestManagerProtocol),
             publish_manager=self.container.get(PublishManager),
         )
 

@@ -57,7 +57,7 @@ class ImportOptimizationAgent(SubAgent):
             with file_path.open(encoding="utf-8") as f:
                 tree = ast.parse(f.read())
         except (SyntaxError, OSError) as e:
-            self.logger.warning(f"Could not parse {file_path}: {e}")
+            self.log(f"Could not parse {file_path}: {e}", level="WARNING")
             return ImportAnalysis(file_path, [], [], [])
 
         return self._analyze_imports(file_path, tree)
@@ -106,7 +106,9 @@ class ImportOptimizationAgent(SubAgent):
             optimization_opportunities=optimization_opportunities,
         )
 
-    def _find_mixed_imports(self, module_imports: dict[str, list[dict]]) -> list[str]:
+    def _find_mixed_imports(
+        self, module_imports: dict[str, list[dict[str, t.Any]]]
+    ) -> list[str]:
         mixed = []
         for module, imports in module_imports.items():
             types = {imp["type"] for imp in imports}
@@ -114,7 +116,7 @@ class ImportOptimizationAgent(SubAgent):
                 mixed.append(module)
         return mixed
 
-    def _find_redundant_imports(self, all_imports: list[dict]) -> list[str]:
+    def _find_redundant_imports(self, all_imports: list[dict[str, t.Any]]) -> list[str]:
         seen_modules = set()
         redundant = []
 
@@ -127,7 +129,7 @@ class ImportOptimizationAgent(SubAgent):
         return redundant
 
     def _find_optimization_opportunities(
-        self, module_imports: dict[str, list[dict]]
+        self, module_imports: dict[str, list[dict[str, t.Any]]]
     ) -> list[str]:
         opportunities = []
 
@@ -142,6 +144,12 @@ class ImportOptimizationAgent(SubAgent):
         return opportunities
 
     async def fix_issue(self, issue: Issue) -> FixResult:
+        if issue.file_path is None:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path provided for import optimization"],
+            )
         file_path = Path(issue.file_path)
 
         analysis = await self.analyze_file(file_path)

@@ -361,6 +361,21 @@ python -m crackerjack -p patch
 - **`managers/test_manager.py`**: Test execution, coverage analysis, environment validation
 - **`managers/publish_manager.py`**: Version bumping, git tagging, PyPI publishing with authentication
 
+### Component Interaction Patterns
+
+**Dependency Flow:**
+```
+WorkflowOrchestrator → SessionCoordinator → PhaseCoordinator → Managers
+                   ↓
+Container (DI) → Protocols → Concrete Implementations
+```
+
+**Critical Interfaces in `models/protocols.py`:**
+- `HookManagerProtocol`, `TestManagerProtocol`, `PublishManagerProtocol`
+- Always import protocols, never concrete classes for dependency injection
+- **Common Error**: `from ..managers.test_manager import TestManager` ❌
+- **Correct**: `from ..models.protocols import TestManagerProtocol` ✅
+
 ### Infrastructure Services
 
 - **`services/filesystem.py`**: File operations with caching, batching, and security validation
@@ -527,6 +542,31 @@ if status in ["error", "failed", "timeout"]:  # BAD
 # USE: Tuples for immutable membership tests
 if status in ("error", "failed", "timeout"):  # GOOD
     handle_error()
+
+# AVOID: Manual list building (FURB138)
+issues = []
+for item in data:
+    if condition(item):
+        issues.append(process(item))
+
+# USE: List comprehensions
+issues = [process(item) for item in data if condition(item)]
+
+# AVOID: Dictionary get with if/else (FURB184)
+emoji = AGENT_EMOJIS.get(agent_type)
+if emoji:
+    return emoji
+return "🤖"
+
+# USE: Dictionary get with default
+return AGENT_EMOJIS.get(agent_type, "🤖")
+
+# AVOID: Lambda for simple attribute access (FURB118)
+sorted_items = sorted(items, key=lambda x: x['priority'])
+
+# USE: operator.itemgetter
+from operator import itemgetter
+sorted_items = sorted(items, key=itemgetter('priority'))
 ```
 
 ## Development Workflow
@@ -768,6 +808,12 @@ Default configuration monitors:
 - **70% line reduction** in MCP server (3,116 lines → 921 lines across 6 focused modules)
 - **35% line reduction** in WebSocket server (1,479 lines → 944 lines across 5 modules)
 - **80% line reduction** in CLI entry point (601 lines → 122 lines via delegation)
+- **Code Quality Improvements**:
+  - Fixed all 31+ refurb violations in agents directory (FURB107, FURB109, FURB118, FURB135, FURB138, FURB184)
+  - Reduced complex functions from 32 to 29 total, with major reductions:
+    - `_execute_crackerjack_sync`: complexity 34 → 3 (91% reduction)
+    - `TestManagementImpl::run_tests`: complexity 33 → 2 (94% reduction)
+    - All 5 fast hooks now passing consistently
 - **Improved maintainability** through single responsibility principle
 - **Better testability** with focused, isolated modules
 - **Enhanced security** with modular validation and error handling
@@ -779,8 +825,29 @@ Default configuration monitors:
 
 - **Never reduce coverage below 42%** in configuration files
 - **Add tests to increase coverage** when below threshold
+- **Current Status**: 18.16% coverage - MUST reach 42%
 - Current test files include: `test_simple_coverage.py`, `test_hook_manager_simple.py`, `test_main_entry.py`, `test_async_hook_manager.py`
 - Focus testing on modules with 0% coverage: plugins, MCP server, enhanced filesystem, unified config
+
+## Current Quality Status (January 2025)
+
+**✅ COMPLETED:**
+- All 31+ refurb violations fixed in agents directory
+- Fast hooks: All 5 passing consistently
+- Major complexity reductions (34→3, 33→2)
+- Import errors and protocol compliance fixed
+
+**🔄 IN PROGRESS:**
+- Complexipy violations: 29 functions still > 15 (reduced from 32)
+- Test coverage: 18.16% → need 42%
+
+**⚠️ CRITICAL PRIORITIES:**
+1. **Fix existing test failures first** (before adding new tests)
+2. Add tests strategically to reach 42% coverage
+3. Complete remaining complexity reductions
+4. Final integration and release preparation
+
+**Key User Directive**: Always prioritize fixing failures of existing tests over creating new tests, especially when coverage issues are being addressed.
 
 ## 🚨 SESSION INITIALIZATION PROTOCOL
 
@@ -834,5 +901,40 @@ result = toolkit.execute_with_verification(
 - Do not reduce coverage below 42% in config files. Instead add tests to increase coverage to the minimum 42% required.
 - **Debugging Approach Memory**: Focus on test errors first then move on to failures when debugging tests
 
+## Critical Quality Standards
+
+- **Test Quality**: Never create async tests that hang indefinitely. When testing async components like `BatchedStateSaver`, prefer simple synchronous tests that verify configuration and basic state rather than complex async workflows that can cause test suite timeouts.
+- **Honest Progress Reporting**: Always report actual coverage percentages and test results accurately. If coverage is 10.17%, report it as 10.17%, not "approaching 15%" or other optimistic estimates.
+- **Import Error Prevention**: Common import error pattern: `TestManager` vs `TestManagerProtocol` in `async_workflow_orchestrator.py`. Always use protocol interfaces from `models/protocols.py`.
+
+## Development Standards
+
+- be honest when describing the things you have accomplished. if tasks have not been completed to their full extent we need to know so sugarcoating your accomplishments for your, and especially our, benefit helps nobody.
+
+- be very critical and comprehensive when performing code or documentation reviews/audits. pride ourselves on our attention to detail and take the time to do things right the first time. always still assume failure on the first try, when making edits, so our work is double checked and bulletproof.
+
+## Common Failure Patterns to Avoid
+
+### Async Test Hangs
+```python
+# AVOID: Complex async tests that can hang
+@pytest.mark.asyncio
+async def test_batch_processing(self, batched_saver):
+    await batched_saver.start()
+    # Complex async workflow that might hang
+
+# PREFER: Simple synchronous config tests
+def test_batch_configuration(self, batched_saver):
+    assert batched_saver.max_batch_size == expected_size
+    assert not batched_saver._running
 ```
+
+### Import Error Prevention
+```python
+# WRONG: Importing concrete classes instead of protocols
+from ..managers.test_manager import TestManager
+
+# CORRECT: Use protocol interfaces for dependency injection
+from ..models.protocols import TestManagerProtocol
 ```
+

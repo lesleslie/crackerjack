@@ -15,7 +15,7 @@ from ..models.protocols import (
     GitInterface,
     HookManager,
     PublishManager,
-    TestManager,
+    TestManagerProtocol,
 )
 from ..services.logging import get_logger
 
@@ -37,7 +37,7 @@ class ServiceDescriptor:
 
     interface: type
     implementation: type | None = None
-    factory: Callable | None = None
+    factory: Callable[..., Any] | None = None
     lifetime: ServiceLifetime = ServiceLifetime.TRANSIENT
     instance: Any | None = None
     created_count: int = 0
@@ -110,7 +110,7 @@ class DependencyResolver:
 
         raise ValueError(f"Cannot create instance for {descriptor.interface}")
 
-    def _create_from_factory(self, factory: Callable) -> Any:
+    def _create_from_factory(self, factory: Callable[..., Any]) -> Any:
         """Create instance using factory function."""
         sig = inspect.signature(factory)
         kwargs = {}
@@ -192,7 +192,7 @@ class EnhancedDependencyContainer:
         self,
         interface: type,
         implementation: type | None = None,
-        factory: Callable | None = None,
+        factory: Callable[..., Any] | None = None,
         instance: Any | None = None,
     ) -> "EnhancedDependencyContainer":
         """Register a singleton service."""
@@ -216,7 +216,7 @@ class EnhancedDependencyContainer:
         self,
         interface: type,
         implementation: type | None = None,
-        factory: Callable | None = None,
+        factory: Callable[..., Any] | None = None,
     ) -> "EnhancedDependencyContainer":
         """Register a transient service."""
         key = self._get_service_key(interface)
@@ -238,7 +238,7 @@ class EnhancedDependencyContainer:
         self,
         interface: type,
         implementation: type | None = None,
-        factory: Callable | None = None,
+        factory: Callable[..., Any] | None = None,
     ) -> "EnhancedDependencyContainer":
         """Register a scoped service."""
         key = self._get_service_key(interface)
@@ -444,7 +444,7 @@ class ServiceCollectionBuilder:
         from ..managers.test_manager import TestManagementImpl
 
         self.container.register_transient(
-            TestManager,
+            TestManagerProtocol,
             factory=lambda: TestManagementImpl(console=console, pkg_path=pkg_path),
         )
 

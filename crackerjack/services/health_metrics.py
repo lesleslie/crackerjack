@@ -295,7 +295,11 @@ class HealthMetricsService:
 
             url = f"https://pypi.org/pypi/{package_name}/json"
 
-            with urllib.request.urlopen(url, timeout=10) as response:
+            # Validate URL scheme for security
+            if not url.startswith("https://pypi.org/"):
+                raise ValueError(f"Invalid URL scheme: {url}")
+
+            with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
                 data = json.load(response)
 
             info = data.get("info", {})

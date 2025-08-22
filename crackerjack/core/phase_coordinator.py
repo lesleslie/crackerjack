@@ -12,7 +12,7 @@ from ..models.protocols import (
     HookManager,
     OptionsProtocol,
     PublishManager,
-    TestManager,
+    TestManagerProtocol,
 )
 from ..services.config import ConfigurationService
 from .session_coordinator import SessionCoordinator
@@ -27,7 +27,7 @@ class PhaseCoordinator:
         filesystem: FileSystemInterface,
         git_service: GitInterface,
         hook_manager: HookManager,
-        test_manager: TestManager,
+        test_manager: TestManagerProtocol,
         publish_manager: PublishManager,
     ) -> None:
         self.console = console

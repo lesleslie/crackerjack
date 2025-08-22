@@ -104,7 +104,7 @@ class DRYAgent(SubAgent):
         self, content: str, file_path: Path
     ) -> list[dict[str, t.Any]]:
         """Detect various types of DRY violations in the code."""
-        violations = []
+        violations: list[dict[str, t.Any]] = []
 
         # Detect error response patterns
         violations.extend(self._detect_error_response_patterns(content))
@@ -122,7 +122,7 @@ class DRYAgent(SubAgent):
 
     def _detect_error_response_patterns(self, content: str) -> list[dict[str, t.Any]]:
         """Detect repetitive error response patterns."""
-        violations = []
+        violations: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
         # Pattern: return f'{"error": "message", "success": false}'
@@ -130,7 +130,7 @@ class DRYAgent(SubAgent):
             r'return\s+f?[\'\"]\{[\'\""]error[\'\""]:\s*[\'\""]([^\'\"]*)[\'\""].*\}[\'\""]'
         )
 
-        error_responses = []
+        error_responses: list[dict[str, t.Any]] = []
         for i, line in enumerate(lines):
             match = error_pattern.search(line.strip())
             if match:
@@ -155,7 +155,7 @@ class DRYAgent(SubAgent):
 
     def _detect_path_conversion_patterns(self, content: str) -> list[dict[str, t.Any]]:
         """Detect repetitive path conversion patterns."""
-        violations = []
+        violations: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
         # Pattern: Path(path) if isinstance(path, str) else path
@@ -163,15 +163,14 @@ class DRYAgent(SubAgent):
             r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+[^)]+"
         )
 
-        path_conversions = []
-        for i, line in enumerate(lines):
-            if path_pattern.search(line):
-                path_conversions.append(
-                    {
-                        "line_number": i + 1,
-                        "content": line.strip(),
-                    }
-                )
+        path_conversions: list[dict[str, t.Any]] = [
+            {
+                "line_number": i + 1,
+                "content": line.strip(),
+            }
+            for i, line in enumerate(lines)
+            if path_pattern.search(line)
+        ]
 
         if len(path_conversions) >= 2:
             violations.append(
@@ -186,21 +185,20 @@ class DRYAgent(SubAgent):
 
     def _detect_file_existence_patterns(self, content: str) -> list[dict[str, t.Any]]:
         """Detect repetitive file existence check patterns."""
-        violations = []
+        violations: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
         # Pattern: if not *.exists():
         existence_pattern = re.compile(r"if\s+not\s+\w+\.exists\(\):")
 
-        existence_checks = []
-        for i, line in enumerate(lines):
-            if existence_pattern.search(line.strip()):
-                existence_checks.append(
-                    {
-                        "line_number": i + 1,
-                        "content": line.strip(),
-                    }
-                )
+        existence_checks: list[dict[str, t.Any]] = [
+            {
+                "line_number": i + 1,
+                "content": line.strip(),
+            }
+            for i, line in enumerate(lines)
+            if existence_pattern.search(line.strip())
+        ]
 
         if len(existence_checks) >= 3:
             violations.append(
@@ -215,13 +213,13 @@ class DRYAgent(SubAgent):
 
     def _detect_exception_patterns(self, content: str) -> list[dict[str, t.Any]]:
         """Detect repetitive exception handling patterns."""
-        violations = []
+        violations: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
         # Pattern: except Exception as e: return {"error": str(e)}
         exception_pattern = re.compile(r"except\s+\w*Exception\s+as\s+\w+:")
 
-        exception_handlers = []
+        exception_handlers: list[dict[str, t.Any]] = []
         for i, line in enumerate(lines):
             if exception_pattern.search(line.strip()):
                 # Look ahead for error return pattern
@@ -279,7 +277,7 @@ def _create_error_response(message: str, success: bool = False) -> str:
         # Find the right place to insert (after imports)
         insert_pos = 0
         for i, line in enumerate(lines):
-            if line.strip().startswith("import ") or line.strip().startswith("from "):
+            if line.strip().startswith(("import ", "from ")):
                 insert_pos = i + 1
             elif line.strip() and not line.strip().startswith("#"):
                 break
@@ -295,7 +293,7 @@ def _create_error_response(message: str, success: bool = False) -> str:
                 instance["line_number"] - 1 + len(utility_lines)
             )  # Adjust for inserted lines
             if line_idx < len(lines):
-                original_line = lines[line_idx]
+                original_line: str = lines[line_idx]
                 # Extract the error message
                 error_msg = instance["error_message"]
                 # Replace with utility function call
@@ -321,7 +319,7 @@ def _ensure_path(path: str | Path) -> Path:
         # Find insertion point (after imports)
         insert_pos = 0
         for i, line in enumerate(lines):
-            if line.strip().startswith("import ") or line.strip().startswith("from "):
+            if line.strip().startswith(("import ", "from ")):
                 insert_pos = i + 1
             elif line.strip() and not line.strip().startswith("#"):
                 break
@@ -339,7 +337,7 @@ def _ensure_path(path: str | Path) -> Path:
         for instance in violation["instances"]:
             line_idx = instance["line_number"] - 1 + len(utility_lines)
             if line_idx < len(lines):
-                original_line = lines[line_idx]
+                original_line: str = lines[line_idx]
                 # Replace pattern with utility function call
                 new_line = path_pattern.sub(r"_ensure_path(\1)", original_line)
                 lines[line_idx] = new_line

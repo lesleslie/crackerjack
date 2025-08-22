@@ -1,5 +1,7 @@
 import ast
+import operator
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from .base import (
@@ -109,7 +111,7 @@ class PerformanceAgent(SubAgent):
         """Detect various performance anti-patterns in the code."""
         issues = []
 
-        try:
+        with suppress(SyntaxError):
             tree = ast.parse(content)
 
             # Detect nested loops
@@ -124,10 +126,6 @@ class PerformanceAgent(SubAgent):
             # Detect inefficient string operations
             issues.extend(self._detect_string_inefficiencies(content))
 
-        except SyntaxError:
-            # Can't analyze files with syntax errors
-            pass
-
         return issues
 
     def _detect_nested_loops(self, tree: ast.AST) -> list[dict[str, t.Any]]:
@@ -139,7 +137,7 @@ class PerformanceAgent(SubAgent):
                 self.loop_stack = []
                 self.nested_loops = []
 
-            def visit_For(self, node):
+            def visit_For(self, node: ast.For) -> None:
                 self.loop_stack.append(("for", node))
                 if len(self.loop_stack) > 1:
                     self.nested_loops.append(
@@ -153,7 +151,7 @@ class PerformanceAgent(SubAgent):
                 self.generic_visit(node)
                 self.loop_stack.pop()
 
-            def visit_While(self, node):
+            def visit_While(self, node: ast.While) -> None:
                 self.loop_stack.append(("while", node))
                 if len(self.loop_stack) > 1:
                     self.nested_loops.append(
@@ -186,7 +184,7 @@ class PerformanceAgent(SubAgent):
     ) -> list[dict[str, t.Any]]:
         """Detect inefficient list operations like repeated appends or concatenations."""
         issues = []
-        content.split("\n")
+        lines = content.split("\n")
 
         # Pattern: list += [item] or list = list + [item] in loops
 
@@ -195,19 +193,19 @@ class PerformanceAgent(SubAgent):
                 self.in_loop = False
                 self.list_ops = []
 
-            def visit_For(self, node):
+            def visit_For(self, node: ast.For) -> None:
                 old_in_loop = self.in_loop
                 self.in_loop = True
                 self.generic_visit(node)
                 self.in_loop = old_in_loop
 
-            def visit_While(self, node):
+            def visit_While(self, node: ast.While) -> None:
                 old_in_loop = self.in_loop
                 self.in_loop = True
                 self.generic_visit(node)
                 self.in_loop = old_in_loop
 
-            def visit_AugAssign(self, node):
+            def visit_AugAssign(self, node: ast.AugAssign) -> None:
                 if self.in_loop and isinstance(node.op, ast.Add):
                     if isinstance(node.value, ast.List):
                         self.list_ops.append(
@@ -248,7 +246,7 @@ class PerformanceAgent(SubAgent):
             # Pattern: expensive operations in loops
             if any(
                 pattern in stripped
-                for pattern in [
+                for pattern in (
                     ".exists()",
                     ".read_text()",
                     ".glob(",
@@ -256,7 +254,7 @@ class PerformanceAgent(SubAgent):
                     "Path(",
                     "len(",
                     ".get(",
-                ]
+                )
             ):
                 # Check if this line is in a loop context (simple heuristic)
                 context_start = max(0, i - 5)
@@ -294,7 +292,7 @@ class PerformanceAgent(SubAgent):
 
         for i, line in enumerate(lines):
             stripped = line.strip()
-            if "+=" in stripped and any(quote in stripped for quote in ['"', "'"]):
+            if "+=" in stripped and any(quote in stripped for quote in ('"', "'")):
                 # Check if in loop context
                 context_start = max(0, i - 5)
                 context_lines = lines[context_start : i + 1]
@@ -348,7 +346,7 @@ class PerformanceAgent(SubAgent):
 
         # Process instances in reverse order (highest line numbers first) to avoid line number shifts
         instances = sorted(
-            issue["instances"], key=lambda x: x["line_number"], reverse=True
+            issue["instances"], key=operator.itemgetter("line_number"), reverse=True
         )
 
         for instance in instances:
@@ -432,15 +430,19 @@ class PerformanceAgent(SubAgent):
         """Find the start of the loop that contains the given line."""
         for i in range(start_idx, -1, -1):
             line = lines[i].strip()
-            if line.startswith("for ") or line.startswith("while "):
+            if line.startswith(("for ", "while ")):
                 return i
             # Stop if we hit a function definition or class definition
-            if line.startswith("def ") or line.startswith("class "):
+            if line.startswith(("def ", "class ")):
                 break
         return None
 
     def _apply_string_building_optimization(
-        self, lines: list[str], var_name: str, instances: list[dict], loop_start: int
+        self,
+        lines: list[str],
+        var_name: str,
+        instances: list[dict[str, t.Any]],
+        loop_start: int,
     ) -> bool:
         """Apply string building optimization using list.append + join pattern."""
         if not instances:

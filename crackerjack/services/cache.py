@@ -1,8 +1,8 @@
 import hashlib
-import pickle
+import json
 import time
 import typing as t
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from ..models.task import HookResult
@@ -28,6 +28,15 @@ class CacheEntry:
     def touch(self) -> None:
         self.accessed_at = time.time()
         self.access_count += 1
+
+    def to_dict(self) -> dict[str, t.Any]:
+        """Convert to JSON-serializable dict."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, t.Any]) -> "CacheEntry":
+        """Create from dict loaded from JSON."""
+        return cls(**data)
 
 
 @dataclass
@@ -140,8 +149,9 @@ class FileCache:
             return None
 
         try:
-            with cache_file.open("rb") as f:
-                entry = pickle.load(f)
+            with cache_file.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+                entry = CacheEntry.from_dict(data)
 
             if entry.is_expired:
                 cache_file.unlink(missing_ok=True)
@@ -151,13 +161,13 @@ class FileCache:
 
             entry.touch()
 
-            with cache_file.open("wb") as f:
-                pickle.dump(entry, f)
+            with cache_file.open("w", encoding="utf-8") as f:
+                json.dump(entry.to_dict(), f)
 
             self.stats.hits += 1
             return entry.value
 
-        except (pickle.PickleError, FileNotFoundError, OSError):
+        except (json.JSONDecodeError, FileNotFoundError, OSError, KeyError):
             self.stats.misses += 1
             cache_file.unlink(missing_ok=True)
             return None
@@ -172,9 +182,9 @@ class FileCache:
         )
 
         try:
-            with cache_file.open("wb") as f:
-                pickle.dump(entry, f)
-        except (pickle.PickleError, OSError):
+            with cache_file.open("w", encoding="utf-8") as f:
+                json.dump(entry.to_dict(), f)
+        except (json.JSONDecodeError, OSError, KeyError):
             pass
 
     def invalidate(self, key: str) -> bool:
@@ -192,13 +202,14 @@ class FileCache:
         removed = 0
         for cache_file in self.cache_dir.glob("*.cache"):
             try:
-                with cache_file.open("rb") as f:
-                    entry = pickle.load(f)
+                with cache_file.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    entry = CacheEntry.from_dict(data)
 
                 if entry.is_expired:
                     cache_file.unlink()
                     removed += 1
-            except (pickle.PickleError, FileNotFoundError, OSError):
+            except (json.JSONDecodeError, FileNotFoundError, OSError, KeyError):
                 cache_file.unlink(missing_ok=True)
                 removed += 1
 

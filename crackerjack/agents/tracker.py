@@ -171,13 +171,12 @@ class AgentTracker:
         }
 
     def _get_agent_emoji(self, agent_type: str) -> str:
-        emojis = {
+        return {
             "FormattingAgent": "🎨",
             "SecurityAgent": "🔒",
             "TestSpecialistAgent": "🧪",
             "TestCreationAgent": "➕",
-        }
-        return emojis.get(agent_type, "🤖")
+        }.get(agent_type, "🤖")
 
     def reset(self) -> None:
         self.active_agents.clear()

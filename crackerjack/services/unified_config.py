@@ -1,5 +1,6 @@
 import json
 import os
+import typing as t
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -149,9 +150,19 @@ class FileConfigSource(ConfigSource):
             content = self.file_path.read_text()
 
             if self.file_path.suffix.lower() in (".yml", ".yaml"):
-                config = yaml.safe_load(content) or {}
+                yaml_result = yaml.safe_load(content)
+                config = (
+                    t.cast(dict[str, Any], yaml_result)
+                    if yaml_result is not None
+                    else {}
+                )
             elif self.file_path.suffix.lower() == ".json":
-                config = json.loads(content) or {}
+                json_result = json.loads(content)
+                config = (
+                    t.cast(dict[str, Any], json_result)
+                    if json_result is not None
+                    else {}
+                )
             else:
                 self.logger.warning(
                     "Unknown config file format", path=str(self.file_path)

@@ -65,8 +65,8 @@ class FormattingAgent(SubAgent):
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         self.log(f"Analyzing formatting issue: {issue.message}")
 
-        fixes_applied = []
-        files_modified = []
+        fixes_applied: list[str] = []
+        files_modified: list[str] = []
 
         try:
             ruff_fixes = await self._apply_ruff_fixes()
@@ -111,9 +111,7 @@ class FormattingAgent(SubAgent):
     async def _apply_ruff_fixes(self) -> list[str]:
         fixes = []
 
-        returncode, stdout, stderr = await self.run_command(
-            ["uv", "run", "ruff", "format", "."]
-        )
+        returncode, _, _ = await self.run_command(["uv", "run", "ruff", "format", "."])
 
         if returncode == 0:
             fixes.append("Applied ruff code formatting")
@@ -121,7 +119,7 @@ class FormattingAgent(SubAgent):
         else:
             self.log(f"Ruff format failed: {stderr}", "WARN")
 
-        returncode, stdout, stderr = await self.run_command(
+        returncode, _, _ = await self.run_command(
             ["uv", "run", "ruff", "check", ".", "--fix"]
         )
 
@@ -136,7 +134,7 @@ class FormattingAgent(SubAgent):
     async def _apply_whitespace_fixes(self) -> list[str]:
         fixes = []
 
-        returncode, stdout, stderr = await self.run_command(
+        returncode, _, _ = await self.run_command(
             [
                 "uv",
                 "run",
@@ -151,7 +149,7 @@ class FormattingAgent(SubAgent):
             fixes.append("Fixed trailing whitespace")
             self.log("Fixed trailing whitespace")
 
-        returncode, stdout, stderr = await self.run_command(
+        returncode, _, _ = await self.run_command(
             [
                 "uv",
                 "run",
@@ -171,7 +169,7 @@ class FormattingAgent(SubAgent):
     async def _apply_import_fixes(self) -> list[str]:
         fixes = []
 
-        returncode, stdout, stderr = await self.run_command(
+        returncode, _, _ = await self.run_command(
             [
                 "uv",
                 "run",

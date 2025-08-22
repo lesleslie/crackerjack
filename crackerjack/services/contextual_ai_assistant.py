@@ -85,7 +85,7 @@ class ContextualAIAssistant:
     def _generate_recommendations(
         self, context: ProjectContext
     ) -> list[AIRecommendation]:
-        recommendations = []
+        recommendations: list[AIRecommendation] = []
 
         recommendations.extend(self._get_testing_recommendations(context))
         recommendations.extend(self._get_code_quality_recommendations(context))

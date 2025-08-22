@@ -39,7 +39,7 @@ class SecurityAgent(SubAgent):
 
         if any(
             keyword in message_lower
-            for keyword in [
+            for keyword in (
                 "bandit",
                 "security",
                 "vulnerability",
@@ -51,17 +51,17 @@ class SecurityAgent(SubAgent):
                 "b506",
                 "unsafe",
                 "injection",
-            ]
+            )
         ):
             return 1.0
 
-        for pattern_name, pattern in self.security_patterns.items():
+        for pattern in self.security_patterns.values():
             if re.search(pattern, issue.message, re.IGNORECASE):
                 return 0.9
 
         if issue.file_path and any(
             keyword in issue.file_path.lower()
-            for keyword in ["security", "auth", "crypto", "password"]
+            for keyword in ("security", "auth", "crypto", "password")
         ):
             return 0.7
 
@@ -123,8 +123,7 @@ class SecurityAgent(SubAgent):
             "weak_crypto": self._fix_weak_crypto,
         }
 
-        fix_method = vulnerability_fix_map.get(vulnerability_type)
-        if fix_method:
+        if fix_method := vulnerability_fix_map.get(vulnerability_type):
             fixes = await fix_method(issue)
             fixes_applied.extend(fixes["fixes"])
             files_modified.extend(fixes["files"])

@@ -8,7 +8,7 @@ from ..models.protocols import (
     GitInterface,
     HookManager,
     PublishManager,
-    TestManager,
+    TestManagerProtocol,
 )
 
 
@@ -64,7 +64,8 @@ class DependencyContainer:
         from ..managers.test_manager import TestManagementImpl
 
         self.register_transient(
-            TestManager, lambda: TestManagementImpl(console=console, pkg_path=pkg_path)
+            TestManagerProtocol,
+            lambda: TestManagementImpl(console=console, pkg_path=pkg_path),
         )
 
         from ..managers.publish_manager import PublishManagerImpl

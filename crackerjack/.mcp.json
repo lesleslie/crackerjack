@@ -5,9 +5,9 @@
       "args": [
         "run",
         "--directory",
-        "/Users/les/Projects/claude/mcp-servers/session-mgmt",
+        "/Users/les/Projects/session-mgmt-mcp",
         "python",
-        "session_mgmt/server.py"
+        "session_mgmt_mcp/server.py"
       ]
     },
     "crackerjack": {
