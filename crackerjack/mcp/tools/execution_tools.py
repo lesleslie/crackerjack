@@ -175,11 +175,11 @@ async def _execute_crackerjack_sync(
 
     try:
         await _initialize_execution(job_id, max_iterations, current_iteration, context)
-        
+
         orchestrator, use_advanced_orchestrator = await _setup_orchestrator(
             job_id, max_iterations, current_iteration, kwargs, context
         )
-        
+
         return await _run_workflow_iterations(
             job_id, max_iterations, orchestrator, use_advanced_orchestrator, kwargs
         )
@@ -245,7 +245,11 @@ async def _initialize_execution(
 
 
 async def _setup_orchestrator(
-    job_id: str, max_iterations: int, current_iteration: int, kwargs: dict[str, t.Any], context: t.Any
+    job_id: str,
+    max_iterations: int,
+    current_iteration: int,
+    kwargs: dict[str, t.Any],
+    context: t.Any,
 ) -> tuple[t.Any, bool]:
     """Set up the appropriate orchestrator (advanced or standard)."""
     try:
@@ -276,7 +280,9 @@ async def _setup_orchestrator(
     return orchestrator, use_advanced_orchestrator
 
 
-async def _create_advanced_orchestrator(job_id: str, kwargs: dict[str, t.Any], context: t.Any) -> t.Any:
+async def _create_advanced_orchestrator(
+    job_id: str, kwargs: dict[str, t.Any], context: t.Any
+) -> t.Any:
     """Create and configure the advanced orchestrator."""
     from ...core.session_coordinator import SessionCoordinator
     from ...orchestration.advanced_orchestrator import AdvancedWorkflowOrchestrator
@@ -329,7 +335,9 @@ async def _create_advanced_orchestrator(job_id: str, kwargs: dict[str, t.Any], c
     return orchestrator
 
 
-def _create_standard_orchestrator(job_id: str, kwargs: dict[str, t.Any], context: t.Any) -> t.Any:
+def _create_standard_orchestrator(
+    job_id: str, kwargs: dict[str, t.Any], context: t.Any
+) -> t.Any:
     """Create the standard fallback orchestrator."""
     from ...core.workflow_orchestrator import WorkflowOrchestrator
 
@@ -342,11 +350,13 @@ def _create_standard_orchestrator(job_id: str, kwargs: dict[str, t.Any], context
 
 
 async def _run_workflow_iterations(
-    job_id: str, max_iterations: int, orchestrator: t.Any, 
-    use_advanced_orchestrator: bool, kwargs: dict[str, t.Any]
+    job_id: str,
+    max_iterations: int,
+    orchestrator: t.Any,
+    use_advanced_orchestrator: bool,
+    kwargs: dict[str, t.Any],
 ) -> dict[str, t.Any]:
     """Run the main workflow iteration loop."""
-    from ...models.config import WorkflowOptions
 
     success = False
     current_iteration = 1
@@ -372,10 +382,14 @@ async def _run_workflow_iterations(
             )
 
             if success:
-                return _create_success_result(job_id, current_iteration, max_iterations, iteration)
-            
+                return _create_success_result(
+                    job_id, current_iteration, max_iterations, iteration
+                )
+
             if iteration < max_iterations:
-                await _handle_iteration_retry(job_id, current_iteration, max_iterations, iteration)
+                await _handle_iteration_retry(
+                    job_id, current_iteration, max_iterations, iteration
+                )
                 continue
 
         except Exception as e:
@@ -388,7 +402,7 @@ async def _run_workflow_iterations(
 def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
     """Create WorkflowOptions from kwargs."""
     from ...models.config import WorkflowOptions
-    
+
     options = WorkflowOptions()
     options.testing.test = kwargs.get("test", True)
     options.ai_agent = kwargs.get("ai_agent", True)
@@ -443,7 +457,9 @@ async def _handle_iteration_retry(
     await asyncio.sleep(1)
 
 
-async def _handle_iteration_error(iteration: int, max_iterations: int, error: Exception) -> bool:
+async def _handle_iteration_error(
+    iteration: int, max_iterations: int, error: Exception
+) -> bool:
     """Handle iteration errors. Returns True to continue, False to break."""
     print(f"Iteration {iteration} failed with error: {error}")
     if iteration >= max_iterations:
@@ -452,7 +468,9 @@ async def _handle_iteration_error(iteration: int, max_iterations: int, error: Ex
     return True
 
 
-def _create_failure_result(job_id: str, current_iteration: int, max_iterations: int) -> dict[str, t.Any]:
+def _create_failure_result(
+    job_id: str, current_iteration: int, max_iterations: int
+) -> dict[str, t.Any]:
     """Create failure result dictionary."""
     _update_progress(
         job_id=job_id,
@@ -544,13 +562,13 @@ async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.
             return _handle_status_error(status_info, context)
 
         cleanup_performed = []
-        
+
         # Check for conflicting jobs
         _check_active_jobs(status_info, context)
-        
+
         # Check and flag resource cleanup needs
         cleanup_performed.extend(_check_resource_cleanup(status_info, context))
-        
+
         # Check service health
         _check_service_health(status_info, context)
 
@@ -570,10 +588,13 @@ async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.
 async def _get_status_info() -> dict[str, t.Any]:
     """Get comprehensive system status."""
     from .monitoring_tools import _get_comprehensive_status
+
     return await _get_comprehensive_status()
 
 
-def _handle_status_error(status_info: dict[str, t.Any], context: t.Any) -> dict[str, t.Any]:
+def _handle_status_error(
+    status_info: dict[str, t.Any], context: t.Any
+) -> dict[str, t.Any]:
     """Handle status check failure."""
     context.safe_print(f"⚠️ Status check failed: {status_info['error']}")
     return {
@@ -598,11 +619,13 @@ def _check_active_jobs(status_info: dict[str, t.Any], context: t.Any) -> None:
         context.safe_print("✅ No active jobs detected - safe to proceed")
 
 
-def _handle_conflicting_jobs(active_jobs: list[dict[str, t.Any]], context: t.Any) -> None:
+def _handle_conflicting_jobs(
+    active_jobs: list[dict[str, t.Any]], context: t.Any
+) -> None:
     """Handle conflicting active jobs."""
     # For now, assume all jobs could conflict (future: check project paths)
     conflicting_jobs = active_jobs
-    
+
     if conflicting_jobs:
         job_ids = [j.get("job_id", "unknown") for j in conflicting_jobs]
         context.safe_print(
@@ -617,7 +640,7 @@ def _handle_conflicting_jobs(active_jobs: list[dict[str, t.Any]], context: t.Any
 def _check_resource_cleanup(status_info: dict[str, t.Any], context: t.Any) -> list[str]:
     """Check if resource cleanup is needed."""
     cleanup_performed = []
-    
+
     temp_files_count = (
         status_info.get("server_stats", {})
         .get("resource_usage", {})
@@ -629,7 +652,7 @@ def _check_resource_cleanup(status_info: dict[str, t.Any], context: t.Any) -> li
             f"🗑️ Found {temp_files_count} temporary files - cleanup recommended"
         )
         cleanup_performed.append("temp_files_flagged")
-    
+
     return cleanup_performed
 
 

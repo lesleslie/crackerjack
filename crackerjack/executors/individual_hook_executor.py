@@ -302,46 +302,71 @@ class IndividualHookExecutor:
     async def execute_strategy_individual(
         self, strategy: HookStrategy
     ) -> IndividualExecutionResult:
+        """Execute all hooks in a strategy individually (non-parallel)."""
         start_time = time.time()
-
         self._print_strategy_header(strategy)
 
-        hook_results: list[HookResult] = []
-        hook_progress: list[HookProgress] = []
-        execution_order: list[str] = []
+        execution_state = self._initialize_execution_state()
 
         for hook in strategy.hooks:
-            execution_order.append(hook.name)
+            await self._execute_single_hook_in_strategy(hook, execution_state)
 
-            progress = HookProgress(
-                hook_name=hook.name,
-                status="pending",
-                start_time=time.time(),
-            )
-            hook_progress.append(progress)
+        return self._finalize_execution_result(strategy, execution_state, start_time)
 
-            result = await self._execute_individual_hook(hook, progress)
-            hook_results.append(result)
+    def _initialize_execution_state(self) -> dict[str, t.Any]:
+        """Initialize state tracking for strategy execution."""
+        return {"hook_results": [], "hook_progress": [], "execution_order": []}
 
-            progress.status = "completed" if result.status == "passed" else "failed"
-            progress.end_time = time.time()
-            progress.duration = progress.end_time - progress.start_time
+    async def _execute_single_hook_in_strategy(
+        self, hook: HookDefinition, execution_state: dict[str, t.Any]
+    ) -> None:
+        """Execute a single hook and update execution state."""
+        execution_state["execution_order"].append(hook.name)
 
-            if self.progress_callback:
-                self.progress_callback(progress)
+        progress = HookProgress(
+            hook_name=hook.name,
+            status="pending",
+            start_time=time.time(),
+        )
+        execution_state["hook_progress"].append(progress)
 
+        result = await self._execute_individual_hook(hook, progress)
+        execution_state["hook_results"].append(result)
+
+        self._update_hook_progress_status(progress, result)
+
+    def _update_hook_progress_status(
+        self, progress: HookProgress, result: HookResult
+    ) -> None:
+        """Update progress status after hook execution."""
+        progress.status = "completed" if result.status == "passed" else "failed"
+        progress.end_time = time.time()
+        progress.duration = progress.end_time - progress.start_time
+
+        if self.progress_callback:
+            self.progress_callback(progress)
+
+    def _finalize_execution_result(
+        self,
+        strategy: HookStrategy,
+        execution_state: dict[str, t.Any],
+        start_time: float,
+    ) -> IndividualExecutionResult:
+        """Finalize and return the execution result."""
         total_duration = time.time() - start_time
-        success = all(r.status == "passed" for r in hook_results)
+        success = all(r.status == "passed" for r in execution_state["hook_results"])
 
-        self._print_individual_summary(strategy, hook_results, hook_progress)
+        self._print_individual_summary(
+            strategy, execution_state["hook_results"], execution_state["hook_progress"]
+        )
 
         return IndividualExecutionResult(
             strategy_name=f"{strategy.name}_individual",
-            hook_results=hook_results,
-            hook_progress=hook_progress,
+            hook_results=execution_state["hook_results"],
+            hook_progress=execution_state["hook_progress"],
             total_duration=total_duration,
             success=success,
-            execution_order=execution_order,
+            execution_order=execution_state["execution_order"],
         )
 
     async def _execute_individual_hook(

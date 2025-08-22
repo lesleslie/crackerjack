@@ -19,6 +19,8 @@ class MockOptions:
         self.no_config_updates = False
         self.interactive = False
         self.no_git_tags = False
+        self.cleanup_pypi = False
+        self.keep_releases = 5
 
 
 class TestPhaseCoordinatorBasics:
@@ -26,7 +28,7 @@ class TestPhaseCoordinatorBasics:
     def mock_dependencies(self):
         return {
             "console": Mock(),
-            "pkg_path": Path(" / test / project"),
+            "pkg_path": Path("/test/project"),
             "session": Mock(spec=SessionCoordinator),
             "filesystem": Mock(),
             "git_service": Mock(),
@@ -39,7 +41,12 @@ class TestPhaseCoordinatorBasics:
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
             with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
-                return PhaseCoordinator(**mock_dependencies)
+                coordinator = PhaseCoordinator(**mock_dependencies)
+                # Mock the config service with the actual methods
+                coordinator.config_service = Mock()
+                coordinator.config_service.update_precommit_config.return_value = True
+                coordinator.config_service.update_pyproject_config.return_value = True
+                return coordinator
 
     @pytest.fixture
     def options(self):
@@ -195,7 +202,7 @@ class TestPhaseCoordinatorHooks:
     def mock_dependencies(self):
         return {
             "console": Mock(),
-            "pkg_path": Path(" / test / project"),
+            "pkg_path": Path("/test/project"),
             "session": Mock(spec=SessionCoordinator),
             "filesystem": Mock(),
             "git_service": Mock(),
@@ -208,7 +215,12 @@ class TestPhaseCoordinatorHooks:
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
             with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
-                return PhaseCoordinator(**mock_dependencies)
+                coordinator = PhaseCoordinator(**mock_dependencies)
+                # Mock the config service with the actual methods
+                coordinator.config_service = Mock()
+                coordinator.config_service.update_precommit_config.return_value = True
+                coordinator.config_service.update_pyproject_config.return_value = True
+                return coordinator
 
     @pytest.fixture
     def options(self):
@@ -278,7 +290,7 @@ class TestPhaseCoordinatorPublishing:
     def mock_dependencies(self):
         return {
             "console": Mock(),
-            "pkg_path": Path(" / test / project"),
+            "pkg_path": Path("/test/project"),
             "session": Mock(spec=SessionCoordinator),
             "filesystem": Mock(),
             "git_service": Mock(),
@@ -291,7 +303,12 @@ class TestPhaseCoordinatorPublishing:
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
             with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
-                return PhaseCoordinator(**mock_dependencies)
+                coordinator = PhaseCoordinator(**mock_dependencies)
+                # Mock the config service with the actual methods
+                coordinator.config_service = Mock()
+                coordinator.config_service.update_precommit_config.return_value = True
+                coordinator.config_service.update_pyproject_config.return_value = True
+                return coordinator
 
     @pytest.fixture
     def options(self):
@@ -311,9 +328,17 @@ class TestPhaseCoordinatorPublishing:
         options.publish = "patch"
         phase_coordinator.publish_manager.bump_version.return_value = "1.2.4"
         phase_coordinator.publish_manager.publish_package.return_value = True
+        phase_coordinator.publish_manager.create_git_tag.return_value = True
+
+        # Mock session tracking methods
+        phase_coordinator.session.track_task.return_value = None
+        phase_coordinator.session.complete_task.return_value = None
+        phase_coordinator.session.fail_task.return_value = None
 
         result = phase_coordinator.run_publishing_phase(options)
         assert result is True
+        phase_coordinator.publish_manager.bump_version.assert_called_once_with("patch")
+        phase_coordinator.publish_manager.publish_package.assert_called_once()
 
     def test_run_publishing_phase_publish_failure(
         self, phase_coordinator, options
@@ -388,7 +413,7 @@ class TestPhaseCoordinatorCommitMessages:
     def mock_dependencies(self):
         return {
             "console": Mock(),
-            "pkg_path": Path(" / test / project"),
+            "pkg_path": Path("/test/project"),
             "session": Mock(spec=SessionCoordinator),
             "filesystem": Mock(),
             "git_service": Mock(),
@@ -401,7 +426,12 @@ class TestPhaseCoordinatorCommitMessages:
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
             with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
-                return PhaseCoordinator(**mock_dependencies)
+                coordinator = PhaseCoordinator(**mock_dependencies)
+                # Mock the config service with the actual methods
+                coordinator.config_service = Mock()
+                coordinator.config_service.update_precommit_config.return_value = True
+                coordinator.config_service.update_pyproject_config.return_value = True
+                return coordinator
 
     @pytest.fixture
     def options(self):
@@ -474,7 +504,7 @@ class TestPhaseCoordinatorInternalMethods:
     def mock_dependencies(self):
         return {
             "console": Mock(),
-            "pkg_path": Path(" / test / project"),
+            "pkg_path": Path("/test/project"),
             "session": Mock(spec=SessionCoordinator),
             "filesystem": Mock(),
             "git_service": Mock(),
@@ -487,32 +517,43 @@ class TestPhaseCoordinatorInternalMethods:
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
             with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
-                return PhaseCoordinator(**mock_dependencies)
+                coordinator = PhaseCoordinator(**mock_dependencies)
+                # Mock the config service with the actual methods
+                coordinator.config_service = Mock()
+                coordinator.config_service.update_precommit_config.return_value = True
+                coordinator.config_service.update_pyproject_config.return_value = True
+                return coordinator
 
     def test_execute_cleaning_process_no_files(self, phase_coordinator) -> None:
-        with patch.object(phase_coordinator.pkg_path, "rglob", return_value=[]):
-            result = phase_coordinator._execute_cleaning_process()
-            assert result is True
+        # Mock the pkg_path to return no files
+        phase_coordinator.pkg_path = Mock()
+        phase_coordinator.pkg_path.rglob.return_value = []
+
+        result = phase_coordinator._execute_cleaning_process()
+        assert result is True
 
     def test_execute_cleaning_process_with_files(self, phase_coordinator) -> None:
-        mock_files = [Path(" / test / file1.py"), Path(" / test / file2.py")]
+        mock_files = [Path("/test/file1.py"), Path("/test/file2.py")]
 
-        with patch.object(phase_coordinator.pkg_path, "rglob", return_value=mock_files):
-            with patch.object(
-                phase_coordinator, "_clean_python_files", return_value=["file1.py"]
-            ):
-                with patch.object(phase_coordinator, "_report_cleaning_results"):
-                    result = phase_coordinator._execute_cleaning_process()
-                    assert result is True
+        # Mock the pkg_path to return mock files
+        phase_coordinator.pkg_path = Mock()
+        phase_coordinator.pkg_path.rglob.return_value = mock_files
+
+        with patch.object(
+            phase_coordinator, "_clean_python_files", return_value=["file1.py"]
+        ):
+            with patch.object(phase_coordinator, "_report_cleaning_results"):
+                result = phase_coordinator._execute_cleaning_process()
+                assert result is True
 
     def test_clean_python_files(self, phase_coordinator) -> None:
-        mock_files = [Path(" / test / file1.py"), Path(" / test / file2.py")]
+        mock_files = [Path("/test/file1.py"), Path("/test/file2.py")]
         phase_coordinator.code_cleaner.should_process_file.return_value = True
         phase_coordinator.code_cleaner.clean_file.side_effect = [True, False]
 
         result = phase_coordinator._clean_python_files(mock_files)
         assert len(result) == 1
-        assert " / test / file1.py" in result
+        assert "/test/file1.py" in result
 
     def test_report_cleaning_results_with_files(self, phase_coordinator) -> None:
         cleaned_files = ["file1.py", "file2.py"]

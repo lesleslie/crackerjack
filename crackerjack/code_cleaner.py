@@ -348,62 +348,72 @@ class CodeCleaner(BaseModel):
         return True
 
     def _create_line_comment_step(self) -> CleaningStepProtocol:
-        class LineCommentStep:
-            name = "remove_line_comments"
+        """Create a step for removing line comments while preserving special comments."""
+        return self._LineCommentStep()
 
-            def __call__(self, code: str, file_path: Path) -> str:
-                lines = code.split("\n")
-                cleaned_lines = []
+    class _LineCommentStep:
+        """Step implementation for removing line comments."""
 
-                for line in lines:
-                    if not line.strip():
-                        cleaned_lines.append(line)
-                        continue
+        name = "remove_line_comments"
 
-                    stripped = line.strip()
-                    if stripped.startswith("#") and (
-                        "coding: " in stripped
-                        or "encoding: " in stripped
-                        or stripped.startswith("# !/ ")
-                        or "type: " in stripped
-                        or "noqa" in stripped
-                        or "pragma" in stripped
-                    ):
-                        cleaned_lines.append(line)
-                        continue
+        def __call__(self, code: str, file_path: Path) -> str:
+            lines = code.split("\n")
+            return "\n".join(self._process_line_for_comments(line) for line in lines)
 
-                    in_string = False
-                    quote_char = None
-                    result = []
-                    i = 0
+        def _process_line_for_comments(self, line: str) -> str:
+            """Process a single line to remove comments while preserving strings."""
+            if not line.strip() or self._is_preserved_comment_line(line):
+                return line
+            return self._remove_comment_from_line(line)
 
-                    while i < len(line):
-                        char = line[i]
+        def _is_preserved_comment_line(self, line: str) -> bool:
+            """Check if this comment line should be preserved."""
+            stripped = line.strip()
+            if not stripped.startswith("#"):
+                return False
+            return self._has_preserved_pattern(stripped)
 
-                        if not in_string and char in ['"', "'"]:
-                            in_string = True
-                            quote_char = char
-                            result.append(char)
-                        elif (
-                            in_string
-                            and char == quote_char
-                            and (i == 0 or line[i - 1] != "\\")
-                        ):
-                            in_string = False
-                            quote_char = None
-                            result.append(char)
-                        elif not in_string and char == "#":
-                            break
-                        else:
-                            result.append(char)
-                        i += 1
+        def _has_preserved_pattern(self, stripped_line: str) -> bool:
+            """Check if line contains preserved comment patterns."""
+            preserved_patterns = ["coding: ", "encoding: ", "type: ", "noqa", "pragma"]
+            return stripped_line.startswith("# !/ ") or any(
+                pattern in stripped_line for pattern in preserved_patterns
+            )
 
-                    cleaned_line = "".join(result).rstrip()
-                    cleaned_lines.append(cleaned_line)
+        def _remove_comment_from_line(self, line: str) -> str:
+            """Remove comments from a line while preserving string literals."""
+            result, string_state = [], {"in_string": False, "quote_char": None}
+            for i, char in enumerate(line):
+                if self._should_break_at_comment(char, string_state):
+                    break
+                self._update_string_state(char, i, line, string_state)
+                result.append(char)
+            return "".join(result).rstrip()
 
-                return "\n".join(cleaned_lines)
+        def _should_break_at_comment(self, char: str, state: dict) -> bool:
+            """Check if we should break at a comment character."""
+            return not state["in_string"] and char == "#"
 
-        return LineCommentStep()
+        def _update_string_state(
+            self, char: str, index: int, line: str, state: dict
+        ) -> None:
+            """Update string parsing state based on current character."""
+            if self._is_string_start(char, state):
+                state["in_string"], state["quote_char"] = True, char
+            elif self._is_string_end(char, index, line, state):
+                state["in_string"], state["quote_char"] = False, None
+
+        def _is_string_start(self, char: str, state: dict) -> bool:
+            """Check if character starts a string."""
+            return not state["in_string"] and char in ['"', "'"]
+
+        def _is_string_end(self, char: str, index: int, line: str, state: dict) -> bool:
+            """Check if character ends a string."""
+            return (
+                state["in_string"]
+                and char == state["quote_char"]
+                and (index == 0 or line[index - 1] != "\\")
+            )
 
     def _create_docstring_step(self) -> CleaningStepProtocol:
         return DocstringStep()

@@ -264,24 +264,43 @@ class WorkflowPipeline:
             self._mcp_state_manager.add_issue(issue)
 
     def _execute_standard_hooks_workflow(self, options: OptionsProtocol) -> bool:
-        if hasattr(self, "_mcp_state_manager") and self._mcp_state_manager:
+        """Execute standard hooks workflow with proper state management."""
+        self._update_hooks_status_running()
+
+        hooks_success = self.phases.run_hooks_phase(options)
+        self._handle_hooks_completion(hooks_success)
+
+        return hooks_success
+
+    def _update_hooks_status_running(self) -> None:
+        """Update MCP state to running for hook phases."""
+        if self._has_mcp_state_manager():
             self._mcp_state_manager.update_stage_status("fast", "running")
             self._mcp_state_manager.update_stage_status("comprehensive", "running")
 
-        hooks_success = self.phases.run_hooks_phase(options)
+    def _handle_hooks_completion(self, hooks_success: bool) -> None:
+        """Handle hooks completion with appropriate status updates."""
         if not hooks_success:
             self.session.fail_task("workflow", "Hooks failed")
-            if hasattr(self, "_mcp_state_manager") and self._mcp_state_manager:
-                self._mcp_state_manager.update_stage_status("fast", "failed")
-                self._mcp_state_manager.update_stage_status("comprehensive", "failed")
-            return False
+            self._update_hooks_status_failed()
         else:
-            if hasattr(self, "_mcp_state_manager") and self._mcp_state_manager:
-                self._mcp_state_manager.update_stage_status("fast", "completed")
-                self._mcp_state_manager.update_stage_status(
-                    "comprehensive", "completed"
-                )
-        return True
+            self._update_hooks_status_completed()
+
+    def _has_mcp_state_manager(self) -> bool:
+        """Check if MCP state manager is available."""
+        return hasattr(self, "_mcp_state_manager") and self._mcp_state_manager
+
+    def _update_hooks_status_failed(self) -> None:
+        """Update MCP state to failed for hook phases."""
+        if self._has_mcp_state_manager():
+            self._mcp_state_manager.update_stage_status("fast", "failed")
+            self._mcp_state_manager.update_stage_status("comprehensive", "failed")
+
+    def _update_hooks_status_completed(self) -> None:
+        """Update MCP state to completed for hook phases."""
+        if self._has_mcp_state_manager():
+            self._mcp_state_manager.update_stage_status("fast", "completed")
+            self._mcp_state_manager.update_stage_status("comprehensive", "completed")
 
     async def _run_ai_agent_fixing_phase(self, options: OptionsProtocol) -> bool:
         """Run AI agent fixing phase to analyze and fix collected failures."""

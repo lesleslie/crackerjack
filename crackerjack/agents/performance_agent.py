@@ -27,6 +27,19 @@ class PerformanceAgent(SubAgent):
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         self.log(f"Analyzing performance issue: {issue.message}")
 
+        validation_result = self._validate_performance_issue(issue)
+        if validation_result:
+            return validation_result
+
+        file_path = Path(issue.file_path)
+
+        try:
+            return await self._process_performance_optimization(file_path)
+        except Exception as e:
+            return self._create_performance_error_result(e)
+
+    def _validate_performance_issue(self, issue: Issue) -> FixResult | None:
+        """Validate the performance issue has required information."""
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -42,68 +55,80 @@ class PerformanceAgent(SubAgent):
                 remaining_issues=[f"File not found: {file_path}"],
             )
 
-        try:
-            content = self.context.get_file_content(file_path)
-            if not content:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Could not read file: {file_path}"],
-                )
+        return None
 
-            # Analyze for performance issues
-            performance_issues = self._detect_performance_issues(content, file_path)
-
-            if not performance_issues:
-                return FixResult(
-                    success=True,
-                    confidence=0.7,
-                    recommendations=["No performance issues detected"],
-                )
-
-            # Apply performance optimizations
-            optimized_content = self._apply_performance_optimizations(
-                content, performance_issues
-            )
-
-            if optimized_content == content:
-                return FixResult(
-                    success=False,
-                    confidence=0.6,
-                    remaining_issues=["Could not automatically optimize performance"],
-                    recommendations=[
-                        "Manual optimization required",
-                        "Consider algorithm complexity improvements",
-                        "Review data structure choices",
-                        "Profile code execution for bottlenecks",
-                    ],
-                )
-
-            success = self.context.write_file_content(file_path, optimized_content)
-            if not success:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Failed to write optimized file: {file_path}"],
-                )
-
-            return FixResult(
-                success=True,
-                confidence=0.8,
-                fixes_applied=[
-                    f"Optimized {len(performance_issues)} performance issues",
-                    "Applied algorithmic improvements",
-                ],
-                files_modified=[str(file_path)],
-                recommendations=["Test performance improvements with benchmarks"],
-            )
-
-        except Exception as e:
+    async def _process_performance_optimization(self, file_path: Path) -> FixResult:
+        """Process performance issue detection and optimization for a file."""
+        content = self.context.get_file_content(file_path)
+        if not content:
             return FixResult(
                 success=False,
                 confidence=0.0,
-                remaining_issues=[f"Error processing file: {e}"],
+                remaining_issues=[f"Could not read file: {file_path}"],
             )
+
+        performance_issues = self._detect_performance_issues(content, file_path)
+
+        if not performance_issues:
+            return FixResult(
+                success=True,
+                confidence=0.7,
+                recommendations=["No performance issues detected"],
+            )
+
+        return self._apply_and_save_optimizations(
+            file_path, content, performance_issues
+        )
+
+    def _apply_and_save_optimizations(
+        self, file_path: Path, content: str, issues: list
+    ) -> FixResult:
+        """Apply performance optimizations and save changes."""
+        optimized_content = self._apply_performance_optimizations(content, issues)
+
+        if optimized_content == content:
+            return self._create_no_optimization_result()
+
+        success = self.context.write_file_content(file_path, optimized_content)
+        if not success:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Failed to write optimized file: {file_path}"],
+            )
+
+        return FixResult(
+            success=True,
+            confidence=0.8,
+            fixes_applied=[
+                f"Optimized {len(issues)} performance issues",
+                "Applied algorithmic improvements",
+            ],
+            files_modified=[str(file_path)],
+            recommendations=["Test performance improvements with benchmarks"],
+        )
+
+    def _create_no_optimization_result(self) -> FixResult:
+        """Create result for when no optimizations could be applied."""
+        return FixResult(
+            success=False,
+            confidence=0.6,
+            remaining_issues=["Could not automatically optimize performance"],
+            recommendations=[
+                "Manual optimization required",
+                "Consider algorithm complexity improvements",
+                "Review data structure choices",
+                "Profile code execution for bottlenecks",
+            ],
+        )
+
+    def _create_performance_error_result(self, error: Exception) -> FixResult:
+        """Create result for performance processing errors."""
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Error processing file: {error}"],
+        )
 
     def _detect_performance_issues(
         self, content: str, file_path: Path
@@ -184,7 +209,7 @@ class PerformanceAgent(SubAgent):
     ) -> list[dict[str, t.Any]]:
         """Detect inefficient list operations like repeated appends or concatenations."""
         issues = []
-        lines = content.split("\n")
+        content.split("\n")
 
         # Pattern: list += [item] or list = list + [item] in loops
 
@@ -235,52 +260,75 @@ class PerformanceAgent(SubAgent):
         self, content: str, tree: ast.AST
     ) -> list[dict[str, t.Any]]:
         """Detect repeated expensive operations that could be cached."""
-        issues = []
         lines = content.split("\n")
+        repeated_calls = self._find_expensive_operations_in_loops(lines)
 
-        # Look for repeated function calls in loops
+        return self._create_repeated_operations_issues(repeated_calls)
+
+    def _find_expensive_operations_in_loops(
+        self, lines: list[str]
+    ) -> list[dict[str, t.Any]]:
+        """Find expensive operations that occur within loop contexts."""
         repeated_calls = []
+        expensive_patterns = self._get_expensive_operation_patterns()
 
         for i, line in enumerate(lines):
             stripped = line.strip()
-            # Pattern: expensive operations in loops
-            if any(
-                pattern in stripped
-                for pattern in (
-                    ".exists()",
-                    ".read_text()",
-                    ".glob(",
-                    ".rglob(",
-                    "Path(",
-                    "len(",
-                    ".get(",
-                )
-            ):
-                # Check if this line is in a loop context (simple heuristic)
-                context_start = max(0, i - 5)
-                context_lines = lines[context_start : i + 1]
-                if any(
-                    "for " in ctx_line or "while " in ctx_line
-                    for ctx_line in context_lines
-                ):
-                    repeated_calls.append(
-                        {
-                            "line_number": i + 1,
-                            "content": stripped,
-                            "type": "expensive_operation_in_loop",
-                        }
-                    )
+            if self._contains_expensive_operation(stripped, expensive_patterns):
+                if self._is_in_loop_context(lines, i):
+                    repeated_calls.append(self._create_operation_record(i, stripped))
 
+        return repeated_calls
+
+    def _get_expensive_operation_patterns(self) -> tuple[str, ...]:
+        """Get patterns for expensive operations to detect."""
+        return (
+            ".exists()",
+            ".read_text()",
+            ".glob(",
+            ".rglob(",
+            "Path(",
+            "len(",
+            ".get(",
+        )
+
+    def _contains_expensive_operation(
+        self, line: str, patterns: tuple[str, ...]
+    ) -> bool:
+        """Check if line contains any expensive operation patterns."""
+        return any(pattern in line for pattern in patterns)
+
+    def _is_in_loop_context(self, lines: list[str], line_index: int) -> bool:
+        """Check if line is within a loop context using simple heuristic."""
+        context_start = max(0, line_index - 5)
+        context_lines = lines[context_start : line_index + 1]
+        return any(
+            "for " in ctx_line or "while " in ctx_line for ctx_line in context_lines
+        )
+
+    def _create_operation_record(
+        self, line_index: int, content: str
+    ) -> dict[str, t.Any]:
+        """Create a record for an expensive operation found in a loop."""
+        return {
+            "line_number": line_index + 1,
+            "content": content,
+            "type": "expensive_operation_in_loop",
+        }
+
+    def _create_repeated_operations_issues(
+        self, repeated_calls: list[dict[str, t.Any]]
+    ) -> list[dict[str, t.Any]]:
+        """Create issues list for repeated operations if threshold is met."""
         if len(repeated_calls) >= 2:
-            issues.append(
+            return [
                 {
                     "type": "repeated_expensive_operations",
                     "instances": repeated_calls,
                     "suggestion": "Cache expensive operations outside loops",
                 }
-            )
-
-        return issues
+            ]
+        return []
 
     def _detect_string_inefficiencies(self, content: str) -> list[dict[str, t.Any]]:
         """Detect inefficient string operations."""

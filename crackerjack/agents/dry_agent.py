@@ -25,6 +25,19 @@ class DRYAgent(SubAgent):
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         self.log(f"Analyzing DRY violation: {issue.message}")
 
+        validation_result = self._validate_dry_issue(issue)
+        if validation_result:
+            return validation_result
+
+        file_path = Path(issue.file_path)
+
+        try:
+            return await self._process_dry_violation(file_path)
+        except Exception as e:
+            return self._create_dry_error_result(e)
+
+    def _validate_dry_issue(self, issue: Issue) -> FixResult | None:
+        """Validate the DRY violation issue has required information."""
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -40,65 +53,77 @@ class DRYAgent(SubAgent):
                 remaining_issues=[f"File not found: {file_path}"],
             )
 
-        try:
-            content = self.context.get_file_content(file_path)
-            if not content:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Could not read file: {file_path}"],
-                )
+        return None
 
-            # Analyze for different types of DRY violations
-            violations = self._detect_dry_violations(content, file_path)
-
-            if not violations:
-                return FixResult(
-                    success=True,
-                    confidence=0.7,
-                    recommendations=["No DRY violations detected"],
-                )
-
-            # Apply fixes for detected violations
-            fixed_content = self._apply_dry_fixes(content, violations)
-
-            if fixed_content == content:
-                return FixResult(
-                    success=False,
-                    confidence=0.5,
-                    remaining_issues=["Could not automatically fix DRY violations"],
-                    recommendations=[
-                        "Manual refactoring required",
-                        "Consider extracting common patterns to utility functions",
-                        "Create base classes or mixins for repeated functionality",
-                    ],
-                )
-
-            success = self.context.write_file_content(file_path, fixed_content)
-            if not success:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Failed to write fixed file: {file_path}"],
-                )
-
-            return FixResult(
-                success=True,
-                confidence=0.8,
-                fixes_applied=[
-                    f"Fixed {len(violations)} DRY violations",
-                    "Consolidated repetitive patterns",
-                ],
-                files_modified=[str(file_path)],
-                recommendations=["Verify functionality after DRY fixes"],
-            )
-
-        except Exception as e:
+    async def _process_dry_violation(self, file_path: Path) -> FixResult:
+        """Process DRY violation detection and fixing for a file."""
+        content = self.context.get_file_content(file_path)
+        if not content:
             return FixResult(
                 success=False,
                 confidence=0.0,
-                remaining_issues=[f"Error processing file: {e}"],
+                remaining_issues=[f"Could not read file: {file_path}"],
             )
+
+        violations = self._detect_dry_violations(content, file_path)
+
+        if not violations:
+            return FixResult(
+                success=True,
+                confidence=0.7,
+                recommendations=["No DRY violations detected"],
+            )
+
+        return self._apply_and_save_dry_fixes(file_path, content, violations)
+
+    def _apply_and_save_dry_fixes(
+        self, file_path: Path, content: str, violations: list
+    ) -> FixResult:
+        """Apply DRY fixes and save changes."""
+        fixed_content = self._apply_dry_fixes(content, violations)
+
+        if fixed_content == content:
+            return self._create_no_fixes_result()
+
+        success = self.context.write_file_content(file_path, fixed_content)
+        if not success:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Failed to write fixed file: {file_path}"],
+            )
+
+        return FixResult(
+            success=True,
+            confidence=0.8,
+            fixes_applied=[
+                f"Fixed {len(violations)} DRY violations",
+                "Consolidated repetitive patterns",
+            ],
+            files_modified=[str(file_path)],
+            recommendations=["Verify functionality after DRY fixes"],
+        )
+
+    def _create_no_fixes_result(self) -> FixResult:
+        """Create result for when no fixes could be applied."""
+        return FixResult(
+            success=False,
+            confidence=0.5,
+            remaining_issues=["Could not automatically fix DRY violations"],
+            recommendations=[
+                "Manual refactoring required",
+                "Consider extracting common patterns to utility functions",
+                "Create base classes or mixins for repeated functionality",
+            ],
+        )
+
+    def _create_dry_error_result(self, error: Exception) -> FixResult:
+        """Create result for DRY processing errors."""
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Error processing file: {error}"],
+        )
 
     def _detect_dry_violations(
         self, content: str, file_path: Path

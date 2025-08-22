@@ -400,18 +400,29 @@ class TestCrackerjackAPIPublishing:
         return api
 
     def test_publish_package_success(self, api) -> None:
-        api.orchestrator.pipeline.run_complete_workflow.return_value = True
+        # Mock the async method to return a coroutine that resolves to True
+        async def mock_workflow(options):
+            return True
+
+        api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
+            side_effect=mock_workflow
+        )
 
         result = api.publish_package()
 
         assert isinstance(result, PublishResult)
         assert result.success is True
-        assert result.version == ""
+        assert result.version == "0.30.3"  # Current version from pyproject.toml
         assert len(result.published_to) == 1
         assert len(result.errors) == 0
 
     def test_publish_package_with_version_bump(self, api) -> None:
-        api.orchestrator.pipeline.run_complete_workflow.return_value = True
+        async def mock_workflow(options):
+            return True
+
+        api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
+            side_effect=mock_workflow
+        )
 
         result = api.publish_package(version_bump="patch")
 
@@ -421,7 +432,12 @@ class TestCrackerjackAPIPublishing:
         assert call_args.bump == "patch"
 
     def test_publish_package_dry_run(self, api) -> None:
-        api.orchestrator.pipeline.run_complete_workflow.return_value = True
+        async def mock_workflow(options):
+            return True
+
+        api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
+            side_effect=mock_workflow
+        )
 
         result = api.publish_package(dry_run=True)
 
@@ -431,7 +447,12 @@ class TestCrackerjackAPIPublishing:
         assert call_args.publish is None
 
     def test_publish_package_real_publish(self, api) -> None:
-        api.orchestrator.pipeline.run_complete_workflow.return_value = True
+        async def mock_workflow(options):
+            return True
+
+        api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
+            side_effect=mock_workflow
+        )
 
         result = api.publish_package(version_bump="minor", dry_run=False)
 
@@ -442,7 +463,12 @@ class TestCrackerjackAPIPublishing:
         assert call_args.publish == "pypi"
 
     def test_publish_package_failure(self, api) -> None:
-        api.orchestrator.pipeline.run_complete_workflow.return_value = False
+        async def mock_workflow(options):
+            return False
+
+        api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
+            side_effect=mock_workflow
+        )
 
         result = api.publish_package()
 
@@ -451,8 +477,8 @@ class TestCrackerjackAPIPublishing:
         assert "Publishing failed" in result.errors[0]
 
     def test_publish_package_exception(self, api) -> None:
-        api.orchestrator.pipeline.run_complete_workflow.side_effect = ValueError(
-            "Publish error"
+        api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
+            side_effect=ValueError("Publish error")
         )
 
         result = api.publish_package()

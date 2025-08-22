@@ -438,30 +438,37 @@ class HealthMetricsService:
         return health
 
     def report_health_status(self, health: ProjectHealth) -> None:
+        """Generate and display comprehensive project health report."""
         health_score = health.get_health_score()
 
-        if health_score >= 0.8:
-            status_icon = "🟢"
-            status_text = "Excellent"
-            status_color = "green"
-        elif health_score >= 0.6:
-            status_icon = "🟡"
-            status_text = "Good"
-            status_color = "yellow"
-        elif health_score >= 0.4:
-            status_icon = "🟠"
-            status_text = "Fair"
-            status_color = "orange"
-        else:
-            status_icon = "🔴"
-            status_text = "Poor"
-            status_color = "red"
+        self._print_health_summary(health_score)
+        self._print_health_metrics(health)
+        self._print_health_recommendations(health)
+
+    def _print_health_summary(self, health_score: float) -> None:
+        """Print the overall health score with appropriate styling."""
+        status_icon, status_text, status_color = self._get_health_status_display(
+            health_score
+        )
 
         self.console.print("\n[bold]📊 Project Health Report[/bold]")
         self.console.print(
             f"{status_icon} Overall Health: [{status_color}]{status_text} ({health_score:.1%})[/{status_color}]"
         )
 
+    def _get_health_status_display(self, health_score: float) -> tuple[str, str, str]:
+        """Get display elements (icon, text, color) for health score."""
+        if health_score >= 0.8:
+            return "🟢", "Excellent", "green"
+        elif health_score >= 0.6:
+            return "🟡", "Good", "yellow"
+        elif health_score >= 0.4:
+            return "🟠", "Fair", "orange"
+        else:
+            return "🔴", "Poor", "red"
+
+    def _print_health_metrics(self, health: ProjectHealth) -> None:
+        """Print detailed health metrics."""
         if health.lint_error_trend:
             recent_errors = health.lint_error_trend[-1]
             self.console.print(f"🔧 Lint Errors: {recent_errors}")
@@ -476,6 +483,8 @@ class HealthMetricsService:
 
         self.console.print(f"⚙️ Config Completeness: {health.config_completeness:.1%}")
 
+    def _print_health_recommendations(self, health: ProjectHealth) -> None:
+        """Print health recommendations and init suggestions."""
         recommendations = health.get_recommendations()
         if recommendations:
             self.console.print("\n[bold]💡 Recommendations:[/bold]")

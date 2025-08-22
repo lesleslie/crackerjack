@@ -91,7 +91,7 @@ class DocumentationAgent(SubAgent):
                 ],
                 files_modified=[str(changelog_path)],
             )
-        
+
         return FixResult(
             success=False,
             confidence=0.0,
@@ -133,7 +133,7 @@ class DocumentationAgent(SubAgent):
                 fixes_applied=fixes_applied,
                 files_modified=files_modified,
             )
-        
+
         return FixResult(
             success=True,
             confidence=0.8,
@@ -253,49 +253,59 @@ class DocumentationAgent(SubAgent):
         date_str = datetime.now().strftime("%Y-%m-%d")
         entry_lines = [f"## [Unreleased] - {date_str}", ""]
 
-        # Categorize changes
-        features: list[str] = []
-        fixes: list[str] = []
-        refactors: list[str] = []
-        other: list[str] = []
+        categorized_changes = self._categorize_changes(changes)
+        self._add_categorized_changes_to_entry(entry_lines, categorized_changes)
+
+        return "\n".join(entry_lines)
+
+    def _categorize_changes(
+        self, changes: list[dict[str, str]]
+    ) -> dict[str, list[str]]:
+        """Categorize changes by type."""
+        categories = {"features": [], "fixes": [], "refactors": [], "other": []}
 
         for change in changes:
             message = change["message"]
-            if message.startswith(("feat:", "feature:")):
-                features.append(message)
-            elif message.startswith("fix:"):
-                fixes.append(message)
-            elif message.startswith(("refactor:", "refact:")):
-                refactors.append(message)
-            else:
-                other.append(message)
+            category = self._get_change_category(message)
+            categories[category].append(message)
 
-        # Add categorized changes
-        if features:
-            entry_lines.append("### Added")
-            for feat in features:
-                entry_lines.append(f"- {feat}")
-            entry_lines.append("")
+        return categories
 
-        if fixes:
-            entry_lines.append("### Fixed")
-            for fix in fixes:
-                entry_lines.append(f"- {fix}")
-            entry_lines.append("")
+    def _get_change_category(self, message: str) -> str:
+        """Determine the category for a change message."""
+        if message.startswith(("feat:", "feature:")):
+            return "features"
+        elif message.startswith("fix:"):
+            return "fixes"
+        elif message.startswith(("refactor:", "refact:")):
+            return "refactors"
+        else:
+            return "other"
 
-        if refactors:
-            entry_lines.append("### Changed")
-            for refactor in refactors:
-                entry_lines.append(f"- {refactor}")
-            entry_lines.append("")
+    def _add_categorized_changes_to_entry(
+        self, entry_lines: list[str], categories: dict[str, list[str]]
+    ) -> None:
+        """Add categorized changes to the entry lines."""
+        section_mappings = {
+            "features": "### Added",
+            "fixes": "### Fixed",
+            "refactors": "### Changed",
+            "other": "### Other",
+        }
 
-        if other:
-            entry_lines.append("### Other")
-            for item in other:
-                entry_lines.append(f"- {item}")
-            entry_lines.append("")
+        for category, section_title in section_mappings.items():
+            items = categories[category]
+            if items:
+                self._add_section_to_entry(entry_lines, section_title, items)
 
-        return "\n".join(entry_lines)
+    def _add_section_to_entry(
+        self, entry_lines: list[str], section_title: str, items: list[str]
+    ) -> None:
+        """Add a section with items to the entry lines."""
+        entry_lines.append(section_title)
+        for item in items:
+            entry_lines.append(f"- {item}")
+        entry_lines.append("")
 
     def _insert_changelog_entry(self, content: str, entry: str) -> str:
         """Insert new changelog entry at the top."""

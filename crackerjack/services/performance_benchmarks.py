@@ -51,13 +51,31 @@ class PerformanceBenchmarkService:
     def run_comprehensive_benchmark(
         self, run_tests: bool = True, run_hooks: bool = True, iterations: int = 1
     ) -> PerformanceReport:
+        """Run comprehensive performance benchmark across all components."""
         self.console.print(
             "[cyan]🚀 Starting comprehensive performance benchmark...[/cyan]"
         )
 
         start_time = time.time()
-        report = PerformanceReport(total_duration=0.0)
+        report = self._initialize_performance_report()
 
+        self._run_requested_benchmarks(report, run_tests, run_hooks, iterations)
+        self._finalize_performance_report(report, start_time)
+
+        return report
+
+    def _initialize_performance_report(self) -> PerformanceReport:
+        """Initialize a new performance report."""
+        return PerformanceReport(total_duration=0.0)
+
+    def _run_requested_benchmarks(
+        self,
+        report: PerformanceReport,
+        run_tests: bool,
+        run_hooks: bool,
+        iterations: int,
+    ) -> None:
+        """Run the requested benchmark types."""
         if run_tests:
             report.test_benchmarks = self._benchmark_test_suite(iterations)
 
@@ -67,12 +85,14 @@ class PerformanceBenchmarkService:
         report.workflow_benchmarks = self._benchmark_workflow_components(iterations)
         report.file_operation_stats = self._benchmark_file_operations()
 
+    def _finalize_performance_report(
+        self, report: PerformanceReport, start_time: float
+    ) -> None:
+        """Finalize performance report with analysis and history."""
         report.total_duration = time.time() - start_time
         report.recommendations = self._generate_performance_recommendations(report)
         report.baseline_comparison = self._compare_with_baseline(report)
-
         self._save_performance_history(report)
-        return report
 
     def _benchmark_test_suite(self, iterations: int = 1) -> dict[str, Any]:
         self.console.print("[dim]📊 Benchmarking test suite...[/dim]")

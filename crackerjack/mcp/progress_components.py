@@ -278,54 +278,102 @@ class ErrorCollector:
         return errors[-5:]
 
     def _check_debug_logs(self) -> list[tuple[str, str, str, str]]:
+        """Check debug logs for recent errors."""
         errors = []
 
         with suppress(Exception):
             debug_log = Path(tempfile.gettempdir()) / "tui_debug.log"
             if debug_log.exists():
-                with debug_log.open() as f:
-                    lines = f.readlines()[-10:]
-
-                for line in lines:
-                    if "ERROR" in line or "Exception" in line or "Failed" in line:
-                        parts = line.strip().split(" ", 2)
-                        if len(parts) >= 3:
-                            timestamp = parts[0]
-                            error_msg = (
-                                parts[2][:40] + "..."
-                                if len(parts[2]) > 40
-                                else parts[2]
-                            )
-                            errors.append((timestamp, "debug", error_msg, "System"))
+                errors = self._extract_debug_log_errors(debug_log)
 
         return errors
 
+    def _extract_debug_log_errors(
+        self, debug_log: Path
+    ) -> list[tuple[str, str, str, str]]:
+        """Extract error entries from debug log file."""
+        errors = []
+
+        with debug_log.open() as f:
+            lines = f.readlines()[-10:]
+
+        for line in lines:
+            if self._is_debug_error_line(line):
+                error_entry = self._parse_debug_error_line(line)
+                if error_entry:
+                    errors.append(error_entry)
+
+        return errors
+
+    def _is_debug_error_line(self, line: str) -> bool:
+        """Check if debug log line contains error indicators."""
+        return any(indicator in line for indicator in ("ERROR", "Exception", "Failed"))
+
+    def _parse_debug_error_line(self, line: str) -> tuple[str, str, str, str] | None:
+        """Parse debug error line into error entry tuple."""
+        parts = line.strip().split(" ", 2)
+        if len(parts) < 3:
+            return None
+
+        timestamp = parts[0]
+        error_msg = self._truncate_debug_message(parts[2])
+        return (timestamp, "debug", error_msg, "System")
+
+    def _truncate_debug_message(self, message: str) -> str:
+        """Truncate debug message to reasonable length."""
+        return message[:40] + "..." if len(message) > 40 else message
+
     def _check_crackerjack_logs(self) -> list[tuple[str, str, str, str]]:
+        """Check crackerjack debug logs for recent errors."""
         errors = []
 
         with suppress(Exception):
             for log_file in Path(tempfile.gettempdir()).glob("crackerjack-debug-*.log"):
-                if time.time() - log_file.stat().st_mtime < 3600:
-                    with log_file.open() as f:
-                        lines = f.readlines()[-5:]
-
-                    for line in lines:
-                        if any(
-                            keyword in line.lower()
-                            for keyword in ("error", "failed", "exception")
-                        ):
-                            timestamp = time.strftime(
-                                " % H: % M: % S",
-                                time.localtime(log_file.stat().st_mtime),
-                            )
-                            error_msg = (
-                                line.strip()[:50] + "..."
-                                if len(line.strip()) > 50
-                                else line.strip()
-                            )
-                            errors.append((timestamp, "job", error_msg, "Crackerjack"))
+                if self._is_log_file_recent(log_file):
+                    errors.extend(self._extract_errors_from_log_file(log_file))
 
         return errors
+
+    def _is_log_file_recent(self, log_file: Path) -> bool:
+        """Check if log file was modified within the last hour."""
+        return time.time() - log_file.stat().st_mtime < 3600
+
+    def _extract_errors_from_log_file(
+        self, log_file: Path
+    ) -> list[tuple[str, str, str, str]]:
+        """Extract error entries from a single log file."""
+        errors = []
+
+        with log_file.open() as f:
+            lines = f.readlines()[-5:]
+
+        for line in lines:
+            if self._is_error_line(line):
+                error_entry = self._create_error_entry(line, log_file)
+                errors.append(error_entry)
+
+        return errors
+
+    def _is_error_line(self, line: str) -> bool:
+        """Check if a log line contains error keywords."""
+        return any(
+            keyword in line.lower() for keyword in ("error", "failed", "exception")
+        )
+
+    def _create_error_entry(
+        self, line: str, log_file: Path
+    ) -> tuple[str, str, str, str]:
+        """Create error entry tuple from log line and file."""
+        timestamp = time.strftime(
+            " % H: % M: % S",
+            time.localtime(log_file.stat().st_mtime),
+        )
+        error_msg = self._truncate_error_message(line.strip())
+        return (timestamp, "job", error_msg, "Crackerjack")
+
+    def _truncate_error_message(self, message: str) -> str:
+        """Truncate error message to reasonable length."""
+        return message[:50] + "..." if len(message) > 50 else message
 
 
 class ServiceManager:

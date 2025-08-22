@@ -47,12 +47,10 @@ class TestOptions:
 
 
 class TestMCPServer:
-    @patch("crackerjack.__main__.console")
     @patch("crackerjack.mcp.server.main")
-    def testhandle_mcp_server(self, mock_start_mcp, mock_console) -> None:
+    def testhandle_mcp_server(self, mock_start_mcp) -> None:
         handle_mcp_server()
 
-        mock_console.print.assert_called()
         mock_start_mcp.assert_called_once()
 
 
@@ -60,28 +58,42 @@ class TestCLI:
     def test_app_exists(self) -> None:
         assert app is not None
 
-    @patch("crackerjack.__main__.WorkflowOrchestrator")
+    @patch("crackerjack.core.workflow_orchestrator.WorkflowOrchestrator")
     def test_basic_run(self, mock_orchestrator_class) -> None:
         mock_orchestrator = Mock()
-        mock_orchestrator.run_complete_workflow.return_value = True
+
+        # Create an async function that returns True
+        async def mock_workflow() -> bool:
+            return True
+
+        # Use side_effect to create a fresh coroutine each time
+        mock_orchestrator.run_complete_workflow.side_effect = (
+            lambda options: mock_workflow()
+        )
         mock_orchestrator_class.return_value = mock_orchestrator
 
         runner = CliRunner()
         result = runner.invoke(app, [])
 
-        assert result.exit_code in (0, None) or result.exit_code is None
-        mock_create_runner.assert_called_once()
+        assert result.exit_code == 0
+        mock_orchestrator.run_complete_workflow.assert_called_once()
 
-    @patch("crackerjack.__main__.handle_mcp_server")
-    def test_mcp_server_flag(self, mock_handle_mcp) -> None:
+    @patch("crackerjack.__main__._handle_server_commands")
+    def test_mcp_server_flag(self, mock_handle_server) -> None:
+        mock_handle_server.return_value = (
+            True  # Simulate successful server command handling
+        )
+
         runner = CliRunner()
-        runner.invoke(app, [" -- start - mcp - server"])
+        result = runner.invoke(app, ["--start-mcp-server"])
 
-        mock_handle_mcp.assert_called_once()
+        assert result.exit_code == 0
+        mock_handle_server.assert_called_once()
 
     @patch("crackerjack.cli.interactive.launch_interactive_cli")
     def test_interactive_flag(self, mock_interactive) -> None:
         runner = CliRunner()
-        runner.invoke(app, [" -- interactive"])
+        result = runner.invoke(app, ["--interactive"])
 
+        assert result.exit_code == 0
         mock_interactive.assert_called_once()

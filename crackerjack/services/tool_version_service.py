@@ -433,60 +433,75 @@ class UnifiedConfigurationService:
         return base_config
 
     def _load_python_config(self) -> dict[str, t.Any]:
+        """Load Python project configuration from pyproject.toml."""
         pyproject = self.project_path / "pyproject.toml"
         config = {"tools": {}, "hooks": {}, "testing": {}, "quality": {}}
 
-        if pyproject.exists():
-            try:
-                import tomllib
+        if not pyproject.exists():
+            return config
 
-                with pyproject.open("rb") as f:
-                    toml_data = tomllib.load(f)
-
-                if "tool" in toml_data:
-                    tool_data = toml_data["tool"]
-
-                    if "ruff" in tool_data:
-                        config["tools"]["ruff"] = {
-                            "enabled": True,
-                            "config": tool_data["ruff"],
-                            "priority": "high",
-                        }
-
-                    if "pyright" in tool_data:
-                        config["tools"]["pyright"] = {
-                            "enabled": True,
-                            "config": tool_data["pyright"],
-                            "priority": "high",
-                        }
-
-                    if "pytest" in tool_data:
-                        config["testing"]["pytest"] = {
-                            "enabled": True,
-                            "config": tool_data["pytest"],
-                            "priority": "critical",
-                        }
-
-                    for tool in (
-                        "bandit",
-                        "vulture",
-                        "complexipy",
-                        "creosote",
-                        "refurb",
-                    ):
-                        if tool in tool_data:
-                            config["quality"][tool] = {
-                                "enabled": True,
-                                "config": tool_data[tool],
-                                "priority": "medium",
-                            }
-
-            except Exception as e:
-                self.console.print(
-                    f"[yellow]⚠️ Error loading pyproject.toml: {e}[/yellow]"
-                )
+        try:
+            tool_data = self._load_pyproject_tool_data(pyproject)
+            if tool_data:
+                self._populate_python_tool_config(config, tool_data)
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️ Error loading pyproject.toml: {e}[/yellow]")
 
         return config
+
+    def _load_pyproject_tool_data(self, pyproject: Path) -> dict[str, t.Any] | None:
+        """Load and parse pyproject.toml tool data."""
+        import tomllib
+
+        with pyproject.open("rb") as f:
+            toml_data = tomllib.load(f)
+
+        return toml_data.get("tool")
+
+    def _populate_python_tool_config(
+        self, config: dict[str, t.Any], tool_data: dict[str, t.Any]
+    ) -> None:
+        """Populate configuration with Python tool settings."""
+        self._add_core_python_tools(config, tool_data)
+        self._add_testing_tools(config, tool_data)
+        self._add_quality_tools(config, tool_data)
+
+    def _add_core_python_tools(
+        self, config: dict[str, t.Any], tool_data: dict[str, t.Any]
+    ) -> None:
+        """Add core Python tools (ruff, pyright) to configuration."""
+        for tool_name in ("ruff", "pyright"):
+            if tool_name in tool_data:
+                config["tools"][tool_name] = {
+                    "enabled": True,
+                    "config": tool_data[tool_name],
+                    "priority": "high",
+                }
+
+    def _add_testing_tools(
+        self, config: dict[str, t.Any], tool_data: dict[str, t.Any]
+    ) -> None:
+        """Add testing tools (pytest) to configuration."""
+        if "pytest" in tool_data:
+            config["testing"]["pytest"] = {
+                "enabled": True,
+                "config": tool_data["pytest"],
+                "priority": "critical",
+            }
+
+    def _add_quality_tools(
+        self, config: dict[str, t.Any], tool_data: dict[str, t.Any]
+    ) -> None:
+        """Add quality tools (bandit, vulture, etc.) to configuration."""
+        quality_tools = ("bandit", "vulture", "complexipy", "creosote", "refurb")
+
+        for tool_name in quality_tools:
+            if tool_name in tool_data:
+                config["quality"][tool_name] = {
+                    "enabled": True,
+                    "config": tool_data[tool_name],
+                    "priority": "medium",
+                }
 
     def _load_node_config(self) -> dict[str, t.Any]:
         config = {"tools": {}, "hooks": {}, "testing": {}, "quality": {}}

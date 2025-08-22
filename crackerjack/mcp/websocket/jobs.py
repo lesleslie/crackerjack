@@ -162,43 +162,65 @@ class JobManager:
                 await asyncio.sleep(3600)
 
     async def timeout_stuck_jobs(self) -> None:
+        """Monitor and timeout stuck jobs that haven't been updated."""
         while self.is_running:
             try:
-                if self.progress_dir.exists():
-                    current_time = time.time()
-                    timeout_seconds = 30 * 60
-
-                    for progress_file in self.progress_dir.glob("job -* .json"):
-                        try:
-                            progress_data = json.loads(progress_file.read_text())
-
-                            if (
-                                progress_data.get("status") == "running"
-                                and current_time - progress_file.stat().st_mtime
-                                > timeout_seconds
-                            ):
-                                progress_data["status"] = "failed"
-                                progress_data["message"] = (
-                                    "Job timed out (no updates for 30 minutes)"
-                                )
-
-                                progress_file.write_text(
-                                    json.dumps(progress_data, indent=2)
-                                )
-
-                                job_id = progress_data.get("job_id", "unknown")
-                                console.print(
-                                    f"[red]Job {job_id} timed out and marked as failed[/red]"
-                                )
-
-                        except (json.JSONDecodeError, OSError):
-                            continue
-
+                await self._check_and_timeout_stuck_jobs()
                 await asyncio.sleep(300)
-
             except Exception as e:
                 console.print(f"[red]Timeout check error: {e}[/red]")
                 await asyncio.sleep(300)
+
+    async def _check_and_timeout_stuck_jobs(self) -> None:
+        """Check for stuck jobs and timeout those that are inactive."""
+        if not self.progress_dir.exists():
+            return
+
+        current_time = time.time()
+        timeout_seconds = 30 * 60
+
+        for progress_file in self.progress_dir.glob("job -* .json"):
+            await self._process_job_timeout_check(
+                progress_file, current_time, timeout_seconds
+            )
+
+    async def _process_job_timeout_check(
+        self, progress_file: Path, current_time: float, timeout_seconds: int
+    ) -> None:
+        """Process timeout check for a single job file."""
+        try:
+            progress_data = json.loads(progress_file.read_text())
+
+            if self._should_timeout_job(
+                progress_data, progress_file, current_time, timeout_seconds
+            ):
+                self._timeout_job(progress_data, progress_file)
+
+        except (json.JSONDecodeError, OSError):
+            pass  # Skip files that can't be processed
+
+    def _should_timeout_job(
+        self,
+        progress_data: dict,
+        progress_file: Path,
+        current_time: float,
+        timeout_seconds: int,
+    ) -> bool:
+        """Determine if a job should be timed out."""
+        return (
+            progress_data.get("status") == "running"
+            and current_time - progress_file.stat().st_mtime > timeout_seconds
+        )
+
+    def _timeout_job(self, progress_data: dict, progress_file: Path) -> None:
+        """Mark a job as failed due to timeout."""
+        progress_data["status"] = "failed"
+        progress_data["message"] = "Job timed out (no updates for 30 minutes)"
+
+        progress_file.write_text(json.dumps(progress_data, indent=2))
+
+        job_id = progress_data.get("job_id", "unknown")
+        console.print(f"[red]Job {job_id} timed out and marked as failed[/red]")
 
     def cleanup(self) -> None:
         self.is_running = False

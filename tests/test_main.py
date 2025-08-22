@@ -11,7 +11,15 @@ from crackerjack.cli.options import BumpOption, Options
 @pytest.fixture
 def mock_crackerjack_process() -> t.Generator[MagicMock]:
     mock_orchestrator = MagicMock()
-    mock_orchestrator.run_complete_workflow.return_value = True
+
+    # Create an async function that returns True
+    async def mock_workflow() -> bool:
+        return True
+
+    # Use side_effect to create a fresh coroutine each time
+    mock_orchestrator.run_complete_workflow.side_effect = (
+        lambda options: mock_workflow()
+    )
     with patch(
         "crackerjack.core.workflow_orchestrator.WorkflowOrchestrator",
         return_value=mock_orchestrator,

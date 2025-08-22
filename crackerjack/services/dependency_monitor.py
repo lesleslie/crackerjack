@@ -264,49 +264,108 @@ class DependencyMonitorService:
             if current_version == "latest":
                 continue
 
-            cache_key = f"{package}_{current_version}"
-            if cache_key in cache:
-                cached_data = cache[cache_key]
-                if current_time - cached_data["timestamp"] < 86400:
-                    if cached_data["has_major_update"]:
-                        major_updates.append(
-                            MajorUpdate(
-                                package=package,
-                                current_version=current_version,
-                                latest_version=cached_data["latest_version"],
-                                release_date=cached_data["release_date"],
-                                breaking_changes=cached_data["breaking_changes"],
-                            )
-                        )
-                    continue
-
-            latest_info = self._get_latest_version_info(package)
-            if latest_info:
-                has_major_update = self._is_major_version_update(
-                    current_version, latest_info["version"]
-                )
-
-                cache[cache_key] = {
-                    "timestamp": current_time,
-                    "has_major_update": has_major_update,
-                    "latest_version": latest_info["version"],
-                    "release_date": latest_info["release_date"],
-                    "breaking_changes": latest_info["breaking_changes"],
-                }
-
-                if has_major_update:
-                    major_updates.append(
-                        MajorUpdate(
-                            package=package,
-                            current_version=current_version,
-                            latest_version=latest_info["version"],
-                            release_date=latest_info["release_date"],
-                            breaking_changes=latest_info["breaking_changes"],
-                        )
-                    )
+            update = self._check_package_major_update(
+                package, current_version, cache, current_time
+            )
+            if update:
+                major_updates.append(update)
 
         self._save_update_cache(cache)
         return major_updates
+
+    def _check_package_major_update(
+        self, package: str, current_version: str, cache: dict, current_time: float
+    ) -> MajorUpdate | None:
+        """Check if a specific package has a major update available."""
+        cache_key = f"{package}_{current_version}"
+
+        # Try to get from cache first
+        cached_update = self._get_cached_major_update(
+            cache_key, cache, current_time, package, current_version
+        )
+        if cached_update is not None:
+            return cached_update
+
+        # Check for updates and update cache
+        return self._fetch_and_cache_update_info(
+            package, current_version, cache_key, cache, current_time
+        )
+
+    def _get_cached_major_update(
+        self,
+        cache_key: str,
+        cache: dict,
+        current_time: float,
+        package: str,
+        current_version: str,
+    ) -> MajorUpdate | None:
+        """Get major update from cache if available and valid."""
+        if cache_key not in cache:
+            return None
+
+        cached_data = cache[cache_key]
+        if current_time - cached_data["timestamp"] >= 86400:  # Cache expired
+            return None
+
+        if not cached_data["has_major_update"]:
+            return None
+
+        return MajorUpdate(
+            package=package,
+            current_version=current_version,
+            latest_version=cached_data["latest_version"],
+            release_date=cached_data["release_date"],
+            breaking_changes=cached_data["breaking_changes"],
+        )
+
+    def _fetch_and_cache_update_info(
+        self,
+        package: str,
+        current_version: str,
+        cache_key: str,
+        cache: dict,
+        current_time: float,
+    ) -> MajorUpdate | None:
+        """Fetch latest version info and cache the result."""
+        latest_info = self._get_latest_version_info(package)
+        if not latest_info:
+            return None
+
+        has_major_update = self._is_major_version_update(
+            current_version, latest_info["version"]
+        )
+
+        self._update_cache_entry(
+            cache, cache_key, current_time, has_major_update, latest_info
+        )
+
+        if has_major_update:
+            return MajorUpdate(
+                package=package,
+                current_version=current_version,
+                latest_version=latest_info["version"],
+                release_date=latest_info["release_date"],
+                breaking_changes=latest_info["breaking_changes"],
+            )
+
+        return None
+
+    def _update_cache_entry(
+        self,
+        cache: dict,
+        cache_key: str,
+        current_time: float,
+        has_major_update: bool,
+        latest_info: dict,
+    ) -> None:
+        """Update cache with latest version information."""
+        cache[cache_key] = {
+            "timestamp": current_time,
+            "has_major_update": has_major_update,
+            "latest_version": latest_info["version"],
+            "release_date": latest_info["release_date"],
+            "breaking_changes": latest_info["breaking_changes"],
+        }
 
     def _get_latest_version_info(self, package: str) -> dict[str, t.Any] | None:
         try:

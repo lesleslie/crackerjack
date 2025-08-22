@@ -37,6 +37,21 @@ class RefactoringAgent(SubAgent):
         )
 
     async def _reduce_complexity(self, issue: Issue) -> FixResult:
+        validation_result = self._validate_complexity_issue(issue)
+        if validation_result:
+            return validation_result
+
+        file_path = Path(issue.file_path)
+
+        try:
+            return await self._process_complexity_reduction(file_path)
+        except SyntaxError as e:
+            return self._create_syntax_error_result(e)
+        except Exception as e:
+            return self._create_general_error_result(e)
+
+    def _validate_complexity_issue(self, issue: Issue) -> FixResult | None:
+        """Validate the complexity issue has required information."""
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -52,73 +67,102 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"File not found: {file_path}"],
             )
 
-        try:
-            content = self.context.get_file_content(file_path)
-            if not content:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Could not read file: {file_path}"],
-                )
+        return None
 
-            tree = ast.parse(content)
-            complex_functions = self._find_complex_functions(tree, content)
-
-            if not complex_functions:
-                return FixResult(
-                    success=True,
-                    confidence=0.7,
-                    recommendations=["No overly complex functions found"],
-                )
-
-            refactored_content = self._apply_complexity_reduction(
-                content, complex_functions
+    async def _process_complexity_reduction(self, file_path: Path) -> FixResult:
+        """Process complexity reduction for a file."""
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Could not read file: {file_path}"],
             )
 
-            if refactored_content == content:
-                return FixResult(
-                    success=False,
-                    confidence=0.5,
-                    remaining_issues=["Could not automatically reduce complexity"],
-                    recommendations=[
-                        "Manual refactoring required",
-                        "Consider breaking down complex conditionals",
-                        "Extract helper methods for repeated patterns",
-                    ],
-                )
+        tree = ast.parse(content)
+        complex_functions = self._find_complex_functions(tree, content)
 
-            success = self.context.write_file_content(file_path, refactored_content)
-            if not success:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Failed to write refactored file: {file_path}"],
-                )
-
+        if not complex_functions:
             return FixResult(
                 success=True,
-                confidence=0.8,
-                fixes_applied=[
-                    f"Reduced complexity in {len(complex_functions)} functions"
-                ],
-                files_modified=[str(file_path)],
-                recommendations=["Verify functionality after complexity reduction"],
+                confidence=0.7,
+                recommendations=["No overly complex functions found"],
             )
 
-        except SyntaxError as e:
+        return self._apply_and_save_refactoring(file_path, content, complex_functions)
+
+    def _apply_and_save_refactoring(
+        self, file_path: Path, content: str, complex_functions: list
+    ) -> FixResult:
+        """Apply refactoring and save changes."""
+        refactored_content = self._apply_complexity_reduction(
+            content, complex_functions
+        )
+
+        if refactored_content == content:
+            return self._create_no_changes_result()
+
+        success = self.context.write_file_content(file_path, refactored_content)
+        if not success:
             return FixResult(
                 success=False,
                 confidence=0.0,
-                remaining_issues=[f"Syntax error in file: {e}"],
+                remaining_issues=[f"Failed to write refactored file: {file_path}"],
             )
-        except Exception as e:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"Error processing file: {e}"],
-            )
+
+        return FixResult(
+            success=True,
+            confidence=0.8,
+            fixes_applied=[f"Reduced complexity in {len(complex_functions)} functions"],
+            files_modified=[str(file_path)],
+            recommendations=["Verify functionality after complexity reduction"],
+        )
+
+    def _create_no_changes_result(self) -> FixResult:
+        """Create result for when no changes could be applied."""
+        return FixResult(
+            success=False,
+            confidence=0.5,
+            remaining_issues=["Could not automatically reduce complexity"],
+            recommendations=[
+                "Manual refactoring required",
+                "Consider breaking down complex conditionals",
+                "Extract helper methods for repeated patterns",
+            ],
+        )
+
+    def _create_syntax_error_result(self, error: SyntaxError) -> FixResult:
+        """Create result for syntax errors."""
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Syntax error in file: {error}"],
+        )
+
+    def _create_general_error_result(self, error: Exception) -> FixResult:
+        """Create result for general errors."""
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Error processing file: {error}"],
+        )
 
     async def _remove_dead_code(self, issue: Issue) -> FixResult:
+        validation_result = self._validate_dead_code_issue(issue)
+        if validation_result:
+            return validation_result
+
+        file_path = Path(issue.file_path)
+
+        try:
+            return await self._process_dead_code_removal(file_path)
+        except SyntaxError as e:
+            return self._create_syntax_error_result(e)
+        except Exception as e:
+            return self._create_dead_code_error_result(e)
+
+    def _validate_dead_code_issue(self, issue: Issue) -> FixResult | None:
+        """Validate the dead code issue has required information."""
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -134,67 +178,75 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"File not found: {file_path}"],
             )
 
-        try:
-            content = self.context.get_file_content(file_path)
-            if not content:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Could not read file: {file_path}"],
-                )
+        return None
 
-            tree = ast.parse(content)
-            dead_code_analysis = self._analyze_dead_code(tree, content)
+    async def _process_dead_code_removal(self, file_path: Path) -> FixResult:
+        """Process dead code removal for a file."""
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Could not read file: {file_path}"],
+            )
 
-            if not dead_code_analysis["removable_items"]:
-                return FixResult(
-                    success=True,
-                    confidence=0.7,
-                    recommendations=["No obvious dead code found"],
-                )
+        tree = ast.parse(content)
+        dead_code_analysis = self._analyze_dead_code(tree, content)
 
-            cleaned_content = self._remove_dead_code_items(content, dead_code_analysis)
-
-            if cleaned_content == content:
-                return FixResult(
-                    success=False,
-                    confidence=0.5,
-                    remaining_issues=["Could not automatically remove dead code"],
-                    recommendations=[
-                        "Manual review required",
-                        "Check for unused imports with tools like vulture",
-                    ],
-                )
-
-            success = self.context.write_file_content(file_path, cleaned_content)
-            if not success:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Failed to write cleaned file: {file_path}"],
-                )
-
-            removed_count = len(dead_code_analysis["removable_items"])
+        if not dead_code_analysis["removable_items"]:
             return FixResult(
                 success=True,
-                confidence=0.8,
-                fixes_applied=[f"Removed {removed_count} dead code items"],
-                files_modified=[str(file_path)],
-                recommendations=["Verify imports and functionality after cleanup"],
+                confidence=0.7,
+                recommendations=["No obvious dead code found"],
             )
 
-        except SyntaxError as e:
+        return self._apply_and_save_cleanup(file_path, content, dead_code_analysis)
+
+    def _apply_and_save_cleanup(
+        self, file_path: Path, content: str, analysis: dict
+    ) -> FixResult:
+        """Apply dead code cleanup and save changes."""
+        cleaned_content = self._remove_dead_code_items(content, analysis)
+
+        if cleaned_content == content:
+            return self._create_no_cleanup_result()
+
+        success = self.context.write_file_content(file_path, cleaned_content)
+        if not success:
             return FixResult(
                 success=False,
                 confidence=0.0,
-                remaining_issues=[f"Syntax error in file: {e}"],
+                remaining_issues=[f"Failed to write cleaned file: {file_path}"],
             )
-        except Exception as e:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"Error processing file: {e}"],
-            )
+
+        removed_count = len(analysis["removable_items"])
+        return FixResult(
+            success=True,
+            confidence=0.8,
+            fixes_applied=[f"Removed {removed_count} dead code items"],
+            files_modified=[str(file_path)],
+            recommendations=["Verify imports and functionality after cleanup"],
+        )
+
+    def _create_no_cleanup_result(self) -> FixResult:
+        """Create result for when no cleanup could be applied."""
+        return FixResult(
+            success=False,
+            confidence=0.5,
+            remaining_issues=["Could not automatically remove dead code"],
+            recommendations=[
+                "Manual review required",
+                "Check for unused imports with tools like vulture",
+            ],
+        )
+
+    def _create_dead_code_error_result(self, error: Exception) -> FixResult:
+        """Create result for dead code processing errors."""
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Error processing file: {error}"],
+        )
 
     def _find_complex_functions(
         self, tree: ast.AST, content: str

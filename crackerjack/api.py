@@ -121,54 +121,85 @@ class CrackerjackAPI:
     def clean_code(
         self, target_dir: Path | None = None, backup: bool = True
     ) -> list[CleaningResult]:
+        """Clean code with TODO validation and comprehensive error handling."""
         target_dir = target_dir or self.project_path
-
         self.logger.info(f"Cleaning code in {target_dir}")
 
+        self._validate_code_before_cleaning(target_dir)
+        self._notify_backup_status(backup)
+
+        return self._execute_code_cleaning(target_dir)
+
+    def _validate_code_before_cleaning(self, target_dir: Path) -> None:
+        """Validate code state before cleaning, checking for TODOs."""
         todos_found = self._check_for_todos(target_dir)
         if todos_found:
-            todo_count = len(todos_found)
-            self.console.print(f"[red]❌ Found {todo_count} TODO(s) in codebase[/red]")
-            self.console.print(
-                "[yellow]Please resolve all TODOs before running code cleaning ( - x)[/yellow]"
-            )
+            self._handle_todos_found(todos_found, target_dir)
 
-            for i, (file_path, line_no, content) in enumerate(todos_found[:5]):
-                relative_path = file_path.relative_to(target_dir)
-                self.console.print(f" {relative_path}: {line_no}: {content.strip()}")
+    def _handle_todos_found(
+        self, todos_found: list[tuple[Path, int, str]], target_dir: Path
+    ) -> None:
+        """Handle case where TODOs are found in codebase."""
+        todo_count = len(todos_found)
+        self.console.print(f"[red]❌ Found {todo_count} TODO(s) in codebase[/red]")
+        self.console.print(
+            "[yellow]Please resolve all TODOs before running code cleaning ( - x)[/yellow]"
+        )
 
-            if todo_count > 5:
-                self.console.print(f" ... and {todo_count - 5} more")
+        self._display_todo_summary(todos_found, target_dir, todo_count)
 
-            raise CrackerjackError(
-                message=f"Found {todo_count} TODO(s) in codebase. Resolve them before cleaning.",
-                error_code=ErrorCode.VALIDATION_ERROR,
-            )
+        raise CrackerjackError(
+            message=f"Found {todo_count} TODO(s) in codebase. Resolve them before cleaning.",
+            error_code=ErrorCode.VALIDATION_ERROR,
+        )
 
+    def _display_todo_summary(
+        self,
+        todos_found: list[tuple[Path, int, str]],
+        target_dir: Path,
+        todo_count: int,
+    ) -> None:
+        """Display summary of found TODOs."""
+        for i, (file_path, line_no, content) in enumerate(todos_found[:5]):
+            relative_path = file_path.relative_to(target_dir)
+            self.console.print(f" {relative_path}: {line_no}: {content.strip()}")
+
+        if todo_count > 5:
+            self.console.print(f" ... and {todo_count - 5} more")
+
+    def _notify_backup_status(self, backup: bool) -> None:
+        """Notify user about backup file creation."""
         if backup:
             self.console.print("[yellow]Note: Backup files will be created[/yellow]")
 
+    def _execute_code_cleaning(self, target_dir: Path) -> list[CleaningResult]:
+        """Execute code cleaning and handle results."""
         try:
             results = self.code_cleaner.clean_files(target_dir)
-
-            successful = sum(1 for r in results if r.success)
-            failed = len(results) - successful
-
-            if successful > 0:
-                self.console.print(
-                    f"[green]✅ Successfully cleaned {successful} files[/green]"
-                )
-            if failed > 0:
-                self.console.print(f"[red]❌ Failed to clean {failed} files[/red]")
-
+            self._report_cleaning_results(results)
             return results
-
         except Exception as e:
-            self.logger.error(f"Code cleaning failed: {e}")
-            raise CrackerjackError(
-                message=f"Code cleaning failed: {e}",
-                error_code=ErrorCode.CODE_CLEANING_ERROR,
+            self._handle_cleaning_error(e)
+
+    def _report_cleaning_results(self, results: list[CleaningResult]) -> None:
+        """Report cleaning results to user."""
+        successful = sum(1 for r in results if r.success)
+        failed = len(results) - successful
+
+        if successful > 0:
+            self.console.print(
+                f"[green]✅ Successfully cleaned {successful} files[/green]"
             )
+        if failed > 0:
+            self.console.print(f"[red]❌ Failed to clean {failed} files[/red]")
+
+    def _handle_cleaning_error(self, error: Exception) -> None:
+        """Handle code cleaning errors."""
+        self.logger.error(f"Code cleaning failed: {error}")
+        raise CrackerjackError(
+            message=f"Code cleaning failed: {error}",
+            error_code=ErrorCode.CODE_CLEANING_ERROR,
+        ) from error
 
     def run_tests(
         self,

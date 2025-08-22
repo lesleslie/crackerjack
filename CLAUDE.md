@@ -937,4 +937,3 @@ from ..managers.test_manager import TestManager
 # CORRECT: Use protocol interfaces for dependency injection
 from ..models.protocols import TestManagerProtocol
 ```
-

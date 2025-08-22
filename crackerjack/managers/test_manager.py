@@ -53,59 +53,73 @@ class TestProgress:
                     setattr(self, key, value)
 
     def format_progress(self) -> Panel:
+        """Format test progress display with appropriate phase-specific content."""
         with self._lock:
             if self.is_collecting:
-                # Collection phase - show file discovery progress
-                progress_text = Text()
-                progress_text.append("🔍 ", style="bold cyan")
-                progress_text.append(self.collection_status, style="cyan")
-
-                if self.files_discovered > 0:
-                    progress_text.append("\n📁 Discovered: ", style="dim")
-                    progress_text.append(
-                        f"{self.files_discovered} test files", style="dim yellow"
-                    )
-
-                if self.total_tests > 0:
-                    progress_text.append("\n🧪 Found: ", style="dim")
-                    progress_text.append(f"{self.total_tests} tests", style="dim green")
-
-                progress_text.append(
-                    f"\n⏱️  Duration: {self.elapsed_time:.1f}s", style="dim"
-                )
-
-                return Panel(
-                    progress_text, title="Test Collection", border_style="yellow"
-                )
+                return self._format_collection_progress()
             else:
-                # Execution phase - show test progress
-                progress_text = Text()
-                progress_text.append("🧪 Tests: ", style="bold cyan")
-                progress_text.append(f"{self.passed}", style="green")
-                progress_text.append(f"/{self.total_tests} passed", style="white")
+                return self._format_execution_progress()
 
-                if self.failed > 0:
-                    progress_text.append(f", {self.failed} failed", style="red")
-                if self.skipped > 0:
-                    progress_text.append(f", {self.skipped} skipped", style="yellow")
-                if self.errors > 0:
-                    progress_text.append(f", {self.errors} errors", style="bright_red")
+    def _format_collection_progress(self) -> Panel:
+        """Format progress display for test collection phase."""
+        progress_text = Text()
+        progress_text.append("🔍 ", style="bold cyan")
+        progress_text.append(self.collection_status, style="cyan")
 
-                # Add current test info
-                if self.current_test:
-                    progress_text.append("\n📍 Current: ", style="dim")
-                    progress_text.append(self.current_test, style="dim cyan")
+        self._add_collection_stats(progress_text)
+        self._add_duration_info(progress_text)
 
-                # Add timing info
-                progress_text.append(
-                    f"\n⏱️  Duration: {self.elapsed_time:.1f}s", style="dim"
-                )
-                if self.eta_seconds is not None and self.eta_seconds > 0:
-                    progress_text.append(
-                        f" | ETA: ~{self.eta_seconds:.0f}s", style="dim"
-                    )
+        return Panel(progress_text, title="Test Collection", border_style="yellow")
 
-                return Panel(progress_text, title="Test Execution", border_style="cyan")
+    def _add_collection_stats(self, progress_text: Text) -> None:
+        """Add collection statistics to progress text."""
+        if self.files_discovered > 0:
+            progress_text.append("\n📁 Discovered: ", style="dim")
+            progress_text.append(
+                f"{self.files_discovered} test files", style="dim yellow"
+            )
+
+        if self.total_tests > 0:
+            progress_text.append("\n🧪 Found: ", style="dim")
+            progress_text.append(f"{self.total_tests} tests", style="dim green")
+
+    def _format_execution_progress(self) -> Panel:
+        """Format progress display for test execution phase."""
+        progress_text = Text()
+        self._add_test_stats(progress_text)
+        self._add_current_test_info(progress_text)
+        self._add_timing_info(progress_text)
+
+        return Panel(progress_text, title="Test Execution", border_style="cyan")
+
+    def _add_test_stats(self, progress_text: Text) -> None:
+        """Add test execution statistics to progress text."""
+        progress_text.append("🧪 Tests: ", style="bold cyan")
+        progress_text.append(f"{self.passed}", style="green")
+        progress_text.append(f"/{self.total_tests} passed", style="white")
+
+        if self.failed > 0:
+            progress_text.append(f", {self.failed} failed", style="red")
+        if self.skipped > 0:
+            progress_text.append(f", {self.skipped} skipped", style="yellow")
+        if self.errors > 0:
+            progress_text.append(f", {self.errors} errors", style="bright_red")
+
+    def _add_current_test_info(self, progress_text: Text) -> None:
+        """Add current test information to progress text."""
+        if self.current_test:
+            progress_text.append("\n📍 Current: ", style="dim")
+            progress_text.append(self.current_test, style="dim cyan")
+
+    def _add_timing_info(self, progress_text: Text) -> None:
+        """Add timing information to progress text."""
+        self._add_duration_info(progress_text)
+        if self.eta_seconds is not None and self.eta_seconds > 0:
+            progress_text.append(f" | ETA: ~{self.eta_seconds:.0f}s", style="dim")
+
+    def _add_duration_info(self, progress_text: Text) -> None:
+        """Add duration information to progress text."""
+        progress_text.append(f"\n⏱️  Duration: {self.elapsed_time:.1f}s", style="dim")
 
 
 class TestManagementImpl:
@@ -569,19 +583,26 @@ class TestManagementImpl:
         return min(calculated_timeout, 600)
 
     def run_tests(self, options: OptionsProtocol) -> bool:
+        """Main entry point for test execution with proper error handling."""
         self._last_test_failures = []
         start_time = time.time()
-        
+
         try:
-            cmd = self._build_test_command(options)
-            timeout = self._get_test_timeout(options)
-            result = self._execute_tests_with_appropriate_mode(cmd, timeout, options)
-            duration = time.time() - start_time
-            return self._process_test_results(result, duration)
+            return self._execute_test_workflow(options, start_time)
         except subprocess.TimeoutExpired:
             return self._handle_test_timeout(start_time)
         except Exception as e:
             return self._handle_test_error(start_time, e)
+
+    def _execute_test_workflow(
+        self, options: OptionsProtocol, start_time: float
+    ) -> bool:
+        """Execute the complete test workflow."""
+        cmd = self._build_test_command(options)
+        timeout = self._get_test_timeout(options)
+        result = self._execute_tests_with_appropriate_mode(cmd, timeout, options)
+        duration = time.time() - start_time
+        return self._process_test_results(result, duration)
 
     def _execute_tests_with_appropriate_mode(
         self, cmd: list[str], timeout: int, options: OptionsProtocol
@@ -589,10 +610,12 @@ class TestManagementImpl:
         """Execute tests using the appropriate mode based on options."""
         execution_mode = self._determine_execution_mode(options)
         extended_timeout = timeout + 60
-        
+
         if execution_mode == "ai_progress":
             self._print_test_start_message(cmd, timeout, options)
-            return self._run_test_command_with_ai_progress(cmd, timeout=extended_timeout)
+            return self._run_test_command_with_ai_progress(
+                cmd, timeout=extended_timeout
+            )
         elif execution_mode == "console_progress":
             return self._run_test_command_with_progress(cmd, timeout=extended_timeout)
         else:  # standard mode
@@ -603,7 +626,7 @@ class TestManagementImpl:
         """Determine which execution mode to use based on options."""
         is_ai_mode = getattr(options, "ai_agent", False)
         is_benchmark = options.benchmark
-        
+
         if is_ai_mode and self._progress_callback:
             return "ai_progress"
         elif not is_ai_mode and not is_benchmark:
@@ -619,7 +642,7 @@ class TestManagementImpl:
 
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:
         """Handle test execution errors."""
-        duration = time.time() - start_time
+        time.time() - start_time
         self.console.print(f"[red]💥[/red] Test execution failed: {error}")
         return False
 
