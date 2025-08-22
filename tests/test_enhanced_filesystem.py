@@ -225,7 +225,7 @@ class TestEnhancedFileSystemService:
         all_files = list(fs_service.list_files(temp_dir))
         assert len(all_files) == 3
 
-        txt_files = list(fs_service.list_files(temp_dir, " * .txt"))
+        txt_files = list(fs_service.list_files(temp_dir, "*.txt"))
         assert len(txt_files) == 2
 
     def test_get_cache_stats(self, fs_service, temp_dir) -> None:

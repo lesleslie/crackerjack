@@ -68,7 +68,7 @@ class TestWorkflowOrchestrator:
 
     @patch("crackerjack.core.workflow_orchestrator.SessionCoordinator")
     @patch("crackerjack.core.workflow_orchestrator.PhaseCoordinator")
-    def test_process_workflow(
+    async def test_process_workflow(
         self, mock_phase, mock_session, orchestrator, workflow_options
     ) -> None:
         mock_session_inst = Mock()
@@ -82,7 +82,7 @@ class TestWorkflowOrchestrator:
         orchestrator.phases = mock_phase_inst
 
         workflow_options.cleaning.clean = True
-        orchestrator.process(workflow_options)
+        await orchestrator.process(workflow_options)
 
         mock_session_inst.start_session.assert_called_once()
         mock_phase_inst.run_cleaning_phase.assert_called_once()
@@ -115,20 +115,23 @@ class TestWorkflowPipeline:
         assert pipeline.session == session
         assert pipeline.phases == phase_coordinator
 
-    def test_execute(self, pipeline, workflow_options) -> None:
+    async def test_execute(self, pipeline, workflow_options) -> None:
+        async def mock_workflow(options):
+            return True
+
         with patch.object(
-            pipeline, "run_complete_workflow", return_value=True
+            pipeline, "run_complete_workflow", side_effect=mock_workflow
         ) as mock_process:
-            result = pipeline.run_complete_workflow(workflow_options)
+            result = await pipeline.run_complete_workflow(workflow_options)
 
             mock_process.assert_called_once_with(workflow_options)
             assert result is True
 
-    def test_execute_error(self, pipeline, workflow_options) -> None:
+    async def test_execute_error(self, pipeline, workflow_options) -> None:
         with patch.object(
             pipeline.phases, "run_cleaning_phase", side_effect=Exception("Test error")
         ):
-            result = pipeline.run_complete_workflow(workflow_options)
+            result = await pipeline.run_complete_workflow(workflow_options)
 
             assert result is False
 

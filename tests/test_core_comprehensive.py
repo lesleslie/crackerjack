@@ -83,7 +83,7 @@ class TestDependencyContainer:
         assert "FileSystemInterface" in container._singletons
         assert "GitInterface" in container._services
         assert "HookManager" in container._services
-        assert "TestManager" in container._services
+        assert "TestManagerProtocol" in container._services
         assert "PublishManager" in container._services
 
 
@@ -232,7 +232,7 @@ class TestWorkflowOrchestrator:
 
         assert version == "unknown"
 
-    def test_process_clean_only(self, orchestrator, workflow_options) -> None:
+    async def test_process_clean_only(self, orchestrator, workflow_options) -> None:
         workflow_options.cleaning.clean = True
 
         with patch.object(orchestrator.session, "start_session") as mock_start:
@@ -240,14 +240,16 @@ class TestWorkflowOrchestrator:
                 with patch.object(
                     orchestrator, "run_complete_workflow", return_value=True
                 ) as mock_workflow:
-                    result = orchestrator.process(workflow_options)
+                    result = await orchestrator.process(workflow_options)
 
                     mock_start.assert_called_once_with("process_workflow")
                     mock_workflow.assert_called_once_with(workflow_options)
                     mock_end.assert_called_once_with(success=True)
                     assert result is True
 
-    def test_process_with_hooks_and_tests(self, orchestrator, workflow_options) -> None:
+    async def test_process_with_hooks_and_tests(
+        self, orchestrator, workflow_options
+    ) -> None:
         workflow_options.testing.test = True
 
         with patch.object(orchestrator.session, "start_session"):
@@ -255,13 +257,15 @@ class TestWorkflowOrchestrator:
                 with patch.object(
                     orchestrator, "run_complete_workflow", return_value=True
                 ) as mock_workflow:
-                    result = orchestrator.process(workflow_options)
+                    result = await orchestrator.process(workflow_options)
 
                     mock_workflow.assert_called_once_with(workflow_options)
                     mock_end.assert_called_once_with(success=True)
                     assert result is True
 
-    def test_process_with_publishing(self, orchestrator, workflow_options) -> None:
+    async def test_process_with_publishing(
+        self, orchestrator, workflow_options
+    ) -> None:
         workflow_options.publishing.publish = "patch"
 
         with patch.object(orchestrator.session, "start_session"):
@@ -269,13 +273,13 @@ class TestWorkflowOrchestrator:
                 with patch.object(
                     orchestrator, "run_complete_workflow", return_value=True
                 ) as mock_workflow:
-                    result = orchestrator.process(workflow_options)
+                    result = await orchestrator.process(workflow_options)
 
                     mock_workflow.assert_called_once_with(workflow_options)
                     mock_end.assert_called_once_with(success=True)
                     assert result is True
 
-    def test_process_with_commit(self, orchestrator, workflow_options) -> None:
+    async def test_process_with_commit(self, orchestrator, workflow_options) -> None:
         workflow_options.git.commit = True
 
         with patch.object(orchestrator.session, "start_session"):
@@ -283,13 +287,13 @@ class TestWorkflowOrchestrator:
                 with patch.object(
                     orchestrator, "run_complete_workflow", return_value=True
                 ) as mock_workflow:
-                    result = orchestrator.process(workflow_options)
+                    result = await orchestrator.process(workflow_options)
 
                     mock_workflow.assert_called_once_with(workflow_options)
                     mock_end.assert_called_once_with(success=True)
                     assert result is True
 
-    def test_process_phase_failure(self, orchestrator, workflow_options) -> None:
+    async def test_process_phase_failure(self, orchestrator, workflow_options) -> None:
         workflow_options.testing.test = True
 
         with patch.object(orchestrator.session, "start_session"):
@@ -297,13 +301,15 @@ class TestWorkflowOrchestrator:
                 with patch.object(
                     orchestrator, "run_complete_workflow", return_value=False
                 ) as mock_workflow:
-                    result = orchestrator.process(workflow_options)
+                    result = await orchestrator.process(workflow_options)
 
                     mock_workflow.assert_called_once_with(workflow_options)
                     mock_end.assert_called_once_with(success=False)
                     assert result is False
 
-    def test_process_exception_handling(self, orchestrator, workflow_options) -> None:
+    async def test_process_exception_handling(
+        self, orchestrator, workflow_options
+    ) -> None:
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
                 with patch.object(
@@ -311,7 +317,7 @@ class TestWorkflowOrchestrator:
                     "run_complete_workflow",
                     side_effect=Exception("Test error"),
                 ) as mock_workflow:
-                    result = orchestrator.process(workflow_options)
+                    result = await orchestrator.process(workflow_options)
 
                     mock_workflow.assert_called_once_with(workflow_options)
                     mock_end.assert_called_once_with(success=False)
@@ -333,49 +339,63 @@ class TestWorkflowPipeline:
         assert pipeline.session is not None
         assert pipeline.phases is not None
 
-    def test_execute_success(self, pipeline, workflow_options) -> None:
+    async def test_execute_success(self, pipeline, workflow_options) -> None:
+        async def mock_workflow(options):
+            return True
+
         with patch.object(
-            pipeline, "run_complete_workflow", return_value=True
+            pipeline, "run_complete_workflow", side_effect=mock_workflow
         ) as mock_run:
-            result = pipeline.run_complete_workflow(workflow_options)
+            result = await pipeline.run_complete_workflow(workflow_options)
 
             mock_run.assert_called_once_with(workflow_options)
             assert result is True
 
-    def test_execute_with_exception(self, pipeline, workflow_options) -> None:
+    async def test_execute_with_exception(self, pipeline, workflow_options) -> None:
+        async def mock_workflow(options):
+            raise Exception("Test error")
+
         with patch.object(
-            pipeline, "run_complete_workflow", side_effect=Exception("Test error")
+            pipeline, "run_complete_workflow", side_effect=mock_workflow
         ) as mock_run:
             try:
-                result = pipeline.run_complete_workflow(workflow_options)
+                result = await pipeline.run_complete_workflow(workflow_options)
             except Exception:
                 result = False
 
             mock_run.assert_called_once_with(workflow_options)
             assert result is False
 
-    def test_execute_with_keyboard_interrupt(self, pipeline, workflow_options) -> None:
+    async def test_execute_with_keyboard_interrupt(
+        self, pipeline, workflow_options
+    ) -> None:
+        async def mock_workflow(options):
+            raise KeyboardInterrupt()
+
         with patch.object(
-            pipeline, "run_complete_workflow", side_effect=KeyboardInterrupt()
+            pipeline, "run_complete_workflow", side_effect=mock_workflow
         ) as mock_run:
             try:
-                result = pipeline.run_complete_workflow(workflow_options)
+                result = await pipeline.run_complete_workflow(workflow_options)
             except KeyboardInterrupt:
                 result = False
 
             mock_run.assert_called_once_with(workflow_options)
             assert result is False
 
-    def test_execute_workflow_options_forwarding(self, pipeline) -> None:
+    async def test_execute_workflow_options_forwarding(self, pipeline) -> None:
         options = WorkflowOptions()
         options.cleaning.clean = True
         options.testing.test = True
         options.execution.verbose = True
 
+        async def mock_workflow(opts):
+            return True
+
         with patch.object(
-            pipeline, "run_complete_workflow", return_value=True
+            pipeline, "run_complete_workflow", side_effect=mock_workflow
         ) as mock_run:
-            pipeline.run_complete_workflow(options)
+            await pipeline.run_complete_workflow(options)
 
             mock_run.assert_called_once_with(options)
             passed_options = mock_run.call_args[0][0]

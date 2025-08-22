@@ -187,7 +187,7 @@ class TestDynamicConfigGenerator:
 
     def test_get_repo_comment_known_repos(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https: // github.com / pre - commit / pre - commit - hooks"
+            "https://github.com/pre-commit/pre-commit-hooks"
         )
         assert result == "File structure and format validators"
 
@@ -227,9 +227,9 @@ class TestDynamicConfigGenerator:
         result = config_generator.generate_config("fast")
 
         assert isinstance(result, str)
-        assert "repos: " in result
-        assert " - repo: " in result
-        assert "hooks: " in result
+        assert "repos:" in result  # Remove space after colon
+        assert "- repo:" in result  # Remove leading space
+        assert "hooks:" in result  # Remove space after colon
 
     def test_create_temp_config(self, config_generator) -> None:
         result = config_generator.create_temp_config("fast")
@@ -237,10 +237,10 @@ class TestDynamicConfigGenerator:
         assert isinstance(result, Path)
         assert result.exists()
         assert result.suffix == ".yaml"
-        assert "crackerjack - fast - " in result.name
+        assert "crackerjack-fast-" in result.name  # Fix dash formatting
 
         content = result.read_text()
-        assert "repos: " in content
+        assert "repos:" in content  # Remove space after colon
 
         result.unlink()
 

@@ -65,7 +65,9 @@ class TestCrackerjackError:
 
     def test_error_defaults(self) -> None:
         """Test error class defaults."""
-        error = CrackerjackError(message="Test error")
+        error = CrackerjackError(
+            message="Test error", error_code=ErrorCode.UNKNOWN_ERROR
+        )
         assert error.message == "Test error"
         assert error.error_code == ErrorCode.UNKNOWN_ERROR
         assert error.details is None

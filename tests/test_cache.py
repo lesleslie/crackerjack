@@ -1,4 +1,4 @@
-import pickle
+import json
 import tempfile
 import time
 from pathlib import Path
@@ -261,10 +261,10 @@ class TestFileCache:
             cache.set("test_key", "test_value", ttl_seconds=7200)
 
             cache_file = cache._get_cache_file("test_key")
-            with cache_file.open("rb") as f:
-                entry = pickle.load(f)
+            with cache_file.open("r", encoding="utf-8") as f:
+                data = json.load(f)
 
-            assert entry.ttl_seconds == 7200
+            assert data["ttl_seconds"] == 7200
 
     def test_invalidate_existing_key(self):
         with tempfile.TemporaryDirectory() as temp_dir:

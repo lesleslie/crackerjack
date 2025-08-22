@@ -173,7 +173,7 @@ class TestWorkflowPipeline:
         assert pipeline.phases == phases
 
     @patch("crackerjack.core.workflow_orchestrator.time.time")
-    def test_workflow_execution_success(self, mock_time) -> None:
+    async def test_workflow_execution_success(self, mock_time) -> None:
         mock_time.return_value = 1000.0
         console = Console()
         pkg_path = Path.cwd()
@@ -191,7 +191,7 @@ class TestWorkflowPipeline:
             phases=phases,
         )
         options = MockOptions()
-        result = pipeline.run_complete_workflow(options)
+        result = await pipeline.run_complete_workflow(options)
         assert result is True
         session.initialize_session_tracking.assert_called_once_with(options)
         session.track_task.assert_called_once_with(
@@ -199,7 +199,7 @@ class TestWorkflowPipeline:
         )
         session.finalize_session.assert_called_once()
 
-    def test_workflow_execution_keyboard_interrupt(self) -> None:
+    async def test_workflow_execution_keyboard_interrupt(self) -> None:
         console = Console()
         pkg_path = Path.cwd()
         session = MagicMock()
@@ -212,7 +212,7 @@ class TestWorkflowPipeline:
             phases=phases,
         )
         options = MockOptions()
-        result = pipeline.run_complete_workflow(options)
+        result = await pipeline.run_complete_workflow(options)
         assert result is False
         session.fail_task.assert_called_once_with("workflow", "Interrupted by user")
 
@@ -236,7 +236,7 @@ class TestWorkflowOrchestrator:
         assert orchestrator.pipeline is not None
 
     @patch("crackerjack.core.container.create_container")
-    def test_delegation_methods(self, mock_create) -> None:
+    async def test_delegation_methods(self, mock_create) -> None:
         console = Console()
         pkg_path = Path.cwd()
         mock_container = MagicMock()
@@ -250,12 +250,21 @@ class TestWorkflowOrchestrator:
         orchestrator.phases = MagicMock()
         orchestrator.autofix = MagicMock()
         orchestrator.pipeline = MagicMock()
+
+        # Make the pipeline method return a coroutine
+        async def mock_run_workflow(options):
+            return True
+
+        orchestrator.pipeline.run_complete_workflow = MagicMock(
+            side_effect=mock_run_workflow
+        )
+
         options = MockOptions()
         orchestrator._track_task("test", "Test task")
         orchestrator.session.track_task.assert_called_once_with("test", "Test task")
         orchestrator.run_cleaning_phase(options)
         orchestrator.phases.run_cleaning_phase.assert_called_once_with(options)
-        orchestrator.run_complete_workflow(options)
+        await orchestrator.run_complete_workflow(options)
         orchestrator.pipeline.run_complete_workflow.assert_called_once_with(options)
 
 
@@ -306,7 +315,7 @@ class TestCoordinatorIntegration:
         assert phases.console == console
         assert phases.pkg_path == pkg_path
 
-    def test_full_pipeline_integration(self) -> None:
+    async def test_full_pipeline_integration(self) -> None:
         console = Console()
         pkg_path = Path.cwd()
         session = SessionCoordinator(console, pkg_path)
@@ -338,7 +347,7 @@ class TestCoordinatorIntegration:
         phases.run_commit_phase = MagicMock(return_value=True)
         options = MockOptions()
         with patch("time.time", return_value=1000.0):
-            result = pipeline.run_complete_workflow(options)
+            result = await pipeline.run_complete_workflow(options)
         assert result is True
         phases.run_configuration_phase.assert_called_once_with(options)
         phases.run_cleaning_phase.assert_called_once_with(options)

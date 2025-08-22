@@ -550,12 +550,12 @@ class TestCrackerjackAPIWorkflowOptions:
         options = api.create_workflow_options()
 
         assert isinstance(options, WorkflowOptions)
-        assert options.clean is True
-        assert options.test is False
-        assert options.publish is None
-        assert options.bump is None
-        assert options.commit is False
-        assert options.create_pr is False
+        assert options.cleaning.clean is True
+        assert options.testing.test is False
+        assert options.publishing.publish is None
+        assert options.publishing.bump is None
+        assert options.git.commit is False
+        assert options.git.create_pr is False
 
     def test_create_workflow_options_custom(self, api) -> None:
         options = api.create_workflow_options(
@@ -567,20 +567,20 @@ class TestCrackerjackAPIWorkflowOptions:
             create_pr=True,
         )
 
-        assert options.clean is True
-        assert options.test is True
-        assert options.publish == "pypi"
-        assert options.bump == "patch"
-        assert options.commit is True
-        assert options.create_pr is True
+        assert options.cleaning.clean is True
+        assert options.testing.test is True
+        assert options.publishing.publish == "pypi"
+        assert options.publishing.bump == "patch"
+        assert options.git.commit is True
+        assert options.git.create_pr is True
 
     def test_create_workflow_options_with_kwargs(self, api) -> None:
         options = api.create_workflow_options(
             clean=True, verbose=True, custom_flag=True
         )
 
-        assert options.clean is True
-        assert hasattr(options, "verbose")
+        assert options.cleaning.clean is True
+        assert options.execution.verbose is True
         assert hasattr(options, "custom_flag")
 
 

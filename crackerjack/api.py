@@ -342,7 +342,7 @@ class CrackerjackAPI:
             git_dir = self.project_path / ".git"
             is_git_repo = git_dir.exists()
 
-            python_files = list(self.project_path.rglob(" * .py"))
+            python_files = list(self.project_path.rglob("*.py"))
 
             return {
                 "project_path": str(self.project_path),
@@ -354,7 +354,7 @@ class CrackerjackAPI:
                 "has_requirements_txt": (
                     self.project_path / "requirements.txt"
                 ).exists(),
-                "has_tests": any(self.project_path.rglob("test * .py")),
+                "has_tests": any(self.project_path.rglob("test*.py")),
             }
 
         except Exception as e:

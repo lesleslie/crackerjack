@@ -109,6 +109,7 @@ class TestPerformanceMonitor:
 
         @monitor.time_operation("preserve_test")
         def test_function(x: int) -> int:
+            """Test function docstring."""
             return x
 
         assert test_function.__name__ == "test_function"
@@ -305,14 +306,14 @@ class TestBatchFileOperations:
         assert results == []
 
     def test_batch_operations_large_batch_size(self):
-        operations = [lambda: i for i in range(5)]
+        operations = [lambda i=i: i for i in range(5)]
 
         results = batch_file_operations(operations, batch_size=10)
 
         assert results == [0, 1, 2, 3, 4]
 
     def test_batch_operations_single_item_batches(self):
-        operations = [lambda: i for i in range(3)]
+        operations = [lambda i=i: i for i in range(3)]
 
         results = batch_file_operations(operations, batch_size=1)
 
