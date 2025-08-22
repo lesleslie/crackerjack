@@ -420,7 +420,27 @@ class IndividualHookExecutor:
     async def _run_command_with_streaming(
         self, cmd: list[str], timeout: int, progress: HookProgress
     ) -> subprocess.CompletedProcess[str]:
-        process = await asyncio.create_subprocess_exec(
+        """Run command with streaming output and progress tracking."""
+        process = await self._create_subprocess(cmd)
+
+        stdout_lines: list[str] = []
+        stderr_lines: list[str] = []
+
+        tasks = self._create_stream_reader_tasks(
+            process, stdout_lines, stderr_lines, progress
+        )
+
+        try:
+            await self._wait_for_process_completion(process, tasks, timeout)
+        except TimeoutError:
+            self._handle_process_timeout(process, tasks)
+            raise
+
+        return self._create_completed_process(cmd, process, stdout_lines, stderr_lines)
+
+    async def _create_subprocess(self, cmd: list[str]) -> asyncio.subprocess.Process:
+        """Create subprocess for command execution."""
+        return await asyncio.create_subprocess_exec(
             *cmd,
             cwd=self.pkg_path,
             stdout=asyncio.subprocess.PIPE,
@@ -428,56 +448,107 @@ class IndividualHookExecutor:
             text=True,
         )
 
-        stdout_lines: list[str] = []
-        stderr_lines: list[str] = []
-
-        async def read_stream(
-            stream: asyncio.StreamReader, output_list: list[str]
-        ) -> None:
-            line_count = 0
-            while True:
-                try:
-                    line = await stream.readline()
-                    if not line:
-                        break
-
-                    line_str = line.decode() if isinstance(line, bytes) else line
-                    line_str = line_str.rstrip()
-
-                    output_list.append(line_str)
-                    progress.output_lines = progress.output_lines or []
-                    progress.output_lines.append(line_str)
-                    line_count += 1
-
-                    # Only print to console if not suppressed (prevents MCP terminal lockup)
-                    if not self.suppress_realtime_output and line_str.strip():
-                        self.console.print(f"[dim] {line_str}[/dim]")
-
-                    # Throttle progress callbacks to reduce overhead
-                    if self.progress_callback and (
-                        line_count % self.progress_callback_interval == 0
-                    ):
-                        self.progress_callback(progress)
-
-                except Exception:
-                    break
-
-        tasks = [
-            asyncio.create_task(read_stream(process.stdout, stdout_lines)),
-            asyncio.create_task(read_stream(process.stderr, stderr_lines)),
+    def _create_stream_reader_tasks(
+        self,
+        process: asyncio.subprocess.Process,
+        stdout_lines: list[str],
+        stderr_lines: list[str],
+        progress: HookProgress,
+    ) -> list[asyncio.Task[None]]:
+        """Create tasks for reading stdout and stderr streams."""
+        return [
+            asyncio.create_task(
+                self._read_stream(process.stdout, stdout_lines, progress)
+            ),
+            asyncio.create_task(
+                self._read_stream(process.stderr, stderr_lines, progress)
+            ),
         ]
 
-        try:
-            await asyncio.wait_for(process.wait(), timeout=timeout)
+    async def _read_stream(
+        self,
+        stream: asyncio.StreamReader | None,
+        output_list: list[str],
+        progress: HookProgress,
+    ) -> None:
+        """Read lines from stream and update progress."""
+        if not stream:
+            return
 
-            await asyncio.gather(*tasks, return_exceptions=True)
+        line_count = 0
+        while True:
+            try:
+                line = await stream.readline()
+                if not line:
+                    break
 
-        except TimeoutError:
-            process.kill()
-            for task in tasks:
-                task.cancel()
-            raise
+                line_str = self._process_stream_line(line)
+                self._update_progress_with_line(
+                    line_str, output_list, progress, line_count
+                )
+                line_count += 1
 
+            except Exception:
+                break
+
+    def _process_stream_line(self, line: bytes | str) -> str:
+        """Process a line from stream into clean string."""
+        line_str = line.decode() if isinstance(line, bytes) else line
+        return line_str.rstrip()
+
+    def _update_progress_with_line(
+        self,
+        line_str: str,
+        output_list: list[str],
+        progress: HookProgress,
+        line_count: int,
+    ) -> None:
+        """Update progress tracking with new line."""
+        output_list.append(line_str)
+        progress.output_lines = progress.output_lines or []
+        progress.output_lines.append(line_str)
+
+        self._maybe_print_line(line_str)
+        self._maybe_callback_progress(progress, line_count)
+
+    def _maybe_print_line(self, line_str: str) -> None:
+        """Print line to console if not suppressed."""
+        if not self.suppress_realtime_output and line_str.strip():
+            self.console.print(f"[dim] {line_str}[/dim]")
+
+    def _maybe_callback_progress(self, progress: HookProgress, line_count: int) -> None:
+        """Callback progress if conditions are met."""
+        if self.progress_callback and (
+            line_count % self.progress_callback_interval == 0
+        ):
+            self.progress_callback(progress)
+
+    async def _wait_for_process_completion(
+        self,
+        process: asyncio.subprocess.Process,
+        tasks: list[asyncio.Task[None]],
+        timeout: int,
+    ) -> None:
+        """Wait for process completion with timeout."""
+        await asyncio.wait_for(process.wait(), timeout=timeout)
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    def _handle_process_timeout(
+        self, process: asyncio.subprocess.Process, tasks: list[asyncio.Task[None]]
+    ) -> None:
+        """Handle process timeout by killing process and canceling tasks."""
+        process.kill()
+        for task in tasks:
+            task.cancel()
+
+    def _create_completed_process(
+        self,
+        cmd: list[str],
+        process: asyncio.subprocess.Process,
+        stdout_lines: list[str],
+        stderr_lines: list[str],
+    ) -> subprocess.CompletedProcess[str]:
+        """Create CompletedProcess result."""
         return subprocess.CompletedProcess(
             args=cmd,
             returncode=process.returncode or 0,

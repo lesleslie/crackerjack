@@ -109,7 +109,7 @@ class FormattingAgent(SubAgent):
             )
 
     async def _apply_ruff_fixes(self) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         returncode, _, stderr = await self.run_command(
             ["uv", "run", "ruff", "format", "."]
@@ -134,7 +134,7 @@ class FormattingAgent(SubAgent):
         return fixes
 
     async def _apply_whitespace_fixes(self) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         returncode, _, _ = await self.run_command(
             [
@@ -169,7 +169,7 @@ class FormattingAgent(SubAgent):
         return fixes
 
     async def _apply_import_fixes(self) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         returncode, _, _ = await self.run_command(
             [
@@ -191,7 +191,7 @@ class FormattingAgent(SubAgent):
         return fixes
 
     async def _fix_specific_file(self, file_path: str, issue: Issue) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         try:
             path = Path(file_path)
@@ -212,7 +212,7 @@ class FormattingAgent(SubAgent):
             content = re.sub(r"\n{3,}", "\n\n", content)
 
             lines = content.split("\n")
-            fixed_lines = []
+            fixed_lines: list[str] = []
 
             for line in lines:
                 if "\t" in line:

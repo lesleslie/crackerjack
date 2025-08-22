@@ -196,13 +196,19 @@ class ServiceHealthChecker:
     async def collect_services_data(self) -> list[tuple[str, str, str]]:
         services = []
 
-        services.append(await self._check_websocket_server())
+        services.extend(
+            (
+                await self._check_websocket_server(),
+                self._check_mcp_server(),
+            )
+        )
 
-        services.append(self._check_mcp_server())
-
-        services.append(self._check_service_watchdog())
-
-        services.append(("File Monitor", "🟢 Watching", "0"))
+        services.extend(
+            (
+                self._check_service_watchdog(),
+                ("File Monitor", "🟢 Watching", "0"),
+            )
+        )
 
         return services
 

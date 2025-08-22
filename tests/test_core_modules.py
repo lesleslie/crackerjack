@@ -412,14 +412,17 @@ class TestCLIModulesBasic:
 
     def test_cli_options_import(self):
         import crackerjack.cli.options as cli_options_module
+
         assert cli_options_module is not None
 
     def test_cli_handlers_import(self):
         import crackerjack.cli.handlers as cli_handlers_module
+
         assert cli_handlers_module is not None
 
     def test_cli_utils_import(self):
         import crackerjack.cli.utils as cli_utils
+
         assert cli_utils is not None
 
 
@@ -462,10 +465,12 @@ class TestConfigModels:
 
     def test_config_import(self):
         import crackerjack.models.config as config_module
+
         assert config_module is not None
 
     def test_task_model_import(self):
         import crackerjack.models.task as task_module
+
         assert task_module is not None
 
 

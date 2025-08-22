@@ -464,8 +464,7 @@ class HealthMetricsService:
             return "🟡", "Good", "yellow"
         elif health_score >= 0.4:
             return "🟠", "Fair", "orange"
-        else:
-            return "🔴", "Poor", "red"
+        return "🔴", "Poor", "red"
 
     def _print_health_metrics(self, health: ProjectHealth) -> None:
         """Print detailed health metrics."""

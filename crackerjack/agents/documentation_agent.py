@@ -262,7 +262,12 @@ class DocumentationAgent(SubAgent):
         self, changes: list[dict[str, str]]
     ) -> dict[str, list[str]]:
         """Categorize changes by type."""
-        categories = {"features": [], "fixes": [], "refactors": [], "other": []}
+        categories: dict[str, list[str]] = {
+            "features": [],
+            "fixes": [],
+            "refactors": [],
+            "other": [],
+        }
 
         for change in changes:
             message = change["message"]
@@ -279,8 +284,7 @@ class DocumentationAgent(SubAgent):
             return "fixes"
         elif message.startswith(("refactor:", "refact:")):
             return "refactors"
-        else:
-            return "other"
+        return "other"
 
     def _add_categorized_changes_to_entry(
         self, entry_lines: list[str], categories: dict[str, list[str]]

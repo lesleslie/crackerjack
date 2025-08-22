@@ -445,87 +445,122 @@ class TestManagementImpl:
         self, cmd: list[str], timeout: int = 600
     ) -> subprocess.CompletedProcess[str]:
         """Run tests with periodic structured progress updates for AI mode."""
+        try:
+            env = self._setup_coverage_env()
+            progress = TestProgress()
+            progress.start_time = time.time()
+
+            return self._execute_test_process_with_progress(cmd, timeout, env, progress)
+        except Exception:
+            # Fallback to standard mode
+            return self._run_test_command(cmd, timeout)
+
+    def _setup_coverage_env(self) -> dict[str, str]:
+        """Set up environment with coverage configuration."""
         import os
         from pathlib import Path
 
-        # Set up coverage data file in cache directory
         cache_dir = Path.home() / ".cache" / "crackerjack" / "coverage"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         env = os.environ.copy()
         env["COVERAGE_FILE"] = str(cache_dir / ".coverage")
+        return env
 
-        progress = TestProgress()
-        progress.start_time = time.time()
+    def _execute_test_process_with_progress(
+        self, cmd: list[str], timeout: int, env: dict[str, str], progress: TestProgress
+    ) -> subprocess.CompletedProcess[str]:
+        """Execute test process with progress tracking."""
         stdout_lines: list[str] = []
         stderr_lines: list[str] = []
-        last_update_time = time.time()
+        last_update_time = [time.time()]  # Use list for mutable reference
 
-        try:
-            with subprocess.Popen(
-                cmd,
-                cwd=self.pkg_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                env=env,
-            ) as process:
+        with subprocess.Popen(
+            cmd,
+            cwd=self.pkg_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        ) as process:
+            # Start reader threads
+            stdout_thread = threading.Thread(
+                target=self._read_stdout_with_progress,
+                args=(process, stdout_lines, progress, last_update_time),
+                daemon=True,
+            )
+            stderr_thread = threading.Thread(
+                target=self._read_stderr_lines,
+                args=(process, stderr_lines),
+                daemon=True,
+            )
 
-                def read_output() -> None:
-                    nonlocal last_update_time
-                    if process.stdout:
-                        for line in iter(process.stdout.readline, ""):
-                            if not line:
-                                break
-                            line = line.rstrip()
-                            stdout_lines.append(line)
-                            self._parse_test_line(line, progress)
+            stdout_thread.start()
+            stderr_thread.start()
 
-                            # Emit structured progress every 10 seconds
-                            current_time = time.time()
-                            if current_time - last_update_time >= 10:
-                                self._emit_ai_progress(progress)
-                                last_update_time = current_time
+            # Wait for process completion
+            returncode = self._wait_for_process_completion(process, timeout)
 
-                def read_stderr() -> None:
-                    if process.stderr:
-                        for line in iter(process.stderr.readline, ""):
-                            if not line:
-                                break
-                            stderr_lines.append(line.rstrip())
+            # Clean up threads
+            stdout_thread.join(timeout=1)
+            stderr_thread.join(timeout=1)
 
-                # Start reader threads
-                stdout_thread = threading.Thread(target=read_output, daemon=True)
-                stderr_thread = threading.Thread(target=read_stderr, daemon=True)
+            # Final progress update
+            progress.is_complete = True
+            self._emit_ai_progress(progress)
 
-                stdout_thread.start()
-                stderr_thread.start()
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=returncode,
+                stdout="\n".join(stdout_lines),
+                stderr="\n".join(stderr_lines),
+            )
 
-                # Wait for process completion with timeout
-                try:
-                    returncode = process.wait(timeout=timeout)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    raise
+    def _read_stdout_with_progress(
+        self,
+        process: subprocess.Popen[str],
+        stdout_lines: list[str],
+        progress: TestProgress,
+        last_update_time: list[float],
+    ) -> None:
+        """Read stdout and update progress."""
+        if not process.stdout:
+            return
 
-                # Wait for threads to finish reading
-                stdout_thread.join(timeout=1)
-                stderr_thread.join(timeout=1)
+        for line in iter(process.stdout.readline, ""):
+            if not line:
+                break
+            line = line.rstrip()
+            stdout_lines.append(line)
+            self._parse_test_line(line, progress)
 
-                # Final progress update
-                progress.is_complete = True
+            # Emit structured progress every 10 seconds
+            current_time = time.time()
+            if current_time - last_update_time[0] >= 10:
                 self._emit_ai_progress(progress)
+                last_update_time[0] = current_time
 
-                return subprocess.CompletedProcess(
-                    args=cmd,
-                    returncode=returncode,
-                    stdout="\n".join(stdout_lines),
-                    stderr="\n".join(stderr_lines),
-                )
+    def _read_stderr_lines(
+        self, process: subprocess.Popen[str], stderr_lines: list[str]
+    ) -> None:
+        """Read stderr lines."""
+        if not process.stderr:
+            return
 
-        except Exception:
-            # Fallback to standard mode
-            return self._run_test_command(cmd, timeout)
+        for line in iter(process.stderr.readline, ""):
+            if not line:
+                break
+            stderr_lines.append(line.rstrip())
+
+    def _wait_for_process_completion(
+        self, process: subprocess.Popen[str], timeout: int
+    ) -> int:
+        """Wait for process completion with timeout handling."""
+        try:
+            return process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            raise
 
     def _emit_ai_progress(self, progress: TestProgress) -> None:
         """Emit structured progress data for AI consumption."""

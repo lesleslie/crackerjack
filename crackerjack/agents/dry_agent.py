@@ -320,13 +320,12 @@ def _create_error_response(message: str, success: bool = False) -> str:
 
         # Replace error response patterns
         for instance in violation["instances"]:
-            line_idx = (
-                instance["line_number"] - 1 + len(utility_lines)
-            )  # Adjust for inserted lines
+            line_number: int = int(instance["line_number"])
+            line_idx = line_number - 1 + len(utility_lines)  # Adjust for inserted lines
             if line_idx < len(lines):
                 original_line: str = lines[line_idx]
                 # Extract the error message
-                error_msg = instance["error_message"]
+                error_msg: str = str(instance["error_message"])
                 # Replace with utility function call
                 indent = len(original_line) - len(original_line.lstrip())
                 new_line = (
@@ -366,11 +365,12 @@ def _ensure_path(path: str | Path) -> Path:
         )
 
         for instance in violation["instances"]:
-            line_idx = instance["line_number"] - 1 + len(utility_lines)
+            line_number: int = int(instance["line_number"])
+            line_idx = line_number - 1 + len(utility_lines)
             if line_idx < len(lines):
                 original_line: str = lines[line_idx]
                 # Replace pattern with utility function call
-                new_line = path_pattern.sub(r"_ensure_path(\1)", original_line)
+                new_line: str = path_pattern.sub(r"_ensure_path(\1)", original_line)
                 lines[line_idx] = new_line
 
         return lines, True

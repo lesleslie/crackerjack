@@ -179,11 +179,11 @@ class LogManager:
     def get_log_stats(self) -> dict[str, dict[str, int | str]]:
         stats = {}
 
-        for log_type, log_dir in [
+        for log_type, log_dir in (
             ("debug", self.debug_dir),
             ("error", self.error_dir),
             ("audit", self.audit_dir),
-        ]:
+        ):
             if log_dir.exists():
                 files = list(log_dir.glob("*.log"))
                 total_size = sum(f.stat().st_size for f in files if f.exists())

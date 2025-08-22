@@ -268,10 +268,13 @@ class UnifiedConfigurationService:
 
         self.sources: list[ConfigSource] = []
 
-        self.sources.append(self._create_default_source())
-
         pyproject_path = pkg_path / "pyproject.toml"
-        self.sources.append(PyprojectConfigSource(pyproject_path))
+        self.sources.extend(
+            (
+                self._create_default_source(),
+                PyprojectConfigSource(pyproject_path),
+            )
+        )
 
         # .crackerjack.* config files are no longer supported
         # Configuration should be done through pyproject.toml
