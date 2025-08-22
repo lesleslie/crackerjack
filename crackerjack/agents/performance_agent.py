@@ -31,6 +31,13 @@ class PerformanceAgent(SubAgent):
         if validation_result:
             return validation_result
 
+        if issue.file_path is None:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path provided for performance issue"],
+            )
+
         file_path = Path(issue.file_path)
 
         try:
@@ -81,7 +88,7 @@ class PerformanceAgent(SubAgent):
         )
 
     def _apply_and_save_optimizations(
-        self, file_path: Path, content: str, issues: list
+        self, file_path: Path, content: str, issues: list[dict[str, t.Any]]
     ) -> FixResult:
         """Apply performance optimizations and save changes."""
         optimized_content = self._apply_performance_optimizations(content, issues)

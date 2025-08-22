@@ -111,7 +111,9 @@ class FormattingAgent(SubAgent):
     async def _apply_ruff_fixes(self) -> list[str]:
         fixes = []
 
-        returncode, _, _ = await self.run_command(["uv", "run", "ruff", "format", "."])
+        returncode, _, stderr = await self.run_command(
+            ["uv", "run", "ruff", "format", "."]
+        )
 
         if returncode == 0:
             fixes.append("Applied ruff code formatting")
@@ -119,7 +121,7 @@ class FormattingAgent(SubAgent):
         else:
             self.log(f"Ruff format failed: {stderr}", "WARN")
 
-        returncode, _, _ = await self.run_command(
+        returncode, _, stderr = await self.run_command(
             ["uv", "run", "ruff", "check", ".", "--fix"]
         )
 

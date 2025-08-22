@@ -197,7 +197,7 @@ class TestSpecialistAgent(SubAgent):
         return fixes
 
     async def _fix_import_errors(self, issue: Issue) -> list[str]:
-        if not self._is_valid_file_path(issue.file_path):
+        if not self._is_valid_file_path(issue.file_path) or issue.file_path is None:
             return []
 
         file_path = Path(issue.file_path)
@@ -296,7 +296,10 @@ class TestSpecialistAgent(SubAgent):
     async def _fix_mock_issues(self, issue: Issue) -> list[str]:
         fixes = []
 
-        if not self._is_valid_mock_issue_file(issue.file_path):
+        if (
+            not self._is_valid_mock_issue_file(issue.file_path)
+            or issue.file_path is None
+        ):
             return fixes
 
         file_path = Path(issue.file_path)
@@ -459,7 +462,7 @@ def console() -> Console:
     async def _apply_general_test_fixes(self) -> list[str]:
         fixes = []
 
-        returncode, stdout, stderr = await self.run_command(
+        returncode, _, stderr = await self.run_command(
             ["uv", "run", "python", "-m", "pytest", "--collect-only", "-q"]
         )
 

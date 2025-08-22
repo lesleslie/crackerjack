@@ -1,782 +1,294 @@
-import io
-import time
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+"""Strategic test coverage for interactive.py - Interactive CLI components."""
 
-import pytest
 from rich.console import Console
-from rich.panel import Panel
 
-from crackerjack.errors import ErrorCode, ExecutionError
+from crackerjack.errors import CrackerjackError, ErrorCode
 from crackerjack.interactive import (
     InteractiveCLI,
     Task,
+    TaskDefinition,
     TaskStatus,
+    WorkflowBuilder,
     WorkflowManager,
+    WorkflowOptions,
     launch_interactive_cli,
 )
 
 
+class TestTaskDefinition:
+    """Test TaskDefinition class functionality."""
+
+    def test_task_definition_creation(self) -> None:
+        task_def = TaskDefinition("test_id", "Test Task", "Test Description", ["dep1"])
+        assert task_def.id == "test_id"
+        assert task_def.name == "Test Task"
+        assert task_def.description == "Test Description"
+        assert task_def.dependencies == ["dep1"]
+        assert not task_def.optional
+        assert task_def.estimated_duration == 0.0
+
+    def test_task_definition_no_dependencies(self) -> None:
+        task_def = TaskDefinition("test_id", "Test Task", "Test Description", [])
+        assert task_def.dependencies == []
+
+
 class TestTask:
+    """Test Task class functionality."""
+
     def test_task_initialization(self) -> None:
-        task = Task("test_task", "Test Description")
-        assert task.name == "test_task"
+        task_def = TaskDefinition("test_task", "Test Task", "Test Description", [])
+        task = Task(task_def)
+        assert task.name == "Test Task"
         assert task.description == "Test Description"
-        assert not task.dependencies
+        assert task.dependencies == []
         assert task.status == TaskStatus.PENDING
         assert task.start_time is None
         assert task.end_time is None
         assert task.error is None
 
-    def test_task_with_dependencies(self) -> None:
-        dep1 = Task("dep1", "Dependency 1")
-        dep2 = Task("dep2", "Dependency 2")
-        task = Task("test_task", "Test Description", dependencies=[dep1, dep2])
-        assert task.dependencies == [dep1, dep2]
+    def test_task_lifecycle(self) -> None:
+        task_def = TaskDefinition("test", "Test", "Test Description", [])
+        task = Task(task_def)
 
-    def test_task_duration(self) -> None:
-        task = Task("test", "Test")
-        assert task.duration is None
-        task.start()
-        time.sleep(0.01)
-        duration1 = task.duration
-        assert duration1 is not None
-        assert duration1 > 0
-        time.sleep(0.01)
-        task.complete()
-        duration2 = task.duration
-        assert duration2 is not None
-        assert duration2 > duration1
-        time.sleep(0.01)
-        assert task.duration == duration2
-
-    def test_task_state_transitions(self) -> None:
-        task = Task("test", "Test")
-        assert task.status == TaskStatus.PENDING
+        # Test start
         task.start()
         assert task.status == TaskStatus.RUNNING
         assert task.start_time is not None
+
+        # Test completion
         task.complete()
         assert task.status == TaskStatus.SUCCESS
         assert task.end_time is not None
-        task = Task("test", "Test")
+
+        # Test duration
+        assert task.duration is not None
+        assert task.duration > 0
+
+    def test_task_failure(self) -> None:
+        task_def = TaskDefinition("test", "Test", "Test Description", [])
+        task = Task(task_def)
         task.start()
-        error = ExecutionError(
+
+        error = CrackerjackError(
             message="Test error",
             error_code=ErrorCode.UNEXPECTED_ERROR,
             details="Test details",
         )
         task.fail(error)
         assert task.status == TaskStatus.FAILED
-        assert task.end_time is not None
         assert task.error == error
-        task = Task("test", "Test")
+
+    def test_task_skip(self) -> None:
+        task_def = TaskDefinition("test", "Test", "Test Description", [])
+        task = Task(task_def)
         task.skip()
         assert task.status == TaskStatus.SKIPPED
 
-    def test_task_can_run(self) -> None:
-        dep1 = Task("dep1", "Dependency 1")
-        dep2 = Task("dep2", "Dependency 2")
-        task = Task("test", "Test", dependencies=[dep1, dep2])
-        assert not task.can_run()
-        dep1.start()
-        dep1.complete()
-        dep2.start()
-        dep2.fail(ExecutionError(message="Test", error_code=ErrorCode.UNEXPECTED_ERROR))
-        assert not task.can_run()
-        dep2 = Task("dep2", "Dependency 2")
-        task = Task("test", "Test", dependencies=[dep1, dep2])
-        dep2.skip()
-        assert task.can_run()
-        dep1 = Task("dep1", "Dependency 1")
-        dep2 = Task("dep2", "Dependency 2")
-        task = Task("test", "Test", dependencies=[dep1, dep2])
-        dep1.start()
-        dep1.complete()
-        dep2.start()
-        dep2.complete()
-        assert task.can_run()
+    def test_task_dependencies(self) -> None:
+        task_def = TaskDefinition("test", "Test", "Test Description", ["dep1", "dep2"])
+        task = Task(task_def)
+        assert task.dependencies == ["dep1", "dep2"]
 
-    def test_task_str_representation(self) -> None:
-        task = Task("test", "Test")
-        assert str(task) == "test (PENDING)"
-        task.start()
-        assert str(task) == "test (RUNNING)"
-        task.complete()
-        assert str(task) == "test (SUCCESS)"
+        # Test can_run with dependencies
+        assert not task.can_run(set())  # No completed tasks
+        assert task.can_run({"dep1", "dep2"})  # All dependencies completed
+        assert not task.can_run({"dep1"})  # Partial dependencies
 
 
 class TestWorkflowManager:
-    @pytest.fixture
-    def workflow(self) -> WorkflowManager:
-        return WorkflowManager(Console())
+    """Test WorkflowManager class functionality."""
 
-    def test_workflow_initialization(self, workflow: WorkflowManager) -> None:
+    def test_workflow_initialization(self) -> None:
+        workflow = WorkflowManager(Console())
         assert not workflow.tasks
-        assert workflow.current_task is None
+        assert not workflow.task_definitions
 
-    def test_add_task(self, workflow: WorkflowManager) -> None:
-        task = workflow.add_task("test", "Test task")
-        assert task.name == "test"
-        assert task.description == "Test task"
-        assert task in workflow.tasks.values()
-        assert workflow.tasks["test"] == task
+    def test_load_workflow(self) -> None:
+        workflow = WorkflowManager(Console())
+        task_defs = {
+            "task1": TaskDefinition("task1", "Task 1", "First task", []),
+            "task2": TaskDefinition("task2", "Task 2", "Second task", ["task1"]),
+        }
+        workflow.load_workflow(task_defs)
+        assert len(workflow.tasks) == 2
+        assert "task1" in workflow.tasks
+        assert "task2" in workflow.tasks
 
-    def test_add_task_with_dependencies(self, workflow: WorkflowManager) -> None:
-        workflow.add_task("dep1", "Dependency 1")
-        workflow.add_task("dep2", "Dependency 2")
-        task = workflow.add_task("test", "Test task", dependencies=["dep1", "dep2"])
-        assert len(task.dependencies) == 2
-        assert workflow.tasks["dep1"] in task.dependencies
-        assert workflow.tasks["dep2"] in task.dependencies
+    def test_get_next_task(self) -> None:
+        workflow = WorkflowManager(Console())
+        task_defs = {
+            "task1": TaskDefinition("task1", "Task 1", "First task", []),
+            "task2": TaskDefinition("task2", "Task 2", "Second task", ["task1"]),
+        }
+        workflow.load_workflow(task_defs)
 
-    def test_add_task_with_invalid_dependency(self, workflow: WorkflowManager) -> None:
-        with pytest.raises(ValueError, match="Dependency task 'invalid' not found"):
-            workflow.add_task("test", "Test task", dependencies=["invalid"])
-
-    def test_get_next_task(self, workflow: WorkflowManager) -> None:
-        workflow.add_task("task1", "Task 1")
-        dep1 = workflow.tasks["task1"]
-        workflow.add_task("task2", "Task 2", dependencies=["task1"])
-        task2 = workflow.tasks["task2"]
+        # First, task1 should be next (no dependencies)
         next_task = workflow.get_next_task()
-        assert next_task == dep1
-        dep1.start()
-        dep1.complete()
-        next_task = workflow.get_next_task()
-        assert next_task == task2
-        workflow.current_task = task2
-        next_task = workflow.get_next_task()
-        assert next_task is None
-        task2.start()
-        task2.complete()
-        workflow.current_task = None
-        next_task = workflow.get_next_task()
-        assert next_task is None
+        assert next_task == workflow.tasks["task1"]
 
-    def test_all_tasks_completed(self, workflow: WorkflowManager) -> None:
-        workflow.add_task("task1", "Task 1")
-        workflow.add_task("task2", "Task 2")
+        # Complete task1, now task2 should be next
+        workflow.tasks["task1"].start()
+        workflow.tasks["task1"].complete()
+        next_task = workflow.get_next_task()
+        assert next_task == workflow.tasks["task2"]
+
+    def test_all_tasks_completed(self) -> None:
+        workflow = WorkflowManager(Console())
+        task_defs = {
+            "task1": TaskDefinition("task1", "Task 1", "First task", []),
+            "task2": TaskDefinition("task2", "Task 2", "Second task", []),
+        }
+        workflow.load_workflow(task_defs)
+
         assert not workflow.all_tasks_completed()
         workflow.tasks["task1"].start()
         workflow.tasks["task1"].complete()
         assert not workflow.all_tasks_completed()
         workflow.tasks["task2"].skip()
         assert workflow.all_tasks_completed()
-        workflow.add_task("task3", "Task 3")
-        assert not workflow.all_tasks_completed()
-        workflow.tasks["task3"].start()
-        workflow.tasks["task3"].fail(
-            ExecutionError(message="Test", error_code=ErrorCode.UNEXPECTED_ERROR)
-        )
-        assert workflow.all_tasks_completed()
 
-    def test_run_task_success(self, workflow: WorkflowManager) -> None:
-        task = workflow.add_task("test", "Test task")
-        func = MagicMock()
-        result = workflow.run_task(task, func)
+    def test_set_task_executor(self) -> None:
+        workflow = WorkflowManager(Console())
+        task_defs = {"task1": TaskDefinition("task1", "Task 1", "First task", [])}
+        workflow.load_workflow(task_defs)
+
+        def mock_executor() -> bool:
+            return True
+
+        workflow.set_task_executor("task1", mock_executor)
+        assert workflow.tasks["task1"].executor == mock_executor
+
+    def test_run_task_without_executor(self) -> None:
+        workflow = WorkflowManager(Console())
+        task_defs = {
+            "test": TaskDefinition("test", "Test task", "Test Description", [])
+        }
+        workflow.load_workflow(task_defs)
+        task = workflow.tasks["test"]
+
+        # Task without executor should be skipped
+        result = workflow.run_task(task)
         assert result
-        assert task.status == TaskStatus.SUCCESS
-        func.assert_called_once()
-        assert workflow.current_task is None
+        assert task.status == TaskStatus.SKIPPED
 
-    def test_run_task_crackerjack_error(self, workflow: WorkflowManager) -> None:
-        task = workflow.add_task("test", "Test task")
-        error = ExecutionError(
-            message="Test error", error_code=ErrorCode.COMMAND_EXECUTION_ERROR
-        )
-        func = MagicMock(side_effect=error)
-        result = workflow.run_task(task, func)
-        assert not result
-        assert task.status == TaskStatus.FAILED
-        assert task.error == error
-        func.assert_called_once()
-        assert workflow.current_task is None
 
-    def test_run_task_generic_exception(self, workflow: WorkflowManager) -> None:
-        task = workflow.add_task("test", "Test task")
-        func = MagicMock(side_effect=ValueError("Test exception"))
-        result = workflow.run_task(task, func)
-        assert not result
-        assert task.status == TaskStatus.FAILED
-        assert task.error is not None
-        assert task.error.error_code == ErrorCode.UNEXPECTED_ERROR
-        assert "Test exception" in str(task.error.details)
-        func.assert_called_once()
-        assert workflow.current_task is None
+class TestWorkflowBuilder:
+    """Test WorkflowBuilder class functionality."""
 
-    def test_display_task_tree(self, workflow: WorkflowManager) -> None:
-        workflow.add_task("task1", "Task 1")
-        workflow.add_task("task2", "Task 2", dependencies=["task1"])
-        workflow.add_task("task3", "Task 3", dependencies=["task1"])
-        with patch.object(workflow.console, "print") as mock_print:
-            workflow.display_task_tree()
-            mock_print.assert_called_once()
-            assert mock_print.call_args is not None
-            assert mock_print.call_args.args is not None
-            assert len(mock_print.call_args.args) > 0
-            from rich.tree import Tree
+    def test_builder_initialization(self) -> None:
+        builder = WorkflowBuilder(Console())
+        assert not builder.tasks
 
-            assert isinstance(mock_print.call_args.args[0], Tree)
+    def test_add_task(self) -> None:
+        builder = WorkflowBuilder(Console())
+        builder.add_task("task1", "Task 1", "First task")
+        assert "task1" in builder.tasks
+        assert builder.tasks["task1"].name == "Task 1"
+
+    def test_build_workflow(self) -> None:
+        builder = WorkflowBuilder(Console())
+        builder.add_task("task1", "Task 1", "First task")
+        builder.add_task("task2", "Task 2", "Second task", ["task1"])
+
+        workflow_def = builder.build()
+        assert len(workflow_def) == 2
+        assert "task1" in workflow_def
+        assert "task2" in workflow_def
+
+
+class TestWorkflowOptions:
+    """Test WorkflowOptions class functionality."""
+
+    def test_workflow_options_defaults(self) -> None:
+        options = WorkflowOptions()
+        assert not options.clean
+        assert not options.test
+        assert options.publish is None
+        assert options.bump is None
+        assert not options.commit
+        assert not options.create_pr
+        assert options.interactive
+        assert not options.dry_run
+
+    def test_workflow_options_from_args(self) -> None:
+        class MockArgs:
+            clean = True
+            test = True
+            publish = "patch"
+            commit = True
+
+        options = WorkflowOptions.from_args(MockArgs())
+        assert options.clean
+        assert options.test
+        assert options.publish == "patch"
+        assert options.commit
 
 
 class TestInteractiveCLI:
-    @pytest.fixture
-    def console(self) -> Console:
-        return Console(file=io.StringIO(), width=100)
+    """Test InteractiveCLI class functionality."""
 
-    @pytest.fixture
-    def cli(self, console: Console) -> InteractiveCLI:
-        return InteractiveCLI(console)
+    def test_cli_initialization(self) -> None:
+        cli = InteractiveCLI()
+        assert cli.console is not None
+        assert cli.workflow is not None
 
-    def test_initialization(self, console: Console) -> None:
+    def test_cli_with_console(self) -> None:
+        console = Console()
         cli = InteractiveCLI(console)
         assert cli.console == console
-        assert isinstance(cli.workflow, WorkflowManager)
 
-    def test_initialization_default_console(self) -> None:
-        cli = InteractiveCLI()
-        assert isinstance(cli.console, Console)
-        assert isinstance(cli.workflow, WorkflowManager)
 
-    def test_show_banner(self, cli: InteractiveCLI, console: Console) -> None:
-        from io import StringIO
+class TestLaunchFunction:
+    """Test the launch_interactive_cli function."""
 
-        console.file = StringIO()
-        cli.show_banner("1.0.0")
-        output = console.file.getvalue()
-        assert "Crackerjack" in output
-        assert "v1.0.0" in output
-        assert "Python project management" in output
+    def test_launch_function_exists(self) -> None:
+        assert callable(launch_interactive_cli)
 
-    def test_create_standard_workflow(self, cli: InteractiveCLI) -> None:
-        cli.create_standard_workflow()
-        assert "setup" in cli.workflow.tasks
-        assert "config" in cli.workflow.tasks
-        assert "clean" in cli.workflow.tasks
-        assert "hooks" in cli.workflow.tasks
-        assert "test" in cli.workflow.tasks
-        assert "version" in cli.workflow.tasks
-        assert "publish" in cli.workflow.tasks
-        assert "commit" in cli.workflow.tasks
-        assert not cli.workflow.tasks["setup"].dependencies
-        assert cli.workflow.tasks["setup"] in cli.workflow.tasks["config"].dependencies
-        assert cli.workflow.tasks["config"] in cli.workflow.tasks["clean"].dependencies
-        assert cli.workflow.tasks["clean"] in cli.workflow.tasks["hooks"].dependencies
-        assert cli.workflow.tasks["hooks"] in cli.workflow.tasks["test"].dependencies
-        assert cli.workflow.tasks["test"] in cli.workflow.tasks["version"].dependencies
-        assert (
-            cli.workflow.tasks["version"] in cli.workflow.tasks["publish"].dependencies
-        )
-        assert (
-            cli.workflow.tasks["publish"] in cli.workflow.tasks["commit"].dependencies
-        )
 
-    def test_setup_layout(self, cli: InteractiveCLI) -> None:
-        layout = cli.setup_layout()
-        assert layout is not None
-        assert layout.get("header") is not None
-        assert layout.get("main") is not None
-        assert layout.get("footer") is not None
-        assert layout["main"].get("tasks") is not None
-        assert layout["main"].get("details") is not None
+class TestTaskStatus:
+    """Test TaskStatus enumeration."""
 
-    def test_show_task_status(self, cli: InteractiveCLI) -> None:
-        task = Task("test", "Test Description")
-        panel = cli.show_task_status(task)
-        assert isinstance(panel, Panel)
-        assert panel.title == "test"
-        task.start()
-        panel = cli.show_task_status(task)
-        assert panel.title == "test"
-        assert panel.border_style == "yellow"
-        task.complete()
-        panel = cli.show_task_status(task)
-        assert panel.title == "test"
-        assert panel.border_style == "green"
-        task = Task("test", "Test Description")
-        task.start()
-        error = ExecutionError(
-            message="Test error",
-            error_code=ErrorCode.COMMAND_EXECUTION_ERROR,
-            details="Test details",
-            recovery="Test recovery",
-        )
-        task.fail(error)
-        panel = cli.show_task_status(task)
-        assert panel.title == "test"
-        assert panel.border_style == "red"
+    def test_task_status_values(self) -> None:
+        assert TaskStatus.PENDING
+        assert TaskStatus.RUNNING
+        assert TaskStatus.SUCCESS
+        assert TaskStatus.FAILED
+        assert TaskStatus.SKIPPED
 
-    def test_show_task_table(self, cli: InteractiveCLI) -> None:
-        task1 = Task("task1", "Task 1")
-        task1.start()
-        task1.complete()
-        cli.workflow.tasks["task1"] = task1
-        task2 = Task("task2", "Task 2")
-        task2.start()
-        cli.workflow.tasks["task2"] = task2
-        task3 = Task("task3", "Task 3")
-        task3.skip()
-        cli.workflow.tasks["task3"] = task3
-        task4 = Task("task4", "Task 4", dependencies=[task1])
-        cli.workflow.tasks["task4"] = task4
-        table = cli.show_task_table()
-        from rich.table import Table
 
-        assert isinstance(table, Table)
-        assert table.title == "Workflow Tasks"
-        assert len(table.columns) == 4
-        assert cli.workflow.tasks
-        assert len(table.rows) == len(cli.workflow.tasks)
+class TestIntegrationScenarios:
+    """Test integration scenarios between components."""
 
-    @patch("crackerjack.interactive.Prompt")
-    def test_confirm_dangerous_action(
-        self, mock_prompt: MagicMock, cli: InteractiveCLI
-    ) -> None:
-        mock_prompt.ask.return_value = "delete"
-        result = cli.confirm_dangerous_action("delete", "This will delete files")
-        assert result
-        mock_prompt.ask.return_value = "wrong"
-        result = cli.confirm_dangerous_action("delete", "This will delete files")
-        assert not result
+    def test_full_workflow_scenario(self) -> None:
+        # Create workflow builder
+        builder = WorkflowBuilder(Console())
+        builder.add_task("setup", "Setup", "Setup task")
+        builder.add_task("test", "Test", "Test task", ["setup"])
+        builder.add_task("deploy", "Deploy", "Deploy task", ["test"])
 
-    def test_show_error(self, cli: InteractiveCLI) -> None:
-        error = ExecutionError(
-            message="Test error",
-            error_code=ErrorCode.COMMAND_EXECUTION_ERROR,
-            details="Test details",
-            recovery="Test recovery",
-        )
-        with patch("crackerjack.interactive.handle_error") as mock_handle_error:
-            cli.show_error(error, verbose=True)
-            mock_handle_error.assert_called_once_with(
-                error, cli.console, True, exit_on_error=False
-            )
+        # Build and load workflow
+        workflow_def = builder.build()
+        manager = WorkflowManager(Console())
+        manager.load_workflow(workflow_def)
 
-    def test_run_interactive_basic(self, cli: InteractiveCLI) -> None:
-        cli.create_standard_workflow()
-        with patch("crackerjack.interactive.Live") as mock_live:
-            mock_context = MagicMock()
-            mock_live.return_value.__enter__.return_value = mock_context
-            mock_context.start.side_effect = KeyboardInterrupt
-            with patch.object(cli.console, "clear"):
-                with patch("crackerjack.interactive.Confirm"):
-                    cli.run_interactive()
+        # Execute workflow step by step
+        next_task = manager.get_next_task()
+        assert next_task.name == "Setup"
+        next_task.start()
+        next_task.complete()
 
-    @patch("crackerjack.interactive.Prompt")
-    def test_ask_for_file(
-        self, mock_prompt: MagicMock, cli: InteractiveCLI, tmp_path: Path
-    ) -> None:
-        file1 = tmp_path / "file1.txt"
-        file1.write_text("test")
-        file2 = tmp_path / "file2.txt"
-        file2.write_text("test")
-        mock_prompt.ask.return_value = "1"
-        result = cli.ask_for_file("Select a file", tmp_path)
-        assert result == file1
-        mock_prompt.ask.return_value = "file2.txt"
-        result = cli.ask_for_file("Select a file", tmp_path)
-        assert result == file2
-        mock_prompt.ask.return_value = "newfile.txt"
-        result = cli.ask_for_file("Select a file", tmp_path)
-        assert result == tmp_path / "newfile.txt"
+        next_task = manager.get_next_task()
+        assert next_task.name == "Test"
+        next_task.start()
+        next_task.complete()
 
+        next_task = manager.get_next_task()
+        assert next_task.name == "Deploy"
+        next_task.start()
+        next_task.complete()
 
-def test_task_status_formatting_edge_cases() -> None:
-    from crackerjack.interactive import InteractiveCLI, TaskStatus
+        # All tasks should be completed
+        assert manager.all_tasks_completed()
 
-    InteractiveCLI()
-    task_completed = MagicMock()
-    task_completed.status = TaskStatus.SUCCESS
-    task_completed.name = "Test"
-    task_running = MagicMock()
-    task_running.status = TaskStatus.RUNNING
-    task_running.name = "Test"
-    task_skipped = MagicMock()
-    task_skipped.status = TaskStatus.SKIPPED
-    task_skipped.name = "Test"
-    assert task_completed.status == TaskStatus.SUCCESS
-    assert task_running.status == TaskStatus.RUNNING
-    assert task_skipped.status == TaskStatus.SKIPPED
-
-
-def test_workflow_break_condition() -> None:
-    from crackerjack.interactive import InteractiveCLI, WorkflowManager
-
-    cli = InteractiveCLI()
-    empty_workflow = WorkflowManager(cli.console)
-    cli.workflow = empty_workflow
-    with patch.object(cli, "show_task_table", return_value=MagicMock()):
-        assert empty_workflow.get_next_task() is None
-
-
-@patch("crackerjack.interactive.InteractiveCLI")
-def test_launch_interactive_cli(mock_cli_class: MagicMock) -> None:
-    mock_cli = MagicMock()
-    mock_cli_class.return_value = mock_cli
-    launch_interactive_cli("1.0.0")
-    mock_cli_class.assert_called_once()
-    mock_cli.show_banner.assert_called_once_with("1.0.0")
-    mock_cli.create_standard_workflow.assert_called_once()
-    mock_cli.run_interactive.assert_called_once()
-
-
-def test_from_args_basic():
-    """Test basic functionality of from_args."""
-
-    try:
-        result = from_args()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(from_args), "Function should be callable"
-        sig = inspect.signature(from_args)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in from_args: {e}")
-
-
-def test_name_basic():
-    """Test basic functionality of name."""
-
-    try:
-        result = name()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(name), "Function should be callable"
-        sig = inspect.signature(name)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in name: {e}")
-
-
-def test_description_basic():
-    """Test basic functionality of description."""
-
-    try:
-        result = description()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(description), "Function should be callable"
-        sig = inspect.signature(description)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in description: {e}")
-
-
-def test_dependencies_basic():
-    """Test basic functionality of dependencies."""
-
-    try:
-        result = dependencies()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(dependencies), "Function should be callable"
-        sig = inspect.signature(dependencies)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in dependencies: {e}")
-
-
-def test_get_resolved_dependencies_basic():
-    """Test basic functionality of get_resolved_dependencies."""
-
-    try:
-        result = get_resolved_dependencies()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(get_resolved_dependencies), "Function should be callable"
-        sig = inspect.signature(get_resolved_dependencies)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_resolved_dependencies: {e}")
-
-
-def test_duration_basic():
-    """Test basic functionality of duration."""
-
-    try:
-        result = duration()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(duration), "Function should be callable"
-        sig = inspect.signature(duration)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in duration: {e}")
-
-
-def test_start_basic():
-    """Test basic functionality of start."""
-
-    try:
-        result = start()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(start), "Function should be callable"
-        sig = inspect.signature(start)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in start: {e}")
-
-
-def test_complete_basic():
-    """Test basic functionality of complete."""
-
-    try:
-        result = complete()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(complete), "Function should be callable"
-        sig = inspect.signature(complete)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in complete: {e}")
-
-
-def test_skip_basic():
-    """Test basic functionality of skip."""
-
-    try:
-        result = skip()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(skip), "Function should be callable"
-        sig = inspect.signature(skip)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in skip: {e}")
-
-
-def test_fail_basic():
-    """Test basic functionality of fail."""
-
-    try:
-        result = fail()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(fail), "Function should be callable"
-        sig = inspect.signature(fail)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in fail: {e}")
-
-
-def test_can_run_basic():
-    """Test basic functionality of can_run."""
-
-    try:
-        result = can_run()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(can_run), "Function should be callable"
-        sig = inspect.signature(can_run)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in can_run: {e}")
-
-
-def test_add_conditional_task_basic():
-    """Test basic functionality of add_conditional_task."""
-
-    try:
-        result = add_conditional_task()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(add_conditional_task), "Function should be callable"
-        sig = inspect.signature(add_conditional_task)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in add_conditional_task: {e}")
-
-
-def test_build_basic():
-    """Test basic functionality of build."""
-
-    try:
-        result = build()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(build), "Function should be callable"
-        sig = inspect.signature(build)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in build: {e}")
-
-
-def test_load_workflow_basic():
-    """Test basic functionality of load_workflow."""
-
-    try:
-        result = load_workflow()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(load_workflow), "Function should be callable"
-        sig = inspect.signature(load_workflow)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in load_workflow: {e}")
-
-
-def test_set_task_executor_basic():
-    """Test basic functionality of set_task_executor."""
-
-    try:
-        result = set_task_executor()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(set_task_executor), "Function should be callable"
-        sig = inspect.signature(set_task_executor)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in set_task_executor: {e}")
-
-
-def test_get_workflow_summary_basic():
-    """Test basic functionality of get_workflow_summary."""
-
-    try:
-        result = get_workflow_summary()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(get_workflow_summary), "Function should be callable"
-        sig = inspect.signature(get_workflow_summary)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_workflow_summary: {e}")
-
-
-def test_create_dynamic_workflow_basic():
-    """Test basic functionality of create_dynamic_workflow."""
-
-    try:
-        result = create_dynamic_workflow()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(create_dynamic_workflow), "Function should be callable"
-        sig = inspect.signature(create_dynamic_workflow)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in create_dynamic_workflow: {e}")
-
-
-def test_run_interactive_workflow_basic():
-    """Test basic functionality of run_interactive_workflow."""
-
-    try:
-        result = run_interactive_workflow()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(run_interactive_workflow), "Function should be callable"
-        sig = inspect.signature(run_interactive_workflow)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in run_interactive_workflow: {e}")
-
-
-def test_has_cycle_basic():
-    """Test basic functionality of has_cycle."""
-
-    try:
-        result = has_cycle()
-        assert result is not None or result is None
-    except TypeError:
-        import inspect
-
-        assert callable(has_cycle), "Function should be callable"
-        sig = inspect.signature(has_cycle)
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in has_cycle: {e}")
+        # No more tasks
+        assert manager.get_next_task() is None

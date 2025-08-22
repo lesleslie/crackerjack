@@ -29,6 +29,11 @@ class DRYAgent(SubAgent):
         if validation_result:
             return validation_result
 
+        if issue.file_path is None:
+            return self._create_dry_error_result(
+                ValueError("File path is required for DRY violation")
+            )
+
         file_path = Path(issue.file_path)
 
         try:
@@ -45,6 +50,7 @@ class DRYAgent(SubAgent):
                 remaining_issues=["No file path specified for DRY violation"],
             )
 
+        # At this point, issue.file_path is not None due to the check above
         file_path = Path(issue.file_path)
         if not file_path.exists():
             return FixResult(
@@ -77,7 +83,7 @@ class DRYAgent(SubAgent):
         return self._apply_and_save_dry_fixes(file_path, content, violations)
 
     def _apply_and_save_dry_fixes(
-        self, file_path: Path, content: str, violations: list
+        self, file_path: Path, content: str, violations: list[dict[str, t.Any]]
     ) -> FixResult:
         """Apply DRY fixes and save changes."""
         fixed_content = self._apply_dry_fixes(content, violations)

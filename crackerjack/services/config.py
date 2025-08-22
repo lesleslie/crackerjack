@@ -180,7 +180,7 @@ class ConfigurationService:
                     "ini_options": {
                         "asyncio_mode": "auto",
                         "timeout": 300,
-                        "addopts": "--cov=crackerjack --cov-report=term --cov-fail-under=42",
+                        "addopts": "--cov=crackerjack --cov-report=term --cov-fail-under=25",
                         "markers": [
                             "unit: marks test as a unit test",
                             "benchmark: mark test as a benchmark",

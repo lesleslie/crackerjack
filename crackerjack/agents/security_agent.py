@@ -441,7 +441,7 @@ class SecurityAgent(SubAgent):
         fixes = []
 
         try:
-            returncode, stdout, stderr = await self.run_command(
+            returncode, _, _ = await self.run_command(
                 ["uv", "run", "bandit", "-r", "crackerjack/", "-f", "txt"]
             )
 

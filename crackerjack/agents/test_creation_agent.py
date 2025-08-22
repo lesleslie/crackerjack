@@ -209,7 +209,7 @@ class TestCreationAgent(SubAgent):
 
     async def _analyze_coverage(self) -> dict[str, Any]:
         try:
-            returncode, stdout, stderr = await self._run_coverage_command()
+            returncode, _, stderr = await self._run_coverage_command()
 
             if returncode != 0:
                 return self._handle_coverage_command_failure(stderr)

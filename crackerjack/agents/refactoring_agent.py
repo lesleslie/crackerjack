@@ -41,6 +41,13 @@ class RefactoringAgent(SubAgent):
         if validation_result:
             return validation_result
 
+        if issue.file_path is None:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path provided for complexity issue"],
+            )
+
         file_path = Path(issue.file_path)
 
         try:
@@ -92,7 +99,7 @@ class RefactoringAgent(SubAgent):
         return self._apply_and_save_refactoring(file_path, content, complex_functions)
 
     def _apply_and_save_refactoring(
-        self, file_path: Path, content: str, complex_functions: list
+        self, file_path: Path, content: str, complex_functions: list[dict[str, t.Any]]
     ) -> FixResult:
         """Apply refactoring and save changes."""
         refactored_content = self._apply_complexity_reduction(
@@ -152,6 +159,13 @@ class RefactoringAgent(SubAgent):
         if validation_result:
             return validation_result
 
+        if issue.file_path is None:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path provided for dead code issue"],
+            )
+
         file_path = Path(issue.file_path)
 
         try:
@@ -203,7 +217,7 @@ class RefactoringAgent(SubAgent):
         return self._apply_and_save_cleanup(file_path, content, dead_code_analysis)
 
     def _apply_and_save_cleanup(
-        self, file_path: Path, content: str, analysis: dict
+        self, file_path: Path, content: str, analysis: dict[str, t.Any]
     ) -> FixResult:
         """Apply dead code cleanup and save changes."""
         cleaned_content = self._remove_dead_code_items(content, analysis)
@@ -254,8 +268,16 @@ class RefactoringAgent(SubAgent):
         complex_functions = []
 
         class ComplexityAnalyzer(ast.NodeVisitor):
-            def visit_FunctionDef(self, node):
-                complexity = self._calculate_cognitive_complexity(node)
+            def __init__(
+                self,
+                calc_complexity: t.Callable[
+                    [ast.FunctionDef | ast.AsyncFunctionDef], int
+                ],
+            ) -> None:
+                self.calc_complexity = calc_complexity
+
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+                complexity = self.calc_complexity(node)
                 if complexity > 13:
                     complex_functions.append(
                         {
@@ -268,40 +290,53 @@ class RefactoringAgent(SubAgent):
                     )
                 self.generic_visit(node)
 
-            def visit_AsyncFunctionDef(self, node):
-                self.visit_FunctionDef(node)
+            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+                # Handle async functions like regular functions for complexity analysis
+                complexity = self.calc_complexity(node)
+                if complexity > 13:
+                    complex_functions.append(
+                        {
+                            "name": node.name,
+                            "line_start": node.lineno,
+                            "line_end": node.end_lineno or node.lineno,
+                            "complexity": complexity,
+                            "node": node,
+                        }
+                    )
+                self.generic_visit(node)
 
-        analyzer = ComplexityAnalyzer()
-        analyzer._calculate_cognitive_complexity = self._calculate_cognitive_complexity
+        analyzer = ComplexityAnalyzer(self._calculate_cognitive_complexity)
         analyzer.visit(tree)
 
         return complex_functions
 
-    def _calculate_cognitive_complexity(self, node: ast.FunctionDef) -> int:
+    def _calculate_cognitive_complexity(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> int:
         class ComplexityCalculator(ast.NodeVisitor):
             def __init__(self):
                 self.complexity = 0
                 self.nesting_level = 0
 
-            def visit_If(self, node):
+            def visit_If(self, node: ast.If) -> None:
                 self.complexity += 1 + self.nesting_level
                 self.nesting_level += 1
                 self.generic_visit(node)
                 self.nesting_level -= 1
 
-            def visit_For(self, node):
+            def visit_For(self, node: ast.For) -> None:
                 self.complexity += 1 + self.nesting_level
                 self.nesting_level += 1
                 self.generic_visit(node)
                 self.nesting_level -= 1
 
-            def visit_While(self, node):
+            def visit_While(self, node: ast.While) -> None:
                 self.complexity += 1 + self.nesting_level
                 self.nesting_level += 1
                 self.generic_visit(node)
                 self.nesting_level -= 1
 
-            def visit_Try(self, node):
+            def visit_Try(self, node: ast.Try) -> None:
                 self.complexity += 1 + self.nesting_level
                 self.nesting_level += 1
                 self.generic_visit(node)
@@ -420,7 +455,9 @@ class RefactoringAgent(SubAgent):
             "unused_functions": unused_functions,
         }
 
-    def _process_unused_imports(self, analysis: dict, analyzer_result: dict) -> None:
+    def _process_unused_imports(
+        self, analysis: dict[str, t.Any], analyzer_result: dict[str, t.Any]
+    ) -> None:
         for line_no, name, import_type in analyzer_result["import_lines"]:
             if name not in analyzer_result["used_names"]:
                 analysis["unused_imports"].append(
@@ -432,7 +469,9 @@ class RefactoringAgent(SubAgent):
                 )
                 analysis["removable_items"].append(f"unused import: {name}")
 
-    def _process_unused_functions(self, analysis: dict, analyzer_result: dict) -> None:
+    def _process_unused_functions(
+        self, analysis: dict[str, t.Any], analyzer_result: dict[str, t.Any]
+    ) -> None:
         unused_functions = [
             func
             for func in analyzer_result["unused_functions"]

@@ -362,3 +362,128 @@ class TestDependencyContainer:
             ValueError, match="Service FileSystemInterface not registered"
         ):
             container.get(FileSystemInterface)
+
+
+class TestEnhancedContainer:
+    """Test enhanced dependency injection container."""
+
+    def test_enhanced_container_basic(self):
+        from crackerjack.core.enhanced_container import (
+            EnhancedDependencyContainer,
+            ServiceLifetime,
+            create_enhanced_container,
+        )
+
+        # Test container creation
+        container = EnhancedDependencyContainer("test")
+        assert container.name == "test"
+
+        # Test service lifetimes
+        assert ServiceLifetime.SINGLETON.value == "singleton"
+        assert ServiceLifetime.TRANSIENT.value == "transient"
+        assert ServiceLifetime.SCOPED.value == "scoped"
+
+        # Test enhanced container factory
+        enhanced = create_enhanced_container()
+        assert isinstance(enhanced, EnhancedDependencyContainer)
+
+    def test_service_descriptor_basic(self):
+        from crackerjack.core.enhanced_container import (
+            ServiceDescriptor,
+            ServiceLifetime,
+        )
+
+        class TestService:
+            pass
+
+        # Test with implementation
+        descriptor = ServiceDescriptor(
+            interface=TestService,
+            implementation=TestService,
+            lifetime=ServiceLifetime.SINGLETON,
+        )
+        assert descriptor.interface == TestService
+        assert descriptor.implementation == TestService
+        assert descriptor.created_count == 0
+
+
+class TestCLIModulesBasic:
+    """Test basic CLI modules."""
+
+    def test_cli_options_import(self):
+        import crackerjack.cli.options as cli_options_module
+        assert cli_options_module is not None
+
+    def test_cli_handlers_import(self):
+        import crackerjack.cli.handlers as cli_handlers_module
+        assert cli_handlers_module is not None
+
+    def test_cli_utils_import(self):
+        import crackerjack.cli.utils as cli_utils
+        assert cli_utils is not None
+
+
+class TestMainEntryPoint:
+    """Test main entry point module."""
+
+    def test_main_module_import(self):
+        import crackerjack.__main__ as main_module
+
+        assert main_module is not None
+
+    def test_main_function_exists(self):
+        from crackerjack.__main__ import main
+
+        assert callable(main)
+
+
+class TestProtocolsModule:
+    """Test protocols module."""
+
+    def test_protocols_import(self):
+        from crackerjack.models.protocols import (
+            FileSystemInterface,
+            GitInterface,
+            HookManager,
+            PublishManager,
+            TestManagerProtocol,
+        )
+
+        # Basic import tests
+        assert FileSystemInterface is not None
+        assert GitInterface is not None
+        assert HookManager is not None
+        assert TestManagerProtocol is not None
+        assert PublishManager is not None
+
+
+class TestConfigModels:
+    """Test configuration models."""
+
+    def test_config_import(self):
+        import crackerjack.models.config as config_module
+        assert config_module is not None
+
+    def test_task_model_import(self):
+        import crackerjack.models.task as task_module
+        assert task_module is not None
+
+
+class TestErrorsModule:
+    """Test errors module."""
+
+    def test_errors_import(self):
+        from crackerjack.errors import CrackerjackError, ErrorCode
+
+        assert CrackerjackError is not None
+        assert ErrorCode is not None
+
+    def test_error_creation(self):
+        from crackerjack.errors import CrackerjackError, ErrorCode
+
+        error = CrackerjackError(
+            message="Test error", error_code=ErrorCode.UNEXPECTED_ERROR
+        )
+
+        assert error.message == "Test error"
+        assert error.error_code == ErrorCode.UNEXPECTED_ERROR
