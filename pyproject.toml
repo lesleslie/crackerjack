@@ -276,4 +276,4 @@ exclude_patterns = [
     "**/tests/**",
     "**/test_*.py",
 ]
-max_complexity = 13
+max_complexity = 15

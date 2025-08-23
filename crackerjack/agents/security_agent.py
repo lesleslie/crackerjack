@@ -186,8 +186,8 @@ class SecurityAgent(SubAgent):
         return "unknown"
 
     async def _fix_hardcoded_temp_paths(self, issue: Issue) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         if not issue.file_path:
             return {"fixes": fixes, "files": files}
@@ -262,8 +262,8 @@ class SecurityAgent(SubAgent):
         return lines, modified
 
     async def _fix_shell_injection(self, issue: Issue) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         if not issue.file_path:
             return {"fixes": fixes, "files": files}
@@ -304,8 +304,8 @@ class SecurityAgent(SubAgent):
         return {"fixes": fixes, "files": files}
 
     async def _fix_hardcoded_secrets(self, issue: Issue) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         if not issue.file_path:
             return {"fixes": fixes, "files": files}
@@ -374,8 +374,8 @@ class SecurityAgent(SubAgent):
         return line
 
     async def _fix_unsafe_yaml(self, issue: Issue) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         if not issue.file_path:
             return {"fixes": fixes, "files": files}
@@ -398,8 +398,8 @@ class SecurityAgent(SubAgent):
         return {"fixes": fixes, "files": files}
 
     async def _fix_eval_usage(self, issue: Issue) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         fixes.append(
             f"Identified eval() usage in {issue.file_path} - manual review required"
@@ -408,8 +408,8 @@ class SecurityAgent(SubAgent):
         return {"fixes": fixes, "files": files}
 
     async def _fix_weak_crypto(self, issue: Issue) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         if not issue.file_path:
             return {"fixes": fixes, "files": files}
@@ -438,7 +438,7 @@ class SecurityAgent(SubAgent):
         return {"fixes": fixes, "files": files}
 
     async def _run_bandit_analysis(self) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         try:
             returncode, _, _ = await self.run_command(
@@ -456,8 +456,8 @@ class SecurityAgent(SubAgent):
         return fixes
 
     async def _fix_file_security_issues(self, file_path: str) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         try:
             path = Path(file_path)

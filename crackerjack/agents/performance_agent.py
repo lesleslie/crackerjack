@@ -141,7 +141,7 @@ class PerformanceAgent(SubAgent):
         self, content: str, file_path: Path
     ) -> list[dict[str, t.Any]]:
         """Detect various performance anti-patterns in the code."""
-        issues = []
+        issues: list[dict[str, t.Any]] = []
 
         with suppress(SyntaxError):
             tree = ast.parse(content)
@@ -162,12 +162,12 @@ class PerformanceAgent(SubAgent):
 
     def _detect_nested_loops(self, tree: ast.AST) -> list[dict[str, t.Any]]:
         """Detect nested loops that might have O(n²) or worse complexity."""
-        issues = []
+        issues: list[dict[str, t.Any]] = []
 
         class NestedLoopAnalyzer(ast.NodeVisitor):
             def __init__(self):
-                self.loop_stack = []
-                self.nested_loops = []
+                self.loop_stack: list[tuple[str, ast.AST]] = []
+                self.nested_loops: list[dict[str, t.Any]] = []
 
             def visit_For(self, node: ast.For) -> None:
                 self.loop_stack.append(("for", node))
@@ -223,7 +223,7 @@ class PerformanceAgent(SubAgent):
         class ListOpAnalyzer(ast.NodeVisitor):
             def __init__(self):
                 self.in_loop = False
-                self.list_ops = []
+                self.list_ops: list[dict[str, t.Any]] = []
 
             def visit_For(self, node: ast.For) -> None:
                 old_in_loop = self.in_loop
@@ -276,7 +276,7 @@ class PerformanceAgent(SubAgent):
         self, lines: list[str]
     ) -> list[dict[str, t.Any]]:
         """Find expensive operations that occur within loop contexts."""
-        repeated_calls = []
+        repeated_calls: list[dict[str, t.Any]] = []
         expensive_patterns = self._get_expensive_operation_patterns()
 
         for i, line in enumerate(lines):
@@ -339,11 +339,11 @@ class PerformanceAgent(SubAgent):
 
     def _detect_string_inefficiencies(self, content: str) -> list[dict[str, t.Any]]:
         """Detect inefficient string operations."""
-        issues = []
+        issues: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
         # Pattern: String concatenation in loops
-        string_concat_in_loop = []
+        string_concat_in_loop: list[dict[str, t.Any]] = []
 
         for i, line in enumerate(lines):
             stripped = line.strip()

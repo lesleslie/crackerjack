@@ -63,8 +63,8 @@ class ImportOptimizationAgent(SubAgent):
         return self._analyze_imports(file_path, tree)
 
     def _analyze_imports(self, file_path: Path, tree: ast.AST) -> ImportAnalysis:
-        module_imports = defaultdict(list)
-        all_imports = []
+        module_imports: dict[str, list[dict[str, t.Any]]] = defaultdict(list)
+        all_imports: list[dict[str, t.Any]] = []
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -109,7 +109,7 @@ class ImportOptimizationAgent(SubAgent):
     def _find_mixed_imports(
         self, module_imports: dict[str, list[dict[str, t.Any]]]
     ) -> list[str]:
-        mixed = []
+        mixed: list[str] = []
         for module, imports in module_imports.items():
             types = {imp["type"] for imp in imports}
             if len(types) > 1:
@@ -117,8 +117,8 @@ class ImportOptimizationAgent(SubAgent):
         return mixed
 
     def _find_redundant_imports(self, all_imports: list[dict[str, t.Any]]) -> list[str]:
-        seen_modules = set()
-        redundant = []
+        seen_modules: set[str] = set()
+        redundant: list[str] = []
 
         for imp in all_imports:
             module_key = f"{imp['module']}: {imp['name']}"
@@ -131,7 +131,7 @@ class ImportOptimizationAgent(SubAgent):
     def _find_optimization_opportunities(
         self, module_imports: dict[str, list[dict[str, t.Any]]]
     ) -> list[str]:
-        opportunities = []
+        opportunities: list[str] = []
 
         for module, imports in module_imports.items():
             standard_imports = [imp for imp in imports if imp["type"] == "standard"]
@@ -179,7 +179,7 @@ class ImportOptimizationAgent(SubAgent):
             with file_path.open("w", encoding="utf-8") as f:
                 f.write(optimized_content)
 
-            changes = []
+            changes: list[str] = []
             if analysis.mixed_imports:
                 changes.append(
                     f"Standardized mixed imports for modules: {', '.join(analysis.mixed_imports)}"
@@ -222,8 +222,8 @@ class ImportOptimizationAgent(SubAgent):
         return "\n".join(lines)
 
     def _consolidate_typing_imports(self, lines: list[str]) -> list[str]:
-        typing_imports = set()
-        lines_to_remove = []
+        typing_imports: set[str] = set()
+        lines_to_remove: list[int] = []
         insert_position = None
 
         for i, line in enumerate(lines):

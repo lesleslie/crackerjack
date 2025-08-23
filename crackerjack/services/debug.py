@@ -116,7 +116,7 @@ class AIAgentDebugger:
             duration = time.time() - start_time
             self.logger.debug(
                 f"Operation completed: {operation}",
-                extra={"duration": duration, **kwargs},
+                extra={"duration": duration} | kwargs,
             )
 
             if self.verbose:
@@ -128,7 +128,7 @@ class AIAgentDebugger:
             duration = time.time() - start_time
             self.logger.error(
                 f"Operation failed: {operation}",
-                extra={"error": str(e), "duration": duration, **kwargs},
+                extra={"error": str(e), "duration": duration} | kwargs,
             )
 
             if self.verbose:
@@ -328,13 +328,13 @@ class AIAgentDebugger:
         table.add_row(
             "MCP Operations",
             str(len(self.mcp_operations)),
-            f"Tools used: {len(set(op['tool'] for op in self.mcp_operations))}",
+            f"Tools used: {len({op['tool'] for op in self.mcp_operations})}",
         )
 
         table.add_row(
             "Agent Activities",
             str(len(self.agent_activities)),
-            f"Agents active: {len(set(act['agent'] for act in self.agent_activities))}",
+            f"Agents active: {len({act['agent'] for act in self.agent_activities})}",
         )
 
         table.add_row(
@@ -346,7 +346,7 @@ class AIAgentDebugger:
         table.add_row(
             "Error Events",
             str(len(self.error_events)),
-            f"Types: {len(set(err['error_type'] for err in self.error_events))}",
+            f"Types: {len({err['error_type'] for err in self.error_events})}",
         )
 
         # Add iteration statistics row
@@ -421,7 +421,7 @@ class AIAgentDebugger:
             if activity.get("confidence"):
                 agent_stats[agent]["confidences"].append(activity["confidence"])
 
-        for agent, stats in agent_stats.items():
+        for stats in agent_stats.values():
             if stats["confidences"]:
                 stats["avg_confidence"] = sum(stats["confidences"]) / len(
                     stats["confidences"]

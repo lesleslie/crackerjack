@@ -19,13 +19,13 @@ class AgentActivity:
 
 class AgentTracker:
     def __init__(self):
-        self.active_agents = {}
-        self.completed_activities = []
-        self.performance_metrics = defaultdict(list)
+        self.active_agents: dict[str, dict[str, t.Any]] = {}
+        self.completed_activities: list[dict[str, t.Any]] = []
+        self.performance_metrics: defaultdict[str, list[float]] = defaultdict(list)
         self.cache_stats = {"hits": 0, "misses": 0}
         self.total_issues_processed = 0
         self.coordinator_status = "idle"
-        self.agent_registry = {
+        self.agent_registry: dict[str, t.Any] = {
             "total_agents": 0,
             "initialized_agents": 0,
             "agent_types": [],

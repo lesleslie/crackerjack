@@ -161,7 +161,7 @@ class PerformanceBenchmarkService:
         ]
 
         for hook_name in hooks_to_test:
-            durations = []
+            durations: list[float] = []
 
             for i in range(iterations):
                 try:

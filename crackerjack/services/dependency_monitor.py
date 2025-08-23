@@ -111,7 +111,7 @@ class DependencyMonitorService:
     def _check_security_vulnerabilities(
         self, dependencies: dict[str, str]
     ) -> list[DependencyVulnerability]:
-        vulnerabilities = []
+        vulnerabilities: list[DependencyVulnerability] = []
 
         safety_vulns = self._check_with_safety(dependencies)
         vulnerabilities.extend(safety_vulns)
@@ -125,97 +125,90 @@ class DependencyMonitorService:
     def _check_with_safety(
         self, dependencies: dict[str, str]
     ) -> list[DependencyVulnerability]:
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as f:
-                for package, version in dependencies.items():
-                    if version != "latest":
-                        f.write(f"{package}=={version}\n")
-                    else:
-                        f.write(f"{package}\n")
-                temp_file = f.name
-
-            try:
-                result = subprocess.run(
-                    ["uv", "run", "safety", "check", "--file", temp_file, "--json"],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                )
-
-                if result.returncode == 0:
-                    return []
-
-                if result.stdout:
-                    safety_data = json.loads(result.stdout)
-                    return self._parse_safety_output(safety_data)
-
-            finally:
-                Path(temp_file).unlink(missing_ok=True)
-
-        except (
-            subprocess.CalledProcessError,
-            subprocess.TimeoutExpired,
-            json.JSONDecodeError,
-            Exception,
-        ):
-            pass  # Vulnerability check failed, return empty list
-
-        return []
+        cmd = ["uv", "run", "safety", "check", "--file", "__TEMP_FILE__", "--json"]
+        return self._run_vulnerability_tool(
+            dependencies, cmd, self._parse_safety_output
+        )
 
     def _check_with_pip_audit(
         self, dependencies: dict[str, str]
     ) -> list[DependencyVulnerability]:
+        cmd = [
+            "uv",
+            "run",
+            "pip-audit",
+            "--requirement",
+            "__TEMP_FILE__",
+            "--format",
+            "json",
+        ]
+        return self._run_vulnerability_tool(
+            dependencies, cmd, self._parse_pip_audit_output
+        )
+
+    def _run_vulnerability_tool(
+        self,
+        dependencies: dict[str, str],
+        command_template: list[str],
+        parser_func: t.Callable[[t.Any], list[DependencyVulnerability]],
+    ) -> list[DependencyVulnerability]:
+        """Common logic for running vulnerability scanning tools."""
         try:
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as f:
-                for package, version in dependencies.items():
-                    if version != "latest":
-                        f.write(f"{package}=={version}\n")
-                    else:
-                        f.write(f"{package}\n")
-                temp_file = f.name
-
+            temp_file = self._create_requirements_file(dependencies)
             try:
-                result = subprocess.run(
-                    [
-                        "uv",
-                        "run",
-                        "pip-audit",
-                        "--requirement",
-                        temp_file,
-                        "--format",
-                        "json",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
+                result = self._execute_vulnerability_command(
+                    command_template, temp_file
                 )
-
-                if result.returncode == 0:
-                    return []
-
-                if result.stdout:
-                    audit_data = json.loads(result.stdout)
-                    return self._parse_pip_audit_output(audit_data)
-
+                return self._process_vulnerability_result(result, parser_func)
             finally:
                 Path(temp_file).unlink(missing_ok=True)
-
         except (
             subprocess.CalledProcessError,
             subprocess.TimeoutExpired,
             json.JSONDecodeError,
             Exception,
         ):
-            pass  # Vulnerability check failed, return empty list
+            return []  # Vulnerability check failed, return empty list
+
+    def _create_requirements_file(self, dependencies: dict[str, str]) -> str:
+        """Create temporary requirements file for vulnerability scanning."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            for package, version in dependencies.items():
+                if version != "latest":
+                    f.write(f"{package}=={version}\n")
+                else:
+                    f.write(f"{package}\n")
+            return f.name
+
+    def _execute_vulnerability_command(
+        self, command_template: list[str], temp_file: str
+    ) -> subprocess.CompletedProcess[str]:
+        """Execute vulnerability scanning command with temp file."""
+        cmd = [part.replace("__TEMP_FILE__", temp_file) for part in command_template]
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+    def _process_vulnerability_result(
+        self,
+        result: subprocess.CompletedProcess[str],
+        parser_func: t.Callable[[t.Any], list[DependencyVulnerability]],
+    ) -> list[DependencyVulnerability]:
+        """Process vulnerability scan result using appropriate parser."""
+        if result.returncode == 0:
+            return []
+
+        if result.stdout:
+            data = json.loads(result.stdout)
+            return parser_func(data)
 
         return []
 
     def _parse_safety_output(self, safety_data: t.Any) -> list[DependencyVulnerability]:
-        vulnerabilities = []
+        vulnerabilities: list[DependencyVulnerability] = []
 
         with suppress(Exception):
             for vuln in safety_data:
@@ -236,7 +229,7 @@ class DependencyMonitorService:
     def _parse_pip_audit_output(
         self, audit_data: t.Any
     ) -> list[DependencyVulnerability]:
-        vulnerabilities = []
+        vulnerabilities: list[DependencyVulnerability] = []
 
         with suppress(Exception):
             for vuln in audit_data.get("vulnerabilities", []):
@@ -256,7 +249,7 @@ class DependencyMonitorService:
         return vulnerabilities
 
     def _check_major_updates(self, dependencies: dict[str, str]) -> list[MajorUpdate]:
-        major_updates = []
+        major_updates: list[MajorUpdate] = []
         cache = self._load_update_cache()
         current_time = time.time()
 
@@ -369,42 +362,55 @@ class DependencyMonitorService:
 
     def _get_latest_version_info(self, package: str) -> dict[str, t.Any] | None:
         try:
-            import urllib.error
-            import urllib.request
-
-            url = f"https://pypi.org/pypi/{package}/json"
-
-            # Validate URL scheme for security
-            if not url.startswith("https://pypi.org/"):
-                raise ValueError(f"Invalid URL scheme: {url}")
-
-            with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
-                data = json.load(response)
-
-            info = data.get("info", {})
-            releases = data.get("releases", {})
-
-            latest_version = info.get("version", "")
-            if not latest_version:
-                return None
-
-            release_info = releases.get(latest_version, [])
-            release_date = ""
-            if release_info:
-                release_date = release_info[0].get("upload_time", "")
-
-            breaking_changes = (
-                latest_version.split(".")[0] != "0" if "." in latest_version else False
-            )
-
-            return {
-                "version": latest_version,
-                "release_date": release_date,
-                "breaking_changes": breaking_changes,
-            }
-
+            data = self._fetch_pypi_data(package)
+            return self._extract_version_info(data)
         except Exception:
             return None
+
+    def _fetch_pypi_data(self, package: str) -> dict[str, t.Any]:
+        """Fetch package data from PyPI API."""
+        import urllib.error
+        import urllib.request
+
+        url = f"https://pypi.org/pypi/{package}/json"
+        self._validate_pypi_url(url)
+
+        with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
+            return json.load(response)
+
+    def _validate_pypi_url(self, url: str) -> None:
+        """Validate PyPI URL for security."""
+        if not url.startswith("https://pypi.org/"):
+            raise ValueError(f"Invalid URL scheme: {url}")
+
+    def _extract_version_info(self, data: dict[str, t.Any]) -> dict[str, t.Any] | None:
+        """Extract version information from PyPI response data."""
+        info = data.get("info", {})
+        releases = data.get("releases", {})
+
+        latest_version = info.get("version", "")
+        if not latest_version:
+            return None
+
+        release_date = self._get_release_date(releases, latest_version)
+        breaking_changes = self._has_breaking_changes(latest_version)
+
+        return {
+            "version": latest_version,
+            "release_date": release_date,
+            "breaking_changes": breaking_changes,
+        }
+
+    def _get_release_date(self, releases: dict[str, t.Any], version: str) -> str:
+        """Extract release date for a specific version."""
+        release_info = releases.get(version, [])
+        if release_info:
+            return release_info[0].get("upload_time", "")
+        return ""
+
+    def _has_breaking_changes(self, version: str) -> bool:
+        """Determine if version likely has breaking changes based on major version."""
+        return version.split(".")[0] != "0" if "." in version else False
 
     def _is_major_version_update(self, current: str, latest: str) -> bool:
         with suppress(ValueError, IndexError):

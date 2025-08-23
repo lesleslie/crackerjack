@@ -115,8 +115,8 @@ class TestCreationAgent(SubAgent):
     async def _apply_test_creation_fixes(
         self, issue: Issue
     ) -> tuple[list[str], list[str]]:
-        fixes_applied = []
-        files_modified = []
+        fixes_applied: list[str] = []
+        files_modified: list[str] = []
 
         coverage_fixes, coverage_files = await self._apply_coverage_based_fixes()
         fixes_applied.extend(coverage_fixes)

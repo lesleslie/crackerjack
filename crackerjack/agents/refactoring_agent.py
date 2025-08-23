@@ -265,7 +265,7 @@ class RefactoringAgent(SubAgent):
     def _find_complex_functions(
         self, tree: ast.AST, content: str
     ) -> list[dict[str, t.Any]]:
-        complex_functions = []
+        complex_functions: list[dict[str, t.Any]] = []
 
         class ComplexityAnalyzer(ast.NodeVisitor):
             def __init__(
@@ -379,7 +379,7 @@ class RefactoringAgent(SubAgent):
     def _extract_helper_methods(
         self, func_lines: list[str], func_info: dict[str, t.Any]
     ) -> list[str]:
-        extracted_methods = []
+        extracted_methods: list[str] = []
 
         for i, line in enumerate(func_lines):
             stripped = line.strip()
@@ -417,10 +417,10 @@ class RefactoringAgent(SubAgent):
         return analysis
 
     def _collect_usage_data(self, tree: ast.AST) -> dict[str, t.Any]:
-        defined_names = set()
-        used_names = set()
-        import_lines = []
-        unused_functions = []
+        defined_names: set[str] = set()
+        used_names: set[str] = set()
+        import_lines: list[tuple[int, str, str]] = []
+        unused_functions: list[dict[str, t.Any]] = []
 
         class UsageAnalyzer(ast.NodeVisitor):
             def visit_Import(self, node):

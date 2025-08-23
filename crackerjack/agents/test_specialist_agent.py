@@ -92,8 +92,8 @@ class TestSpecialistAgent(SubAgent):
             return self._create_error_fix_result(e)
 
     async def _apply_issue_fixes(self, issue: Issue) -> tuple[list[str], list[str]]:
-        fixes_applied = []
-        files_modified = []
+        fixes_applied: list[str] = []
+        files_modified: list[str] = []
 
         failure_type = self._identify_failure_type(issue)
         self.log(f"Identified failure type: {failure_type}")
