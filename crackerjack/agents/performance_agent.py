@@ -215,7 +215,7 @@ class PerformanceAgent(SubAgent):
         self, content: str, tree: ast.AST
     ) -> list[dict[str, t.Any]]:
         """Detect inefficient list operations like repeated appends or concatenations."""
-        issues = []
+        issues: list[dict[str, t.Any]] = []
         content.split("\n")
 
         # Pattern: list += [item] or list = list + [item] in loops
@@ -437,7 +437,7 @@ class PerformanceAgent(SubAgent):
         modified = False
 
         # Group instances by the string variable being concatenated to
-        var_groups = {}
+        var_groups: dict[str, list[dict[str, t.Any]]] = {}
         for instance in issue["instances"]:
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
@@ -567,10 +567,11 @@ class PerformanceAgent(SubAgent):
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = lines[line_idx]
-                indent = len(original_line) - len(original_line.lstrip())
+                indent_level = len(original_line) - len(original_line.lstrip())
+                indent_str = " " * indent_level
 
                 # Add performance comment
-                comment = f"{indent}# Performance: Consider caching this expensive operation outside the loop"
+                comment = f"{indent_str}# Performance: Consider caching this expensive operation outside the loop"
                 lines.insert(line_idx, comment)
                 modified = True
 

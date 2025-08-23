@@ -392,7 +392,7 @@ class UnifiedConfigurationService:
     def __init__(self, console: Console, project_path: Path) -> None:
         self.console = console
         self.project_path = project_path
-        self.config_cache = {}
+        self.config_cache: dict[str, t.Any] = {}
         self.project_type = self._detect_project_type()
 
     def _detect_project_type(self) -> str:
@@ -628,7 +628,7 @@ class UnifiedConfigurationService:
 
     def validate_configuration(self) -> dict[str, t.Any]:
         unified_config = self.get_unified_config()
-        validation_results = {
+        validation_results: dict[str, t.Any] = {
             "valid": True,
             "warnings": [],
             "errors": [],

@@ -135,8 +135,8 @@ class TestCreationAgent(SubAgent):
         return fixes_applied, files_modified
 
     async def _apply_coverage_based_fixes(self) -> tuple[list[str], list[str]]:
-        fixes_applied = []
-        files_modified = []
+        fixes_applied: list[str] = []
+        files_modified: list[str] = []
 
         coverage_analysis = await self._analyze_coverage()
 
@@ -162,8 +162,8 @@ class TestCreationAgent(SubAgent):
         return file_fixes["fixes"], file_fixes["files"]
 
     async def _apply_function_specific_fixes(self) -> tuple[list[str], list[str]]:
-        fixes_applied = []
-        files_modified = []
+        fixes_applied: list[str] = []
+        files_modified: list[str] = []
 
         untested_functions = await self._find_untested_functions()
         for func_info in untested_functions[:5]:
@@ -260,7 +260,7 @@ class TestCreationAgent(SubAgent):
         }
 
     async def _find_uncovered_modules(self) -> list[str]:
-        uncovered = []
+        uncovered: list[str] = []
 
         package_dir = self.context.project_path / "crackerjack"
         if not package_dir.exists():
@@ -299,8 +299,8 @@ class TestCreationAgent(SubAgent):
         return False
 
     async def _create_tests_for_module(self, module_path: str) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         try:
             module_file = Path(module_path)
@@ -335,7 +335,7 @@ class TestCreationAgent(SubAgent):
         return await self._create_tests_for_module(file_path)
 
     async def _find_untested_functions(self) -> list[dict[str, Any]]:
-        untested = []
+        untested: list[dict[str, Any]] = []
 
         package_dir = self.context.project_path / "crackerjack"
         if not package_dir.exists():
@@ -356,7 +356,7 @@ class TestCreationAgent(SubAgent):
     async def _find_untested_functions_in_file(
         self, py_file: Path
     ) -> list[dict[str, Any]]:
-        untested = []
+        untested: list[dict[str, Any]] = []
 
         functions = await self._extract_functions_from_file(py_file)
         for func in functions:
@@ -378,8 +378,8 @@ class TestCreationAgent(SubAgent):
     async def _create_test_for_function(
         self, func_info: dict[str, Any]
     ) -> dict[str, list[str]]:
-        fixes = []
-        files = []
+        fixes: list[str] = []
+        files: list[str] = []
 
         try:
             func_file = Path(func_info["file"])
@@ -425,7 +425,7 @@ class TestCreationAgent(SubAgent):
         return functions
 
     def _parse_function_nodes(self, tree: ast.AST) -> list[dict[str, Any]]:
-        functions = []
+        functions: list[dict[str, Any]] = []
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and self._is_valid_function_node(node):
@@ -463,7 +463,7 @@ class TestCreationAgent(SubAgent):
         return classes
 
     def _process_ast_nodes_for_classes(self, tree: ast.AST) -> list[dict[str, Any]]:
-        classes = []
+        classes: list[dict[str, Any]] = []
 
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and self._should_include_class(node):

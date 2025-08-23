@@ -1,4 +1,5 @@
 import time
+import typing as t
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
@@ -19,8 +20,8 @@ class AgentActivity:
 
 class AgentTracker:
     def __init__(self):
-        self.active_agents: dict[str, dict[str, t.Any]] = {}
-        self.completed_activities: list[dict[str, t.Any]] = []
+        self.active_agents: dict[str, AgentActivity] = {}
+        self.completed_activities: list[AgentActivity] = []
         self.performance_metrics: defaultdict[str, list[float]] = defaultdict(list)
         self.cache_stats = {"hits": 0, "misses": 0}
         self.total_issues_processed = 0
@@ -89,10 +90,10 @@ class AgentTracker:
         self.cache_stats["misses"] += 1
 
     def get_status(self) -> dict[str, Any]:
-        active_agents = []
+        active_agents: list[dict[str, Any]] = []
 
         for agent_type, activity in self.active_agents.items():
-            agent_data = {
+            agent_data: dict[str, Any] = {
                 "agent_type": agent_type,
                 "confidence": activity.confidence,
                 "status": activity.status,
@@ -125,7 +126,7 @@ class AgentTracker:
         )
         success_rate = successful / total_completed if total_completed > 0 else 0.0
 
-        all_times = []
+        all_times: list[float] = []
         for times in self.performance_metrics.values():
             all_times.extend(times)
 
@@ -150,7 +151,7 @@ class AgentTracker:
         active_count = len(self.active_agents)
         cache_hits = self.cache_stats["hits"]
 
-        active_summary = []
+        active_summary: list[dict[str, Any]] = []
         for agent_type, activity in self.active_agents.items():
             emoji = self._get_agent_emoji(agent_type)
             processing_time = time.time() - activity.start_time

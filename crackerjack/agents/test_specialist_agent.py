@@ -178,7 +178,7 @@ class TestSpecialistAgent(SubAgent):
         return "unknown"
 
     async def _fix_missing_fixtures(self, issue: Issue) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         match = re.search(r"fixture '(\w+)' not found", issue.message)
         if not match:
@@ -219,7 +219,7 @@ class TestSpecialistAgent(SubAgent):
     def _apply_import_fixes(
         self, lines: list[str], content: str, file_path: str
     ) -> tuple[list[str], bool]:
-        fixes = []
+        fixes: list[str] = []
         modified = False
 
         if self._needs_pytest_import(content):
@@ -268,7 +268,7 @@ class TestSpecialistAgent(SubAgent):
             self.log(f"Fixed imports in {file_path_str}")
 
     async def _fix_hardcoded_paths(self, issue: Issue) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         if not issue.file_path:
             return fixes
@@ -294,7 +294,7 @@ class TestSpecialistAgent(SubAgent):
         return fixes
 
     async def _fix_mock_issues(self, issue: Issue) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         if (
             not self._is_valid_mock_issue_file(issue.file_path)
@@ -324,7 +324,7 @@ class TestSpecialistAgent(SubAgent):
     def _apply_mock_fixes_to_content(
         self, content: str, file_path: str
     ) -> tuple[str, list[str]]:
-        fixes = []
+        fixes: list[str] = []
 
         if self._needs_console_mock_fix(content):
             content = self._fix_console_mock_usage(content)
@@ -372,7 +372,7 @@ class TestSpecialistAgent(SubAgent):
         if not file_path:
             return []
 
-        fixes = []
+        fixes: list[str] = []
         path = Path(file_path)
         content = self.context.get_file_content(path)
         if not content:
@@ -406,7 +406,7 @@ def temp_pkg_path(tmp_path) -> Path:
         if not file_path:
             return []
 
-        fixes = []
+        fixes: list[str] = []
         path = Path(file_path)
         content = self.context.get_file_content(path)
         if not content:
@@ -436,7 +436,7 @@ def console() -> Console:
         ]
 
     async def _fix_test_file_issues(self, file_path: str) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         path = Path(file_path)
         content = self.context.get_file_content(path)
@@ -460,7 +460,7 @@ def console() -> Console:
         return fixes
 
     async def _apply_general_test_fixes(self) -> list[str]:
-        fixes = []
+        fixes: list[str] = []
 
         returncode, _, stderr = await self.run_command(
             ["uv", "run", "python", "-m", "pytest", "--collect-only", "-q"]

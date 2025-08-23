@@ -51,7 +51,7 @@ class ProjectHealth:
         return all(recent[i] >= recent[i + 1] for i in range(len(recent) - 1))
 
     def get_health_score(self) -> float:
-        scores = []
+        scores: list[float] = []
 
         if self.lint_error_trend:
             recent_errors = sum(self.lint_error_trend[-5:]) / min(
@@ -78,7 +78,7 @@ class ProjectHealth:
         return sum(scores) / len(scores) if scores else 0.0
 
     def get_recommendations(self) -> list[str]:
-        recommendations = []
+        recommendations: list[str] = []
 
         if self._is_trending_up(self.lint_error_trend):
             recommendations.append(
@@ -89,7 +89,7 @@ class ProjectHealth:
             recommendations.append("🧪 Test coverage is declining - add more tests")
 
         if any(age > 365 for age in self.dependency_age.values()):
-            old_deps = [pkg for pkg, age in self.dependency_age.items() if age > 365]
+            old_deps: list[str] = [pkg for pkg, age in self.dependency_age.items() if age > 365]
             recommendations.append(
                 f"📦 Very old dependencies detected: {', '.join(old_deps[:3])}"
             )
@@ -251,7 +251,7 @@ class HealthMetricsService:
         return None
 
     def _calculate_dependency_ages(self) -> dict[str, int]:
-        dependency_ages = {}
+        dependency_ages: dict[str, int] = {}
 
         with suppress(Exception):
             if not self.pyproject_path.exists():
@@ -260,7 +260,7 @@ class HealthMetricsService:
             with self.pyproject_path.open("rb") as f:
                 data = tomllib.load(f)
 
-            dependencies = []
+            dependencies: list[str] = []
 
             if "dependencies" in data.get("project", {}):
                 dependencies.extend(data["project"]["dependencies"])

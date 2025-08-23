@@ -342,13 +342,13 @@ class RefactoringAgent(SubAgent):
                 self.generic_visit(node)
                 self.nesting_level -= 1
 
-            def visit_With(self, node):
+            def visit_With(self, node: ast.With) -> None:
                 self.complexity += 1 + self.nesting_level
                 self.nesting_level += 1
                 self.generic_visit(node)
                 self.nesting_level -= 1
 
-            def visit_BoolOp(self, node):
+            def visit_BoolOp(self, node: ast.BoolOp) -> None:
                 self.complexity += len(node.values) - 1
                 self.generic_visit(node)
 
@@ -423,25 +423,25 @@ class RefactoringAgent(SubAgent):
         unused_functions: list[dict[str, t.Any]] = []
 
         class UsageAnalyzer(ast.NodeVisitor):
-            def visit_Import(self, node):
+            def visit_Import(self, node: ast.Import) -> None:
                 for alias in node.names:
                     name = alias.asname or alias.name
                     defined_names.add(name)
                     import_lines.append((node.lineno, name, "import"))
 
-            def visit_ImportFrom(self, node):
+            def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
                 for alias in node.names:
                     name = alias.asname or alias.name
                     defined_names.add(name)
                     import_lines.append((node.lineno, name, "from_import"))
 
-            def visit_FunctionDef(self, node):
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
                 defined_names.add(node.name)
                 if not node.name.startswith("_"):
-                    unused_functions.append(node.name)
+                    unused_functions.append({"name": node.name, "line": node.lineno})
                 self.generic_visit(node)
 
-            def visit_Name(self, node):
+            def visit_Name(self, node: ast.Name) -> None:
                 if isinstance(node.ctx, ast.Load):
                     used_names.add(node.id)
 
@@ -475,15 +475,15 @@ class RefactoringAgent(SubAgent):
         unused_functions = [
             func
             for func in analyzer_result["unused_functions"]
-            if func not in analyzer_result["used_names"]
+            if func["name"] not in analyzer_result["used_names"]
         ]
         analysis["unused_functions"] = unused_functions
         for func in unused_functions:
-            analysis["removable_items"].append(f"unused function: {func}")
+            analysis["removable_items"].append(f"unused function: {func['name']}")
 
     def _remove_dead_code_items(self, content: str, analysis: dict[str, t.Any]) -> str:
         lines = content.split("\n")
-        lines_to_remove = set()
+        lines_to_remove: set[int] = set()
 
         for unused_import in analysis["unused_imports"]:
             line_idx = unused_import["line"] - 1
