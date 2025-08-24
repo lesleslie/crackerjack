@@ -90,8 +90,9 @@ class PluginBase(abc.ABC):
         required_keys = schema.get("required", [])
         for key in required_keys:
             if key not in config:
+                msg = f"Required config key '{key}' missing for plugin {self.name}"
                 raise ValueError(
-                    f"Required config key '{key}' missing for plugin {self.name}"
+                    msg,
                 )
 
     def get_config(self, key: str, default: t.Any = None) -> t.Any:

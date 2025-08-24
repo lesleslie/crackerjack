@@ -79,24 +79,23 @@ class ImportOptimizationAgent(SubAgent):
                     base_module = alias.name.split(".")[0]
                     module_imports[base_module].append(import_info)
 
-            elif isinstance(node, ast.ImportFrom):
-                if node.module:
-                    for alias in node.names:
-                        import_info = {
-                            "type": "from",
-                            "module": node.module,
-                            "name": alias.name,
-                            "asname": alias.asname,
-                            "line": node.lineno,
-                        }
-                        all_imports.append(import_info)
-                        base_module = node.module.split(".")[0]
-                        module_imports[base_module].append(import_info)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                for alias in node.names:
+                    import_info = {
+                        "type": "from",
+                        "module": node.module,
+                        "name": alias.name,
+                        "asname": alias.asname,
+                        "line": node.lineno,
+                    }
+                    all_imports.append(import_info)
+                    base_module = node.module.split(".")[0]
+                    module_imports[base_module].append(import_info)
 
         mixed_imports = self._find_mixed_imports(module_imports)
         redundant_imports = self._find_redundant_imports(all_imports)
         optimization_opportunities = self._find_optimization_opportunities(
-            module_imports
+            module_imports,
         )
 
         return ImportAnalysis(
@@ -107,7 +106,7 @@ class ImportOptimizationAgent(SubAgent):
         )
 
     def _find_mixed_imports(
-        self, module_imports: dict[str, list[dict[str, t.Any]]]
+        self, module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> list[str]:
         mixed: list[str] = []
         for module, imports in module_imports.items():
@@ -129,7 +128,7 @@ class ImportOptimizationAgent(SubAgent):
         return redundant
 
     def _find_optimization_opportunities(
-        self, module_imports: dict[str, list[dict[str, t.Any]]]
+        self, module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> list[str]:
         opportunities: list[str] = []
 
@@ -138,7 +137,7 @@ class ImportOptimizationAgent(SubAgent):
             if len(standard_imports) >= 2:
                 opportunities.append(
                     f"Consider consolidating {len(standard_imports)} standard imports "
-                    f"from {module} to from-imports"
+                    f"from {module} to from-imports",
                 )
 
         return opportunities
@@ -159,7 +158,7 @@ class ImportOptimizationAgent(SubAgent):
                 analysis.mixed_imports,
                 analysis.redundant_imports,
                 analysis.optimization_opportunities,
-            ]
+            ],
         ):
             return FixResult(
                 success=True,
@@ -182,15 +181,15 @@ class ImportOptimizationAgent(SubAgent):
             changes: list[str] = []
             if analysis.mixed_imports:
                 changes.append(
-                    f"Standardized mixed imports for modules: {', '.join(analysis.mixed_imports)}"
+                    f"Standardized mixed imports for modules: {', '.join(analysis.mixed_imports)}",
                 )
             if analysis.redundant_imports:
                 changes.append(
-                    f"Removed {len(analysis.redundant_imports)} redundant imports"
+                    f"Removed {len(analysis.redundant_imports)} redundant imports",
                 )
             if analysis.optimization_opportunities:
                 changes.append(
-                    f"Applied {len(analysis.optimization_opportunities)} optimizations"
+                    f"Applied {len(analysis.optimization_opportunities)} optimizations",
                 )
 
             return FixResult(
@@ -271,7 +270,7 @@ class ImportOptimizationAgent(SubAgent):
 
             diagnostics["redundant_imports"] += len(analysis.redundant_imports)
             diagnostics["optimization_opportunities"] += len(
-                analysis.optimization_opportunities
+                analysis.optimization_opportunities,
             )
 
         return diagnostics

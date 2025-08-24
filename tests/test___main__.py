@@ -3,7 +3,7 @@
 from crackerjack.__main__ import main
 
 
-def test_main_basic():
+def test_main_basic() -> None:
     """Test basic functionality of main."""
     import inspect
 

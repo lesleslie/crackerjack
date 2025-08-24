@@ -1,5 +1,4 @@
-"""
-Strategic test file targeting 0% coverage agents modules for maximum coverage impact.
+"""Strategic test file targeting 0% coverage agents modules for maximum coverage impact.
 
 Focus on high-line-count agents modules with 0% coverage:
 - agents/documentation_agent.py (287 lines)
@@ -17,10 +16,10 @@ import pytest
 
 @pytest.mark.unit
 class TestDocumentationAgent:
-    """Test documentation agent - 287 lines targeted"""
+    """Test documentation agent - 287 lines targeted."""
 
-    def test_documentation_agent_import(self):
-        """Basic import test for documentation agent"""
+    def test_documentation_agent_import(self) -> None:
+        """Basic import test for documentation agent."""
         from crackerjack.agents.documentation_agent import DocumentationAgent
 
         assert DocumentationAgent is not None
@@ -28,10 +27,10 @@ class TestDocumentationAgent:
 
 @pytest.mark.unit
 class TestRefactoringAgent:
-    """Test refactoring agent - 245 lines targeted"""
+    """Test refactoring agent - 245 lines targeted."""
 
-    def test_refactoring_agent_import(self):
-        """Basic import test for refactoring agent"""
+    def test_refactoring_agent_import(self) -> None:
+        """Basic import test for refactoring agent."""
         from crackerjack.agents.refactoring_agent import RefactoringAgent
 
         assert RefactoringAgent is not None
@@ -39,10 +38,10 @@ class TestRefactoringAgent:
 
 @pytest.mark.unit
 class TestPerformanceAgent:
-    """Test performance agent - 198 lines targeted"""
+    """Test performance agent - 198 lines targeted."""
 
-    def test_performance_agent_import(self):
-        """Basic import test for performance agent"""
+    def test_performance_agent_import(self) -> None:
+        """Basic import test for performance agent."""
         from crackerjack.agents.performance_agent import PerformanceAgent
 
         assert PerformanceAgent is not None
@@ -50,10 +49,10 @@ class TestPerformanceAgent:
 
 @pytest.mark.unit
 class TestSecurityAgent:
-    """Test security agent - 156 lines targeted"""
+    """Test security agent - 156 lines targeted."""
 
-    def test_security_agent_import(self):
-        """Basic import test for security agent"""
+    def test_security_agent_import(self) -> None:
+        """Basic import test for security agent."""
         from crackerjack.agents.security_agent import SecurityAgent
 
         assert SecurityAgent is not None
@@ -61,10 +60,10 @@ class TestSecurityAgent:
 
 @pytest.mark.unit
 class TestImportOptimizationAgent:
-    """Test import optimization agent - 134 lines targeted"""
+    """Test import optimization agent - 134 lines targeted."""
 
-    def test_import_optimization_agent_import(self):
-        """Basic import test for import optimization agent"""
+    def test_import_optimization_agent_import(self) -> None:
+        """Basic import test for import optimization agent."""
         from crackerjack.agents.import_optimization_agent import ImportOptimizationAgent
 
         assert ImportOptimizationAgent is not None
@@ -72,10 +71,10 @@ class TestImportOptimizationAgent:
 
 @pytest.mark.unit
 class TestDRYAgent:
-    """Test DRY agent - 123 lines targeted"""
+    """Test DRY agent - 123 lines targeted."""
 
-    def test_dry_agent_import(self):
-        """Basic import test for DRY agent"""
+    def test_dry_agent_import(self) -> None:
+        """Basic import test for DRY agent."""
         from crackerjack.agents.dry_agent import DRYAgent
 
         assert DRYAgent is not None

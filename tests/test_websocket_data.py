@@ -10,7 +10,7 @@ from rich.console import Console
 console = Console()
 
 
-async def test_websocket_flow():
+async def test_websocket_flow() -> None:
     progress_dir = Path.home() / ".cache" / "crackerjack" / "progress"
     progress_dir.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +94,7 @@ async def test_websocket_flow():
                 "overall_progress": overall_progress,
                 "message": message,
                 "timestamp": time.time(),
-            }
+            },
         )
 
         with progress_file.open("w") as f:
@@ -109,7 +109,7 @@ async def test_websocket_flow():
         json.dump(progress_data, f, indent=2)
 
     console.print(
-        "\n[green]✅ Test completed! Check if the monitor showed the updates.[/green]"
+        "\n[green]✅ Test completed! Check if the monitor showed the updates.[/green]",
     )
     console.print("\nPress Enter to clean up...")
     input()

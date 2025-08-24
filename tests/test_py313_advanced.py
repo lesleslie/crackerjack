@@ -19,7 +19,7 @@ class TestPy313Advanced:
     def test_command_runner_type_parameters(self) -> None:
         runner_str = CommandRunner[str]()
         with mock.patch.object(
-            CommandRunner, "run_command", return_value="test output"
+            CommandRunner, "run_command", return_value="test output",
         ):
             result = runner_str.run_command(["echo", "test"])
             assert result == "test output"
@@ -95,7 +95,7 @@ class TestPy313Advanced:
             return f"Failure object: {result}"
 
         processed = process_hook_results(
-            non_dict_results, alt_success_handler, alt_failure_handler
+            non_dict_results, alt_success_handler, alt_failure_handler,
         )
         assert processed[0] == "Failure object: not a dict"
         assert processed[1] == "Failure object: 123"
@@ -132,4 +132,4 @@ class TestPy313Advanced:
             assert isinstance(result["duration_ms"], float)
             success, message = runner.handle_result(result)
             assert not success
-            assert "Unknown command result pattern" == message
+            assert message == "Unknown command result pattern"

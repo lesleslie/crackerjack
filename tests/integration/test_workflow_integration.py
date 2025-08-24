@@ -1,5 +1,4 @@
-"""
-Integration tests for key crackerjack workflows.
+"""Integration tests for key crackerjack workflows.
 
 Tests complete workflows from start to finish:
 - Full crackerjack execution with hooks and tests
@@ -9,6 +8,7 @@ Tests complete workflows from start to finish:
 - Error recovery and retry logic
 """
 
+import contextlib
 import os
 import subprocess
 from pathlib import Path
@@ -27,10 +27,10 @@ from crackerjack.services.unified_config import CrackerjackConfig
 
 @pytest.mark.integration
 class TestWorkflowIntegration:
-    """Test complete workflow integration"""
+    """Test complete workflow integration."""
 
-    def test_basic_workflow_execution(self, temp_project_dir, sample_config):
-        """Test basic workflow from start to finish"""
+    def test_basic_workflow_execution(self, temp_project_dir, sample_config) -> None:
+        """Test basic workflow from start to finish."""
         # Update config to use temp project
         sample_config.project_path = temp_project_dir
         sample_config.testing = False  # Skip tests for speed
@@ -44,8 +44,8 @@ class TestWorkflowIntegration:
         # Should complete successfully
         assert isinstance(result, bool)
 
-    def test_workflow_with_configuration_loading(self, temp_project_dir):
-        """Test workflow with real configuration loading"""
+    def test_workflow_with_configuration_loading(self, temp_project_dir) -> None:
+        """Test workflow with real configuration loading."""
         # Create pyproject.toml in temp project
         config_content = """
 [tool.crackerjack]
@@ -59,13 +59,13 @@ testing = false
         # Load configuration
         config_service = ConfigurationService()
         config = config_service.load_config_from_file(
-            str(temp_project_dir / "pyproject.toml")
+            str(temp_project_dir / "pyproject.toml"),
         )
 
         assert config is not None
 
-    def test_hook_manager_integration(self, temp_project_dir, sample_config):
-        """Test hook manager integration with filesystem"""
+    def test_hook_manager_integration(self, temp_project_dir, sample_config) -> None:
+        """Test hook manager integration with filesystem."""
         sample_config.project_path = temp_project_dir
         sample_config.skip_hooks = True  # Use mock hooks for reliability
 
@@ -81,8 +81,8 @@ testing = false
             assert isinstance(success, bool)
             assert isinstance(errors, list)
 
-    def test_filesystem_integration(self, temp_project_dir):
-        """Test filesystem service with real file operations"""
+    def test_filesystem_integration(self, temp_project_dir) -> None:
+        """Test filesystem service with real file operations."""
         fs_service = FileSystemService()
 
         # Test file operations
@@ -104,8 +104,8 @@ testing = false
         fs_service.create_directory(str(new_dir))
         assert new_dir.exists()
 
-    def test_git_integration(self, temp_project_dir):
-        """Test git service integration"""
+    def test_git_integration(self, temp_project_dir) -> None:
+        """Test git service integration."""
         # Change to temp project directory
         original_cwd = os.getcwd()
         os.chdir(temp_project_dir)
@@ -132,10 +132,10 @@ testing = false
 @pytest.mark.integration
 @pytest.mark.slow
 class TestMCPIntegration:
-    """Test MCP server integration"""
+    """Test MCP server integration."""
 
-    def test_mcp_server_import(self):
-        """Test that MCP server can be imported"""
+    def test_mcp_server_import(self) -> None:
+        """Test that MCP server can be imported."""
         try:
             from crackerjack.mcp.server import main as mcp_main
 
@@ -143,8 +143,8 @@ class TestMCPIntegration:
         except ImportError:
             pytest.skip("MCP server not available")
 
-    def test_websocket_server_import(self):
-        """Test that WebSocket server can be imported"""
+    def test_websocket_server_import(self) -> None:
+        """Test that WebSocket server can be imported."""
         try:
             from crackerjack.mcp.websocket_server import main as ws_main
 
@@ -155,10 +155,10 @@ class TestMCPIntegration:
 
 @pytest.mark.integration
 class TestConfigurationIntegration:
-    """Test configuration loading and validation"""
+    """Test configuration loading and validation."""
 
-    def test_config_service_integration(self, temp_dir):
-        """Test configuration service with real TOML files"""
+    def test_config_service_integration(self, temp_dir) -> None:
+        """Test configuration service with real TOML files."""
         config_service = ConfigurationService()
 
         # Create test config file
@@ -184,11 +184,11 @@ verbose = false
         assert merged["test_timeout"] == 60
         assert merged["verbose"] is True
 
-    def test_crackerjack_config_validation(self):
-        """Test CrackerjackConfig validation"""
+    def test_crackerjack_config_validation(self) -> None:
+        """Test CrackerjackConfig validation."""
         # Valid config
         valid_config = CrackerjackConfig(
-            project_path=Path.cwd(), test_timeout=60, test_workers=2, testing=True
+            project_path=Path.cwd(), test_timeout=60, test_workers=2, testing=True,
         )
 
         assert valid_config.project_path == Path.cwd()
@@ -200,12 +200,12 @@ verbose = false
 @pytest.mark.integration
 @pytest.mark.performance
 class TestWorkflowPerformance:
-    """Test workflow performance characteristics"""
+    """Test workflow performance characteristics."""
 
     def test_fast_hook_performance(
-        self, temp_project_dir, sample_config, performance_timer
-    ):
-        """Test that fast hooks complete within reasonable time"""
+        self, temp_project_dir, sample_config, performance_timer,
+    ) -> None:
+        """Test that fast hooks complete within reasonable time."""
         sample_config.project_path = temp_project_dir
         sample_config.skip_hooks = True  # Use mock for performance test
 
@@ -222,9 +222,9 @@ class TestWorkflowPerformance:
             assert duration < 5.0  # 5 seconds max for mocked hooks
 
     def test_workflow_orchestrator_performance(
-        self, temp_project_dir, sample_config, performance_timer
-    ):
-        """Test workflow orchestrator performance"""
+        self, temp_project_dir, sample_config, performance_timer,
+    ) -> None:
+        """Test workflow orchestrator performance."""
         sample_config.project_path = temp_project_dir
         sample_config.testing = False
         sample_config.skip_hooks = True
@@ -243,24 +243,24 @@ class TestWorkflowPerformance:
 @pytest.mark.integration
 @pytest.mark.external
 class TestExternalDependencies:
-    """Test integration with external dependencies"""
+    """Test integration with external dependencies."""
 
-    def test_uv_availability(self):
-        """Test that UV package manager is available"""
+    def test_uv_availability(self) -> None:
+        """Test that UV package manager is available."""
         try:
             result = subprocess.run(
-                ["uv", "--version"], capture_output=True, text=True, timeout=10
+                ["uv", "--version"], check=False, capture_output=True, text=True, timeout=10,
             )
             assert result.returncode == 0
             assert "uv" in result.stdout.lower()
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pytest.skip("UV not available in test environment")
 
-    def test_pre_commit_availability(self):
-        """Test that pre-commit is available"""
+    def test_pre_commit_availability(self) -> None:
+        """Test that pre-commit is available."""
         try:
             result = subprocess.run(
-                ["pre-commit", "--version"], capture_output=True, text=True, timeout=10
+                ["pre-commit", "--version"], check=False, capture_output=True, text=True, timeout=10,
             )
             assert result.returncode == 0
             assert "pre-commit" in result.stdout.lower()
@@ -271,10 +271,10 @@ class TestExternalDependencies:
 @pytest.mark.integration
 @pytest.mark.regression
 class TestRegressionScenarios:
-    """Test scenarios that have caused issues in the past"""
+    """Test scenarios that have caused issues in the past."""
 
-    def test_empty_project_handling(self, temp_dir):
-        """Test handling of empty project directory"""
+    def test_empty_project_handling(self, temp_dir) -> None:
+        """Test handling of empty project directory."""
         empty_project = temp_dir / "empty_project"
         empty_project.mkdir()
 
@@ -292,8 +292,8 @@ class TestRegressionScenarios:
         result = orchestrator.execute_workflow()
         assert isinstance(result, bool)
 
-    def test_missing_pyproject_toml(self, temp_dir):
-        """Test handling of missing pyproject.toml"""
+    def test_missing_pyproject_toml(self, temp_dir) -> None:
+        """Test handling of missing pyproject.toml."""
         project_without_config = temp_dir / "no_config_project"
         project_without_config.mkdir()
 
@@ -302,16 +302,16 @@ class TestRegressionScenarios:
         # Should handle missing config file gracefully
         with pytest.raises((FileNotFoundError, Exception)):
             config_service.load_config_from_file(
-                str(project_without_config / "pyproject.toml")
+                str(project_without_config / "pyproject.toml"),
             )
 
 
 @pytest.mark.integration
 class TestErrorRecovery:
-    """Test error recovery and retry mechanisms"""
+    """Test error recovery and retry mechanisms."""
 
-    def test_hook_failure_recovery(self, temp_project_dir, sample_config):
-        """Test recovery from hook failures"""
+    def test_hook_failure_recovery(self, temp_project_dir, sample_config) -> None:
+        """Test recovery from hook failures."""
         sample_config.project_path = temp_project_dir
 
         hook_manager = HookManagerImpl(console=Console(), pkg_path=Path.cwd())
@@ -327,7 +327,7 @@ class TestErrorRecovery:
             return (True, "Hook passed", "")
 
         with patch.object(
-            hook_manager, "_run_hook_command", side_effect=mock_hook_side_effect
+            hook_manager, "_run_hook_command", side_effect=mock_hook_side_effect,
         ):
             success, errors = hook_manager.run_fast_hooks()
 
@@ -335,8 +335,8 @@ class TestErrorRecovery:
             assert isinstance(success, bool)
             assert isinstance(errors, list)
 
-    def test_filesystem_error_handling(self, temp_dir):
-        """Test filesystem error handling"""
+    def test_filesystem_error_handling(self, temp_dir) -> None:
+        """Test filesystem error handling."""
         fs_service = FileSystemService()
 
         # Test reading non-existent file
@@ -363,7 +363,5 @@ class TestErrorRecovery:
             pytest.skip("Cannot test read-only scenarios in this environment")
         finally:
             # Restore permissions for cleanup
-            try:
+            with contextlib.suppress(Exception):
                 readonly_dir.chmod(0o755)
-            except Exception:
-                pass

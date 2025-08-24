@@ -4,12 +4,12 @@ from .loader import PluginDiscovery, PluginLoader
 from .managers import PluginManager
 
 __all__ = [
-    "PluginBase",
-    "PluginMetadata",
-    "PluginRegistry",
     "CustomHookPlugin",
     "HookPluginBase",
-    "PluginManager",
-    "PluginLoader",
+    "PluginBase",
     "PluginDiscovery",
+    "PluginLoader",
+    "PluginManager",
+    "PluginMetadata",
+    "PluginRegistry",
 ]

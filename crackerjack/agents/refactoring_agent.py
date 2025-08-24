@@ -18,7 +18,7 @@ class RefactoringAgent(SubAgent):
     async def can_handle(self, issue: Issue) -> float:
         if issue.type == IssueType.COMPLEXITY:
             return 0.9
-        elif issue.type == IssueType.DEAD_CODE:
+        if issue.type == IssueType.DEAD_CODE:
             return 0.8
         return 0.0
 
@@ -27,7 +27,7 @@ class RefactoringAgent(SubAgent):
 
         if issue.type == IssueType.COMPLEXITY:
             return await self._reduce_complexity(issue)
-        elif issue.type == IssueType.DEAD_CODE:
+        if issue.type == IssueType.DEAD_CODE:
             return await self._remove_dead_code(issue)
 
         return FixResult(
@@ -99,11 +99,11 @@ class RefactoringAgent(SubAgent):
         return self._apply_and_save_refactoring(file_path, content, complex_functions)
 
     def _apply_and_save_refactoring(
-        self, file_path: Path, content: str, complex_functions: list[dict[str, t.Any]]
+        self, file_path: Path, content: str, complex_functions: list[dict[str, t.Any]],
     ) -> FixResult:
         """Apply refactoring and save changes."""
         refactored_content = self._apply_complexity_reduction(
-            content, complex_functions
+            content, complex_functions,
         )
 
         if refactored_content == content:
@@ -217,7 +217,7 @@ class RefactoringAgent(SubAgent):
         return self._apply_and_save_cleanup(file_path, content, dead_code_analysis)
 
     def _apply_and_save_cleanup(
-        self, file_path: Path, content: str, analysis: dict[str, t.Any]
+        self, file_path: Path, content: str, analysis: dict[str, t.Any],
     ) -> FixResult:
         """Apply dead code cleanup and save changes."""
         cleaned_content = self._remove_dead_code_items(content, analysis)
@@ -263,7 +263,7 @@ class RefactoringAgent(SubAgent):
         )
 
     def _find_complex_functions(
-        self, tree: ast.AST, content: str
+        self, tree: ast.AST, content: str,
     ) -> list[dict[str, t.Any]]:
         complex_functions: list[dict[str, t.Any]] = []
 
@@ -271,7 +271,7 @@ class RefactoringAgent(SubAgent):
             def __init__(
                 self,
                 calc_complexity: t.Callable[
-                    [ast.FunctionDef | ast.AsyncFunctionDef], int
+                    [ast.FunctionDef | ast.AsyncFunctionDef], int,
                 ],
             ) -> None:
                 self.calc_complexity = calc_complexity
@@ -286,7 +286,7 @@ class RefactoringAgent(SubAgent):
                             "line_end": node.end_lineno or node.lineno,
                             "complexity": complexity,
                             "node": node,
-                        }
+                        },
                     )
                 self.generic_visit(node)
 
@@ -301,7 +301,7 @@ class RefactoringAgent(SubAgent):
                             "line_end": node.end_lineno or node.lineno,
                             "complexity": complexity,
                             "node": node,
-                        }
+                        },
                     )
                 self.generic_visit(node)
 
@@ -311,10 +311,10 @@ class RefactoringAgent(SubAgent):
         return complex_functions
 
     def _calculate_cognitive_complexity(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> int:
         class ComplexityCalculator(ast.NodeVisitor):
-            def __init__(self):
+            def __init__(self) -> None:
                 self.complexity = 0
                 self.nesting_level = 0
 
@@ -357,7 +357,7 @@ class RefactoringAgent(SubAgent):
         return calculator.complexity
 
     def _apply_complexity_reduction(
-        self, content: str, complex_functions: list[dict[str, t.Any]]
+        self, content: str, complex_functions: list[dict[str, t.Any]],
     ) -> str:
         lines = content.split("\n")
         modified = False
@@ -377,7 +377,7 @@ class RefactoringAgent(SubAgent):
         return "\n".join(lines) if modified else content
 
     def _extract_helper_methods(
-        self, func_lines: list[str], func_info: dict[str, t.Any]
+        self, func_lines: list[str], func_info: dict[str, t.Any],
     ) -> list[str]:
         extracted_methods: list[str] = []
 
@@ -456,7 +456,7 @@ class RefactoringAgent(SubAgent):
         }
 
     def _process_unused_imports(
-        self, analysis: dict[str, t.Any], analyzer_result: dict[str, t.Any]
+        self, analysis: dict[str, t.Any], analyzer_result: dict[str, t.Any],
     ) -> None:
         for line_no, name, import_type in analyzer_result["import_lines"]:
             if name not in analyzer_result["used_names"]:
@@ -465,12 +465,12 @@ class RefactoringAgent(SubAgent):
                         "name": name,
                         "line": line_no,
                         "type": import_type,
-                    }
+                    },
                 )
                 analysis["removable_items"].append(f"unused import: {name}")
 
     def _process_unused_functions(
-        self, analysis: dict[str, t.Any], analyzer_result: dict[str, t.Any]
+        self, analysis: dict[str, t.Any], analyzer_result: dict[str, t.Any],
     ) -> None:
         unused_functions = [
             func

@@ -3,6 +3,7 @@ import logging
 import tempfile
 import time
 from pathlib import Path
+from typing import Never
 
 import pytest
 import structlog
@@ -98,7 +99,7 @@ class TestLoggingContext:
         setup_structured_logging(level="INFO", json_output=False)
 
         with LoggingContext(
-            "test_operation", param1="value1", param2=42
+            "test_operation", param1="value1", param2=42,
         ) as correlation_id:
             assert isinstance(correlation_id, str)
             assert len(correlation_id) == 8
@@ -114,13 +115,14 @@ class TestLoggingContext:
         assert "param2 = 42" in output
         assert "duration_seconds" in output
 
-    def test_logging_context_exception(self, capsys):
+    def test_logging_context_exception(self, capsys) -> Never:
         setup_structured_logging(level="INFO", json_output=False)
 
         with pytest.raises(ValueError, match="Test error"):
             with LoggingContext("failing_operation", test_param="test_value"):
                 time.sleep(0.01)
-                raise ValueError("Test error")
+                msg = "Test error"
+                raise ValueError(msg)
 
         captured = capsys.readouterr()
         output = captured.out
@@ -164,9 +166,10 @@ class TestLogPerformanceDecorator:
         setup_structured_logging(level="INFO", json_output=False)
 
         @log_performance("failing_function")
-        def failing_function():
+        def failing_function() -> Never:
             time.sleep(0.01)
-            raise RuntimeError("Function failed")
+            msg = "Function failed"
+            raise RuntimeError(msg)
 
         with pytest.raises(RuntimeError, match="Function failed"):
             failing_function()

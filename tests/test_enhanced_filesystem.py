@@ -105,7 +105,7 @@ class TestEnhancedFileSystemService:
     @pytest.fixture
     def fs_service(self):
         return EnhancedFileSystemService(
-            cache_size=100, cache_ttl=60.0, batch_size=5, enable_async=True
+            cache_size=100, cache_ttl=60.0, batch_size=5, enable_async=True,
         )
 
     @pytest.fixture
@@ -148,7 +148,7 @@ class TestEnhancedFileSystemService:
         assert content == new_content
 
     def test_cache_invalidation_on_file_modification(
-        self, fs_service, temp_dir
+        self, fs_service, temp_dir,
     ) -> None:
         test_file = temp_dir / "external_modification.txt"
         original_content = "original"

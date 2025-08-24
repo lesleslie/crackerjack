@@ -43,7 +43,7 @@ class CleaningStepProtocol(Protocol):
 
 class ErrorHandlerProtocol(Protocol):
     def handle_file_error(
-        self, file_path: Path, error: Exception, step: str
+        self, file_path: Path, error: Exception, step: str,
     ) -> None: ...
     def log_cleaning_result(self, result: CleaningResult) -> None: ...
 
@@ -68,7 +68,7 @@ class FileProcessor(BaseModel):
                 try:
                     content = file_path.read_text(encoding=encoding)
                     self.logger.warning(
-                        f"File {file_path} read with {encoding} encoding"
+                        f"File {file_path} read with {encoding} encoding",
                     )
                     return content
                 except UnicodeDecodeError:
@@ -118,7 +118,7 @@ class CleaningErrorHandler(BaseModel):
 
     def handle_file_error(self, file_path: Path, error: Exception, step: str) -> None:
         self.console.print(
-            f"[bold bright_yellow]⚠️ Warning: {step} failed for {file_path}: {error}[/bold bright_yellow]"
+            f"[bold bright_yellow]⚠️ Warning: {step} failed for {file_path}: {error}[/bold bright_yellow]",
         )
 
         self.logger.warning(
@@ -135,12 +135,12 @@ class CleaningErrorHandler(BaseModel):
         if result.success:
             self.console.print(
                 f"[green]✅ Cleaned {result.file_path}[/green] "
-                f"({result.original_size} → {result.cleaned_size} bytes)"
+                f"({result.original_size} → {result.cleaned_size} bytes)",
             )
         else:
             self.console.print(
                 f"[red]❌ Failed to clean {result.file_path}[/red] "
-                f"({len(result.steps_failed)} steps failed)"
+                f"({len(result.steps_failed)} steps failed)",
             )
 
         if result.warnings:
@@ -175,7 +175,7 @@ class CleaningPipeline(BaseModel):
             self.logger = logging.getLogger("crackerjack.code_cleaner.pipeline")
 
     def clean_file(
-        self, file_path: Path, cleaning_steps: list[CleaningStepProtocol]
+        self, file_path: Path, cleaning_steps: list[CleaningStepProtocol],
     ) -> CleaningResult:
         self.logger.info(f"Starting clean_file for {file_path}")
         try:
@@ -183,7 +183,7 @@ class CleaningPipeline(BaseModel):
             original_size = len(original_code.encode("utf - 8"))
 
             result = self._apply_cleaning_pipeline(
-                original_code, file_path, cleaning_steps
+                original_code, file_path, cleaning_steps,
             )
 
             if result.success and result.cleaned_code != original_code:
@@ -226,7 +226,7 @@ class CleaningPipeline(BaseModel):
         warnings: list[str]
 
     def _apply_cleaning_pipeline(
-        self, code: str, file_path: Path, cleaning_steps: list[CleaningStepProtocol]
+        self, code: str, file_path: Path, cleaning_steps: list[CleaningStepProtocol],
     ) -> PipelineResult:
         current_code = code
         steps_completed: list[str] = []
@@ -342,10 +342,7 @@ class CodeCleaner(BaseModel):
             if parent.name in ignore_patterns:
                 return False
 
-        if file_path.name.startswith(".") or file_path.suffix != ".py":
-            return False
-
-        return True
+        return not (file_path.name.startswith(".") or file_path.suffix != ".py")
 
     def _create_line_comment_step(self) -> CleaningStepProtocol:
         """Create a step for removing line comments while preserving special comments."""
@@ -396,7 +393,7 @@ class CodeCleaner(BaseModel):
             return not state["in_string"] and char == "#"
 
         def _update_string_state(
-            self, char: str, index: int, line: str, state: dict[str, t.Any]
+            self, char: str, index: int, line: str, state: dict[str, t.Any],
         ) -> None:
             """Update string parsing state based on current character."""
             if self._is_string_start(char, state):
@@ -409,7 +406,7 @@ class CodeCleaner(BaseModel):
             return not state["in_string"] and char in ['"', "'"]
 
         def _is_string_end(
-            self, char: str, index: int, line: str, state: dict[str, t.Any]
+            self, char: str, index: int, line: str, state: dict[str, t.Any],
         ) -> bool:
             """Check if character ends a string."""
             return (
@@ -422,7 +419,7 @@ class CodeCleaner(BaseModel):
         return DocstringStep()
 
     def _create_docstring_finder_class(
-        self, docstring_nodes: list[ast.AST]
+        self, docstring_nodes: list[ast.AST],
     ) -> type[ast.NodeVisitor]:
         class DocstringFinder(ast.NodeVisitor):
             def _add_if_docstring(self, node: ast.AST) -> None:
@@ -466,7 +463,7 @@ class DocstringStep:
         return docstring_nodes
 
     def _create_docstring_finder_class(
-        self, docstring_nodes: list[ast.AST]
+        self, docstring_nodes: list[ast.AST],
     ) -> type[ast.NodeVisitor]:
         class DocstringFinder(ast.NodeVisitor):
             def _add_if_docstring(self, node: ast.AST) -> None:
@@ -498,19 +495,18 @@ class DocstringStep:
         return lines_to_remove
 
     def _filter_docstring_lines(
-        self, lines: list[str], lines_to_remove: set[int]
+        self, lines: list[str], lines_to_remove: set[int],
     ) -> list[str]:
         filtered_lines = []
         for i, line in enumerate(lines):
             if i not in lines_to_remove:
                 filtered_lines.append(line)
-            else:
-                if line.strip() and not any(
-                    lines[j].strip()
-                    for j in range(max(0, i - 2), min(len(lines), i + 3))
-                    if j != i
-                ):
-                    filtered_lines.append("")
+            elif line.strip() and not any(
+                lines[j].strip()
+                for j in range(max(0, i - 2), min(len(lines), i + 3))
+                if j != i
+            ):
+                filtered_lines.append("")
         return filtered_lines
 
     def __call__(self, code: str, file_path: Path) -> str:
@@ -562,7 +558,7 @@ class DocstringStep:
                         empty_line_count = 0
 
                         leading_whitespace = len(cleaned_line) - len(
-                            cleaned_line.lstrip()
+                            cleaned_line.lstrip(),
                         )
                         content = cleaned_line.lstrip()
 

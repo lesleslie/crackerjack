@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 class TestMCPCacheModule:
     """Test crackerjack.mcp.cache module."""
 
-    def test_cache_imports_successfully(self):
+    def test_cache_imports_successfully(self) -> None:
         """Test that cache module can be imported."""
         from crackerjack.mcp.cache import ErrorCache, ErrorPattern, FixResult
 
@@ -16,7 +16,7 @@ class TestMCPCacheModule:
         assert ErrorPattern is not None
         assert FixResult is not None
 
-    def test_error_pattern_creation(self):
+    def test_error_pattern_creation(self) -> None:
         """Test ErrorPattern basic creation."""
         from crackerjack.mcp.cache import ErrorPattern
 
@@ -30,7 +30,7 @@ class TestMCPCacheModule:
         assert pattern.error_type == "syntax"
         assert pattern.auto_fixable is False
 
-    def test_fix_result_creation(self):
+    def test_fix_result_creation(self) -> None:
         """Test FixResult basic creation."""
         from crackerjack.mcp.cache import FixResult
 
@@ -45,7 +45,7 @@ class TestMCPCacheModule:
         assert result.success is True
         assert len(result.files_affected) == 1
 
-    def test_error_cache_creation(self):
+    def test_error_cache_creation(self) -> None:
         """Test ErrorCache basic creation."""
         from crackerjack.mcp.cache import ErrorCache
 
@@ -57,13 +57,13 @@ class TestMCPCacheModule:
 class TestMCPContextModule:
     """Test crackerjack.mcp.context module."""
 
-    def test_context_imports_successfully(self):
+    def test_context_imports_successfully(self) -> None:
         """Test that context module can be imported."""
         from crackerjack.mcp.context import MCPContext
 
         assert MCPContext is not None
 
-    def test_mcp_context_basic_creation(self):
+    def test_mcp_context_basic_creation(self) -> None:
         """Test MCPContext basic creation."""
         from crackerjack.mcp.context import MCPContext
 
@@ -75,13 +75,13 @@ class TestMCPContextModule:
 class TestMCPStateModule:
     """Test crackerjack.mcp.state module."""
 
-    def test_state_imports_successfully(self):
+    def test_state_imports_successfully(self) -> None:
         """Test that state module can be imported."""
         from crackerjack.mcp.state import SessionState
 
         assert SessionState is not None
 
-    def test_session_state_basic_creation(self):
+    def test_session_state_basic_creation(self) -> None:
         """Test SessionState basic creation."""
         from crackerjack.mcp.state import SessionState
 
@@ -92,13 +92,13 @@ class TestMCPStateModule:
 class TestMCPTaskManagerModule:
     """Test crackerjack.mcp.task_manager module."""
 
-    def test_task_manager_imports_successfully(self):
+    def test_task_manager_imports_successfully(self) -> None:
         """Test that task_manager module can be imported."""
         from crackerjack.mcp.task_manager import TaskManager
 
         assert TaskManager is not None
 
-    def test_task_manager_basic_creation(self):
+    def test_task_manager_basic_creation(self) -> None:
         """Test TaskManager basic creation."""
         from crackerjack.mcp.task_manager import TaskManager
 
@@ -109,13 +109,13 @@ class TestMCPTaskManagerModule:
 class TestMCPRateLimiterModule:
     """Test crackerjack.mcp.rate_limiter module."""
 
-    def test_rate_limiter_imports_successfully(self):
+    def test_rate_limiter_imports_successfully(self) -> None:
         """Test that rate_limiter module can be imported."""
         from crackerjack.mcp.rate_limiter import RateLimiter
 
         assert RateLimiter is not None
 
-    def test_rate_limiter_basic_creation(self):
+    def test_rate_limiter_basic_creation(self) -> None:
         """Test RateLimiter basic creation."""
         from crackerjack.mcp.rate_limiter import RateLimiter
 
@@ -127,14 +127,14 @@ class TestMCPRateLimiterModule:
 class TestMCPServerCoreModule:
     """Test crackerjack.mcp.server_core module."""
 
-    def test_server_core_imports_successfully(self):
+    def test_server_core_imports_successfully(self) -> None:
         """Test that server_core module can be imported."""
         from crackerjack.mcp.server_core import create_server
 
         assert create_server is not None
 
     @patch("crackerjack.mcp.server_core.create_server")
-    def test_server_creation_mock(self, mock_create):
+    def test_server_creation_mock(self, mock_create) -> None:
         """Test server creation with mock."""
         from crackerjack.mcp.server_core import create_server
 
@@ -147,13 +147,13 @@ class TestMCPServerCoreModule:
 class TestMCPFileMonitorModule:
     """Test crackerjack.mcp.file_monitor module."""
 
-    def test_file_monitor_imports_successfully(self):
+    def test_file_monitor_imports_successfully(self) -> None:
         """Test that file_monitor module can be imported."""
         from crackerjack.mcp.file_monitor import FileMonitor
 
         assert FileMonitor is not None
 
-    def test_file_monitor_basic_creation(self):
+    def test_file_monitor_basic_creation(self) -> None:
         """Test FileMonitor basic creation."""
         from crackerjack.mcp.file_monitor import FileMonitor
 
@@ -165,25 +165,25 @@ class TestMCPFileMonitorModule:
 class TestMCPToolsModules:
     """Test crackerjack.mcp.tools modules."""
 
-    def test_core_tools_imports_successfully(self):
+    def test_core_tools_imports_successfully(self) -> None:
         """Test that core_tools module can be imported."""
         from crackerjack.mcp.tools.core_tools import execute_crackerjack
 
         assert execute_crackerjack is not None
 
-    def test_monitoring_tools_imports_successfully(self):
+    def test_monitoring_tools_imports_successfully(self) -> None:
         """Test that monitoring_tools module can be imported."""
         from crackerjack.mcp.tools.monitoring_tools import get_comprehensive_status
 
         assert get_comprehensive_status is not None
 
-    def test_progress_tools_imports_successfully(self):
+    def test_progress_tools_imports_successfully(self) -> None:
         """Test that progress_tools module can be imported."""
         from crackerjack.mcp.tools.progress_tools import get_job_progress
 
         assert get_job_progress is not None
 
-    def test_execution_tools_imports_successfully(self):
+    def test_execution_tools_imports_successfully(self) -> None:
         """Test that execution_tools module can be imported."""
         from crackerjack.mcp.tools.execution_tools import run_crackerjack_stage
 
@@ -193,31 +193,31 @@ class TestMCPToolsModules:
 class TestMCPWebSocketModules:
     """Test crackerjack.mcp.websocket modules."""
 
-    def test_websocket_app_imports_successfully(self):
+    def test_websocket_app_imports_successfully(self) -> None:
         """Test that websocket app module can be imported."""
         from crackerjack.mcp.websocket.app import create_app
 
         assert create_app is not None
 
-    def test_websocket_server_imports_successfully(self):
+    def test_websocket_server_imports_successfully(self) -> None:
         """Test that websocket server module can be imported."""
         from crackerjack.mcp.websocket.server import WebSocketServer
 
         assert WebSocketServer is not None
 
-    def test_websocket_jobs_imports_successfully(self):
+    def test_websocket_jobs_imports_successfully(self) -> None:
         """Test that websocket jobs module can be imported."""
         from crackerjack.mcp.websocket.jobs import JobManager
 
         assert JobManager is not None
 
-    def test_websocket_endpoints_imports_successfully(self):
+    def test_websocket_endpoints_imports_successfully(self) -> None:
         """Test that websocket endpoints module can be imported."""
         from crackerjack.mcp.websocket.endpoints import router
 
         assert router is not None
 
-    def test_websocket_handler_imports_successfully(self):
+    def test_websocket_handler_imports_successfully(self) -> None:
         """Test that websocket handler module can be imported."""
         from crackerjack.mcp.websocket.websocket_handler import WebSocketHandler
 

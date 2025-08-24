@@ -112,7 +112,7 @@ class SubAgent(ABC):
         pass
 
     async def run_command(
-        self, cmd: list[str], cwd: Path | None = None, timeout: int | None = None
+        self, cmd: list[str], cwd: Path | None = None, timeout: int | None = None,
     ) -> tuple[int, str, str]:
         try:
             process = await asyncio.create_subprocess_exec(
@@ -138,7 +138,7 @@ class SubAgent(ABC):
             return (-1, "", f"Command failed: {e}")
 
     def log(self, message: str, level: str = "INFO") -> None:
-        print(f"[{self.name}] {level}: {message}")
+        pass
 
 
 class AgentRegistry:

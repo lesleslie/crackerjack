@@ -6,9 +6,9 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..config.hooks import HookDefinition, HookStrategy, RetryPolicy
-from ..models.task import HookResult
-from ..services.logging import LoggingContext, get_logger
+from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
+from crackerjack.models.task import HookResult
+from crackerjack.services.logging import LoggingContext, get_logger
 
 
 @dataclass
@@ -67,7 +67,7 @@ class AsyncHookExecutor:
         self._semaphore = asyncio.Semaphore(max_concurrent)
 
     async def execute_strategy(
-        self, strategy: HookStrategy
+        self, strategy: HookStrategy,
     ) -> AsyncHookExecutionResult:
         with LoggingContext(
             "async_hook_strategy",
@@ -129,15 +129,15 @@ class AsyncHookExecutor:
         self.console.print("\n" + "-" * 80)
         if strategy.name == "fast":
             self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks (async)[/bold bright_white]"
+                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks (async)[/bold bright_white]",
             )
         elif strategy.name == "comprehensive":
             self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running comprehensive quality checks (async)[/bold bright_white]"
+                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running comprehensive quality checks (async)[/bold bright_white]",
             )
         else:
             self.console.print(
-                f"[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running {strategy.name} hooks (async)[/bold bright_white]"
+                f"[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running {strategy.name} hooks (async)[/bold bright_white]",
             )
         self.console.print("-" * 80 + "\n")
 
@@ -182,7 +182,7 @@ class AsyncHookExecutor:
                     results.append(error_result)
                     self._display_hook_result(error_result)
                 else:
-                    hook_result = t.cast(HookResult, result)
+                    hook_result = t.cast("HookResult", result)
                     results.append(hook_result)
                     self._display_hook_result(hook_result)
 
@@ -215,7 +215,7 @@ class AsyncHookExecutor:
 
             try:
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout_val
+                    process.communicate(), timeout=timeout_val,
                 )
             except TimeoutError:
                 process.kill()
@@ -269,7 +269,7 @@ class AsyncHookExecutor:
 
         except Exception as e:
             duration = time.time() - start_time
-            self.logger.error(
+            self.logger.exception(
                 "Hook execution failed with exception",
                 hook=hook.name,
                 error=str(e),
@@ -300,7 +300,7 @@ class AsyncHookExecutor:
         status_color = "green" if result.status == "passed" else "red"
 
         self.console.print(
-            f"{result.name}{dots}[{status_color}]{status_text}[/{status_color}]"
+            f"{result.name}{dots}[{status_color}]{status_text}[/{status_color}]",
         )
 
         if result.status != "passed" and result.issues_found:
@@ -309,16 +309,16 @@ class AsyncHookExecutor:
                     self.console.print(issue)
 
     async def _handle_retries(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self, strategy: HookStrategy, results: list[HookResult],
     ) -> list[HookResult]:
         if strategy.retry_policy == RetryPolicy.FORMATTING_ONLY:
             return await self._retry_formatting_hooks(strategy, results)
-        elif strategy.retry_policy == RetryPolicy.ALL_HOOKS:
+        if strategy.retry_policy == RetryPolicy.ALL_HOOKS:
             return await self._retry_all_hooks(strategy, results)
         return results
 
     async def _retry_formatting_hooks(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self, strategy: HookStrategy, results: list[HookResult],
     ) -> list[HookResult]:
         formatting_hooks_failed: set[str] = set()
 
@@ -334,7 +334,7 @@ class AsyncHookExecutor:
         retry_results = await asyncio.gather(*retry_tasks, return_exceptions=True)
 
         updated_results: list[HookResult] = []
-        for i, (prev_result, new_result) in enumerate(zip(results, retry_results)):
+        for i, (prev_result, new_result) in enumerate(zip(results, retry_results, strict=False)):
             if isinstance(new_result, Exception):
                 hook = strategy.hooks[i]
                 error_result = HookResult(
@@ -347,7 +347,7 @@ class AsyncHookExecutor:
                 )
                 updated_results.append(error_result)
             else:
-                hook_result = t.cast(HookResult, new_result)
+                hook_result = t.cast("HookResult", new_result)
                 hook_result.duration += prev_result.duration
                 updated_results.append(hook_result)
 
@@ -356,7 +356,7 @@ class AsyncHookExecutor:
         return updated_results
 
     async def _retry_all_hooks(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self, strategy: HookStrategy, results: list[HookResult],
     ) -> list[HookResult]:
         failed_indices = [i for i, r in enumerate(results) if r.status == "failed"]
 
@@ -374,7 +374,7 @@ class AsyncHookExecutor:
 
         retry_results = await asyncio.gather(*retry_tasks, return_exceptions=True)
 
-        for result_idx, new_result in zip(retry_indices, retry_results):
+        for result_idx, new_result in zip(retry_indices, retry_results, strict=False):
             prev_result = results[result_idx]
 
             if isinstance(new_result, Exception):
@@ -389,7 +389,7 @@ class AsyncHookExecutor:
                 )
                 updated_results[result_idx] = error_result
             else:
-                hook_result = t.cast(HookResult, new_result)
+                hook_result = t.cast("HookResult", new_result)
                 hook_result.duration += prev_result.duration
                 updated_results[result_idx] = hook_result
 
@@ -407,12 +407,12 @@ class AsyncHookExecutor:
         if success:
             self.console.print(
                 f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
-                f"(async, {performance_gain: .1f} % faster)"
+                f"(async, {performance_gain: .1f} % faster)",
             )
         else:
             failed_count = sum(1 for r in results if r.status == "failed")
             error_count = sum(1 for r in results if r.status in ("timeout", "error"))
             self.console.print(
                 f"[red]❌[/red] {strategy.name.title()} hooks failed: {failed_count} failed, {error_count} errors "
-                f"(async, {performance_gain: .1f} % faster)"
+                f"(async, {performance_gain: .1f} % faster)",
             )

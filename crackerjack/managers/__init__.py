@@ -4,8 +4,8 @@ from .publish_manager import PublishManagerImpl
 from .test_manager import TestManagementImpl
 
 __all__ = [
-    "HookManagerImpl",
     "AsyncHookManager",
-    "TestManagementImpl",
+    "HookManagerImpl",
     "PublishManagerImpl",
+    "TestManagementImpl",
 ]

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import typing as t
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 
 from rich.console import Console
@@ -34,13 +34,13 @@ class AsyncTaskManager:
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
         try:
             console.print(
-                f"[green]🎯 Task Manager started (max {self.max_concurrent_tasks} concurrent)[ / green]"
+                f"[green]🎯 Task Manager started (max {self.max_concurrent_tasks} concurrent)[ / green]",
             )
         except (ValueError, OSError):
             import logging
 
             logging.info(
-                f"Task Manager started (max {self.max_concurrent_tasks} concurrent) "
+                f"Task Manager started (max {self.max_concurrent_tasks} concurrent) ",
             )
 
     async def stop(self) -> None:
@@ -48,10 +48,8 @@ class AsyncTaskManager:
 
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         await self._cancel_all_tasks()
         try:
@@ -70,11 +68,13 @@ class AsyncTaskManager:
     ) -> asyncio.Task:
         async with self._lock:
             if task_id in self._tasks:
-                raise ValueError(f"Task {task_id} already exists")
+                msg = f"Task {task_id} already exists"
+                raise ValueError(msg)
 
             if len(self._tasks) >= self.max_concurrent_tasks:
+                msg = f"Maximum concurrent tasks ({self.max_concurrent_tasks}) reached"
                 raise RuntimeError(
-                    f"Maximum concurrent tasks ({self.max_concurrent_tasks}) reached"
+                    msg,
                 )
 
         if timeout_seconds:
@@ -110,7 +110,7 @@ class AsyncTaskManager:
             logger.info(f"Task {task_id} was cancelled")
             raise
         except Exception as e:
-            logger.error(f"Task {task_id} failed: {e}")
+            logger.exception(f"Task {task_id} failed: {e}")
             from contextlib import suppress
 
             with suppress(ValueError, OSError):
@@ -171,13 +171,13 @@ class AsyncTaskManager:
         async with self._lock:
             task_info = self._tasks.get(task_id)
             if not task_info:
-                raise ValueError(f"Task {task_id} not found")
+                msg = f"Task {task_id} not found"
+                raise ValueError(msg)
 
         try:
             if timeout:
                 return await asyncio.wait_for(task_info.task, timeout=timeout)
-            else:
-                return await task_info.task
+            return await task_info.task
         except TimeoutError:
             logger.warning(f"Timeout waiting for task {task_id}")
             raise
@@ -196,10 +196,8 @@ class AsyncTaskManager:
         finally:
             if not task.done():
                 task.cancel()
-                try:
+                with suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
     async def _cancel_all_tasks(self) -> None:
         async with self._lock:
@@ -210,7 +208,7 @@ class AsyncTaskManager:
 
         try:
             console.print(
-                f"[yellow]🧹 Cancelling {len(tasks_to_cancel)} running tasks[ / yellow]"
+                f"[yellow]🧹 Cancelling {len(tasks_to_cancel)} running tasks[ / yellow]",
             )
         except (ValueError, OSError):
             import logging
@@ -221,7 +219,7 @@ class AsyncTaskManager:
             task_info.task.cancel()
 
         await asyncio.gather(
-            *[task_info.task for task_info in tasks_to_cancel], return_exceptions=True
+            *[task_info.task for task_info in tasks_to_cancel], return_exceptions=True,
         )
 
         async with self._lock:
@@ -235,7 +233,7 @@ class AsyncTaskManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in task cleanup loop: {e}")
+                logger.exception(f"Error in task cleanup loop: {e}")
                 await asyncio.sleep(5)
 
     async def _cleanup_completed_tasks(self) -> None:

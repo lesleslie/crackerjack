@@ -19,14 +19,14 @@ from crackerjack.models.protocols import (
 class TestDependencyContainer:
     """Test dependency injection container functionality."""
 
-    def test_container_initialization(self):
+    def test_container_initialization(self) -> None:
         """Test basic container initialization."""
         container = DependencyContainer()
 
         assert container._services == {}
         assert container._singletons == {}
 
-    def test_register_singleton(self):
+    def test_register_singleton(self) -> None:
         """Test singleton registration and retrieval."""
         container = DependencyContainer()
         mock_service = Mock()
@@ -37,7 +37,7 @@ class TestDependencyContainer:
         # Second call should return same instance
         assert container.get(FileSystemInterface) is mock_service
 
-    def test_register_transient(self):
+    def test_register_transient(self) -> None:
         """Test transient service registration."""
         container = DependencyContainer()
 
@@ -52,14 +52,14 @@ class TestDependencyContainer:
         # Should get different instances each time
         assert service1 is not service2
 
-    def test_get_unregistered_service_raises_error(self):
+    def test_get_unregistered_service_raises_error(self) -> None:
         """Test that getting unregistered service raises ValueError."""
         container = DependencyContainer()
 
         with pytest.raises(ValueError, match="Service HookManager not registered"):
             container.get(HookManager)
 
-    def test_singleton_takes_precedence_over_transient(self):
+    def test_singleton_takes_precedence_over_transient(self) -> None:
         """Test that singleton registration overrides transient."""
         container = DependencyContainer()
         singleton_service = Mock()
@@ -85,14 +85,14 @@ class TestDependencyContainer:
         mock_hook_manager,
         mock_git_service,
         mock_filesystem_service,
-    ):
+    ) -> None:
         """Test default container creation with all dependencies."""
         container = DependencyContainer()
         console = Mock(spec=Console)
         pkg_path = Path("/test/path")
 
         result = container.create_default_container(
-            console=console, pkg_path=pkg_path, dry_run=True
+            console=console, pkg_path=pkg_path, dry_run=True,
         )
 
         assert result is container
@@ -110,7 +110,7 @@ class TestDependencyContainer:
         assert tests is not None
         assert publish is not None
 
-    def test_create_default_container_with_defaults(self):
+    def test_create_default_container_with_defaults(self) -> None:
         """Test default container creation with default parameters."""
         container = DependencyContainer()
 
@@ -152,7 +152,7 @@ class TestDependencyContainer:
         mock_hook_manager,
         mock_git_service,
         mock_filesystem_service,
-    ):
+    ) -> None:
         """Test that transient services create new instances each time."""
         # Create different instances for each call
         mock_git_service.side_effect = lambda **kwargs: Mock()
@@ -173,7 +173,7 @@ class TestDependencyContainer:
         assert hooks1 is not hooks2
 
     @patch("crackerjack.services.filesystem.FileSystemService")
-    def test_singleton_services_reuse_instances(self, mock_filesystem_service):
+    def test_singleton_services_reuse_instances(self, mock_filesystem_service) -> None:
         """Test that singleton services reuse the same instance."""
         container = DependencyContainer()
         container.create_default_container()
@@ -190,7 +190,7 @@ class TestCreateContainerFunction:
     """Test the create_container factory function."""
 
     @patch("crackerjack.core.container.DependencyContainer")
-    def test_create_container_function(self, mock_container_class):
+    def test_create_container_function(self, mock_container_class) -> None:
         """Test create_container factory function."""
         mock_container = Mock()
         mock_container_class.return_value = mock_container
@@ -203,12 +203,12 @@ class TestCreateContainerFunction:
 
         mock_container_class.assert_called_once()
         mock_container.create_default_container.assert_called_once_with(
-            console=console, pkg_path=pkg_path, dry_run=True
+            console=console, pkg_path=pkg_path, dry_run=True,
         )
         assert result is mock_container
 
     @patch("crackerjack.core.container.DependencyContainer")
-    def test_create_container_with_defaults(self, mock_container_class):
+    def test_create_container_with_defaults(self, mock_container_class) -> None:
         """Test create_container with default parameters."""
         mock_container = Mock()
         mock_container_class.return_value = mock_container
@@ -217,7 +217,7 @@ class TestCreateContainerFunction:
         result = create_container()
 
         mock_container.create_default_container.assert_called_once_with(
-            console=None, pkg_path=None, dry_run=False
+            console=None, pkg_path=None, dry_run=False,
         )
         assert result is mock_container
 
@@ -225,7 +225,7 @@ class TestCreateContainerFunction:
 class TestContainerIntegration:
     """Integration tests for the dependency container."""
 
-    def test_container_service_name_resolution(self):
+    def test_container_service_name_resolution(self) -> None:
         """Test that service names are resolved correctly."""
         container = DependencyContainer()
         mock_service = Mock()
@@ -236,7 +236,7 @@ class TestContainerIntegration:
         # Should retrieve by interface name
         assert container.get(FileSystemInterface) is mock_service
 
-    def test_factory_function_execution(self):
+    def test_factory_function_execution(self) -> None:
         """Test that factory functions are executed correctly."""
         container = DependencyContainer()
         call_count = 0
@@ -255,7 +255,7 @@ class TestContainerIntegration:
         assert service1.id == 1
         assert service2.id == 2
 
-    def test_mixed_registration_types(self):
+    def test_mixed_registration_types(self) -> None:
         """Test container with both singleton and transient registrations."""
         container = DependencyContainer()
 

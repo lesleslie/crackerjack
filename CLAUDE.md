@@ -432,6 +432,8 @@ Container (DI) → Protocols → Concrete Implementations
 
 1. **Fast Hooks First** (~5 seconds): `trailing-whitespace`, `end-of-file-fixer`, `ruff-format`, `ruff-check`, `detect-secrets`
 
+   - **Package-focused**: `ruff-check` now runs only on `crackerjack/` package code, excludes `tests/`
+   - **Repository-wide**: Other fast hooks (formatting) still run on entire repository
    - If any formatting hooks fail → **Retry fast hooks once** (formatting fixes often resolve downstream issues)
    - Only proceed when fast hooks pass or have been retried
 

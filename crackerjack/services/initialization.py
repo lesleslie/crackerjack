@@ -26,7 +26,7 @@ class InitializationService:
         self.pkg_path = pkg_path
 
     def initialize_project(
-        self, target_path: Path | None = None, force: bool = False
+        self, target_path: Path | None = None, force: bool = False,
     ) -> dict[str, t.Any]:
         if target_path is None:
             target_path = Path.cwd()
@@ -39,7 +39,7 @@ class InitializationService:
 
             for file_name, merge_strategy in config_files.items():
                 self._process_config_file(
-                    file_name, merge_strategy, project_name, target_path, force, results
+                    file_name, merge_strategy, project_name, target_path, force, results,
                 )
 
             self._print_summary(results)
@@ -62,7 +62,7 @@ class InitializationService:
         """Get config files with their merge strategies."""
         return {
             ".pre-commit-config.yaml": "smart_merge",
-            "pyproject.toml": "smart_merge", 
+            "pyproject.toml": "smart_merge",
             "CLAUDE.md": "smart_append",
             "RULES.md": "replace_if_missing",
             "mcp.json": "special",  # Special handling: mcp.json -> .mcp.json with merging
@@ -92,12 +92,18 @@ class InitializationService:
         try:
             # Handle different merge strategies
             if merge_strategy == "smart_merge":
-                self._smart_merge_config(source_file, target_file, file_name, project_name, force, results)
+                self._smart_merge_config(
+                    source_file, target_file, file_name, project_name, force, results,
+                )
             elif merge_strategy == "smart_append":
-                self._smart_append_config(source_file, target_file, file_name, project_name, force, results)
+                self._smart_append_config(
+                    source_file, target_file, file_name, project_name, force, results,
+                )
             elif merge_strategy == "replace_if_missing":
                 if not target_file.exists() or force:
-                    content = self._read_and_process_content(source_file, True, project_name)
+                    content = self._read_and_process_content(
+                        source_file, True, project_name,
+                    )
                     self._write_file_and_track(target_file, content, file_name, results)
                 else:
                     self._skip_existing_file(file_name, results)
@@ -105,25 +111,27 @@ class InitializationService:
                 # Fallback to old behavior
                 if not self._should_copy_file(target_file, force, file_name, results):
                     return
-                content = self._read_and_process_content(source_file, True, project_name)
+                content = self._read_and_process_content(
+                    source_file, True, project_name,
+                )
                 self._write_file_and_track(target_file, content, file_name, results)
 
         except Exception as e:
             self._handle_file_processing_error(file_name, e, results)
 
     def _should_copy_file(
-        self, target_file: Path, force: bool, file_name: str, results: dict[str, t.Any]
+        self, target_file: Path, force: bool, file_name: str, results: dict[str, t.Any],
     ) -> bool:
         if target_file.exists() and not force:
-            t.cast(list[str], results["files_skipped"]).append(file_name)
+            t.cast("list[str]", results["files_skipped"]).append(file_name)
             self.console.print(
-                f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)"
+                f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)",
             )
             return False
         return True
 
     def _read_and_process_content(
-        self, source_file: Path, should_replace: bool, project_name: str
+        self, source_file: Path, should_replace: bool, project_name: str,
     ) -> str:
         content = source_file.read_text()
 
@@ -133,10 +141,10 @@ class InitializationService:
         return content
 
     def _write_file_and_track(
-        self, target_file: Path, content: str, file_name: str, results: dict[str, t.Any]
+        self, target_file: Path, content: str, file_name: str, results: dict[str, t.Any],
     ) -> None:
         target_file.write_text(content)
-        t.cast(list[str], results["files_copied"]).append(file_name)
+        t.cast("list[str]", results["files_copied"]).append(file_name)
 
         try:
             self.git_service.add_files([str(target_file)])
@@ -146,23 +154,21 @@ class InitializationService:
         self.console.print(f"[green]✅[/green] Copied {file_name}")
 
     def _skip_existing_file(self, file_name: str, results: dict[str, t.Any]) -> None:
-        t.cast(list[str], results["files_skipped"]).append(file_name)
-        self.console.print(
-            f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)"
-        )
+        t.cast("list[str]", results["files_skipped"]).append(file_name)
+        self.console.print(f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)")
 
     def _handle_missing_source_file(
-        self, file_name: str, results: dict[str, t.Any]
+        self, file_name: str, results: dict[str, t.Any],
     ) -> None:
         error_msg = f"Source file not found: {file_name}"
-        t.cast(list[str], results["errors"]).append(error_msg)
+        t.cast("list[str]", results["errors"]).append(error_msg)
         self.console.print(f"[yellow]⚠️[/yellow] {error_msg}")
 
     def _handle_file_processing_error(
-        self, file_name: str, error: Exception, results: dict[str, t.Any]
+        self, file_name: str, error: Exception, results: dict[str, t.Any],
     ) -> None:
         error_msg = f"Failed to copy {file_name}: {error}"
-        t.cast(list[str], results["errors"]).append(error_msg)
+        t.cast("list[str]", results["errors"]).append(error_msg)
         results["success"] = False
         self.console.print(f"[red]❌[/red] {error_msg}")
 
@@ -170,18 +176,18 @@ class InitializationService:
         if results["success"]:
             self.console.print(
                 f"[green]🎉 Project initialized successfully ! [/green] "
-                f"Copied {len(t.cast(list[str], results['files_copied']))} files"
+                f"Copied {len(t.cast('list[str]', results['files_copied']))} files",
             )
         else:
             self.console.print(
-                "[red]❌ Project initialization completed with errors[/red]"
+                "[red]❌ Project initialization completed with errors[/red]",
             )
 
     def _handle_initialization_error(
-        self, results: dict[str, t.Any], error: Exception
+        self, results: dict[str, t.Any], error: Exception,
     ) -> None:
         results["success"] = False
-        t.cast(list[str], results["errors"]).append(f"Initialization failed: {error}")
+        t.cast("list[str]", results["errors"]).append(f"Initialization failed: {error}")
         self.console.print(f"[red]❌[/red] Initialization failed: {error}")
 
     def check_uv_installed(self) -> bool:
@@ -198,7 +204,7 @@ class InitializationService:
             return False
 
     def _process_mcp_config(
-        self, target_path: Path, force: bool, results: dict[str, t.Any]
+        self, target_path: Path, force: bool, results: dict[str, t.Any],
     ) -> None:
         """Handle special processing for mcp.json -> .mcp.json with merging."""
         # Source: mcp.json in crackerjack package (contains servers to add to projects)
@@ -230,7 +236,7 @@ class InitializationService:
                 target_config = {"mcpServers": crackerjack_servers}
                 self._write_mcp_config_and_track(target_file, target_config, results)
                 self.console.print(
-                    "[green]✅[/green] Created .mcp.json with crackerjack MCP servers"
+                    "[green]✅[/green] Created .mcp.json with crackerjack MCP servers",
                 )
                 return
 
@@ -244,7 +250,7 @@ class InitializationService:
             target_config = {"mcpServers": crackerjack_servers}
             self._write_mcp_config_and_track(target_file, target_config, results)
             self.console.print(
-                "[green]✅[/green] Updated .mcp.json with crackerjack MCP servers"
+                "[green]✅[/green] Updated .mcp.json with crackerjack MCP servers",
             )
 
         except Exception as e:
@@ -272,11 +278,11 @@ class InitializationService:
             for name, config in crackerjack_servers.items():
                 if name in existing_servers:
                     self.console.print(
-                        f"[yellow]🔄[/yellow] Updating existing MCP server: {name}"
+                        f"[yellow]🔄[/yellow] Updating existing MCP server: {name}",
                     )
                 else:
                     self.console.print(
-                        f"[green]➕[/green] Adding new MCP server: {name}"
+                        f"[green]➕[/green] Adding new MCP server: {name}",
                     )
                 updated_servers[name] = config
 
@@ -286,19 +292,19 @@ class InitializationService:
             # Write the merged config
             self._write_mcp_config_and_track(target_file, existing_config, results)
 
-            t.cast(list[str], results["files_copied"]).append(".mcp.json (merged)")
+            t.cast("list[str]", results["files_copied"]).append(".mcp.json (merged)")
 
         except Exception as e:
             self._handle_file_processing_error(".mcp.json (merge)", e, results)
 
     def _write_mcp_config_and_track(
-        self, target_file: Path, config: dict[str, t.Any], results: dict[str, t.Any]
+        self, target_file: Path, config: dict[str, t.Any], results: dict[str, t.Any],
     ) -> None:
         """Write MCP config file and track in results."""
         with target_file.open("w") as f:
             json.dump(config, f, indent=2)
 
-        t.cast(list[str], results["files_copied"]).append(".mcp.json")
+        t.cast("list[str]", results["files_copied"]).append(".mcp.json")
 
         # Try to git add the file
         try:
@@ -325,18 +331,18 @@ class InitializationService:
     ) -> None:
         """Smart append for CLAUDE.md - append crackerjack content without overwriting."""
         source_content = self._read_and_process_content(source_file, True, project_name)
-        
+
         if not target_file.exists():
             # No existing file, just copy
             self._write_file_and_track(target_file, source_content, file_name, results)
             return
 
         existing_content = target_file.read_text()
-        
+
         # Check if crackerjack content already exists
         crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
         crackerjack_end_marker = "<!-- CRACKERJACK INTEGRATION END -->"
-        
+
         if crackerjack_start_marker in existing_content:
             if force:
                 # Replace existing crackerjack section
@@ -353,13 +359,15 @@ class InitializationService:
                 return
 
         # Append crackerjack content with clear markers
-        merged_content = existing_content.strip() + "\n\n" + crackerjack_start_marker + "\n"
+        merged_content = (
+            existing_content.strip() + "\n\n" + crackerjack_start_marker + "\n"
+        )
         merged_content += source_content.strip() + "\n"
         merged_content += crackerjack_end_marker + "\n"
-        
+
         target_file.write_text(merged_content)
-        t.cast(list[str], results["files_copied"]).append(f"{file_name} (appended)")
-        
+        t.cast("list[str]", results["files_copied"]).append(f"{file_name} (appended)")
+
         try:
             self.git_service.add_files([str(target_file)])
         except Exception as e:
@@ -378,16 +386,21 @@ class InitializationService:
     ) -> None:
         """Smart merge for configuration files."""
         if file_name == "pyproject.toml":
-            self._smart_merge_pyproject(source_file, target_file, project_name, force, results)
+            self._smart_merge_pyproject(
+                source_file, target_file, project_name, force, results,
+            )
         elif file_name == ".pre-commit-config.yaml":
-            self._smart_merge_pre_commit_config(source_file, target_file, force, results)
+            self._smart_merge_pre_commit_config(
+                source_file, target_file, force, results,
+            )
+        # Fallback to regular copy
+        elif not target_file.exists() or force:
+            content = self._read_and_process_content(
+                source_file, True, project_name,
+            )
+            self._write_file_and_track(target_file, content, file_name, results)
         else:
-            # Fallback to regular copy
-            if not target_file.exists() or force:
-                content = self._read_and_process_content(source_file, True, project_name)
-                self._write_file_and_track(target_file, content, file_name, results)
-            else:
-                self._skip_existing_file(file_name, results)
+            self._skip_existing_file(file_name, results)
 
     def _smart_merge_pyproject(
         self,
@@ -401,7 +414,7 @@ class InitializationService:
         # Load source (crackerjack) config
         with source_file.open("rb") as f:
             source_config = tomli.load(f)
-        
+
         if not target_file.exists():
             # No existing file, just copy and replace project name
             content = self._read_and_process_content(source_file, True, project_name)
@@ -425,137 +438,163 @@ class InitializationService:
         with target_file.open("wb") as f:
             tomli_w.dump(target_config, f)
 
-        t.cast(list[str], results["files_copied"]).append("pyproject.toml (merged)")
-        
+        t.cast("list[str]", results["files_copied"]).append("pyproject.toml (merged)")
+
         try:
             self.git_service.add_files([str(target_file)])
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/yellow] Could not git add pyproject.toml: {e}")
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Could not git add pyproject.toml: {e}",
+            )
 
         self.console.print("[green]✅[/green] Smart merged pyproject.toml")
 
     def _ensure_crackerjack_dev_dependency(
-        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any]
+        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any],
     ) -> None:
         """Ensure crackerjack is in dev dependencies."""
         # Check different dependency group structures
         if "dependency-groups" not in target_config:
             target_config["dependency-groups"] = {}
-        
+
         if "dev" not in target_config["dependency-groups"]:
             target_config["dependency-groups"]["dev"] = []
-        
+
         dev_deps = target_config["dependency-groups"]["dev"]
         if "crackerjack" not in str(dev_deps):
             # Add crackerjack to dev dependencies
             dev_deps.append("crackerjack")
 
     def _merge_tool_configurations(
-        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any]
+        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any],
     ) -> None:
         """Merge tool configurations, preserving existing settings."""
         source_tools = source_config.get("tool", {})
-        
+
         if "tool" not in target_config:
             target_config["tool"] = {}
-        
+
         target_tools = target_config["tool"]
-        
+
         # Tools to merge (add if missing, preserve if existing)
         tools_to_merge = [
-            "ruff", "pyright", "bandit", "vulture", "refurb", 
-            "complexipy", "codespell", "creosote"
+            "ruff",
+            "pyright",
+            "bandit",
+            "vulture",
+            "refurb",
+            "complexipy",
+            "codespell",
+            "creosote",
         ]
-        
+
         for tool_name in tools_to_merge:
             if tool_name in source_tools:
                 if tool_name not in target_tools:
                     # Tool missing, add it
                     target_tools[tool_name] = source_tools[tool_name]
-                    self.console.print(f"[green]➕[/green] Added [tool.{tool_name}] configuration")
+                    self.console.print(
+                        f"[green]➕[/green] Added [tool.{tool_name}] configuration",
+                    )
                 else:
                     # Tool exists, merge settings
-                    self._merge_tool_settings(target_tools[tool_name], source_tools[tool_name], tool_name)
+                    self._merge_tool_settings(
+                        target_tools[tool_name], source_tools[tool_name], tool_name,
+                    )
 
         # Special handling for pytest.ini_options markers
         self._merge_pytest_markers(target_tools, source_tools)
 
     def _merge_tool_settings(
-        self, target_tool: dict[str, t.Any], source_tool: dict[str, t.Any], tool_name: str
+        self,
+        target_tool: dict[str, t.Any],
+        source_tool: dict[str, t.Any],
+        tool_name: str,
     ) -> None:
         """Merge individual tool settings."""
         updated_keys = []
-        
+
         for key, value in source_tool.items():
             if key not in target_tool:
                 target_tool[key] = value
                 updated_keys.append(key)
-        
+
         if updated_keys:
             self.console.print(
-                f"[yellow]🔄[/yellow] Updated [tool.{tool_name}] with: {', '.join(updated_keys)}"
+                f"[yellow]🔄[/yellow] Updated [tool.{tool_name}] with: {', '.join(updated_keys)}",
             )
 
     def _merge_pytest_markers(
-        self, target_tools: dict[str, t.Any], source_tools: dict[str, t.Any]
+        self, target_tools: dict[str, t.Any], source_tools: dict[str, t.Any],
     ) -> None:
         """Merge pytest markers without duplication."""
         if "pytest" not in source_tools or "pytest" not in target_tools:
             return
-        
+
         source_pytest = source_tools["pytest"]
         target_pytest = target_tools["pytest"]
-        
+
         if "ini_options" not in source_pytest or "ini_options" not in target_pytest:
             return
-        
+
         source_markers = source_pytest["ini_options"].get("markers", [])
         target_markers = target_pytest["ini_options"].get("markers", [])
-        
+
         # Extract marker names to avoid duplication
         existing_marker_names = {marker.split(":")[0] for marker in target_markers}
         new_markers = [
-            marker for marker in source_markers 
+            marker
+            for marker in source_markers
             if marker.split(":")[0] not in existing_marker_names
         ]
-        
+
         if new_markers:
             target_markers.extend(new_markers)
-            self.console.print(f"[green]➕[/green] Added pytest markers: {len(new_markers)}")
+            self.console.print(
+                f"[green]➕[/green] Added pytest markers: {len(new_markers)}",
+            )
 
     def _preserve_higher_coverage_requirement(
-        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any]
+        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any],
     ) -> None:
         """Preserve higher coverage requirements."""
-        source_coverage = source_config.get("tool", {}).get("pytest", {}).get("ini_options", {})
-        target_coverage = target_config.get("tool", {}).get("pytest", {}).get("ini_options", {})
-        
-        source_cov_fail = self._extract_coverage_requirement(source_coverage.get("addopts", ""))
-        target_cov_fail = self._extract_coverage_requirement(target_coverage.get("addopts", ""))
-        
+        source_coverage = (
+            source_config.get("tool", {}).get("pytest", {}).get("ini_options", {})
+        )
+        target_coverage = (
+            target_config.get("tool", {}).get("pytest", {}).get("ini_options", {})
+        )
+
+        source_cov_fail = self._extract_coverage_requirement(
+            source_coverage.get("addopts", ""),
+        )
+        target_cov_fail = self._extract_coverage_requirement(
+            target_coverage.get("addopts", ""),
+        )
+
         if source_cov_fail and target_cov_fail:
             if target_cov_fail > source_cov_fail:
                 self.console.print(
-                    f"[green]📊[/green] Preserving higher coverage requirement: {target_cov_fail}%"
+                    f"[green]📊[/green] Preserving higher coverage requirement: {target_cov_fail}%",
                 )
             elif source_cov_fail > target_cov_fail:
                 # Update to higher requirement
                 addopts = target_coverage.get("addopts", "")
-                addopts = addopts.replace(f"--cov-fail-under={target_cov_fail}", 
-                                        f"--cov-fail-under={source_cov_fail}")
+                addopts = addopts.replace(
+                    f"--cov-fail-under={target_cov_fail}",
+                    f"--cov-fail-under={source_cov_fail}",
+                )
                 target_coverage["addopts"] = addopts
                 self.console.print(
-                    f"[yellow]📊[/yellow] Updated coverage requirement: {source_cov_fail}%"
+                    f"[yellow]📊[/yellow] Updated coverage requirement: {source_cov_fail}%",
                 )
 
     def _extract_coverage_requirement(self, addopts: str | list[str]) -> int | None:
         """Extract coverage requirement from pytest addopts."""
         import re
+
         # Handle both string and list formats
-        if isinstance(addopts, list):
-            addopts_str = " ".join(addopts)
-        else:
-            addopts_str = addopts
+        addopts_str = " ".join(addopts) if isinstance(addopts, list) else addopts
         match = re.search(r"--cov-fail-under=(\d+)", addopts_str)
         return int(match.group(1)) if match else None
 
@@ -570,45 +609,53 @@ class InitializationService:
         # Load source config
         with source_file.open("r") as f:
             source_config = yaml.safe_load(f)
-        
+
         if not target_file.exists():
             # No existing file, just copy
-            self._write_file_and_track(target_file, source_file.read_text(), 
-                                     ".pre-commit-config.yaml", results)
+            self._write_file_and_track(
+                target_file, source_file.read_text(), ".pre-commit-config.yaml", results,
+            )
             return
 
-        # Load existing config  
+        # Load existing config
         with target_file.open("r") as f:
             target_config = yaml.safe_load(f)
 
         # Merge hooks without duplication
         source_repos = source_config.get("repos", [])
         target_repos = target_config.get("repos", [])
-        
+
         # Track existing repo URLs
         existing_repo_urls = {repo.get("repo", "") for repo in target_repos}
-        
+
         # Add new repos that don't already exist
         new_repos = [
-            repo for repo in source_repos 
+            repo
+            for repo in source_repos
             if repo.get("repo", "") not in existing_repo_urls
         ]
-        
+
         if new_repos:
             target_repos.extend(new_repos)
             target_config["repos"] = target_repos
-            
+
             # Write merged config
             with target_file.open("w") as f:
                 yaml.dump(target_config, f, default_flow_style=False, sort_keys=False)
-            
-            t.cast(list[str], results["files_copied"]).append(".pre-commit-config.yaml (merged)")
-            
+
+            t.cast("list[str]", results["files_copied"]).append(
+                ".pre-commit-config.yaml (merged)",
+            )
+
             try:
                 self.git_service.add_files([str(target_file)])
             except Exception as e:
-                self.console.print(f"[yellow]⚠️[/yellow] Could not git add .pre-commit-config.yaml: {e}")
+                self.console.print(
+                    f"[yellow]⚠️[/yellow] Could not git add .pre-commit-config.yaml: {e}",
+                )
 
-            self.console.print(f"[green]✅[/green] Merged .pre-commit-config.yaml ({len(new_repos)} new repos)")
+            self.console.print(
+                f"[green]✅[/green] Merged .pre-commit-config.yaml ({len(new_repos)} new repos)",
+            )
         else:
             self._skip_existing_file(".pre-commit-config.yaml (no new repos)", results)

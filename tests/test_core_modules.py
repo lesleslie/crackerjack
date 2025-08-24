@@ -69,7 +69,7 @@ class TestWorkflowOrchestrator:
     @patch("crackerjack.core.workflow_orchestrator.SessionCoordinator")
     @patch("crackerjack.core.workflow_orchestrator.PhaseCoordinator")
     async def test_process_workflow(
-        self, mock_phase, mock_session, orchestrator, workflow_options
+        self, mock_phase, mock_session, orchestrator, workflow_options,
     ) -> None:
         mock_session_inst = Mock()
         mock_phase_inst = Mock()
@@ -89,14 +89,14 @@ class TestWorkflowOrchestrator:
 
     def test_get_version(self, orchestrator) -> None:
         with patch(
-            "crackerjack.core.workflow_orchestrator.version", return_value="1.0.0"
+            "crackerjack.core.workflow_orchestrator.version", return_value="1.0.0",
         ):
             version = orchestrator._get_version()
             assert version == "1.0.0"
 
     def test_get_version_fallback(self, orchestrator) -> None:
         with patch(
-            "crackerjack.core.workflow_orchestrator.version", side_effect=Exception()
+            "crackerjack.core.workflow_orchestrator.version", side_effect=Exception(),
         ):
             version = orchestrator._get_version()
             assert version == "unknown"
@@ -108,7 +108,7 @@ class TestWorkflowPipeline:
         return WorkflowPipeline(console, pkg_path, session, phase_coordinator)
 
     def test_init(
-        self, pipeline, console, pkg_path, session, phase_coordinator
+        self, pipeline, console, pkg_path, session, phase_coordinator,
     ) -> None:
         assert pipeline.console == console
         assert pipeline.pkg_path == pkg_path
@@ -116,11 +116,11 @@ class TestWorkflowPipeline:
         assert pipeline.phases == phase_coordinator
 
     async def test_execute(self, pipeline, workflow_options) -> None:
-        async def mock_workflow(options):
+        async def mock_workflow(options) -> bool:
             return True
 
         with patch.object(
-            pipeline, "run_complete_workflow", side_effect=mock_workflow
+            pipeline, "run_complete_workflow", side_effect=mock_workflow,
         ) as mock_process:
             result = await pipeline.run_complete_workflow(workflow_options)
 
@@ -129,7 +129,7 @@ class TestWorkflowPipeline:
 
     async def test_execute_error(self, pipeline, workflow_options) -> None:
         with patch.object(
-            pipeline.phases, "run_cleaning_phase", side_effect=Exception("Test error")
+            pipeline.phases, "run_cleaning_phase", side_effect=Exception("Test error"),
         ):
             result = await pipeline.run_complete_workflow(workflow_options)
 
@@ -201,7 +201,7 @@ class TestPhaseCoordinator:
         with patch.object(phase_coordinator.session, "track_task"):
             with patch.object(phase_coordinator.session, "complete_task"):
                 with patch.object(
-                    phase_coordinator, "_execute_cleaning_process", return_value=True
+                    phase_coordinator, "_execute_cleaning_process", return_value=True,
                 ):
                     result = phase_coordinator.run_cleaning_phase(mock_options)
 
@@ -217,15 +217,13 @@ class TestPhaseCoordinator:
             phase_coordinator.config_service,
             "update_precommit_config",
             return_value=True,
-        ):
-            with patch.object(
-                phase_coordinator.config_service,
-                "update_pyproject_config",
-                return_value=True,
-            ):
-                with patch.object(phase_coordinator.session, "track_task"):
-                    with patch.object(phase_coordinator.session, "complete_task"):
-                        result = phase_coordinator.run_configuration_phase(mock_options)
+        ), patch.object(
+            phase_coordinator.config_service,
+            "update_pyproject_config",
+            return_value=True,
+        ), patch.object(phase_coordinator.session, "track_task"):
+            with patch.object(phase_coordinator.session, "complete_task"):
+                result = phase_coordinator.run_configuration_phase(mock_options)
 
         assert result is True
 
@@ -237,7 +235,7 @@ class TestPhaseCoordinator:
 
         with patch.object(phase_coordinator, "run_fast_hooks_only", return_value=True):
             with patch.object(
-                phase_coordinator, "run_comprehensive_hooks_only", return_value=True
+                phase_coordinator, "run_comprehensive_hooks_only", return_value=True,
             ):
                 with patch.object(
                     phase_coordinator.config_service,
@@ -259,18 +257,15 @@ class TestPhaseCoordinator:
             phase_coordinator.test_manager,
             "validate_test_environment",
             return_value=True,
-        ):
-            with patch.object(
-                phase_coordinator.test_manager, "run_tests", return_value=True
-            ):
-                with patch.object(
-                    phase_coordinator.test_manager,
-                    "get_coverage",
-                    return_value={"total_coverage": 85.0},
-                ):
-                    with patch.object(phase_coordinator.session, "track_task"):
-                        with patch.object(phase_coordinator.session, "complete_task"):
-                            result = phase_coordinator.run_testing_phase(mock_options)
+        ), patch.object(
+            phase_coordinator.test_manager, "run_tests", return_value=True,
+        ), patch.object(
+            phase_coordinator.test_manager,
+            "get_coverage",
+            return_value={"total_coverage": 85.0},
+        ), patch.object(phase_coordinator.session, "track_task"):
+            with patch.object(phase_coordinator.session, "complete_task"):
+                result = phase_coordinator.run_testing_phase(mock_options)
 
         assert result is True
 
@@ -284,15 +279,13 @@ class TestPhaseCoordinator:
             phase_coordinator.publish_manager,
             "bump_version",
             return_value=True,
-        ):
-            with patch.object(
-                phase_coordinator.publish_manager,
-                "publish",
-                return_value=True,
-            ):
-                with patch.object(phase_coordinator.session, "track_task"):
-                    with patch.object(phase_coordinator.session, "complete_task"):
-                        result = phase_coordinator.run_publishing_phase(mock_options)
+        ), patch.object(
+            phase_coordinator.publish_manager,
+            "publish",
+            return_value=True,
+        ), patch.object(phase_coordinator.session, "track_task"):
+            with patch.object(phase_coordinator.session, "complete_task"):
+                result = phase_coordinator.run_publishing_phase(mock_options)
 
         assert result is True
 
@@ -307,28 +300,22 @@ class TestPhaseCoordinator:
             phase_coordinator.git_service,
             "get_changed_files",
             return_value=["file1.py"],
+        ), patch.object(
+            phase_coordinator.git_service,
+            "get_commit_message_suggestions",
+            return_value=["Update project files"],
+        ), patch.object(
+            phase_coordinator.git_service, "add_files", return_value=True,
+        ), patch.object(
+            phase_coordinator.git_service, "commit", return_value=True,
+        ), patch.object(
+            phase_coordinator.git_service, "push", return_value=True,
+        ), patch.object(phase_coordinator.session, "track_task"), patch.object(
+            phase_coordinator.session, "complete_task",
         ):
-            with patch.object(
-                phase_coordinator.git_service,
-                "get_commit_message_suggestions",
-                return_value=["Update project files"],
-            ):
-                with patch.object(
-                    phase_coordinator.git_service, "add_files", return_value=True
-                ):
-                    with patch.object(
-                        phase_coordinator.git_service, "commit", return_value=True
-                    ):
-                        with patch.object(
-                            phase_coordinator.git_service, "push", return_value=True
-                        ):
-                            with patch.object(phase_coordinator.session, "track_task"):
-                                with patch.object(
-                                    phase_coordinator.session, "complete_task"
-                                ):
-                                    result = phase_coordinator.run_commit_phase(
-                                        mock_options
-                                    )
+            result = phase_coordinator.run_commit_phase(
+                mock_options,
+            )
 
         assert result is True
 
@@ -359,7 +346,7 @@ class TestDependencyContainer:
 
     def test_service_not_found(self, container) -> None:
         with pytest.raises(
-            ValueError, match="Service FileSystemInterface not registered"
+            ValueError, match="Service FileSystemInterface not registered",
         ):
             container.get(FileSystemInterface)
 
@@ -367,7 +354,7 @@ class TestDependencyContainer:
 class TestEnhancedContainer:
     """Test enhanced dependency injection container."""
 
-    def test_enhanced_container_basic(self):
+    def test_enhanced_container_basic(self) -> None:
         from crackerjack.core.enhanced_container import (
             EnhancedDependencyContainer,
             ServiceLifetime,
@@ -387,7 +374,7 @@ class TestEnhancedContainer:
         enhanced = create_enhanced_container()
         assert isinstance(enhanced, EnhancedDependencyContainer)
 
-    def test_service_descriptor_basic(self):
+    def test_service_descriptor_basic(self) -> None:
         from crackerjack.core.enhanced_container import (
             ServiceDescriptor,
             ServiceLifetime,
@@ -410,17 +397,17 @@ class TestEnhancedContainer:
 class TestCLIModulesBasic:
     """Test basic CLI modules."""
 
-    def test_cli_options_import(self):
+    def test_cli_options_import(self) -> None:
         import crackerjack.cli.options as cli_options_module
 
         assert cli_options_module is not None
 
-    def test_cli_handlers_import(self):
+    def test_cli_handlers_import(self) -> None:
         import crackerjack.cli.handlers as cli_handlers_module
 
         assert cli_handlers_module is not None
 
-    def test_cli_utils_import(self):
+    def test_cli_utils_import(self) -> None:
         import crackerjack.cli.utils as cli_utils
 
         assert cli_utils is not None
@@ -429,12 +416,12 @@ class TestCLIModulesBasic:
 class TestMainEntryPoint:
     """Test main entry point module."""
 
-    def test_main_module_import(self):
+    def test_main_module_import(self) -> None:
         import crackerjack.__main__ as main_module
 
         assert main_module is not None
 
-    def test_main_function_exists(self):
+    def test_main_function_exists(self) -> None:
         from crackerjack.__main__ import main
 
         assert callable(main)
@@ -443,7 +430,7 @@ class TestMainEntryPoint:
 class TestProtocolsModule:
     """Test protocols module."""
 
-    def test_protocols_import(self):
+    def test_protocols_import(self) -> None:
         from crackerjack.models.protocols import (
             FileSystemInterface,
             GitInterface,
@@ -463,12 +450,12 @@ class TestProtocolsModule:
 class TestConfigModels:
     """Test configuration models."""
 
-    def test_config_import(self):
+    def test_config_import(self) -> None:
         import crackerjack.models.config as config_module
 
         assert config_module is not None
 
-    def test_task_model_import(self):
+    def test_task_model_import(self) -> None:
         import crackerjack.models.task as task_module
 
         assert task_module is not None
@@ -477,17 +464,17 @@ class TestConfigModels:
 class TestErrorsModule:
     """Test errors module."""
 
-    def test_errors_import(self):
+    def test_errors_import(self) -> None:
         from crackerjack.errors import CrackerjackError, ErrorCode
 
         assert CrackerjackError is not None
         assert ErrorCode is not None
 
-    def test_error_creation(self):
+    def test_error_creation(self) -> None:
         from crackerjack.errors import CrackerjackError, ErrorCode
 
         error = CrackerjackError(
-            message="Test error", error_code=ErrorCode.UNEXPECTED_ERROR
+            message="Test error", error_code=ErrorCode.UNEXPECTED_ERROR,
         )
 
         assert error.message == "Test error"

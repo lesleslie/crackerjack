@@ -24,7 +24,7 @@ from .progress_components import (
 
 
 class AgentStatusPanel(Widget):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.border_title = "🤖 AI Agents"
         self.border_title_align = "left"
@@ -38,7 +38,7 @@ class AgentStatusPanel(Widget):
         with suppress(Exception):
             agents_table = self.query_one("#agents-table", DataTable)
             agents_table.add_columns(
-                "Agent", "Status", "Issue Type", "Confidence", "Time"
+                "Agent", "Status", "Issue Type", "Confidence", "Time",
             )
 
             agents_table.styles.max_height = "8"
@@ -61,7 +61,7 @@ class AgentStatusPanel(Widget):
             status_emoji = "✅" if coordinator_status == "active" else "⏸️"
             status_label = self.query_one("#coordinator-status", Label)
             status_label.update(
-                f"Coordinator: {status_emoji} {coordinator_status.title()} ({total_agents} agents)"
+                f"Coordinator: {status_emoji} {coordinator_status.title()} ({total_agents} agents)",
             )
 
     def _update_agents_table(self, data: dict) -> None:
@@ -148,7 +148,7 @@ class AgentStatusPanel(Widget):
 
 
 class JobPanel(Widget):
-    def __init__(self, job_data: dict, **kwargs):
+    def __init__(self, job_data: dict, **kwargs) -> None:
         super().__init__(**kwargs)
         self.job_data = job_data
         self.completion_time = None
@@ -174,14 +174,12 @@ class JobPanel(Widget):
 
             if total_failures == 0:
                 return "round green"
-            else:
-                return "round red"
-        elif status == "failed" or self.iteration_count >= 10:
             return "round red"
-        elif status == "running":
+        if status == "failed" or self.iteration_count >= 10:
+            return "round red"
+        if status == "running":
             return "round blue"
-        else:
-            return "round white"
+        return "round white"
 
     def on_mount(self) -> None:
         project_name = self.job_data.get("project", "crackerjack")
@@ -212,7 +210,7 @@ class JobPanel(Widget):
             errors_container.border_title = "❌ Errors"
 
             errors_table = self.query_one(
-                f"#job-errors-{self.job_data.get('job_id', 'unknown')}", DataTable
+                f"#job-errors-{self.job_data.get('job_id', 'unknown')}", DataTable,
             )
             errors_table.add_columns("", "", "", "")
 
@@ -221,7 +219,7 @@ class JobPanel(Widget):
     def _update_errors_table(self) -> None:
         with suppress(Exception):
             errors_table = self.query_one(
-                f"#job-errors-{self.job_data.get('job_id', 'unknown')}", DataTable
+                f"#job-errors-{self.job_data.get('job_id', 'unknown')}", DataTable,
             )
             errors_table.clear()
 
@@ -268,7 +266,7 @@ class JobPanel(Widget):
                         resolved_value,
                     ),
                     (remaining_label, remaining_value, progress_label, progress_value),
-                ]
+                ],
             )
 
     def _update_progress_bar(self) -> None:
@@ -351,7 +349,7 @@ class JobPanel(Widget):
 
     def _compose_job_identifiers(self) -> ComposeResult:
         job_id = self.job_data.get(
-            "full_job_id", self.job_data.get("job_id", "Unknown")
+            "full_job_id", self.job_data.get("job_id", "Unknown"),
         )
         yield Label(f"🆔 UUID: {job_id}")
 
@@ -414,7 +412,7 @@ class CrackerjackDashboard(App):
         ("q", "quit", "Quit"),
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
         self.websocket_url = "ws://localhost:8675"
@@ -614,7 +612,7 @@ class CrackerjackDashboard(App):
                         resolved_value,
                     ),
                     (remaining_label, remaining_value, progress_label, progress_value),
-                ]
+                ],
             )
 
     def _update_services_table(self, services_data: list) -> None:
@@ -700,7 +698,7 @@ class CrackerjackDashboard(App):
                         resolved_value,
                     ),
                     (remaining_label, remaining_value, progress_label, progress_value),
-                ]
+                ],
             )
 
     def _update_agent_panel(self, jobs_data: dict) -> None:
@@ -808,7 +806,7 @@ class CrackerjackDashboard(App):
                 Label(
                     "No active jobs detected. Start a Crackerjack job to see progress here.",
                     id="no-jobs-label",
-                )
+                ),
             )
         elif self.active_jobs and has_placeholder:
             container.query("#no-jobs-label").remove()
@@ -844,7 +842,7 @@ class CrackerjackDashboard(App):
     def _restore_terminal_fallback(self) -> None:
         self.terminal_restorer.restore_terminal()
 
-    def _signal_handler(self, _signum, _frame):
+    def _signal_handler(self, _signum, _frame) -> None:
         with suppress(Exception):
             self._restore_terminal()
             self._cleanup_started_services()
@@ -856,10 +854,9 @@ class CrackerjackDashboard(App):
     def _format_time_metric(self, seconds: float) -> str:
         if seconds < 60:
             return f"{seconds: .0f}s"
-        elif seconds < 3600:
+        if seconds < 3600:
             return f"{seconds / 60: .0f}m {seconds % 60: .0f}s"
-        else:
-            return f"{seconds / 3600: .0f}h {(seconds % 3600) / 60: .0f}m"
+        return f"{seconds / 3600: .0f}h {(seconds % 3600) / 60: .0f}m"
 
     def _format_metric_with_trend(self, value: int, trend: str = "") -> str:
         formatted = f"{value: , }"
@@ -893,12 +890,12 @@ class JobMetrics:
 
 
 async def run_progress_monitor(
-    enable_watchdog: bool = True, dev_mode: bool = False
+    enable_watchdog: bool = True, dev_mode: bool = False,
 ) -> None:
     try:
         console = Console()
         console.print(
-            "[bold green]🚀 Starting Crackerjack Progress Monitor[/bold green]"
+            "[bold green]🚀 Starting Crackerjack Progress Monitor[/bold green]",
         )
 
         if enable_watchdog:
@@ -923,7 +920,7 @@ async def run_crackerjack_with_progress(
     try:
         console = Console()
         console.print(
-            "[bold green]🚀 Starting Crackerjack Progress Monitor[/bold green]"
+            "[bold green]🚀 Starting Crackerjack Progress Monitor[/bold green]",
         )
 
         app = CrackerjackDashboard()
@@ -941,14 +938,14 @@ def main() -> None:
             sys.stdout.write("\033[?25h\033[0m")
             sys.stdout.flush()
             subprocess.run(
-                ["stty", "sane"], check=False, capture_output=True, timeout=1
+                ["stty", "sane"], check=False, capture_output=True, timeout=1,
             )
     except Exception:
         with suppress(Exception):
             sys.stdout.write("\033[?25h\033[0m")
             sys.stdout.flush()
             subprocess.run(
-                ["stty", "sane"], check=False, capture_output=True, timeout=1
+                ["stty", "sane"], check=False, capture_output=True, timeout=1,
             )
 
 

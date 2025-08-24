@@ -24,12 +24,12 @@ from .cli.handlers import (
 
 console = Console(force_terminal=True)
 app = typer.Typer(
-    help="Crackerjack: Your Python project setup and style enforcement tool."
+    help="Crackerjack: Your Python project setup and style enforcement tool.",
 )
 
 
 def _handle_monitoring_commands(
-    monitor: bool, enhanced_monitor: bool, dashboard: bool, watchdog: bool, dev: bool
+    monitor: bool, enhanced_monitor: bool, dashboard: bool, watchdog: bool, dev: bool,
 ) -> bool:
     """Handle monitoring commands."""
     if monitor:
@@ -111,7 +111,7 @@ def _handle_server_commands(
             websocket_port,
         )
         or _handle_mcp_commands(
-            start_mcp_server, stop_mcp_server, restart_mcp_server, websocket_port
+            start_mcp_server, stop_mcp_server, restart_mcp_server, websocket_port,
         )
     )
 

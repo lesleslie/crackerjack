@@ -4,7 +4,7 @@
 class TestImportCoverage:
     """Test basic imports and class instantiation for maximum coverage boost."""
 
-    def test_mcp_imports(self):
+    def test_mcp_imports(self) -> None:
         """Test MCP module imports to get basic coverage."""
         # Import MCP components
         from crackerjack.mcp import cache, context, server_core, state
@@ -30,7 +30,7 @@ class TestImportCoverage:
         assert jobs is not None
         assert endpoints is not None
 
-    def test_core_imports(self):
+    def test_core_imports(self) -> None:
         """Test core module imports."""
         from crackerjack.core import (
             async_workflow_orchestrator,
@@ -44,7 +44,7 @@ class TestImportCoverage:
         assert async_workflow_orchestrator is not None
         assert autofix_coordinator is not None
 
-    def test_plugin_imports(self):
+    def test_plugin_imports(self) -> None:
         """Test plugin module imports."""
         from crackerjack.plugins import base, hooks, loader, managers
 
@@ -53,7 +53,7 @@ class TestImportCoverage:
         assert hooks is not None
         assert managers is not None
 
-    def test_service_imports(self):
+    def test_service_imports(self) -> None:
         """Test service module imports."""
         from crackerjack.services import (
             contextual_ai_assistant,
@@ -75,7 +75,7 @@ class TestImportCoverage:
         assert dependency_monitor is not None
         assert tool_version_service is not None
 
-    def test_orchestration_imports(self):
+    def test_orchestration_imports(self) -> None:
         """Test orchestration module imports."""
         from crackerjack.orchestration import (
             advanced_orchestrator,
@@ -85,25 +85,25 @@ class TestImportCoverage:
         assert advanced_orchestrator is not None
         assert execution_strategies is not None
 
-    def test_executor_imports(self):
+    def test_executor_imports(self) -> None:
         """Test executor module imports."""
         from crackerjack.executors import individual_hook_executor
 
         assert individual_hook_executor is not None
 
-    def test_model_config_adapter_import(self):
+    def test_model_config_adapter_import(self) -> None:
         """Test model config adapter import."""
         from crackerjack.models import config_adapter
 
         assert config_adapter is not None
 
-    def test_py313_import(self):
+    def test_py313_import(self) -> None:
         """Test py313 module import."""
         from crackerjack import py313
 
         assert py313 is not None
 
-    def test_cli_imports(self):
+    def test_cli_imports(self) -> None:
         """Test CLI module imports."""
         from crackerjack.cli import facade, handlers, interactive, utils
 
@@ -112,7 +112,7 @@ class TestImportCoverage:
         assert interactive is not None
         assert utils is not None
 
-    def test_main_module_import(self):
+    def test_main_module_import(self) -> None:
         """Test main module import."""
         from crackerjack import __main__
 
@@ -122,7 +122,7 @@ class TestImportCoverage:
 class TestBasicClassInstantiation:
     """Test basic class instantiation where possible without complex dependencies."""
 
-    def test_enhanced_dependency_container(self):
+    def test_enhanced_dependency_container(self) -> None:
         """Test EnhancedDependencyContainer basic usage."""
         from crackerjack.core.enhanced_container import EnhancedDependencyContainer
 
@@ -134,7 +134,7 @@ class TestBasicClassInstantiation:
         assert hasattr(container, "get")
         assert hasattr(container, "dispose")
 
-    def test_performance_monitor(self):
+    def test_performance_monitor(self) -> None:
         """Test PerformanceMonitor basic usage."""
         from crackerjack.core.performance import PerformanceMonitor
 
@@ -145,7 +145,7 @@ class TestBasicClassInstantiation:
         assert hasattr(monitor, "record_metric")
         assert hasattr(monitor, "get_stats")
 
-    def test_file_cache(self):
+    def test_file_cache(self) -> None:
         """Test FileCache basic usage."""
         from crackerjack.core.performance import FileCache
 
@@ -156,7 +156,7 @@ class TestBasicClassInstantiation:
         assert hasattr(cache, "set")
         assert hasattr(cache, "clear")
 
-    def test_plugin_registry(self):
+    def test_plugin_registry(self) -> None:
         """Test PluginRegistry basic usage."""
         from crackerjack.plugins.base import PluginRegistry
 
@@ -167,7 +167,7 @@ class TestBasicClassInstantiation:
         assert hasattr(registry, "get")
         assert hasattr(registry, "list_all")
 
-    def test_plugin_loader(self):
+    def test_plugin_loader(self) -> None:
         """Test PluginLoader basic usage."""
         from crackerjack.plugins.loader import PluginLoader
 
@@ -178,7 +178,7 @@ class TestBasicClassInstantiation:
         assert hasattr(loader, "load_plugin_from_config")
         assert hasattr(loader, "load_and_register")
 
-    def test_plugin_manager(self):
+    def test_plugin_manager(self) -> None:
         """Test PluginManager basic usage."""
         from pathlib import Path
 
@@ -195,7 +195,7 @@ class TestBasicClassInstantiation:
         assert hasattr(manager, "list_plugins")
         assert hasattr(manager, "get_plugin_stats")
 
-    def test_batched_state_saver(self):
+    def test_batched_state_saver(self) -> None:
         """Test BatchedStateSaver basic usage."""
         from crackerjack.mcp.context import BatchedStateSaver
 
@@ -208,7 +208,7 @@ class TestBasicClassInstantiation:
         assert hasattr(saver, "stop")
         assert not saver._running
 
-    def test_error_cache(self):
+    def test_error_cache(self) -> None:
         """Test ErrorCache basic usage."""
         from crackerjack.mcp.cache import ErrorCache
 
@@ -219,7 +219,7 @@ class TestBasicClassInstantiation:
         assert hasattr(cache, "find_patterns_by_type")
         assert hasattr(cache, "get_common_patterns")
 
-    def test_state_manager(self):
+    def test_state_manager(self) -> None:
         """Test StateManager basic usage."""
         from crackerjack.mcp.state import StateManager
 
@@ -235,7 +235,7 @@ class TestBasicClassInstantiation:
 class TestFunctionLevelCoverage:
     """Test individual functions for coverage where classes aren't easily instantiated."""
 
-    def test_configuration_service_methods(self):
+    def test_configuration_service_methods(self) -> None:
         """Test ConfigurationService individual methods."""
         import tempfile
         from pathlib import Path
@@ -252,7 +252,7 @@ class TestFunctionLevelCoverage:
             result = service.load_precommit_config()
             assert isinstance(result, dict)
 
-    def test_filesystem_service_methods(self):
+    def test_filesystem_service_methods(self) -> None:
         """Test FileSystemService individual methods."""
         from pathlib import Path
 
@@ -269,7 +269,7 @@ class TestFunctionLevelCoverage:
         result = service.file_exists(Path("/non/existent/file.txt"))
         assert result is False
 
-    def test_security_service_methods(self):
+    def test_security_service_methods(self) -> None:
         """Test SecurityService individual methods."""
         from crackerjack.services.security import SecurityService
 
@@ -285,7 +285,7 @@ class TestFunctionLevelCoverage:
         result = service.validate_token_format("valid_token_123")
         assert result is True
 
-    def test_unified_config_service_methods(self):
+    def test_unified_config_service_methods(self) -> None:
         """Test UnifiedConfigurationService individual methods."""
         import tempfile
         from pathlib import Path
@@ -304,7 +304,7 @@ class TestFunctionLevelCoverage:
 class TestEdgeCaseCoverage:
     """Test edge cases and error paths for coverage."""
 
-    def test_error_handling_imports(self):
+    def test_error_handling_imports(self) -> None:
         """Test error handling code paths."""
         # Import modules that have error handling
         from crackerjack import errors
@@ -320,7 +320,7 @@ class TestEdgeCaseCoverage:
         assert hasattr(task, "TaskStatus")
         assert hasattr(task, "HookResult")
 
-    def test_async_components_import(self):
+    def test_async_components_import(self) -> None:
         """Test async component imports."""
         from crackerjack.core import async_workflow_orchestrator, autofix_coordinator
         from crackerjack.executors import async_hook_executor
@@ -330,7 +330,7 @@ class TestEdgeCaseCoverage:
         assert hasattr(autofix_coordinator, "AutofixCoordinator")
         assert hasattr(async_hook_executor, "AsyncHookExecutor")
 
-    def test_interactive_components(self):
+    def test_interactive_components(self) -> None:
         """Test interactive component imports."""
         from crackerjack import interactive
         from crackerjack.cli import interactive as cli_interactive

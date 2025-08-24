@@ -5,7 +5,7 @@ import typing as t
 @t.runtime_checkable
 class CommandRunner(t.Protocol):
     def execute_command(
-        self, cmd: list[str], **kwargs: t.Any
+        self, cmd: list[str], **kwargs: t.Any,
     ) -> subprocess.CompletedProcess[str]: ...
 
 

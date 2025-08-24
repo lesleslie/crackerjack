@@ -112,7 +112,7 @@ class FormattingAgent(SubAgent):
         fixes: list[str] = []
 
         returncode, _, stderr = await self.run_command(
-            ["uv", "run", "ruff", "format", "."]
+            ["uv", "run", "ruff", "format", "."],
         )
 
         if returncode == 0:
@@ -122,7 +122,7 @@ class FormattingAgent(SubAgent):
             self.log(f"Ruff format failed: {stderr}", "WARN")
 
         returncode, _, stderr = await self.run_command(
-            ["uv", "run", "ruff", "check", ".", "--fix"]
+            ["uv", "run", "ruff", "check", ".", "--fix"],
         )
 
         if returncode == 0:
@@ -144,7 +144,7 @@ class FormattingAgent(SubAgent):
                 "run",
                 "trailing-whitespace",
                 "--all-files",
-            ]
+            ],
         )
 
         if returncode == 0:
@@ -159,7 +159,7 @@ class FormattingAgent(SubAgent):
                 "run",
                 "end-of-file-fixer",
                 "--all-files",
-            ]
+            ],
         )
 
         if returncode == 0:
@@ -181,7 +181,7 @@ class FormattingAgent(SubAgent):
                 "--select",
                 "I,F401",
                 "--fix",
-            ]
+            ],
         )
 
         if returncode == 0:

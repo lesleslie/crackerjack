@@ -84,11 +84,11 @@ class PerformanceAgent(SubAgent):
             )
 
         return self._apply_and_save_optimizations(
-            file_path, content, performance_issues
+            file_path, content, performance_issues,
         )
 
     def _apply_and_save_optimizations(
-        self, file_path: Path, content: str, issues: list[dict[str, t.Any]]
+        self, file_path: Path, content: str, issues: list[dict[str, t.Any]],
     ) -> FixResult:
         """Apply performance optimizations and save changes."""
         optimized_content = self._apply_performance_optimizations(content, issues)
@@ -138,7 +138,7 @@ class PerformanceAgent(SubAgent):
         )
 
     def _detect_performance_issues(
-        self, content: str, file_path: Path
+        self, content: str, file_path: Path,
     ) -> list[dict[str, t.Any]]:
         """Detect various performance anti-patterns in the code."""
         issues: list[dict[str, t.Any]] = []
@@ -165,7 +165,7 @@ class PerformanceAgent(SubAgent):
         issues: list[dict[str, t.Any]] = []
 
         class NestedLoopAnalyzer(ast.NodeVisitor):
-            def __init__(self):
+            def __init__(self) -> None:
                 self.loop_stack: list[tuple[str, ast.AST]] = []
                 self.nested_loops: list[dict[str, t.Any]] = []
 
@@ -178,7 +178,7 @@ class PerformanceAgent(SubAgent):
                             "type": "nested_for_loop",
                             "depth": len(self.loop_stack),
                             "node": node,
-                        }
+                        },
                     )
                 self.generic_visit(node)
                 self.loop_stack.pop()
@@ -192,7 +192,7 @@ class PerformanceAgent(SubAgent):
                             "type": "nested_while_loop",
                             "depth": len(self.loop_stack),
                             "node": node,
-                        }
+                        },
                     )
                 self.generic_visit(node)
                 self.loop_stack.pop()
@@ -206,13 +206,13 @@ class PerformanceAgent(SubAgent):
                     "type": "nested_loops",
                     "instances": analyzer.nested_loops,
                     "suggestion": "Consider flattening loops or using more efficient algorithms",
-                }
+                },
             )
 
         return issues
 
     def _detect_inefficient_list_ops(
-        self, content: str, tree: ast.AST
+        self, content: str, tree: ast.AST,
     ) -> list[dict[str, t.Any]]:
         """Detect inefficient list operations like repeated appends or concatenations."""
         issues: list[dict[str, t.Any]] = []
@@ -221,7 +221,7 @@ class PerformanceAgent(SubAgent):
         # Pattern: list += [item] or list = list + [item] in loops
 
         class ListOpAnalyzer(ast.NodeVisitor):
-            def __init__(self):
+            def __init__(self) -> None:
                 self.in_loop = False
                 self.list_ops: list[dict[str, t.Any]] = []
 
@@ -245,7 +245,7 @@ class PerformanceAgent(SubAgent):
                                 "line_number": node.lineno,
                                 "type": "list_concat_in_loop",
                                 "pattern": "list += [item]",
-                            }
+                            },
                         )
                 self.generic_visit(node)
 
@@ -258,13 +258,13 @@ class PerformanceAgent(SubAgent):
                     "type": "inefficient_list_operations",
                     "instances": analyzer.list_ops,
                     "suggestion": "Use list.append() or collect items first, then extend",
-                }
+                },
             )
 
         return issues
 
     def _detect_repeated_operations(
-        self, content: str, tree: ast.AST
+        self, content: str, tree: ast.AST,
     ) -> list[dict[str, t.Any]]:
         """Detect repeated expensive operations that could be cached."""
         lines = content.split("\n")
@@ -273,7 +273,7 @@ class PerformanceAgent(SubAgent):
         return self._create_repeated_operations_issues(repeated_calls)
 
     def _find_expensive_operations_in_loops(
-        self, lines: list[str]
+        self, lines: list[str],
     ) -> list[dict[str, t.Any]]:
         """Find expensive operations that occur within loop contexts."""
         repeated_calls: list[dict[str, t.Any]] = []
@@ -300,7 +300,7 @@ class PerformanceAgent(SubAgent):
         )
 
     def _contains_expensive_operation(
-        self, line: str, patterns: tuple[str, ...]
+        self, line: str, patterns: tuple[str, ...],
     ) -> bool:
         """Check if line contains any expensive operation patterns."""
         return any(pattern in line for pattern in patterns)
@@ -314,7 +314,7 @@ class PerformanceAgent(SubAgent):
         )
 
     def _create_operation_record(
-        self, line_index: int, content: str
+        self, line_index: int, content: str,
     ) -> dict[str, t.Any]:
         """Create a record for an expensive operation found in a loop."""
         return {
@@ -324,7 +324,7 @@ class PerformanceAgent(SubAgent):
         }
 
     def _create_repeated_operations_issues(
-        self, repeated_calls: list[dict[str, t.Any]]
+        self, repeated_calls: list[dict[str, t.Any]],
     ) -> list[dict[str, t.Any]]:
         """Create issues list for repeated operations if threshold is met."""
         if len(repeated_calls) >= 2:
@@ -333,7 +333,7 @@ class PerformanceAgent(SubAgent):
                     "type": "repeated_expensive_operations",
                     "instances": repeated_calls,
                     "suggestion": "Cache expensive operations outside loops",
-                }
+                },
             ]
         return []
 
@@ -359,7 +359,7 @@ class PerformanceAgent(SubAgent):
                         {
                             "line_number": i + 1,
                             "content": stripped,
-                        }
+                        },
                     )
 
         if len(string_concat_in_loop) >= 2:
@@ -368,13 +368,13 @@ class PerformanceAgent(SubAgent):
                     "type": "string_concatenation_in_loop",
                     "instances": string_concat_in_loop,
                     "suggestion": 'Use list.append() and "".join() for string building',
-                }
+                },
             )
 
         return issues
 
     def _apply_performance_optimizations(
-        self, content: str, issues: list[dict[str, t.Any]]
+        self, content: str, issues: list[dict[str, t.Any]],
     ) -> str:
         """Apply performance optimizations for detected issues."""
         lines = content.split("\n")
@@ -394,14 +394,14 @@ class PerformanceAgent(SubAgent):
         return "\n".join(lines) if modified else content
 
     def _fix_list_operations(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self, lines: list[str], issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         """Fix inefficient list operations by replacing list += [item] with list.append(item)."""
         modified = False
 
         # Process instances in reverse order (highest line numbers first) to avoid line number shifts
         instances = sorted(
-            issue["instances"], key=operator.itemgetter("line_number"), reverse=True
+            issue["instances"], key=operator.itemgetter("line_number"), reverse=True,
         )
 
         for instance in instances:
@@ -431,7 +431,7 @@ class PerformanceAgent(SubAgent):
         return lines, modified
 
     def _fix_string_concatenation(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self, lines: list[str], issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         """Fix inefficient string concatenation in loops by transforming to list.append + join pattern."""
         modified = False
@@ -458,7 +458,7 @@ class PerformanceAgent(SubAgent):
                             "indent": indent,
                             "expr": expr.strip(),
                             "original_line": original_line,
-                        }
+                        },
                     )
 
         # Transform each variable's concatenation pattern
@@ -474,7 +474,7 @@ class PerformanceAgent(SubAgent):
                     # Apply the string building optimization
                     modified = (
                         self._apply_string_building_optimization(
-                            lines, var_name, instances, loop_start
+                            lines, var_name, instances, loop_start,
                         )
                         or modified
                     )
@@ -558,7 +558,7 @@ class PerformanceAgent(SubAgent):
         return len(lines) - 1
 
     def _fix_repeated_operations(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self, lines: list[str], issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         """Add comments suggesting caching for repeated expensive operations."""
         modified = False

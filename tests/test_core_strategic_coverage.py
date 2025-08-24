@@ -19,13 +19,13 @@ class TestEnhancedDependencyContainer:
         """Create EnhancedDependencyContainer instance."""
         return EnhancedDependencyContainer()
 
-    def test_init(self, enhanced_container):
+    def test_init(self, enhanced_container) -> None:
         """Test EnhancedContainer initialization."""
         assert enhanced_container is not None
         assert hasattr(enhanced_container, "_services")
         assert hasattr(enhanced_container, "_singletons")
 
-    def test_register_service(self, enhanced_container):
+    def test_register_service(self, enhanced_container) -> None:
         """Test service registration."""
         mock_service = Mock()
 
@@ -34,7 +34,7 @@ class TestEnhancedDependencyContainer:
         # Service should be registered
         assert enhanced_container.is_registered(str)
 
-    def test_get_service(self, enhanced_container):
+    def test_get_service(self, enhanced_container) -> None:
         """Test service retrieval."""
         mock_service = Mock()
         enhanced_container.register_singleton(str, instance=mock_service)
@@ -43,12 +43,12 @@ class TestEnhancedDependencyContainer:
 
         assert retrieved == mock_service
 
-    def test_get_service_not_found(self, enhanced_container):
+    def test_get_service_not_found(self, enhanced_container) -> None:
         """Test getting non-existent service."""
         with pytest.raises(ValueError):
             enhanced_container.get(int)
 
-    def test_has_service(self, enhanced_container):
+    def test_has_service(self, enhanced_container) -> None:
         """Test checking if service exists."""
         assert not enhanced_container.is_registered(str)
 
@@ -56,7 +56,7 @@ class TestEnhancedDependencyContainer:
 
         assert enhanced_container.is_registered(str)
 
-    def test_register_factory(self, enhanced_container):
+    def test_register_factory(self, enhanced_container) -> None:
         """Test factory registration."""
 
         def factory():
@@ -66,7 +66,7 @@ class TestEnhancedDependencyContainer:
 
         assert enhanced_container.is_registered(str)
 
-    def test_get_from_factory(self, enhanced_container):
+    def test_get_from_factory(self, enhanced_container) -> None:
         """Test getting service from factory."""
 
         def factory():
@@ -80,7 +80,7 @@ class TestEnhancedDependencyContainer:
 
         assert service.name == "from_factory"
 
-    def test_singleton_factory(self, enhanced_container):
+    def test_singleton_factory(self, enhanced_container) -> None:
         """Test singleton factory behavior."""
         call_count = 0
 
@@ -100,7 +100,7 @@ class TestEnhancedDependencyContainer:
         assert service1 is service2
         assert call_count == 1
 
-    def test_dispose_services(self, enhanced_container):
+    def test_dispose_services(self, enhanced_container) -> None:
         """Test disposing all services."""
         enhanced_container.register_singleton(int, instance=Mock())
         enhanced_container.register_singleton(float, instance=Mock())
@@ -114,7 +114,7 @@ class TestEnhancedDependencyContainer:
         assert enhanced_container.is_registered(int)
         assert enhanced_container.is_registered(float)
 
-    def test_service_info(self, enhanced_container):
+    def test_service_info(self, enhanced_container) -> None:
         """Test getting service information."""
         info = enhanced_container.get_service_info()
         assert isinstance(info, dict)
@@ -128,7 +128,7 @@ class TestEnhancedDependencyContainer:
         assert "builtins.int" in info
         assert "builtins.float" in info
 
-    def test_get_optional(self, enhanced_container):
+    def test_get_optional(self, enhanced_container) -> None:
         """Test getting optional services."""
         # Test with default None
         service = enhanced_container.get_optional(int)
@@ -154,18 +154,18 @@ class TestPerformanceMonitor:
         """Create PerformanceMonitor instance."""
         return PerformanceMonitor()
 
-    def test_init(self, performance_monitor):
+    def test_init(self, performance_monitor) -> None:
         """Test PerformanceMonitor initialization."""
         assert performance_monitor is not None
         assert hasattr(performance_monitor, "metrics")
         assert isinstance(performance_monitor.metrics, dict)
         assert len(performance_monitor.metrics) == 0
 
-    def test_time_operation_decorator(self, performance_monitor):
+    def test_time_operation_decorator(self, performance_monitor) -> None:
         """Test time_operation decorator."""
 
         @performance_monitor.time_operation("test_operation")
-        def test_function():
+        def test_function() -> str:
             return "result"
 
         result = test_function()
@@ -175,7 +175,7 @@ class TestPerformanceMonitor:
         assert len(performance_monitor.metrics["test_operation"]) == 1
         assert performance_monitor.metrics["test_operation"][0] >= 0
 
-    def test_record_metric(self, performance_monitor):
+    def test_record_metric(self, performance_monitor) -> None:
         """Test recording a metric."""
         performance_monitor.record_metric("test_metric", 42.5)
 
@@ -183,7 +183,7 @@ class TestPerformanceMonitor:
         assert len(performance_monitor.metrics["test_metric"]) == 1
         assert performance_monitor.metrics["test_metric"][0] == 42.5
 
-    def test_get_stats(self, performance_monitor):
+    def test_get_stats(self, performance_monitor) -> None:
         """Test getting statistics for metrics."""
         # Test with no data
         stats = performance_monitor.get_stats("nonexistent")
@@ -201,7 +201,7 @@ class TestPerformanceMonitor:
         assert stats["min"] == 10.0
         assert stats["max"] == 30.0
 
-    def test_print_stats_no_console(self, performance_monitor):
+    def test_print_stats_no_console(self, performance_monitor) -> None:
         """Test print_stats without console."""
         performance_monitor.record_metric("test_metric", 15.0)
 
@@ -209,7 +209,7 @@ class TestPerformanceMonitor:
         performance_monitor.print_stats("test_metric")
         performance_monitor.print_stats()
 
-    def test_print_stats_with_console(self, performance_monitor):
+    def test_print_stats_with_console(self, performance_monitor) -> None:
         """Test print_stats with console."""
         from unittest.mock import Mock
 
@@ -221,7 +221,7 @@ class TestPerformanceMonitor:
 
         mock_console.print.assert_called_once()
 
-    def test_multiple_metrics(self, performance_monitor):
+    def test_multiple_metrics(self, performance_monitor) -> None:
         """Test handling multiple different metrics."""
         performance_monitor.record_metric("metric1", 10.0)
         performance_monitor.record_metric("metric1", 15.0)
@@ -262,7 +262,7 @@ class TestAsyncWorkflowOrchestrator:
         console = Mock()
         return AsyncWorkflowOrchestrator(console=console, pkg_path=Path("/tmp/test"))
 
-    def test_basic_attributes(self):
+    def test_basic_attributes(self) -> None:
         """Test basic AsyncWorkflowOrchestrator properties."""
         # Test import works
         from crackerjack.core.async_workflow_orchestrator import (
@@ -276,7 +276,7 @@ class TestAsyncWorkflowOrchestrator:
             == "crackerjack.core.async_workflow_orchestrator"
         )
 
-    def test_module_constants(self):
+    def test_module_constants(self) -> None:
         """Test module has expected constants and imports."""
         from crackerjack.core import async_workflow_orchestrator
 
@@ -290,7 +290,7 @@ class TestAsyncWorkflowOrchestrator:
         assert "from pathlib import Path" in source
         assert "from rich.console import Console" in source
 
-    def test_constructor_signature(self):
+    def test_constructor_signature(self) -> None:
         """Test constructor has expected signature."""
         import inspect
 
@@ -325,13 +325,13 @@ class TestAutofixCoordinator:
         """Create AutofixCoordinator with mocked dependencies."""
         return AutofixCoordinator(**mock_dependencies)
 
-    def test_init(self, autofix_coordinator, mock_dependencies):
+    def test_init(self, autofix_coordinator, mock_dependencies) -> None:
         """Test AutofixCoordinator initialization."""
         assert autofix_coordinator.console == mock_dependencies["console"]
         assert autofix_coordinator.pkg_path == mock_dependencies["pkg_path"]
         assert hasattr(autofix_coordinator, "logger")
 
-    def test_apply_fast_stage_fixes(self, autofix_coordinator):
+    def test_apply_fast_stage_fixes(self, autofix_coordinator) -> None:
         """Test fast stage fixes."""
         # Mocking subprocess execution with patch
         with patch("subprocess.run") as mock_run:
@@ -343,7 +343,7 @@ class TestAutofixCoordinator:
             # Should return True if any fixes were applied
             assert isinstance(result, bool)
 
-    def test_apply_comprehensive_stage_fixes(self, autofix_coordinator):
+    def test_apply_comprehensive_stage_fixes(self, autofix_coordinator) -> None:
         """Test comprehensive stage fixes."""
         # Mock hook results
         mock_hook_result = Mock()
@@ -359,7 +359,7 @@ class TestAutofixCoordinator:
 
             assert isinstance(result, bool)
 
-    def test_validate_fix_command(self, autofix_coordinator):
+    def test_validate_fix_command(self, autofix_coordinator) -> None:
         """Test fix command validation."""
         # Valid command
         valid_cmd = ["uv", "run", "ruff", "check", "."]
@@ -369,7 +369,7 @@ class TestAutofixCoordinator:
         invalid_cmd = ["python", "script.py"]
         assert autofix_coordinator.validate_fix_command(invalid_cmd) is False
 
-    def test_should_skip_autofix(self, autofix_coordinator):
+    def test_should_skip_autofix(self, autofix_coordinator) -> None:
         """Test checking if autofix should be skipped."""
         # Mock hook result with import error
         mock_hook_result = Mock()
@@ -385,7 +385,7 @@ class TestAutofixCoordinator:
         result = autofix_coordinator.should_skip_autofix(hook_results)
         assert result is False
 
-    def test_validate_hook_result(self, autofix_coordinator):
+    def test_validate_hook_result(self, autofix_coordinator) -> None:
         """Test hook result validation."""
         # Valid hook result
         valid_result = Mock()

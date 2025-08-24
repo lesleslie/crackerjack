@@ -26,17 +26,17 @@ class TestConfigurationService:
         """Create ConfigurationService with temporary directory."""
         return ConfigurationService(pkg_path=temp_dir)
 
-    def test_init(self, config_service, temp_dir):
+    def test_init(self, config_service, temp_dir) -> None:
         """Test ConfigurationService initialization."""
         assert config_service.pkg_path == temp_dir
 
-    def test_load_pyproject_config_not_exists(self, config_service):
+    def test_load_pyproject_config_not_exists(self, config_service) -> None:
         """Test loading pyproject.toml that doesn't exist."""
         result = config_service.load_pyproject_config()
 
         assert result == {}
 
-    def test_save_pyproject_config(self, config_service, temp_dir):
+    def test_save_pyproject_config(self, config_service, temp_dir) -> None:
         """Test saving pyproject.toml configuration."""
         config = {"project": {"name": "test", "version": "1.0.0"}}
 
@@ -47,13 +47,13 @@ class TestConfigurationService:
         pyproject_path = temp_dir / "pyproject.toml"
         assert pyproject_path.exists()
 
-    def test_load_precommit_config_not_exists(self, config_service):
+    def test_load_precommit_config_not_exists(self, config_service) -> None:
         """Test loading .pre-commit-config.yaml that doesn't exist."""
         result = config_service.load_precommit_config()
 
         assert result == {}
 
-    def test_save_precommit_config(self, config_service, temp_dir):
+    def test_save_precommit_config(self, config_service, temp_dir) -> None:
         """Test saving .pre-commit-config.yaml configuration."""
         config = {"repos": [{"repo": "https://github.com/test/repo", "rev": "v1.0.0"}]}
 
@@ -64,7 +64,7 @@ class TestConfigurationService:
         precommit_path = temp_dir / ".pre-commit-config.yaml"
         assert precommit_path.exists()
 
-    def test_update_pyproject_config(self, config_service, temp_dir):
+    def test_update_pyproject_config(self, config_service, temp_dir) -> None:
         """Test updating pyproject.toml configuration."""
         # Create initial config
         initial_config = {"project": {"name": "test"}}
@@ -72,7 +72,7 @@ class TestConfigurationService:
 
         # Update with new values
         result = config_service.update_pyproject_config(
-            {"tool": {"pytest": {"timeout": 300}}}
+            {"tool": {"pytest": {"timeout": 300}}},
         )
 
         assert result is True
@@ -83,7 +83,7 @@ class TestConfigurationService:
         assert "tool" in loaded_config
         assert loaded_config["project"]["name"] == "test"
 
-    def test_update_precommit_config(self, config_service):
+    def test_update_precommit_config(self, config_service) -> None:
         """Test updating pre-commit configuration."""
         updates = {"repos": [{"repo": "https://github.com/test/repo", "rev": "v1.0.0"}]}
 
@@ -91,7 +91,7 @@ class TestConfigurationService:
 
         assert result is True
 
-    def test_validate_pyproject_config_valid(self, config_service, temp_dir):
+    def test_validate_pyproject_config_valid(self, config_service, temp_dir) -> None:
         """Test validating valid pyproject.toml."""
         valid_config = {"project": {"name": "test", "version": "1.0.0"}}
         config_service.save_pyproject_config(valid_config)
@@ -100,19 +100,19 @@ class TestConfigurationService:
 
         assert result is True
 
-    def test_validate_pyproject_config_missing(self, config_service):
+    def test_validate_pyproject_config_missing(self, config_service) -> None:
         """Test validating missing pyproject.toml."""
         result = config_service.validate_pyproject_config()
 
         assert result is False
 
-    def test_validate_precommit_config_missing(self, config_service):
+    def test_validate_precommit_config_missing(self, config_service) -> None:
         """Test validating missing pre-commit config."""
         result = config_service.validate_precommit_config()
 
         assert result is False
 
-    def test_backup_config_files(self, config_service, temp_dir):
+    def test_backup_config_files(self, config_service, temp_dir) -> None:
         """Test backing up configuration files."""
         # Create config files first
         config_service.save_pyproject_config({"project": {"name": "test"}})
@@ -122,14 +122,14 @@ class TestConfigurationService:
 
         assert result is True
 
-    def test_restore_config_files(self, config_service):
+    def test_restore_config_files(self, config_service) -> None:
         """Test restoring configuration files from backup."""
         # Should handle gracefully when no backups exist
         result = config_service.restore_config_files()
 
         assert isinstance(result, bool)
 
-    def test_get_config_summary(self, config_service, temp_dir):
+    def test_get_config_summary(self, config_service, temp_dir) -> None:
         """Test getting configuration summary."""
         config_service.save_pyproject_config({"project": {"name": "test"}})
 
@@ -161,25 +161,25 @@ class TestFileSystemService:
         if temp_path.exists():
             temp_path.unlink()
 
-    def test_init(self, filesystem_service):
+    def test_init(self, filesystem_service) -> None:
         """Test FileSystemService initialization."""
         assert filesystem_service is not None
         assert hasattr(filesystem_service, "_cache")
 
-    def test_read_file(self, filesystem_service, temp_file):
+    def test_read_file(self, filesystem_service, temp_file) -> None:
         """Test reading a file."""
         content = filesystem_service.read_file(temp_file)
 
         assert "# Test file" in content
         assert "print('hello')" in content
 
-    def test_read_file_not_exists(self, filesystem_service):
+    def test_read_file_not_exists(self, filesystem_service) -> None:
         """Test reading non-existent file."""
         result = filesystem_service.read_file(Path("/non/existent/file.txt"))
 
         assert result is None
 
-    def test_write_file(self, filesystem_service):
+    def test_write_file(self, filesystem_service) -> None:
         """Test writing a file."""
         with tempfile.NamedTemporaryFile(delete=False) as f:
             temp_path = Path(f.name)
@@ -198,12 +198,12 @@ class TestFileSystemService:
             if temp_path.exists():
                 temp_path.unlink()
 
-    def test_file_exists(self, filesystem_service, temp_file):
+    def test_file_exists(self, filesystem_service, temp_file) -> None:
         """Test checking file existence."""
         assert filesystem_service.file_exists(temp_file) is True
         assert filesystem_service.file_exists(Path("/non/existent.txt")) is False
 
-    def test_list_files(self, filesystem_service):
+    def test_list_files(self, filesystem_service) -> None:
         """Test listing files in directory."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
@@ -218,7 +218,7 @@ class TestFileSystemService:
             assert any(f.name == "file1.py" for f in files)
             assert any(f.name == "file2.txt" for f in files)
 
-    def test_list_files_with_pattern(self, filesystem_service):
+    def test_list_files_with_pattern(self, filesystem_service) -> None:
         """Test listing files with pattern."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
@@ -233,7 +233,7 @@ class TestFileSystemService:
             assert len(py_files) == 2
             assert all(f.suffix == ".py" for f in py_files)
 
-    def test_create_directory(self, filesystem_service):
+    def test_create_directory(self, filesystem_service) -> None:
         """Test creating directory."""
         with tempfile.TemporaryDirectory() as tmpdir:
             new_dir = Path(tmpdir) / "new_directory"
@@ -244,7 +244,7 @@ class TestFileSystemService:
             assert new_dir.exists()
             assert new_dir.is_dir()
 
-    def test_delete_file(self, filesystem_service):
+    def test_delete_file(self, filesystem_service) -> None:
         """Test deleting file."""
         with tempfile.NamedTemporaryFile(delete=False) as f:
             temp_path = Path(f.name)
@@ -256,7 +256,7 @@ class TestFileSystemService:
         assert result is True
         assert not temp_path.exists()
 
-    def test_copy_file(self, filesystem_service, temp_file):
+    def test_copy_file(self, filesystem_service, temp_file) -> None:
         """Test copying file."""
         with tempfile.NamedTemporaryFile(delete=False) as f:
             dest_path = Path(f.name)
@@ -278,7 +278,7 @@ class TestFileSystemService:
             if dest_path.exists():
                 dest_path.unlink()
 
-    def test_get_file_stats(self, filesystem_service, temp_file):
+    def test_get_file_stats(self, filesystem_service, temp_file) -> None:
         """Test getting file statistics."""
         stats = filesystem_service.get_file_stats(temp_file)
 
@@ -287,7 +287,7 @@ class TestFileSystemService:
         assert "modified" in stats
         assert "created" in stats
 
-    def test_clear_cache(self, filesystem_service):
+    def test_clear_cache(self, filesystem_service) -> None:
         """Test clearing file cache."""
         # This should not raise an error
         filesystem_service.clear_cache()
@@ -301,32 +301,32 @@ class TestSecurityService:
         """Create SecurityService instance."""
         return SecurityService()
 
-    def test_init(self, security_service):
+    def test_init(self, security_service) -> None:
         """Test SecurityService initialization."""
         assert security_service is not None
 
     @patch.dict("os.environ", {"UV_PUBLISH_TOKEN": "test_token_123"})
-    def test_get_publish_token_from_env(self, security_service):
+    def test_get_publish_token_from_env(self, security_service) -> None:
         """Test getting publish token from environment."""
         token = security_service.get_publish_token()
 
         assert token == "test_token_123"
 
-    def test_get_publish_token_missing(self, security_service):
+    def test_get_publish_token_missing(self, security_service) -> None:
         """Test getting publish token when missing."""
         with patch.dict("os.environ", {}, clear=True):
             token = security_service.get_publish_token()
 
             assert token is None
 
-    def test_validate_token_format_valid(self, security_service):
+    def test_validate_token_format_valid(self, security_service) -> None:
         """Test validating valid token format."""
         valid_tokens = ["pypi-abc123def456", "test-token-123", "abcdef123456"]
 
         for token in valid_tokens:
             assert security_service.validate_token_format(token) is True
 
-    def test_validate_token_format_invalid(self, security_service):
+    def test_validate_token_format_invalid(self, security_service) -> None:
         """Test validating invalid token format."""
         invalid_tokens = [
             "",  # empty
@@ -338,7 +338,7 @@ class TestSecurityService:
         for token in invalid_tokens:
             assert security_service.validate_token_format(token) is False
 
-    def test_create_secure_temp_file(self, security_service):
+    def test_create_secure_temp_file(self, security_service) -> None:
         """Test creating secure temporary file."""
         temp_file = security_service.create_secure_temp_file("test_content")
 
@@ -356,7 +356,7 @@ class TestSecurityService:
             if temp_file.exists():
                 temp_file.unlink()
 
-    def test_sanitize_path_safe(self, security_service):
+    def test_sanitize_path_safe(self, security_service) -> None:
         """Test sanitizing safe path."""
         safe_paths = ["normal/path/file.txt", "file.py", "dir/subdir/file.json"]
 
@@ -364,7 +364,7 @@ class TestSecurityService:
             result = security_service.sanitize_path(path)
             assert result == path
 
-    def test_sanitize_path_unsafe(self, security_service):
+    def test_sanitize_path_unsafe(self, security_service) -> None:
         """Test sanitizing unsafe path."""
         unsafe_paths = [
             "../../../etc/passwd",  # Directory traversal
@@ -378,7 +378,7 @@ class TestSecurityService:
             assert ".." not in result
             assert not result.startswith("/")
 
-    def test_validate_command_safe(self, security_service):
+    def test_validate_command_safe(self, security_service) -> None:
         """Test validating safe commands."""
         safe_commands = [
             ["python", "-m", "pytest"],
@@ -389,7 +389,7 @@ class TestSecurityService:
         for cmd in safe_commands:
             assert security_service.validate_command(cmd) is True
 
-    def test_validate_command_unsafe(self, security_service):
+    def test_validate_command_unsafe(self, security_service) -> None:
         """Test validating unsafe commands."""
         unsafe_commands = [
             ["rm", "-rf", "/"],  # Dangerous system command
@@ -400,7 +400,7 @@ class TestSecurityService:
         for cmd in unsafe_commands:
             assert security_service.validate_command(cmd) is False
 
-    def test_hash_sensitive_data(self, security_service):
+    def test_hash_sensitive_data(self, security_service) -> None:
         """Test hashing sensitive data."""
         data = "sensitive_password_123"
 
@@ -414,7 +414,7 @@ class TestSecurityService:
         # Should be hex string
         assert all(c in "0123456789abcdef" for c in hash1)
 
-    def test_secure_delete_file(self, security_service):
+    def test_secure_delete_file(self, security_service) -> None:
         """Test securely deleting file."""
         # Create temporary file
         with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -443,11 +443,11 @@ class TestUnifiedConfigurationService:
         """Create UnifiedConfigurationService with temporary directory."""
         return UnifiedConfigurationService(pkg_path=temp_dir)
 
-    def test_init(self, unified_config_service, temp_dir):
+    def test_init(self, unified_config_service, temp_dir) -> None:
         """Test UnifiedConfigService initialization."""
         assert unified_config_service.pkg_path == temp_dir
 
-    def test_load_all_configs_empty(self, unified_config_service):
+    def test_load_all_configs_empty(self, unified_config_service) -> None:
         """Test loading all configs when none exist."""
         configs = unified_config_service.load_all_configs()
 
@@ -455,14 +455,14 @@ class TestUnifiedConfigurationService:
         assert "pyproject" in configs
         assert "precommit" in configs
 
-    def test_validate_all_configs_empty(self, unified_config_service):
+    def test_validate_all_configs_empty(self, unified_config_service) -> None:
         """Test validating all configs when none exist."""
         result = unified_config_service.validate_all_configs()
 
         # Should handle missing configs gracefully
         assert isinstance(result, bool)
 
-    def test_get_unified_summary(self, unified_config_service):
+    def test_get_unified_summary(self, unified_config_service) -> None:
         """Test getting unified configuration summary."""
         summary = unified_config_service.get_unified_summary()
 
@@ -470,25 +470,25 @@ class TestUnifiedConfigurationService:
         assert "total_configs" in summary
         assert "valid_configs" in summary
 
-    def test_sync_configurations(self, unified_config_service):
+    def test_sync_configurations(self, unified_config_service) -> None:
         """Test synchronizing configurations."""
         result = unified_config_service.sync_configurations()
 
         assert isinstance(result, bool)
 
-    def test_backup_all_configs(self, unified_config_service):
+    def test_backup_all_configs(self, unified_config_service) -> None:
         """Test backing up all configurations."""
         result = unified_config_service.backup_all_configs()
 
         assert isinstance(result, bool)
 
-    def test_restore_all_configs(self, unified_config_service):
+    def test_restore_all_configs(self, unified_config_service) -> None:
         """Test restoring all configurations."""
         result = unified_config_service.restore_all_configs()
 
         assert isinstance(result, bool)
 
-    def test_merge_config_updates(self, unified_config_service):
+    def test_merge_config_updates(self, unified_config_service) -> None:
         """Test merging configuration updates."""
         updates = {
             "pyproject": {"tool": {"pytest": {"timeout": 300}}},
@@ -499,13 +499,13 @@ class TestUnifiedConfigurationService:
 
         assert isinstance(result, bool)
 
-    def test_get_config_dependencies(self, unified_config_service):
+    def test_get_config_dependencies(self, unified_config_service) -> None:
         """Test getting configuration dependencies."""
         deps = unified_config_service.get_config_dependencies()
 
         assert isinstance(deps, dict)
 
-    def test_validate_config_consistency(self, unified_config_service):
+    def test_validate_config_consistency(self, unified_config_service) -> None:
         """Test validating configuration consistency."""
         result = unified_config_service.validate_config_consistency()
 

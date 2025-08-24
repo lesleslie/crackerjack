@@ -92,7 +92,7 @@ class TestDynamicConfigGenerator:
         enabled_experimental = ["other - hook"]
 
         result = config_generator._should_include_hook(
-            hook, config, enabled_experimental
+            hook, config, enabled_experimental,
         )
         assert result is False
 
@@ -187,7 +187,7 @@ class TestDynamicConfigGenerator:
 
     def test_get_repo_comment_known_repos(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https://github.com/pre-commit/pre-commit-hooks"
+            "https://github.com/pre-commit/pre-commit-hooks",
         )
         assert result == "File structure and format validators"
 
@@ -196,19 +196,19 @@ class TestDynamicConfigGenerator:
 
     def test_get_repo_comment_security_keywords(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https: // github.com / security / bandit"
+            "https: // github.com / security / bandit",
         )
         assert result == "Security checks"
 
     def test_get_repo_comment_formatting_keywords(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https: // github.com / astral - sh / ruff - pre - commit"
+            "https: // github.com / astral - sh / ruff - pre - commit",
         )
         assert result == "Code formatting and quality"
 
     def test_get_repo_comment_unknown(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https: // github.com / unknown / repo"
+            "https: // github.com / unknown / repo",
         )
         assert result is None
 

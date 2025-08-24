@@ -82,11 +82,11 @@ class SecurityAgent(SubAgent):
             self.log(f"Identified vulnerability type: {vulnerability_type}")
 
             fixes_applied, files_modified = await self._apply_vulnerability_fixes(
-                vulnerability_type, issue, fixes_applied, files_modified
+                vulnerability_type, issue, fixes_applied, files_modified,
             )
 
             fixes_applied, files_modified = await self._apply_additional_fixes(
-                issue, fixes_applied, files_modified
+                issue, fixes_applied, files_modified,
             )
 
             success = len(fixes_applied) > 0
@@ -131,7 +131,7 @@ class SecurityAgent(SubAgent):
         return fixes_applied, files_modified
 
     async def _apply_additional_fixes(
-        self, issue: Issue, fixes_applied: list[str], files_modified: list[str]
+        self, issue: Issue, fixes_applied: list[str], files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         if not fixes_applied:
             bandit_fixes = await self._run_bandit_analysis()
@@ -172,11 +172,11 @@ class SecurityAgent(SubAgent):
 
         if "B108" in message:
             return "hardcoded_temp_paths"
-        elif "B602" in message or "shell=True" in message:
+        if "B602" in message or "shell=True" in message:
             return "shell_injection"
-        elif "B301" in message or "pickle" in message.lower():
+        if "B301" in message or "pickle" in message.lower():
             return "pickle_usage"
-        elif "B506" in message or "yaml.load" in message:
+        if "B506" in message or "yaml.load" in message:
             return "unsafe_yaml"
 
         for pattern_name, pattern in self.security_patterns.items():
@@ -296,7 +296,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(
-                    f"Fixed shell injection vulnerability in {issue.file_path}"
+                    f"Fixed shell injection vulnerability in {issue.file_path}",
                 )
                 files.append(str(file_path))
                 self.log(f"Fixed shell injection in {issue.file_path}")
@@ -327,7 +327,7 @@ class SecurityAgent(SubAgent):
         return {"fixes": fixes, "files": files}
 
     def _process_hardcoded_secrets_in_lines(
-        self, lines: list[str]
+        self, lines: list[str],
     ) -> tuple[list[str], bool]:
         modified = False
 
@@ -362,7 +362,7 @@ class SecurityAgent(SubAgent):
                 r'(password|secret|key|token)\s*=\s*[\'"][^\'"]+[\'"]',
                 line,
                 re.IGNORECASE,
-            )
+            ),
         )
 
     def _replace_hardcoded_secret_with_env_var(self, line: str) -> str:
@@ -402,7 +402,7 @@ class SecurityAgent(SubAgent):
         files: list[str] = []
 
         fixes.append(
-            f"Identified eval() usage in {issue.file_path} - manual review required"
+            f"Identified eval() usage in {issue.file_path} - manual review required",
         )
 
         return {"fixes": fixes, "files": files}
@@ -442,7 +442,7 @@ class SecurityAgent(SubAgent):
 
         try:
             returncode, _, _ = await self.run_command(
-                ["uv", "run", "bandit", "-r", "crackerjack/", "-f", "txt"]
+                ["uv", "run", "bandit", "-r", "crackerjack/", "-f", "txt"],
             )
 
             if returncode == 0:
@@ -487,8 +487,7 @@ class SecurityAgent(SubAgent):
 
     async def _apply_security_fixes_to_content(self, content: str) -> str:
         content = await self._fix_insecure_random_usage(content)
-        content = self._remove_debug_prints_with_secrets(content)
-        return content
+        return self._remove_debug_prints_with_secrets(content)
 
     async def _fix_insecure_random_usage(self, content: str) -> str:
         if not re.search(r"random\.(?:random|choice)\(", content):
@@ -496,9 +495,8 @@ class SecurityAgent(SubAgent):
 
         content = self._add_secrets_import_if_needed(content)
 
-        content = re.sub(r"random\.choice\(([^)]+)\)", r"secrets.choice(\1)", content)
+        return re.sub(r"random\.choice\(([^)]+)\)", r"secrets.choice(\1)", content)
 
-        return content
 
     def _add_secrets_import_if_needed(self, content: str) -> str:
         if "import secrets" in content:

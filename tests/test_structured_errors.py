@@ -41,11 +41,11 @@ class TestErrorHandlingIntegration:
         result.returncode = 0
         result.stdout = "Success"
         result.stderr = ""
-        yield result
+        return result
 
     def test_check_command_result_success(self, mock_command_result: MagicMock) -> None:
         check_command_result(
-            mock_command_result, "test command", "Error executing command"
+            mock_command_result, "test command", "Error executing command",
         )
 
     def test_check_command_result_failure(self, mock_command_result: MagicMock) -> None:
@@ -53,13 +53,15 @@ class TestErrorHandlingIntegration:
         mock_command_result.stderr = "Command failed"
         with pytest.raises(ExecutionError) as excinfo:
             check_command_result(
-                mock_command_result, "test command", "Error executing command"
+                mock_command_result, "test command", "Error executing command",
             )
         assert excinfo.value.error_code == ErrorCode.COMMAND_EXECUTION_ERROR
         assert "Error executing command" in excinfo.value.message
         assert (
             excinfo.value.details is not None
-            and "Command failed" in excinfo.value.details
+        )
+        assert (
+            "Command failed" in excinfo.value.details
         )
 
     def test_check_file_exists_success(self, tmp_path: Path) -> None:
@@ -75,11 +77,13 @@ class TestErrorHandlingIntegration:
         assert "File not found" in excinfo.value.message
         assert (
             excinfo.value.details is not None
-            and str(test_file) in excinfo.value.details
+        )
+        assert (
+            str(test_file) in excinfo.value.details
         )
 
     def test_error_handling_in_code_cleaner(
-        self, capsys: "CaptureFixture[str]"
+        self, capsys: "CaptureFixture[str]",
     ) -> None:
         from crackerjack.code_cleaner import CodeCleaner
 
@@ -88,7 +92,7 @@ class TestErrorHandlingIntegration:
         test_path = Path("/nonexistent / file.py")
         with patch("pathlib.Path.read_text") as mock_read:
             mock_read.side_effect = FileNotFoundError(
-                f"[Errno 2] No such file or directory: '{test_path}'"
+                f"[Errno 2] No such file or directory: '{test_path}'",
             )
             cleaner.clean_file(test_path)
             captured = capsys.readouterr()

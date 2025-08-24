@@ -12,7 +12,7 @@ from unittest.mock import Mock
 class TestServicesCacheFunctionality:
     """Test cache service functionality to boost coverage."""
 
-    def test_cache_basic_operations(self):
+    def test_cache_basic_operations(self) -> None:
         """Test cache basic operations."""
         from crackerjack.services.cache import Cache
 
@@ -29,7 +29,7 @@ class TestServicesCacheFunctionality:
         cache.clear()
         assert cache.get("key1") is None
 
-    def test_cache_configuration(self):
+    def test_cache_configuration(self) -> None:
         """Test cache configuration options."""
         from crackerjack.services.cache import Cache
 
@@ -41,7 +41,7 @@ class TestServicesCacheFunctionality:
 class TestServicesFilesystemFunctionality:
     """Test filesystem service functionality to boost coverage."""
 
-    def test_filesystem_basic_operations(self):
+    def test_filesystem_basic_operations(self) -> None:
         """Test filesystem basic operations."""
         from crackerjack.services.filesystem import FileSystem
 
@@ -64,7 +64,7 @@ class TestServicesFilesystemFunctionality:
         finally:
             temp_path.unlink()
 
-    def test_filesystem_path_operations(self):
+    def test_filesystem_path_operations(self) -> None:
         """Test filesystem path operations."""
         from crackerjack.services.filesystem import FileSystem
 
@@ -81,7 +81,7 @@ class TestServicesFilesystemFunctionality:
 class TestServicesSecurityFunctionality:
     """Test security service functionality to boost coverage."""
 
-    def test_security_path_validation(self):
+    def test_security_path_validation(self) -> None:
         """Test security path validation."""
         from crackerjack.services.security import SecurityService
 
@@ -92,7 +92,7 @@ class TestServicesSecurityFunctionality:
         assert security.is_safe_path("../unsafe/path") is False
         assert security.is_safe_path("./relative/path") is True
 
-    def test_security_command_validation(self):
+    def test_security_command_validation(self) -> None:
         """Test security command validation."""
         from crackerjack.services.security import SecurityService
 
@@ -111,7 +111,7 @@ class TestServicesSecurityFunctionality:
 class TestServicesGitFunctionality:
     """Test git service functionality to boost coverage."""
 
-    def test_git_command_building(self):
+    def test_git_command_building(self) -> None:
         """Test git command building."""
         from crackerjack.services.git import GitService
 
@@ -123,7 +123,7 @@ class TestServicesGitFunctionality:
         assert "git" in cmd
         assert "status" in cmd
 
-    def test_git_repository_checks(self):
+    def test_git_repository_checks(self) -> None:
         """Test git repository checks."""
         from crackerjack.services.git import GitService
 
@@ -141,7 +141,7 @@ class TestServicesGitFunctionality:
 class TestCoreContainerFunctionality:
     """Test core container functionality to boost coverage."""
 
-    def test_container_dependency_registration(self):
+    def test_container_dependency_registration(self) -> None:
         """Test container dependency registration."""
         from crackerjack.core.container import Container
 
@@ -155,7 +155,7 @@ class TestCoreContainerFunctionality:
         retrieved = container.get("test_service")
         assert retrieved is test_service
 
-    def test_container_singleton_behavior(self):
+    def test_container_singleton_behavior(self) -> None:
         """Test container singleton behavior."""
         from crackerjack.core.container import Container
 
@@ -175,7 +175,7 @@ class TestCoreContainerFunctionality:
 class TestModelsTaskFunctionality:
     """Test models task functionality to boost coverage."""
 
-    def test_task_status_transitions(self):
+    def test_task_status_transitions(self) -> None:
         """Test task status transitions."""
         from crackerjack.models.task import Task, TaskStatus
 
@@ -193,7 +193,7 @@ class TestModelsTaskFunctionality:
         task.status = TaskStatus.COMPLETED
         assert task.status == TaskStatus.COMPLETED
 
-    def test_task_validation(self):
+    def test_task_validation(self) -> None:
         """Test task validation and properties."""
         from crackerjack.models.task import Task, TaskStatus
 
@@ -213,7 +213,7 @@ class TestModelsTaskFunctionality:
 class TestInteractiveCLIFunctionality:
     """Test interactive CLI functionality to boost coverage."""
 
-    def test_interactive_cli_creation(self):
+    def test_interactive_cli_creation(self) -> None:
         """Test interactive CLI creation."""
         from crackerjack.interactive import InteractiveCLI
 
@@ -223,7 +223,7 @@ class TestInteractiveCLIFunctionality:
         # Test console availability
         assert hasattr(cli, "console")
 
-    def test_interactive_cli_configuration(self):
+    def test_interactive_cli_configuration(self) -> None:
         """Test interactive CLI configuration."""
         from crackerjack.interactive import InteractiveCLI
 
@@ -241,7 +241,7 @@ class TestInteractiveCLIFunctionality:
 class TestCodeCleanerFunctionality:
     """Test code cleaner functionality to boost coverage."""
 
-    def test_code_cleaner_creation(self):
+    def test_code_cleaner_creation(self) -> None:
         """Test code cleaner creation."""
         from crackerjack.code_cleaner import CodeCleaner
 
@@ -251,7 +251,7 @@ class TestCodeCleanerFunctionality:
         # Test configuration access
         assert hasattr(cleaner, "config")
 
-    def test_code_cleaner_analysis(self):
+    def test_code_cleaner_analysis(self) -> None:
         """Test code cleaner analysis functionality."""
         from crackerjack.code_cleaner import CodeCleaner
 
@@ -271,7 +271,7 @@ class TestCodeCleanerFunctionality:
 class TestDynamicConfigFunctionality:
     """Test dynamic config functionality to boost coverage."""
 
-    def test_config_template_creation(self):
+    def test_config_template_creation(self) -> None:
         """Test config template creation."""
         from crackerjack.dynamic_config import ConfigTemplate
 
@@ -280,7 +280,7 @@ class TestDynamicConfigFunctionality:
         assert template.name == "test_template"
         assert template.content == "test content"
 
-    def test_dynamic_config_operations(self):
+    def test_dynamic_config_operations(self) -> None:
         """Test dynamic config operations."""
         from crackerjack.dynamic_config import DynamicConfig
 
@@ -299,7 +299,7 @@ class TestDynamicConfigFunctionality:
 class TestErrorsFunctionality:
     """Test errors functionality to boost coverage."""
 
-    def test_crackerjack_error_hierarchy(self):
+    def test_crackerjack_error_hierarchy(self) -> None:
         """Test crackerjack error hierarchy."""
         from crackerjack.errors import (
             ConfigurationError,
@@ -324,7 +324,7 @@ class TestErrorsFunctionality:
         file_error = FileError("file error")
         assert isinstance(file_error, CrackerjackError)
 
-    def test_error_code_enum(self):
+    def test_error_code_enum(self) -> None:
         """Test error code enum values."""
         from crackerjack.errors import ErrorCode
 
@@ -338,14 +338,14 @@ class TestErrorsFunctionality:
 class TestAgentsCoordinatorFunctionality:
     """Test agents coordinator functionality to boost coverage."""
 
-    def test_agents_coordinator_creation(self):
+    def test_agents_coordinator_creation(self) -> None:
         """Test agents coordinator creation."""
         from crackerjack.agents.coordinator import AgentCoordinator
 
         coordinator = AgentCoordinator()
         assert coordinator is not None
 
-    def test_agents_coordinator_methods(self):
+    def test_agents_coordinator_methods(self) -> None:
         """Test agents coordinator methods."""
         from crackerjack.agents.coordinator import AgentCoordinator
 
@@ -363,7 +363,7 @@ class TestAgentsCoordinatorFunctionality:
 class TestMCPCacheFunctionalityAdvanced:
     """Test advanced MCP cache functionality to boost coverage."""
 
-    def test_error_cache_advanced_operations(self):
+    def test_error_cache_advanced_operations(self) -> None:
         """Test error cache advanced operations."""
         from crackerjack.mcp.cache import ErrorCache, ErrorPattern
 
@@ -380,7 +380,7 @@ class TestMCPCacheFunctionalityAdvanced:
             assert retrieved is not None
             assert retrieved.pattern_id == "test1"
 
-    def test_fix_result_merge_operations(self):
+    def test_fix_result_merge_operations(self) -> None:
         """Test fix result merge operations."""
         from crackerjack.mcp.cache import FixResult
 
@@ -396,7 +396,7 @@ class TestMCPCacheFunctionalityAdvanced:
 class TestServicesAdvancedFunctionality:
     """Test advanced services functionality for maximum coverage boost."""
 
-    def test_file_hasher_advanced(self):
+    def test_file_hasher_advanced(self) -> None:
         """Test file hasher advanced functionality."""
         from crackerjack.services.file_hasher import FileHasher
 
@@ -420,7 +420,7 @@ class TestServicesAdvancedFunctionality:
         finally:
             temp_path.unlink()
 
-    def test_logging_service_advanced(self):
+    def test_logging_service_advanced(self) -> None:
         """Test logging service advanced functionality."""
         from crackerjack.services.logging import get_logger
 
@@ -442,7 +442,7 @@ class TestServicesAdvancedFunctionality:
 class TestComplexityReductionStrategic:
     """Strategic tests for maximum coverage with minimal complexity."""
 
-    def test_mass_import_coverage_boost(self):
+    def test_mass_import_coverage_boost(self) -> None:
         """Mass import test to boost coverage across multiple modules."""
         # Import all major components for coverage
         import crackerjack
@@ -481,7 +481,7 @@ class TestComplexityReductionStrategic:
         for module in modules:
             assert module is not None
 
-    def test_version_and_metadata_coverage(self):
+    def test_version_and_metadata_coverage(self) -> None:
         """Test version and metadata for coverage."""
         import crackerjack
 

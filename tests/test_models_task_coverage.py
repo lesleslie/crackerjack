@@ -12,7 +12,7 @@ from crackerjack.models.task import HookResult, SessionTracker, TaskStatus
 class TestHookResult:
     def test_hook_result_creation_minimal(self) -> None:
         result = HookResult(
-            id="test-hook", name="Test Hook", status="passed", duration=1.5
+            id="test-hook", name="Test Hook", status="passed", duration=1.5,
         )
 
         assert result.id == "test-hook"
@@ -44,7 +44,7 @@ class TestHookResult:
 
     def test_hook_result_post_init_none_issues(self) -> None:
         result = HookResult(
-            id="test", name="Test", status="passed", duration=1.0, issues_found=None
+            id="test", name="Test", status="passed", duration=1.0, issues_found=None,
         )
 
         assert result.issues_found == []
@@ -52,7 +52,7 @@ class TestHookResult:
     def test_hook_result_post_init_existing_issues(self) -> None:
         issues = ["issue1", "issue2"]
         result = HookResult(
-            id="test", name="Test", status="failed", duration=1.0, issues_found=issues
+            id="test", name="Test", status="failed", duration=1.0, issues_found=issues,
         )
 
         assert result.issues_found == issues
@@ -102,7 +102,7 @@ class TestTaskStatus:
 
     def test_task_status_post_init_none_files_changed(self) -> None:
         status = TaskStatus(
-            id="test", name="Test", status="pending", files_changed=None
+            id="test", name="Test", status="pending", files_changed=None,
         )
 
         assert status.files_changed == []
@@ -110,7 +110,7 @@ class TestTaskStatus:
     def test_task_status_post_init_existing_files_changed(self) -> None:
         files = ["file1.py", "file2.py"]
         status = TaskStatus(
-            id="test", name="Test", status="pending", files_changed=files
+            id="test", name="Test", status="pending", files_changed=files,
         )
 
         assert status.files_changed == files
@@ -132,7 +132,7 @@ class TestTaskStatus:
 
     def test_task_status_post_init_no_duration_calculation(self) -> None:
         status = TaskStatus(
-            id="test", name="Test", status="pending", start_time=None, end_time=None
+            id="test", name="Test", status="pending", start_time=None, end_time=None,
         )
 
         assert status.duration is None
@@ -236,7 +236,7 @@ class TestSessionTracker:
         assert session_tracker.current_task == "task1"
 
         session_tracker.console.print.assert_called_with(
-            "[yellow]⏳[/yellow] Started: Test Task"
+            "[yellow]⏳[/yellow] Started: Test Task",
         )
 
     def test_start_task_with_details(self, session_tracker) -> None:
@@ -260,7 +260,7 @@ class TestSessionTracker:
         assert session_tracker.current_task is None
 
         session_tracker.console.print.assert_called_with(
-            "[green]✅[/green] Completed: Test Task"
+            "[green]✅[/green] Completed: Test Task",
         )
 
     def test_complete_task_with_files_changed(self, session_tracker) -> None:
@@ -303,7 +303,7 @@ class TestSessionTracker:
         assert session_tracker.current_task is None
 
         session_tracker.console.print.assert_called_with(
-            "[red]❌[/red] Failed: Test Task - Task failed"
+            "[red]❌[/red] Failed: Test Task - Task failed",
         )
 
     def test_fail_task_nonexistent(self, session_tracker) -> None:
@@ -365,7 +365,7 @@ class TestSessionTracker:
 class TestTaskStatusEdgeCases:
     def test_task_status_duration_calculation_zero_start_time(self) -> None:
         status = TaskStatus(
-            id="test", name="Test", status="completed", start_time=0.0, end_time=5.0
+            id="test", name="Test", status="completed", start_time=0.0, end_time=5.0,
         )
 
         assert status.duration == 5.0
@@ -401,7 +401,7 @@ class TestSessionTrackerIntegration:
             assert task.details == "Starting task"
 
             tracker.complete_task(
-                "lifecycle", details="Task finished", files_changed=["test.py"]
+                "lifecycle", details="Task finished", files_changed=["test.py"],
             )
 
             assert tracker.current_task is None

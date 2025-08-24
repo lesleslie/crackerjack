@@ -80,7 +80,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
             self.metadata = {}
 
     def start_task(
-        self, task_id: str, task_name: str, details: str | None = None
+        self, task_id: str, task_name: str, details: str | None = None,
     ) -> None:
         task = TaskStatusData(
             id=task_id,
@@ -127,7 +127,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
             if details:
                 task.details = details
                 self.console.print(
-                    f"[red]❌[/red] Failed: {task.name} - {error_message}"
+                    f"[red]❌[/red] Failed: {task.name} - {error_message}",
                 )
             if self.current_task == task_id:
                 self.current_task = None

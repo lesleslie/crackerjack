@@ -11,7 +11,7 @@ from pathlib import Path
 class TestMCPModuleImports:
     """Test MCP modules can be imported and basic classes instantiated."""
 
-    def test_mcp_cache_imports(self):
+    def test_mcp_cache_imports(self) -> None:
         """Test MCP cache module imports."""
         from crackerjack.mcp.cache import ErrorCache, ErrorPattern, FixResult
 
@@ -26,46 +26,46 @@ class TestMCPModuleImports:
             cache = ErrorCache(Path(temp_dir))
             assert cache.cache_dir == Path(temp_dir)
 
-    def test_mcp_state_imports(self):
+    def test_mcp_state_imports(self) -> None:
         """Test MCP state module imports."""
         from crackerjack.mcp import state
 
         # Just importing gives coverage
         assert hasattr(state, "SessionState")
 
-    def test_mcp_rate_limiter_imports(self):
+    def test_mcp_rate_limiter_imports(self) -> None:
         """Test MCP rate limiter module imports."""
         from crackerjack.mcp import rate_limiter
 
         # Just importing gives coverage
         assert hasattr(rate_limiter, "RateLimiter")
 
-    def test_mcp_server_core_imports(self):
+    def test_mcp_server_core_imports(self) -> None:
         """Test MCP server core module imports."""
         from crackerjack.mcp import server_core
 
         # Just importing gives coverage - avoid actual server creation
         assert server_core is not None
 
-    def test_mcp_file_monitor_imports(self):
+    def test_mcp_file_monitor_imports(self) -> None:
         """Test MCP file monitor module imports."""
         from crackerjack.mcp import file_monitor
 
         assert file_monitor is not None
 
-    def test_mcp_task_manager_imports(self):
+    def test_mcp_task_manager_imports(self) -> None:
         """Test MCP task manager module imports."""
         from crackerjack.mcp import task_manager
 
         assert task_manager is not None
 
-    def test_mcp_context_imports(self):
+    def test_mcp_context_imports(self) -> None:
         """Test MCP context module imports."""
         from crackerjack.mcp import context
 
         assert context is not None
 
-    def test_mcp_tools_imports(self):
+    def test_mcp_tools_imports(self) -> None:
         """Test MCP tools modules imports."""
         from crackerjack.mcp.tools import (
             core_tools,
@@ -79,7 +79,7 @@ class TestMCPModuleImports:
         assert progress_tools is not None
         assert execution_tools is not None
 
-    def test_mcp_websocket_imports(self):
+    def test_mcp_websocket_imports(self) -> None:
         """Test MCP websocket modules imports."""
         from crackerjack.mcp.websocket import (
             app,
@@ -95,7 +95,7 @@ class TestMCPModuleImports:
         assert endpoints is not None
         assert websocket_handler is not None
 
-    def test_mcp_progress_components_imports(self):
+    def test_mcp_progress_components_imports(self) -> None:
         """Test MCP progress components imports."""
         from crackerjack.mcp import (
             dashboard,
@@ -116,7 +116,7 @@ class TestMCPModuleImports:
 class TestServicesModuleImports:
     """Test services modules can be imported."""
 
-    def test_services_enhanced_filesystem_imports(self):
+    def test_services_enhanced_filesystem_imports(self) -> None:
         """Test enhanced filesystem module imports."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -128,13 +128,13 @@ class TestServicesModuleImports:
 
         assert enhanced_filesystem is not None
 
-    def test_services_unified_config_imports(self):
+    def test_services_unified_config_imports(self) -> None:
         """Test unified config module imports."""
         from crackerjack.services import unified_config
 
         assert unified_config is not None
 
-    def test_services_zero_coverage_modules(self):
+    def test_services_zero_coverage_modules(self) -> None:
         """Test various services modules with 0% coverage."""
         from crackerjack.services import (
             contextual_ai_assistant,
@@ -159,25 +159,25 @@ class TestServicesModuleImports:
 class TestPluginsModuleImports:
     """Test plugins modules can be imported."""
 
-    def test_plugins_base_imports(self):
+    def test_plugins_base_imports(self) -> None:
         """Test plugins base module imports."""
         from crackerjack.plugins import base
 
         assert base is not None
 
-    def test_plugins_hooks_imports(self):
+    def test_plugins_hooks_imports(self) -> None:
         """Test plugins hooks module imports."""
         from crackerjack.plugins import hooks
 
         assert hooks is not None
 
-    def test_plugins_loader_imports(self):
+    def test_plugins_loader_imports(self) -> None:
         """Test plugins loader module imports."""
         from crackerjack.plugins import loader
 
         assert loader is not None
 
-    def test_plugins_managers_imports(self):
+    def test_plugins_managers_imports(self) -> None:
         """Test plugins managers module imports."""
         from crackerjack.plugins import managers
 
@@ -187,25 +187,25 @@ class TestPluginsModuleImports:
 class TestCoreModuleImports:
     """Test core modules can be imported."""
 
-    def test_core_enhanced_container_imports(self):
+    def test_core_enhanced_container_imports(self) -> None:
         """Test enhanced container module imports."""
         from crackerjack.core import enhanced_container
 
         assert enhanced_container is not None
 
-    def test_core_async_workflow_orchestrator_imports(self):
+    def test_core_async_workflow_orchestrator_imports(self) -> None:
         """Test async workflow orchestrator module imports."""
         from crackerjack.core import async_workflow_orchestrator
 
         assert async_workflow_orchestrator is not None
 
-    def test_core_autofix_coordinator_imports(self):
+    def test_core_autofix_coordinator_imports(self) -> None:
         """Test autofix coordinator module imports."""
         from crackerjack.core import autofix_coordinator
 
         assert autofix_coordinator is not None
 
-    def test_core_performance_imports(self):
+    def test_core_performance_imports(self) -> None:
         """Test performance module imports."""
         from crackerjack.core import performance
 
@@ -215,13 +215,13 @@ class TestCoreModuleImports:
 class TestOrchestrationModuleImports:
     """Test orchestration modules can be imported."""
 
-    def test_orchestration_advanced_orchestrator_imports(self):
+    def test_orchestration_advanced_orchestrator_imports(self) -> None:
         """Test advanced orchestrator module imports."""
         from crackerjack.orchestration import advanced_orchestrator
 
         assert advanced_orchestrator is not None
 
-    def test_orchestration_execution_strategies_imports(self):
+    def test_orchestration_execution_strategies_imports(self) -> None:
         """Test execution strategies module imports."""
         from crackerjack.orchestration import execution_strategies
 
@@ -231,7 +231,7 @@ class TestOrchestrationModuleImports:
 class TestExecutorsModuleImports:
     """Test executors modules can be imported."""
 
-    def test_executors_individual_hook_executor_imports(self):
+    def test_executors_individual_hook_executor_imports(self) -> None:
         """Test individual hook executor module imports."""
         from crackerjack.executors import individual_hook_executor
 
@@ -241,25 +241,25 @@ class TestExecutorsModuleImports:
 class TestCLIModuleImports:
     """Test CLI modules can be imported."""
 
-    def test_cli_facade_imports(self):
+    def test_cli_facade_imports(self) -> None:
         """Test CLI facade module imports."""
         from crackerjack.cli import facade
 
         assert facade is not None
 
-    def test_cli_interactive_imports(self):
+    def test_cli_interactive_imports(self) -> None:
         """Test CLI interactive module imports."""
         from crackerjack.cli import interactive
 
         assert interactive is not None
 
-    def test_cli_utils_imports(self):
+    def test_cli_utils_imports(self) -> None:
         """Test CLI utils module imports."""
         from crackerjack.cli import utils
 
         assert utils is not None
 
-    def test_cli_handlers_imports(self):
+    def test_cli_handlers_imports(self) -> None:
         """Test CLI handlers module imports."""
         from crackerjack.cli import handlers
 
@@ -269,19 +269,19 @@ class TestCLIModuleImports:
 class TestMiscModuleImports:
     """Test miscellaneous modules can be imported."""
 
-    def test_py313_imports(self):
+    def test_py313_imports(self) -> None:
         """Test py313 module imports."""
         from crackerjack import py313
 
         assert py313 is not None
 
-    def test_config_hooks_imports(self):
+    def test_config_hooks_imports(self) -> None:
         """Test config hooks module imports."""
         from crackerjack.config import hooks
 
         assert hooks is not None
 
-    def test_models_config_adapter_imports(self):
+    def test_models_config_adapter_imports(self) -> None:
         """Test models config adapter module imports."""
         from crackerjack.models import config_adapter
 

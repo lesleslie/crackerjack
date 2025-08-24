@@ -132,7 +132,7 @@ class EnhancedCommandRunner:
         start_time = time.time()
         try:
             process = subprocess.run(
-                cmd, capture_output=True, text=True, cwd=self.working_dir, **kwargs
+                cmd, check=False, capture_output=True, text=True, cwd=self.working_dir, **kwargs,
             )
             duration_ms = (time.time() - start_time) * 1000
             return CommandResult(
@@ -178,7 +178,7 @@ def clean_python_code(code: str) -> str:
                 code_part = line.split("#", 1)[0].rstrip()
                 if code_part:
                     cleaned_lines.append(code_part)
-            case s if s.startswith('"""') or s.startswith("'''"):
+            case s if s.startswith(('"""', "'''")):
                 continue
             case _:
                 cleaned_lines.append(line)

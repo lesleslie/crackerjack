@@ -167,7 +167,7 @@ class TestCoreToolsValidation:
 
         assert _execute_stage(mock_orchestrator, "comprehensive", mock_options) is True
         mock_orchestrator.run_comprehensive_hooks_only.assert_called_once_with(
-            mock_options
+            mock_options,
         )
 
         assert _execute_stage(mock_orchestrator, "tests", mock_options) is True
@@ -239,7 +239,7 @@ class TestErrorAnalysis:
 
         # Test without suggestions
         detected_errors_no_sugg, suggestions_no_sugg = _detect_errors_and_suggestions(
-            error_text, False
+            error_text, False,
         )
 
         assert detected_errors_no_sugg == detected_errors
@@ -308,45 +308,44 @@ class TestCoreToolsRegistration:
         mock_orchestrator.run_fast_hooks_only.return_value = True
 
         with patch(
-            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context
+            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context,
+        ), patch(
+            "crackerjack.mcp.tools.core_tools.WorkflowOrchestrator",
+            return_value=mock_orchestrator,
         ):
-            with patch(
-                "crackerjack.mcp.tools.core_tools.WorkflowOrchestrator",
-                return_value=mock_orchestrator,
-            ):
-                # Import the function after patching
-                from crackerjack.mcp.tools.core_tools import register_core_tools
+            # Import the function after patching
+            from crackerjack.mcp.tools.core_tools import register_core_tools
 
-                # Create mock app and register tools
-                mock_app = Mock()
-                registered_functions = []
+            # Create mock app and register tools
+            mock_app = Mock()
+            registered_functions = []
 
-                def mock_tool_decorator():
-                    def decorator(func):
-                        registered_functions.append(func)
-                        return func
+            def mock_tool_decorator():
+                def decorator(func):
+                    registered_functions.append(func)
+                    return func
 
-                    return decorator
+                return decorator
 
-                mock_app.tool = mock_tool_decorator
-                register_core_tools(mock_app)
+            mock_app.tool = mock_tool_decorator
+            register_core_tools(mock_app)
 
-                # Find the run_crackerjack_stage function
-                stage_function = None
-                for func in registered_functions:
-                    if func.__name__ == "run_crackerjack_stage":
-                        stage_function = func
-                        break
+            # Find the run_crackerjack_stage function
+            stage_function = None
+            for func in registered_functions:
+                if func.__name__ == "run_crackerjack_stage":
+                    stage_function = func
+                    break
 
-                assert stage_function is not None
+            assert stage_function is not None
 
-                # Test the function
-                result = await stage_function("fast", "{}")
+            # Test the function
+            result = await stage_function("fast", "{}")
 
-                # Parse and verify result
-                result_data = json.loads(result)
-                assert result_data["success"] is True
-                assert result_data["stage"] == "fast"
+            # Parse and verify result
+            result_data = json.loads(result)
+            assert result_data["success"] is True
+            assert result_data["stage"] == "fast"
 
     @pytest.mark.asyncio
     async def test_analyze_errors_tool_functionality(self) -> None:
@@ -357,49 +356,48 @@ class TestCoreToolsRegistration:
         mock_debugger.enabled = True
 
         with patch(
-            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context
+            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context,
+        ), patch(
+            "crackerjack.mcp.tools.core_tools.get_ai_agent_debugger",
+            return_value=mock_debugger,
         ):
-            with patch(
-                "crackerjack.mcp.tools.core_tools.get_ai_agent_debugger",
-                return_value=mock_debugger,
-            ):
-                # Import and register analyze errors tool
-                from crackerjack.mcp.tools.core_tools import (
-                    register_analyze_errors_tool,
-                )
+            # Import and register analyze errors tool
+            from crackerjack.mcp.tools.core_tools import (
+                register_analyze_errors_tool,
+            )
 
-                mock_app = Mock()
-                registered_functions = []
+            mock_app = Mock()
+            registered_functions = []
 
-                def mock_tool_decorator():
-                    def decorator(func):
-                        registered_functions.append(func)
-                        return func
+            def mock_tool_decorator():
+                def decorator(func):
+                    registered_functions.append(func)
+                    return func
 
-                    return decorator
+                return decorator
 
-                mock_app.tool = mock_tool_decorator
-                register_analyze_errors_tool(mock_app)
+            mock_app.tool = mock_tool_decorator
+            register_analyze_errors_tool(mock_app)
 
-                # Find the analyze_errors function
-                analyze_function = None
-                for func in registered_functions:
-                    if func.__name__ == "analyze_errors":
-                        analyze_function = func
-                        break
+            # Find the analyze_errors function
+            analyze_function = None
+            for func in registered_functions:
+                if func.__name__ == "analyze_errors":
+                    analyze_function = func
+                    break
 
-                assert analyze_function is not None
+            assert analyze_function is not None
 
-                # Test the function
-                error_output = "TypeError: object has no attribute 'test'"
-                result = await analyze_function(error_output, True)
+            # Test the function
+            error_output = "TypeError: object has no attribute 'test'"
+            result = await analyze_function(error_output, True)
 
-                # Parse and verify result
-                result_data = json.loads(result)
-                assert "analysis" in result_data
-                assert "error_types" in result_data
-                assert "suggestions" in result_data
-                assert isinstance(result_data["error_types"], list)
+            # Parse and verify result
+            result_data = json.loads(result)
+            assert "analysis" in result_data
+            assert "error_types" in result_data
+            assert "suggestions" in result_data
+            assert isinstance(result_data["error_types"], list)
 
 
 class TestMonitoringToolsUtilities:
@@ -427,7 +425,7 @@ class TestMonitoringToolsUtilities:
         """Test getting stage status dictionary."""
         mock_state_manager = Mock()
         mock_state_manager.get_stage_status = Mock(
-            side_effect=lambda stage: f"{stage}_status"
+            side_effect=lambda stage: f"{stage}_status",
         )
 
         result = _get_stage_status_dict(mock_state_manager)
@@ -474,7 +472,7 @@ class TestMonitoringToolsUtilities:
 
         # Test when fast stage not completed
         mock_state_manager.get_stage_status = Mock(
-            side_effect=lambda stage: "pending" if stage == "fast" else "completed"
+            side_effect=lambda stage: "pending" if stage == "fast" else "completed",
         )
 
         result = _determine_next_action(mock_state_manager)
@@ -485,7 +483,7 @@ class TestMonitoringToolsUtilities:
 
         # Test when tests not completed
         mock_state_manager.get_stage_status = Mock(
-            side_effect=lambda stage: "pending" if stage == "tests" else "completed"
+            side_effect=lambda stage: "pending" if stage == "tests" else "completed",
         )
 
         result = _determine_next_action(mock_state_manager)
@@ -579,7 +577,7 @@ class TestMonitoringToolsUtilities:
                 "message": "Running tests...",
                 "timestamp": "2024-01-01T10:00:00",
                 "error_counts": {"errors": 2},
-            }
+            },
         )
 
         mock_file2 = Mock()
@@ -589,7 +587,7 @@ class TestMonitoringToolsUtilities:
                 "status": "completed",
                 "iteration": 5,
                 "max_iterations": 5,
-            }
+            },
         )
 
         mock_progress_dir.glob.return_value = [mock_file1, mock_file2]
@@ -664,7 +662,7 @@ class TestComprehensiveStatus:
         mock_context.progress_dir.glob.return_value = []
         mock_context.rate_limiter = None
         mock_context.get_websocket_server_status = AsyncMock(
-            return_value={"status": "running"}
+            return_value={"status": "running"},
         )
 
         # Mock service manager functions
@@ -717,12 +715,11 @@ class TestComprehensiveStatus:
         with patch(
             "crackerjack.mcp.tools.monitoring_tools.get_context",
             return_value=mock_context,
+        ), patch(
+            "crackerjack.mcp.tools.monitoring_tools.find_mcp_server_processes",
+            side_effect=Exception("Service error"),
         ):
-            with patch(
-                "crackerjack.mcp.tools.monitoring_tools.find_mcp_server_processes",
-                side_effect=Exception("Service error"),
-            ):
-                result = await _get_comprehensive_status()
+            result = await _get_comprehensive_status()
 
         assert "error" in result
         assert "Failed to get comprehensive status" in result["error"]
@@ -872,20 +869,19 @@ class TestToolsIntegration:
         mock_context.rate_limiter = None
 
         with patch(
-            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context
+            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context,
+        ), patch(
+            "crackerjack.mcp.tools.monitoring_tools.get_context",
+            return_value=mock_context,
         ):
-            with patch(
-                "crackerjack.mcp.tools.monitoring_tools.get_context",
-                return_value=mock_context,
-            ):
-                # Both tools should use the same context
-                core_validation = await _validate_stage_request(mock_context, None)
-                assert core_validation is None  # No error
+            # Both tools should use the same context
+            core_validation = await _validate_stage_request(mock_context, None)
+            assert core_validation is None  # No error
 
-                # Monitoring tools should also work with same context
-                server_stats = _build_server_stats(mock_context)
-                assert "server_info" in server_stats
-                assert server_stats["server_info"]["project_path"] == "/test"
+            # Monitoring tools should also work with same context
+            server_stats = _build_server_stats(mock_context)
+            assert "server_info" in server_stats
+            assert server_stats["server_info"]["project_path"] == "/test"
 
 
 if __name__ == "__main__":

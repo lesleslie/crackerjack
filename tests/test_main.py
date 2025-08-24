@@ -64,10 +64,10 @@ def test_commit_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -
 
 
 def test_interactive_option(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     with patch(
-        "crackerjack.cli.interactive.launch_interactive_cli"
+        "crackerjack.cli.interactive.launch_interactive_cli",
     ) as mock_interactive:
         result = runner.invoke(app, ["-i"])
         assert result.exit_code == 0
@@ -81,7 +81,7 @@ def test_interactive_option(
 
 
 def test_update_precommit_option(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     result = runner.invoke(app, ["-u"])
     assert result.exit_code == 0
@@ -168,7 +168,7 @@ def test_clean_option(runner: CliRunner, mock_crackerjack_process: MagicMock) ->
 
 
 def test_no_config_updates(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     result = runner.invoke(app, ["-n"])
     assert result.exit_code == 0
@@ -196,10 +196,10 @@ def test_test_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> 
 
 
 def test_multiple_options(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     with patch(
-        "crackerjack.cli.interactive.launch_interactive_cli"
+        "crackerjack.cli.interactive.launch_interactive_cli",
     ) as mock_interactive:
         result = runner.invoke(app, ["-c", "-i", "-t", "-x"])
         assert result.exit_code == 0
@@ -245,7 +245,7 @@ def test_create_options() -> None:
 
 
 def test_conflicting_options(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     result = runner.invoke(app, ["-p", "patch", "-b", "minor"])
     assert result.exit_code == 0
@@ -278,7 +278,7 @@ def test_all_option(runner: CliRunner, mock_crackerjack_process: MagicMock) -> N
 
 
 def test_all_option_with_other_options(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     result = runner.invoke(app, ["-a", "patch", "-c", "-t"])
     assert result.exit_code == 0
@@ -290,7 +290,7 @@ def test_all_option_with_other_options(
 
 
 def test_create_pr_option(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     result = runner.invoke(app, ["-r"])
     assert result.exit_code == 0
@@ -305,7 +305,7 @@ def test_create_pr_option(
 
 
 def test_skip_hooks_option(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     result = runner.invoke(app, ["-s"])
     assert result.exit_code == 0
@@ -320,7 +320,7 @@ def test_skip_hooks_option(
 
 
 def test_benchmark_option(
-    runner: CliRunner, mock_crackerjack_process: MagicMock
+    runner: CliRunner, mock_crackerjack_process: MagicMock,
 ) -> None:
     result = runner.invoke(app, ["--benchmark"])
     assert result.exit_code == 0

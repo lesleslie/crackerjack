@@ -35,7 +35,7 @@ class TestPublishManagerCore:
         assert publish_manager.security is not None
 
     def test_initialization_dry_run(
-        self, dry_run_manager, mock_console, temp_pkg_path
+        self, dry_run_manager, mock_console, temp_pkg_path,
     ) -> None:
         assert dry_run_manager.console == mock_console
         assert dry_run_manager.pkg_path == temp_pkg_path
@@ -64,7 +64,7 @@ class TestPublishManagerCore:
 
         with patch.object(publish_manager.security, "mask_tokens") as mock_mask:
             mock_mask.side_effect = lambda x: x.replace(
-                "pypi - abcd1234efgh5678", "pypi -**** "
+                "pypi - abcd1234efgh5678", "pypi -**** ",
             )
 
             publish_manager._run_command(["test"])
@@ -79,7 +79,7 @@ version = "1.2.3"
 description = "Test package"
 """
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value=pyproject_content
+            publish_manager.filesystem, "read_file", return_value=pyproject_content,
         ):
             version = publish_manager._get_current_version()
             assert version == "1.2.3"
@@ -90,7 +90,7 @@ description = "Test package"
 
     def test_get_current_version_invalid_content(self, publish_manager) -> None:
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value="invalid toml [[["
+            publish_manager.filesystem, "read_file", return_value="invalid toml [[[",
         ):
             version = publish_manager._get_current_version()
             assert version is None
@@ -120,40 +120,38 @@ description = "Test package"
         expected_content = 'version = "1.2.4"'
 
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value=original_content
-        ):
-            with patch.object(publish_manager.filesystem, "write_file") as mock_write:
-                result = publish_manager._update_version_in_file("1.2.4")
+            publish_manager.filesystem, "read_file", return_value=original_content,
+        ), patch.object(publish_manager.filesystem, "write_file") as mock_write:
+            result = publish_manager._update_version_in_file("1.2.4")
 
-                assert result is True
-                mock_write.assert_called_once_with(
-                    publish_manager.pkg_path / "pyproject.toml", expected_content
-                )
+            assert result is True
+            mock_write.assert_called_once_with(
+                publish_manager.pkg_path / "pyproject.toml", expected_content,
+            )
 
     def test_update_version_in_file_dry_run(self, dry_run_manager) -> None:
         original_content = 'version = "1.2.3"'
 
         with patch.object(
-            dry_run_manager.filesystem, "read_file", return_value=original_content
-        ):
-            with patch.object(dry_run_manager.filesystem, "write_file") as mock_write:
-                result = dry_run_manager._update_version_in_file("1.2.4")
+            dry_run_manager.filesystem, "read_file", return_value=original_content,
+        ), patch.object(dry_run_manager.filesystem, "write_file") as mock_write:
+            result = dry_run_manager._update_version_in_file("1.2.4")
 
-                assert result is True
-                mock_write.assert_not_called()
+            assert result is True
+            mock_write.assert_not_called()
 
     def test_update_version_in_file_pattern_not_found(self, publish_manager) -> None:
         original_content = 'name = "test - package"'
 
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value=original_content
+            publish_manager.filesystem, "read_file", return_value=original_content,
         ):
             result = publish_manager._update_version_in_file("1.2.4")
             assert result is False
 
     def test_update_version_in_file_error(self, publish_manager) -> None:
         with patch.object(
-            publish_manager.filesystem, "read_file", side_effect=Exception("File error")
+            publish_manager.filesystem, "read_file", side_effect=Exception("File error"),
         ):
             result = publish_manager._update_version_in_file("1.2.4")
             assert result is False
@@ -170,13 +168,12 @@ class TestPublishManagerVersionBumping:
 
     def test_bump_version_success(self, publish_manager) -> None:
         with patch.object(
-            publish_manager, "_get_current_version", return_value="1.2.3"
+            publish_manager, "_get_current_version", return_value="1.2.3",
+        ), patch.object(
+            publish_manager, "_update_version_in_file", return_value=True,
         ):
-            with patch.object(
-                publish_manager, "_update_version_in_file", return_value=True
-            ):
-                result = publish_manager.bump_version("patch")
-                assert result == "1.2.4"
+            result = publish_manager.bump_version("patch")
+            assert result == "1.2.4"
 
     def test_bump_version_no_current_version(self, publish_manager) -> None:
         with patch.object(publish_manager, "_get_current_version", return_value=None):
@@ -185,21 +182,19 @@ class TestPublishManagerVersionBumping:
 
     def test_bump_version_update_failure(self, publish_manager) -> None:
         with patch.object(
-            publish_manager, "_get_current_version", return_value="1.2.3"
+            publish_manager, "_get_current_version", return_value="1.2.3",
+        ), patch.object(
+            publish_manager, "_update_version_in_file", return_value=False,
+        ), pytest.raises(
+            ValueError, match="Failed to update version in file",
         ):
-            with patch.object(
-                publish_manager, "_update_version_in_file", return_value=False
-            ):
-                with pytest.raises(
-                    ValueError, match="Failed to update version in file"
-                ):
-                    publish_manager.bump_version("patch")
+            publish_manager.bump_version("patch")
 
     def test_bump_version_dry_run(self, publish_manager) -> None:
         publish_manager.dry_run = True
 
         with patch.object(
-            publish_manager, "_get_current_version", return_value="1.2.3"
+            publish_manager, "_get_current_version", return_value="1.2.3",
         ):
             result = publish_manager.bump_version("minor")
             assert result == "1.3.0"
@@ -217,7 +212,7 @@ class TestPublishManagerAuthentication:
     @patch.dict(os.environ, {"UV_PUBLISH_TOKEN": "pypi - valid - token"})
     def test_check_env_token_auth_valid(self, publish_manager) -> None:
         with patch.object(
-            publish_manager.security, "validate_token_format", return_value=True
+            publish_manager.security, "validate_token_format", return_value=True,
         ):
             result = publish_manager._check_env_token_auth()
             assert result == "Environment variable (UV_PUBLISH_TOKEN)"
@@ -225,7 +220,7 @@ class TestPublishManagerAuthentication:
     @patch.dict(os.environ, {"UV_PUBLISH_TOKEN": "invalid - token"})
     def test_check_env_token_auth_invalid(self, publish_manager) -> None:
         with patch.object(
-            publish_manager.security, "validate_token_format", return_value=False
+            publish_manager.security, "validate_token_format", return_value=False,
         ):
             result = publish_manager._check_env_token_auth()
             assert result is None
@@ -242,7 +237,7 @@ class TestPublishManagerAuthentication:
 
         with patch.object(publish_manager, "_run_command", return_value=mock_result):
             with patch.object(
-                publish_manager.security, "validate_token_format", return_value=True
+                publish_manager.security, "validate_token_format", return_value=True,
             ):
                 result = publish_manager._check_keyring_auth()
                 assert result == "Keyring storage"
@@ -258,7 +253,7 @@ class TestPublishManagerAuthentication:
 
     def test_check_keyring_auth_exception(self, publish_manager) -> None:
         with patch.object(
-            publish_manager, "_run_command", side_effect=subprocess.SubprocessError
+            publish_manager, "_run_command", side_effect=subprocess.SubprocessError,
         ):
             result = publish_manager._check_keyring_auth()
             assert result is None
@@ -328,7 +323,7 @@ class TestPublishManagerBuildPackage:
 
     def test_build_package_exception(self, publish_manager) -> None:
         with patch.object(
-            publish_manager, "_run_command", side_effect=Exception("Build error")
+            publish_manager, "_run_command", side_effect=Exception("Build error"),
         ):
             result = publish_manager.build_package()
             assert result is False
@@ -370,17 +365,16 @@ class TestPublishManagerPublishPackage:
 
     def test_publish_package_success(self, publish_manager) -> None:
         with patch.object(
-            publish_manager, "_validate_prerequisites", return_value=True
+            publish_manager, "_validate_prerequisites", return_value=True,
+        ), patch.object(
+            publish_manager, "_perform_publish_workflow", return_value=True,
         ):
-            with patch.object(
-                publish_manager, "_perform_publish_workflow", return_value=True
-            ):
-                result = publish_manager.publish_package()
-                assert result is True
+            result = publish_manager.publish_package()
+            assert result is True
 
     def test_publish_package_auth_failure(self, publish_manager) -> None:
         with patch.object(
-            publish_manager, "_validate_prerequisites", return_value=False
+            publish_manager, "_validate_prerequisites", return_value=False,
         ):
             result = publish_manager.publish_package()
             assert result is False
@@ -438,12 +432,11 @@ class TestPublishManagerPublishPackage:
 
     def test_display_package_url(self, publish_manager) -> None:
         with patch.object(
-            publish_manager, "_get_current_version", return_value="1.0.0"
+            publish_manager, "_get_current_version", return_value="1.0.0",
+        ), patch.object(
+            publish_manager, "_get_package_name", return_value="test - package",
         ):
-            with patch.object(
-                publish_manager, "_get_package_name", return_value="test - package"
-            ):
-                publish_manager._display_package_url()
+            publish_manager._display_package_url()
 
 
 class TestPublishManagerUtilities:
@@ -462,7 +455,7 @@ name = "test - package"
 version = "1.0.0"
 """
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value=pyproject_content
+            publish_manager.filesystem, "read_file", return_value=pyproject_content,
         ):
             name = publish_manager._get_package_name()
             assert name == "test - package"
@@ -473,14 +466,14 @@ version = "1.0.0"
 version = "1.0.0"
 """
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value=pyproject_content
+            publish_manager.filesystem, "read_file", return_value=pyproject_content,
         ):
             name = publish_manager._get_package_name()
             assert name == ""
 
     def test_get_package_name_error(self, publish_manager) -> None:
         with patch.object(
-            publish_manager.filesystem, "read_file", side_effect=Exception("File error")
+            publish_manager.filesystem, "read_file", side_effect=Exception("File error"),
         ):
             name = publish_manager._get_package_name()
             assert name is None
@@ -496,7 +489,7 @@ dependencies = ["requests >= 2.0.0"]
 requires - python = " >= 3.8"
 """
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value=pyproject_content
+            publish_manager.filesystem, "read_file", return_value=pyproject_content,
         ):
             info = publish_manager.get_package_info()
 
@@ -513,7 +506,7 @@ requires - python = " >= 3.8"
 
     def test_get_package_info_error(self, publish_manager) -> None:
         with patch.object(
-            publish_manager.filesystem, "read_file", side_effect=Exception("File error")
+            publish_manager.filesystem, "read_file", side_effect=Exception("File error"),
         ):
             info = publish_manager.get_package_info()
             assert info == {}
@@ -563,7 +556,7 @@ requires - python = " >= 3.8"
 
     def test_create_git_tag_exception(self, publish_manager) -> None:
         with patch.object(
-            publish_manager, "_run_command", side_effect=Exception("Git error")
+            publish_manager, "_run_command", side_effect=Exception("Git error"),
         ):
             result = publish_manager.create_git_tag("1.0.0")
             assert result is False
@@ -575,7 +568,7 @@ name = "test - package"
 version = "1.0.0"
 """
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value=pyproject_content
+            publish_manager.filesystem, "read_file", return_value=pyproject_content,
         ):
             result = publish_manager.cleanup_old_releases(5)
             assert result is True
@@ -591,14 +584,14 @@ version = "1.0.0"
 version = "1.0.0"
 """
         with patch.object(
-            publish_manager.filesystem, "read_file", return_value=pyproject_content
+            publish_manager.filesystem, "read_file", return_value=pyproject_content,
         ):
             result = publish_manager.cleanup_old_releases()
             assert result is False
 
     def test_cleanup_old_releases_error(self, publish_manager) -> None:
         with patch.object(
-            publish_manager.filesystem, "read_file", side_effect=Exception("File error")
+            publish_manager.filesystem, "read_file", side_effect=Exception("File error"),
         ):
             result = publish_manager.cleanup_old_releases()
             assert result is False

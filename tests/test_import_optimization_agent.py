@@ -22,7 +22,7 @@ def import_agent(agent_context):
 
 
 @pytest.mark.asyncio
-async def test_can_handle_import_error(import_agent):
+async def test_can_handle_import_error(import_agent) -> None:
     issue = Issue(
         id="test - 1",
         type=IssueType.IMPORT_ERROR,
@@ -36,7 +36,7 @@ async def test_can_handle_import_error(import_agent):
 
 
 @pytest.mark.asyncio
-async def test_can_handle_dead_code(import_agent):
+async def test_can_handle_dead_code(import_agent) -> None:
     issue = Issue(
         id="test - 2",
         type=IssueType.DEAD_CODE,
@@ -50,7 +50,7 @@ async def test_can_handle_dead_code(import_agent):
 
 
 @pytest.mark.asyncio
-async def test_can_handle_by_message_content(import_agent):
+async def test_can_handle_by_message_content(import_agent) -> None:
     issue = Issue(
         id="test - 3",
         type=IssueType.FORMATTING,
@@ -64,7 +64,7 @@ async def test_can_handle_by_message_content(import_agent):
 
 
 @pytest.mark.asyncio
-async def test_cannot_handle_unrelated_issue(import_agent):
+async def test_cannot_handle_unrelated_issue(import_agent) -> None:
     issue = Issue(
         id="test - 4",
         type=IssueType.SECURITY,
@@ -78,7 +78,7 @@ async def test_cannot_handle_unrelated_issue(import_agent):
 
 
 @pytest.mark.asyncio
-async def test_analyze_file_with_mixed_imports(import_agent):
+async def test_analyze_file_with_mixed_imports(import_agent) -> None:
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write("""import typing
 from typing import Any, Dict
@@ -99,7 +99,7 @@ from json import loads
 
 
 @pytest.mark.asyncio
-async def test_analyze_file_with_consistent_imports(import_agent):
+async def test_analyze_file_with_consistent_imports(import_agent) -> None:
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write("""from typing import Any, Dict
 from json import loads, dumps
@@ -117,7 +117,7 @@ from pathlib import Path
 
 
 @pytest.mark.asyncio
-async def test_fix_issue_no_optimization_needed(import_agent):
+async def test_fix_issue_no_optimization_needed(import_agent) -> None:
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write("""from typing import Any
 from pathlib import Path
@@ -144,7 +144,7 @@ from pathlib import Path
 
 
 @pytest.mark.asyncio
-async def test_fix_issue_with_mixed_typing_imports(import_agent):
+async def test_fix_issue_with_mixed_typing_imports(import_agent) -> None:
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write("""import typing
 from typing import Any, Dict
@@ -181,7 +181,7 @@ def test_function(data: Any) -> Dict:
 
 
 @pytest.mark.asyncio
-async def test_get_diagnostics(import_agent):
+async def test_get_diagnostics(import_agent) -> None:
     import_agent.context.project_path = Path(__file__).parent.parent / "crackerjack"
 
     diagnostics = await import_agent.get_diagnostics()

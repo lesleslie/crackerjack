@@ -2,7 +2,7 @@ import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
-from ..errors import ErrorCode, FileError, ResourceError
+from crackerjack.errors import ErrorCode, FileError, ResourceError
 
 
 class FileSystemService:
@@ -304,7 +304,7 @@ class FileSystemService:
             ) from e
 
     def read_file_chunked(
-        self, path: str | Path, chunk_size: int = 8192
+        self, path: str | Path, chunk_size: int = 8192,
     ) -> Iterator[str]:
         try:
             path_obj = Path(path) if isinstance(path, str) else path

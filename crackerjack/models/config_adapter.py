@@ -1,5 +1,4 @@
-"""
-Adapter for converting between the old OptionsProtocol and new WorkflowOptions.
+"""Adapter for converting between the old OptionsProtocol and new WorkflowOptions.
 
 This provides backward compatibility during the migration period.
 """

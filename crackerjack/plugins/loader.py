@@ -5,7 +5,8 @@ import logging
 import typing as t
 from pathlib import Path
 
-from ..config.hooks import HookStage
+from crackerjack.config.hooks import HookStage
+
 from .base import (
     PluginBase,
     PluginMetadata,
@@ -27,34 +28,40 @@ class PluginLoader:
 
     def load_plugin_from_file(self, plugin_file: Path) -> PluginBase:
         if not plugin_file.exists():
-            raise PluginLoadError(f"Plugin file not found: {plugin_file}")
+            msg = f"Plugin file not found: {plugin_file}"
+            raise PluginLoadError(msg)
 
         if plugin_file.suffix != ".py":
-            raise PluginLoadError(f"Plugin file must be .py: {plugin_file}")
+            msg = f"Plugin file must be .py: {plugin_file}"
+            raise PluginLoadError(msg)
 
         spec = importlib.util.spec_from_file_location(plugin_file.stem, plugin_file)
         if not spec or not spec.loader:
-            raise PluginLoadError(f"Could not create module spec for: {plugin_file}")
+            msg = f"Could not create module spec for: {plugin_file}"
+            raise PluginLoadError(msg)
 
         module = importlib.util.module_from_spec(spec)
 
         try:
             spec.loader.exec_module(module)
         except Exception as e:
-            raise PluginLoadError(f"Failed to execute plugin module {plugin_file}: {e}")
+            msg = f"Failed to execute plugin module {plugin_file}: {e}"
+            raise PluginLoadError(msg)
 
         plugin = self._extract_plugin_from_module(module, plugin_file)
 
         if not isinstance(plugin, PluginBase):
+            msg = f"Plugin {plugin_file} does not provide a PluginBase instance"
             raise PluginLoadError(
-                f"Plugin {plugin_file} does not provide a PluginBase instance"
+                msg,
             )
 
         return plugin
 
     def load_plugin_from_config(self, config_file: Path) -> PluginBase:
         if not config_file.exists():
-            raise PluginLoadError(f"Plugin config file not found: {config_file}")
+            msg = f"Plugin config file not found: {config_file}"
+            raise PluginLoadError(msg)
 
         try:
             if config_file.suffix == ".json":
@@ -66,16 +73,18 @@ class PluginLoader:
                 with config_file.open() as f:
                     config = yaml.safe_load(f)
             else:
+                msg = f"Unsupported config format: {config_file.suffix}"
                 raise PluginLoadError(
-                    f"Unsupported config format: {config_file.suffix}"
+                    msg,
                 )
         except Exception as e:
-            raise PluginLoadError(f"Failed to parse config file {config_file}: {e}")
+            msg = f"Failed to parse config file {config_file}: {e}"
+            raise PluginLoadError(msg)
 
         return self._create_plugin_from_config(config, config_file)
 
     def _extract_plugin_from_module(
-        self, module: t.Any, plugin_file: Path
+        self, module: t.Any, plugin_file: Path,
     ) -> PluginBase:
         plugin = self._try_standard_entry_points(module)
         if plugin:
@@ -85,7 +94,8 @@ class PluginLoader:
         if plugin:
             return plugin
 
-        raise PluginLoadError(f"No valid plugin found in {plugin_file}")
+        msg = f"No valid plugin found in {plugin_file}"
+        raise PluginLoadError(msg)
 
     def _try_standard_entry_points(self, module: t.Any) -> PluginBase | None:
         entry_points = [
@@ -102,7 +112,7 @@ class PluginLoader:
         return None
 
     def _try_single_entry_point(
-        self, module: t.Any, entry_point: str
+        self, module: t.Any, entry_point: str,
     ) -> PluginBase | None:
         if not hasattr(module, entry_point):
             return None
@@ -111,13 +121,13 @@ class PluginLoader:
 
         if isinstance(obj, PluginBase):
             return obj
-        elif callable(obj):
+        if callable(obj):
             return self._try_factory_function(obj, entry_point)
 
         return None
 
     def _try_factory_function(
-        self, factory: t.Callable, name: str
+        self, factory: t.Callable, name: str,
     ) -> PluginBase | None:
         try:
             result = factory()
@@ -128,7 +138,7 @@ class PluginLoader:
         return None
 
     def _try_plugin_subclasses(
-        self, module: t.Any, plugin_file: Path
+        self, module: t.Any, plugin_file: Path,
     ) -> PluginBase | None:
         for name, obj in vars(module).items():
             if self._is_valid_plugin_class(obj):
@@ -145,7 +155,7 @@ class PluginLoader:
         )
 
     def _try_instantiate_plugin_class(
-        self, plugin_class: type[PluginBase], name: str, plugin_file: Path
+        self, plugin_class: type[PluginBase], name: str, plugin_file: Path,
     ) -> PluginBase | None:
         try:
             metadata = PluginMetadata(
@@ -160,7 +170,7 @@ class PluginLoader:
             return None
 
     def _create_plugin_from_config(
-        self, config: dict[str, t.Any], config_file: Path
+        self, config: dict[str, t.Any], config_file: Path,
     ) -> PluginBase:
         metadata = PluginMetadata(
             name=config.get("name", config_file.stem),
@@ -174,11 +184,11 @@ class PluginLoader:
 
         if metadata.plugin_type == PluginType.HOOK:
             return self._create_hook_plugin_from_config(metadata, config)
-        else:
-            raise PluginLoadError(f"Unsupported plugin type: {metadata.plugin_type}")
+        msg = f"Unsupported plugin type: {metadata.plugin_type}"
+        raise PluginLoadError(msg)
 
     def _create_hook_plugin_from_config(
-        self, metadata: PluginMetadata, config: dict[str, t.Any]
+        self, metadata: PluginMetadata, config: dict[str, t.Any],
     ) -> CustomHookPlugin:
         hooks_config = config.get("hooks", [])
         hook_definitions = []
@@ -217,10 +227,10 @@ class PluginLoader:
             return success
 
         except PluginLoadError as e:
-            self.logger.error(f"Failed to load plugin from {plugin_source}: {e}")
+            self.logger.exception(f"Failed to load plugin from {plugin_source}: {e}")
             return False
         except Exception as e:
-            self.logger.error(f"Unexpected error loading plugin {plugin_source}: {e}")
+            self.logger.exception(f"Unexpected error loading plugin {plugin_source}: {e}")
             return False
 
 
@@ -230,7 +240,7 @@ class PluginDiscovery:
         self.logger = logging.getLogger("crackerjack.plugin_discovery")
 
     def discover_in_directory(
-        self, directory: Path, recursive: bool = False
+        self, directory: Path, recursive: bool = False,
     ) -> list[Path]:
         if not directory.exists() or not directory.is_dir():
             return []
@@ -259,7 +269,7 @@ class PluginDiscovery:
         for plugin_dir in plugin_dirs:
             if plugin_dir.exists():
                 plugin_files.extend(
-                    self.discover_in_directory(plugin_dir, recursive=True)
+                    self.discover_in_directory(plugin_dir, recursive=True),
                 )
 
         return plugin_files
@@ -280,9 +290,8 @@ class PluginDiscovery:
         if plugin_files:
             self.logger.info(f"Found {len(plugin_files)} potential plugin files")
             return self.load_discovered_plugins(plugin_files)
-        else:
-            self.logger.info("No plugin files found")
-            return {}
+        self.logger.info("No plugin files found")
+        return {}
 
     def _looks_like_plugin_file(self, file_path: Path) -> bool:
         name_lower = file_path.name.lower()

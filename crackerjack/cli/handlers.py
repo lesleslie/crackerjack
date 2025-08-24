@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -18,20 +19,20 @@ def setup_ai_agent_env(ai_agent: bool, verbose: bool = False) -> None:
         if verbose:
             console = Console()
             console.print(
-                "[bold cyan]🐛 AI Agent Debug Mode Configuration: [/bold cyan]"
+                "[bold cyan]🐛 AI Agent Debug Mode Configuration: [/bold cyan]",
             )
             console.print(f" • AI Agent: {'✅ Enabled' if ai_agent else '❌ Disabled'}")
             console.print(
-                f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}"
+                f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}",
             )
             console.print(
-                f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}"
+                f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",
             )
             console.print(" • Enhanced logging will be available during execution")
 
 
 def handle_mcp_server(websocket_port: int | None = None) -> None:
-    from ..mcp.server import main as start_mcp_main
+    from crackerjack.mcp.server import main as start_mcp_main
 
     # Always pass current working directory as project path
     project_path = str(Path.cwd())
@@ -43,12 +44,12 @@ def handle_mcp_server(websocket_port: int | None = None) -> None:
 
 
 def handle_monitor_mode(dev_mode: bool = False) -> None:
-    from ..mcp.progress_monitor import run_progress_monitor
+    from crackerjack.mcp.progress_monitor import run_progress_monitor
 
     console = Console()
     console.print("[bold cyan]🌟 Starting Multi-Project Progress Monitor[/bold cyan]")
     console.print(
-        "[bold yellow]🐕 With integrated Service Watchdog and WebSocket polling[/bold yellow]"
+        "[bold yellow]🐕 With integrated Service Watchdog and WebSocket polling[/bold yellow]",
     )
 
     try:
@@ -58,12 +59,12 @@ def handle_monitor_mode(dev_mode: bool = False) -> None:
 
 
 def handle_enhanced_monitor_mode(dev_mode: bool = False) -> None:
-    from ..mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
+    from crackerjack.mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
 
     console = Console()
     console.print("[bold magenta]✨ Starting Enhanced Progress Monitor[/bold magenta]")
     console.print(
-        "[bold cyan]📊 With advanced MetricCard widgets and modern web UI patterns[/bold cyan]"
+        "[bold cyan]📊 With advanced MetricCard widgets and modern web UI patterns[/bold cyan]",
     )
 
     try:
@@ -73,12 +74,12 @@ def handle_enhanced_monitor_mode(dev_mode: bool = False) -> None:
 
 
 def handle_dashboard_mode(dev_mode: bool = False) -> None:
-    from ..mcp.dashboard import run_dashboard
+    from crackerjack.mcp.dashboard import run_dashboard
 
     console = Console()
     console.print("[bold green]🎯 Starting Comprehensive Dashboard[/bold green]")
     console.print(
-        "[bold cyan]📈 With system metrics, job tracking, and performance monitoring[/bold cyan]"
+        "[bold cyan]📈 With system metrics, job tracking, and performance monitoring[/bold cyan]",
     )
 
     try:
@@ -88,7 +89,7 @@ def handle_dashboard_mode(dev_mode: bool = False) -> None:
 
 
 def handle_watchdog_mode() -> None:
-    from ..mcp.service_watchdog import main as start_watchdog
+    from crackerjack.mcp.service_watchdog import main as start_watchdog
 
     console = Console()
     try:
@@ -98,25 +99,25 @@ def handle_watchdog_mode() -> None:
 
 
 def handle_start_websocket_server(port: int = 8675) -> None:
-    from ..mcp.websocket.server import handle_websocket_server_command
+    from crackerjack.mcp.websocket.server import handle_websocket_server_command
 
     handle_websocket_server_command(start=True, port=port)
 
 
 def handle_stop_websocket_server() -> None:
-    from ..mcp.websocket.server import handle_websocket_server_command
+    from crackerjack.mcp.websocket.server import handle_websocket_server_command
 
     handle_websocket_server_command(stop=True)
 
 
 def handle_restart_websocket_server(port: int = 8675) -> None:
-    from ..mcp.websocket.server import handle_websocket_server_command
+    from crackerjack.mcp.websocket.server import handle_websocket_server_command
 
     handle_websocket_server_command(restart=True, port=port)
 
 
 def handle_stop_mcp_server() -> None:
-    from ..services.server_manager import list_server_status, stop_all_servers
+    from crackerjack.services.server_manager import list_server_status, stop_all_servers
 
     console = Console()
     console.print("[bold red]🛑 Stopping MCP Servers[/bold red]")
@@ -131,7 +132,7 @@ def handle_stop_mcp_server() -> None:
 
 
 def handle_restart_mcp_server(websocket_port: int | None = None) -> None:
-    from ..services.server_manager import restart_mcp_server
+    from crackerjack.services.server_manager import restart_mcp_server
 
     console = Console()
     if restart_mcp_server(websocket_port, console):
@@ -142,7 +143,8 @@ def handle_restart_mcp_server(websocket_port: int | None = None) -> None:
 
 
 def handle_interactive_mode(options: Options) -> None:
-    from ..cli.utils import get_package_version
+    from crackerjack.cli.utils import get_package_version
+
     from .interactive import launch_interactive_cli
 
     pkg_version = get_package_version()
@@ -162,19 +164,21 @@ def handle_standard_mode(
     if orchestrated:
         handle_orchestrated_mode(options, job_id)
     else:
-        from ..core.async_workflow_orchestrator import AsyncWorkflowOrchestrator
-        from ..core.workflow_orchestrator import WorkflowOrchestrator
+        from crackerjack.core.async_workflow_orchestrator import (
+            AsyncWorkflowOrchestrator,
+        )
+        from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
         pkg_path = Path.cwd()
 
         if async_mode:
             orchestrator = AsyncWorkflowOrchestrator(
-                console=console, pkg_path=pkg_path, web_job_id=job_id
+                console=console, pkg_path=pkg_path, web_job_id=job_id,
             )
             success = asyncio.run(orchestrator.run_complete_workflow_async(options))
         else:
             orchestrator = WorkflowOrchestrator(
-                console=console, pkg_path=pkg_path, web_job_id=job_id
+                console=console, pkg_path=pkg_path, web_job_id=job_id,
             )
             success = asyncio.run(orchestrator.run_complete_workflow(options))
 
@@ -189,9 +193,11 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
     console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/bold bright_blue]")
 
     try:
-        from ..core.session_coordinator import SessionCoordinator
-        from ..orchestration.advanced_orchestrator import AdvancedWorkflowOrchestrator
-        from ..orchestration.execution_strategies import (
+        from crackerjack.core.session_coordinator import SessionCoordinator
+        from crackerjack.orchestration.advanced_orchestrator import (
+            AdvancedWorkflowOrchestrator,
+        )
+        from crackerjack.orchestration.execution_strategies import (
             AICoordinationMode,
             ExecutionStrategy,
             OrchestrationConfig,
@@ -207,7 +213,7 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
         strategy = ExecutionStrategy(options.orchestration_strategy)
     except ValueError:
         console.print(
-            f"[red]Invalid orchestration strategy: {options.orchestration_strategy}[/red]"
+            f"[red]Invalid orchestration strategy: {options.orchestration_strategy}[/red]",
         )
         strategy = ExecutionStrategy.ADAPTIVE
 
@@ -215,7 +221,7 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
         progress = ProgressLevel(options.orchestration_progress)
     except ValueError:
         console.print(
-            f"[red]Invalid progress level: {options.orchestration_progress}[/red]"
+            f"[red]Invalid progress level: {options.orchestration_progress}[/red]",
         )
         progress = ProgressLevel.GRANULAR
 
@@ -243,14 +249,14 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
         success = asyncio.run(orchestrator.execute_orchestrated_workflow(options))
         if success:
             console.print(
-                "\n[bold green]🎉 ORCHESTRATED WORKFLOW COMPLETED SUCCESSFULLY![/bold green]"
+                "\n[bold green]🎉 ORCHESTRATED WORKFLOW COMPLETED SUCCESSFULLY![/bold green]",
             )
         else:
             console.print("\n[bold red]❌ ORCHESTRATED WORKFLOW FAILED[/bold red]")
-            exit(1)
+            sys.exit(1)
     except KeyboardInterrupt:
         console.print("\n[yellow]🛑 Orchestrated workflow interrupted[/yellow]")
-        exit(130)
+        sys.exit(130)
     except Exception as e:
         console.print(f"\n[red]💥 Orchestrated workflow error: {e}[/red]")
-        exit(1)
+        sys.exit(1)

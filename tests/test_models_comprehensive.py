@@ -176,7 +176,7 @@ class TestTaskModels:
         assert tracker.session_id == "session_123"
         assert tracker.start_time == 1000.0
         assert tracker.progress_file == Path(
-            str(Path(tempfile.gettempdir()) / "progress.json")
+            str(Path(tempfile.gettempdir()) / "progress.json"),
         )
         assert tracker.tasks == {}
         assert tracker.current_task is None

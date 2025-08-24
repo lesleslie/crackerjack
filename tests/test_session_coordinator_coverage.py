@@ -47,7 +47,7 @@ class TestSessionCoordinator:
         assert coordinator._lock_files == set()
 
     def test_initialize_session_tracking_enabled(
-        self, coordinator, mock_options
+        self, coordinator, mock_options,
     ) -> None:
         with patch.object(uuid, "uuid4") as mock_uuid:
             mock_uuid.return_value.hex = "test-session-id"
@@ -61,11 +61,11 @@ class TestSessionCoordinator:
             assert coordinator.session_tracker is not None
             assert isinstance(coordinator.session_tracker, SessionTracker)
             coordinator.console.print.assert_called_with(
-                "[cyan]📊[/cyan] Session tracking enabled"
+                "[cyan]📊[/cyan] Session tracking enabled",
             )
 
     def test_initialize_session_tracking_disabled(
-        self, coordinator, mock_options_no_tracking
+        self, coordinator, mock_options_no_tracking,
     ) -> None:
         coordinator.initialize_session_tracking(mock_options_no_tracking)
 
@@ -92,7 +92,7 @@ class TestSessionCoordinator:
         coordinator.complete_task("task_1", details="Task completed successfully")
 
         mock_tracker.complete_task.assert_called_once_with(
-            "task_1", details="Task completed successfully"
+            "task_1", details="Task completed successfully",
         )
 
     def test_complete_task_without_tracker(self, coordinator) -> None:
@@ -115,7 +115,7 @@ class TestSessionCoordinator:
         coordinator.fail_task("task_1", "Task failed due to error")
 
         mock_tracker.fail_task.assert_called_once_with(
-            "task_1", "Task failed due to error"
+            "task_1", "Task failed due to error",
         )
 
     def test_fail_task_without_tracker(self, coordinator) -> None:
@@ -301,7 +301,7 @@ class TestSessionCoordinator:
             assert debug_file.exists()
 
     def test_cleanup_debug_logs_handles_permission_error(
-        self, coordinator, temp_dir
+        self, coordinator, temp_dir,
     ) -> None:
         debug_file = temp_dir / "crackerjack-debug-001.log"
         debug_file.write_text("Debug log")
@@ -330,13 +330,13 @@ class TestSessionCoordinator:
             assert coverage_file.exists()
 
     def test_cleanup_coverage_files_handles_file_not_found_error(
-        self, coordinator, temp_dir
+        self, coordinator, temp_dir,
     ) -> None:
         coverage_file = temp_dir / ".coverage.001"
         coverage_file.write_text("Coverage data")
 
         with patch.object(
-            Path, "unlink", side_effect=FileNotFoundError("File not found")
+            Path, "unlink", side_effect=FileNotFoundError("File not found"),
         ):
             coordinator._cleanup_coverage_files(keep_recent=0)
 

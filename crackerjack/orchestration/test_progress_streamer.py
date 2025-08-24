@@ -8,7 +8,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..models.protocols import OptionsProtocol
+from crackerjack.models.protocols import OptionsProtocol
 
 
 @dataclass
@@ -105,17 +105,17 @@ class TestSuiteProgress:
 
 class PytestOutputParser:
     TEST_START_PATTERN = re.compile(
-        r"^(.+?)::(.*)::(.*)(?:PASSED|FAILED|SKIPPED|ERROR)"
+        r"^(.+?)::(.*)::(.*)(?:PASSED|FAILED|SKIPPED|ERROR)",
     )
     TEST_RESULT_PATTERN = re.compile(
-        r"^(.+?)(?:PASSED|FAILED|SKIPPED|ERROR)(?:\s+\[.*?\])?\s*$"
+        r"^(.+?)(?:PASSED|FAILED|SKIPPED|ERROR)(?:\s+\[.*?\])?\s*$",
     )
     TEST_COLLECTION_PATTERN = re.compile(r"collected (\d+) items?")
     TEST_SESSION_START = re.compile(r"test session starts")
     COVERAGE_PATTERN = re.compile(r"TOTAL\s+\d+\s+\d+\s+(\d+)%")
 
     DETAILED_TEST_PATTERN = re.compile(
-        r"^(.+?\.py)::(.*)(?:PASSED|FAILED|SKIPPED|ERROR)(?:\s+\[(\d+)%\])?\s*(?:\[(.*?)\])?\s*$"
+        r"^(.+?\.py)::(.*)(?:PASSED|FAILED|SKIPPED|ERROR)(?:\s+\[(\d+)%\])?\s*(?:\[(.*?)\])?\s*$",
     )
 
     def __init__(self) -> None:
@@ -144,13 +144,13 @@ class PytestOutputParser:
         }
 
     def _process_test_collection_line(
-        self, line: str, suite_info: TestSuiteProgress
+        self, line: str, suite_info: TestSuiteProgress,
     ) -> None:
         if match := self.TEST_COLLECTION_PATTERN.search(line):
             suite_info.total_tests = int(match.group(1))
 
     def _process_test_result_line(
-        self, line: str, tests: dict[str, TestProgress], suite_info: TestSuiteProgress
+        self, line: str, tests: dict[str, TestProgress], suite_info: TestSuiteProgress,
     ) -> None:
         if match := self.DETAILED_TEST_PATTERN.match(line):
             file_path, test_name, status, progress, timing = match.groups()
@@ -158,14 +158,14 @@ class PytestOutputParser:
 
             if test_id not in tests:
                 tests[test_id] = self._create_test_progress(
-                    file_path, test_name, test_id
+                    file_path, test_name, test_id,
                 )
 
             self._update_test_progress(tests[test_id], status)
             self._update_suite_counts(suite_info, status)
 
     def _create_test_progress(
-        self, file_path: str, test_name: str, test_id: str
+        self, file_path: str, test_name: str, test_id: str,
     ) -> TestProgress:
         test_file = Path(file_path).name
         test_parts = test_name.split("::")
@@ -199,7 +199,7 @@ class PytestOutputParser:
             suite_info.coverage_percentage = float(match.group(1))
 
     def _process_current_test_line(
-        self, line: str, suite_info: TestSuiteProgress
+        self, line: str, suite_info: TestSuiteProgress,
     ) -> None:
         if "::" in line and any(
             status in line for status in ["PASSED", "FAILED", "SKIPPED", "ERROR"]
@@ -260,7 +260,7 @@ class TestProgressStreamer:
         self.test_callback: t.Callable[[TestProgress], None] | None = None
 
     def set_progress_callback(
-        self, callback: t.Callable[[TestSuiteProgress], None]
+        self, callback: t.Callable[[TestSuiteProgress], None],
     ) -> None:
         self.progress_callback = callback
 
@@ -268,13 +268,13 @@ class TestProgressStreamer:
         self.test_callback = callback
 
     async def run_tests_with_streaming(
-        self, options: OptionsProtocol, execution_mode: str = "full_suite"
+        self, options: OptionsProtocol, execution_mode: str = "full_suite",
     ) -> dict[str, t.Any]:
         start_time = time.time()
         suite_progress = TestSuiteProgress(start_time=start_time)
 
         self.console.print(
-            "\n[bold bright_green]🧪 RUNNING TESTS WITH STREAMING PROGRESS[/bold bright_green]"
+            "\n[bold bright_green]🧪 RUNNING TESTS WITH STREAMING PROGRESS[/bold bright_green]",
         )
 
         cmd = self.build_pytest_command(options, execution_mode)
@@ -285,13 +285,13 @@ class TestProgressStreamer:
             return self._handle_test_execution_error(e, suite_progress)
 
     async def _execute_tests_and_process_results(
-        self, cmd: list[str], suite_progress: TestSuiteProgress
+        self, cmd: list[str], suite_progress: TestSuiteProgress,
     ) -> dict[str, t.Any]:
         result = await self._run_pytest_with_streaming(cmd, suite_progress)
 
         parsed_results = self.parser.parse_pytest_output(result.stdout.split("\n"))
         failure_details = self.parser.parse_test_failure_details(
-            result.stdout.split("\n")
+            result.stdout.split("\n"),
         )
 
         self._finalize_suite_progress(suite_progress)
@@ -305,7 +305,7 @@ class TestProgressStreamer:
         suite_progress.duration = suite_progress.end_time - suite_progress.start_time
 
     def _attach_failure_details(
-        self, tests: list[TestProgress], failure_details: dict[str, str]
+        self, tests: list[TestProgress], failure_details: dict[str, str],
     ) -> None:
         for test in tests:
             if test.test_id in failure_details:
@@ -329,7 +329,7 @@ class TestProgressStreamer:
         }
 
     def _handle_test_execution_error(
-        self, error: Exception, suite_progress: TestSuiteProgress
+        self, error: Exception, suite_progress: TestSuiteProgress,
     ) -> dict[str, t.Any]:
         self.console.print(f"[red]❌ Test execution failed: {error}[/red]")
         suite_progress.end_time = time.time()
@@ -344,7 +344,7 @@ class TestProgressStreamer:
         }
 
     def build_pytest_command(
-        self, options: OptionsProtocol, execution_mode: str
+        self, options: OptionsProtocol, execution_mode: str,
     ) -> list[str]:
         cmd = ["uv", "run", "pytest"]
 
@@ -381,11 +381,11 @@ class TestProgressStreamer:
 
         try:
             await self._process_streams(
-                process, stdout_lines, stderr_lines, suite_progress
+                process, stdout_lines, stderr_lines, suite_progress,
             )
-        except Exception as e:
+        except Exception:
             await self._cleanup_process_and_tasks(process, [])
-            raise e
+            raise
 
         return self._build_completed_process(cmd, process, stdout_lines, stderr_lines)
 
@@ -407,19 +407,19 @@ class TestProgressStreamer:
     ) -> None:
         tasks = [
             asyncio.create_task(
-                self._read_stream(process.stdout, stdout_lines, suite_progress)
+                self._read_stream(process.stdout, stdout_lines, suite_progress),
             ),
             asyncio.create_task(
-                self._read_stream(process.stderr, stderr_lines, suite_progress)
+                self._read_stream(process.stderr, stderr_lines, suite_progress),
             ),
         ]
 
         try:
             await process.wait()
             await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception as e:
+        except Exception:
             await self._cleanup_process_and_tasks(process, tasks)
-            raise e
+            raise
 
     async def _read_stream(
         self,
@@ -449,7 +449,7 @@ class TestProgressStreamer:
         return line_str.rstrip()
 
     def _handle_line_output(
-        self, line_str: str, suite_progress: TestSuiteProgress
+        self, line_str: str, suite_progress: TestSuiteProgress,
     ) -> None:
         self._parse_line_for_progress(line_str, suite_progress)
 
@@ -460,7 +460,7 @@ class TestProgressStreamer:
             self.progress_callback(suite_progress)
 
     async def _cleanup_process_and_tasks(
-        self, process: asyncio.subprocess.Process, tasks: list[asyncio.Task]
+        self, process: asyncio.subprocess.Process, tasks: list[asyncio.Task],
     ) -> None:
         process.kill()
         for task in tasks:
@@ -481,7 +481,7 @@ class TestProgressStreamer:
         )
 
     def _parse_line_for_progress(
-        self, line: str, suite_progress: TestSuiteProgress
+        self, line: str, suite_progress: TestSuiteProgress,
     ) -> None:
         if "::" in line and any(
             status in line for status in ["PASSED", "FAILED", "SKIPPED", "ERROR"]
@@ -521,7 +521,7 @@ class TestProgressStreamer:
             self.console.print(f"[dim]{line}[/dim]")
 
     def _print_test_summary(
-        self, suite_progress: TestSuiteProgress, tests: list[TestProgress]
+        self, suite_progress: TestSuiteProgress, tests: list[TestProgress],
     ) -> None:
         self._print_summary_header()
         self._print_test_counts(suite_progress)
@@ -533,7 +533,7 @@ class TestProgressStreamer:
     def _print_summary_header(self) -> None:
         self.console.print("\n" + "=" * 80)
         self.console.print(
-            "[bold bright_green]🧪 TEST EXECUTION SUMMARY[/bold bright_green]"
+            "[bold bright_green]🧪 TEST EXECUTION SUMMARY[/bold bright_green]",
         )
         self.console.print("=" * 80)
 
@@ -546,12 +546,12 @@ class TestProgressStreamer:
 
         if suite_progress.skipped_tests > 0:
             self.console.print(
-                f"[yellow]⏭️ Skipped: [/yellow] {suite_progress.skipped_tests}"
+                f"[yellow]⏭️ Skipped: [/yellow] {suite_progress.skipped_tests}",
             )
 
         if suite_progress.error_tests > 0:
             self.console.print(
-                f"[bright_red]💥 Errors: [/bright_red] {suite_progress.error_tests}"
+                f"[bright_red]💥 Errors: [/bright_red] {suite_progress.error_tests}",
             )
 
     def _print_timing_stats(self, suite_progress: TestSuiteProgress) -> None:
@@ -565,13 +565,13 @@ class TestProgressStreamer:
             self.console.print(f"[dim]Average per test: {avg_time:.2f}s[/dim]")
 
         self.console.print(
-            f"[bold]📊 Success Rate: [/bold] {suite_progress.success_rate:.1f}%"
+            f"[bold]📊 Success Rate: [/bold] {suite_progress.success_rate:.1f}%",
         )
 
     def _print_coverage_stats(self, suite_progress: TestSuiteProgress) -> None:
         if suite_progress.coverage_percentage is not None:
             self.console.print(
-                f"[bold]📈 Coverage: [/bold] {suite_progress.coverage_percentage:.1f}%"
+                f"[bold]📈 Coverage: [/bold] {suite_progress.coverage_percentage:.1f}%",
             )
 
     def _print_failed_test_details(self, tests: list[TestProgress]) -> None:
@@ -580,7 +580,7 @@ class TestProgressStreamer:
             return
 
         self.console.print(
-            f"\n[bold red]Failed Tests ({len(failed_tests)}): [/bold red]"
+            f"\n[bold red]Failed Tests ({len(failed_tests)}): [/bold red]",
         )
         for test in failed_tests[:5]:
             self.console.print(f" ❌ {test.test_id}")

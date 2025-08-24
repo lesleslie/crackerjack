@@ -9,9 +9,9 @@ import yaml
 from pydantic import BaseModel, Field, field_validator
 from rich.console import Console
 
-from ..errors import ValidationError
-from ..models.protocols import OptionsProtocol
-from ..services.logging import LoggingContext, get_logger
+from crackerjack.errors import ValidationError
+from crackerjack.models.protocols import OptionsProtocol
+from crackerjack.services.logging import LoggingContext, get_logger
 
 
 class CrackerjackConfig(BaseModel):
@@ -80,7 +80,8 @@ class CrackerjackConfig(BaseModel):
     def validate_log_level(cls, v: str) -> str:
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in valid_levels:
-            raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
+            msg = f"Invalid log level: {v}. Must be one of {valid_levels}"
+            raise ValueError(msg)
         return v.upper()
 
     class Config:
@@ -152,20 +153,20 @@ class FileConfigSource(ConfigSource):
             if self.file_path.suffix.lower() in (".yml", ".yaml"):
                 yaml_result: t.Any = yaml.safe_load(content)
                 config = (
-                    t.cast(dict[str, Any], yaml_result)
+                    t.cast("dict[str, Any]", yaml_result)
                     if yaml_result is not None
                     else {}
                 )
             elif self.file_path.suffix.lower() == ".json":
                 json_result = json.loads(content)
                 config = (
-                    t.cast(dict[str, Any], json_result)
+                    t.cast("dict[str, Any]", json_result)
                     if json_result is not None
                     else {}
                 )
             else:
                 self.logger.warning(
-                    "Unknown config file format", path=str(self.file_path)
+                    "Unknown config file format", path=str(self.file_path),
                 )
                 return {}
 
@@ -177,8 +178,8 @@ class FileConfigSource(ConfigSource):
             return config
 
         except Exception as e:
-            self.logger.error(
-                "Failed to load config file", path=str(self.file_path), error=str(e)
+            self.logger.exception(
+                "Failed to load config file", path=str(self.file_path), error=str(e),
             )
             return {}
 
@@ -217,11 +218,11 @@ class PyprojectConfigSource(ConfigSource):
                 return config
             except ImportError:
                 self.logger.warning(
-                    "No TOML library available for pyproject.toml parsing"
+                    "No TOML library available for pyproject.toml parsing",
                 )
                 return {}
         except Exception as e:
-            self.logger.error("Failed to load pyproject.toml", error=str(e))
+            self.logger.exception("Failed to load pyproject.toml", error=str(e))
             return {}
 
 
@@ -273,7 +274,7 @@ class UnifiedConfigurationService:
             (
                 self._create_default_source(),
                 PyprojectConfigSource(pyproject_path),
-            )
+            ),
         )
 
         # .crackerjack.* config files are no longer supported
@@ -325,7 +326,7 @@ class UnifiedConfigurationService:
                             keys=list(source_config.keys()),
                         )
                 except Exception as e:
-                    self.logger.error(
+                    self.logger.exception(
                         "Failed to load config from source",
                         source_type=type(source).__name__,
                         error=str(e),
@@ -347,7 +348,7 @@ class UnifiedConfigurationService:
             return config
 
         except Exception as e:
-            self.logger.error("Configuration validation failed", error=str(e))
+            self.logger.exception("Configuration validation failed", error=str(e))
             raise ValidationError(
                 message="Invalid configuration",
                 details=str(e),
@@ -359,7 +360,7 @@ class UnifiedConfigurationService:
 
         if config.experimental_hooks:
             return "experimental"
-        elif hasattr(config, "test") and getattr(config, "test", False):
+        if hasattr(config, "test") and getattr(config, "test", False):
             return "comprehensive"
         return config.precommit_mode
 
@@ -429,5 +430,5 @@ class UnifiedConfigurationService:
             return True
 
         except Exception as e:
-            self.logger.error("Configuration validation failed", error=str(e))
+            self.logger.exception("Configuration validation failed", error=str(e))
             return False

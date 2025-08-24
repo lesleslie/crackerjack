@@ -32,7 +32,7 @@ class TestHookManager:
     @patch("crackerjack.managers.hook_manager.HookConfigLoader")
     @patch("crackerjack.managers.hook_manager.HookExecutor")
     def test_init_with_mocks(
-        self, mock_executor_class, mock_loader_class, console, pkg_path
+        self, mock_executor_class, mock_loader_class, console, pkg_path,
     ) -> None:
         HookManagerImpl(console, pkg_path)
 
@@ -73,7 +73,7 @@ class TestHookManager:
         mock_strategy = Mock()
         mock_result = Mock()
         mock_result.results = [
-            HookResult(id="test", name="test hook", status="passed", duration=1.0)
+            HookResult(id="test", name="test hook", status="passed", duration=1.0),
         ]
 
         hook_manager.config_loader.load_strategy = Mock(return_value=mock_strategy)
@@ -100,7 +100,7 @@ class TestHookManager:
 
         assert len(results) == 2
         hook_manager.config_loader.load_strategy.assert_called_once_with(
-            "comprehensive"
+            "comprehensive",
         )
 
     def test_install_hooks(self, hook_manager) -> None:

@@ -3,8 +3,8 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..dynamic_config import DynamicConfigGenerator, generate_config_for_mode
-from ..models.protocols import OptionsProtocol
+from crackerjack.dynamic_config import DynamicConfigGenerator, generate_config_for_mode
+from crackerjack.models.protocols import OptionsProtocol
 
 
 class ConfigurationService:
@@ -30,7 +30,7 @@ class ConfigurationService:
             return True
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Failed to generate pre-commit config: {e}"
+                f"[red]❌[/red] Failed to generate pre-commit config: {e}",
             )
             return False
 
@@ -40,7 +40,7 @@ class ConfigurationService:
     def _determine_config_mode(self, options: OptionsProtocol) -> str:
         if options.experimental_hooks:
             return "experimental"
-        elif hasattr(options, "test") and options.test:
+        if hasattr(options, "test") and options.test:
             return "comprehensive"
         return "comprehensive"
 
@@ -49,7 +49,7 @@ class ConfigurationService:
             config_file = self.pkg_path / ".pre-commit-config.yaml"
             if not config_file.exists():
                 self.console.print(
-                    "[yellow]⚠️ No pre-commit configuration found[/yellow]"
+                    "[yellow]⚠️ No pre-commit configuration found[/yellow]",
                 )
                 return False
             import yaml
@@ -57,7 +57,7 @@ class ConfigurationService:
             with config_file.open("r") as f:
                 yaml_result = yaml.safe_load(f)
                 _ = (
-                    t.cast(dict[str, t.Any], yaml_result)
+                    t.cast("dict[str, t.Any]", yaml_result)
                     if yaml_result is not None
                     else {}
                 )
@@ -78,12 +78,12 @@ class ConfigurationService:
             backup_file = self.pkg_path / f".pre-commit-config.yaml.backup.{timestamp}"
             backup_file.write_text(config_file.read_text())
             self.console.print(
-                f"[cyan]💾[/cyan] Configuration backed up to {backup_file.name}"
+                f"[cyan]💾[/cyan] Configuration backed up to {backup_file.name}",
             )
             return backup_file
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Failed to backup configuration: {e}"
+                f"[yellow]⚠️[/yellow] Failed to backup configuration: {e}",
             )
             return None
 
@@ -91,13 +91,13 @@ class ConfigurationService:
         try:
             if not backup_file.exists():
                 self.console.print(
-                    f"[red]❌[/red] Backup file not found: {backup_file}"
+                    f"[red]❌[/red] Backup file not found: {backup_file}",
                 )
                 return False
             config_file = self.pkg_path / ".pre-commit-config.yaml"
             config_file.write_text(backup_file.read_text())
             self.console.print(
-                f"[green]✅[/green] Configuration restored from {backup_file.name}"
+                f"[green]✅[/green] Configuration restored from {backup_file.name}",
             )
             return True
         except Exception as e:
@@ -114,7 +114,7 @@ class ConfigurationService:
             with config_file.open("r") as f:
                 yaml_result = yaml.safe_load(f)
                 config_data = (
-                    t.cast(dict[str, t.Any], yaml_result)
+                    t.cast("dict[str, t.Any]", yaml_result)
                     if isinstance(yaml_result, dict)
                     else {}
                 )
@@ -187,7 +187,7 @@ class ConfigurationService:
                             "integration: marks test as an integration test",
                             "no_leaks: detect asyncio task leaks",
                         ],
-                    }
+                    },
                 }
             with pyproject_file.open("w") as f:
                 f.write(dumps(config))

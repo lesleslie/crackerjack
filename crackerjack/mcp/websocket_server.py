@@ -1,6 +1,6 @@
 from .websocket import WebSocketServer, main
 
-__all__ = ["main", "WebSocketServer"]
+__all__ = ["WebSocketServer", "main"]
 
 
 if __name__ == "__main__":

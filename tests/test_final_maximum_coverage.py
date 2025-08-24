@@ -12,13 +12,13 @@ from pathlib import Path
 class TestActualCacheClasses:
     """Test actual cache classes that exist in the codebase."""
 
-    def test_cache_entry_comprehensive(self):
+    def test_cache_entry_comprehensive(self) -> None:
         """Test CacheEntry class comprehensively."""
         from crackerjack.services.cache import CacheEntry
 
         # Test creation with all parameters
         entry = CacheEntry(
-            key="test_key", value="test_value", ttl_seconds=60, access_count=0
+            key="test_key", value="test_value", ttl_seconds=60, access_count=0,
         )
 
         # Test properties
@@ -55,7 +55,7 @@ class TestActualCacheClasses:
         assert recreated.value == entry.value
         assert recreated.ttl_seconds == entry.ttl_seconds
 
-    def test_cache_entry_expiration(self):
+    def test_cache_entry_expiration(self) -> None:
         """Test CacheEntry expiration functionality."""
         from crackerjack.services.cache import CacheEntry
 
@@ -69,7 +69,7 @@ class TestActualCacheClasses:
         expired_entry.created_at = time.time() - 2
         assert expired_entry.is_expired
 
-    def test_cache_stats_comprehensive(self):
+    def test_cache_stats_comprehensive(self) -> None:
         """Test CacheStats class comprehensively."""
         from crackerjack.services.cache import CacheStats
 
@@ -96,7 +96,7 @@ class TestActualCacheClasses:
         assert stats_dict["misses"] == 20
         assert stats_dict["hit_rate_percent"] == 80.0
 
-    def test_inmemory_cache_comprehensive(self):
+    def test_inmemory_cache_comprehensive(self) -> None:
         """Test InMemoryCache class comprehensively."""
         from crackerjack.services.cache import InMemoryCache
 
@@ -130,7 +130,7 @@ class TestActualCacheClasses:
         # Should have evicted some entries due to max_entries=5
         assert len(cache._cache) <= 5
 
-    def test_cache_alias_class(self):
+    def test_cache_alias_class(self) -> None:
         """Test Cache alias class."""
         from crackerjack.services.cache import Cache
 
@@ -147,7 +147,7 @@ class TestActualCacheClasses:
 class TestActualCodeCleanerClasses:
     """Test actual code cleaner classes that exist."""
 
-    def test_code_cleaner_basic(self):
+    def test_code_cleaner_basic(self) -> None:
         """Test CodeCleaner basic functionality."""
         from crackerjack.code_cleaner import CodeCleaner
 
@@ -159,7 +159,7 @@ class TestActualCodeCleanerClasses:
             config = cleaner.config
             assert config is not None
 
-    def test_cleaning_result_if_exists(self):
+    def test_cleaning_result_if_exists(self) -> None:
         """Test CleaningResult class if it exists."""
         try:
             from crackerjack.code_cleaner import CleaningResult
@@ -184,7 +184,7 @@ class TestActualCodeCleanerClasses:
 class TestActualInteractiveClasses:
     """Test actual interactive classes that exist."""
 
-    def test_interactive_cli_basic(self):
+    def test_interactive_cli_basic(self) -> None:
         """Test InteractiveCLI basic functionality."""
         from crackerjack.interactive import InteractiveCLI
 
@@ -196,7 +196,7 @@ class TestActualInteractiveClasses:
         console = cli.console
         assert console is not None
 
-    def test_workflow_options_if_exists(self):
+    def test_workflow_options_if_exists(self) -> None:
         """Test WorkflowOptions if it exists."""
         try:
             from crackerjack.interactive import WorkflowOptions
@@ -212,7 +212,7 @@ class TestActualInteractiveClasses:
 class TestActualMCPCacheAdvanced:
     """Test MCP cache with comprehensive coverage."""
 
-    def test_error_cache_comprehensive(self):
+    def test_error_cache_comprehensive(self) -> None:
         """Test ErrorCache comprehensive functionality."""
         from crackerjack.mcp.cache import (
             ErrorCache,
@@ -245,7 +245,7 @@ class TestActualMCPCacheAdvanced:
                 pattern_dict = retrieved.to_dict()
                 assert pattern_dict["pattern_id"] == f"comprehensive_pattern_{i}"
 
-    def test_mcp_fix_result_advanced(self):
+    def test_mcp_fix_result_advanced(self) -> None:
         """Test MCP FixResult advanced functionality."""
         from crackerjack.mcp.cache import FixResult as MCPFixResult
 
@@ -274,7 +274,7 @@ class TestActualMCPCacheAdvanced:
 class TestWorkingClassInstantiations:
     """Test class instantiations that definitely work."""
 
-    def test_options_all_combinations(self):
+    def test_options_all_combinations(self) -> None:
         """Test Options class with all possible combinations."""
         from crackerjack.cli.options import BumpOption, Options
 
@@ -305,7 +305,7 @@ class TestWorkingClassInstantiations:
             if "verbose" not in combo:
                 assert options.verbose is False
 
-    def test_all_bump_options_comprehensive(self):
+    def test_all_bump_options_comprehensive(self) -> None:
         """Test all BumpOption values comprehensively."""
         from crackerjack.cli.options import BumpOption
 
@@ -328,7 +328,7 @@ class TestWorkingClassInstantiations:
             # Test enum equality
             assert option == BumpOption(option.value)
 
-    def test_agent_context_all_scenarios(self):
+    def test_agent_context_all_scenarios(self) -> None:
         """Test AgentContext in all scenarios."""
         from crackerjack.agents.base import AgentContext
 
@@ -366,7 +366,7 @@ class TestWorkingClassInstantiations:
 class TestEnumAndDataclassExhaustive:
     """Exhaustive testing of all enums and dataclasses."""
 
-    def test_all_issue_types_with_all_priorities(self):
+    def test_all_issue_types_with_all_priorities(self) -> None:
         """Test all IssueType/Priority combinations."""
         from crackerjack.agents.base import Issue, IssueType, Priority
 
@@ -417,7 +417,7 @@ class TestEnumAndDataclassExhaustive:
         # Should have created 12 * 4 = 48 issues
         assert len(issues) == 48
 
-    def test_fix_result_comprehensive_scenarios(self):
+    def test_fix_result_comprehensive_scenarios(self) -> None:
         """Test FixResult in comprehensive scenarios."""
         from crackerjack.agents.base import FixResult
 
@@ -478,7 +478,7 @@ class TestEnumAndDataclassExhaustive:
 class TestHighValueCoverageTargets:
     """Target specific high-value coverage areas."""
 
-    def test_enhanced_filesystem_file_cache_exhaustive(self):
+    def test_enhanced_filesystem_file_cache_exhaustive(self) -> None:
         """Test enhanced filesystem FileCache exhaustively."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -529,7 +529,7 @@ class TestHighValueCoverageTargets:
             # Should respect max_size (approximately, due to LRU eviction)
             assert active_count <= max_size * 2  # Allow some flexibility
 
-    def test_comprehensive_package_imports(self):
+    def test_comprehensive_package_imports(self) -> None:
         """Test comprehensive package imports for coverage."""
         # Import every single module we can
         import_targets = [
@@ -611,6 +611,5 @@ class TestHighValueCoverageTargets:
 
         # If any failed, that's ok but log them
         if failed_imports:
-            print(f"Failed imports: {len(failed_imports)}")
-            for module, error in failed_imports[:5]:  # Show first 5
-                print(f"  {module}: {error}")
+            for module, _error in failed_imports[:5]:  # Show first 5
+                pass

@@ -163,7 +163,7 @@ COMPREHENSIVE_HOOKS = [
 
 
 FAST_STRATEGY = HookStrategy(
-    name="fast", hooks=FAST_HOOKS, timeout=60, retry_policy=RetryPolicy.FORMATTING_ONLY
+    name="fast", hooks=FAST_HOOKS, timeout=60, retry_policy=RetryPolicy.FORMATTING_ONLY,
 )
 
 COMPREHENSIVE_STRATEGY = HookStrategy(
@@ -179,10 +179,10 @@ class HookConfigLoader:
     def load_strategy(name: str, _: Path | None = None) -> HookStrategy:
         if name == "fast":
             return FAST_STRATEGY
-        elif name == "comprehensive":
+        if name == "comprehensive":
             return COMPREHENSIVE_STRATEGY
-        else:
-            raise ValueError(f"Unknown hook strategy: {name}")
+        msg = f"Unknown hook strategy: {name}"
+        raise ValueError(msg)
 
     @staticmethod
     def get_all_strategies() -> dict[str, HookStrategy]:

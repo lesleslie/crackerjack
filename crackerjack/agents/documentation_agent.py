@@ -31,15 +31,14 @@ class DocumentationAgent(SubAgent):
             # Detect what type of documentation update is needed
             if "changelog" in issue.message.lower():
                 return await self._update_changelog(issue)
-            elif (
+            if (
                 "agent count" in issue.message.lower()
                 or "consistency" in issue.message.lower()
             ):
                 return await self._fix_documentation_consistency(issue)
-            elif "api" in issue.message.lower() or "readme" in issue.message.lower():
+            if "api" in issue.message.lower() or "readme" in issue.message.lower():
                 return await self._update_api_documentation(issue)
-            else:
-                return await self._general_documentation_update(issue)
+            return await self._general_documentation_update(issue)
 
         except Exception as e:
             return FixResult(
@@ -87,7 +86,7 @@ class DocumentationAgent(SubAgent):
                 success=True,
                 confidence=0.9,
                 fixes_applied=[
-                    f"Updated CHANGELOG.md with {len(recent_changes)} recent changes"
+                    f"Updated CHANGELOG.md with {len(recent_changes)} recent changes",
                 ],
                 files_modified=[str(changelog_path)],
             )
@@ -116,11 +115,11 @@ class DocumentationAgent(SubAgent):
             if content:
                 # Fix agent count references
                 updated_content = self._fix_agent_count_references(
-                    content, current_count, expected_count
+                    content, current_count, expected_count,
                 )
                 if updated_content != content:
                     success = self.context.write_file_content(
-                        file_path, updated_content
+                        file_path, updated_content,
                     )
                     if success:
                         files_modified.append(str(file_path))
@@ -152,7 +151,7 @@ class DocumentationAgent(SubAgent):
                 success=True,
                 confidence=0.7,
                 recommendations=[
-                    "No API changes detected requiring documentation updates"
+                    "No API changes detected requiring documentation updates",
                 ],
             )
 
@@ -259,7 +258,7 @@ class DocumentationAgent(SubAgent):
         return "\n".join(entry_lines)
 
     def _categorize_changes(
-        self, changes: list[dict[str, str]]
+        self, changes: list[dict[str, str]],
     ) -> dict[str, list[str]]:
         """Categorize changes by type."""
         categories: dict[str, list[str]] = {
@@ -280,14 +279,14 @@ class DocumentationAgent(SubAgent):
         """Determine the category for a change message."""
         if message.startswith(("feat:", "feature:")):
             return "features"
-        elif message.startswith("fix:"):
+        if message.startswith("fix:"):
             return "fixes"
-        elif message.startswith(("refactor:", "refact:")):
+        if message.startswith(("refactor:", "refact:")):
             return "refactors"
         return "other"
 
     def _add_categorized_changes_to_entry(
-        self, entry_lines: list[str], categories: dict[str, list[str]]
+        self, entry_lines: list[str], categories: dict[str, list[str]],
     ) -> None:
         """Add categorized changes to the entry lines."""
         section_mappings = {
@@ -303,7 +302,7 @@ class DocumentationAgent(SubAgent):
                 self._add_section_to_entry(entry_lines, section_title, items)
 
     def _add_section_to_entry(
-        self, entry_lines: list[str], section_title: str, items: list[str]
+        self, entry_lines: list[str], section_title: str, items: list[str],
     ) -> None:
         """Add a section with items to the entry lines."""
         entry_lines.append(section_title)
@@ -342,7 +341,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 """
 
     def _check_agent_count_consistency(
-        self, md_files: list[Path]
+        self, md_files: list[Path],
     ) -> list[tuple[Path, int, int]]:
         """Check for inconsistent agent count references across documentation."""
         expected_count = 9  # Current total with DocumentationAgent
@@ -375,7 +374,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         return issues
 
     def _fix_agent_count_references(
-        self, content: str, current_count: int, expected_count: int
+        self, content: str, current_count: int, expected_count: int,
     ) -> str:
         """Fix agent count references in documentation."""
         # Replace various agent count patterns
@@ -395,7 +394,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         updated_content = content
         for pattern, replacement in patterns_replacements:
             updated_content = re.sub(
-                pattern, replacement, updated_content, flags=re.IGNORECASE
+                pattern, replacement, updated_content, flags=re.IGNORECASE,
             )
 
         return updated_content
@@ -433,7 +432,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             return []
 
     def _update_readme_examples(
-        self, content: str, api_changes: list[dict[str, str]]
+        self, content: str, api_changes: list[dict[str, str]],
     ) -> str:
         """Update README examples based on API changes."""
         # This is a placeholder - real implementation would parse and update code examples
@@ -445,7 +444,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             for i, line in enumerate(lines):
                 if line.startswith("# ") and i < len(lines) - 1:
                     lines.insert(
-                        i + 2, "<!-- TODO: Update examples after recent API changes -->"
+                        i + 2, "<!-- TODO: Update examples after recent API changes -->",
                     )
                     break
             return "\n".join(lines)

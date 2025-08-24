@@ -1,8 +1,9 @@
+import contextlib
 import json
 import typing as t
 from pathlib import Path
 
-from ..context import get_context
+from crackerjack.mcp.context import get_context
 
 
 def _create_progress_file(job_id: str) -> Path:
@@ -10,17 +11,18 @@ def _create_progress_file(job_id: str) -> Path:
     import tempfile
 
     if not job_id or not isinstance(job_id, str):
-        raise ValueError(f"Invalid job_id: {job_id}")
+        msg = f"Invalid job_id: {job_id}"
+        raise ValueError(msg)
     if not re.match(r"^[a-zA-Z0-9_-]+$", job_id):
-        raise ValueError(f"Invalid job_id format: {job_id}")
+        msg = f"Invalid job_id format: {job_id}"
+        raise ValueError(msg)
 
     context = get_context()
     if context:
         return context.progress_dir / f"job-{job_id}.json"
-    else:
-        progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
-        progress_dir.mkdir(exist_ok=True)
-        return progress_dir / f"job-{job_id}.json"
+    progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
+    progress_dir.mkdir(exist_ok=True)
+    return progress_dir / f"job-{job_id}.json"
 
 
 def _update_progress(
@@ -52,10 +54,8 @@ def _update_progress(
 
         context = get_context()
         if context and hasattr(context, "websocket_progress_queue"):
-            try:
+            with contextlib.suppress(Exception):
                 context.websocket_progress_queue.put_nowait(progress_data)
-            except Exception:
-                pass
 
     except Exception as e:
         context = get_context()
@@ -87,27 +87,26 @@ def _handle_get_job_progress(job_id: str) -> str:
 
 
 def _execute_session_action(
-    state_manager, action: str, checkpoint_name: str | None, context
+    state_manager, action: str, checkpoint_name: str | None, context,
 ) -> str:
     if action == "start":
         state_manager.start_session()
         return '{"status": "session_started", "action": "start"}'
 
-    elif action == "checkpoint":
+    if action == "checkpoint":
         checkpoint_name = checkpoint_name or f"checkpoint_{context.get_current_time()}"
         state_manager.create_checkpoint(checkpoint_name)
         return f'{{"status": "checkpoint_created", "action": "checkpoint", "name": "{checkpoint_name}"}}'
 
-    elif action == "complete":
+    if action == "complete":
         state_manager.complete_session()
         return '{"status": "session_completed", "action": "complete"}'
 
-    elif action == "reset":
+    if action == "reset":
         state_manager.reset_session()
         return '{"status": "session_reset", "action": "reset"}'
 
-    else:
-        return f'{{"error": "Invalid action: {action}. Valid actions: start, checkpoint, complete, reset"}}'
+    return f'{{"error": "Invalid action: {action}. Valid actions: start, checkpoint, complete, reset"}}'
 
 
 def _handle_session_management(action: str, checkpoint_name: str | None = None) -> str:
@@ -133,6 +132,6 @@ def register_progress_tools(mcp_app: t.Any) -> None:
 
     @mcp_app.tool()
     async def session_management(
-        action: str, checkpoint_name: str | None = None
+        action: str, checkpoint_name: str | None = None,
     ) -> str:
         return _handle_session_management(action, checkpoint_name)

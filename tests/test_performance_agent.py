@@ -33,14 +33,14 @@ def temp_python_file():
 class TestPerformanceAgent:
     """Test cases for PerformanceAgent."""
 
-    def test_get_supported_types(self, performance_agent):
+    def test_get_supported_types(self, performance_agent) -> None:
         """Test that PerformanceAgent supports PERFORMANCE type."""
         supported_types = performance_agent.get_supported_types()
         assert IssueType.PERFORMANCE in supported_types
         assert len(supported_types) == 1
 
     @pytest.mark.asyncio
-    async def test_can_handle_performance_issue(self, performance_agent):
+    async def test_can_handle_performance_issue(self, performance_agent) -> None:
         """Test that PerformanceAgent can handle performance issues with correct confidence."""
         issue = Issue(
             id="perf-001",
@@ -54,7 +54,7 @@ class TestPerformanceAgent:
         assert confidence == 0.85
 
     @pytest.mark.asyncio
-    async def test_cannot_handle_other_issue_types(self, performance_agent):
+    async def test_cannot_handle_other_issue_types(self, performance_agent) -> None:
         """Test that PerformanceAgent returns 0.0 confidence for non-performance issues."""
         issue = Issue(
             id="sec-001",
@@ -69,8 +69,8 @@ class TestPerformanceAgent:
 
     @pytest.mark.asyncio
     async def test_fix_performance_issue_success(
-        self, performance_agent, temp_python_file
-    ):
+        self, performance_agent, temp_python_file,
+    ) -> None:
         """Test successful performance issue fixing."""
         # Create file with performance issues
         temp_python_file.write_text("""
@@ -99,7 +99,7 @@ def process_items(items):
         assert "result += [" not in fixed_content
 
     @pytest.mark.asyncio
-    async def test_fix_performance_issue_failure(self, performance_agent):
+    async def test_fix_performance_issue_failure(self, performance_agent) -> None:
         """Test handling of performance fix failure."""
         issue = Issue(
             id="perf-003",
@@ -115,8 +115,8 @@ def process_items(items):
         assert len(result.remaining_issues) > 0
 
     def test_detect_performance_issues_list_concatenation(
-        self, performance_agent, temp_python_file
-    ):
+        self, performance_agent, temp_python_file,
+    ) -> None:
         """Test detecting list concatenation performance issues."""
         temp_python_file.write_text("""
 def bad_function():
@@ -132,8 +132,8 @@ def bad_function():
         assert any("list concatenation" in issue.lower() for issue in issues)
 
     def test_detect_performance_issues_string_concatenation(
-        self, performance_agent, temp_python_file
-    ):
+        self, performance_agent, temp_python_file,
+    ) -> None:
         """Test detecting string concatenation performance issues."""
         temp_python_file.write_text("""
 def build_string():
@@ -149,8 +149,8 @@ def build_string():
         assert any("string concatenation" in issue.lower() for issue in issues)
 
     def test_detect_performance_issues_nested_loops(
-        self, performance_agent, temp_python_file
-    ):
+        self, performance_agent, temp_python_file,
+    ) -> None:
         """Test detecting nested loop performance issues."""
         temp_python_file.write_text("""
 def nested_function(matrix):
@@ -165,7 +165,7 @@ def nested_function(matrix):
         assert len(issues) > 0
         assert any("nested loop" in issue.lower() for issue in issues)
 
-    def test_fix_list_operations_single_item(self, performance_agent, temp_python_file):
+    def test_fix_list_operations_single_item(self, performance_agent, temp_python_file) -> None:
         """Test fixing single item list concatenation."""
         temp_python_file.write_text("""
 def process():
@@ -182,8 +182,8 @@ def process():
         assert "items += [42]" not in fixed_content
 
     def test_fix_list_operations_multiple_items(
-        self, performance_agent, temp_python_file
-    ):
+        self, performance_agent, temp_python_file,
+    ) -> None:
         """Test fixing multiple item list concatenation."""
         temp_python_file.write_text("""
 def process():
@@ -200,8 +200,8 @@ def process():
         assert "items += [1, 2, 3]" not in fixed_content
 
     def test_fix_string_concatenation_in_loop(
-        self, performance_agent, temp_python_file
-    ):
+        self, performance_agent, temp_python_file,
+    ) -> None:
         """Test fixing string concatenation in loops."""
         temp_python_file.write_text("""
 def build_string(items):
@@ -212,7 +212,7 @@ def build_string(items):
 """)
 
         fixes_applied = performance_agent._fix_string_concatenation(
-            str(temp_python_file)
+            str(temp_python_file),
         )
 
         assert fixes_applied > 0
@@ -221,7 +221,7 @@ def build_string(items):
         assert "parts.append(" in fixed_content
         assert 'return "".join(parts)' in fixed_content
 
-    def test_no_performance_issues(self, performance_agent, temp_python_file):
+    def test_no_performance_issues(self, performance_agent, temp_python_file) -> None:
         """Test file with no performance issues."""
         temp_python_file.write_text("""
 def efficient_function(items):
@@ -235,7 +235,7 @@ def efficient_function(items):
 
         assert len(issues) == 0
 
-    def test_find_loop_containing_line(self, performance_agent, temp_python_file):
+    def test_find_loop_containing_line(self, performance_agent, temp_python_file) -> None:
         """Test finding loops that contain a specific line."""
         temp_python_file.write_text("""
 def test_function():
@@ -253,7 +253,7 @@ def test_function():
         assert loop is not None
         assert hasattr(loop, "iter")  # It's a For loop
 
-    def test_parse_ast_invalid_syntax(self, performance_agent):
+    def test_parse_ast_invalid_syntax(self, performance_agent) -> None:
         """Test handling of invalid Python syntax."""
         tree = performance_agent._parse_ast("def invalid syntax:")
 

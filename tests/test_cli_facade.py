@@ -16,7 +16,7 @@ from crackerjack.cli.facade import (
 class MockOptions:
     """Mock options for testing."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self.verbose = kwargs.get("verbose", False)
         self.start_mcp_server = kwargs.get("start_mcp_server", False)
         self.enterprise_batch = kwargs.get("enterprise_batch", False)
@@ -40,7 +40,7 @@ class TestCrackerjackCLIFacade:
         pkg_path = Path("/test/path")
         return CrackerjackCLIFacade(console=mock_console, pkg_path=pkg_path)
 
-    def test_facade_initialization_with_params(self, mock_console):
+    def test_facade_initialization_with_params(self, mock_console) -> None:
         """Test facade initialization with provided parameters."""
         pkg_path = Path("/test/path")
         facade = CrackerjackCLIFacade(console=mock_console, pkg_path=pkg_path)
@@ -49,7 +49,7 @@ class TestCrackerjackCLIFacade:
         assert facade.pkg_path == pkg_path
         assert facade.orchestrator is not None
 
-    def test_facade_initialization_with_defaults(self):
+    def test_facade_initialization_with_defaults(self) -> None:
         """Test facade initialization with default parameters."""
         facade = CrackerjackCLIFacade()
 
@@ -58,39 +58,39 @@ class TestCrackerjackCLIFacade:
         assert facade.pkg_path is not None
         assert facade.orchestrator is not None
 
-    def test_process_successful_workflow(self, facade):
+    def test_process_successful_workflow(self, facade) -> None:
         """Test successful workflow processing."""
         options = MockOptions()
 
         with (
             patch.object(facade, "_should_handle_special_mode", return_value=False),
             patch.object(
-                facade.orchestrator, "run_complete_workflow", return_value=True
+                facade.orchestrator, "run_complete_workflow", return_value=True,
             ),
         ):
             facade.process(options)
 
             facade.console.print.assert_called_with(
-                "[green]🎉 Workflow completed successfully![/green]"
+                "[green]🎉 Workflow completed successfully![/green]",
             )
 
-    def test_process_failed_workflow(self, facade):
+    def test_process_failed_workflow(self, facade) -> None:
         """Test failed workflow processing."""
         options = MockOptions()
 
         with (
             patch.object(facade, "_should_handle_special_mode", return_value=False),
             patch.object(
-                facade.orchestrator, "run_complete_workflow", return_value=False
+                facade.orchestrator, "run_complete_workflow", return_value=False,
             ),
         ):
             facade.process(options)
 
             facade.console.print.assert_called_with(
-                "[red]❌ Workflow completed with errors[/red]"
+                "[red]❌ Workflow completed with errors[/red]",
             )
 
-    def test_process_keyboard_interrupt(self, facade):
+    def test_process_keyboard_interrupt(self, facade) -> None:
         """Test keyboard interrupt handling."""
         options = MockOptions()
 
@@ -107,10 +107,10 @@ class TestCrackerjackCLIFacade:
 
             assert exc_info.value.code == 130
             facade.console.print.assert_called_with(
-                "\n[yellow]⏹️ Operation cancelled by user[/yellow]"
+                "\n[yellow]⏹️ Operation cancelled by user[/yellow]",
             )
 
-    def test_process_unexpected_exception(self, facade):
+    def test_process_unexpected_exception(self, facade) -> None:
         """Test unexpected exception handling."""
         options = MockOptions(verbose=False)
 
@@ -127,10 +127,10 @@ class TestCrackerjackCLIFacade:
 
             assert exc_info.value.code == 1
             facade.console.print.assert_any_call(
-                "[red]💥 Unexpected error: Test error[/red]"
+                "[red]💥 Unexpected error: Test error[/red]",
             )
 
-    def test_process_unexpected_exception_verbose(self, facade):
+    def test_process_unexpected_exception_verbose(self, facade) -> None:
         """Test unexpected exception handling with verbose output."""
         options = MockOptions(verbose=True)
 
@@ -147,11 +147,11 @@ class TestCrackerjackCLIFacade:
             facade.process(options)
 
             facade.console.print.assert_any_call(
-                "[red]💥 Unexpected error: Test error[/red]"
+                "[red]💥 Unexpected error: Test error[/red]",
             )
             facade.console.print.assert_any_call("[dim]Full traceback[/dim]")
 
-    def test_process_special_mode(self, facade):
+    def test_process_special_mode(self, facade) -> None:
         """Test processing with special mode handling."""
         options = MockOptions(start_mcp_server=True)
 
@@ -164,7 +164,7 @@ class TestCrackerjackCLIFacade:
             mock_handle.assert_called_once_with(options)
 
     @pytest.mark.asyncio
-    async def test_process_async(self, facade):
+    async def test_process_async(self, facade) -> None:
         """Test async processing."""
         options = MockOptions()
 
@@ -176,7 +176,7 @@ class TestCrackerjackCLIFacade:
 
             mock_to_thread.assert_called_once_with(facade.process, options)
 
-    def test_should_handle_special_mode(self, facade):
+    def test_should_handle_special_mode(self, facade) -> None:
         """Test special mode detection."""
         # MCP server mode
         options = MockOptions(start_mcp_server=True)
@@ -186,7 +186,7 @@ class TestCrackerjackCLIFacade:
         options = MockOptions()
         assert facade._should_handle_special_mode(options) is False
 
-    def test_should_handle_special_mode_missing_attributes(self, facade):
+    def test_should_handle_special_mode_missing_attributes(self, facade) -> None:
         """Test special mode detection with missing attributes."""
         options = Mock()
         # Remove attributes to test hasattr checks
@@ -199,7 +199,7 @@ class TestCrackerjackCLIFacade:
 
         assert facade._should_handle_special_mode(options) is False
 
-    def test_handle_special_modes_mcp_server(self, facade):
+    def test_handle_special_modes_mcp_server(self, facade) -> None:
         """Test handling MCP server mode."""
         options = MockOptions(start_mcp_server=True)
 
@@ -208,7 +208,7 @@ class TestCrackerjackCLIFacade:
 
             mock_start.assert_called_once()
 
-    def test_handle_special_modes_enterprise_batch(self, facade):
+    def test_handle_special_modes_enterprise_batch(self, facade) -> None:
         """Test handling enterprise batch mode."""
         options = MockOptions(enterprise_batch="/path1,/path2")
 
@@ -217,7 +217,7 @@ class TestCrackerjackCLIFacade:
 
             mock_handle.assert_called_once_with(options)
 
-    def test_handle_special_modes_monitor_dashboard(self, facade):
+    def test_handle_special_modes_monitor_dashboard(self, facade) -> None:
         """Test handling monitor dashboard mode."""
         options = MockOptions(monitor_dashboard="/path1,/path2")
 
@@ -227,24 +227,25 @@ class TestCrackerjackCLIFacade:
             mock_handle.assert_called_once_with(options)
 
     @patch("asyncio.run")
-    def test_start_mcp_server_success(self, mock_asyncio_run, facade):
+    def test_start_mcp_server_success(self, mock_asyncio_run, facade) -> None:
         """Test successful MCP server start."""
         with patch("crackerjack.mcp.server.main") as mock_main:
             facade._start_mcp_server()
 
             facade.console.print.assert_called_with(
-                "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]"
+                "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]",
             )
             mock_asyncio_run.assert_called_once_with(mock_main())
 
-    def test_start_mcp_server_import_error(self, facade):
+    def test_start_mcp_server_import_error(self, facade) -> None:
         """Test MCP server start with import error."""
         # Patch the import to raise ImportError
         original_import = __builtins__["__import__"]
 
         def mock_import(name, *args, **kwargs):
             if name == "crackerjack.mcp.server":
-                raise ImportError("No module named mcp")
+                msg = "No module named mcp"
+                raise ImportError(msg)
             return original_import(name, *args, **kwargs)
 
         with (
@@ -255,11 +256,11 @@ class TestCrackerjackCLIFacade:
 
             assert exc_info.value.code == 1
             facade.console.print.assert_any_call(
-                "[red]❌ MCP server requires additional dependencies[/red]"
+                "[red]❌ MCP server requires additional dependencies[/red]",
             )
 
     @patch("asyncio.run")
-    def test_start_mcp_server_exception(self, mock_asyncio_run, facade):
+    def test_start_mcp_server_exception(self, mock_asyncio_run, facade) -> None:
         """Test MCP server start with general exception."""
         mock_asyncio_run.side_effect = Exception("Test error")
 
@@ -271,10 +272,10 @@ class TestCrackerjackCLIFacade:
 
             assert exc_info.value.code == 1
             facade.console.print.assert_called_with(
-                "[red]❌ Failed to start MCP server: Test error[/red]"
+                "[red]❌ Failed to start MCP server: Test error[/red]",
             )
 
-    def test_handle_enterprise_batch_structure(self, facade):
+    def test_handle_enterprise_batch_structure(self, facade) -> None:
         """Test enterprise batch handling structure."""
         MockOptions(enterprise_batch="/path1,/path2")
 
@@ -282,7 +283,7 @@ class TestCrackerjackCLIFacade:
         assert hasattr(facade, "_handle_enterprise_batch")
         assert callable(facade._handle_enterprise_batch)
 
-    def test_handle_monitor_dashboard_structure(self, facade):
+    def test_handle_monitor_dashboard_structure(self, facade) -> None:
         """Test monitor dashboard handling structure."""
         MockOptions(monitor_dashboard="/path1,/path2")
 
@@ -294,7 +295,7 @@ class TestCrackerjackCLIFacade:
 class TestFactoryFunctions:
     """Test factory functions."""
 
-    def test_create_crackerjack_runner(self):
+    def test_create_crackerjack_runner(self) -> None:
         """Test create_crackerjack_runner factory function."""
         console = Mock(spec=Console)
         pkg_path = Path("/test")
@@ -306,11 +307,11 @@ class TestFactoryFunctions:
             result = create_crackerjack_runner(console=console, pkg_path=pkg_path)
 
             mock_facade_class.assert_called_once_with(
-                console=console, pkg_path=pkg_path
+                console=console, pkg_path=pkg_path,
             )
             assert result is mock_facade
 
-    def test_create_crackerjack_runner_defaults(self):
+    def test_create_crackerjack_runner_defaults(self) -> None:
         """Test create_crackerjack_runner with default parameters."""
         with patch("crackerjack.cli.facade.CrackerjackCLIFacade") as mock_facade_class:
             mock_facade = Mock()
@@ -321,7 +322,7 @@ class TestFactoryFunctions:
             mock_facade_class.assert_called_once_with(console=None, pkg_path=None)
             assert result is mock_facade
 
-    def test_crackerjack_runner_alias(self):
+    def test_crackerjack_runner_alias(self) -> None:
         """Test that CrackerjackRunner is an alias for CrackerjackCLIFacade."""
         assert CrackerjackRunner is CrackerjackCLIFacade
 
@@ -329,14 +330,14 @@ class TestFactoryFunctions:
 class TestCLIFacadeIntegration:
     """Integration tests for CLI facade."""
 
-    def test_facade_has_orchestrator(self):
+    def test_facade_has_orchestrator(self) -> None:
         """Test that facade has orchestrator integration."""
         facade = CrackerjackCLIFacade()
 
         assert hasattr(facade, "orchestrator")
         assert facade.orchestrator is not None
 
-    def test_path_parsing_logic_exists(self):
+    def test_path_parsing_logic_exists(self) -> None:
         """Test that path parsing logic exists."""
         facade = CrackerjackCLIFacade()
 
@@ -344,7 +345,7 @@ class TestCLIFacadeIntegration:
         assert hasattr(facade, "_handle_enterprise_batch")
         assert hasattr(facade, "_handle_monitor_dashboard")
 
-    def test_error_handling_structure(self):
+    def test_error_handling_structure(self) -> None:
         """Test that error handling structure is in place."""
         facade = CrackerjackCLIFacade()
         MockOptions()

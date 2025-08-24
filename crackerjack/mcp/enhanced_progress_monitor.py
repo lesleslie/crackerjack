@@ -30,7 +30,7 @@ class MetricCard(Widget):
         trend: str = "",
         color: str = "white",
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(**kwargs)
         self.label = label
         self.value = value
@@ -43,7 +43,7 @@ class MetricCard(Widget):
 
 
 class AgentActivityWidget(Widget):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.border_title = "🤖 AI Agent Activity"
         self.border_title_align = "left"
@@ -52,7 +52,7 @@ class AgentActivityWidget(Widget):
         with Vertical():
             with Horizontal(id="agent - metrics"):
                 yield MetricCard(
-                    "Active Agents", "0", color="cyan", id="active - agents - metric"
+                    "Active Agents", "0", color="cyan", id="active - agents - metric",
                 )
                 yield MetricCard(
                     "Issues Fixed",
@@ -62,10 +62,10 @@ class AgentActivityWidget(Widget):
                     id="issues - fixed - metric",
                 )
                 yield MetricCard(
-                    "Confidence", "0 % ", color="yellow", id="confidence - metric"
+                    "Confidence", "0 % ", color="yellow", id="confidence - metric",
                 )
                 yield MetricCard(
-                    "Cache Hits", "0", color="magenta", id="cache - hits - metric"
+                    "Cache Hits", "0", color="magenta", id="cache - hits - metric",
                 )
 
             yield DataTable(id="agents - detail - table", show_header=True)
@@ -75,7 +75,7 @@ class AgentActivityWidget(Widget):
     def on_mount(self) -> None:
         table = self.query_one("#agents - detail - table", DataTable)
         table.add_columns(
-            ("Agent", 20), ("Status", 10), ("Type", 15), ("Conf.", 8), ("Time", 10)
+            ("Agent", 20), ("Status", 10), ("Type", 15), ("Conf.", 8), ("Time", 10),
         )
         table.zebra_stripes = True
         table.styles.max_height = 6
@@ -88,7 +88,7 @@ class AgentActivityWidget(Widget):
 
             active_count = len(active_agents)
             self.query_one("#active - agents - metric", MetricCard).value = str(
-                active_count
+                active_count,
             )
 
             total_fixed = sum(agent.get("issues_fixed", 0) for agent in active_agents)
@@ -98,10 +98,10 @@ class AgentActivityWidget(Widget):
             cache_hits = activity.get("cache_hits", 0)
 
             self.query_one("#issues - fixed - metric", MetricCard).value = str(
-                total_fixed
+                total_fixed,
             )
             self.query_one(
-                "#confidence - metric", MetricCard
+                "#confidence - metric", MetricCard,
             ).value = f"{avg_confidence: .0 % }"
             self.query_one("#cache - hits - metric", MetricCard).value = str(cache_hits)
 
@@ -118,7 +118,7 @@ class AgentActivityWidget(Widget):
         icon = status_icons.get(status, "⏸️")
         status_bar = self.query_one("#coordinator - status - bar", Label)
         status_bar.update(
-            f"{icon} Coordinator: {status.title()} ({total_agents} agents available)"
+            f"{icon} Coordinator: {status.title()} ({total_agents} agents available)",
         )
 
     def _update_agent_table(self, agents: list) -> None:
@@ -162,7 +162,7 @@ class AgentActivityWidget(Widget):
 
 
 class JobProgressPanel(Widget):
-    def __init__(self, job_data: dict, **kwargs):
+    def __init__(self, job_data: dict, **kwargs) -> None:
         super().__init__(**kwargs)
         self.job_data = job_data
         self.start_time = time.time()
@@ -220,29 +220,28 @@ class JobProgressPanel(Widget):
         with Horizontal(classes="metrics - grid"):
             yield MetricCard("Issues Found", str(total_issues), color="yellow")
             yield MetricCard(
-                "Fixed", str(fixed), "↑" if fixed > 0 else "", color="green"
+                "Fixed", str(fixed), "↑" if fixed > 0 else "", color="green",
             )
             yield MetricCard(
-                "Remaining", str(remaining), "↓" if fixed > 0 else "", color="red"
+                "Remaining", str(remaining), "↓" if fixed > 0 else "", color="red",
             )
 
         if total_issues > 0:
             success_rate = (fixed / total_issues) * 100
             yield Label(
-                f"Success Rate: {success_rate: .1f} % ", classes="success - rate"
+                f"Success Rate: {success_rate: .1f} % ", classes="success - rate",
             )
 
     def _format_time(self, seconds: float) -> str:
         if seconds < 60:
             return f"{seconds: .0f}s"
-        elif seconds < 3600:
+        if seconds < 3600:
             return f"{seconds / 60: .0f}m {seconds % 60: .0f}s"
-        else:
-            return f"{seconds / 3600: .0f}h {(seconds % 3600) / 60: .0f}m"
+        return f"{seconds / 3600: .0f}h {(seconds % 3600) / 60: .0f}m"
 
 
 class ServiceHealthPanel(Widget):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.border_title = "🏥 Service Health"
         self.border_title_align = "left"
@@ -290,7 +289,7 @@ class ServiceHealthPanel(Widget):
 
             if isinstance(last_check, int | float):
                 last_check_str = datetime.fromtimestamp(last_check).strftime(
-                    " % H: % M: % S"
+                    " % H: % M: % S",
                 )
             else:
                 last_check_str = str(last_check)
@@ -306,19 +305,18 @@ class ServiceHealthPanel(Widget):
     def _format_uptime(self, seconds: float) -> str:
         if seconds < 60:
             return f"{seconds: .0f}s"
-        elif seconds < 3600:
+        if seconds < 3600:
             return f"{seconds / 60: .0f}m"
-        elif seconds < 86400:
+        if seconds < 86400:
             return f"{seconds / 3600: .1f}h"
-        else:
-            return f"{seconds / 86400: .1f}d"
+        return f"{seconds / 86400: .1f}d"
 
 
 class EnhancedCrackerjackDashboard(App):
     TITLE = "Crackerjack Progress Monitor"
     CSS_PATH = Path(__file__).parent / "enhanced_progress_monitor.tcss"
 
-    def __init__(self, progress_dir: Path, websocket_url: str = "ws://localhost:8675"):
+    def __init__(self, progress_dir: Path, websocket_url: str = "ws://localhost:8675") -> None:
         super().__init__()
         self.progress_dir = progress_dir
         self.websocket_url = websocket_url
@@ -350,15 +348,15 @@ class EnhancedCrackerjackDashboard(App):
 
             services = self.service_manager.check_all_services()
             self.query_one("#service - panel", ServiceHealthPanel).update_services(
-                services
+                services,
             )
 
             if jobs_data.get("individual_jobs"):
                 aggregated_agent_data = self._aggregate_agent_data(
-                    jobs_data["individual_jobs"]
+                    jobs_data["individual_jobs"],
                 )
                 self.query_one("#agent - panel", AgentActivityWidget).update_metrics(
-                    aggregated_agent_data
+                    aggregated_agent_data,
                 )
 
             self._update_job_panels(jobs_data.get("individual_jobs", []))
@@ -373,7 +371,7 @@ class EnhancedCrackerjackDashboard(App):
                 "coordinator_status": "idle",
                 "agent_registry": {"total_agents": 6},
                 "cache_hits": 0,
-            }
+            },
         }
 
         for job in jobs:
@@ -394,7 +392,7 @@ class EnhancedCrackerjackDashboard(App):
                                 else "formatting",
                             }
                             for agent_type in ["RefactoringAgent", "FormattingAgent"]
-                        ]
+                        ],
                     )
 
         return aggregated
@@ -425,7 +423,7 @@ class EnhancedCrackerjackDashboard(App):
 
 
 async def run_enhanced_progress_monitor(
-    progress_dir: Path = None,
+    progress_dir: Path | None = None,
     websocket_url: str = "ws://localhost:8675",
     dev_mode: bool = False,
 ) -> None:

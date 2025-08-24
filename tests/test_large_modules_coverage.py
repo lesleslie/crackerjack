@@ -1,6 +1,4 @@
-"""
-Tests for large modules to boost coverage significantly.
-"""
+"""Tests for large modules to boost coverage significantly."""
 
 from pathlib import Path
 from unittest.mock import Mock
@@ -38,17 +36,17 @@ class TestCodeCleaner:
         """Create a CodeCleaner instance."""
         return CodeCleaner(console)
 
-    def test_init(self, code_cleaner, console):
+    def test_init(self, code_cleaner, console) -> None:
         """Test CodeCleaner initialization."""
         assert code_cleaner.console == console
         assert hasattr(code_cleaner, "clean_files")
 
-    def test_clean_files_method_exists(self, code_cleaner):
+    def test_clean_files_method_exists(self, code_cleaner) -> None:
         """Test that clean_files method exists."""
         assert hasattr(code_cleaner, "clean_files")
         assert callable(code_cleaner.clean_files)
 
-    def test_legacy_clean_method_exists(self, code_cleaner):
+    def test_legacy_clean_method_exists(self, code_cleaner) -> None:
         """Test that legacy clean method exists."""
         assert hasattr(code_cleaner, "clean")
         assert callable(code_cleaner.clean)
@@ -57,7 +55,7 @@ class TestCodeCleaner:
 class TestInteractiveModules:
     """Test interactive module components."""
 
-    def test_task_status_enum(self):
+    def test_task_status_enum(self) -> None:
         """Test TaskStatus enum."""
         assert TaskStatus.PENDING is not None
         assert TaskStatus.RUNNING is not None
@@ -65,7 +63,7 @@ class TestInteractiveModules:
         assert TaskStatus.FAILED is not None
         assert TaskStatus.SKIPPED is not None
 
-    def test_workflow_options_defaults(self):
+    def test_workflow_options_defaults(self) -> None:
         """Test WorkflowOptions default values."""
         options = WorkflowOptions()
 
@@ -77,7 +75,7 @@ class TestInteractiveModules:
         assert options.interactive is True
         assert options.dry_run is False
 
-    def test_workflow_options_with_values(self):
+    def test_workflow_options_with_values(self) -> None:
         """Test WorkflowOptions with explicit values."""
         options = WorkflowOptions(
             clean=True,
@@ -95,7 +93,7 @@ class TestInteractiveModules:
         assert options.commit is True
         assert options.dry_run is True
 
-    def test_workflow_options_from_args(self):
+    def test_workflow_options_from_args(self) -> None:
         """Test creating WorkflowOptions from args."""
         mock_args = Mock()
         mock_args.clean = True
@@ -110,7 +108,7 @@ class TestInteractiveModules:
         assert options.publish == "patch"
         assert options.bump is None
 
-    def test_task_creation(self):
+    def test_task_creation(self) -> None:
         """Test Task creation."""
         definition = TaskDefinition(
             id="test_task",
@@ -125,7 +123,7 @@ class TestInteractiveModules:
         assert task.definition.description == "Test task description"
         assert task.status == TaskStatus.PENDING
 
-    def test_task_status_transitions(self):
+    def test_task_status_transitions(self) -> None:
         """Test Task status transitions."""
         definition = TaskDefinition(
             id="test_task",
@@ -143,7 +141,7 @@ class TestInteractiveModules:
         task.complete(success=True)
         assert task.status == TaskStatus.SUCCESS
 
-    def test_task_failure_handling(self):
+    def test_task_failure_handling(self) -> None:
         """Test Task failure handling."""
         definition = TaskDefinition(
             id="failing_task",
@@ -167,6 +165,6 @@ class TestModernInteractiveCLI:
         """Create a InteractiveCLI instance."""
         return InteractiveCLI(console)
 
-    def test_init(self, interactive_cli, console):
+    def test_init(self, interactive_cli, console) -> None:
         """Test InteractiveCLI initialization."""
         assert interactive_cli.console == console

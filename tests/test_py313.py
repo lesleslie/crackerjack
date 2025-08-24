@@ -18,7 +18,7 @@ from crackerjack.py313 import (
 
 
 class TestCommandResult:
-    def test_command_result_structure(self):
+    def test_command_result_structure(self) -> None:
         result: CommandResult = {
             "success": True,
             "exit_code": 0,
@@ -37,7 +37,7 @@ class TestCommandResult:
 
 
 class TestCommandRunner:
-    def test_command_runner_protocol(self):
+    def test_command_runner_protocol(self) -> None:
         class ConcreteRunner(CommandRunner[str]):
             def run_command(self, cmd: list[str], **kwargs) -> str:
                 return f"Executed: {' '.join(cmd)}"
@@ -49,7 +49,7 @@ class TestCommandRunner:
 
 
 class TestProcessCommandOutput:
-    def test_successful_command_with_output(self):
+    def test_successful_command_with_output(self) -> None:
         result: CommandResult = {
             "success": True,
             "exit_code": 0,
@@ -64,7 +64,7 @@ class TestProcessCommandOutput:
         assert success is True
         assert message == "Command output"
 
-    def test_successful_command_no_output(self):
+    def test_successful_command_no_output(self) -> None:
         result: CommandResult = {
             "success": True,
             "exit_code": 0,
@@ -79,7 +79,7 @@ class TestProcessCommandOutput:
         assert success is True
         assert message == "Command completed successfully with no output"
 
-    def test_command_not_found(self):
+    def test_command_not_found(self) -> None:
         result: CommandResult = {
             "success": False,
             "exit_code": 127,
@@ -94,7 +94,7 @@ class TestProcessCommandOutput:
         assert success is False
         assert message == "Command not found: command not found: nonexistent"
 
-    def test_command_failed_with_error(self):
+    def test_command_failed_with_error(self) -> None:
         result: CommandResult = {
             "success": False,
             "exit_code": 1,
@@ -109,7 +109,7 @@ class TestProcessCommandOutput:
         assert success is False
         assert message == "Command failed with exit code 1: Permission denied"
 
-    def test_unknown_pattern(self):
+    def test_unknown_pattern(self) -> None:
         result: CommandResult = {
             "success": None,
             "exit_code": -999,
@@ -126,7 +126,7 @@ class TestProcessCommandOutput:
 
 
 class TestHookStatus:
-    def test_hook_status_values(self):
+    def test_hook_status_values(self) -> None:
         assert HookStatus.SUCCESS.name == "SUCCESS"
         assert HookStatus.FAILURE.name == "FAILURE"
         assert HookStatus.SKIPPED.name == "SKIPPED"
@@ -142,7 +142,7 @@ class TestHookStatus:
 
 
 class TestHookResult:
-    def test_hook_result_structure(self):
+    def test_hook_result_structure(self) -> None:
         result: HookResult = {
             "status": HookStatus.SUCCESS,
             "hook_id": "test - hook",
@@ -157,7 +157,7 @@ class TestHookResult:
 
 
 class TestAnalyzeHookResult:
-    def test_successful_hook(self):
+    def test_successful_hook(self) -> None:
         result: HookResult = {
             "status": HookStatus.SUCCESS,
             "hook_id": "ruff - check",
@@ -169,7 +169,7 @@ class TestAnalyzeHookResult:
 
         assert message == "✅ Hook ruff - check passed successfully"
 
-    def test_failed_hook_fixable(self):
+    def test_failed_hook_fixable(self) -> None:
         result: HookResult = {
             "status": HookStatus.FAILURE,
             "hook_id": "trailing - whitespace",
@@ -181,7 +181,7 @@ class TestAnalyzeHookResult:
 
         assert message == "🔧 Hook trailing - whitespace failed with fixable issues"
 
-    def test_failed_hook_not_fixable(self):
+    def test_failed_hook_not_fixable(self) -> None:
         result: HookResult = {
             "status": HookStatus.FAILURE,
             "hook_id": "pyright",
@@ -193,7 +193,7 @@ class TestAnalyzeHookResult:
 
         assert message == "❌ Hook pyright failed"
 
-    def test_skipped_hook(self):
+    def test_skipped_hook(self) -> None:
         result: HookResult = {
             "status": HookStatus.SKIPPED,
             "hook_id": "bandit",
@@ -205,7 +205,7 @@ class TestAnalyzeHookResult:
 
         assert message == "⏩ Hook bandit was skipped"
 
-    def test_error_hook(self):
+    def test_error_hook(self) -> None:
         result: HookResult = {
             "status": HookStatus.ERROR,
             "hook_id": "custom - hook",
@@ -220,7 +220,7 @@ class TestAnalyzeHookResult:
             == "💥 Hook custom - hook encountered an error: Hook crashed with exception"
         )
 
-    def test_unknown_hook_pattern(self):
+    def test_unknown_hook_pattern(self) -> None:
         result: HookResult = {
             "status": None,
             "hook_id": "unknown",
@@ -234,70 +234,70 @@ class TestAnalyzeHookResult:
 
 
 class TestCategorizeFile:
-    def test_python_test_file(self):
+    def test_python_test_file(self) -> None:
         file_path = Path("/project / tests / test_module.py")
 
         category = categorize_file(file_path)
 
         assert category == "Python Test File"
 
-    def test_python_init_file(self):
+    def test_python_init_file(self) -> None:
         file_path = Path("/project / package / __init__.py")
 
         category = categorize_file(file_path)
 
         assert category == "Python Module Init"
 
-    def test_python_source_file(self):
+    def test_python_source_file(self) -> None:
         file_path = Path("/project / src / module.py")
 
         category = categorize_file(file_path)
 
         assert category == "Python Source File"
 
-    def test_markdown_documentation(self):
+    def test_markdown_documentation(self) -> None:
         file_path = Path("/project / README.md")
 
         category = categorize_file(file_path)
 
         assert category == "Documentation File"
 
-    def test_rst_documentation(self):
+    def test_rst_documentation(self) -> None:
         file_path = Path("/project / docs / index.rst")
 
         category = categorize_file(file_path)
 
         assert category == "Documentation File"
 
-    def test_text_documentation(self):
+    def test_text_documentation(self) -> None:
         file_path = Path("/project / CHANGELOG.txt")
 
         category = categorize_file(file_path)
 
         assert category == "Documentation File"
 
-    def test_gitignore_config_file(self):
+    def test_gitignore_config_file(self) -> None:
         file_path = Path("/project / .gitignore")
 
         category = categorize_file(file_path)
 
         assert category == "Configuration File"
 
-    def test_precommit_config_file(self):
+    def test_precommit_config_file(self) -> None:
         file_path = Path("/project / .pre - commit - config.yaml")
 
         category = categorize_file(file_path)
 
         assert category == "Configuration File"
 
-    def test_hidden_config_file(self):
+    def test_hidden_config_file(self) -> None:
         file_path = Path("/project / .env")
 
         category = categorize_file(file_path)
 
         assert category == "Configuration File"
 
-    def test_unknown_file_type(self):
+    def test_unknown_file_type(self) -> None:
         file_path = Path("/project / data.csv")
 
         category = categorize_file(file_path)
@@ -306,17 +306,17 @@ class TestCategorizeFile:
 
 
 class TestProcessHookResults:
-    def test_process_mixed_results(self):
+    def test_process_mixed_results(self) -> None:
         results = [
             {"status": HookStatus.SUCCESS, "hook_id": "hook1"},
             {"status": HookStatus.FAILURE, "hook_id": "hook2"},
             {"status": HookStatus.SUCCESS, "hook_id": "hook3"},
         ]
 
-        def success_handler(result):
+        def success_handler(result) -> str:
             return f"SUCCESS: {result['hook_id']}"
 
-        def failure_handler(result):
+        def failure_handler(result) -> str:
             return f"FAILURE: {result['hook_id']}"
 
         processed = process_hook_results(results, success_handler, failure_handler)
@@ -327,7 +327,7 @@ class TestProcessHookResults:
             "SUCCESS: hook3",
         ]
 
-    def test_process_all_successful_results(self):
+    def test_process_all_successful_results(self) -> None:
         results = [
             {"status": HookStatus.SUCCESS, "data": "test1"},
             {"status": HookStatus.SUCCESS, "data": "test2"},
@@ -336,24 +336,24 @@ class TestProcessHookResults:
         def success_handler(result):
             return result["data"].upper()
 
-        def failure_handler(result):
+        def failure_handler(result) -> str:
             return "FAILED"
 
         processed = process_hook_results(results, success_handler, failure_handler)
 
         assert processed == ["TEST1", "TEST2"]
 
-    def test_process_all_failed_results(self):
+    def test_process_all_failed_results(self) -> None:
         results = [
             {"status": HookStatus.FAILURE, "error": "error1"},
             {"status": HookStatus.ERROR, "error": "error2"},
             "invalid_result",
         ]
 
-        def success_handler(result):
+        def success_handler(result) -> str:
             return "SUCCESS"
 
-        def failure_handler(result):
+        def failure_handler(result) -> str:
             if isinstance(result, dict) and "error" in result:
                 return f"ERROR: {result['error']}"
             return "UNKNOWN_ERROR"
@@ -362,13 +362,13 @@ class TestProcessHookResults:
 
         assert processed == ["ERROR: error1", "ERROR: error2", "UNKNOWN_ERROR"]
 
-    def test_process_empty_results(self):
+    def test_process_empty_results(self) -> None:
         results = []
 
-        def success_handler(result):
+        def success_handler(result) -> str:
             return "SUCCESS"
 
-        def failure_handler(result):
+        def failure_handler(result) -> str:
             return "FAILURE"
 
         processed = process_hook_results(results, success_handler, failure_handler)
@@ -377,14 +377,14 @@ class TestProcessHookResults:
 
 
 class TestModernConfigManager:
-    def test_config_manager_initialization(self):
+    def test_config_manager_initialization(self) -> None:
         config_path = Path("/test / config.yaml")
         manager = ModernConfigManager(config_path)
 
         assert manager.config_path == config_path
         assert manager.config == {}
 
-    def test_config_manager_chaining(self):
+    def test_config_manager_chaining(self) -> None:
         config_path = Path("/test / config.yaml")
         manager = ModernConfigManager(config_path)
 
@@ -393,14 +393,14 @@ class TestModernConfigManager:
         assert result is manager
         assert manager.config == {"key1": "value1", "key2": "value2"}
 
-    def test_load_returns_self(self):
+    def test_load_returns_self(self) -> None:
         manager = ModernConfigManager(Path("/test / config.yaml"))
 
         result = manager.load()
 
         assert result is manager
 
-    def test_update_modifies_config(self):
+    def test_update_modifies_config(self) -> None:
         manager = ModernConfigManager(Path("/test / config.yaml"))
 
         result = manager.update("test_key", "test_value")
@@ -408,7 +408,7 @@ class TestModernConfigManager:
         assert result is manager
         assert manager.config["test_key"] == "test_value"
 
-    def test_save_returns_self(self):
+    def test_save_returns_self(self) -> None:
         manager = ModernConfigManager(Path("/test / config.yaml"))
 
         result = manager.save()
@@ -417,19 +417,19 @@ class TestModernConfigManager:
 
 
 class TestEnhancedCommandRunner:
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         working_dir = Path("/test / dir")
         runner = EnhancedCommandRunner(working_dir)
 
         assert runner.working_dir == working_dir
 
-    def test_initialization_no_working_dir(self):
+    def test_initialization_no_working_dir(self) -> None:
         runner = EnhancedCommandRunner()
 
         assert runner.working_dir is None
 
     @patch("subprocess.run")
-    def test_successful_command_run(self, mock_run):
+    def test_successful_command_run(self, mock_run) -> None:
         mock_process = Mock()
         mock_process.returncode = 0
         mock_process.stdout = "Command output"
@@ -447,11 +447,11 @@ class TestEnhancedCommandRunner:
         assert result["duration_ms"] > 0
 
         mock_run.assert_called_once_with(
-            ["echo", "test"], capture_output=True, text=True, cwd=None
+            ["echo", "test"], capture_output=True, text=True, cwd=None,
         )
 
     @patch("subprocess.run")
-    def test_failed_command_run(self, mock_run):
+    def test_failed_command_run(self, mock_run) -> None:
         mock_process = Mock()
         mock_process.returncode = 1
         mock_process.stdout = ""
@@ -469,7 +469,7 @@ class TestEnhancedCommandRunner:
         assert result["duration_ms"] > 0
 
     @patch("subprocess.run")
-    def test_command_with_working_directory(self, mock_run):
+    def test_command_with_working_directory(self, mock_run) -> None:
         mock_process = Mock()
         mock_process.returncode = 0
         mock_process.stdout = "output"
@@ -481,11 +481,11 @@ class TestEnhancedCommandRunner:
         runner.run(["ls"])
 
         mock_run.assert_called_once_with(
-            ["ls"], capture_output=True, text=True, cwd=working_dir
+            ["ls"], capture_output=True, text=True, cwd=working_dir,
         )
 
     @patch("subprocess.run")
-    def test_subprocess_error_handling(self, mock_run):
+    def test_subprocess_error_handling(self, mock_run) -> None:
         mock_run.side_effect = subprocess.SubprocessError("Process error")
 
         runner = EnhancedCommandRunner()
@@ -499,7 +499,7 @@ class TestEnhancedCommandRunner:
         assert result["duration_ms"] > 0
 
     @patch("subprocess.run")
-    def test_handle_result_integration(self, mock_run):
+    def test_handle_result_integration(self, mock_run) -> None:
         mock_process = Mock()
         mock_process.returncode = 0
         mock_process.stdout = "Success output"
@@ -515,7 +515,7 @@ class TestEnhancedCommandRunner:
 
 
 class TestCleanPythonCode:
-    def test_remove_comments(self):
+    def test_remove_comments(self) -> None:
         code = """def test():
     x = 1
 
@@ -528,7 +528,7 @@ class TestCleanPythonCode:
     return x"""
         assert cleaned == expected
 
-    def test_preserve_special_comments(self):
+    def test_preserve_special_comments(self) -> None:
         code = """def test():
     x = 1
     y = 2
@@ -546,7 +546,7 @@ class TestCleanPythonCode:
     return x"""
         assert cleaned == expected
 
-    def test_preserve_imports(self):
+    def test_preserve_imports(self) -> None:
         code = """import os # Standard library
 from pathlib import Path
 
@@ -562,7 +562,7 @@ def test():
     pass"""
         assert cleaned == expected
 
-    def test_remove_docstrings(self):
+    def test_remove_docstrings(self) -> None:
         code = '''def test():
     """This is a docstring."""
     x = 1
@@ -576,7 +576,7 @@ def test():
     return x"""
         assert cleaned == expected
 
-    def test_handle_empty_lines(self):
+    def test_handle_empty_lines(self) -> None:
         code = """def test():
 
 
@@ -598,7 +598,7 @@ def test():
 """
         assert cleaned == expected
 
-    def test_mixed_code_cleaning(self):
+    def test_mixed_code_cleaning(self) -> None:
         code = '''# File header comment
 import sys
 from typing import Any
@@ -631,14 +631,14 @@ class TestClass:
         pass"""
         assert cleaned == expected
 
-    def test_empty_input(self):
+    def test_empty_input(self) -> None:
         code = ""
 
         cleaned = clean_python_code(code)
 
         assert cleaned == ""
 
-    def test_only_comments_and_docstrings(self):
+    def test_only_comments_and_docstrings(self) -> None:
         code = '''# Just comments
 """And docstrings"""
 
@@ -650,9 +650,8 @@ class TestClass:
         assert cleaned == ""
 
 
-def test_process_command_output_basic():
+def test_process_command_output_basic() -> None:
     """Test basic functionality of process_command_output."""
-
     try:
         result = process_command_output()
         assert result is not None or result is None
@@ -663,15 +662,14 @@ def test_process_command_output_basic():
         sig = inspect.signature(process_command_output)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in process_command_output: {e}")
 
 
-def test_analyze_hook_result_basic():
+def test_analyze_hook_result_basic() -> None:
     """Test basic functionality of analyze_hook_result."""
-
     try:
         result = analyze_hook_result()
         assert result is not None or result is None
@@ -682,15 +680,14 @@ def test_analyze_hook_result_basic():
         sig = inspect.signature(analyze_hook_result)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in analyze_hook_result: {e}")
 
 
-def test_categorize_file_basic():
+def test_categorize_file_basic() -> None:
     """Test basic functionality of categorize_file."""
-
     try:
         result = categorize_file()
         assert result is not None or result is None
@@ -701,15 +698,14 @@ def test_categorize_file_basic():
         sig = inspect.signature(categorize_file)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in categorize_file: {e}")
 
 
-def test_process_hook_results_basic():
+def test_process_hook_results_basic() -> None:
     """Test basic functionality of process_hook_results."""
-
     try:
         result = process_hook_results()
         assert result is not None or result is None
@@ -720,15 +716,14 @@ def test_process_hook_results_basic():
         sig = inspect.signature(process_hook_results)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in process_hook_results: {e}")
 
 
-def test_clean_python_code_basic():
+def test_clean_python_code_basic() -> None:
     """Test basic functionality of clean_python_code."""
-
     try:
         result = clean_python_code()
         assert result is not None or result is None
@@ -739,15 +734,14 @@ def test_clean_python_code_basic():
         sig = inspect.signature(clean_python_code)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in clean_python_code: {e}")
 
 
-def test_run_command_basic():
+def test_run_command_basic() -> None:
     """Test basic functionality of run_command."""
-
     try:
         result = run_command()
         assert result is not None or result is None
@@ -758,15 +752,14 @@ def test_run_command_basic():
         sig = inspect.signature(run_command)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in run_command: {e}")
 
 
-def test_run_basic():
+def test_run_basic() -> None:
     """Test basic functionality of run."""
-
     try:
         result = run()
         assert result is not None or result is None
@@ -777,7 +770,7 @@ def test_run_basic():
         sig = inspect.signature(run)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in run: {e}")

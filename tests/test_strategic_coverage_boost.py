@@ -7,7 +7,7 @@ from pathlib import Path
 class TestHighImpactModulesFixed:
     """Test high-impact modules with correct imports and safe instantiation."""
 
-    def test_tool_version_service_comprehensive(self):
+    def test_tool_version_service_comprehensive(self) -> None:
         """Test tool_version_service (568 statements, 13% coverage) - biggest impact."""
         from crackerjack.services import tool_version_service
 
@@ -19,7 +19,7 @@ class TestHighImpactModulesFixed:
         module_dir = dir(tool_version_service)
         assert len(module_dir) > 10  # Should have substantial content
 
-    def test_progress_monitor_comprehensive(self):
+    def test_progress_monitor_comprehensive(self) -> None:
         """Test mcp/progress_monitor.py (588 statements, 0% coverage) - highest impact."""
         from crackerjack.mcp import progress_monitor
 
@@ -28,7 +28,7 @@ class TestHighImpactModulesFixed:
         module_contents = dir(progress_monitor)
         assert len(module_contents) > 5
 
-    def test_advanced_orchestrator_comprehensive(self):
+    def test_advanced_orchestrator_comprehensive(self) -> None:
         """Test orchestration/advanced_orchestrator.py (339 statements, 0% coverage)."""
         from crackerjack.orchestration import advanced_orchestrator
 
@@ -36,7 +36,7 @@ class TestHighImpactModulesFixed:
         module_contents = dir(advanced_orchestrator)
         assert len(module_contents) > 5
 
-    def test_enhanced_filesystem_comprehensive(self):
+    def test_enhanced_filesystem_comprehensive(self) -> None:
         """Test services/enhanced_filesystem.py (262 statements, 0% coverage)."""
         from crackerjack.services import enhanced_filesystem
 
@@ -44,7 +44,7 @@ class TestHighImpactModulesFixed:
         module_contents = dir(enhanced_filesystem)
         assert len(module_contents) > 5
 
-    def test_individual_hook_executor_comprehensive(self):
+    def test_individual_hook_executor_comprehensive(self) -> None:
         """Test executors/individual_hook_executor.py (252 statements, 0% coverage)."""
         from crackerjack.executors import individual_hook_executor
 
@@ -52,7 +52,7 @@ class TestHighImpactModulesFixed:
         module_contents = dir(individual_hook_executor)
         assert len(module_contents) > 5
 
-    def test_dependency_monitor_comprehensive(self):
+    def test_dependency_monitor_comprehensive(self) -> None:
         """Test services/dependency_monitor.py (251 statements, 0% coverage)."""
         from crackerjack.services import dependency_monitor
 
@@ -60,7 +60,7 @@ class TestHighImpactModulesFixed:
         dir(dependency_monitor)
         assert len(dependency_monitor) > 5
 
-    def test_performance_benchmarks_comprehensive(self):
+    def test_performance_benchmarks_comprehensive(self) -> None:
         """Test services/performance_benchmarks.py (246 statements, 18% coverage)."""
         from crackerjack.services import performance_benchmarks
 
@@ -68,7 +68,7 @@ class TestHighImpactModulesFixed:
         module_contents = dir(performance_benchmarks)
         assert len(module_contents) > 5
 
-    def test_contextual_ai_assistant_comprehensive(self):
+    def test_contextual_ai_assistant_comprehensive(self) -> None:
         """Test services/contextual_ai_assistant.py (241 statements, 0% coverage)."""
         from crackerjack.services import contextual_ai_assistant
 
@@ -76,7 +76,7 @@ class TestHighImpactModulesFixed:
         module_contents = dir(contextual_ai_assistant)
         assert len(module_contents) > 5
 
-    def test_unified_config_comprehensive(self):
+    def test_unified_config_comprehensive(self) -> None:
         """Test services/unified_config.py (236 statements, 37% coverage)."""
         from crackerjack.services import unified_config
 
@@ -88,7 +88,7 @@ class TestHighImpactModulesFixed:
 class TestMCPModulesFixed:
     """Test MCP modules with correct imports and safe methods."""
 
-    def test_mcp_options_comprehensive(self):
+    def test_mcp_options_comprehensive(self) -> None:
         """Test MCPOptions class from server_core."""
         from crackerjack.mcp.server_core import MCPOptions
 
@@ -102,7 +102,7 @@ class TestMCPModulesFixed:
         assert options.test is False
         assert options.autofix is True
 
-    def test_mcp_options_with_kwargs(self):
+    def test_mcp_options_with_kwargs(self) -> None:
         """Test MCPOptions with kwargs."""
         from crackerjack.mcp.server_core import MCPOptions
 
@@ -113,7 +113,7 @@ class TestMCPModulesFixed:
         assert options.verbose is False
         assert options.test is False
 
-    def test_batched_state_saver_safe_methods(self):
+    def test_batched_state_saver_safe_methods(self) -> None:
         """Test BatchedStateSaver with safe method calls."""
         from crackerjack.mcp.context import BatchedStateSaver
 
@@ -131,7 +131,7 @@ class TestMCPModulesFixed:
         running = saver.is_running()
         assert isinstance(running, bool)
 
-    def test_mcp_context_comprehensive(self):
+    def test_mcp_context_comprehensive(self) -> None:
         """Test MCP context module comprehensively."""
         from crackerjack.mcp import context
 
@@ -144,7 +144,7 @@ class TestMCPModulesFixed:
         assert hasattr(context, "BatchedStateSaver")
         assert hasattr(context, "MCPServerContext")
 
-    def test_error_cache_safe_methods(self):
+    def test_error_cache_safe_methods(self) -> None:
         """Test ErrorCache with safe method calls."""
         from crackerjack.mcp.cache import ErrorCache
 
@@ -158,7 +158,7 @@ class TestMCPModulesFixed:
         patterns = cache.find_patterns_by_type("")
         assert isinstance(patterns, list)
 
-    def test_state_manager_safe_methods(self):
+    def test_state_manager_safe_methods(self) -> None:
         """Test StateManager with safe method access."""
         from crackerjack.mcp.state import StateManager
 
@@ -172,7 +172,7 @@ class TestMCPModulesFixed:
 class TestServiceModulesFixed:
     """Test service modules with working instantiation."""
 
-    def test_file_system_service_safe_methods(self):
+    def test_file_system_service_safe_methods(self) -> None:
         """Test FileSystemService with safe methods."""
         from crackerjack.services.filesystem import FileSystemService
 
@@ -191,7 +191,7 @@ class TestServiceModulesFixed:
             # Expected for non-existent file
             pass
 
-    def test_security_service_safe_methods(self):
+    def test_security_service_safe_methods(self) -> None:
         """Test SecurityService with working methods."""
         from crackerjack.services.security import SecurityService
 
@@ -202,7 +202,7 @@ class TestServiceModulesFixed:
         assert service.validate_token_format("ab") is False  # too short
         assert service.validate_token_format("valid_token_123456789") is True
 
-    def test_configuration_service_safe_methods(self):
+    def test_configuration_service_safe_methods(self) -> None:
         """Test ConfigurationService with working methods."""
         from crackerjack.services.config import ConfigurationService
 
@@ -220,7 +220,7 @@ class TestServiceModulesFixed:
 class TestCoreModulesFixed:
     """Test core modules with safe instantiation."""
 
-    def test_enhanced_dependency_container_comprehensive(self):
+    def test_enhanced_dependency_container_comprehensive(self) -> None:
         """Test EnhancedDependencyContainer comprehensive usage."""
         from crackerjack.core.enhanced_container import EnhancedDependencyContainer
 
@@ -234,7 +234,7 @@ class TestCoreModulesFixed:
 
         # Test simple registration and retrieval
         class TestService:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.value = "test"
 
         # Register a service
@@ -245,7 +245,7 @@ class TestCoreModulesFixed:
         assert service is not None
         assert service.value == "test"
 
-    def test_performance_monitor_comprehensive(self):
+    def test_performance_monitor_comprehensive(self) -> None:
         """Test PerformanceMonitor comprehensive usage."""
         from crackerjack.core.performance import PerformanceMonitor
 
@@ -263,7 +263,7 @@ class TestCoreModulesFixed:
         stats = monitor.get_stats()
         assert isinstance(stats, dict)
 
-    def test_file_cache_comprehensive(self):
+    def test_file_cache_comprehensive(self) -> None:
         """Test FileCache comprehensive usage."""
         from crackerjack.core.performance import FileCache
 
@@ -285,7 +285,7 @@ class TestCoreModulesFixed:
 class TestPluginModulesFixed:
     """Test plugin modules with safe instantiation."""
 
-    def test_plugin_registry_comprehensive(self):
+    def test_plugin_registry_comprehensive(self) -> None:
         """Test PluginRegistry comprehensive usage."""
         from crackerjack.plugins.base import PluginRegistry
 
@@ -300,7 +300,7 @@ class TestPluginModulesFixed:
         all_plugins = registry.list_all()
         assert isinstance(all_plugins, dict)
 
-    def test_plugin_loader_comprehensive(self):
+    def test_plugin_loader_comprehensive(self) -> None:
         """Test PluginLoader comprehensive usage."""
         from crackerjack.plugins.base import PluginRegistry
         from crackerjack.plugins.loader import PluginLoader
@@ -317,7 +317,7 @@ class TestPluginModulesFixed:
 class TestAdditionalHighImpactModules:
     """Test additional high-impact modules for maximum coverage boost."""
 
-    def test_all_cli_modules(self):
+    def test_all_cli_modules(self) -> None:
         """Test all CLI modules comprehensively."""
         from crackerjack.cli import facade, handlers, interactive, options, utils
 
@@ -330,7 +330,7 @@ class TestAdditionalHighImpactModules:
         assert len(dir(interactive)) > 5
         assert len(dir(options)) > 5
 
-    def test_all_executor_modules(self):
+    def test_all_executor_modules(self) -> None:
         """Test all executor modules comprehensively."""
         from crackerjack.executors import (
             async_hook_executor,
@@ -345,7 +345,7 @@ class TestAdditionalHighImpactModules:
         assert len(dir(cached_hook_executor)) > 10
         assert len(dir(hook_executor)) > 10
 
-    def test_all_manager_modules(self):
+    def test_all_manager_modules(self) -> None:
         """Test all manager modules comprehensively."""
         from crackerjack.managers import (
             async_hook_manager,
@@ -360,7 +360,7 @@ class TestAdditionalHighImpactModules:
         assert len(dir(hook_manager)) > 5
         assert len(dir(publish_manager)) > 10
 
-    def test_all_mcp_dashboard_modules(self):
+    def test_all_mcp_dashboard_modules(self) -> None:
         """Test MCP dashboard and monitoring modules."""
         from crackerjack.mcp import (
             dashboard,
@@ -377,7 +377,7 @@ class TestAdditionalHighImpactModules:
                 file_monitor,
                 service_watchdog,
                 task_manager,
-            ]
+            ],
         )
 
         # Test substantial content
@@ -385,7 +385,7 @@ class TestAdditionalHighImpactModules:
         assert len(dir(enhanced_progress_monitor)) > 10
         assert len(dir(service_watchdog)) > 10
 
-    def test_additional_service_modules(self):
+    def test_additional_service_modules(self) -> None:
         """Test additional service modules with high statement counts."""
         from crackerjack.services import health_metrics, metrics, server_manager
 
@@ -396,7 +396,7 @@ class TestAdditionalHighImpactModules:
         assert len(dir(server_manager)) > 5
         assert len(dir(metrics)) > 5
 
-    def test_websocket_modules_comprehensive(self):
+    def test_websocket_modules_comprehensive(self) -> None:
         """Test WebSocket modules comprehensively."""
         from crackerjack.mcp.websocket import (
             app,
@@ -413,7 +413,7 @@ class TestAdditionalHighImpactModules:
         assert len(dir(endpoints)) > 15
         assert len(dir(server)) > 5
 
-    def test_mcp_tools_comprehensive(self):
+    def test_mcp_tools_comprehensive(self) -> None:
         """Test MCP tools modules comprehensively."""
         from crackerjack.mcp.tools import (
             core_tools,

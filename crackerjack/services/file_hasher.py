@@ -24,7 +24,7 @@ class FileHasher:
         return file_hash
 
     def get_directory_hash(
-        self, directory: Path, patterns: list[str] | None = None
+        self, directory: Path, patterns: list[str] | None = None,
     ) -> str:
         if patterns is None:
             patterns = ["*.py"]
@@ -35,7 +35,7 @@ class FileHasher:
                 if file_path.is_file():
                     file_hash = self.get_file_hash(file_path)
                     file_hashes.append(
-                        f"{file_path.relative_to(directory)}: {file_hash}"
+                        f"{file_path.relative_to(directory)}: {file_hash}",
                     )
 
         file_hashes.sort()

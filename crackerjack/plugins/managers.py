@@ -4,7 +4,8 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..models.protocols import OptionsProtocol
+from crackerjack.models.protocols import OptionsProtocol
+
 from .base import PluginRegistry, PluginType, get_plugin_registry
 from .hooks import HookPluginRegistry, get_hook_plugin_registry
 from .loader import PluginDiscovery, PluginLoader
@@ -43,7 +44,7 @@ class PluginManager:
 
             if total_count > 0:
                 self.console.print(
-                    f"[green]✅[/green] Loaded {loaded_count} / {total_count} plugins"
+                    f"[green]✅[/green] Loaded {loaded_count} / {total_count} plugins",
                 )
 
             activation_results = self.registry.activate_all()
@@ -53,7 +54,7 @@ class PluginManager:
 
             if activated_count > 0:
                 self.console.print(
-                    f"[green]✅[/green] Activated {activated_count} plugins"
+                    f"[green]✅[/green] Activated {activated_count} plugins",
                 )
 
             hook_plugins = self.registry.get_enabled(PluginType.HOOK)
@@ -66,9 +67,9 @@ class PluginManager:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize plugin system: {e}")
+            self.logger.exception(f"Failed to initialize plugin system: {e}")
             self.console.print(
-                f"[red]❌[/red] Plugin system initialization failed: {e}"
+                f"[red]❌[/red] Plugin system initialization failed: {e}",
             )
             return False
 
@@ -84,13 +85,13 @@ class PluginManager:
 
             if deactivated_count > 0:
                 self.console.print(
-                    f"[yellow]⏹️[/yellow] Deactivated {deactivated_count} plugins"
+                    f"[yellow]⏹️[/yellow] Deactivated {deactivated_count} plugins",
                 )
 
             self._initialized = False
 
         except Exception as e:
-            self.logger.error(f"Error during plugin system shutdown: {e}")
+            self.logger.exception(f"Error during plugin system shutdown: {e}")
 
     def list_plugins(self, plugin_type: PluginType | None = None) -> dict[str, t.Any]:
         if plugin_type:
@@ -132,7 +133,7 @@ class PluginManager:
 
         if plugin.enabled:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Plugin already enabled: {plugin_name}"
+                f"[yellow]⚠️[/yellow] Plugin already enabled: {plugin_name}",
             )
             return True
 
@@ -147,16 +148,15 @@ class PluginManager:
                     self.hook_registry.register_hook_plugin(plugin)
 
                 return True
-            else:
-                plugin.disable()
-                self.console.print(
-                    f"[red]❌[/red] Failed to activate plugin: {plugin_name}"
-                )
-                return False
+            plugin.disable()
+            self.console.print(
+                f"[red]❌[/red] Failed to activate plugin: {plugin_name}",
+            )
+            return False
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error enabling plugin {plugin_name}: {e}"
+                f"[red]❌[/red] Error enabling plugin {plugin_name}: {e}",
             )
             return False
 
@@ -168,7 +168,7 @@ class PluginManager:
 
         if not plugin.enabled:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Plugin already disabled: {plugin_name}"
+                f"[yellow]⚠️[/yellow] Plugin already disabled: {plugin_name}",
             )
             return True
 
@@ -183,14 +183,14 @@ class PluginManager:
                 self.console.print(f"[yellow]⏹️[/yellow] Disabled plugin: {plugin_name}")
             else:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Plugin disabled with warnings: {plugin_name}"
+                    f"[yellow]⚠️[/yellow] Plugin disabled with warnings: {plugin_name}",
                 )
 
             return True
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error disabling plugin {plugin_name}: {e}"
+                f"[red]❌[/red] Error disabling plugin {plugin_name}: {e}",
             )
             return False
 
@@ -212,7 +212,7 @@ class PluginManager:
             return True
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error configuring plugin {plugin_name}: {e}"
+                f"[red]❌[/red] Error configuring plugin {plugin_name}: {e}",
             )
             return False
 
@@ -222,26 +222,26 @@ class PluginManager:
 
             if success:
                 self.console.print(
-                    f"[green]✅[/green] Installed plugin from: {plugin_file}"
+                    f"[green]✅[/green] Installed plugin from: {plugin_file}",
                 )
 
                 if self._initialized:
                     plugins = self.registry.list_all()
                     if plugins:
                         latest_plugin_name = max(
-                            plugins.keys(), key=lambda k: id(plugins[k])
+                            plugins.keys(), key=lambda k: id(plugins[k]),
                         )
                         self.enable_plugin(latest_plugin_name)
             else:
                 self.console.print(
-                    f"[red]❌[/red] Failed to install plugin from: {plugin_file}"
+                    f"[red]❌[/red] Failed to install plugin from: {plugin_file}",
                 )
 
             return success
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error installing plugin {plugin_file}: {e}"
+                f"[red]❌[/red] Error installing plugin {plugin_file}: {e}",
             )
             return False
 
@@ -250,6 +250,6 @@ class PluginManager:
         return list(custom_hooks.keys())
 
     def execute_custom_hook(
-        self, hook_name: str, files: list[Path], options: OptionsProtocol
+        self, hook_name: str, files: list[Path], options: OptionsProtocol,
     ) -> t.Any:
         return self.hook_registry.execute_custom_hook(hook_name, files, options)

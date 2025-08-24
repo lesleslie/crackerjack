@@ -1,5 +1,4 @@
-"""
-Comprehensive integration tests for workflow orchestration system.
+"""Comprehensive integration tests for workflow orchestration system.
 
 Tests the interaction between coordinators, managers, and services to ensure
 the modular architecture works correctly with protocol-based dependency injection.
@@ -34,7 +33,7 @@ from crackerjack.models.protocols import (
 class MockOptions:
     """Mock implementation of OptionsProtocol for testing."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         # Set default values
         self.commit = False
         self.interactive = False
@@ -74,7 +73,7 @@ class MockOptions:
 class MockFileSystem:
     """Mock FileSystemInterface implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.files = {}
 
     def read_file(self, path: str | t.Any) -> str:
@@ -93,7 +92,7 @@ class MockFileSystem:
 class MockGitService:
     """Mock GitInterface implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.changed_files = ["file1.py", "file2.py"]
         self.commit_messages = ["feat: add new feature", "fix: bug fix"]
         self.is_repo = True
@@ -122,7 +121,7 @@ class MockGitService:
 class MockHookManager:
     """Mock HookManager implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.fast_hook_results = []
         self.comprehensive_hook_results = []
         self.config_path = None
@@ -160,7 +159,7 @@ class MockHookManager:
 class MockTestManagerImpl:
     """Mock TestManager implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.test_success = True
         self.coverage_data = {"total_coverage": 85.5}
         self.test_failures = []
@@ -182,7 +181,7 @@ class MockTestManagerImpl:
 class MockPublishManager:
     """Mock PublishManager implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.new_version = "1.0.1"
         self.publish_success = True
         self.auth_valid = True
@@ -269,7 +268,7 @@ def phase_coordinator(mock_console, mock_pkg_path, session_coordinator, mock_ser
 
 @pytest.fixture
 def workflow_pipeline(
-    mock_console, mock_pkg_path, session_coordinator, phase_coordinator
+    mock_console, mock_pkg_path, session_coordinator, phase_coordinator,
 ):
     """Fixture providing a workflow pipeline."""
     return WorkflowPipeline(
@@ -284,11 +283,11 @@ class TestDependencyInjectionContainer:
     """Tests for the dependency injection container system."""
 
     def test_container_creation_with_default_services(
-        self, mock_console, mock_pkg_path
-    ):
+        self, mock_console, mock_pkg_path,
+    ) -> None:
         """Test that the container can be created with default services."""
         container = create_container(
-            console=mock_console, pkg_path=mock_pkg_path, dry_run=False
+            console=mock_console, pkg_path=mock_pkg_path, dry_run=False,
         )
 
         # Verify all required services are registered
@@ -304,7 +303,7 @@ class TestDependencyInjectionContainer:
         assert test_manager is not None
         assert publish_manager is not None
 
-    def test_container_singleton_behavior(self, dependency_container, mock_services):
+    def test_container_singleton_behavior(self, dependency_container, mock_services) -> None:
         """Test that singleton services return the same instance."""
         filesystem1 = dependency_container.get(FileSystemInterface)
         filesystem2 = dependency_container.get(FileSystemInterface)
@@ -312,14 +311,14 @@ class TestDependencyInjectionContainer:
         assert filesystem1 is filesystem2
         assert filesystem1 is mock_services["filesystem"]
 
-    def test_container_unregistered_service_error(self, dependency_container):
+    def test_container_unregistered_service_error(self, dependency_container) -> None:
         """Test that requesting unregistered service raises error."""
 
         class UnregisteredInterface(t.Protocol):
             pass
 
         with pytest.raises(
-            ValueError, match="Service UnregisteredInterface not registered"
+            ValueError, match="Service UnregisteredInterface not registered",
         ):
             dependency_container.get(UnregisteredInterface)
 
@@ -327,7 +326,7 @@ class TestDependencyInjectionContainer:
 class TestSessionCoordinator:
     """Tests for session coordination and tracking."""
 
-    def test_session_initialization_and_tracking(self, session_coordinator):
+    def test_session_initialization_and_tracking(self, session_coordinator) -> None:
         """Test session initialization and task tracking."""
         options = MockOptions(track_progress=True)
 
@@ -351,11 +350,11 @@ class TestSessionCoordinator:
             assert summary["success"] is True
             assert summary["tasks_count"] == 1
 
-    def test_session_cleanup_management(self, session_coordinator):
+    def test_session_cleanup_management(self, session_coordinator) -> None:
         """Test session cleanup handler registration and execution."""
         cleanup_called = False
 
-        def cleanup_handler():
+        def cleanup_handler() -> None:
             nonlocal cleanup_called
             cleanup_called = True
 
@@ -364,7 +363,7 @@ class TestSessionCoordinator:
 
         assert cleanup_called is True
 
-    def test_session_lock_file_tracking(self, session_coordinator, tmp_path):
+    def test_session_lock_file_tracking(self, session_coordinator, tmp_path) -> None:
         """Test lock file tracking functionality."""
         lock_file = tmp_path / "test.lock"
         lock_file.touch()
@@ -376,7 +375,7 @@ class TestSessionCoordinator:
 class TestPhaseCoordinator:
     """Tests for phase coordination and workflow execution."""
 
-    def test_cleaning_phase_execution(self, phase_coordinator, mock_services):
+    def test_cleaning_phase_execution(self, phase_coordinator, mock_services) -> None:
         """Test cleaning phase execution."""
         options = MockOptions(clean=True)
 
@@ -386,13 +385,13 @@ class TestPhaseCoordinator:
 
         # Mock the entire _execute_cleaning_process method to avoid Pydantic issues
         with patch.object(
-            phase_coordinator, "_execute_cleaning_process", return_value=True
+            phase_coordinator, "_execute_cleaning_process", return_value=True,
         ):
             result = phase_coordinator.run_cleaning_phase(options)
 
         assert result is True
 
-    def test_configuration_phase_execution(self, phase_coordinator):
+    def test_configuration_phase_execution(self, phase_coordinator) -> None:
         """Test configuration phase execution."""
         options = MockOptions(no_config_updates=False)
 
@@ -400,17 +399,16 @@ class TestPhaseCoordinator:
             phase_coordinator.config_service,
             "update_precommit_config",
             return_value=True,
+        ), patch.object(
+            phase_coordinator.config_service,
+            "update_pyproject_config",
+            return_value=True,
         ):
-            with patch.object(
-                phase_coordinator.config_service,
-                "update_pyproject_config",
-                return_value=True,
-            ):
-                result = phase_coordinator.run_configuration_phase(options)
+            result = phase_coordinator.run_configuration_phase(options)
 
         assert result is True
 
-    def test_fast_hooks_execution(self, phase_coordinator, mock_services):
+    def test_fast_hooks_execution(self, phase_coordinator, mock_services) -> None:
         """Test fast hooks execution with success scenario."""
         options = MockOptions(skip_hooks=False)
 
@@ -423,7 +421,7 @@ class TestPhaseCoordinator:
         result = phase_coordinator.run_fast_hooks_only(options)
         assert result is True
 
-    def test_fast_hooks_with_retry_logic(self, phase_coordinator, mock_services):
+    def test_fast_hooks_with_retry_logic(self, phase_coordinator, mock_services) -> None:
         """Test fast hooks execution with retry logic for formatting fixes."""
         options = MockOptions(skip_hooks=False)
 
@@ -438,22 +436,21 @@ class TestPhaseCoordinator:
 
         # Mock the retry mechanism
         with patch.object(
-            phase_coordinator, "_should_retry_fast_hooks", return_value=True
-        ):
-            with patch.object(phase_coordinator, "_get_max_retries", return_value=2):
-                # Second attempt: hooks pass
-                mock_services["hook_manager"].fast_hook_results = [
-                    Mock(failed=False, error=False, hook_id="ruff-format")
-                ]
+            phase_coordinator, "_should_retry_fast_hooks", return_value=True,
+        ), patch.object(phase_coordinator, "_get_max_retries", return_value=2):
+            # Second attempt: hooks pass
+            mock_services["hook_manager"].fast_hook_results = [
+                Mock(failed=False, error=False, hook_id="ruff-format"),
+            ]
 
-                result = phase_coordinator.run_fast_hooks_only(options)
-                # The test should still work with proper mocking
-                assert result in [
-                    True,
-                    False,
-                ]  # Accept either outcome for this integration test
+            result = phase_coordinator.run_fast_hooks_only(options)
+            # The test should still work with proper mocking
+            assert result in [
+                True,
+                False,
+            ]  # Accept either outcome for this integration test
 
-    def test_comprehensive_hooks_execution(self, phase_coordinator, mock_services):
+    def test_comprehensive_hooks_execution(self, phase_coordinator, mock_services) -> None:
         """Test comprehensive hooks execution."""
         options = MockOptions(skip_hooks=False)
 
@@ -465,7 +462,7 @@ class TestPhaseCoordinator:
         result = phase_coordinator.run_comprehensive_hooks_only(options)
         assert result is True
 
-    def test_testing_phase_execution(self, phase_coordinator, mock_services):
+    def test_testing_phase_execution(self, phase_coordinator, mock_services) -> None:
         """Test testing phase execution."""
         options = MockOptions(test=True)
 
@@ -475,20 +472,20 @@ class TestPhaseCoordinator:
         result = phase_coordinator.run_testing_phase(options)
         assert result is True
 
-    def test_testing_phase_with_failures(self, phase_coordinator, mock_services):
+    def test_testing_phase_with_failures(self, phase_coordinator, mock_services) -> None:
         """Test testing phase with test failures."""
         options = MockOptions(test=True)
 
         mock_services["test_manager"].env_valid = True
         mock_services["test_manager"].test_success = False
         mock_services["test_manager"].test_failures = [
-            "tests/test_example.py::test_function FAILED"
+            "tests/test_example.py::test_function FAILED",
         ]
 
         result = phase_coordinator.run_testing_phase(options)
         assert result is False
 
-    def test_publishing_phase_execution(self, phase_coordinator, mock_services):
+    def test_publishing_phase_execution(self, phase_coordinator, mock_services) -> None:
         """Test publishing phase execution."""
         options = MockOptions(publish="patch", no_git_tags=False, cleanup_pypi=False)
 
@@ -499,7 +496,7 @@ class TestPhaseCoordinator:
         result = phase_coordinator.run_publishing_phase(options)
         assert result is True
 
-    def test_commit_phase_execution(self, phase_coordinator, mock_services):
+    def test_commit_phase_execution(self, phase_coordinator, mock_services) -> None:
         """Test commit phase execution."""
         options = MockOptions(commit=True, interactive=False)
 
@@ -510,7 +507,7 @@ class TestPhaseCoordinator:
         result = phase_coordinator.run_commit_phase(options)
         assert result is True
 
-    def test_commit_phase_no_changes(self, phase_coordinator, mock_services):
+    def test_commit_phase_no_changes(self, phase_coordinator, mock_services) -> None:
         """Test commit phase with no changes to commit."""
         options = MockOptions(commit=True)
 
@@ -525,11 +522,11 @@ class TestWorkflowPipeline:
 
     @pytest.mark.asyncio
     async def test_complete_workflow_execution_success(
-        self, workflow_pipeline, mock_services
-    ):
+        self, workflow_pipeline, mock_services,
+    ) -> None:
         """Test complete workflow execution with all phases succeeding."""
         options = MockOptions(
-            clean=True, test=True, skip_hooks=False, commit=False, publish=None
+            clean=True, test=True, skip_hooks=False, commit=False, publish=None,
         )
 
         # Set up all services for success
@@ -538,25 +535,24 @@ class TestWorkflowPipeline:
         mock_services["hook_manager"].comprehensive_hook_results = []
 
         with patch.object(
-            workflow_pipeline.phases, "run_cleaning_phase", return_value=True
+            workflow_pipeline.phases, "run_cleaning_phase", return_value=True,
+        ), patch.object(
+            workflow_pipeline.phases, "run_configuration_phase", return_value=True,
         ):
-            with patch.object(
-                workflow_pipeline.phases, "run_configuration_phase", return_value=True
-            ):
-                result = await workflow_pipeline.run_complete_workflow(options)
+            result = await workflow_pipeline.run_complete_workflow(options)
 
         assert result is True
 
     @pytest.mark.asyncio
     async def test_complete_workflow_execution_failure(
-        self, workflow_pipeline, mock_services
-    ):
+        self, workflow_pipeline, mock_services,
+    ) -> None:
         """Test complete workflow execution with phase failure."""
         options = MockOptions(clean=True, test=True)
 
         # Set up cleaning phase to fail
         with patch.object(
-            workflow_pipeline.phases, "run_cleaning_phase", return_value=False
+            workflow_pipeline.phases, "run_cleaning_phase", return_value=False,
         ):
             result = await workflow_pipeline.run_complete_workflow(options)
 
@@ -564,20 +560,20 @@ class TestWorkflowPipeline:
 
     @pytest.mark.asyncio
     async def test_ai_agent_workflow_integration(
-        self, workflow_pipeline, mock_services
-    ):
+        self, workflow_pipeline, mock_services,
+    ) -> None:
         """Test AI agent integration in workflow execution."""
         options = MockOptions(test=True, ai_agent=True, skip_hooks=False)
 
         # Set up test failures to trigger AI agent
         mock_services["test_manager"].test_success = False
         mock_services["test_manager"].test_failures = [
-            "tests/test_example.py::test_function FAILED - assertion error"
+            "tests/test_example.py::test_function FAILED - assertion error",
         ]
 
         # Mock the AI agent fixing phase
         with patch.object(
-            workflow_pipeline, "_run_ai_agent_fixing_phase"
+            workflow_pipeline, "_run_ai_agent_fixing_phase",
         ) as mock_ai_fix:
             mock_ai_fix.return_value = True  # AI successfully fixes issues
 
@@ -587,7 +583,7 @@ class TestWorkflowPipeline:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_ai_agent_issue_collection(self, workflow_pipeline, mock_services):
+    async def test_ai_agent_issue_collection(self, workflow_pipeline, mock_services) -> None:
         """Test AI agent issue collection from test and hook failures."""
         # Set up test failures
         mock_services["test_manager"].test_failures = [
@@ -611,7 +607,7 @@ class TestWorkflowPipeline:
         assert len(test_issues) == 2
 
     @pytest.mark.asyncio
-    async def test_workflow_interruption_handling(self, workflow_pipeline):
+    async def test_workflow_interruption_handling(self, workflow_pipeline) -> None:
         """Test workflow interruption handling."""
         options = MockOptions(clean=True)
 
@@ -629,10 +625,10 @@ class TestWorkflowPipeline:
 class TestWorkflowOrchestrator:
     """Tests for the main workflow orchestrator."""
 
-    def test_orchestrator_initialization(self, mock_console, mock_pkg_path):
+    def test_orchestrator_initialization(self, mock_console, mock_pkg_path) -> None:
         """Test workflow orchestrator initialization."""
         orchestrator = WorkflowOrchestrator(
-            console=mock_console, pkg_path=mock_pkg_path, dry_run=False
+            console=mock_console, pkg_path=mock_pkg_path, dry_run=False,
         )
 
         assert orchestrator.console is mock_console
@@ -643,26 +639,26 @@ class TestWorkflowOrchestrator:
         assert orchestrator.pipeline is not None
 
     @pytest.mark.asyncio
-    async def test_orchestrator_process_workflow(self, mock_console, mock_pkg_path):
+    async def test_orchestrator_process_workflow(self, mock_console, mock_pkg_path) -> None:
         """Test orchestrator process method."""
         orchestrator = WorkflowOrchestrator(
-            console=mock_console, pkg_path=mock_pkg_path, dry_run=False
+            console=mock_console, pkg_path=mock_pkg_path, dry_run=False,
         )
 
         options = MockOptions(clean=False, test=False, skip_hooks=True)
 
         # Mock the complete workflow to return success
         with patch.object(
-            orchestrator.pipeline, "run_complete_workflow", return_value=True
+            orchestrator.pipeline, "run_complete_workflow", return_value=True,
         ):
             result = await orchestrator.process(options)
 
         assert result is True
 
-    def test_orchestrator_delegate_methods(self, mock_console, mock_pkg_path):
+    def test_orchestrator_delegate_methods(self, mock_console, mock_pkg_path) -> None:
         """Test that orchestrator properly delegates to phases."""
         orchestrator = WorkflowOrchestrator(
-            console=mock_console, pkg_path=mock_pkg_path, dry_run=False
+            console=mock_console, pkg_path=mock_pkg_path, dry_run=False,
         )
 
         MockOptions()
@@ -679,7 +675,7 @@ class TestWorkflowOrchestrator:
 class TestIntegrationErrorHandling:
     """Tests for error handling across integration points."""
 
-    def test_service_dependency_failure_handling(self, mock_console, mock_pkg_path):
+    def test_service_dependency_failure_handling(self, mock_console, mock_pkg_path) -> None:
         """Test handling of service dependency failures."""
         # Create container with missing service
         container = DependencyContainer()
@@ -688,8 +684,8 @@ class TestIntegrationErrorHandling:
             container.get(FileSystemInterface)
 
     def test_phase_coordinator_exception_propagation(
-        self, phase_coordinator, mock_services
-    ):
+        self, phase_coordinator, mock_services,
+    ) -> None:
         """Test that phase coordinator properly handles exceptions."""
         options = MockOptions(clean=True)
 
@@ -708,7 +704,7 @@ class TestIntegrationErrorHandling:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_workflow_pipeline_exception_handling(self, workflow_pipeline):
+    async def test_workflow_pipeline_exception_handling(self, workflow_pipeline) -> None:
         """Test workflow pipeline exception handling."""
         options = MockOptions(clean=True)
 
@@ -726,7 +722,7 @@ class TestIntegrationErrorHandling:
 class TestTwoStageHookSystem:
     """Tests for the two-stage hook system (fast → comprehensive)."""
 
-    def test_two_stage_hook_execution_order(self, phase_coordinator, mock_services):
+    def test_two_stage_hook_execution_order(self, phase_coordinator, mock_services) -> None:
         """Test that hooks are executed in fast → comprehensive order."""
         options = MockOptions(test=True, skip_hooks=False)
 
@@ -751,14 +747,14 @@ class TestTwoStageHookSystem:
         assert execution_order == ["fast", "comprehensive"]
 
     def test_fast_hooks_failure_blocks_comprehensive(
-        self, phase_coordinator, mock_services
-    ):
+        self, phase_coordinator, mock_services,
+    ) -> None:
         """Test that fast hook failures block comprehensive hooks."""
         options = MockOptions(skip_hooks=False)
 
         # Set up fast hooks to fail
         mock_services["hook_manager"].fast_hook_results = [
-            Mock(failed=True, error=False, hook_id="ruff-format")
+            Mock(failed=True, error=False, hook_id="ruff-format"),
         ]
 
         # Track if comprehensive hooks are called
@@ -783,7 +779,7 @@ class TestTwoStageHookSystem:
 class TestStateManagementIntegration:
     """Tests for state management across workflow components."""
 
-    def test_session_state_persistence(self, session_coordinator):
+    def test_session_state_persistence(self, session_coordinator) -> None:
         """Test that session state persists across operations."""
         session_coordinator.start_session("test_workflow")
 
@@ -805,7 +801,7 @@ class TestStateManagementIntegration:
         assert len(summary["tasks"]) == 2
         assert summary["success"] is False
 
-    def test_task_progress_tracking(self, session_coordinator):
+    def test_task_progress_tracking(self, session_coordinator) -> None:
         """Test task progress tracking functionality."""
         task_id = session_coordinator.track_task("progress_task", "Progress Task")
 
@@ -828,11 +824,11 @@ class TestFullWorkflowIntegration:
     """End-to-end integration tests for complete workflows."""
 
     @pytest.mark.asyncio
-    async def test_full_workflow_with_mocked_services(self, mock_console, tmp_path):
+    async def test_full_workflow_with_mocked_services(self, mock_console, tmp_path) -> None:
         """Test complete workflow execution with all mocked services."""
         # Create orchestrator
         orchestrator = WorkflowOrchestrator(
-            console=mock_console, pkg_path=tmp_path, dry_run=True
+            console=mock_console, pkg_path=tmp_path, dry_run=True,
         )
 
         # Execute workflow with minimal options to avoid complex mocking
@@ -847,10 +843,10 @@ class TestFullWorkflowIntegration:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_workflow_performance_tracking(self, mock_console, tmp_path):
+    async def test_workflow_performance_tracking(self, mock_console, tmp_path) -> None:
         """Test workflow performance and timing tracking."""
         orchestrator = WorkflowOrchestrator(
-            console=mock_console, pkg_path=tmp_path, dry_run=True
+            console=mock_console, pkg_path=tmp_path, dry_run=True,
         )
 
         start_time = time.time()
@@ -859,10 +855,10 @@ class TestFullWorkflowIntegration:
 
         # Mock workflow to add slight delay
         with patch.object(
-            orchestrator.pipeline, "run_complete_workflow"
+            orchestrator.pipeline, "run_complete_workflow",
         ) as mock_workflow:
 
-            async def delayed_workflow(opts):
+            async def delayed_workflow(opts) -> bool:
                 await asyncio.sleep(0.1)  # Small delay
                 return True
 
@@ -874,7 +870,7 @@ class TestFullWorkflowIntegration:
         assert result is True
         assert end_time - start_time >= 0.1  # Verify delay was applied
 
-    def test_protocol_compliance_verification(self, dependency_container):
+    def test_protocol_compliance_verification(self, dependency_container) -> None:
         """Test that all services comply with their protocol interfaces."""
         # Get all registered services
         filesystem = dependency_container.get(FileSystemInterface)

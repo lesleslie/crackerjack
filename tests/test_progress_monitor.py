@@ -11,7 +11,7 @@ from rich.console import Console
 console = Console()
 
 
-async def test_progress_flow():
+async def test_progress_flow() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         progress_dir = Path(temp_dir) / "progress"
         progress_dir.mkdir(exist_ok=True)
@@ -42,7 +42,7 @@ async def test_progress_flow():
             json.dump(progress_data, f, indent=2)
 
         console.print(
-            f"✅ Written progress data: {json.dumps(progress_data, indent=2)}"
+            f"✅ Written progress data: {json.dumps(progress_data, indent=2)}",
         )
 
         console.print("\n[yellow]2. Testing AsyncProgressMonitor...[/yellow]")
@@ -62,19 +62,19 @@ async def test_progress_flow():
         callback_called = False
         received_data = None
 
-        def progress_callback(data):
+        def progress_callback(data) -> None:
             nonlocal callback_called, received_data
             callback_called = True
             received_data = data
             console.print(
-                f"[green]✅ Callback received data: {json.dumps(data, indent=2)}[/green]"
+                f"[green]✅ Callback received data: {json.dumps(data, indent=2)}[/green]",
             )
 
         monitor.subscribe(job_id, progress_callback)
 
         console.print(f"Subscribers for {job_id}: {job_id in monitor.subscribers}")
         console.print(
-            f"Observer state: {monitor.observer is not None if hasattr(monitor, 'observer') else 'N/A'}"
+            f"Observer state: {monitor.observer is not None if hasattr(monitor, 'observer') else 'N/A'}",
         )
 
         await monitor.start()
@@ -122,7 +122,7 @@ async def test_progress_flow():
         console.print("\n[yellow]4. Testing WebSocket server integration...[/yellow]")
         console.print("To test WebSocket: ")
         console.print(
-            "1. Start WebSocket server: python -m crackerjack --start-websocket-server"
+            "1. Start WebSocket server: python -m crackerjack --start-websocket-server",
         )
         console.print("2. Connect to: ws://localhost:8675/ws/progress/test-job-123")
         console.print("3. You should receive the progress updates")

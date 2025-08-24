@@ -4,11 +4,16 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..agents.base import AgentContext, Issue, IssueType, Priority
-from ..agents.coordinator import AgentCoordinator
-from ..models.protocols import OptionsProtocol
-from ..services.debug import get_ai_agent_debugger
-from ..services.logging import LoggingContext, get_logger, setup_structured_logging
+from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
+from crackerjack.agents.coordinator import AgentCoordinator
+from crackerjack.models.protocols import OptionsProtocol
+from crackerjack.services.debug import get_ai_agent_debugger
+from crackerjack.services.logging import (
+    LoggingContext,
+    get_logger,
+    setup_structured_logging,
+)
+
 from .phase_coordinator import PhaseCoordinator
 from .session_coordinator import SessionCoordinator
 
@@ -115,7 +120,7 @@ class WorkflowPipeline:
             except Exception as e:
                 self.console.print(f"Error: {e}")
                 self.session.fail_task("workflow", f"Unexpected error: {e}")
-                self.logger.error(
+                self.logger.exception(
                     "Workflow execution failed",
                     error=str(e),
                     error_type=type(e).__name__,
@@ -147,9 +152,9 @@ class WorkflowPipeline:
     async def _execute_quality_phase(self, options: OptionsProtocol) -> bool:
         if hasattr(options, "fast") and options.fast:
             return self._run_fast_hooks_phase(options)
-        elif hasattr(options, "comp") and options.comp:
+        if hasattr(options, "comp") and options.comp:
             return self._run_comprehensive_hooks_phase(options)
-        elif options.test:
+        if options.test:
             return await self._execute_test_workflow(options)
         return self._execute_standard_hooks_workflow(options)
 
@@ -178,10 +183,9 @@ class WorkflowPipeline:
                 if self._should_debug():
                     self.debugger.log_iteration_end(iteration, success)
                 return success
-            else:
-                if self._should_debug():
-                    self.debugger.log_iteration_end(iteration, True)
-                return True  # All phases passed, no fixes needed
+            if self._should_debug():
+                self.debugger.log_iteration_end(iteration, True)
+            return True  # All phases passed, no fixes needed
 
         # Non-AI agent mode: All phases must pass
         success = testing_passed and comprehensive_passed
@@ -249,7 +253,7 @@ class WorkflowPipeline:
         if self._should_debug():
             self.debugger.log_test_failures(len(failures))
 
-        from ..mcp.state import Issue, Priority
+        from crackerjack.mcp.state import Issue, Priority
 
         for i, failure in enumerate(failures[:10]):
             issue = Issue(
@@ -309,7 +313,7 @@ class WorkflowPipeline:
 
         if self._should_debug():
             self.debugger.log_workflow_phase(
-                "ai_agent_fixing", "started", details={"ai_agent": True}
+                "ai_agent_fixing", "started", details={"ai_agent": True},
             )
 
         try:
@@ -346,14 +350,14 @@ class WorkflowPipeline:
                     total_fixes = len(fix_result.fixes_applied)
                     # Estimate test vs hook fixes based on original issue types
                     test_fixes = len(
-                        [f for f in fix_result.fixes_applied if "test" in f.lower()]
+                        [f for f in fix_result.fixes_applied if "test" in f.lower()],
                     )
                     hook_fixes = total_fixes - test_fixes
                     self.debugger.log_test_fixes(test_fixes)
                     self.debugger.log_hook_fixes(hook_fixes)
             else:
                 self.logger.warning(
-                    f"AI agents could not fix all issues: {fix_result.remaining_issues}"
+                    f"AI agents could not fix all issues: {fix_result.remaining_issues}",
                 )
                 self._update_mcp_status("ai_fixing", "failed")
 
@@ -371,13 +375,13 @@ class WorkflowPipeline:
             return success
 
         except Exception as e:
-            self.logger.error(f"AI agent fixing phase failed: {e}")
+            self.logger.exception(f"AI agent fixing phase failed: {e}")
             self.session.fail_task("ai_fixing", f"AI agent fixing failed: {e}")
             self._update_mcp_status("ai_fixing", "failed")
 
             if self._should_debug():
                 self.debugger.log_workflow_phase(
-                    "ai_agent_fixing", "failed", details={"error": str(e)}
+                    "ai_agent_fixing", "failed", details={"error": str(e)},
                 )
 
             return False
@@ -390,12 +394,12 @@ class WorkflowPipeline:
 
         # Collect test failures
         if hasattr(self.phases, "test_manager") and hasattr(
-            self.phases.test_manager, "get_test_failures"
+            self.phases.test_manager, "get_test_failures",
         ):
             test_failures = self.phases.test_manager.get_test_failures()
             test_count = len(test_failures)
             for i, failure in enumerate(
-                test_failures[:20]
+                test_failures[:20],
             ):  # Limit to prevent overload
                 issue = Issue(
                     id=f"test_failure_{i}",
@@ -446,17 +450,18 @@ class WorkflowOrchestrator:
         self.dry_run = dry_run
         self.web_job_id = web_job_id
 
-        from ..models.protocols import (
+        from crackerjack.models.protocols import (
             FileSystemInterface,
             GitInterface,
             HookManager,
             PublishManager,
             TestManagerProtocol,
         )
+
         from .container import create_container
 
         self.container = create_container(
-            console=self.console, pkg_path=self.pkg_path, dry_run=self.dry_run
+            console=self.console, pkg_path=self.pkg_path, dry_run=self.dry_run,
         )
 
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)

@@ -13,7 +13,7 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
     """Find all running MCP server processes for this project."""
     try:
         result = subprocess.run(
-            ["ps", "aux"], capture_output=True, text=True, check=True
+            ["ps", "aux"], capture_output=True, text=True, check=True,
         )
 
         processes = []
@@ -32,7 +32,7 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
                                 "user": parts[0],
                                 "cpu": parts[2],
                                 "mem": parts[3],
-                            }
+                            },
                         )
                     except (ValueError, IndexError):
                         continue
@@ -47,7 +47,7 @@ def find_websocket_server_processes() -> list[dict[str, t.Any]]:
     """Find all running WebSocket server processes for this project."""
     try:
         result = subprocess.run(
-            ["ps", "aux"], capture_output=True, text=True, check=True
+            ["ps", "aux"], capture_output=True, text=True, check=True,
         )
 
         processes = []
@@ -65,7 +65,7 @@ def find_websocket_server_processes() -> list[dict[str, t.Any]]:
                                 "user": parts[0],
                                 "cpu": parts[2],
                                 "mem": parts[3],
-                            }
+                            },
                         )
                     except (ValueError, IndexError):
                         continue
@@ -159,7 +159,7 @@ def stop_all_servers(console: Console | None = None) -> bool:
 
 
 def restart_mcp_server(
-    websocket_port: int | None = None, console: Console | None = None
+    websocket_port: int | None = None, console: Console | None = None,
 ) -> bool:
     """Restart the MCP server."""
     if console is None:
@@ -207,7 +207,7 @@ def list_server_status(console: Console | None = None) -> None:
         console.print("\n[bold green]MCP Servers:[/bold green]")
         for proc in mcp_processes:
             console.print(
-                f"  • PID {proc['pid']} - CPU: {proc['cpu']}% - Memory: {proc['mem']}%"
+                f"  • PID {proc['pid']} - CPU: {proc['cpu']}% - Memory: {proc['mem']}%",
             )
             console.print(f"    Command: {proc['command']}")
     else:
@@ -217,7 +217,7 @@ def list_server_status(console: Console | None = None) -> None:
         console.print("\n[bold green]WebSocket Servers:[/bold green]")
         for proc in websocket_processes:
             console.print(
-                f"  • PID {proc['pid']} - CPU: {proc['cpu']}% - Memory: {proc['mem']}%"
+                f"  • PID {proc['pid']} - CPU: {proc['cpu']}% - Memory: {proc['mem']}%",
             )
             console.print(f"    Command: {proc['command']}")
     else:

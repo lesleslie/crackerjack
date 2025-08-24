@@ -37,15 +37,14 @@ class PerformanceMonitor:
         self.metrics: dict[str, list[float]] = {}
 
     def time_operation(
-        self, operation_name: str
+        self, operation_name: str,
     ) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
         def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
             @functools.wraps(func)
             def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
                 start_time = time.time()
                 try:
-                    result = func(*args, **kwargs)
-                    return result
+                    return func(*args, **kwargs)
                 finally:
                     duration = time.time() - start_time
                     self.record_metric(operation_name, duration)
@@ -82,7 +81,7 @@ class PerformanceMonitor:
                     f"avg = {stats['avg']:.3f}s, "
                     f"min = {stats['min']:.3f}s, "
                     f"max = {stats['max']:.3f}s, "
-                    f"count = {stats['count']}"
+                    f"count = {stats['count']}",
                 )
         else:
             for metric_name in self.metrics:
@@ -102,21 +101,20 @@ def memoize_with_ttl(
                 timestamp, value = cache[key]
                 if time.time() - timestamp <= ttl:
                     return value
-                else:
-                    del cache[key]
+                del cache[key]
             result = func(*args, **kwargs)
             cache[key] = (time.time(), result)
             return result
 
-        setattr(wrapper, "cache_clear", cache.clear)
-        setattr(wrapper, "cache_info", lambda: {"size": len(cache), "ttl": ttl})
+        wrapper.cache_clear = cache.clear
+        wrapper.cache_info = lambda: {"size": len(cache), "ttl": ttl}
         return wrapper
 
     return decorator
 
 
 def batch_file_operations(
-    operations: list[t.Callable[[], t.Any]], batch_size: int = 50
+    operations: list[t.Callable[[], t.Any]], batch_size: int = 50,
 ) -> list[t.Any]:
     results: list[t.Any] = []
     for i in range(0, len(operations), batch_size):
@@ -163,7 +161,7 @@ class OptimizedFileWatcher:
         self._file_cache.clear()
 
         if hasattr(self.get_python_files, "cache_clear"):
-            getattr(self.get_python_files, "cache_clear")()
+            self.get_python_files.cache_clear()
 
 
 class ParallelTaskExecutor:
@@ -173,7 +171,7 @@ class ParallelTaskExecutor:
         self.max_workers = max_workers or min(os.cpu_count() or 1, 8)
 
     def execute_tasks(
-        self, tasks: list[t.Callable[[], t.Any]], timeout: float = 300.0
+        self, tasks: list[t.Callable[[], t.Any]], timeout: float = 300.0,
     ) -> list[t.Any]:
         if len(tasks) <= 1:
             return [task() for task in tasks]
@@ -181,11 +179,11 @@ class ParallelTaskExecutor:
 
         results: list[tuple[int, t.Any]] = []
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.max_workers
+            max_workers=self.max_workers,
         ) as executor:
             future_to_task = {executor.submit(task): i for i, task in enumerate(tasks)}
             for future in concurrent.futures.as_completed(
-                future_to_task, timeout=timeout
+                future_to_task, timeout=timeout,
             ):
                 task_index = future_to_task[future]
                 try:
@@ -200,13 +198,13 @@ class ParallelTaskExecutor:
 
 
 def optimize_subprocess_calls(
-    commands: list[list[str]], cwd: Path | None = None
+    commands: list[list[str]], cwd: Path | None = None,
 ) -> list[t.Any]:
     if len(commands) <= 1:
         import subprocess
 
         return [
-            subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+            subprocess.run(cmd, check=False, cwd=cwd, capture_output=True, text=True)
             for cmd in commands
         ]
     executor = ParallelTaskExecutor()
@@ -214,7 +212,7 @@ def optimize_subprocess_calls(
     def run_command(cmd: list[str]) -> t.Any:
         import subprocess
 
-        return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+        return subprocess.run(cmd, check=False, cwd=cwd, capture_output=True, text=True)
 
     import functools
 

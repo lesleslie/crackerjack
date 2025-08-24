@@ -1,6 +1,4 @@
-"""
-Comprehensive tests for MCP (Model Context Protocol) components with extensive mocking.
-"""
+"""Comprehensive tests for MCP (Model Context Protocol) components with extensive mocking."""
 
 import asyncio
 import json
@@ -24,7 +22,7 @@ from crackerjack.mcp.state import (
 class TestErrorPattern:
     """Test ErrorPattern dataclass."""
 
-    def test_error_pattern_creation(self):
+    def test_error_pattern_creation(self) -> None:
         """Test creating an ErrorPattern."""
         pattern = ErrorPattern(
             pattern_id="test_pattern_1",
@@ -42,7 +40,7 @@ class TestErrorPattern:
         assert pattern.file_pattern == "*.py"
         assert pattern.common_fixes == ["Check syntax"]
 
-    def test_error_pattern_defaults(self):
+    def test_error_pattern_defaults(self) -> None:
         """Test ErrorPattern with default values."""
         pattern = ErrorPattern(
             pattern_id="test_pattern_2",
@@ -55,7 +53,7 @@ class TestErrorPattern:
         assert pattern.frequency == 1
         assert pattern.common_fixes == []
 
-    def test_error_pattern_to_dict(self):
+    def test_error_pattern_to_dict(self) -> None:
         """Test converting ErrorPattern to dict."""
         pattern = ErrorPattern(
             pattern_id="test_pattern_3",
@@ -72,7 +70,7 @@ class TestErrorPattern:
         assert result["error_type"] == "import_error"
         assert result["error_code"] == "E401"
 
-    def test_error_pattern_post_init(self):
+    def test_error_pattern_post_init(self) -> None:
         """Test ErrorPattern post_init behavior."""
         pattern = ErrorPattern(
             pattern_id="test_pattern_4",
@@ -89,7 +87,7 @@ class TestErrorPattern:
 class TestFixResult:
     """Test FixResult dataclass."""
 
-    def test_fix_result_creation(self):
+    def test_fix_result_creation(self) -> None:
         """Test creating a FixResult."""
         result = FixResult(
             fix_id="fix_123",
@@ -107,7 +105,7 @@ class TestFixResult:
         assert result.time_taken == 1.5
         assert result.error_message is None
 
-    def test_fix_result_to_dict(self):
+    def test_fix_result_to_dict(self) -> None:
         """Test converting FixResult to dict."""
         result = FixResult(
             fix_id="fix_456",
@@ -140,13 +138,13 @@ class TestErrorCache:
         """Create ErrorCache instance."""
         return ErrorCache(cache_dir)
 
-    def test_init(self, error_cache, cache_dir):
+    def test_init(self, error_cache, cache_dir) -> None:
         """Test ErrorCache initialization."""
         assert error_cache.cache_dir == cache_dir
         assert error_cache.patterns_file == cache_dir / "error_patterns.json"
         assert error_cache.results_file == cache_dir / "cached_results.json"
 
-    def test_ensure_cache_dir(self, error_cache, cache_dir):
+    def test_ensure_cache_dir(self, error_cache, cache_dir) -> None:
         """Test cache directory creation."""
         # Directory shouldn't exist initially
         assert not cache_dir.exists()
@@ -157,7 +155,7 @@ class TestErrorCache:
         assert cache_dir.exists()
         assert cache_dir.is_dir()
 
-    def test_load_patterns_file_not_exists(self, error_cache):
+    def test_load_patterns_file_not_exists(self, error_cache) -> None:
         """Test loading patterns when file doesn't exist."""
         # Clear existing patterns and reload
         error_cache.patterns = {}
@@ -165,7 +163,7 @@ class TestErrorCache:
 
         assert len(error_cache.patterns) == 0
 
-    def test_load_patterns_with_data(self, error_cache, cache_dir):
+    def test_load_patterns_with_data(self, error_cache, cache_dir) -> None:
         """Test loading patterns from existing file."""
         # Create cache directory and patterns file
         cache_dir.mkdir(parents=True)
@@ -180,7 +178,7 @@ class TestErrorCache:
                 "auto_fixable": False,
                 "frequency": 1,
                 "last_seen": time.time(),
-            }
+            },
         }
 
         patterns_file = cache_dir / "error_patterns.json"
@@ -194,7 +192,7 @@ class TestErrorCache:
         assert pattern is not None
         assert pattern.error_type == "syntax_error"
 
-    def test_save_patterns(self, error_cache, cache_dir):
+    def test_save_patterns(self, error_cache, cache_dir) -> None:
         """Test saving patterns to file."""
         pattern = ErrorPattern(
             pattern_id="test_error_1",
@@ -215,7 +213,7 @@ class TestErrorCache:
         assert "test_error_1" in data
         assert data["test_error_1"]["error_type"] == "test_error"
 
-    def test_add_pattern(self, error_cache):
+    def test_add_pattern(self, error_cache) -> None:
         """Test adding a new pattern."""
         pattern = ErrorPattern(
             pattern_id="new_error_1",
@@ -231,7 +229,7 @@ class TestErrorCache:
             mock_save.assert_called_once()
             assert error_cache.get_pattern("new_error_1") == pattern
 
-    def test_find_patterns_by_type(self, error_cache):
+    def test_find_patterns_by_type(self, error_cache) -> None:
         """Test finding patterns by error type."""
         pattern1 = ErrorPattern(
             pattern_id="syntax_1",
@@ -254,7 +252,7 @@ class TestErrorCache:
         assert len(matches) == 1
         assert matches[0].error_type == "syntax"
 
-    def test_add_fix_result(self, error_cache):
+    def test_add_fix_result(self, error_cache) -> None:
         """Test adding a fix result."""
         result = FixResult(
             fix_id="fix_123",
@@ -269,7 +267,7 @@ class TestErrorCache:
 
             mock_save.assert_called_once()
 
-    def test_get_fix_success_rate(self, error_cache):
+    def test_get_fix_success_rate(self, error_cache) -> None:
         """Test retrieving fix success rate."""
         result1 = FixResult(
             fix_id="fix_1",
@@ -293,7 +291,7 @@ class TestErrorCache:
 
         assert success_rate == 0.5
 
-    def test_cleanup_old_patterns(self, error_cache, cache_dir):
+    def test_cleanup_old_patterns(self, error_cache, cache_dir) -> None:
         """Test cleaning up old patterns."""
         # Create old pattern
         old_pattern = ErrorPattern(
@@ -311,7 +309,7 @@ class TestErrorCache:
         assert cleaned == 1
         assert error_cache.get_pattern("old_pattern") is None
 
-    def test_get_cache_stats(self, error_cache):
+    def test_get_cache_stats(self, error_cache) -> None:
         """Test getting cache statistics."""
         pattern = ErrorPattern(
             pattern_id="test_pattern",
@@ -342,7 +340,7 @@ class TestErrorCache:
 class TestIssue:
     """Test Issue dataclass."""
 
-    def test_issue_creation(self):
+    def test_issue_creation(self) -> None:
         """Test creating Issue."""
         issue = Issue(
             id="issue_1",
@@ -364,7 +362,7 @@ class TestIssue:
         assert issue.priority == Priority.HIGH
         assert issue.auto_fixable is True
 
-    def test_issue_defaults(self):
+    def test_issue_defaults(self) -> None:
         """Test Issue with defaults."""
         issue = Issue(
             id="issue_2",
@@ -379,7 +377,7 @@ class TestIssue:
         assert issue.suggested_fix is None
         assert issue.auto_fixable is False
 
-    def test_issue_to_dict(self):
+    def test_issue_to_dict(self) -> None:
         """Test converting Issue to dict."""
         issue = Issue(
             id="issue_3",
@@ -408,7 +406,7 @@ class TestSessionState:
             start_time=time.time(),
         )
 
-    def test_init(self, session_state):
+    def test_init(self, session_state) -> None:
         """Test SessionState initialization."""
         assert session_state.session_id == "test_session"
         assert session_state.start_time > 0
@@ -417,7 +415,7 @@ class TestSessionState:
         assert session_state.fixes_applied == []
         assert session_state.metadata == {}
 
-    def test_add_stage_result(self, session_state):
+    def test_add_stage_result(self, session_state) -> None:
         """Test adding a stage result to session."""
         stage_result = StageResult(
             stage="fast",
@@ -431,7 +429,7 @@ class TestSessionState:
         assert "fast" in session_state.stages
         assert session_state.stages["fast"] == stage_result
 
-    def test_add_global_issue(self, session_state):
+    def test_add_global_issue(self, session_state) -> None:
         """Test adding a global issue."""
         issue = Issue(
             id="issue_1",
@@ -445,7 +443,7 @@ class TestSessionState:
         assert len(session_state.global_issues) == 1
         assert session_state.global_issues[0] == issue
 
-    def test_set_metadata(self, session_state):
+    def test_set_metadata(self, session_state) -> None:
         """Test setting session metadata."""
         session_state.metadata["user"] = "test_user"
         session_state.metadata["project"] = "test_project"
@@ -453,7 +451,7 @@ class TestSessionState:
         assert session_state.metadata["user"] == "test_user"
         assert session_state.metadata["project"] == "test_project"
 
-    def test_to_dict(self, session_state):
+    def test_to_dict(self, session_state) -> None:
         """Test converting session to dict."""
         issue = Issue(
             id="issue_1",
@@ -482,13 +480,13 @@ class TestStateManager:
         """Create StateManager instance."""
         return StateManager(state_dir=tmp_path / "state")
 
-    def test_init(self, state_manager):
+    def test_init(self, state_manager) -> None:
         """Test StateManager initialization."""
         assert state_manager.session_state is not None
         assert state_manager.session_state.session_id is not None
         assert state_manager.session_state.start_time > 0
 
-    def test_start_stage(self, state_manager):
+    def test_start_stage(self, state_manager) -> None:
         """Test starting a new stage."""
         state_manager.start_stage("fast")
 
@@ -496,7 +494,7 @@ class TestStateManager:
         assert "fast" in state_manager.session_state.stages
         assert state_manager.session_state.stages["fast"].status == StageStatus.RUNNING
 
-    def test_complete_stage(self, state_manager):
+    def test_complete_stage(self, state_manager) -> None:
         """Test completing a stage."""
         state_manager.start_stage("fast")
 
@@ -515,7 +513,7 @@ class TestStateManager:
         assert len(stage_result.issues_found) == 1
         assert len(stage_result.fixes_applied) == 1
 
-    def test_fail_stage(self, state_manager):
+    def test_fail_stage(self, state_manager) -> None:
         """Test failing a stage."""
         state_manager.start_stage("comprehensive")
 
@@ -526,7 +524,7 @@ class TestStateManager:
         assert stage_result.error_message == "Error occurred"
         assert state_manager.session_state.current_stage is None
 
-    def test_add_issue(self, state_manager):
+    def test_add_issue(self, state_manager) -> None:
         """Test adding an issue."""
         issue = Issue(
             id="global_issue",
@@ -540,7 +538,7 @@ class TestStateManager:
         assert len(state_manager.session_state.global_issues) == 1
         assert state_manager.session_state.global_issues[0] == issue
 
-    def test_remove_issue(self, state_manager):
+    def test_remove_issue(self, state_manager) -> None:
         """Test removing an issue."""
         issue = Issue(
             id="removable_issue",
@@ -555,7 +553,7 @@ class TestStateManager:
         assert success is True
         assert len(state_manager.session_state.global_issues) == 0
 
-    def test_get_issues_by_priority(self, state_manager):
+    def test_get_issues_by_priority(self, state_manager) -> None:
         """Test filtering issues by priority."""
         high_issue = Issue(
             id="high_issue",
@@ -580,7 +578,7 @@ class TestStateManager:
         assert len(high_issues) == 1
         assert high_issues[0].priority == Priority.HIGH
 
-    def test_get_session_summary(self, state_manager):
+    def test_get_session_summary(self, state_manager) -> None:
         """Test getting session summary."""
         state_manager.start_stage("fast")
 
@@ -603,7 +601,7 @@ class TestStateManager:
         assert summary["auto_fixable_issues"] == 1
         assert "fast" in summary["stages"]
 
-    def test_save_and_load_checkpoint(self, state_manager):
+    def test_save_and_load_checkpoint(self, state_manager) -> None:
         """Test saving and loading checkpoints."""
         issue = Issue(
             id="checkpoint_issue",
@@ -629,7 +627,7 @@ class TestStateManager:
         assert state_manager.session_state.session_id == original_session_id
         assert len(state_manager.session_state.global_issues) == 1
 
-    def test_list_checkpoints(self, state_manager):
+    def test_list_checkpoints(self, state_manager) -> None:
         """Test listing checkpoints."""
         state_manager.save_checkpoint("checkpoint_1")
         state_manager.save_checkpoint("checkpoint_2")
@@ -645,7 +643,7 @@ class TestStateManager:
 class TestMCPIntegration:
     """Integration tests for MCP components."""
 
-    def test_session_state_workflow(self):
+    def test_session_state_workflow(self) -> None:
         """Test complete session state workflow."""
         manager = StateManager()
 
@@ -678,7 +676,7 @@ class TestMCPIntegration:
         assert session.issues[1].message == "Test warning 2"
 
     @pytest.mark.asyncio
-    async def test_mcp_main_function(self):
+    async def test_mcp_main_function(self) -> None:
         """Test the main MCP server function."""
         with patch("crackerjack.mcp.server.Server") as mock_server_class:
             with patch("crackerjack.mcp.server.stdio_server") as mock_stdio:
@@ -687,7 +685,7 @@ class TestMCPIntegration:
                 mock_stdio.return_value = AsyncMock()
 
                 # Mock the async context manager
-                async def mock_serve():
+                async def mock_serve() -> None:
                     pass
 
                 mock_stdio.return_value.__aenter__ = AsyncMock(return_value=mock_serve)

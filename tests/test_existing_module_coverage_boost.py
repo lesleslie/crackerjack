@@ -12,21 +12,21 @@ from unittest.mock import Mock
 class TestManagersModuleCoverage:
     """Boost coverage for managers modules."""
 
-    def test_async_hook_manager_basic(self):
+    def test_async_hook_manager_basic(self) -> None:
         """Test async hook manager basic functionality."""
         from crackerjack.managers.async_hook_manager import AsyncHookManager
 
         manager = AsyncHookManager()
         assert manager is not None
 
-    def test_hook_manager_basic(self):
+    def test_hook_manager_basic(self) -> None:
         """Test hook manager basic functionality."""
         from crackerjack.managers.hook_manager import HookManager
 
         manager = HookManager()
         assert manager is not None
 
-    def test_publish_manager_basic(self):
+    def test_publish_manager_basic(self) -> None:
         """Test publish manager basic functionality."""
         from crackerjack.managers.publish_manager import PublishManager
 
@@ -37,21 +37,21 @@ class TestManagersModuleCoverage:
 class TestExecutorsModuleCoverage:
     """Boost coverage for executors modules."""
 
-    def test_async_hook_executor_basic(self):
+    def test_async_hook_executor_basic(self) -> None:
         """Test async hook executor basic functionality."""
         from crackerjack.executors.async_hook_executor import AsyncHookExecutor
 
         executor = AsyncHookExecutor()
         assert executor is not None
 
-    def test_cached_hook_executor_basic(self):
+    def test_cached_hook_executor_basic(self) -> None:
         """Test cached hook executor basic functionality."""
         from crackerjack.executors.cached_hook_executor import CachedHookExecutor
 
         executor = CachedHookExecutor()
         assert executor is not None
 
-    def test_hook_executor_basic(self):
+    def test_hook_executor_basic(self) -> None:
         """Test hook executor basic functionality."""
         from crackerjack.executors.hook_executor import HookExecutor
 
@@ -62,7 +62,7 @@ class TestExecutorsModuleCoverage:
 class TestServicesModuleCoverage:
     """Boost coverage for services modules with existing coverage."""
 
-    def test_cache_service_basic(self):
+    def test_cache_service_basic(self) -> None:
         """Test cache service basic functionality."""
         from crackerjack.services.cache import Cache
 
@@ -76,7 +76,7 @@ class TestServicesModuleCoverage:
         # Test cache miss
         assert cache.get("nonexistent") is None
 
-    def test_debug_service_basic(self):
+    def test_debug_service_basic(self) -> None:
         """Test debug service basic functionality."""
         from crackerjack.services.debug import DebugService
 
@@ -89,7 +89,7 @@ class TestServicesModuleCoverage:
         # Test debug state
         assert hasattr(debug, "enabled")
 
-    def test_file_hasher_service_basic(self):
+    def test_file_hasher_service_basic(self) -> None:
         """Test file hasher service basic functionality."""
         from crackerjack.services.file_hasher import FileHasher
 
@@ -108,7 +108,7 @@ class TestServicesModuleCoverage:
         finally:
             temp_path.unlink()
 
-    def test_filesystem_service_basic(self):
+    def test_filesystem_service_basic(self) -> None:
         """Test filesystem service basic functionality."""
         from crackerjack.services.filesystem import FileSystem
 
@@ -124,7 +124,7 @@ class TestServicesModuleCoverage:
             content = fs.read_file(temp_path)
             assert content == "test content"
 
-    def test_git_service_basic(self):
+    def test_git_service_basic(self) -> None:
         """Test git service basic functionality."""
         from crackerjack.services.git import GitService
 
@@ -137,7 +137,7 @@ class TestServicesModuleCoverage:
         assert "status" in cmd
         assert "--porcelain" in cmd
 
-    def test_security_service_basic(self):
+    def test_security_service_basic(self) -> None:
         """Test security service basic functionality."""
         from crackerjack.services.security import SecurityService
 
@@ -148,7 +148,7 @@ class TestServicesModuleCoverage:
         assert security.is_safe_path("/safe/path")
         assert not security.is_safe_path("../unsafe/path")
 
-    def test_logging_service_basic(self):
+    def test_logging_service_basic(self) -> None:
         """Test logging service basic functionality."""
         from crackerjack.services.logging import get_logger
 
@@ -160,7 +160,7 @@ class TestServicesModuleCoverage:
         logger.debug("debug message")
         logger.warning("warning message")
 
-    def test_log_manager_service_basic(self):
+    def test_log_manager_service_basic(self) -> None:
         """Test log manager service basic functionality."""
         from crackerjack.services.log_manager import LogManager
 
@@ -177,28 +177,28 @@ class TestServicesModuleCoverage:
 class TestCoreModuleCoverage:
     """Boost coverage for core modules with existing coverage."""
 
-    def test_phase_coordinator_basic(self):
+    def test_phase_coordinator_basic(self) -> None:
         """Test phase coordinator basic functionality."""
         from crackerjack.core.phase_coordinator import PhaseCoordinator
 
         coordinator = PhaseCoordinator()
         assert coordinator is not None
 
-    def test_session_coordinator_basic(self):
+    def test_session_coordinator_basic(self) -> None:
         """Test session coordinator basic functionality."""
         from crackerjack.core.session_coordinator import SessionCoordinator
 
         coordinator = SessionCoordinator()
         assert coordinator is not None
 
-    def test_workflow_orchestrator_basic(self):
+    def test_workflow_orchestrator_basic(self) -> None:
         """Test workflow orchestrator basic functionality."""
         from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
         orchestrator = WorkflowOrchestrator()
         assert orchestrator is not None
 
-    def test_container_basic(self):
+    def test_container_basic(self) -> None:
         """Test container basic functionality."""
         from crackerjack.core.container import Container
 
@@ -217,7 +217,7 @@ class TestCoreModuleCoverage:
 class TestModelsModuleCoverage:
     """Boost coverage for models modules."""
 
-    def test_task_model_basic(self):
+    def test_task_model_basic(self) -> None:
         """Test task model basic functionality."""
         from crackerjack.models.task import Task, TaskStatus
 
@@ -238,7 +238,7 @@ class TestModelsModuleCoverage:
 class TestInteractiveModuleCoverage:
     """Boost coverage for interactive module."""
 
-    def test_interactive_basic(self):
+    def test_interactive_basic(self) -> None:
         """Test interactive module basic functionality."""
         from crackerjack.interactive import InteractiveCLI
 
@@ -252,7 +252,7 @@ class TestInteractiveModuleCoverage:
 class TestCodeCleanerModuleCoverage:
     """Boost coverage for code cleaner module."""
 
-    def test_code_cleaner_basic(self):
+    def test_code_cleaner_basic(self) -> None:
         """Test code cleaner basic functionality."""
         from crackerjack.code_cleaner import CodeCleaner
 
@@ -266,7 +266,7 @@ class TestCodeCleanerModuleCoverage:
 class TestDynamicConfigModuleCoverage:
     """Boost coverage for dynamic config module."""
 
-    def test_dynamic_config_basic(self):
+    def test_dynamic_config_basic(self) -> None:
         """Test dynamic config basic functionality."""
         from crackerjack.dynamic_config import ConfigTemplate, DynamicConfig
 
@@ -281,7 +281,7 @@ class TestDynamicConfigModuleCoverage:
 class TestErrorsModuleCoverage:
     """Boost coverage for errors module."""
 
-    def test_error_classes_basic(self):
+    def test_error_classes_basic(self) -> None:
         """Test error classes basic functionality."""
         from crackerjack.errors import (
             ConfigurationError,

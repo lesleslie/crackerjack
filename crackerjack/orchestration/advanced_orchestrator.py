@@ -6,15 +6,25 @@ from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
 
-from ..agents import AgentContext, AgentCoordinator, Issue, IssueType, Priority
-from ..config.hooks import HookConfigLoader, HookStrategy
-from ..core.session_coordinator import SessionCoordinator
-from ..executors.hook_executor import HookExecutor
-from ..executors.individual_hook_executor import HookProgress, IndividualHookExecutor
-from ..managers.test_manager import TestManagementImpl
-from ..models.protocols import OptionsProtocol
-from ..models.task import HookResult
-from ..services.metrics import get_metrics_collector
+from crackerjack.agents import (
+    AgentContext,
+    AgentCoordinator,
+    Issue,
+    IssueType,
+    Priority,
+)
+from crackerjack.config.hooks import HookConfigLoader, HookStrategy
+from crackerjack.core.session_coordinator import SessionCoordinator
+from crackerjack.executors.hook_executor import HookExecutor
+from crackerjack.executors.individual_hook_executor import (
+    HookProgress,
+    IndividualHookExecutor,
+)
+from crackerjack.managers.test_manager import TestManagementImpl
+from crackerjack.models.protocols import OptionsProtocol
+from crackerjack.models.task import HookResult
+from crackerjack.services.metrics import get_metrics_collector
+
 from .execution_strategies import (
     AICoordinationMode,
     ExecutionContext,
@@ -64,7 +74,7 @@ class CorrelationTracker:
             previous = self.iteration_data[i - 1]
 
             recurring_failures = set(current["failed_hooks"]) & set(
-                previous["failed_hooks"]
+                previous["failed_hooks"],
             )
 
             for hook in recurring_failures:
@@ -108,7 +118,7 @@ class MinimalProgressStreamer:
 
 class ProgressStreamer:
     def __init__(
-        self, config: OrchestrationConfig, session: SessionCoordinator
+        self, config: OrchestrationConfig, session: SessionCoordinator,
     ) -> None:
         self.config = config
         self.session = session
@@ -125,7 +135,7 @@ class ProgressStreamer:
                 "stage": stage,
                 "substage": substage,
                 "timestamp": time.time(),
-            }
+            },
         )
 
     def update_hook_progress(self, progress: HookProgress) -> None:
@@ -136,7 +146,7 @@ class ProgressStreamer:
                 "hook_name": progress.hook_name,
                 "progress": progress.to_dict(),
                 "timestamp": time.time(),
-            }
+            },
         )
 
     def _stream_update(self, update_data: dict[str, t.Any]) -> None:
@@ -168,7 +178,7 @@ class ProgressStreamer:
                         },
                         "last_update": update_data,
                         "updated_at": time.time(),
-                    }
+                    },
                 )
 
                 with self.session.progress_file.open("w") as f:
@@ -205,7 +215,7 @@ class AdvancedWorkflowOrchestrator:
         except Exception as e:
             # Fallback to a minimal progress streamer if there's an issue
             console.print(
-                f"[yellow]Warning: ProgressStreamer initialization failed: {e}[/yellow]"
+                f"[yellow]Warning: ProgressStreamer initialization failed: {e}[/yellow]",
             )
             self.progress_streamer = MinimalProgressStreamer()
         self.metrics = get_metrics_collector()
@@ -231,7 +241,7 @@ class AdvancedWorkflowOrchestrator:
             # Configure individual executor for MCP mode to prevent terminal lockup
             self.individual_executor.set_mcp_mode(True)
             self.console.print(
-                "[dim]🔧 MCP mode detected - using minimal output mode[/dim]"
+                "[dim]🔧 MCP mode detected - using minimal output mode[/dim]",
             )
         if self.config.ai_coordination_mode in (
             AICoordinationMode.MULTI_AGENT,
@@ -240,13 +250,13 @@ class AdvancedWorkflowOrchestrator:
             self._initialize_multi_agent_system()
 
         self.individual_executor.set_progress_callback(
-            self.progress_streamer.update_hook_progress
+            self.progress_streamer.update_hook_progress,
         )
         self.test_streamer.set_progress_callback(self._update_test_suite_progress)
 
     def _initialize_multi_agent_system(self) -> None:
         self.console.print(
-            "[bold cyan]🤖 Initializing Multi-Agent AI System[/bold cyan]"
+            "[bold cyan]🤖 Initializing Multi-Agent AI System[/bold cyan]",
         )
 
         agent_context = AgentContext(
@@ -259,14 +269,14 @@ class AdvancedWorkflowOrchestrator:
 
         capabilities = self.agent_coordinator.get_agent_capabilities()
         self.console.print(
-            f"[green]✅ Initialized {len(capabilities)} specialized agents: [/green]"
+            f"[green]✅ Initialized {len(capabilities)} specialized agents: [/green]",
         )
         for agent_name, info in capabilities.items():
             types_str = ", ".join(info["supported_types"])
             self.console.print(f" • {agent_name}: {types_str}")
 
         self.console.print(
-            f"[cyan]AI Coordination Mode: {self.config.ai_coordination_mode.value}[/cyan]"
+            f"[cyan]AI Coordination Mode: {self.config.ai_coordination_mode.value}[/cyan]",
         )
 
     def _display_iteration_stats(
@@ -288,13 +298,13 @@ class AdvancedWorkflowOrchestrator:
 
         # Add timing rows
         timing_table.add_row(
-            "🔧 Hooks", f"{iteration_times.get('hooks', 0):.1f}s", f"{hooks_time:.1f}s"
+            "🔧 Hooks", f"{iteration_times.get('hooks', 0):.1f}s", f"{hooks_time:.1f}s",
         )
         timing_table.add_row(
-            "🧪 Tests", f"{iteration_times.get('tests', 0):.1f}s", f"{tests_time:.1f}s"
+            "🧪 Tests", f"{iteration_times.get('tests', 0):.1f}s", f"{tests_time:.1f}s",
         )
         timing_table.add_row(
-            "🤖 AI Analysis", f"{iteration_times.get('ai', 0):.1f}s", f"{ai_time:.1f}s"
+            "🤖 AI Analysis", f"{iteration_times.get('ai', 0):.1f}s", f"{ai_time:.1f}s",
         )
 
         total_iteration_time = sum(iteration_times.values())
@@ -313,7 +323,7 @@ class AdvancedWorkflowOrchestrator:
 
         status_table.add_row("🔄 Iteration", f"{iteration}/{max_iterations}")
         status_table.add_row(
-            "📈 Progress", f"{(iteration / max_iterations) * 100:.1f}%"
+            "📈 Progress", f"{(iteration / max_iterations) * 100:.1f}%",
         )
 
         if hasattr(context, "hook_failures"):
@@ -352,7 +362,7 @@ class AdvancedWorkflowOrchestrator:
         )
 
         self.console.print(
-            "\n[bold bright_blue]🚀 STARTING ORCHESTRATED WORKFLOW[/bold bright_blue]"
+            "\n[bold bright_blue]🚀 STARTING ORCHESTRATED WORKFLOW[/bold bright_blue]",
         )
 
         context = ExecutionContext(self.pkg_path, options)
@@ -363,7 +373,7 @@ class AdvancedWorkflowOrchestrator:
         ]
 
         execution_plan = self.planner.create_execution_plan(
-            self.config, context, hook_strategies
+            self.config, context, hook_strategies,
         )
 
         execution_plan.print_plan_summary(self.console)
@@ -376,14 +386,14 @@ class AdvancedWorkflowOrchestrator:
 
         for iteration in range(1, max_iterations + 1):
             self.console.print(
-                f"\n[bold bright_yellow]🔄 ITERATION {iteration} / {max_iterations}[/bold bright_yellow]"
+                f"\n[bold bright_yellow]🔄 ITERATION {iteration} / {max_iterations}[/bold bright_yellow]",
             )
 
             context.iteration_count = iteration
 
             time.time()
             iteration_success, iteration_times = await self._execute_single_iteration(
-                execution_plan, context, iteration
+                execution_plan, context, iteration,
             )
 
             hooks_time += iteration_times.get("hooks", 0)
@@ -403,7 +413,7 @@ class AdvancedWorkflowOrchestrator:
 
             if iteration_success:
                 self.console.print(
-                    f"\n[bold green]🎉 WORKFLOW COMPLETED SUCCESSFULLY IN {iteration} ITERATIONS![/bold green]"
+                    f"\n[bold green]🎉 WORKFLOW COMPLETED SUCCESSFULLY IN {iteration} ITERATIONS![/bold green]",
                 )
                 success = True
                 break
@@ -416,7 +426,7 @@ class AdvancedWorkflowOrchestrator:
 
         if not success:
             self.console.print(
-                f"\n[bold red]❌ WORKFLOW INCOMPLETE AFTER {max_iterations} ITERATIONS[/bold red]"
+                f"\n[bold red]❌ WORKFLOW INCOMPLETE AFTER {max_iterations} ITERATIONS[/bold red]",
             )
 
         self._print_final_analysis()
@@ -489,7 +499,7 @@ class AdvancedWorkflowOrchestrator:
         )
 
         self.correlation_tracker.record_iteration(
-            iteration, hook_results, test_results, ai_fixes
+            iteration, hook_results, test_results, ai_fixes,
         )
 
         all_hooks_passed = all(r.status == "passed" for r in hook_results)
@@ -517,18 +527,18 @@ class AdvancedWorkflowOrchestrator:
             # Special handling for fast hooks with autofix cycle
             if strategy.name == "fast":
                 fast_results = await self._execute_fast_hooks_with_autofix(
-                    strategy, execution_mode, context
+                    strategy, execution_mode, context,
                 )
                 all_results.extend(fast_results)
             else:
                 # Regular execution for non-fast hooks
                 self.progress_streamer.update_stage(
-                    "hooks", f"executing_{strategy.name}"
+                    "hooks", f"executing_{strategy.name}",
                 )
 
                 if execution_mode == ExecutionStrategy.INDIVIDUAL:
                     result = await self.individual_executor.execute_strategy_individual(
-                        strategy
+                        strategy,
                     )
                     all_results.extend(result.hook_results)
                 else:
@@ -552,31 +562,31 @@ class AdvancedWorkflowOrchestrator:
 
         while autofix_cycle < max_autofix_cycles:
             self.console.print(
-                f"[cyan]🚀 Fast hooks execution (autofix cycle {autofix_cycle + 1}/{max_autofix_cycles})[/cyan]"
+                f"[cyan]🚀 Fast hooks execution (autofix cycle {autofix_cycle + 1}/{max_autofix_cycles})[/cyan]",
             )
 
             # Run fast hooks twice
             first_attempt = await self._execute_fast_hooks_attempt(
-                strategy, execution_mode
+                strategy, execution_mode,
             )
 
             if all(r.status == "passed" for r in first_attempt):
                 self.console.print(
-                    "[green]✅ Fast hooks passed on first attempt[/green]"
+                    "[green]✅ Fast hooks passed on first attempt[/green]",
                 )
                 return first_attempt
 
             # First attempt failed, try second attempt
             self.console.print(
-                "[yellow]⚠️  Fast hooks failed on first attempt, retrying...[/yellow]"
+                "[yellow]⚠️  Fast hooks failed on first attempt, retrying...[/yellow]",
             )
             second_attempt = await self._execute_fast_hooks_attempt(
-                strategy, execution_mode
+                strategy, execution_mode,
             )
 
             if all(r.status == "passed" for r in second_attempt):
                 self.console.print(
-                    "[green]✅ Fast hooks passed on second attempt[/green]"
+                    "[green]✅ Fast hooks passed on second attempt[/green]",
                 )
                 return second_attempt
 
@@ -584,12 +594,12 @@ class AdvancedWorkflowOrchestrator:
             autofix_cycle += 1
             if autofix_cycle < max_autofix_cycles:
                 self.console.print(
-                    "[red]❌ Fast hooks failed twice, triggering autofix cycle...[/red]"
+                    "[red]❌ Fast hooks failed twice, triggering autofix cycle...[/red]",
                 )
                 await self._trigger_autofix_for_fast_hooks(second_attempt)
             else:
                 self.console.print(
-                    "[red]❌ Fast hooks failed after maximum autofix cycles[/red]"
+                    "[red]❌ Fast hooks failed after maximum autofix cycles[/red]",
                 )
                 return second_attempt
 
@@ -604,19 +614,18 @@ class AdvancedWorkflowOrchestrator:
         """Execute a single attempt of fast hooks."""
         if execution_mode == ExecutionStrategy.INDIVIDUAL:
             result = await self.individual_executor.execute_strategy_individual(
-                strategy
+                strategy,
             )
             return result.hook_results
-        else:
-            results = self.batch_executor.execute_strategy(strategy)
-            return results.results
+        results = self.batch_executor.execute_strategy(strategy)
+        return results.results
 
     async def _trigger_autofix_for_fast_hooks(
-        self, failed_results: list[HookResult]
+        self, failed_results: list[HookResult],
     ) -> None:
         """Trigger AI autofix cycle for failed fast hooks."""
         self.console.print(
-            "[magenta]🤖 Starting AI autofix cycle for fast hooks...[/magenta]"
+            "[magenta]🤖 Starting AI autofix cycle for fast hooks...[/magenta]",
         )
 
         # Create mock test results for AI analysis (fast hooks don't include tests)
@@ -647,12 +656,12 @@ class AdvancedWorkflowOrchestrator:
 
         # Execute AI analysis and fixes for hook failures
         ai_fixes = await self._execute_ai_phase(
-            mock_plan, failed_results, mock_test_results
+            mock_plan, failed_results, mock_test_results,
         )
 
         if ai_fixes:
             self.console.print(
-                f"[green]✅ Applied {len(ai_fixes)} AI fixes for fast hooks[/green]"
+                f"[green]✅ Applied {len(ai_fixes)} AI fixes for fast hooks[/green]",
             )
         else:
             self.console.print("[yellow]⚠️  No AI fixes could be applied[/yellow]")
@@ -672,7 +681,7 @@ class AdvancedWorkflowOrchestrator:
 
         if test_mode in ("individual_with_progress", "selective"):
             test_results = await self.test_streamer.run_tests_with_streaming(
-                context.options, test_mode
+                context.options, test_mode,
             )
 
             job_id = (
@@ -747,14 +756,14 @@ class AdvancedWorkflowOrchestrator:
 
         if failed_individual_tests:
             self.console.print(
-                f"Individual test failures: {len(failed_individual_tests)}"
+                f"Individual test failures: {len(failed_individual_tests)}",
             )
             for test in failed_individual_tests[:3]:
                 self.console.print(f" ❌ {test.test_id}")
 
         if correlation_data["problematic_hooks"]:
             self.console.print(
-                f"Problematic hooks (recurring): {', '.join(correlation_data['problematic_hooks'])}"
+                f"Problematic hooks (recurring): {', '.join(correlation_data['problematic_hooks'])}",
             )
 
         if self.agent_coordinator and self.config.ai_coordination_mode in (
@@ -762,11 +771,11 @@ class AdvancedWorkflowOrchestrator:
             AICoordinationMode.COORDINATOR,
         ):
             ai_fixes = await self._execute_multi_agent_analysis(
-                failed_hooks, failed_tests, failed_individual_tests, correlation_data
+                failed_hooks, failed_tests, failed_individual_tests, correlation_data,
             )
         else:
             ai_fixes = await self._execute_single_agent_analysis(
-                failed_hooks, failed_tests, failed_individual_tests, correlation_data
+                failed_hooks, failed_tests, failed_individual_tests, correlation_data,
             )
 
         self.progress_streamer.update_stage("ai_analysis", "completed")
@@ -816,7 +825,7 @@ class AdvancedWorkflowOrchestrator:
             return ["No issues identified for multi-agent analysis"]
 
         self.console.print(
-            f"[cyan]Processing {len(issues)} issues with specialized agents...[/cyan]"
+            f"[cyan]Processing {len(issues)} issues with specialized agents...[/cyan]",
         )
 
         assert self.agent_coordinator is not None
@@ -827,7 +836,7 @@ class AdvancedWorkflowOrchestrator:
             ai_fixes.extend(result.fixes_applied)
         else:
             ai_fixes.append(
-                f"Multi-agent analysis completed with {result.confidence:.2f} confidence"
+                f"Multi-agent analysis completed with {result.confidence:.2f} confidence",
             )
 
         if result.remaining_issues:
@@ -835,11 +844,11 @@ class AdvancedWorkflowOrchestrator:
 
         if result.recommendations:
             ai_fixes.extend(
-                [f"Recommendation: {rec}" for rec in result.recommendations[:3]]
+                [f"Recommendation: {rec}" for rec in result.recommendations[:3]],
             )
 
         self.console.print(
-            f"[green]✅ Multi-agent analysis completed: {len(result.fixes_applied)} fixes applied[/green]"
+            f"[green]✅ Multi-agent analysis completed: {len(result.fixes_applied)} fixes applied[/green]",
         )
         return ai_fixes
 
@@ -850,14 +859,13 @@ class AdvancedWorkflowOrchestrator:
         failed_individual_tests: list[t.Any],
         correlation_data: dict[str, t.Any],
     ) -> list[str]:
-        ai_fixes = [
+        return [
             f"[Single Agent] Analyzed {len(failed_hooks)} hook failures",
             f"[Single Agent] Analyzed {len(failed_tests)} test failures",
             f"[Single Agent] Analyzed {len(failed_individual_tests)} individual test failures",
             "[Single Agent] Applied batch fixes based on correlation analysis",
         ]
 
-        return ai_fixes
 
     def _map_hook_to_issue_type(self, hook_name: str) -> IssueType:
         hook_type_mapping = {
@@ -884,13 +892,13 @@ class AdvancedWorkflowOrchestrator:
 
         if problematic_hooks:
             self.console.print(
-                f"[yellow]🧠 Adapting strategy due to recurring failures in: {', '.join(problematic_hooks)}[/yellow]"
+                f"[yellow]🧠 Adapting strategy due to recurring failures in: {', '.join(problematic_hooks)}[/yellow]",
             )
 
             if current_plan.execution_strategy == ExecutionStrategy.BATCH:
                 self.config.execution_strategy = ExecutionStrategy.INDIVIDUAL
                 self.console.print(
-                    "[cyan]📋 Switching to individual execution for better debugging[/cyan]"
+                    "[cyan]📋 Switching to individual execution for better debugging[/cyan]",
                 )
 
         hook_strategies = [
@@ -908,7 +916,7 @@ class AdvancedWorkflowOrchestrator:
 
         self.console.print("\n" + "=" * 80)
         self.console.print(
-            "[bold bright_magenta]🔍 CORRELATION ANALYSIS[/bold bright_magenta]"
+            "[bold bright_magenta]🔍 CORRELATION ANALYSIS[/bold bright_magenta]",
         )
         self.console.print("=" * 80)
 
@@ -916,7 +924,7 @@ class AdvancedWorkflowOrchestrator:
 
         if correlation_data["problematic_hooks"]:
             self.console.print(
-                "\n[bold red]Problematic hooks (recurring failures): [/bold red]"
+                "\n[bold red]Problematic hooks (recurring failures): [/bold red]",
             )
             for hook in correlation_data["problematic_hooks"]:
                 failures = correlation_data["failure_patterns"][hook]
@@ -928,7 +936,7 @@ class AdvancedWorkflowOrchestrator:
                 failed_count = len(trend["failed_hooks"])
                 self.console.print(
                     f" Iteration {trend['iteration']}: {failed_count} failed hooks, "
-                    f"{trend['total_errors']} total errors"
+                    f"{trend['total_errors']} total errors",
                 )
 
         self.console.print("=" * 80)

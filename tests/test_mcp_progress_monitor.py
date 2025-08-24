@@ -11,11 +11,11 @@ from crackerjack.mcp.progress_monitor import main
 class TestProgressMonitorBasic:
     """Test basic progress monitor components that we know exist."""
 
-    def test_main_function_exists(self):
+    def test_main_function_exists(self) -> None:
         """Test main function exists and is callable."""
         assert callable(main)
 
-    def test_main_function_with_no_args(self):
+    def test_main_function_with_no_args(self) -> None:
         """Test main function handles no arguments."""
         with (
             patch("sys.argv", ["progress_monitor"]),
@@ -26,7 +26,7 @@ class TestProgressMonitorBasic:
             # Should call asyncio.run
             mock_run.assert_called_once()
 
-    def test_main_function_with_job_id(self):
+    def test_main_function_with_job_id(self) -> None:
         """Test main function with job_id argument."""
         with (
             patch("sys.argv", ["progress_monitor", "test-123"]),
@@ -37,7 +37,7 @@ class TestProgressMonitorBasic:
             # Should call asyncio.run
             mock_run.assert_called_once()
 
-    def test_main_function_with_websocket_url(self):
+    def test_main_function_with_websocket_url(self) -> None:
         """Test main function with websocket URL."""
         with (
             patch("sys.argv", ["progress_monitor", "test-123", "ws://localhost:8675"]),
@@ -52,19 +52,19 @@ class TestProgressMonitorBasic:
 class TestProgressMonitorImports:
     """Test that the module can be imported and has expected components."""
 
-    def test_module_imports_successfully(self):
+    def test_module_imports_successfully(self) -> None:
         """Test that the module imports without errors."""
         import crackerjack.mcp.progress_monitor
 
         assert crackerjack.mcp.progress_monitor is not None
 
-    def test_main_function_import(self):
+    def test_main_function_import(self) -> None:
         """Test main function can be imported."""
         from crackerjack.mcp.progress_monitor import main
 
         assert callable(main)
 
-    def test_agent_status_panel_import(self):
+    def test_agent_status_panel_import(self) -> None:
         """Test AgentStatusPanel can be imported."""
         try:
             from crackerjack.mcp.progress_monitor import AgentStatusPanel
@@ -74,7 +74,7 @@ class TestProgressMonitorImports:
             # If it doesn't exist, that's fine for basic coverage
             pass
 
-    def test_job_panel_import(self):
+    def test_job_panel_import(self) -> None:
         """Test JobPanel can be imported."""
         try:
             from crackerjack.mcp.progress_monitor import JobPanel
@@ -84,7 +84,7 @@ class TestProgressMonitorImports:
             # If it doesn't exist, that's fine for basic coverage
             pass
 
-    def test_dashboard_import(self):
+    def test_dashboard_import(self) -> None:
         """Test CrackerjackDashboard can be imported."""
         try:
             from crackerjack.mcp.progress_monitor import CrackerjackDashboard
@@ -98,7 +98,7 @@ class TestProgressMonitorImports:
 class TestProgressMonitorComponents:
     """Test progress monitor components if they exist."""
 
-    def test_agent_status_panel_basic(self):
+    def test_agent_status_panel_basic(self) -> None:
         """Test AgentStatusPanel basic functionality if it exists."""
         try:
             from crackerjack.mcp.progress_monitor import AgentStatusPanel
@@ -115,7 +115,7 @@ class TestProgressMonitorComponents:
             # Component doesn't exist, skip test
             pytest.skip("AgentStatusPanel not available")
 
-    def test_job_panel_basic(self):
+    def test_job_panel_basic(self) -> None:
         """Test JobPanel basic functionality if it exists."""
         try:
             from crackerjack.mcp.progress_monitor import JobPanel
@@ -136,7 +136,7 @@ class TestProgressMonitorComponents:
             # Different constructor signature, still counts as coverage
             pass
 
-    def test_dashboard_basic(self):
+    def test_dashboard_basic(self) -> None:
         """Test CrackerjackDashboard basic functionality if it exists."""
         try:
             from crackerjack.mcp.progress_monitor import CrackerjackDashboard
@@ -160,7 +160,7 @@ class TestProgressMonitorComponents:
             # Component doesn't exist, skip test
             pytest.skip("CrackerjackDashboard not available")
 
-    def test_job_metrics_basic(self):
+    def test_job_metrics_basic(self) -> None:
         """Test JobMetrics basic functionality if it exists."""
         try:
             from crackerjack.mcp.progress_monitor import JobMetrics
@@ -184,7 +184,7 @@ class TestProgressMonitorComponents:
 class TestProgressMonitorFunctions:
     """Test standalone functions if they exist."""
 
-    def test_run_progress_monitor_function(self):
+    def test_run_progress_monitor_function(self) -> None:
         """Test run_progress_monitor function if it exists."""
         try:
             from crackerjack.mcp.progress_monitor import run_progress_monitor
@@ -194,7 +194,7 @@ class TestProgressMonitorFunctions:
             # Function doesn't exist, skip test
             pytest.skip("run_progress_monitor not available")
 
-    def test_run_crackerjack_with_progress_function(self):
+    def test_run_crackerjack_with_progress_function(self) -> None:
         """Test run_crackerjack_with_progress function if it exists."""
         try:
             from crackerjack.mcp.progress_monitor import run_crackerjack_with_progress
@@ -208,7 +208,7 @@ class TestProgressMonitorFunctions:
 class TestProgressMonitorIntegration:
     """Integration tests for progress monitor."""
 
-    def test_module_structure(self):
+    def test_module_structure(self) -> None:
         """Test overall module structure."""
         import crackerjack.mcp.progress_monitor as pm
 
@@ -216,7 +216,7 @@ class TestProgressMonitorIntegration:
         assert hasattr(pm, "main")
         assert callable(pm.main)
 
-    def test_module_components_basic_coverage(self):
+    def test_module_components_basic_coverage(self) -> None:
         """Test basic coverage of module components."""
         import crackerjack.mcp.progress_monitor as pm
 

@@ -32,7 +32,7 @@ class TestAsyncHookManager:
     @patch("crackerjack.managers.async_hook_manager.HookConfigLoader")
     @patch("crackerjack.managers.async_hook_manager.AsyncHookExecutor")
     def test_init_with_mocks(
-        self, mock_executor_class, mock_loader_class, console, pkg_path
+        self, mock_executor_class, mock_loader_class, console, pkg_path,
     ) -> None:
         AsyncHookManager(console, pkg_path, max_concurrent=3)
 
@@ -44,14 +44,14 @@ class TestAsyncHookManager:
         mock_strategy = Mock()
         mock_result = Mock()
         mock_result.results = [
-            HookResult(id="test", name="test hook", status="passed", duration=1.0)
+            HookResult(id="test", name="test hook", status="passed", duration=1.0),
         ]
 
         async_hook_manager.config_loader.load_strategy = Mock(
-            return_value=mock_strategy
+            return_value=mock_strategy,
         )
         async_hook_manager.async_executor.execute_strategy = AsyncMock(
-            return_value=mock_result
+            return_value=mock_result,
         )
 
         results = await async_hook_manager.run_fast_hooks_async()
@@ -70,10 +70,10 @@ class TestAsyncHookManager:
         ]
 
         async_hook_manager.config_loader.load_strategy = Mock(
-            return_value=mock_strategy
+            return_value=mock_strategy,
         )
         async_hook_manager.async_executor.execute_strategy = AsyncMock(
-            return_value=mock_result
+            return_value=mock_result,
         )
 
         results = await async_hook_manager.run_comprehensive_hooks_async()
@@ -85,7 +85,7 @@ class TestAsyncHookManager:
     def test_run_fast_hooks_sync(self, async_hook_manager) -> None:
         with patch.object(async_hook_manager, "run_fast_hooks_async") as mock_async:
             mock_async.return_value = [
-                HookResult(id="test", name="test hook", status="passed", duration=1.0)
+                HookResult(id="test", name="test hook", status="passed", duration=1.0),
             ]
 
             results = async_hook_manager.run_fast_hooks()
@@ -95,10 +95,10 @@ class TestAsyncHookManager:
 
     def test_run_comprehensive_hooks_sync(self, async_hook_manager) -> None:
         with patch.object(
-            async_hook_manager, "run_comprehensive_hooks_async"
+            async_hook_manager, "run_comprehensive_hooks_async",
         ) as mock_async:
             mock_async.return_value = [
-                HookResult(id="test", name="test hook", status="passed", duration=1.0)
+                HookResult(id="test", name="test hook", status="passed", duration=1.0),
             ]
 
             results = async_hook_manager.run_comprehensive_hooks()

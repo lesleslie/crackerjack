@@ -8,7 +8,7 @@ that are guaranteed to work. No complex method calls or assumptions.
 class TestWorkingImportsOnly:
     """Test only imports that are guaranteed to work."""
 
-    def test_all_agents_imports(self):
+    def test_all_agents_imports(self) -> None:
         """Import all agents for coverage."""
         from crackerjack.agents import (
             coordinator,
@@ -33,7 +33,7 @@ class TestWorkingImportsOnly:
         assert coordinator is not None
         assert tracker is not None
 
-    def test_all_services_imports(self):
+    def test_all_services_imports(self) -> None:
         """Import all services for coverage."""
         from crackerjack.services import (
             cache,
@@ -83,7 +83,7 @@ class TestWorkingImportsOnly:
         for service in services:
             assert service is not None
 
-    def test_all_core_imports(self):
+    def test_all_core_imports(self) -> None:
         """Import all core modules for coverage."""
         from crackerjack.core import (
             async_workflow_orchestrator,
@@ -111,7 +111,7 @@ class TestWorkingImportsOnly:
         for module in modules:
             assert module is not None
 
-    def test_all_managers_imports(self):
+    def test_all_managers_imports(self) -> None:
         """Import all managers for coverage."""
         from crackerjack.managers import (
             async_hook_manager,
@@ -126,7 +126,7 @@ class TestWorkingImportsOnly:
         assert publish_manager is not None
         assert test_manager is not None
 
-    def test_all_executors_imports(self):
+    def test_all_executors_imports(self) -> None:
         """Import all executors for coverage."""
         from crackerjack.executors import (
             async_hook_executor,
@@ -141,7 +141,7 @@ class TestWorkingImportsOnly:
         assert hook_executor is not None
         assert individual_hook_executor is not None
 
-    def test_all_cli_imports(self):
+    def test_all_cli_imports(self) -> None:
         """Import all CLI modules for coverage."""
         from crackerjack.cli import facade, handlers, interactive, options, utils
 
@@ -152,7 +152,7 @@ class TestWorkingImportsOnly:
         assert options is not None
         assert utils is not None
 
-    def test_all_models_imports(self):
+    def test_all_models_imports(self) -> None:
         """Import all models for coverage."""
         from crackerjack.models import config, config_adapter, protocols, task
 
@@ -162,7 +162,7 @@ class TestWorkingImportsOnly:
         assert protocols is not None
         assert task is not None
 
-    def test_all_orchestration_imports(self):
+    def test_all_orchestration_imports(self) -> None:
         """Import all orchestration modules for coverage."""
         from crackerjack.orchestration import (
             advanced_orchestrator,
@@ -173,7 +173,7 @@ class TestWorkingImportsOnly:
         assert advanced_orchestrator is not None
         assert execution_strategies is not None
 
-    def test_all_plugins_imports(self):
+    def test_all_plugins_imports(self) -> None:
         """Import all plugins modules for coverage."""
         from crackerjack.plugins import base, hooks, loader, managers
 
@@ -183,13 +183,13 @@ class TestWorkingImportsOnly:
         assert loader is not None
         assert managers is not None
 
-    def test_config_imports(self):
+    def test_config_imports(self) -> None:
         """Import config modules for coverage."""
         from crackerjack.config import hooks
 
         assert hooks is not None
 
-    def test_main_package_imports(self):
+    def test_main_package_imports(self) -> None:
         """Import main package modules for coverage."""
         from crackerjack import (
             __main__,
@@ -212,7 +212,7 @@ class TestWorkingImportsOnly:
 class TestBasicFunctionalityThatWorks:
     """Test basic functionality that we know works from the codebase."""
 
-    def test_issue_and_priority_enums(self):
+    def test_issue_and_priority_enums(self) -> None:
         """Test enums that definitely exist."""
         from crackerjack.agents.base import IssueType, Priority
 
@@ -235,7 +235,7 @@ class TestBasicFunctionalityThatWorks:
         assert Priority.HIGH is not None
         assert Priority.CRITICAL is not None
 
-    def test_issue_creation_basic(self):
+    def test_issue_creation_basic(self) -> None:
         """Test basic issue creation that we know works."""
         from crackerjack.agents.base import Issue, IssueType, Priority
 
@@ -255,7 +255,7 @@ class TestBasicFunctionalityThatWorks:
         assert issue.file_path == "test.py"
         assert issue.line_number == 42
 
-    def test_fix_result_creation_basic(self):
+    def test_fix_result_creation_basic(self) -> None:
         """Test basic fix result creation."""
         from crackerjack.agents.base import FixResult
 
@@ -275,7 +275,7 @@ class TestBasicFunctionalityThatWorks:
         assert result.recommendations == ["rec1"]
         assert result.files_modified == ["file1.py"]
 
-    def test_cli_options_that_work(self):
+    def test_cli_options_that_work(self) -> None:
         """Test CLI options that we know exist."""
         from crackerjack.cli.options import BumpOption, Options
 
@@ -297,7 +297,7 @@ class TestBasicFunctionalityThatWorks:
         assert str(BumpOption.minor) == "minor"
         assert str(BumpOption.major) == "major"
 
-    def test_mcp_cache_classes_basic(self):
+    def test_mcp_cache_classes_basic(self) -> None:
         """Test MCP cache classes we know work."""
         from crackerjack.mcp.cache import ErrorPattern, FixResult
 
@@ -316,7 +316,7 @@ class TestBasicFunctionalityThatWorks:
         assert result.files_affected == ["file.py"]
         assert result.time_taken == 1.5
 
-    def test_enhanced_filesystem_file_cache(self):
+    def test_enhanced_filesystem_file_cache(self) -> None:
         """Test enhanced filesystem file cache that we know works."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -336,7 +336,7 @@ class TestBasicFunctionalityThatWorks:
 class TestWorkingMethodCalls:
     """Test method calls that we know work from the codebase."""
 
-    def test_error_pattern_to_dict(self):
+    def test_error_pattern_to_dict(self) -> None:
         """Test ErrorPattern to_dict method."""
         from crackerjack.mcp.cache import ErrorPattern
 
@@ -349,7 +349,7 @@ class TestWorkingMethodCalls:
         assert result_dict["error_code"] == "E001"
         assert result_dict["message_pattern"] == "test pattern"
 
-    def test_fix_result_to_dict(self):
+    def test_fix_result_to_dict(self) -> None:
         """Test FixResult to_dict method."""
         from crackerjack.mcp.cache import FixResult
 
@@ -363,7 +363,7 @@ class TestWorkingMethodCalls:
         assert result_dict["files_affected"] == ["file.py"]
         assert result_dict["time_taken"] == 1.5
 
-    def test_fix_result_merge_with(self):
+    def test_fix_result_merge_with(self) -> None:
         """Test FixResult merge_with method."""
         from crackerjack.agents.base import FixResult
 
@@ -389,7 +389,7 @@ class TestWorkingMethodCalls:
         assert "file1.py" in merged.files_modified
         assert "file2.py" in merged.files_modified
 
-    def test_issue_context_key_property(self):
+    def test_issue_context_key_property(self) -> None:
         """Test Issue context_key property."""
         from crackerjack.agents.base import Issue, IssueType, Priority
 
@@ -408,7 +408,7 @@ class TestWorkingMethodCalls:
         assert "test.py" in context_key
         assert "42" in context_key
 
-    def test_file_cache_operations(self):
+    def test_file_cache_operations(self) -> None:
         """Test FileCache operations that work."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -434,7 +434,7 @@ class TestWorkingMethodCalls:
 class TestPackageStructureValidation:
     """Validate package structure for coverage."""
 
-    def test_package_has_all_expected_modules(self):
+    def test_package_has_all_expected_modules(self) -> None:
         """Test that all expected modules are present."""
         import crackerjack
 
@@ -445,7 +445,7 @@ class TestPackageStructureValidation:
         # Package should be properly structured
         assert crackerjack is not None
 
-    def test_all_subpackages_importable(self):
+    def test_all_subpackages_importable(self) -> None:
         """Test all subpackages can be imported."""
         subpackages = [
             "agents",
@@ -467,7 +467,7 @@ class TestPackageStructureValidation:
             module = __import__(f"crackerjack.{package}", fromlist=[""])
             assert module is not None
 
-    def test_critical_classes_exist(self):
+    def test_critical_classes_exist(self) -> None:
         """Test that critical classes exist where expected."""
         # Test Issue and related classes
         from crackerjack.agents.base import FixResult, Issue, IssueType, Priority

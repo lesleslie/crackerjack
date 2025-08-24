@@ -26,14 +26,14 @@ def performance_agent(temp_context):
 class TestPerformanceAgentSimple:
     """Simple test cases for PerformanceAgent."""
 
-    def test_get_supported_types(self, performance_agent):
+    def test_get_supported_types(self, performance_agent) -> None:
         """Test that PerformanceAgent supports PERFORMANCE type."""
         supported_types = performance_agent.get_supported_types()
         assert IssueType.PERFORMANCE in supported_types
         assert len(supported_types) == 1
 
     @pytest.mark.asyncio
-    async def test_can_handle_performance_issue(self, performance_agent):
+    async def test_can_handle_performance_issue(self, performance_agent) -> None:
         """Test that PerformanceAgent can handle performance issues with correct confidence."""
         issue = Issue(
             id="perf-001",
@@ -47,7 +47,7 @@ class TestPerformanceAgentSimple:
         assert confidence == 0.85
 
     @pytest.mark.asyncio
-    async def test_cannot_handle_other_issue_types(self, performance_agent):
+    async def test_cannot_handle_other_issue_types(self, performance_agent) -> None:
         """Test that PerformanceAgent returns 0.0 confidence for non-performance issues."""
         issue = Issue(
             id="sec-001",
@@ -61,7 +61,7 @@ class TestPerformanceAgentSimple:
         assert confidence == 0.0
 
     @pytest.mark.asyncio
-    async def test_analyze_and_fix_with_nonexistent_file(self, performance_agent):
+    async def test_analyze_and_fix_with_nonexistent_file(self, performance_agent) -> None:
         """Test handling of nonexistent file."""
         issue = Issue(
             id="perf-002",
@@ -79,7 +79,7 @@ class TestPerformanceAgentSimple:
         assert len(result.remaining_issues) > 0
 
     @pytest.mark.asyncio
-    async def test_analyze_and_fix_with_no_file_path(self, performance_agent):
+    async def test_analyze_and_fix_with_no_file_path(self, performance_agent) -> None:
         """Test handling of issue without file path."""
         issue = Issue(
             id="perf-003",

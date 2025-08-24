@@ -12,7 +12,7 @@ from rich.console import Console
 
 
 class JobDataCollector:
-    def __init__(self, progress_dir: Path, websocket_url: str):
+    def __init__(self, progress_dir: Path, websocket_url: str) -> None:
         self.progress_dir = progress_dir
         self.websocket_url = websocket_url
         self.console = Console()
@@ -41,7 +41,7 @@ class JobDataCollector:
         }
 
     async def _discover_jobs_filesystem(
-        self, jobs_data: dict[str, Any]
+        self, jobs_data: dict[str, Any],
     ) -> dict[str, Any]:
         with suppress(Exception):
             if not self.progress_dir.exists():
@@ -53,7 +53,7 @@ class JobDataCollector:
         return jobs_data
 
     def _process_progress_file(
-        self, progress_file: Path, jobs_data: dict[str, Any]
+        self, progress_file: Path, jobs_data: dict[str, Any],
     ) -> None:
         with suppress(json.JSONDecodeError, OSError):
             with progress_file.open() as f:
@@ -65,7 +65,7 @@ class JobDataCollector:
             self._add_individual_job(job_id, data, jobs_data)
 
     def _update_job_counters(
-        self, data: dict[str, Any], jobs_data: dict[str, Any]
+        self, data: dict[str, Any], jobs_data: dict[str, Any],
     ) -> None:
         status = data.get("status", "unknown")
         if status == "running":
@@ -77,7 +77,7 @@ class JobDataCollector:
         jobs_data["total"] += 1
 
     def _aggregate_error_metrics(
-        self, data: dict[str, Any], jobs_data: dict[str, Any]
+        self, data: dict[str, Any], jobs_data: dict[str, Any],
     ) -> None:
         jobs_data["total_issues"] += data.get("total_issues", 0)
         jobs_data["errors_fixed"] += data.get("errors_fixed", 0)
@@ -92,7 +92,7 @@ class JobDataCollector:
         jobs_data["current_errors"] += current_errors
 
     def _add_individual_job(
-        self, job_id: str, data: dict[str, Any], jobs_data: dict[str, Any]
+        self, job_id: str, data: dict[str, Any], jobs_data: dict[str, Any],
     ) -> None:
         status = data.get("status", "unknown")
         stage = data.get("current_stage", "Unknown")
@@ -122,7 +122,7 @@ class JobDataCollector:
                 "errors_fixed": data.get("errors_fixed", 0),
                 "errors_failed": data.get("errors_failed", 0),
                 "current_errors": data.get("current_errors", {}),
-            }
+            },
         )
 
     async def _discover_jobs_websocket(self) -> dict[str, Any]:
@@ -140,57 +140,56 @@ class JobDataCollector:
 
         with suppress(Exception):
             websocket_base = self.websocket_url.replace("ws: // ", "http: // ").replace(
-                "wss: // ", "https: // "
+                "wss: // ", "https: // ",
             )
 
             async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=3)
-            ) as session:
-                async with session.get(f"{websocket_base} / ") as response:
-                    if response.status == 200:
-                        data = await response.json()
+                timeout=aiohttp.ClientTimeout(total=3),
+            ) as session, session.get(f"{websocket_base} / ") as response:
+                if response.status == 200:
+                    data = await response.json()
 
-                        active_jobs = data.get("active_jobs_detailed", [])
+                    active_jobs = data.get("active_jobs_detailed", [])
 
-                        for job in active_jobs:
-                            job_id = job.get("job_id", "unknown")
-                            status = job.get("status", "unknown")
+                    for job in active_jobs:
+                        job_id = job.get("job_id", "unknown")
+                        status = job.get("status", "unknown")
 
-                            if status == "running":
-                                jobs_data["active"] += 1
-                            elif status == "completed":
-                                jobs_data["completed"] += 1
-                            elif status == "failed":
-                                jobs_data["failed"] += 1
+                        if status == "running":
+                            jobs_data["active"] += 1
+                        elif status == "completed":
+                            jobs_data["completed"] += 1
+                        elif status == "failed":
+                            jobs_data["failed"] += 1
 
-                            jobs_data["total"] += 1
+                        jobs_data["total"] += 1
 
-                            job_entry = {
-                                "job_id": job_id,
-                                "status": status,
-                                "iteration": job.get("iteration", 1),
-                                "max_iterations": job.get("max_iterations", 10),
-                                "current_stage": job.get("current_stage", "unknown"),
-                                "message": job.get("message", "Processing..."),
-                                "project": job.get("project", "crackerjack"),
-                                "total_issues": job.get("total_issues", 0),
-                                "errors_fixed": job.get("errors_fixed", 0),
-                                "errors_failed": job.get("errors_failed", 0),
-                                "current_errors": job.get("current_errors", 0),
-                                "overall_progress": job.get("overall_progress", 0.0),
-                                "stage_progress": job.get("stage_progress", 0.0),
-                            }
-                            jobs_data["individual_jobs"].append(job_entry)
+                        job_entry = {
+                            "job_id": job_id,
+                            "status": status,
+                            "iteration": job.get("iteration", 1),
+                            "max_iterations": job.get("max_iterations", 10),
+                            "current_stage": job.get("current_stage", "unknown"),
+                            "message": job.get("message", "Processing..."),
+                            "project": job.get("project", "crackerjack"),
+                            "total_issues": job.get("total_issues", 0),
+                            "errors_fixed": job.get("errors_fixed", 0),
+                            "errors_failed": job.get("errors_failed", 0),
+                            "current_errors": job.get("current_errors", 0),
+                            "overall_progress": job.get("overall_progress", 0.0),
+                            "stage_progress": job.get("stage_progress", 0.0),
+                        }
+                        jobs_data["individual_jobs"].append(job_entry)
 
-                            jobs_data["total_issues"] += job.get("total_issues", 0)
-                            jobs_data["errors_fixed"] += job.get("errors_fixed", 0)
-                            jobs_data["errors_failed"] += job.get("errors_failed", 0)
+                        jobs_data["total_issues"] += job.get("total_issues", 0)
+                        jobs_data["errors_fixed"] += job.get("errors_fixed", 0)
+                        jobs_data["errors_failed"] += job.get("errors_failed", 0)
 
         return jobs_data
 
 
 class ServiceHealthChecker:
-    def __init__(self):
+    def __init__(self) -> None:
         self.console = Console()
 
     async def collect_services_data(self) -> list[tuple[str, str, str]]:
@@ -200,14 +199,14 @@ class ServiceHealthChecker:
             (
                 await self._check_websocket_server(),
                 self._check_mcp_server(),
-            )
+            ),
         )
 
         services.extend(
             (
                 self._check_service_watchdog(),
                 ("File Monitor", "🟢 Watching", "0"),
-            )
+            ),
         )
 
         return services
@@ -215,32 +214,29 @@ class ServiceHealthChecker:
     async def _check_websocket_server(self) -> tuple[str, str, str]:
         try:
             async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=2)
-            ) as session:
-                async with session.get("http: // localhost: 8675 / ") as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        connections = data.get("total_connections", 0)
-                        len(data.get("active_jobs", []))
-                        return (
-                            "WebSocket Server",
-                            f"🟢 Active ({connections} conn)",
-                            "0",
-                        )
-                    else:
-                        return ("WebSocket Server", "🔴 HTTP Error", "1")
+                timeout=aiohttp.ClientTimeout(total=2),
+            ) as session, session.get("http: // localhost: 8675 / ") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    connections = data.get("total_connections", 0)
+                    len(data.get("active_jobs", []))
+                    return (
+                        "WebSocket Server",
+                        f"🟢 Active ({connections} conn)",
+                        "0",
+                    )
+                return ("WebSocket Server", "🔴 HTTP Error", "1")
         except Exception:
             return ("WebSocket Server", "🔴 Connection Failed", "1")
 
     def _check_mcp_server(self) -> tuple[str, str, str]:
         try:
             result = subprocess.run(
-                ["pgrep", "-f", "crackerjack.*mcp"], capture_output=True, text=True
+                ["pgrep", "-f", "crackerjack.*mcp"], check=False, capture_output=True, text=True,
             )
             if result.returncode == 0:
                 return ("MCP Server", "🟢 Process Active", "0")
-            else:
-                return ("MCP Server", "🔴 No Process", "0")
+            return ("MCP Server", "🔴 No Process", "0")
         except Exception:
             return ("MCP Server", "🔴 Check Failed", "0")
 
@@ -248,19 +244,18 @@ class ServiceHealthChecker:
         try:
             result = subprocess.run(
                 ["pgrep", "-f", "crackerjack.*watchdog"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
             )
             if result.returncode == 0:
                 return ("Service Watchdog", "🟢 Active", "0")
-            else:
-                return ("Service Watchdog", "🔴 Inactive", "0")
+            return ("Service Watchdog", "🔴 Inactive", "0")
         except Exception:
             return ("Service Watchdog", "🔴 Check Failed", "0")
 
 
 class ErrorCollector:
-    def __init__(self):
+    def __init__(self) -> None:
         self.console = Console()
 
     async def collect_recent_errors(self) -> list[tuple[str, str, str, str]]:
@@ -295,7 +290,7 @@ class ErrorCollector:
         return errors
 
     def _extract_debug_log_errors(
-        self, debug_log: Path
+        self, debug_log: Path,
     ) -> list[tuple[str, str, str, str]]:
         """Extract error entries from debug log file."""
         errors = []
@@ -345,7 +340,7 @@ class ErrorCollector:
         return time.time() - log_file.stat().st_mtime < 3600
 
     def _extract_errors_from_log_file(
-        self, log_file: Path
+        self, log_file: Path,
     ) -> list[tuple[str, str, str, str]]:
         """Extract error entries from a single log file."""
         errors = []
@@ -367,7 +362,7 @@ class ErrorCollector:
         )
 
     def _create_error_entry(
-        self, line: str, log_file: Path
+        self, line: str, log_file: Path,
     ) -> tuple[str, str, str, str]:
         """Create error entry tuple from log line and file."""
         timestamp = time.strftime(
@@ -383,7 +378,7 @@ class ErrorCollector:
 
 
 class ServiceManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.started_services: list[tuple[str, subprocess.Popen]] = []
         self.console = Console()
 
@@ -412,7 +407,7 @@ class ServiceManager:
     async def _check_websocket_server(self) -> bool:
         with suppress(Exception):
             async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=2)
+                timeout=aiohttp.ClientTimeout(total=2),
             ) as session:
                 async with session.get("http: // localhost: 8675 / ") as response:
                     return response.status == 200
@@ -421,7 +416,7 @@ class ServiceManager:
     def _check_mcp_server(self) -> bool:
         with suppress(Exception):
             result = subprocess.run(
-                ["pgrep", "-f", "crackerjack.*mcp"], capture_output=True, text=True
+                ["pgrep", "-f", "crackerjack.*mcp"], check=False, capture_output=True, text=True,
             )
             return result.returncode == 0
         return False
@@ -452,7 +447,7 @@ class ServiceManager:
         with suppress(Exception):
             result = subprocess.run(
                 ["pgrep", "-f", "crackerjack.*watchdog"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
             )
             if result.returncode == 0:
@@ -467,7 +462,7 @@ class ServiceManager:
             self.started_services.append(("watchdog", process))
 
     def cleanup_services(self) -> None:
-        for service_name, process in self.started_services:
+        for _service_name, process in self.started_services:
             self._cleanup_single_service(process)
         self.started_services.clear()
 
@@ -538,7 +533,7 @@ class TerminalRestorer:
                 sys.stdout.flush()
 
                 subprocess.run(
-                    ["stty", "sane"], check=False, capture_output=True, timeout=1
+                    ["stty", "sane"], check=False, capture_output=True, timeout=1,
                 )
             except Exception:
                 pass

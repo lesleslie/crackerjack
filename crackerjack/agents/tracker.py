@@ -19,7 +19,7 @@ class AgentActivity:
 
 
 class AgentTracker:
-    def __init__(self):
+    def __init__(self) -> None:
         self.active_agents: dict[str, AgentActivity] = {}
         self.completed_activities: list[AgentActivity] = []
         self.performance_metrics: defaultdict[str, list[float]] = defaultdict(list)
@@ -43,7 +43,7 @@ class AgentTracker:
         }
 
     def track_agent_evaluation(
-        self, agent_type: str, issue: Issue, confidence: float
+        self, agent_type: str, issue: Issue, confidence: float,
     ) -> None:
         self.active_agents[agent_type] = AgentActivity(
             agent_type=agent_type,
@@ -53,7 +53,7 @@ class AgentTracker:
         )
 
     def track_agent_processing(
-        self, agent_type: str, issue: Issue, confidence: float
+        self, agent_type: str, issue: Issue, confidence: float,
     ) -> None:
         if agent_type in self.active_agents:
             activity = self.active_agents[agent_type]
@@ -162,7 +162,7 @@ class AgentTracker:
                     "agent_type": agent_type,
                     "status": activity.status,
                     "processing_time": processing_time,
-                }
+                },
             )
 
         return {

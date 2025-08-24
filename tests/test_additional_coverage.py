@@ -38,7 +38,7 @@ class TestCrackerjackAPI:
     def test_run_quality_checks(self, api) -> None:
         mock_workflow = AsyncMock(return_value=True)
         with patch.object(
-            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow
+            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow,
         ):
             result = api.run_quality_checks()
 
@@ -48,7 +48,7 @@ class TestCrackerjackAPI:
     def test_run_tests(self, api) -> None:
         mock_workflow = AsyncMock(return_value=True)
         with patch.object(
-            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow
+            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow,
         ):
             result = api.run_tests()
 
@@ -57,7 +57,7 @@ class TestCrackerjackAPI:
     def test_publish_package(self, api) -> None:
         mock_workflow = AsyncMock(return_value=True)
         with patch.object(
-            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow
+            api.orchestrator.pipeline, "run_complete_workflow", mock_workflow,
         ):
             result = api.publish_package(version_bump="patch")
 
@@ -280,7 +280,7 @@ class TestSecurityServiceExtended:
     @patch("crackerjack.services.security.Path.chmod")
     @patch("crackerjack.services.security.os.fdopen")
     def test_create_secure_token_file(
-        self, mock_fdopen, mock_chmod, mock_mkstemp, security_service
+        self, mock_fdopen, mock_chmod, mock_mkstemp, security_service,
     ) -> None:
         mock_mkstemp.return_value = (10, " / tmp / secure_file")
         mock_file = mock_fdopen.return_value.__enter__.return_value

@@ -66,7 +66,7 @@ class TestCrackerjackError:
     def test_error_defaults(self) -> None:
         """Test error class defaults."""
         error = CrackerjackError(
-            message="Test error", error_code=ErrorCode.UNKNOWN_ERROR
+            message="Test error", error_code=ErrorCode.UNKNOWN_ERROR,
         )
         assert error.message == "Test error"
         assert error.error_code == ErrorCode.UNKNOWN_ERROR
@@ -77,7 +77,7 @@ class TestCrackerjackError:
     def test_error_repr(self) -> None:
         """Test error representation."""
         error = CrackerjackError(
-            message="Test error", error_code=ErrorCode.CONFIG_ERROR
+            message="Test error", error_code=ErrorCode.CONFIG_ERROR,
         )
         repr_str = repr(error)
         assert "CrackerjackError" in repr_str

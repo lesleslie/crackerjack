@@ -11,9 +11,9 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
-from ..core.workflow_orchestrator import WorkflowOrchestrator
-from ..errors import CrackerjackError, ErrorCode, handle_error
-from ..models.protocols import OptionsProtocol
+from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+from crackerjack.errors import CrackerjackError, ErrorCode, handle_error
+from crackerjack.models.protocols import OptionsProtocol
 
 
 class TaskStatus(Enum):
@@ -156,7 +156,8 @@ class InteractiveWorkflowManager:
         if dependencies:
             for dep_name in dependencies:
                 if dep_name not in self.tasks:
-                    raise ValueError(f"Dependency task '{dep_name}' not found")
+                    msg = f"Dependency task '{dep_name}' not found"
+                    raise ValueError(msg)
                 dep_tasks.append(self.tasks[dep_name])
 
         task = InteractiveTask(name, description, phase_method, dep_tasks)
@@ -246,7 +247,7 @@ class InteractiveWorkflowManager:
     def update_layout(self, pkg_version: str) -> None:
         self.layout["header"].update(self.create_header(pkg_version))
         self.layout["tasks"].update(
-            Panel(self.create_task_tree(), title="Tasks", border_style="blue")
+            Panel(self.create_task_tree(), title="Tasks", border_style="blue"),
         )
         self.layout["details"].update(self.create_details_panel())
         self.layout["footer"].update(self.create_footer())
@@ -265,7 +266,7 @@ class InteractiveWorkflowManager:
         self.setup_workflow(options)
         if not self.tasks:
             self.console.print(
-                "[yellow]⚠️ No tasks to execute based on options[/yellow]"
+                "[yellow]⚠️ No tasks to execute based on options[/yellow]",
             )
             return True
 
@@ -279,7 +280,7 @@ class InteractiveWorkflowManager:
         return True
 
     def _execute_workflow_tasks(
-        self, live: Live, options: OptionsProtocol, pkg_version: str
+        self, live: Live, options: OptionsProtocol, pkg_version: str,
     ) -> bool:
         while True:
             next_task = self.get_next_task()
@@ -354,17 +355,17 @@ class InteractiveWorkflowManager:
             duration_text = f"{task.duration: .1f}s" if task.duration else " - "
             details = task.error.message if task.error else task.description
             table.add_row(
-                task.name, f"[{style}]{status_text}[/{style}]", duration_text, details
+                task.name, f"[{style}]{status_text}[/{style}]", duration_text, details,
             )
         self.console.print("\n")
         self.console.print(table)
         if failed_count == 0:
             self.console.print(
-                f"\n[bold green]🎉 Workflow completed ! {success_count} / {len(self.tasks)} tasks successful[/bold green]"
+                f"\n[bold green]🎉 Workflow completed ! {success_count} / {len(self.tasks)} tasks successful[/bold green]",
             )
         else:
             self.console.print(
-                f"\n[bold yellow]⚠️ Workflow completed with issues: {failed_count} failed, {skipped_count} skipped[/bold yellow]"
+                f"\n[bold yellow]⚠️ Workflow completed with issues: {failed_count} failed, {skipped_count} skipped[/bold yellow]",
             )
 
 
@@ -374,7 +375,7 @@ class InteractiveCLI:
         self.console = console or Console(force_terminal=True)
         self.orchestrator = WorkflowOrchestrator(console=self.console)
         self.workflow_manager = InteractiveWorkflowManager(
-            self.console, self.orchestrator
+            self.console, self.orchestrator,
         )
 
     def launch(self, options: OptionsProtocol) -> None:
@@ -382,7 +383,7 @@ class InteractiveCLI:
             self._show_welcome()
             updated_options = self._get_user_preferences(options)
             success = self.workflow_manager.run_workflow(
-                updated_options, self.pkg_version
+                updated_options, self.pkg_version,
             )
             if not success:
                 raise SystemExit(1)
@@ -414,11 +415,11 @@ class InteractiveCLI:
         self.console.print("Configure your crackerjack workflow: \n")
         updated_options = type(options)(**vars(options))
         updated_options.clean = Confirm.ask(
-            "🧹 Clean code (remove docstrings, comments)?", default=options.clean
+            "🧹 Clean code (remove docstrings, comments)?", default=options.clean,
         )
         updated_options.test = Confirm.ask("🧪 Run tests?", default=options.test)
         updated_options.commit = Confirm.ask(
-            "📝 Commit changes to git?", default=options.commit
+            "📝 Commit changes to git?", default=options.commit,
         )
         if not any([options.publish, options.all, options.bump]):
             if Confirm.ask("📦 Bump version and publish?", default=False):
@@ -430,7 +431,7 @@ class InteractiveCLI:
                 updated_options.publish = version_type
         if Confirm.ask("\n⚙️ Configure advanced options?", default=False):
             updated_options.verbose = Confirm.ask(
-                "Enable verbose output?", default=options.verbose
+                "Enable verbose output?", default=options.verbose,
             )
         self.console.print()
         return updated_options

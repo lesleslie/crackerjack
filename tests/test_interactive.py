@@ -161,7 +161,7 @@ class TestWorkflowManager:
     def test_run_task_without_executor(self) -> None:
         workflow = WorkflowManager(Console())
         task_defs = {
-            "test": TaskDefinition("test", "Test task", "Test Description", [])
+            "test": TaskDefinition("test", "Test task", "Test Description", []),
         }
         workflow.load_workflow(task_defs)
         task = workflow.tasks["test"]

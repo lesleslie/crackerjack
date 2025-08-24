@@ -10,7 +10,7 @@ from typing import Any
 
 from rich.console import Console
 
-from ..models.protocols import FileSystemInterface
+from crackerjack.models.protocols import FileSystemInterface
 
 
 @dataclass
@@ -31,10 +31,7 @@ class ProjectHealth:
         if any(age > 180 for age in self.dependency_age.values()):
             return True
 
-        if self.config_completeness < 0.8:
-            return True
-
-        return False
+        return self.config_completeness < 0.8
 
     def _is_trending_up(self, values: list[int], min_points: int = 3) -> bool:
         if len(values) < min_points:
@@ -55,14 +52,14 @@ class ProjectHealth:
 
         if self.lint_error_trend:
             recent_errors = sum(self.lint_error_trend[-5:]) / min(
-                len(self.lint_error_trend), 5
+                len(self.lint_error_trend), 5,
             )
             lint_score = max(0, 1.0 - (recent_errors / 100))
             scores.append(lint_score)
 
         if self.test_coverage_trend:
             recent_coverage = sum(self.test_coverage_trend[-5:]) / min(
-                len(self.test_coverage_trend), 5
+                len(self.test_coverage_trend), 5,
             )
             coverage_score = recent_coverage / 100.0
             scores.append(coverage_score)
@@ -82,7 +79,7 @@ class ProjectHealth:
 
         if self._is_trending_up(self.lint_error_trend):
             recommendations.append(
-                "🔧 Lint errors are increasing - consider running formatting tools"
+                "🔧 Lint errors are increasing - consider running formatting tools",
             )
 
         if self._is_trending_down(self.test_coverage_trend):
@@ -93,12 +90,12 @@ class ProjectHealth:
                 pkg for pkg, age in self.dependency_age.items() if age > 365
             ]
             recommendations.append(
-                f"📦 Very old dependencies detected: {', '.join(old_deps[:3])}"
+                f"📦 Very old dependencies detected: {', '.join(old_deps[:3])}",
             )
 
         if self.config_completeness < 0.5:
             recommendations.append(
-                "⚙️ Project configuration is incomplete - run crackerjack init"
+                "⚙️ Project configuration is incomplete - run crackerjack init",
             )
         elif self.config_completeness < 0.8:
             recommendations.append("⚙️ Project configuration could be improved")
@@ -108,7 +105,7 @@ class ProjectHealth:
             older_avg = sum(self.lint_error_trend[-10:-5]) / 5
             if recent_avg > older_avg * 1.5:
                 recommendations.append(
-                    "📈 Quality is degrading rapidly - immediate attention needed"
+                    "📈 Quality is degrading rapidly - immediate attention needed",
                 )
 
         return recommendations
@@ -173,14 +170,14 @@ class HealthMetricsService:
                 json.dump(data, f, indent=2)
         except Exception as e:
             self.console.print(
-                f"[yellow]Warning: Failed to save health metrics: {e}[/yellow]"
+                f"[yellow]Warning: Failed to save health metrics: {e}[/yellow]",
             )
 
     def _count_lint_errors(self) -> int | None:
         with suppress(Exception):
             result = subprocess.run(
                 ["uv", "run", "ruff", "check", ".", "--output-format=json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=30,
                 cwd=self.project_root,
@@ -226,7 +223,7 @@ class HealthMetricsService:
                         "-q",
                         "--maxfail=1",
                     ],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=60,
                     cwd=self.project_root,
@@ -240,7 +237,7 @@ class HealthMetricsService:
 
             result = subprocess.run(
                 ["uv", "run", "coverage", "report", "--format=json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=15,
                 cwd=self.project_root,
@@ -299,7 +296,8 @@ class HealthMetricsService:
 
             # Validate URL scheme for security
             if not url.startswith("https://pypi.org/"):
-                raise ValueError(f"Invalid URL scheme: {url}")
+                msg = f"Invalid URL scheme: {url}"
+                raise ValueError(msg)
 
             with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
                 data = json.load(response)
@@ -320,9 +318,8 @@ class HealthMetricsService:
                 return None
 
             try:
-                upload_date = datetime.fromisoformat(upload_time.replace("Z", "+00:00"))
-                age = (datetime.now(upload_date.tzinfo) - upload_date).days
-                return age
+                upload_date = datetime.fromisoformat(upload_time)
+                return (datetime.now(upload_date.tzinfo) - upload_date).days
             except Exception:
                 return None
 
@@ -450,21 +447,21 @@ class HealthMetricsService:
     def _print_health_summary(self, health_score: float) -> None:
         """Print the overall health score with appropriate styling."""
         status_icon, status_text, status_color = self._get_health_status_display(
-            health_score
+            health_score,
         )
 
         self.console.print("\n[bold]📊 Project Health Report[/bold]")
         self.console.print(
-            f"{status_icon} Overall Health: [{status_color}]{status_text} ({health_score:.1%})[/{status_color}]"
+            f"{status_icon} Overall Health: [{status_color}]{status_text} ({health_score:.1%})[/{status_color}]",
         )
 
     def _get_health_status_display(self, health_score: float) -> tuple[str, str, str]:
         """Get display elements (icon, text, color) for health score."""
         if health_score >= 0.8:
             return "🟢", "Excellent", "green"
-        elif health_score >= 0.6:
+        if health_score >= 0.6:
             return "🟡", "Good", "yellow"
-        elif health_score >= 0.4:
+        if health_score >= 0.4:
             return "🟠", "Fair", "orange"
         return "🔴", "Poor", "red"
 
@@ -494,13 +491,13 @@ class HealthMetricsService:
 
         if health.needs_init():
             self.console.print(
-                "\n[bold yellow]⚠️ Consider running `crackerjack --init` to improve project health[/bold yellow]"
+                "\n[bold yellow]⚠️ Consider running `crackerjack --init` to improve project health[/bold yellow]",
             )
 
     def get_health_trend_summary(self, days: int = 30) -> dict[str, Any]:
         health = self._load_health_history()
 
-        summary = {
+        return {
             "health_score": health.get_health_score(),
             "needs_attention": health.needs_init(),
             "recommendations": health.get_recommendations(),
@@ -521,7 +518,7 @@ class HealthMetricsService:
                     else None,
                     "trend": "up"
                     if health._is_trending_up(
-                        [int(x) for x in health.test_coverage_trend]
+                        [int(x) for x in health.test_coverage_trend],
                     )
                     else "down"
                     if health._is_trending_down(health.test_coverage_trend)
@@ -540,4 +537,3 @@ class HealthMetricsService:
             },
         }
 
-        return summary

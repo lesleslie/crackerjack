@@ -10,7 +10,7 @@ from rich.console import Console
 class TestMainModuleImports:
     """Test that main module imports work correctly."""
 
-    def test_console_creation(self):
+    def test_console_creation(self) -> None:
         """Test that console is created properly."""
         # Import after patching to avoid side effects
         with patch("crackerjack.__main__.Console") as mock_console_class:
@@ -27,7 +27,7 @@ class TestMainModuleImports:
             # Console should be created with force_terminal=True
             mock_console_class.assert_called_with(force_terminal=True)
 
-    def test_typer_app_creation(self):
+    def test_typer_app_creation(self) -> None:
         """Test that typer app is created properly."""
         with patch("crackerjack.__main__.typer.Typer") as mock_typer_class:
             mock_app = Mock()
@@ -42,10 +42,10 @@ class TestMainModuleImports:
 
             # Typer should be created with help text
             mock_typer_class.assert_called_with(
-                help="Crackerjack: Your Python project setup and style enforcement tool."
+                help="Crackerjack: Your Python project setup and style enforcement tool.",
             )
 
-    def test_imports_available(self):
+    def test_imports_available(self) -> None:
         """Test that main module imports are available."""
         import crackerjack.__main__ as main_module
 
@@ -53,7 +53,7 @@ class TestMainModuleImports:
         assert hasattr(main_module, "console")
         assert hasattr(main_module, "app")
 
-    def test_cli_imports_available(self):
+    def test_cli_imports_available(self) -> None:
         """Test that CLI imports are available."""
         try:
             from crackerjack.cli import (
@@ -75,7 +75,7 @@ class TestMainModuleImports:
         except ImportError:
             pytest.skip("CLI imports not available")
 
-    def test_handler_imports_available(self):
+    def test_handler_imports_available(self) -> None:
         """Test that handler imports are available."""
         try:
             from crackerjack.cli.handlers import (
@@ -109,50 +109,50 @@ class TestMainModuleImports:
 class TestMainModuleStructure:
     """Test the structure and components of the main module."""
 
-    def test_module_has_console(self):
+    def test_module_has_console(self) -> None:
         """Test that module has console attribute."""
         import crackerjack.__main__ as main_module
 
         assert hasattr(main_module, "console")
         # Console should be some kind of console object
-        console = getattr(main_module, "console")
+        console = main_module.console
         assert console is not None
 
-    def test_module_has_app(self):
+    def test_module_has_app(self) -> None:
         """Test that module has typer app attribute."""
         import crackerjack.__main__ as main_module
 
         assert hasattr(main_module, "app")
         # App should be some kind of typer app
-        app = getattr(main_module, "app")
+        app = main_module.app
         assert app is not None
 
-    def test_console_type(self):
+    def test_console_type(self) -> None:
         """Test that console is the expected type."""
         import crackerjack.__main__ as main_module
 
-        console = getattr(main_module, "console")
+        console = main_module.console
         # Should have console-like methods
         assert (
             hasattr(console, "print")
             or str(type(console)) == "<class 'unittest.mock.Mock'>"
         )
 
-    def test_app_type(self):
+    def test_app_type(self) -> None:
         """Test that app is the expected type."""
         import crackerjack.__main__ as main_module
 
-        app = getattr(main_module, "app")
+        app = main_module.app
         # Should be typer app or mock
         assert (
-            hasattr(app, "__call__") or str(type(app)) == "<class 'unittest.mock.Mock'>"
+            callable(app) or str(type(app)) == "<class 'unittest.mock.Mock'>"
         )
 
 
 class TestMainModuleInitialization:
     """Test main module initialization behavior."""
 
-    def test_module_can_be_imported(self):
+    def test_module_can_be_imported(self) -> None:
         """Test that the main module can be imported successfully."""
         import importlib.util
 
@@ -163,7 +163,7 @@ class TestMainModuleInitialization:
         # If we get here, module was found successfully
         assert True
 
-    def test_module_imports_do_not_raise(self):
+    def test_module_imports_do_not_raise(self) -> None:
         """Test that module imports don't raise exceptions."""
         # This tests the actual import statements at module level
         try:
@@ -175,7 +175,7 @@ class TestMainModuleInitialization:
         except Exception as e:
             pytest.fail(f"Module imports raised exception: {e}")
 
-    def test_console_initialization(self):
+    def test_console_initialization(self) -> None:
         """Test console initialization with correct parameters."""
         # Test that console creation works
         from rich.console import Console
@@ -187,11 +187,11 @@ class TestMainModuleInitialization:
         assert console is not None
         assert hasattr(console, "print")
 
-    def test_typer_app_initialization(self):
+    def test_typer_app_initialization(self) -> None:
         """Test typer app initialization with correct parameters."""
         # Test that typer app creation works
         app = typer.Typer(
-            help="Crackerjack: Your Python project setup and style enforcement tool."
+            help="Crackerjack: Your Python project setup and style enforcement tool.",
         )
 
         # Should not raise error
@@ -202,7 +202,7 @@ class TestMainModuleInitialization:
 class TestMainModuleDependencies:
     """Test main module dependencies and their availability."""
 
-    def test_typer_available(self):
+    def test_typer_available(self) -> None:
         """Test that typer dependency is available."""
         try:
             import typer
@@ -211,7 +211,7 @@ class TestMainModuleDependencies:
         except ImportError:
             pytest.fail("typer dependency not available")
 
-    def test_rich_available(self):
+    def test_rich_available(self) -> None:
         """Test that rich dependency is available."""
         try:
             from rich.console import Console
@@ -220,7 +220,7 @@ class TestMainModuleDependencies:
         except ImportError:
             pytest.fail("rich dependency not available")
 
-    def test_cli_module_available(self):
+    def test_cli_module_available(self) -> None:
         """Test that cli module is available."""
         import importlib.util
 
@@ -231,7 +231,7 @@ class TestMainModuleDependencies:
         # Should be found successfully
         assert True
 
-    def test_cli_handlers_module_available(self):
+    def test_cli_handlers_module_available(self) -> None:
         """Test that cli.handlers module is available."""
         import importlib.util
 
@@ -246,7 +246,7 @@ class TestMainModuleDependencies:
 class TestMainModuleFunctionality:
     """Test main module functionality and behavior."""
 
-    def test_module_attributes_are_not_none(self):
+    def test_module_attributes_are_not_none(self) -> None:
         """Test that module attributes are properly initialized."""
         import crackerjack.__main__ as main_module
 
@@ -254,25 +254,25 @@ class TestMainModuleFunctionality:
         assert getattr(main_module, "console", None) is not None
         assert getattr(main_module, "app", None) is not None
 
-    def test_console_has_expected_interface(self):
+    def test_console_has_expected_interface(self) -> None:
         """Test that console has expected interface."""
         import crackerjack.__main__ as main_module
 
-        console = getattr(main_module, "console")
+        console = main_module.console
         # Console should have print method (or be a mock)
         assert hasattr(console, "print") or str(type(console)).startswith(
-            "<class 'unittest.mock."
+            "<class 'unittest.mock.",
         )
 
-    def test_app_has_expected_interface(self):
+    def test_app_has_expected_interface(self) -> None:
         """Test that app has expected interface."""
         import crackerjack.__main__ as main_module
 
-        app = getattr(main_module, "app")
+        app = main_module.app
         # App should be callable (or be a mock)
         assert callable(app) or str(type(app)).startswith("<class 'unittest.mock.")
 
-    def test_module_structure_consistency(self):
+    def test_module_structure_consistency(self) -> None:
         """Test that module structure is consistent."""
         import crackerjack.__main__ as main_module
 
@@ -287,19 +287,19 @@ class TestMainModuleFunctionality:
 class TestMainModuleIntegration:
     """Integration tests for main module components."""
 
-    def test_console_and_app_coexist(self):
+    def test_console_and_app_coexist(self) -> None:
         """Test that console and app can coexist without conflicts."""
         import crackerjack.__main__ as main_module
 
-        console = getattr(main_module, "console")
-        app = getattr(main_module, "app")
+        console = main_module.console
+        app = main_module.app
 
         # Both should exist without conflicting
         assert console is not None
         assert app is not None
         assert console is not app  # Should be different objects
 
-    def test_module_level_initialization(self):
+    def test_module_level_initialization(self) -> None:
         """Test that module-level initialization works correctly."""
         # Re-import to test initialization
         import importlib

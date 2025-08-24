@@ -37,14 +37,14 @@ class WebSocketHandler:
                         "iteration": 0,
                         "max_iterations": 10,
                         "current_stage": "Initializing",
-                    }
+                    },
                 )
 
             while True:
                 try:
                     data = await websocket.receive_text()
                     console.print(
-                        f"[blue]Received message for {job_id}: {data[:100]}...[/blue]"
+                        f"[blue]Received message for {job_id}: {data[:100]}...[/blue]",
                     )
 
                     await websocket.send_json(
@@ -52,7 +52,7 @@ class WebSocketHandler:
                             "type": "echo",
                             "message": f"Received: {data}",
                             "job_id": job_id,
-                        }
+                        },
                     )
 
                 except WebSocketDisconnect:
@@ -67,10 +67,10 @@ class WebSocketHandler:
 
 
 def register_websocket_routes(
-    app: FastAPI, job_manager: JobManager, progress_dir: Path
+    app: FastAPI, job_manager: JobManager, progress_dir: Path,
 ) -> None:
     handler = WebSocketHandler(job_manager, progress_dir)
 
     @app.websocket(" / ws / progress / {job_id}")
-    async def websocket_progress_endpoint(websocket: WebSocket, job_id: str):
+    async def websocket_progress_endpoint(websocket: WebSocket, job_id: str) -> None:
         await handler.handle_connection(websocket, job_id)

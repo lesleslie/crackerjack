@@ -18,10 +18,7 @@ class LogManager:
 
     def _get_log_directory(self) -> Path:
         cache_home = os.environ.get("XDG_CACHE_HOME")
-        if cache_home:
-            base_dir = Path(cache_home)
-        else:
-            base_dir = Path.home() / ".cache"
+        base_dir = Path(cache_home) if cache_home else Path.home() / ".cache"
 
         return base_dir / self.app_name / "logs"
 
@@ -98,7 +95,7 @@ class LogManager:
                     log_file.unlink()
                     removed_count += 1
                     console.print(
-                        f"[dim]🗑️ Removed old log: {log_file.name} ({reason})[/dim]"
+                        f"[dim]🗑️ Removed old log: {log_file.name} ({reason})[/dim]",
                     )
 
         return removed_count
@@ -113,21 +110,21 @@ class LogManager:
         results = {}
 
         results["debug"] = self.rotate_logs(
-            self.debug_dir, "debug-*.log", debug_max_files, max_age_days
+            self.debug_dir, "debug-*.log", debug_max_files, max_age_days,
         )
 
         results["error"] = self.rotate_logs(
-            self.error_dir, "error-*.log", error_max_files, max_age_days
+            self.error_dir, "error-*.log", error_max_files, max_age_days,
         )
 
         results["audit"] = self.rotate_logs(
-            self.audit_dir, "audit-*.log", audit_max_files, max_age_days
+            self.audit_dir, "audit-*.log", audit_max_files, max_age_days,
         )
 
         return results
 
     def migrate_legacy_logs(
-        self, source_dir: Path, dry_run: bool = False
+        self, source_dir: Path, dry_run: bool = False,
     ) -> dict[str, int]:
         if not source_dir.exists():
             return {"moved": 0, "failed": 0, "found": 0}
@@ -142,7 +139,7 @@ class LogManager:
             return results
 
         console.print(
-            f"[yellow]📦 Found {len(legacy_files)} legacy debug log files to migrate[/yellow]"
+            f"[yellow]📦 Found {len(legacy_files)} legacy debug log files to migrate[/yellow]",
         )
 
         for legacy_file in legacy_files:
@@ -158,20 +155,20 @@ class LogManager:
 
                 if dry_run:
                     console.print(
-                        f"[cyan]📋 Would move: {legacy_file.name} → {new_filename}[/cyan]"
+                        f"[cyan]📋 Would move: {legacy_file.name} → {new_filename}[/cyan]",
                     )
                     results["moved"] += 1
                 else:
                     shutil.move(str(legacy_file), str(new_path))
                     results["moved"] += 1
                     console.print(
-                        f"[green]✅ Moved: {legacy_file.name} → {new_filename}[/green]"
+                        f"[green]✅ Moved: {legacy_file.name} → {new_filename}[/green]",
                     )
 
             except (OSError, ValueError) as e:
                 results["failed"] += 1
                 console.print(
-                    f"[red]❌ Failed to migrate {legacy_file.name}: {e}[/red]"
+                    f"[red]❌ Failed to migrate {legacy_file.name}: {e}[/red]",
                 )
 
         return results
@@ -228,7 +225,7 @@ class LogManager:
         )
 
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         handler.setFormatter(formatter)
 
@@ -259,7 +256,7 @@ class LogManager:
 
         if total_files > 0:
             console.print(
-                f"\n[bold]Total: {total_files} files, {total_size:.2f}MB[/bold]"
+                f"\n[bold]Total: {total_files} files, {total_size:.2f}MB[/bold]",
             )
         else:
             console.print("\n[dim]No log files found[/dim]")

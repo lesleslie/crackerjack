@@ -27,7 +27,7 @@ class AIAgentDebugger:
         if self.enabled:
             log_manager = get_log_manager()
             self.debug_log_path = log_manager.create_debug_log_file(
-                f"ai-agent-{self.session_id}"
+                f"ai-agent-{self.session_id}",
             )
         else:
             self.debug_log_path = None
@@ -63,7 +63,7 @@ class AIAgentDebugger:
         debug_handler = logging.FileHandler(self.debug_log_path)
         debug_handler.setLevel(logging.DEBUG)
         debug_formatter = logging.Formatter(
-            "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+            "%(asctime)s | %(name)s | %(levelname)s | %(message)s",
         )
         debug_handler.setFormatter(debug_formatter)
 
@@ -121,19 +121,19 @@ class AIAgentDebugger:
 
             if self.verbose:
                 self.console.print(
-                    f"[dim green]✅ {operation} completed ({duration:.2f}s)[/dim green]"
+                    f"[dim green]✅ {operation} completed ({duration:.2f}s)[/dim green]",
                 )
 
         except Exception as e:
             duration = time.time() - start_time
-            self.logger.error(
+            self.logger.exception(
                 f"Operation failed: {operation}",
                 extra={"error": str(e), "duration": duration} | kwargs,
             )
 
             if self.verbose:
                 self.console.print(
-                    f"[dim red]❌ {operation} failed ({duration:.2f}s): {e}[/dim red]"
+                    f"[dim red]❌ {operation} failed ({duration:.2f}s): {e}[/dim red]",
                 )
             raise
 
@@ -181,7 +181,7 @@ class AIAgentDebugger:
             self.console.print(
                 f"[{status_color}]{status_icon} MCP {operation_type}[/{status_color}]: "
                 f"[bold]{tool_name}[/bold]"
-                + (f" ({duration:.2f}s)" if duration else "")
+                + (f" ({duration:.2f}s)" if duration else ""),
             )
 
             if error and self.verbose:
@@ -230,7 +230,7 @@ class AIAgentDebugger:
             issue_text = f" [issue: {issue_id}]" if issue_id else ""
 
             self.console.print(
-                f"[blue]🤖 {agent_name}[/blue]: {activity}{confidence_text}{issue_text}"
+                f"[blue]🤖 {agent_name}[/blue]: {activity}{confidence_text}{issue_text}",
             )
 
     def log_workflow_phase(
@@ -273,7 +273,7 @@ class AIAgentDebugger:
             duration_text = f" ({duration:.2f}s)" if duration else ""
 
             self.console.print(
-                f"[{color}]📋 Workflow {status}: {phase}{duration_text}[/{color}]"
+                f"[{color}]📋 Workflow {status}: {phase}{duration_text}[/{color}]",
             )
 
     def log_error_event(
@@ -374,7 +374,7 @@ class AIAgentDebugger:
         self.console.print(
             f"\n[dim]📝 Full debug log available at: {self.debug_log_path}[/dim]"
             if self.debug_log_path
-            else ""
+            else "",
         )
 
     def _print_iteration_breakdown(self, border_style: str = "red") -> None:
@@ -424,7 +424,7 @@ class AIAgentDebugger:
         for stats in agent_stats.values():
             if stats["confidences"]:
                 stats["avg_confidence"] = sum(stats["confidences"]) / len(
-                    stats["confidences"]
+                    stats["confidences"],
                 )
 
         table = Table(
@@ -542,7 +542,7 @@ class AIAgentDebugger:
 
         if self.verbose:
             self.console.print(
-                f"[yellow]🔄 Starting Iteration {iteration_number}[/yellow]"
+                f"[yellow]🔄 Starting Iteration {iteration_number}[/yellow]",
             )
 
     def log_iteration_end(self, iteration_number: int, success: bool) -> None:
@@ -563,7 +563,7 @@ class AIAgentDebugger:
         if self.verbose:
             status = "✅ PASSED" if success else "❌ FAILED"
             self.console.print(
-                f"[{'green' if success else 'red'}]🏁 Iteration {iteration_number} {status}[/{'green' if success else 'red'}]"
+                f"[{'green' if success else 'red'}]🏁 Iteration {iteration_number} {status}[/{'green' if success else 'red'}]",
             )
 
     def log_test_failures(self, count: int) -> None:
@@ -721,7 +721,7 @@ def get_ai_agent_debugger() -> AIAgentDebugger | NoOpDebugger:
 
         if debug_enabled:
             _ai_agent_debugger = AIAgentDebugger(
-                enabled=debug_enabled, verbose=verbose_mode
+                enabled=debug_enabled, verbose=verbose_mode,
             )
         else:
             _ai_agent_debugger = NoOpDebugger()

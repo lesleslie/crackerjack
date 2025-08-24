@@ -98,11 +98,11 @@ class TestPluginManager:
         assert hasattr(plugin_manager.discovery, "auto_discover_and_load")
 
         with patch.object(
-            plugin_manager.discovery, "auto_discover_and_load"
+            plugin_manager.discovery, "auto_discover_and_load",
         ) as mock_discover:
             mock_discover.return_value = {}
             result = plugin_manager.discovery.auto_discover_and_load(
-                plugin_manager.project_path
+                plugin_manager.project_path,
             )
             assert isinstance(result, dict)
 
@@ -145,10 +145,12 @@ class TestPluginManager:
 
         class ErrorPlugin(PluginBase):
             def activate(self) -> bool:
-                raise Exception("Activation failed")
+                msg = "Activation failed"
+                raise Exception(msg)
 
             def deactivate(self) -> bool:
-                raise Exception("Deactivation failed")
+                msg = "Deactivation failed"
+                raise Exception(msg)
 
         metadata = PluginMetadata(
             name="error - plugin",
@@ -250,9 +252,7 @@ class TestPluginIntegration:
                 return self.filesystem_service is not None
 
             def execute(self, *args, **kwargs) -> bool:
-                if self.filesystem_service:
-                    return True
-                return False
+                return bool(self.filesystem_service)
 
         mock_fs_service = Mock()
         plugin = ServicePlugin(filesystem_service=mock_fs_service)

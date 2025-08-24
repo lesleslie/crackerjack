@@ -64,7 +64,7 @@ class TestTestResult:
 class TestPublishResult:
     def test_publish_result_creation(self) -> None:
         result = PublishResult(
-            success=True, version="1.2.3", published_to=["pypi", "testpypi"], errors=[]
+            success=True, version="1.2.3", published_to=["pypi", "testpypi"], errors=[],
         )
 
         assert result.success is True
@@ -187,7 +187,7 @@ class TestCrackerjackAPIQualityChecks:
 
     def test_run_quality_checks_exception(self, api) -> None:
         api.orchestrator.pipeline.run_complete_workflow.side_effect = ValueError(
-            "Test error"
+            "Test error",
         )
 
         result = api.run_quality_checks()
@@ -204,8 +204,7 @@ class TestCrackerjackAPICodeCleaning:
     @pytest.fixture
     def api(self, temp_dir):
         console = Mock(spec=Console)
-        api = CrackerjackAPI(project_path=temp_dir, console=console)
-        return api
+        return CrackerjackAPI(project_path=temp_dir, console=console)
 
     @pytest.fixture
     def temp_dir(self):
@@ -380,7 +379,7 @@ class TestCrackerjackAPITesting:
 
     def test_run_tests_exception(self, api) -> None:
         api.orchestrator.pipeline.run_complete_workflow.side_effect = RuntimeError(
-            "Test error"
+            "Test error",
         )
 
         result = api.run_tests()
@@ -401,11 +400,11 @@ class TestCrackerjackAPIPublishing:
 
     def test_publish_package_success(self, api) -> None:
         # Mock the async method to return a coroutine that resolves to True
-        async def mock_workflow(options):
+        async def mock_workflow(options) -> bool:
             return True
 
         api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
-            side_effect=mock_workflow
+            side_effect=mock_workflow,
         )
 
         result = api.publish_package()
@@ -417,11 +416,11 @@ class TestCrackerjackAPIPublishing:
         assert len(result.errors) == 0
 
     def test_publish_package_with_version_bump(self, api) -> None:
-        async def mock_workflow(options):
+        async def mock_workflow(options) -> bool:
             return True
 
         api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
-            side_effect=mock_workflow
+            side_effect=mock_workflow,
         )
 
         result = api.publish_package(version_bump="patch")
@@ -432,11 +431,11 @@ class TestCrackerjackAPIPublishing:
         assert call_args.bump == "patch"
 
     def test_publish_package_dry_run(self, api) -> None:
-        async def mock_workflow(options):
+        async def mock_workflow(options) -> bool:
             return True
 
         api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
-            side_effect=mock_workflow
+            side_effect=mock_workflow,
         )
 
         result = api.publish_package(dry_run=True)
@@ -447,11 +446,11 @@ class TestCrackerjackAPIPublishing:
         assert call_args.publish is None
 
     def test_publish_package_real_publish(self, api) -> None:
-        async def mock_workflow(options):
+        async def mock_workflow(options) -> bool:
             return True
 
         api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
-            side_effect=mock_workflow
+            side_effect=mock_workflow,
         )
 
         result = api.publish_package(version_bump="minor", dry_run=False)
@@ -463,11 +462,11 @@ class TestCrackerjackAPIPublishing:
         assert call_args.publish == "pypi"
 
     def test_publish_package_failure(self, api) -> None:
-        async def mock_workflow(options):
+        async def mock_workflow(options) -> bool:
             return False
 
         api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
-            side_effect=mock_workflow
+            side_effect=mock_workflow,
         )
 
         result = api.publish_package()
@@ -478,7 +477,7 @@ class TestCrackerjackAPIPublishing:
 
     def test_publish_package_exception(self, api) -> None:
         api.orchestrator.pipeline.run_complete_workflow = AsyncMock(
-            side_effect=ValueError("Publish error")
+            side_effect=ValueError("Publish error"),
         )
 
         result = api.publish_package()
@@ -503,7 +502,7 @@ class TestCrackerjackAPIInteractive:
 
         assert result is True
         mock_cli.run_interactive_workflow.assert_called_once_with(
-            InteractiveWorkflowOptions()
+            InteractiveWorkflowOptions(),
         )
 
     def test_run_interactive_workflow_with_options(self, api) -> None:
@@ -531,7 +530,7 @@ class TestCrackerjackAPIInteractive:
         mock_cli = Mock()
         api._interactive_cli = mock_cli
         mock_cli.run_interactive_workflow.side_effect = RuntimeError(
-            "Interactive error"
+            "Interactive error",
         )
 
         result = api.run_interactive_workflow()
@@ -576,7 +575,7 @@ class TestCrackerjackAPIWorkflowOptions:
 
     def test_create_workflow_options_with_kwargs(self, api) -> None:
         options = api.create_workflow_options(
-            clean=True, verbose=True, custom_flag=True
+            clean=True, verbose=True, custom_flag=True,
         )
 
         assert options.cleaning.clean is True
@@ -683,7 +682,7 @@ class TestCrackerjackAPICreateOptions:
 
     def test_create_options_arbitrary_kwargs(self, api) -> None:
         options = api._create_options(
-            custom_flag=True, custom_value="test", custom_number=42
+            custom_flag=True, custom_value="test", custom_number=42,
         )
 
         assert options.custom_flag is True
@@ -711,13 +710,13 @@ class TestConvenienceFunctions:
             mock_api_class.return_value = mock_api
 
             result = run_quality_checks(
-                project_path=temp_dir, fast_only=True, autofix=False
+                project_path=temp_dir, fast_only=True, autofix=False,
             )
 
             assert isinstance(result, QualityCheckResult)
             mock_api_class.assert_called_once_with(project_path=temp_dir)
             mock_api.run_quality_checks.assert_called_once_with(
-                fast_only=True, autofix=False
+                fast_only=True, autofix=False,
             )
 
     def test_clean_code_convenience(self, temp_dir) -> None:
@@ -755,16 +754,16 @@ class TestConvenienceFunctions:
         with patch("crackerjack.api.CrackerjackAPI") as mock_api_class:
             mock_api = Mock()
             mock_api.publish_package.return_value = PublishResult(
-                success=True, version="1.2.3", published_to=["pypi"], errors=[]
+                success=True, version="1.2.3", published_to=["pypi"], errors=[],
             )
             mock_api_class.return_value = mock_api
 
             result = publish_package(
-                project_path=temp_dir, version_bump="patch", dry_run=True
+                project_path=temp_dir, version_bump="patch", dry_run=True,
             )
 
             assert isinstance(result, PublishResult)
             mock_api_class.assert_called_once_with(project_path=temp_dir)
             mock_api.publish_package.assert_called_once_with(
-                version_bump="patch", dry_run=True
+                version_bump="patch", dry_run=True,
             )

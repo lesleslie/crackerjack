@@ -4,7 +4,7 @@ import tempfile
 from contextlib import suppress
 from pathlib import Path
 
-from ..errors import FileError, SecurityError
+from crackerjack.errors import FileError, SecurityError
 
 
 class SecurityService:
@@ -46,7 +46,7 @@ class SecurityService:
         return self.mask_tokens(stdout), self.mask_tokens(stderr)
 
     def create_secure_token_file(
-        self, token: str, prefix: str = "crackerjack_token"
+        self, token: str, prefix: str = "crackerjack_token",
     ) -> Path:
         if not token:
             raise SecurityError(
@@ -62,7 +62,7 @@ class SecurityService:
             )
         try:
             fd, temp_path = tempfile.mkstemp(
-                prefix=f"{prefix}_", suffix=".token", text=True
+                prefix=f"{prefix}_", suffix=".token", text=True,
             )
             temp_file = Path(temp_path)
             try:
@@ -128,7 +128,7 @@ class SecurityService:
             return False
         if token_type and token_type.lower() == "pypi":
             return token.startswith("pypi-") and len(token) >= 16
-        elif token_type and token_type.lower() == "github":
+        if token_type and token_type.lower() == "github":
             return token.startswith("ghp_") and len(token) == 40
         return len(token) >= 16 and not token.isspace()
 

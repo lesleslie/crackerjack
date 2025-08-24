@@ -17,13 +17,13 @@ from crackerjack.orchestration.advanced_orchestrator import (
 class MockSessionCoordinator:
     """Mock session coordinator for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.web_job_id = None
         self.progress_file = None
         self.current_stage = None
         self.current_substage = None
 
-    def update_stage(self, stage: str, substage: str = ""):
+    def update_stage(self, stage: str, substage: str = "") -> None:
         self.current_stage = stage
         self.current_substage = substage
 
@@ -31,7 +31,7 @@ class MockSessionCoordinator:
 class MockOrchestrationConfig:
     """Mock orchestration config for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.max_iterations = 10
         self.ai_coordination_mode = "auto"
         self.strategy = "adaptive"
@@ -40,7 +40,7 @@ class MockOrchestrationConfig:
 class TestCorrelationTracker:
     """Test CorrelationTracker class."""
 
-    def test_tracker_initialization(self):
+    def test_tracker_initialization(self) -> None:
         """Test correlation tracker initialization."""
         tracker = CorrelationTracker()
 
@@ -48,7 +48,7 @@ class TestCorrelationTracker:
         assert tracker.failure_patterns == {}
         assert tracker.fix_success_rates == {}
 
-    def test_record_iteration_basic(self):
+    def test_record_iteration_basic(self) -> None:
         """Test recording basic iteration data."""
         tracker = CorrelationTracker()
 
@@ -76,7 +76,7 @@ class TestCorrelationTracker:
         assert iteration["test_failures"] == ["test_example"]
         assert iteration["ai_fixes_applied"] == ["fix_type_annotations"]
 
-    def test_record_iteration_with_error_details(self):
+    def test_record_iteration_with_error_details(self) -> None:
         """Test recording iteration with error details."""
         tracker = CorrelationTracker()
 
@@ -93,7 +93,7 @@ class TestCorrelationTracker:
         iteration = tracker.iteration_data[0]
         assert iteration["total_errors"] == 2
 
-    def test_record_iteration_non_dict_test_results(self):
+    def test_record_iteration_non_dict_test_results(self) -> None:
         """Test recording iteration with non-dict test results."""
         tracker = CorrelationTracker()
 
@@ -112,7 +112,7 @@ class TestCorrelationTracker:
         iteration = tracker.iteration_data[0]
         assert iteration["test_failures"] == []
 
-    def test_analyze_failure_patterns(self):
+    def test_analyze_failure_patterns(self) -> None:
         """Test failure pattern analysis."""
         tracker = CorrelationTracker()
 
@@ -148,7 +148,7 @@ class TestCorrelationTracker:
         assert "mypy" in tracker.failure_patterns
         assert len(tracker.failure_patterns["mypy"]) > 0
 
-    def test_get_problematic_hooks(self):
+    def test_get_problematic_hooks(self) -> None:
         """Test getting problematic hooks."""
         tracker = CorrelationTracker()
 
@@ -165,7 +165,7 @@ class TestCorrelationTracker:
         problematic = tracker.get_problematic_hooks()
         assert "mypy" in problematic
 
-    def test_get_correlation_data(self):
+    def test_get_correlation_data(self) -> None:
         """Test getting correlation data."""
         tracker = CorrelationTracker()
 
@@ -186,7 +186,7 @@ class TestCorrelationTracker:
         assert "recent_trends" in data
         assert len(data["recent_trends"]) == 3  # Last 3 iterations
 
-    def test_get_correlation_data_few_iterations(self):
+    def test_get_correlation_data_few_iterations(self) -> None:
         """Test correlation data with few iterations."""
         tracker = CorrelationTracker()
 
@@ -206,21 +206,21 @@ class TestCorrelationTracker:
 class TestMinimalProgressStreamer:
     """Test MinimalProgressStreamer class."""
 
-    def test_minimal_streamer_initialization(self):
+    def test_minimal_streamer_initialization(self) -> None:
         """Test minimal progress streamer initialization."""
         streamer = MinimalProgressStreamer()
 
         # Should initialize without error
         assert streamer is not None
 
-    def test_update_stage(self):
+    def test_update_stage(self) -> None:
         """Test stage update method."""
         streamer = MinimalProgressStreamer()
 
         # Should not raise error
         streamer.update_stage("testing", "unit_tests")
 
-    def test_update_hook_progress(self):
+    def test_update_hook_progress(self) -> None:
         """Test hook progress update method."""
         streamer = MinimalProgressStreamer()
         progress = Mock()
@@ -228,7 +228,7 @@ class TestMinimalProgressStreamer:
         # Should not raise error
         streamer.update_hook_progress(progress)
 
-    def test_stream_update(self):
+    def test_stream_update(self) -> None:
         """Test internal stream update method."""
         streamer = MinimalProgressStreamer()
 
@@ -255,8 +255,8 @@ class TestProgressStreamer:
         return ProgressStreamer(mock_config, mock_session)
 
     def test_streamer_initialization(
-        self, progress_streamer, mock_config, mock_session
-    ):
+        self, progress_streamer, mock_config, mock_session,
+    ) -> None:
         """Test progress streamer initialization."""
         assert progress_streamer.config is mock_config
         assert progress_streamer.session is mock_session
@@ -264,14 +264,14 @@ class TestProgressStreamer:
         assert progress_streamer.current_substage == ""
         assert progress_streamer.hook_progress == {}
 
-    def test_update_stage(self, progress_streamer):
+    def test_update_stage(self, progress_streamer) -> None:
         """Test stage update."""
         progress_streamer.update_stage("testing", "unit_tests")
 
         assert progress_streamer.current_stage == "testing"
         assert progress_streamer.current_substage == "unit_tests"
 
-    def test_update_hook_progress(self, progress_streamer):
+    def test_update_hook_progress(self, progress_streamer) -> None:
         """Test hook progress update."""
         progress = Mock()
         progress.hook_name = "ruff"
@@ -282,7 +282,7 @@ class TestProgressStreamer:
         assert "ruff" in progress_streamer.hook_progress
         assert progress_streamer.hook_progress["ruff"] is progress
 
-    def test_stream_update(self, progress_streamer, mock_session):
+    def test_stream_update(self, progress_streamer, mock_session) -> None:
         """Test stream update functionality."""
         update_data = {"type": "test", "hook_name": "mypy"}
 
@@ -291,7 +291,7 @@ class TestProgressStreamer:
         # Should update session
         assert mock_session.current_stage == "initialization"
 
-    def test_update_websocket_progress_no_file(self, progress_streamer, mock_session):
+    def test_update_websocket_progress_no_file(self, progress_streamer, mock_session) -> None:
         """Test websocket progress update without file."""
         # No progress file set
         mock_session.web_job_id = "test_job"
@@ -301,8 +301,8 @@ class TestProgressStreamer:
         progress_streamer._update_websocket_progress(update_data)
 
     def test_update_websocket_progress_with_file(
-        self, progress_streamer, mock_session, tmp_path
-    ):
+        self, progress_streamer, mock_session, tmp_path,
+    ) -> None:
         """Test websocket progress update with file."""
         progress_file = tmp_path / "progress.json"
         mock_session.web_job_id = "test_job"
@@ -354,7 +354,7 @@ class TestAdvancedWorkflowOrchestrator:
             patch("crackerjack.orchestration.advanced_orchestrator.HookConfigLoader"),
             patch("crackerjack.orchestration.advanced_orchestrator.HookExecutor"),
             patch(
-                "crackerjack.orchestration.advanced_orchestrator.IndividualHookExecutor"
+                "crackerjack.orchestration.advanced_orchestrator.IndividualHookExecutor",
             ),
             patch("crackerjack.orchestration.advanced_orchestrator.TestManagementImpl"),
         ):
@@ -366,8 +366,8 @@ class TestAdvancedWorkflowOrchestrator:
             )
 
     def test_orchestrator_initialization(
-        self, orchestrator, mock_console, mock_session, mock_config
-    ):
+        self, orchestrator, mock_console, mock_session, mock_config,
+    ) -> None:
         """Test orchestrator initialization."""
         assert orchestrator.console is mock_console
         assert orchestrator.pkg_path == Path("/test")
@@ -375,8 +375,8 @@ class TestAdvancedWorkflowOrchestrator:
         assert orchestrator.config is mock_config
 
     def test_orchestrator_initialization_default_config(
-        self, mock_console, mock_session
-    ):
+        self, mock_console, mock_session,
+    ) -> None:
         """Test orchestrator initialization with default config."""
         pkg_path = Path("/test")
 
@@ -384,30 +384,30 @@ class TestAdvancedWorkflowOrchestrator:
             patch("crackerjack.orchestration.advanced_orchestrator.HookConfigLoader"),
             patch("crackerjack.orchestration.advanced_orchestrator.HookExecutor"),
             patch(
-                "crackerjack.orchestration.advanced_orchestrator.IndividualHookExecutor"
+                "crackerjack.orchestration.advanced_orchestrator.IndividualHookExecutor",
             ),
             patch("crackerjack.orchestration.advanced_orchestrator.TestManagementImpl"),
             patch(
-                "crackerjack.orchestration.advanced_orchestrator.OrchestrationConfig"
+                "crackerjack.orchestration.advanced_orchestrator.OrchestrationConfig",
             ) as mock_config_class,
         ):
             mock_config_class.return_value = mock_config_class
 
             orchestrator = AdvancedWorkflowOrchestrator(
-                console=mock_console, pkg_path=pkg_path, session=mock_session
+                console=mock_console, pkg_path=pkg_path, session=mock_session,
             )
 
             # Should create default config
             assert orchestrator.config is not None
 
-    def test_orchestrator_has_required_components(self, orchestrator):
+    def test_orchestrator_has_required_components(self, orchestrator) -> None:
         """Test that orchestrator has required components."""
         assert hasattr(orchestrator, "hook_config_loader")
         assert hasattr(orchestrator, "batch_executor")
         assert hasattr(orchestrator, "individual_executor")
         assert hasattr(orchestrator, "test_manager")
 
-    def test_orchestrator_components_initialization(self, orchestrator):
+    def test_orchestrator_components_initialization(self, orchestrator) -> None:
         """Test orchestrator components are properly initialized."""
         # All major components should be initialized
         assert orchestrator.hook_config_loader is not None
@@ -419,7 +419,7 @@ class TestAdvancedWorkflowOrchestrator:
 class TestIntegrationScenarios:
     """Integration test scenarios for advanced orchestrator."""
 
-    def test_correlation_tracker_workflow(self):
+    def test_correlation_tracker_workflow(self) -> None:
         """Test correlation tracker in a typical workflow."""
         tracker = CorrelationTracker()
 
@@ -455,7 +455,7 @@ class TestIntegrationScenarios:
         assert tracker.iteration_data[1]["failed_hooks"] == ["mypy"]
         assert tracker.iteration_data[2]["failed_hooks"] == []
 
-    def test_progress_streamer_coordination(self):
+    def test_progress_streamer_coordination(self) -> None:
         """Test progress streamer coordination."""
         config = MockOrchestrationConfig()
         session = MockSessionCoordinator()
@@ -477,7 +477,7 @@ class TestIntegrationScenarios:
         assert streamer.current_stage == "tests"
         assert "ruff" in streamer.hook_progress
 
-    def test_orchestrator_component_interaction(self):
+    def test_orchestrator_component_interaction(self) -> None:
         """Test orchestrator component interaction."""
         console = Mock(spec=Console)
         session = MockSessionCoordinator()
@@ -486,20 +486,20 @@ class TestIntegrationScenarios:
 
         with (
             patch(
-                "crackerjack.orchestration.advanced_orchestrator.HookConfigLoader"
+                "crackerjack.orchestration.advanced_orchestrator.HookConfigLoader",
             ) as mock_loader,
             patch(
-                "crackerjack.orchestration.advanced_orchestrator.HookExecutor"
+                "crackerjack.orchestration.advanced_orchestrator.HookExecutor",
             ) as mock_batch,
             patch(
-                "crackerjack.orchestration.advanced_orchestrator.IndividualHookExecutor"
+                "crackerjack.orchestration.advanced_orchestrator.IndividualHookExecutor",
             ) as mock_individual,
             patch(
-                "crackerjack.orchestration.advanced_orchestrator.TestManagementImpl"
+                "crackerjack.orchestration.advanced_orchestrator.TestManagementImpl",
             ) as mock_test,
         ):
             AdvancedWorkflowOrchestrator(
-                console=console, pkg_path=pkg_path, session=session, config=config
+                console=console, pkg_path=pkg_path, session=session, config=config,
             )
 
             # Verify components were created with correct parameters
@@ -508,7 +508,7 @@ class TestIntegrationScenarios:
             mock_individual.assert_called_once_with(console, pkg_path)
             mock_test.assert_called_once_with(console, pkg_path)
 
-    def test_minimal_vs_full_progress_streamer(self):
+    def test_minimal_vs_full_progress_streamer(self) -> None:
         """Test minimal vs full progress streamer functionality."""
         minimal = MinimalProgressStreamer()
 

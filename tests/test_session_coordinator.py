@@ -7,7 +7,7 @@ from rich.console import Console
 from crackerjack.core.session_coordinator import SessionCoordinator
 
 
-def test_session_coordinator_initialization():
+def test_session_coordinator_initialization() -> None:
     """Test SessionCoordinator initialization."""
     console = Console()
     pkg_path = Path("/tmp/test")
@@ -21,7 +21,7 @@ def test_session_coordinator_initialization():
     assert len(coordinator.tasks) == 0
 
 
-def test_session_coordinator_with_web_job_id():
+def test_session_coordinator_with_web_job_id() -> None:
     """Test SessionCoordinator with web job ID."""
     console = Console()
     pkg_path = Path("/tmp/test")
@@ -32,7 +32,7 @@ def test_session_coordinator_with_web_job_id():
     assert coordinator.web_job_id == web_job_id
 
 
-def test_session_coordinator_start_session():
+def test_session_coordinator_start_session() -> None:
     """Test starting a session task."""
     console = Console()
     pkg_path = Path("/tmp/test")
@@ -45,7 +45,7 @@ def test_session_coordinator_start_session():
     assert coordinator.current_task == task_name
 
 
-def test_session_coordinator_track_task():
+def test_session_coordinator_track_task() -> None:
     """Test tracking a task."""
     console = Console()
     pkg_path = Path("/tmp/test")

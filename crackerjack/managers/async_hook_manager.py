@@ -4,9 +4,9 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..config.hooks import HookConfigLoader
-from ..executors.async_hook_executor import AsyncHookExecutor
-from ..models.task import HookResult
+from crackerjack.config.hooks import HookConfigLoader
+from crackerjack.executors.async_hook_executor import AsyncHookExecutor
+from crackerjack.models.task import HookResult
 
 
 class AsyncHookManager:
@@ -19,7 +19,7 @@ class AsyncHookManager:
         self.console = console
         self.pkg_path = pkg_path
         self.async_executor = AsyncHookExecutor(
-            console, pkg_path, max_concurrent=max_concurrent
+            console, pkg_path, max_concurrent=max_concurrent,
         )
         self.config_loader = HookConfigLoader()
 
@@ -61,12 +61,11 @@ class AsyncHookManager:
             if process.returncode == 0:
                 self.console.print("[green]✅[/green] Pre-commit hooks installed")
                 return True
-            else:
-                error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
-                self.console.print(
-                    f"[red]❌[/red] Failed to install hooks: {error_msg}"
-                )
-                return False
+            error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
+            self.console.print(
+                f"[red]❌[/red] Failed to install hooks: {error_msg}",
+            )
+            return False
 
         except TimeoutError:
             self.console.print("[red]❌[/red] Hook installation timed out")
@@ -93,10 +92,9 @@ class AsyncHookManager:
             if process.returncode == 0:
                 self.console.print("[green]✅[/green] Pre-commit hooks updated")
                 return True
-            else:
-                error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
-                self.console.print(f"[red]❌[/red] Failed to update hooks: {error_msg}")
-                return False
+            error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
+            self.console.print(f"[red]❌[/red] Failed to update hooks: {error_msg}")
+            return False
 
         except TimeoutError:
             self.console.print("[red]❌[/red] Hook update timed out")

@@ -84,7 +84,7 @@ class TestSpecialistAgent(SubAgent):
             recommendations = self._get_failure_recommendations(fixes_applied)
 
             return self._create_fix_result(
-                fixes_applied, files_modified, recommendations
+                fixes_applied, files_modified, recommendations,
             )
 
         except Exception as e:
@@ -114,13 +114,13 @@ class TestSpecialistAgent(SubAgent):
     async def _apply_targeted_fixes(self, failure_type: str, issue: Issue) -> list[str]:
         if failure_type == "fixture_not_found":
             return await self._fix_missing_fixtures(issue)
-        elif failure_type == "import_error":
+        if failure_type == "import_error":
             return await self._fix_import_errors(issue)
-        elif failure_type == "hardcoded_path":
+        if failure_type == "hardcoded_path":
             return await self._fix_hardcoded_paths(issue)
-        elif failure_type == "mock_spec_error":
+        if failure_type == "mock_spec_error":
             return await self._fix_mock_issues(issue)
-        elif failure_type == "pydantic_validation":
+        if failure_type == "pydantic_validation":
             return await self._fix_pydantic_issues(issue)
         return []
 
@@ -217,7 +217,7 @@ class TestSpecialistAgent(SubAgent):
         return file_path is not None and Path(file_path).exists()
 
     def _apply_import_fixes(
-        self, lines: list[str], content: str, file_path: str
+        self, lines: list[str], content: str, file_path: str,
     ) -> tuple[list[str], bool]:
         fixes: list[str] = []
         modified = False
@@ -262,7 +262,7 @@ class TestSpecialistAgent(SubAgent):
         return import_section_end
 
     def _save_import_fixes(
-        self, file_path: Path, lines: list[str], file_path_str: str
+        self, file_path: Path, lines: list[str], file_path_str: str,
     ) -> None:
         if self.context.write_file_content(file_path, "\n".join(lines)):
             self.log(f"Fixed imports in {file_path_str}")
@@ -309,7 +309,7 @@ class TestSpecialistAgent(SubAgent):
 
         original_content = content
         content, mock_fixes = self._apply_mock_fixes_to_content(
-            content, issue.file_path
+            content, issue.file_path,
         )
         fixes.extend(mock_fixes)
 
@@ -322,7 +322,7 @@ class TestSpecialistAgent(SubAgent):
         return file_path is not None
 
     def _apply_mock_fixes_to_content(
-        self, content: str, file_path: str
+        self, content: str, file_path: str,
     ) -> tuple[str, list[str]]:
         fixes: list[str] = []
 
@@ -337,8 +337,7 @@ class TestSpecialistAgent(SubAgent):
 
     def _fix_console_mock_usage(self, content: str) -> str:
         content = content.replace("console = Mock()", "console = Console()")
-        content = self._ensure_console_import(content)
-        return content
+        return self._ensure_console_import(content)
 
     def _ensure_console_import(self, content: str) -> str:
         if "from rich.console import Console" in content:
@@ -358,15 +357,14 @@ class TestSpecialistAgent(SubAgent):
         return lines
 
     def _save_mock_fixes(
-        self, file_path: Path, content: str, file_path_str: str
+        self, file_path: Path, content: str, file_path_str: str,
     ) -> None:
         if self.context.write_file_content(file_path, content):
             self.log(f"Fixed Mock issues in {file_path_str}")
 
     async def _fix_pydantic_issues(self, issue: Issue) -> list[str]:
-        fixes = []
+        return []
 
-        return fixes
 
     async def _add_temp_pkg_path_fixture(self, file_path: str | None) -> list[str]:
         if not file_path:
@@ -432,7 +430,7 @@ def console() -> Console:
 
     async def _add_temp_path_fixture(self, file_path: str | None) -> list[str]:
         return [
-            f"Note: tmp_path is a built-in pytest fixture - check fixture usage in {file_path}"
+            f"Note: tmp_path is a built-in pytest fixture - check fixture usage in {file_path}",
         ]
 
     async def _fix_test_file_issues(self, file_path: str) -> list[str]:
@@ -463,7 +461,7 @@ def console() -> Console:
         fixes: list[str] = []
 
         returncode, _, stderr = await self.run_command(
-            ["uv", "run", "python", "-m", "pytest", "--collect-only", "-q"]
+            ["uv", "run", "python", "-m", "pytest", "--collect-only", "-q"],
         )
 
         if returncode != 0 and "ImportError" in stderr:

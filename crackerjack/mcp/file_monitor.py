@@ -15,6 +15,8 @@ except ImportError:
     Observer = None
     WATCHDOG_AVAILABLE = False
 
+import contextlib
+
 from rich.console import Console
 
 console = Console()
@@ -55,7 +57,7 @@ if WATCHDOG_AVAILABLE:
 
             except (json.JSONDecodeError, FileNotFoundError, OSError) as e:
                 console.print(
-                    f"[yellow]Warning: Failed to read progress file {file_path}: {e}[/yellow]"
+                    f"[yellow]Warning: Failed to read progress file {file_path}: {e}[/yellow]",
                 )
 
         def on_created(self, event: FileSystemEvent) -> None:
@@ -78,7 +80,7 @@ class AsyncProgressMonitor:
 
         if not WATCHDOG_AVAILABLE:
             console.print(
-                "[yellow]Warning: watchdog not available, falling back to polling[/yellow]"
+                "[yellow]Warning: watchdog not available, falling back to polling[/yellow]",
             )
 
     async def start(self) -> None:
@@ -94,7 +96,7 @@ class AsyncProgressMonitor:
         self.observer.start()
 
         console.print(
-            f"[green]📁 Started monitoring progress directory: {self.progress_dir}[/green]"
+            f"[green]📁 Started monitoring progress directory: {self.progress_dir}[/green]",
         )
 
     async def stop(self) -> None:
@@ -130,7 +132,7 @@ class AsyncProgressMonitor:
                     callback(progress_data)
                 except Exception as e:
                     console.print(
-                        f"[red]Error in progress callback for job {job_id}: {e}[/red]"
+                        f"[red]Error in progress callback for job {job_id}: {e}[/red]",
                     )
 
                     self.subscribers[job_id].discard(callback)
@@ -164,7 +166,7 @@ class AsyncProgressMonitor:
                         progress_file.unlink()
                         cleaned += 1
                         console.print(
-                            f"[dim]🧹 Cleaned up old progress file: {progress_file.name}[/dim]"
+                            f"[dim]🧹 Cleaned up old progress file: {progress_file.name}[/dim]",
                         )
 
             except (json.JSONDecodeError, OSError, KeyError):
@@ -174,7 +176,7 @@ class AsyncProgressMonitor:
                     progress_file.unlink()
                     cleaned += 1
                     console.print(
-                        f"[dim]🧹 Removed corrupted progress file: {progress_file.name}[/dim]"
+                        f"[dim]🧹 Removed corrupted progress file: {progress_file.name}[/dim]",
                     )
 
         return cleaned
@@ -194,7 +196,7 @@ class PollingProgressMonitor:
         self._running = True
         self._poll_task = asyncio.create_task(self._poll_loop())
         console.print(
-            f"[yellow]📁 Started polling progress directory: {self.progress_dir}[/yellow]"
+            f"[yellow]📁 Started polling progress directory: {self.progress_dir}[/yellow]",
         )
 
     async def stop(self) -> None:
@@ -202,10 +204,8 @@ class PollingProgressMonitor:
 
         if self._poll_task:
             self._poll_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._poll_task
-            except asyncio.CancelledError:
-                pass
             self._poll_task = None
 
         console.print("[yellow]📁 Stopped progress directory polling[/yellow]")
@@ -246,7 +246,7 @@ class PollingProgressMonitor:
 
                     except (json.JSONDecodeError, OSError) as e:
                         console.print(
-                            f"[yellow]Warning: Failed to read progress file {progress_file}: {e}[/yellow]"
+                            f"[yellow]Warning: Failed to read progress file {progress_file}: {e}[/yellow]",
                         )
 
             except OSError:
@@ -261,7 +261,7 @@ class PollingProgressMonitor:
                     callback(progress_data)
                 except Exception as e:
                     console.print(
-                        f"[red]Error in progress callback for job {job_id}: {e}[/red]"
+                        f"[red]Error in progress callback for job {job_id}: {e}[/red]",
                     )
                     self.subscribers[job_id].discard(callback)
 
@@ -280,7 +280,7 @@ class PollingProgressMonitor:
                 del self.subscribers[job_id]
 
         console.print(
-            f"[cyan]📋 Unsubscribed from job updates: {job_id} (polling)[/cyan]"
+            f"[cyan]📋 Unsubscribed from job updates: {job_id} (polling)[/cyan]",
         )
 
     async def get_current_progress(self, job_id: str) -> dict | None:
@@ -312,7 +312,7 @@ class PollingProgressMonitor:
                         progress_file.unlink()
                         cleaned += 1
                         console.print(
-                            f"[dim]🧹 Cleaned up old progress file: {progress_file.name}[/dim]"
+                            f"[dim]🧹 Cleaned up old progress file: {progress_file.name}[/dim]",
                         )
 
             except (json.JSONDecodeError, OSError, KeyError):
@@ -322,7 +322,7 @@ class PollingProgressMonitor:
                     progress_file.unlink()
                     cleaned += 1
                     console.print(
-                        f"[dim]🧹 Removed corrupted progress file: {progress_file.name}[/dim]"
+                        f"[dim]🧹 Removed corrupted progress file: {progress_file.name}[/dim]",
                     )
 
         return cleaned

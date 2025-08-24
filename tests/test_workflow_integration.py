@@ -112,7 +112,7 @@ class TestSessionTracker:
         )
 
     def test_session_tracker_initialization(
-        self, session_tracker: SessionTracker
+        self, session_tracker: SessionTracker,
     ) -> None:
         assert session_tracker.session_id == "test - session - 123"
         assert session_tracker.start_time == 1000.0
@@ -134,13 +134,13 @@ class TestSessionTracker:
         assert session_tracker.current_task == "task1"
 
     def test_session_tracker_complete_task(
-        self, session_tracker: SessionTracker
+        self, session_tracker: SessionTracker,
     ) -> None:
         with patch.object(session_tracker, "_update_progress_file"):
             with patch.object(session_tracker.console, "print"):
                 session_tracker.start_task("task1", "Test Task")
                 session_tracker.complete_task(
-                    "task1", "Completed successfully", ["file1.py", "file2.py"]
+                    "task1", "Completed successfully", ["file1.py", "file2.py"],
                 )
 
         task = session_tracker.tasks["task1"]
@@ -169,10 +169,11 @@ class TestSessionTracker:
         task = session_tracker.tasks["task1"]
         assert task.status == "skipped"
         assert task.end_time is not None
-        assert task.details is not None and "Skipped: Task not needed" in task.details
+        assert task.details is not None
+        assert "Skipped: Task not needed" in task.details
 
     def test_session_tracker_nonexistent_task_operations(
-        self, session_tracker: SessionTracker
+        self, session_tracker: SessionTracker,
     ) -> None:
         with patch.object(session_tracker, "_update_progress_file"):
             with patch.object(session_tracker.console, "print"):
@@ -199,8 +200,10 @@ class TestWorkflowIntegration:
             details=f"Hook {hook.name} processed {hook.files_processed} files",
         )
         assert task.duration == hook.duration
-        assert task.details is not None and hook.name in task.details
-        assert task.details is not None and str(hook.files_processed) in task.details
+        assert task.details is not None
+        assert hook.name in task.details
+        assert task.details is not None
+        assert str(hook.files_processed) in task.details
 
     def test_session_tracker_with_multiple_tasks(self, tmp_path: Path) -> None:
         progress_file = tmp_path / "session.md"
@@ -217,7 +220,7 @@ class TestWorkflowIntegration:
                 tracker.complete_task("setup", "Environment ready")
                 tracker.start_task("test", "Run Tests")
                 tracker.complete_task(
-                    "test", "All tests passed", ["test1.py", "test2.py"]
+                    "test", "All tests passed", ["test1.py", "test2.py"],
                 )
                 tracker.start_task("deploy", "Deploy Package")
                 tracker.fail_task("deploy", "Network timeout", "Deployment failed")

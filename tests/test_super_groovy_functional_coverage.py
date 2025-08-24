@@ -1,5 +1,4 @@
-"""
-SUPER GROOVY FUNCTIONAL COVERAGE BOOST - Targeted Real Code Execution
+"""SUPER GROOVY FUNCTIONAL COVERAGE BOOST - Targeted Real Code Execution.
 
 This test suite focuses on ACTUALLY executing code paths rather than just mocking,
 targeting the highest-impact modules for real coverage gains:
@@ -29,18 +28,18 @@ from rich.console import Console
 
 
 class TestToolVersionServiceFunctional:
-    """Execute real tool_version_service.py code paths"""
+    """Execute real tool_version_service.py code paths."""
 
     @pytest.fixture
     def tool_service(self):
-        """Create real ToolVersionService instance"""
+        """Create real ToolVersionService instance."""
         from crackerjack.services.tool_version_service import ToolVersionService
 
         console = Console(file=Mock())  # Capture output
         return ToolVersionService(console=console)
 
-    def test_version_comparison_real_execution(self, tool_service):
-        """Test real version comparison logic execution"""
+    def test_version_comparison_real_execution(self, tool_service) -> None:
+        """Test real version comparison logic execution."""
         # Test actual version comparison method
         assert tool_service._version_compare("1.0.0", "1.0.1") == -1
         assert tool_service._version_compare("1.0.1", "1.0.0") == 1
@@ -53,8 +52,8 @@ class TestToolVersionServiceFunctional:
         assert tool_service._version_compare("1.0", "1.0.0") == -1
         assert tool_service._version_compare("10.0.0", "2.0.0") == 1
 
-    def test_tool_registration_real_execution(self, tool_service):
-        """Test real tool registration and enumeration"""
+    def test_tool_registration_real_execution(self, tool_service) -> None:
+        """Test real tool registration and enumeration."""
         # Execute real tool enumeration
         tools = tool_service.tools_to_check
 
@@ -66,11 +65,11 @@ class TestToolVersionServiceFunctional:
         assert "uv" in tools
 
         # Test that tool getters are callable
-        for tool_name, getter in tools.items():
+        for getter in tools.values():
             assert callable(getter)
 
-    def test_version_parsing_real_execution(self, tool_service):
-        """Test real version parsing logic"""
+    def test_version_parsing_real_execution(self, tool_service) -> None:
+        """Test real version parsing logic."""
         # Test version extraction from common output formats
         test_outputs = [
             "ruff 0.1.6\n",
@@ -98,8 +97,8 @@ class TestToolVersionServiceFunctional:
                 assert version is not None
                 assert len(version) > 0
 
-    def test_github_api_url_construction(self, tool_service):
-        """Test PyPI API URL construction"""
+    def test_github_api_url_construction(self, tool_service) -> None:
+        """Test PyPI API URL construction."""
         # Test URL mapping - verify it uses PyPI, not GitHub
         pypi_urls = {
             "ruff": "https://pypi.org/pypi/ruff/json",
@@ -124,8 +123,8 @@ class TestToolVersionServiceFunctional:
             assert url.endswith("/json")
 
     @pytest.mark.asyncio
-    async def test_full_update_check_workflow(self, tool_service):
-        """Test complete update check workflow execution"""
+    async def test_full_update_check_workflow(self, tool_service) -> None:
+        """Test complete update check workflow execution."""
         # Mock subprocess for version detection
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.stdout = "ruff 0.1.0\n"
@@ -147,7 +146,7 @@ class TestToolVersionServiceFunctional:
                 assert len(results) > 0
 
                 # Check that VersionInfo objects were created
-                for tool_name, version_info in results.items():
+                for version_info in results.values():
                     assert hasattr(version_info, "tool_name")
                     assert hasattr(version_info, "current_version")
                     assert hasattr(version_info, "latest_version")
@@ -155,17 +154,17 @@ class TestToolVersionServiceFunctional:
 
 
 class TestHealthMetricsFunctional:
-    """Execute real health_metrics.py code paths"""
+    """Execute real health_metrics.py code paths."""
 
     @pytest.fixture
     def project_health(self):
-        """Create real ProjectHealth instance"""
+        """Create real ProjectHealth instance."""
         from crackerjack.services.health_metrics import ProjectHealth
 
         return ProjectHealth()
 
-    def test_trend_analysis_real_execution(self, project_health):
-        """Test real trend analysis logic execution"""
+    def test_trend_analysis_real_execution(self, project_health) -> None:
+        """Test real trend analysis logic execution."""
         # Test actual trending up detection
         project_health.lint_error_trend = [1, 2, 3, 4, 5]
         assert project_health._is_trending_up(project_health.lint_error_trend) is True
@@ -188,8 +187,8 @@ class TestHealthMetricsFunctional:
             is False
         )
 
-    def test_health_assessment_real_execution(self, project_health):
-        """Test real health assessment logic"""
+    def test_health_assessment_real_execution(self, project_health) -> None:
+        """Test real health assessment logic."""
         # Test needs_init with various real scenarios
 
         # Healthy project
@@ -216,8 +215,8 @@ class TestHealthMetricsFunctional:
         project_health.config_completeness = 0.6  # Below threshold
         assert project_health.needs_init() is True
 
-    def test_data_structure_real_execution(self, project_health):
-        """Test real data structure operations"""
+    def test_data_structure_real_execution(self, project_health) -> None:
+        """Test real data structure operations."""
         # Test that all fields work correctly
         assert isinstance(project_health.lint_error_trend, list)
         assert isinstance(project_health.test_coverage_trend, list)
@@ -237,11 +236,11 @@ class TestHealthMetricsFunctional:
 
 
 class TestContextualAIAssistantFunctional:
-    """Execute real contextual_ai_assistant.py code paths"""
+    """Execute real contextual_ai_assistant.py code paths."""
 
     @pytest.fixture
     def temp_pyproject(self):
-        """Create temporary pyproject.toml for testing"""
+        """Create temporary pyproject.toml for testing."""
         content = """
 [project]
 name = "test-project"
@@ -258,14 +257,14 @@ testpaths = ["tests"]
 line-length = 88
 """
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix="pyproject.toml", delete=False
+            mode="w", suffix="pyproject.toml", delete=False,
         ) as f:
             f.write(content)
             yield Path(f.name)
         Path(f.name).unlink()
 
-    def test_data_classes_real_execution(self):
-        """Test real dataclass functionality"""
+    def test_data_classes_real_execution(self) -> None:
+        """Test real dataclass functionality."""
         from crackerjack.services.contextual_ai_assistant import (
             AIRecommendation,
             ProjectContext,
@@ -319,8 +318,8 @@ line-length = 88
         assert context.has_documentation is True
         assert context.project_type == "library"
 
-    def test_ai_assistant_initialization_real(self):
-        """Test real AI assistant initialization"""
+    def test_ai_assistant_initialization_real(self) -> None:
+        """Test real AI assistant initialization."""
         from crackerjack.services.contextual_ai_assistant import ContextualAIAssistant
 
         # Mock filesystem but test real initialization logic
@@ -339,16 +338,16 @@ line-length = 88
 
 
 class TestPerformanceBenchmarksFunctional:
-    """Execute real performance_benchmarks.py code paths where possible"""
+    """Execute real performance_benchmarks.py code paths where possible."""
 
     @pytest.fixture
     def mock_filesystem(self):
-        """Create mock filesystem for testing"""
+        """Create mock filesystem for testing."""
         return Mock()
 
     @pytest.fixture
     def benchmark_service(self, mock_filesystem):
-        """Create real PerformanceBenchmarkService instance"""
+        """Create real PerformanceBenchmarkService instance."""
         from crackerjack.services.performance_benchmarks import (
             PerformanceBenchmarkService,
         )
@@ -356,8 +355,8 @@ class TestPerformanceBenchmarksFunctional:
         console = Console(file=Mock())
         return PerformanceBenchmarkService(filesystem=mock_filesystem, console=console)
 
-    def test_benchmark_data_structures(self, benchmark_service):
-        """Test actual benchmark dataclasses and data structures"""
+    def test_benchmark_data_structures(self, benchmark_service) -> None:
+        """Test actual benchmark dataclasses and data structures."""
         from crackerjack.services.performance_benchmarks import (
             BenchmarkResult,
             PerformanceReport,
@@ -388,7 +387,7 @@ class TestPerformanceBenchmarksFunctional:
             workflow_benchmarks=[benchmark_result],
             test_benchmarks={"iteration_1": {"duration": 45.0, "success": True}},
             hook_performance={
-                "ruff": {"mean_duration": 2.5, "min_duration": 2.0, "max_duration": 3.0}
+                "ruff": {"mean_duration": 2.5, "min_duration": 2.0, "max_duration": 3.0},
             },
             file_operation_stats={"file_read_ops": 0.001},
             recommendations=["Consider caching for better performance"],
@@ -405,8 +404,8 @@ class TestPerformanceBenchmarksFunctional:
         assert len(report.recommendations) == 1
         assert report.baseline_comparison["overall_performance_change_percent"] == -5.2
 
-    def test_benchmark_service_initialization(self, benchmark_service):
-        """Test PerformanceBenchmarkService initialization and properties"""
+    def test_benchmark_service_initialization(self, benchmark_service) -> None:
+        """Test PerformanceBenchmarkService initialization and properties."""
         # Test service was initialized correctly
         assert benchmark_service.filesystem is not None
         assert benchmark_service.console is not None
@@ -417,8 +416,8 @@ class TestPerformanceBenchmarksFunctional:
         # Test directories were created
         assert benchmark_service.benchmarks_dir.exists()
 
-    def test_benchmark_helper_methods(self, benchmark_service):
-        """Test internal benchmark helper methods"""
+    def test_benchmark_helper_methods(self, benchmark_service) -> None:
+        """Test internal benchmark helper methods."""
         from crackerjack.services.performance_benchmarks import (
             BenchmarkResult,
             PerformanceReport,
@@ -439,7 +438,7 @@ class TestPerformanceBenchmarksFunctional:
         workflow_benchmarks = [fast_component, slow_component]
 
         slow_components = benchmark_service._identify_slow_components(
-            workflow_benchmarks
+            workflow_benchmarks,
         )
         assert len(slow_components) == 1
         assert slow_components[0].name == "slow_op"
@@ -485,8 +484,8 @@ class TestPerformanceBenchmarksFunctional:
         change = benchmark_service._calculate_performance_change(8.0, 10.0)
         assert change == -20.0  # 20% faster
 
-    def test_benchmark_file_operations(self, benchmark_service):
-        """Test file operation benchmarking"""
+    def test_benchmark_file_operations(self, benchmark_service) -> None:
+        """Test file operation benchmarking."""
         # Test _benchmark_file_operations method
         with (
             patch("pathlib.Path.glob") as mock_glob,
@@ -506,8 +505,8 @@ class TestPerformanceBenchmarksFunctional:
                 assert isinstance(stats["file_read_ops"], float)
                 assert stats["file_read_ops"] >= 0
 
-    def test_recommendation_generation(self, benchmark_service):
-        """Test performance recommendation generation"""
+    def test_recommendation_generation(self, benchmark_service) -> None:
+        """Test performance recommendation generation."""
         from crackerjack.services.performance_benchmarks import (
             BenchmarkResult,
             PerformanceReport,
@@ -519,20 +518,20 @@ class TestPerformanceBenchmarksFunctional:
             total_duration=400.0,  # Very slow overall
             workflow_benchmarks=[slow_component],
             test_benchmarks={
-                "iteration_1": {"total_duration": 70.0, "success": True}  # Slow test
+                "iteration_1": {"total_duration": 70.0, "success": True},  # Slow test
             },
             hook_performance={
                 "slow-hook": {
                     "mean_duration": 35.0,
                     "min_duration": 30.0,
                     "max_duration": 40.0,
-                }
+                },
             },
         )
 
         # Test recommendation generation
         recommendations = benchmark_service._generate_performance_recommendations(
-            report
+            report,
         )
 
         assert isinstance(recommendations, list)
@@ -546,8 +545,8 @@ class TestPerformanceBenchmarksFunctional:
             "Overall workflow" in rec_text or "skip-hooks" in rec_text
         )  # Overall slowness
 
-    def test_benchmark_workflow_components(self, benchmark_service):
-        """Test workflow component benchmarking"""
+    def test_benchmark_workflow_components(self, benchmark_service) -> None:
+        """Test workflow component benchmarking."""
         with (
             patch("pathlib.Path.rglob") as mock_rglob,
             patch("pathlib.Path.exists") as mock_exists,
@@ -571,7 +570,7 @@ class TestPerformanceBenchmarksFunctional:
 
             # Check file discovery result
             file_discovery_result = next(
-                (r for r in results if r.name == "file_discovery"), None
+                (r for r in results if r.name == "file_discovery"), None,
             )
             assert file_discovery_result is not None
             assert file_discovery_result.duration_seconds >= 0
@@ -579,13 +578,13 @@ class TestPerformanceBenchmarksFunctional:
 
             # Check config loading result if present
             config_result = next(
-                (r for r in results if r.name == "config_loading"), None
+                (r for r in results if r.name == "config_loading"), None,
             )
             if config_result:
                 assert config_result.duration_seconds >= 0
 
-    def test_performance_history_management(self, benchmark_service):
-        """Test performance history saving and loading"""
+    def test_performance_history_management(self, benchmark_service) -> None:
+        """Test performance history saving and loading."""
         from crackerjack.services.performance_benchmarks import (
             BenchmarkResult,
             PerformanceReport,
@@ -617,7 +616,7 @@ class TestPerformanceBenchmarksFunctional:
             # Test with existing history
             mock_exists.return_value = True
             mock_json_load.return_value = [
-                {"timestamp": 1234567890, "total_duration": 25.0}
+                {"timestamp": 1234567890, "total_duration": 25.0},
             ]
             benchmark_service._save_performance_history(report)
 
@@ -632,8 +631,8 @@ class TestPerformanceBenchmarksFunctional:
             assert history is not None
             assert len(history) == 2
 
-    def test_performance_trends_analysis(self, benchmark_service):
-        """Test performance trends analysis"""
+    def test_performance_trends_analysis(self, benchmark_service) -> None:
+        """Test performance trends analysis."""
         with (
             patch("pathlib.Path.exists") as mock_exists,
             patch("pathlib.Path.open"),
@@ -648,7 +647,7 @@ class TestPerformanceBenchmarksFunctional:
             # Test with insufficient data
             mock_exists.return_value = True
             mock_json_load.return_value = [
-                {"timestamp": time.time(), "total_duration": 25.0}
+                {"timestamp": time.time(), "total_duration": 25.0},
             ]
             trends = benchmark_service.get_performance_trends(days=7)
             assert "error" in trends
@@ -704,10 +703,10 @@ class TestPerformanceBenchmarksFunctional:
 
 
 class TestDependencyMonitorFunctional:
-    """Execute real dependency_monitor.py code paths where possible"""
+    """Execute real dependency_monitor.py code paths where possible."""
 
-    def test_dependency_data_structures(self):
-        """Test dependency monitoring data structures"""
+    def test_dependency_data_structures(self) -> None:
+        """Test dependency monitoring data structures."""
         # Test dependency information structure
         dependency_info = {
             "name": "requests",
@@ -727,8 +726,8 @@ class TestDependencyMonitorFunctional:
         assert isinstance(dependency_info["security_issues"], list)
         assert dependency_info["age_days"] == 180
 
-    def test_dependency_analysis_patterns(self):
-        """Test dependency analysis patterns"""
+    def test_dependency_analysis_patterns(self) -> None:
+        """Test dependency analysis patterns."""
         # Test dependency collection
         dependencies = {
             "requests": {"version": "2.25.1", "type": "runtime"},
@@ -757,14 +756,14 @@ class TestDependencyMonitorFunctional:
                     "major": int(major),
                     "minor": int(minor),
                     "patch": int(patch),
-                }
+                },
             )
 
         assert len(version_patterns) == 4
         assert all("major" in pattern for pattern in version_patterns)
 
-    def test_security_analysis_patterns(self):
-        """Test security analysis patterns"""
+    def test_security_analysis_patterns(self) -> None:
+        """Test security analysis patterns."""
         # Test security issue categorization
         security_issues = [
             {"package": "requests", "severity": "medium", "cve": "CVE-2023-1234"},
@@ -800,10 +799,10 @@ class TestDependencyMonitorFunctional:
 
 
 class TestIntegrationFunctionalCoverage:
-    """Integration tests that execute real code paths across components"""
+    """Integration tests that execute real code paths across components."""
 
-    def test_cross_component_data_flow(self):
-        """Test real data flow between components"""
+    def test_cross_component_data_flow(self) -> None:
+        """Test real data flow between components."""
         # Test data transformation pipeline
         input_data = {
             "project_name": "test-project",
@@ -829,7 +828,7 @@ class TestIntegrationFunctionalCoverage:
                     "category": "testing",
                     "priority": "medium",
                     "action": "Increase test coverage",
-                }
+                },
             )
 
         if analysis_result["dependency_count"] > 10:
@@ -838,7 +837,7 @@ class TestIntegrationFunctionalCoverage:
                     "category": "dependencies",
                     "priority": "low",
                     "action": "Review dependency count",
-                }
+                },
             )
 
         # Stage 3: Action planning
@@ -857,8 +856,8 @@ class TestIntegrationFunctionalCoverage:
         assert len(action_plan["short_term"]) == 1
         assert len(action_plan["immediate"]) == 0
 
-    def test_configuration_processing_real(self):
-        """Test real configuration processing across components"""
+    def test_configuration_processing_real(self) -> None:
+        """Test real configuration processing across components."""
         # Test configuration merging and validation
         base_config = {
             "timeout": 30,
@@ -898,14 +897,14 @@ class TestIntegrationFunctionalCoverage:
         assert merged_config["tools"]["pytest"]["enabled"] is True  # New tool
 
     @pytest.mark.asyncio
-    async def test_async_workflow_real_execution(self):
-        """Test real async workflow execution patterns"""
+    async def test_async_workflow_real_execution(self) -> None:
+        """Test real async workflow execution patterns."""
         # Simulate real async workflow
         workflow_steps = ["init", "analyze", "process", "report"]
         results = {}
 
-        async def execute_step(step_name: str, delay: float = 0.01):
-            """Simulate async step execution"""
+        async def execute_step(step_name: str, delay: float = 0.01) -> str:
+            """Simulate async step execution."""
             await asyncio.sleep(delay)
             return f"{step_name}_completed"
 
@@ -934,10 +933,10 @@ class TestIntegrationFunctionalCoverage:
 
 
 class TestExecutionOptimization:
-    """Optimize test execution for maximum coverage with minimal overhead"""
+    """Optimize test execution for maximum coverage with minimal overhead."""
 
-    def test_streamlined_coverage_boost(self):
-        """Execute multiple code paths in single test for efficiency"""
+    def test_streamlined_coverage_boost(self) -> None:
+        """Execute multiple code paths in single test for efficiency."""
         # Test multiple utility functions in one go
         import time
         from pathlib import Path
@@ -972,8 +971,8 @@ class TestExecutionOptimization:
         later_time = time.time()
         assert later_time > current_time
 
-    def test_data_structure_coverage_boost(self):
-        """Cover performance benchmark data structure operations efficiently"""
+    def test_data_structure_coverage_boost(self) -> None:
+        """Cover performance benchmark data structure operations efficiently."""
         from crackerjack.services.performance_benchmarks import (
             BenchmarkResult,
             PerformanceReport,
@@ -1099,11 +1098,11 @@ class TestExecutionOptimization:
         assert len(failed_test_iterations) == 1  # iteration_3
 
     @pytest.mark.asyncio
-    async def test_async_coverage_boost(self):
-        """Cover async patterns efficiently"""
+    async def test_async_coverage_boost(self) -> None:
+        """Cover async patterns efficiently."""
 
         # Test various async patterns
-        async def simple_async_func():
+        async def simple_async_func() -> str:
             await asyncio.sleep(0.001)
             return "async_result"
 
@@ -1112,7 +1111,7 @@ class TestExecutionOptimization:
                 await asyncio.sleep(0.001)
                 yield f"item_{i}"
 
-        async def async_context_manager():
+        async def async_context_manager() -> str:
             return "context_value"
 
         # Execute async operations

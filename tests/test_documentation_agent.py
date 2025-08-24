@@ -32,13 +32,13 @@ def temp_project_dir():
 
         # Create basic project structure
         (project_path / "CHANGELOG.md").write_text(
-            "# Changelog\n\n## [0.1.0] - 2025-01-01\n- Initial release\n"
+            "# Changelog\n\n## [0.1.0] - 2025-01-01\n- Initial release\n",
         )
         (project_path / "README.md").write_text(
-            "# Test Project\n\nThis project has 8 agents.\n"
+            "# Test Project\n\nThis project has 8 agents.\n",
         )
         (project_path / "pyproject.toml").write_text(
-            '[project]\nname = "test-project"\nversion = "0.1.0"\n'
+            '[project]\nname = "test-project"\nversion = "0.1.0"\n',
         )
 
         yield project_path
@@ -47,14 +47,14 @@ def temp_project_dir():
 class TestDocumentationAgent:
     """Test cases for DocumentationAgent."""
 
-    def test_get_supported_types(self, documentation_agent):
+    def test_get_supported_types(self, documentation_agent) -> None:
         """Test that DocumentationAgent supports DOCUMENTATION type."""
         supported_types = documentation_agent.get_supported_types()
         assert IssueType.DOCUMENTATION in supported_types
         assert len(supported_types) == 1
 
     @pytest.mark.asyncio
-    async def test_can_handle_documentation_issue(self, documentation_agent):
+    async def test_can_handle_documentation_issue(self, documentation_agent) -> None:
         """Test that DocumentationAgent can handle documentation issues with correct confidence."""
         issue = Issue(
             id="doc-001",
@@ -68,7 +68,7 @@ class TestDocumentationAgent:
         assert confidence == 0.8
 
     @pytest.mark.asyncio
-    async def test_cannot_handle_other_issue_types(self, documentation_agent):
+    async def test_cannot_handle_other_issue_types(self, documentation_agent) -> None:
         """Test that DocumentationAgent returns 0.0 confidence for non-documentation issues."""
         issue = Issue(
             id="perf-001",
@@ -82,7 +82,7 @@ class TestDocumentationAgent:
         assert confidence == 0.0
 
     @pytest.mark.asyncio
-    async def test_fix_documentation_issue(self, documentation_agent, temp_project_dir):
+    async def test_fix_documentation_issue(self, documentation_agent, temp_project_dir) -> None:
         """Test fixing a documentation issue."""
         issue = Issue(
             id="doc-002",
@@ -93,7 +93,7 @@ class TestDocumentationAgent:
         )
 
         with patch.object(
-            documentation_agent, "_fix_documentation_consistency"
+            documentation_agent, "_fix_documentation_consistency",
         ) as mock_fix:
             mock_fix.return_value = FixResult(success=True, confidence=0.8)
 
@@ -104,8 +104,8 @@ class TestDocumentationAgent:
 
     @pytest.mark.asyncio
     async def test_fix_documentation_issue_failure(
-        self, documentation_agent, temp_project_dir
-    ):
+        self, documentation_agent, temp_project_dir,
+    ) -> None:
         """Test handling of documentation fix failure."""
         # Create an issue with a non-existent file path to force failure
         issue = Issue(
@@ -123,13 +123,13 @@ class TestDocumentationAgent:
             # Should still succeed but with no changes
             assert result.success is True
             assert "No recent changes to add to changelog" in str(
-                result.recommendations
+                result.recommendations,
             )
 
     @pytest.mark.asyncio
     async def test_fix_documentation_consistency_agent_count(
-        self, documentation_agent, temp_project_dir
-    ):
+        self, documentation_agent, temp_project_dir,
+    ) -> None:
         """Test fixing agent count inconsistencies in documentation."""
         # Create README with incorrect agent count
         readme_path = temp_project_dir / "README.md"
@@ -149,8 +149,8 @@ class TestDocumentationAgent:
 
     @pytest.mark.asyncio
     async def test_fix_documentation_consistency_no_changes_needed(
-        self, documentation_agent, temp_project_dir
-    ):
+        self, documentation_agent, temp_project_dir,
+    ) -> None:
         """Test when documentation is already consistent."""
         readme_path = temp_project_dir / "README.md"
         readme_path.write_text("# Test Project\n\nThis project has 9 agents.\n")
@@ -170,8 +170,8 @@ class TestDocumentationAgent:
 
     @pytest.mark.asyncio
     async def test_update_changelog_version_bump(
-        self, documentation_agent, temp_project_dir
-    ):
+        self, documentation_agent, temp_project_dir,
+    ) -> None:
         """Test updating changelog during version bump."""
         changelog_path = temp_project_dir / "CHANGELOG.md"
 
@@ -194,7 +194,7 @@ class TestDocumentationAgent:
             assert result.success is True
 
     @patch("subprocess.run")
-    def test_get_recent_changes(self, mock_run, documentation_agent):
+    def test_get_recent_changes(self, mock_run, documentation_agent) -> None:
         """Test getting recent git changes."""
         # Mock both the tag check (first call) and the log command (second call)
         mock_run.side_effect = [
@@ -217,7 +217,7 @@ class TestDocumentationAgent:
         assert changes[2]["message"] == "docs: update README"
 
     @patch("subprocess.run")
-    def test_get_recent_changes_git_error(self, mock_run, documentation_agent):
+    def test_get_recent_changes_git_error(self, mock_run, documentation_agent) -> None:
         """Test handling git command errors."""
         mock_run.return_value = MagicMock(returncode=1, stdout="")
 
@@ -226,8 +226,8 @@ class TestDocumentationAgent:
         assert changes == []
 
     def test_check_agent_count_consistency_mismatch(
-        self, documentation_agent, temp_project_dir
-    ):
+        self, documentation_agent, temp_project_dir,
+    ) -> None:
         """Test detecting agent count mismatches."""
         readme_path = temp_project_dir / "README.md"
         readme_path.write_text("# Test Project\n\nThis project has 5 agents.\n")
@@ -237,12 +237,12 @@ class TestDocumentationAgent:
         assert isinstance(issues, list)
 
     def test_check_agent_count_consistency_no_issues(
-        self, documentation_agent, temp_project_dir
-    ):
+        self, documentation_agent, temp_project_dir,
+    ) -> None:
         """Test when no documentation issues are found."""
         readme_path = temp_project_dir / "README.md"
         readme_path.write_text(
-            "# Test Project\n\nThis project has 9 specialized agents.\n"
+            "# Test Project\n\nThis project has 9 specialized agents.\n",
         )
 
         issues = documentation_agent._check_agent_count_consistency([readme_path])
@@ -250,7 +250,7 @@ class TestDocumentationAgent:
         # Should return list (might be empty)
         assert isinstance(issues, list)
 
-    def test_generate_changelog_entry_formatting(self, documentation_agent):
+    def test_generate_changelog_entry_formatting(self, documentation_agent) -> None:
         """Test changelog entry formatting."""
         changes = [
             {"message": "feat: add new feature", "hash": "abc123"},

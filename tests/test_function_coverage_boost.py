@@ -11,7 +11,7 @@ from pathlib import Path
 class TestMCPCacheFunctionality:
     """Test MCP cache functionality beyond imports."""
 
-    def test_error_pattern_to_dict(self):
+    def test_error_pattern_to_dict(self) -> None:
         """Test ErrorPattern to_dict method."""
         from crackerjack.mcp.cache import ErrorPattern
 
@@ -27,7 +27,7 @@ class TestMCPCacheFunctionality:
         assert result_dict["pattern_id"] == "test1"
         assert result_dict["error_type"] == "syntax"
 
-    def test_fix_result_to_dict(self):
+    def test_fix_result_to_dict(self) -> None:
         """Test FixResult to_dict method."""
         from crackerjack.mcp.cache import FixResult
 
@@ -48,7 +48,7 @@ class TestMCPCacheFunctionality:
 class TestServicesEnhancedFilesystemFunctionality:
     """Test enhanced filesystem functionality."""
 
-    def test_file_cache_put_and_get(self):
+    def test_file_cache_put_and_get(self) -> None:
         """Test FileCache put and get methods."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -65,7 +65,7 @@ class TestServicesEnhancedFilesystemFunctionality:
         result = cache.get("nonexistent")
         assert result is None
 
-    def test_file_cache_eviction(self):
+    def test_file_cache_eviction(self) -> None:
         """Test FileCache LRU eviction."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -90,7 +90,7 @@ class TestServicesEnhancedFilesystemFunctionality:
 class TestModelsConfigAdapterFunctionality:
     """Test models config adapter functionality."""
 
-    def test_config_adapter_basic_functionality(self):
+    def test_config_adapter_basic_functionality(self) -> None:
         """Test ConfigAdapter basic methods."""
         from crackerjack.models.config_adapter import ConfigAdapter
 
@@ -112,7 +112,7 @@ class TestModelsConfigAdapterFunctionality:
 class TestPluginsFunctionality:
     """Test plugins system functionality."""
 
-    def test_plugin_base_classes(self):
+    def test_plugin_base_classes(self) -> None:
         """Test plugin base classes functionality."""
         from crackerjack.plugins.base import BasePlugin, PluginType
 
@@ -140,7 +140,7 @@ class TestPluginsFunctionality:
         assert plugin.is_enabled() is True
         assert plugin.execute() is True
 
-    def test_plugin_loader_functionality(self):
+    def test_plugin_loader_functionality(self) -> None:
         """Test plugin loader functionality."""
         from crackerjack.plugins.loader import PluginLoader
 
@@ -154,7 +154,7 @@ class TestPluginsFunctionality:
             # Test empty directory
             assert len(plugins) == 0
 
-    def test_plugin_manager_functionality(self):
+    def test_plugin_manager_functionality(self) -> None:
         """Test plugin manager functionality."""
         from crackerjack.plugins.base import BasePlugin, PluginType
         from crackerjack.plugins.managers import PluginManager
@@ -190,7 +190,7 @@ class TestPluginsFunctionality:
 class TestOrchestrationFunctionality:
     """Test orchestration modules functionality."""
 
-    def test_execution_strategies_basic(self):
+    def test_execution_strategies_basic(self) -> None:
         """Test execution strategies functionality."""
         from crackerjack.orchestration.execution_strategies import ExecutionStrategy
 
@@ -204,7 +204,7 @@ class TestOrchestrationFunctionality:
         assert "parallel" in config
         assert "timeout" in config
 
-    def test_advanced_orchestrator_basic(self):
+    def test_advanced_orchestrator_basic(self) -> None:
         """Test advanced orchestrator functionality."""
         from crackerjack.orchestration.advanced_orchestrator import AdvancedOrchestrator
 
@@ -220,7 +220,7 @@ class TestOrchestrationFunctionality:
 class TestPy313Functionality:
     """Test Python 3.13 features functionality."""
 
-    def test_python313_features_basic(self):
+    def test_python313_features_basic(self) -> None:
         """Test Python 3.13 features."""
         from crackerjack.py313 import Python313Features
 
@@ -245,7 +245,7 @@ class TestPy313Functionality:
 class TestServicesFunctionality:
     """Test services functionality beyond imports."""
 
-    def test_metrics_functionality(self):
+    def test_metrics_functionality(self) -> None:
         """Test metrics service functionality."""
         from crackerjack.services.metrics import Metrics
 
@@ -266,7 +266,7 @@ class TestServicesFunctionality:
         gauge_value = metrics.get_gauge("test_gauge")
         assert gauge_value == 42.5
 
-    def test_config_hooks_functionality(self):
+    def test_config_hooks_functionality(self) -> None:
         """Test config hooks functionality."""
         from crackerjack.config.hooks import HookConfig
 

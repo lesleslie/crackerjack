@@ -30,7 +30,7 @@ from crackerjack.models.protocols import (
 class TestProtocolCompliance:
     """Test that all concrete implementations satisfy their protocol interfaces."""
 
-    def test_filesystem_interface_compliance(self):
+    def test_filesystem_interface_compliance(self) -> None:
         """Test FileSystemInterface protocol compliance."""
         from crackerjack.services.filesystem import FileSystemService
 
@@ -61,7 +61,7 @@ class TestProtocolCompliance:
         mkdir_sig = inspect.signature(service.mkdir)
         assert len(mkdir_sig.parameters) >= 1  # path parameter + optional parents
 
-    def test_git_interface_compliance(self):
+    def test_git_interface_compliance(self) -> None:
         """Test GitInterface protocol compliance."""
         from crackerjack.services.git import GitService
 
@@ -97,7 +97,7 @@ class TestProtocolCompliance:
         assert len(commit_sig.parameters) == 1  # message parameter
         assert commit_sig.return_annotation is bool
 
-    def test_hook_manager_compliance(self):
+    def test_hook_manager_compliance(self) -> None:
         """Test HookManager protocol compliance."""
         from crackerjack.managers.hook_manager import HookManagerImpl
 
@@ -129,7 +129,7 @@ class TestProtocolCompliance:
         set_config_sig = inspect.signature(manager.set_config_path)
         assert len(set_config_sig.parameters) == 1  # path parameter
 
-    def test_test_manager_protocol_compliance(self):
+    def test_test_manager_protocol_compliance(self) -> None:
         """Test TestManagerProtocol compliance."""
         from crackerjack.managers.test_manager import TestManagementImpl
 
@@ -163,7 +163,7 @@ class TestProtocolCompliance:
         assert len(validate_env_sig.parameters) == 0
         assert validate_env_sig.return_annotation is bool
 
-    def test_publish_manager_compliance(self):
+    def test_publish_manager_compliance(self) -> None:
         """Test PublishManager protocol compliance."""
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
@@ -202,13 +202,13 @@ class TestProtocolCompliance:
 class TestDependencyContainer:
     """Test dependency injection container behavior with protocols."""
 
-    def test_container_creation(self):
+    def test_container_creation(self) -> None:
         """Test basic container creation."""
         container = DependencyContainer()
         assert container._services == {}
         assert container._singletons == {}
 
-    def test_register_singleton(self):
+    def test_register_singleton(self) -> None:
         """Test singleton registration."""
         container = DependencyContainer()
         mock_service = Mock()
@@ -218,7 +218,7 @@ class TestDependencyContainer:
         assert "FileSystemInterface" in container._singletons
         assert container._singletons["FileSystemInterface"] is mock_service
 
-    def test_register_transient(self):
+    def test_register_transient(self) -> None:
         """Test transient service registration."""
         container = DependencyContainer()
 
@@ -230,7 +230,7 @@ class TestDependencyContainer:
         assert "GitInterface" in container._services
         assert callable(container._services["GitInterface"])
 
-    def test_get_singleton(self):
+    def test_get_singleton(self) -> None:
         """Test retrieving singleton services."""
         container = DependencyContainer()
         mock_service = Mock()
@@ -242,7 +242,7 @@ class TestDependencyContainer:
         # Second call returns same instance
         assert container.get(FileSystemInterface) is mock_service
 
-    def test_get_transient(self):
+    def test_get_transient(self) -> None:
         """Test retrieving transient services."""
         container = DependencyContainer()
         call_count = 0
@@ -262,16 +262,16 @@ class TestDependencyContainer:
         assert first.id == 1
         assert second.id == 2
 
-    def test_get_unregistered_service_raises_error(self):
+    def test_get_unregistered_service_raises_error(self) -> None:
         """Test that getting unregistered service raises ValueError."""
         container = DependencyContainer()
 
         with pytest.raises(
-            ValueError, match="Service TestManagerProtocol not registered"
+            ValueError, match="Service TestManagerProtocol not registered",
         ):
             container.get(TestManagerProtocol)
 
-    def test_create_default_container(self):
+    def test_create_default_container(self) -> None:
         """Test creating container with default services."""
         container = create_container()
 
@@ -282,7 +282,7 @@ class TestDependencyContainer:
         assert "TestManagerProtocol" in container._services
         assert "PublishManager" in container._services
 
-    def test_container_service_resolution(self):
+    def test_container_service_resolution(self) -> None:
         """Test that container can resolve all registered services."""
         container = create_container()
 
@@ -321,7 +321,7 @@ class TestDependencyContainer:
 class TestProtocolSubstitutability:
     """Test protocol substitutability (Liskov Substitution Principle)."""
 
-    def test_filesystem_substitutability(self):
+    def test_filesystem_substitutability(self) -> None:
         """Test that FileSystemInterface implementations are substitutable."""
         from crackerjack.services.filesystem import FileSystemService
 
@@ -358,14 +358,14 @@ class TestProtocolSubstitutability:
                 assert isinstance(exists, bool)
 
                 if isinstance(
-                    service, FileSystemService
+                    service, FileSystemService,
                 ):  # Only test read on real service
                     content = service.read_file(temp_path)
                     assert isinstance(content, str)
             finally:
                 Path(temp_path).unlink(missing_ok=True)
 
-    def test_hook_manager_substitutability(self):
+    def test_hook_manager_substitutability(self) -> None:
         """Test that HookManager implementations are substitutable."""
         from crackerjack.managers.hook_manager import HookManagerImpl
 
@@ -407,7 +407,7 @@ class TestProtocolSubstitutability:
 class TestProtocolMethodSignatures:
     """Test that method signatures and return types match protocol definitions."""
 
-    def test_options_protocol_attributes(self):
+    def test_options_protocol_attributes(self) -> None:
         """Test OptionsProtocol attribute definitions."""
         try:
             from crackerjack.cli.options import Options
@@ -417,7 +417,7 @@ class TestProtocolMethodSignatures:
         except ImportError:
             # Create a mock options object that follows the protocol
             class MockOptions:
-                def __init__(self):
+                def __init__(self) -> None:
                     self.commit = False
                     self.interactive = False
                     self.no_config_updates = False
@@ -489,7 +489,7 @@ class TestProtocolMethodSignatures:
         for attr in required_attrs:
             assert hasattr(options, attr), f"Missing attribute: {attr}"
 
-    def test_console_interface_methods(self):
+    def test_console_interface_methods(self) -> None:
         """Test ConsoleInterface method signatures."""
 
         # Rich Console doesn't implement input, so we test with a mock
@@ -506,18 +506,18 @@ class TestProtocolMethodSignatures:
         assert isinstance(console, ConsoleInterface)
 
         # Check method signatures
-        print_method = getattr(console, "print")
+        print_method = console.print
         assert callable(print_method)
 
-        input_method = getattr(console, "input")
+        input_method = console.input
         assert callable(input_method)
 
-    def test_command_runner_protocol(self):
+    def test_command_runner_protocol(self) -> None:
         """Test CommandRunner protocol method signature."""
 
         class MockCommandRunner:
             def execute_command(
-                self, cmd: list[str], **kwargs: t.Any
+                self, cmd: list[str], **kwargs: t.Any,
             ) -> subprocess.CompletedProcess[str]:
                 return subprocess.CompletedProcess(cmd, 0, "output", "")
 
@@ -535,21 +535,24 @@ class TestProtocolMethodSignatures:
 class TestMockProtocolImplementations:
     """Test edge cases using mock protocol implementations."""
 
-    def test_filesystem_error_handling(self):
+    def test_filesystem_error_handling(self) -> None:
         """Test FileSystemInterface error handling patterns."""
 
         class FailingFileSystem:
             def read_file(self, path: str | t.Any) -> str:
-                raise FileNotFoundError("File not found")
+                msg = "File not found"
+                raise FileNotFoundError(msg)
 
             def write_file(self, path: str | t.Any, content: str) -> None:
-                raise PermissionError("Permission denied")
+                msg = "Permission denied"
+                raise PermissionError(msg)
 
             def exists(self, path: str | t.Any) -> bool:
                 return False
 
             def mkdir(self, path: str | t.Any, parents: bool = False) -> None:
-                raise OSError("Disk full")
+                msg = "Disk full"
+                raise OSError(msg)
 
         failing_fs = FailingFileSystem()
         assert isinstance(failing_fs, FileSystemInterface)
@@ -566,7 +569,7 @@ class TestMockProtocolImplementations:
         with pytest.raises(OSError):
             failing_fs.mkdir("/newdir")
 
-    def test_git_interface_edge_cases(self):
+    def test_git_interface_edge_cases(self) -> None:
         """Test GitInterface edge cases."""
 
         class EdgeCaseGit:
@@ -586,7 +589,7 @@ class TestMockProtocolImplementations:
                 return len(files) == 0  # Only succeeds with empty list
 
             def get_commit_message_suggestions(
-                self, changed_files: list[str]
+                self, changed_files: list[str],
             ) -> list[str]:
                 return ["No suggestions available"]
 
@@ -604,7 +607,7 @@ class TestMockProtocolImplementations:
         assert isinstance(suggestions, list)
         assert len(suggestions) > 0
 
-    def test_container_with_mock_services(self):
+    def test_container_with_mock_services(self) -> None:
         """Test container behavior with mock service implementations."""
         container = DependencyContainer()
 

@@ -4,9 +4,9 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..config.hooks import HookConfigLoader
-from ..executors.hook_executor import HookExecutor
-from ..models.task import HookResult
+from crackerjack.config.hooks import HookConfigLoader
+from crackerjack.executors.hook_executor import HookExecutor
+from crackerjack.models.task import HookResult
 
 
 class HookManagerImpl:
@@ -67,7 +67,7 @@ class HookManagerImpl:
         try:
             result = subprocess.run(
                 ["pre-commit", "install"],
-                cwd=self.pkg_path,
+                check=False, cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -75,11 +75,10 @@ class HookManagerImpl:
             if result.returncode == 0:
                 self.console.print("[green]✅[/green] Pre-commit hooks installed")
                 return True
-            else:
-                self.console.print(
-                    f"[red]❌[/red] Failed to install hooks: {result.stderr}"
-                )
-                return False
+            self.console.print(
+                f"[red]❌[/red] Failed to install hooks: {result.stderr}",
+            )
+            return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error installing hooks: {e}")
             return False
@@ -88,7 +87,7 @@ class HookManagerImpl:
         try:
             result = subprocess.run(
                 ["pre-commit", "autoupdate"],
-                cwd=self.pkg_path,
+                check=False, cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -96,11 +95,10 @@ class HookManagerImpl:
             if result.returncode == 0:
                 self.console.print("[green]✅[/green] Pre-commit hooks updated")
                 return True
-            else:
-                self.console.print(
-                    f"[red]❌[/red] Failed to update hooks: {result.stderr}"
-                )
-                return False
+            self.console.print(
+                f"[red]❌[/red] Failed to update hooks: {result.stderr}",
+            )
+            return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error updating hooks: {e}")
             return False

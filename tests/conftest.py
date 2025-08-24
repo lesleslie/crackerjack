@@ -23,7 +23,7 @@ from crackerjack.services.unified_config import CrackerjackConfig
 
 def pytest_configure(config: Config) -> None:
     config.addinivalue_line(
-        "markers", "benchmark: mark test as a benchmark (disables parallel execution)"
+        "markers", "benchmark: mark test as a benchmark (disables parallel execution)",
     )
     if not hasattr(config, "workerinput"):
         pass
@@ -39,26 +39,22 @@ def pytest_addoption(parser: Parser) -> None:
 
 
 def pytest_collection_modifyitems(config: Config, items: list[Item]) -> None:
-    benchmark_mode = t.cast(bool, config.getoption("--benchmark"))
+    benchmark_mode = t.cast("bool", config.getoption("--benchmark"))
     has_benchmark_tests = any(item.get_closest_marker("benchmark") for item in items)
     if benchmark_mode or has_benchmark_tests:
         has_worker = hasattr(config, "workerinput")
         try:
-            num_processes = t.cast(int, config.getoption("numprocesses"))
+            num_processes = t.cast("int", config.getoption("numprocesses"))
             has_multi_processes = num_processes > 0
         except Exception:
             has_multi_processes = False
         if has_worker or has_multi_processes:
             config.option.numprocesses = 0
-            print(
-                "Benchmark tests detected: Disabling parallel execution for accurate timing"
-            )
 
 
 @pytest.hookimpl(trylast=True)
 def pytest_runtest_setup(item: t.Any) -> None:
     item._start_time = time.time()
-    print(f"Starting test: {item.name}")
 
 
 @pytest.hookimpl(trylast=True)
@@ -66,9 +62,9 @@ def pytest_runtest_teardown(item: t.Any) -> None:
     if hasattr(item, "_start_time"):
         duration = time.time() - item._start_time
         if duration > 10:
-            print(f"SLOW TEST: {item.name} took {duration: .2f}s")
+            pass
         else:
-            print(f"Test completed: {item.name} in {duration: .2f}s")
+            pass
 
 
 @pytest.hookimpl(trylast=True)
@@ -77,7 +73,7 @@ def pytest_runtest_protocol(item: t.Any) -> None:
 
 
 def pytest_benchmark_compare_machine_info(
-    machine_info: dict[str, t.Any], compared_benchmark: t.Any
+    machine_info: dict[str, t.Any], compared_benchmark: t.Any,
 ) -> bool:
     return True
 
@@ -93,7 +89,7 @@ def pytest_benchmark_generate_commit_info(config: Config) -> dict[str, t.Any]:
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Create an instance of the default event loop for the test session"""
+    """Create an instance of the default event loop for the test session."""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -105,14 +101,14 @@ def event_loop():
 
 @pytest.fixture
 def temp_dir():
-    """Create a temporary directory for tests"""
+    """Create a temporary directory for tests."""
     with tempfile.TemporaryDirectory() as temp_path:
         yield Path(temp_path)
 
 
 @pytest.fixture
 def temp_project_dir(temp_dir):
-    """Create a temporary project directory structure"""
+    """Create a temporary project directory structure."""
     project_dir = temp_dir / "test_project"
     project_dir.mkdir()
 
@@ -125,7 +121,7 @@ def temp_project_dir(temp_dir):
 name = "test-project"
 version = "0.1.0"
 description = "Test project"
-    """.strip()
+    """.strip(),
     )
 
     # Create git repository
@@ -134,12 +130,12 @@ description = "Test project"
     os.system("git config user.email 'test@example.com'")
     os.system("git config user.name 'Test User'")
 
-    yield project_dir
+    return project_dir
 
 
 @pytest.fixture
 def mock_container():
-    """Create a mock dependency injection container"""
+    """Create a mock dependency injection container."""
     container = Mock(spec=DependencyContainer)
 
     # Mock services
@@ -156,7 +152,7 @@ def mock_container():
 
 @pytest.fixture
 def sample_config():
-    """Create sample crackerjack configuration"""
+    """Create sample crackerjack configuration."""
     return CrackerjackConfig(
         package_path=Path.cwd(),
         test_timeout=60,
@@ -167,7 +163,7 @@ def sample_config():
 
 @pytest.fixture
 def mock_hook_manager():
-    """Create a mock hook manager"""
+    """Create a mock hook manager."""
     manager = Mock(spec=HookManager)
     manager.run_fast_hooks.return_value = (True, [])
     manager.run_comprehensive_hooks.return_value = (True, [])
@@ -177,7 +173,7 @@ def mock_hook_manager():
 
 @pytest.fixture
 def mock_test_manager():
-    """Create a mock test manager"""
+    """Create a mock test manager."""
     manager = Mock(spec=TestManagerProtocol)
     manager.run_tests.return_value = (True, [])
     manager.get_test_results.return_value = []
@@ -187,7 +183,7 @@ def mock_test_manager():
 
 @pytest.fixture
 def mock_publish_manager():
-    """Create a mock publish manager"""
+    """Create a mock publish manager."""
     manager = Mock(spec=PublishManager)
     manager.bump_version.return_value = "1.0.1"
     manager.create_git_tag.return_value = None
@@ -197,7 +193,7 @@ def mock_publish_manager():
 
 @pytest.fixture
 def mock_filesystem():
-    """Create a mock filesystem service"""
+    """Create a mock filesystem service."""
     fs = Mock(spec=FileSystemService)
     fs.read_file.return_value = "file content"
     fs.write_file.return_value = None
@@ -208,7 +204,7 @@ def mock_filesystem():
 
 @pytest.fixture
 def mock_git():
-    """Create a mock git service"""
+    """Create a mock git service."""
     git = Mock(spec=GitService)
     git.is_git_repo.return_value = True
     git.get_current_branch.return_value = "main"
@@ -220,7 +216,7 @@ def mock_git():
 
 @pytest.fixture
 async def async_mock_container():
-    """Create an async mock container for async tests"""
+    """Create an async mock container for async tests."""
     container = AsyncMock(spec=DependencyContainer)
 
     # Mock async services
@@ -232,7 +228,7 @@ async def async_mock_container():
 
 @pytest.fixture
 def sample_test_data():
-    """Sample test data for various test scenarios"""
+    """Sample test data for various test scenarios."""
     return {
         "files": [
             {"name": "test.py", "content": "print('hello world')"},
@@ -255,11 +251,11 @@ def sample_test_data():
 
 
 class ConfigFactory:
-    """Factory for creating test configurations"""
+    """Factory for creating test configurations."""
 
     @staticmethod
     def create_basic_config(**overrides):
-        """Create basic configuration with optional overrides"""
+        """Create basic configuration with optional overrides."""
         defaults = {
             "package_path": Path.cwd(),
             "test_timeout": 60,
@@ -270,23 +266,23 @@ class ConfigFactory:
 
     @staticmethod
     def create_ci_config():
-        """Create configuration optimized for CI environment"""
+        """Create configuration optimized for CI environment."""
         return ConfigFactory.create_basic_config(
-            test_workers=4, test_timeout=120, skip_hooks=False
+            test_workers=4, test_timeout=120, skip_hooks=False,
         )
 
     @staticmethod
     def create_dev_config():
-        """Create configuration for development environment"""
+        """Create configuration for development environment."""
         return ConfigFactory.create_basic_config(test_workers=1, skip_hooks=True)
 
 
 class HookResultFactory:
-    """Factory for creating hook test results"""
+    """Factory for creating hook test results."""
 
     @staticmethod
     def create_passed_result(hook_name: str):
-        """Create a passing hook result"""
+        """Create a passing hook result."""
         return {
             "hook_name": hook_name,
             "status": "passed",
@@ -297,7 +293,7 @@ class HookResultFactory:
 
     @staticmethod
     def create_failed_result(hook_name: str, error_msg: str):
-        """Create a failing hook result"""
+        """Create a failing hook result."""
         return {
             "hook_name": hook_name,
             "status": "failed",
@@ -308,11 +304,11 @@ class HookResultFactory:
 
 
 class TestResultFactory:
-    """Factory for creating test results"""
+    """Factory for creating test results."""
 
     @staticmethod
     def create_passed_test(test_name: str):
-        """Create a passing test result"""
+        """Create a passing test result."""
         return {
             "test_name": test_name,
             "status": "passed",
@@ -323,7 +319,7 @@ class TestResultFactory:
 
     @staticmethod
     def create_failed_test(test_name: str, error_msg: str):
-        """Create a failing test result"""
+        """Create a failing test result."""
         return {
             "test_name": test_name,
             "status": "failed",
@@ -340,7 +336,7 @@ class TestResultFactory:
 
 @pytest.fixture
 async def async_timeout():
-    """Fixture to handle async test timeouts"""
+    """Fixture to handle async test timeouts."""
 
     async def _timeout(coro, timeout_seconds=10):
         try:
@@ -358,7 +354,7 @@ async def async_timeout():
 
 @pytest.fixture
 def performance_timer():
-    """Fixture for timing performance tests"""
+    """Fixture for timing performance tests."""
     times = []
 
     def _timer():
@@ -383,7 +379,7 @@ def performance_timer():
 
 @pytest.fixture
 def security_test_data():
-    """Test data for security testing"""
+    """Test data for security testing."""
     return {
         "malicious_inputs": [
             "'; DROP TABLE users; --",
@@ -406,7 +402,7 @@ def security_test_data():
 
 @pytest.fixture(scope="session")
 def ci_environment():
-    """Detect and configure for CI environment"""
+    """Detect and configure for CI environment."""
     ci_indicators = [
         "CI",
         "CONTINUOUS_INTEGRATION",
@@ -428,23 +424,23 @@ def ci_environment():
     }
 
 
-def _detect_ci_provider():
-    """Detect which CI provider is being used"""
+def _detect_ci_provider() -> str:
+    """Detect which CI provider is being used."""
     if os.getenv("GITHUB_ACTIONS"):
         return "github_actions"
-    elif os.getenv("GITLAB_CI"):
+    if os.getenv("GITLAB_CI"):
         return "gitlab_ci"
-    elif os.getenv("JENKINS_URL"):
+    if os.getenv("JENKINS_URL"):
         return "jenkins"
-    elif os.getenv("TRAVIS"):
+    if os.getenv("TRAVIS"):
         return "travis"
-    elif os.getenv("CIRCLECI"):
+    if os.getenv("CIRCLECI"):
         return "circleci"
     return "unknown"
 
 
 def _is_parallel_safe():
-    """Determine if parallel test execution is safe"""
+    """Determine if parallel test execution is safe."""
     # Some CI environments have issues with parallel execution
     provider = _detect_ci_provider()
     return provider not in ["travis", "unknown"]
@@ -452,7 +448,7 @@ def _is_parallel_safe():
 
 @pytest.fixture
 def ci_config_factory():
-    """Factory for creating CI-optimized configurations"""
+    """Factory for creating CI-optimized configurations."""
 
     def create_ci_config(ci_env, **overrides):
         base_config = {
@@ -474,7 +470,7 @@ def ci_config_factory():
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
-    """Setup test environment before any tests run"""
+    """Setup test environment before any tests run."""
     # Ensure clean test state
     if Path(".current_test").exists():
         Path(".current_test").unlink()
@@ -493,7 +489,7 @@ def setup_test_environment():
 
 @pytest.fixture
 def test_isolation():
-    """Ensure test isolation by changing to temp directory"""
+    """Ensure test isolation by changing to temp directory."""
     original_cwd = os.getcwd()
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -510,7 +506,7 @@ def test_isolation():
 
 @pytest.fixture
 def coverage_tracker():
-    """Track coverage improvements during test execution"""
+    """Track coverage improvements during test execution."""
     coverage_data = {"initial": 0, "final": 0, "target": 42}
 
     # Would integrate with coverage.py in real implementation
@@ -525,7 +521,7 @@ def coverage_tracker():
 
 @pytest.fixture
 def quality_metrics():
-    """Track quality metrics during testing"""
+    """Track quality metrics during testing."""
     return {
         "test_count": 0,
         "failure_count": 0,

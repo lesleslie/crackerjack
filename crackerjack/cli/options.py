@@ -73,14 +73,15 @@ class Options(BaseModel):
             return BumpOption(value.lower())
         except ValueError:
             valid_options = ", ".join([o.value for o in BumpOption])
+            msg = f"Invalid bump option: {value}. Must be one of: {valid_options}"
             raise ValueError(
-                f"Invalid bump option: {value}. Must be one of: {valid_options}"
+                msg,
             )
 
 
 CLI_OPTIONS = {
     "commit": typer.Option(
-        False, "-c", "--commit", help="Commit and push changes to Git."
+        False, "-c", "--commit", help="Commit and push changes to Git.",
     ),
     "interactive": typer.Option(
         False,

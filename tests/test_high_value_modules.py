@@ -1,18 +1,18 @@
-"""
-High-value module tests focused on strategic coverage improvements.
+"""High-value module tests focused on strategic coverage improvements.
 
 This file implements the test-quality-specialist recommendations for
 achieving 42% coverage through targeted testing of high-impact modules.
 """
 
 from pathlib import Path
+from typing import Never
 
 import pytest
 
 
 @pytest.mark.unit
-def test_cli_options_module():
-    """Test CLI options module - high impact coverage target"""
+def test_cli_options_module() -> None:
+    """Test CLI options module - high impact coverage target."""
     from crackerjack.cli.options import BumpOption, Options, create_options
 
     # Test Options class instantiation
@@ -66,8 +66,8 @@ def test_cli_options_module():
 
 
 @pytest.mark.unit
-def test_services_metrics_basic():
-    """Test metrics service - strategic coverage target"""
+def test_services_metrics_basic() -> None:
+    """Test metrics service - strategic coverage target."""
     try:
         import tempfile
 
@@ -110,9 +110,8 @@ def test_services_metrics_basic():
 
 
 @pytest.mark.unit
-def test_api_module_comprehensive():
-    """Test API module comprehensively - strategic coverage boost"""
-
+def test_api_module_comprehensive() -> None:
+    """Test API module comprehensively - strategic coverage boost."""
     from crackerjack.api import (
         CrackerjackAPI,
         QualityCheckResult,
@@ -161,8 +160,8 @@ def test_api_module_comprehensive():
 
 
 @pytest.mark.unit
-def test_code_cleaner_strategic():
-    """Test code cleaner module - strategic coverage target"""
+def test_code_cleaner_strategic() -> None:
+    """Test code cleaner module - strategic coverage target."""
     import tempfile
     from pathlib import Path
 
@@ -201,8 +200,8 @@ def test_code_cleaner_strategic():
 
 
 @pytest.mark.unit
-def test_unified_config_strategic():
-    """Test unified config module - strategic coverage target"""
+def test_unified_config_strategic() -> None:
+    """Test unified config module - strategic coverage target."""
     import tempfile
     from pathlib import Path
 
@@ -231,8 +230,8 @@ def test_unified_config_strategic():
 
 
 @pytest.mark.unit
-def test_logging_service_complete():
-    """Complete coverage of logging service"""
+def test_logging_service_complete() -> None:
+    """Complete coverage of logging service."""
     import tempfile
     from pathlib import Path
 
@@ -283,14 +282,16 @@ def test_logging_service_complete():
     try:
         with LoggingContext("error_operation", test_param="value") as cid:
             assert len(cid) == 8
-            raise ValueError("Intentional test error")
+            msg = "Intentional test error"
+            raise ValueError(msg)
     except ValueError:
         pass  # Expected
 
     # Test performance decorator error path
     @log_performance("test_operation", category="test")
-    def error_function():
-        raise RuntimeError("Intentional test error")
+    def error_function() -> Never:
+        msg = "Intentional test error"
+        raise RuntimeError(msg)
 
     try:
         error_function()
@@ -308,8 +309,8 @@ def test_logging_service_complete():
 
 
 @pytest.mark.unit
-def test_container_module_complete():
-    """Complete coverage of container module"""
+def test_container_module_complete() -> None:
+    """Complete coverage of container module."""
     from crackerjack.core.container import DependencyContainer, create_container
 
     # Test container creation and basic operations
@@ -340,8 +341,8 @@ def test_container_module_complete():
 
 
 @pytest.mark.unit
-def test_workflow_orchestrator_complete():
-    """Complete coverage of workflow orchestrator"""
+def test_workflow_orchestrator_complete() -> None:
+    """Complete coverage of workflow orchestrator."""
     from pathlib import Path
 
     from rich.console import Console

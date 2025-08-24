@@ -10,9 +10,9 @@ class GitService:
         self.pkg_path = pkg_path or Path.cwd()
 
     def _run_git_command(self, args: list[str]) -> subprocess.CompletedProcess[str]:
-        cmd = ["git"] + args
+        cmd = ["git", *args]
         return subprocess.run(
-            cmd, cwd=self.pkg_path, capture_output=True, text=True, timeout=60
+            cmd, check=False, cwd=self.pkg_path, capture_output=True, text=True, timeout=60,
         )
 
     def is_git_repo(self) -> bool:
@@ -37,7 +37,7 @@ class GitService:
                 else []
             )
             untracked_result = self._run_git_command(
-                ["ls-files", "--others", "--exclude-standard"]
+                ["ls-files", "--others", "--exclude-standard"],
             )
             untracked_files = (
                 untracked_result.stdout.strip().split("\n")
@@ -64,7 +64,7 @@ class GitService:
                 result = self._run_git_command(["add", file])
                 if result.returncode != 0:
                     self.console.print(
-                        f"[red]❌[/red] Failed to add {file}: {result.stderr}"
+                        f"[red]❌[/red] Failed to add {file}: {result.stderr}",
                     )
                     return False
             return True
@@ -78,9 +78,8 @@ class GitService:
             if result.returncode == 0:
                 self.console.print(f"[green]✅[/green] Committed: {message}")
                 return True
-            else:
-                self.console.print(f"[red]❌[/red] Commit failed: {result.stderr}")
-                return False
+            self.console.print(f"[red]❌[/red] Commit failed: {result.stderr}")
+            return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error committing: {e}")
             return False
@@ -91,9 +90,8 @@ class GitService:
             if result.returncode == 0:
                 self.console.print("[green]✅[/green] Pushed to remote")
                 return True
-            else:
-                self.console.print(f"[red]❌[/red] Push failed: {result.stderr}")
-                return False
+            self.console.print(f"[red]❌[/red] Push failed: {result.stderr}")
+            return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error pushing: {e}")
             return False
@@ -137,7 +135,7 @@ class GitService:
 
     def _generate_category_messages(self, file_categories: set[str]) -> list[str]:
         if len(file_categories) == 1:
-            return self._generate_single_category_message(list(file_categories)[0])
+            return self._generate_single_category_message(next(iter(file_categories)))
         return [f"Update {', '.join(sorted(file_categories))}"]
 
     def _generate_single_category_message(self, category: str) -> list[str]:

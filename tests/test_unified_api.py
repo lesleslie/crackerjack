@@ -100,7 +100,7 @@ def test_example():
 
     def test_create_workflow_options(self, api) -> None:
         options = api.create_workflow_options(
-            clean=True, test=True, publish="pypi", bump="patch", commit=True
+            clean=True, test=True, publish="pypi", bump="patch", commit=True,
         )
 
         assert isinstance(options, WorkflowOptions)
@@ -263,20 +263,20 @@ version = "0.1.0"
     def test_publish_package_convenience(self, mock_api_class, temp_project) -> None:
         mock_api = Mock()
         mock_result = PublishResult(
-            success=True, version="0.1.1", published_to=["pypi"], errors=[]
+            success=True, version="0.1.1", published_to=["pypi"], errors=[],
         )
         mock_api.publish_package.return_value = mock_result
         mock_api_class.return_value = mock_api
 
         result = publish_package(
-            project_path=temp_project, version_bump="patch", dry_run=True
+            project_path=temp_project, version_bump="patch", dry_run=True,
         )
 
         assert isinstance(result, PublishResult)
         assert result.success is True
         mock_api_class.assert_called_once_with(project_path=temp_project)
         mock_api.publish_package.assert_called_once_with(
-            version_bump="patch", dry_run=True
+            version_bump="patch", dry_run=True,
         )
 
 
@@ -317,7 +317,7 @@ class TestResultClasses:
 
     def test_publish_result(self) -> None:
         result = PublishResult(
-            success=True, version="1.0.0", published_to=["pypi", "testpypi"], errors=[]
+            success=True, version="1.0.0", published_to=["pypi", "testpypi"], errors=[],
         )
 
         assert result.success is True

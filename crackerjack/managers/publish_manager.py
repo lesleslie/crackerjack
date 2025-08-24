@@ -5,8 +5,8 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..services.filesystem import FileSystemService
-from ..services.security import SecurityService
+from crackerjack.services.filesystem import FileSystemService
+from crackerjack.services.security import SecurityService
 
 
 class PublishManagerImpl:
@@ -18,13 +18,13 @@ class PublishManagerImpl:
         self.security = SecurityService()
 
     def _run_command(
-        self, cmd: list[str], timeout: int = 300
+        self, cmd: list[str], timeout: int = 300,
     ) -> subprocess.CompletedProcess[str]:
         secure_env = self.security.create_secure_command_env()
 
         result = subprocess.run(
             cmd,
-            cwd=self.pkg_path,
+            check=False, cwd=self.pkg_path,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -65,14 +65,13 @@ class PublishManagerImpl:
                 if not self.dry_run:
                     self.filesystem.write_file(pyproject_path, new_content)
                 self.console.print(
-                    f"[green]✅[/green] Updated version to {new_version}"
+                    f"[green]✅[/green] Updated version to {new_version}",
                 )
                 return True
-            else:
-                self.console.print(
-                    "[yellow]⚠️[/yellow] Version pattern not found in pyproject.toml"
-                )
-                return False
+            self.console.print(
+                "[yellow]⚠️[/yellow] Version pattern not found in pyproject.toml",
+            )
+            return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error updating version: {e}")
             return False
@@ -81,16 +80,17 @@ class PublishManagerImpl:
         try:
             parts = current.split(".")
             if len(parts) != 3:
-                raise ValueError(f"Invalid version format: {current}")
+                msg = f"Invalid version format: {current}"
+                raise ValueError(msg)
             major, minor, patch = map(int, parts)
             if bump_type == "major":
                 return f"{major + 1}.0.0"
-            elif bump_type == "minor":
+            if bump_type == "minor":
                 return f"{major}.{minor + 1}.0"
-            elif bump_type == "patch":
+            if bump_type == "patch":
                 return f"{major}.{minor}.{patch + 1}"
-            else:
-                raise ValueError(f"Invalid bump type: {bump_type}")
+            msg = f"Invalid bump type: {bump_type}"
+            raise ValueError(msg)
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error calculating version: {e}")
             raise
@@ -99,21 +99,22 @@ class PublishManagerImpl:
         current_version = self._get_current_version()
         if not current_version:
             self.console.print("[red]❌[/red] Could not determine current version")
-            raise ValueError("Cannot determine current version")
+            msg = "Cannot determine current version"
+            raise ValueError(msg)
         self.console.print(f"[cyan]📦[/cyan] Current version: {current_version}")
         try:
             new_version = self._calculate_next_version(current_version, version_type)
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/yellow] Would bump {version_type} version: {current_version} → {new_version}"
+                    f"[yellow]🔍[/yellow] Would bump {version_type} version: {current_version} → {new_version}",
+                )
+            elif self._update_version_in_file(new_version):
+                self.console.print(
+                    f"[green]🚀[/green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
             else:
-                if self._update_version_in_file(new_version):
-                    self.console.print(
-                        f"[green]🚀[/green] Bumped {version_type} version: {current_version} → {new_version}"
-                    )
-                else:
-                    raise ValueError("Failed to update version in file")
+                msg = "Failed to update version in file"
+                raise ValueError(msg)
 
             return new_version
         except Exception as e:
@@ -148,25 +149,23 @@ class PublishManagerImpl:
             masked_token = self.security.mask_tokens(token)
             self.console.print(f"[dim]Token format: {masked_token}[/dim]", style="dim")
             return "Environment variable (UV_PUBLISH_TOKEN)"
-        else:
-            self.console.print(
-                "[yellow]⚠️[/yellow] UV_PUBLISH_TOKEN format appears invalid"
-            )
-            return None
+        self.console.print(
+            "[yellow]⚠️[/yellow] UV_PUBLISH_TOKEN format appears invalid",
+        )
+        return None
 
     def _check_keyring_auth(self) -> str | None:
         try:
             result = self._run_command(
-                ["keyring", "get", "https://upload.pypi.org/legacy/", "__token__"]
+                ["keyring", "get", "https://upload.pypi.org/legacy/", "__token__"],
             )
             if result.returncode == 0 and result.stdout.strip():
                 keyring_token = result.stdout.strip()
                 if self.security.validate_token_format(keyring_token, "pypi"):
                     return "Keyring storage"
-                else:
-                    self.console.print(
-                        "[yellow]⚠️[/yellow] Keyring token format appears invalid"
-                    )
+                self.console.print(
+                    "[yellow]⚠️[/yellow] Keyring token format appears invalid",
+                )
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
             pass
         return None
@@ -177,21 +176,20 @@ class PublishManagerImpl:
             for method in auth_methods:
                 self.console.print(f" - {method}")
             return True
-        else:
-            self._display_auth_setup_instructions()
-            return False
+        self._display_auth_setup_instructions()
+        return False
 
     def _display_auth_setup_instructions(self) -> None:
         self.console.print("[red]❌[/red] No valid PyPI authentication found")
         self.console.print("\n[yellow]💡[/yellow] Setup options: ")
         self.console.print(
-            " 1. Set environment variable: export UV_PUBLISH_TOKEN=<your-pypi-token>"
+            " 1. Set environment variable: export UV_PUBLISH_TOKEN=<your-pypi-token>",
         )
         self.console.print(
-            " 2. Use keyring: keyring set https://upload.pypi.org/legacy/ __token__"
+            " 2. Use keyring: keyring set https://upload.pypi.org/legacy/ __token__",
         )
         self.console.print(
-            " 3. Ensure token starts with 'pypi-' and is properly formatted"
+            " 3. Ensure token starts with 'pypi-' and is properly formatted",
         )
 
     def build_package(self) -> bool:
@@ -305,11 +303,11 @@ class PublishManagerImpl:
     def cleanup_old_releases(self, keep_releases: int = 10) -> bool:
         try:
             self.console.print(
-                f"[yellow]🧹[/yellow] Cleaning up old releases (keeping {keep_releases})..."
+                f"[yellow]🧹[/yellow] Cleaning up old releases (keeping {keep_releases})...",
             )
             if self.dry_run:
                 self.console.print(
-                    "[yellow]🔍[/yellow] Would clean up old PyPI releases"
+                    "[yellow]🔍[/yellow] Would clean up old PyPI releases",
                 )
                 return True
             pyproject_path = self.pkg_path / "pyproject.toml"
@@ -320,14 +318,14 @@ class PublishManagerImpl:
             package_name = data.get("project", {}).get("name", "")
             if not package_name:
                 self.console.print(
-                    "[yellow]⚠️[/yellow] Could not determine package name"
+                    "[yellow]⚠️[/yellow] Could not determine package name",
                 )
                 return False
             self.console.print(
-                f"[cyan]📦[/cyan] Would analyze releases for {package_name}"
+                f"[cyan]📦[/cyan] Would analyze releases for {package_name}",
             )
             self.console.print(
-                f"[cyan]🔧[/cyan] Would keep {keep_releases} most recent releases"
+                f"[cyan]🔧[/cyan] Would keep {keep_releases} most recent releases",
             )
 
             return True
@@ -339,28 +337,27 @@ class PublishManagerImpl:
         try:
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/yellow] Would create git tag: v{version}"
+                    f"[yellow]🔍[/yellow] Would create git tag: v{version}",
                 )
                 return True
             result = self._run_command(["git", "tag", f"v{version}"])
             if result.returncode == 0:
                 self.console.print(f"[green]🏷️[/green] Created git tag: v{version}")
                 push_result = self._run_command(
-                    ["git", "push", "origin", f"v{version}"]
+                    ["git", "push", "origin", f"v{version}"],
                 )
                 if push_result.returncode == 0:
                     self.console.print("[green]📤[/green] Pushed tag to remote")
                 else:
                     self.console.print(
-                        f"[yellow]⚠️[/yellow] Tag created but push failed: {push_result.stderr}"
+                        f"[yellow]⚠️[/yellow] Tag created but push failed: {push_result.stderr}",
                     )
 
                 return True
-            else:
-                self.console.print(
-                    f"[red]❌[/red] Failed to create tag: {result.stderr}"
-                )
-                return False
+            self.console.print(
+                f"[red]❌[/red] Failed to create tag: {result.stderr}",
+            )
+            return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Tag creation error: {e}")
             return False

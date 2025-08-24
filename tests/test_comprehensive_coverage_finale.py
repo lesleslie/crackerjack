@@ -11,7 +11,7 @@ from pathlib import Path
 class TestExecutableCodePaths:
     """Test actual executable code paths for maximum coverage."""
 
-    def test_crackerjack_api_basic_functionality(self):
+    def test_crackerjack_api_basic_functionality(self) -> None:
         """Test CrackerjackAPI basic functionality."""
         from crackerjack.api import CrackerjackAPI
 
@@ -29,7 +29,7 @@ class TestExecutableCodePaths:
         except Exception:
             pass
 
-    def test_cli_options_all_properties(self):
+    def test_cli_options_all_properties(self) -> None:
         """Test all CLI options properties for coverage."""
         from crackerjack.cli.options import BumpOption, Options
 
@@ -64,7 +64,7 @@ class TestExecutableCodePaths:
         assert options_with_bump.publish == BumpOption.patch
         assert options_with_bump.bump == BumpOption.minor
 
-    def test_agent_context_creation(self):
+    def test_agent_context_creation(self) -> None:
         """Test AgentContext creation and properties."""
         from crackerjack.agents.base import AgentContext
 
@@ -88,7 +88,7 @@ class TestExecutableCodePaths:
             assert context.subprocess_timeout == 600
             assert context.max_file_size == 20_000_000
 
-    def test_issue_all_properties(self):
+    def test_issue_all_properties(self) -> None:
         """Test Issue with all possible properties."""
         from crackerjack.agents.base import Issue, IssueType, Priority
 
@@ -120,7 +120,7 @@ class TestExecutableCodePaths:
         assert "test_file.py" in context_key
         assert "100" in context_key
 
-    def test_fix_result_all_properties(self):
+    def test_fix_result_all_properties(self) -> None:
         """Test FixResult with all possible properties."""
         from crackerjack.agents.base import FixResult
 
@@ -141,7 +141,7 @@ class TestExecutableCodePaths:
         assert result.recommendations == ["rec1", "rec2", "rec3"]
         assert result.files_modified == ["file1.py", "file2.py", "file3.py"]
 
-    def test_all_issue_types_comprehensive(self):
+    def test_all_issue_types_comprehensive(self) -> None:
         """Test all IssueType enum values comprehensively."""
         from crackerjack.agents.base import IssueType
 
@@ -166,7 +166,7 @@ class TestExecutableCodePaths:
             assert isinstance(issue_type.value, str)
             assert len(issue_type.value) > 0
 
-    def test_all_priority_levels_comprehensive(self):
+    def test_all_priority_levels_comprehensive(self) -> None:
         """Test all Priority enum values comprehensively."""
         from crackerjack.agents.base import Priority
 
@@ -183,7 +183,7 @@ class TestExecutableCodePaths:
             assert isinstance(priority.value, str)
             assert len(priority.value) > 0
 
-    def test_file_cache_advanced_operations(self):
+    def test_file_cache_advanced_operations(self) -> None:
         """Test FileCache advanced operations for coverage."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -216,7 +216,7 @@ class TestExecutableCodePaths:
         # Recent keys should still be there
         assert cache1.get("evict_key_9") == "evict_value_9"
 
-    def test_error_pattern_comprehensive(self):
+    def test_error_pattern_comprehensive(self) -> None:
         """Test ErrorPattern comprehensive functionality."""
         from crackerjack.mcp.cache import ErrorPattern
 
@@ -246,7 +246,7 @@ class TestExecutableCodePaths:
             == "Comprehensive test pattern with {placeholder}"
         )
 
-    def test_mcp_fix_result_comprehensive(self):
+    def test_mcp_fix_result_comprehensive(self) -> None:
         """Test MCP FixResult comprehensive functionality."""
         from crackerjack.mcp.cache import FixResult as MCPFixResult
 
@@ -274,7 +274,7 @@ class TestExecutableCodePaths:
         assert result_dict["files_affected"] == ["file1.py", "file2.py", "file3.py"]
         assert result_dict["time_taken"] == 2.5
 
-    def test_all_bump_options(self):
+    def test_all_bump_options(self) -> None:
         """Test all BumpOption values."""
         from crackerjack.cli.options import BumpOption
 
@@ -300,7 +300,7 @@ class TestExecutableCodePaths:
 class TestWorkingClassInstantiations:
     """Test class instantiations that work to boost coverage."""
 
-    def test_agents_working_instantiations(self):
+    def test_agents_working_instantiations(self) -> None:
         """Test agent instantiations where possible."""
         # Test imports first
         from crackerjack.agents import coordinator, tracker
@@ -319,7 +319,7 @@ class TestWorkingClassInstantiations:
             # Class might not exist or have different name
             pass
 
-    def test_services_working_instantiations(self):
+    def test_services_working_instantiations(self) -> None:
         """Test service instantiations that work."""
         # Test logging service
         from crackerjack.services.logging import get_logger
@@ -340,7 +340,7 @@ class TestWorkingClassInstantiations:
         # All loggers should be created successfully
         assert len(loggers) == len(logger_names)
 
-    def test_config_hooks_working_functionality(self):
+    def test_config_hooks_working_functionality(self) -> None:
         """Test config hooks functionality that works."""
         from crackerjack.config import hooks
 
@@ -357,7 +357,7 @@ class TestWorkingClassInstantiations:
             # Class might not exist or have different name
             pass
 
-    def test_models_task_working_functionality(self):
+    def test_models_task_working_functionality(self) -> None:
         """Test models task functionality that works."""
         from crackerjack.models import task
 
@@ -392,7 +392,7 @@ class TestWorkingClassInstantiations:
 class TestMaximumCoverageBoost:
     """Final push for maximum coverage boost."""
 
-    def test_comprehensive_package_structure(self):
+    def test_comprehensive_package_structure(self) -> None:
         """Test comprehensive package structure for coverage."""
         import crackerjack
 
@@ -433,7 +433,7 @@ class TestMaximumCoverageBoost:
                 # Some modules might not be available
                 pass
 
-    def test_working_method_calls_comprehensive(self):
+    def test_working_method_calls_comprehensive(self) -> None:
         """Test all working method calls comprehensively."""
         # Test Issue context_key with different scenarios
         from crackerjack.agents.base import Issue, IssueType, Priority
@@ -461,7 +461,7 @@ class TestMaximumCoverageBoost:
             assert file_path in context_key
             assert str(line_num) in context_key
 
-    def test_fix_result_merge_comprehensive(self):
+    def test_fix_result_merge_comprehensive(self) -> None:
         """Test FixResult merge comprehensive scenarios."""
         from crackerjack.agents.base import FixResult
 
@@ -492,7 +492,7 @@ class TestMaximumCoverageBoost:
         assert len(final_merged.fixes_applied) == 6
         assert len(final_merged.files_modified) == 3
 
-    def test_file_cache_edge_cases(self):
+    def test_file_cache_edge_cases(self) -> None:
         """Test FileCache edge cases for maximum coverage."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -523,7 +523,7 @@ class TestMaximumCoverageBoost:
             # Most recent items should still be there
             assert cache.get(f"key_{max_size + 1}") == f"value_{max_size + 1}"
 
-    def test_all_enum_string_representations(self):
+    def test_all_enum_string_representations(self) -> None:
         """Test string representations of all enums."""
         from crackerjack.agents.base import IssueType, Priority
         from crackerjack.cli.options import BumpOption
@@ -549,7 +549,7 @@ class TestMaximumCoverageBoost:
             assert len(str_repr) > 0
             assert str_repr == bump.value
 
-    def test_comprehensive_import_coverage(self):
+    def test_comprehensive_import_coverage(self) -> None:
         """Final comprehensive import test for coverage."""
         # Import every possible submodule
         import_targets = [

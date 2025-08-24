@@ -153,9 +153,8 @@ def test_remove_experimental_hook() -> None:
     assert "test - removable" not in remaining_hooks
 
 
-def test_generate_config_for_mode_basic():
+def test_generate_config_for_mode_basic() -> None:
     """Test basic functionality of generate_config_for_mode."""
-
     try:
         result = generate_config_for_mode()
         assert result is not None or result is None
@@ -166,13 +165,13 @@ def test_generate_config_for_mode_basic():
         sig = inspect.signature(generate_config_for_mode)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in generate_config_for_mode: {e}")
 
 
-def test_filter_hooks_for_mode_basic():
+def test_filter_hooks_for_mode_basic() -> None:
     """Test basic functionality of DynamicConfigGenerator.filter_hooks_for_mode."""
     generator = DynamicConfigGenerator()
 
@@ -184,7 +183,7 @@ def test_filter_hooks_for_mode_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_group_hooks_by_repo_basic():
+def test_group_hooks_by_repo_basic() -> None:
     """Test basic functionality of DynamicConfigGenerator.group_hooks_by_repo."""
     generator = DynamicConfigGenerator()
 
@@ -196,7 +195,7 @@ def test_group_hooks_by_repo_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_generate_config_basic():
+def test_generate_config_basic() -> None:
     """Test basic functionality via DynamicConfigGenerator.generate_config."""
     generator = DynamicConfigGenerator()
 
@@ -209,19 +208,19 @@ def test_generate_config_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_create_temp_config_basic():
+def test_create_temp_config_basic() -> None:
     """Test basic functionality via DynamicConfigGenerator.create_temp_config."""
     generator = DynamicConfigGenerator()
 
     try:
         # Test the actual method that exists
         result = generator.create_temp_config(
-            mode="fast", tiers=[1], experimental=False
+            mode="fast", tiers=[1], experimental=False,
         )
         assert result is not None
         # Should return a Path object to temp file
         from pathlib import Path
 
-        assert isinstance(result, Path) or isinstance(result, str)
+        assert isinstance(result, (Path, str))
     except Exception as e:
         pytest.skip(f"Method requires specific implementation - skipped: {e}")

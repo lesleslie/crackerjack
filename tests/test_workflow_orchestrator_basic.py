@@ -12,7 +12,7 @@ from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 class MockOptions:
     """Mock options for testing."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self.clean = kwargs.get("clean", False)
         self.test = kwargs.get("test", False)
         self.commit = kwargs.get("commit", False)
@@ -38,29 +38,29 @@ class TestWorkflowOrchestrator:
         pkg_path = Path("/test/path")
 
         with patch(
-            "crackerjack.core.workflow_orchestrator.create_container"
+            "crackerjack.core.workflow_orchestrator.create_container",
         ) as mock_create_container:
             mock_container = Mock()
             mock_create_container.return_value = mock_container
 
             return WorkflowOrchestrator(
-                console=mock_console, pkg_path=pkg_path, dry_run=False
+                console=mock_console, pkg_path=pkg_path, dry_run=False,
             )
 
-    def test_orchestrator_initialization(self, mock_console):
+    def test_orchestrator_initialization(self, mock_console) -> None:
         """Test orchestrator initialization."""
         pkg_path = Path("/test/path")
 
         with patch("crackerjack.core.workflow_orchestrator.create_container"):
             orchestrator = WorkflowOrchestrator(
-                console=mock_console, pkg_path=pkg_path, dry_run=True
+                console=mock_console, pkg_path=pkg_path, dry_run=True,
             )
 
             assert orchestrator.console is mock_console
             assert orchestrator.pkg_path == pkg_path
             assert orchestrator.dry_run is True
 
-    def test_orchestrator_has_required_methods(self, orchestrator):
+    def test_orchestrator_has_required_methods(self, orchestrator) -> None:
         """Test that orchestrator has required methods."""
         assert hasattr(orchestrator, "run_complete_workflow")
         assert callable(orchestrator.run_complete_workflow)
@@ -68,14 +68,14 @@ class TestWorkflowOrchestrator:
         assert hasattr(orchestrator, "setup_environment")
         assert callable(orchestrator.setup_environment)
 
-    def test_orchestrator_attributes(self, orchestrator):
+    def test_orchestrator_attributes(self, orchestrator) -> None:
         """Test orchestrator attributes."""
         assert hasattr(orchestrator, "console")
         assert hasattr(orchestrator, "pkg_path")
         assert hasattr(orchestrator, "dry_run")
         assert hasattr(orchestrator, "container")
 
-    def test_setup_environment_method(self, orchestrator):
+    def test_setup_environment_method(self, orchestrator) -> None:
         """Test setup_environment method exists and can be called."""
         # Should not raise an error when called
         try:
@@ -86,7 +86,7 @@ class TestWorkflowOrchestrator:
             # If method requires specific setup, just test it exists
             assert hasattr(orchestrator, "setup_environment")
 
-    def test_run_complete_workflow_basic(self, orchestrator):
+    def test_run_complete_workflow_basic(self, orchestrator) -> None:
         """Test basic run_complete_workflow functionality."""
         options = MockOptions()
 
@@ -100,7 +100,7 @@ class TestWorkflowOrchestrator:
                 # If method requires more complex setup, just test structure
                 assert callable(orchestrator.run_complete_workflow)
 
-    def test_dry_run_flag_impact(self, mock_console):
+    def test_dry_run_flag_impact(self, mock_console) -> None:
         """Test that dry_run flag is properly set."""
         pkg_path = Path("/test")
 
@@ -113,7 +113,7 @@ class TestWorkflowOrchestrator:
             orch_normal = WorkflowOrchestrator(mock_console, pkg_path, dry_run=False)
             assert orch_normal.dry_run is False
 
-    def test_orchestrator_with_different_paths(self, mock_console):
+    def test_orchestrator_with_different_paths(self, mock_console) -> None:
         """Test orchestrator with different path configurations."""
         paths = [
             Path("/tmp/test1"),
@@ -126,7 +126,7 @@ class TestWorkflowOrchestrator:
                 orch = WorkflowOrchestrator(mock_console, path, dry_run=False)
                 assert orch.pkg_path == path
 
-    def test_container_integration(self, orchestrator):
+    def test_container_integration(self, orchestrator) -> None:
         """Test that orchestrator integrates with container."""
         # Should have container attribute
         assert hasattr(orchestrator, "container")
@@ -148,7 +148,7 @@ class TestWorkflowOrchestratorMethods:
         with patch("crackerjack.core.workflow_orchestrator.create_container"):
             return WorkflowOrchestrator(console, pkg_path, dry_run=False)
 
-    def test_orchestrator_method_signatures(self, orchestrator):
+    def test_orchestrator_method_signatures(self, orchestrator) -> None:
         """Test that key methods have expected signatures."""
         # run_complete_workflow should accept options
         import inspect
@@ -161,7 +161,7 @@ class TestWorkflowOrchestratorMethods:
         setup_sig = inspect.signature(orchestrator.setup_environment)
         assert setup_sig is not None
 
-    def test_orchestrator_with_options_variations(self, orchestrator):
+    def test_orchestrator_with_options_variations(self, orchestrator) -> None:
         """Test orchestrator with different option configurations."""
         option_sets = [
             MockOptions(),
@@ -178,7 +178,7 @@ class TestWorkflowOrchestratorMethods:
             assert hasattr(options, "test")
             assert hasattr(options, "commit")
 
-    def test_orchestrator_error_handling_structure(self, orchestrator):
+    def test_orchestrator_error_handling_structure(self, orchestrator) -> None:
         """Test that orchestrator has error handling structure."""
         # Should not crash on initialization
         assert orchestrator is not None
@@ -191,7 +191,7 @@ class TestWorkflowOrchestratorMethods:
 class TestWorkflowOrchestratorIntegration:
     """Integration tests for WorkflowOrchestrator."""
 
-    def test_orchestrator_creation_patterns(self):
+    def test_orchestrator_creation_patterns(self) -> None:
         """Test different orchestrator creation patterns."""
         console = Mock(spec=Console)
 
@@ -204,7 +204,7 @@ class TestWorkflowOrchestratorIntegration:
             orch2 = WorkflowOrchestrator(console, Path("/test2"), True)
             assert orch2.dry_run is True
 
-    def test_orchestrator_with_real_path_object(self):
+    def test_orchestrator_with_real_path_object(self) -> None:
         """Test orchestrator with real Path objects."""
         console = Mock(spec=Console)
         real_path = Path.cwd()
@@ -215,7 +215,7 @@ class TestWorkflowOrchestratorIntegration:
             assert orch.pkg_path == real_path
             assert isinstance(orch.pkg_path, Path)
 
-    def test_orchestrator_console_integration(self):
+    def test_orchestrator_console_integration(self) -> None:
         """Test orchestrator console integration."""
         console = Console()
 
@@ -225,7 +225,7 @@ class TestWorkflowOrchestratorIntegration:
             assert orch.console is console
             assert hasattr(orch.console, "print")
 
-    def test_multiple_orchestrator_instances(self):
+    def test_multiple_orchestrator_instances(self) -> None:
         """Test creating multiple orchestrator instances."""
         console1 = Mock(spec=Console)
         console2 = Mock(spec=Console)
@@ -244,14 +244,14 @@ class TestWorkflowOrchestratorIntegration:
 class TestWorkflowOrchestratorEdgeCases:
     """Test edge cases and error conditions."""
 
-    def test_orchestrator_with_none_values(self):
+    def test_orchestrator_with_none_values(self) -> None:
         """Test orchestrator behavior with None values where appropriate."""
         with patch("crackerjack.core.workflow_orchestrator.create_container"):
             # Console should not be None
             with pytest.raises((TypeError, AttributeError)):
                 WorkflowOrchestrator(None, Path("/test"), False)
 
-    def test_orchestrator_with_invalid_path_types(self):
+    def test_orchestrator_with_invalid_path_types(self) -> None:
         """Test orchestrator with invalid path types."""
         console = Mock(spec=Console)
 
@@ -265,7 +265,7 @@ class TestWorkflowOrchestratorEdgeCases:
                 # Expected if string paths are not supported
                 pass
 
-    def test_orchestrator_boolean_flags(self):
+    def test_orchestrator_boolean_flags(self) -> None:
         """Test orchestrator with various boolean flag combinations."""
         console = Mock(spec=Console)
         path = Path("/test")

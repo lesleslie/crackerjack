@@ -23,7 +23,7 @@ def _build_job_list(job_manager: JobManager, progress_dir: Path) -> list[dict]:
                         "status": progress_data.get("status", "unknown"),
                         "message": progress_data.get("message", ""),
                         "progress": progress_data.get("overall_progress", 0),
-                    }
+                    },
                 )
             except (json.JSONDecodeError, OSError):
                 continue
@@ -501,7 +501,7 @@ def _get_monitor_html(job_id: str) -> str:
 
 
 def register_endpoints(
-    app: FastAPI, job_manager: JobManager, progress_dir: Path
+    app: FastAPI, job_manager: JobManager, progress_dir: Path,
 ) -> None:
     @app.get("/")
     async def get_status():

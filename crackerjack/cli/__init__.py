@@ -10,8 +10,8 @@ from .options import CLI_OPTIONS, BumpOption, Options, create_options
 from .utils import get_package_version
 
 __all__ = [
-    "BumpOption",
     "CLI_OPTIONS",
+    "BumpOption",
     "Options",
     "create_options",
     "get_package_version",

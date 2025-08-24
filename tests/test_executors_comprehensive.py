@@ -25,7 +25,7 @@ class TestHookExecutorCore:
         return HookExecutor(console=mock_console, pkg_path=mock_pkg_path)
 
     def test_executor_initialization(
-        self, hook_executor, mock_console, mock_pkg_path
+        self, hook_executor, mock_console, mock_pkg_path,
     ) -> None:
         assert hook_executor.console == mock_console
         assert hook_executor.pkg_path == mock_pkg_path
@@ -44,10 +44,10 @@ class TestHookExecutorCore:
 
         with patch.object(hook_executor, "execute_single_hook") as mock_execute_hook:
             mock_result1 = HookResult(
-                id="hook1", name="test - hook - 1", status="passed", duration=1.0
+                id="hook1", name="test - hook - 1", status="passed", duration=1.0,
             )
             mock_result2 = HookResult(
-                id="hook2", name="test - hook - 2", status="passed", duration=1.5
+                id="hook2", name="test - hook - 2", status="passed", duration=1.5,
             )
             mock_execute_hook.side_effect = [mock_result1, mock_result2]
 
@@ -64,7 +64,7 @@ class TestHookExecutorCore:
 
         with patch.object(hook_executor, "execute_single_hook") as mock_execute_hook:
             mock_result = HookResult(
-                id="hook1", name="failing - hook", status="failed", duration=1.0
+                id="hook1", name="failing - hook", status="failed", duration=1.0,
             )
             mock_execute_hook.return_value = mock_result
 
@@ -77,12 +77,12 @@ class TestHookExecutorCore:
         from crackerjack.config.hooks import HookDefinition
 
         hook_config = HookDefinition(
-            name="test - hook", command=["echo", "success"], timeout=10
+            name="test - hook", command=["echo", "success"], timeout=10,
         )
 
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(
-                returncode=0, stdout="success\n", stderr="", check=True
+                returncode=0, stdout="success\n", stderr="", check=True,
             )
 
             result = hook_executor.execute_single_hook(hook_config)
@@ -98,7 +98,7 @@ class TestHookExecutorCore:
 
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(
-                returncode=1, stdout="", stderr="Command failed", check=False
+                returncode=1, stdout="", stderr="Command failed", check=False,
             )
 
             result = hook_executor.execute_single_hook(hook_config)
@@ -110,7 +110,7 @@ class TestHookExecutorCore:
         from crackerjack.config.hooks import HookDefinition
 
         hook_config = HookDefinition(
-            name="timeout - hook", command=["sleep", "100"], timeout=1
+            name="timeout - hook", command=["sleep", "100"], timeout=1,
         )
 
         with patch("subprocess.run") as mock_run:
@@ -163,7 +163,7 @@ class TestAsyncHookExecutorCore:
         return AsyncHookExecutor(console=mock_console, pkg_path=mock_pkg_path)
 
     def test_async_executor_initialization(
-        self, async_executor, mock_console, mock_pkg_path
+        self, async_executor, mock_console, mock_pkg_path,
     ) -> None:
         assert async_executor.console == mock_console
         assert async_executor.pkg_path == mock_pkg_path
@@ -191,10 +191,10 @@ class TestAsyncHookExecutorCore:
         with patch.object(async_executor, "_execute_single_hook") as mock_execute:
             mock_results = [
                 HookResult(
-                    id="async1", name="async - hook - 1", status="passed", duration=0.5
+                    id="async1", name="async - hook - 1", status="passed", duration=0.5,
                 ),
                 HookResult(
-                    id="async2", name="async - hook - 2", status="passed", duration=0.7
+                    id="async2", name="async - hook - 2", status="passed", duration=0.7,
                 ),
             ]
             mock_execute.side_effect = mock_results
@@ -209,7 +209,7 @@ class TestAsyncHookExecutorCore:
         from crackerjack.config.hooks import HookDefinition
 
         hook_config = HookDefinition(
-            name="async - test", command=["echo", "async - success"]
+            name="async - test", command=["echo", "async - success"],
         )
 
         with patch("asyncio.create_subprocess_exec") as mock_subprocess:
@@ -262,7 +262,7 @@ class TestAsyncHookExecutorCore:
             async def mock_hook_execution(hook):
                 await asyncio.sleep(0.01)
                 return HookResult(
-                    id=hook.id, name=hook.name, status="passed", duration=0.01
+                    id=hook.id, name=hook.name, status="passed", duration=0.01,
                 )
 
             mock_execute.side_effect = mock_hook_execution
@@ -287,7 +287,7 @@ class TestCachedHookExecutorCore:
         return CachedHookExecutor(console=mock_console, pkg_path=mock_pkg_path)
 
     def test_cached_executor_initialization(
-        self, cached_executor, mock_console, mock_pkg_path
+        self, cached_executor, mock_console, mock_pkg_path,
     ) -> None:
         assert cached_executor.console == mock_console
         assert cached_executor.pkg_path == mock_pkg_path
@@ -347,27 +347,27 @@ class TestCachedHookExecutorCore:
         hook_config = HookDefinition(name="cached - hook", command=["echo", "cached"])
 
         cached_result = HookResult(
-            id="cached - hook", name="cached - hook", status="passed", duration=1.0
+            id="cached - hook", name="cached - hook", status="passed", duration=1.0,
         )
 
         with patch.object(
-            cached_executor, "_get_relevant_files_for_strategy", return_value=[]
+            cached_executor, "_get_relevant_files_for_strategy", return_value=[],
         ):
             file_hashes = []
         cached_executor.cache.set_hook_result(
-            hook_config.name, file_hashes, cached_result
+            hook_config.name, file_hashes, cached_result,
         )
 
         with (
             patch.object(
-                cached_executor, "_get_relevant_files_for_strategy", return_value=[]
+                cached_executor, "_get_relevant_files_for_strategy", return_value=[],
             ),
             patch.object(
-                cached_executor.cache, "get_hook_result", return_value=cached_result
+                cached_executor.cache, "get_hook_result", return_value=cached_result,
             ) as mock_get_cache,
         ):
             result = cached_executor.execute_strategy(
-                Mock(hooks=[hook_config], name="test_strategy")
+                Mock(hooks=[hook_config], name="test_strategy"),
             )
             mock_get_cache.assert_called_once_with(hook_config.name, file_hashes)
             assert result.results[0].id == cached_result.id
@@ -380,12 +380,12 @@ class TestCachedHookExecutorCore:
         from crackerjack.config.hooks import HookDefinition, HookStrategy
 
         hook_config = HookDefinition(
-            name="uncached - hook", command=["echo", "uncached"]
+            name="uncached - hook", command=["echo", "uncached"],
         )
         strategy = HookStrategy(name="test - cache - miss", hooks=[hook_config])
 
         with patch.object(
-            cached_executor.base_executor, "execute_single_hook"
+            cached_executor.base_executor, "execute_single_hook",
         ) as mock_execute:
             mock_result = HookResult(
                 id="uncached - hook",
@@ -396,7 +396,7 @@ class TestCachedHookExecutorCore:
             mock_execute.return_value = mock_result
 
             with patch.object(
-                cached_executor.cache, "get_hook_result", return_value=None
+                cached_executor.cache, "get_hook_result", return_value=None,
             ):
                 result = cached_executor.execute_strategy(strategy)
 
@@ -453,7 +453,7 @@ class TestExecutorErrorHandling:
         from crackerjack.config.hooks import HookDefinition
 
         hook_config = HookDefinition(
-            name="error - hook", command=["nonexistent - command"]
+            name="error - hook", command=["nonexistent - command"],
         )
 
         with patch("subprocess.run") as mock_run:
@@ -466,7 +466,7 @@ class TestExecutorErrorHandling:
 
     @pytest.mark.asyncio
     async def test_async_executor_subprocess_error(
-        self, mock_console, mock_pkg_path
+        self, mock_console, mock_pkg_path,
     ) -> None:
         executor = AsyncHookExecutor(console=mock_console, pkg_path=mock_pkg_path)
 
@@ -486,7 +486,7 @@ class TestExecutorErrorHandling:
             assert result.name == "async - error - hook"
 
     def test_cached_executor_cache_corruption(
-        self, mock_console, mock_pkg_path
+        self, mock_console, mock_pkg_path,
     ) -> None:
         executor = CachedHookExecutor(console=mock_console, pkg_path=mock_pkg_path)
 
@@ -502,7 +502,7 @@ class TestExecutorErrorHandling:
             strategy = HookStrategy(name="test - corruption", hooks=[hook_config])
 
             with patch.object(
-                executor.base_executor, "execute_single_hook"
+                executor.base_executor, "execute_single_hook",
             ) as mock_execute:
                 mock_result = HookResult(
                     id="cache - corruption - hook",
@@ -553,7 +553,7 @@ class TestExecutorPerformance:
 
     @pytest.mark.asyncio
     async def test_async_executor_concurrency(
-        self, mock_console, mock_pkg_path
+        self, mock_console, mock_pkg_path,
     ) -> None:
         executor = AsyncHookExecutor(console=mock_console, pkg_path=mock_pkg_path)
 
@@ -602,7 +602,7 @@ class TestExecutorPerformance:
             assert len(result.results) == 10
 
     def test_cached_executor_performance_improvement(
-        self, mock_console, mock_pkg_path
+        self, mock_console, mock_pkg_path,
     ) -> None:
         executor = CachedHookExecutor(console=mock_console, pkg_path=mock_pkg_path)
 
@@ -616,7 +616,7 @@ class TestExecutorPerformance:
         strategy = HookStrategy(name="test - perf", hooks=[hook_config])
 
         with patch.object(
-            executor.base_executor, "execute_single_hook"
+            executor.base_executor, "execute_single_hook",
         ) as mock_execute:
             mock_result = HookResult(
                 id="perf - cached - hook",
@@ -633,13 +633,12 @@ class TestExecutorPerformance:
             first_execution_time = time.time() - start_time
 
             with patch.object(
-                executor.cache, "get_hook_result", return_value=mock_result
-            ):
-                with patch.object(executor, "_is_cache_valid", return_value=True):
-                    start_time = time.time()
-                    result2 = executor.execute_strategy(strategy)
-                    second_execution_time = time.time() - start_time
+                executor.cache, "get_hook_result", return_value=mock_result,
+            ), patch.object(executor, "_is_cache_valid", return_value=True):
+                start_time = time.time()
+                result2 = executor.execute_strategy(strategy)
+                second_execution_time = time.time() - start_time
 
-                    assert second_execution_time < first_execution_time
-                    assert result1.success == result2.success
-                    assert len(result1.results) == len(result2.results)
+                assert second_execution_time < first_execution_time
+                assert result1.success == result2.success
+                assert len(result1.results) == len(result2.results)

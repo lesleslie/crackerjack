@@ -4,6 +4,7 @@ Focus on modules with many lines and low coverage for maximum percentage gain.
 Targeting: services (many with 500+ lines and <25% coverage), orchestration, core, etc.
 """
 
+import contextlib
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock
@@ -12,7 +13,7 @@ from unittest.mock import Mock
 class TestHighImpactServicesModules:
     """Target high line-count services modules for maximum coverage gain."""
 
-    def test_services_tool_version_service_coverage(self):
+    def test_services_tool_version_service_coverage(self) -> None:
         """Test tool_version_service module (579 lines, 14% coverage)."""
         from crackerjack.services import tool_version_service
 
@@ -44,7 +45,7 @@ class TestHighImpactServicesModules:
         except (ImportError, AttributeError):
             pass
 
-    def test_services_health_metrics_coverage(self):
+    def test_services_health_metrics_coverage(self) -> None:
         """Test health_metrics module (309 lines, 15% coverage)."""
         from crackerjack.services import health_metrics
 
@@ -58,21 +59,17 @@ class TestHighImpactServicesModules:
 
             # Try basic methods
             if hasattr(metrics, "get_status"):
-                try:
+                with contextlib.suppress(Exception):
                     metrics.get_status()
-                except Exception:
-                    pass
 
             if hasattr(metrics, "record_metric"):
-                try:
+                with contextlib.suppress(Exception):
                     metrics.record_metric("test_metric", 1.0)
-                except Exception:
-                    pass
 
         except (ImportError, AttributeError):
             pass
 
-    def test_services_performance_benchmarks_coverage(self):
+    def test_services_performance_benchmarks_coverage(self) -> None:
         """Test performance_benchmarks module (304 lines, 22% coverage)."""
         from crackerjack.services import performance_benchmarks
 
@@ -88,21 +85,17 @@ class TestHighImpactServicesModules:
 
             # Try basic methods
             if hasattr(benchmarks, "start_benchmark"):
-                try:
+                with contextlib.suppress(Exception):
                     benchmarks.start_benchmark("test")
-                except Exception:
-                    pass
 
             if hasattr(benchmarks, "get_results"):
-                try:
+                with contextlib.suppress(Exception):
                     benchmarks.get_results()
-                except Exception:
-                    pass
 
         except (ImportError, AttributeError):
             pass
 
-    def test_services_debug_coverage(self):
+    def test_services_debug_coverage(self) -> None:
         """Test debug module (317 lines, 18% coverage)."""
         from crackerjack.services import debug
 
@@ -119,15 +112,13 @@ class TestHighImpactServicesModules:
                 debug_service.log_debug("test debug message")
 
             if hasattr(debug_service, "set_level"):
-                try:
+                with contextlib.suppress(Exception):
                     debug_service.set_level("DEBUG")
-                except Exception:
-                    pass
 
         except (ImportError, AttributeError):
             pass
 
-    def test_services_dependency_monitor_coverage(self):
+    def test_services_dependency_monitor_coverage(self) -> None:
         """Test dependency_monitor module (290 lines, 22% coverage)."""
         from crackerjack.services import dependency_monitor
 
@@ -141,21 +132,17 @@ class TestHighImpactServicesModules:
 
             # Try basic monitoring methods
             if hasattr(monitor, "scan_dependencies"):
-                try:
+                with contextlib.suppress(Exception):
                     monitor.scan_dependencies()
-                except Exception:
-                    pass
 
             if hasattr(monitor, "get_outdated"):
-                try:
+                with contextlib.suppress(Exception):
                     monitor.get_outdated()
-                except Exception:
-                    pass
 
         except (ImportError, AttributeError):
             pass
 
-    def test_services_contextual_ai_assistant_coverage(self):
+    def test_services_contextual_ai_assistant_coverage(self) -> None:
         """Test contextual_ai_assistant module (241 lines, 22% coverage)."""
         from crackerjack.services import contextual_ai_assistant
 
@@ -171,16 +158,12 @@ class TestHighImpactServicesModules:
 
             # Try basic assistant methods
             if hasattr(assistant, "get_suggestion"):
-                try:
+                with contextlib.suppress(Exception):
                     assistant.get_suggestion("test query")
-                except Exception:
-                    pass
 
             if hasattr(assistant, "analyze_code"):
-                try:
+                with contextlib.suppress(Exception):
                     assistant.analyze_code("def test(): pass")
-                except Exception:
-                    pass
 
         except (ImportError, AttributeError):
             pass
@@ -189,7 +172,7 @@ class TestHighImpactServicesModules:
 class TestHighImpactAgentsModules:
     """Target agents modules with many lines for coverage gain."""
 
-    def test_agents_security_agent_coverage(self):
+    def test_agents_security_agent_coverage(self) -> None:
         """Test security_agent module (281 lines, 12% coverage)."""
         from crackerjack.agents import security_agent
 
@@ -213,7 +196,7 @@ class TestHighImpactAgentsModules:
                         from crackerjack.agents.base import Issue, IssueType, Priority
 
                         issue = Issue(
-                            "test", IssueType.SECURITY, Priority.HIGH, "test", "file.py"
+                            "test", IssueType.SECURITY, Priority.HIGH, "test", "file.py",
                         )
                         confidence = agent.can_handle(issue)
                         assert isinstance(confidence, int | float)
@@ -223,7 +206,7 @@ class TestHighImpactAgentsModules:
         except (ImportError, AttributeError):
             pass
 
-    def test_agents_performance_agent_coverage(self):
+    def test_agents_performance_agent_coverage(self) -> None:
         """Test performance_agent module (264 lines, 13% coverage)."""
         from crackerjack.agents import performance_agent
 
@@ -247,7 +230,7 @@ class TestHighImpactAgentsModules:
         except (ImportError, AttributeError):
             pass
 
-    def test_agents_refactoring_agent_coverage(self):
+    def test_agents_refactoring_agent_coverage(self) -> None:
         """Test refactoring_agent module (243 lines, 13% coverage)."""
         from crackerjack.agents import refactoring_agent
 
@@ -266,7 +249,7 @@ class TestHighImpactAgentsModules:
         except (ImportError, AttributeError):
             pass
 
-    def test_agents_documentation_agent_coverage(self):
+    def test_agents_documentation_agent_coverage(self) -> None:
         """Test documentation_agent module (190 lines, 14% coverage)."""
         from crackerjack.agents import documentation_agent
 
@@ -289,7 +272,7 @@ class TestHighImpactAgentsModules:
 class TestHighImpactCLIModules:
     """Target CLI modules with significant line counts."""
 
-    def test_cli_interactive_coverage(self):
+    def test_cli_interactive_coverage(self) -> None:
         """Test cli interactive module (265 lines, 20% coverage)."""
         from crackerjack.cli import interactive
 
@@ -306,15 +289,13 @@ class TestHighImpactCLIModules:
 
             # Try basic methods if they exist
             if hasattr(cli, "get_config"):
-                try:
+                with contextlib.suppress(Exception):
                     cli.get_config()
-                except Exception:
-                    pass
 
         except (ImportError, AttributeError):
             pass
 
-    def test_cli_handlers_coverage(self):
+    def test_cli_handlers_coverage(self) -> None:
         """Test cli handlers module (145 lines, 13% coverage)."""
         from crackerjack.cli import handlers
 
@@ -323,7 +304,7 @@ class TestHighImpactCLIModules:
         # Try importing handler classes
         try:
             if hasattr(handlers, "CommandHandler"):
-                handler_class = getattr(handlers, "CommandHandler")
+                handler_class = handlers.CommandHandler
                 handler = handler_class()
                 assert handler is not None
         except Exception:
@@ -333,7 +314,7 @@ class TestHighImpactCLIModules:
 class TestHighImpactCoreModules:
     """Target core modules with significant complexity."""
 
-    def test_core_async_workflow_orchestrator_coverage(self):
+    def test_core_async_workflow_orchestrator_coverage(self) -> None:
         """Test async_workflow_orchestrator module (139 lines, 26% coverage)."""
         from crackerjack.core import async_workflow_orchestrator
 
@@ -341,15 +322,13 @@ class TestHighImpactCoreModules:
 
         try:
             if hasattr(async_workflow_orchestrator, "AsyncWorkflowOrchestrator"):
-                orchestrator_class = getattr(
-                    async_workflow_orchestrator, "AsyncWorkflowOrchestrator"
-                )
+                orchestrator_class = async_workflow_orchestrator.AsyncWorkflowOrchestrator
                 orchestrator = orchestrator_class()
                 assert orchestrator is not None
         except Exception:
             pass
 
-    def test_core_session_coordinator_coverage(self):
+    def test_core_session_coordinator_coverage(self) -> None:
         """Test session_coordinator module (increases from 35% coverage)."""
         from crackerjack.core import session_coordinator
 
@@ -372,7 +351,7 @@ class TestHighImpactCoreModules:
         except (ImportError, AttributeError):
             pass
 
-    def test_core_phase_coordinator_coverage(self):
+    def test_core_phase_coordinator_coverage(self) -> None:
         """Test phase_coordinator module (increases from 19% coverage)."""
         from crackerjack.core import phase_coordinator
 
@@ -399,7 +378,7 @@ class TestHighImpactCoreModules:
 class TestWorkingServicesFunctionality:
     """Test services functionality that we know works."""
 
-    def test_services_cache_all_operations(self):
+    def test_services_cache_all_operations(self) -> None:
         """Test cache service comprehensive operations."""
         from crackerjack.services.cache import Cache
 
@@ -429,7 +408,7 @@ class TestWorkingServicesFunctionality:
                 key = f"cache_{i}_key_{j}"
                 assert cache.get(key) is None
 
-    def test_services_logging_comprehensive(self):
+    def test_services_logging_comprehensive(self) -> None:
         """Test logging service comprehensively."""
         from crackerjack.services.logging import get_logger
 
@@ -443,7 +422,7 @@ class TestWorkingServicesFunctionality:
         ]
 
         loggers = []
-        for name, level in logger_configs:
+        for name, _level in logger_configs:
             logger = get_logger(name)
             loggers.append(logger)
 
@@ -460,7 +439,7 @@ class TestWorkingServicesFunctionality:
             assert hasattr(logger, "name")
             assert logger.name == name
 
-    def test_enhanced_filesystem_comprehensive(self):
+    def test_enhanced_filesystem_comprehensive(self) -> None:
         """Test enhanced filesystem comprehensively."""
         from crackerjack.services.enhanced_filesystem import FileCache
 
@@ -495,7 +474,7 @@ class TestWorkingServicesFunctionality:
 class TestComprehensiveEnumAndDataclassUsage:
     """Comprehensive testing of enums and dataclasses for coverage."""
 
-    def test_all_issue_type_values_comprehensive(self):
+    def test_all_issue_type_values_comprehensive(self) -> None:
         """Test all IssueType enum values with comprehensive usage."""
         from crackerjack.agents.base import Issue, IssueType, Priority
 
@@ -535,7 +514,7 @@ class TestComprehensiveEnumAndDataclassUsage:
             assert f"test_{i}.py" in context_key
             assert str(10 + i) in context_key
 
-    def test_all_priority_values_comprehensive(self):
+    def test_all_priority_values_comprehensive(self) -> None:
         """Test all Priority enum values with comprehensive usage."""
         from crackerjack.agents.base import Issue, IssueType, Priority
 
@@ -562,7 +541,7 @@ class TestComprehensiveEnumAndDataclassUsage:
             assert issue.severity == priority
             assert issue.severity.value == priority.value
 
-    def test_fix_result_merge_scenarios_comprehensive(self):
+    def test_fix_result_merge_scenarios_comprehensive(self) -> None:
         """Test FixResult merge in various scenarios."""
         from crackerjack.agents.base import FixResult
 
@@ -600,7 +579,7 @@ class TestComprehensiveEnumAndDataclassUsage:
 class TestMCPCacheComprehensive:
     """Comprehensive MCP cache testing for coverage."""
 
-    def test_error_cache_with_temporary_directory(self):
+    def test_error_cache_with_temporary_directory(self) -> None:
         """Test ErrorCache with comprehensive operations."""
         from crackerjack.mcp.cache import (
             ErrorCache,
@@ -634,7 +613,7 @@ class TestMCPCacheComprehensive:
                 assert retrieved.pattern_id == f"pattern_{i}"
                 assert retrieved.error_type == f"error_type_{i}"
 
-    def test_mcp_fix_result_comprehensive_operations(self):
+    def test_mcp_fix_result_comprehensive_operations(self) -> None:
         """Test MCP FixResult comprehensive operations."""
         from crackerjack.mcp.cache import FixResult as MCPFixResult
 
@@ -662,7 +641,7 @@ class TestMCPCacheComprehensive:
 class TestPackageStructureComprehensive:
     """Test package structure comprehensively for maximum coverage."""
 
-    def test_all_submodules_attributes(self):
+    def test_all_submodules_attributes(self) -> None:
         """Test attributes of all submodules."""
         import crackerjack
 
@@ -697,7 +676,7 @@ class TestPackageStructureComprehensive:
                 # Some modules might not exist, that's okay
                 pass
 
-    def test_all_main_modules_attributes(self):
+    def test_all_main_modules_attributes(self) -> None:
         """Test main modules attributes."""
         main_modules = [
             "code_cleaner",

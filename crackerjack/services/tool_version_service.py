@@ -53,7 +53,7 @@ class ToolVersionService:
                     if update_available:
                         self.console.print(
                             f"[yellow]🔄 {tool_name} update available: "
-                            f"{current_version} → {latest_version}[/yellow]"
+                            f"{current_version} → {latest_version}[/yellow]",
                         )
                 else:
                     results[tool_name] = VersionInfo(
@@ -177,7 +177,7 @@ class ToolVersionService:
             for i in range(max_len):
                 if current_parts[i] < latest_parts[i]:
                     return -1
-                elif current_parts[i] > latest_parts[i]:
+                if current_parts[i] > latest_parts[i]:
                     return 1
 
             # Special case: If numeric values are equal but lengths differ
@@ -193,15 +193,14 @@ class ToolVersionService:
                     if current_len > 1:  # "1.0" vs "1.0.0"
                         return -1
                     return 0  # "1" vs "1.0"
-                else:
-                    # current_len > latest_len
-                    extra_parts = current_parts[latest_len:]
-                    if any(part != 0 for part in extra_parts):
-                        return 1
-                    # If extra parts are all zeros, treat as equal unless latest has explicit zeros
-                    if latest_len > 1:  # "1.0.0" vs "1.0"
-                        return 1
-                    return 0  # "1.0" vs "1"
+                # current_len > latest_len
+                extra_parts = current_parts[latest_len:]
+                if any(part != 0 for part in extra_parts):
+                    return 1
+                # If extra parts are all zeros, treat as equal unless latest has explicit zeros
+                if latest_len > 1:  # "1.0.0" vs "1.0"
+                    return 1
+                return 0  # "1.0" vs "1"
 
             return 0
 
@@ -226,13 +225,12 @@ class ConfigIntegrityService:
 
         for file_name in config_files:
             file_path = self.project_path / file_name
-            if file_path.exists():
-                if self._check_file_drift(file_path):
-                    drift_detected = True
+            if file_path.exists() and self._check_file_drift(file_path):
+                drift_detected = True
 
         if not self._has_required_config_sections():
             self.console.print(
-                "[yellow]⚠️ Configuration missing required sections[/yellow]"
+                "[yellow]⚠️ Configuration missing required sections[/yellow]",
             )
             drift_detected = True
 
@@ -252,7 +250,7 @@ class ConfigIntegrityService:
                     cached_hash = int(cache_file.read_text().strip())
                     if current_hash != cached_hash:
                         self.console.print(
-                            f"[yellow]⚠️ {file_path.name} has been modified manually[/yellow]"
+                            f"[yellow]⚠️ {file_path.name} has been modified manually[/yellow]",
                         )
                         return True
 
@@ -283,7 +281,7 @@ class ConfigIntegrityService:
                 for key in keys:
                     if key not in current:
                         self.console.print(
-                            f"[yellow]⚠️ Missing required config section: {section}[/yellow]"
+                            f"[yellow]⚠️ Missing required config section: {section}[/yellow]",
                         )
                         return False
                     current = current[key]
@@ -310,9 +308,9 @@ class SmartSchedulingService:
 
         if init_schedule == "weekly":
             return self._check_weekly_schedule()
-        elif init_schedule == "commit-based":
+        if init_schedule == "commit-based":
             return self._check_commit_based_schedule()
-        elif init_schedule == "activity-based":
+        if init_schedule == "activity-based":
             return self._check_activity_based_schedule()
 
         return self._check_weekly_schedule()
@@ -325,7 +323,7 @@ class SmartSchedulingService:
             last_init = self._get_last_init_timestamp()
             if datetime.now() - last_init > timedelta(days=6):
                 self.console.print(
-                    f"[blue]📅 Weekly initialization scheduled for {init_day}[/blue]"
+                    f"[blue]📅 Weekly initialization scheduled for {init_day}[/blue]",
                 )
                 return True
 
@@ -338,7 +336,7 @@ class SmartSchedulingService:
         if commits_since_init >= threshold:
             self.console.print(
                 f"[blue]📊 {commits_since_init} commits since last init "
-                f"(threshold: {threshold})[/blue]"
+                f"(threshold: {threshold})[/blue]",
             )
             return True
 
@@ -347,7 +345,7 @@ class SmartSchedulingService:
     def _check_activity_based_schedule(self) -> bool:
         if self._has_recent_activity() and self._days_since_init() >= 7:
             self.console.print(
-                "[blue]⚡ Recent activity detected, initialization recommended[/blue]"
+                "[blue]⚡ Recent activity detected, initialization recommended[/blue]",
             )
             return True
 
@@ -371,7 +369,7 @@ class SmartSchedulingService:
             timestamp_file.write_text(datetime.now().isoformat())
         except OSError as e:
             self.console.print(
-                f"[yellow]⚠️ Could not record init timestamp: {e}[/yellow]"
+                f"[yellow]⚠️ Could not record init timestamp: {e}[/yellow]",
             )
 
     def _count_commits_since_init(self) -> int:
@@ -426,11 +424,11 @@ class UnifiedConfigurationService:
     def _detect_project_type(self) -> str:
         if (self.project_path / "pyproject.toml").exists():
             return "python"
-        elif (self.project_path / "package.json").exists():
+        if (self.project_path / "package.json").exists():
             return "node"
-        elif (self.project_path / "Cargo.toml").exists():
+        if (self.project_path / "Cargo.toml").exists():
             return "rust"
-        elif (self.project_path / "go.mod").exists():
+        if (self.project_path / "go.mod").exists():
             return "go"
 
         return "generic"
@@ -492,7 +490,7 @@ class UnifiedConfigurationService:
         return toml_data.get("tool")
 
     def _populate_python_tool_config(
-        self, config: dict[str, t.Any], tool_data: dict[str, t.Any]
+        self, config: dict[str, t.Any], tool_data: dict[str, t.Any],
     ) -> None:
         """Populate configuration with Python tool settings."""
         self._add_core_python_tools(config, tool_data)
@@ -500,7 +498,7 @@ class UnifiedConfigurationService:
         self._add_quality_tools(config, tool_data)
 
     def _add_core_python_tools(
-        self, config: dict[str, t.Any], tool_data: dict[str, t.Any]
+        self, config: dict[str, t.Any], tool_data: dict[str, t.Any],
     ) -> None:
         """Add core Python tools (ruff, pyright) to configuration."""
         for tool_name in ("ruff", "pyright"):
@@ -512,7 +510,7 @@ class UnifiedConfigurationService:
                 }
 
     def _add_testing_tools(
-        self, config: dict[str, t.Any], tool_data: dict[str, t.Any]
+        self, config: dict[str, t.Any], tool_data: dict[str, t.Any],
     ) -> None:
         """Add testing tools (pytest) to configuration."""
         if "pytest" in tool_data:
@@ -523,7 +521,7 @@ class UnifiedConfigurationService:
             }
 
     def _add_quality_tools(
-        self, config: dict[str, t.Any], tool_data: dict[str, t.Any]
+        self, config: dict[str, t.Any], tool_data: dict[str, t.Any],
     ) -> None:
         """Add quality tools (bandit, vulture, etc.) to configuration."""
         quality_tools = ("bandit", "vulture", "complexipy", "creosote", "refurb")
@@ -567,7 +565,7 @@ class UnifiedConfigurationService:
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️ Error loading package.json: {e}[/yellow]"
+                    f"[yellow]⚠️ Error loading package.json: {e}[/yellow]",
                 )
 
         return config
@@ -606,7 +604,7 @@ class UnifiedConfigurationService:
         return None
 
     def update_tool_config(
-        self, tool_name: str, section: str, config: dict[str, t.Any]
+        self, tool_name: str, section: str, config: dict[str, t.Any],
     ) -> bool:
         try:
             unified_config = self.get_unified_config()
@@ -624,12 +622,12 @@ class UnifiedConfigurationService:
 
         except Exception as e:
             self.console.print(
-                f"[red]❌ Failed to update {tool_name} config: {e}[/red]"
+                f"[red]❌ Failed to update {tool_name} config: {e}[/red]",
             )
             return False
 
     def _update_python_config(
-        self, tool_name: str, section: str, config: dict[str, t.Any]
+        self, tool_name: str, section: str, config: dict[str, t.Any],
     ) -> bool:
         pyproject = self.project_path / "pyproject.toml"
 
@@ -675,12 +673,12 @@ class UnifiedConfigurationService:
 
             if not tool_config:
                 validation_results["errors"].append(
-                    f"Required tool {tool} not configured"
+                    f"Required tool {tool} not configured",
                 )
                 validation_results["valid"] = False
             elif not tool_config.get("enabled", False):
                 validation_results["warnings"].append(
-                    f"Tool {tool} is configured but disabled"
+                    f"Tool {tool} is configured but disabled",
                 )
 
         conflicts = self._check_configuration_conflicts(unified_config)
@@ -698,17 +696,17 @@ class UnifiedConfigurationService:
                 "pyright": {"priority": "high", "reason": "Type checking"},
                 "pytest": {"priority": "critical", "reason": "Testing framework"},
             }
-        elif self.project_type == "node":
+        if self.project_type == "node":
             return {
                 "eslint": {"priority": "high", "reason": "JavaScript linting"},
                 "jest": {"priority": "critical", "reason": "Testing framework"},
             }
-        elif self.project_type == "rust":
+        if self.project_type == "rust":
             return {
                 "cargo": {"priority": "critical", "reason": "Build system"},
                 "clippy": {"priority": "high", "reason": "Linting"},
             }
-        elif self.project_type == "go":
+        if self.project_type == "go":
             return {
                 "go": {"priority": "critical", "reason": "Build system"},
                 "golint": {"priority": "high", "reason": "Linting"},
@@ -729,9 +727,8 @@ class UnifiedConfigurationService:
                     "prettier",
                     "rustfmt",
                     "gofmt",
-                ):
-                    if tool_config.get("enabled", False):
-                        formatters.append(tool_name)
+                ) and tool_config.get("enabled", False):
+                    formatters.append(tool_name)
 
         if len(formatters) > 1:
             conflicts.append(f"Multiple formatters enabled: {', '.join(formatters)}")
@@ -918,7 +915,7 @@ class EnhancedErrorCategorizationService:
                         "description": pattern_info["description"],
                         "pattern_matched": pattern,
                         "suggested_fix": self._suggest_fix(
-                            error_type, match.groups(), line
+                            error_type, match.groups(), line,
                         ),
                     }
 
@@ -940,32 +937,32 @@ class EnhancedErrorCategorizationService:
         return {"critical": 1, "high": 2, "medium": 3, "low": 4}.get(severity, 3)
 
     def _suggest_fix(
-        self, error_type: str, groups: tuple[str, ...], line: str
+        self, error_type: str, groups: tuple[str, ...], line: str,
     ) -> str | None:
         if error_type == "import_error" and groups:
             missing_module = groups[0]
             return f"Add '{missing_module}' to pyproject.toml dependencies or install with: uv add {missing_module}"
 
-        elif error_type == "syntax_error":
+        if error_type == "syntax_error":
             return "Review Python syntax, check for missing colons, parentheses, or indentation issues"
 
-        elif error_type == "type_error" and groups:
+        if error_type == "type_error" and groups:
             return f"Add type annotations or fix type mismatch: {groups[0] if groups else 'review types'}"
 
-        elif error_type == "dead_code" and groups:
+        if error_type == "dead_code" and groups:
             unused_item = groups[0]
             return f"Remove unused {unused_item} or add # noqa comment if intentionally unused"
 
-        elif error_type == "complexity_violation":
+        if error_type == "complexity_violation":
             return "Refactor function into smaller helper methods to reduce cognitive complexity"
 
-        elif error_type == "formatting_issue":
+        if error_type == "formatting_issue":
             return "Run 'ruff format' or fix formatting manually"
 
-        elif error_type == "security_issue":
+        if error_type == "security_issue":
             return "Review security issue and apply recommended fixes from Bandit documentation"
 
-        elif error_type == "test_failure":
+        if error_type == "test_failure":
             return (
                 "Debug test failure by examining assertion details and test environment"
             )
@@ -1006,11 +1003,11 @@ class EnhancedErrorCategorizationService:
                         "line": error["raw_line"][:100] + "..."
                         if len(error["raw_line"]) > 100
                         else error["raw_line"],
-                    }
+                    },
                 )
 
         recommended_actions = self._generate_recommended_actions(
-            by_category, by_severity, auto_fixable_count
+            by_category, by_severity, auto_fixable_count,
         )
 
         return {
@@ -1019,7 +1016,7 @@ class EnhancedErrorCategorizationService:
             "by_severity": by_severity,
             "auto_fixable_count": auto_fixable_count,
             "auto_fixable_percentage": round(
-                (auto_fixable_count / len(errors)) * 100, 1
+                (auto_fixable_count / len(errors)) * 100, 1,
             ),
             "critical_issues": critical_issues[:5],
             "recommended_actions": recommended_actions,
@@ -1036,37 +1033,37 @@ class EnhancedErrorCategorizationService:
         critical_count = by_severity.get("critical", 0) + by_severity.get("high", 0)
         if critical_count > 0:
             actions.append(
-                f"🚨 Address {critical_count} critical / high severity issues first"
+                f"🚨 Address {critical_count} critical / high severity issues first",
             )
 
         if by_category.get("dependency", 0) > 0:
             actions.append(
-                "📦 Review dependency issues - check pyproject.toml and run 'uv sync'"
+                "📦 Review dependency issues - check pyproject.toml and run 'uv sync'",
             )
 
         if by_category.get("security", 0) > 0:
             actions.append(
-                "🔒 Security issues require immediate attention - review Bandit findings"
+                "🔒 Security issues require immediate attention - review Bandit findings",
             )
 
         if by_category.get("testing", 0) > 0:
             actions.append(
-                "🧪 Test failures need debugging - check test environment and assertions"
+                "🧪 Test failures need debugging - check test environment and assertions",
             )
 
         if by_category.get("typing", 0) > 0:
             actions.append(
-                "🔤 Type issues can be auto - fixed - consider running type annotation tools"
+                "🔤 Type issues can be auto - fixed - consider running type annotation tools",
             )
 
         if auto_fixable > 0:
             actions.append(
-                f"⚡ {auto_fixable} errors can be auto - fixed with AI agent mode"
+                f"⚡ {auto_fixable} errors can be auto - fixed with AI agent mode",
             )
 
         if by_category.get("quality", 0) > 3:
             actions.append(
-                "🔄 Multiple quality issues - consider refactoring complex functions"
+                "🔄 Multiple quality issues - consider refactoring complex functions",
             )
 
         return actions
@@ -1081,7 +1078,7 @@ class EnhancedErrorCategorizationService:
         self.console.print("\n[bold red]📊 Error Analysis Report[/bold red]")
         self.console.print(f"Total Errors: {summary['total_errors']}")
         self.console.print(
-            f"Auto - fixable: {summary['auto_fixable_count']} ({summary['auto_fixable_percentage']} % )"
+            f"Auto - fixable: {summary['auto_fixable_count']} ({summary['auto_fixable_percentage']} % )",
         )
 
         self.console.print("\n[bold]By Severity: [/bold]")
@@ -1093,7 +1090,7 @@ class EnhancedErrorCategorizationService:
                 "low": "dim",
             }.get(severity, "white")
             self.console.print(
-                f" [{severity_color}]{severity.title()}: {count}[ / {severity_color}]"
+                f" [{severity_color}]{severity.title()}: {count}[ / {severity_color}]",
             )
 
         self.console.print("\n[bold]By Category: [/bold]")
@@ -1127,7 +1124,7 @@ class GitHookService:
 
         if hook_path.exists() and not force:
             self.console.print(
-                "[yellow]⚠️ pre-commit hook already exists (use force = True to overwrite)[/yellow]"
+                "[yellow]⚠️ pre-commit hook already exists (use force = True to overwrite)[/yellow]",
             )
             return False
 
@@ -1139,7 +1136,7 @@ class GitHookService:
             hook_path.chmod(hook_path.stat().st_mode | stat.S_IEXEC)
 
             self.console.print(
-                "[green]✅ pre-commit hook installed successfully[/green]"
+                "[green]✅ pre-commit hook installed successfully[/green]",
             )
             return True
 
@@ -1208,14 +1205,13 @@ sys.exit(exit_code)
             if "Crackerjack pre-commit hook" in content:
                 hook_path.unlink()
                 self.console.print(
-                    "[green]✅ Crackerjack pre-commit hook removed[/green]"
+                    "[green]✅ Crackerjack pre-commit hook removed[/green]",
                 )
                 return True
-            else:
-                self.console.print(
-                    "[yellow]⚠️ pre-commit hook exists but is not a Crackerjack hook[/yellow]"
-                )
-                return False
+            self.console.print(
+                "[yellow]⚠️ pre-commit hook exists but is not a Crackerjack hook[/yellow]",
+            )
+            return False
 
         except OSError as e:
             self.console.print(f"[red]❌ Failed to remove pre-commit hook: {e}[/red]")

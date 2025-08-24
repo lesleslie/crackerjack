@@ -32,7 +32,7 @@ class TestRefactoringAgent:
         assert supported == {IssueType.COMPLEXITY, IssueType.DEAD_CODE}
 
     async def test_can_handle_complexity_issue(
-        self, refactoring_agent: RefactoringAgent
+        self, refactoring_agent: RefactoringAgent,
     ) -> None:
         issue = Issue(
             id="test_complexity",
@@ -45,7 +45,7 @@ class TestRefactoringAgent:
         assert confidence == 0.9
 
     async def test_can_handle_dead_code_issue(
-        self, refactoring_agent: RefactoringAgent
+        self, refactoring_agent: RefactoringAgent,
     ) -> None:
         issue = Issue(
             id="test_dead_code",
@@ -58,7 +58,7 @@ class TestRefactoringAgent:
         assert confidence == 0.8
 
     async def test_can_handle_unsupported_issue(
-        self, refactoring_agent: RefactoringAgent
+        self, refactoring_agent: RefactoringAgent,
     ) -> None:
         issue = Issue(
             id="test_unsupported",
@@ -71,7 +71,7 @@ class TestRefactoringAgent:
         assert confidence == 0.0
 
     async def test_analyze_and_fix_complexity_issue(
-        self, refactoring_agent: RefactoringAgent, tmp_path: Path
+        self, refactoring_agent: RefactoringAgent, tmp_path: Path,
     ) -> None:
         test_file = tmp_path / "complex_function.py"
         complex_code = '''def complex_function(x, y, z):
@@ -109,7 +109,7 @@ class TestRefactoringAgent:
         assert isinstance(result.confidence, float)
 
     async def test_analyze_and_fix_dead_code_issue(
-        self, refactoring_agent: RefactoringAgent, tmp_path: Path
+        self, refactoring_agent: RefactoringAgent, tmp_path: Path,
     ) -> None:
         test_file = tmp_path / "dead_code.py"
         dead_code = '''import os
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         assert isinstance(result.confidence, float)
 
     async def test_analyze_and_fix_unsupported_issue(
-        self, refactoring_agent: RefactoringAgent
+        self, refactoring_agent: RefactoringAgent,
     ) -> None:
         issue = Issue(
             id="test_unsupported_fix",
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         assert "RefactoringAgent cannot handle security" in result.remaining_issues[0]
 
     async def test_reduce_complexity_no_file_path(
-        self, refactoring_agent: RefactoringAgent
+        self, refactoring_agent: RefactoringAgent,
     ) -> None:
         issue = Issue(
             id="test_no_path",
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         assert "No file path specified" in result.remaining_issues[0]
 
     async def test_reduce_complexity_file_not_found(
-        self, refactoring_agent: RefactoringAgent
+        self, refactoring_agent: RefactoringAgent,
     ) -> None:
         issue = Issue(
             id="test_not_found",
@@ -192,7 +192,7 @@ if __name__ == "__main__":
         assert "File not found" in result.remaining_issues[0]
 
     async def test_remove_dead_code_no_file_path(
-        self, refactoring_agent: RefactoringAgent
+        self, refactoring_agent: RefactoringAgent,
     ) -> None:
         issue = Issue(
             id="test_no_path_dead",
@@ -239,7 +239,7 @@ def complex_function(x, y, z):
         assert complex_funcs[0]["complexity"] > 13
 
     def test_calculate_cognitive_complexity(
-        self, refactoring_agent: RefactoringAgent
+        self, refactoring_agent: RefactoringAgent,
     ) -> None:
         simple_code = """
 def simple():
@@ -248,7 +248,7 @@ def simple():
         simple_tree = ast.parse(simple_code)
         simple_func = simple_tree.body[0]
         simple_complexity = refactoring_agent._calculate_cognitive_complexity(
-            simple_func
+            simple_func,
         )
         assert simple_complexity == 0
 
@@ -267,7 +267,7 @@ def complex(x):
         complex_tree = ast.parse(complex_code)
         complex_func = complex_tree.body[0]
         complex_complexity = refactoring_agent._calculate_cognitive_complexity(
-            complex_func
+            complex_func,
         )
         assert complex_complexity > 10
 
@@ -318,7 +318,7 @@ def main():
         assert "import sys" in result
 
     async def test_syntax_error_handling(
-        self, refactoring_agent: RefactoringAgent, tmp_path: Path
+        self, refactoring_agent: RefactoringAgent, tmp_path: Path,
     ) -> None:
         test_file = tmp_path / "syntax_error.py"
         test_file.write_text("def broken_function(\n # Missing closing parenthesis")
@@ -354,13 +354,13 @@ def main():
         assert any("def _is_complex_func_condition" in method for method in extracted)
 
     async def test_file_write_failure(
-        self, refactoring_agent: RefactoringAgent, tmp_path: Path
+        self, refactoring_agent: RefactoringAgent, tmp_path: Path,
     ) -> None:
         test_file = tmp_path / "test_file.py"
         test_file.write_text("import unused_module\n\ndef main(): pass")
 
         with patch.object(
-            refactoring_agent.context, "write_file_content", return_value=False
+            refactoring_agent.context, "write_file_content", return_value=False,
         ):
             issue = Issue(
                 id="test_write_fail",
@@ -377,7 +377,7 @@ def main():
             assert "Failed to write" in result.remaining_issues[0]
 
     async def test_no_complex_functions_found(
-        self, refactoring_agent: RefactoringAgent, tmp_path: Path
+        self, refactoring_agent: RefactoringAgent, tmp_path: Path,
     ) -> None:
         test_file = tmp_path / "simple_file.py"
         simple_code = '''def simple_function():
@@ -405,7 +405,7 @@ def another_simple_function(x):
         assert "No overly complex functions found" in result.recommendations[0]
 
     async def test_no_dead_code_found(
-        self, refactoring_agent: RefactoringAgent, tmp_path: Path
+        self, refactoring_agent: RefactoringAgent, tmp_path: Path,
     ) -> None:
         test_file = tmp_path / "clean_file.py"
         clean_code = '''import os

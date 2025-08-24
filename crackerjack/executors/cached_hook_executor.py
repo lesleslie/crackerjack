@@ -5,10 +5,11 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..config.hooks import HookDefinition, HookStrategy
-from ..models.task import HookResult
-from ..services.cache import CrackerjackCache
-from ..services.file_hasher import FileHasher
+from crackerjack.config.hooks import HookDefinition, HookStrategy
+from crackerjack.models.task import HookResult
+from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.file_hasher import FileHasher
+
 from .hook_executor import HookExecutionResult, HookExecutor
 
 
@@ -45,7 +46,7 @@ class CachedHookExecutor:
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         self.logger.info(
-            f"Executing cached strategy '{strategy.name}' with {len(strategy.hooks)} hooks"
+            f"Executing cached strategy '{strategy.name}' with {len(strategy.hooks)} hooks",
         )
 
         start_time = time.time()
@@ -60,7 +61,7 @@ class CachedHookExecutor:
             cached_result = None
             try:
                 cached_result = self.cache.get_hook_result(
-                    hook_def.name, current_file_hashes
+                    hook_def.name, current_file_hashes,
                 )
             except Exception as e:
                 self.logger.warning(f"Cache error for hook {hook_def.name}: {e}")
@@ -80,11 +81,11 @@ class CachedHookExecutor:
                 if hook_result.status == "passed":
                     try:
                         self.cache.set_hook_result(
-                            hook_def.name, current_file_hashes, hook_result
+                            hook_def.name, current_file_hashes, hook_result,
                         )
                     except Exception as e:
                         self.logger.warning(
-                            f"Failed to cache result for {hook_def.name}: {e}"
+                            f"Failed to cache result for {hook_def.name}: {e}",
                         )
 
         total_time = time.time() - start_time
@@ -92,7 +93,7 @@ class CachedHookExecutor:
 
         self.logger.info(
             f"Cached strategy '{strategy.name}' completed in {total_time: .2f}s - "
-            f"Success: {success}, Cache hits: {cache_hits}, Cache misses: {cache_misses}"
+            f"Success: {success}, Cache hits: {cache_hits}, Cache misses: {cache_misses}",
         )
 
         return HookExecutionResult(
@@ -153,16 +154,13 @@ class CachedHookExecutor:
         return any(pattern in path_str for pattern in ignore_patterns)
 
     def _is_cache_valid(
-        self, cached_result: HookResult, hook_def: HookDefinition
+        self, cached_result: HookResult, hook_def: HookDefinition,
     ) -> bool:
         if cached_result.status != "passed":
             return False
 
         cache_age = time.time() - getattr(cached_result, "timestamp", time.time())
-        if cache_age > self.cache_ttl_seconds:
-            return False
-
-        return True
+        return not cache_age > self.cache_ttl_seconds
 
     def invalidate_hook_cache(self, hook_name: str | None = None) -> None:
         self.cache.invalidate_hook_cache(hook_name)
@@ -181,7 +179,7 @@ class SmartCacheManager:
         self.logger = logging.getLogger("crackerjack.cache_manager")
 
     def should_use_cache_for_hook(
-        self, hook_name: str, project_state: dict[str, t.Any]
+        self, hook_name: str, project_state: dict[str, t.Any],
     ) -> bool:
         external_hooks = {"detect - secrets"}
         if hook_name in external_hooks:
@@ -203,14 +201,14 @@ class SmartCacheManager:
         return True
 
     def get_optimal_cache_strategy(
-        self, hook_strategy: HookStrategy
+        self, hook_strategy: HookStrategy,
     ) -> dict[str, bool]:
         project_state = self._analyze_project_state()
 
         cache_decisions = {}
         for hook_def in hook_strategy.hooks:
             cache_decisions[hook_def.name] = self.should_use_cache_for_hook(
-                hook_def.name, project_state
+                hook_def.name, project_state,
             )
 
         return cache_decisions

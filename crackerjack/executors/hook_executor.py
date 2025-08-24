@@ -8,8 +8,8 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..config.hooks import HookDefinition, HookStrategy, RetryPolicy
-from ..models.task import HookResult
+from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
+from crackerjack.models.task import HookResult
 
 
 @dataclass
@@ -83,15 +83,15 @@ class HookExecutor:
         self.console.print("\n" + "-" * 80)
         if strategy.name == "fast":
             self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks[/bold bright_white]"
+                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks[/bold bright_white]",
             )
         elif strategy.name == "comprehensive":
             self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running comprehensive quality checks[/bold bright_white]"
+                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running comprehensive quality checks[/bold bright_white]",
             )
         else:
             self.console.print(
-                f"[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running {strategy.name} hooks[/bold bright_white]"
+                f"[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running {strategy.name} hooks[/bold bright_white]",
             )
         self.console.print("-" * 80 + "\n")
 
@@ -150,7 +150,7 @@ class HookExecutor:
             clean_env = self._get_clean_environment()
             result = subprocess.run(
                 hook.get_command(),
-                cwd=self.pkg_path,
+                check=False, cwd=self.pkg_path,
                 text=True,
                 timeout=hook.timeout,
                 env=clean_env,
@@ -192,7 +192,7 @@ class HookExecutor:
             )
 
     def _parse_hook_output(
-        self, result: subprocess.CompletedProcess[str]
+        self, result: subprocess.CompletedProcess[str],
     ) -> dict[str, t.Any]:
         output = result.stdout + result.stderr
         return {
@@ -208,20 +208,20 @@ class HookExecutor:
         status_text = "PASSED" if result.status == "passed" else "FAILED"
 
         self.console.print(
-            f"{status_icon} {result.name}: {status_text} ({result.duration:.1f}s)"
+            f"{status_icon} {result.name}: {status_text} ({result.duration:.1f}s)",
         )
 
     def _handle_retries(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self, strategy: HookStrategy, results: list[HookResult],
     ) -> list[HookResult]:
         if strategy.retry_policy == RetryPolicy.FORMATTING_ONLY:
             return self._retry_formatting_hooks(strategy, results)
-        elif strategy.retry_policy == RetryPolicy.ALL_HOOKS:
+        if strategy.retry_policy == RetryPolicy.ALL_HOOKS:
             return self._retry_all_hooks(strategy, results)
         return results
 
     def _retry_formatting_hooks(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self, strategy: HookStrategy, results: list[HookResult],
     ) -> list[HookResult]:
         formatting_hooks_failed: set[str] = set()
 
@@ -245,7 +245,7 @@ class HookExecutor:
         return updated_results
 
     def _retry_all_hooks(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self, strategy: HookStrategy, results: list[HookResult],
     ) -> list[HookResult]:
         failed_hooks = [i for i, r in enumerate(results) if r.status == "failed"]
 
@@ -297,15 +297,15 @@ class HookExecutor:
         return clean_env
 
     def _print_summary(
-        self, strategy: HookStrategy, results: list[HookResult], success: bool
+        self, strategy: HookStrategy, results: list[HookResult], success: bool,
     ) -> None:
         if success:
             self.console.print(
-                f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)}"
+                f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)}",
             )
         else:
             failed_count = sum(1 for r in results if r.status == "failed")
             error_count = sum(1 for r in results if r.status in ("timeout", "error"))
             self.console.print(
-                f"[red]❌[/red] {strategy.name.title()} hooks failed: {failed_count} failed, {error_count} errors"
+                f"[red]❌[/red] {strategy.name.title()} hooks failed: {failed_count} failed, {error_count} errors",
             )

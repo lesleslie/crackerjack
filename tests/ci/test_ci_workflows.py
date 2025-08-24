@@ -1,5 +1,4 @@
-"""
-CI/CD workflow tests.
+"""CI/CD workflow tests.
 
 Tests that verify crackerjack works correctly in CI/CD environments
 with proper configuration, timeouts, and parallel execution handling.
@@ -20,10 +19,10 @@ from crackerjack.services.unified_config import CrackerjackConfig
 
 @pytest.mark.integration
 class TestCIWorkflows:
-    """Test CI/CD workflow scenarios"""
+    """Test CI/CD workflow scenarios."""
 
-    def test_ci_environment_detection(self, ci_environment):
-        """Test CI environment is detected correctly"""
+    def test_ci_environment_detection(self, ci_environment) -> None:
+        """Test CI environment is detected correctly."""
         if ci_environment["is_ci"]:
             # Running in CI environment
             assert ci_environment["provider"] in [
@@ -39,8 +38,8 @@ class TestCIWorkflows:
             # Running locally
             assert ci_environment["timeout_multiplier"] == 1
 
-    def test_ci_optimized_config(self, ci_environment, ci_config_factory):
-        """Test CI-optimized configuration"""
+    def test_ci_optimized_config(self, ci_environment, ci_config_factory) -> None:
+        """Test CI-optimized configuration."""
         config = ci_config_factory(ci_environment)
 
         # CI config should have appropriate settings
@@ -54,8 +53,8 @@ class TestCIWorkflows:
             assert config.test_timeout == 60
             assert config.test_workers >= 1
 
-    def test_workflow_execution_in_ci(self, temp_project_dir, ci_environment):
-        """Test workflow execution with CI settings"""
+    def test_workflow_execution_in_ci(self, temp_project_dir, ci_environment) -> None:
+        """Test workflow execution with CI settings."""
         config = CrackerjackConfig(
             project_path=temp_project_dir,
             test_timeout=30 * ci_environment["timeout_multiplier"],
@@ -79,10 +78,10 @@ class TestCIWorkflows:
 
 @pytest.mark.integration
 class TestParallelExecution:
-    """Test parallel test execution scenarios"""
+    """Test parallel test execution scenarios."""
 
-    def test_parallel_hook_execution(self, temp_project_dir, ci_environment):
-        """Test hooks can handle parallel execution"""
+    def test_parallel_hook_execution(self, temp_project_dir, ci_environment) -> None:
+        """Test hooks can handle parallel execution."""
         CrackerjackConfig(
             project_path=temp_project_dir,
             test_workers=2 if ci_environment["parallel_safe"] else 1,
@@ -105,8 +104,8 @@ class TestParallelExecution:
             assert isinstance(success, bool)
             assert isinstance(errors, list)
 
-    def test_concurrent_filesystem_operations(self, temp_dir, ci_environment):
-        """Test filesystem operations under concurrent load"""
+    def test_concurrent_filesystem_operations(self, temp_dir, ci_environment) -> None:
+        """Test filesystem operations under concurrent load."""
         from crackerjack.services.filesystem import FileSystemService
 
         fs_service = FileSystemService()
@@ -138,10 +137,10 @@ class TestParallelExecution:
 @pytest.mark.integration
 @pytest.mark.slow
 class TestTimeoutHandling:
-    """Test timeout handling in CI environments"""
+    """Test timeout handling in CI environments."""
 
-    def test_hook_timeout_handling(self, temp_project_dir, ci_environment):
-        """Test hook timeout handling"""
+    def test_hook_timeout_handling(self, temp_project_dir, ci_environment) -> None:
+        """Test hook timeout handling."""
         config = CrackerjackConfig(
             project_path=temp_project_dir,
             test_timeout=5,  # Short timeout for testing
@@ -157,7 +156,7 @@ class TestTimeoutHandling:
             return (True, "Slow hook completed", "")
 
         with patch.object(
-            hook_manager, "_run_hook_command", side_effect=slow_hook_mock
+            hook_manager, "_run_hook_command", side_effect=slow_hook_mock,
         ):
             start_time = time.time()
             success, errors = hook_manager.run_fast_hooks()
@@ -168,8 +167,8 @@ class TestTimeoutHandling:
             assert duration < timeout_limit
             assert isinstance(success, bool)
 
-    def test_workflow_timeout_handling(self, temp_project_dir, ci_environment):
-        """Test overall workflow timeout handling"""
+    def test_workflow_timeout_handling(self, temp_project_dir, ci_environment) -> None:
+        """Test overall workflow timeout handling."""
         config = CrackerjackConfig(
             project_path=temp_project_dir,
             test_timeout=10 * ci_environment["timeout_multiplier"],
@@ -192,10 +191,10 @@ class TestTimeoutHandling:
 
 @pytest.mark.integration
 class TestResourceConstraints:
-    """Test behavior under resource constraints typical in CI"""
+    """Test behavior under resource constraints typical in CI."""
 
-    def test_low_memory_handling(self, temp_dir, ci_environment):
-        """Test handling of memory-constrained environments"""
+    def test_low_memory_handling(self, temp_dir, ci_environment) -> None:
+        """Test handling of memory-constrained environments."""
         from crackerjack.services.filesystem import FileSystemService
 
         fs_service = FileSystemService()
@@ -227,8 +226,8 @@ class TestResourceConstraints:
         for file_path in files_created[:5]:  # Check first 5
             assert file_path.exists()
 
-    def test_cpu_constrained_execution(self, temp_project_dir, ci_environment):
-        """Test execution in CPU-constrained environments"""
+    def test_cpu_constrained_execution(self, temp_project_dir, ci_environment) -> None:
+        """Test execution in CPU-constrained environments."""
         config = CrackerjackConfig(
             project_path=temp_project_dir,
             test_workers=1,  # Single worker for CPU constraint
@@ -243,7 +242,7 @@ class TestResourceConstraints:
         iterations = 3
         durations = []
 
-        for i in range(iterations):
+        for _i in range(iterations):
             start_time = time.time()
             result = orchestrator.execute_workflow()
             duration = time.time() - start_time
@@ -261,12 +260,12 @@ class TestResourceConstraints:
 
 @pytest.mark.integration
 class TestErrorRecoveryInCI:
-    """Test error recovery in CI environments"""
+    """Test error recovery in CI environments."""
 
-    def test_transient_failure_recovery(self, temp_project_dir, ci_environment):
-        """Test recovery from transient failures"""
+    def test_transient_failure_recovery(self, temp_project_dir, ci_environment) -> None:
+        """Test recovery from transient failures."""
         CrackerjackConfig(
-            project_path=temp_project_dir, test_workers=1, skip_hooks=True
+            project_path=temp_project_dir, test_workers=1, skip_hooks=True,
         )
 
         hook_manager = HookManagerImpl(console=Console(), pkg_path=Path.cwd())
@@ -282,7 +281,7 @@ class TestErrorRecoveryInCI:
             return (True, "Hook recovered", "")
 
         with patch.object(
-            hook_manager, "_run_hook_command", side_effect=transient_failure_mock
+            hook_manager, "_run_hook_command", side_effect=transient_failure_mock,
         ):
             # First call should fail
             success1, errors1 = hook_manager.run_fast_hooks()
@@ -297,10 +296,10 @@ class TestErrorRecoveryInCI:
             assert isinstance(success2, bool)
             assert isinstance(errors2, list)
 
-    def test_partial_failure_handling(self, temp_project_dir):
-        """Test handling of partial failures in CI"""
+    def test_partial_failure_handling(self, temp_project_dir) -> None:
+        """Test handling of partial failures in CI."""
         CrackerjackConfig(
-            project_path=temp_project_dir, test_workers=1, skip_hooks=True
+            project_path=temp_project_dir, test_workers=1, skip_hooks=True,
         )
 
         hook_manager = HookManagerImpl(console=Console(), pkg_path=Path.cwd())
@@ -321,7 +320,7 @@ class TestErrorRecoveryInCI:
             return result
 
         with patch.object(
-            hook_manager, "_run_hook_command", side_effect=mixed_results_mock
+            hook_manager, "_run_hook_command", side_effect=mixed_results_mock,
         ):
             success, errors = hook_manager.run_fast_hooks()
 
@@ -332,10 +331,10 @@ class TestErrorRecoveryInCI:
 
 @pytest.mark.integration
 class TestCICacheHandling:
-    """Test cache handling in CI environments"""
+    """Test cache handling in CI environments."""
 
-    def test_cache_isolation(self, temp_dir):
-        """Test that caches don't interfere between CI runs"""
+    def test_cache_isolation(self, temp_dir) -> None:
+        """Test that caches don't interfere between CI runs."""
         from crackerjack.services.filesystem import FileSystemService
 
         fs_service = FileSystemService()
@@ -367,8 +366,8 @@ class TestCICacheHandling:
         remaining_files = list(cache_dir.glob("*.json"))
         assert len(remaining_files) == 0
 
-    def test_temporary_file_cleanup(self, temp_dir):
-        """Test cleanup of temporary files in CI"""
+    def test_temporary_file_cleanup(self, temp_dir) -> None:
+        """Test cleanup of temporary files in CI."""
         from crackerjack.services.filesystem import FileSystemService
 
         fs_service = FileSystemService()
@@ -398,10 +397,10 @@ class TestCICacheHandling:
 @pytest.mark.integration
 @pytest.mark.external
 class TestExternalServiceIntegration:
-    """Test integration with external services in CI"""
+    """Test integration with external services in CI."""
 
-    def test_git_operations_in_ci(self, temp_project_dir, ci_environment):
-        """Test git operations work in CI environment"""
+    def test_git_operations_in_ci(self, temp_project_dir, ci_environment) -> None:
+        """Test git operations work in CI environment."""
         from crackerjack.services.git import GitService
 
         original_cwd = os.getcwd()
@@ -423,8 +422,8 @@ class TestExternalServiceIntegration:
         finally:
             os.chdir(original_cwd)
 
-    def test_network_timeout_handling(self, ci_environment):
-        """Test handling of network timeouts in CI"""
+    def test_network_timeout_handling(self, ci_environment) -> None:
+        """Test handling of network timeouts in CI."""
         # This would test network operations with proper timeouts
         # Mock network calls to avoid actual network dependencies
 

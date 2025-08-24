@@ -28,7 +28,7 @@ class TestInteractiveRun:
         return layout
 
     def test_run_interactive_with_tasks_success_and_failure(
-        self, cli: InteractiveCLI
+        self, cli: InteractiveCLI,
     ) -> None:
         task1 = cli.workflow.add_task("task1", "Task 1")
         task2 = cli.workflow.add_task("task2", "Task 2")
@@ -93,7 +93,7 @@ class TestInteractiveRun:
         task2 = cli.workflow.add_task("failed", "Failed Task")
         task2.start()
         task2.fail(
-            ExecutionError(message="Failed", error_code=ErrorCode.UNEXPECTED_ERROR)
+            ExecutionError(message="Failed", error_code=ErrorCode.UNEXPECTED_ERROR),
         )
         task3 = cli.workflow.add_task("skipped", "Skipped Task")
         task3.skip()

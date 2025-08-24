@@ -5,8 +5,8 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..config.hooks import HookStrategy
-from ..models.protocols import OptionsProtocol
+from crackerjack.config.hooks import HookStrategy
+from crackerjack.models.protocols import OptionsProtocol
 
 
 class ExecutionStrategy(str, Enum):
@@ -123,7 +123,7 @@ class StrategySelector:
         self.console = console
 
     def select_strategy(
-        self, config: OrchestrationConfig, context: ExecutionContext
+        self, config: OrchestrationConfig, context: ExecutionContext,
     ) -> ExecutionStrategy:
         if config.execution_strategy != ExecutionStrategy.ADAPTIVE:
             return config.execution_strategy
@@ -136,13 +136,13 @@ class StrategySelector:
 
         if len(context.previous_failures) > 5:
             self.console.print(
-                "[yellow]🧠 Switching to individual execution due to multiple failures[/yellow]"
+                "[yellow]🧠 Switching to individual execution due to multiple failures[/yellow]",
             )
             return ExecutionStrategy.INDIVIDUAL
 
         if context.changed_files and len(context.changed_files) < 5:
             self.console.print(
-                "[cyan]🎯 Using selective execution for targeted file changes[/cyan]"
+                "[cyan]🎯 Using selective execution for targeted file changes[/cyan]",
             )
             return ExecutionStrategy.SELECTIVE
 
@@ -163,7 +163,7 @@ class StrategySelector:
         return strategy
 
     def _create_selective_strategy(
-        self, strategy: HookStrategy, context: ExecutionContext
+        self, strategy: HookStrategy, context: ExecutionContext,
     ) -> HookStrategy:
         priority_hooks = set(context.previous_failures)
 
@@ -185,7 +185,7 @@ class StrategySelector:
 
         self.console.print(
             f"[cyan]🎯 Selected {len(selected_hooks)} hooks for targeted execution: "
-            f"{', '.join(h.name for h in selected_hooks)}[/cyan]"
+            f"{', '.join(h.name for h in selected_hooks)}[/cyan]",
         )
 
         return HookStrategy(
@@ -214,16 +214,16 @@ class OrchestrationPlanner:
         hook_plans = []
         for strategy in hook_strategies:
             selected_strategy = self.strategy_selector.select_hook_subset(
-                strategy, execution_strategy, context
+                strategy, execution_strategy, context,
             )
             hook_plans.append(
                 {
                     "strategy": selected_strategy,
                     "execution_mode": execution_strategy,
                     "estimated_duration": self._estimate_strategy_duration(
-                        selected_strategy
+                        selected_strategy,
                     ),
-                }
+                },
             )
 
         test_plan = self._create_test_plan(config, context, execution_strategy)
@@ -262,7 +262,7 @@ class OrchestrationPlanner:
         return {
             "mode": test_mode,
             "parallel_workers": min(
-                config.max_parallel_tests, context.total_test_files
+                config.max_parallel_tests, context.total_test_files,
             ),
             "estimated_duration": context.total_test_files * 2.0,
             "progress_tracking": config.progress_level
@@ -270,7 +270,7 @@ class OrchestrationPlanner:
         }
 
     def _create_ai_plan(
-        self, config: OrchestrationConfig, context: ExecutionContext
+        self, config: OrchestrationConfig, context: ExecutionContext,
     ) -> dict[str, t.Any]:
         return {
             "mode": config.ai_coordination_mode,
@@ -294,19 +294,19 @@ class ExecutionPlan:
     def print_plan_summary(self, console: Console) -> None:
         console.print("\n" + "=" * 80)
         console.print(
-            "[bold bright_blue]🎯 ORCHESTRATED EXECUTION PLAN[/bold bright_blue]"
+            "[bold bright_blue]🎯 ORCHESTRATED EXECUTION PLAN[/bold bright_blue]",
         )
         console.print("=" * 80)
 
         console.print(f"[bold]Strategy: [/bold] {self.execution_strategy.value}")
         console.print(
-            f"[bold]AI Mode: [/bold] {self.config.ai_coordination_mode.value}"
+            f"[bold]AI Mode: [/bold] {self.config.ai_coordination_mode.value}",
         )
         console.print(
-            f"[bold]Progress Level: [/bold] {self.config.progress_level.value}"
+            f"[bold]Progress Level: [/bold] {self.config.progress_level.value}",
         )
         console.print(
-            f"[bold]Estimated Duration: [/bold] {self.estimated_total_duration: .1f}s"
+            f"[bold]Estimated Duration: [/bold] {self.estimated_total_duration: .1f}s",
         )
 
         console.print("\n[bold cyan]Hook Execution: [/bold cyan]")
@@ -314,7 +314,7 @@ class ExecutionPlan:
             strategy = plan["strategy"]
             console.print(
                 f" {i}. {strategy.name} - {len(strategy.hooks)} hooks "
-                f"({plan['estimated_duration']: .1f}s)"
+                f"({plan['estimated_duration']: .1f}s)",
             )
 
         console.print("\n[bold green]Test Execution: [/bold green]")
@@ -326,7 +326,7 @@ class ExecutionPlan:
         console.print(f" Mode: {self.ai_plan['mode'].value}")
         console.print(f" Intelligence: {self.ai_plan['intelligence_level'].value}")
         console.print(
-            f" Batch Processing: {'✅' if self.ai_plan['batch_processing'] else '❌'}"
+            f" Batch Processing: {'✅' if self.ai_plan['batch_processing'] else '❌'}",
         )
 
         console.print("=" * 80)

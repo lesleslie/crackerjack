@@ -8,7 +8,7 @@ with minimal complexity. Target specific classes and functions that exist.
 class TestAgentsModuleCoverage:
     """Boost coverage for agents modules (they have some existing coverage)."""
 
-    def test_agents_base_imports_and_basic(self):
+    def test_agents_base_imports_and_basic(self) -> None:
         """Test agents base module."""
         from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
 
@@ -31,19 +31,19 @@ class TestAgentsModuleCoverage:
         assert result.success is True
         assert result.confidence == 0.9
 
-    def test_agents_coordinator_imports(self):
+    def test_agents_coordinator_imports(self) -> None:
         """Test agents coordinator module."""
         from crackerjack.agents import coordinator
 
         assert coordinator is not None
 
-    def test_agents_tracker_imports(self):
+    def test_agents_tracker_imports(self) -> None:
         """Test agents tracker module."""
         from crackerjack.agents import tracker
 
         assert tracker is not None
 
-    def test_all_agent_imports(self):
+    def test_all_agent_imports(self) -> None:
         """Test all specific agent imports."""
         from crackerjack.agents import (
             documentation_agent,
@@ -68,7 +68,7 @@ class TestAgentsModuleCoverage:
 class TestAPIModuleCoverage:
     """Boost coverage for API module (has existing coverage)."""
 
-    def test_api_classes_imports(self):
+    def test_api_classes_imports(self) -> None:
         """Test API classes imports."""
         from crackerjack.api import CrackerjackAPI
 
@@ -76,7 +76,7 @@ class TestAPIModuleCoverage:
         api = CrackerjackAPI()
         assert api is not None
 
-    def test_api_functions_imports(self):
+    def test_api_functions_imports(self) -> None:
         """Test API functions imports."""
         from crackerjack.api import (
             clean_code,
@@ -95,7 +95,7 @@ class TestAPIModuleCoverage:
 class TestCLIOptionsModuleCoverage:
     """Boost coverage for CLI options module (has high coverage already)."""
 
-    def test_cli_options_classes(self):
+    def test_cli_options_classes(self) -> None:
         """Test CLI options classes."""
         from crackerjack.cli.options import BumpOption, Options
 
@@ -114,7 +114,7 @@ class TestCLIOptionsModuleCoverage:
 class TestConfigHooksModuleCoverage:
     """Boost coverage for config hooks module."""
 
-    def test_config_hooks_classes_and_functions(self):
+    def test_config_hooks_classes_and_functions(self) -> None:
         """Test config hooks module."""
         from crackerjack.config import hooks
 
@@ -125,7 +125,7 @@ class TestConfigHooksModuleCoverage:
 class TestServicesInitializationCoverage:
     """Test services initialization module."""
 
-    def test_initialization_service_imports(self):
+    def test_initialization_service_imports(self) -> None:
         """Test initialization service."""
         from crackerjack.services import initialization
 
@@ -135,7 +135,7 @@ class TestServicesInitializationCoverage:
 class TestModelsTaskCoverage:
     """Test models task module (has existing coverage)."""
 
-    def test_task_enums_and_classes(self):
+    def test_task_enums_and_classes(self) -> None:
         """Test task models."""
         from crackerjack.models import task
 
@@ -146,7 +146,7 @@ class TestModelsTaskCoverage:
 class TestMainModuleCoverage:
     """Test main module functionality."""
 
-    def test_main_module_imports(self):
+    def test_main_module_imports(self) -> None:
         """Test main module imports."""
         from crackerjack import __main__
 
@@ -159,14 +159,14 @@ class TestMainModuleCoverage:
 class TestVersionAndMetadata:
     """Test package version and metadata."""
 
-    def test_package_version(self):
+    def test_package_version(self) -> None:
         """Test package version access."""
         import crackerjack
 
         # Package should have version info
         assert hasattr(crackerjack, "__version__") or hasattr(crackerjack, "VERSION")
 
-    def test_package_metadata(self):
+    def test_package_metadata(self) -> None:
         """Test package metadata."""
         import crackerjack
 
@@ -180,7 +180,7 @@ class TestVersionAndMetadata:
 class TestMoreMCPComponents:
     """Test additional MCP components for coverage."""
 
-    def test_mcp_server_wrapper(self):
+    def test_mcp_server_wrapper(self) -> None:
         """Test MCP server wrapper module."""
         from crackerjack.mcp import server, websocket_server
 
@@ -192,13 +192,13 @@ class TestMoreMCPComponents:
 class TestAdditionalServices:
     """Test additional services for more coverage."""
 
-    def test_config_service_coverage(self):
+    def test_config_service_coverage(self) -> None:
         """Test config service."""
         from crackerjack.services import config
 
         assert config is not None
 
-    def test_initialization_service_coverage(self):
+    def test_initialization_service_coverage(self) -> None:
         """Test initialization service."""
         from crackerjack.services import initialization
 
@@ -208,14 +208,14 @@ class TestAdditionalServices:
 class TestUtilityFunctions:
     """Test utility functions across modules."""
 
-    def test_error_handling_coverage(self):
+    def test_error_handling_coverage(self) -> None:
         """Test error handling utilities."""
         from crackerjack import errors
 
         # Import the module for coverage
         assert errors is not None
 
-    def test_dynamic_config_coverage(self):
+    def test_dynamic_config_coverage(self) -> None:
         """Test dynamic config utilities."""
         from crackerjack import dynamic_config
 
@@ -225,7 +225,7 @@ class TestUtilityFunctions:
 class TestMoreAgentCoverage:
     """Additional agent coverage for specific functionality."""
 
-    def test_issue_types_and_priorities(self):
+    def test_issue_types_and_priorities(self) -> None:
         """Test Issue types and priorities enums."""
         from crackerjack.agents.base import IssueType, Priority
 
@@ -241,7 +241,7 @@ class TestMoreAgentCoverage:
         assert Priority.HIGH is not None
         assert Priority.CRITICAL is not None
 
-    def test_fix_result_methods(self):
+    def test_fix_result_methods(self) -> None:
         """Test FixResult methods."""
         from crackerjack.agents.base import FixResult
 
@@ -253,11 +253,11 @@ class TestMoreAgentCoverage:
 
         # Test with fixes applied
         result_with_fixes = FixResult(
-            success=True, confidence=0.9, fixes_applied=["fix1", "fix2"]
+            success=True, confidence=0.9, fixes_applied=["fix1", "fix2"],
         )
         assert len(result_with_fixes.fixes_applied) == 2
 
-    def test_issue_creation_variants(self):
+    def test_issue_creation_variants(self) -> None:
         """Test different Issue creation patterns."""
         from crackerjack.agents.base import Issue, IssueType, Priority
 
@@ -286,7 +286,7 @@ class TestMoreAgentCoverage:
 class TestComplexityReduction:
     """Simple tests that should work reliably."""
 
-    def test_basic_imports_coverage(self):
+    def test_basic_imports_coverage(self) -> None:
         """Mass import test for coverage."""
         # Import all major modules for coverage
         import crackerjack

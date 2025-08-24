@@ -26,14 +26,14 @@ def documentation_agent(temp_context):
 class TestDocumentationAgentSimple:
     """Simple test cases for DocumentationAgent."""
 
-    def test_get_supported_types(self, documentation_agent):
+    def test_get_supported_types(self, documentation_agent) -> None:
         """Test that DocumentationAgent supports DOCUMENTATION type."""
         supported_types = documentation_agent.get_supported_types()
         assert IssueType.DOCUMENTATION in supported_types
         assert len(supported_types) == 1
 
     @pytest.mark.asyncio
-    async def test_can_handle_documentation_issue(self, documentation_agent):
+    async def test_can_handle_documentation_issue(self, documentation_agent) -> None:
         """Test that DocumentationAgent can handle documentation issues with correct confidence."""
         issue = Issue(
             id="doc-001",
@@ -47,7 +47,7 @@ class TestDocumentationAgentSimple:
         assert confidence == 0.8
 
     @pytest.mark.asyncio
-    async def test_cannot_handle_other_issue_types(self, documentation_agent):
+    async def test_cannot_handle_other_issue_types(self, documentation_agent) -> None:
         """Test that DocumentationAgent returns 0.0 confidence for non-documentation issues."""
         issue = Issue(
             id="perf-001",
@@ -61,7 +61,7 @@ class TestDocumentationAgentSimple:
         assert confidence == 0.0
 
     @pytest.mark.asyncio
-    async def test_analyze_and_fix_with_nonexistent_file(self, documentation_agent):
+    async def test_analyze_and_fix_with_nonexistent_file(self, documentation_agent) -> None:
         """Test handling of nonexistent file."""
         issue = Issue(
             id="doc-002",
@@ -78,7 +78,7 @@ class TestDocumentationAgentSimple:
         assert isinstance(result.success, bool)
 
     @pytest.mark.asyncio
-    async def test_analyze_and_fix_general_update(self, documentation_agent):
+    async def test_analyze_and_fix_general_update(self, documentation_agent) -> None:
         """Test general documentation update."""
         issue = Issue(
             id="doc-003",

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..models.protocols import FileSystemInterface
+from crackerjack.models.protocols import FileSystemInterface
 
 
 @dataclass
@@ -49,7 +49,7 @@ class ContextualAIAssistant:
         self.cache_file = self.project_root / ".crackerjack" / "ai_context.json"
 
     def get_contextual_recommendations(
-        self, max_recommendations: int = 5
+        self, max_recommendations: int = 5,
     ) -> list[AIRecommendation]:
         context = self._analyze_project_context()
         recommendations = self._generate_recommendations(context)
@@ -83,7 +83,7 @@ class ContextualAIAssistant:
         return context
 
     def _generate_recommendations(
-        self, context: ProjectContext
+        self, context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations: list[AIRecommendation] = []
 
@@ -97,7 +97,7 @@ class ContextualAIAssistant:
         return recommendations
 
     def _get_testing_recommendations(
-        self, context: ProjectContext
+        self, context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -111,7 +111,7 @@ class ContextualAIAssistant:
                     action_command="python -m crackerjack -t",
                     reasoning="Projects without tests have 40% more bugs in production",
                     confidence=0.9,
-                )
+                ),
             )
         elif context.test_coverage < 42:
             recommendations.append(
@@ -123,13 +123,13 @@ class ContextualAIAssistant:
                     action_command="python -m crackerjack -t",
                     reasoning="Low test coverage indicates untested code paths that may fail in production",
                     confidence=0.85,
-                )
+                ),
             )
 
         return recommendations
 
     def _get_code_quality_recommendations(
-        self, context: ProjectContext
+        self, context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -143,7 +143,7 @@ class ContextualAIAssistant:
                     action_command="python -m crackerjack --ai-agent",
                     reasoning="High lint error count indicates technical debt and potential bugs",
                     confidence=0.95,
-                )
+                ),
             )
         elif context.lint_errors_count > 5:
             recommendations.append(
@@ -155,13 +155,13 @@ class ContextualAIAssistant:
                     action_command="python -m crackerjack",
                     reasoning="Clean code is easier to maintain and has fewer bugs",
                     confidence=0.8,
-                )
+                ),
             )
 
         return recommendations
 
     def _get_security_recommendations(
-        self, context: ProjectContext
+        self, context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -175,13 +175,13 @@ class ContextualAIAssistant:
                     action_command="python -m crackerjack --check-dependencies",
                     reasoning="Security vulnerabilities can expose your application to attacks",
                     confidence=0.95,
-                )
+                ),
             )
 
         return recommendations
 
     def _get_maintenance_recommendations(
-        self, context: ProjectContext
+        self, context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -195,13 +195,13 @@ class ContextualAIAssistant:
                     action_command="python -m crackerjack --check-dependencies",
                     reasoning="Outdated dependencies may have security vulnerabilities or performance issues",
                     confidence=0.75,
-                )
+                ),
             )
 
         return recommendations
 
     def _get_workflow_recommendations(
-        self, context: ProjectContext
+        self, context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -214,13 +214,13 @@ class ContextualAIAssistant:
                     description="No CI/CD configuration found. Automated testing and deployment improve reliability.",
                     reasoning="CI/CD prevents 60% of deployment issues and improves team productivity",
                     confidence=0.8,
-                )
+                ),
             )
 
         return recommendations
 
     def _get_documentation_recommendations(
-        self, context: ProjectContext
+        self, context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -233,7 +233,7 @@ class ContextualAIAssistant:
                     description="No documentation found. Good documentation improves adoption and maintenance.",
                     reasoning="Well-documented projects get 3x more contributors and have better longevity",
                     confidence=0.7,
-                )
+                ),
             )
 
         return recommendations
@@ -250,7 +250,7 @@ class ContextualAIAssistant:
             if coverage_file.exists():
                 result = subprocess.run(
                     ["uv", "run", "coverage", "report", "--format=json"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=10,
                     cwd=self.project_root,
@@ -267,7 +267,7 @@ class ContextualAIAssistant:
         with suppress(Exception):
             result = subprocess.run(
                 ["uv", "run", "ruff", "check", ".", "--output-format=json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=30,
                 cwd=self.project_root,
@@ -285,10 +285,9 @@ class ContextualAIAssistant:
             python_files = list(self.project_root.rglob("*.py"))
             if len(python_files) < 10:
                 return "small"
-            elif len(python_files) < 50:
+            if len(python_files) < 50:
                 return "medium"
-            else:
-                return "large"
+            return "large"
         except Exception:
             return "small"
 
@@ -361,7 +360,7 @@ class ContextualAIAssistant:
         with suppress(Exception):
             result = subprocess.run(
                 ["git", "log", "-1", "--format=%ct"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=5,
                 cwd=self.project_root,
@@ -380,7 +379,7 @@ class ContextualAIAssistant:
         with suppress(Exception):
             result = subprocess.run(
                 ["uv", "run", "bandit", "-r", ".", "-f", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=30,
                 cwd=self.project_root,
@@ -424,7 +423,7 @@ class ContextualAIAssistant:
     def display_recommendations(self, recommendations: list[AIRecommendation]) -> None:
         if not recommendations:
             self.console.print(
-                "[green]✨ Great job! No immediate recommendations.[/green]"
+                "[green]✨ Great job! No immediate recommendations.[/green]",
             )
             return
 
@@ -433,7 +432,7 @@ class ContextualAIAssistant:
 
         for i, rec in enumerate(recommendations, 1):
             priority_color = {"high": "red", "medium": "yellow", "low": "blue"}.get(
-                rec.priority, "white"
+                rec.priority, "white",
             )
 
             category_emoji = {
@@ -448,13 +447,13 @@ class ContextualAIAssistant:
             }.get(rec.category, "💡")
 
             self.console.print(
-                f"[bold]{i}. {category_emoji} {rec.title}[/bold] [{priority_color}]({rec.priority})[/{priority_color}]"
+                f"[bold]{i}. {category_emoji} {rec.title}[/bold] [{priority_color}]({rec.priority})[/{priority_color}]",
             )
             self.console.print(f" {rec.description}")
 
             if rec.action_command:
                 self.console.print(
-                    f" [dim]Run:[/dim] [cyan]{rec.action_command}[/cyan]"
+                    f" [dim]Run:[/dim] [cyan]{rec.action_command}[/cyan]",
                 )
 
             if rec.reasoning:
@@ -464,7 +463,7 @@ class ContextualAIAssistant:
                 10 - int(rec.confidence * 10)
             )
             self.console.print(
-                f" [dim]Confidence: [{confidence_bar}] {rec.confidence:.1%}[/dim]"
+                f" [dim]Confidence: [{confidence_bar}] {rec.confidence:.1%}[/dim]",
             )
 
             if i < len(recommendations):

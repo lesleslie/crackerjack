@@ -8,14 +8,14 @@ from crackerjack.mcp.server import MCPOptions, main
 class TestMCPOptions:
     """Test MCPOptions configuration."""
 
-    def test_default_options(self):
+    def test_default_options(self) -> None:
         """Test default MCPOptions."""
         options = MCPOptions()
         assert options.websocket_port is None
         assert options.verbose is False
         assert options.cache_dir is None
 
-    def test_custom_options(self):
+    def test_custom_options(self) -> None:
         """Test custom MCPOptions."""
         options = MCPOptions(websocket_port=8675, verbose=True)
         assert options.websocket_port == 8675
@@ -25,11 +25,11 @@ class TestMCPOptions:
 class TestMCPServerIntegration:
     """Test MCP server integration."""
 
-    def test_main_function_exists(self):
+    def test_main_function_exists(self) -> None:
         """Test that main function exists and can be called."""
         assert callable(main)
 
-    def test_main_with_defaults(self):
+    def test_main_with_defaults(self) -> None:
         """Test main function with default arguments."""
         with patch("crackerjack.mcp.server_core._initialize_context"):
             with patch("crackerjack.mcp.server_core.Console"):

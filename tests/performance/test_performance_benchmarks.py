@@ -1,5 +1,4 @@
-"""
-Performance benchmark tests for crackerjack components.
+"""Performance benchmark tests for crackerjack components.
 
 These tests measure and verify performance characteristics of critical operations.
 Run with: python -m crackerjack --benchmark
@@ -22,10 +21,10 @@ from crackerjack.services.unified_config import CrackerjackConfig
 @pytest.mark.performance
 @pytest.mark.benchmark
 class TestWorkflowPerformance:
-    """Benchmark workflow performance"""
+    """Benchmark workflow performance."""
 
-    def test_workflow_orchestrator_performance(self, benchmark, temp_project_dir):
-        """Benchmark workflow orchestrator execution time"""
+    def test_workflow_orchestrator_performance(self, benchmark, temp_project_dir) -> None:
+        """Benchmark workflow orchestrator execution time."""
         config = CrackerjackConfig(
             project_path=temp_project_dir,
             test_timeout=30,
@@ -42,8 +41,8 @@ class TestWorkflowPerformance:
         result = benchmark(run_workflow)
         assert isinstance(result, bool)
 
-    def test_hook_manager_fast_hooks_performance(self, benchmark, temp_project_dir):
-        """Benchmark fast hooks execution time"""
+    def test_hook_manager_fast_hooks_performance(self, benchmark, temp_project_dir) -> None:
+        """Benchmark fast hooks execution time."""
         CrackerjackConfig(
             project_path=temp_project_dir,
             skip_hooks=True,  # Use mocked hooks for consistent timing
@@ -68,10 +67,10 @@ class TestWorkflowPerformance:
 @pytest.mark.performance
 @pytest.mark.benchmark
 class TestFileSystemPerformance:
-    """Benchmark filesystem operations"""
+    """Benchmark filesystem operations."""
 
-    def test_file_read_performance(self, benchmark, temp_dir):
-        """Benchmark file reading performance"""
+    def test_file_read_performance(self, benchmark, temp_dir) -> None:
+        """Benchmark file reading performance."""
         fs_service = FileSystemService()
 
         # Create test file
@@ -85,14 +84,14 @@ class TestFileSystemPerformance:
         result = benchmark(read_file)
         assert len(result) == len(test_content)
 
-    def test_file_write_performance(self, benchmark, temp_dir):
-        """Benchmark file writing performance"""
+    def test_file_write_performance(self, benchmark, temp_dir) -> None:
+        """Benchmark file writing performance."""
         fs_service = FileSystemService()
 
         test_content = "Performance test content " * 500  # ~12KB
         test_files = [temp_dir / f"write_test_{i}.txt" for i in range(10)]
 
-        def write_files():
+        def write_files() -> None:
             for test_file in test_files:
                 fs_service.write_file(str(test_file), test_content)
 
@@ -103,8 +102,8 @@ class TestFileSystemPerformance:
             assert test_file.exists()
             assert len(test_file.read_text()) == len(test_content)
 
-    def test_directory_creation_performance(self, benchmark, temp_dir):
-        """Benchmark directory creation performance"""
+    def test_directory_creation_performance(self, benchmark, temp_dir) -> None:
+        """Benchmark directory creation performance."""
         fs_service = FileSystemService()
 
         def create_directories():
@@ -130,16 +129,16 @@ class TestFileSystemPerformance:
 
 @pytest.mark.performance
 class TestMemoryUsage:
-    """Test memory usage patterns"""
+    """Test memory usage patterns."""
 
-    def test_workflow_orchestrator_memory_usage(self, temp_project_dir):
-        """Test workflow orchestrator doesn't leak memory"""
+    def test_workflow_orchestrator_memory_usage(self, temp_project_dir) -> None:
+        """Test workflow orchestrator doesn't leak memory."""
         config = CrackerjackConfig(
-            project_path=temp_project_dir, testing=False, skip_hooks=True, verbose=False
+            project_path=temp_project_dir, testing=False, skip_hooks=True, verbose=False,
         )
 
         # Run workflow multiple times
-        for i in range(10):
+        for _i in range(10):
             orchestrator = WorkflowOrchestrator(config)
             result = orchestrator.execute_workflow()
             assert isinstance(result, bool)
@@ -150,8 +149,8 @@ class TestMemoryUsage:
         # If we get here without memory errors, test passes
         assert True
 
-    def test_large_file_handling(self, temp_dir):
-        """Test handling of larger files without memory issues"""
+    def test_large_file_handling(self, temp_dir) -> None:
+        """Test handling of larger files without memory issues."""
         fs_service = FileSystemService()
 
         # Create a moderately large file (1MB)
@@ -172,10 +171,10 @@ class TestMemoryUsage:
 @pytest.mark.performance
 @pytest.mark.slow
 class TestConcurrencyPerformance:
-    """Test performance under concurrent load"""
+    """Test performance under concurrent load."""
 
-    def test_concurrent_file_operations(self, temp_dir):
-        """Test concurrent file operations performance"""
+    def test_concurrent_file_operations(self, temp_dir) -> None:
+        """Test concurrent file operations performance."""
         fs_service = FileSystemService()
 
         def write_file(file_index):
@@ -202,10 +201,10 @@ class TestConcurrencyPerformance:
             assert file_path.exists()
 
     @pytest.mark.asyncio
-    async def test_async_operation_performance(self):
-        """Test async operation performance"""
+    async def test_async_operation_performance(self) -> None:
+        """Test async operation performance."""
 
-        async def async_task(task_id, delay=0.01):
+        async def async_task(task_id, delay=0.01) -> str:
             await asyncio.sleep(delay)
             return f"Task {task_id} completed"
 
@@ -224,10 +223,10 @@ class TestConcurrencyPerformance:
 
 @pytest.mark.performance
 class TestScalabilityLimits:
-    """Test behavior at scale limits"""
+    """Test behavior at scale limits."""
 
-    def test_many_small_files(self, temp_dir):
-        """Test handling many small files"""
+    def test_many_small_files(self, temp_dir) -> None:
+        """Test handling many small files."""
         fs_service = FileSystemService()
 
         start_time = time.time()
@@ -257,8 +256,8 @@ class TestScalabilityLimits:
         # Should read efficiently
         assert read_time < 5.0  # 5 seconds to read 100 files
 
-    def test_deep_directory_structure(self, temp_dir):
-        """Test deep directory structure performance"""
+    def test_deep_directory_structure(self, temp_dir) -> None:
+        """Test deep directory structure performance."""
         fs_service = FileSystemService()
 
         # Create deep nested structure
@@ -288,10 +287,10 @@ class TestScalabilityLimits:
 @pytest.mark.performance
 @pytest.mark.benchmark
 class TestConfigurationPerformance:
-    """Benchmark configuration loading and processing"""
+    """Benchmark configuration loading and processing."""
 
-    def test_config_loading_performance(self, benchmark, temp_dir):
-        """Benchmark configuration loading speed"""
+    def test_config_loading_performance(self, benchmark, temp_dir) -> None:
+        """Benchmark configuration loading speed."""
         from crackerjack.services.config import ConfigurationService
 
         # Create complex config file
@@ -317,8 +316,8 @@ ai_agent = false
         result = benchmark(load_config)
         assert result is not None
 
-    def test_config_merging_performance(self, benchmark):
-        """Benchmark configuration merging speed"""
+    def test_config_merging_performance(self, benchmark) -> None:
+        """Benchmark configuration merging speed."""
         from crackerjack.services.config import ConfigurationService
 
         config_service = ConfigurationService()

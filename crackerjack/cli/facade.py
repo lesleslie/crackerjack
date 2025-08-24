@@ -1,5 +1,4 @@
-"""
-CLI Facade for backward compatibility.
+"""CLI Facade for backward compatibility.
 
 This module provides a bridge between the existing CLI interface and the new
 workflow orchestrator, ensuring all existing functionality continues to work.
@@ -10,18 +9,18 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..core.workflow_orchestrator import WorkflowOrchestrator
-from ..models.protocols import OptionsProtocol
+from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+from crackerjack.models.protocols import OptionsProtocol
 
 
 class CrackerjackCLIFacade:
     def __init__(
-        self, console: Console | None = None, pkg_path: Path | None = None
+        self, console: Console | None = None, pkg_path: Path | None = None,
     ) -> None:
         self.console = console or Console(force_terminal=True)
         self.pkg_path = pkg_path or Path.cwd()
         self.orchestrator = WorkflowOrchestrator(
-            console=self.console, pkg_path=self.pkg_path, dry_run=False
+            console=self.console, pkg_path=self.pkg_path, dry_run=False,
         )
 
     def process(self, options: OptionsProtocol) -> None:
@@ -65,15 +64,15 @@ class CrackerjackCLIFacade:
 
     def _start_mcp_server(self) -> None:
         try:
-            from ..mcp.server import main as start_mcp_main
+            from crackerjack.mcp.server import main as start_mcp_main
 
             self.console.print(
-                "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]"
+                "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]",
             )
             start_mcp_main(str(self.pkg_path))
         except ImportError:
             self.console.print(
-                "[red]❌ MCP server requires additional dependencies[/red]"
+                "[red]❌ MCP server requires additional dependencies[/red]",
             )
             self.console.print("[yellow]Install with: uv sync --group mcp[/yellow]")
             raise SystemExit(1)
@@ -83,12 +82,12 @@ class CrackerjackCLIFacade:
 
     def _handle_enterprise_batch(self, options: OptionsProtocol) -> None:
         try:
-            from ..mcp_enterprise import run_enterprise_batch
+            from crackerjack.mcp_enterprise import run_enterprise_batch
 
             enterprise_batch = options.enterprise_batch
             project_paths = [path.strip() for path in enterprise_batch.split(",")]
             self.console.print(
-                "[bold cyan]🏢 Starting Enterprise Batch Processing...[/bold cyan]"
+                "[bold cyan]🏢 Starting Enterprise Batch Processing...[/bold cyan]",
             )
             self.console.print(f"[dim]Processing {len(project_paths)} projects[/dim]")
             stages = ["fast", "comprehensive"]
@@ -100,20 +99,20 @@ class CrackerjackCLIFacade:
                     stages=stages,
                     fail_fast=False,
                     create_reports=True,
-                )
+                ),
             )
             if result.failed_projects == 0:
                 self.console.print(
-                    "[bold green]🎉 All projects processed successfully![/bold green]"
+                    "[bold green]🎉 All projects processed successfully![/bold green]",
                 )
             else:
                 self.console.print(
-                    f"[bold yellow]⚠️ {result.failed_projects} projects failed[/bold yellow]"
+                    f"[bold yellow]⚠️ {result.failed_projects} projects failed[/bold yellow]",
                 )
                 raise SystemExit(1)
         except ImportError:
             self.console.print(
-                "[red]❌ Enterprise features require additional dependencies[/red]"
+                "[red]❌ Enterprise features require additional dependencies[/red]",
             )
             raise SystemExit(1)
         except Exception as e:
@@ -122,18 +121,18 @@ class CrackerjackCLIFacade:
 
     def _handle_monitor_dashboard(self, options: OptionsProtocol) -> None:
         try:
-            from ..mcp_monitor import start_monitoring_dashboard
+            from crackerjack.mcp_monitor import start_monitoring_dashboard
 
             monitor_dashboard = options.monitor_dashboard
             project_paths = [path.strip() for path in monitor_dashboard.split(",")]
             self.console.print(
-                "[bold cyan]🖥️ Starting Real-Time Monitoring Dashboard...[/bold cyan]"
+                "[bold cyan]🖥️ Starting Real-Time Monitoring Dashboard...[/bold cyan]",
             )
             self.console.print(f"[dim]Monitoring {len(project_paths)} projects[/dim]")
             asyncio.run(start_monitoring_dashboard(project_paths))
         except ImportError:
             self.console.print(
-                "[red]❌ Monitoring features require additional dependencies[/red]"
+                "[red]❌ Monitoring features require additional dependencies[/red]",
             )
             raise SystemExit(1)
         except Exception as e:
@@ -142,7 +141,7 @@ class CrackerjackCLIFacade:
 
 
 def create_crackerjack_runner(
-    console: Console | None = None, pkg_path: Path | None = None
+    console: Console | None = None, pkg_path: Path | None = None,
 ) -> CrackerjackCLIFacade:
     return CrackerjackCLIFacade(console=console, pkg_path=pkg_path)
 

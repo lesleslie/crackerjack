@@ -19,7 +19,7 @@ def create_websocket_app(job_manager: JobManager, progress_dir: Path) -> FastAPI
     app.state.job_manager = job_manager
 
     @app.on_event("startup")
-    async def startup_event():
+    async def startup_event() -> None:
         """Start background tasks."""
         if job_manager:
             asyncio.create_task(job_manager.monitor_progress_files())
@@ -27,7 +27,7 @@ def create_websocket_app(job_manager: JobManager, progress_dir: Path) -> FastAPI
             asyncio.create_task(job_manager.timeout_stuck_jobs())
 
     @app.on_event("shutdown")
-    async def shutdown_event():
+    async def shutdown_event() -> None:
         """Cleanup on shutdown."""
         if job_manager:
             job_manager.cleanup()

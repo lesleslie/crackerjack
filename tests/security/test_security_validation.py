@@ -1,10 +1,10 @@
-"""
-Security validation tests for crackerjack components.
+"""Security validation tests for crackerjack components.
 
 These tests verify security measures, input validation, and protection
 against common vulnerabilities in crackerjack operations.
 """
 
+import contextlib
 import os
 import subprocess
 import tempfile
@@ -20,10 +20,10 @@ from crackerjack.services.security import SecurityService
 
 @pytest.mark.security
 class TestInputValidation:
-    """Test input validation and sanitization"""
+    """Test input validation and sanitization."""
 
-    def test_filesystem_path_validation(self, temp_dir):
-        """Test filesystem service validates paths securely"""
+    def test_filesystem_path_validation(self, temp_dir) -> None:
+        """Test filesystem service validates paths securely."""
         fs_service = FileSystemService()
 
         # Test path traversal attempts
@@ -52,8 +52,8 @@ class TestInputValidation:
                 # Expected behavior for dangerous paths
                 pass
 
-    def test_command_injection_protection(self):
-        """Test protection against command injection"""
+    def test_command_injection_protection(self) -> None:
+        """Test protection against command injection."""
         # Test that shell commands are properly escaped
         malicious_inputs = [
             "test; rm -rf /",
@@ -88,15 +88,15 @@ class TestInputValidation:
 
 @pytest.mark.security
 class TestFileSystemSecurity:
-    """Test filesystem security measures"""
+    """Test filesystem security measures."""
 
-    def test_temporary_file_security(self, temp_dir):
-        """Test secure temporary file creation"""
+    def test_temporary_file_security(self, temp_dir) -> None:
+        """Test secure temporary file creation."""
         fs_service = FileSystemService()
 
         # Create temporary file securely
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False
+            mode="w", suffix=".txt", delete=False,
         ) as tmp_file:
             tmp_path = tmp_file.name
             tmp_file.write("Secure temporary content")
@@ -107,7 +107,7 @@ class TestFileSystemSecurity:
 
             # Read content back
             content = fs_service.read_file(tmp_path)
-            assert "Secure temporary content" == content
+            assert content == "Secure temporary content"
 
             # Check file permissions (Unix-like systems)
             if os.name != "nt":  # Not Windows
@@ -121,8 +121,8 @@ class TestFileSystemSecurity:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
-    def test_directory_traversal_protection(self, temp_dir):
-        """Test protection against directory traversal attacks"""
+    def test_directory_traversal_protection(self, temp_dir) -> None:
+        """Test protection against directory traversal attacks."""
         fs_service = FileSystemService()
 
         # Create a file in temp directory
@@ -154,8 +154,8 @@ class TestFileSystemSecurity:
                 # Expected behavior for traversal attempts
                 pass
 
-    def test_file_permission_handling(self, temp_dir):
-        """Test proper handling of file permissions"""
+    def test_file_permission_handling(self, temp_dir) -> None:
+        """Test proper handling of file permissions."""
         fs_service = FileSystemService()
 
         if os.name == "nt":  # Windows
@@ -173,23 +173,21 @@ class TestFileSystemSecurity:
 
         finally:
             # Restore permissions for cleanup
-            try:
+            with contextlib.suppress(Exception):
                 restricted_file.chmod(0o644)
-            except Exception:
-                pass
 
 
 @pytest.mark.security
 class TestSecurityService:
-    """Test dedicated security service functionality"""
+    """Test dedicated security service functionality."""
 
-    def test_security_service_initialization(self):
-        """Test SecurityService can be initialized"""
+    def test_security_service_initialization(self) -> None:
+        """Test SecurityService can be initialized."""
         security = SecurityService()
         assert security is not None
 
-    def test_input_sanitization(self, security_test_data):
-        """Test input sanitization functionality"""
+    def test_input_sanitization(self, security_test_data) -> None:
+        """Test input sanitization functionality."""
         security = SecurityService()
 
         # Test malicious inputs
@@ -206,8 +204,8 @@ class TestSecurityService:
             # Valid inputs should be preserved or minimally changed
             assert len(sanitized) > 0
 
-    def test_file_path_validation(self, temp_dir):
-        """Test file path security validation"""
+    def test_file_path_validation(self, temp_dir) -> None:
+        """Test file path security validation."""
         security = SecurityService()
 
         # Test safe paths
@@ -233,8 +231,8 @@ class TestSecurityService:
             is_safe = security.validate_file_path(dangerous_path)
             assert is_safe is False
 
-    def test_permission_checking(self, temp_dir):
-        """Test file permission validation"""
+    def test_permission_checking(self, temp_dir) -> None:
+        """Test file permission validation."""
         security = SecurityService()
 
         # Create test file
@@ -257,10 +255,10 @@ class TestSecurityService:
 
 @pytest.mark.security
 class TestGitSecurityIntegration:
-    """Test git operations security"""
+    """Test git operations security."""
 
-    def test_git_command_safety(self, temp_project_dir):
-        """Test git commands are executed safely"""
+    def test_git_command_safety(self, temp_project_dir) -> None:
+        """Test git commands are executed safely."""
         original_cwd = os.getcwd()
         os.chdir(temp_project_dir)
 
@@ -285,8 +283,8 @@ class TestGitSecurityIntegration:
         finally:
             os.chdir(original_cwd)
 
-    def test_git_repository_validation(self, temp_dir):
-        """Test git repository path validation"""
+    def test_git_repository_validation(self, temp_dir) -> None:
+        """Test git repository path validation."""
         git_service = GitService()
 
         # Test with non-git directory
@@ -310,10 +308,10 @@ class TestGitSecurityIntegration:
 
 @pytest.mark.security
 class TestConfigurationSecurity:
-    """Test configuration security measures"""
+    """Test configuration security measures."""
 
-    def test_config_file_validation(self, temp_dir):
-        """Test configuration file security validation"""
+    def test_config_file_validation(self, temp_dir) -> None:
+        """Test configuration file security validation."""
         from crackerjack.services.config import ConfigurationService
 
         config_service = ConfigurationService()
@@ -346,8 +344,8 @@ project_path = "../../../etc"  # Path traversal attempt
             # If it rejects malicious config, that's good
             pass
 
-    def test_config_injection_protection(self):
-        """Test protection against config injection attacks"""
+    def test_config_injection_protection(self) -> None:
+        """Test protection against config injection attacks."""
         from crackerjack.services.config import ConfigurationService
 
         config_service = ConfigurationService()
@@ -371,7 +369,7 @@ project_path = "../../../etc"  # Path traversal attempt
             # If merge succeeds, values should be sanitized
             if merged:
                 # Values should not contain shell commands
-                for key, value in merged.items():
+                for value in merged.values():
                     if isinstance(value, str):
                         assert "$(" not in value
                         assert "eval(" not in value
@@ -385,10 +383,10 @@ project_path = "../../../etc"  # Path traversal attempt
 @pytest.mark.security
 @pytest.mark.slow
 class TestDenialOfServiceProtection:
-    """Test protection against DoS attacks"""
+    """Test protection against DoS attacks."""
 
-    def test_large_file_handling(self, temp_dir):
-        """Test handling of unreasonably large files"""
+    def test_large_file_handling(self, temp_dir) -> None:
+        """Test handling of unreasonably large files."""
         fs_service = FileSystemService()
 
         # Create a moderately large file (1MB)
@@ -414,8 +412,8 @@ class TestDenialOfServiceProtection:
             # Acceptable to fail with very large files
             pass
 
-    def test_deep_recursion_protection(self, temp_dir):
-        """Test protection against deep recursion attacks"""
+    def test_deep_recursion_protection(self, temp_dir) -> None:
+        """Test protection against deep recursion attacks."""
         fs_service = FileSystemService()
 
         # Create moderately deep directory structure

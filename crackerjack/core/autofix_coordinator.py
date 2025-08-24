@@ -16,19 +16,19 @@ class AutofixCoordinator:
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[t.Any]) -> bool:
         self.logger.debug(
-            f"Applying autofix for {mode} mode with {len(hook_results)} hook results"
+            f"Applying autofix for {mode} mode with {len(hook_results)} hook results",
         )
         try:
             if self._should_skip_autofix(hook_results):
                 self.logger.info(
-                    f"Skipping autofix for {mode} - unfixable error patterns detected"
+                    f"Skipping autofix for {mode} - unfixable error patterns detected",
                 )
                 return False
             if mode == "fast":
                 result = self._apply_fast_stage_fixes()
                 self.logger.debug(f"Fast stage fixes result: {result}")
                 return result
-            elif mode == "comprehensive":
+            if mode == "comprehensive":
                 result = self._apply_comprehensive_stage_fixes(hook_results)
                 self.logger.debug(f"Comprehensive stage fixes result: {result}")
                 return result
@@ -106,12 +106,12 @@ class AutofixCoordinator:
         return failed_hooks
 
     def _get_hook_specific_fixes(
-        self, failed_hooks: set[str]
+        self, failed_hooks: set[str],
     ) -> list[tuple[list[str], str]]:
         hook_specific_fixes: list[tuple[list[str], str]] = []
         if "bandit" in failed_hooks:
             hook_specific_fixes.append(
-                (["uv", "run", "bandit", "-f", "json", ".", "-ll"], "bandit analysis")
+                (["uv", "run", "bandit", "-f", "json", ".", "-ll"], "bandit analysis"),
             )
 
         return hook_specific_fixes
@@ -121,19 +121,16 @@ class AutofixCoordinator:
             return False
         try:
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=30, cwd=self.pkg_path
+                cmd, check=False, capture_output=True, text=True, timeout=30, cwd=self.pkg_path,
             )
             return self._handle_command_result(result, description)
         except Exception:
             return False
 
     def _handle_command_result(
-        self, result: subprocess.CompletedProcess[str], description: str
+        self, result: subprocess.CompletedProcess[str], description: str,
     ) -> bool:
-        if result.returncode == 0 or self._is_successful_fix(result):
-            return True
-        else:
-            return False
+        return bool(result.returncode == 0 or self._is_successful_fix(result))
 
     def _is_successful_fix(self, result: subprocess.CompletedProcess[str]) -> bool:
         output = result.stdout.lower()
@@ -155,7 +152,7 @@ class AutofixCoordinator:
             output_lower = result.lower()
             if "ruff" in tool_name:
                 return "fixed" in output_lower or "would reformat" in output_lower
-            elif "trailing-whitespace" in tool_name:
+            if "trailing-whitespace" in tool_name:
                 return "fixing" in output_lower or "fixed" in output_lower
 
         return False
@@ -189,7 +186,7 @@ class AutofixCoordinator:
                 output = getattr(result, "raw_output", "")
                 if "ModuleNotFoundError" in output or "ImportError" in output:
                     self.console.print(
-                        "[dim yellow]  → Skipping autofix (import errors)[/dim yellow]"
+                        "[dim yellow]  → Skipping autofix (import errors)[/dim yellow]",
                     )
                     return True
         return False

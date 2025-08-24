@@ -87,7 +87,7 @@ def console():
 class TestWorkflowIntegration:
     def test_basic_workflow_orchestrator(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions()
         result = orchestrator.run_configuration_phase(options)
@@ -95,7 +95,7 @@ class TestWorkflowIntegration:
 
     def test_cleaning_phase_integration(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions(clean=True)
         result = orchestrator.run_cleaning_phase(options)
@@ -103,56 +103,52 @@ class TestWorkflowIntegration:
 
     def test_hooks_phase_with_mocked_commands(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions(skip_hooks=False)
         with patch.object(
-            orchestrator.phases.hook_manager, "run_fast_hooks"
-        ) as mock_fast:
-            with patch.object(
-                orchestrator.phases.hook_manager, "run_comprehensive_hooks"
-            ) as mock_comp:
-                with patch.object(
-                    orchestrator.phases.hook_manager, "get_hook_summary"
-                ) as mock_summary:
-                    mock_fast.return_value = []
-                    mock_comp.return_value = []
-                    mock_summary.return_value = {
-                        "failed": 0,
-                        "errors": 0,
-                        "passed": 5,
-                        "total": 5,
-                    }
-                    result = orchestrator.run_hooks_phase(options)
-                    assert result is True
+            orchestrator.phases.hook_manager, "run_fast_hooks",
+        ) as mock_fast, patch.object(
+            orchestrator.phases.hook_manager, "run_comprehensive_hooks",
+        ) as mock_comp, patch.object(
+            orchestrator.phases.hook_manager, "get_hook_summary",
+        ) as mock_summary:
+            mock_fast.return_value = []
+            mock_comp.return_value = []
+            mock_summary.return_value = {
+                "failed": 0,
+                "errors": 0,
+                "passed": 5,
+                "total": 5,
+            }
+            result = orchestrator.run_hooks_phase(options)
+            assert result is True
 
     def test_testing_phase_with_mocked_pytest(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions(test=True)
         with patch.object(
-            orchestrator.phases.test_manager, "validate_test_environment"
-        ) as mock_validate:
-            with patch.object(
-                orchestrator.phases.test_manager, "run_tests"
-            ) as mock_run:
-                with patch.object(
-                    orchestrator.phases.test_manager, "get_coverage"
-                ) as mock_coverage:
-                    mock_validate.return_value = True
-                    mock_run.return_value = True
-                    mock_coverage.return_value = {"total_coverage": 85.0}
-                    result = orchestrator.run_testing_phase(options)
-                    assert result is True
+            orchestrator.phases.test_manager, "validate_test_environment",
+        ) as mock_validate, patch.object(
+            orchestrator.phases.test_manager, "run_tests",
+        ) as mock_run, patch.object(
+            orchestrator.phases.test_manager, "get_coverage",
+        ) as mock_coverage:
+            mock_validate.return_value = True
+            mock_run.return_value = True
+            mock_coverage.return_value = {"total_coverage": 85.0}
+            result = orchestrator.run_testing_phase(options)
+            assert result is True
 
     def test_publishing_phase_version_bump(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions(bump="patch")
         with patch.object(
-            orchestrator.phases.publish_manager, "bump_version"
+            orchestrator.phases.publish_manager, "bump_version",
         ) as mock_bump:
             mock_bump.return_value = "0.1.1"
             result = orchestrator.run_publishing_phase(options)
@@ -161,11 +157,11 @@ class TestWorkflowIntegration:
 
     def test_commit_phase_no_changes(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions(commit=True)
         with patch.object(
-            orchestrator.phases.git_service, "get_changed_files"
+            orchestrator.phases.git_service, "get_changed_files",
         ) as mock_changes:
             mock_changes.return_value = []
             result = orchestrator.run_commit_phase(options)
@@ -177,7 +173,7 @@ class TestCLIFacadeIntegration:
         WorkflowOrchestrator(console=console, pkg_path=temp_project)
         options = MockOptions()
         with patch.object(
-            facade.orchestrator, "run_complete_workflow"
+            facade.orchestrator, "run_complete_workflow",
         ) as mock_workflow:
             mock_workflow.return_value = True
             facade.process(options)
@@ -187,7 +183,7 @@ class TestCLIFacadeIntegration:
         WorkflowOrchestrator(console=console, pkg_path=temp_project)
         options = MockOptions(clean=True, verbose=True)
         with patch.object(
-            facade.orchestrator, "run_complete_workflow"
+            facade.orchestrator, "run_complete_workflow",
         ) as mock_workflow:
             mock_workflow.return_value = True
             facade.process(options)
@@ -197,7 +193,7 @@ class TestCLIFacadeIntegration:
         WorkflowOrchestrator(console=console, pkg_path=temp_project)
         options = MockOptions(test=True)
         with patch.object(
-            facade.orchestrator, "run_complete_workflow"
+            facade.orchestrator, "run_complete_workflow",
         ) as mock_workflow:
             mock_workflow.return_value = True
             facade.process(options)
@@ -207,7 +203,7 @@ class TestCLIFacadeIntegration:
         WorkflowOrchestrator(console=console, pkg_path=temp_project)
         options = MockOptions()
         with patch.object(
-            facade.orchestrator, "run_complete_workflow"
+            facade.orchestrator, "run_complete_workflow",
         ) as mock_workflow:
             mock_workflow.side_effect = Exception("Test error")
             with pytest.raises(SystemExit) as exc_info:
@@ -218,7 +214,7 @@ class TestCLIFacadeIntegration:
         WorkflowOrchestrator(console=console, pkg_path=temp_project)
         options = MockOptions()
         with patch.object(
-            facade.orchestrator, "run_complete_workflow"
+            facade.orchestrator, "run_complete_workflow",
         ) as mock_workflow:
             mock_workflow.side_effect = KeyboardInterrupt()
             with pytest.raises(SystemExit) as exc_info:
@@ -229,116 +225,99 @@ class TestCLIFacadeIntegration:
 class TestCompleteWorkflowIntegration:
     def test_complete_workflow_minimal_options(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions()
         with patch.object(
-            orchestrator.phases, "run_configuration_phase", return_value=True
+            orchestrator.phases, "run_configuration_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_cleaning_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_hooks_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_testing_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases,
+            "run_publishing_phase",
+            return_value=True,
+        ), patch.object(
+            orchestrator.phases,
+            "run_commit_phase",
+            return_value=True,
         ):
-            with patch.object(
-                orchestrator.phases, "run_cleaning_phase", return_value=True
-            ):
-                with patch.object(
-                    orchestrator.phases, "run_hooks_phase", return_value=True
-                ):
-                    with patch.object(
-                        orchestrator.phases, "run_testing_phase", return_value=True
-                    ):
-                        with patch.object(
-                            orchestrator.phases,
-                            "run_publishing_phase",
-                            return_value=True,
-                        ):
-                            with patch.object(
-                                orchestrator.phases,
-                                "run_commit_phase",
-                                return_value=True,
-                            ):
-                                result = orchestrator.run_complete_workflow(options)
-                                assert result is True
+            result = orchestrator.run_complete_workflow(options)
+            assert result is True
 
     def test_complete_workflow_all_features(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions(
-            clean=True, test=True, commit=True, bump="patch", track_progress=True
+            clean=True, test=True, commit=True, bump="patch", track_progress=True,
         )
         with patch.object(
-            orchestrator.phases, "run_configuration_phase", return_value=True
+            orchestrator.phases, "run_configuration_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_cleaning_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_fast_hooks_only", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_testing_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases,
+            "run_comprehensive_hooks_only",
+            return_value=True,
+        ), patch.object(
+            orchestrator.phases,
+            "run_publishing_phase",
+            return_value=True,
+        ), patch.object(
+            orchestrator.phases,
+            "run_commit_phase",
+            return_value=True,
         ):
-            with patch.object(
-                orchestrator.phases, "run_cleaning_phase", return_value=True
-            ):
-                with patch.object(
-                    orchestrator.phases, "run_fast_hooks_only", return_value=True
-                ):
-                    with patch.object(
-                        orchestrator.phases, "run_testing_phase", return_value=True
-                    ):
-                        with patch.object(
-                            orchestrator.phases,
-                            "run_comprehensive_hooks_only",
-                            return_value=True,
-                        ):
-                            with patch.object(
-                                orchestrator.phases,
-                                "run_publishing_phase",
-                                return_value=True,
-                            ):
-                                with patch.object(
-                                    orchestrator.phases,
-                                    "run_commit_phase",
-                                    return_value=True,
-                                ):
-                                    result = orchestrator.run_complete_workflow(options)
-                                    assert result is True
+            result = orchestrator.run_complete_workflow(options)
+            assert result is True
 
     def test_complete_workflow_failure_propagation(self, temp_project, console) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions()
         with patch.object(
-            orchestrator.phases, "run_configuration_phase", return_value=True
+            orchestrator.phases, "run_configuration_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_cleaning_phase", return_value=False,
         ):
-            with patch.object(
-                orchestrator.phases, "run_cleaning_phase", return_value=False
-            ):
-                result = orchestrator.run_complete_workflow(options)
-                assert result is False
+            result = orchestrator.run_complete_workflow(options)
+            assert result is False
 
     def test_complete_workflow_autofix_continues_on_failure(
-        self, temp_project, console
+        self, temp_project, console,
     ) -> None:
         orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project, dry_run=True
+            console=console, pkg_path=temp_project, dry_run=True,
         )
         options = MockOptions(autofix=True)
         with patch.object(
-            orchestrator.phases, "run_configuration_phase", return_value=True
+            orchestrator.phases, "run_configuration_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_cleaning_phase", return_value=False,
+        ), patch.object(
+            orchestrator.phases, "run_hooks_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases, "run_testing_phase", return_value=True,
+        ), patch.object(
+            orchestrator.phases,
+            "run_publishing_phase",
+            return_value=True,
+        ), patch.object(
+            orchestrator.phases,
+            "run_commit_phase",
+            return_value=True,
         ):
-            with patch.object(
-                orchestrator.phases, "run_cleaning_phase", return_value=False
-            ):
-                with patch.object(
-                    orchestrator.phases, "run_hooks_phase", return_value=True
-                ):
-                    with patch.object(
-                        orchestrator.phases, "run_testing_phase", return_value=True
-                    ):
-                        with patch.object(
-                            orchestrator.phases,
-                            "run_publishing_phase",
-                            return_value=True,
-                        ):
-                            with patch.object(
-                                orchestrator.phases,
-                                "run_commit_phase",
-                                return_value=True,
-                            ):
-                                result = orchestrator.run_complete_workflow(options)
-                                assert result is False
+            result = orchestrator.run_complete_workflow(options)
+            assert result is False
 
 
 class TestServiceIntegration:

@@ -8,7 +8,7 @@ from typing import Any
 
 
 class MetricsCollector:
-    def __init__(self, db_path: Path | None = None):
+    def __init__(self, db_path: Path | None = None) -> None:
         if db_path is None:
             db_dir = Path.home() / ".cache" / "crackerjack"
             db_dir.mkdir(parents=True, exist_ok=True)
@@ -18,7 +18,7 @@ class MetricsCollector:
         self._lock = threading.Lock()
         self._init_database()
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         with self._get_connection() as conn:
             conn.executescript("""
                 -- Jobs table
@@ -170,15 +170,14 @@ class MetricsCollector:
         ai_agent: bool = False,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._get_connection() as conn:
+            conn.execute(
+                """
                     INSERT INTO jobs (job_id, start_time, status, ai_agent, metadata)
                     VALUES (?, ?, 'running', ?, ?)
                 """,
-                    (job_id, datetime.now(), ai_agent, json.dumps(metadata or {})),
-                )
+                (job_id, datetime.now(), ai_agent, json.dumps(metadata or {})),
+            )
 
     def end_job(
         self,
@@ -187,18 +186,17 @@ class MetricsCollector:
         iterations: int = 0,
         error_message: str | None = None,
     ) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._get_connection() as conn:
+            conn.execute(
+                """
                     UPDATE jobs
                     SET end_time = ?, status = ?, iterations = ?, error_message = ?
                     WHERE job_id = ?
                 """,
-                    (datetime.now(), status, iterations, error_message, job_id),
-                )
+                (datetime.now(), status, iterations, error_message, job_id),
+            )
 
-                self._update_daily_summary(conn, datetime.now().date())
+            self._update_daily_summary(conn, datetime.now().date())
 
     def record_error(
         self,
@@ -209,24 +207,23 @@ class MetricsCollector:
         file_path: str | None = None,
         line_number: int | None = None,
     ) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._get_connection() as conn:
+            conn.execute(
+                """
                     INSERT INTO errors (job_id, timestamp, error_type, error_category,
                                       error_message, file_path, line_number)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                    (
-                        job_id,
-                        datetime.now(),
-                        error_type,
-                        error_category,
-                        error_message,
-                        file_path,
-                        line_number,
-                    ),
-                )
+                (
+                    job_id,
+                    datetime.now(),
+                    error_type,
+                    error_category,
+                    error_message,
+                    file_path,
+                    line_number,
+                ),
+            )
 
     def record_hook_execution(
         self,
@@ -236,23 +233,22 @@ class MetricsCollector:
         execution_time_ms: int,
         status: str,
     ) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._get_connection() as conn:
+            conn.execute(
+                """
                     INSERT INTO hook_executions (job_id, timestamp, hook_name,
                                                hook_type, execution_time_ms, status)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                    (
-                        job_id,
-                        datetime.now(),
-                        hook_name,
-                        hook_type,
-                        execution_time_ms,
-                        status,
-                    ),
-                )
+                (
+                    job_id,
+                    datetime.now(),
+                    hook_name,
+                    hook_type,
+                    execution_time_ms,
+                    status,
+                ),
+            )
 
     def record_test_execution(
         self,
@@ -264,26 +260,25 @@ class MetricsCollector:
         execution_time_ms: int,
         coverage_percent: float | None = None,
     ) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._get_connection() as conn:
+            conn.execute(
+                """
                     INSERT INTO test_executions (job_id, timestamp, total_tests,
                                                passed, failed, skipped,
                                                execution_time_ms, coverage_percent)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                    (
-                        job_id,
-                        datetime.now(),
-                        total_tests,
-                        passed,
-                        failed,
-                        skipped,
-                        execution_time_ms,
-                        coverage_percent,
-                    ),
-                )
+                (
+                    job_id,
+                    datetime.now(),
+                    total_tests,
+                    passed,
+                    failed,
+                    skipped,
+                    execution_time_ms,
+                    coverage_percent,
+                ),
+            )
 
     def record_orchestration_execution(
         self,
@@ -299,10 +294,9 @@ class MetricsCollector:
         tests_execution_time_ms: int,
         ai_analysis_time_ms: int,
     ) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._get_connection() as conn:
+            conn.execute(
+                """
                     INSERT INTO orchestration_executions
                     (job_id, timestamp, execution_strategy, progress_level, ai_mode,
                      iteration_count, strategy_switches, correlation_insights,
@@ -310,21 +304,21 @@ class MetricsCollector:
                      tests_execution_time_ms, ai_analysis_time_ms)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (
-                        job_id,
-                        datetime.now(),
-                        execution_strategy,
-                        progress_level,
-                        ai_mode,
-                        iteration_count,
-                        strategy_switches,
-                        json.dumps(correlation_insights),
-                        total_execution_time_ms,
-                        hooks_execution_time_ms,
-                        tests_execution_time_ms,
-                        ai_analysis_time_ms,
-                    ),
-                )
+                (
+                    job_id,
+                    datetime.now(),
+                    execution_strategy,
+                    progress_level,
+                    ai_mode,
+                    iteration_count,
+                    strategy_switches,
+                    json.dumps(correlation_insights),
+                    total_execution_time_ms,
+                    hooks_execution_time_ms,
+                    tests_execution_time_ms,
+                    ai_analysis_time_ms,
+                ),
+            )
 
     def record_strategy_decision(
         self,
@@ -336,26 +330,25 @@ class MetricsCollector:
         context_data: dict[str, Any],
         effectiveness_score: float | None = None,
     ) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._get_connection() as conn:
+            conn.execute(
+                """
                     INSERT INTO strategy_decisions
                     (job_id, iteration, timestamp, previous_strategy, selected_strategy,
                      decision_reason, context_data, effectiveness_score)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (
-                        job_id,
-                        iteration,
-                        datetime.now(),
-                        previous_strategy,
-                        selected_strategy,
-                        decision_reason,
-                        json.dumps(context_data),
-                        effectiveness_score,
-                    ),
-                )
+                (
+                    job_id,
+                    iteration,
+                    datetime.now(),
+                    previous_strategy,
+                    selected_strategy,
+                    decision_reason,
+                    json.dumps(context_data),
+                    effectiveness_score,
+                ),
+            )
 
     def record_individual_test(
         self,
@@ -369,28 +362,27 @@ class MetricsCollector:
         error_message: str | None = None,
         error_traceback: str | None = None,
     ) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._get_connection() as conn:
+            conn.execute(
+                """
                     INSERT INTO individual_test_executions
                     (job_id, timestamp, test_id, test_file, test_class, test_method,
                      status, execution_time_ms, error_message, error_traceback)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (
-                        job_id,
-                        datetime.now(),
-                        test_id,
-                        test_file,
-                        test_class,
-                        test_method,
-                        status,
-                        execution_time_ms,
-                        error_message,
-                        error_traceback,
-                    ),
-                )
+                (
+                    job_id,
+                    datetime.now(),
+                    test_id,
+                    test_file,
+                    test_class,
+                    test_method,
+                    status,
+                    execution_time_ms,
+                    error_message,
+                    error_traceback,
+                ),
+            )
 
     def get_orchestration_stats(self) -> dict[str, Any]:
         with self._get_connection() as conn:
@@ -457,7 +449,7 @@ class MetricsCollector:
             }
 
     def _update_daily_summary(
-        self, conn: sqlite3.Connection, date: datetime.date
+        self, conn: sqlite3.Connection, date: datetime.date,
     ) -> None:
         job_stats = conn.execute(
             """

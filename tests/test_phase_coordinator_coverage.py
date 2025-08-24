@@ -49,37 +49,37 @@ class TestPhaseCoordinatorCore:
         assert phase_coordinator.publish_manager == mock_dependencies["publish_manager"]
 
     def test_run_configuration_phase_success(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         result = phase_coordinator.run_configuration_phase(workflow_options)
         assert result is True
 
     def test_run_configuration_phase_with_error(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         phase_coordinator.filesystem.ensure_directory.side_effect = Exception(
-            "FS Error"
+            "FS Error",
         )
 
         result = phase_coordinator.run_configuration_phase(workflow_options)
         assert result is False
 
     def test_run_cleaning_phase_enabled(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.clean = True
 
         with patch.object(
-            phase_coordinator, "_execute_cleaning_process", return_value=True
+            phase_coordinator, "_execute_cleaning_process", return_value=True,
         ):
             result = phase_coordinator.run_cleaning_phase(workflow_options)
             assert result is True
             phase_coordinator.session.track_task.assert_called_with(
-                "cleaning", "Code cleaning"
+                "cleaning", "Code cleaning",
             )
 
     def test_run_cleaning_phase_disabled(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.clean = False
 
@@ -87,7 +87,7 @@ class TestPhaseCoordinatorCore:
         assert result is True
 
     def test_run_cleaning_phase_with_error(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.clean = True
 
@@ -104,7 +104,7 @@ class TestPhaseCoordinatorCore:
 
         with patch.object(phase_coordinator, "run_fast_hooks_only", return_value=True):
             with patch.object(
-                phase_coordinator, "run_comprehensive_hooks_only", return_value=True
+                phase_coordinator, "run_comprehensive_hooks_only", return_value=True,
             ):
                 result = phase_coordinator.run_hooks_phase(workflow_options)
                 assert result is True
@@ -117,7 +117,7 @@ class TestPhaseCoordinatorCore:
             assert result is False
 
     def test_run_fast_hooks_only_success(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         phase_coordinator.hook_manager.run_fast_hooks.return_value = True
 
@@ -126,7 +126,7 @@ class TestPhaseCoordinatorCore:
         phase_coordinator.hook_manager.run_fast_hooks.assert_called_once()
 
     def test_run_fast_hooks_only_failure(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         phase_coordinator.hook_manager.run_fast_hooks.return_value = False
 
@@ -134,7 +134,7 @@ class TestPhaseCoordinatorCore:
         assert result is False
 
     def test_run_comprehensive_hooks_only_success(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         phase_coordinator.hook_manager.run_comprehensive_hooks.return_value = True
 
@@ -143,7 +143,7 @@ class TestPhaseCoordinatorCore:
         phase_coordinator.hook_manager.run_comprehensive_hooks.assert_called_once()
 
     def test_run_comprehensive_hooks_only_failure(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         phase_coordinator.hook_manager.run_comprehensive_hooks.return_value = False
 
@@ -151,7 +151,7 @@ class TestPhaseCoordinatorCore:
         assert result is False
 
     def test_run_testing_phase_enabled(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.testing.test = True
         phase_coordinator.test_manager.run_tests.return_value = True
@@ -161,7 +161,7 @@ class TestPhaseCoordinatorCore:
         phase_coordinator.test_manager.run_tests.assert_called_once()
 
     def test_run_testing_phase_disabled(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.testing.test = False
 
@@ -169,7 +169,7 @@ class TestPhaseCoordinatorCore:
         assert result is True
 
     def test_run_testing_phase_failure(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.testing.test = True
         phase_coordinator.test_manager.run_tests.return_value = False
@@ -178,7 +178,7 @@ class TestPhaseCoordinatorCore:
         assert result is False
 
     def test_run_publishing_phase_enabled(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.publishing.publish = "patch"
         phase_coordinator.publish_manager.run_publishing.return_value = True
@@ -188,7 +188,7 @@ class TestPhaseCoordinatorCore:
         phase_coordinator.publish_manager.run_publishing.assert_called_once()
 
     def test_run_publishing_phase_disabled(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.publishing.publish = None
 
@@ -196,7 +196,7 @@ class TestPhaseCoordinatorCore:
         assert result is True
 
     def test_run_publishing_phase_failure(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.publishing.publish = "patch"
         phase_coordinator.publish_manager.run_publishing.return_value = False
@@ -205,7 +205,7 @@ class TestPhaseCoordinatorCore:
         assert result is False
 
     def test_run_commit_phase_enabled(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.git.commit = True
         phase_coordinator.git_service.commit_changes.return_value = True
@@ -215,7 +215,7 @@ class TestPhaseCoordinatorCore:
         phase_coordinator.git_service.commit_changes.assert_called_once()
 
     def test_run_commit_phase_disabled(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.git.commit = False
 
@@ -223,7 +223,7 @@ class TestPhaseCoordinatorCore:
         assert result is True
 
     def test_run_commit_phase_failure(
-        self, phase_coordinator, workflow_options
+        self, phase_coordinator, workflow_options,
     ) -> None:
         workflow_options.git.commit = True
         phase_coordinator.git_service.commit_changes.return_value = False
@@ -255,7 +255,7 @@ class TestPhaseCoordinatorErrorHandling:
         options.cleaning.clean = True
 
         phase_coordinator.filesystem.clean_directories.side_effect = OSError(
-            "Permission denied"
+            "Permission denied",
         )
 
         result = phase_coordinator.run_cleaning_phase(options)
@@ -267,7 +267,7 @@ class TestPhaseCoordinatorErrorHandling:
         options.git.commit = True
 
         phase_coordinator.git_service.commit_changes.side_effect = CrackerjackError(
-            "Git failed", ErrorCode.GIT_ERROR
+            "Git failed", ErrorCode.GIT_ERROR,
         )
 
         result = phase_coordinator.run_commit_phase(options)
@@ -277,7 +277,7 @@ class TestPhaseCoordinatorErrorHandling:
         options = WorkflowOptions()
 
         phase_coordinator.hook_manager.run_hooks.side_effect = Exception(
-            "Hook execution failed"
+            "Hook execution failed",
         )
 
         result = phase_coordinator.run_hooks_phase(options)
@@ -288,7 +288,7 @@ class TestPhaseCoordinatorErrorHandling:
         options.testing.test = True
 
         phase_coordinator.test_manager.run_tests.side_effect = CrackerjackError(
-            "Tests failed", ErrorCode.TEST_EXECUTION_ERROR
+            "Tests failed", ErrorCode.TEST_EXECUTION_ERROR,
         )
 
         result = phase_coordinator.run_testing_phase(options)
@@ -299,7 +299,7 @@ class TestPhaseCoordinatorErrorHandling:
         options.publishing.publish = "patch"
 
         phase_coordinator.publish_manager.run_publishing.side_effect = Exception(
-            "Publish failed"
+            "Publish failed",
         )
 
         result = phase_coordinator.run_publishing_phase(options)
@@ -421,7 +421,7 @@ class TestPhaseCoordinatorSessionIntegration:
         phase_coordinator.run_cleaning_phase(options)
 
         phase_coordinator.session.track_task.assert_called_with(
-            "cleaning", "Clean package directory"
+            "cleaning", "Clean package directory",
         )
         phase_coordinator.session.complete_task.assert_called_with("cleaning")
 
@@ -432,7 +432,7 @@ class TestPhaseCoordinatorSessionIntegration:
         phase_coordinator.run_hooks_phase(options)
 
         phase_coordinator.session.track_task.assert_called_with(
-            "hooks", "Execute pre - commit hooks"
+            "hooks", "Execute pre - commit hooks",
         )
         phase_coordinator.session.complete_task.assert_called_with("hooks")
 
@@ -444,7 +444,7 @@ class TestPhaseCoordinatorSessionIntegration:
         phase_coordinator.run_testing_phase(options)
 
         phase_coordinator.session.track_task.assert_called_with(
-            "testing", "Test execution"
+            "testing", "Test execution",
         )
         phase_coordinator.session.complete_task.assert_called_with("testing")
 
@@ -456,7 +456,7 @@ class TestPhaseCoordinatorSessionIntegration:
         phase_coordinator.run_publishing_phase(options)
 
         phase_coordinator.session.track_task.assert_called_with(
-            "publishing", "Publish package"
+            "publishing", "Publish package",
         )
         phase_coordinator.session.complete_task.assert_called_with("publishing")
 
@@ -468,7 +468,7 @@ class TestPhaseCoordinatorSessionIntegration:
         phase_coordinator.run_commit_phase(options)
 
         phase_coordinator.session.track_task.assert_called_with(
-            "commit", "Commit changes"
+            "commit", "Commit changes",
         )
         phase_coordinator.session.complete_task.assert_called_with("commit")
 
@@ -480,10 +480,10 @@ class TestPhaseCoordinatorSessionIntegration:
         phase_coordinator.run_testing_phase(options)
 
         phase_coordinator.session.track_task.assert_called_with(
-            "testing", "Test execution"
+            "testing", "Test execution",
         )
         phase_coordinator.session.fail_task.assert_called_with(
-            "testing", "Tests failed"
+            "testing", "Tests failed",
         )
 
 

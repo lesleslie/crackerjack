@@ -1,42 +1,42 @@
-"""
-Minimal test file focused on achieving 42% coverage quickly.
+"""Minimal test file focused on achieving 42% coverage quickly.
 
 This test file focuses on simple, high-impact tests that actually work
 rather than complex integration tests with import issues.
 """
 
 from pathlib import Path
+from typing import Never
 
 import pytest
 
 
 @pytest.mark.unit
-def test_import_main_module():
-    """Test that we can import the main crackerjack module"""
+def test_import_main_module() -> None:
+    """Test that we can import the main crackerjack module."""
     import crackerjack
 
     assert crackerjack is not None
 
 
 @pytest.mark.unit
-def test_import_api():
-    """Test that we can import the API module"""
+def test_import_api() -> None:
+    """Test that we can import the API module."""
     from crackerjack import api
 
     assert api is not None
 
 
 @pytest.mark.unit
-def test_import_code_cleaner():
-    """Test that we can import the code cleaner module"""
+def test_import_code_cleaner() -> None:
+    """Test that we can import the code cleaner module."""
     from crackerjack import code_cleaner
 
     assert code_cleaner is not None
 
 
 @pytest.mark.unit
-def test_version_function():
-    """Test the version function"""
+def test_version_function() -> None:
+    """Test the version function."""
     from crackerjack.core.workflow_orchestrator import version
 
     result = version()
@@ -45,8 +45,8 @@ def test_version_function():
 
 
 @pytest.mark.unit
-def test_dependency_container():
-    """Test basic dependency container functionality"""
+def test_dependency_container() -> None:
+    """Test basic dependency container functionality."""
     from crackerjack.core.container import DependencyContainer
 
     container = DependencyContainer()
@@ -56,8 +56,8 @@ def test_dependency_container():
 
 
 @pytest.mark.unit
-def test_create_container_function():
-    """Test the create_container function"""
+def test_create_container_function() -> None:
+    """Test the create_container function."""
     from crackerjack.core.container import create_container
 
     container = create_container()
@@ -65,8 +65,8 @@ def test_create_container_function():
 
 
 @pytest.mark.unit
-def test_crackerjack_config():
-    """Test the CrackerjackConfig class"""
+def test_crackerjack_config() -> None:
+    """Test the CrackerjackConfig class."""
     from crackerjack.services.unified_config import CrackerjackConfig
 
     config = CrackerjackConfig()
@@ -76,8 +76,8 @@ def test_crackerjack_config():
 
 
 @pytest.mark.unit
-def test_filesystem_service():
-    """Test the FileSystemService class"""
+def test_filesystem_service() -> None:
+    """Test the FileSystemService class."""
     from crackerjack.services.filesystem import FileSystemService
 
     fs = FileSystemService()
@@ -87,16 +87,16 @@ def test_filesystem_service():
 
 
 @pytest.mark.unit
-def test_git_service():
-    """Test the GitService class can be imported"""
+def test_git_service() -> None:
+    """Test the GitService class can be imported."""
     from crackerjack.services.git import GitService
 
     assert GitService is not None
 
 
 @pytest.mark.unit
-def test_protocols():
-    """Test that protocols can be imported"""
+def test_protocols() -> None:
+    """Test that protocols can be imported."""
     from crackerjack.models.protocols import (
         HookManager,
         OptionsProtocol,
@@ -111,8 +111,8 @@ def test_protocols():
 
 
 @pytest.mark.unit
-def test_workflow_orchestrator():
-    """Test basic WorkflowOrchestrator functionality"""
+def test_workflow_orchestrator() -> None:
+    """Test basic WorkflowOrchestrator functionality."""
     from rich.console import Console
 
     from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
@@ -126,8 +126,8 @@ def test_workflow_orchestrator():
 
 
 @pytest.mark.unit
-def test_enhanced_dependency_container():
-    """Test the EnhancedDependencyContainer class"""
+def test_enhanced_dependency_container() -> None:
+    """Test the EnhancedDependencyContainer class."""
     from crackerjack.core.enhanced_container import EnhancedDependencyContainer
 
     container = EnhancedDependencyContainer()
@@ -135,8 +135,8 @@ def test_enhanced_dependency_container():
 
 
 @pytest.mark.unit
-def test_models_protocols_extensively():
-    """Test protocols module more thoroughly for better coverage"""
+def test_models_protocols_extensively() -> None:
+    """Test protocols module more thoroughly for better coverage."""
     # Test that all protocols are runtime checkable
 
     from crackerjack.models.protocols import (
@@ -161,8 +161,8 @@ def test_models_protocols_extensively():
 
 
 @pytest.mark.unit
-def test_models_config():
-    """Test the config models module"""
+def test_models_config() -> None:
+    """Test the config models module."""
     from crackerjack.models.config import CleaningConfig, HookConfig, TestConfig
 
     # Test CleaningConfig
@@ -182,8 +182,8 @@ def test_models_config():
 
 
 @pytest.mark.unit
-def test_code_cleaner_module():
-    """Test code cleaner module classes"""
+def test_code_cleaner_module() -> None:
+    """Test code cleaner module classes."""
     from pathlib import Path
 
     from rich.console import Console
@@ -209,8 +209,8 @@ def test_code_cleaner_module():
 
 
 @pytest.mark.unit
-def test_api_module():
-    """Test API module classes and functions"""
+def test_api_module() -> None:
+    """Test API module classes and functions."""
     from crackerjack.api import (
         CrackerjackAPI,
         clean_code,
@@ -229,8 +229,8 @@ def test_api_module():
 
 
 @pytest.mark.unit
-def test_services_logging():
-    """Test logging service functions"""
+def test_services_logging() -> None:
+    """Test logging service functions."""
     from crackerjack.services.logging import (
         LoggingContext,
         get_logger,
@@ -250,8 +250,8 @@ def test_services_logging():
 
 
 @pytest.mark.unit
-def test_services_unified_config():
-    """Test unified config service extensively"""
+def test_services_unified_config() -> None:
+    """Test unified config service extensively."""
     from crackerjack.services.unified_config import CrackerjackConfig
 
     # Test creating config instance
@@ -268,8 +268,8 @@ def test_services_unified_config():
 
 
 @pytest.mark.unit
-def test_core_session_coordinator():
-    """Test session coordinator functionality"""
+def test_core_session_coordinator() -> None:
+    """Test session coordinator functionality."""
     from pathlib import Path
 
     from rich.console import Console
@@ -283,8 +283,8 @@ def test_core_session_coordinator():
 
 
 @pytest.mark.unit
-def test_managers_imports():
-    """Test importing manager modules"""
+def test_managers_imports() -> None:
+    """Test importing manager modules."""
     # Test hook manager
     from crackerjack.managers.hook_manager import HookManagerImpl
 
@@ -302,8 +302,8 @@ def test_managers_imports():
 
 
 @pytest.mark.unit
-def test_task_model():
-    """Test that task model can be imported"""
+def test_task_model() -> None:
+    """Test that task model can be imported."""
     # Just verify the module can be imported since actual classes may not exist
     try:
         from crackerjack.models import task
@@ -316,9 +316,8 @@ def test_task_model():
 
 # Add high-impact simple tests to reach 42% coverage
 @pytest.mark.unit
-def test_additional_imports_simple():
-    """Test additional module imports that should work"""
-
+def test_additional_imports_simple() -> None:
+    """Test additional module imports that should work."""
     # Test CLI module imports (just check they exist)
     try:
         from crackerjack import cli
@@ -345,8 +344,8 @@ def test_additional_imports_simple():
 
 
 @pytest.mark.unit
-def test_more_services():
-    """Test additional service modules"""
+def test_more_services() -> None:
+    """Test additional service modules."""
     from crackerjack.services import cache, debug, metrics
 
     # Just test imports work
@@ -356,8 +355,8 @@ def test_more_services():
 
 
 @pytest.mark.unit
-def test_additional_core_modules():
-    """Test additional core modules can be imported"""
+def test_additional_core_modules() -> None:
+    """Test additional core modules can be imported."""
     from crackerjack import core
     from crackerjack.core import container, enhanced_container
 
@@ -367,8 +366,8 @@ def test_additional_core_modules():
 
 
 @pytest.mark.unit
-def test_models_extensively():
-    """Test models package comprehensively"""
+def test_models_extensively() -> None:
+    """Test models package comprehensively."""
     from crackerjack import models
     from crackerjack.models import config, protocols
 
@@ -389,8 +388,8 @@ def test_models_extensively():
 
 
 @pytest.mark.unit
-def test_executors_and_managers():
-    """Test managers and executors packages"""
+def test_executors_and_managers() -> None:
+    """Test managers and executors packages."""
     from crackerjack import executors, managers
 
     assert managers is not None
@@ -398,8 +397,8 @@ def test_executors_and_managers():
 
 
 @pytest.mark.unit
-def test_plugin_system():
-    """Test plugin system modules"""
+def test_plugin_system() -> None:
+    """Test plugin system modules."""
     try:
         from crackerjack import plugins
 
@@ -410,8 +409,8 @@ def test_plugin_system():
 
 
 @pytest.mark.unit
-def test_mcp_modules():
-    """Test MCP modules can be imported"""
+def test_mcp_modules() -> None:
+    """Test MCP modules can be imported."""
     try:
         from crackerjack import mcp
 
@@ -422,8 +421,8 @@ def test_mcp_modules():
 
 
 @pytest.mark.unit
-def test_py313_module():
-    """Test Python 3.13 specific module"""
+def test_py313_module() -> None:
+    """Test Python 3.13 specific module."""
     try:
         from crackerjack import py313
 
@@ -435,8 +434,8 @@ def test_py313_module():
 
 # Add targeted tests for high-coverage modules
 @pytest.mark.unit
-def test_cli_options_comprehensive():
-    """Test CLI options module comprehensively to boost its 86% coverage"""
+def test_cli_options_comprehensive() -> None:
+    """Test CLI options module comprehensively to boost its 86% coverage."""
     from pathlib import Path
 
     from crackerjack.cli.options import CrackerjackOptions
@@ -459,8 +458,8 @@ def test_cli_options_comprehensive():
 
 
 @pytest.mark.unit
-def test_task_model_comprehensive():
-    """Test task model comprehensively to boost its 55% coverage"""
+def test_task_model_comprehensive() -> None:
+    """Test task model comprehensively to boost its 55% coverage."""
     from crackerjack.models.task import Task, TaskResult, TaskStatus
 
     # Test Task creation with all parameters
@@ -479,7 +478,7 @@ def test_task_model_comprehensive():
 
     # Test TaskResult creation
     result = TaskResult(
-        success=True, output="hello world", error_output="", duration=1.5, return_code=0
+        success=True, output="hello world", error_output="", duration=1.5, return_code=0,
     )
     assert result.success is True
     assert result.output == "hello world"
@@ -501,8 +500,8 @@ def test_task_model_comprehensive():
 
 
 @pytest.mark.unit
-def test_plugins_base_comprehensive():
-    """Test plugins base module to boost its 48% coverage"""
+def test_plugins_base_comprehensive() -> None:
+    """Test plugins base module to boost its 48% coverage."""
     from crackerjack.plugins.base import PluginBase, PluginMetadata, PluginRegistry
 
     # Test PluginMetadata
@@ -532,8 +531,8 @@ def test_plugins_base_comprehensive():
 
 
 @pytest.mark.unit
-def test_plugins_hooks_comprehensive():
-    """Test plugins hooks module to boost its 38% coverage"""
+def test_plugins_hooks_comprehensive() -> None:
+    """Test plugins hooks module to boost its 38% coverage."""
     from crackerjack.plugins.hooks import HookResult, PreCommitHook
 
     # Test HookResult
@@ -556,9 +555,8 @@ def test_plugins_hooks_comprehensive():
 
 
 @pytest.mark.unit
-def test_more_high_coverage_modules():
-    """Test additional modules that show promise for coverage"""
-
+def test_more_high_coverage_modules() -> None:
+    """Test additional modules that show promise for coverage."""
     # Test agents/base which is at 69% - we can push it higher
     from crackerjack.agents.base import AgentResult, IssueType
 
@@ -594,8 +592,8 @@ def test_more_high_coverage_modules():
 
 
 @pytest.mark.unit
-def test_services_metrics_comprehensive():
-    """Test services metrics module to boost its 30% coverage"""
+def test_services_metrics_comprehensive() -> None:
+    """Test services metrics module to boost its 30% coverage."""
     from crackerjack.services.metrics import MetricsService, MetricType, MetricValue
 
     # Test MetricType enum
@@ -630,8 +628,8 @@ def test_services_metrics_comprehensive():
 
 
 @pytest.mark.unit
-def test_services_log_manager_comprehensive():
-    """Test log manager service to boost its 34% coverage"""
+def test_services_log_manager_comprehensive() -> None:
+    """Test log manager service to boost its 34% coverage."""
     from crackerjack.services.log_manager import LogEntry, LogLevel, LogManager
 
     # Test LogLevel enum
@@ -667,8 +665,8 @@ def test_services_log_manager_comprehensive():
 
 
 @pytest.mark.unit
-def test_services_working_modules():
-    """Test service modules that definitely exist and work"""
+def test_services_working_modules() -> None:
+    """Test service modules that definitely exist and work."""
     # Test modules that we know exist from earlier runs
     from crackerjack.services.logging import get_logger
     from crackerjack.services.unified_config import CrackerjackConfig
@@ -686,8 +684,8 @@ def test_services_working_modules():
 
 
 @pytest.mark.unit
-def test_core_modules_working():
-    """Test core modules that we know exist"""
+def test_core_modules_working() -> None:
+    """Test core modules that we know exist."""
     from pathlib import Path
 
     from rich.console import Console
@@ -717,8 +715,8 @@ def test_core_modules_working():
 
 
 @pytest.mark.unit
-def test_managers_working_modules():
-    """Test manager modules that we know work"""
+def test_managers_working_modules() -> None:
+    """Test manager modules that we know work."""
     from rich.console import Console
 
     from crackerjack.managers.hook_manager import HookManagerImpl
@@ -742,8 +740,8 @@ def test_managers_working_modules():
 
 
 @pytest.mark.unit
-def test_api_functionality_deeper():
-    """Test API functionality more comprehensively"""
+def test_api_functionality_deeper() -> None:
+    """Test API functionality more comprehensively."""
     from pathlib import Path
 
     from rich.console import Console
@@ -788,15 +786,15 @@ def test_api_functionality_deeper():
     assert test_result.coverage_percentage == 45.7
 
     publish_result = PublishResult(
-        success=True, version="1.0.0", published_to=["pypi"], errors=[]
+        success=True, version="1.0.0", published_to=["pypi"], errors=[],
     )
     assert publish_result.version == "1.0.0"
     assert "pypi" in publish_result.published_to
 
 
 @pytest.mark.unit
-def test_code_cleaner_deeper():
-    """Test code cleaner functionality more comprehensively"""
+def test_code_cleaner_deeper() -> None:
+    """Test code cleaner functionality more comprehensively."""
     from pathlib import Path
 
     from rich.console import Console
@@ -838,8 +836,8 @@ def test_code_cleaner_deeper():
 
 
 @pytest.mark.unit
-def test_models_config_comprehensive():
-    """Test models config module extensively"""
+def test_models_config_comprehensive() -> None:
+    """Test models config module extensively."""
     from crackerjack.models.config import (
         CleaningConfig,
         ExecutionConfig,
@@ -880,8 +878,8 @@ def test_models_config_comprehensive():
 
 
 @pytest.mark.unit
-def test_simple_working_imports():
-    """Test simple imports that should definitely work"""
+def test_simple_working_imports() -> None:
+    """Test simple imports that should definitely work."""
     # These are basic imports that we know exist
     import crackerjack
     from crackerjack import __version__
@@ -898,8 +896,8 @@ def test_simple_working_imports():
 
 
 @pytest.mark.unit
-def test_protocols_module():
-    """Test protocols module if it exists"""
+def test_protocols_module() -> None:
+    """Test protocols module if it exists."""
     try:
         from crackerjack.models.protocols import (
             HookManager,
@@ -923,8 +921,8 @@ def test_protocols_module():
 
 
 @pytest.mark.unit
-def test_additional_service_modules():
-    """Test additional service modules for coverage boost"""
+def test_additional_service_modules() -> None:
+    """Test additional service modules for coverage boost."""
     # Test filesystem service
     try:
         from crackerjack.services import filesystem
@@ -959,8 +957,8 @@ def test_additional_service_modules():
 
 
 @pytest.mark.unit
-def test_more_working_service_imports():
-    """Test more service imports that should work"""
+def test_more_working_service_imports() -> None:
+    """Test more service imports that should work."""
     # Focus on services we know exist from the file listing
     from crackerjack.services.logging import (
         add_correlation_id,
@@ -992,8 +990,8 @@ def test_more_working_service_imports():
 
 
 @pytest.mark.unit
-def test_api_comprehensive():
-    """Test API module extensively - it's confirmed working"""
+def test_api_comprehensive() -> None:
+    """Test API module extensively - it's confirmed working."""
     from pathlib import Path
 
     from crackerjack.api import CrackerjackAPI
@@ -1020,8 +1018,8 @@ def test_api_comprehensive():
 
 
 @pytest.mark.unit
-def test_more_core_imports():
-    """Test more core module imports safely"""
+def test_more_core_imports() -> None:
+    """Test more core module imports safely."""
     # These should all work based on our previous success
     from crackerjack.core.container import DependencyContainer
     from crackerjack.core.workflow_orchestrator import (
@@ -1042,8 +1040,8 @@ def test_more_core_imports():
 
 
 @pytest.mark.unit
-def test_code_cleaner_extensive():
-    """Test code cleaner module extensively since it works"""
+def test_code_cleaner_extensive() -> None:
+    """Test code cleaner module extensively since it works."""
     from pathlib import Path
 
     from rich.console import Console
@@ -1084,8 +1082,8 @@ def test_code_cleaner_extensive():
 
 
 @pytest.mark.unit
-def test_unified_config_extensive():
-    """Test unified config thoroughly since we know it works"""
+def test_unified_config_extensive() -> None:
+    """Test unified config thoroughly since we know it works."""
     from crackerjack.services.unified_config import CrackerjackConfig
 
     # Test default config
@@ -1099,7 +1097,7 @@ def test_unified_config_extensive():
 
     # Test config with custom values
     custom_config = CrackerjackConfig(
-        min_coverage=50.0, test_timeout=600, hook_timeout=120, cache_enabled=False
+        min_coverage=50.0, test_timeout=600, hook_timeout=120, cache_enabled=False,
     )
     assert custom_config.min_coverage == 50.0
     assert custom_config.test_timeout == 600
@@ -1112,8 +1110,8 @@ def test_unified_config_extensive():
 
 
 @pytest.mark.unit
-def test_more_import_coverage():
-    """Test more modules for import coverage"""
+def test_more_import_coverage() -> None:
+    """Test more modules for import coverage."""
     # Test orchestration module
     from crackerjack.orchestration import advanced_orchestrator
 
@@ -1144,8 +1142,8 @@ def test_more_import_coverage():
 
 
 @pytest.mark.unit
-def test_agents_imports_safe():
-    """Test agents imports that should work"""
+def test_agents_imports_safe() -> None:
+    """Test agents imports that should work."""
     try:
         from crackerjack.agents import documentation_agent
 
@@ -1162,8 +1160,8 @@ def test_agents_imports_safe():
 
 
 @pytest.mark.unit
-def test_mcp_safe_imports():
-    """Test MCP imports safely"""
+def test_mcp_safe_imports() -> None:
+    """Test MCP imports safely."""
     try:
         from crackerjack.mcp.websocket import jobs
 
@@ -1180,9 +1178,8 @@ def test_mcp_safe_imports():
 
 
 @pytest.mark.unit
-def test_deep_api_coverage():
-    """Focus on API module since it's working well for coverage"""
-
+def test_deep_api_coverage() -> None:
+    """Focus on API module since it's working well for coverage."""
     from crackerjack.api import (
         CrackerjackAPI,
         QualityCheckResult,
@@ -1237,8 +1234,8 @@ def test_deep_api_coverage():
 
 
 @pytest.mark.unit
-def test_function_calls_for_coverage():
-    """Test actual function calls rather than just imports for better coverage"""
+def test_function_calls_for_coverage() -> None:
+    """Test actual function calls rather than just imports for better coverage."""
     # Focus on logging since it's at 72% already
     from crackerjack.services.logging import get_logger, setup_structured_logging
 
@@ -1253,9 +1250,8 @@ def test_function_calls_for_coverage():
 
 
 @pytest.mark.unit
-def test_api_method_calls():
-    """Test calling API methods for better coverage"""
-
+def test_api_method_calls() -> None:
+    """Test calling API methods for better coverage."""
     from crackerjack.api import CrackerjackAPI
 
     api = CrackerjackAPI()
@@ -1282,8 +1278,8 @@ def test_api_method_calls():
 
 
 @pytest.mark.unit
-def test_orchestrator_method_calls():
-    """Test workflow orchestrator methods for coverage"""
+def test_orchestrator_method_calls() -> None:
+    """Test workflow orchestrator methods for coverage."""
     from pathlib import Path
 
     from rich.console import Console
@@ -1301,8 +1297,8 @@ def test_orchestrator_method_calls():
 
 
 @pytest.mark.unit
-def test_container_operations():
-    """Test container operations for coverage"""
+def test_container_operations() -> None:
+    """Test container operations for coverage."""
     from rich.console import Console
 
     from crackerjack.core.container import DependencyContainer
@@ -1325,8 +1321,8 @@ def test_container_operations():
 
 
 @pytest.mark.unit
-def test_more_unified_config_methods():
-    """Test unified config methods to boost its 37% coverage"""
+def test_more_unified_config_methods() -> None:
+    """Test unified config methods to boost its 37% coverage."""
     from pathlib import Path
 
     from crackerjack.services.unified_config import CrackerjackConfig
@@ -1372,8 +1368,8 @@ def test_more_unified_config_methods():
 
 
 @pytest.mark.unit
-def test_code_cleaner_functionality():
-    """Test code cleaner functionality to boost its 65% coverage"""
+def test_code_cleaner_functionality() -> None:
+    """Test code cleaner functionality to boost its 65% coverage."""
     from rich.console import Console
 
     from crackerjack.code_cleaner import CodeCleaner
@@ -1393,8 +1389,8 @@ def test_code_cleaner_functionality():
 
 
 @pytest.mark.unit
-def test_session_coordinator_functionality():
-    """Test session coordinator methods for coverage"""
+def test_session_coordinator_functionality() -> None:
+    """Test session coordinator methods for coverage."""
     from pathlib import Path
 
     from rich.console import Console
@@ -1414,8 +1410,8 @@ def test_session_coordinator_functionality():
 
 
 @pytest.mark.unit
-def test_more_service_functionality():
-    """Test more service functionality for coverage"""
+def test_more_service_functionality() -> None:
+    """Test more service functionality for coverage."""
     # Test git service functions
     try:
         from crackerjack.services.git import GitService
@@ -1439,8 +1435,8 @@ def test_more_service_functionality():
 
 
 @pytest.mark.unit
-def test_additional_logging_coverage():
-    """Test more logging functionality for maximum coverage"""
+def test_additional_logging_coverage() -> None:
+    """Test more logging functionality for maximum coverage."""
     from crackerjack.services.logging import (
         LoggingContext,
         cache_logger,
@@ -1459,7 +1455,7 @@ def test_additional_logging_coverage():
 
     # Test log_performance decorator
     @log_performance("test_performance", category="unit_test")
-    def test_function():
+    def test_function() -> str:
         return "success"
 
     result = test_function()
@@ -1473,8 +1469,8 @@ def test_additional_logging_coverage():
 
 
 @pytest.mark.unit
-def test_enhanced_container_operations():
-    """Test enhanced container for coverage"""
+def test_enhanced_container_operations() -> None:
+    """Test enhanced container for coverage."""
     from rich.console import Console
 
     from crackerjack.core.enhanced_container import EnhancedDependencyContainer
@@ -1496,8 +1492,8 @@ def test_enhanced_container_operations():
 
 
 @pytest.mark.unit
-def test_more_protocol_coverage():
-    """Test more protocol usage for coverage"""
+def test_more_protocol_coverage() -> None:
+    """Test more protocol usage for coverage."""
     from crackerjack.models.protocols import HookManager, PublishManager, TestManager
 
     # Just test that protocols exist and have expected methods
@@ -1507,8 +1503,8 @@ def test_more_protocol_coverage():
 
 
 @pytest.mark.unit
-def test_cache_functionality():
-    """Test cache service functionality"""
+def test_cache_functionality() -> None:
+    """Test cache service functionality."""
     try:
         import os
         import tempfile
@@ -1534,8 +1530,8 @@ def test_cache_functionality():
 
 
 @pytest.mark.unit
-def test_file_hasher_functionality():
-    """Test file hasher service functionality"""
+def test_file_hasher_functionality() -> None:
+    """Test file hasher service functionality."""
     try:
         import os
         import tempfile
@@ -1561,8 +1557,8 @@ def test_file_hasher_functionality():
 
 
 @pytest.mark.unit
-def test_metrics_service():
-    """Test metrics service functionality"""
+def test_metrics_service() -> None:
+    """Test metrics service functionality."""
     try:
         from crackerjack.services.metrics import MetricsCollector
 
@@ -1583,8 +1579,8 @@ def test_metrics_service():
 
 
 @pytest.mark.unit
-def test_performance_benchmarks():
-    """Test performance benchmarks service"""
+def test_performance_benchmarks() -> None:
+    """Test performance benchmarks service."""
     try:
         from crackerjack.services.performance_benchmarks import BenchmarkRunner
 
@@ -1600,8 +1596,8 @@ def test_performance_benchmarks():
 
 
 @pytest.mark.unit
-def test_dependency_monitor():
-    """Test dependency monitor service"""
+def test_dependency_monitor() -> None:
+    """Test dependency monitor service."""
     try:
         from crackerjack.services.dependency_monitor import DependencyMonitor
 
@@ -1617,8 +1613,8 @@ def test_dependency_monitor():
 
 
 @pytest.mark.unit
-def test_tool_version_service():
-    """Test tool version service"""
+def test_tool_version_service() -> None:
+    """Test tool version service."""
     try:
         from crackerjack.services.tool_version_service import ToolVersionService
 
@@ -1635,8 +1631,8 @@ def test_tool_version_service():
 
 
 @pytest.mark.unit
-def test_health_metrics():
-    """Test health metrics service"""
+def test_health_metrics() -> None:
+    """Test health metrics service."""
     try:
         from crackerjack.services.health_metrics import HealthMetrics
 
@@ -1655,8 +1651,8 @@ def test_health_metrics():
 
 
 @pytest.mark.unit
-def test_enhanced_filesystem_functionality():
-    """Test enhanced filesystem functionality"""
+def test_enhanced_filesystem_functionality() -> None:
+    """Test enhanced filesystem functionality."""
     try:
         import os
         import tempfile
@@ -1681,8 +1677,8 @@ def test_enhanced_filesystem_functionality():
 
 
 @pytest.mark.unit
-def test_config_manager_functionality():
-    """Test configuration manager functionality"""
+def test_config_manager_functionality() -> None:
+    """Test configuration manager functionality."""
     try:
         import os
         import tempfile
@@ -1707,8 +1703,8 @@ def test_config_manager_functionality():
 
 
 @pytest.mark.unit
-def test_git_service_functionality():
-    """Test git service functionality"""
+def test_git_service_functionality() -> None:
+    """Test git service functionality."""
     try:
         import subprocess
         import tempfile
@@ -1718,7 +1714,7 @@ def test_git_service_functionality():
         with tempfile.TemporaryDirectory() as temp_dir:
             # Initialize a git repo
             subprocess.run(
-                ["git", "init"], cwd=temp_dir, check=True, capture_output=True
+                ["git", "init"], cwd=temp_dir, check=True, capture_output=True,
             )
             subprocess.run(
                 ["git", "config", "user.email", "test@example.com"],
@@ -1748,8 +1744,8 @@ def test_git_service_functionality():
 
 
 @pytest.mark.unit
-def test_security_service_functionality():
-    """Test security service functionality"""
+def test_security_service_functionality() -> None:
+    """Test security service functionality."""
     try:
         from crackerjack.services.security import SecurityService
 
@@ -1770,8 +1766,8 @@ def test_security_service_functionality():
 
 
 @pytest.mark.unit
-def test_filesystem_service_functionality():
-    """Test filesystem service functionality"""
+def test_filesystem_service_functionality() -> None:
+    """Test filesystem service functionality."""
     try:
         import os
         import tempfile
@@ -1797,8 +1793,8 @@ def test_filesystem_service_functionality():
 
 
 @pytest.mark.unit
-def test_core_workflow_orchestrator_functions():
-    """Test additional workflow orchestrator functions for coverage"""
+def test_core_workflow_orchestrator_functions() -> None:
+    """Test additional workflow orchestrator functions for coverage."""
     from pathlib import Path
 
     from rich.console import Console
@@ -1822,9 +1818,8 @@ def test_core_workflow_orchestrator_functions():
 
 
 @pytest.mark.unit
-def test_api_module_functions():
-    """Test more API module functions for better coverage"""
-
+def test_api_module_functions() -> None:
+    """Test more API module functions for better coverage."""
     from crackerjack.api import CrackerjackAPI
 
     api = CrackerjackAPI()
@@ -1842,8 +1837,8 @@ def test_api_module_functions():
 
 
 @pytest.mark.unit
-def test_code_cleaner_functions():
-    """Test more code cleaner functions for coverage"""
+def test_code_cleaner_functions() -> None:
+    """Test more code cleaner functions for coverage."""
     import os
     import tempfile
     from pathlib import Path
@@ -1870,8 +1865,8 @@ def test_code_cleaner_functions():
 
 
 @pytest.mark.unit
-def test_unified_config_functions():
-    """Test unified config functions for better coverage"""
+def test_unified_config_functions() -> None:
+    """Test unified config functions for better coverage."""
     import tempfile
     from pathlib import Path
 
@@ -1895,8 +1890,8 @@ def test_unified_config_functions():
 
 
 @pytest.mark.unit
-def test_models_config_functions():
-    """Test models config functions for coverage"""
+def test_models_config_functions() -> None:
+    """Test models config functions for coverage."""
     from crackerjack.models.config import CleaningConfig, TestConfig, WorkflowOptions
 
     # Test WorkflowOptions
@@ -1915,9 +1910,8 @@ def test_models_config_functions():
 
 
 @pytest.mark.unit
-def test_logging_advanced_functions():
-    """Test more logging functions for maximum coverage"""
-
+def test_logging_advanced_functions() -> None:
+    """Test more logging functions for maximum coverage."""
     from crackerjack.services.logging import (
         LoggingContext,
         add_correlation_id,
@@ -1955,14 +1949,16 @@ def test_logging_advanced_functions():
     try:
         with LoggingContext("error_test") as cid:
             assert len(cid) == 8
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
     except ValueError:
         pass  # Expected
 
     # Test log_performance decorator with exception
     @log_performance("error_perf_test")
-    def failing_function():
-        raise RuntimeError("Test error")
+    def failing_function() -> Never:
+        msg = "Test error"
+        raise RuntimeError(msg)
 
     try:
         failing_function()
@@ -1971,8 +1967,8 @@ def test_logging_advanced_functions():
 
 
 @pytest.mark.unit
-def test_filesystem_service_functions():
-    """Test filesystem service functions for coverage"""
+def test_filesystem_service_functions() -> None:
+    """Test filesystem service functions for coverage."""
     import tempfile
     from pathlib import Path
 

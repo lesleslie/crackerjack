@@ -1,5 +1,4 @@
-"""
-Integration tests for MCP server and WebSocket functionality.
+"""Integration tests for MCP server and WebSocket functionality.
 
 Tests complete MCP workflow integration:
 - MCP server startup and shutdown
@@ -36,10 +35,10 @@ except ImportError:
 @pytest.mark.integration
 @pytest.mark.skipif(not MCP_AVAILABLE, reason="MCP components not available")
 class TestMCPServerIntegration:
-    """Test MCP server integration functionality"""
+    """Test MCP server integration functionality."""
 
-    def test_session_state_management(self):
-        """Test session state creation and management"""
+    def test_session_state_management(self) -> None:
+        """Test session state creation and management."""
         session_state = SessionState()
 
         # Test session creation
@@ -58,8 +57,8 @@ class TestMCPServerIntegration:
         session_state.cleanup_session(session_id)
         assert not session_state.has_session(session_id)
 
-    def test_error_cache_functionality(self):
-        """Test error pattern caching"""
+    def test_error_cache_functionality(self) -> None:
+        """Test error pattern caching."""
         cache = ErrorCache()
 
         # Test error pattern storage
@@ -77,8 +76,8 @@ class TestMCPServerIntegration:
         assert isinstance(stats, dict)
         assert "hit_rate" in stats or "total_entries" in stats
 
-    def test_rate_limiter_functionality(self):
-        """Test rate limiting for API calls"""
+    def test_rate_limiter_functionality(self) -> None:
+        """Test rate limiting for API calls."""
         rate_limiter = RateLimiter(requests_per_minute=60)
 
         # Test rate limiting
@@ -94,8 +93,8 @@ class TestMCPServerIntegration:
         stats = rate_limiter.get_stats()
         assert isinstance(stats, dict)
 
-    def test_mcp_context_integration(self, sample_config):
-        """Test MCP context manager"""
+    def test_mcp_context_integration(self, sample_config) -> None:
+        """Test MCP context manager."""
         context = MCPContext(sample_config)
 
         # Test context initialization
@@ -108,14 +107,14 @@ class TestMCPServerIntegration:
 
 @pytest.mark.integration
 @pytest.mark.skipif(
-    not WEBSOCKET_AVAILABLE, reason="WebSocket components not available"
+    not WEBSOCKET_AVAILABLE, reason="WebSocket components not available",
 )
 class TestWebSocketIntegration:
-    """Test WebSocket server integration"""
+    """Test WebSocket server integration."""
 
     @pytest.mark.asyncio
-    async def test_job_manager_basic_operations(self):
-        """Test basic job manager operations"""
+    async def test_job_manager_basic_operations(self) -> None:
+        """Test basic job manager operations."""
         job_manager = JobManager()
 
         # Test job creation
@@ -138,8 +137,8 @@ class TestWebSocketIntegration:
         assert final_info["status"] == "completed"
 
     @pytest.mark.asyncio
-    async def test_job_progress_tracking(self):
-        """Test job progress updates"""
+    async def test_job_progress_tracking(self) -> None:
+        """Test job progress updates."""
         job_manager = JobManager()
 
         job_id = await job_manager.create_job("progress_test", {})
@@ -156,8 +155,8 @@ class TestWebSocketIntegration:
         assert "Finished" in job_info["status_message"]
 
     @pytest.mark.asyncio
-    async def test_job_error_handling(self):
-        """Test job error scenarios"""
+    async def test_job_error_handling(self) -> None:
+        """Test job error scenarios."""
         job_manager = JobManager()
 
         job_id = await job_manager.create_job("error_test", {})
@@ -175,10 +174,10 @@ class TestWebSocketIntegration:
 
 @pytest.mark.integration
 class TestMCPToolIntegration:
-    """Test MCP tool functionality integration"""
+    """Test MCP tool functionality integration."""
 
-    def test_tool_execution_flow(self, sample_config):
-        """Test complete tool execution workflow"""
+    def test_tool_execution_flow(self, sample_config) -> None:
+        """Test complete tool execution workflow."""
         # Mock tool execution context
         mock_context = {
             "config": sample_config,
@@ -191,8 +190,8 @@ class TestMCPToolIntegration:
         assert "config" in mock_context
         assert "session_id" in mock_context
 
-    def test_error_analysis_integration(self):
-        """Test error analysis tool integration"""
+    def test_error_analysis_integration(self) -> None:
+        """Test error analysis tool integration."""
         # Mock error data
         error_data = [
             {
@@ -216,8 +215,8 @@ class TestMCPToolIntegration:
         assert len(import_errors) == 1
         assert len(syntax_errors) == 1
 
-    def test_progress_reporting_integration(self):
-        """Test progress reporting functionality"""
+    def test_progress_reporting_integration(self) -> None:
+        """Test progress reporting functionality."""
         # Mock progress data
         progress_data = {
             "job_id": "test_123",
@@ -238,10 +237,10 @@ class TestMCPToolIntegration:
 @pytest.mark.integration
 @pytest.mark.slow
 class TestMCPPerformanceIntegration:
-    """Test MCP performance characteristics"""
+    """Test MCP performance characteristics."""
 
-    def test_session_state_performance(self, performance_timer):
-        """Test session state operations performance"""
+    def test_session_state_performance(self, performance_timer) -> None:
+        """Test session state operations performance."""
         if not MCP_AVAILABLE:
             pytest.skip("MCP components not available")
 
@@ -265,8 +264,8 @@ class TestMCPPerformanceIntegration:
         for session_id in session_ids:
             session_state.cleanup_session(session_id)
 
-    def test_error_cache_performance(self, performance_timer):
-        """Test error cache performance"""
+    def test_error_cache_performance(self, performance_timer) -> None:
+        """Test error cache performance."""
         if not MCP_AVAILABLE:
             pytest.skip("MCP components not available")
 
@@ -302,10 +301,10 @@ class TestMCPPerformanceIntegration:
 @pytest.mark.integration
 @pytest.mark.asyncio
 class TestAsyncMCPIntegration:
-    """Test async MCP operations"""
+    """Test async MCP operations."""
 
-    async def test_async_job_processing(self):
-        """Test async job processing workflow"""
+    async def test_async_job_processing(self) -> None:
+        """Test async job processing workflow."""
         if not WEBSOCKET_AVAILABLE:
             pytest.skip("WebSocket components not available")
 
@@ -318,14 +317,14 @@ class TestAsyncMCPIntegration:
             job_ids.append(job_id)
 
         # Process jobs concurrently
-        async def process_job(job_id, index):
+        async def process_job(job_id, index) -> None:
             await job_manager.update_progress(job_id, 50, f"Processing {index}")
             await asyncio.sleep(0.1)  # Simulate work
             await job_manager.complete_job(job_id, {"result": f"completed_{index}"})
 
         # Execute all jobs concurrently
         await asyncio.gather(
-            *[process_job(job_id, i) for i, job_id in enumerate(job_ids)]
+            *[process_job(job_id, i) for i, job_id in enumerate(job_ids)],
         )
 
         # Verify all jobs completed
@@ -333,8 +332,8 @@ class TestAsyncMCPIntegration:
             job_info = await job_manager.get_job_info(job_id)
             assert job_info["status"] == "completed"
 
-    async def test_async_error_handling(self):
-        """Test async error handling in MCP operations"""
+    async def test_async_error_handling(self) -> None:
+        """Test async error handling in MCP operations."""
         if not WEBSOCKET_AVAILABLE:
             pytest.skip("WebSocket components not available")
 
@@ -348,7 +347,8 @@ class TestAsyncMCPIntegration:
             await job_manager.update_progress(job_id, 25, "Starting")
 
             # Simulate failure
-            raise ValueError("Simulated async error")
+            msg = "Simulated async error"
+            raise ValueError(msg)
 
         except ValueError as e:
             # Handle error
@@ -363,10 +363,10 @@ class TestAsyncMCPIntegration:
 @pytest.mark.integration
 @pytest.mark.security
 class TestMCPSecurityIntegration:
-    """Test MCP security integration"""
+    """Test MCP security integration."""
 
-    def test_rate_limiting_security(self):
-        """Test rate limiting prevents abuse"""
+    def test_rate_limiting_security(self) -> None:
+        """Test rate limiting prevents abuse."""
         if not MCP_AVAILABLE:
             pytest.skip("MCP components not available")
 
@@ -374,14 +374,14 @@ class TestMCPSecurityIntegration:
         rate_limiter = RateLimiter(requests_per_minute=5, max_burst=3)
 
         # Should allow initial requests
-        for i in range(3):
+        for _i in range(3):
             assert rate_limiter.can_proceed()
             rate_limiter.record_request()
 
         # Should start rate limiting
         # Note: Actual rate limiting behavior depends on implementation
         remaining_allowed = 0
-        for i in range(10):
+        for _i in range(10):
             if rate_limiter.can_proceed():
                 rate_limiter.record_request()
                 remaining_allowed += 1
@@ -389,8 +389,8 @@ class TestMCPSecurityIntegration:
         # Should have limited additional requests
         assert remaining_allowed <= 5  # Should not allow unlimited requests
 
-    def test_session_isolation(self):
-        """Test session data isolation"""
+    def test_session_isolation(self) -> None:
+        """Test session data isolation."""
         if not MCP_AVAILABLE:
             pytest.skip("MCP components not available")
 

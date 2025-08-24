@@ -15,7 +15,7 @@ from crackerjack.services.cache import (
 
 
 class TestCacheEntry:
-    def test_cache_entry_creation(self):
+    def test_cache_entry_creation(self) -> None:
         entry = CacheEntry(key="test_key", value="test_value")
 
         assert entry.key == "test_key"
@@ -25,24 +25,24 @@ class TestCacheEntry:
         assert isinstance(entry.created_at, float)
         assert isinstance(entry.accessed_at, float)
 
-    def test_is_expired_not_expired(self):
+    def test_is_expired_not_expired(self) -> None:
         entry = CacheEntry(key="test", value="data", ttl_seconds=10)
 
         assert entry.is_expired is False
 
-    def test_is_expired_expired(self):
+    def test_is_expired_expired(self) -> None:
         entry = CacheEntry(key="test", value="data", ttl_seconds=1)
 
         with patch("time.time", return_value=entry.created_at + 2):
             assert entry.is_expired is True
 
-    def test_age_seconds(self):
+    def test_age_seconds(self) -> None:
         entry = CacheEntry(key="test", value="data")
 
         with patch("time.time", return_value=entry.created_at + 5):
             assert entry.age_seconds == 5
 
-    def test_touch(self):
+    def test_touch(self) -> None:
         entry = CacheEntry(key="test", value="data")
         initial_access_count = entry.access_count
         initial_accessed_at = entry.accessed_at
@@ -55,7 +55,7 @@ class TestCacheEntry:
 
 
 class TestCacheStats:
-    def test_cache_stats_creation(self):
+    def test_cache_stats_creation(self) -> None:
         stats = CacheStats()
 
         assert stats.hits == 0
@@ -64,17 +64,17 @@ class TestCacheStats:
         assert stats.total_entries == 0
         assert stats.total_size_bytes == 0
 
-    def test_hit_rate_zero_requests(self):
+    def test_hit_rate_zero_requests(self) -> None:
         stats = CacheStats()
 
         assert stats.hit_rate == 0.0
 
-    def test_hit_rate_with_data(self):
+    def test_hit_rate_with_data(self) -> None:
         stats = CacheStats(hits=75, misses=25)
 
         assert stats.hit_rate == 75.0
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         stats = CacheStats(
             hits=10,
             misses=5,
@@ -98,7 +98,7 @@ class TestCacheStats:
 
 
 class TestInMemoryCache:
-    def test_inmemorycache_creation(self):
+    def test_inmemorycache_creation(self) -> None:
         cache = InMemoryCache()
 
         assert cache.max_entries == 1000
@@ -106,13 +106,13 @@ class TestInMemoryCache:
         assert isinstance(cache.stats, CacheStats)
         assert len(cache._cache) == 0
 
-    def test_inmemorycache_custom_params(self):
+    def test_inmemorycache_custom_params(self) -> None:
         cache = InMemoryCache(max_entries=500, default_ttl=1800)
 
         assert cache.max_entries == 500
         assert cache.default_ttl == 1800
 
-    def test_get_miss(self):
+    def test_get_miss(self) -> None:
         cache = InMemoryCache()
 
         result = cache.get("nonexistent")
@@ -121,7 +121,7 @@ class TestInMemoryCache:
         assert cache.stats.misses == 1
         assert cache.stats.hits == 0
 
-    def test_set_and_get_hit(self):
+    def test_set_and_get_hit(self) -> None:
         cache = InMemoryCache()
 
         cache.set("test_key", "test_value")
@@ -131,7 +131,7 @@ class TestInMemoryCache:
         assert cache.stats.hits == 1
         assert cache.stats.misses == 0
 
-    def test_get_expired_entry(self):
+    def test_get_expired_entry(self) -> None:
         cache = InMemoryCache()
         cache.set("test_key", "test_value", ttl_seconds=1)
 
@@ -144,7 +144,7 @@ class TestInMemoryCache:
         assert cache.stats.evictions == 1
         assert "test_key" not in cache._cache
 
-    def test_set_with_custom_ttl(self):
+    def test_set_with_custom_ttl(self) -> None:
         cache = InMemoryCache()
 
         cache.set("test_key", "test_value", ttl_seconds=7200)
@@ -152,7 +152,7 @@ class TestInMemoryCache:
 
         assert entry.ttl_seconds == 7200
 
-    def test_set_with_max_entries_eviction(self):
+    def test_set_with_max_entries_eviction(self) -> None:
         cache = InMemoryCache(max_entries=2)
 
         cache.set("key1", "value1")
@@ -167,7 +167,7 @@ class TestInMemoryCache:
         assert "key3" in cache._cache
         assert cache.stats.evictions == 1
 
-    def test_invalidate_existing_key(self):
+    def test_invalidate_existing_key(self) -> None:
         cache = InMemoryCache()
         cache.set("test_key", "test_value")
 
@@ -177,14 +177,14 @@ class TestInMemoryCache:
         assert "test_key" not in cache._cache
         assert cache.stats.total_entries == 0
 
-    def test_invalidate_nonexistent_key(self):
+    def test_invalidate_nonexistent_key(self) -> None:
         cache = InMemoryCache()
 
         result = cache.invalidate("nonexistent")
 
         assert result is False
 
-    def test_clear(self):
+    def test_clear(self) -> None:
         cache = InMemoryCache()
         cache.set("key1", "value1")
         cache.set("key2", "value2")
@@ -195,7 +195,7 @@ class TestInMemoryCache:
         assert cache.stats.evictions == 2
         assert cache.stats.total_entries == 0
 
-    def test_cleanup_expired(self):
+    def test_cleanup_expired(self) -> None:
         cache = InMemoryCache()
 
         cache.set("valid_key", "valid_value", ttl_seconds=3600)
@@ -214,7 +214,7 @@ class TestInMemoryCache:
 
 
 class TestFileCache:
-    def test_filecache_creation(self):
+    def test_filecache_creation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache_dir = Path(temp_dir)
             cache = FileCache(cache_dir, namespace="test")
@@ -223,7 +223,7 @@ class TestFileCache:
             assert cache.cache_dir.exists()
             assert isinstance(cache.stats, CacheStats)
 
-    def test_get_miss(self):
+    def test_get_miss(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
 
@@ -232,7 +232,7 @@ class TestFileCache:
             assert result is None
             assert cache.stats.misses == 1
 
-    def test_set_and_get_hit(self):
+    def test_set_and_get_hit(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
 
@@ -242,7 +242,7 @@ class TestFileCache:
             assert result == "test_value"
             assert cache.stats.hits == 1
 
-    def test_get_expired_entry(self):
+    def test_get_expired_entry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
             cache.set("test_key", "test_value", ttl_seconds=1)
@@ -254,7 +254,7 @@ class TestFileCache:
             assert cache.stats.misses == 1
             assert cache.stats.evictions == 1
 
-    def test_set_with_custom_ttl(self):
+    def test_set_with_custom_ttl(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
 
@@ -266,7 +266,7 @@ class TestFileCache:
 
             assert data["ttl_seconds"] == 7200
 
-    def test_invalidate_existing_key(self):
+    def test_invalidate_existing_key(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
             cache.set("test_key", "test_value")
@@ -277,7 +277,7 @@ class TestFileCache:
             cache_file = cache._get_cache_file("test_key")
             assert not cache_file.exists()
 
-    def test_invalidate_nonexistent_key(self):
+    def test_invalidate_nonexistent_key(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
 
@@ -285,7 +285,7 @@ class TestFileCache:
 
             assert result is False
 
-    def test_clear(self):
+    def test_clear(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
             cache.set("key1", "value1")
@@ -296,7 +296,7 @@ class TestFileCache:
             cache_files = list(cache.cache_dir.glob(" * .cache"))
             assert len(cache_files) == 0
 
-    def test_cleanup_expired(self):
+    def test_cleanup_expired(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
 
@@ -309,7 +309,7 @@ class TestFileCache:
             assert removed_count == 1
             assert cache.stats.evictions == 1
 
-    def test_get_with_corrupted_file(self):
+    def test_get_with_corrupted_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = FileCache(Path(temp_dir))
 
@@ -324,7 +324,7 @@ class TestFileCache:
 
 
 class TestCrackerjackCache:
-    def test_crackerjackcache_creation(self):
+    def test_crackerjackcache_creation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache_dir = Path(temp_dir)
             cache = CrackerjackCache(cache_dir=cache_dir)
@@ -336,20 +336,20 @@ class TestCrackerjackCache:
             assert isinstance(cache.config_cache, InMemoryCache)
             assert hasattr(cache, "disk_cache")
 
-    def test_crackerjackcache_without_disk_cache(self):
+    def test_crackerjackcache_without_disk_cache(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         assert cache.enable_disk_cache is False
         assert not hasattr(cache, "disk_cache")
 
-    def test_get_hook_result_miss(self):
+    def test_get_hook_result_miss(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         result = cache.get_hook_result("test_hook", ["hash1", "hash2"])
 
         assert result is None
 
-    def test_set_and_get_hook_result(self):
+    def test_set_and_get_hook_result(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         hook_result = HookResult(
@@ -366,7 +366,7 @@ class TestCrackerjackCache:
 
         assert result == hook_result
 
-    def test_get_file_hash_miss(self):
+    def test_get_file_hash_miss(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         with tempfile.NamedTemporaryFile() as temp_file:
@@ -375,7 +375,7 @@ class TestCrackerjackCache:
 
             assert result is None
 
-    def test_set_and_get_file_hash(self):
+    def test_set_and_get_file_hash(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         with tempfile.NamedTemporaryFile() as temp_file:
@@ -387,14 +387,14 @@ class TestCrackerjackCache:
 
             assert result == test_hash
 
-    def test_get_config_data_miss(self):
+    def test_get_config_data_miss(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         result = cache.get_config_data("test_config")
 
         assert result is None
 
-    def test_set_and_get_config_data(self):
+    def test_set_and_get_config_data(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         test_data = {"key": "value", "number": 42}
@@ -404,7 +404,7 @@ class TestCrackerjackCache:
 
         assert result == test_data
 
-    def test_invalidate_hook_cache_specific(self):
+    def test_invalidate_hook_cache_specific(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         hook_result = HookResult(
@@ -424,7 +424,7 @@ class TestCrackerjackCache:
         assert cache.get_hook_result("test_hook", ["hash1"]) is None
         assert cache.get_hook_result("other_hook", ["hash2"]) is not None
 
-    def test_invalidate_hook_cache_all(self):
+    def test_invalidate_hook_cache_all(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         hook_result = HookResult(
@@ -444,7 +444,7 @@ class TestCrackerjackCache:
         assert cache.get_hook_result("test_hook", ["hash1"]) is None
         assert cache.get_hook_result("other_hook", ["hash2"]) is None
 
-    def test_cleanup_all_without_disk_cache(self):
+    def test_cleanup_all_without_disk_cache(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         results = cache.cleanup_all()
@@ -454,7 +454,7 @@ class TestCrackerjackCache:
         assert "config" in results
         assert "disk_cache" not in results
 
-    def test_cleanup_all_with_disk_cache(self):
+    def test_cleanup_all_with_disk_cache(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = CrackerjackCache(cache_dir=Path(temp_dir), enable_disk_cache=True)
 
@@ -465,7 +465,7 @@ class TestCrackerjackCache:
             assert "config" in results
             assert "disk_cache" in results
 
-    def test_get_cache_stats_without_disk_cache(self):
+    def test_get_cache_stats_without_disk_cache(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         stats = cache.get_cache_stats()
@@ -475,7 +475,7 @@ class TestCrackerjackCache:
         assert "config" in stats
         assert "disk_cache" not in stats
 
-    def test_get_cache_stats_with_disk_cache(self):
+    def test_get_cache_stats_with_disk_cache(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = CrackerjackCache(cache_dir=Path(temp_dir), enable_disk_cache=True)
 
@@ -486,7 +486,7 @@ class TestCrackerjackCache:
             assert "config" in stats
             assert "disk_cache" in stats
 
-    def test_hook_cache_key_generation(self):
+    def test_hook_cache_key_generation(self) -> None:
         cache = CrackerjackCache(enable_disk_cache=False)
 
         key1 = cache._get_hook_cache_key("test_hook", ["hash1", "hash2"])

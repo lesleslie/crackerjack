@@ -69,10 +69,12 @@ class ExceptionTestPlugin(PluginBase):
     """Test plugin that raises exceptions during activation/deactivation."""
 
     def activate(self) -> bool:
-        raise RuntimeError("Activation failed")
+        msg = "Activation failed"
+        raise RuntimeError(msg)
 
     def deactivate(self) -> bool:
-        raise RuntimeError("Deactivation failed")
+        msg = "Deactivation failed"
+        raise RuntimeError(msg)
 
 
 @pytest.fixture
@@ -221,7 +223,7 @@ class TestPluginBase:
         assert plugin.get_config("missing", "default") == "default"
 
     def test_plugin_config_validation_success(
-        self, test_metadata: PluginMetadata
+        self, test_metadata: PluginMetadata,
     ) -> None:
         """Test successful config validation."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -231,7 +233,7 @@ class TestPluginBase:
         plugin.configure(config)  # Should not raise
 
     def test_plugin_config_validation_failure(
-        self, test_metadata: PluginMetadata
+        self, test_metadata: PluginMetadata,
     ) -> None:
         """Test config validation failure."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -288,7 +290,7 @@ class TestPluginRegistry:
         assert len(registry.get_by_type(PluginType.HOOK)) == 0
 
     def test_plugin_registration(
-        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin
+        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin,
     ) -> None:
         """Test plugin registration."""
         result = registry.register(test_plugin)
@@ -298,7 +300,7 @@ class TestPluginRegistry:
         assert retrieved == test_plugin
 
     def test_duplicate_plugin_registration(
-        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin
+        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin,
     ) -> None:
         """Test duplicate plugin registration prevention."""
         registry.register(test_plugin)
@@ -308,7 +310,7 @@ class TestPluginRegistry:
         assert result is False
 
     def test_plugin_unregistration(
-        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin
+        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin,
     ) -> None:
         """Test plugin unregistration."""
         registry.register(test_plugin)
@@ -324,7 +326,7 @@ class TestPluginRegistry:
         assert result is False
 
     def test_get_by_type(
-        self, registry: PluginRegistry, test_metadata: PluginMetadata
+        self, registry: PluginRegistry, test_metadata: PluginMetadata,
     ) -> None:
         """Test getting plugins by type."""
         hook_plugin = ConcreteTestPlugin(test_metadata)
@@ -349,7 +351,7 @@ class TestPluginRegistry:
         assert formatter_plugins[0] == formatter_plugin
 
     def test_get_enabled_plugins(
-        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin
+        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin,
     ) -> None:
         """Test getting enabled plugins."""
         registry.register(test_plugin)
@@ -363,7 +365,7 @@ class TestPluginRegistry:
         assert len(enabled) == 0
 
     def test_get_enabled_by_type(
-        self, registry: PluginRegistry, test_metadata: PluginMetadata
+        self, registry: PluginRegistry, test_metadata: PluginMetadata,
     ) -> None:
         """Test getting enabled plugins by type."""
         hook_plugin = ConcreteTestPlugin(test_metadata)
@@ -389,7 +391,7 @@ class TestPluginRegistry:
         assert enabled_formatters[0] == formatter_plugin
 
     def test_activate_all(
-        self, registry: PluginRegistry, test_metadata: PluginMetadata
+        self, registry: PluginRegistry, test_metadata: PluginMetadata,
     ) -> None:
         """Test activating all plugins."""
         plugin1 = ConcreteTestPlugin(test_metadata)
@@ -413,7 +415,7 @@ class TestPluginRegistry:
         assert plugin2.activate_called is True
 
     def test_activate_all_with_disabled(
-        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin
+        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin,
     ) -> None:
         """Test activate_all skips disabled plugins."""
         test_plugin.disable()
@@ -425,7 +427,7 @@ class TestPluginRegistry:
         assert test_plugin.activate_called is False
 
     def test_activate_all_with_failure(
-        self, registry: PluginRegistry, test_metadata: PluginMetadata
+        self, registry: PluginRegistry, test_metadata: PluginMetadata,
     ) -> None:
         """Test activate_all handles failures."""
         failing_plugin = FailingTestPlugin(test_metadata)
@@ -436,7 +438,7 @@ class TestPluginRegistry:
         assert results["test-plugin"] is False
 
     def test_activate_all_with_exception(
-        self, registry: PluginRegistry, test_metadata: PluginMetadata
+        self, registry: PluginRegistry, test_metadata: PluginMetadata,
     ) -> None:
         """Test activate_all handles exceptions."""
         exception_plugin = ExceptionTestPlugin(test_metadata)
@@ -447,7 +449,7 @@ class TestPluginRegistry:
         assert results["test-plugin"] is False
 
     def test_deactivate_all(
-        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin
+        self, registry: PluginRegistry, test_plugin: ConcreteTestPlugin,
     ) -> None:
         """Test deactivating all plugins."""
         registry.register(test_plugin)
@@ -458,7 +460,7 @@ class TestPluginRegistry:
         assert test_plugin.deactivate_called is True
 
     def test_deactivate_all_with_exception(
-        self, registry: PluginRegistry, test_metadata: PluginMetadata
+        self, registry: PluginRegistry, test_metadata: PluginMetadata,
     ) -> None:
         """Test deactivate_all handles exceptions."""
         exception_plugin = ExceptionTestPlugin(test_metadata)
@@ -469,7 +471,7 @@ class TestPluginRegistry:
         assert results["test-plugin"] is False
 
     def test_get_stats(
-        self, registry: PluginRegistry, test_metadata: PluginMetadata
+        self, registry: PluginRegistry, test_metadata: PluginMetadata,
     ) -> None:
         """Test registry statistics."""
         hook_plugin = ConcreteTestPlugin(test_metadata)
@@ -539,7 +541,7 @@ class TestCustomHookDefinition:
     def test_hook_definition_defaults(self) -> None:
         """Test hook definition with default values."""
         hook_def = CustomHookDefinition(
-            name="simple-hook", description="Simple test hook"
+            name="simple-hook", description="Simple test hook",
         )
 
         assert hook_def.command is None
@@ -665,7 +667,7 @@ class TestCustomHookPlugin:
         assert plugin.should_run_hook("no-pattern-hook", []) is False
 
     def test_should_run_hook_no_files_required(
-        self, hook_metadata: PluginMetadata
+        self, hook_metadata: PluginMetadata,
     ) -> None:
         """Test hook execution when no files are required."""
         hook_def = CustomHookDefinition(
@@ -680,7 +682,7 @@ class TestCustomHookPlugin:
         assert plugin.should_run_hook("no-files-hook", [Path("file.py")]) is True
 
     def test_execute_hook_success(
-        self, hook_metadata: PluginMetadata, mock_console: Console
+        self, hook_metadata: PluginMetadata, mock_console: Console,
     ) -> None:
         """Test successful hook execution."""
         hook_def = CustomHookDefinition(
@@ -703,18 +705,18 @@ class TestCustomHookPlugin:
             mock_run.assert_called_once()
 
     def test_execute_hook_failure(
-        self, hook_metadata: PluginMetadata, mock_console: Console
+        self, hook_metadata: PluginMetadata, mock_console: Console,
     ) -> None:
         """Test failed hook execution."""
         hook_def = CustomHookDefinition(
-            name="fail-hook", description="Hook that fails", command=["false"]
+            name="fail-hook", description="Hook that fails", command=["false"],
         )
         plugin = CustomHookPlugin(hook_metadata, [hook_def])
         plugin.initialize(mock_console, Path("/test"))
 
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(
-                returncode=1, stderr="Error occurred", stdout=""
+                returncode=1, stderr="Error occurred", stdout="",
             )
 
             result = plugin.execute_hook("fail-hook", [], Mock())
@@ -724,7 +726,7 @@ class TestCustomHookPlugin:
             assert result.issues_found == ["Error occurred"]
 
     def test_execute_hook_timeout(
-        self, hook_metadata: PluginMetadata, mock_console: Console
+        self, hook_metadata: PluginMetadata, mock_console: Console,
     ) -> None:
         """Test hook execution timeout."""
         hook_def = CustomHookDefinition(
@@ -747,7 +749,7 @@ class TestCustomHookPlugin:
             assert "timed out" in result.issues_found[0]
 
     def test_execute_hook_exception(
-        self, hook_metadata: PluginMetadata, mock_console: Console
+        self, hook_metadata: PluginMetadata, mock_console: Console,
     ) -> None:
         """Test hook execution with exception."""
         hook_def = CustomHookDefinition(
@@ -778,7 +780,7 @@ class TestCustomHookPlugin:
     def test_execute_hook_no_command(self, hook_metadata: PluginMetadata) -> None:
         """Test executing hook with no command."""
         hook_def = CustomHookDefinition(
-            name="no-command-hook", description="Hook without command"
+            name="no-command-hook", description="Hook without command",
         )
         plugin = CustomHookPlugin(hook_metadata, [hook_def])
 
@@ -813,19 +815,19 @@ class TestHookPluginRegistry:
             description="Test hook plugin",
         )
         hook_def = CustomHookDefinition(
-            name="test-hook", description="Test hook", command=["echo", "test"]
+            name="test-hook", description="Test hook", command=["echo", "test"],
         )
         return CustomHookPlugin(metadata, [hook_def])
 
     def test_register_hook_plugin(
-        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin
+        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin,
     ) -> None:
         """Test registering hook plugin."""
         result = hook_registry.register_hook_plugin(test_hook_plugin)
         assert result is True
 
     def test_register_duplicate_hook_plugin(
-        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin
+        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin,
     ) -> None:
         """Test registering duplicate hook plugin."""
         hook_registry.register_hook_plugin(test_hook_plugin)
@@ -834,7 +836,7 @@ class TestHookPluginRegistry:
         assert result is False
 
     def test_unregister_hook_plugin(
-        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin
+        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin,
     ) -> None:
         """Test unregistering hook plugin."""
         hook_registry.register_hook_plugin(test_hook_plugin)
@@ -846,7 +848,7 @@ class TestHookPluginRegistry:
         assert result is False
 
     def test_get_all_custom_hooks(
-        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin
+        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin,
     ) -> None:
         """Test getting all custom hooks."""
         hook_registry.register_hook_plugin(test_hook_plugin)
@@ -857,7 +859,7 @@ class TestHookPluginRegistry:
         assert hooks["test-hook"].name == "test-hook"
 
     def test_get_all_custom_hooks_disabled(
-        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin
+        self, hook_registry: HookPluginRegistry, test_hook_plugin: CustomHookPlugin,
     ) -> None:
         """Test getting custom hooks skips disabled plugins."""
         test_hook_plugin.disable()
@@ -886,7 +888,7 @@ class TestHookPluginRegistry:
             )
 
             result = hook_registry.execute_custom_hook(
-                "test-hook", [Path("test.py")], mock_options
+                "test-hook", [Path("test.py")], mock_options,
             )
 
             assert result is not None
@@ -894,7 +896,7 @@ class TestHookPluginRegistry:
             mock_execute.assert_called_once()
 
     def test_execute_custom_hook_not_found(
-        self, hook_registry: HookPluginRegistry, mock_options: OptionsProtocol
+        self, hook_registry: HookPluginRegistry, mock_options: OptionsProtocol,
     ) -> None:
         """Test executing non-existent custom hook."""
         result = hook_registry.execute_custom_hook("non-existent", [], mock_options)
@@ -1048,7 +1050,7 @@ invalid python syntax here <<<
 
         try:
             with pytest.raises(
-                PluginLoadError, match="Failed to execute plugin module"
+                PluginLoadError, match="Failed to execute plugin module",
             ):
                 loader.load_plugin_from_file(tmp_path)
         finally:
@@ -1067,7 +1069,7 @@ invalid python syntax here <<<
                     "description": "Hook from JSON",
                     "command": ["echo", "json"],
                     "stage": "comprehensive",  # Use valid HookStage value
-                }
+                },
             ],
         }
 
@@ -1102,7 +1104,7 @@ invalid python syntax here <<<
             tmp_path.unlink()
 
     def test_load_plugin_from_config_unsupported_format(
-        self, loader: PluginLoader
+        self, loader: PluginLoader,
     ) -> None:
         """Test loading from unsupported config format."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as tmp:
@@ -1190,7 +1192,7 @@ class TestPluginDiscovery:
             assert result == []
 
     def test_discover_in_directory_with_plugins(
-        self, discovery: PluginDiscovery
+        self, discovery: PluginDiscovery,
     ) -> None:
         """Test discovery in directory with plugin files."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1211,7 +1213,7 @@ class TestPluginDiscovery:
             (tmp_path / "readme.txt").write_text("not a plugin")
             (tmp_path / "__init__.py").write_text("init file")
             (tmp_path / "test_something.py").write_text(
-                "test file"
+                "test file",
             )  # Starts with "test_"
             (tmp_path / "helper.py").write_text("helper file")  # No plugin indicators
 
@@ -1242,7 +1244,7 @@ class TestPluginDiscovery:
 
             # Non-recursive should only find top level
             result_non_recursive = discovery.discover_in_directory(
-                tmp_path, recursive=False
+                tmp_path, recursive=False,
             )
             names_non_recursive = [p.name for p in result_non_recursive]
             assert "top_plugin.py" in names_non_recursive
@@ -1345,7 +1347,7 @@ class TestPluginManager:
     def test_initialize_no_plugins(self, plugin_manager: PluginManager) -> None:
         """Test initialization with no plugins found."""
         with patch.object(
-            plugin_manager.discovery, "auto_discover_and_load"
+            plugin_manager.discovery, "auto_discover_and_load",
         ) as mock_discover:
             mock_discover.return_value = {}
 
@@ -1356,7 +1358,7 @@ class TestPluginManager:
     def test_initialize_with_plugins(self, plugin_manager: PluginManager) -> None:
         """Test initialization with plugins."""
         with patch.object(
-            plugin_manager.discovery, "auto_discover_and_load"
+            plugin_manager.discovery, "auto_discover_and_load",
         ) as mock_discover:
             mock_discover.return_value = {"plugin1.py": True, "plugin2.py": True}
 
@@ -1368,7 +1370,7 @@ class TestPluginManager:
                 assert plugin_manager._initialized is True
 
     def test_initialize_already_initialized(
-        self, plugin_manager: PluginManager
+        self, plugin_manager: PluginManager,
     ) -> None:
         """Test initialization when already initialized."""
         plugin_manager._initialized = True
@@ -1379,7 +1381,7 @@ class TestPluginManager:
     def test_initialize_error(self, plugin_manager: PluginManager) -> None:
         """Test initialization with error."""
         with patch.object(
-            plugin_manager.discovery, "auto_discover_and_load"
+            plugin_manager.discovery, "auto_discover_and_load",
         ) as mock_discover:
             mock_discover.side_effect = Exception("Discovery failed")
 
@@ -1403,7 +1405,7 @@ class TestPluginManager:
             mock_deactivate.assert_called_once()
 
     def test_list_plugins_all(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test listing all plugins."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -1417,7 +1419,7 @@ class TestPluginManager:
         assert result["plugins"][0]["metadata"]["name"] == "test-plugin"
 
     def test_list_plugins_by_type(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test listing plugins by type."""
         hook_plugin = ConcreteTestPlugin(test_metadata)
@@ -1442,7 +1444,7 @@ class TestPluginManager:
         assert formatter_result["plugins"][0]["metadata"]["name"] == "formatter-plugin"
 
     def test_enable_plugin_success(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test enabling plugin successfully."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -1460,7 +1462,7 @@ class TestPluginManager:
         assert result is False
 
     def test_enable_plugin_already_enabled(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test enabling already enabled plugin."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -1470,7 +1472,7 @@ class TestPluginManager:
         assert result is True
 
     def test_enable_plugin_activation_failure(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test enabling plugin with activation failure."""
         plugin = FailingTestPlugin(test_metadata)
@@ -1482,7 +1484,7 @@ class TestPluginManager:
         assert plugin.enabled is False
 
     def test_disable_plugin_success(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test disabling plugin successfully."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -1499,7 +1501,7 @@ class TestPluginManager:
         assert result is False
 
     def test_disable_plugin_already_disabled(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test disabling already disabled plugin."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -1510,7 +1512,7 @@ class TestPluginManager:
         assert result is True
 
     def test_reload_plugin(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test reloading plugin."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -1520,7 +1522,7 @@ class TestPluginManager:
         assert result is True
 
     def test_configure_plugin_success(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test configuring plugin successfully."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -1536,7 +1538,7 @@ class TestPluginManager:
         assert result is False
 
     def test_configure_plugin_validation_error(
-        self, plugin_manager: PluginManager, test_metadata: PluginMetadata
+        self, plugin_manager: PluginManager, test_metadata: PluginMetadata,
     ) -> None:
         """Test configuring plugin with validation error."""
         plugin = ConcreteTestPlugin(test_metadata)
@@ -1591,7 +1593,7 @@ plugin = InstallPlugin(metadata)
     def test_get_available_custom_hooks(self, plugin_manager: PluginManager) -> None:
         """Test getting available custom hooks."""
         with patch.object(
-            plugin_manager.hook_registry, "get_all_custom_hooks"
+            plugin_manager.hook_registry, "get_all_custom_hooks",
         ) as mock_get_hooks:
             mock_get_hooks.return_value = {"hook1": Mock(), "hook2": Mock()}
 
@@ -1599,18 +1601,18 @@ plugin = InstallPlugin(metadata)
             assert hooks == ["hook1", "hook2"]
 
     def test_execute_custom_hook(
-        self, plugin_manager: PluginManager, mock_options: OptionsProtocol
+        self, plugin_manager: PluginManager, mock_options: OptionsProtocol,
     ) -> None:
         """Test executing custom hook."""
         files = [Path("test.py")]
 
         with patch.object(
-            plugin_manager.hook_registry, "execute_custom_hook"
+            plugin_manager.hook_registry, "execute_custom_hook",
         ) as mock_execute:
             mock_execute.return_value = Mock()
 
             result = plugin_manager.execute_custom_hook(
-                "test-hook", files, mock_options
+                "test-hook", files, mock_options,
             )
 
             mock_execute.assert_called_once_with("test-hook", files, mock_options)

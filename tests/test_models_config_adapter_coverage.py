@@ -1,5 +1,4 @@
-"""
-Tests for models.config_adapter module to increase coverage significantly.
+"""Tests for models.config_adapter module to increase coverage significantly.
 Targeting 68% → 85%+ coverage (~20 statements).
 """
 
@@ -78,14 +77,14 @@ class TestOptionsAdapter:
 
         # Create simple object without the problematic Mock behavior
         class MinimalOptions:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.clean = False
                 self.test = True
                 self.verbose = False
 
         return MinimalOptions()
 
-    def test_from_options_protocol_comprehensive(self, mock_options):
+    def test_from_options_protocol_comprehensive(self, mock_options) -> None:
         """Test converting comprehensive OptionsProtocol to WorkflowOptions."""
         workflow_options = OptionsAdapter.from_options_protocol(mock_options)
 
@@ -139,7 +138,7 @@ class TestOptionsAdapter:
         assert workflow_options.progress.resume_from == "session123"
         assert workflow_options.progress.progress_file == "progress.json"
 
-    def test_from_options_protocol_with_defaults(self, minimal_options):
+    def test_from_options_protocol_with_defaults(self, minimal_options) -> None:
         """Test converting OptionsProtocol with missing attributes uses defaults."""
         workflow_options = OptionsAdapter.from_options_protocol(minimal_options)
 
@@ -162,7 +161,7 @@ class TestOptionsAdapter:
         assert workflow_options.execution.async_mode is False  # Default
         assert workflow_options.execution.no_config_updates is False  # Default
 
-    def test_to_options_protocol(self):
+    def test_to_options_protocol(self) -> None:
         """Test converting WorkflowOptions to LegacyOptionsWrapper."""
         workflow_options = WorkflowOptions()  # Use defaults
 
@@ -230,24 +229,24 @@ class TestLegacyOptionsWrapper:
         """Create LegacyOptionsWrapper instance."""
         return LegacyOptionsWrapper(workflow_options)
 
-    def test_wrapper_initialization(self, workflow_options):
+    def test_wrapper_initialization(self, workflow_options) -> None:
         """Test LegacyOptionsWrapper initialization."""
         wrapper = LegacyOptionsWrapper(workflow_options)
         assert wrapper._options is workflow_options
 
-    def test_git_properties(self, wrapper):
+    def test_git_properties(self, wrapper) -> None:
         """Test git-related properties."""
         assert wrapper.commit is False
         assert wrapper.create_pr is True
 
-    def test_execution_properties(self, wrapper):
+    def test_execution_properties(self, wrapper) -> None:
         """Test execution-related properties."""
         assert wrapper.interactive is True
         assert wrapper.verbose is False
         assert wrapper.no_config_updates is False
         assert wrapper.async_mode is True
 
-    def test_cleaning_properties(self, wrapper):
+    def test_cleaning_properties(self, wrapper) -> None:
         """Test cleaning-related properties."""
         assert wrapper.clean is True
         assert wrapper.update_docs is True
@@ -255,7 +254,7 @@ class TestLegacyOptionsWrapper:
         assert wrapper.compress_docs is True
         assert wrapper.auto_compress_docs is False
 
-    def test_publishing_properties(self, wrapper):
+    def test_publishing_properties(self, wrapper) -> None:
         """Test publishing-related properties."""
         assert wrapper.cleanup_pypi is False
         assert wrapper.keep_releases == 20
@@ -265,7 +264,7 @@ class TestLegacyOptionsWrapper:
         assert wrapper.no_git_tags is True
         assert wrapper.skip_version_check is False
 
-    def test_testing_properties(self, wrapper):
+    def test_testing_properties(self, wrapper) -> None:
         """Test testing-related properties."""
         assert wrapper.test is True
         assert wrapper.benchmark is True
@@ -274,12 +273,12 @@ class TestLegacyOptionsWrapper:
         assert wrapper.test_workers == 8
         assert wrapper.test_timeout == 600
 
-    def test_ai_properties(self, wrapper):
+    def test_ai_properties(self, wrapper) -> None:
         """Test AI-related properties."""
         assert wrapper.ai_agent is False
         assert wrapper.start_mcp_server is True
 
-    def test_hooks_properties(self, wrapper):
+    def test_hooks_properties(self, wrapper) -> None:
         """Test hooks-related properties."""
         assert wrapper.skip_hooks is True
         assert wrapper.update_precommit is False
@@ -287,7 +286,7 @@ class TestLegacyOptionsWrapper:
         assert wrapper.enable_pyrefly is False
         assert wrapper.enable_ty is True
 
-    def test_progress_properties(self, wrapper):
+    def test_progress_properties(self, wrapper) -> None:
         """Test progress-related properties."""
         assert wrapper.track_progress is False
         assert wrapper.resume_from == "test_session"
@@ -297,7 +296,7 @@ class TestLegacyOptionsWrapper:
 class TestIntegrationBothDirections:
     """Test integration between both conversion directions."""
 
-    def test_round_trip_conversion(self):
+    def test_round_trip_conversion(self) -> None:
         """Test converting from OptionsProtocol to WorkflowOptions and back."""
         # Create mock options
         original_options = Mock(spec=OptionsProtocol)
@@ -334,7 +333,7 @@ class TestIntegrationBothDirections:
         assert legacy_wrapper.update_docs == original_options.update_docs
         assert legacy_wrapper.cleanup_pypi == original_options.cleanup_pypi
 
-    def test_complex_options_preservation(self):
+    def test_complex_options_preservation(self) -> None:
         """Test that complex option values are preserved correctly."""
         original_options = Mock(spec=OptionsProtocol)
         original_options.benchmark_regression_threshold = 0.15
@@ -354,7 +353,7 @@ class TestIntegrationBothDirections:
         assert legacy_wrapper.resume_from == "complex_session_id_123"
         assert legacy_wrapper.progress_file == "/path/to/complex/progress.json"
 
-    def test_none_values_handling(self):
+    def test_none_values_handling(self) -> None:
         """Test handling of None values in options."""
         original_options = Mock(spec=OptionsProtocol)
         original_options.publish = None
@@ -376,7 +375,7 @@ class TestIntegrationBothDirections:
 class TestEdgeCasesAndDefaults:
     """Test edge cases and default value handling."""
 
-    def test_empty_options_object(self):
+    def test_empty_options_object(self) -> None:
         """Test handling of options object with no attributes."""
 
         # Create simple object without any attributes
@@ -392,12 +391,12 @@ class TestEdgeCasesAndDefaults:
         assert workflow_options.testing.test is False  # Default
         assert workflow_options.execution.verbose is False  # Default
 
-    def test_default_value_consistency(self):
+    def test_default_value_consistency(self) -> None:
         """Test that default values are consistent across conversions."""
 
         # Create options with minimal attributes
         class MinimalOptions:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.clean = False
                 self.verbose = True
 
@@ -414,7 +413,7 @@ class TestEdgeCasesAndDefaults:
         assert workflow_options.testing.benchmark is False  # Default
         assert workflow_options.hooks.skip_hooks is False  # Default
 
-    def test_boolean_type_safety(self):
+    def test_boolean_type_safety(self) -> None:
         """Test that boolean values are properly handled."""
         options = Mock(spec=OptionsProtocol)
 

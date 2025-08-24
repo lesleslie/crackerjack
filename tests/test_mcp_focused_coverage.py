@@ -379,7 +379,7 @@ class TestMCPCoreTools:
 
         # Test without suggestions
         detected_errors_no_sugg, suggestions_no_sugg = _detect_errors_and_suggestions(
-            error_text, False
+            error_text, False,
         )
         assert detected_errors_no_sugg == detected_errors
         assert suggestions_no_sugg == []
@@ -419,7 +419,7 @@ class TestMCPMonitoringTools:
 
         # Test when fast stage incomplete
         mock_state_manager.get_stage_status = Mock(
-            side_effect=lambda stage: "pending" if stage == "fast" else "completed"
+            side_effect=lambda stage: "pending" if stage == "fast" else "completed",
         )
 
         result = _determine_next_action(mock_state_manager)
@@ -462,7 +462,7 @@ class TestMCPBatchedSaver:
 
     @pytest.mark.asyncio
     async def test_batched_saver_lifecycle(
-        self, batched_saver: BatchedStateSaver
+        self, batched_saver: BatchedStateSaver,
     ) -> None:
         """Test batched saver lifecycle."""
         assert not batched_saver._running

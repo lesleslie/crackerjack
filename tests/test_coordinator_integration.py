@@ -19,13 +19,13 @@ class MockOptions:
         self.autofix = kwargs.get("autofix", False)
         self.skip_hooks = kwargs.get("skip_hooks", False)
         self.track_progress = kwargs.get("track_progress", False)
-        self.progress_file = kwargs.get("progress_file", None)
+        self.progress_file = kwargs.get("progress_file")
         self.no_config_updates = kwargs.get("no_config_updates", False)
         self.update_precommit = kwargs.get("update_precommit", False)
         self.interactive = kwargs.get("interactive", False)
-        self.publish = kwargs.get("publish", None)
-        self.all = kwargs.get("all", None)
-        self.bump = kwargs.get("bump", None)
+        self.publish = kwargs.get("publish")
+        self.all = kwargs.get("all")
+        self.bump = kwargs.get("bump")
         self.commit = kwargs.get("commit", False)
         self.no_git_tags = kwargs.get("no_git_tags", False)
 
@@ -195,7 +195,7 @@ class TestWorkflowPipeline:
         assert result is True
         session.initialize_session_tracking.assert_called_once_with(options)
         session.track_task.assert_called_once_with(
-            "workflow", "Complete crackerjack workflow"
+            "workflow", "Complete crackerjack workflow",
         )
         session.finalize_session.assert_called_once()
 
@@ -252,11 +252,11 @@ class TestWorkflowOrchestrator:
         orchestrator.pipeline = MagicMock()
 
         # Make the pipeline method return a coroutine
-        async def mock_run_workflow(options):
+        async def mock_run_workflow(options) -> bool:
             return True
 
         orchestrator.pipeline.run_complete_workflow = MagicMock(
-            side_effect=mock_run_workflow
+            side_effect=mock_run_workflow,
         )
 
         options = MockOptions()

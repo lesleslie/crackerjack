@@ -2,7 +2,7 @@ import time
 from collections import deque
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 from rich.text import Text
@@ -13,7 +13,6 @@ from textual.containers import (
     Horizontal,
 )
 from textual.reactive import reactive
-from textual.timer import Timer
 from textual.widgets import (
     Button,
     DataTable,
@@ -25,8 +24,12 @@ from textual.widgets import (
     TabPane,
 )
 
-from ..services import server_manager
+from crackerjack.services import server_manager
+
 from .progress_components import JobDataCollector, TerminalRestorer
+
+if TYPE_CHECKING:
+    from textual.timer import Timer
 
 
 class MetricCard(Static):
@@ -137,7 +140,7 @@ class JobsTableWidget(Static):
     def on_mount(self) -> None:
         table = self.query_one("#jobs_table", DataTable)
         table.add_columns(
-            "Job ID", "Status", "Stage", "Progress", "Started", "Duration", "Issues"
+            "Job ID", "Status", "Stage", "Progress", "Started", "Duration", "Issues",
         )
         table.zebra_stripes = True
         table.show_header = True
@@ -242,17 +245,17 @@ class PerformanceWidget(Static):
         ratio = value / max_value
         if ratio >= 0.875:
             return "█"
-        elif ratio >= 0.75:
+        if ratio >= 0.75:
             return "▇"
-        elif ratio >= 0.625:
+        if ratio >= 0.625:
             return "▆"
-        elif ratio >= 0.5:
+        if ratio >= 0.5:
             return "▅"
-        elif ratio >= 0.375:
+        if ratio >= 0.375:
             return "▄"
-        elif ratio >= 0.25:
+        if ratio >= 0.25:
             return "▃"
-        elif ratio >= 0.125:
+        if ratio >= 0.125:
             return "▂"
         return "▁"
 
@@ -492,7 +495,7 @@ class CrackerjackDashboard(App):
             table.clear()
 
             active_count = len(
-                [j for j in self.jobs_data.values() if j.get("status") != "completed"]
+                [j for j in self.jobs_data.values() if j.get("status") != "completed"],
             )
             jobs_metric = self.query_one("#jobs_metric", MetricCard)
             jobs_metric.update_metric(str(active_count))
@@ -506,7 +509,7 @@ class CrackerjackDashboard(App):
                 stage = job_data.get("current_stage", "N/A")
                 progress = job_data.get("progress", 0)
                 started = datetime.fromtimestamp(job_data.get("timestamp", 0)).strftime(
-                    "%H:%M:%S"
+                    "%H:%M:%S",
                 )
                 duration = self._format_duration(job_data.get("duration", 0))
                 issues = job_data.get("issues_found", 0)
@@ -545,7 +548,7 @@ class CrackerjackDashboard(App):
     async def _update_performance_metrics(self) -> None:
         try:
             performance_widget = self.query_one(
-                "#performance_widget", PerformanceWidget
+                "#performance_widget", PerformanceWidget,
             )
 
             cpu = self.performance_data.get("cpu", 0)
@@ -577,12 +580,11 @@ class CrackerjackDashboard(App):
     def _format_duration(self, seconds: float) -> str:
         if seconds < 60:
             return f"{seconds: .1f}s"
-        elif seconds < 3600:
+        if seconds < 3600:
             minutes = seconds / 60
             return f"{minutes: .1f}m"
-        else:
-            hours = seconds / 3600
-            return f"{hours: .1f}h"
+        hours = seconds / 3600
+        return f"{hours: .1f}h"
 
     def action_refresh(self) -> None:
         self.call_later(self.update_dashboard)

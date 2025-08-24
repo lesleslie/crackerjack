@@ -38,7 +38,7 @@ def temp_file():
 class TestCleaningStepResult:
     """Test CleaningStepResult enum."""
 
-    def test_enum_values(self):
+    def test_enum_values(self) -> None:
         """Test enum has expected values."""
         assert CleaningStepResult.SUCCESS.value == "success"
         assert CleaningStepResult.FAILED.value == "failed"
@@ -48,7 +48,7 @@ class TestCleaningStepResult:
 class TestCleaningResult:
     """Test CleaningResult dataclass."""
 
-    def test_cleaning_result_creation(self):
+    def test_cleaning_result_creation(self) -> None:
         """Test CleaningResult can be created with required fields."""
         result = CleaningResult(
             file_path=Path("test.py"),
@@ -72,13 +72,13 @@ class TestCleaningResult:
 class TestFileProcessor:
     """Test FileProcessor class."""
 
-    def test_file_processor_creation(self, console):
+    def test_file_processor_creation(self, console) -> None:
         """Test FileProcessor can be created."""
         processor = FileProcessor(console=console)
         assert processor.console == console
         assert processor.logger is not None
 
-    def test_read_file_safely(self, console, temp_file):
+    def test_read_file_safely(self, console, temp_file) -> None:
         """Test reading a file safely."""
         processor = FileProcessor(console=console)
 
@@ -86,7 +86,7 @@ class TestFileProcessor:
         assert isinstance(content, str)
         assert "def example()" in content
 
-    def test_read_file_safely_nonexistent(self, console):
+    def test_read_file_safely_nonexistent(self, console) -> None:
         """Test reading nonexistent file raises error."""
         processor = FileProcessor(console=console)
 
@@ -94,7 +94,7 @@ class TestFileProcessor:
             processor.read_file_safely(Path("/nonexistent/file.py"))
         assert "Failed to read file" in str(exc_info.value)
 
-    def test_write_file_safely(self, console, temp_file):
+    def test_write_file_safely(self, console, temp_file) -> None:
         """Test writing a file safely."""
         processor = FileProcessor(console=console)
         test_content = "# Test content\nprint('hello')\n"
@@ -105,7 +105,7 @@ class TestFileProcessor:
         written_content = temp_file.read_text()
         assert written_content == test_content
 
-    def test_backup_file(self, console, temp_file):
+    def test_backup_file(self, console, temp_file) -> None:
         """Test creating a backup file."""
         processor = FileProcessor(console=console)
         original_content = temp_file.read_text()
@@ -123,13 +123,13 @@ class TestFileProcessor:
 class TestCleaningErrorHandler:
     """Test CleaningErrorHandler class."""
 
-    def test_error_handler_creation(self, console):
+    def test_error_handler_creation(self, console) -> None:
         """Test CleaningErrorHandler can be created."""
         handler = CleaningErrorHandler(console=console)
         assert handler.console == console
         assert handler.logger is not None
 
-    def test_handle_file_error(self, console, capsys):
+    def test_handle_file_error(self, console, capsys) -> None:
         """Test error handling prints warning."""
         handler = CleaningErrorHandler(console=console)
         test_error = ValueError("Test error")
@@ -147,7 +147,7 @@ class TestCleaningErrorHandler:
         assert "Warning: test_step failed" in output
         assert "test.py" in output
 
-    def test_log_cleaning_result_success(self, console):
+    def test_log_cleaning_result_success(self, console) -> None:
         """Test logging successful cleaning result."""
         handler = CleaningErrorHandler(console=console)
 
@@ -177,12 +177,12 @@ class TestCleaningErrorHandler:
 class TestDocstringStep:
     """Test DocstringStep class."""
 
-    def test_docstring_step_creation(self):
+    def test_docstring_step_creation(self) -> None:
         """Test DocstringStep can be created."""
         step = DocstringStep()
         assert step.name == "remove_docstrings"
 
-    def test_docstring_removal(self):
+    def test_docstring_removal(self) -> None:
         """Test docstring removal from code."""
         step = DocstringStep()
         code = '''
@@ -205,7 +205,7 @@ def func():
 class TestCodeCleaner:
     """Test CodeCleaner class."""
 
-    def test_code_cleaner_creation(self, console):
+    def test_code_cleaner_creation(self, console) -> None:
         """Test CodeCleaner can be created."""
         cleaner = CodeCleaner(console=console)
         assert cleaner.console == console
@@ -213,7 +213,7 @@ class TestCodeCleaner:
         assert cleaner.error_handler is not None
         assert cleaner.pipeline is not None
 
-    def test_code_cleaner_has_methods(self, console):
+    def test_code_cleaner_has_methods(self, console) -> None:
         """Test CodeCleaner has expected methods."""
         cleaner = CodeCleaner(console=console)
 
@@ -225,7 +225,7 @@ class TestCodeCleaner:
         assert callable(cleaner.clean_files)
         assert callable(cleaner.should_process_file)
 
-    def test_should_process_file_logic(self, console):
+    def test_should_process_file_logic(self, console) -> None:
         """Test file processing filter logic without calling broken methods."""
         cleaner = CodeCleaner(console=console)
 
@@ -234,7 +234,7 @@ class TestCodeCleaner:
         assert cleaner.should_process_file(Path("test.txt")) is False
         assert cleaner.should_process_file(Path(".hidden.py")) is False
 
-    def test_file_patterns(self, console):
+    def test_file_patterns(self, console) -> None:
         """Test file pattern matching."""
         cleaner = CodeCleaner(console=console)
 
@@ -252,10 +252,10 @@ class TestCodeCleaner:
             assert isinstance(result, bool)
             if expected:
                 # Only assert True for cases we're confident about
-                if file_path.name == "regular.py" or file_path.name == "main.py":
+                if file_path.name in {"regular.py", "main.py"}:
                     assert result is True
 
-    def test_code_cleaner_class_structure(self, console):
+    def test_code_cleaner_class_structure(self, console) -> None:
         """Test the basic structure of CodeCleaner class."""
         cleaner = CodeCleaner(console=console)
 
@@ -271,7 +271,7 @@ class TestCodeCleaner:
         assert cleaner.error_handler is not None
         assert cleaner.pipeline is not None
 
-    def test_dependency_injection(self, console):
+    def test_dependency_injection(self, console) -> None:
         """Test dependency injection pattern in CodeCleaner."""
         # Create custom dependencies
         file_processor = FileProcessor(console=console)
@@ -279,7 +279,7 @@ class TestCodeCleaner:
 
         # Create CodeCleaner with custom dependencies
         cleaner = CodeCleaner(
-            console=console, file_processor=file_processor, error_handler=error_handler
+            console=console, file_processor=file_processor, error_handler=error_handler,
         )
 
         # Verify dependencies are injected correctly
@@ -290,26 +290,26 @@ class TestCodeCleaner:
 class TestCleaningPipeline:
     """Test CleaningPipeline class."""
 
-    def test_pipeline_creation(self, console):
+    def test_pipeline_creation(self, console) -> None:
         """Test CleaningPipeline can be created."""
         file_processor = FileProcessor(console=console)
         error_handler = CleaningErrorHandler(console=console)
 
         pipeline = CleaningPipeline(
-            file_processor=file_processor, error_handler=error_handler, console=console
+            file_processor=file_processor, error_handler=error_handler, console=console,
         )
 
         assert pipeline.file_processor == file_processor
         assert pipeline.error_handler == error_handler
         assert pipeline.console == console
 
-    def test_apply_cleaning_pipeline(self, console, temp_file):
+    def test_apply_cleaning_pipeline(self, console, temp_file) -> None:
         """Test applying cleaning pipeline to code."""
         file_processor = FileProcessor(console=console)
         error_handler = CleaningErrorHandler(console=console)
 
         pipeline = CleaningPipeline(
-            file_processor=file_processor, error_handler=error_handler, console=console
+            file_processor=file_processor, error_handler=error_handler, console=console,
         )
 
         # Create a mock cleaning step
@@ -321,7 +321,7 @@ class TestCleaningPipeline:
 
         test_code = "def func(): pass"
         result = pipeline._apply_cleaning_pipeline(
-            test_code, temp_file, [MockCleaningStep()]
+            test_code, temp_file, [MockCleaningStep()],
         )
 
         assert isinstance(result, pipeline.PipelineResult)
@@ -334,7 +334,7 @@ class TestCleaningPipeline:
 class TestIntegration:
     """Integration tests for working components."""
 
-    def test_file_processor_integration(self, console, temp_file):
+    def test_file_processor_integration(self, console, temp_file) -> None:
         """Test FileProcessor integration with real files."""
         processor = FileProcessor(console=console)
         original_content = processor.read_file_safely(temp_file)
@@ -351,7 +351,7 @@ class TestIntegration:
         # Cleanup
         backup_path.unlink()
 
-    def test_error_handler_integration(self, console):
+    def test_error_handler_integration(self, console) -> None:
         """Test CleaningErrorHandler with actual errors."""
         handler = CleaningErrorHandler(console=console)
 
@@ -369,7 +369,7 @@ class TestIntegration:
         # This should not raise an exception
         handler.log_cleaning_result(result)
 
-    def test_docstring_step_edge_cases(self):
+    def test_docstring_step_edge_cases(self) -> None:
         """Test DocstringStep with various code patterns."""
         step = DocstringStep()
 
@@ -384,14 +384,14 @@ class TestIntegration:
         result = step(invalid_code, Path("test.py"))
         assert isinstance(result, str)
 
-    def test_additional_coverage_targets(self, console, temp_file):
+    def test_additional_coverage_targets(self, console, temp_file) -> None:
         """Additional tests to increase coverage on key modules."""
         # Import and test additional modules for coverage
         from crackerjack.errors import ErrorCode, ExecutionError
 
         # Test ExecutionError creation
         error = ExecutionError(
-            message="Test error", error_code=ErrorCode.FILE_READ_ERROR
+            message="Test error", error_code=ErrorCode.FILE_READ_ERROR,
         )
         assert error.message == "Test error"
         assert error.error_code == ErrorCode.FILE_READ_ERROR
@@ -413,7 +413,7 @@ class TestIntegration:
             assert "Failed to create backup" in str(e)
             assert e.error_code == ErrorCode.FILE_WRITE_ERROR
 
-    def test_models_and_protocols(self):
+    def test_models_and_protocols(self) -> None:
         """Test models and protocols for additional coverage."""
         from crackerjack.models.config import CleaningConfig, HookConfig
         from crackerjack.models.task import Task, TaskStatus
@@ -425,7 +425,7 @@ class TestIntegration:
         assert config.force_update_docs is False
 
         config_custom = CleaningConfig(
-            clean=False, update_docs=True, compress_docs=True
+            clean=False, update_docs=True, compress_docs=True,
         )
         assert config_custom.clean is False
         assert config_custom.update_docs is True
@@ -437,7 +437,7 @@ class TestIntegration:
         assert hook_config.experimental_hooks is False
 
         hook_config_custom = HookConfig(
-            skip_hooks=True, experimental_hooks=True, enable_pyrefly=True
+            skip_hooks=True, experimental_hooks=True, enable_pyrefly=True,
         )
         assert hook_config_custom.skip_hooks is True
         assert hook_config_custom.experimental_hooks is True
@@ -458,12 +458,12 @@ class TestIntegration:
         # Test different statuses
         for status in TaskStatus:
             test_task = Task(
-                id=f"task-{status.value}", name=f"Task {status.value}", status=status
+                id=f"task-{status.value}", name=f"Task {status.value}", status=status,
             )
             assert test_task.status == status
             assert test_task.to_dict()["status"] == status.value
 
-    def test_dynamic_config_coverage(self):
+    def test_dynamic_config_coverage(self) -> None:
         """Test dynamic_config module for additional coverage."""
         from crackerjack import dynamic_config
 
@@ -487,7 +487,7 @@ class TestIntegration:
             # If it fails, that's okay - we're just trying to increase coverage
             pass
 
-    def test_api_module_coverage(self):
+    def test_api_module_coverage(self) -> None:
         """Test api module for additional coverage."""
         from crackerjack import api
 
@@ -524,7 +524,7 @@ class TestIntegration:
             # Function might not exist or have different signature
             pass
 
-    def test_interactive_module_coverage(self):
+    def test_interactive_module_coverage(self) -> None:
         """Test interactive module for additional coverage."""
         from crackerjack import interactive
 

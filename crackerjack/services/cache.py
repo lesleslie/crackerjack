@@ -5,7 +5,7 @@ import typing as t
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from ..models.task import HookResult
+from crackerjack.models.task import HookResult
 
 
 @dataclass
@@ -223,7 +223,7 @@ class FileCache:
 
 class CrackerjackCache:
     def __init__(
-        self, cache_dir: Path | None = None, enable_disk_cache: bool = True
+        self, cache_dir: Path | None = None, enable_disk_cache: bool = True,
     ) -> None:
         self.cache_dir = cache_dir or Path.cwd() / ".crackerjack_cache"
         self.enable_disk_cache = enable_disk_cache
@@ -236,13 +236,13 @@ class CrackerjackCache:
             self.disk_cache = FileCache(self.cache_dir)
 
     def get_hook_result(
-        self, hook_name: str, file_hashes: list[str]
+        self, hook_name: str, file_hashes: list[str],
     ) -> HookResult | None:
         cache_key = self._get_hook_cache_key(hook_name, file_hashes)
         return self.hook_results_cache.get(cache_key)
 
     def set_hook_result(
-        self, hook_name: str, file_hashes: list[str], result: HookResult
+        self, hook_name: str, file_hashes: list[str], result: HookResult,
     ) -> None:
         cache_key = self._get_hook_cache_key(hook_name, file_hashes)
         self.hook_results_cache.set(cache_key, result, ttl_seconds=1800)
@@ -267,7 +267,7 @@ class CrackerjackCache:
         if hook_name:
             keys_to_remove = [
                 key
-                for key in self.hook_results_cache._cache.keys()
+                for key in self.hook_results_cache._cache
                 if key.startswith(f"hook_result:{hook_name}:")
             ]
             for key in keys_to_remove:
@@ -301,6 +301,6 @@ class CrackerjackCache:
 
     def _get_hook_cache_key(self, hook_name: str, file_hashes: list[str]) -> str:
         hash_signature = hashlib.md5(
-            ",".join(sorted(file_hashes)).encode(), usedforsecurity=False
+            ",".join(sorted(file_hashes)).encode(), usedforsecurity=False,
         ).hexdigest()
         return f"hook_result:{hook_name}:{hash_signature}"

@@ -29,6 +29,7 @@ from .tools import (
     register_execution_tools,
     register_monitoring_tools,
     register_progress_tools,
+    register_utility_tools,
 )
 
 console = Console()
@@ -80,7 +81,7 @@ def create_mcp_server() -> t.Any | None:
 
     mcp_app = FastMCP("crackerjack-mcp-server")
 
-    from ..slash_commands import get_slash_command_path
+    from crackerjack.slash_commands import get_slash_command_path
 
     @mcp_app.prompt("run")
     async def get_crackerjack_run_prompt() -> str:
@@ -88,7 +89,8 @@ def create_mcp_server() -> t.Any | None:
             command_path = get_slash_command_path("run")
             return command_path.read_text()
         except Exception as e:
-            raise ValueError(f"Failed to read run command: {e}")
+            msg = f"Failed to read run command: {e}"
+            raise ValueError(msg)
 
     @mcp_app.prompt("init")
     async def get_crackerjack_init_prompt() -> str:
@@ -96,7 +98,8 @@ def create_mcp_server() -> t.Any | None:
             command_path = get_slash_command_path("init")
             return command_path.read_text()
         except Exception as e:
-            raise ValueError(f"Failed to read init command: {e}")
+            msg = f"Failed to read init command: {e}"
+            raise ValueError(msg)
 
     @mcp_app.prompt("status")
     async def get_crackerjack_status_prompt() -> str:
@@ -104,12 +107,14 @@ def create_mcp_server() -> t.Any | None:
             command_path = get_slash_command_path("status")
             return command_path.read_text()
         except Exception as e:
-            raise ValueError(f"Failed to read status command: {e}")
+            msg = f"Failed to read status command: {e}"
+            raise ValueError(msg)
 
     register_core_tools(mcp_app)
     register_execution_tools(mcp_app)
     register_monitoring_tools(mcp_app)
     register_progress_tools(mcp_app)
+    register_utility_tools(mcp_app)
 
     return mcp_app
 
@@ -121,14 +126,13 @@ def handle_mcp_server_command(
     websocket_port: int | None = None,
 ) -> None:
     """Handle MCP server start/stop/restart commands."""
-
     if stop or restart:
         console.print("[yellow]Stopping MCP servers...[/yellow]")
         # Kill any existing MCP server processes
         try:
             result = subprocess.run(
                 ["pkill", "-f", "crackerjack-mcp-server"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -175,9 +179,6 @@ def _stop_websocket_server() -> None:
 
 def main(project_path_arg: str = ".", websocket_port: int | None = None) -> None:
     if not MCP_AVAILABLE:
-        print(
-            "MCP dependencies not available. Install with: uv add 'fastmcp >= 2.10.6'"
-        )
         return
 
     try:

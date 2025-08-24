@@ -1,8 +1,8 @@
-"""
-Tests for interactive.py to increase coverage significantly.
+"""Tests for interactive.py to increase coverage significantly.
 Targeting 31% → 60%+ coverage (~100 statements).
 """
 
+from typing import Never
 from unittest.mock import Mock, patch
 
 import pytest
@@ -23,7 +23,7 @@ from crackerjack.interactive import (
 class TestTaskStatus:
     """Test TaskStatus enum."""
 
-    def test_task_status_values(self):
+    def test_task_status_values(self) -> None:
         """Test TaskStatus enum values."""
         assert TaskStatus.PENDING.name == "PENDING"
         assert TaskStatus.RUNNING.name == "RUNNING"
@@ -35,7 +35,7 @@ class TestTaskStatus:
 class TestWorkflowOptions:
     """Test WorkflowOptions dataclass."""
 
-    def test_workflow_options_defaults(self):
+    def test_workflow_options_defaults(self) -> None:
         """Test WorkflowOptions default values."""
         options = WorkflowOptions()
 
@@ -48,7 +48,7 @@ class TestWorkflowOptions:
         assert options.interactive is True
         assert options.dry_run is False
 
-    def test_workflow_options_custom_values(self):
+    def test_workflow_options_custom_values(self) -> None:
         """Test WorkflowOptions with custom values."""
         options = WorkflowOptions(
             clean=True,
@@ -70,7 +70,7 @@ class TestWorkflowOptions:
         assert options.interactive is False
         assert options.dry_run is True
 
-    def test_from_args_with_complete_args(self):
+    def test_from_args_with_complete_args(self) -> None:
         """Test from_args with complete argument object."""
         mock_args = Mock()
         mock_args.clean = True
@@ -93,12 +93,12 @@ class TestWorkflowOptions:
         assert options.interactive is False
         assert options.dry_run is True
 
-    def test_from_args_with_partial_args(self):
+    def test_from_args_with_partial_args(self) -> None:
         """Test from_args with partial argument object."""
 
         # Use a simple object instead of Mock to avoid Mock's behavior
         class PartialArgs:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.clean = True
                 self.test = False
 
@@ -118,7 +118,7 @@ class TestWorkflowOptions:
 class TestTaskDefinition:
     """Test TaskDefinition dataclass."""
 
-    def test_task_definition_creation(self):
+    def test_task_definition_creation(self) -> None:
         """Test TaskDefinition creation."""
         task_def = TaskDefinition(
             id="test-task",
@@ -136,7 +136,7 @@ class TestTaskDefinition:
         assert task_def.optional is True
         assert task_def.estimated_duration == 5.0
 
-    def test_task_definition_post_init_empty_dependencies(self):
+    def test_task_definition_post_init_empty_dependencies(self) -> None:
         """Test TaskDefinition post_init with None dependencies."""
         task_def = TaskDefinition(
             id="test-task",
@@ -147,7 +147,7 @@ class TestTaskDefinition:
 
         assert task_def.dependencies == []
 
-    def test_task_definition_post_init_existing_dependencies(self):
+    def test_task_definition_post_init_existing_dependencies(self) -> None:
         """Test TaskDefinition post_init with existing dependencies."""
         task_def = TaskDefinition(
             id="test-task",
@@ -178,7 +178,7 @@ class TestTask:
         """Create mock task executor."""
         return Mock(return_value=True)
 
-    def test_task_initialization(self, task_definition, mock_executor):
+    def test_task_initialization(self, task_definition, mock_executor) -> None:
         """Test Task initialization."""
         task = Task(task_definition, mock_executor)
 
@@ -190,7 +190,7 @@ class TestTask:
         assert task.error is None
         assert task.logger is not None
 
-    def test_task_properties(self, task_definition):
+    def test_task_properties(self, task_definition) -> None:
         """Test Task properties."""
         task = Task(task_definition)
 
@@ -198,12 +198,12 @@ class TestTask:
         assert task.description == "A test task"
         assert task.dependencies == ["dep1"]
 
-    def test_task_duration_not_started(self, task_definition):
+    def test_task_duration_not_started(self, task_definition) -> None:
         """Test duration when task not started."""
         task = Task(task_definition)
         assert task.duration is None
 
-    def test_task_duration_started_not_completed(self, task_definition):
+    def test_task_duration_started_not_completed(self, task_definition) -> None:
         """Test duration when task started but not completed."""
         task = Task(task_definition)
 
@@ -213,7 +213,7 @@ class TestTask:
 
         assert duration == 5.0
 
-    def test_task_duration_completed(self, task_definition):
+    def test_task_duration_completed(self, task_definition) -> None:
         """Test duration when task completed."""
         task = Task(task_definition)
 
@@ -223,7 +223,7 @@ class TestTask:
 
         assert task.duration == 5.0
 
-    def test_task_start(self, task_definition):
+    def test_task_start(self, task_definition) -> None:
         """Test task start."""
         task = Task(task_definition)
 
@@ -233,7 +233,7 @@ class TestTask:
         assert task.status == TaskStatus.RUNNING
         assert task.start_time == 100.0
 
-    def test_task_complete_success(self, task_definition):
+    def test_task_complete_success(self, task_definition) -> None:
         """Test task completion with success."""
         task = Task(task_definition)
 
@@ -243,7 +243,7 @@ class TestTask:
         assert task.status == TaskStatus.SUCCESS
         assert task.end_time == 105.0
 
-    def test_task_complete_failure(self, task_definition):
+    def test_task_complete_failure(self, task_definition) -> None:
         """Test task completion with failure."""
         task = Task(task_definition)
 
@@ -253,7 +253,7 @@ class TestTask:
         assert task.status == TaskStatus.FAILED
         assert task.end_time == 105.0
 
-    def test_task_skip(self, task_definition):
+    def test_task_skip(self, task_definition) -> None:
         """Test task skip."""
         task = Task(task_definition)
 
@@ -263,7 +263,7 @@ class TestTask:
         assert task.status == TaskStatus.SKIPPED
         assert task.end_time == 105.0
 
-    def test_task_fail(self, task_definition):
+    def test_task_fail(self, task_definition) -> None:
         """Test task fail with error."""
         task = Task(task_definition)
         error = CrackerjackError("Test error", ErrorCode.COMMAND_EXECUTION_ERROR)
@@ -275,7 +275,7 @@ class TestTask:
         assert task.end_time == 105.0
         assert task.error == error
 
-    def test_can_run_no_dependencies(self):
+    def test_can_run_no_dependencies(self) -> None:
         """Test can_run with no dependencies."""
         task_def = TaskDefinition("test", "Test", "Description", dependencies=[])
         task = Task(task_def)
@@ -283,14 +283,14 @@ class TestTask:
         assert task.can_run(set()) is True
         assert task.can_run({"other-task"}) is True
 
-    def test_can_run_dependencies_met(self, task_definition):
+    def test_can_run_dependencies_met(self, task_definition) -> None:
         """Test can_run with dependencies met."""
         task = Task(task_definition)
         completed_tasks = {"dep1"}
 
         assert task.can_run(completed_tasks) is True
 
-    def test_can_run_dependencies_not_met(self, task_definition):
+    def test_can_run_dependencies_not_met(self, task_definition) -> None:
         """Test can_run with dependencies not met."""
         task = Task(task_definition)
         completed_tasks = {"other-task"}
@@ -311,16 +311,16 @@ class TestWorkflowBuilder:
         """Create WorkflowBuilder instance."""
         return WorkflowBuilder(console)
 
-    def test_initialization(self, builder, console):
+    def test_initialization(self, builder, console) -> None:
         """Test WorkflowBuilder initialization."""
         assert builder.console == console
         assert builder.tasks == {}
         assert builder.logger is not None
 
-    def test_add_task_basic(self, builder):
+    def test_add_task_basic(self, builder) -> None:
         """Test adding basic task."""
         result = builder.add_task(
-            task_id="test-task", name="Test Task", description="A test task"
+            task_id="test-task", name="Test Task", description="A test task",
         )
 
         assert result == builder  # Should return self for chaining
@@ -334,7 +334,7 @@ class TestWorkflowBuilder:
         assert task_def.optional is False
         assert task_def.estimated_duration == 0.0
 
-    def test_add_task_with_all_options(self, builder):
+    def test_add_task_with_all_options(self, builder) -> None:
         """Test adding task with all options."""
         builder.add_task(
             task_id="test-task",
@@ -350,7 +350,7 @@ class TestWorkflowBuilder:
         assert task_def.optional is True
         assert task_def.estimated_duration == 5.0
 
-    def test_add_conditional_task_true(self, builder):
+    def test_add_conditional_task_true(self, builder) -> None:
         """Test add_conditional_task when condition is True."""
         result = builder.add_conditional_task(
             condition=True,
@@ -364,7 +364,7 @@ class TestWorkflowBuilder:
         assert result == "conditional-task"
         assert "conditional-task" in builder.tasks
 
-    def test_add_conditional_task_false_with_dependencies(self, builder):
+    def test_add_conditional_task_false_with_dependencies(self, builder) -> None:
         """Test add_conditional_task when condition is False with dependencies."""
         result = builder.add_conditional_task(
             condition=False,
@@ -377,7 +377,7 @@ class TestWorkflowBuilder:
         assert result == "dep2"  # Should return last dependency
         assert "conditional-task" not in builder.tasks
 
-    def test_add_conditional_task_false_no_dependencies(self, builder):
+    def test_add_conditional_task_false_no_dependencies(self, builder) -> None:
         """Test add_conditional_task when condition is False with no dependencies."""
         result = builder.add_conditional_task(
             condition=False,
@@ -389,7 +389,7 @@ class TestWorkflowBuilder:
         assert result == ""  # Should return empty string
         assert "conditional-task" not in builder.tasks
 
-    def test_build_valid_workflow(self, builder):
+    def test_build_valid_workflow(self, builder) -> None:
         """Test building valid workflow."""
         builder.add_task("task1", "Task 1", "First task")
         builder.add_task("task2", "Task 2", "Second task", dependencies=["task1"])
@@ -401,7 +401,7 @@ class TestWorkflowBuilder:
         assert "task2" in workflow
         assert workflow["task2"].dependencies == ["task1"]
 
-    def test_validate_dependencies_missing_dependency(self, builder):
+    def test_validate_dependencies_missing_dependency(self, builder) -> None:
         """Test validation with missing dependency."""
         builder.add_task("task1", "Task 1", "First task", dependencies=["nonexistent"])
 
@@ -410,7 +410,7 @@ class TestWorkflowBuilder:
 
         assert "depends on unknown task nonexistent" in str(exc_info.value)
 
-    def test_check_circular_dependencies_simple_cycle(self, builder):
+    def test_check_circular_dependencies_simple_cycle(self, builder) -> None:
         """Test detection of simple circular dependency."""
         builder.add_task("task1", "Task 1", "First task", dependencies=["task2"])
         builder.add_task("task2", "Task 2", "Second task", dependencies=["task1"])
@@ -420,7 +420,7 @@ class TestWorkflowBuilder:
 
         assert "Circular dependency detected" in str(exc_info.value)
 
-    def test_check_circular_dependencies_complex_cycle(self, builder):
+    def test_check_circular_dependencies_complex_cycle(self, builder) -> None:
         """Test detection of complex circular dependency."""
         builder.add_task("task1", "Task 1", "First task", dependencies=["task3"])
         builder.add_task("task2", "Task 2", "Second task", dependencies=["task1"])
@@ -451,21 +451,21 @@ class TestModernWorkflowManager:
         return {
             "task1": TaskDefinition("task1", "Task 1", "First task", dependencies=[]),
             "task2": TaskDefinition(
-                "task2", "Task 2", "Second task", dependencies=["task1"]
+                "task2", "Task 2", "Second task", dependencies=["task1"],
             ),
             "task3": TaskDefinition(
-                "task3", "Task 3", "Third task", dependencies=["task1"]
+                "task3", "Task 3", "Third task", dependencies=["task1"],
             ),
         }
 
-    def test_initialization(self, workflow_manager, console):
+    def test_initialization(self, workflow_manager, console) -> None:
         """Test WorkflowManager initialization."""
         assert workflow_manager.console == console
         assert workflow_manager.tasks == {}
         assert workflow_manager.task_definitions == {}
         assert workflow_manager.logger is not None
 
-    def test_load_workflow(self, workflow_manager, sample_workflow):
+    def test_load_workflow(self, workflow_manager, sample_workflow) -> None:
         """Test loading workflow."""
         workflow_manager.load_workflow(sample_workflow)
 
@@ -473,7 +473,7 @@ class TestModernWorkflowManager:
         assert len(workflow_manager.task_definitions) == 3
         assert all(isinstance(task, Task) for task in workflow_manager.tasks.values())
 
-    def test_set_task_executor_existing_task(self, workflow_manager, sample_workflow):
+    def test_set_task_executor_existing_task(self, workflow_manager, sample_workflow) -> None:
         """Test setting executor for existing task."""
         workflow_manager.load_workflow(sample_workflow)
         mock_executor = Mock(return_value=True)
@@ -483,8 +483,8 @@ class TestModernWorkflowManager:
         assert workflow_manager.tasks["task1"].executor == mock_executor
 
     def test_set_task_executor_nonexistent_task(
-        self, workflow_manager, sample_workflow
-    ):
+        self, workflow_manager, sample_workflow,
+    ) -> None:
         """Test setting executor for nonexistent task."""
         workflow_manager.load_workflow(sample_workflow)
         mock_executor = Mock(return_value=True)
@@ -492,7 +492,7 @@ class TestModernWorkflowManager:
         # Should not raise error
         workflow_manager.set_task_executor("nonexistent", mock_executor)
 
-    def test_get_next_task_first_task(self, workflow_manager, sample_workflow):
+    def test_get_next_task_first_task(self, workflow_manager, sample_workflow) -> None:
         """Test getting next task when no tasks completed."""
         workflow_manager.load_workflow(sample_workflow)
 
@@ -502,8 +502,8 @@ class TestModernWorkflowManager:
         assert next_task.definition.id == "task1"  # No dependencies
 
     def test_get_next_task_with_completed_dependency(
-        self, workflow_manager, sample_workflow
-    ):
+        self, workflow_manager, sample_workflow,
+    ) -> None:
         """Test getting next task after dependency completed."""
         workflow_manager.load_workflow(sample_workflow)
 
@@ -515,7 +515,7 @@ class TestModernWorkflowManager:
         assert next_task is not None
         assert next_task.definition.id in ["task2", "task3"]  # Either dependent task
 
-    def test_get_next_task_no_available_tasks(self, workflow_manager, sample_workflow):
+    def test_get_next_task_no_available_tasks(self, workflow_manager, sample_workflow) -> None:
         """Test getting next task when no tasks available."""
         workflow_manager.load_workflow(sample_workflow)
 
@@ -526,13 +526,13 @@ class TestModernWorkflowManager:
 
         assert next_task is None
 
-    def test_all_tasks_completed_false(self, workflow_manager, sample_workflow):
+    def test_all_tasks_completed_false(self, workflow_manager, sample_workflow) -> None:
         """Test all_tasks_completed when tasks pending."""
         workflow_manager.load_workflow(sample_workflow)
 
         assert workflow_manager.all_tasks_completed() is False
 
-    def test_all_tasks_completed_true(self, workflow_manager, sample_workflow):
+    def test_all_tasks_completed_true(self, workflow_manager, sample_workflow) -> None:
         """Test all_tasks_completed when all tasks done."""
         workflow_manager.load_workflow(sample_workflow)
 
@@ -543,7 +543,7 @@ class TestModernWorkflowManager:
 
         assert workflow_manager.all_tasks_completed() is True
 
-    def test_run_task_without_executor(self, workflow_manager, sample_workflow):
+    def test_run_task_without_executor(self, workflow_manager, sample_workflow) -> None:
         """Test running task without executor."""
         workflow_manager.load_workflow(sample_workflow)
         task = workflow_manager.tasks["task1"]
@@ -554,7 +554,7 @@ class TestModernWorkflowManager:
         assert task.status == TaskStatus.SKIPPED
         workflow_manager.console.print.assert_called()
 
-    def test_run_task_with_successful_executor(self, workflow_manager, sample_workflow):
+    def test_run_task_with_successful_executor(self, workflow_manager, sample_workflow) -> None:
         """Test running task with successful executor."""
         workflow_manager.load_workflow(sample_workflow)
         task = workflow_manager.tasks["task1"]
@@ -568,7 +568,7 @@ class TestModernWorkflowManager:
         assert task.status == TaskStatus.SUCCESS
         mock_executor.assert_called_once()
 
-    def test_run_task_with_failing_executor(self, workflow_manager, sample_workflow):
+    def test_run_task_with_failing_executor(self, workflow_manager, sample_workflow) -> None:
         """Test running task with failing executor."""
         workflow_manager.load_workflow(sample_workflow)
         task = workflow_manager.tasks["task1"]
@@ -581,7 +581,7 @@ class TestModernWorkflowManager:
         assert result is False
         assert task.status == TaskStatus.FAILED
 
-    def test_run_task_with_exception(self, workflow_manager, sample_workflow):
+    def test_run_task_with_exception(self, workflow_manager, sample_workflow) -> None:
         """Test running task that throws exception."""
         workflow_manager.load_workflow(sample_workflow)
         task = workflow_manager.tasks["task1"]
@@ -596,7 +596,7 @@ class TestModernWorkflowManager:
         assert task.error is not None
         assert "Test error" in str(task.error)
 
-    def test_display_task_tree(self, workflow_manager, sample_workflow):
+    def test_display_task_tree(self, workflow_manager, sample_workflow) -> None:
         """Test displaying task tree."""
         workflow_manager.load_workflow(sample_workflow)
 
@@ -610,7 +610,7 @@ class TestModernWorkflowManager:
         # Should print tree to console
         workflow_manager.console.print.assert_called()
 
-    def test_get_workflow_summary(self, workflow_manager, sample_workflow):
+    def test_get_workflow_summary(self, workflow_manager, sample_workflow) -> None:
         """Test getting workflow summary."""
         workflow_manager.load_workflow(sample_workflow)
 
@@ -641,7 +641,7 @@ class TestModernInteractiveCLI:
         """Create InteractiveCLI instance."""
         return InteractiveCLI(console)
 
-    def test_initialization_with_console(self, console):
+    def test_initialization_with_console(self, console) -> None:
         """Test CLI initialization with provided console."""
         cli = InteractiveCLI(console)
 
@@ -649,14 +649,14 @@ class TestModernInteractiveCLI:
         assert isinstance(cli.workflow, WorkflowManager)
         assert cli.logger is not None
 
-    def test_initialization_without_console(self):
+    def test_initialization_without_console(self) -> None:
         """Test CLI initialization without console."""
         cli = InteractiveCLI()
 
         assert isinstance(cli.console, Console)
         assert isinstance(cli.workflow, WorkflowManager)
 
-    def test_create_dynamic_workflow_minimal(self, cli):
+    def test_create_dynamic_workflow_minimal(self, cli) -> None:
         """Test creating dynamic workflow with minimal options."""
         options = WorkflowOptions()
 
@@ -665,7 +665,7 @@ class TestModernInteractiveCLI:
         # Should have created some basic tasks
         assert len(cli.workflow.tasks) > 0
 
-    def test_create_dynamic_workflow_full_options(self, cli):
+    def test_create_dynamic_workflow_full_options(self, cli) -> None:
         """Test creating dynamic workflow with full options."""
         options = WorkflowOptions(
             clean=True,
@@ -681,7 +681,7 @@ class TestModernInteractiveCLI:
         # Should have created more tasks
         assert len(cli.workflow.tasks) > 5
 
-    def test_workflow_phase_methods(self, cli):
+    def test_workflow_phase_methods(self, cli) -> None:
         """Test individual workflow phase methods."""
         builder = Mock()
         builder.add_task.return_value = builder
@@ -759,7 +759,7 @@ class TestModernInteractiveCLI:
         result = cli._add_pr_phase(builder, "commit", enabled=False)
         assert result == "commit"
 
-    def test_run_interactive_workflow_success(self, cli):
+    def test_run_interactive_workflow_success(self, cli) -> None:
         """Test successful interactive workflow execution."""
         options = WorkflowOptions(clean=True, test=True)
 
@@ -769,7 +769,7 @@ class TestModernInteractiveCLI:
 
                 assert result is True
 
-    def test_run_interactive_workflow_cancelled(self, cli):
+    def test_run_interactive_workflow_cancelled(self, cli) -> None:
         """Test cancelled interactive workflow."""
         options = WorkflowOptions()
 
@@ -778,7 +778,7 @@ class TestModernInteractiveCLI:
 
             assert result is False
 
-    def test_execute_workflow_loop_success(self, cli):
+    def test_execute_workflow_loop_success(self, cli) -> None:
         """Test successful workflow loop execution."""
         # Mock workflow state
         cli.workflow = Mock()
@@ -795,7 +795,7 @@ class TestModernInteractiveCLI:
 
                     assert result is True
 
-    def test_execute_workflow_loop_stuck(self, cli):
+    def test_execute_workflow_loop_stuck(self, cli) -> None:
         """Test workflow loop with stuck workflow."""
         cli.workflow = Mock()
         cli.workflow.all_tasks_completed.return_value = False
@@ -811,7 +811,7 @@ class TestModernInteractiveCLI:
 
             assert result is False
 
-    def test_execute_workflow_loop_with_failure(self, cli):
+    def test_execute_workflow_loop_with_failure(self, cli) -> None:
         """Test workflow loop with task failure."""
         cli.workflow = Mock()
         cli.workflow.all_tasks_completed.side_effect = [False, True]
@@ -823,14 +823,14 @@ class TestModernInteractiveCLI:
         with patch.object(cli, "_should_run_task", return_value=True):
             with patch.object(cli, "_execute_single_task", return_value=False):
                 with patch.object(
-                    cli, "_should_continue_after_failure", return_value=False
+                    cli, "_should_continue_after_failure", return_value=False,
                 ):
                     with patch.object(cli, "_display_workflow_summary"):
                         result = cli._execute_workflow_loop()
 
                         assert result is False
 
-    def test_handle_stuck_workflow_with_pending(self, cli):
+    def test_handle_stuck_workflow_with_pending(self, cli) -> None:
         """Test handling stuck workflow with pending tasks."""
         cli.workflow = Mock()
         mock_task = Mock()
@@ -840,7 +840,7 @@ class TestModernInteractiveCLI:
         result = cli._handle_stuck_workflow()
         assert result is False
 
-    def test_handle_stuck_workflow_no_pending(self, cli):
+    def test_handle_stuck_workflow_no_pending(self, cli) -> None:
         """Test handling stuck workflow with no pending tasks."""
         cli.workflow = Mock()
         cli.workflow.tasks = {}
@@ -848,7 +848,7 @@ class TestModernInteractiveCLI:
         result = cli._handle_stuck_workflow()
         assert result is True
 
-    def test_should_run_task_confirmed(self, cli):
+    def test_should_run_task_confirmed(self, cli) -> None:
         """Test should_run_task with user confirmation."""
         mock_task = Mock()
         mock_task.name = "Test Task"
@@ -857,7 +857,7 @@ class TestModernInteractiveCLI:
             result = cli._should_run_task(mock_task)
             assert result is True
 
-    def test_should_run_task_declined(self, cli):
+    def test_should_run_task_declined(self, cli) -> None:
         """Test should_run_task with user declining."""
         mock_task = Mock()
         mock_task.name = "Test Task"
@@ -868,7 +868,7 @@ class TestModernInteractiveCLI:
             assert result is False
             mock_task.skip.assert_called_once()
 
-    def test_execute_single_task(self, cli):
+    def test_execute_single_task(self, cli) -> None:
         """Test executing single task."""
         cli.workflow = Mock()
         mock_task = Mock()
@@ -878,13 +878,13 @@ class TestModernInteractiveCLI:
         assert result is True
         cli.workflow.run_task.assert_called_once_with(mock_task)
 
-    def test_should_continue_after_failure(self, cli):
+    def test_should_continue_after_failure(self, cli) -> None:
         """Test should_continue_after_failure prompt."""
         with patch("crackerjack.interactive.Confirm.ask", return_value=True):
             result = cli._should_continue_after_failure()
             assert result is True
 
-    def test_display_workflow_summary(self, cli):
+    def test_display_workflow_summary(self, cli) -> None:
         """Test displaying workflow summary."""
         cli.workflow.get_workflow_summary.return_value = {
             "success": 2,
@@ -915,13 +915,13 @@ class TestLegacyWorkflowManager:
 
         return WorkflowManager(console)
 
-    def test_initialization(self, workflow_manager, console):
+    def test_initialization(self, workflow_manager, console) -> None:
         """Test WorkflowManager initialization."""
         assert workflow_manager.console == console
         assert workflow_manager.current_task is None
         assert isinstance(workflow_manager.tasks, dict)
 
-    def test_add_task_basic(self, workflow_manager):
+    def test_add_task_basic(self, workflow_manager) -> None:
         """Test adding task with basic parameters."""
         task = workflow_manager.add_task("Test Task", "A test task")
 
@@ -930,19 +930,19 @@ class TestLegacyWorkflowManager:
         assert task.dependencies == []
         assert "Test Task" in workflow_manager.tasks
 
-    def test_add_task_with_dependencies(self, workflow_manager):
+    def test_add_task_with_dependencies(self, workflow_manager) -> None:
         """Test adding task with dependencies."""
         task = workflow_manager.add_task(
-            "Test Task", "A test task", dependencies=["dep1", "dep2"]
+            "Test Task", "A test task", dependencies=["dep1", "dep2"],
         )
 
         assert task.dependencies == ["dep1", "dep2"]
 
-    def test_run_legacy_task_success(self, workflow_manager):
+    def test_run_legacy_task_success(self, workflow_manager) -> None:
         """Test running legacy task successfully."""
         task = workflow_manager.add_task("Test Task", "A test task")
 
-        def success_func():
+        def success_func() -> bool:
             return True
 
         result = workflow_manager.run_legacy_task(task, success_func)
@@ -951,12 +951,13 @@ class TestLegacyWorkflowManager:
         assert task.status == TaskStatus.SUCCESS
         assert workflow_manager.current_task is None
 
-    def test_run_legacy_task_crackerjack_error(self, workflow_manager):
+    def test_run_legacy_task_crackerjack_error(self, workflow_manager) -> None:
         """Test running legacy task with CrackerjackError."""
         task = workflow_manager.add_task("Test Task", "A test task")
 
-        def error_func():
-            raise CrackerjackError("Test error", ErrorCode.COMMAND_EXECUTION_ERROR)
+        def error_func() -> Never:
+            msg = "Test error"
+            raise CrackerjackError(msg, ErrorCode.COMMAND_EXECUTION_ERROR)
 
         result = workflow_manager.run_legacy_task(task, error_func)
 
@@ -964,12 +965,13 @@ class TestLegacyWorkflowManager:
         assert task.status == TaskStatus.FAILED
         assert task.error is not None
 
-    def test_run_legacy_task_unexpected_error(self, workflow_manager):
+    def test_run_legacy_task_unexpected_error(self, workflow_manager) -> None:
         """Test running legacy task with unexpected error."""
         task = workflow_manager.add_task("Test Task", "A test task")
 
-        def error_func():
-            raise ValueError("Unexpected error")
+        def error_func() -> Never:
+            msg = "Unexpected error"
+            raise ValueError(msg)
 
         result = workflow_manager.run_legacy_task(task, error_func)
 
@@ -994,7 +996,7 @@ class TestLegacyInteractiveCLI:
 
         return InteractiveCLI(console)
 
-    def test_initialization_with_console(self, console):
+    def test_initialization_with_console(self, console) -> None:
         """Test CLI initialization with console."""
         from crackerjack.interactive import InteractiveCLI, WorkflowManager
 
@@ -1003,7 +1005,7 @@ class TestLegacyInteractiveCLI:
         assert cli.console == console
         assert isinstance(cli.workflow, WorkflowManager)
 
-    def test_initialization_without_console(self):
+    def test_initialization_without_console(self) -> None:
         """Test CLI initialization without console."""
         from crackerjack.interactive import InteractiveCLI
 
@@ -1011,14 +1013,14 @@ class TestLegacyInteractiveCLI:
 
         assert isinstance(cli.console, Console)
 
-    def test_show_banner(self, cli):
+    def test_show_banner(self, cli) -> None:
         """Test showing banner."""
         cli.show_banner("1.0.0")
 
         # Should print banner
         cli.console.print.assert_called()
 
-    def test_create_standard_workflow(self, cli):
+    def test_create_standard_workflow(self, cli) -> None:
         """Test creating standard workflow."""
         cli.create_standard_workflow()
 
@@ -1036,7 +1038,7 @@ class TestLegacyInteractiveCLI:
         for task_name in expected_tasks:
             assert task_name in cli.workflow.tasks
 
-    def test_create_dynamic_workflow_with_options(self, cli):
+    def test_create_dynamic_workflow_with_options(self, cli) -> None:
         """Test creating dynamic workflow with options."""
         mock_options = Mock()
         mock_options.clean = True
@@ -1051,7 +1053,7 @@ class TestLegacyInteractiveCLI:
 class TestLaunchInteractiveCLI:
     """Test launch_interactive_cli function."""
 
-    def test_launch_with_options(self):
+    def test_launch_with_options(self) -> None:
         """Test launching with options."""
         from crackerjack.interactive import launch_interactive_cli
 
@@ -1074,7 +1076,7 @@ class TestLaunchInteractiveCLI:
                 mock_cli.show_banner.assert_called_once_with("1.0.0")
                 mock_cli.create_dynamic_workflow.assert_called_once_with(mock_options)
 
-    def test_launch_without_options(self):
+    def test_launch_without_options(self) -> None:
         """Test launching without options."""
         from crackerjack.interactive import launch_interactive_cli
 
@@ -1091,7 +1093,7 @@ class TestLaunchInteractiveCLI:
 
                 mock_cli.create_standard_workflow.assert_called_once()
 
-    def test_launch_no_interactive_method(self):
+    def test_launch_no_interactive_method(self) -> None:
         """Test launching when interactive method not available."""
         from crackerjack.interactive import launch_interactive_cli
 

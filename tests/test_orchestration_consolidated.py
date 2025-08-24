@@ -198,7 +198,7 @@ class TestAdvancedOrchestrator:
 
         session = SessionCoordinator(console, temp_project)
         orchestrator = AdvancedWorkflowOrchestrator(
-            console=console, pkg_path=temp_project, session=session
+            console=console, pkg_path=temp_project, session=session,
         )
         assert orchestrator.console is console
         assert orchestrator.pkg_path == temp_project
@@ -209,7 +209,7 @@ class TestAdvancedOrchestrator:
 
         session = SessionCoordinator(console, temp_project)
         orchestrator = AdvancedWorkflowOrchestrator(
-            console=console, pkg_path=temp_project, session=session
+            console=console, pkg_path=temp_project, session=session,
         )
         MockOptions()
 
@@ -222,7 +222,7 @@ class TestAdvancedOrchestrator:
 
         session = SessionCoordinator(console, temp_project)
         orchestrator = AdvancedWorkflowOrchestrator(
-            console=console, pkg_path=temp_project, session=session
+            console=console, pkg_path=temp_project, session=session,
         )
         MockOptions(autofix=True)
 
@@ -235,7 +235,7 @@ class TestAdvancedOrchestrator:
 
         session = SessionCoordinator(console, temp_project)
         orchestrator = AdvancedWorkflowOrchestrator(
-            console=console, pkg_path=temp_project, session=session
+            console=console, pkg_path=temp_project, session=session,
         )
 
         # Test correlation tracker functionality
@@ -249,16 +249,16 @@ class TestOrchestrationIntegration:
     def test_orchestrator_interoperability(self, console, temp_project) -> None:
         """Test that different orchestrators can work together."""
         basic_orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project
+            console=console, pkg_path=temp_project,
         )
         async_orchestrator = AsyncWorkflowOrchestrator(
-            console=console, pkg_path=temp_project
+            console=console, pkg_path=temp_project,
         )
         from crackerjack.core.session_coordinator import SessionCoordinator
 
         session = SessionCoordinator(console, temp_project)
         advanced_orchestrator = AdvancedWorkflowOrchestrator(
-            console=console, pkg_path=temp_project, session=session
+            console=console, pkg_path=temp_project, session=session,
         )
 
         # Verify all have same basic interface
@@ -276,7 +276,7 @@ class TestOrchestrationIntegration:
         options = WorkflowOptions()
 
         basic_orchestrator = WorkflowOrchestrator(
-            console=console, pkg_path=temp_project
+            console=console, pkg_path=temp_project,
         )
         pipeline = WorkflowPipeline(console=console, pkg_path=temp_project)
 
@@ -314,7 +314,7 @@ class TestOrchestrationPerformance:
     def test_orchestrator_memory_efficiency(self, console, temp_project) -> None:
         """Test orchestrator memory efficiency."""
         # Create and destroy multiple orchestrators to test memory management
-        for i in range(10):
+        for _i in range(10):
             orchestrator = WorkflowOrchestrator(console=console, pkg_path=temp_project)
             options = MockOptions()
 
@@ -389,7 +389,7 @@ class TestOrchestrationErrorHandling:
 
     @pytest.mark.asyncio
     async def test_async_orchestrator_error_handling(
-        self, console, temp_project
+        self, console, temp_project,
     ) -> None:
         """Test async orchestrator error handling."""
         orchestrator = AsyncWorkflowOrchestrator(console=console, pkg_path=temp_project)

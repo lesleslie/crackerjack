@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import time
 import typing as t
 from collections import defaultdict, deque
@@ -26,16 +27,16 @@ class RateLimitConfig:
 
 class RateLimiter:
     def __init__(
-        self, requests_per_minute: int = 30, requests_per_hour: int = 300
+        self, requests_per_minute: int = 30, requests_per_hour: int = 300,
     ) -> None:
         self.requests_per_minute = requests_per_minute
         self.requests_per_hour = requests_per_hour
 
         self.minute_windows: dict[str, deque[float]] = defaultdict(
-            lambda: deque(maxlen=requests_per_minute)
+            lambda: deque(maxlen=requests_per_minute),
         )
         self.hour_windows: dict[str, deque[float]] = defaultdict(
-            lambda: deque(maxlen=requests_per_hour)
+            lambda: deque(maxlen=requests_per_hour),
         )
 
         self.global_minute_window: deque[float] = deque(maxlen=requests_per_minute * 10)
@@ -44,7 +45,7 @@ class RateLimiter:
         self._lock = asyncio.Lock()
 
     async def is_allowed(
-        self, client_id: str = "default"
+        self, client_id: str = "default",
     ) -> tuple[bool, dict[str, t.Any]]:
         async with self._lock:
             now = time.time()
@@ -155,7 +156,7 @@ class ResourceMonitor:
                 and len(self.active_jobs) >= self.config.max_concurrent_jobs
             ):
                 console.print(
-                    f"[yellow]🚫 Job {job_id} rejected: max concurrent jobs ({self.config.max_concurrent_jobs}) reached[/yellow]"
+                    f"[yellow]🚫 Job {job_id} rejected: max concurrent jobs ({self.config.max_concurrent_jobs}) reached[/yellow]",
                 )
                 return False
 
@@ -163,7 +164,7 @@ class ResourceMonitor:
                 await asyncio.wait_for(self.job_locks.acquire(), timeout=0.1)
             except TimeoutError:
                 console.print(
-                    f"[yellow]🚫 Job {job_id} rejected: max concurrent jobs ({self.config.max_concurrent_jobs}) reached[/yellow]"
+                    f"[yellow]🚫 Job {job_id} rejected: max concurrent jobs ({self.config.max_concurrent_jobs}) reached[/yellow]",
                 )
                 return False
 
@@ -171,7 +172,7 @@ class ResourceMonitor:
                 self.active_jobs[job_id] = time.time()
 
             console.print(
-                f"[green]🎯 Job {job_id} acquired slot ({len(self.active_jobs)} / {self.config.max_concurrent_jobs})[/green]"
+                f"[green]🎯 Job {job_id} acquired slot ({len(self.active_jobs)} / {self.config.max_concurrent_jobs})[/green]",
             )
             return True
 
@@ -185,7 +186,7 @@ class ResourceMonitor:
                 start_time = self.active_jobs.pop(job_id)
                 duration = time.time() - start_time
                 console.print(
-                    f"[blue]🏁 Job {job_id} completed in {duration: .1f}s ({len(self.active_jobs)} / {self.config.max_concurrent_jobs} active)[/blue]"
+                    f"[blue]🏁 Job {job_id} completed in {duration: .1f}s ({len(self.active_jobs)} / {self.config.max_concurrent_jobs} active)[/blue]",
                 )
 
         self.job_locks.release()
@@ -204,7 +205,7 @@ class ResourceMonitor:
 
         if stale_jobs:
             console.print(
-                f"[yellow]🧹 Cleaned up {len(stale_jobs)} stale jobs (exceeded {self.config.max_job_duration_minutes}m)[/yellow]"
+                f"[yellow]🧹 Cleaned up {len(stale_jobs)} stale jobs (exceeded {self.config.max_job_duration_minutes}m)[/yellow]",
             )
 
         return len(stale_jobs)
@@ -217,7 +218,7 @@ class ResourceMonitor:
             size_mb = file_path.stat().st_size / (1024 * 1024)
             if size_mb > self.config.max_file_size_mb:
                 console.print(
-                    f"[red]🚫 File {file_path} ({size_mb: .1f}MB) exceeds limit ({self.config.max_file_size_mb}MB)[/red]"
+                    f"[red]🚫 File {file_path} ({size_mb: .1f}MB) exceeds limit ({self.config.max_file_size_mb}MB)[/red]",
                 )
                 return False
 
@@ -233,7 +234,7 @@ class ResourceMonitor:
             file_count = len(list(progress_dir.glob("job -* .json")))
             if file_count > self.config.max_progress_files:
                 console.print(
-                    f"[red]🚫 Progress files ({file_count}) exceed limit ({self.config.max_progress_files})[/red]"
+                    f"[red]🚫 Progress files ({file_count}) exceed limit ({self.config.max_progress_files})[/red]",
                 )
                 return False
 
@@ -263,7 +264,7 @@ class RateLimitMiddleware:
     def __init__(self, config: RateLimitConfig | None = None) -> None:
         self.config = config or RateLimitConfig()
         self.rate_limiter = RateLimiter(
-            self.config.requests_per_minute, self.config.requests_per_hour
+            self.config.requests_per_minute, self.config.requests_per_hour,
         )
         self.resource_monitor = ResourceMonitor(self.config)
 
@@ -279,14 +280,12 @@ class RateLimitMiddleware:
         self._running = False
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
         console.print("[yellow]🛡️ Rate limiting middleware stopped[/yellow]")
 
     async def check_request_allowed(
-        self, client_id: str = "default"
+        self, client_id: str = "default",
     ) -> tuple[bool, dict[str, t.Any]]:
         return await self.rate_limiter.is_allowed(client_id)
 

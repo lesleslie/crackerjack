@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import io
 import os
 import subprocess
@@ -11,7 +12,8 @@ from types import TracebackType
 
 from rich.console import Console
 
-from ..core.workflow_orchestrator import WorkflowOrchestrator
+from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+
 from .cache import ErrorCache
 from .rate_limiter import RateLimitConfig, RateLimitMiddleware
 from .state import StateManager
@@ -41,15 +43,13 @@ class BatchedStateSaver:
 
         if self._save_task:
             self._save_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._save_task
-            except asyncio.CancelledError:
-                pass
 
         await self._flush_saves()
 
     async def schedule_save(
-        self, save_id: str, save_func: t.Callable[[], None]
+        self, save_id: str, save_func: t.Callable[[], None],
     ) -> None:
         async with self._lock:
             self._pending_saves[save_id] = save_func
@@ -69,8 +69,7 @@ class BatchedStateSaver:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                print(f"Error in batched save loop: {e}")
+            except Exception:
                 await asyncio.sleep(1)
 
     async def _get_ready_saves(self) -> list[str]:
@@ -94,10 +93,8 @@ class BatchedStateSaver:
                     self._last_save_time.pop(save_id, None)
 
         for save_id, save_func in saves_to_execute:
-            try:
+            with contextlib.suppress(Exception):
                 save_func()
-            except Exception as e:
-                print(f"Error executing save for {save_id}: {e}")
 
     async def _flush_saves(self) -> None:
         async with self._lock:
@@ -140,12 +137,12 @@ class MCPServerContext:
             Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
         )
         self.progress_queue: asyncio.Queue[dict[str, t.Any]] = asyncio.Queue(
-            maxsize=1000
+            maxsize=1000,
         )
 
         self.websocket_server_process: subprocess.Popen[bytes] | None = None
         self.websocket_server_port: int = int(
-            os.environ.get("CRACKERJACK_WEBSOCKET_PORT", "8675")
+            os.environ.get("CRACKERJACK_WEBSOCKET_PORT", "8675"),
         )
         self._websocket_process_lock = asyncio.Lock()
         self._websocket_cleanup_registered = False
@@ -169,7 +166,7 @@ class MCPServerContext:
             self.progress_dir.mkdir(exist_ok=True)
 
             self.cli_runner = WorkflowOrchestrator(
-                console=self.console, pkg_path=self.config.project_path
+                console=self.console, pkg_path=self.config.project_path,
             )
 
             self.state_manager = StateManager(
@@ -178,7 +175,7 @@ class MCPServerContext:
             )
 
             self.error_cache = ErrorCache(
-                self.config.cache_dir or Path.home() / ".cache" / "crackerjack-mcp"
+                self.config.cache_dir or Path.home() / ".cache" / "crackerjack-mcp",
             )
 
             self.rate_limiter = RateLimitMiddleware(self.config.rate_limit_config)
@@ -195,7 +192,8 @@ class MCPServerContext:
             self.state_manager = None
             self.error_cache = None
             self.rate_limiter = None
-            raise RuntimeError(f"Failed to initialize MCP server context: {e}") from e
+            msg = f"Failed to initialize MCP server context: {e}"
+            raise RuntimeError(msg) from e
 
     async def shutdown(self) -> None:
         if not self._initialized:
@@ -210,10 +208,8 @@ class MCPServerContext:
 
         if self._websocket_health_check_task:
             self._websocket_health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._websocket_health_check_task
-            except asyncio.CancelledError:
-                pass
             self._websocket_health_check_task = None
 
         await self._stop_websocket_server()
@@ -252,10 +248,7 @@ class MCPServerContext:
 
         import os
 
-        if os.path.basename(job_id) != job_id:
-            return False
-
-        return True
+        return os.path.basename(job_id) == job_id
 
     async def check_websocket_server_running(self) -> bool:
         import socket
@@ -272,7 +265,7 @@ class MCPServerContext:
 
             if self.console:
                 self.console.print(
-                    f"🚀 Starting WebSocket server on localhost:{self.websocket_server_port}..."
+                    f"🚀 Starting WebSocket server on localhost:{self.websocket_server_port}...",
                 )
 
             try:
@@ -294,16 +287,15 @@ class MCPServerContext:
             if await self.check_websocket_server_running():
                 if self.console:
                     self.console.print(
-                        f"✅ WebSocket server already running on port {self.websocket_server_port}"
+                        f"✅ WebSocket server already running on port {self.websocket_server_port}",
                     )
                 return True
-            else:
-                await self._cleanup_dead_websocket_process()
+            await self._cleanup_dead_websocket_process()
 
         if await self.check_websocket_server_running():
             if self.console:
                 self.console.print(
-                    f"⚠️ Port {self.websocket_server_port} already in use by another process"
+                    f"⚠️ Port {self.websocket_server_port} already in use by another process",
                 )
             return True
 
@@ -333,19 +325,19 @@ class MCPServerContext:
 
         if not self._websocket_health_check_task:
             self._websocket_health_check_task = asyncio.create_task(
-                self._websocket_health_monitor()
+                self._websocket_health_monitor(),
             )
 
     async def _wait_for_websocket_startup(self) -> bool:
         max_attempts = 10
-        for attempt in range(max_attempts):
+        for _attempt in range(max_attempts):
             await asyncio.sleep(0.5)
 
             if self.websocket_server_process.poll() is not None:
                 return_code = self.websocket_server_process.returncode
                 if self.console:
                     self.console.print(
-                        f"❌ WebSocket server process died during startup (exit code: {return_code})"
+                        f"❌ WebSocket server process died during startup (exit code: {return_code})",
                     )
                 self.websocket_server_process = None
                 return False
@@ -353,16 +345,16 @@ class MCPServerContext:
             if await self.check_websocket_server_running():
                 if self.console:
                     self.console.print(
-                        f"✅ WebSocket server started successfully on port {self.websocket_server_port}"
+                        f"✅ WebSocket server started successfully on port {self.websocket_server_port}",
                     )
                     self.console.print(
-                        f"📊 Progress available at: ws://localhost:{self.websocket_server_port}/ws/progress/{{job_id}}"
+                        f"📊 Progress available at: ws://localhost:{self.websocket_server_port}/ws/progress/{{job_id}}",
                     )
                 return True
 
         if self.console:
             self.console.print(
-                f"❌ WebSocket server failed to start within {max_attempts * 0.5}s"
+                f"❌ WebSocket server failed to start within {max_attempts * 0.5}s",
             )
         await self._cleanup_dead_websocket_process()
         return False
@@ -491,7 +483,7 @@ class MCPServerContext:
         return_code = self.websocket_server_process.returncode
         if self.console:
             self.console.print(
-                f"⚠️ WebSocket server process died (exit code: {return_code}), attempting restart..."
+                f"⚠️ WebSocket server process died (exit code: {return_code}), attempting restart...",
             )
         self.websocket_server_process = None
         await self._restart_websocket_server()
@@ -506,9 +498,8 @@ class MCPServerContext:
         if await self.start_websocket_server():
             if self.console:
                 self.console.print("✅ WebSocket server restarted successfully")
-        else:
-            if self.console:
-                self.console.print("❌ Failed to restart WebSocket server")
+        elif self.console:
+            self.console.print("❌ Failed to restart WebSocket server")
 
     def safe_print(self, *args, **kwargs) -> None:
         if not self.config.stdio_mode and self.console:
@@ -516,11 +507,12 @@ class MCPServerContext:
 
     def create_progress_file_path(self, job_id: str) -> Path:
         if not self.validate_job_id(job_id):
-            raise ValueError(f"Invalid job_id: {job_id}")
+            msg = f"Invalid job_id: {job_id}"
+            raise ValueError(msg)
         return self.progress_dir / f"job-{job_id}.json"
 
     async def schedule_state_save(
-        self, save_id: str, save_func: t.Callable[[], None]
+        self, save_id: str, save_func: t.Callable[[], None],
     ) -> None:
         await self.batched_saver.schedule_save(save_id, save_func)
 
@@ -577,8 +569,9 @@ _global_context: MCPServerContext | None = None
 
 def get_context() -> MCPServerContext:
     if _global_context is None:
+        msg = "MCP server context not initialized. Call set_context() first."
         raise RuntimeError(
-            "MCP server context not initialized. Call set_context() first."
+            msg,
         )
     return _global_context
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..models.protocols import (
+from crackerjack.models.protocols import (
     FileSystemInterface,
     GitInterface,
     HookManager,
@@ -21,7 +21,7 @@ class DependencyContainer:
         self._singletons[interface.__name__] = implementation
 
     def register_transient(
-        self, interface: type, factory: t.Callable[[], t.Any]
+        self, interface: type, factory: t.Callable[[], t.Any],
     ) -> None:
         self._services[interface.__name__] = factory
 
@@ -31,7 +31,8 @@ class DependencyContainer:
             return self._singletons[name]
         if name in self._services:
             return self._services[name]()
-        raise ValueError(f"Service {name} not registered")
+        msg = f"Service {name} not registered"
+        raise ValueError(msg)
 
     def create_default_container(
         self,
@@ -45,35 +46,35 @@ class DependencyContainer:
         if pkg_path is None:
             pkg_path = Path.cwd()
 
-        from ..services.filesystem import FileSystemService
+        from crackerjack.services.filesystem import FileSystemService
 
         self.register_singleton(FileSystemInterface, FileSystemService())
 
-        from ..services.git import GitService
+        from crackerjack.services.git import GitService
 
         self.register_transient(
-            GitInterface, lambda: GitService(console=console, pkg_path=pkg_path)
+            GitInterface, lambda: GitService(console=console, pkg_path=pkg_path),
         )
 
-        from ..managers.hook_manager import HookManagerImpl
+        from crackerjack.managers.hook_manager import HookManagerImpl
 
         self.register_transient(
-            HookManager, lambda: HookManagerImpl(console=console, pkg_path=pkg_path)
+            HookManager, lambda: HookManagerImpl(console=console, pkg_path=pkg_path),
         )
 
-        from ..managers.test_manager import TestManagementImpl
+        from crackerjack.managers.test_manager import TestManagementImpl
 
         self.register_transient(
             TestManagerProtocol,
             lambda: TestManagementImpl(console=console, pkg_path=pkg_path),
         )
 
-        from ..managers.publish_manager import PublishManagerImpl
+        from crackerjack.managers.publish_manager import PublishManagerImpl
 
         self.register_transient(
             PublishManager,
             lambda: PublishManagerImpl(
-                console=console, pkg_path=pkg_path, dry_run=dry_run
+                console=console, pkg_path=pkg_path, dry_run=dry_run,
             ),
         )
 
@@ -86,5 +87,5 @@ def create_container(
     dry_run: bool = False,
 ) -> DependencyContainer:
     return DependencyContainer().create_default_container(
-        console=console, pkg_path=pkg_path, dry_run=dry_run
+        console=console, pkg_path=pkg_path, dry_run=dry_run,
     )

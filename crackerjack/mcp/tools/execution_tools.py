@@ -4,13 +4,15 @@ import time
 import typing as t
 import uuid
 
-from ..context import get_context
+from crackerjack.mcp.context import get_context
+
 from .progress_tools import _update_progress
 
 
 def register_execution_tools(mcp_app: t.Any) -> None:
     _register_execute_crackerjack_tool(mcp_app)
     _register_smart_error_analysis_tool(mcp_app)
+    _register_init_crackerjack_tool(mcp_app)
 
 
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
@@ -32,7 +34,7 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
         # Run the workflow directly instead of in background
         try:
             result = await _execute_crackerjack_sync(
-                job_id, args, extra_kwargs, context
+                job_id, args, extra_kwargs, context,
             )
             return json.dumps(result, indent=2)
         except Exception as e:
@@ -54,7 +56,7 @@ def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
             return '{"error": "Server context not available"}'
 
         try:
-            from ...services.debug import get_ai_agent_debugger
+            from crackerjack.services.debug import get_ai_agent_debugger
 
             get_ai_agent_debugger()
 
@@ -81,7 +83,7 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
 
 
 def _handle_task_exception(job_id: str, task: asyncio.Task) -> None:
-    """Handle exceptions from background tasks"""
+    """Handle exceptions from background tasks."""
     import tempfile
     from pathlib import Path
 
@@ -94,13 +96,13 @@ def _handle_task_exception(job_id: str, task: asyncio.Task) -> None:
             )
             with debug_file.open("w") as f:
                 f.write(
-                    f"Background task {job_id} failed with exception: {exception}\n"
+                    f"Background task {job_id} failed with exception: {exception}\n",
                 )
                 f.write(f"Exception type: {type(exception)}\n")
                 import traceback
 
                 f.write(
-                    f"Traceback:\n{traceback.format_exception(type(exception), exception, exception.__traceback__)}\n"
+                    f"Traceback:\n{traceback.format_exception(type(exception), exception, exception.__traceback__)}\n",
                 )
     except Exception as e:
         # If we can't even log the error, at least try to create a simple file
@@ -128,7 +130,7 @@ def _get_cached_patterns(context: t.Any, use_cache: bool) -> list[t.Any]:
 
 
 def _build_error_analysis(
-    use_cache: bool, cached_patterns: list[t.Any]
+    use_cache: bool, cached_patterns: list[t.Any],
 ) -> dict[str, t.Any]:
     analysis = {
         "analysis_type": "smart_error_analysis",
@@ -165,7 +167,7 @@ def _build_error_analysis(
 
 
 async def _execute_crackerjack_sync(
-    job_id: str, args: str, kwargs: dict[str, t.Any], context: t.Any
+    job_id: str, args: str, kwargs: dict[str, t.Any], context: t.Any,
 ) -> dict[str, t.Any]:
     if not context:
         return {"job_id": job_id, "status": "failed", "error": "No context available"}
@@ -177,11 +179,11 @@ async def _execute_crackerjack_sync(
         await _initialize_execution(job_id, max_iterations, current_iteration, context)
 
         orchestrator, use_advanced_orchestrator = await _setup_orchestrator(
-            job_id, max_iterations, current_iteration, kwargs, context
+            job_id, max_iterations, current_iteration, kwargs, context,
         )
 
         return await _run_workflow_iterations(
-            job_id, max_iterations, orchestrator, use_advanced_orchestrator, kwargs
+            job_id, max_iterations, orchestrator, use_advanced_orchestrator, kwargs,
         )
 
     except Exception as e:
@@ -199,7 +201,7 @@ async def _execute_crackerjack_sync(
 
 
 async def _initialize_execution(
-    job_id: str, max_iterations: int, current_iteration: int, context: t.Any
+    job_id: str, max_iterations: int, current_iteration: int, context: t.Any,
 ) -> None:
     """Initialize execution with status checks and service preparation."""
     _update_progress(
@@ -215,7 +217,8 @@ async def _initialize_execution(
     # Check comprehensive status first to prevent conflicts and perform cleanup
     status_result = await _check_status_and_prepare(job_id, context)
     if status_result.get("should_abort", False):
-        raise RuntimeError(f"Execution aborted: {status_result['reason']}")
+        msg = f"Execution aborted: {status_result['reason']}"
+        raise RuntimeError(msg)
 
     _update_progress(
         job_id=job_id,
@@ -281,12 +284,14 @@ async def _setup_orchestrator(
 
 
 async def _create_advanced_orchestrator(
-    job_id: str, kwargs: dict[str, t.Any], context: t.Any
+    job_id: str, kwargs: dict[str, t.Any], context: t.Any,
 ) -> t.Any:
     """Create and configure the advanced orchestrator."""
-    from ...core.session_coordinator import SessionCoordinator
-    from ...orchestration.advanced_orchestrator import AdvancedWorkflowOrchestrator
-    from ...orchestration.execution_strategies import (
+    from crackerjack.core.session_coordinator import SessionCoordinator
+    from crackerjack.orchestration.advanced_orchestrator import (
+        AdvancedWorkflowOrchestrator,
+    )
+    from crackerjack.orchestration.execution_strategies import (
         AICoordinationMode,
         AIIntelligence,
         ExecutionStrategy,
@@ -318,7 +323,7 @@ async def _create_advanced_orchestrator(
 
     # Initialize advanced orchestrator with optimal config
     session = SessionCoordinator(
-        context.console, context.config.project_path, web_job_id=job_id
+        context.console, context.config.project_path, web_job_id=job_id,
     )
     orchestrator = AdvancedWorkflowOrchestrator(
         console=context.console,
@@ -336,10 +341,10 @@ async def _create_advanced_orchestrator(
 
 
 def _create_standard_orchestrator(
-    job_id: str, kwargs: dict[str, t.Any], context: t.Any
+    job_id: str, kwargs: dict[str, t.Any], context: t.Any,
 ) -> t.Any:
     """Create the standard fallback orchestrator."""
-    from ...core.workflow_orchestrator import WorkflowOrchestrator
+    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
     return WorkflowOrchestrator(
         console=context.console,
@@ -357,7 +362,6 @@ async def _run_workflow_iterations(
     kwargs: dict[str, t.Any],
 ) -> dict[str, t.Any]:
     """Run the main workflow iteration loop."""
-
     success = False
     current_iteration = 1
 
@@ -378,17 +382,17 @@ async def _run_workflow_iterations(
 
         try:
             success = await _execute_single_iteration(
-                orchestrator, use_advanced_orchestrator, options
+                orchestrator, use_advanced_orchestrator, options,
             )
 
             if success:
                 return _create_success_result(
-                    job_id, current_iteration, max_iterations, iteration
+                    job_id, current_iteration, max_iterations, iteration,
                 )
 
             if iteration < max_iterations:
                 await _handle_iteration_retry(
-                    job_id, current_iteration, max_iterations, iteration
+                    job_id, current_iteration, max_iterations, iteration,
                 )
                 continue
 
@@ -401,7 +405,7 @@ async def _run_workflow_iterations(
 
 def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
     """Create WorkflowOptions from kwargs."""
-    from ...models.config import WorkflowOptions
+    from crackerjack.models.config import WorkflowOptions
 
     options = WorkflowOptions()
     options.testing.test = kwargs.get("test", True)
@@ -411,17 +415,16 @@ def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
 
 
 async def _execute_single_iteration(
-    orchestrator: t.Any, use_advanced_orchestrator: bool, options: t.Any
+    orchestrator: t.Any, use_advanced_orchestrator: bool, options: t.Any,
 ) -> bool:
     """Execute a single workflow iteration."""
     if use_advanced_orchestrator:
         return await orchestrator.execute_orchestrated_workflow(options)
-    else:
-        return await orchestrator.run_complete_workflow(options)
+    return await orchestrator.run_complete_workflow(options)
 
 
 def _create_success_result(
-    job_id: str, current_iteration: int, max_iterations: int, iteration: int
+    job_id: str, current_iteration: int, max_iterations: int, iteration: int,
 ) -> dict[str, t.Any]:
     """Create success result dictionary."""
     _update_progress(
@@ -442,7 +445,7 @@ def _create_success_result(
 
 
 async def _handle_iteration_retry(
-    job_id: str, current_iteration: int, max_iterations: int, iteration: int
+    job_id: str, current_iteration: int, max_iterations: int, iteration: int,
 ) -> None:
     """Handle iteration retry logic."""
     _update_progress(
@@ -458,10 +461,9 @@ async def _handle_iteration_retry(
 
 
 async def _handle_iteration_error(
-    iteration: int, max_iterations: int, error: Exception
+    iteration: int, max_iterations: int, error: Exception,
 ) -> bool:
     """Handle iteration errors. Returns True to continue, False to break."""
-    print(f"Iteration {iteration} failed with error: {error}")
     if iteration >= max_iterations:
         return False
     await asyncio.sleep(1)
@@ -469,7 +471,7 @@ async def _handle_iteration_error(
 
 
 def _create_failure_result(
-    job_id: str, current_iteration: int, max_iterations: int
+    job_id: str, current_iteration: int, max_iterations: int,
 ) -> dict[str, t.Any]:
     """Create failure result dictionary."""
     _update_progress(
@@ -503,7 +505,7 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
     # Check if WebSocket server is running
     websocket_running = False
     try:
-        from ...services.server_manager import find_websocket_server_processes
+        from crackerjack.services.server_manager import find_websocket_server_processes
 
         websocket_processes = find_websocket_server_processes()
         websocket_running = len(websocket_processes) > 0
@@ -529,7 +531,7 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
             )
 
             # Wait for server to start
-            for i in range(10):
+            for _i in range(10):
                 try:
                     websocket_processes = find_websocket_server_processes()
                     if len(websocket_processes) > 0:
@@ -593,7 +595,7 @@ async def _get_status_info() -> dict[str, t.Any]:
 
 
 def _handle_status_error(
-    status_info: dict[str, t.Any], context: t.Any
+    status_info: dict[str, t.Any], context: t.Any,
 ) -> dict[str, t.Any]:
     """Handle status check failure."""
     context.safe_print(f"⚠️ Status check failed: {status_info['error']}")
@@ -620,7 +622,7 @@ def _check_active_jobs(status_info: dict[str, t.Any], context: t.Any) -> None:
 
 
 def _handle_conflicting_jobs(
-    active_jobs: list[dict[str, t.Any]], context: t.Any
+    active_jobs: list[dict[str, t.Any]], context: t.Any,
 ) -> None:
     """Handle conflicting active jobs."""
     # For now, assume all jobs could conflict (future: check project paths)
@@ -629,10 +631,10 @@ def _handle_conflicting_jobs(
     if conflicting_jobs:
         job_ids = [j.get("job_id", "unknown") for j in conflicting_jobs]
         context.safe_print(
-            f"⚠️ Found {len(conflicting_jobs)} active job(s): {', '.join(job_ids[:3])}"
+            f"⚠️ Found {len(conflicting_jobs)} active job(s): {', '.join(job_ids[:3])}",
         )
         context.safe_print(
-            "   Running concurrent crackerjack instances may cause file conflicts"
+            "   Running concurrent crackerjack instances may cause file conflicts",
         )
         context.safe_print("   Proceeding with caution...")
 
@@ -649,7 +651,7 @@ def _check_resource_cleanup(status_info: dict[str, t.Any], context: t.Any) -> li
 
     if temp_files_count > 50:
         context.safe_print(
-            f"🗑️ Found {temp_files_count} temporary files - cleanup recommended"
+            f"🗑️ Found {temp_files_count} temporary files - cleanup recommended",
         )
         cleanup_performed.append("temp_files_flagged")
 
@@ -723,3 +725,79 @@ async def _cleanup_stale_jobs(context: t.Any) -> None:
 
     if cleaned_count > 0:
         context.safe_print(f"🗑️ Cleaned up {cleaned_count} stale job files")
+
+
+def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
+    @mcp_app.tool()
+    async def init_crackerjack(args: str = "", kwargs: str = "{}") -> str:
+        """Initialize or update crackerjack configuration in current project.
+        
+        Args:
+            args: Optional target path (defaults to current directory)
+            kwargs: JSON string with options like {"force": true}
+        
+        Returns:
+            JSON string with initialization results
+        """
+        context = get_context()
+        if not context:
+            return json.dumps({"error": "Server context not available", "success": False})
+
+        # Parse arguments
+        target_path = args.strip() if args.strip() else None
+        
+        try:
+            extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+        except json.JSONDecodeError as e:
+            return json.dumps({"error": f"Invalid JSON in kwargs: {e}", "success": False})
+
+        force = extra_kwargs.get("force", False)
+
+        try:
+            from pathlib import Path
+            from crackerjack.services.filesystem import FileSystemService
+            from crackerjack.services.git import GitService
+            from crackerjack.services.initialization import InitializationService
+
+            # Determine target path
+            if target_path:
+                target_path = Path(target_path).resolve()
+            else:
+                target_path = Path.cwd()
+
+            # Validate target path exists
+            if not target_path.exists():
+                return json.dumps({
+                    "error": f"Target path does not exist: {target_path}",
+                    "success": False
+                })
+
+            # Initialize services
+            filesystem = FileSystemService()
+            git_service = GitService(context.console, context.config.project_path)
+            
+            init_service = InitializationService(
+                context.console, 
+                filesystem, 
+                git_service, 
+                context.config.project_path
+            )
+
+            # Run initialization
+            results = init_service.initialize_project(target_path=target_path, force=force)
+            
+            # Add summary information
+            results["command"] = "init_crackerjack"
+            results["target_path"] = str(target_path)
+            results["force"] = force
+            
+            return json.dumps(results, indent=2)
+
+        except Exception as e:
+            error_result = {
+                "error": f"Initialization failed: {e}",
+                "success": False,
+                "command": "init_crackerjack",
+                "target_path": str(target_path) if target_path else "current_directory"
+            }
+            return json.dumps(error_result, indent=2)

@@ -7,9 +7,9 @@ from typing import Any
 
 import aiofiles
 
-from ..errors import FileError
-from ..models.protocols import FileSystemInterface
-from ..services.logging import LoggingContext, get_logger
+from crackerjack.errors import FileError
+from crackerjack.models.protocols import FileSystemInterface
+from crackerjack.services.logging import LoggingContext, get_logger
 
 
 class FileCache:
@@ -103,7 +103,7 @@ class BatchFileOperations:
 
     async def flush_all(self) -> None:
         await asyncio.gather(
-            self._flush_reads(), self._flush_writes(), return_exceptions=True
+            self._flush_reads(), self._flush_writes(), return_exceptions=True,
         )
 
     async def _flush_reads(self) -> None:
@@ -143,7 +143,7 @@ class BatchFileOperations:
             future.set_exception(e)
 
     async def _write_single_async(
-        self, path: Path, content: str, future: asyncio.Future[None]
+        self, path: Path, content: str, future: asyncio.Future[None],
     ) -> None:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -190,7 +190,8 @@ class EnhancedFileSystemService(FileSystemInterface):
         path_obj = Path(path) if isinstance(path, str) else path
 
         if not isinstance(content, str):
-            raise TypeError("Content must be a string")
+            msg = "Content must be a string"
+            raise TypeError(msg)
 
         with LoggingContext("write_file", path=str(path_obj), size=len(content)):
             self._write_file_direct(path_obj, content)
@@ -235,8 +236,8 @@ class EnhancedFileSystemService(FileSystemInterface):
                 try:
                     results[path] = self.read_file(path)
                 except Exception as e:
-                    self.logger.error(
-                        "Failed to read file", path=str(path), error=str(e)
+                    self.logger.exception(
+                        "Failed to read file", path=str(path), error=str(e),
                     )
                     results[path] = ""
             return results
@@ -246,10 +247,10 @@ class EnhancedFileSystemService(FileSystemInterface):
 
             results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for path, result in zip(paths, results_list):
+            for path, result in zip(paths, results_list, strict=False):
                 if isinstance(result, Exception):
                     self.logger.error(
-                        "Failed to read file", path=str(path), error=str(result)
+                        "Failed to read file", path=str(path), error=str(result),
                     )
                     results[path] = ""
                 else:
@@ -263,8 +264,8 @@ class EnhancedFileSystemService(FileSystemInterface):
                 try:
                     self.write_file(path, content)
                 except Exception as e:
-                    self.logger.error(
-                        "Failed to write file", path=str(path), error=str(e)
+                    self.logger.exception(
+                        "Failed to write file", path=str(path), error=str(e),
                     )
             return
 

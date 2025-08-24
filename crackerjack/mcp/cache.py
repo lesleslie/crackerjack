@@ -1,6 +1,5 @@
 import asyncio
 import json
-import sys
 import time
 import typing as t
 from dataclasses import asdict, dataclass
@@ -63,7 +62,7 @@ class ErrorCache:
             self._save_patterns()
 
     def _update_existing_pattern(
-        self, existing: ErrorPattern, pattern: ErrorPattern
+        self, existing: ErrorPattern, pattern: ErrorPattern,
     ) -> None:
         existing.frequency += 1
         existing.last_seen = time.time()
@@ -135,7 +134,7 @@ class ErrorCache:
         ]
 
     def create_pattern_from_error(
-        self, error_output: str, error_type: str
+        self, error_output: str, error_type: str,
     ) -> ErrorPattern | None:
         try:
             lines = error_output.split("\n")
@@ -146,7 +145,7 @@ class ErrorCache:
                 error_code, message_pattern = self._extract_error_info(line, error_type)
                 if self._is_meaningful_pattern(error_code, message_pattern):
                     return self._create_error_pattern(
-                        error_type, error_code, message_pattern
+                        error_type, error_code, message_pattern,
                     )
 
             return None
@@ -159,9 +158,9 @@ class ErrorCache:
     def _extract_error_info(self, line: str, error_type: str) -> tuple[str, str]:
         if error_type == "ruff":
             return self._extract_ruff_info(line)
-        elif error_type == "pyright":
+        if error_type == "pyright":
             return self._extract_pyright_info(line)
-        elif error_type == "bandit":
+        if error_type == "bandit":
             return self._extract_bandit_info(line)
         return "", line
 
@@ -208,7 +207,7 @@ class ErrorCache:
         return bool(error_code) or len(message_pattern) > 10
 
     def _create_error_pattern(
-        self, error_type: str, error_code: str, message_pattern: str
+        self, error_type: str, error_code: str, message_pattern: str,
     ) -> ErrorPattern:
         pattern_id = f"{error_type}_{error_code}_{hash(message_pattern) % 10000}"
 
@@ -221,7 +220,7 @@ class ErrorCache:
         )
 
     def analyze_output_for_patterns(
-        self, output: str, error_type: str
+        self, output: str, error_type: str,
     ) -> list[ErrorPattern]:
         patterns: list[ErrorPattern] = []
         sections = output.split("\n\n")
@@ -310,17 +309,17 @@ class ErrorCache:
             }
             with self.patterns_file.open("w") as f:
                 json.dump(patterns_data, f, indent=2)
-        except (OSError, json.JSONEncodeError) as e:
-            print(f"Warning: Failed to save error patterns cache: {e}", file=sys.stderr)
-        except Exception as e:
-            print(f"Unexpected error saving patterns cache: {e}", file=sys.stderr)
+        except (OSError, json.JSONEncodeError):
+            pass
+        except Exception:
+            pass
 
     def _save_fixes(self) -> None:
         try:
             fixes_data = [result.to_dict() for result in self.fix_results]
             with self.fixes_file.open("w") as f:
                 json.dump(fixes_data, f, indent=2)
-        except (OSError, json.JSONEncodeError) as e:
-            print(f"Warning: Failed to save fix results cache: {e}", file=sys.stderr)
-        except Exception as e:
-            print(f"Unexpected error saving fix cache: {e}", file=sys.stderr)
+        except (OSError, json.JSONEncodeError):
+            pass
+        except Exception:
+            pass

@@ -5,9 +5,8 @@ import pytest
 from crackerjack.core.enhanced_container import create_enhanced_container
 
 
-def test_create_enhanced_container_basic():
+def test_create_enhanced_container_basic() -> None:
     """Test basic functionality of create_enhanced_container."""
-
     try:
         result = create_enhanced_container()
         assert result is not None or result is None
@@ -18,15 +17,14 @@ def test_create_enhanced_container_basic():
         sig = inspect.signature(create_enhanced_container)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in create_enhanced_container: {e}")
 
 
-def test_get_instance_basic():
+def test_get_instance_basic() -> None:
     """Test basic functionality of container.get_instance."""
-
     try:
         container = create_enhanced_container()
         # Test getting an instance - need a valid interface type
@@ -49,7 +47,7 @@ def test_get_instance_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_set_instance_basic():
+def test_set_instance_basic() -> None:
     """Test basic functionality of container.set_instance."""
     try:
         container = create_enhanced_container()
@@ -62,7 +60,7 @@ def test_set_instance_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_dispose_basic():
+def test_dispose_basic() -> None:
     """Test basic functionality of container.dispose."""
     try:
         container = create_enhanced_container()
@@ -75,7 +73,7 @@ def test_dispose_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_create_instance_basic():
+def test_create_instance_basic() -> None:
     """Test basic functionality of container.create_instance."""
     try:
         container = create_enhanced_container()
@@ -87,7 +85,7 @@ def test_create_instance_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_register_singleton_basic():
+def test_register_singleton_basic() -> None:
     """Test basic functionality of container.register_singleton."""
     try:
         container = create_enhanced_container()
@@ -99,7 +97,7 @@ def test_register_singleton_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_register_transient_basic():
+def test_register_transient_basic() -> None:
     """Test basic functionality of container.register_transient."""
     try:
         container = create_enhanced_container()
@@ -111,7 +109,7 @@ def test_register_transient_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_register_scoped_basic():
+def test_register_scoped_basic() -> None:
     """Test basic functionality of container.register_scoped."""
     try:
         container = create_enhanced_container()
@@ -123,7 +121,7 @@ def test_register_scoped_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_get_optional_basic():
+def test_get_optional_basic() -> None:
     """Test basic functionality of container.get_optional."""
     try:
         container = create_enhanced_container()
@@ -135,7 +133,7 @@ def test_get_optional_basic():
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
-def test_is_registered_basic():
+def test_is_registered_basic() -> None:
     """Test basic functionality of container.is_registered."""
     try:
         container = create_enhanced_container()

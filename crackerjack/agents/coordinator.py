@@ -4,7 +4,8 @@ import operator
 import typing as t
 from collections import defaultdict
 
-from ..services.debug import get_ai_agent_debugger
+from crackerjack.services.debug import get_ai_agent_debugger
+
 from .base import (
     AgentContext,
     FixResult,
@@ -96,7 +97,7 @@ class AgentCoordinator:
         return result
 
     async def _handle_issues_by_type(
-        self, issue_type: IssueType, issues: list[Issue]
+        self, issue_type: IssueType, issues: list[Issue],
     ) -> FixResult:
         self.logger.info(f"Handling {len(issues)} {issue_type.value} issues")
 
@@ -136,7 +137,7 @@ class AgentCoordinator:
         return combined_result
 
     async def _evaluate_agents_for_issue(
-        self, issue: Issue
+        self, issue: Issue,
     ) -> list[tuple[SubAgent, float]]:
         evaluations: list[tuple[SubAgent, float]] = []
 
@@ -146,13 +147,13 @@ class AgentCoordinator:
                 if confidence > 0.0:
                     evaluations.append((agent, confidence))
             except Exception as e:
-                self.logger.error(f"Error evaluating {agent.name} for issue: {e}")
+                self.logger.exception(f"Error evaluating {agent.name} for issue: {e}")
 
         evaluations.sort(key=operator.itemgetter(1), reverse=True)
         return evaluations
 
     async def _find_best_specialist(
-        self, specialists: list[SubAgent], issue: Issue
+        self, specialists: list[SubAgent], issue: Issue,
     ) -> SubAgent | None:
         best_agent = None
         best_score = 0.0
@@ -164,12 +165,12 @@ class AgentCoordinator:
                     best_score = score
                     best_agent = agent
             except Exception as e:
-                self.logger.error(f"Error evaluating specialist {agent.name}: {e}")
+                self.logger.exception(f"Error evaluating specialist {agent.name}: {e}")
 
         return best_agent
 
     async def _handle_with_single_agent(
-        self, agent: SubAgent, issue: Issue
+        self, agent: SubAgent, issue: Issue,
     ) -> FixResult:
         self.logger.info(f"Handling issue with {agent.name}: {issue.message[:100]}")
 
@@ -207,7 +208,7 @@ class AgentCoordinator:
 
             return result
         except Exception as e:
-            self.logger.error(f"{agent.name} threw exception: {e}")
+            self.logger.exception(f"{agent.name} threw exception: {e}")
             error_result = FixResult(
                 success=False,
                 confidence=0.0,
@@ -218,10 +219,10 @@ class AgentCoordinator:
             return error_result
 
     async def _handle_with_collaboration(
-        self, agent_scores: list[tuple[SubAgent, float]], issue: Issue
+        self, agent_scores: list[tuple[SubAgent, float]], issue: Issue,
     ) -> FixResult:
         self.logger.info(
-            f"Using collaborative approach for issue: {issue.message[:100]}"
+            f"Using collaborative approach for issue: {issue.message[:100]}",
         )
 
         results: list[FixResult] = []
@@ -236,13 +237,13 @@ class AgentCoordinator:
                     break
 
             except Exception as e:
-                self.logger.error(f"Collaborative agent {agent.name} failed: {e}")
+                self.logger.exception(f"Collaborative agent {agent.name} failed: {e}")
                 results.append(
                     FixResult(
                         success=False,
                         confidence=0.0,
                         remaining_issues=[f"{agent.name} failed: {e}"],
-                    )
+                    ),
                 )
 
         if not results:
@@ -255,7 +256,7 @@ class AgentCoordinator:
         return combined_result
 
     def _group_issues_by_type(
-        self, issues: list[Issue]
+        self, issues: list[Issue],
     ) -> dict[IssueType, list[Issue]]:
         grouped: defaultdict[IssueType, list[Issue]] = defaultdict(list)
         for issue in issues:
@@ -295,7 +296,7 @@ class AgentCoordinator:
                 confidence = await agent.can_handle(test_issue)
                 connectivity[agent.name] = confidence >= 0.0
             except Exception as e:
-                self.logger.error(f"Connectivity test failed for {agent.name}: {e}")
+                self.logger.exception(f"Connectivity test failed for {agent.name}: {e}")
                 connectivity[agent.name] = False
 
         return connectivity

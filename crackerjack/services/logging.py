@@ -127,7 +127,7 @@ class LoggingContext:
 
 
 def log_performance(
-    operation: str, **kwargs: Any
+    operation: str, **kwargs: Any,
 ) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         def wrapper(*args: t.Any, **func_kwargs: t.Any) -> t.Any:
@@ -148,7 +148,7 @@ def log_performance(
                 return result
             except Exception as e:
                 duration = time.time() - start_time
-                logger.error(
+                logger.exception(
                     "Function failed",
                     operation=operation,
                     function=func.__name__,

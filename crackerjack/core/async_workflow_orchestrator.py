@@ -6,7 +6,8 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..models.protocols import OptionsProtocol
+from crackerjack.models.protocols import OptionsProtocol
+
 from .phase_coordinator import PhaseCoordinator
 from .session_coordinator import SessionCoordinator
 
@@ -80,9 +81,9 @@ class AsyncWorkflowPipeline:
     async def _execute_quality_phase_async(self, options: OptionsProtocol) -> bool:
         if hasattr(options, "fast") and options.fast:
             return await self._run_fast_hooks_async(options)
-        elif hasattr(options, "comp") and options.comp:
+        if hasattr(options, "comp") and options.comp:
             return await self._run_comprehensive_hooks_async(options)
-        elif options.test:
+        if options.test:
             return await self._execute_test_workflow_async(options)
         return await self._execute_standard_hooks_workflow_async(options)
 
@@ -99,7 +100,7 @@ class AsyncWorkflowPipeline:
         hooks_task = asyncio.create_task(self._run_comprehensive_hooks_async(options))
 
         test_success, hooks_success = await asyncio.gather(
-            test_task, hooks_task, return_exceptions=True
+            test_task, hooks_task, return_exceptions=True,
         )
 
         if isinstance(test_success, Exception):
@@ -125,7 +126,7 @@ class AsyncWorkflowPipeline:
         return overall_success
 
     async def _execute_standard_hooks_workflow_async(
-        self, options: OptionsProtocol
+        self, options: OptionsProtocol,
     ) -> bool:
         hooks_success = await self._run_hooks_phase_async(options)
         if not hooks_success:
@@ -138,7 +139,7 @@ class AsyncWorkflowPipeline:
 
     async def _run_comprehensive_hooks_async(self, options: OptionsProtocol) -> bool:
         return await asyncio.to_thread(
-            self.phases.run_comprehensive_hooks_only, options
+            self.phases.run_comprehensive_hooks_only, options,
         )
 
     async def _run_hooks_phase_async(self, options: OptionsProtocol) -> bool:
@@ -161,17 +162,18 @@ class AsyncWorkflowOrchestrator:
         self.dry_run = dry_run
         self.web_job_id = web_job_id
 
-        from ..models.protocols import (
+        from crackerjack.models.protocols import (
             FileSystemInterface,
             GitInterface,
             HookManager,
             PublishManager,
             TestManagerProtocol,
         )
+
         from .container import create_container
 
         self.container = create_container(
-            console=self.console, pkg_path=self.pkg_path, dry_run=self.dry_run
+            console=self.console, pkg_path=self.pkg_path, dry_run=self.dry_run,
         )
 
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)

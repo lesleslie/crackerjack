@@ -17,11 +17,10 @@ try:
     VERIFICATION_AVAILABLE = True
 except ImportError:
     VERIFICATION_AVAILABLE = False
-    print("⚠️ Global verification toolkit not available, using basic verification")
 
 
 class AIAgentWorkflowTester:
-    def __init__(self):
+    def __init__(self) -> None:
         self.project_root = Path("/Users / les / Projects / crackerjack")
         self.test_results = {}
         self.verification_toolkit = None
@@ -30,9 +29,8 @@ class AIAgentWorkflowTester:
             self.verification_toolkit = VerificationToolkit()
 
     def setup_test_environment(self) -> dict[str, Any]:
-        print("🔧 Setting up test environment...")
 
-        initial_state = {
+        return {
             "timestamp": time.time(),
             "git_status": self._get_git_status(),
             "test_status": self._run_quick_test_check(),
@@ -40,18 +38,13 @@ class AIAgentWorkflowTester:
             "python_files": list(self.project_root.glob(" **/* .py")),
         }
 
-        print(f" 📊 Found {len(initial_state['python_files'])} Python files")
-        print(
-            f" 📋 Git status: {len(initial_state['git_status']['modified'])} modified files"
-        )
 
-        return initial_state
 
     def _get_git_status(self) -> dict[str, list[str]]:
         try:
             result = subprocess.run(
                 ["git", "status", " -- porcelain"],
-                cwd=self.project_root,
+                check=False, cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -83,12 +76,11 @@ class AIAgentWorkflowTester:
             }
 
     def _run_quick_test_check(self) -> dict[str, Any]:
-        print(" 🧪 Running quick test check...")
 
         try:
             result = subprocess.run(
                 ["python", " - m", "pytest", " -- tb = no", " - q"],
-                cwd=self.project_root,
+                check=False, cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -107,7 +99,6 @@ class AIAgentWorkflowTester:
             return {"error": str(e), "passed": False}
 
     def _run_quick_hook_check(self) -> dict[str, Any]:
-        print(" 🪝 Running quick hook check...")
 
         try:
             result = subprocess.run(
@@ -118,7 +109,7 @@ class AIAgentWorkflowTester:
                     " -- skip - comprehensive",
                     " -- skip - tests",
                 ],
-                cwd=self.project_root,
+                check=False, cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -137,12 +128,10 @@ class AIAgentWorkflowTester:
             return {"error": str(e), "passed": False}
 
     async def run_ai_agent_workflow(self) -> dict[str, Any]:
-        print("🤖 Starting AI agent iterative workflow...")
 
         if self.verification_toolkit:
             return await self._run_with_verification()
-        else:
-            return await self._run_basic_workflow()
+        return await self._run_basic_workflow()
 
     async def _run_with_verification(self) -> dict[str, Any]:
         def execute_ai_workflow():
@@ -155,14 +144,14 @@ class AIAgentWorkflowTester:
                     " - t",
                     " -- verbose",
                 ],
-                cwd=self.project_root,
+                check=False, cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 timeout=600,
             )
 
         workflow_result = self.verification_toolkit.execute_with_verification(
-            "ai_agent_workflow", execute_ai_workflow
+            "ai_agent_workflow", execute_ai_workflow,
         )
 
         output = workflow_result.get("result", {}).get("stdout", "")
@@ -177,7 +166,6 @@ class AIAgentWorkflowTester:
         }
 
     async def _run_basic_workflow(self) -> dict[str, Any]:
-        print(" Running basic AI agent workflow...")
 
         try:
             result = subprocess.run(
@@ -189,7 +177,7 @@ class AIAgentWorkflowTester:
                     " - t",
                     " -- verbose",
                 ],
-                cwd=self.project_root,
+                check=False, cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 timeout=600,
@@ -253,7 +241,7 @@ class AIAgentWorkflowTester:
         }
 
     def _process_iteration_line(
-        self, line: str, current_iteration: dict[str, Any]
+        self, line: str, current_iteration: dict[str, Any],
     ) -> None:
         stage_mapping = {
             "⚡ Fast Hooks": "fast_hooks",
@@ -275,7 +263,7 @@ class AIAgentWorkflowTester:
             current_iteration["success"] = True
 
     def _extract_fixes_count(
-        self, line: str, current_iteration: dict[str, Any]
+        self, line: str, current_iteration: dict[str, Any],
     ) -> None:
         try:
             import re
@@ -287,7 +275,6 @@ class AIAgentWorkflowTester:
             pass
 
     def verify_final_state(self) -> dict[str, Any]:
-        print("✅ Verifying final state...")
 
         final_state = {
             "timestamp": time.time(),
@@ -308,18 +295,17 @@ class AIAgentWorkflowTester:
                 final_state["all_tests_pass"],
                 final_state["all_hooks_pass"],
                 final_state["comprehensive_pass"],
-            ]
+            ],
         )
 
         return final_state
 
     def _run_comprehensive_check(self) -> dict[str, Any]:
-        print(" 🔍 Running comprehensive quality check...")
 
         try:
             result = subprocess.run(
                 ["python", " - m", "crackerjack"],
-                cwd=self.project_root,
+                check=False, cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 timeout=120,
@@ -338,7 +324,7 @@ class AIAgentWorkflowTester:
             return {"error": str(e), "passed": False}
 
     def generate_test_report(
-        self, initial_state: dict, workflow_result: dict, final_state: dict
+        self, initial_state: dict, workflow_result: dict, final_state: dict,
     ) -> str:
         report = []
         report.append(" = " * 80)
@@ -354,13 +340,13 @@ class AIAgentWorkflowTester:
         total_iterations = workflow_result.get("total_iterations", 0)
 
         report.append(
-            f"✅ Workflow Execution: {'SUCCESS' if workflow_success else 'FAILED'}"
+            f"✅ Workflow Execution: {'SUCCESS' if workflow_success else 'FAILED'}",
         )
         report.append(f"✅ Final State: {'SUCCESS' if final_success else 'FAILED'}")
         report.append(f"🔄 Total Iterations: {total_iterations}")
         report.append("🎯 Target: ≤ 3 iterations")
         report.append(
-            f"📈 Efficiency: {'EXCELLENT' if total_iterations <= 3 else 'NEEDS IMPROVEMENT'}"
+            f"📈 Efficiency: {'EXCELLENT' if total_iterations <= 3 else 'NEEDS IMPROVEMENT'}",
         )
         report.append("")
 
@@ -375,13 +361,13 @@ class AIAgentWorkflowTester:
         final_comprehensive_pass = final_state.get("comprehensive_pass", False)
 
         report.append(
-            f"🧪 Tests: {self._status_change(initial_tests_pass, final_tests_pass)}"
+            f"🧪 Tests: {self._status_change(initial_tests_pass, final_tests_pass)}",
         )
         report.append(
-            f"🪝 Hooks: {self._status_change(initial_hooks_pass, final_hooks_pass)}"
+            f"🪝 Hooks: {self._status_change(initial_hooks_pass, final_hooks_pass)}",
         )
         report.append(
-            f"🔍 Comprehensive: {'N / A' if initial_state.get('comprehensive_check') is None else 'INITIAL'} → {'PASS' if final_comprehensive_pass else 'FAIL'}"
+            f"🔍 Comprehensive: {'N / A' if initial_state.get('comprehensive_check') is None else 'INITIAL'} → {'PASS' if final_comprehensive_pass else 'FAIL'}",
         )
         report.append("")
 
@@ -394,7 +380,7 @@ class AIAgentWorkflowTester:
                 report.append(f" 📋 Stages: {', '.join(iteration.get('stages', []))}")
                 report.append(f" 🔧 Fixes Applied: {iteration.get('errors_fixed', 0)}")
                 report.append(
-                    f" ✅ Success: {'YES' if iteration.get('success', False) else 'NO'}"
+                    f" ✅ Success: {'YES' if iteration.get('success', False) else 'NO'}",
                 )
                 report.append("")
 
@@ -455,14 +441,11 @@ class AIAgentWorkflowTester:
 
         if before == after:
             return f"{before_str} → {after_str} (no change)"
-        elif after:
+        if after:
             return f"{before_str} → {after_str} ✅ IMPROVED"
-        else:
-            return f"{before_str} → {after_str} ❌ REGRESSED"
+        return f"{before_str} → {after_str} ❌ REGRESSED"
 
     async def run_complete_test(self) -> dict[str, Any]:
-        print("🚀 Starting AI Agent Workflow Test")
-        print(" = " * 50)
 
         initial_state = self.setup_test_environment()
 
@@ -485,16 +468,15 @@ class AIAgentWorkflowTester:
         }
 
 
-async def main():
+async def main() -> None:
     tester = AIAgentWorkflowTester()
 
     try:
         result = await tester.run_complete_test()
 
-        print(result["report"])
 
         results_file = Path(
-            " / Users / les / Projects / crackerjack / ai_agent_test_results.json"
+            " / Users / les / Projects / crackerjack / ai_agent_test_results.json",
         )
         with open(results_file, "w") as f:
             json.dump(
@@ -509,15 +491,12 @@ async def main():
                 default=str,
             )
 
-        print(f"\n📄 Detailed results saved to: {results_file}")
 
         sys.exit(0 if result["test_success"] else 1)
 
     except KeyboardInterrupt:
-        print("\n⚠️ Test interrupted by user")
         sys.exit(130)
-    except Exception as e:
-        print(f"\n❌ Test failed with error: {e}")
+    except Exception:
         sys.exit(1)
 
 

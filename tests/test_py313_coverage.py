@@ -528,4 +528,4 @@ class TestPy313Integration:
             }
 
             analysis = analyze_hook_result(hook_result)
-            assert "✅ Hook integration - test passed successfully" == analysis
+            assert analysis == "✅ Hook integration - test passed successfully"

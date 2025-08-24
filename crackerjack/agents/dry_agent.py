@@ -31,7 +31,7 @@ class DRYAgent(SubAgent):
 
         if issue.file_path is None:
             return self._create_dry_error_result(
-                ValueError("File path is required for DRY violation")
+                ValueError("File path is required for DRY violation"),
             )
 
         file_path = Path(issue.file_path)
@@ -83,7 +83,7 @@ class DRYAgent(SubAgent):
         return self._apply_and_save_dry_fixes(file_path, content, violations)
 
     def _apply_and_save_dry_fixes(
-        self, file_path: Path, content: str, violations: list[dict[str, t.Any]]
+        self, file_path: Path, content: str, violations: list[dict[str, t.Any]],
     ) -> FixResult:
         """Apply DRY fixes and save changes."""
         fixed_content = self._apply_dry_fixes(content, violations)
@@ -132,7 +132,7 @@ class DRYAgent(SubAgent):
         )
 
     def _detect_dry_violations(
-        self, content: str, file_path: Path
+        self, content: str, file_path: Path,
     ) -> list[dict[str, t.Any]]:
         """Detect various types of DRY violations in the code."""
         violations: list[dict[str, t.Any]] = []
@@ -158,7 +158,7 @@ class DRYAgent(SubAgent):
 
         # Pattern: return f'{"error": "message", "success": false}'
         error_pattern = re.compile(
-            r'return\s+f?[\'\"]\{[\'\""]error[\'\""]:\s*[\'\""]([^\'\"]*)[\'\""].*\}[\'\""]'
+            r'return\s+f?[\'\"]\{[\'\""]error[\'\""]:\s*[\'\""]([^\'\"]*)[\'\""].*\}[\'\""]',
         )
 
         error_responses: list[dict[str, t.Any]] = []
@@ -170,7 +170,7 @@ class DRYAgent(SubAgent):
                         "line_number": i + 1,
                         "content": line.strip(),
                         "error_message": match.group(1),
-                    }
+                    },
                 )
 
         if len(error_responses) >= 3:  # Only flag if 3+ similar patterns
@@ -179,7 +179,7 @@ class DRYAgent(SubAgent):
                     "type": "error_response_pattern",
                     "instances": error_responses,
                     "suggestion": "Extract to error utility function",
-                }
+                },
             )
 
         return violations
@@ -191,7 +191,7 @@ class DRYAgent(SubAgent):
 
         # Pattern: Path(path) if isinstance(path, str) else path
         path_pattern = re.compile(
-            r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+[^)]+"
+            r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+[^)]+",
         )
 
         path_conversions: list[dict[str, t.Any]] = [
@@ -209,7 +209,7 @@ class DRYAgent(SubAgent):
                     "type": "path_conversion_pattern",
                     "instances": path_conversions,
                     "suggestion": "Extract to path utility function",
-                }
+                },
             )
 
         return violations
@@ -237,7 +237,7 @@ class DRYAgent(SubAgent):
                     "type": "file_existence_pattern",
                     "instances": existence_checks,
                     "suggestion": "Extract to file validation utility",
-                }
+                },
             )
 
         return violations
@@ -264,7 +264,7 @@ class DRYAgent(SubAgent):
                             "line_number": i + 1,
                             "content": line.strip(),
                             "next_line": lines[i + 1].strip(),
-                        }
+                        },
                     )
 
         if len(exception_handlers) >= 3:
@@ -273,7 +273,7 @@ class DRYAgent(SubAgent):
                     "type": "exception_handling_pattern",
                     "instances": exception_handlers,
                     "suggestion": "Extract to error handling utility or decorator",
-                }
+                },
             )
 
         return violations
@@ -294,7 +294,7 @@ class DRYAgent(SubAgent):
         return "\n".join(lines) if modified else content
 
     def _fix_error_response_pattern(
-        self, lines: list[str], violation: dict[str, t.Any]
+        self, lines: list[str], violation: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         """Fix error response patterns by adding utility function."""
         # Add utility function at the top of the file (after imports)
@@ -336,7 +336,7 @@ def _create_error_response(message: str, success: bool = False) -> str:
         return lines, True
 
     def _fix_path_conversion_pattern(
-        self, lines: list[str], violation: dict[str, t.Any]
+        self, lines: list[str], violation: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         """Fix path conversion patterns by adding utility function."""
         # Add utility function
@@ -361,7 +361,7 @@ def _ensure_path(path: str | Path) -> Path:
 
         # Replace path conversion patterns
         path_pattern = re.compile(
-            r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+([^)]+)"
+            r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+([^)]+)",
         )
 
         for instance in violation["instances"]:

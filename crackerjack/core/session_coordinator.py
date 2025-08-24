@@ -7,13 +7,13 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..models.protocols import OptionsProtocol
-from ..models.task import SessionTracker
+from crackerjack.models.protocols import OptionsProtocol
+from crackerjack.models.task import SessionTracker
 
 
 class SessionCoordinator:
     def __init__(
-        self, console: Console, pkg_path: Path, web_job_id: str | None = None
+        self, console: Console, pkg_path: Path, web_job_id: str | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -142,11 +142,11 @@ class SessionCoordinator:
         total_time = time.time() - start_time
         if success:
             self.complete_task(
-                "workflow", f"Completed successfully in {total_time:.1f}s"
+                "workflow", f"Completed successfully in {total_time:.1f}s",
             )
         else:
             self.complete_task(
-                "workflow", f"Completed with issues in {total_time:.1f}s"
+                "workflow", f"Completed with issues in {total_time:.1f}s",
             )
 
     def register_cleanup(self, cleanup_handler: t.Callable[[], None]) -> None:
@@ -170,7 +170,7 @@ class SessionCoordinator:
         elif self._cleanup_config.auto_cleanup:
             self._cleanup_debug_logs(keep_recent=self._cleanup_config.keep_debug_logs)
             self._cleanup_coverage_files(
-                keep_recent=self._cleanup_config.keep_coverage_files
+                keep_recent=self._cleanup_config.keep_coverage_files,
             )
             self._cleanup_pycache_directories()
 
@@ -192,7 +192,7 @@ class SessionCoordinator:
 
             legacy_pattern = "crackerjack-debug-*.log"
             legacy_files = sorted(
-                self.pkg_path.glob(legacy_pattern), key=lambda p: p.stat().st_mtime
+                self.pkg_path.glob(legacy_pattern), key=lambda p: p.stat().st_mtime,
             )
 
             for old_file in legacy_files[:-keep_recent]:
@@ -206,7 +206,7 @@ class SessionCoordinator:
             if cache_dir.exists():
                 pattern = ".coverage*"
                 coverage_files = sorted(
-                    cache_dir.glob(pattern), key=lambda p: p.stat().st_mtime
+                    cache_dir.glob(pattern), key=lambda p: p.stat().st_mtime,
                 )
 
                 for old_file in coverage_files[:-keep_recent]:
@@ -216,7 +216,7 @@ class SessionCoordinator:
             # Also clean up any legacy coverage files from project root
             pattern = ".coverage.*"
             coverage_files = sorted(
-                self.pkg_path.glob(pattern), key=lambda p: p.stat().st_mtime
+                self.pkg_path.glob(pattern), key=lambda p: p.stat().st_mtime,
             )
 
             for old_file in coverage_files:
@@ -266,14 +266,14 @@ class SessionCoordinator:
                     "message": message,
                     "updated_at": time.time(),
                     "current_stage": message,
-                }
+                },
             )
 
             self.progress_file.write_text(json.dumps(progress_data, indent=2))
 
         except Exception as e:
             self.console.print(
-                f"[dim yellow]Warning: Could not update progress file: {e}[/dim yellow]"
+                f"[dim yellow]Warning: Could not update progress file: {e}[/dim yellow]",
             )
 
     def update_stage(self, stage: str, status: str) -> None:

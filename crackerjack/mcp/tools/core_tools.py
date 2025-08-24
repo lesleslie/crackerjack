@@ -1,6 +1,6 @@
 import typing as t
 
-from ..context import get_context
+from crackerjack.mcp.context import get_context
 
 
 async def _validate_stage_request(context, rate_limiter) -> str | None:
@@ -35,12 +35,10 @@ def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
 
 
 def _configure_stage_options(stage: str) -> "WorkflowOptions":
-    from ...models.config import WorkflowOptions
+    from crackerjack.models.config import WorkflowOptions
 
     options = WorkflowOptions()
-    if stage == "fast":
-        options.skip_hooks = False
-    elif stage == "comprehensive":
+    if stage in {"fast", "comprehensive"}:
         options.skip_hooks = False
     elif stage == "tests":
         options.testing.test = True
@@ -55,13 +53,13 @@ def _configure_stage_options(stage: str) -> "WorkflowOptions":
 def _execute_stage(orchestrator, stage: str, options) -> bool:
     if stage == "fast":
         return orchestrator.run_fast_hooks_only(options)
-    elif stage == "comprehensive":
+    if stage == "comprehensive":
         return orchestrator.run_comprehensive_hooks_only(options)
-    elif stage == "tests":
+    if stage == "tests":
         return orchestrator.run_testing_phase(options)
-    elif stage == "cleaning":
+    if stage == "cleaning":
         return orchestrator.run_cleaning_phase(options)
-    elif stage == "init":
+    if stage == "init":
         return _execute_init_stage(orchestrator)
     return False
 
@@ -70,10 +68,10 @@ def _execute_init_stage(orchestrator) -> bool:
     """Execute project initialization stage."""
     try:
         from pathlib import Path
-        from rich.console import Console
-        from ...services.initialization import InitializationService
-        from ...services.filesystem import FileSystemService
-        from ...services.git import GitService
+
+        from crackerjack.services.filesystem import FileSystemService
+        from crackerjack.services.git import GitService
+        from crackerjack.services.initialization import InitializationService
 
         # Get orchestrator dependencies
         console = orchestrator.console
@@ -92,7 +90,7 @@ def _execute_init_stage(orchestrator) -> bool:
         return results.get("success", False)
 
     except Exception as e:
-        if hasattr(orchestrator, 'console'):
+        if hasattr(orchestrator, "console"):
             orchestrator.console.print(f"[red]❌[/red] Initialization failed: {e}")
         return False
 
@@ -108,7 +106,7 @@ def register_core_tools(mcp_app: t.Any) -> None:
             return validation_error
 
         try:
-            from ...core.workflow_orchestrator import WorkflowOrchestrator
+            from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
             parse_result = _parse_stage_args(args, kwargs)
             if isinstance(parse_result, str):
@@ -154,7 +152,7 @@ def _get_error_suggestion(error_type: str) -> str:
 
 
 def _detect_errors_and_suggestions(
-    text: str, include_suggestions: bool
+    text: str, include_suggestions: bool,
 ) -> tuple[list[str], list[str]]:
     import re
 
@@ -178,7 +176,7 @@ def register_analyze_errors_tool(mcp_app: t.Any) -> None:
             return '{"error": "Server context not available"}'
 
         try:
-            from ...services.debug import get_ai_agent_debugger
+            from crackerjack.services.debug import get_ai_agent_debugger
 
             debugger = get_ai_agent_debugger()
             if not debugger.enabled:
@@ -186,7 +184,7 @@ def register_analyze_errors_tool(mcp_app: t.Any) -> None:
 
             analysis_text = output or "No specific output provided"
             detected_errors, suggestions = _detect_errors_and_suggestions(
-                analysis_text, include_suggestions
+                analysis_text, include_suggestions,
             )
 
             result = {

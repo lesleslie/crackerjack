@@ -37,7 +37,7 @@ async def ensure_mcp_server_running() -> subprocess.Popen | None:
         start_new_session=True,
     )
 
-    for i in range(20):
+    for _i in range(20):
         if is_mcp_server_running():
             console.print("[green]✅ MCP server started successfully[/green]")
             return server_process
@@ -45,7 +45,8 @@ async def ensure_mcp_server_running() -> subprocess.Popen | None:
 
     console.print("[red]❌ Failed to start MCP server[/red]")
     server_process.terminate()
-    raise RuntimeError("Failed to start MCP server within timeout period")
+    msg = "Failed to start MCP server within timeout period"
+    raise RuntimeError(msg)
 
 
 async def run_with_mcp_server(command: str = "/crackerjack:run") -> None:
@@ -56,20 +57,19 @@ async def run_with_mcp_server(command: str = "/crackerjack:run") -> None:
     try:
         server_script = Path(__file__).parent.parent / "__main__.py"
         async with stdio_client(
-            sys.executable, str(server_script), "--start-mcp-server"
-        ) as (read_stream, write_stream):
-            async with read_stream.session(
-                read_stream=read_stream, write_stream=write_stream
-            ) as session:
-                try:
-                    await run_crackerjack_with_progress(session, command)
-                except Exception as e:
-                    console.print(f"[bold red]Error: {e}[/bold red]")
-                    sys.exit(1)
+            sys.executable, str(server_script), "--start-mcp-server",
+        ) as (read_stream, write_stream), read_stream.session(
+            read_stream=read_stream, write_stream=write_stream,
+        ) as session:
+            try:
+                await run_crackerjack_with_progress(session, command)
+            except Exception as e:
+                console.print(f"[bold red]Error: {e}[/bold red]")
+                sys.exit(1)
     finally:
         if server_process:
             console.print(
-                "[yellow]Note: MCP server continues running in background[/yellow]"
+                "[yellow]Note: MCP server continues running in background[/yellow]",
             )
 
 
@@ -77,7 +77,7 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Run Crackerjack commands through MCP with progress monitoring"
+        description="Run Crackerjack commands through MCP with progress monitoring",
     )
     parser.add_argument(
         "command",

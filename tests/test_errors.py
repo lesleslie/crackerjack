@@ -10,9 +10,8 @@ from crackerjack.errors import (
 )
 
 
-def test_handle_error_basic():
+def test_handle_error_basic() -> None:
     """Test basic functionality of handle_error."""
-
     try:
         result = handle_error()
         assert result is not None or result is None
@@ -23,15 +22,14 @@ def test_handle_error_basic():
         sig = inspect.signature(handle_error)
         assert sig is not None, "Function should have valid signature"
         pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+            "Function requires specific arguments - manual implementation needed",
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in handle_error: {e}")
 
 
-def test_check_file_exists_basic():
+def test_check_file_exists_basic() -> None:
     """Test basic functionality of check_file_exists."""
-
     try:
         # Test with a path that exists
         import tempfile
@@ -46,7 +44,8 @@ def test_check_file_exists_basic():
         non_existent = Path("/nonexistent/path/file.txt")
         try:
             check_file_exists(non_existent)
-            assert False, "Should have raised an exception for non-existent file"
+            msg = "Should have raised an exception for non-existent file"
+            raise AssertionError(msg)
         except Exception:
             # Expected to raise an exception
             pass
@@ -55,9 +54,8 @@ def test_check_file_exists_basic():
         pytest.skip(f"Function requires specific implementation - skipped: {e}")
 
 
-def test_check_command_result_basic():
+def test_check_command_result_basic() -> None:
     """Test basic functionality of check_command_result."""
-
     try:
         # Test with a successful command result
         result = check_command_result(returncode=0, command="echo test")
@@ -66,9 +64,10 @@ def test_check_command_result_basic():
         # Test with a failed command result
         try:
             check_command_result(
-                returncode=1, command="failing command", stdout="", stderr="error"
+                returncode=1, command="failing command", stdout="", stderr="error",
             )
-            assert False, "Should have raised an exception for failed command"
+            msg = "Should have raised an exception for failed command"
+            raise AssertionError(msg)
         except Exception:
             # Expected to raise an exception
             pass
@@ -77,9 +76,8 @@ def test_check_command_result_basic():
         pytest.skip(f"Function requires specific implementation - skipped: {e}")
 
 
-def test_format_error_report_basic():
+def test_format_error_report_basic() -> None:
     """Test basic functionality of format_error_report."""
-
     try:
         from crackerjack.errors import CrackerjackError
 
