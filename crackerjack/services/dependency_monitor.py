@@ -67,24 +67,16 @@ class DependencyMonitorService:
         return False
 
     def _parse_dependencies(self) -> dict[str, str]:
+        """Parse dependencies from pyproject.toml file."""
         try:
             with self.pyproject_path.open("rb") as f:
                 data = tomllib.load(f)
 
             dependencies = {}
+            project_data = data.get("project", {})
 
-            if "dependencies" in data.get("project", {}):
-                for dep in data["project"]["dependencies"]:
-                    name, version = self._parse_dependency_spec(dep)
-                    if name and version:
-                        dependencies[name] = version
-
-            if "optional-dependencies" in data.get("project", {}):
-                for group_deps in data["project"]["optional-dependencies"].values():
-                    for dep in group_deps:
-                        name, version = self._parse_dependency_spec(dep)
-                        if name and version:
-                            dependencies[name] = version
+            self._extract_main_dependencies(project_data, dependencies)
+            self._extract_optional_dependencies(project_data, dependencies)
 
             return dependencies
 
@@ -93,6 +85,31 @@ class DependencyMonitorService:
                 f"[yellow]Warning: Failed to parse pyproject.toml: {e}[/yellow]"
             )
             return {}
+
+    def _extract_main_dependencies(
+        self, project_data: dict, dependencies: dict[str, str]
+    ) -> None:
+        """Extract main dependencies from project data."""
+        if "dependencies" not in project_data:
+            return
+
+        for dep in project_data["dependencies"]:
+            name, version = self._parse_dependency_spec(dep)
+            if name and version:
+                dependencies[name] = version
+
+    def _extract_optional_dependencies(
+        self, project_data: dict, dependencies: dict[str, str]
+    ) -> None:
+        """Extract optional dependencies from project data."""
+        if "optional-dependencies" not in project_data:
+            return
+
+        for group_deps in project_data["optional-dependencies"].values():
+            for dep in group_deps:
+                name, version = self._parse_dependency_spec(dep)
+                if name and version:
+                    dependencies[name] = version
 
     def _parse_dependency_spec(self, spec: str) -> tuple[str | None, str | None]:
         if not spec or spec.startswith("-"):
@@ -270,7 +287,7 @@ class DependencyMonitorService:
         self, package: str, current_version: str, cache: dict, current_time: float
     ) -> MajorUpdate | None:
         """Check if a specific package has a major update available."""
-        cache_key = f"{package}_{current_version}"
+        cache_key = self._build_cache_key(package, current_version)
 
         # Try to get from cache first
         cached_update = self._get_cached_major_update(
@@ -284,6 +301,10 @@ class DependencyMonitorService:
             package, current_version, cache_key, cache, current_time
         )
 
+    def _build_cache_key(self, package: str, current_version: str) -> str:
+        """Build cache key for package version."""
+        return f"{package}_{current_version}"
+
     def _get_cached_major_update(
         self,
         cache_key: str,
@@ -293,16 +314,32 @@ class DependencyMonitorService:
         current_version: str,
     ) -> MajorUpdate | None:
         """Get major update from cache if available and valid."""
-        if cache_key not in cache:
+        if not self._is_cache_entry_valid(cache_key, cache, current_time):
             return None
 
         cached_data = cache[cache_key]
-        if current_time - cached_data["timestamp"] >= 86400:  # Cache expired
-            return None
-
         if not cached_data["has_major_update"]:
             return None
 
+        return self._create_major_update_from_cache(
+            package, current_version, cached_data
+        )
+
+    def _is_cache_entry_valid(
+        self, cache_key: str, cache: dict, current_time: float
+    ) -> bool:
+        """Check if cache entry exists and is not expired."""
+        if cache_key not in cache:
+            return False
+
+        cached_data = cache[cache_key]
+        cache_age = current_time - cached_data["timestamp"]
+        return cache_age < 86400  # Not expired (24 hours)
+
+    def _create_major_update_from_cache(
+        self, package: str, current_version: str, cached_data: dict
+    ) -> MajorUpdate:
+        """Create MajorUpdate instance from cached data."""
         return MajorUpdate(
             package=package,
             current_version=current_version,
@@ -332,16 +369,28 @@ class DependencyMonitorService:
             cache, cache_key, current_time, has_major_update, latest_info
         )
 
-        if has_major_update:
-            return MajorUpdate(
-                package=package,
-                current_version=current_version,
-                latest_version=latest_info["version"],
-                release_date=latest_info["release_date"],
-                breaking_changes=latest_info["breaking_changes"],
-            )
+        return self._create_major_update_if_needed(
+            package, current_version, latest_info, has_major_update
+        )
 
-        return None
+    def _create_major_update_if_needed(
+        self,
+        package: str,
+        current_version: str,
+        latest_info: dict,
+        has_major_update: bool,
+    ) -> MajorUpdate | None:
+        """Create MajorUpdate instance if there is a major update available."""
+        if not has_major_update:
+            return None
+
+        return MajorUpdate(
+            package=package,
+            current_version=current_version,
+            latest_version=latest_info["version"],
+            release_date=latest_info["release_date"],
+            breaking_changes=latest_info["breaking_changes"],
+        )
 
     def _update_cache_entry(
         self,

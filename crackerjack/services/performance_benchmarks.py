@@ -249,94 +249,164 @@ class PerformanceBenchmarkService:
     def _generate_performance_recommendations(
         self, report: PerformanceReport
     ) -> list[str]:
+        """Generate performance recommendations based on benchmark results."""
         recommendations = []
 
-        if report.test_benchmarks:
-            for iteration_data in report.test_benchmarks.values():
-                if (
-                    isinstance(iteration_data, dict)
-                    and iteration_data.get("total_duration", 0) > 60
-                ):
-                    recommendations.append(
-                        "Consider optimizing test suite - execution time exceeds 1 minute"
-                    )
-                    break
+        self._add_test_suite_recommendations(report, recommendations)
+        self._add_hook_performance_recommendations(report, recommendations)
+        self._add_component_performance_recommendations(report, recommendations)
+        self._add_overall_performance_recommendations(report, recommendations)
 
+        return recommendations
+
+    def _add_test_suite_recommendations(
+        self, report: PerformanceReport, recommendations: list[str]
+    ) -> None:
+        """Add recommendations for test suite performance."""
+        if not report.test_benchmarks:
+            return
+
+        for iteration_data in report.test_benchmarks.values():
+            if self._is_slow_test_iteration(iteration_data):
+                recommendations.append(
+                    "Consider optimizing test suite - execution time exceeds 1 minute"
+                )
+                break
+
+    def _is_slow_test_iteration(self, iteration_data: Any) -> bool:
+        """Check if test iteration is slow."""
+        return (
+            isinstance(iteration_data, dict)
+            and iteration_data.get("total_duration", 0) > 60
+        )
+
+    def _add_hook_performance_recommendations(
+        self, report: PerformanceReport, recommendations: list[str]
+    ) -> None:
+        """Add recommendations for hook performance."""
+        slow_hooks = self._identify_slow_hooks(report.hook_performance)
+        if slow_hooks:
+            recommendations.append(self._format_slow_hooks_message(slow_hooks))
+
+    def _identify_slow_hooks(
+        self, hook_performance: dict[str, float]
+    ) -> list[tuple[str, float]]:
+        """Identify hooks with slow performance."""
         slow_hooks = []
-        for hook_name, perf_data in report.hook_performance.items():
+        for hook_name, perf_data in hook_performance.items():
             if isinstance(perf_data, dict):
                 mean_duration = perf_data.get("mean_duration", 0)
                 if mean_duration > 30:
                     slow_hooks.append((hook_name, mean_duration))
+        return slow_hooks
 
-        if slow_hooks:
-            recommendations.append(
-                f"Slow hooks detected: {', '.join(f'{h}({d:.1f}s)' for h, d in slow_hooks[:3])}. "
-                f"Consider hook optimization or selective execution."
-            )
+    def _format_slow_hooks_message(self, slow_hooks: list[tuple[str, float]]) -> str:
+        """Format message for slow hooks recommendation."""
+        hooks_info = ", ".join(f"{h}({d:.1f}s)" for h, d in slow_hooks[:3])
+        return (
+            f"Slow hooks detected: {hooks_info}. "
+            "Consider hook optimization or selective execution."
+        )
 
-        slow_components = [
-            b for b in report.workflow_benchmarks if b.duration_seconds > 5
-        ]
+    def _add_component_performance_recommendations(
+        self, report: PerformanceReport, recommendations: list[str]
+    ) -> None:
+        """Add recommendations for component performance."""
+        slow_components = self._identify_slow_components(report.workflow_benchmarks)
         if slow_components:
+            components_names = ", ".join(c.name for c in slow_components)
             recommendations.append(
-                f"Slow workflow components: {', '.join(c.name for c in slow_components)}. "
-                f"Consider caching or optimization."
+                f"Slow workflow components: {components_names}. "
+                "Consider caching or optimization."
             )
 
+    def _identify_slow_components(
+        self, workflow_benchmarks: list[BenchmarkResult]
+    ) -> list[BenchmarkResult]:
+        """Identify slow workflow components."""
+        return [b for b in workflow_benchmarks if b.duration_seconds > 5]
+
+    def _add_overall_performance_recommendations(
+        self, report: PerformanceReport, recommendations: list[str]
+    ) -> None:
+        """Add recommendations for overall performance."""
         if report.total_duration > 300:
             recommendations.append(
                 "Overall workflow execution is slow. Consider enabling --skip-hooks "
                 "during development iterations."
             )
 
-        return recommendations
-
     def _compare_with_baseline(
         self, current_report: PerformanceReport
     ) -> dict[str, float]:
+        """Compare current performance with historical baseline."""
         baseline_comparison = {}
 
         try:
-            if self.history_file.exists():
-                with self.history_file.open() as f:
-                    history = json.load(f)
+            history = self._load_performance_history()
+            if not history:
+                return baseline_comparison
 
-                if history and len(history) > 1:
-                    recent_runs = history[-5:]
-                    baseline_duration = statistics.median(
-                        [r["total_duration"] for r in recent_runs]
-                    )
-
-                    performance_change = (
-                        (current_report.total_duration - baseline_duration)
-                        / baseline_duration
-                    ) * 100
-                    baseline_comparison["overall_performance_change_percent"] = (
-                        performance_change
-                    )
-
-                    if recent_runs:
-                        last_run = recent_runs[-1]
-                        for component in current_report.workflow_benchmarks:
-                            if component.name in last_run.get(
-                                "component_durations", {}
-                            ):
-                                old_duration = last_run["component_durations"][
-                                    component.name
-                                ]
-                                change = (
-                                    (component.duration_seconds - old_duration)
-                                    / old_duration
-                                ) * 100
-                                baseline_comparison[
-                                    f"{component.name}_change_percent"
-                                ] = change
+            self._add_overall_performance_comparison(
+                current_report, history, baseline_comparison
+            )
+            self._add_component_performance_comparison(
+                current_report, history, baseline_comparison
+            )
 
         except Exception as e:
             baseline_comparison["error"] = f"Could not load baseline: {e}"
 
         return baseline_comparison
+
+    def _load_performance_history(self) -> list[dict] | None:
+        """Load performance history from file."""
+        if not self.history_file.exists():
+            return None
+
+        with self.history_file.open() as f:
+            history = json.load(f)
+
+        return history if history and len(history) > 1 else None
+
+    def _add_overall_performance_comparison(
+        self, current_report: PerformanceReport, history: list[dict], comparison: dict
+    ) -> None:
+        """Add overall performance comparison to baseline."""
+        recent_runs = history[-5:]
+        baseline_duration = statistics.median(
+            [r["total_duration"] for r in recent_runs]
+        )
+
+        performance_change = (
+            (current_report.total_duration - baseline_duration) / baseline_duration
+        ) * 100
+        comparison["overall_performance_change_percent"] = performance_change
+
+    def _add_component_performance_comparison(
+        self, current_report: PerformanceReport, history: list[dict], comparison: dict
+    ) -> None:
+        """Add component-level performance comparison."""
+        recent_runs = history[-5:]
+        if not recent_runs:
+            return
+
+        last_run = recent_runs[-1]
+        component_durations = last_run.get("component_durations", {})
+
+        for component in current_report.workflow_benchmarks:
+            if component.name in component_durations:
+                old_duration = component_durations[component.name]
+                change = self._calculate_performance_change(
+                    component.duration_seconds, old_duration
+                )
+                comparison[f"{component.name}_change_percent"] = change
+
+    def _calculate_performance_change(
+        self, current_duration: float, old_duration: float
+    ) -> float:
+        """Calculate performance change percentage."""
+        return ((current_duration - old_duration) / old_duration) * 100
 
     def _save_performance_history(self, report: PerformanceReport) -> None:
         try:
@@ -453,51 +523,80 @@ class PerformanceBenchmarkService:
             self.console.print("[green]✨ No performance issues detected![/green]")
 
     def get_performance_trends(self, days: int = 7) -> dict[str, Any]:
-        trends = {}
-
+        """Get performance trends over specified time period."""
         try:
-            if not self.history_file.exists():
-                return {"error": "No performance history available"}
+            recent_history = self._get_recent_history(days)
+            if not recent_history:
+                return self._handle_insufficient_trend_data()
 
-            with self.history_file.open() as f:
-                history = json.load(f)
-
-            cutoff_time = time.time() - (days * 86400)
-            recent_history = [r for r in history if r.get("timestamp", 0) > cutoff_time]
-
-            if len(recent_history) < 2:
-                return {"error": "Insufficient data for trend analysis"}
-
-            durations = [r["total_duration"] for r in recent_history]
-            trends["duration_trend"] = {
-                "current": durations[-1],
-                "average": statistics.mean(durations),
-                "trend": "improving"
-                if durations[-1] < statistics.mean(durations[:-1])
-                else "degrading",
-            }
-
-            component_trends = {}
-            for component in recent_history[-1].get("component_durations", {}):
-                component_durations = [
-                    r.get("component_durations", {}).get(component)
-                    for r in recent_history
-                    if component in r.get("component_durations", {})
-                ]
-                if len(component_durations) >= 2:
-                    component_trends[component] = {
-                        "current": component_durations[-1],
-                        "average": statistics.mean(component_durations),
-                        "trend": "improving"
-                        if component_durations[-1]
-                        < statistics.mean(component_durations[:-1])
-                        else "degrading",
-                    }
-
-            trends["component_trends"] = component_trends
+            trends = {}
+            self._add_duration_trends(recent_history, trends)
+            self._add_component_trends(recent_history, trends)
             trends["data_points"] = len(recent_history)
 
-        except Exception as e:
-            trends["error"] = f"Could not analyze trends: {e}"
+            return trends
 
-        return trends
+        except Exception as e:
+            return {"error": f"Could not analyze trends: {e}"}
+
+    def _get_recent_history(self, days: int) -> list[dict] | None:
+        """Get recent performance history within specified days."""
+        if not self.history_file.exists():
+            return None
+
+        with self.history_file.open() as f:
+            history = json.load(f)
+
+        cutoff_time = time.time() - (days * 86400)
+        recent_history = [r for r in history if r.get("timestamp", 0) > cutoff_time]
+
+        return recent_history if len(recent_history) >= 2 else None
+
+    def _handle_insufficient_trend_data(self) -> dict[str, str]:
+        """Handle cases where insufficient data is available for trend analysis."""
+        if not self.history_file.exists():
+            return {"error": "No performance history available"}
+        return {"error": "Insufficient data for trend analysis"}
+
+    def _add_duration_trends(self, recent_history: list[dict], trends: dict) -> None:
+        """Add overall duration trends to results."""
+        durations = [r["total_duration"] for r in recent_history]
+        trends["duration_trend"] = {
+            "current": durations[-1],
+            "average": statistics.mean(durations),
+            "trend": self._determine_trend_direction(durations),
+        }
+
+    def _add_component_trends(self, recent_history: list[dict], trends: dict) -> None:
+        """Add component-level trends to results."""
+        component_trends = {}
+        latest_components = recent_history[-1].get("component_durations", {})
+
+        for component in latest_components:
+            component_durations = self._extract_component_durations(
+                recent_history, component
+            )
+            if len(component_durations) >= 2:
+                component_trends[component] = {
+                    "current": component_durations[-1],
+                    "average": statistics.mean(component_durations),
+                    "trend": self._determine_trend_direction(component_durations),
+                }
+
+        trends["component_trends"] = component_trends
+
+    def _extract_component_durations(
+        self, recent_history: list[dict], component: str
+    ) -> list[float]:
+        """Extract duration data for a specific component."""
+        return [
+            r.get("component_durations", {}).get(component)
+            for r in recent_history
+            if component in r.get("component_durations", {})
+        ]
+
+    def _determine_trend_direction(self, durations: list[float]) -> str:
+        """Determine if trend is improving or degrading."""
+        current = durations[-1]
+        historical_average = statistics.mean(durations[:-1])
+        return "improving" if current < historical_average else "degrading"

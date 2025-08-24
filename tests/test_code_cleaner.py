@@ -494,24 +494,24 @@ class TestIntegration:
         # Test that API module can be imported and has expected functions
         assert hasattr(api, "clean_code")
 
-        # Test TODO detection functionality if available
-        test_code_with_todo = "# TODO: implement this\ndef func(): pass"
+        # Test task detection functionality if available
+        test_code_with_todo = "# TASK: implement this\ndef func(): pass"
 
         try:
             has_todos = api.detect_todos(test_code_with_todo)
             assert isinstance(has_todos, bool)
-            assert has_todos is True  # Should detect the TODO
+            assert has_todos is True  # Should detect the task
         except (AttributeError, TypeError):
             # Function might not exist or have different signature
             pass
 
-        # Test code without TODOs
+        # Test code without tasks
         test_code_clean = "def func(): pass"
 
         try:
             has_todos = api.detect_todos(test_code_clean)
             assert isinstance(has_todos, bool)
-            assert has_todos is False  # Should not detect TODOs
+            assert has_todos is False  # Should not detect tasks
         except (AttributeError, TypeError):
             # Function might not exist or have different signature
             pass

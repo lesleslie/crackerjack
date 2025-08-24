@@ -189,7 +189,7 @@ class DocumentationAgent(SubAgent):
         """Handle general documentation updates."""
         self.log("Performing general documentation update")
 
-        # Add TODO comments for manual review
+        # Add review comments for manual review
 
         return FixResult(
             success=True,

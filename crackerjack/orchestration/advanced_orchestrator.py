@@ -45,9 +45,7 @@ class CorrelationTracker:
             "iteration": iteration,
             "timestamp": time.time(),
             "failed_hooks": failed_hooks,
-            "test_failures": test_results.get("failed_tests", [])
-            if isinstance(test_results, dict)
-            else [],
+            "test_failures": test_results.get("failed_tests", []),
             "ai_fixes_applied": ai_fixes,
             "total_errors": sum(
                 len(getattr(r, "error_details", [])) for r in hook_results
@@ -155,7 +153,7 @@ class ProgressStreamer:
             if hasattr(self.session, "progress_file") and self.session.progress_file:
                 import json
 
-                progress_data = {}
+                progress_data: dict[str, t.Any] = {}
                 if self.session.progress_file.exists():
                     with self.session.progress_file.open() as f:
                         progress_data = json.load(f)
@@ -279,7 +277,7 @@ class AdvancedWorkflowOrchestrator:
         hooks_time: float,
         tests_time: float,
         ai_time: float,
-        context: "OrchestrationContext",
+        context: t.Any,
     ) -> None:
         """Display rich iteration statistics panel."""
         # Create timing table
@@ -447,18 +445,18 @@ class AdvancedWorkflowOrchestrator:
         plan: ExecutionPlan,
         context: ExecutionContext,
         iteration: int,
-    ) -> tuple[bool, dict[str, int]]:
+    ) -> tuple[bool, dict[str, float]]:
         self.progress_streamer.update_stage("iteration_start", f"iteration_{iteration}")
 
-        phase_times = {"hooks": 0, "tests": 0, "ai": 0}
+        phase_times: dict[str, float] = {"hooks": 0.0, "tests": 0.0, "ai": 0.0}
 
         hooks_start = time.time()
         hook_results = await self._execute_hooks_phase(plan, context)
-        phase_times["hooks"] = int((time.time() - hooks_start) * 1000)
+        phase_times["hooks"] = time.time() - hooks_start
 
         tests_start = time.time()
         test_results = await self._execute_tests_phase(plan, context)
-        phase_times["tests"] = int((time.time() - tests_start) * 1000)
+        phase_times["tests"] = time.time() - tests_start
 
         ai_fixes = []
         if not (
@@ -471,7 +469,7 @@ class AdvancedWorkflowOrchestrator:
         ):
             ai_start = time.time()
             ai_fixes = await self._execute_ai_phase(plan, hook_results, test_results)
-            phase_times["ai"] = int((time.time() - ai_start) * 1000)
+            phase_times["ai"] = time.time() - ai_start
 
         job_id = (
             getattr(self.session, "job_id", None) or f"orchestration_{int(time.time())}"
@@ -484,11 +482,7 @@ class AdvancedWorkflowOrchestrator:
             decision_reason=f"Iteration {iteration} execution strategy",
             context_data={
                 "failed_hooks": len([r for r in hook_results if r.status == "failed"]),
-                "failed_tests": len(
-                    test_results.get("failed_tests", [])
-                    if isinstance(test_results, dict)
-                    else []
-                ),
+                "failed_tests": len(test_results.get("failed_tests", [])),
                 "ai_fixes_applied": len(ai_fixes),
             },
             effectiveness_score=None,

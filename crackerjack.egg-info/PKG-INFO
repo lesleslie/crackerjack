@@ -330,7 +330,7 @@ Crackerjack supports several environment variables for configuration:
 
 ```bash
 # Create .env file (add to .gitignore)
-echo "UV_PUBLISH_TOKEN=pypi-your-token-here" > .env
+echo "UV_PUBLISH_TOKEN=pypi-your-token-here" > .env  # pragma: allowlist secret  # pragma: allowlist secret
 echo ".env" >> .gitignore
 
 # Or use secure keyring storage
@@ -505,7 +505,7 @@ export UV_PUBLISH_TOKEN=pypi-your-token-here
 
 ```bash
 # Create .env file (must be in .gitignore)
-echo "UV_PUBLISH_TOKEN=pypi-your-token-here" > .env
+echo "UV_PUBLISH_TOKEN=pypi-your-token-here" > .env  # pragma: allowlist secret
 echo ".env" >> .gitignore
 ```
 

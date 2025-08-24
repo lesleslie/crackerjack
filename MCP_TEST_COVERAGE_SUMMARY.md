@@ -77,7 +77,7 @@ def test_stage_args_parsing(self) -> None:
     stage, kwargs = result
     assert stage == "fast"
     assert kwargs == {}
-    
+
     # Invalid stage
     result = _parse_stage_args("invalid", "{}")
     assert isinstance(result, str)
@@ -96,7 +96,7 @@ async def test_pattern_management(self, error_cache: ErrorCache) -> None:
         message_pattern="line too long",
         auto_fixable=True
     )
-    
+
     # Add pattern
     await error_cache.add_pattern(pattern)
     retrieved = error_cache.get_pattern("test_1")

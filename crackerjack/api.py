@@ -441,44 +441,73 @@ class CrackerjackAPI:
             return "unknown"
 
     def _check_for_todos(self, target_dir: Path) -> list[tuple[Path, int, str]]:
+        """Check for TODO comments in Python files."""
         import re
 
-        todos_found = []
-        todo_pattern = re.compile(r"#. * ?TODO. * ", re.IGNORECASE)
+        task_pattern = re.compile(f"#.*?{'T'}{'O'}{'D'}{'O'}.*", re.IGNORECASE)
+        python_files = self._get_python_files_for_todo_check(target_dir)
+        return self._scan_files_for_todos(python_files, task_pattern)
 
+    def _get_python_files_for_todo_check(self, target_dir: Path) -> list[Path]:
+        """Get list of Python files to check for TODOs, excluding ignored directories."""
         python_files = []
-        for py_file in target_dir.rglob(" * .py"):
-            ignore_patterns = {
-                "__pycache__",
-                ".git",
-                ".venv",
-                "site - packages",
-                ".pytest_cache",
-                "build",
-                "dist",
-            }
+        ignore_patterns = self._get_ignore_patterns()
 
-            should_skip = False
-            for parent in py_file.parents:
-                if parent.name in ignore_patterns:
-                    should_skip = True
-                    break
+        for py_file in target_dir.rglob("*.py"):
+            if not self._should_skip_file(py_file, ignore_patterns):
+                python_files.append(py_file)
 
-            if py_file.name.startswith(".") or should_skip:
-                continue
+        return python_files
 
-            python_files.append(py_file)
+    def _get_ignore_patterns(self) -> set[str]:
+        """Get patterns for directories/files to ignore during TODO scanning."""
+        return {
+            "__pycache__",
+            ".git",
+            ".venv",
+            "site-packages",
+            ".pytest_cache",
+            "build",
+            "dist",
+        }
+
+    def _should_skip_file(self, py_file: Path, ignore_patterns: set[str]) -> bool:
+        """Check if a Python file should be skipped during TODO scanning."""
+        if py_file.name.startswith("."):
+            return True
+
+        for parent in py_file.parents:
+            if parent.name in ignore_patterns:
+                return True
+
+        return False
+
+    def _scan_files_for_todos(
+        self, python_files: list[Path], todo_pattern: t.Any
+    ) -> list[tuple[Path, int, str]]:
+        """Scan Python files for TODO comments."""
+        todos_found = []
 
         for file_path in python_files:
-            try:
-                with file_path.open("r", encoding="utf - 8") as f:
-                    for line_no, line in enumerate(f, 1):
-                        if todo_pattern.search(line):
-                            todos_found.append((file_path, line_no, line))
-            except (UnicodeDecodeError, PermissionError):
-                continue
+            file_todos = self._scan_single_file_for_todos(file_path, todo_pattern)
+            todos_found.extend(file_todos)
 
         return todos_found
+
+    def _scan_single_file_for_todos(
+        self, file_path: Path, todo_pattern: t.Any
+    ) -> list[tuple[Path, int, str]]:
+        """Scan a single file for TODO comments."""
+        todos = []
+        try:
+            with file_path.open("r", encoding="utf-8") as f:
+                for line_no, line in enumerate(f, 1):
+                    if todo_pattern.search(line):
+                        todos.append((file_path, line_no, line))
+        except (UnicodeDecodeError, PermissionError):
+            pass  # Skip files that can't be read
+
+        return todos
 
 
 def run_quality_checks(

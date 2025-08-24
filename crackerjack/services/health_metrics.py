@@ -89,7 +89,9 @@ class ProjectHealth:
             recommendations.append("🧪 Test coverage is declining - add more tests")
 
         if any(age > 365 for age in self.dependency_age.values()):
-            old_deps: list[str] = [pkg for pkg, age in self.dependency_age.items() if age > 365]
+            old_deps: list[str] = [
+                pkg for pkg, age in self.dependency_age.items() if age > 365
+            ]
             recommendations.append(
                 f"📦 Very old dependencies detected: {', '.join(old_deps[:3])}"
             )

@@ -20,12 +20,12 @@ This slash command initializes a new Python project with crackerjack's best prac
 ## What It Does
 
 1. **Checks Project State**: Verifies which configuration files exist
-1. **Creates Missing Files**:
-   - `pyproject.toml` - Project metadata and dependencies
-   - `.pre-commit-config.yaml` - Code quality hooks
-   - `CLAUDE.md` - AI assistant guidelines
-   - `RULES.md` - Project coding standards
-1. **Updates Outdated Configs**: Refreshes configurations older than 30 days
+1. **Smart Merge Configuration**:
+   - `pyproject.toml` - Intelligently merges tool configurations, preserves higher coverage requirements
+   - `.pre-commit-config.yaml` - Adds missing repos, preserves existing hooks
+   - `CLAUDE.md` - Appends crackerjack guidelines without overwriting existing content
+   - `RULES.md` - Copies only if missing, preserves existing coding standards
+1. **Preserves Project Identity**: Never overwrites existing project metadata, dependencies, or configurations
 1. **Installs Pre-commit Hooks**: Sets up git hooks for quality enforcement
 
 ## When to Use /crackerjack:init
@@ -78,3 +78,45 @@ When connected via MCP, crackerjack can automatically suggest initialization whe
 1. Finding outdated pre-commit hooks (>30 days old)
 
 This ensures projects always have up-to-date quality standards without manual intervention.
+
+## Smart Merge Behavior
+
+**Crackerjack uses intelligent smart merging instead of destructive overwrites:**
+
+### pyproject.toml Smart Merge
+
+- **Preserves Project Identity**: Project name, version, description, dependencies remain untouched
+- **Ensures Crackerjack Dependency**: Adds `crackerjack` to `[dependency-groups].dev` if missing
+- **Merges Tool Configurations**: Adds missing tool sections (`[tool.ruff]`, `[tool.pyright]`, etc.)
+- **Preserves Higher Coverage**: If target has higher `--cov-fail-under` than source, keeps the higher value
+- **Adds Missing Pytest Markers**: Appends new test markers while preserving existing ones
+
+### CLAUDE.md Smart Append
+
+- **Non-Destructive**: Appends crackerjack guidelines with clear markers
+- **Prevents Duplicates**: Skips if crackerjack section already exists
+- **Clear Boundaries**: Uses `<!-- CRACKERJACK_START -->` and `<!-- CRACKERJACK_END -->` markers
+
+### .pre-commit-config.yaml Smart Merge
+
+- **Adds Missing Repos**: Only adds pre-commit repos that don't already exist
+- **Preserves Existing Hooks**: Never modifies existing hook configurations
+- **Skips if No New Repos**: Intelligent detection prevents unnecessary changes
+
+### Universal Compatibility
+
+This smart merge approach works with **any Python package**, not just specific projects:
+
+- ✅ **MCP Servers** (session-mgmt-mcp, excalidraw-mcp)
+- ✅ **Django Projects** with existing configurations
+- ✅ **Flask Applications** with established tooling
+- ✅ **Data Science Projects** with Jupyter-specific settings
+- ✅ **CLI Tools** with complex pyproject.toml configurations
+
+### Example Smart Merge Results
+
+**Before**: Project with 85% coverage requirement
+**After**: Keeps 85% coverage, adds all crackerjack tools, preserves project identity
+
+**Before**: CLAUDE.md with project-specific guidelines
+**After**: Original content + crackerjack section appended with clear markers

@@ -102,7 +102,7 @@ ignore-words-list = "crate,uptodate,nd,nin"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 timeout = 300
-addopts = "--cov=crackerjack --cov-report=term --cov-fail-under=25"
+addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --cov-fail-under=42 --strict-markers --strict-config -ra --tb=short"
 testpaths = [
     "tests",
 ]
@@ -120,6 +120,15 @@ markers = [
     "unit: marks test as a unit test",
     "benchmark: mark test as a benchmark",
     "integration: marks test as an integration test",
+    "e2e: marks test as end-to-end test",
+    "security: marks test as security test",
+    "performance: marks test as performance test",
+    "slow: marks test as slow running test",
+    "smoke: marks test as smoke test",
+    "regression: marks test as regression test",
+    "api: marks test as API test",
+    "database: marks test as database test",
+    "external: marks test requiring external services",
     "no_leaks: detect asyncio task leaks",
 ]
 
@@ -146,6 +155,7 @@ omit = [
     "*/conftest.py",
     "*/test_*.py",
     "*/_test.py",
+    "crackerjack/__main__.py",
 ]
 
 [tool.coverage.report]

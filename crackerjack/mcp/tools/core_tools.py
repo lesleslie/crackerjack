@@ -17,7 +17,7 @@ async def _validate_stage_request(context, rate_limiter) -> str | None:
 
 def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
     stage = args.strip().lower()
-    valid_stages = {"fast", "comprehensive", "tests", "cleaning"}
+    valid_stages = {"fast", "comprehensive", "tests", "cleaning", "init"}
 
     if stage not in valid_stages:
         return f'{{"error": "Invalid stage: {stage}. Valid stages: {valid_stages}", "success": false}}'
@@ -46,6 +46,9 @@ def _configure_stage_options(stage: str) -> "WorkflowOptions":
         options.testing.test = True
     elif stage == "cleaning":
         options.cleaning.clean = True
+    elif stage == "init":
+        # Init stage doesn't use standard workflow options
+        options.skip_hooks = True
     return options
 
 
@@ -58,7 +61,40 @@ def _execute_stage(orchestrator, stage: str, options) -> bool:
         return orchestrator.run_testing_phase(options)
     elif stage == "cleaning":
         return orchestrator.run_cleaning_phase(options)
+    elif stage == "init":
+        return _execute_init_stage(orchestrator)
     return False
+
+
+def _execute_init_stage(orchestrator) -> bool:
+    """Execute project initialization stage."""
+    try:
+        from pathlib import Path
+        from rich.console import Console
+        from ...services.initialization import InitializationService
+        from ...services.filesystem import FileSystemService
+        from ...services.git import GitService
+
+        # Get orchestrator dependencies
+        console = orchestrator.console
+        pkg_path = orchestrator.pkg_path
+
+        # Create service dependencies
+        filesystem = FileSystemService()
+        git_service = GitService(console, pkg_path)
+
+        # Initialize the service
+        init_service = InitializationService(console, filesystem, git_service, pkg_path)
+
+        # Run initialization in current directory
+        results = init_service.initialize_project(target_path=Path.cwd(), force=False)
+
+        return results.get("success", False)
+
+    except Exception as e:
+        if hasattr(orchestrator, 'console'):
+            orchestrator.console.print(f"[red]❌[/red] Initialization failed: {e}")
+        return False
 
 
 def register_core_tools(mcp_app: t.Any) -> None:

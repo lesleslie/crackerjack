@@ -73,7 +73,7 @@ class IndividualExecutionResult:
 
 
 class HookOutputParser:
-    HOOK_PATTERNS = {
+    HOOK_PATTERNS: dict[str, dict[str, re.Pattern[str]]] = {
         "ruff-check": {
             "error": re.compile(r"^(.+?):(\d+):(\d+):([A-Z]\d+) (.+)$"),
             "summary": re.compile(r"Found (\d+) error"),
@@ -109,7 +109,11 @@ class HookOutputParser:
         if hook_name not in self.HOOK_PATTERNS:
             return self._parse_generic_output(output_lines)
 
-        result = {"errors": [], "warnings": [], "files_processed": set()}
+        result: dict[str, t.Any] = {
+            "errors": [],
+            "warnings": [],
+            "files_processed": set(),
+        }
         patterns = self.HOOK_PATTERNS[hook_name]
 
         parser_map = {
@@ -127,7 +131,10 @@ class HookOutputParser:
         return result
 
     def _parse_ruff_check(
-        self, output_lines: list[str], patterns: dict, result: dict
+        self,
+        output_lines: list[str],
+        patterns: dict[str, re.Pattern[str]],
+        result: dict[str, t.Any],
     ) -> None:
         for line in output_lines:
             line = line.strip()
@@ -148,7 +155,10 @@ class HookOutputParser:
                 )
 
     def _parse_pyright(
-        self, output_lines: list[str], patterns: dict, result: dict
+        self,
+        output_lines: list[str],
+        patterns: dict[str, re.Pattern[str]],
+        result: dict[str, t.Any],
     ) -> None:
         for line in output_lines:
             line = line.strip()
@@ -180,7 +190,10 @@ class HookOutputParser:
                 )
 
     def _parse_bandit(
-        self, output_lines: list[str], patterns: dict, result: dict
+        self,
+        output_lines: list[str],
+        patterns: dict[str, re.Pattern[str]],
+        result: dict[str, t.Any],
     ) -> None:
         for line in output_lines:
             line = line.strip()
@@ -193,7 +206,10 @@ class HookOutputParser:
                 )
 
     def _parse_vulture(
-        self, output_lines: list[str], patterns: dict, result: dict
+        self,
+        output_lines: list[str],
+        patterns: dict[str, re.Pattern[str]],
+        result: dict[str, t.Any],
     ) -> None:
         for line in output_lines:
             line = line.strip()
@@ -212,7 +228,10 @@ class HookOutputParser:
                 )
 
     def _parse_complexipy(
-        self, output_lines: list[str], patterns: dict, result: dict
+        self,
+        output_lines: list[str],
+        patterns: dict[str, re.Pattern[str]],
+        result: dict[str, t.Any],
     ) -> None:
         for line in output_lines:
             line = line.strip()
@@ -232,7 +251,10 @@ class HookOutputParser:
                 )
 
     def _parse_default_hook(
-        self, output_lines: list[str], patterns: dict, result: dict
+        self,
+        output_lines: list[str],
+        patterns: dict[str, re.Pattern[str]],
+        result: dict[str, t.Any],
     ) -> None:
         # Default parser for hooks not specifically handled
         for line in output_lines:

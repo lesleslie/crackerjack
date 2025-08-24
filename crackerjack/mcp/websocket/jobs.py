@@ -139,27 +139,45 @@ class JobManager:
             console.print(f"[red]Progress monitoring setup error: {e}[/red]")
 
     async def cleanup_old_jobs(self) -> None:
+        """Periodically clean up old job files."""
         while self.is_running:
             try:
-                if self.progress_dir.exists():
-                    current_time = time.time()
-                    cutoff_time = current_time - (24 * 60 * 60)
-
-                    for progress_file in self.progress_dir.glob("job -* .json"):
-                        if progress_file.stat().st_mtime < cutoff_time:
-                            job_id = self.extract_job_id_from_file(progress_file)
-
-                            if job_id not in self.active_connections:
-                                progress_file.unlink(missing_ok=True)
-                                console.print(
-                                    f"[yellow]Cleaned up old job: {job_id}[/yellow]"
-                                )
-
+                await self._perform_cleanup_cycle()
                 await asyncio.sleep(3600)
-
             except Exception as e:
                 console.print(f"[red]Cleanup error: {e}[/red]")
                 await asyncio.sleep(3600)
+
+    async def _perform_cleanup_cycle(self) -> None:
+        """Perform a single cleanup cycle for old jobs."""
+        if not self.progress_dir.exists():
+            return
+
+        cutoff_time = self._calculate_cleanup_cutoff_time()
+        old_job_files = self._find_old_job_files(cutoff_time)
+
+        for progress_file in old_job_files:
+            self._cleanup_old_job_file(progress_file)
+
+    def _calculate_cleanup_cutoff_time(self) -> float:
+        """Calculate cutoff time for job cleanup (24 hours ago)."""
+        return time.time() - (24 * 60 * 60)
+
+    def _find_old_job_files(self, cutoff_time: float) -> list[Path]:
+        """Find job files older than the cutoff time."""
+        old_files = []
+        for progress_file in self.progress_dir.glob("job-*.json"):
+            if progress_file.stat().st_mtime < cutoff_time:
+                old_files.append(progress_file)
+        return old_files
+
+    def _cleanup_old_job_file(self, progress_file: Path) -> None:
+        """Clean up a single old job file if it's safe to do so."""
+        job_id = self.extract_job_id_from_file(progress_file)
+
+        if job_id not in self.active_connections:
+            progress_file.unlink(missing_ok=True)
+            console.print(f"[yellow]Cleaned up old job: {job_id}[/yellow]")
 
     async def timeout_stuck_jobs(self) -> None:
         """Monitor and timeout stuck jobs that haven't been updated."""

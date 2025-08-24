@@ -382,7 +382,8 @@ class CodeCleaner(BaseModel):
 
         def _remove_comment_from_line(self, line: str) -> str:
             """Remove comments from a line while preserving string literals."""
-            result, string_state = [], {"in_string": False, "quote_char": None}
+            result: list[str] = []
+            string_state: dict[str, t.Any] = {"in_string": False, "quote_char": None}
             for i, char in enumerate(line):
                 if self._should_break_at_comment(char, string_state):
                     break
@@ -390,12 +391,12 @@ class CodeCleaner(BaseModel):
                 result.append(char)
             return "".join(result).rstrip()
 
-        def _should_break_at_comment(self, char: str, state: dict) -> bool:
+        def _should_break_at_comment(self, char: str, state: dict[str, t.Any]) -> bool:
             """Check if we should break at a comment character."""
             return not state["in_string"] and char == "#"
 
         def _update_string_state(
-            self, char: str, index: int, line: str, state: dict
+            self, char: str, index: int, line: str, state: dict[str, t.Any]
         ) -> None:
             """Update string parsing state based on current character."""
             if self._is_string_start(char, state):
@@ -403,11 +404,13 @@ class CodeCleaner(BaseModel):
             elif self._is_string_end(char, index, line, state):
                 state["in_string"], state["quote_char"] = False, None
 
-        def _is_string_start(self, char: str, state: dict) -> bool:
+        def _is_string_start(self, char: str, state: dict[str, t.Any]) -> bool:
             """Check if character starts a string."""
             return not state["in_string"] and char in ['"', "'"]
 
-        def _is_string_end(self, char: str, index: int, line: str, state: dict) -> bool:
+        def _is_string_end(
+            self, char: str, index: int, line: str, state: dict[str, t.Any]
+        ) -> bool:
             """Check if character ends a string."""
             return (
                 state["in_string"]
@@ -422,21 +425,21 @@ class CodeCleaner(BaseModel):
         self, docstring_nodes: list[ast.AST]
     ) -> type[ast.NodeVisitor]:
         class DocstringFinder(ast.NodeVisitor):
-            def _add_if_docstring(self, node):
+            def _add_if_docstring(self, node: ast.AST) -> None:
                 if self._is_docstring_node(node):
                     docstring_nodes.append(node.body[0])
                 self.generic_visit(node)
 
-            def visit_Module(self, node):
+            def visit_Module(self, node: ast.Module) -> None:
                 self._add_if_docstring(node)
 
-            def visit_FunctionDef(self, node):
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
                 self._add_if_docstring(node)
 
-            def visit_AsyncFunctionDef(self, node):
+            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
                 self._add_if_docstring(node)
 
-            def visit_ClassDef(self, node):
+            def visit_ClassDef(self, node: ast.ClassDef) -> None:
                 self._add_if_docstring(node)
 
         return DocstringFinder
@@ -466,21 +469,21 @@ class DocstringStep:
         self, docstring_nodes: list[ast.AST]
     ) -> type[ast.NodeVisitor]:
         class DocstringFinder(ast.NodeVisitor):
-            def _add_if_docstring(self, node):
+            def _add_if_docstring(self, node: ast.AST) -> None:
                 if self._is_docstring_node(node):
                     docstring_nodes.append(node.body[0])
                 self.generic_visit(node)
 
-            def visit_Module(self, node):
+            def visit_Module(self, node: ast.Module) -> None:
                 self._add_if_docstring(node)
 
-            def visit_FunctionDef(self, node):
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
                 self._add_if_docstring(node)
 
-            def visit_AsyncFunctionDef(self, node):
+            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
                 self._add_if_docstring(node)
 
-            def visit_ClassDef(self, node):
+            def visit_ClassDef(self, node: ast.ClassDef) -> None:
                 self._add_if_docstring(node)
 
         return DocstringFinder

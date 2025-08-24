@@ -108,7 +108,7 @@ class EnvironmentConfigSource(ConfigSource):
         super().__init__(priority)
 
     def load(self) -> dict[str, Any]:
-        config = {}
+        config: dict[str, Any] = {}
 
         for key, value in os.environ.items():
             if key.startswith(self.ENV_PREFIX):
@@ -150,7 +150,7 @@ class FileConfigSource(ConfigSource):
             content = self.file_path.read_text()
 
             if self.file_path.suffix.lower() in (".yml", ".yaml"):
-                yaml_result = yaml.safe_load(content)
+                yaml_result: t.Any = yaml.safe_load(content)
                 config = (
                     t.cast(dict[str, Any], yaml_result)
                     if yaml_result is not None
@@ -231,7 +231,7 @@ class OptionsConfigSource(ConfigSource):
         self.options = options
 
     def load(self) -> dict[str, Any]:
-        config = {}
+        config: dict[str, Any] = {}
 
         option_mappings = {
             "testing": "test_mode",
@@ -308,7 +308,7 @@ class UnifiedConfigurationService:
         return self._config
 
     def _load_unified_config(self) -> CrackerjackConfig:
-        merged_config = {}
+        merged_config: dict[str, Any] = {}
 
         sorted_sources = sorted(self.sources, key=lambda s: s.priority)
 

@@ -50,20 +50,17 @@ class CrackerjackCLIFacade:
 
     def _should_handle_special_mode(self, options: OptionsProtocol) -> bool:
         return (
-            hasattr(options, "start_mcp_server")
-            and options.start_mcp_server
-            or hasattr(options, "enterprise_batch")
-            and options.enterprise_batch
-            or hasattr(options, "monitor_dashboard")
-            and options.monitor_dashboard
+            getattr(options, "start_mcp_server", False)
+            or getattr(options, "enterprise_batch", False)
+            or getattr(options, "monitor_dashboard", False)
         )
 
     def _handle_special_modes(self, options: OptionsProtocol) -> None:
-        if hasattr(options, "start_mcp_server") and options.start_mcp_server:
+        if getattr(options, "start_mcp_server", False):
             self._start_mcp_server()
-        elif hasattr(options, "enterprise_batch") and options.enterprise_batch:
+        elif getattr(options, "enterprise_batch", False):
             self._handle_enterprise_batch(options)
-        elif hasattr(options, "monitor_dashboard") and options.monitor_dashboard:
+        elif getattr(options, "monitor_dashboard", False):
             self._handle_monitor_dashboard(options)
 
     def _start_mcp_server(self) -> None:
@@ -73,7 +70,7 @@ class CrackerjackCLIFacade:
             self.console.print(
                 "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]"
             )
-            asyncio.run(start_mcp_main())
+            start_mcp_main(str(self.pkg_path))
         except ImportError:
             self.console.print(
                 "[red]❌ MCP server requires additional dependencies[/red]"

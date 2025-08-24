@@ -691,7 +691,7 @@ await run_crackerjack_with_enhanced_progress(client, "/crackerjack:run")
 
 **`/crackerjack:status`**: Get comprehensive system status including MCP server health, WebSocket server status, active jobs, progress tracking, and resource usage
 
-**`/crackerjack:init`**: Initialize or update project configuration with optional force flag
+**`/crackerjack:init`**: Initialize or update project configuration with intelligent smart merge (preserves existing configurations, never overwrites project identity)
 
 **Programmatic Access**:
 

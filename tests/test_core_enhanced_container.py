@@ -1,44 +1,43 @@
 """Strategic test coverage for core/enhanced_container.py - Enhanced dependency injection."""
 
-import pytest
 import threading
-import time
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
 from rich.console import Console
 
 from crackerjack.core.enhanced_container import (
-    ServiceLifetime,
-    ServiceDescriptor,
-    ServiceScope,
     DependencyResolver,
     EnhancedDependencyContainer,
     ServiceCollectionBuilder,
-    create_enhanced_container,
+    ServiceDescriptor,
+    ServiceLifetime,
+    ServiceScope,
 )
 from crackerjack.models.protocols import (
     FileSystemInterface,
     GitInterface,
     HookManager,
-    TestManagerProtocol,
     PublishManager,
+    TestManagerProtocol,
 )
 
 
 class MockService:
     """Mock service for testing."""
-    
+
     def __init__(self, value: str = "test"):
         self.value = value
         self.disposed = False
-    
+
     def dispose(self):
         self.disposed = True
 
 
 class MockDependentService:
     """Mock service with dependencies for testing."""
-    
+
     def __init__(self, dependency: MockService):
         self.dependency = dependency
 
@@ -69,9 +68,9 @@ class TestServiceDescriptor:
         descriptor = ServiceDescriptor(
             interface=MockService,
             implementation=MockService,
-            lifetime=ServiceLifetime.SINGLETON
+            lifetime=ServiceLifetime.SINGLETON,
         )
-        
+
         assert descriptor.interface == MockService
         assert descriptor.implementation == MockService
         assert descriptor.lifetime == ServiceLifetime.SINGLETON
@@ -82,15 +81,16 @@ class TestServiceDescriptor:
 
     def test_descriptor_with_factory(self):
         """Test descriptor with factory function."""
+
         def mock_factory():
             return MockService()
-        
+
         descriptor = ServiceDescriptor(
             interface=MockService,
             factory=mock_factory,
-            lifetime=ServiceLifetime.TRANSIENT
+            lifetime=ServiceLifetime.TRANSIENT,
         )
-        
+
         assert descriptor.interface == MockService
         assert descriptor.implementation is None
         assert descriptor.factory == mock_factory
@@ -99,13 +99,11 @@ class TestServiceDescriptor:
     def test_descriptor_with_instance(self):
         """Test descriptor with pre-created instance."""
         instance = MockService("test_instance")
-        
+
         descriptor = ServiceDescriptor(
-            interface=MockService,
-            instance=instance,
-            lifetime=ServiceLifetime.SINGLETON
+            interface=MockService, instance=instance, lifetime=ServiceLifetime.SINGLETON
         )
-        
+
         assert descriptor.interface == MockService
         assert descriptor.instance == instance
         assert descriptor.implementation is None
@@ -113,7 +111,9 @@ class TestServiceDescriptor:
 
     def test_descriptor_validation_error(self):
         """Test descriptor validation when no source provided."""
-        with pytest.raises(ValueError, match="Must provide either implementation, factory, or instance"):
+        with pytest.raises(
+            ValueError, match="Must provide either implementation, factory, or instance"
+        ):
             ServiceDescriptor(interface=MockService)
 
     def test_descriptor_with_dependencies(self):
@@ -122,9 +122,9 @@ class TestServiceDescriptor:
             interface=MockDependentService,
             implementation=MockDependentService,
             dependencies=[MockService],
-            lifetime=ServiceLifetime.TRANSIENT
+            lifetime=ServiceLifetime.TRANSIENT,
         )
-        
+
         assert descriptor.dependencies == [MockService]
 
 
@@ -134,7 +134,7 @@ class TestServiceScope:
     def test_scope_creation(self):
         """Test service scope creation."""
         scope = ServiceScope("test_scope")
-        
+
         assert scope.name == "test_scope"
         assert scope._instances == {}
 
@@ -142,13 +142,13 @@ class TestServiceScope:
         """Test getting and setting scoped instances."""
         scope = ServiceScope("test")
         service = MockService("scoped")
-        
+
         # Initially no instance
         assert scope.get_instance("test_key") is None
-        
+
         # Set instance
         scope.set_instance("test_key", service)
-        
+
         # Get instance
         retrieved = scope.get_instance("test_key")
         assert retrieved is service
@@ -159,33 +159,33 @@ class TestServiceScope:
         scope = ServiceScope("test")
         service1 = MockService("service1")
         service2 = MockService("service2")
-        
+
         scope.set_instance("key1", service1)
         scope.set_instance("key2", service2)
-        
+
         # Dispose scope
         scope.dispose()
-        
+
         # Services should be disposed
         assert service1.disposed
         assert service2.disposed
-        
+
         # Instances should be cleared
         assert scope._instances == {}
 
     def test_scope_dispose_with_error(self):
         """Test scope disposal with error handling."""
         scope = ServiceScope("test")
-        
+
         # Create mock service that raises error on dispose
         failing_service = Mock()
         failing_service.dispose.side_effect = Exception("Dispose error")
-        
+
         scope.set_instance("failing", failing_service)
-        
+
         # Should not raise error, just log it
         scope.dispose()
-        
+
         # Should still clear instances
         assert scope._instances == {}
 
@@ -193,22 +193,22 @@ class TestServiceScope:
         """Test scope thread safety."""
         scope = ServiceScope("threaded")
         results = []
-        
+
         def worker(worker_id):
             service = MockService(f"worker_{worker_id}")
             scope.set_instance(f"key_{worker_id}", service)
             retrieved = scope.get_instance(f"key_{worker_id}")
             results.append(retrieved.value)
-        
+
         threads = []
         for i in range(5):
             thread = threading.Thread(target=worker, args=(i,))
             threads.append(thread)
             thread.start()
-        
+
         for thread in threads:
             thread.join()
-        
+
         assert len(results) == 5
         assert "worker_0" in results
         assert "worker_4" in results
@@ -235,24 +235,19 @@ class TestDependencyResolver:
     def test_create_instance_with_instance(self, resolver):
         """Test creating instance when descriptor has pre-created instance."""
         instance = MockService("pre_created")
-        descriptor = ServiceDescriptor(
-            interface=MockService,
-            instance=instance
-        )
-        
+        descriptor = ServiceDescriptor(interface=MockService, instance=instance)
+
         result = resolver.create_instance(descriptor)
         assert result is instance
 
     def test_create_instance_with_factory(self, resolver):
         """Test creating instance with factory function."""
+
         def mock_factory():
             return MockService("from_factory")
-        
-        descriptor = ServiceDescriptor(
-            interface=MockService,
-            factory=mock_factory
-        )
-        
+
+        descriptor = ServiceDescriptor(interface=MockService, factory=mock_factory)
+
         result = resolver.create_instance(descriptor)
         assert isinstance(result, MockService)
         assert result.value == "from_factory"
@@ -260,10 +255,9 @@ class TestDependencyResolver:
     def test_create_instance_with_implementation(self, resolver):
         """Test creating instance with implementation class."""
         descriptor = ServiceDescriptor(
-            interface=MockService,
-            implementation=MockService
+            interface=MockService, implementation=MockService
         )
-        
+
         result = resolver.create_instance(descriptor)
         assert isinstance(result, MockService)
 
@@ -271,12 +265,11 @@ class TestDependencyResolver:
         """Test creating instance with dependency injection."""
         # Register dependency
         container.register_singleton(MockService, implementation=MockService)
-        
+
         descriptor = ServiceDescriptor(
-            interface=MockDependentService,
-            implementation=MockDependentService
+            interface=MockDependentService, implementation=MockDependentService
         )
-        
+
         result = resolver.create_instance(descriptor)
         assert isinstance(result, MockDependentService)
         assert isinstance(result.dependency, MockService)
@@ -292,7 +285,7 @@ class TestDependencyResolver:
         descriptor.lifetime = ServiceLifetime.TRANSIENT
         descriptor.created_count = 0
         descriptor.dependencies = []
-        
+
         with pytest.raises(ValueError, match="Cannot create instance"):
             resolver.create_instance(descriptor)
 
@@ -300,15 +293,14 @@ class TestDependencyResolver:
         """Test factory function with dependency injection."""
         # Register dependency
         container.register_singleton(MockService, implementation=MockService)
-        
+
         def factory_with_dep(dependency: MockService):
             return MockDependentService(dependency)
-        
+
         descriptor = ServiceDescriptor(
-            interface=MockDependentService,
-            factory=factory_with_dep
+            interface=MockDependentService, factory=factory_with_dep
         )
-        
+
         result = resolver.create_instance(descriptor)
         assert isinstance(result, MockDependentService)
         assert isinstance(result.dependency, MockService)
@@ -320,7 +312,7 @@ class TestEnhancedDependencyContainer:
     def test_container_creation(self):
         """Test container creation."""
         container = EnhancedDependencyContainer("test_container")
-        
+
         assert container.name == "test_container"
         assert container._services == {}
         assert container._singletons == {}
@@ -330,15 +322,15 @@ class TestEnhancedDependencyContainer:
     def test_register_singleton(self):
         """Test registering singleton service."""
         container = EnhancedDependencyContainer()
-        
+
         result = container.register_singleton(MockService, implementation=MockService)
-        
+
         # Should return self for chaining
         assert result is container
-        
+
         # Should be registered
         assert container.is_registered(MockService)
-        
+
         # Check descriptor
         key = container._get_service_key(MockService)
         descriptor = container._services[key]
@@ -349,15 +341,15 @@ class TestEnhancedDependencyContainer:
     def test_register_transient(self):
         """Test registering transient service."""
         container = EnhancedDependencyContainer()
-        
+
         def mock_factory():
             return MockService()
-        
+
         result = container.register_transient(MockService, factory=mock_factory)
-        
+
         assert result is container
         assert container.is_registered(MockService)
-        
+
         key = container._get_service_key(MockService)
         descriptor = container._services[key]
         assert descriptor.factory == mock_factory
@@ -366,12 +358,12 @@ class TestEnhancedDependencyContainer:
     def test_register_scoped(self):
         """Test registering scoped service."""
         container = EnhancedDependencyContainer()
-        
+
         result = container.register_scoped(MockService, implementation=MockService)
-        
+
         assert result is container
         assert container.is_registered(MockService)
-        
+
         key = container._get_service_key(MockService)
         descriptor = container._services[key]
         assert descriptor.lifetime == ServiceLifetime.SCOPED
@@ -380,11 +372,11 @@ class TestEnhancedDependencyContainer:
         """Test getting singleton service."""
         container = EnhancedDependencyContainer()
         container.register_singleton(MockService, implementation=MockService)
-        
+
         # First call should create instance
         instance1 = container.get(MockService)
         assert isinstance(instance1, MockService)
-        
+
         # Second call should return same instance
         instance2 = container.get(MockService)
         assert instance1 is instance2
@@ -393,11 +385,11 @@ class TestEnhancedDependencyContainer:
         """Test getting transient service."""
         container = EnhancedDependencyContainer()
         container.register_transient(MockService, implementation=MockService)
-        
+
         # Each call should create new instance
         instance1 = container.get(MockService)
         instance2 = container.get(MockService)
-        
+
         assert isinstance(instance1, MockService)
         assert isinstance(instance2, MockService)
         assert instance1 is not instance2
@@ -406,13 +398,13 @@ class TestEnhancedDependencyContainer:
         """Test getting scoped service."""
         container = EnhancedDependencyContainer()
         container.register_scoped(MockService, implementation=MockService)
-        
+
         scope = container.create_scope("test_scope")
-        
+
         # First call should create instance in scope
         instance1 = container.get(MockService, scope)
         assert isinstance(instance1, MockService)
-        
+
         # Second call should return same scoped instance
         instance2 = container.get(MockService, scope)
         assert instance1 is instance2
@@ -421,25 +413,25 @@ class TestEnhancedDependencyContainer:
         """Test getting scoped service without providing scope."""
         container = EnhancedDependencyContainer()
         container.register_scoped(MockService, implementation=MockService)
-        
+
         with pytest.raises(ValueError, match="requires an active scope"):
             container.get(MockService)
 
     def test_get_unregistered_service(self):
         """Test getting unregistered service."""
         container = EnhancedDependencyContainer()
-        
+
         with pytest.raises(ValueError, match="Service MockService not registered"):
             container.get(MockService)
 
     def test_get_optional_service(self):
         """Test getting optional service."""
         container = EnhancedDependencyContainer()
-        
+
         # Not registered, should return default
         result = container.get_optional(MockService, "default")
         assert result == "default"
-        
+
         # Register and get
         container.register_singleton(MockService, implementation=MockService)
         result = container.get_optional(MockService)
@@ -448,16 +440,16 @@ class TestEnhancedDependencyContainer:
     def test_is_registered(self):
         """Test checking if service is registered."""
         container = EnhancedDependencyContainer()
-        
+
         assert not container.is_registered(MockService)
-        
+
         container.register_singleton(MockService, implementation=MockService)
         assert container.is_registered(MockService)
 
     def test_create_scope(self):
         """Test creating service scope."""
         container = EnhancedDependencyContainer()
-        
+
         scope = container.create_scope("custom_scope")
         assert isinstance(scope, ServiceScope)
         assert scope.name == "custom_scope"
@@ -466,10 +458,10 @@ class TestEnhancedDependencyContainer:
         """Test setting current scope."""
         container = EnhancedDependencyContainer()
         scope = ServiceScope("test")
-        
+
         container.set_current_scope(scope)
         assert container._current_scope is scope
-        
+
         container.set_current_scope(None)
         assert container._current_scope is None
 
@@ -477,12 +469,14 @@ class TestEnhancedDependencyContainer:
         """Test getting service information."""
         container = EnhancedDependencyContainer()
         container.register_singleton(MockService, implementation=MockService)
-        container.register_transient(MockDependentService, implementation=MockDependentService)
-        
+        container.register_transient(
+            MockDependentService, implementation=MockDependentService
+        )
+
         info = container.get_service_info()
-        
+
         assert len(info) == 2
-        
+
         # Check singleton info
         singleton_key = container._get_service_key(MockService)
         singleton_info = info[singleton_key]
@@ -496,18 +490,18 @@ class TestEnhancedDependencyContainer:
         """Test disposing container."""
         container = EnhancedDependencyContainer()
         container.register_singleton(MockService, implementation=MockService)
-        
+
         # Create singleton instance
         instance = container.get(MockService)
         assert isinstance(instance, MockService)
-        
+
         # Create and set scope
         scope = ServiceScope("test")
         container.set_current_scope(scope)
-        
+
         # Dispose container
         container.dispose()
-        
+
         # Should clear singletons and scope
         assert container._singletons == {}
         assert container._current_scope is None
@@ -517,13 +511,13 @@ class TestEnhancedDependencyContainer:
         with EnhancedDependencyContainer("context_test") as container:
             container.register_singleton(MockService, implementation=MockService)
             assert container.name == "context_test"
-        
+
         # Container should be disposed after context
 
     def test_service_key_generation(self):
         """Test service key generation."""
         container = EnhancedDependencyContainer()
-        
+
         key = container._get_service_key(MockService)
         expected = f"{MockService.__module__}.{MockService.__name__}"
         assert key == expected
@@ -536,7 +530,7 @@ class TestServiceCollectionBuilder:
         """Test builder creation."""
         container = EnhancedDependencyContainer()
         builder = ServiceCollectionBuilder(container)
-        
+
         assert builder.container is container
         assert builder.console is None
         assert builder.pkg_path is None
@@ -547,16 +541,15 @@ class TestServiceCollectionBuilder:
         container = EnhancedDependencyContainer()
         console = Console()
         pkg_path = Path("/test")
-        
+
         builder = ServiceCollectionBuilder(container)
-        result = (builder
-                 .with_console(console)
-                 .with_package_path(pkg_path)
-                 .with_dry_run(True))
-        
+        result = (
+            builder.with_console(console).with_package_path(pkg_path).with_dry_run(True)
+        )
+
         # Should return self for chaining
         assert result is builder
-        
+
         assert builder.console is console
         assert builder.pkg_path == pkg_path
         assert builder.dry_run is True
@@ -565,7 +558,7 @@ class TestServiceCollectionBuilder:
         """Test builder build method."""
         container = EnhancedDependencyContainer()
         builder = ServiceCollectionBuilder(container)
-        
+
         result = builder.build()
         assert result is container
 
@@ -574,20 +567,25 @@ class TestServiceCollectionBuilder:
         container = EnhancedDependencyContainer()
         console = Console()
         pkg_path = Path("/test")
-        
+
         builder = ServiceCollectionBuilder(container)
-        
-        with patch('crackerjack.services.enhanced_filesystem.EnhancedFileSystemService') as mock_fs, \
-             patch('crackerjack.services.git.GitService') as mock_git, \
-             patch('crackerjack.managers.async_hook_manager.AsyncHookManager') as mock_hook, \
-             patch('crackerjack.managers.test_manager.TestManagementImpl') as mock_test, \
-             patch('crackerjack.managers.publish_manager.PublishManagerImpl') as mock_publish:
-            
-            result = builder.with_console(console).with_package_path(pkg_path).add_core_services()
-            
+
+        with (
+            patch("crackerjack.services.enhanced_filesystem.EnhancedFileSystemService"),
+            patch("crackerjack.services.git.GitService"),
+            patch("crackerjack.managers.async_hook_manager.AsyncHookManager"),
+            patch("crackerjack.managers.test_manager.TestManagementImpl"),
+            patch("crackerjack.managers.publish_manager.PublishManagerImpl"),
+        ):
+            result = (
+                builder.with_console(console)
+                .with_package_path(pkg_path)
+                .add_core_services()
+            )
+
             # Should return self for chaining
             assert result is builder
-            
+
             # Should register core services
             assert container.is_registered(FileSystemInterface)
             assert container.is_registered(GitInterface)
@@ -600,12 +598,10 @@ class TestServiceCollectionBuilder:
         container = EnhancedDependencyContainer()
         console = Console()
         pkg_path = Path("/test")
-        
+
         builder = ServiceCollectionBuilder(container)
-        result = (builder
-                 .with_console(console)
-                 .with_package_path(pkg_path))
-        
+        result = builder.with_console(console).with_package_path(pkg_path)
+
         # Test builder configuration without complex imports
         assert result is builder
         assert builder.console is console
@@ -627,13 +623,12 @@ class TestCreateEnhancedContainer:
         container = EnhancedDependencyContainer("builder_test")
         console = Console()
         pkg_path = Path("/test")
-        
+
         builder = ServiceCollectionBuilder(container)
-        result = (builder
-                 .with_console(console)
-                 .with_package_path(pkg_path)
-                 .with_dry_run(True))
-        
+        result = (
+            builder.with_console(console).with_package_path(pkg_path).with_dry_run(True)
+        )
+
         assert result is builder
         assert builder.container is container
         assert builder.console is console
@@ -644,7 +639,7 @@ class TestCreateEnhancedContainer:
         """Test that builder build returns the container."""
         container = EnhancedDependencyContainer("build_test")
         builder = ServiceCollectionBuilder(container)
-        
+
         result = builder.build()
         assert result is container
 
@@ -655,17 +650,19 @@ class TestIntegrationScenarios:
     def test_full_dependency_injection_scenario(self):
         """Test complete dependency injection scenario."""
         container = EnhancedDependencyContainer("integration_test")
-        
+
         # Register services with dependencies
         container.register_singleton(MockService, implementation=MockService)
-        container.register_transient(MockDependentService, implementation=MockDependentService)
-        
+        container.register_transient(
+            MockDependentService, implementation=MockDependentService
+        )
+
         # Get dependent service - should inject MockService
         dependent = container.get(MockDependentService)
-        
+
         assert isinstance(dependent, MockDependentService)
         assert isinstance(dependent.dependency, MockService)
-        
+
         # Get another dependent service - should reuse singleton MockService
         dependent2 = container.get(MockDependentService)
         assert dependent.dependency is dependent2.dependency  # Same singleton instance
@@ -674,26 +671,26 @@ class TestIntegrationScenarios:
         """Test scoped service lifecycle."""
         container = EnhancedDependencyContainer("scope_test")
         container.register_scoped(MockService, implementation=MockService)
-        
+
         # Create two scopes
         scope1 = container.create_scope("scope1")
         scope2 = container.create_scope("scope2")
-        
+
         # Get service in each scope
         service1a = container.get(MockService, scope1)
         service1b = container.get(MockService, scope1)  # Same scope
-        service2 = container.get(MockService, scope2)   # Different scope
-        
+        service2 = container.get(MockService, scope2)  # Different scope
+
         # Services in same scope should be identical
         assert service1a is service1b
-        
+
         # Services in different scopes should be different
         assert service1a is not service2
-        
+
         # Dispose scopes
         scope1.dispose()
         scope2.dispose()
-        
+
         assert service1a.disposed
         assert service2.disposed
 
@@ -701,17 +698,19 @@ class TestIntegrationScenarios:
         """Test builder pattern integration - simplified version."""
         console = Console()
         pkg_path = Path("/test")
-        
+
         # Use builder pattern to create configured container
-        container = (ServiceCollectionBuilder(EnhancedDependencyContainer("builder_test"))
-                    .with_console(console)
-                    .with_package_path(pkg_path)
-                    .with_dry_run(True)
-                    .build())
-        
+        container = (
+            ServiceCollectionBuilder(EnhancedDependencyContainer("builder_test"))
+            .with_console(console)
+            .with_package_path(pkg_path)
+            .with_dry_run(True)
+            .build()
+        )
+
         assert container.name == "builder_test"
         assert isinstance(container, EnhancedDependencyContainer)
-        
+
         # Test builder retained configuration
         builder = ServiceCollectionBuilder(container)
         builder.with_console(console).with_package_path(pkg_path)

@@ -1,212 +1,246 @@
 """Strategic test coverage for services modules with 0% coverage."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
+from unittest.mock import patch
+
 from rich.console import Console
 
 
 class TestEnhancedFileSystemService:
     """Test enhanced filesystem service."""
-    
+
     def test_enhanced_filesystem_import(self):
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
+
         assert EnhancedFileSystemService is not None
-    
+
     def test_enhanced_filesystem_basic(self):
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
-        
+
         service = EnhancedFileSystemService()
         assert service is not None
 
 
 class TestUnifiedConfigService:
     """Test unified configuration service."""
-    
+
     def test_unified_config_import(self):
         from crackerjack.services.unified_config import UnifiedConfigurationService
+
         assert UnifiedConfigurationService is not None
-    
+
     def test_unified_config_basic(self):
         from crackerjack.services.unified_config import UnifiedConfigurationService
-        
+
         console = Console()
         pkg_path = Path("/test")
-        
-        with patch("crackerjack.services.unified_config.Path.exists", return_value=True):
+
+        with patch(
+            "crackerjack.services.unified_config.Path.exists", return_value=True
+        ):
             service = UnifiedConfigurationService(console, pkg_path)
             assert service is not None
 
 
 class TestMetricsService:
     """Test metrics service."""
-    
+
     def test_metrics_import(self):
         from crackerjack.services.metrics import MetricsCollector
+
         assert MetricsCollector is not None
-    
+
     def test_metrics_basic(self):
         from crackerjack.services.metrics import MetricsCollector
-        
+
         collector = MetricsCollector()
         assert collector is not None
 
 
 class TestServerManagerService:
     """Test server manager service."""
-    
+
     def test_server_manager_import(self):
         import crackerjack.services.server_manager as server_manager_module
+
         assert server_manager_module is not None
 
 
 class TestToolVersionService:
     """Test tool version service."""
-    
+
     def test_tool_version_import(self):
         import crackerjack.services.tool_version_service as tool_version_module
+
         assert tool_version_module is not None
 
 
 class TestPerformanceBenchmarks:
     """Test performance benchmarks service."""
-    
+
     def test_performance_benchmarks_import(self):
         import crackerjack.services.performance_benchmarks as perf_module
+
         assert perf_module is not None
 
 
 class TestHealthMetrics:
     """Test health metrics service."""
-    
+
     def test_health_metrics_import(self):
         import crackerjack.services.health_metrics as health_module
+
         assert health_module is not None
 
 
 class TestDependencyMonitor:
     """Test dependency monitor service."""
-    
+
     def test_dependency_monitor_import(self):
         import crackerjack.services.dependency_monitor as dep_module
+
         assert dep_module is not None
 
 
 class TestContextualAIAssistant:
     """Test contextual AI assistant service."""
-    
+
     def test_contextual_ai_import(self):
         import crackerjack.services.contextual_ai_assistant as ai_module
+
         assert ai_module is not None
 
 
 class TestManagersModules:
     """Test manager modules that have 0% coverage."""
-    
+
     def test_async_hook_manager_import(self):
         import crackerjack.managers.async_hook_manager as async_hook_module
+
         assert async_hook_module is not None
-    
+
     def test_hook_manager_import(self):
         import crackerjack.managers.hook_manager as hook_module
+
         assert hook_module is not None
-    
+
     def test_publish_manager_import(self):
         import crackerjack.managers.publish_manager as publish_module
+
         assert publish_module is not None
 
 
 class TestCoreModulesZeroCoverage:
     """Test core modules with 0% coverage."""
-    
+
     def test_async_workflow_orchestrator_import(self):
         import crackerjack.core.async_workflow_orchestrator as async_workflow_module
+
         assert async_workflow_module is not None
-    
+
     def test_autofix_coordinator_import(self):
         import crackerjack.core.autofix_coordinator as autofix_module
+
         assert autofix_module is not None
-    
+
     def test_performance_import(self):
         import crackerjack.core.performance as performance_module
+
         assert performance_module is not None
 
 
 class TestExecutorModules:
     """Test executor modules with 0% coverage."""
-    
+
     def test_async_hook_executor_import(self):
         from crackerjack.executors.async_hook_executor import AsyncHookExecutor
+
         assert AsyncHookExecutor is not None
-    
+
     def test_cached_hook_executor_import(self):
         from crackerjack.executors.cached_hook_executor import CachedHookExecutor
+
         assert CachedHookExecutor is not None
-    
+
     def test_hook_executor_import(self):
         from crackerjack.executors.hook_executor import HookExecutor
+
         assert HookExecutor is not None
-    
+
     def test_individual_hook_executor_import(self):
-        from crackerjack.executors.individual_hook_executor import IndividualHookExecutor
+        from crackerjack.executors.individual_hook_executor import (
+            IndividualHookExecutor,
+        )
+
         assert IndividualHookExecutor is not None
 
 
 class TestPluginModules:
     """Test plugin modules with 0% coverage."""
-    
+
     def test_plugin_base_import(self):
         import crackerjack.plugins.base as plugin_base_module
+
         assert plugin_base_module is not None
-    
+
     def test_plugin_loader_import(self):
         import crackerjack.plugins.loader as plugin_loader_module
+
         assert plugin_loader_module is not None
-    
+
     def test_plugin_managers_import(self):
         import crackerjack.plugins.managers as plugin_managers_module
+
         assert plugin_managers_module is not None
 
 
 class TestMCPModulesBasic:
     """Test basic MCP module imports that work."""
-    
+
     def test_mcp_state_import(self):
         import crackerjack.mcp.state as mcp_state_module
+
         assert mcp_state_module is not None
-    
+
     def test_mcp_rate_limiter_import(self):
         import crackerjack.mcp.rate_limiter as rate_limiter_module
+
         assert rate_limiter_module is not None
-    
+
     def test_mcp_dashboard_import(self):
         import crackerjack.mcp.dashboard as dashboard_module
+
         assert dashboard_module is not None
-    
+
     def test_mcp_progress_monitor_import(self):
         import crackerjack.mcp.progress_monitor as progress_module
+
         assert progress_module is not None
-    
+
     def test_mcp_service_watchdog_import(self):
         import crackerjack.mcp.service_watchdog as watchdog_module
+
         assert watchdog_module is not None
 
 
 class TestOrchestrationModules:
     """Test orchestration modules with 0% coverage."""
-    
+
     def test_advanced_orchestrator_import(self):
         import crackerjack.orchestration.advanced_orchestrator as advanced_module
+
         assert advanced_module is not None
-    
+
     def test_execution_strategies_import(self):
         import crackerjack.orchestration.execution_strategies as strategies_module
+
         assert strategies_module is not None
 
 
 class TestPy313Module:
     """Test Python 3.13 compatibility module."""
-    
+
     def test_py313_import(self):
         import crackerjack.py313 as py313_module
+
         assert py313_module is not None

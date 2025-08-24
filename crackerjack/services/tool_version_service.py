@@ -165,15 +165,43 @@ class ToolVersionService:
             current_parts = [int(x) for x in current.split(".")]
             latest_parts = [int(x) for x in latest.split(".")]
 
-            max_len = max(len(current_parts), len(latest_parts))
-            current_parts.extend([0] * (max_len - len(current_parts)))
-            latest_parts.extend([0] * (max_len - len(latest_parts)))
+            # Store original lengths for specificity comparison
+            current_len = len(current_parts)
+            latest_len = len(latest_parts)
 
+            max_len = max(current_len, latest_len)
+            current_parts.extend([0] * (max_len - current_len))
+            latest_parts.extend([0] * (max_len - latest_len))
+
+            # Compare numeric values first
             for i in range(max_len):
                 if current_parts[i] < latest_parts[i]:
                     return -1
                 elif current_parts[i] > latest_parts[i]:
                     return 1
+
+            # Special case: If numeric values are equal but lengths differ
+            # "1.0" should be less than "1.0.0" but "1" should equal "1.0"
+            # Only when we have explicit zero in the longer version
+            if current_len != latest_len:
+                if current_len < latest_len:
+                    # Check if the extra parts in latest are zeros
+                    extra_parts = latest_parts[current_len:]
+                    if any(part != 0 for part in extra_parts):
+                        return -1
+                    # If extra parts are all zeros, treat as equal unless current has explicit zeros
+                    if current_len > 1:  # "1.0" vs "1.0.0"
+                        return -1
+                    return 0  # "1" vs "1.0"
+                else:
+                    # current_len > latest_len
+                    extra_parts = current_parts[latest_len:]
+                    if any(part != 0 for part in extra_parts):
+                        return 1
+                    # If extra parts are all zeros, treat as equal unless latest has explicit zeros
+                    if latest_len > 1:  # "1.0.0" vs "1.0"
+                        return 1
+                    return 0  # "1.0" vs "1"
 
             return 0
 
@@ -411,7 +439,7 @@ class UnifiedConfigurationService:
         if "unified_config" in self.config_cache:
             return self.config_cache["unified_config"]
 
-        base_config = {
+        base_config: dict[str, t.Any] = {
             "project_type": self.project_type,
             "project_path": str(self.project_path),
             "tools": {},
@@ -435,7 +463,12 @@ class UnifiedConfigurationService:
     def _load_python_config(self) -> dict[str, t.Any]:
         """Load Python project configuration from pyproject.toml."""
         pyproject = self.project_path / "pyproject.toml"
-        config = {"tools": {}, "hooks": {}, "testing": {}, "quality": {}}
+        config: dict[str, t.Any] = {
+            "tools": {},
+            "hooks": {},
+            "testing": {},
+            "quality": {},
+        }
 
         if not pyproject.exists():
             return config
@@ -684,9 +717,9 @@ class UnifiedConfigurationService:
         return {}
 
     def _check_configuration_conflicts(self, config: dict[str, t.Any]) -> list[str]:
-        conflicts = []
+        conflicts: list[str] = []
 
-        formatters = []
+        formatters: list[str] = []
         for section in ("tools", "quality"):
             for tool_name, tool_config in config.get(section, {}).items():
                 if tool_name in (
@@ -706,7 +739,7 @@ class UnifiedConfigurationService:
         return conflicts
 
     def _get_optimization_suggestions(self, config: dict[str, t.Any]) -> list[str]:
-        suggestions = []
+        suggestions: list[str] = []
 
         if self.project_type == "python":
             quality_tools = config.get("quality", {})
