@@ -280,7 +280,10 @@ class InteractiveWorkflowManager:
         return True
 
     def _execute_workflow_tasks(
-        self, live: Live, options: OptionsProtocol, pkg_version: str,
+        self,
+        live: Live,
+        options: OptionsProtocol,
+        pkg_version: str,
     ) -> bool:
         while True:
             next_task = self.get_next_task()
@@ -355,7 +358,10 @@ class InteractiveWorkflowManager:
             duration_text = f"{task.duration: .1f}s" if task.duration else " - "
             details = task.error.message if task.error else task.description
             table.add_row(
-                task.name, f"[{style}]{status_text}[/{style}]", duration_text, details,
+                task.name,
+                f"[{style}]{status_text}[/{style}]",
+                duration_text,
+                details,
             )
         self.console.print("\n")
         self.console.print(table)
@@ -375,7 +381,8 @@ class InteractiveCLI:
         self.console = console or Console(force_terminal=True)
         self.orchestrator = WorkflowOrchestrator(console=self.console)
         self.workflow_manager = InteractiveWorkflowManager(
-            self.console, self.orchestrator,
+            self.console,
+            self.orchestrator,
         )
 
     def launch(self, options: OptionsProtocol) -> None:
@@ -383,7 +390,8 @@ class InteractiveCLI:
             self._show_welcome()
             updated_options = self._get_user_preferences(options)
             success = self.workflow_manager.run_workflow(
-                updated_options, self.pkg_version,
+                updated_options,
+                self.pkg_version,
             )
             if not success:
                 raise SystemExit(1)
@@ -415,11 +423,13 @@ class InteractiveCLI:
         self.console.print("Configure your crackerjack workflow: \n")
         updated_options = type(options)(**vars(options))
         updated_options.clean = Confirm.ask(
-            "🧹 Clean code (remove docstrings, comments)?", default=options.clean,
+            "🧹 Clean code (remove docstrings, comments)?",
+            default=options.clean,
         )
         updated_options.test = Confirm.ask("🧪 Run tests?", default=options.test)
         updated_options.commit = Confirm.ask(
-            "📝 Commit changes to git?", default=options.commit,
+            "📝 Commit changes to git?",
+            default=options.commit,
         )
         if not any([options.publish, options.all, options.bump]):
             if Confirm.ask("📦 Bump version and publish?", default=False):
@@ -431,7 +441,8 @@ class InteractiveCLI:
                 updated_options.publish = version_type
         if Confirm.ask("\n⚙️ Configure advanced options?", default=False):
             updated_options.verbose = Confirm.ask(
-                "Enable verbose output?", default=options.verbose,
+                "Enable verbose output?",
+                default=options.verbose,
             )
         self.console.print()
         return updated_options

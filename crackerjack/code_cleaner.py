@@ -43,7 +43,10 @@ class CleaningStepProtocol(Protocol):
 
 class ErrorHandlerProtocol(Protocol):
     def handle_file_error(
-        self, file_path: Path, error: Exception, step: str,
+        self,
+        file_path: Path,
+        error: Exception,
+        step: str,
     ) -> None: ...
     def log_cleaning_result(self, result: CleaningResult) -> None: ...
 
@@ -175,7 +178,9 @@ class CleaningPipeline(BaseModel):
             self.logger = logging.getLogger("crackerjack.code_cleaner.pipeline")
 
     def clean_file(
-        self, file_path: Path, cleaning_steps: list[CleaningStepProtocol],
+        self,
+        file_path: Path,
+        cleaning_steps: list[CleaningStepProtocol],
     ) -> CleaningResult:
         self.logger.info(f"Starting clean_file for {file_path}")
         try:
@@ -183,7 +188,9 @@ class CleaningPipeline(BaseModel):
             original_size = len(original_code.encode("utf - 8"))
 
             result = self._apply_cleaning_pipeline(
-                original_code, file_path, cleaning_steps,
+                original_code,
+                file_path,
+                cleaning_steps,
             )
 
             if result.success and result.cleaned_code != original_code:
@@ -226,7 +233,10 @@ class CleaningPipeline(BaseModel):
         warnings: list[str]
 
     def _apply_cleaning_pipeline(
-        self, code: str, file_path: Path, cleaning_steps: list[CleaningStepProtocol],
+        self,
+        code: str,
+        file_path: Path,
+        cleaning_steps: list[CleaningStepProtocol],
     ) -> PipelineResult:
         current_code = code
         steps_completed: list[str] = []
@@ -393,7 +403,11 @@ class CodeCleaner(BaseModel):
             return not state["in_string"] and char == "#"
 
         def _update_string_state(
-            self, char: str, index: int, line: str, state: dict[str, t.Any],
+            self,
+            char: str,
+            index: int,
+            line: str,
+            state: dict[str, t.Any],
         ) -> None:
             """Update string parsing state based on current character."""
             if self._is_string_start(char, state):
@@ -406,7 +420,11 @@ class CodeCleaner(BaseModel):
             return not state["in_string"] and char in ['"', "'"]
 
         def _is_string_end(
-            self, char: str, index: int, line: str, state: dict[str, t.Any],
+            self,
+            char: str,
+            index: int,
+            line: str,
+            state: dict[str, t.Any],
         ) -> bool:
             """Check if character ends a string."""
             return (
@@ -419,7 +437,8 @@ class CodeCleaner(BaseModel):
         return DocstringStep()
 
     def _create_docstring_finder_class(
-        self, docstring_nodes: list[ast.AST],
+        self,
+        docstring_nodes: list[ast.AST],
     ) -> type[ast.NodeVisitor]:
         class DocstringFinder(ast.NodeVisitor):
             def _add_if_docstring(self, node: ast.AST) -> None:
@@ -463,7 +482,8 @@ class DocstringStep:
         return docstring_nodes
 
     def _create_docstring_finder_class(
-        self, docstring_nodes: list[ast.AST],
+        self,
+        docstring_nodes: list[ast.AST],
     ) -> type[ast.NodeVisitor]:
         class DocstringFinder(ast.NodeVisitor):
             def _add_if_docstring(self, node: ast.AST) -> None:
@@ -495,7 +515,9 @@ class DocstringStep:
         return lines_to_remove
 
     def _filter_docstring_lines(
-        self, lines: list[str], lines_to_remove: set[int],
+        self,
+        lines: list[str],
+        lines_to_remove: set[int],
     ) -> list[str]:
         filtered_lines = []
         for i, line in enumerate(lines):

@@ -26,7 +26,9 @@ class InitializationService:
         self.pkg_path = pkg_path
 
     def initialize_project(
-        self, target_path: Path | None = None, force: bool = False,
+        self,
+        target_path: Path | None = None,
+        force: bool = False,
     ) -> dict[str, t.Any]:
         if target_path is None:
             target_path = Path.cwd()
@@ -39,7 +41,12 @@ class InitializationService:
 
             for file_name, merge_strategy in config_files.items():
                 self._process_config_file(
-                    file_name, merge_strategy, project_name, target_path, force, results,
+                    file_name,
+                    merge_strategy,
+                    project_name,
+                    target_path,
+                    force,
+                    results,
                 )
 
             self._print_summary(results)
@@ -93,16 +100,28 @@ class InitializationService:
             # Handle different merge strategies
             if merge_strategy == "smart_merge":
                 self._smart_merge_config(
-                    source_file, target_file, file_name, project_name, force, results,
+                    source_file,
+                    target_file,
+                    file_name,
+                    project_name,
+                    force,
+                    results,
                 )
             elif merge_strategy == "smart_append":
                 self._smart_append_config(
-                    source_file, target_file, file_name, project_name, force, results,
+                    source_file,
+                    target_file,
+                    file_name,
+                    project_name,
+                    force,
+                    results,
                 )
             elif merge_strategy == "replace_if_missing":
                 if not target_file.exists() or force:
                     content = self._read_and_process_content(
-                        source_file, True, project_name,
+                        source_file,
+                        True,
+                        project_name,
                     )
                     self._write_file_and_track(target_file, content, file_name, results)
                 else:
@@ -112,7 +131,9 @@ class InitializationService:
                 if not self._should_copy_file(target_file, force, file_name, results):
                     return
                 content = self._read_and_process_content(
-                    source_file, True, project_name,
+                    source_file,
+                    True,
+                    project_name,
                 )
                 self._write_file_and_track(target_file, content, file_name, results)
 
@@ -120,7 +141,11 @@ class InitializationService:
             self._handle_file_processing_error(file_name, e, results)
 
     def _should_copy_file(
-        self, target_file: Path, force: bool, file_name: str, results: dict[str, t.Any],
+        self,
+        target_file: Path,
+        force: bool,
+        file_name: str,
+        results: dict[str, t.Any],
     ) -> bool:
         if target_file.exists() and not force:
             t.cast("list[str]", results["files_skipped"]).append(file_name)
@@ -131,7 +156,10 @@ class InitializationService:
         return True
 
     def _read_and_process_content(
-        self, source_file: Path, should_replace: bool, project_name: str,
+        self,
+        source_file: Path,
+        should_replace: bool,
+        project_name: str,
     ) -> str:
         content = source_file.read_text()
 
@@ -141,7 +169,11 @@ class InitializationService:
         return content
 
     def _write_file_and_track(
-        self, target_file: Path, content: str, file_name: str, results: dict[str, t.Any],
+        self,
+        target_file: Path,
+        content: str,
+        file_name: str,
+        results: dict[str, t.Any],
     ) -> None:
         target_file.write_text(content)
         t.cast("list[str]", results["files_copied"]).append(file_name)
@@ -158,14 +190,19 @@ class InitializationService:
         self.console.print(f"[yellow]⚠️[/yellow] Skipped {file_name} (already exists)")
 
     def _handle_missing_source_file(
-        self, file_name: str, results: dict[str, t.Any],
+        self,
+        file_name: str,
+        results: dict[str, t.Any],
     ) -> None:
         error_msg = f"Source file not found: {file_name}"
         t.cast("list[str]", results["errors"]).append(error_msg)
         self.console.print(f"[yellow]⚠️[/yellow] {error_msg}")
 
     def _handle_file_processing_error(
-        self, file_name: str, error: Exception, results: dict[str, t.Any],
+        self,
+        file_name: str,
+        error: Exception,
+        results: dict[str, t.Any],
     ) -> None:
         error_msg = f"Failed to copy {file_name}: {error}"
         t.cast("list[str]", results["errors"]).append(error_msg)
@@ -184,7 +221,9 @@ class InitializationService:
             )
 
     def _handle_initialization_error(
-        self, results: dict[str, t.Any], error: Exception,
+        self,
+        results: dict[str, t.Any],
+        error: Exception,
     ) -> None:
         results["success"] = False
         t.cast("list[str]", results["errors"]).append(f"Initialization failed: {error}")
@@ -204,7 +243,10 @@ class InitializationService:
             return False
 
     def _process_mcp_config(
-        self, target_path: Path, force: bool, results: dict[str, t.Any],
+        self,
+        target_path: Path,
+        force: bool,
+        results: dict[str, t.Any],
     ) -> None:
         """Handle special processing for mcp.json -> .mcp.json with merging."""
         # Source: mcp.json in crackerjack package (contains servers to add to projects)
@@ -298,7 +340,10 @@ class InitializationService:
             self._handle_file_processing_error(".mcp.json (merge)", e, results)
 
     def _write_mcp_config_and_track(
-        self, target_file: Path, config: dict[str, t.Any], results: dict[str, t.Any],
+        self,
+        target_file: Path,
+        config: dict[str, t.Any],
+        results: dict[str, t.Any],
     ) -> None:
         """Write MCP config file and track in results."""
         with target_file.open("w") as f:
@@ -387,16 +432,25 @@ class InitializationService:
         """Smart merge for configuration files."""
         if file_name == "pyproject.toml":
             self._smart_merge_pyproject(
-                source_file, target_file, project_name, force, results,
+                source_file,
+                target_file,
+                project_name,
+                force,
+                results,
             )
         elif file_name == ".pre-commit-config.yaml":
             self._smart_merge_pre_commit_config(
-                source_file, target_file, force, results,
+                source_file,
+                target_file,
+                force,
+                results,
             )
         # Fallback to regular copy
         elif not target_file.exists() or force:
             content = self._read_and_process_content(
-                source_file, True, project_name,
+                source_file,
+                True,
+                project_name,
             )
             self._write_file_and_track(target_file, content, file_name, results)
         else:
@@ -450,7 +504,9 @@ class InitializationService:
         self.console.print("[green]✅[/green] Smart merged pyproject.toml")
 
     def _ensure_crackerjack_dev_dependency(
-        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any],
+        self,
+        target_config: dict[str, t.Any],
+        source_config: dict[str, t.Any],
     ) -> None:
         """Ensure crackerjack is in dev dependencies."""
         # Check different dependency group structures
@@ -466,7 +522,9 @@ class InitializationService:
             dev_deps.append("crackerjack")
 
     def _merge_tool_configurations(
-        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any],
+        self,
+        target_config: dict[str, t.Any],
+        source_config: dict[str, t.Any],
     ) -> None:
         """Merge tool configurations, preserving existing settings."""
         source_tools = source_config.get("tool", {})
@@ -499,7 +557,9 @@ class InitializationService:
                 else:
                     # Tool exists, merge settings
                     self._merge_tool_settings(
-                        target_tools[tool_name], source_tools[tool_name], tool_name,
+                        target_tools[tool_name],
+                        source_tools[tool_name],
+                        tool_name,
                     )
 
         # Special handling for pytest.ini_options markers
@@ -525,7 +585,9 @@ class InitializationService:
             )
 
     def _merge_pytest_markers(
-        self, target_tools: dict[str, t.Any], source_tools: dict[str, t.Any],
+        self,
+        target_tools: dict[str, t.Any],
+        source_tools: dict[str, t.Any],
     ) -> None:
         """Merge pytest markers without duplication."""
         if "pytest" not in source_tools or "pytest" not in target_tools:
@@ -555,7 +617,9 @@ class InitializationService:
             )
 
     def _preserve_higher_coverage_requirement(
-        self, target_config: dict[str, t.Any], source_config: dict[str, t.Any],
+        self,
+        target_config: dict[str, t.Any],
+        source_config: dict[str, t.Any],
     ) -> None:
         """Preserve higher coverage requirements."""
         source_coverage = (
@@ -613,7 +677,10 @@ class InitializationService:
         if not target_file.exists():
             # No existing file, just copy
             self._write_file_and_track(
-                target_file, source_file.read_text(), ".pre-commit-config.yaml", results,
+                target_file,
+                source_file.read_text(),
+                ".pre-commit-config.yaml",
+                results,
             )
             return
 

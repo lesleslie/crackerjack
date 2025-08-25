@@ -173,12 +173,16 @@ def handle_standard_mode(
 
         if async_mode:
             orchestrator = AsyncWorkflowOrchestrator(
-                console=console, pkg_path=pkg_path, web_job_id=job_id,
+                console=console,
+                pkg_path=pkg_path,
+                web_job_id=job_id,
             )
             success = asyncio.run(orchestrator.run_complete_workflow_async(options))
         else:
             orchestrator = WorkflowOrchestrator(
-                console=console, pkg_path=pkg_path, web_job_id=job_id,
+                console=console,
+                pkg_path=pkg_path,
+                web_job_id=job_id,
             )
             success = asyncio.run(orchestrator.run_complete_workflow(options))
 

@@ -46,7 +46,9 @@ class TestWorkflowOrchestrator:
         assert isinstance(pipeline, WorkflowPipeline)
 
     @patch("crackerjack.core.workflow_orchestrator.create_container")
-    def test_execute_workflow_success(self, mock_create_container, sample_config) -> None:
+    def test_execute_workflow_success(
+        self, mock_create_container, sample_config
+    ) -> None:
         """Test successful workflow execution."""
         # Setup mocks
         mock_container = Mock()
@@ -69,7 +71,9 @@ class TestWorkflowOrchestrator:
         assert isinstance(result, bool)
 
     @patch("crackerjack.core.workflow_orchestrator.create_container")
-    def test_execute_workflow_hook_failure(self, mock_create_container, sample_config) -> None:
+    def test_execute_workflow_hook_failure(
+        self, mock_create_container, sample_config
+    ) -> None:
         """Test workflow execution with hook failures."""
         # Setup mocks
         mock_container = Mock()

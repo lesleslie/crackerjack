@@ -721,7 +721,8 @@ def get_ai_agent_debugger() -> AIAgentDebugger | NoOpDebugger:
 
         if debug_enabled:
             _ai_agent_debugger = AIAgentDebugger(
-                enabled=debug_enabled, verbose=verbose_mode,
+                enabled=debug_enabled,
+                verbose=verbose_mode,
             )
         else:
             _ai_agent_debugger = NoOpDebugger()

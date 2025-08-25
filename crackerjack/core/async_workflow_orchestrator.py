@@ -100,7 +100,9 @@ class AsyncWorkflowPipeline:
         hooks_task = asyncio.create_task(self._run_comprehensive_hooks_async(options))
 
         test_success, hooks_success = await asyncio.gather(
-            test_task, hooks_task, return_exceptions=True,
+            test_task,
+            hooks_task,
+            return_exceptions=True,
         )
 
         if isinstance(test_success, Exception):
@@ -126,7 +128,8 @@ class AsyncWorkflowPipeline:
         return overall_success
 
     async def _execute_standard_hooks_workflow_async(
-        self, options: OptionsProtocol,
+        self,
+        options: OptionsProtocol,
     ) -> bool:
         hooks_success = await self._run_hooks_phase_async(options)
         if not hooks_success:
@@ -139,7 +142,8 @@ class AsyncWorkflowPipeline:
 
     async def _run_comprehensive_hooks_async(self, options: OptionsProtocol) -> bool:
         return await asyncio.to_thread(
-            self.phases.run_comprehensive_hooks_only, options,
+            self.phases.run_comprehensive_hooks_only,
+            options,
         )
 
     async def _run_hooks_phase_async(self, options: OptionsProtocol) -> bool:
@@ -173,7 +177,9 @@ class AsyncWorkflowOrchestrator:
         from .container import create_container
 
         self.container = create_container(
-            console=self.console, pkg_path=self.pkg_path, dry_run=self.dry_run,
+            console=self.console,
+            pkg_path=self.pkg_path,
+            dry_run=self.dry_run,
         )
 
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)

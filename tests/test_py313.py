@@ -447,7 +447,10 @@ class TestEnhancedCommandRunner:
         assert result["duration_ms"] > 0
 
         mock_run.assert_called_once_with(
-            ["echo", "test"], capture_output=True, text=True, cwd=None,
+            ["echo", "test"],
+            capture_output=True,
+            text=True,
+            cwd=None,
         )
 
     @patch("subprocess.run")
@@ -481,7 +484,10 @@ class TestEnhancedCommandRunner:
         runner.run(["ls"])
 
         mock_run.assert_called_once_with(
-            ["ls"], capture_output=True, text=True, cwd=working_dir,
+            ["ls"],
+            capture_output=True,
+            text=True,
+            cwd=working_dir,
         )
 
     @patch("subprocess.run")

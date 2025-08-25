@@ -94,7 +94,8 @@ class PhaseCoordinator:
         if cleaned_files:
             self.console.print(f"[green]✅[/green] Cleaned {len(cleaned_files)} files")
             self.session.complete_task(
-                "cleaning", f"Cleaned {len(cleaned_files)} files",
+                "cleaning",
+                f"Cleaned {len(cleaned_files)} files",
             )
         else:
             self.console.print("[green]✅[/green] No cleaning needed")
@@ -213,7 +214,9 @@ class PhaseCoordinator:
             return True
 
         return self._execute_hooks_with_retry(
-            "fast", self.hook_manager.run_fast_hooks, options,
+            "fast",
+            self.hook_manager.run_fast_hooks,
+            options,
         )
 
     def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
@@ -221,7 +224,9 @@ class PhaseCoordinator:
             return True
 
         return self._execute_hooks_with_retry(
-            "comprehensive", self.hook_manager.run_comprehensive_hooks, options,
+            "comprehensive",
+            self.hook_manager.run_comprehensive_hooks,
+            options,
         )
 
     def run_testing_phase(self, options: OptionsProtocol) -> bool:
@@ -277,7 +282,9 @@ class PhaseCoordinator:
         return None
 
     def _execute_publishing_workflow(
-        self, options: OptionsProtocol, version_type: str,
+        self,
+        options: OptionsProtocol,
+        version_type: str,
     ) -> bool:
         new_version = self.publish_manager.bump_version(version_type)
 
@@ -291,7 +298,9 @@ class PhaseCoordinator:
         return False
 
     def _handle_successful_publish(
-        self, options: OptionsProtocol, new_version: str,
+        self,
+        options: OptionsProtocol,
+        new_version: str,
     ) -> None:
         self.console.print(f"[green]🚀[/green] Successfully published {new_version}!")
 
@@ -321,7 +330,9 @@ class PhaseCoordinator:
         return True
 
     def _execute_commit_and_push(
-        self, changed_files: list[str], commit_message: str,
+        self,
+        changed_files: list[str],
+        commit_message: str,
     ) -> bool:
         if not self.git_service.add_files(changed_files):
             self.session.fail_task("commit", "Failed to stage files")
@@ -339,14 +350,16 @@ class PhaseCoordinator:
                 f"[green]🎉[/green] Committed and pushed: {commit_message}",
             )
             self.session.complete_task(
-                "commit", f"Committed and pushed: {commit_message}",
+                "commit",
+                f"Committed and pushed: {commit_message}",
             )
         else:
             self.console.print(
                 f"[yellow]⚠️[/yellow] Committed but push failed: {commit_message}",
             )
             self.session.complete_task(
-                "commit", f"Committed (push failed): {commit_message}",
+                "commit",
+                f"Committed (push failed): {commit_message}",
             )
         return True
 
@@ -371,7 +384,9 @@ class PhaseCoordinator:
             return False
 
     def _get_commit_message(
-        self, changed_files: list[str], options: OptionsProtocol,
+        self,
+        changed_files: list[str],
+        options: OptionsProtocol,
     ) -> str:
         suggestions = self.git_service.get_commit_message_suggestions(changed_files)
 
@@ -420,12 +435,20 @@ class PhaseCoordinator:
 
                 if self._has_hook_failures(summary):
                     if self._should_retry_hooks(
-                        hook_type, attempt, max_retries, results,
+                        hook_type,
+                        attempt,
+                        max_retries,
+                        results,
                     ):
                         continue
 
                     return self._handle_hook_failures(
-                        hook_type, options, summary, results, attempt, max_retries,
+                        hook_type,
+                        options,
+                        summary,
+                        results,
+                        attempt,
+                        max_retries,
                     )
                 return self._handle_hook_success(hook_type, summary)
 
@@ -437,7 +460,8 @@ class PhaseCoordinator:
     def _initialize_hook_execution(self, hook_type: str) -> None:
         self.logger.info(f"Starting {hook_type} hooks execution")
         self.session.track_task(
-            f"{hook_type}_hooks", f"{hook_type.title()} hooks execution",
+            f"{hook_type}_hooks",
+            f"{hook_type.title()} hooks execution",
         )
 
     def _get_max_retries(self, hook_type: str) -> int:
@@ -447,7 +471,11 @@ class PhaseCoordinator:
         return summary["failed"] > 0 or summary["errors"] > 0
 
     def _should_retry_hooks(
-        self, hook_type: str, attempt: int, max_retries: int, results: list[t.Any],
+        self,
+        hook_type: str,
+        attempt: int,
+        max_retries: int,
+        results: list[t.Any],
     ) -> bool:
         if hook_type == "fast" and attempt < max_retries - 1:
             if self._should_retry_fast_hooks(results):

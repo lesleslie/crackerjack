@@ -48,7 +48,9 @@ class TestFileSystemServiceBasics:
         test_file.write_text("content")
 
         with patch.object(
-            Path, "read_text", side_effect=PermissionError("Access denied"),
+            Path,
+            "read_text",
+            side_effect=PermissionError("Access denied"),
         ):
             with pytest.raises(FileError) as exc_info:
                 fs_service.read_file(test_file)
@@ -108,7 +110,9 @@ class TestFileSystemServiceBasics:
         test_file = temp_dir / "test.txt"
 
         with patch.object(
-            Path, "write_text", side_effect=PermissionError("Access denied"),
+            Path,
+            "write_text",
+            side_effect=PermissionError("Access denied"),
         ):
             with pytest.raises(FileError) as exc_info:
                 fs_service.write_file(test_file, "content")
@@ -119,7 +123,9 @@ class TestFileSystemServiceBasics:
         test_file = temp_dir / "test.txt"
 
         with patch.object(
-            Path, "write_text", side_effect=OSError("No space left on device"),
+            Path,
+            "write_text",
+            side_effect=OSError("No space left on device"),
         ):
             with pytest.raises(ResourceError) as exc_info:
                 fs_service.write_file(test_file, "content")
@@ -201,7 +207,9 @@ class TestFileSystemServiceDirectories:
         new_dir = temp_dir / "new_dir"
 
         with patch.object(
-            Path, "mkdir", side_effect=OSError("No space left on device"),
+            Path,
+            "mkdir",
+            side_effect=OSError("No space left on device"),
         ):
             with pytest.raises(ResourceError) as exc_info:
                 fs_service.mkdir(new_dir)

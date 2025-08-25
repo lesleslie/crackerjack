@@ -38,7 +38,11 @@ class AgentStatusPanel(Widget):
         with suppress(Exception):
             agents_table = self.query_one("#agents-table", DataTable)
             agents_table.add_columns(
-                "Agent", "Status", "Issue Type", "Confidence", "Time",
+                "Agent",
+                "Status",
+                "Issue Type",
+                "Confidence",
+                "Time",
             )
 
             agents_table.styles.max_height = "8"
@@ -210,7 +214,8 @@ class JobPanel(Widget):
             errors_container.border_title = "❌ Errors"
 
             errors_table = self.query_one(
-                f"#job-errors-{self.job_data.get('job_id', 'unknown')}", DataTable,
+                f"#job-errors-{self.job_data.get('job_id', 'unknown')}",
+                DataTable,
             )
             errors_table.add_columns("", "", "", "")
 
@@ -219,7 +224,8 @@ class JobPanel(Widget):
     def _update_errors_table(self) -> None:
         with suppress(Exception):
             errors_table = self.query_one(
-                f"#job-errors-{self.job_data.get('job_id', 'unknown')}", DataTable,
+                f"#job-errors-{self.job_data.get('job_id', 'unknown')}",
+                DataTable,
             )
             errors_table.clear()
 
@@ -349,7 +355,8 @@ class JobPanel(Widget):
 
     def _compose_job_identifiers(self) -> ComposeResult:
         job_id = self.job_data.get(
-            "full_job_id", self.job_data.get("job_id", "Unknown"),
+            "full_job_id",
+            self.job_data.get("job_id", "Unknown"),
         )
         yield Label(f"🆔 UUID: {job_id}")
 
@@ -890,7 +897,8 @@ class JobMetrics:
 
 
 async def run_progress_monitor(
-    enable_watchdog: bool = True, dev_mode: bool = False,
+    enable_watchdog: bool = True,
+    dev_mode: bool = False,
 ) -> None:
     try:
         console = Console()
@@ -938,14 +946,20 @@ def main() -> None:
             sys.stdout.write("\033[?25h\033[0m")
             sys.stdout.flush()
             subprocess.run(
-                ["stty", "sane"], check=False, capture_output=True, timeout=1,
+                ["stty", "sane"],
+                check=False,
+                capture_output=True,
+                timeout=1,
             )
     except Exception:
         with suppress(Exception):
             sys.stdout.write("\033[?25h\033[0m")
             sys.stdout.flush()
             subprocess.run(
-                ["stty", "sane"], check=False, capture_output=True, timeout=1,
+                ["stty", "sane"],
+                check=False,
+                capture_output=True,
+                timeout=1,
             )
 
 

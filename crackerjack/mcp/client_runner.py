@@ -56,11 +56,17 @@ async def run_with_mcp_server(command: str = "/crackerjack:run") -> None:
 
     try:
         server_script = Path(__file__).parent.parent / "__main__.py"
-        async with stdio_client(
-            sys.executable, str(server_script), "--start-mcp-server",
-        ) as (read_stream, write_stream), read_stream.session(
-            read_stream=read_stream, write_stream=write_stream,
-        ) as session:
+        async with (
+            stdio_client(
+                sys.executable,
+                str(server_script),
+                "--start-mcp-server",
+            ) as (read_stream, write_stream),
+            read_stream.session(
+                read_stream=read_stream,
+                write_stream=write_stream,
+            ) as session,
+        ):
             try:
                 await run_crackerjack_with_progress(session, command)
             except Exception as e:

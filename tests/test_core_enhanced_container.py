@@ -101,7 +101,9 @@ class TestServiceDescriptor:
         instance = MockService("test_instance")
 
         descriptor = ServiceDescriptor(
-            interface=MockService, instance=instance, lifetime=ServiceLifetime.SINGLETON,
+            interface=MockService,
+            instance=instance,
+            lifetime=ServiceLifetime.SINGLETON,
         )
 
         assert descriptor.interface == MockService
@@ -112,7 +114,8 @@ class TestServiceDescriptor:
     def test_descriptor_validation_error(self) -> None:
         """Test descriptor validation when no source provided."""
         with pytest.raises(
-            ValueError, match="Must provide either implementation, factory, or instance",
+            ValueError,
+            match="Must provide either implementation, factory, or instance",
         ):
             ServiceDescriptor(interface=MockService)
 
@@ -255,19 +258,23 @@ class TestDependencyResolver:
     def test_create_instance_with_implementation(self, resolver) -> None:
         """Test creating instance with implementation class."""
         descriptor = ServiceDescriptor(
-            interface=MockService, implementation=MockService,
+            interface=MockService,
+            implementation=MockService,
         )
 
         result = resolver.create_instance(descriptor)
         assert isinstance(result, MockService)
 
-    def test_create_instance_with_dependency_injection(self, resolver, container) -> None:
+    def test_create_instance_with_dependency_injection(
+        self, resolver, container
+    ) -> None:
         """Test creating instance with dependency injection."""
         # Register dependency
         container.register_singleton(MockService, implementation=MockService)
 
         descriptor = ServiceDescriptor(
-            interface=MockDependentService, implementation=MockDependentService,
+            interface=MockDependentService,
+            implementation=MockDependentService,
         )
 
         result = resolver.create_instance(descriptor)
@@ -298,7 +305,8 @@ class TestDependencyResolver:
             return MockDependentService(dependency)
 
         descriptor = ServiceDescriptor(
-            interface=MockDependentService, factory=factory_with_dep,
+            interface=MockDependentService,
+            factory=factory_with_dep,
         )
 
         result = resolver.create_instance(descriptor)
@@ -470,7 +478,8 @@ class TestEnhancedDependencyContainer:
         container = EnhancedDependencyContainer()
         container.register_singleton(MockService, implementation=MockService)
         container.register_transient(
-            MockDependentService, implementation=MockDependentService,
+            MockDependentService,
+            implementation=MockDependentService,
         )
 
         info = container.get_service_info()
@@ -654,7 +663,8 @@ class TestIntegrationScenarios:
         # Register services with dependencies
         container.register_singleton(MockService, implementation=MockService)
         container.register_transient(
-            MockDependentService, implementation=MockDependentService,
+            MockDependentService,
+            implementation=MockDependentService,
         )
 
         # Get dependent service - should inject MockService

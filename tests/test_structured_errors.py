@@ -45,7 +45,9 @@ class TestErrorHandlingIntegration:
 
     def test_check_command_result_success(self, mock_command_result: MagicMock) -> None:
         check_command_result(
-            mock_command_result, "test command", "Error executing command",
+            mock_command_result,
+            "test command",
+            "Error executing command",
         )
 
     def test_check_command_result_failure(self, mock_command_result: MagicMock) -> None:
@@ -53,16 +55,14 @@ class TestErrorHandlingIntegration:
         mock_command_result.stderr = "Command failed"
         with pytest.raises(ExecutionError) as excinfo:
             check_command_result(
-                mock_command_result, "test command", "Error executing command",
+                mock_command_result,
+                "test command",
+                "Error executing command",
             )
         assert excinfo.value.error_code == ErrorCode.COMMAND_EXECUTION_ERROR
         assert "Error executing command" in excinfo.value.message
-        assert (
-            excinfo.value.details is not None
-        )
-        assert (
-            "Command failed" in excinfo.value.details
-        )
+        assert excinfo.value.details is not None
+        assert "Command failed" in excinfo.value.details
 
     def test_check_file_exists_success(self, tmp_path: Path) -> None:
         test_file = tmp_path / "test.txt"
@@ -75,15 +75,12 @@ class TestErrorHandlingIntegration:
             check_file_exists(test_file, "File not found")
         assert excinfo.value.error_code == ErrorCode.FILE_NOT_FOUND
         assert "File not found" in excinfo.value.message
-        assert (
-            excinfo.value.details is not None
-        )
-        assert (
-            str(test_file) in excinfo.value.details
-        )
+        assert excinfo.value.details is not None
+        assert str(test_file) in excinfo.value.details
 
     def test_error_handling_in_code_cleaner(
-        self, capsys: "CaptureFixture[str]",
+        self,
+        capsys: "CaptureFixture[str]",
     ) -> None:
         from crackerjack.code_cleaner import CodeCleaner
 

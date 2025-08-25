@@ -379,7 +379,8 @@ class TestMCPCoreTools:
 
         # Test without suggestions
         detected_errors_no_sugg, suggestions_no_sugg = _detect_errors_and_suggestions(
-            error_text, False,
+            error_text,
+            False,
         )
         assert detected_errors_no_sugg == detected_errors
         assert suggestions_no_sugg == []
@@ -462,7 +463,8 @@ class TestMCPBatchedSaver:
 
     @pytest.mark.asyncio
     async def test_batched_saver_lifecycle(
-        self, batched_saver: BatchedStateSaver,
+        self,
+        batched_saver: BatchedStateSaver,
     ) -> None:
         """Test batched saver lifecycle."""
         assert not batched_saver._running

@@ -144,9 +144,7 @@ class TestMainModuleStructure:
 
         app = main_module.app
         # Should be typer app or mock
-        assert (
-            callable(app) or str(type(app)) == "<class 'unittest.mock.Mock'>"
-        )
+        assert callable(app) or str(type(app)) == "<class 'unittest.mock.Mock'>"
 
 
 class TestMainModuleInitialization:

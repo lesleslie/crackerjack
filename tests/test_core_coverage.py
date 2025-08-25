@@ -231,7 +231,9 @@ class TestPhaseCoordinator:
         with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
             with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
                 coordinator = PhaseCoordinator(
-                    console=console, pkg_path=temp_path, **mock_dependencies,
+                    console=console,
+                    pkg_path=temp_path,
+                    **mock_dependencies,
                 )
                 # Replace the real config service with a mock
                 coordinator.config_service = Mock()
@@ -246,7 +248,9 @@ class TestPhaseCoordinator:
         assert hasattr(coordinator, "session")
         assert hasattr(coordinator, "filesystem")
 
-    def test_run_configuration_phase_success(self, coordinator, mock_dependencies) -> None:
+    def test_run_configuration_phase_success(
+        self, coordinator, mock_dependencies
+    ) -> None:
         """Test successful configuration phase."""
         options = MockOptions()
 

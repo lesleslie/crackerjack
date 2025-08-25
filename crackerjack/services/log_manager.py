@@ -110,21 +110,32 @@ class LogManager:
         results = {}
 
         results["debug"] = self.rotate_logs(
-            self.debug_dir, "debug-*.log", debug_max_files, max_age_days,
+            self.debug_dir,
+            "debug-*.log",
+            debug_max_files,
+            max_age_days,
         )
 
         results["error"] = self.rotate_logs(
-            self.error_dir, "error-*.log", error_max_files, max_age_days,
+            self.error_dir,
+            "error-*.log",
+            error_max_files,
+            max_age_days,
         )
 
         results["audit"] = self.rotate_logs(
-            self.audit_dir, "audit-*.log", audit_max_files, max_age_days,
+            self.audit_dir,
+            "audit-*.log",
+            audit_max_files,
+            max_age_days,
         )
 
         return results
 
     def migrate_legacy_logs(
-        self, source_dir: Path, dry_run: bool = False,
+        self,
+        source_dir: Path,
+        dry_run: bool = False,
     ) -> dict[str, int]:
         if not source_dir.exists():
             return {"moved": 0, "failed": 0, "found": 0}

@@ -21,7 +21,9 @@ class DependencyContainer:
         self._singletons[interface.__name__] = implementation
 
     def register_transient(
-        self, interface: type, factory: t.Callable[[], t.Any],
+        self,
+        interface: type,
+        factory: t.Callable[[], t.Any],
     ) -> None:
         self._services[interface.__name__] = factory
 
@@ -53,13 +55,15 @@ class DependencyContainer:
         from crackerjack.services.git import GitService
 
         self.register_transient(
-            GitInterface, lambda: GitService(console=console, pkg_path=pkg_path),
+            GitInterface,
+            lambda: GitService(console=console, pkg_path=pkg_path),
         )
 
         from crackerjack.managers.hook_manager import HookManagerImpl
 
         self.register_transient(
-            HookManager, lambda: HookManagerImpl(console=console, pkg_path=pkg_path),
+            HookManager,
+            lambda: HookManagerImpl(console=console, pkg_path=pkg_path),
         )
 
         from crackerjack.managers.test_manager import TestManagementImpl
@@ -74,7 +78,9 @@ class DependencyContainer:
         self.register_transient(
             PublishManager,
             lambda: PublishManagerImpl(
-                console=console, pkg_path=pkg_path, dry_run=dry_run,
+                console=console,
+                pkg_path=pkg_path,
+                dry_run=dry_run,
             ),
         )
 
@@ -87,5 +93,7 @@ def create_container(
     dry_run: bool = False,
 ) -> DependencyContainer:
     return DependencyContainer().create_default_container(
-        console=console, pkg_path=pkg_path, dry_run=dry_run,
+        console=console,
+        pkg_path=pkg_path,
+        dry_run=dry_run,
     )

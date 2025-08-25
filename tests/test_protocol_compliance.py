@@ -267,7 +267,8 @@ class TestDependencyContainer:
         container = DependencyContainer()
 
         with pytest.raises(
-            ValueError, match="Service TestManagerProtocol not registered",
+            ValueError,
+            match="Service TestManagerProtocol not registered",
         ):
             container.get(TestManagerProtocol)
 
@@ -358,7 +359,8 @@ class TestProtocolSubstitutability:
                 assert isinstance(exists, bool)
 
                 if isinstance(
-                    service, FileSystemService,
+                    service,
+                    FileSystemService,
                 ):  # Only test read on real service
                     content = service.read_file(temp_path)
                     assert isinstance(content, str)
@@ -517,7 +519,9 @@ class TestProtocolMethodSignatures:
 
         class MockCommandRunner:
             def execute_command(
-                self, cmd: list[str], **kwargs: t.Any,
+                self,
+                cmd: list[str],
+                **kwargs: t.Any,
             ) -> subprocess.CompletedProcess[str]:
                 return subprocess.CompletedProcess(cmd, 0, "output", "")
 
@@ -589,7 +593,8 @@ class TestMockProtocolImplementations:
                 return len(files) == 0  # Only succeeds with empty list
 
             def get_commit_message_suggestions(
-                self, changed_files: list[str],
+                self,
+                changed_files: list[str],
             ) -> list[str]:
                 return ["No suggestions available"]
 

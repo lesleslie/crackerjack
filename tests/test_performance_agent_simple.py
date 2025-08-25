@@ -61,7 +61,9 @@ class TestPerformanceAgentSimple:
         assert confidence == 0.0
 
     @pytest.mark.asyncio
-    async def test_analyze_and_fix_with_nonexistent_file(self, performance_agent) -> None:
+    async def test_analyze_and_fix_with_nonexistent_file(
+        self, performance_agent
+    ) -> None:
         """Test handling of nonexistent file."""
         issue = Issue(
             id="perf-002",

@@ -123,7 +123,9 @@ class StrategySelector:
         self.console = console
 
     def select_strategy(
-        self, config: OrchestrationConfig, context: ExecutionContext,
+        self,
+        config: OrchestrationConfig,
+        context: ExecutionContext,
     ) -> ExecutionStrategy:
         if config.execution_strategy != ExecutionStrategy.ADAPTIVE:
             return config.execution_strategy
@@ -163,7 +165,9 @@ class StrategySelector:
         return strategy
 
     def _create_selective_strategy(
-        self, strategy: HookStrategy, context: ExecutionContext,
+        self,
+        strategy: HookStrategy,
+        context: ExecutionContext,
     ) -> HookStrategy:
         priority_hooks = set(context.previous_failures)
 
@@ -214,7 +218,9 @@ class OrchestrationPlanner:
         hook_plans = []
         for strategy in hook_strategies:
             selected_strategy = self.strategy_selector.select_hook_subset(
-                strategy, execution_strategy, context,
+                strategy,
+                execution_strategy,
+                context,
             )
             hook_plans.append(
                 {
@@ -262,7 +268,8 @@ class OrchestrationPlanner:
         return {
             "mode": test_mode,
             "parallel_workers": min(
-                config.max_parallel_tests, context.total_test_files,
+                config.max_parallel_tests,
+                context.total_test_files,
             ),
             "estimated_duration": context.total_test_files * 2.0,
             "progress_tracking": config.progress_level
@@ -270,7 +277,9 @@ class OrchestrationPlanner:
         }
 
     def _create_ai_plan(
-        self, config: OrchestrationConfig, context: ExecutionContext,
+        self,
+        config: OrchestrationConfig,
+        context: ExecutionContext,
     ) -> dict[str, t.Any]:
         return {
             "mode": config.ai_coordination_mode,

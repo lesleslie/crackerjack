@@ -97,7 +97,8 @@ class StateManager:
         self.state_dir = state_dir or Path.home() / ".cache" / "crackerjack-mcp"
         self.state_dir.mkdir(exist_ok=True)
         self.session_state = SessionState(
-            session_id=self._generate_session_id(), start_time=time.time(),
+            session_id=self._generate_session_id(),
+            start_time=time.time(),
         )
         self.checkpoints_dir = self.state_dir / "checkpoints"
         self.checkpoints_dir.mkdir(exist_ok=True)
@@ -112,7 +113,9 @@ class StateManager:
                 self.session_state.stages = {}
             self.session_state.current_stage = stage
             self.session_state.stages[stage] = StageResult(
-                stage=stage, status=StageStatus.RUNNING, start_time=time.time(),
+                stage=stage,
+                status=StageStatus.RUNNING,
+                start_time=time.time(),
             )
             self._save_state()
 
@@ -144,7 +147,9 @@ class StateManager:
         stage_result.duration = stage_result.end_time - stage_result.start_time
 
     def _process_stage_issues(
-        self, stage_result: StageResult, issues: list[Issue] | None,
+        self,
+        stage_result: StageResult,
+        issues: list[Issue] | None,
     ) -> None:
         if not issues:
             return
@@ -154,7 +159,9 @@ class StateManager:
         self.session_state.global_issues.extend(issues)
 
     def _process_stage_fixes(
-        self, stage_result: StageResult, fixes: list[str] | None,
+        self,
+        stage_result: StageResult,
+        fixes: list[str] | None,
     ) -> None:
         if not fixes:
             return
@@ -186,7 +193,9 @@ class StateManager:
                 self.session_state.stages = {}
             if stage not in self.session_state.stages:
                 self.session_state.stages[stage] = StageResult(
-                    stage=stage, status=StageStatus(status), start_time=time.time(),
+                    stage=stage,
+                    status=StageStatus(status),
+                    start_time=time.time(),
                 )
             else:
                 self.session_state.stages[stage].status = StageStatus(status)
@@ -344,7 +353,8 @@ class StateManager:
     async def reset_session(self) -> None:
         async with self._lock:
             self.session_state = SessionState(
-                session_id=self._generate_session_id(), start_time=time.time(),
+                session_id=self._generate_session_id(),
+                start_time=time.time(),
             )
             self._save_state()
 

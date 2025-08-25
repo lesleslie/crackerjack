@@ -229,7 +229,8 @@ class PluginManager:
                     plugins = self.registry.list_all()
                     if plugins:
                         latest_plugin_name = max(
-                            plugins.keys(), key=lambda k: id(plugins[k]),
+                            plugins.keys(),
+                            key=lambda k: id(plugins[k]),
                         )
                         self.enable_plugin(latest_plugin_name)
             else:
@@ -250,6 +251,9 @@ class PluginManager:
         return list(custom_hooks.keys())
 
     def execute_custom_hook(
-        self, hook_name: str, files: list[Path], options: OptionsProtocol,
+        self,
+        hook_name: str,
+        files: list[Path],
+        options: OptionsProtocol,
     ) -> t.Any:
         return self.hook_registry.execute_custom_hook(hook_name, files, options)

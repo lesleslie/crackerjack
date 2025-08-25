@@ -15,12 +15,16 @@ from crackerjack.models.protocols import OptionsProtocol
 
 class CrackerjackCLIFacade:
     def __init__(
-        self, console: Console | None = None, pkg_path: Path | None = None,
+        self,
+        console: Console | None = None,
+        pkg_path: Path | None = None,
     ) -> None:
         self.console = console or Console(force_terminal=True)
         self.pkg_path = pkg_path or Path.cwd()
         self.orchestrator = WorkflowOrchestrator(
-            console=self.console, pkg_path=self.pkg_path, dry_run=False,
+            console=self.console,
+            pkg_path=self.pkg_path,
+            dry_run=False,
         )
 
     def process(self, options: OptionsProtocol) -> None:
@@ -141,7 +145,8 @@ class CrackerjackCLIFacade:
 
 
 def create_crackerjack_runner(
-    console: Console | None = None, pkg_path: Path | None = None,
+    console: Console | None = None,
+    pkg_path: Path | None = None,
 ) -> CrackerjackCLIFacade:
     return CrackerjackCLIFacade(console=console, pkg_path=pkg_path)
 

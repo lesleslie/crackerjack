@@ -13,7 +13,10 @@ from crackerjack.models.task import SessionTracker
 
 class SessionCoordinator:
     def __init__(
-        self, console: Console, pkg_path: Path, web_job_id: str | None = None,
+        self,
+        console: Console,
+        pkg_path: Path,
+        web_job_id: str | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -142,11 +145,13 @@ class SessionCoordinator:
         total_time = time.time() - start_time
         if success:
             self.complete_task(
-                "workflow", f"Completed successfully in {total_time:.1f}s",
+                "workflow",
+                f"Completed successfully in {total_time:.1f}s",
             )
         else:
             self.complete_task(
-                "workflow", f"Completed with issues in {total_time:.1f}s",
+                "workflow",
+                f"Completed with issues in {total_time:.1f}s",
             )
 
     def register_cleanup(self, cleanup_handler: t.Callable[[], None]) -> None:
@@ -192,7 +197,8 @@ class SessionCoordinator:
 
             legacy_pattern = "crackerjack-debug-*.log"
             legacy_files = sorted(
-                self.pkg_path.glob(legacy_pattern), key=lambda p: p.stat().st_mtime,
+                self.pkg_path.glob(legacy_pattern),
+                key=lambda p: p.stat().st_mtime,
             )
 
             for old_file in legacy_files[:-keep_recent]:
@@ -206,7 +212,8 @@ class SessionCoordinator:
             if cache_dir.exists():
                 pattern = ".coverage*"
                 coverage_files = sorted(
-                    cache_dir.glob(pattern), key=lambda p: p.stat().st_mtime,
+                    cache_dir.glob(pattern),
+                    key=lambda p: p.stat().st_mtime,
                 )
 
                 for old_file in coverage_files[:-keep_recent]:
@@ -216,7 +223,8 @@ class SessionCoordinator:
             # Also clean up any legacy coverage files from project root
             pattern = ".coverage.*"
             coverage_files = sorted(
-                self.pkg_path.glob(pattern), key=lambda p: p.stat().st_mtime,
+                self.pkg_path.glob(pattern),
+                key=lambda p: p.stat().st_mtime,
             )
 
             for old_file in coverage_files:

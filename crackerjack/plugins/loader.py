@@ -84,7 +84,9 @@ class PluginLoader:
         return self._create_plugin_from_config(config, config_file)
 
     def _extract_plugin_from_module(
-        self, module: t.Any, plugin_file: Path,
+        self,
+        module: t.Any,
+        plugin_file: Path,
     ) -> PluginBase:
         plugin = self._try_standard_entry_points(module)
         if plugin:
@@ -112,7 +114,9 @@ class PluginLoader:
         return None
 
     def _try_single_entry_point(
-        self, module: t.Any, entry_point: str,
+        self,
+        module: t.Any,
+        entry_point: str,
     ) -> PluginBase | None:
         if not hasattr(module, entry_point):
             return None
@@ -127,7 +131,9 @@ class PluginLoader:
         return None
 
     def _try_factory_function(
-        self, factory: t.Callable, name: str,
+        self,
+        factory: t.Callable,
+        name: str,
     ) -> PluginBase | None:
         try:
             result = factory()
@@ -138,7 +144,9 @@ class PluginLoader:
         return None
 
     def _try_plugin_subclasses(
-        self, module: t.Any, plugin_file: Path,
+        self,
+        module: t.Any,
+        plugin_file: Path,
     ) -> PluginBase | None:
         for name, obj in vars(module).items():
             if self._is_valid_plugin_class(obj):
@@ -155,7 +163,10 @@ class PluginLoader:
         )
 
     def _try_instantiate_plugin_class(
-        self, plugin_class: type[PluginBase], name: str, plugin_file: Path,
+        self,
+        plugin_class: type[PluginBase],
+        name: str,
+        plugin_file: Path,
     ) -> PluginBase | None:
         try:
             metadata = PluginMetadata(
@@ -170,7 +181,9 @@ class PluginLoader:
             return None
 
     def _create_plugin_from_config(
-        self, config: dict[str, t.Any], config_file: Path,
+        self,
+        config: dict[str, t.Any],
+        config_file: Path,
     ) -> PluginBase:
         metadata = PluginMetadata(
             name=config.get("name", config_file.stem),
@@ -188,7 +201,9 @@ class PluginLoader:
         raise PluginLoadError(msg)
 
     def _create_hook_plugin_from_config(
-        self, metadata: PluginMetadata, config: dict[str, t.Any],
+        self,
+        metadata: PluginMetadata,
+        config: dict[str, t.Any],
     ) -> CustomHookPlugin:
         hooks_config = config.get("hooks", [])
         hook_definitions = []
@@ -230,7 +245,9 @@ class PluginLoader:
             self.logger.exception(f"Failed to load plugin from {plugin_source}: {e}")
             return False
         except Exception as e:
-            self.logger.exception(f"Unexpected error loading plugin {plugin_source}: {e}")
+            self.logger.exception(
+                f"Unexpected error loading plugin {plugin_source}: {e}"
+            )
             return False
 
 
@@ -240,7 +257,9 @@ class PluginDiscovery:
         self.logger = logging.getLogger("crackerjack.plugin_discovery")
 
     def discover_in_directory(
-        self, directory: Path, recursive: bool = False,
+        self,
+        directory: Path,
+        recursive: bool = False,
     ) -> list[Path]:
         if not directory.exists() or not directory.is_dir():
             return []

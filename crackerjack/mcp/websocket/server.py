@@ -45,7 +45,10 @@ class WebSocketServer:
             console.print("Press Ctrl + C to stop")
 
             config = uvicorn.Config(
-                app=self.app, port=self.port, host="127.0.0.1", log_level="info",
+                app=self.app,
+                port=self.port,
+                host="127.0.0.1",
+                log_level="info",
             )
 
             server = uvicorn.Server(config)
@@ -60,7 +63,10 @@ class WebSocketServer:
 
 
 def handle_websocket_server_command(
-    start: bool = False, stop: bool = False, restart: bool = False, port: int = 8675,
+    start: bool = False,
+    stop: bool = False,
+    restart: bool = False,
+    port: int = 8675,
 ) -> None:
     """Handle WebSocket server start/stop/restart commands."""
     if stop or restart:
@@ -69,7 +75,8 @@ def handle_websocket_server_command(
         try:
             result = subprocess.run(
                 ["pkill", "-f", f"uvicorn.*:{port}"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )

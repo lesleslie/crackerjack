@@ -490,7 +490,9 @@ class UnifiedConfigurationService:
         return toml_data.get("tool")
 
     def _populate_python_tool_config(
-        self, config: dict[str, t.Any], tool_data: dict[str, t.Any],
+        self,
+        config: dict[str, t.Any],
+        tool_data: dict[str, t.Any],
     ) -> None:
         """Populate configuration with Python tool settings."""
         self._add_core_python_tools(config, tool_data)
@@ -498,7 +500,9 @@ class UnifiedConfigurationService:
         self._add_quality_tools(config, tool_data)
 
     def _add_core_python_tools(
-        self, config: dict[str, t.Any], tool_data: dict[str, t.Any],
+        self,
+        config: dict[str, t.Any],
+        tool_data: dict[str, t.Any],
     ) -> None:
         """Add core Python tools (ruff, pyright) to configuration."""
         for tool_name in ("ruff", "pyright"):
@@ -510,7 +514,9 @@ class UnifiedConfigurationService:
                 }
 
     def _add_testing_tools(
-        self, config: dict[str, t.Any], tool_data: dict[str, t.Any],
+        self,
+        config: dict[str, t.Any],
+        tool_data: dict[str, t.Any],
     ) -> None:
         """Add testing tools (pytest) to configuration."""
         if "pytest" in tool_data:
@@ -521,7 +527,9 @@ class UnifiedConfigurationService:
             }
 
     def _add_quality_tools(
-        self, config: dict[str, t.Any], tool_data: dict[str, t.Any],
+        self,
+        config: dict[str, t.Any],
+        tool_data: dict[str, t.Any],
     ) -> None:
         """Add quality tools (bandit, vulture, etc.) to configuration."""
         quality_tools = ("bandit", "vulture", "complexipy", "creosote", "refurb")
@@ -604,7 +612,10 @@ class UnifiedConfigurationService:
         return None
 
     def update_tool_config(
-        self, tool_name: str, section: str, config: dict[str, t.Any],
+        self,
+        tool_name: str,
+        section: str,
+        config: dict[str, t.Any],
     ) -> bool:
         try:
             unified_config = self.get_unified_config()
@@ -627,7 +638,10 @@ class UnifiedConfigurationService:
             return False
 
     def _update_python_config(
-        self, tool_name: str, section: str, config: dict[str, t.Any],
+        self,
+        tool_name: str,
+        section: str,
+        config: dict[str, t.Any],
     ) -> bool:
         pyproject = self.project_path / "pyproject.toml"
 
@@ -915,7 +929,9 @@ class EnhancedErrorCategorizationService:
                         "description": pattern_info["description"],
                         "pattern_matched": pattern,
                         "suggested_fix": self._suggest_fix(
-                            error_type, match.groups(), line,
+                            error_type,
+                            match.groups(),
+                            line,
                         ),
                     }
 
@@ -937,7 +953,10 @@ class EnhancedErrorCategorizationService:
         return {"critical": 1, "high": 2, "medium": 3, "low": 4}.get(severity, 3)
 
     def _suggest_fix(
-        self, error_type: str, groups: tuple[str, ...], line: str,
+        self,
+        error_type: str,
+        groups: tuple[str, ...],
+        line: str,
     ) -> str | None:
         if error_type == "import_error" and groups:
             missing_module = groups[0]
@@ -1007,7 +1026,9 @@ class EnhancedErrorCategorizationService:
                 )
 
         recommended_actions = self._generate_recommended_actions(
-            by_category, by_severity, auto_fixable_count,
+            by_category,
+            by_severity,
+            auto_fixable_count,
         )
 
         return {
@@ -1016,7 +1037,8 @@ class EnhancedErrorCategorizationService:
             "by_severity": by_severity,
             "auto_fixable_count": auto_fixable_count,
             "auto_fixable_percentage": round(
-                (auto_fixable_count / len(errors)) * 100, 1,
+                (auto_fixable_count / len(errors)) * 100,
+                1,
             ),
             "critical_issues": critical_issues[:5],
             "recommended_actions": recommended_actions,

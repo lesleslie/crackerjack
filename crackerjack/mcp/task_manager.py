@@ -219,7 +219,8 @@ class AsyncTaskManager:
             task_info.task.cancel()
 
         await asyncio.gather(
-            *[task_info.task for task_info in tasks_to_cancel], return_exceptions=True,
+            *[task_info.task for task_info in tasks_to_cancel],
+            return_exceptions=True,
         )
 
         async with self._lock:

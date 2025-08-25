@@ -53,10 +53,14 @@ class TestAsyncHookExecutor:
 
     @pytest.mark.asyncio
     async def test_execute_strategy_success(
-        self, async_executor, mock_strategy,
+        self,
+        async_executor,
+        mock_strategy,
     ) -> None:
         with patch.object(
-            async_executor, "_execute_sequential", new_callable=AsyncMock,
+            async_executor,
+            "_execute_sequential",
+            new_callable=AsyncMock,
         ) as mock_execute:
             mock_result = HookResult(
                 id="test - hook",
@@ -80,10 +84,14 @@ class TestAsyncHookExecutor:
 
     @pytest.mark.asyncio
     async def test_execute_strategy_failure(
-        self, async_executor, mock_strategy,
+        self,
+        async_executor,
+        mock_strategy,
     ) -> None:
         with patch.object(
-            async_executor, "_execute_sequential", new_callable=AsyncMock,
+            async_executor,
+            "_execute_sequential",
+            new_callable=AsyncMock,
         ) as mock_execute:
             mock_result = HookResult(
                 id="test - hook",
@@ -104,12 +112,16 @@ class TestAsyncHookExecutor:
 
     @pytest.mark.asyncio
     async def test_execute_sequential_strategy(
-        self, async_executor, mock_strategy,
+        self,
+        async_executor,
+        mock_strategy,
     ) -> None:
         mock_strategy.parallel = False
 
         with patch.object(
-            async_executor, "_execute_sequential", new_callable=AsyncMock,
+            async_executor,
+            "_execute_sequential",
+            new_callable=AsyncMock,
         ) as mock_execute:
             mock_result = HookResult(
                 id="test - hook",
@@ -159,10 +171,13 @@ class TestAsyncHookExecutor:
 
     @pytest.mark.asyncio
     async def test_execute_single_hook_exception(
-        self, async_executor, mock_hook,
+        self,
+        async_executor,
+        mock_hook,
     ) -> None:
         with patch(
-            "asyncio.create_subprocess_exec", side_effect=Exception("Test error"),
+            "asyncio.create_subprocess_exec",
+            side_effect=Exception("Test error"),
         ):
             result = await async_executor._execute_single_hook(mock_hook)
 
@@ -172,7 +187,9 @@ class TestAsyncHookExecutor:
 
     @pytest.mark.asyncio
     async def test_parallel_execution_with_formatting_hooks(
-        self, async_executor, mock_strategy,
+        self,
+        async_executor,
+        mock_strategy,
     ) -> None:
         formatting_hook = Mock(spec=HookDefinition)
         formatting_hook.name = "formatting - hook"
@@ -187,7 +204,9 @@ class TestAsyncHookExecutor:
         mock_strategy.hooks = [formatting_hook, non_formatting_hook]
 
         with patch.object(
-            async_executor, "_execute_single_hook", new_callable=AsyncMock,
+            async_executor,
+            "_execute_single_hook",
+            new_callable=AsyncMock,
         ) as mock_single:
             mock_single.return_value = HookResult(
                 id="test",
@@ -231,12 +250,15 @@ class TestAsyncHookExecutor:
         )
 
         with patch.object(
-            async_executor, "_execute_single_hook", new_callable=AsyncMock,
+            async_executor,
+            "_execute_single_hook",
+            new_callable=AsyncMock,
         ) as mock_single:
             mock_single.return_value = success_result
 
             results = await async_executor._retry_formatting_hooks(
-                mock_strategy, [failed_result],
+                mock_strategy,
+                [failed_result],
             )
 
             assert len(results) == 1
@@ -247,7 +269,9 @@ class TestAsyncHookExecutor:
     @pytest.mark.asyncio
     async def test_performance_metrics(self, async_executor, mock_strategy) -> None:
         with patch.object(
-            async_executor, "_execute_parallel", new_callable=AsyncMock,
+            async_executor,
+            "_execute_parallel",
+            new_callable=AsyncMock,
         ) as mock_execute:
             mock_result = HookResult(
                 id="test - hook",

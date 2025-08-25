@@ -69,7 +69,9 @@ class TestPerformanceAgent:
 
     @pytest.mark.asyncio
     async def test_fix_performance_issue_success(
-        self, performance_agent, temp_python_file,
+        self,
+        performance_agent,
+        temp_python_file,
     ) -> None:
         """Test successful performance issue fixing."""
         # Create file with performance issues
@@ -115,7 +117,9 @@ def process_items(items):
         assert len(result.remaining_issues) > 0
 
     def test_detect_performance_issues_list_concatenation(
-        self, performance_agent, temp_python_file,
+        self,
+        performance_agent,
+        temp_python_file,
     ) -> None:
         """Test detecting list concatenation performance issues."""
         temp_python_file.write_text("""
@@ -132,7 +136,9 @@ def bad_function():
         assert any("list concatenation" in issue.lower() for issue in issues)
 
     def test_detect_performance_issues_string_concatenation(
-        self, performance_agent, temp_python_file,
+        self,
+        performance_agent,
+        temp_python_file,
     ) -> None:
         """Test detecting string concatenation performance issues."""
         temp_python_file.write_text("""
@@ -149,7 +155,9 @@ def build_string():
         assert any("string concatenation" in issue.lower() for issue in issues)
 
     def test_detect_performance_issues_nested_loops(
-        self, performance_agent, temp_python_file,
+        self,
+        performance_agent,
+        temp_python_file,
     ) -> None:
         """Test detecting nested loop performance issues."""
         temp_python_file.write_text("""
@@ -165,7 +173,9 @@ def nested_function(matrix):
         assert len(issues) > 0
         assert any("nested loop" in issue.lower() for issue in issues)
 
-    def test_fix_list_operations_single_item(self, performance_agent, temp_python_file) -> None:
+    def test_fix_list_operations_single_item(
+        self, performance_agent, temp_python_file
+    ) -> None:
         """Test fixing single item list concatenation."""
         temp_python_file.write_text("""
 def process():
@@ -182,7 +192,9 @@ def process():
         assert "items += [42]" not in fixed_content
 
     def test_fix_list_operations_multiple_items(
-        self, performance_agent, temp_python_file,
+        self,
+        performance_agent,
+        temp_python_file,
     ) -> None:
         """Test fixing multiple item list concatenation."""
         temp_python_file.write_text("""
@@ -200,7 +212,9 @@ def process():
         assert "items += [1, 2, 3]" not in fixed_content
 
     def test_fix_string_concatenation_in_loop(
-        self, performance_agent, temp_python_file,
+        self,
+        performance_agent,
+        temp_python_file,
     ) -> None:
         """Test fixing string concatenation in loops."""
         temp_python_file.write_text("""
@@ -235,7 +249,9 @@ def efficient_function(items):
 
         assert len(issues) == 0
 
-    def test_find_loop_containing_line(self, performance_agent, temp_python_file) -> None:
+    def test_find_loop_containing_line(
+        self, performance_agent, temp_python_file
+    ) -> None:
         """Test finding loops that contain a specific line."""
         temp_python_file.write_text("""
 def test_function():

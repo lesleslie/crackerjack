@@ -255,7 +255,10 @@ class TestProgressStreamer:
         return ProgressStreamer(mock_config, mock_session)
 
     def test_streamer_initialization(
-        self, progress_streamer, mock_config, mock_session,
+        self,
+        progress_streamer,
+        mock_config,
+        mock_session,
     ) -> None:
         """Test progress streamer initialization."""
         assert progress_streamer.config is mock_config
@@ -291,7 +294,9 @@ class TestProgressStreamer:
         # Should update session
         assert mock_session.current_stage == "initialization"
 
-    def test_update_websocket_progress_no_file(self, progress_streamer, mock_session) -> None:
+    def test_update_websocket_progress_no_file(
+        self, progress_streamer, mock_session
+    ) -> None:
         """Test websocket progress update without file."""
         # No progress file set
         mock_session.web_job_id = "test_job"
@@ -301,7 +306,10 @@ class TestProgressStreamer:
         progress_streamer._update_websocket_progress(update_data)
 
     def test_update_websocket_progress_with_file(
-        self, progress_streamer, mock_session, tmp_path,
+        self,
+        progress_streamer,
+        mock_session,
+        tmp_path,
     ) -> None:
         """Test websocket progress update with file."""
         progress_file = tmp_path / "progress.json"
@@ -366,7 +374,11 @@ class TestAdvancedWorkflowOrchestrator:
             )
 
     def test_orchestrator_initialization(
-        self, orchestrator, mock_console, mock_session, mock_config,
+        self,
+        orchestrator,
+        mock_console,
+        mock_session,
+        mock_config,
     ) -> None:
         """Test orchestrator initialization."""
         assert orchestrator.console is mock_console
@@ -375,7 +387,9 @@ class TestAdvancedWorkflowOrchestrator:
         assert orchestrator.config is mock_config
 
     def test_orchestrator_initialization_default_config(
-        self, mock_console, mock_session,
+        self,
+        mock_console,
+        mock_session,
     ) -> None:
         """Test orchestrator initialization with default config."""
         pkg_path = Path("/test")
@@ -394,7 +408,9 @@ class TestAdvancedWorkflowOrchestrator:
             mock_config_class.return_value = mock_config_class
 
             orchestrator = AdvancedWorkflowOrchestrator(
-                console=mock_console, pkg_path=pkg_path, session=mock_session,
+                console=mock_console,
+                pkg_path=pkg_path,
+                session=mock_session,
             )
 
             # Should create default config
@@ -499,7 +515,10 @@ class TestIntegrationScenarios:
             ) as mock_test,
         ):
             AdvancedWorkflowOrchestrator(
-                console=console, pkg_path=pkg_path, session=session, config=config,
+                console=console,
+                pkg_path=pkg_path,
+                session=session,
+                config=config,
             )
 
             # Verify components were created with correct parameters

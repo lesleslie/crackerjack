@@ -97,7 +97,9 @@ class AgentCoordinator:
         return result
 
     async def _handle_issues_by_type(
-        self, issue_type: IssueType, issues: list[Issue],
+        self,
+        issue_type: IssueType,
+        issues: list[Issue],
     ) -> FixResult:
         self.logger.info(f"Handling {len(issues)} {issue_type.value} issues")
 
@@ -137,7 +139,8 @@ class AgentCoordinator:
         return combined_result
 
     async def _evaluate_agents_for_issue(
-        self, issue: Issue,
+        self,
+        issue: Issue,
     ) -> list[tuple[SubAgent, float]]:
         evaluations: list[tuple[SubAgent, float]] = []
 
@@ -153,7 +156,9 @@ class AgentCoordinator:
         return evaluations
 
     async def _find_best_specialist(
-        self, specialists: list[SubAgent], issue: Issue,
+        self,
+        specialists: list[SubAgent],
+        issue: Issue,
     ) -> SubAgent | None:
         best_agent = None
         best_score = 0.0
@@ -170,7 +175,9 @@ class AgentCoordinator:
         return best_agent
 
     async def _handle_with_single_agent(
-        self, agent: SubAgent, issue: Issue,
+        self,
+        agent: SubAgent,
+        issue: Issue,
     ) -> FixResult:
         self.logger.info(f"Handling issue with {agent.name}: {issue.message[:100]}")
 
@@ -219,7 +226,9 @@ class AgentCoordinator:
             return error_result
 
     async def _handle_with_collaboration(
-        self, agent_scores: list[tuple[SubAgent, float]], issue: Issue,
+        self,
+        agent_scores: list[tuple[SubAgent, float]],
+        issue: Issue,
     ) -> FixResult:
         self.logger.info(
             f"Using collaborative approach for issue: {issue.message[:100]}",
@@ -256,7 +265,8 @@ class AgentCoordinator:
         return combined_result
 
     def _group_issues_by_type(
-        self, issues: list[Issue],
+        self,
+        issues: list[Issue],
     ) -> dict[IssueType, list[Issue]]:
         grouped: defaultdict[IssueType, list[Issue]] = defaultdict(list)
         for issue in issues:

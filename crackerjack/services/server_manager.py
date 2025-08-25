@@ -13,7 +13,10 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
     """Find all running MCP server processes for this project."""
     try:
         result = subprocess.run(
-            ["ps", "aux"], capture_output=True, text=True, check=True,
+            ["ps", "aux"],
+            capture_output=True,
+            text=True,
+            check=True,
         )
 
         processes = []
@@ -47,7 +50,10 @@ def find_websocket_server_processes() -> list[dict[str, t.Any]]:
     """Find all running WebSocket server processes for this project."""
     try:
         result = subprocess.run(
-            ["ps", "aux"], capture_output=True, text=True, check=True,
+            ["ps", "aux"],
+            capture_output=True,
+            text=True,
+            check=True,
         )
 
         processes = []
@@ -159,7 +165,8 @@ def stop_all_servers(console: Console | None = None) -> bool:
 
 
 def restart_mcp_server(
-    websocket_port: int | None = None, console: Console | None = None,
+    websocket_port: int | None = None,
+    console: Console | None = None,
 ) -> bool:
     """Restart the MCP server."""
     if console is None:

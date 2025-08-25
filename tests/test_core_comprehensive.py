@@ -239,7 +239,9 @@ class TestWorkflowOrchestrator:
         with patch.object(orchestrator.session, "start_session") as mock_start:
             with patch.object(orchestrator.session, "end_session") as mock_end:
                 with patch.object(
-                    orchestrator, "run_complete_workflow", return_value=True,
+                    orchestrator,
+                    "run_complete_workflow",
+                    return_value=True,
                 ) as mock_workflow:
                     result = await orchestrator.process(workflow_options)
 
@@ -249,14 +251,18 @@ class TestWorkflowOrchestrator:
                     assert result is True
 
     async def test_process_with_hooks_and_tests(
-        self, orchestrator, workflow_options,
+        self,
+        orchestrator,
+        workflow_options,
     ) -> None:
         workflow_options.testing.test = True
 
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
                 with patch.object(
-                    orchestrator, "run_complete_workflow", return_value=True,
+                    orchestrator,
+                    "run_complete_workflow",
+                    return_value=True,
                 ) as mock_workflow:
                     result = await orchestrator.process(workflow_options)
 
@@ -265,14 +271,18 @@ class TestWorkflowOrchestrator:
                     assert result is True
 
     async def test_process_with_publishing(
-        self, orchestrator, workflow_options,
+        self,
+        orchestrator,
+        workflow_options,
     ) -> None:
         workflow_options.publishing.publish = "patch"
 
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
                 with patch.object(
-                    orchestrator, "run_complete_workflow", return_value=True,
+                    orchestrator,
+                    "run_complete_workflow",
+                    return_value=True,
                 ) as mock_workflow:
                     result = await orchestrator.process(workflow_options)
 
@@ -286,7 +296,9 @@ class TestWorkflowOrchestrator:
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
                 with patch.object(
-                    orchestrator, "run_complete_workflow", return_value=True,
+                    orchestrator,
+                    "run_complete_workflow",
+                    return_value=True,
                 ) as mock_workflow:
                     result = await orchestrator.process(workflow_options)
 
@@ -300,7 +312,9 @@ class TestWorkflowOrchestrator:
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
                 with patch.object(
-                    orchestrator, "run_complete_workflow", return_value=False,
+                    orchestrator,
+                    "run_complete_workflow",
+                    return_value=False,
                 ) as mock_workflow:
                     result = await orchestrator.process(workflow_options)
 
@@ -309,7 +323,9 @@ class TestWorkflowOrchestrator:
                     assert result is False
 
     async def test_process_exception_handling(
-        self, orchestrator, workflow_options,
+        self,
+        orchestrator,
+        workflow_options,
     ) -> None:
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
@@ -345,7 +361,9 @@ class TestWorkflowPipeline:
             return True
 
         with patch.object(
-            pipeline, "run_complete_workflow", side_effect=mock_workflow,
+            pipeline,
+            "run_complete_workflow",
+            side_effect=mock_workflow,
         ) as mock_run:
             result = await pipeline.run_complete_workflow(workflow_options)
 
@@ -358,7 +376,9 @@ class TestWorkflowPipeline:
             raise Exception(msg)
 
         with patch.object(
-            pipeline, "run_complete_workflow", side_effect=mock_workflow,
+            pipeline,
+            "run_complete_workflow",
+            side_effect=mock_workflow,
         ) as mock_run:
             try:
                 result = await pipeline.run_complete_workflow(workflow_options)
@@ -369,13 +389,17 @@ class TestWorkflowPipeline:
             assert result is False
 
     async def test_execute_with_keyboard_interrupt(
-        self, pipeline, workflow_options,
+        self,
+        pipeline,
+        workflow_options,
     ) -> None:
         async def mock_workflow(options) -> Never:
             raise KeyboardInterrupt
 
         with patch.object(
-            pipeline, "run_complete_workflow", side_effect=mock_workflow,
+            pipeline,
+            "run_complete_workflow",
+            side_effect=mock_workflow,
         ) as mock_run:
             try:
                 result = await pipeline.run_complete_workflow(workflow_options)
@@ -395,7 +419,9 @@ class TestWorkflowPipeline:
             return True
 
         with patch.object(
-            pipeline, "run_complete_workflow", side_effect=mock_workflow,
+            pipeline,
+            "run_complete_workflow",
+            side_effect=mock_workflow,
         ) as mock_run:
             await pipeline.run_complete_workflow(options)
 

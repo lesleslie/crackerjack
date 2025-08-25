@@ -215,12 +215,14 @@ def test_create_temp_config_basic() -> None:
     try:
         # Test the actual method that exists
         result = generator.create_temp_config(
-            mode="fast", tiers=[1], experimental=False,
+            mode="fast",
+            tiers=[1],
+            experimental=False,
         )
         assert result is not None
         # Should return a Path object to temp file
         from pathlib import Path
 
-        assert isinstance(result, (Path, str))
+        assert isinstance(result, Path | str)
     except Exception as e:
         pytest.skip(f"Method requires specific implementation - skipped: {e}")

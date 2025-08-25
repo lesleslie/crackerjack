@@ -478,7 +478,11 @@ def test_task_model_comprehensive() -> None:
 
     # Test TaskResult creation
     result = TaskResult(
-        success=True, output="hello world", error_output="", duration=1.5, return_code=0,
+        success=True,
+        output="hello world",
+        error_output="",
+        duration=1.5,
+        return_code=0,
     )
     assert result.success is True
     assert result.output == "hello world"
@@ -786,7 +790,10 @@ def test_api_functionality_deeper() -> None:
     assert test_result.coverage_percentage == 45.7
 
     publish_result = PublishResult(
-        success=True, version="1.0.0", published_to=["pypi"], errors=[],
+        success=True,
+        version="1.0.0",
+        published_to=["pypi"],
+        errors=[],
     )
     assert publish_result.version == "1.0.0"
     assert "pypi" in publish_result.published_to
@@ -1097,7 +1104,10 @@ def test_unified_config_extensive() -> None:
 
     # Test config with custom values
     custom_config = CrackerjackConfig(
-        min_coverage=50.0, test_timeout=600, hook_timeout=120, cache_enabled=False,
+        min_coverage=50.0,
+        test_timeout=600,
+        hook_timeout=120,
+        cache_enabled=False,
     )
     assert custom_config.min_coverage == 50.0
     assert custom_config.test_timeout == 600
@@ -1714,7 +1724,10 @@ def test_git_service_functionality() -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Initialize a git repo
             subprocess.run(
-                ["git", "init"], cwd=temp_dir, check=True, capture_output=True,
+                ["git", "init"],
+                cwd=temp_dir,
+                check=True,
+                capture_output=True,
             )
             subprocess.run(
                 ["git", "config", "user.email", "test@example.com"],

@@ -24,7 +24,9 @@ class FileHasher:
         return file_hash
 
     def get_directory_hash(
-        self, directory: Path, patterns: list[str] | None = None,
+        self,
+        directory: Path,
+        patterns: list[str] | None = None,
     ) -> str:
         if patterns is None:
             patterns = ["*.py"]

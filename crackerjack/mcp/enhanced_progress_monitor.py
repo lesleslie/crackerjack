@@ -52,7 +52,10 @@ class AgentActivityWidget(Widget):
         with Vertical():
             with Horizontal(id="agent - metrics"):
                 yield MetricCard(
-                    "Active Agents", "0", color="cyan", id="active - agents - metric",
+                    "Active Agents",
+                    "0",
+                    color="cyan",
+                    id="active - agents - metric",
                 )
                 yield MetricCard(
                     "Issues Fixed",
@@ -62,10 +65,16 @@ class AgentActivityWidget(Widget):
                     id="issues - fixed - metric",
                 )
                 yield MetricCard(
-                    "Confidence", "0 % ", color="yellow", id="confidence - metric",
+                    "Confidence",
+                    "0 % ",
+                    color="yellow",
+                    id="confidence - metric",
                 )
                 yield MetricCard(
-                    "Cache Hits", "0", color="magenta", id="cache - hits - metric",
+                    "Cache Hits",
+                    "0",
+                    color="magenta",
+                    id="cache - hits - metric",
                 )
 
             yield DataTable(id="agents - detail - table", show_header=True)
@@ -75,7 +84,11 @@ class AgentActivityWidget(Widget):
     def on_mount(self) -> None:
         table = self.query_one("#agents - detail - table", DataTable)
         table.add_columns(
-            ("Agent", 20), ("Status", 10), ("Type", 15), ("Conf.", 8), ("Time", 10),
+            ("Agent", 20),
+            ("Status", 10),
+            ("Type", 15),
+            ("Conf.", 8),
+            ("Time", 10),
         )
         table.zebra_stripes = True
         table.styles.max_height = 6
@@ -101,7 +114,8 @@ class AgentActivityWidget(Widget):
                 total_fixed,
             )
             self.query_one(
-                "#confidence - metric", MetricCard,
+                "#confidence - metric",
+                MetricCard,
             ).value = f"{avg_confidence: .0 % }"
             self.query_one("#cache - hits - metric", MetricCard).value = str(cache_hits)
 
@@ -220,16 +234,23 @@ class JobProgressPanel(Widget):
         with Horizontal(classes="metrics - grid"):
             yield MetricCard("Issues Found", str(total_issues), color="yellow")
             yield MetricCard(
-                "Fixed", str(fixed), "↑" if fixed > 0 else "", color="green",
+                "Fixed",
+                str(fixed),
+                "↑" if fixed > 0 else "",
+                color="green",
             )
             yield MetricCard(
-                "Remaining", str(remaining), "↓" if fixed > 0 else "", color="red",
+                "Remaining",
+                str(remaining),
+                "↓" if fixed > 0 else "",
+                color="red",
             )
 
         if total_issues > 0:
             success_rate = (fixed / total_issues) * 100
             yield Label(
-                f"Success Rate: {success_rate: .1f} % ", classes="success - rate",
+                f"Success Rate: {success_rate: .1f} % ",
+                classes="success - rate",
             )
 
     def _format_time(self, seconds: float) -> str:
@@ -316,7 +337,9 @@ class EnhancedCrackerjackDashboard(App):
     TITLE = "Crackerjack Progress Monitor"
     CSS_PATH = Path(__file__).parent / "enhanced_progress_monitor.tcss"
 
-    def __init__(self, progress_dir: Path, websocket_url: str = "ws://localhost:8675") -> None:
+    def __init__(
+        self, progress_dir: Path, websocket_url: str = "ws://localhost:8675"
+    ) -> None:
         super().__init__()
         self.progress_dir = progress_dir
         self.websocket_url = websocket_url

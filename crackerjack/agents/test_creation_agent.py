@@ -113,7 +113,8 @@ class TestCreationAgent(SubAgent):
             return self._create_error_result(e)
 
     async def _apply_test_creation_fixes(
-        self, issue: Issue,
+        self,
+        issue: Issue,
     ) -> tuple[list[str], list[str]]:
         fixes_applied: list[str] = []
         files_modified: list[str] = []
@@ -153,7 +154,8 @@ class TestCreationAgent(SubAgent):
         return fixes_applied, files_modified
 
     async def _apply_file_specific_fixes(
-        self, file_path: str | None,
+        self,
+        file_path: str | None,
     ) -> tuple[list[str], list[str]]:
         if not file_path:
             return [], []
@@ -174,7 +176,9 @@ class TestCreationAgent(SubAgent):
         return fixes_applied, files_modified
 
     def _create_test_creation_result(
-        self, fixes_applied: list[str], files_modified: list[str],
+        self,
+        fixes_applied: list[str],
+        files_modified: list[str],
     ) -> FixResult:
         success = len(fixes_applied) > 0
         confidence = 0.8 if success else 0.5
@@ -315,7 +319,9 @@ class TestCreationAgent(SubAgent):
 
             test_file_path = await self._generate_test_file_path(module_file)
             test_content = await self._generate_test_content(
-                module_file, functions, classes,
+                module_file,
+                functions,
+                classes,
             )
 
             if self.context.write_file_content(test_file_path, test_content):
@@ -354,7 +360,8 @@ class TestCreationAgent(SubAgent):
         return py_file.name.startswith("test_")
 
     async def _find_untested_functions_in_file(
-        self, py_file: Path,
+        self,
+        py_file: Path,
     ) -> list[dict[str, Any]]:
         untested: list[dict[str, Any]] = []
 
@@ -366,7 +373,9 @@ class TestCreationAgent(SubAgent):
         return untested
 
     def _create_untested_function_info(
-        self, func: dict[str, Any], py_file: Path,
+        self,
+        func: dict[str, Any],
+        py_file: Path,
     ) -> dict[str, Any]:
         return {
             "name": func["name"],
@@ -376,7 +385,8 @@ class TestCreationAgent(SubAgent):
         }
 
     async def _create_test_for_function(
-        self, func_info: dict[str, Any],
+        self,
+        func_info: dict[str, Any],
     ) -> dict[str, list[str]]:
         fixes: list[str] = []
         files: list[str] = []
@@ -401,13 +411,15 @@ class TestCreationAgent(SubAgent):
 
         except Exception as e:
             self.log(
-                f"Error creating test for function {func_info['name']}: {e}", "ERROR",
+                f"Error creating test for function {func_info['name']}: {e}",
+                "ERROR",
             )
 
         return {"fixes": fixes, "files": files}
 
     async def _extract_functions_from_file(
-        self, file_path: Path,
+        self,
+        file_path: Path,
     ) -> list[dict[str, Any]]:
         functions = []
 
@@ -496,7 +508,9 @@ class TestCreationAgent(SubAgent):
         return "Any"
 
     async def _function_has_test(
-        self, func_info: dict[str, Any], file_path: Path,
+        self,
+        func_info: dict[str, Any],
+        file_path: Path,
     ) -> bool:
         test_file_path = await self._generate_test_file_path(file_path)
 

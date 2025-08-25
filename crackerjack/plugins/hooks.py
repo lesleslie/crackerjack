@@ -51,7 +51,10 @@ class HookPluginBase(PluginBase, abc.ABC):
 
     @abc.abstractmethod
     def execute_hook(
-        self, hook_name: str, files: list[Path], options: OptionsProtocol,
+        self,
+        hook_name: str,
+        files: list[Path],
+        options: OptionsProtocol,
     ) -> HookResult:
         pass
 
@@ -79,7 +82,9 @@ class HookPluginBase(PluginBase, abc.ABC):
 
 class CustomHookPlugin(HookPluginBase):
     def __init__(
-        self, metadata: PluginMetadata, hook_definitions: list[CustomHookDefinition],
+        self,
+        metadata: PluginMetadata,
+        hook_definitions: list[CustomHookDefinition],
     ) -> None:
         super().__init__(metadata)
         self._hook_definitions = hook_definitions
@@ -88,7 +93,10 @@ class CustomHookPlugin(HookPluginBase):
         return self._hook_definitions.copy()
 
     def execute_hook(
-        self, hook_name: str, files: list[Path], options: OptionsProtocol,
+        self,
+        hook_name: str,
+        files: list[Path],
+        options: OptionsProtocol,
     ) -> HookResult:
         hook_def = self._get_hook_definition(hook_name)
         if not hook_def:
@@ -112,7 +120,9 @@ class CustomHookPlugin(HookPluginBase):
         return self._execute_command_hook(hook_def, files)
 
     def _execute_command_hook(
-        self, hook_def: CustomHookDefinition, files: list[Path],
+        self,
+        hook_def: CustomHookDefinition,
+        files: list[Path],
     ) -> HookResult:
         import time
 
@@ -125,7 +135,8 @@ class CustomHookPlugin(HookPluginBase):
 
             result = subprocess.run(
                 cmd,
-                check=False, cwd=self.pkg_path,
+                check=False,
+                cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
                 timeout=hook_def.timeout,
@@ -195,7 +206,10 @@ class HookPluginRegistry:
         return hooks
 
     def execute_custom_hook(
-        self, hook_name: str, files: list[Path], options: OptionsProtocol,
+        self,
+        hook_name: str,
+        files: list[Path],
+        options: OptionsProtocol,
     ) -> HookResult | None:
         for plugin in self._hook_plugins.values():
             if not plugin.enabled:

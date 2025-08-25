@@ -181,7 +181,8 @@ class TestAsyncWorkflowOrchestrator:
         ):
             # AsyncWorkflowOrchestrator constructor: (console, pkg_path, dry_run, web_job_id)
             orchestrator = AsyncWorkflowOrchestrator(
-                console=console, pkg_path=Path.cwd(),
+                console=console,
+                pkg_path=Path.cwd(),
             )
             assert orchestrator is not None
 

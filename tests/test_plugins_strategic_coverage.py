@@ -225,7 +225,9 @@ class TestPluginLoader:
         # Mock plugin in registry
         with patch.object(plugin_loader, "unload_plugin", return_value=True):
             with patch.object(
-                plugin_loader, "load_plugin_from_path", return_value=Mock(),
+                plugin_loader,
+                "load_plugin_from_path",
+                return_value=Mock(),
             ):
                 result = plugin_loader.reload_plugin("test_plugin", Path("/fake/path"))
 
@@ -346,10 +348,17 @@ class TestPluginManager:
 
     def test_cleanup_plugins(self, plugin_manager) -> None:
         """Test cleaning up all plugins."""
-        with patch.object(
-            plugin_manager._loader, "get_loaded_plugins", return_value=["plugin1"],
-        ), patch.object(
-            plugin_manager._loader, "unload_plugin", return_value=True,
+        with (
+            patch.object(
+                plugin_manager._loader,
+                "get_loaded_plugins",
+                return_value=["plugin1"],
+            ),
+            patch.object(
+                plugin_manager._loader,
+                "unload_plugin",
+                return_value=True,
+            ),
         ):
             result = plugin_manager.cleanup_plugins()
 

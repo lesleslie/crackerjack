@@ -152,7 +152,8 @@ def _get_error_suggestion(error_type: str) -> str:
 
 
 def _detect_errors_and_suggestions(
-    text: str, include_suggestions: bool,
+    text: str,
+    include_suggestions: bool,
 ) -> tuple[list[str], list[str]]:
     import re
 
@@ -184,7 +185,8 @@ def register_analyze_errors_tool(mcp_app: t.Any) -> None:
 
             analysis_text = output or "No specific output provided"
             detected_errors, suggestions = _detect_errors_and_suggestions(
-                analysis_text, include_suggestions,
+                analysis_text,
+                include_suggestions,
             )
 
             result = {

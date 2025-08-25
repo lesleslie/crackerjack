@@ -103,7 +103,9 @@ class BatchFileOperations:
 
     async def flush_all(self) -> None:
         await asyncio.gather(
-            self._flush_reads(), self._flush_writes(), return_exceptions=True,
+            self._flush_reads(),
+            self._flush_writes(),
+            return_exceptions=True,
         )
 
     async def _flush_reads(self) -> None:
@@ -143,7 +145,10 @@ class BatchFileOperations:
             future.set_exception(e)
 
     async def _write_single_async(
-        self, path: Path, content: str, future: asyncio.Future[None],
+        self,
+        path: Path,
+        content: str,
+        future: asyncio.Future[None],
     ) -> None:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -237,7 +242,9 @@ class EnhancedFileSystemService(FileSystemInterface):
                     results[path] = self.read_file(path)
                 except Exception as e:
                     self.logger.exception(
-                        "Failed to read file", path=str(path), error=str(e),
+                        "Failed to read file",
+                        path=str(path),
+                        error=str(e),
                     )
                     results[path] = ""
             return results
@@ -250,7 +257,9 @@ class EnhancedFileSystemService(FileSystemInterface):
             for path, result in zip(paths, results_list, strict=False):
                 if isinstance(result, Exception):
                     self.logger.error(
-                        "Failed to read file", path=str(path), error=str(result),
+                        "Failed to read file",
+                        path=str(path),
+                        error=str(result),
                     )
                     results[path] = ""
                 else:
@@ -265,7 +274,9 @@ class EnhancedFileSystemService(FileSystemInterface):
                     self.write_file(path, content)
                 except Exception as e:
                     self.logger.exception(
-                        "Failed to write file", path=str(path), error=str(e),
+                        "Failed to write file",
+                        path=str(path),
+                        error=str(e),
                     )
             return
 

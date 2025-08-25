@@ -19,7 +19,9 @@ class AsyncHookManager:
         self.console = console
         self.pkg_path = pkg_path
         self.async_executor = AsyncHookExecutor(
-            console, pkg_path, max_concurrent=max_concurrent,
+            console,
+            pkg_path,
+            max_concurrent=max_concurrent,
         )
         self.config_loader = HookConfigLoader()
 

@@ -84,7 +84,9 @@ class TestSpecialistAgent(SubAgent):
             recommendations = self._get_failure_recommendations(fixes_applied)
 
             return self._create_fix_result(
-                fixes_applied, files_modified, recommendations,
+                fixes_applied,
+                files_modified,
+                recommendations,
             )
 
         except Exception as e:
@@ -217,7 +219,10 @@ class TestSpecialistAgent(SubAgent):
         return file_path is not None and Path(file_path).exists()
 
     def _apply_import_fixes(
-        self, lines: list[str], content: str, file_path: str,
+        self,
+        lines: list[str],
+        content: str,
+        file_path: str,
     ) -> tuple[list[str], bool]:
         fixes: list[str] = []
         modified = False
@@ -262,7 +267,10 @@ class TestSpecialistAgent(SubAgent):
         return import_section_end
 
     def _save_import_fixes(
-        self, file_path: Path, lines: list[str], file_path_str: str,
+        self,
+        file_path: Path,
+        lines: list[str],
+        file_path_str: str,
     ) -> None:
         if self.context.write_file_content(file_path, "\n".join(lines)):
             self.log(f"Fixed imports in {file_path_str}")
@@ -309,7 +317,8 @@ class TestSpecialistAgent(SubAgent):
 
         original_content = content
         content, mock_fixes = self._apply_mock_fixes_to_content(
-            content, issue.file_path,
+            content,
+            issue.file_path,
         )
         fixes.extend(mock_fixes)
 
@@ -322,7 +331,9 @@ class TestSpecialistAgent(SubAgent):
         return file_path is not None
 
     def _apply_mock_fixes_to_content(
-        self, content: str, file_path: str,
+        self,
+        content: str,
+        file_path: str,
     ) -> tuple[str, list[str]]:
         fixes: list[str] = []
 
@@ -357,14 +368,16 @@ class TestSpecialistAgent(SubAgent):
         return lines
 
     def _save_mock_fixes(
-        self, file_path: Path, content: str, file_path_str: str,
+        self,
+        file_path: Path,
+        content: str,
+        file_path_str: str,
     ) -> None:
         if self.context.write_file_content(file_path, content):
             self.log(f"Fixed Mock issues in {file_path_str}")
 
     async def _fix_pydantic_issues(self, issue: Issue) -> list[str]:
         return []
-
 
     async def _add_temp_pkg_path_fixture(self, file_path: str | None) -> list[str]:
         if not file_path:

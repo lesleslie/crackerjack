@@ -61,7 +61,8 @@ class CachedHookExecutor:
             cached_result = None
             try:
                 cached_result = self.cache.get_hook_result(
-                    hook_def.name, current_file_hashes,
+                    hook_def.name,
+                    current_file_hashes,
                 )
             except Exception as e:
                 self.logger.warning(f"Cache error for hook {hook_def.name}: {e}")
@@ -81,7 +82,9 @@ class CachedHookExecutor:
                 if hook_result.status == "passed":
                     try:
                         self.cache.set_hook_result(
-                            hook_def.name, current_file_hashes, hook_result,
+                            hook_def.name,
+                            current_file_hashes,
+                            hook_result,
                         )
                     except Exception as e:
                         self.logger.warning(
@@ -154,7 +157,9 @@ class CachedHookExecutor:
         return any(pattern in path_str for pattern in ignore_patterns)
 
     def _is_cache_valid(
-        self, cached_result: HookResult, hook_def: HookDefinition,
+        self,
+        cached_result: HookResult,
+        hook_def: HookDefinition,
     ) -> bool:
         if cached_result.status != "passed":
             return False
@@ -179,7 +184,9 @@ class SmartCacheManager:
         self.logger = logging.getLogger("crackerjack.cache_manager")
 
     def should_use_cache_for_hook(
-        self, hook_name: str, project_state: dict[str, t.Any],
+        self,
+        hook_name: str,
+        project_state: dict[str, t.Any],
     ) -> bool:
         external_hooks = {"detect - secrets"}
         if hook_name in external_hooks:
@@ -201,14 +208,16 @@ class SmartCacheManager:
         return True
 
     def get_optimal_cache_strategy(
-        self, hook_strategy: HookStrategy,
+        self,
+        hook_strategy: HookStrategy,
     ) -> dict[str, bool]:
         project_state = self._analyze_project_state()
 
         cache_decisions = {}
         for hook_def in hook_strategy.hooks:
             cache_decisions[hook_def.name] = self.should_use_cache_for_hook(
-                hook_def.name, project_state,
+                hook_def.name,
+                project_state,
             )
 
         return cache_decisions

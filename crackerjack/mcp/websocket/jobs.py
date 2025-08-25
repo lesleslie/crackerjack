@@ -30,7 +30,9 @@ class JobManager:
 
         import re
 
-        return bool(re.match(r" ^ [a - zA - Z0 - 9_ - ] + $", job_id) and len(job_id) <= 50)
+        return bool(
+            re.match(r" ^ [a - zA - Z0 - 9_ - ] + $", job_id) and len(job_id) <= 50
+        )
 
     def add_connection(self, job_id: str, websocket: Any) -> None:
         if job_id not in self.active_connections:
@@ -196,18 +198,26 @@ class JobManager:
 
         for progress_file in self.progress_dir.glob("job -* .json"):
             await self._process_job_timeout_check(
-                progress_file, current_time, timeout_seconds,
+                progress_file,
+                current_time,
+                timeout_seconds,
             )
 
     async def _process_job_timeout_check(
-        self, progress_file: Path, current_time: float, timeout_seconds: int,
+        self,
+        progress_file: Path,
+        current_time: float,
+        timeout_seconds: int,
     ) -> None:
         """Process timeout check for a single job file."""
         try:
             progress_data = json.loads(progress_file.read_text())
 
             if self._should_timeout_job(
-                progress_data, progress_file, current_time, timeout_seconds,
+                progress_data,
+                progress_file,
+                current_time,
+                timeout_seconds,
             ):
                 self._timeout_job(progress_data, progress_file)
 

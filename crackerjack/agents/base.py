@@ -112,7 +112,10 @@ class SubAgent(ABC):
         pass
 
     async def run_command(
-        self, cmd: list[str], cwd: Path | None = None, timeout: int | None = None,
+        self,
+        cmd: list[str],
+        cwd: Path | None = None,
+        timeout: int | None = None,
     ) -> tuple[int, str, str]:
         try:
             process = await asyncio.create_subprocess_exec(

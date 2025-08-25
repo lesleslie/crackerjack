@@ -132,7 +132,12 @@ class EnhancedCommandRunner:
         start_time = time.time()
         try:
             process = subprocess.run(
-                cmd, check=False, capture_output=True, text=True, cwd=self.working_dir, **kwargs,
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=self.working_dir,
+                **kwargs,
             )
             duration_ms = (time.time() - start_time) * 1000
             return CommandResult(

@@ -140,7 +140,13 @@ class JobsTableWidget(Static):
     def on_mount(self) -> None:
         table = self.query_one("#jobs_table", DataTable)
         table.add_columns(
-            "Job ID", "Status", "Stage", "Progress", "Started", "Duration", "Issues",
+            "Job ID",
+            "Status",
+            "Stage",
+            "Progress",
+            "Started",
+            "Duration",
+            "Issues",
         )
         table.zebra_stripes = True
         table.show_header = True
@@ -548,7 +554,8 @@ class CrackerjackDashboard(App):
     async def _update_performance_metrics(self) -> None:
         try:
             performance_widget = self.query_one(
-                "#performance_widget", PerformanceWidget,
+                "#performance_widget",
+                PerformanceWidget,
             )
 
             cpu = self.performance_data.get("cpu", 0)

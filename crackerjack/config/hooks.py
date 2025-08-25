@@ -163,7 +163,10 @@ COMPREHENSIVE_HOOKS = [
 
 
 FAST_STRATEGY = HookStrategy(
-    name="fast", hooks=FAST_HOOKS, timeout=60, retry_policy=RetryPolicy.FORMATTING_ONLY,
+    name="fast",
+    hooks=FAST_HOOKS,
+    timeout=60,
+    retry_policy=RetryPolicy.FORMATTING_ONLY,
 )
 
 COMPREHENSIVE_STRATEGY = HookStrategy(

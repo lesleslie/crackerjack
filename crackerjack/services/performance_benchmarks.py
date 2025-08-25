@@ -49,7 +49,10 @@ class PerformanceBenchmarkService:
         self.benchmarks_dir.mkdir(exist_ok=True)
 
     def run_comprehensive_benchmark(
-        self, run_tests: bool = True, run_hooks: bool = True, iterations: int = 1,
+        self,
+        run_tests: bool = True,
+        run_hooks: bool = True,
+        iterations: int = 1,
     ) -> PerformanceReport:
         """Run comprehensive performance benchmark across all components."""
         self.console.print(
@@ -86,7 +89,9 @@ class PerformanceBenchmarkService:
         report.file_operation_stats = self._benchmark_file_operations()
 
     def _finalize_performance_report(
-        self, report: PerformanceReport, start_time: float,
+        self,
+        report: PerformanceReport,
+        start_time: float,
     ) -> None:
         """Finalize performance report with analysis and history."""
         report.total_duration = time.time() - start_time
@@ -113,7 +118,8 @@ class PerformanceBenchmarkService:
                         "--tb=no",
                         "-q",
                     ],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=300,
                 )
@@ -175,7 +181,8 @@ class PerformanceBenchmarkService:
                             hook_name,
                             "--all-files",
                         ],
-                        check=False, capture_output=True,
+                        check=False,
+                        capture_output=True,
                         text=True,
                         timeout=120,
                     )
@@ -196,7 +203,8 @@ class PerformanceBenchmarkService:
         return hook_performance
 
     def _benchmark_workflow_components(
-        self, iterations: int = 1,
+        self,
+        iterations: int = 1,
     ) -> list[BenchmarkResult]:
         self.console.print("[dim]⚙️ Benchmarking workflow components...[/dim]")
 
@@ -226,7 +234,8 @@ class PerformanceBenchmarkService:
 
                 results.append(
                     BenchmarkResult(
-                        name="config_loading", duration_seconds=config_load_duration,
+                        name="config_loading",
+                        duration_seconds=config_load_duration,
                     ),
                 )
 
@@ -247,7 +256,8 @@ class PerformanceBenchmarkService:
         return stats
 
     def _generate_performance_recommendations(
-        self, report: PerformanceReport,
+        self,
+        report: PerformanceReport,
     ) -> list[str]:
         """Generate performance recommendations based on benchmark results."""
         recommendations = []
@@ -260,7 +270,9 @@ class PerformanceBenchmarkService:
         return recommendations
 
     def _add_test_suite_recommendations(
-        self, report: PerformanceReport, recommendations: list[str],
+        self,
+        report: PerformanceReport,
+        recommendations: list[str],
     ) -> None:
         """Add recommendations for test suite performance."""
         if not report.test_benchmarks:
@@ -281,7 +293,9 @@ class PerformanceBenchmarkService:
         )
 
     def _add_hook_performance_recommendations(
-        self, report: PerformanceReport, recommendations: list[str],
+        self,
+        report: PerformanceReport,
+        recommendations: list[str],
     ) -> None:
         """Add recommendations for hook performance."""
         slow_hooks = self._identify_slow_hooks(report.hook_performance)
@@ -289,7 +303,8 @@ class PerformanceBenchmarkService:
             recommendations.append(self._format_slow_hooks_message(slow_hooks))
 
     def _identify_slow_hooks(
-        self, hook_performance: dict[str, float],
+        self,
+        hook_performance: dict[str, float],
     ) -> list[tuple[str, float]]:
         """Identify hooks with slow performance."""
         slow_hooks = []
@@ -309,7 +324,9 @@ class PerformanceBenchmarkService:
         )
 
     def _add_component_performance_recommendations(
-        self, report: PerformanceReport, recommendations: list[str],
+        self,
+        report: PerformanceReport,
+        recommendations: list[str],
     ) -> None:
         """Add recommendations for component performance."""
         slow_components = self._identify_slow_components(report.workflow_benchmarks)
@@ -321,13 +338,16 @@ class PerformanceBenchmarkService:
             )
 
     def _identify_slow_components(
-        self, workflow_benchmarks: list[BenchmarkResult],
+        self,
+        workflow_benchmarks: list[BenchmarkResult],
     ) -> list[BenchmarkResult]:
         """Identify slow workflow components."""
         return [b for b in workflow_benchmarks if b.duration_seconds > 5]
 
     def _add_overall_performance_recommendations(
-        self, report: PerformanceReport, recommendations: list[str],
+        self,
+        report: PerformanceReport,
+        recommendations: list[str],
     ) -> None:
         """Add recommendations for overall performance."""
         if report.total_duration > 300:
@@ -337,7 +357,8 @@ class PerformanceBenchmarkService:
             )
 
     def _compare_with_baseline(
-        self, current_report: PerformanceReport,
+        self,
+        current_report: PerformanceReport,
     ) -> dict[str, float]:
         """Compare current performance with historical baseline."""
         baseline_comparison = {}
@@ -348,10 +369,14 @@ class PerformanceBenchmarkService:
                 return baseline_comparison
 
             self._add_overall_performance_comparison(
-                current_report, history, baseline_comparison,
+                current_report,
+                history,
+                baseline_comparison,
             )
             self._add_component_performance_comparison(
-                current_report, history, baseline_comparison,
+                current_report,
+                history,
+                baseline_comparison,
             )
 
         except Exception as e:
@@ -370,7 +395,10 @@ class PerformanceBenchmarkService:
         return history if history and len(history) > 1 else None
 
     def _add_overall_performance_comparison(
-        self, current_report: PerformanceReport, history: list[dict], comparison: dict,
+        self,
+        current_report: PerformanceReport,
+        history: list[dict],
+        comparison: dict,
     ) -> None:
         """Add overall performance comparison to baseline."""
         recent_runs = history[-5:]
@@ -384,7 +412,10 @@ class PerformanceBenchmarkService:
         comparison["overall_performance_change_percent"] = performance_change
 
     def _add_component_performance_comparison(
-        self, current_report: PerformanceReport, history: list[dict], comparison: dict,
+        self,
+        current_report: PerformanceReport,
+        history: list[dict],
+        comparison: dict,
     ) -> None:
         """Add component-level performance comparison."""
         recent_runs = history[-5:]
@@ -398,12 +429,15 @@ class PerformanceBenchmarkService:
             if component.name in component_durations:
                 old_duration = component_durations[component.name]
                 change = self._calculate_performance_change(
-                    component.duration_seconds, old_duration,
+                    component.duration_seconds,
+                    old_duration,
                 )
                 comparison[f"{component.name}_change_percent"] = change
 
     def _calculate_performance_change(
-        self, current_duration: float, old_duration: float,
+        self,
+        current_duration: float,
+        old_duration: float,
     ) -> float:
         """Calculate performance change percentage."""
         return ((current_duration - old_duration) / old_duration) * 100
@@ -470,7 +504,9 @@ class PerformanceBenchmarkService:
         for benchmark in report.workflow_benchmarks:
             metadata_str = ", ".join(f"{k}={v}" for k, v in benchmark.metadata.items())
             table.add_row(
-                benchmark.name, f"{benchmark.duration_seconds:.3f}", metadata_str,
+                benchmark.name,
+                f"{benchmark.duration_seconds:.3f}",
+                metadata_str,
             )
 
         self.console.print(table)
@@ -574,7 +610,8 @@ class PerformanceBenchmarkService:
 
         for component in latest_components:
             component_durations = self._extract_component_durations(
-                recent_history, component,
+                recent_history,
+                component,
             )
             if len(component_durations) >= 2:
                 component_trends[component] = {
@@ -586,7 +623,9 @@ class PerformanceBenchmarkService:
         trends["component_trends"] = component_trends
 
     def _extract_component_durations(
-        self, recent_history: list[dict], component: str,
+        self,
+        recent_history: list[dict],
+        component: str,
     ) -> list[float]:
         """Extract duration data for a specific component."""
         return [

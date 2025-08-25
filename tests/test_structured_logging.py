@@ -99,7 +99,9 @@ class TestLoggingContext:
         setup_structured_logging(level="INFO", json_output=False)
 
         with LoggingContext(
-            "test_operation", param1="value1", param2=42,
+            "test_operation",
+            param1="value1",
+            param2=42,
         ) as correlation_id:
             assert isinstance(correlation_id, str)
             assert len(correlation_id) == 8

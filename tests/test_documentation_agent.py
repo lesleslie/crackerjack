@@ -82,7 +82,9 @@ class TestDocumentationAgent:
         assert confidence == 0.0
 
     @pytest.mark.asyncio
-    async def test_fix_documentation_issue(self, documentation_agent, temp_project_dir) -> None:
+    async def test_fix_documentation_issue(
+        self, documentation_agent, temp_project_dir
+    ) -> None:
         """Test fixing a documentation issue."""
         issue = Issue(
             id="doc-002",
@@ -93,7 +95,8 @@ class TestDocumentationAgent:
         )
 
         with patch.object(
-            documentation_agent, "_fix_documentation_consistency",
+            documentation_agent,
+            "_fix_documentation_consistency",
         ) as mock_fix:
             mock_fix.return_value = FixResult(success=True, confidence=0.8)
 
@@ -104,7 +107,9 @@ class TestDocumentationAgent:
 
     @pytest.mark.asyncio
     async def test_fix_documentation_issue_failure(
-        self, documentation_agent, temp_project_dir,
+        self,
+        documentation_agent,
+        temp_project_dir,
     ) -> None:
         """Test handling of documentation fix failure."""
         # Create an issue with a non-existent file path to force failure
@@ -128,7 +133,9 @@ class TestDocumentationAgent:
 
     @pytest.mark.asyncio
     async def test_fix_documentation_consistency_agent_count(
-        self, documentation_agent, temp_project_dir,
+        self,
+        documentation_agent,
+        temp_project_dir,
     ) -> None:
         """Test fixing agent count inconsistencies in documentation."""
         # Create README with incorrect agent count
@@ -149,7 +156,9 @@ class TestDocumentationAgent:
 
     @pytest.mark.asyncio
     async def test_fix_documentation_consistency_no_changes_needed(
-        self, documentation_agent, temp_project_dir,
+        self,
+        documentation_agent,
+        temp_project_dir,
     ) -> None:
         """Test when documentation is already consistent."""
         readme_path = temp_project_dir / "README.md"
@@ -170,7 +179,9 @@ class TestDocumentationAgent:
 
     @pytest.mark.asyncio
     async def test_update_changelog_version_bump(
-        self, documentation_agent, temp_project_dir,
+        self,
+        documentation_agent,
+        temp_project_dir,
     ) -> None:
         """Test updating changelog during version bump."""
         changelog_path = temp_project_dir / "CHANGELOG.md"
@@ -226,7 +237,9 @@ class TestDocumentationAgent:
         assert changes == []
 
     def test_check_agent_count_consistency_mismatch(
-        self, documentation_agent, temp_project_dir,
+        self,
+        documentation_agent,
+        temp_project_dir,
     ) -> None:
         """Test detecting agent count mismatches."""
         readme_path = temp_project_dir / "README.md"
@@ -237,7 +250,9 @@ class TestDocumentationAgent:
         assert isinstance(issues, list)
 
     def test_check_agent_count_consistency_no_issues(
-        self, documentation_agent, temp_project_dir,
+        self,
+        documentation_agent,
+        temp_project_dir,
     ) -> None:
         """Test when no documentation issues are found."""
         readme_path = temp_project_dir / "README.md"

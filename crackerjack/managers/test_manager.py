@@ -75,7 +75,8 @@ class TestProgress:
         if self.files_discovered > 0:
             progress_text.append("\n📁 Discovered: ", style="dim")
             progress_text.append(
-                f"{self.files_discovered} test files", style="dim yellow",
+                f"{self.files_discovered} test files",
+                style="dim yellow",
             )
 
         if self.total_tests > 0:
@@ -129,13 +130,16 @@ class TestManagementImpl:
         self._progress_callback: t.Callable[[dict[str, t.Any]], None] | None = None
 
     def set_progress_callback(
-        self, callback: t.Callable[[dict[str, t.Any]], None] | None,
+        self,
+        callback: t.Callable[[dict[str, t.Any]], None] | None,
     ) -> None:
         """Set callback for AI mode structured progress updates."""
         self._progress_callback = callback
 
     def _run_test_command(
-        self, cmd: list[str], timeout: int = 600,
+        self,
+        cmd: list[str],
+        timeout: int = 600,
     ) -> subprocess.CompletedProcess[str]:
         import os
         from pathlib import Path
@@ -149,7 +153,8 @@ class TestManagementImpl:
 
         return subprocess.run(
             cmd,
-            check=False, cwd=self.pkg_path,
+            check=False,
+            cwd=self.pkg_path,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -157,7 +162,10 @@ class TestManagementImpl:
         )
 
     def _run_test_command_with_progress(
-        self, cmd: list[str], timeout: int = 600, show_progress: bool = True,
+        self,
+        cmd: list[str],
+        timeout: int = 600,
+        show_progress: bool = True,
     ) -> subprocess.CompletedProcess[str]:
         if not show_progress:
             return self._run_test_command(cmd, timeout)
@@ -168,7 +176,9 @@ class TestManagementImpl:
             return self._handle_progress_error(e, cmd, timeout)
 
     def _execute_with_live_progress(
-        self, cmd: list[str], timeout: int,
+        self,
+        cmd: list[str],
+        timeout: int,
     ) -> subprocess.CompletedProcess[str]:
         progress = self._initialize_progress()
         stdout_lines: list[str] = []
@@ -176,19 +186,22 @@ class TestManagementImpl:
         # Use a mutable container to share last_activity_time between threads
         activity_tracker = {"last_time": time.time()}
 
-        with Live(
-            progress.format_progress(),
-            refresh_per_second=4,
-            console=self.console,
-            auto_refresh=True,
-        ) as live, subprocess.Popen(
-            cmd,
-            cwd=self.pkg_path,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=self._setup_test_environment(),
-        ) as process:
+        with (
+            Live(
+                progress.format_progress(),
+                refresh_per_second=4,
+                console=self.console,
+                auto_refresh=True,
+            ) as live,
+            subprocess.Popen(
+                cmd,
+                cwd=self.pkg_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=self._setup_test_environment(),
+            ) as process,
+        ):
             threads = self._start_reader_threads(
                 process,
                 progress,
@@ -235,11 +248,18 @@ class TestManagementImpl:
         activity_tracker: dict[str, float],
     ) -> dict[str, threading.Thread]:
         read_output = self._create_stdout_reader(
-            process, progress, stdout_lines, live, activity_tracker,
+            process,
+            progress,
+            stdout_lines,
+            live,
+            activity_tracker,
         )
         read_stderr = self._create_stderr_reader(process, stderr_lines)
         monitor_stuck = self._create_monitor_thread(
-            process, progress, live, activity_tracker,
+            process,
+            progress,
+            live,
+            activity_tracker,
         )
 
         threads = {
@@ -282,7 +302,9 @@ class TestManagementImpl:
         return read_output
 
     def _create_stderr_reader(
-        self, process: subprocess.Popen[str], stderr_lines: list[str],
+        self,
+        process: subprocess.Popen[str],
+        stderr_lines: list[str],
     ) -> t.Callable[[], None]:
         def read_stderr() -> None:
             if process.stderr:
@@ -306,13 +328,18 @@ class TestManagementImpl:
                 current_time = time.time()
                 if current_time - activity_tracker["last_time"] > 30:
                     self._mark_test_as_stuck(
-                        progress, current_time - activity_tracker["last_time"], live,
+                        progress,
+                        current_time - activity_tracker["last_time"],
+                        live,
                     )
 
         return monitor_stuck_tests
 
     def _mark_test_as_stuck(
-        self, progress: TestProgress, stuck_time: float, live: Live,
+        self,
+        progress: TestProgress,
+        stuck_time: float,
+        live: Live,
     ) -> None:
         if progress.current_test and "stuck" not in progress.current_test.lower():
             progress.update(
@@ -336,7 +363,10 @@ class TestManagementImpl:
             raise
 
     def _cleanup_threads(
-        self, threads: dict[str, threading.Thread], progress: TestProgress, live: Live,
+        self,
+        threads: dict[str, threading.Thread],
+        progress: TestProgress,
+        live: Live,
     ) -> None:
         threads["stdout"].join(timeout=1)
         threads["stderr"].join(timeout=1)
@@ -344,7 +374,10 @@ class TestManagementImpl:
         live.update(progress.format_progress())
 
     def _handle_progress_error(
-        self, error: Exception, cmd: list[str], timeout: int,
+        self,
+        error: Exception,
+        cmd: list[str],
+        timeout: int,
     ) -> subprocess.CompletedProcess[str]:
         try:
             self.console.print(f"[red]❌ Progress display failed: {error}[/red]")
@@ -440,7 +473,9 @@ class TestManagementImpl:
             progress.update(current_test=test_path)
 
     def _run_test_command_with_ai_progress(
-        self, cmd: list[str], timeout: int = 600,
+        self,
+        cmd: list[str],
+        timeout: int = 600,
     ) -> subprocess.CompletedProcess[str]:
         """Run tests with periodic structured progress updates for AI mode."""
         try:
@@ -466,7 +501,11 @@ class TestManagementImpl:
         return env
 
     def _execute_test_process_with_progress(
-        self, cmd: list[str], timeout: int, env: dict[str, str], progress: TestProgress,
+        self,
+        cmd: list[str],
+        timeout: int,
+        env: dict[str, str],
+        progress: TestProgress,
     ) -> subprocess.CompletedProcess[str]:
         """Execute test process with progress tracking."""
         stdout_lines: list[str] = []
@@ -539,7 +578,9 @@ class TestManagementImpl:
                 last_update_time[0] = current_time
 
     def _read_stderr_lines(
-        self, process: subprocess.Popen[str], stderr_lines: list[str],
+        self,
+        process: subprocess.Popen[str],
+        stderr_lines: list[str],
     ) -> None:
         """Read stderr lines."""
         if not process.stderr:
@@ -551,7 +592,9 @@ class TestManagementImpl:
             stderr_lines.append(line.rstrip())
 
     def _wait_for_process_completion(
-        self, process: subprocess.Popen[str], timeout: int,
+        self,
+        process: subprocess.Popen[str],
+        timeout: int,
     ) -> int:
         """Wait for process completion with timeout handling."""
         try:
@@ -628,7 +671,9 @@ class TestManagementImpl:
             return self._handle_test_error(start_time, e)
 
     def _execute_test_workflow(
-        self, options: OptionsProtocol, start_time: float,
+        self,
+        options: OptionsProtocol,
+        start_time: float,
     ) -> bool:
         """Execute the complete test workflow."""
         cmd = self._build_test_command(options)
@@ -638,7 +683,10 @@ class TestManagementImpl:
         return self._process_test_results(result, duration)
 
     def _execute_tests_with_appropriate_mode(
-        self, cmd: list[str], timeout: int, options: OptionsProtocol,
+        self,
+        cmd: list[str],
+        timeout: int,
+        options: OptionsProtocol,
     ) -> subprocess.CompletedProcess[str]:
         """Execute tests using the appropriate mode based on options."""
         execution_mode = self._determine_execution_mode(options)
@@ -647,7 +695,8 @@ class TestManagementImpl:
         if execution_mode == "ai_progress":
             self._print_test_start_message(cmd, timeout, options)
             return self._run_test_command_with_ai_progress(
-                cmd, timeout=extended_timeout,
+                cmd,
+                timeout=extended_timeout,
             )
         if execution_mode == "console_progress":
             return self._run_test_command_with_progress(cmd, timeout=extended_timeout)
@@ -718,7 +767,10 @@ class TestManagementImpl:
         cmd.extend(["--timeout", str(timeout)])
 
     def _add_verbosity_options(
-        self, cmd: list[str], options: OptionsProtocol, force_verbose: bool = False,
+        self,
+        cmd: list[str],
+        options: OptionsProtocol,
+        force_verbose: bool = False,
     ) -> None:
         if options.verbose or force_verbose:
             cmd.append("-v")
@@ -729,7 +781,10 @@ class TestManagementImpl:
             cmd.append(str(test_path))
 
     def _print_test_start_message(
-        self, cmd: list[str], timeout: int, options: OptionsProtocol,
+        self,
+        cmd: list[str],
+        timeout: int,
+        options: OptionsProtocol,
     ) -> None:
         self.console.print(
             f"[yellow]🧪[/yellow] Running tests... (timeout: {timeout}s)",
@@ -738,7 +793,9 @@ class TestManagementImpl:
             self.console.print(f"[dim]Command: {' '.join(cmd)}[/dim]")
 
     def _process_test_results(
-        self, result: subprocess.CompletedProcess[str], duration: float,
+        self,
+        result: subprocess.CompletedProcess[str],
+        duration: float,
     ) -> bool:
         output = result.stdout + result.stderr
         if result.returncode == 0:
@@ -794,7 +851,8 @@ class TestManagementImpl:
 
                 return {
                     "total_coverage": coverage_data.get("totals", {}).get(
-                        "percent_covered", 0,
+                        "percent_covered",
+                        0,
                     ),
                     "files": coverage_data.get("files", {}),
                     "summary": coverage_data.get("totals", {}),

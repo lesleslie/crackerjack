@@ -61,7 +61,9 @@ class TestPhaseCoordinatorBasics:
         options.clean = True
 
         with patch.object(
-            phase_coordinator, "_execute_cleaning_process", return_value=True,
+            phase_coordinator,
+            "_execute_cleaning_process",
+            return_value=True,
         ):
             result = phase_coordinator.run_cleaning_phase(options)
             assert result is True
@@ -115,7 +117,9 @@ class TestPhaseCoordinatorBasics:
         assert result is True
 
     def test_run_testing_phase_validation_failure(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         options.test = True
         phase_coordinator.test_manager.validate_test_environment.return_value = False
@@ -142,7 +146,9 @@ class TestPhaseCoordinatorBasics:
         phase_coordinator.git_service.push.return_value = True
 
         with patch.object(
-            phase_coordinator, "_get_commit_message", return_value="Test commit",
+            phase_coordinator,
+            "_get_commit_message",
+            return_value="Test commit",
         ):
             result = phase_coordinator.run_commit_phase(options)
             assert result is True
@@ -166,7 +172,9 @@ class TestPhaseCoordinatorBasics:
         phase_coordinator.git_service.add_files.return_value = False
 
         with patch.object(
-            phase_coordinator, "_get_commit_message", return_value="Test commit",
+            phase_coordinator,
+            "_get_commit_message",
+            return_value="Test commit",
         ):
             result = phase_coordinator.run_commit_phase(options)
             assert result is False
@@ -178,7 +186,9 @@ class TestPhaseCoordinatorBasics:
         phase_coordinator.git_service.commit.return_value = False
 
         with patch.object(
-            phase_coordinator, "_get_commit_message", return_value="Test commit",
+            phase_coordinator,
+            "_get_commit_message",
+            return_value="Test commit",
         ):
             result = phase_coordinator.run_commit_phase(options)
             assert result is False
@@ -191,7 +201,9 @@ class TestPhaseCoordinatorBasics:
         phase_coordinator.git_service.push.return_value = False
 
         with patch.object(
-            phase_coordinator, "_get_commit_message", return_value="Test commit",
+            phase_coordinator,
+            "_get_commit_message",
+            return_value="Test commit",
         ):
             result = phase_coordinator.run_commit_phase(options)
             assert result is True
@@ -239,7 +251,9 @@ class TestPhaseCoordinatorHooks:
         assert result is True
 
     def test_run_comprehensive_hooks_only_skip(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         options.skip_hooks = True
 
@@ -256,7 +270,9 @@ class TestPhaseCoordinatorHooks:
         }
 
         result = phase_coordinator._execute_hooks_with_retry(
-            "fast", mock_hook_runner, options,
+            "fast",
+            mock_hook_runner,
+            options,
         )
         assert result is True
 
@@ -270,17 +286,23 @@ class TestPhaseCoordinatorHooks:
         }
 
         result = phase_coordinator._execute_hooks_with_retry(
-            "fast", mock_hook_runner, options,
+            "fast",
+            mock_hook_runner,
+            options,
         )
         assert result is False
 
     def test_execute_hooks_with_retry_exception(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         mock_hook_runner = Mock(side_effect=Exception("Hook error"))
 
         result = phase_coordinator._execute_hooks_with_retry(
-            "fast", mock_hook_runner, options,
+            "fast",
+            mock_hook_runner,
+            options,
         )
         assert result is False
 
@@ -323,7 +345,9 @@ class TestPhaseCoordinatorPublishing:
         assert result is True
 
     def test_run_publishing_phase_publish_success(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         options.publish = "patch"
         phase_coordinator.publish_manager.bump_version.return_value = "1.2.4"
@@ -341,7 +365,9 @@ class TestPhaseCoordinatorPublishing:
         phase_coordinator.publish_manager.publish_package.assert_called_once()
 
     def test_run_publishing_phase_publish_failure(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         options.publish = "patch"
         phase_coordinator.publish_manager.bump_version.return_value = "1.2.4"
@@ -359,7 +385,9 @@ class TestPhaseCoordinatorPublishing:
         assert result is True
 
     def test_run_publishing_phase_with_git_tag(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         options.publish = "patch"
         options.no_git_tags = False
@@ -372,7 +400,9 @@ class TestPhaseCoordinatorPublishing:
         phase_coordinator.publish_manager.create_git_tag.assert_called_with("1.2.4")
 
     def test_run_publishing_phase_without_git_tag(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         options.publish = "patch"
         options.no_git_tags = True
@@ -384,7 +414,9 @@ class TestPhaseCoordinatorPublishing:
         phase_coordinator.publish_manager.create_git_tag.assert_not_called()
 
     def test_run_publishing_phase_with_cleanup(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         options.publish = "patch"
         phase_coordinator.publish_manager.bump_version.return_value = "1.2.4"
@@ -438,7 +470,9 @@ class TestPhaseCoordinatorCommitMessages:
         return MockOptions()
 
     def test_get_commit_message_no_suggestions(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         phase_coordinator.git_service.get_commit_message_suggestions.return_value = []
 
@@ -446,7 +480,9 @@ class TestPhaseCoordinatorCommitMessages:
         assert result == "Update project files"
 
     def test_get_commit_message_non_interactive(
-        self, phase_coordinator, options,
+        self,
+        phase_coordinator,
+        options,
     ) -> None:
         options.interactive = False
         phase_coordinator.git_service.get_commit_message_suggestions.return_value = [
@@ -488,7 +524,8 @@ class TestPhaseCoordinatorCommitMessages:
         suggestions = ["Message 1", "Message 2", "Message 3"]
 
         result = phase_coordinator._process_commit_choice(
-            "Custom commit message", suggestions,
+            "Custom commit message",
+            suggestions,
         )
         assert result == "Custom commit message"
 
@@ -539,9 +576,14 @@ class TestPhaseCoordinatorInternalMethods:
         phase_coordinator.pkg_path = Mock()
         phase_coordinator.pkg_path.rglob.return_value = mock_files
 
-        with patch.object(
-            phase_coordinator, "_clean_python_files", return_value=["file1.py"],
-        ), patch.object(phase_coordinator, "_report_cleaning_results"):
+        with (
+            patch.object(
+                phase_coordinator,
+                "_clean_python_files",
+                return_value=["file1.py"],
+            ),
+            patch.object(phase_coordinator, "_report_cleaning_results"),
+        ):
             result = phase_coordinator._execute_cleaning_process()
             assert result is True
 
@@ -559,7 +601,8 @@ class TestPhaseCoordinatorInternalMethods:
 
         phase_coordinator._report_cleaning_results(cleaned_files)
         phase_coordinator.session.complete_task.assert_called_with(
-            "cleaning", "Cleaned 2 files",
+            "cleaning",
+            "Cleaned 2 files",
         )
 
     def test_report_cleaning_results_no_files(self, phase_coordinator) -> None:
@@ -567,7 +610,8 @@ class TestPhaseCoordinatorInternalMethods:
 
         phase_coordinator._report_cleaning_results(cleaned_files)
         phase_coordinator.session.complete_task.assert_called_with(
-            "cleaning", "No cleaning needed",
+            "cleaning",
+            "No cleaning needed",
         )
 
     def test_display_cleaning_header(self, phase_coordinator) -> None:
@@ -579,7 +623,8 @@ class TestPhaseCoordinatorInternalMethods:
         result = phase_coordinator._handle_no_files_to_clean()
         assert result is True
         phase_coordinator.session.complete_task.assert_called_with(
-            "cleaning", "No files to clean",
+            "cleaning",
+            "No files to clean",
         )
 
     def test_display_commit_suggestions(self, phase_coordinator) -> None:
@@ -593,5 +638,6 @@ class TestPhaseCoordinatorInternalMethods:
         result = phase_coordinator._handle_no_changes_to_commit()
         assert result is True
         phase_coordinator.session.complete_task.assert_called_with(
-            "commit", "No changes to commit",
+            "commit",
+            "No changes to commit",
         )

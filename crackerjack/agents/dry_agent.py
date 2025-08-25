@@ -83,7 +83,10 @@ class DRYAgent(SubAgent):
         return self._apply_and_save_dry_fixes(file_path, content, violations)
 
     def _apply_and_save_dry_fixes(
-        self, file_path: Path, content: str, violations: list[dict[str, t.Any]],
+        self,
+        file_path: Path,
+        content: str,
+        violations: list[dict[str, t.Any]],
     ) -> FixResult:
         """Apply DRY fixes and save changes."""
         fixed_content = self._apply_dry_fixes(content, violations)
@@ -132,7 +135,9 @@ class DRYAgent(SubAgent):
         )
 
     def _detect_dry_violations(
-        self, content: str, file_path: Path,
+        self,
+        content: str,
+        file_path: Path,
     ) -> list[dict[str, t.Any]]:
         """Detect various types of DRY violations in the code."""
         violations: list[dict[str, t.Any]] = []
@@ -294,7 +299,9 @@ class DRYAgent(SubAgent):
         return "\n".join(lines) if modified else content
 
     def _fix_error_response_pattern(
-        self, lines: list[str], violation: dict[str, t.Any],
+        self,
+        lines: list[str],
+        violation: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         """Fix error response patterns by adding utility function."""
         # Add utility function at the top of the file (after imports)
@@ -336,7 +343,9 @@ def _create_error_response(message: str, success: bool = False) -> str:
         return lines, True
 
     def _fix_path_conversion_pattern(
-        self, lines: list[str], violation: dict[str, t.Any],
+        self,
+        lines: list[str],
+        violation: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         """Fix path conversion patterns by adding utility function."""
         # Add utility function

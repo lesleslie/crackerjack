@@ -279,7 +279,9 @@ class TestCodeCleaner:
 
         # Create CodeCleaner with custom dependencies
         cleaner = CodeCleaner(
-            console=console, file_processor=file_processor, error_handler=error_handler,
+            console=console,
+            file_processor=file_processor,
+            error_handler=error_handler,
         )
 
         # Verify dependencies are injected correctly
@@ -296,7 +298,9 @@ class TestCleaningPipeline:
         error_handler = CleaningErrorHandler(console=console)
 
         pipeline = CleaningPipeline(
-            file_processor=file_processor, error_handler=error_handler, console=console,
+            file_processor=file_processor,
+            error_handler=error_handler,
+            console=console,
         )
 
         assert pipeline.file_processor == file_processor
@@ -309,7 +313,9 @@ class TestCleaningPipeline:
         error_handler = CleaningErrorHandler(console=console)
 
         pipeline = CleaningPipeline(
-            file_processor=file_processor, error_handler=error_handler, console=console,
+            file_processor=file_processor,
+            error_handler=error_handler,
+            console=console,
         )
 
         # Create a mock cleaning step
@@ -321,7 +327,9 @@ class TestCleaningPipeline:
 
         test_code = "def func(): pass"
         result = pipeline._apply_cleaning_pipeline(
-            test_code, temp_file, [MockCleaningStep()],
+            test_code,
+            temp_file,
+            [MockCleaningStep()],
         )
 
         assert isinstance(result, pipeline.PipelineResult)
@@ -391,7 +399,8 @@ class TestIntegration:
 
         # Test ExecutionError creation
         error = ExecutionError(
-            message="Test error", error_code=ErrorCode.FILE_READ_ERROR,
+            message="Test error",
+            error_code=ErrorCode.FILE_READ_ERROR,
         )
         assert error.message == "Test error"
         assert error.error_code == ErrorCode.FILE_READ_ERROR
@@ -425,7 +434,9 @@ class TestIntegration:
         assert config.force_update_docs is False
 
         config_custom = CleaningConfig(
-            clean=False, update_docs=True, compress_docs=True,
+            clean=False,
+            update_docs=True,
+            compress_docs=True,
         )
         assert config_custom.clean is False
         assert config_custom.update_docs is True
@@ -437,7 +448,9 @@ class TestIntegration:
         assert hook_config.experimental_hooks is False
 
         hook_config_custom = HookConfig(
-            skip_hooks=True, experimental_hooks=True, enable_pyrefly=True,
+            skip_hooks=True,
+            experimental_hooks=True,
+            enable_pyrefly=True,
         )
         assert hook_config_custom.skip_hooks is True
         assert hook_config_custom.experimental_hooks is True
@@ -458,7 +471,9 @@ class TestIntegration:
         # Test different statuses
         for status in TaskStatus:
             test_task = Task(
-                id=f"task-{status.value}", name=f"Task {status.value}", status=status,
+                id=f"task-{status.value}",
+                name=f"Task {status.value}",
+                status=status,
             )
             assert test_task.status == status
             assert test_task.to_dict()["status"] == status.value

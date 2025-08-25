@@ -65,7 +65,11 @@ class TestMCPOptions:
     def test_mcp_options_with_kwargs(self) -> None:
         """Test MCPOptions initialization with keyword arguments."""
         options = MCPOptions(
-            test=True, verbose=True, ai_agent=True, publish="patch", bump="minor",
+            test=True,
+            verbose=True,
+            ai_agent=True,
+            publish="patch",
+            bump="minor",
         )
 
         assert options.test is True
@@ -80,7 +84,9 @@ class TestMCPOptions:
     def test_mcp_options_ignores_invalid_attributes(self) -> None:
         """Test MCPOptions ignores invalid attributes in kwargs."""
         options = MCPOptions(
-            test=True, invalid_attribute="should_be_ignored", another_invalid=123,
+            test=True,
+            invalid_attribute="should_be_ignored",
+            another_invalid=123,
         )
 
         assert options.test is True
@@ -164,7 +170,9 @@ class TestErrorCache:
         )
 
     def test_error_cache_initialization(
-        self, error_cache: ErrorCache, temp_cache_dir: Path,
+        self,
+        error_cache: ErrorCache,
+        temp_cache_dir: Path,
     ) -> None:
         """Test ErrorCache initialization."""
         assert error_cache.cache_dir == temp_cache_dir
@@ -175,7 +183,9 @@ class TestErrorCache:
 
     @pytest.mark.asyncio
     async def test_add_pattern(
-        self, error_cache: ErrorCache, sample_pattern: ErrorPattern,
+        self,
+        error_cache: ErrorCache,
+        sample_pattern: ErrorPattern,
     ) -> None:
         """Test adding error pattern."""
         await error_cache.add_pattern(sample_pattern)
@@ -189,7 +199,9 @@ class TestErrorCache:
 
     @pytest.mark.asyncio
     async def test_update_existing_pattern(
-        self, error_cache: ErrorCache, sample_pattern: ErrorPattern,
+        self,
+        error_cache: ErrorCache,
+        sample_pattern: ErrorPattern,
     ) -> None:
         """Test updating existing error pattern."""
         await error_cache.add_pattern(sample_pattern)
@@ -215,7 +227,10 @@ class TestErrorCache:
             ErrorPattern("ruff_1", "ruff", "E501", "line too long"),
             ErrorPattern("ruff_2", "ruff", "E502", "blank line"),
             ErrorPattern(
-                "pyright_1", "pyright", "reportMissingImports", "import error",
+                "pyright_1",
+                "pyright",
+                "reportMissingImports",
+                "import error",
             ),
         ]
 
@@ -265,13 +280,25 @@ class TestErrorCache:
         """Test getting auto-fixable patterns."""
         patterns = [
             ErrorPattern(
-                "fixable_1", "ruff", "E501", "fixable error", auto_fixable=True,
+                "fixable_1",
+                "ruff",
+                "E501",
+                "fixable error",
+                auto_fixable=True,
             ),
             ErrorPattern(
-                "fixable_2", "ruff", "E502", "another fixable", auto_fixable=True,
+                "fixable_2",
+                "ruff",
+                "E502",
+                "another fixable",
+                auto_fixable=True,
             ),
             ErrorPattern(
-                "not_fixable", "pyright", "E503", "complex error", auto_fixable=False,
+                "not_fixable",
+                "pyright",
+                "E503",
+                "complex error",
+                auto_fixable=False,
             ),
         ]
 
@@ -284,7 +311,9 @@ class TestErrorCache:
 
     @pytest.mark.asyncio
     async def test_add_fix_result(
-        self, error_cache: ErrorCache, sample_pattern: ErrorPattern,
+        self,
+        error_cache: ErrorCache,
+        sample_pattern: ErrorPattern,
     ) -> None:
         """Test adding fix result."""
         await error_cache.add_pattern(sample_pattern)
@@ -366,7 +395,12 @@ class TestErrorCache:
         # Add test data
         patterns = [
             ErrorPattern(
-                "ruff_1", "ruff", "E501", "error 1", auto_fixable=True, frequency=5,
+                "ruff_1",
+                "ruff",
+                "E501",
+                "error 1",
+                auto_fixable=True,
+                frequency=5,
             ),
             ErrorPattern(
                 "pyright_1",
@@ -433,7 +467,9 @@ class TestStateManagement:
         )
 
     def test_state_manager_initialization(
-        self, state_manager: StateManager, temp_state_dir: Path,
+        self,
+        state_manager: StateManager,
+        temp_state_dir: Path,
     ) -> None:
         """Test StateManager initialization."""
         assert state_manager.state_dir == temp_state_dir
@@ -443,7 +479,9 @@ class TestStateManagement:
 
     @pytest.mark.asyncio
     async def test_start_and_complete_stage(
-        self, state_manager: StateManager, sample_issue: Issue,
+        self,
+        state_manager: StateManager,
+        sample_issue: Issue,
     ) -> None:
         """Test stage lifecycle management."""
         stage_name = "hooks"
@@ -460,7 +498,9 @@ class TestStateManagement:
         # Complete stage
         fixes = ["Applied ruff fix"]
         await state_manager.complete_stage(
-            stage_name, issues=[sample_issue], fixes=fixes,
+            stage_name,
+            issues=[sample_issue],
+            fixes=fixes,
         )
 
         stage_result = state_manager.session_state.stages[stage_name]
@@ -492,7 +532,9 @@ class TestStateManagement:
 
     @pytest.mark.asyncio
     async def test_add_and_remove_issue(
-        self, state_manager: StateManager, sample_issue: Issue,
+        self,
+        state_manager: StateManager,
+        sample_issue: Issue,
     ) -> None:
         """Test issue management."""
         # Add issue
@@ -515,7 +557,11 @@ class TestStateManagement:
         """Test filtering issues by priority."""
         issues = [
             Issue(
-                "issue_1", "error", "High priority", "test.py", priority=Priority.HIGH,
+                "issue_1",
+                "error",
+                "High priority",
+                "test.py",
+                priority=Priority.HIGH,
             ),
             Issue(
                 "issue_2",
@@ -566,10 +612,18 @@ class TestStateManagement:
         issues = [
             Issue("issue_1", "ruff_error", "Fixable", "test.py", auto_fixable=True),
             Issue(
-                "issue_2", "complex_error", "Not fixable", "test.py", auto_fixable=False,
+                "issue_2",
+                "complex_error",
+                "Not fixable",
+                "test.py",
+                auto_fixable=False,
             ),
             Issue(
-                "issue_3", "format_error", "Also fixable", "test.py", auto_fixable=True,
+                "issue_3",
+                "format_error",
+                "Also fixable",
+                "test.py",
+                auto_fixable=True,
             ),
         ]
 
@@ -624,7 +678,9 @@ class TestStateManagement:
 
     @pytest.mark.asyncio
     async def test_save_and_load_checkpoint(
-        self, state_manager: StateManager, sample_issue: Issue,
+        self,
+        state_manager: StateManager,
+        sample_issue: Issue,
     ) -> None:
         """Test checkpoint save and load."""
         # Set up state
@@ -688,7 +744,8 @@ class TestBatchedStateSaver:
 
     @pytest.mark.asyncio
     async def test_batched_saver_lifecycle(
-        self, batched_saver: BatchedStateSaver,
+        self,
+        batched_saver: BatchedStateSaver,
     ) -> None:
         """Test BatchedStateSaver start and stop."""
         assert not batched_saver._running
@@ -703,7 +760,8 @@ class TestBatchedStateSaver:
 
     @pytest.mark.asyncio
     async def test_schedule_save_with_debouncing(
-        self, batched_saver: BatchedStateSaver,
+        self,
+        batched_saver: BatchedStateSaver,
     ) -> None:
         """Test save scheduling with debouncing."""
         await batched_saver.start()
@@ -774,7 +832,9 @@ class TestMCPServerContext:
         return MCPServerContext(mcp_config)
 
     def test_mcp_context_initialization(
-        self, mcp_context: MCPServerContext, temp_project_path: Path,
+        self,
+        mcp_context: MCPServerContext,
+        temp_project_path: Path,
     ) -> None:
         """Test MCPServerContext initialization."""
         assert mcp_context.config.project_path == temp_project_path
@@ -944,7 +1004,8 @@ class TestContextGlobals:
 
     @pytest.mark.asyncio
     async def test_context_helper_functions(
-        self, mcp_context: MCPServerContext,
+        self,
+        mcp_context: MCPServerContext,
     ) -> None:
         """Test context helper functions."""
         set_context(mcp_context)

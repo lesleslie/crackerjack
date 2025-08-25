@@ -71,7 +71,8 @@ class TestRunner:
         ]
 
         return self._execute_pytest(
-            cmd, f"Coverage-Focused Tests (Target: {target_coverage}%)",
+            cmd,
+            f"Coverage-Focused Tests (Target: {target_coverage}%)",
         )
 
     def run_performance_tests(self) -> int:
@@ -172,7 +173,8 @@ class TestRunner:
         try:
             result = subprocess.run(
                 cmd,
-                check=False, cwd=self.project_root,
+                check=False,
+                cwd=self.project_root,
                 timeout=600,  # 10 minute timeout
             )
 
@@ -222,16 +224,24 @@ def main():
     # Test suite options
     parser.add_argument("--fast", action="store_true", help="Run fast unit tests only")
     parser.add_argument(
-        "--comprehensive", action="store_true", help="Run full test suite",
+        "--comprehensive",
+        action="store_true",
+        help="Run full test suite",
     )
     parser.add_argument(
-        "--coverage", action="store_true", help="Run coverage-focused tests",
+        "--coverage",
+        action="store_true",
+        help="Run coverage-focused tests",
     )
     parser.add_argument(
-        "--coverage-report", action="store_true", help="Generate coverage reports",
+        "--coverage-report",
+        action="store_true",
+        help="Generate coverage reports",
     )
     parser.add_argument(
-        "--performance", action="store_true", help="Run performance tests",
+        "--performance",
+        action="store_true",
+        help="Run performance tests",
     )
     parser.add_argument("--security", action="store_true", help="Run security tests")
     parser.add_argument("--ci", action="store_true", help="Run CI-optimized tests")
@@ -244,10 +254,15 @@ def main():
     # Configuration options
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument(
-        "--target", type=int, default=42, help="Coverage target percentage",
+        "--target",
+        type=int,
+        default=42,
+        help="Coverage target percentage",
     )
     parser.add_argument(
-        "--no-parallel", action="store_true", help="Disable parallel execution",
+        "--no-parallel",
+        action="store_true",
+        help="Disable parallel execution",
     )
 
     args = parser.parse_args()

@@ -37,7 +37,8 @@ class PerformanceMonitor:
         self.metrics: dict[str, list[float]] = {}
 
     def time_operation(
-        self, operation_name: str,
+        self,
+        operation_name: str,
     ) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
         def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
             @functools.wraps(func)
@@ -114,7 +115,8 @@ def memoize_with_ttl(
 
 
 def batch_file_operations(
-    operations: list[t.Callable[[], t.Any]], batch_size: int = 50,
+    operations: list[t.Callable[[], t.Any]],
+    batch_size: int = 50,
 ) -> list[t.Any]:
     results: list[t.Any] = []
     for i in range(0, len(operations), batch_size):
@@ -171,7 +173,9 @@ class ParallelTaskExecutor:
         self.max_workers = max_workers or min(os.cpu_count() or 1, 8)
 
     def execute_tasks(
-        self, tasks: list[t.Callable[[], t.Any]], timeout: float = 300.0,
+        self,
+        tasks: list[t.Callable[[], t.Any]],
+        timeout: float = 300.0,
     ) -> list[t.Any]:
         if len(tasks) <= 1:
             return [task() for task in tasks]
@@ -183,7 +187,8 @@ class ParallelTaskExecutor:
         ) as executor:
             future_to_task = {executor.submit(task): i for i, task in enumerate(tasks)}
             for future in concurrent.futures.as_completed(
-                future_to_task, timeout=timeout,
+                future_to_task,
+                timeout=timeout,
             ):
                 task_index = future_to_task[future]
                 try:
@@ -198,7 +203,8 @@ class ParallelTaskExecutor:
 
 
 def optimize_subprocess_calls(
-    commands: list[list[str]], cwd: Path | None = None,
+    commands: list[list[str]],
+    cwd: Path | None = None,
 ) -> list[t.Any]:
     if len(commands) <= 1:
         import subprocess

@@ -132,7 +132,8 @@ def handle_mcp_server_command(
         try:
             result = subprocess.run(
                 ["pkill", "-f", "crackerjack-mcp-server"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )

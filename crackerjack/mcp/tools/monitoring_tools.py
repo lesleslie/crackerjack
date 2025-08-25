@@ -1,4 +1,3 @@
-import contextlib
 import json
 import time
 import typing as t
@@ -292,8 +291,8 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                         "Real-time WebSocket progress streaming",
                         "Advanced orchestrator with adaptive strategies",
                         "Automatic service management",
-                        "Debug mode support"
-                    ]
+                        "Debug mode support",
+                    ],
                 },
                 "/crackerjack:status": {
                     "description": "Get comprehensive system status including servers, jobs, and resource usage",
@@ -303,41 +302,46 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                         "WebSocket server status",
                         "Active job tracking",
                         "Resource usage metrics",
-                        "Error counts and progress data"
-                    ]
+                        "Error counts and progress data",
+                    ],
                 },
                 "/crackerjack:init": {
                     "description": "Initialize or update crackerjack configuration with smart configuration merging",
                     "usage": "Optional parameters: target_path (defaults to current directory)",
-                    "kwargs": {"force": "boolean - force overwrite existing configurations"},
+                    "kwargs": {
+                        "force": "boolean - force overwrite existing configurations"
+                    },
                     "features": [
                         "Smart merge preserving existing configurations",
                         "Universal Python project compatibility",
                         "pyproject.toml and pre-commit setup",
                         "Documentation and MCP configuration",
-                        "Non-destructive configuration updates"
-                    ]
-                }
+                        "Non-destructive configuration updates",
+                    ],
+                },
             }
-            
-            return json.dumps({
-                "available_commands": list(commands.keys()),
-                "command_details": commands,
-                "total_commands": len(commands)
-            }, indent=2)
-            
+
+            return json.dumps(
+                {
+                    "available_commands": list(commands.keys()),
+                    "command_details": commands,
+                    "total_commands": len(commands),
+                },
+                indent=2,
+            )
+
         except Exception as e:
-            return json.dumps({
-                "error": f"Failed to list slash commands: {e}",
-                "success": False
-            }, indent=2)
+            return json.dumps(
+                {"error": f"Failed to list slash commands: {e}", "success": False},
+                indent=2,
+            )
 
 
 def _register_filtered_status_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def get_filtered_status(components: str = "all") -> str:
         """Get specific status components for better performance.
-        
+
         Args:
             components: Comma-separated list of components to include:
                        'services', 'jobs', 'resources', 'all' (default)
@@ -345,35 +349,41 @@ def _register_filtered_status_tool(mcp_app: t.Any) -> None:
         try:
             valid_components = {"services", "jobs", "resources", "all"}
             requested = set(c.strip().lower() for c in components.split(","))
-            
+
             # Validate components
             invalid = requested - valid_components
             if invalid:
-                return json.dumps({
-                    "error": f"Invalid components: {invalid}. Valid: {valid_components}",
-                    "success": False
-                }, indent=2)
-            
+                return json.dumps(
+                    {
+                        "error": f"Invalid components: {invalid}. Valid: {valid_components}",
+                        "success": False,
+                    },
+                    indent=2,
+                )
+
             # If 'all' is requested, get everything
             if "all" in requested:
                 status = await _get_comprehensive_status()
                 return json.dumps(status, indent=2)
-            
+
             # Build filtered status
             context = get_context()
             if not context:
-                return json.dumps({"error": "Server context not available", "success": False})
-                
+                return json.dumps(
+                    {"error": "Server context not available", "success": False}
+                )
+
             filtered_status = {"timestamp": time.time()}
-            
+
             if "services" in requested:
                 from crackerjack.services.server_manager import (
                     find_mcp_server_processes,
                     find_websocket_server_processes,
                 )
+
                 mcp_processes = find_mcp_server_processes()
                 websocket_processes = find_websocket_server_processes()
-                
+
                 filtered_status["services"] = {
                     "mcp_server": {
                         "running": len(mcp_processes) > 0,
@@ -382,25 +392,24 @@ def _register_filtered_status_tool(mcp_app: t.Any) -> None:
                     "websocket_server": {
                         "running": len(websocket_processes) > 0,
                         "processes": websocket_processes,
-                    }
+                    },
                 }
-                
+
             if "jobs" in requested:
-                filtered_status["jobs"] = {
-                    "active": _get_active_jobs(context)
-                }
-                
+                filtered_status["jobs"] = {"active": _get_active_jobs(context)}
+
             if "resources" in requested:
                 filtered_status["resources"] = {
                     "temp_files_count": len(list(context.progress_dir.glob("*.json")))
-                    if context.progress_dir.exists() else 0,
+                    if context.progress_dir.exists()
+                    else 0,
                     "progress_dir": str(context.progress_dir),
                 }
-                
+
             return json.dumps(filtered_status, indent=2)
-            
+
         except Exception as e:
-            return json.dumps({
-                "error": f"Failed to get filtered status: {e}",
-                "success": False
-            }, indent=2)
+            return json.dumps(
+                {"error": f"Failed to get filtered status: {e}", "success": False},
+                indent=2,
+            )

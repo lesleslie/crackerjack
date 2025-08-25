@@ -12,7 +12,12 @@ class GitService:
     def _run_git_command(self, args: list[str]) -> subprocess.CompletedProcess[str]:
         cmd = ["git", *args]
         return subprocess.run(
-            cmd, check=False, cwd=self.pkg_path, capture_output=True, text=True, timeout=60,
+            cmd,
+            check=False,
+            cwd=self.pkg_path,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
 
     def is_git_repo(self) -> bool:

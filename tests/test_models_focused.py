@@ -166,7 +166,8 @@ class TestExecutionError:
     def test_basic_error_creation(self) -> None:
         """Test basic error creation."""
         error = ExecutionError(
-            message="Test error message", error_code=ErrorCode.FILE_READ_ERROR,
+            message="Test error message",
+            error_code=ErrorCode.FILE_READ_ERROR,
         )
         assert str(error) == "Test error message"
         assert error.error_code == ErrorCode.FILE_READ_ERROR
@@ -174,7 +175,8 @@ class TestExecutionError:
     def test_error_inheritance(self) -> None:
         """Test error inheritance from CrackerjackError."""
         error = ExecutionError(
-            message="Test error", error_code=ErrorCode.FILE_WRITE_ERROR,
+            message="Test error",
+            error_code=ErrorCode.FILE_WRITE_ERROR,
         )
         assert isinstance(error, ExecutionError)
         assert isinstance(error, CrackerjackError)
@@ -191,7 +193,8 @@ class TestExecutionError:
 
         for code in error_codes:
             error = ExecutionError(
-                message=f"Test error for {code.name}", error_code=code,
+                message=f"Test error for {code.name}",
+                error_code=code,
             )
             assert error.error_code == code
             assert isinstance(error, ExecutionError)

@@ -67,7 +67,8 @@ class AsyncHookExecutor:
         self._semaphore = asyncio.Semaphore(max_concurrent)
 
     async def execute_strategy(
-        self, strategy: HookStrategy,
+        self,
+        strategy: HookStrategy,
     ) -> AsyncHookExecutionResult:
         with LoggingContext(
             "async_hook_strategy",
@@ -215,7 +216,8 @@ class AsyncHookExecutor:
 
             try:
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout_val,
+                    process.communicate(),
+                    timeout=timeout_val,
                 )
             except TimeoutError:
                 process.kill()
@@ -309,7 +311,9 @@ class AsyncHookExecutor:
                     self.console.print(issue)
 
     async def _handle_retries(
-        self, strategy: HookStrategy, results: list[HookResult],
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> list[HookResult]:
         if strategy.retry_policy == RetryPolicy.FORMATTING_ONLY:
             return await self._retry_formatting_hooks(strategy, results)
@@ -318,7 +322,9 @@ class AsyncHookExecutor:
         return results
 
     async def _retry_formatting_hooks(
-        self, strategy: HookStrategy, results: list[HookResult],
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> list[HookResult]:
         formatting_hooks_failed: set[str] = set()
 
@@ -334,7 +340,9 @@ class AsyncHookExecutor:
         retry_results = await asyncio.gather(*retry_tasks, return_exceptions=True)
 
         updated_results: list[HookResult] = []
-        for i, (prev_result, new_result) in enumerate(zip(results, retry_results, strict=False)):
+        for i, (prev_result, new_result) in enumerate(
+            zip(results, retry_results, strict=False)
+        ):
             if isinstance(new_result, Exception):
                 hook = strategy.hooks[i]
                 error_result = HookResult(
@@ -356,7 +364,9 @@ class AsyncHookExecutor:
         return updated_results
 
     async def _retry_all_hooks(
-        self, strategy: HookStrategy, results: list[HookResult],
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> list[HookResult]:
         failed_indices = [i for i, r in enumerate(results) if r.status == "failed"]
 

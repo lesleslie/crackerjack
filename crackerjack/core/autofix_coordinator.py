@@ -106,7 +106,8 @@ class AutofixCoordinator:
         return failed_hooks
 
     def _get_hook_specific_fixes(
-        self, failed_hooks: set[str],
+        self,
+        failed_hooks: set[str],
     ) -> list[tuple[list[str], str]]:
         hook_specific_fixes: list[tuple[list[str], str]] = []
         if "bandit" in failed_hooks:
@@ -121,14 +122,21 @@ class AutofixCoordinator:
             return False
         try:
             result = subprocess.run(
-                cmd, check=False, capture_output=True, text=True, timeout=30, cwd=self.pkg_path,
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=self.pkg_path,
             )
             return self._handle_command_result(result, description)
         except Exception:
             return False
 
     def _handle_command_result(
-        self, result: subprocess.CompletedProcess[str], description: str,
+        self,
+        result: subprocess.CompletedProcess[str],
+        description: str,
     ) -> bool:
         return bool(result.returncode == 0 or self._is_successful_fix(result))
 

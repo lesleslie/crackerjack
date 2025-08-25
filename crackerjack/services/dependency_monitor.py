@@ -87,7 +87,9 @@ class DependencyMonitorService:
             return {}
 
     def _extract_main_dependencies(
-        self, project_data: dict, dependencies: dict[str, str],
+        self,
+        project_data: dict,
+        dependencies: dict[str, str],
     ) -> None:
         """Extract main dependencies from project data."""
         if "dependencies" not in project_data:
@@ -99,7 +101,9 @@ class DependencyMonitorService:
                 dependencies[name] = version
 
     def _extract_optional_dependencies(
-        self, project_data: dict, dependencies: dict[str, str],
+        self,
+        project_data: dict,
+        dependencies: dict[str, str],
     ) -> None:
         """Extract optional dependencies from project data."""
         if "optional-dependencies" not in project_data:
@@ -126,7 +130,8 @@ class DependencyMonitorService:
         return spec.strip(), "latest"
 
     def _check_security_vulnerabilities(
-        self, dependencies: dict[str, str],
+        self,
+        dependencies: dict[str, str],
     ) -> list[DependencyVulnerability]:
         vulnerabilities: list[DependencyVulnerability] = []
 
@@ -140,15 +145,19 @@ class DependencyMonitorService:
         return vulnerabilities
 
     def _check_with_safety(
-        self, dependencies: dict[str, str],
+        self,
+        dependencies: dict[str, str],
     ) -> list[DependencyVulnerability]:
         cmd = ["uv", "run", "safety", "check", "--file", "__TEMP_FILE__", "--json"]
         return self._run_vulnerability_tool(
-            dependencies, cmd, self._parse_safety_output,
+            dependencies,
+            cmd,
+            self._parse_safety_output,
         )
 
     def _check_with_pip_audit(
-        self, dependencies: dict[str, str],
+        self,
+        dependencies: dict[str, str],
     ) -> list[DependencyVulnerability]:
         cmd = [
             "uv",
@@ -160,7 +169,9 @@ class DependencyMonitorService:
             "json",
         ]
         return self._run_vulnerability_tool(
-            dependencies, cmd, self._parse_pip_audit_output,
+            dependencies,
+            cmd,
+            self._parse_pip_audit_output,
         )
 
     def _run_vulnerability_tool(
@@ -174,7 +185,8 @@ class DependencyMonitorService:
             temp_file = self._create_requirements_file(dependencies)
             try:
                 result = self._execute_vulnerability_command(
-                    command_template, temp_file,
+                    command_template,
+                    temp_file,
                 )
                 return self._process_vulnerability_result(result, parser_func)
             finally:
@@ -198,13 +210,16 @@ class DependencyMonitorService:
             return f.name
 
     def _execute_vulnerability_command(
-        self, command_template: list[str], temp_file: str,
+        self,
+        command_template: list[str],
+        temp_file: str,
     ) -> subprocess.CompletedProcess[str]:
         """Execute vulnerability scanning command with temp file."""
         cmd = [part.replace("__TEMP_FILE__", temp_file) for part in command_template]
         return subprocess.run(
             cmd,
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
             timeout=30,
         )
@@ -244,7 +259,8 @@ class DependencyMonitorService:
         return vulnerabilities
 
     def _parse_pip_audit_output(
-        self, audit_data: t.Any,
+        self,
+        audit_data: t.Any,
     ) -> list[DependencyVulnerability]:
         vulnerabilities: list[DependencyVulnerability] = []
 
@@ -275,7 +291,10 @@ class DependencyMonitorService:
                 continue
 
             update = self._check_package_major_update(
-                package, current_version, cache, current_time,
+                package,
+                current_version,
+                cache,
+                current_time,
             )
             if update:
                 major_updates.append(update)
@@ -284,21 +303,33 @@ class DependencyMonitorService:
         return major_updates
 
     def _check_package_major_update(
-        self, package: str, current_version: str, cache: dict, current_time: float,
+        self,
+        package: str,
+        current_version: str,
+        cache: dict,
+        current_time: float,
     ) -> MajorUpdate | None:
         """Check if a specific package has a major update available."""
         cache_key = self._build_cache_key(package, current_version)
 
         # Try to get from cache first
         cached_update = self._get_cached_major_update(
-            cache_key, cache, current_time, package, current_version,
+            cache_key,
+            cache,
+            current_time,
+            package,
+            current_version,
         )
         if cached_update is not None:
             return cached_update
 
         # Check for updates and update cache
         return self._fetch_and_cache_update_info(
-            package, current_version, cache_key, cache, current_time,
+            package,
+            current_version,
+            cache_key,
+            cache,
+            current_time,
         )
 
     def _build_cache_key(self, package: str, current_version: str) -> str:
@@ -322,11 +353,16 @@ class DependencyMonitorService:
             return None
 
         return self._create_major_update_from_cache(
-            package, current_version, cached_data,
+            package,
+            current_version,
+            cached_data,
         )
 
     def _is_cache_entry_valid(
-        self, cache_key: str, cache: dict, current_time: float,
+        self,
+        cache_key: str,
+        cache: dict,
+        current_time: float,
     ) -> bool:
         """Check if cache entry exists and is not expired."""
         if cache_key not in cache:
@@ -337,7 +373,10 @@ class DependencyMonitorService:
         return cache_age < 86400  # Not expired (24 hours)
 
     def _create_major_update_from_cache(
-        self, package: str, current_version: str, cached_data: dict,
+        self,
+        package: str,
+        current_version: str,
+        cached_data: dict,
     ) -> MajorUpdate:
         """Create MajorUpdate instance from cached data."""
         return MajorUpdate(
@@ -362,15 +401,23 @@ class DependencyMonitorService:
             return None
 
         has_major_update = self._is_major_version_update(
-            current_version, latest_info["version"],
+            current_version,
+            latest_info["version"],
         )
 
         self._update_cache_entry(
-            cache, cache_key, current_time, has_major_update, latest_info,
+            cache,
+            cache_key,
+            current_time,
+            has_major_update,
+            latest_info,
         )
 
         return self._create_major_update_if_needed(
-            package, current_version, latest_info, has_major_update,
+            package,
+            current_version,
+            latest_info,
+            has_major_update,
         )
 
     def _create_major_update_if_needed(
@@ -500,7 +547,8 @@ class DependencyMonitorService:
                 json.dump(cache, f, indent=2)
 
     def _report_vulnerabilities(
-        self, vulnerabilities: list[DependencyVulnerability],
+        self,
+        vulnerabilities: list[DependencyVulnerability],
     ) -> None:
         self.console.print("\n[bold red]🚨 Security Vulnerabilities Found![/bold red]")
         self.console.print(

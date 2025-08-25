@@ -23,7 +23,8 @@ from crackerjack.services.unified_config import CrackerjackConfig
 
 def pytest_configure(config: Config) -> None:
     config.addinivalue_line(
-        "markers", "benchmark: mark test as a benchmark (disables parallel execution)",
+        "markers",
+        "benchmark: mark test as a benchmark (disables parallel execution)",
     )
     if not hasattr(config, "workerinput"):
         pass
@@ -73,7 +74,8 @@ def pytest_runtest_protocol(item: t.Any) -> None:
 
 
 def pytest_benchmark_compare_machine_info(
-    machine_info: dict[str, t.Any], compared_benchmark: t.Any,
+    machine_info: dict[str, t.Any],
+    compared_benchmark: t.Any,
 ) -> bool:
     return True
 
@@ -268,7 +270,9 @@ class ConfigFactory:
     def create_ci_config():
         """Create configuration optimized for CI environment."""
         return ConfigFactory.create_basic_config(
-            test_workers=4, test_timeout=120, skip_hooks=False,
+            test_workers=4,
+            test_timeout=120,
+            skip_hooks=False,
         )
 
     @staticmethod

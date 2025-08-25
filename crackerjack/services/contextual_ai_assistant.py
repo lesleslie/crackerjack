@@ -49,7 +49,8 @@ class ContextualAIAssistant:
         self.cache_file = self.project_root / ".crackerjack" / "ai_context.json"
 
     def get_contextual_recommendations(
-        self, max_recommendations: int = 5,
+        self,
+        max_recommendations: int = 5,
     ) -> list[AIRecommendation]:
         context = self._analyze_project_context()
         recommendations = self._generate_recommendations(context)
@@ -83,7 +84,8 @@ class ContextualAIAssistant:
         return context
 
     def _generate_recommendations(
-        self, context: ProjectContext,
+        self,
+        context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations: list[AIRecommendation] = []
 
@@ -97,7 +99,8 @@ class ContextualAIAssistant:
         return recommendations
 
     def _get_testing_recommendations(
-        self, context: ProjectContext,
+        self,
+        context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -129,7 +132,8 @@ class ContextualAIAssistant:
         return recommendations
 
     def _get_code_quality_recommendations(
-        self, context: ProjectContext,
+        self,
+        context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -161,7 +165,8 @@ class ContextualAIAssistant:
         return recommendations
 
     def _get_security_recommendations(
-        self, context: ProjectContext,
+        self,
+        context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -181,7 +186,8 @@ class ContextualAIAssistant:
         return recommendations
 
     def _get_maintenance_recommendations(
-        self, context: ProjectContext,
+        self,
+        context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -201,7 +207,8 @@ class ContextualAIAssistant:
         return recommendations
 
     def _get_workflow_recommendations(
-        self, context: ProjectContext,
+        self,
+        context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -220,7 +227,8 @@ class ContextualAIAssistant:
         return recommendations
 
     def _get_documentation_recommendations(
-        self, context: ProjectContext,
+        self,
+        context: ProjectContext,
     ) -> list[AIRecommendation]:
         recommendations = []
 
@@ -250,7 +258,8 @@ class ContextualAIAssistant:
             if coverage_file.exists():
                 result = subprocess.run(
                     ["uv", "run", "coverage", "report", "--format=json"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=10,
                     cwd=self.project_root,
@@ -267,7 +276,8 @@ class ContextualAIAssistant:
         with suppress(Exception):
             result = subprocess.run(
                 ["uv", "run", "ruff", "check", ".", "--output-format=json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=30,
                 cwd=self.project_root,
@@ -360,7 +370,8 @@ class ContextualAIAssistant:
         with suppress(Exception):
             result = subprocess.run(
                 ["git", "log", "-1", "--format=%ct"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=5,
                 cwd=self.project_root,
@@ -379,7 +390,8 @@ class ContextualAIAssistant:
         with suppress(Exception):
             result = subprocess.run(
                 ["uv", "run", "bandit", "-r", ".", "-f", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=30,
                 cwd=self.project_root,
@@ -432,7 +444,8 @@ class ContextualAIAssistant:
 
         for i, rec in enumerate(recommendations, 1):
             priority_color = {"high": "red", "medium": "yellow", "low": "blue"}.get(
-                rec.priority, "white",
+                rec.priority,
+                "white",
             )
 
             category_emoji = {

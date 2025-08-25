@@ -103,7 +103,8 @@ class Task:
         return self.definition.dependencies
 
     def get_resolved_dependencies(
-        self, workflow_tasks: dict[str, "Task"],
+        self,
+        workflow_tasks: dict[str, "Task"],
     ) -> list["Task"]:
         return [
             workflow_tasks[dep_name]
@@ -365,7 +366,11 @@ class WorkflowManager:
         }
 
     def _add_status_branch(
-        self, tree: Tree, status: TaskStatus, label: str, color: str,
+        self,
+        tree: Tree,
+        status: TaskStatus,
+        label: str,
+        color: str,
     ) -> None:
         status_tasks = [task for task in self.tasks.values() if task.status == status]
 
@@ -405,7 +410,8 @@ class InteractiveCLI:
             partial(self._add_testing_phase, enabled=options.test),
             self._add_comprehensive_hooks_phase,
             partial(
-                self._add_version_phase, enabled=bool(options.publish or options.bump),
+                self._add_version_phase,
+                enabled=bool(options.publish or options.bump),
             ),
             partial(self._add_publish_phase, enabled=bool(options.publish)),
             partial(self._add_commit_phase, enabled=options.commit),
@@ -420,7 +426,8 @@ class InteractiveCLI:
         self.workflow.load_workflow(workflow_def)
 
         self.logger.info(
-            "Dynamic workflow created", extra={"task_count": len(workflow_def)},
+            "Dynamic workflow created",
+            extra={"task_count": len(workflow_def)},
         )
 
     def _add_setup_phase(self, builder: WorkflowBuilder, last_task: str) -> str:
@@ -443,7 +450,10 @@ class InteractiveCLI:
         return "config"
 
     def _add_cleaning_phase(
-        self, builder: WorkflowBuilder, last_task: str, enabled: bool,
+        self,
+        builder: WorkflowBuilder,
+        last_task: str,
+        enabled: bool,
     ) -> str:
         return (
             builder.add_conditional_task(
@@ -468,7 +478,10 @@ class InteractiveCLI:
         return "fast_hooks"
 
     def _add_testing_phase(
-        self, builder: WorkflowBuilder, last_task: str, enabled: bool,
+        self,
+        builder: WorkflowBuilder,
+        last_task: str,
+        enabled: bool,
     ) -> str:
         return (
             builder.add_conditional_task(
@@ -483,7 +496,9 @@ class InteractiveCLI:
         )
 
     def _add_comprehensive_hooks_phase(
-        self, builder: WorkflowBuilder, last_task: str,
+        self,
+        builder: WorkflowBuilder,
+        last_task: str,
     ) -> str:
         builder.add_task(
             "comprehensive_hooks",
@@ -495,7 +510,10 @@ class InteractiveCLI:
         return "comprehensive_hooks"
 
     def _add_version_phase(
-        self, builder: WorkflowBuilder, last_task: str, enabled: bool,
+        self,
+        builder: WorkflowBuilder,
+        last_task: str,
+        enabled: bool,
     ) -> str:
         return (
             builder.add_conditional_task(
@@ -510,7 +528,10 @@ class InteractiveCLI:
         )
 
     def _add_publish_phase(
-        self, builder: WorkflowBuilder, last_task: str, enabled: bool,
+        self,
+        builder: WorkflowBuilder,
+        last_task: str,
+        enabled: bool,
     ) -> str:
         return (
             builder.add_conditional_task(
@@ -525,7 +546,10 @@ class InteractiveCLI:
         )
 
     def _add_commit_phase(
-        self, builder: WorkflowBuilder, last_task: str, enabled: bool,
+        self,
+        builder: WorkflowBuilder,
+        last_task: str,
+        enabled: bool,
     ) -> str:
         return (
             builder.add_conditional_task(
@@ -540,7 +564,10 @@ class InteractiveCLI:
         )
 
     def _add_pr_phase(
-        self, builder: WorkflowBuilder, last_task: str, enabled: bool,
+        self,
+        builder: WorkflowBuilder,
+        last_task: str,
+        enabled: bool,
     ) -> str:
         return (
             builder.add_conditional_task(
@@ -647,7 +674,9 @@ def launch_interactive_cli(version: str, options: t.Any = None) -> None:
     version_text = Text(f"v{version}", style="dim cyan")
     subtitle = Text("Your Python project management toolkit", style="italic")
     panel = Panel(
-        f"{title} {version_text}\n{subtitle}", border_style="cyan", expand=False,
+        f"{title} {version_text}\n{subtitle}",
+        border_style="cyan",
+        expand=False,
     )
     console.print(panel)
     console.print()

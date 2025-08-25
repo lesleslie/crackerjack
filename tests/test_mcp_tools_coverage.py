@@ -239,7 +239,8 @@ class TestErrorAnalysis:
 
         # Test without suggestions
         detected_errors_no_sugg, suggestions_no_sugg = _detect_errors_and_suggestions(
-            error_text, False,
+            error_text,
+            False,
         )
 
         assert detected_errors_no_sugg == detected_errors
@@ -307,11 +308,15 @@ class TestCoreToolsRegistration:
         mock_orchestrator = Mock()
         mock_orchestrator.run_fast_hooks_only.return_value = True
 
-        with patch(
-            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context,
-        ), patch(
-            "crackerjack.mcp.tools.core_tools.WorkflowOrchestrator",
-            return_value=mock_orchestrator,
+        with (
+            patch(
+                "crackerjack.mcp.tools.core_tools.get_context",
+                return_value=mock_context,
+            ),
+            patch(
+                "crackerjack.mcp.tools.core_tools.WorkflowOrchestrator",
+                return_value=mock_orchestrator,
+            ),
         ):
             # Import the function after patching
             from crackerjack.mcp.tools.core_tools import register_core_tools
@@ -355,11 +360,15 @@ class TestCoreToolsRegistration:
         mock_debugger = Mock()
         mock_debugger.enabled = True
 
-        with patch(
-            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context,
-        ), patch(
-            "crackerjack.mcp.tools.core_tools.get_ai_agent_debugger",
-            return_value=mock_debugger,
+        with (
+            patch(
+                "crackerjack.mcp.tools.core_tools.get_context",
+                return_value=mock_context,
+            ),
+            patch(
+                "crackerjack.mcp.tools.core_tools.get_ai_agent_debugger",
+                return_value=mock_debugger,
+            ),
         ):
             # Import and register analyze errors tool
             from crackerjack.mcp.tools.core_tools import (
@@ -712,12 +721,15 @@ class TestComprehensiveStatus:
         mock_context.config.project_path = Path("/test")
 
         # Mock an exception during service discovery
-        with patch(
-            "crackerjack.mcp.tools.monitoring_tools.get_context",
-            return_value=mock_context,
-        ), patch(
-            "crackerjack.mcp.tools.monitoring_tools.find_mcp_server_processes",
-            side_effect=Exception("Service error"),
+        with (
+            patch(
+                "crackerjack.mcp.tools.monitoring_tools.get_context",
+                return_value=mock_context,
+            ),
+            patch(
+                "crackerjack.mcp.tools.monitoring_tools.find_mcp_server_processes",
+                side_effect=Exception("Service error"),
+            ),
         ):
             result = await _get_comprehensive_status()
 
@@ -868,11 +880,15 @@ class TestToolsIntegration:
         mock_context.config.project_path = Path("/test")
         mock_context.rate_limiter = None
 
-        with patch(
-            "crackerjack.mcp.tools.core_tools.get_context", return_value=mock_context,
-        ), patch(
-            "crackerjack.mcp.tools.monitoring_tools.get_context",
-            return_value=mock_context,
+        with (
+            patch(
+                "crackerjack.mcp.tools.core_tools.get_context",
+                return_value=mock_context,
+            ),
+            patch(
+                "crackerjack.mcp.tools.monitoring_tools.get_context",
+                return_value=mock_context,
+            ),
         ):
             # Both tools should use the same context
             core_validation = await _validate_stage_request(mock_context, None)

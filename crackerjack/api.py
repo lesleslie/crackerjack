@@ -53,7 +53,8 @@ class CrackerjackAPI:
         self.verbose = verbose
 
         self.orchestrator = WorkflowOrchestrator(
-            console=self.console, pkg_path=self.project_path,
+            console=self.console,
+            pkg_path=self.project_path,
         )
 
         self.container = self.orchestrator.container
@@ -78,7 +79,9 @@ class CrackerjackAPI:
         return self._interactive_cli
 
     def run_quality_checks(
-        self, fast_only: bool = False, autofix: bool = True,
+        self,
+        fast_only: bool = False,
+        autofix: bool = True,
     ) -> QualityCheckResult:
         import asyncio
         import time
@@ -119,7 +122,9 @@ class CrackerjackAPI:
             )
 
     def clean_code(
-        self, target_dir: Path | None = None, backup: bool = True,
+        self,
+        target_dir: Path | None = None,
+        backup: bool = True,
     ) -> list[CleaningResult]:
         """Clean code with TODO validation and comprehensive error handling."""
         target_dir = target_dir or self.project_path
@@ -137,7 +142,9 @@ class CrackerjackAPI:
             self._handle_todos_found(todos_found, target_dir)
 
     def _handle_todos_found(
-        self, todos_found: list[tuple[Path, int, str]], target_dir: Path,
+        self,
+        todos_found: list[tuple[Path, int, str]],
+        target_dir: Path,
     ) -> None:
         """Handle case where TODOs are found in codebase."""
         todo_count = len(todos_found)
@@ -215,7 +222,9 @@ class CrackerjackAPI:
             self.logger.info("Running tests")
 
             options = self._create_options(
-                test=True, test_workers=workers or 0, test_timeout=timeout or 0,
+                test=True,
+                test_workers=workers or 0,
+                test_timeout=timeout or 0,
             )
 
             success = asyncio.run(
@@ -247,7 +256,9 @@ class CrackerjackAPI:
             )
 
     def publish_package(
-        self, version_bump: str | None = None, dry_run: bool = False,
+        self,
+        version_bump: str | None = None,
+        dry_run: bool = False,
     ) -> PublishResult:
         try:
             self.logger.info(
@@ -255,7 +266,8 @@ class CrackerjackAPI:
             )
 
             options = self._create_options(
-                bump=version_bump, publish="pypi" if not dry_run else None,
+                bump=version_bump,
+                publish="pypi" if not dry_run else None,
             )
 
             success = asyncio.run(
@@ -273,11 +285,15 @@ class CrackerjackAPI:
             self.logger.exception(f"Package publishing failed: {e}")
 
             return PublishResult(
-                success=False, version="", published_to=[], errors=[str(e)],
+                success=False,
+                version="",
+                published_to=[],
+                errors=[str(e)],
             )
 
     def run_interactive_workflow(
-        self, options: InteractiveWorkflowOptions | None = None,
+        self,
+        options: InteractiveWorkflowOptions | None = None,
     ) -> bool:
         options = options or InteractiveWorkflowOptions()
 
@@ -479,7 +495,9 @@ class CrackerjackAPI:
         return any(parent.name in ignore_patterns for parent in py_file.parents)
 
     def _scan_files_for_todos(
-        self, python_files: list[Path], todo_pattern: t.Any,
+        self,
+        python_files: list[Path],
+        todo_pattern: t.Any,
     ) -> list[tuple[Path, int, str]]:
         """Scan Python files for TODO comments."""
         todos_found = []
@@ -491,7 +509,9 @@ class CrackerjackAPI:
         return todos_found
 
     def _scan_single_file_for_todos(
-        self, file_path: Path, todo_pattern: t.Any,
+        self,
+        file_path: Path,
+        todo_pattern: t.Any,
     ) -> list[tuple[Path, int, str]]:
         """Scan a single file for TODO comments."""
         todos = []
@@ -507,15 +527,19 @@ class CrackerjackAPI:
 
 
 def run_quality_checks(
-    project_path: Path | None = None, fast_only: bool = False, autofix: bool = True,
+    project_path: Path | None = None,
+    fast_only: bool = False,
+    autofix: bool = True,
 ) -> QualityCheckResult:
     return CrackerjackAPI(project_path=project_path).run_quality_checks(
-        fast_only=fast_only, autofix=autofix,
+        fast_only=fast_only,
+        autofix=autofix,
     )
 
 
 def clean_code(
-    project_path: Path | None = None, backup: bool = True,
+    project_path: Path | None = None,
+    backup: bool = True,
 ) -> list[CleaningResult]:
     return CrackerjackAPI(project_path=project_path).clean_code(backup=backup)
 
@@ -530,5 +554,6 @@ def publish_package(
     dry_run: bool = False,
 ) -> PublishResult:
     return CrackerjackAPI(project_path=project_path).publish_package(
-        version_bump=version_bump, dry_run=dry_run,
+        version_bump=version_bump,
+        dry_run=dry_run,
     )

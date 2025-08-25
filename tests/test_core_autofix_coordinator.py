@@ -51,7 +51,9 @@ class TestAutofixCoordinator:
         with (
             patch.object(coordinator, "_should_skip_autofix", return_value=False),
             patch.object(
-                coordinator, "_apply_comprehensive_stage_fixes", return_value=True,
+                coordinator,
+                "_apply_comprehensive_stage_fixes",
+                return_value=True,
             ),
         ):
             result = coordinator.apply_autofix_for_hooks("comprehensive", hook_results)
@@ -81,7 +83,9 @@ class TestAutofixCoordinator:
         hook_results = []
 
         with patch.object(
-            coordinator, "_should_skip_autofix", side_effect=Exception("Test error"),
+            coordinator,
+            "_should_skip_autofix",
+            side_effect=Exception("Test error"),
         ):
             result = coordinator.apply_autofix_for_hooks("fast", hook_results)
 
@@ -95,25 +99,39 @@ class TestAutofixCoordinator:
 
         with (
             patch.object(
-                coordinator, "_apply_fast_stage_fixes", return_value=True,
+                coordinator,
+                "_apply_fast_stage_fixes",
+                return_value=True,
             ) as mock_fast,
             patch.object(
-                coordinator, "_apply_comprehensive_stage_fixes", return_value=True,
+                coordinator,
+                "_apply_comprehensive_stage_fixes",
+                return_value=True,
             ) as mock_comp,
             patch.object(
-                coordinator, "_run_fix_command", return_value=True,
+                coordinator,
+                "_run_fix_command",
+                return_value=True,
             ) as mock_run,
             patch.object(
-                coordinator, "_check_tool_success_patterns", return_value=True,
+                coordinator,
+                "_check_tool_success_patterns",
+                return_value=True,
             ) as mock_check,
             patch.object(
-                coordinator, "_validate_fix_command", return_value=True,
+                coordinator,
+                "_validate_fix_command",
+                return_value=True,
             ) as mock_validate_cmd,
             patch.object(
-                coordinator, "_validate_hook_result", return_value=True,
+                coordinator,
+                "_validate_hook_result",
+                return_value=True,
             ) as mock_validate_hook,
             patch.object(
-                coordinator, "_should_skip_autofix", return_value=False,
+                coordinator,
+                "_should_skip_autofix",
+                return_value=False,
             ) as mock_skip,
         ):
             # Test all public interface methods
@@ -141,7 +159,9 @@ class TestAutofixCoordinator:
     def test_execute_fast_fixes(self, coordinator) -> None:
         """Test execution of fast fixes."""
         with patch.object(
-            coordinator, "_run_fix_command", return_value=True,
+            coordinator,
+            "_run_fix_command",
+            return_value=True,
         ) as mock_run:
             result = coordinator._execute_fast_fixes()
 
@@ -393,7 +413,9 @@ class TestAutofixCoordinatorIntegration:
         hook_results = []
 
         with patch.object(
-            coordinator, "_run_fix_command", return_value=True,
+            coordinator,
+            "_run_fix_command",
+            return_value=True,
         ) as mock_run:
             result = coordinator.apply_autofix_for_hooks("fast", hook_results)
 
@@ -417,7 +439,9 @@ class TestAutofixCoordinatorIntegration:
         hook_results = [ruff_result, bandit_result]
 
         with patch.object(
-            coordinator, "_run_fix_command", return_value=True,
+            coordinator,
+            "_run_fix_command",
+            return_value=True,
         ) as mock_run:
             result = coordinator.apply_autofix_for_hooks("comprehensive", hook_results)
 
@@ -431,7 +455,9 @@ class TestAutofixCoordinatorIntegration:
 
         # Simulate subprocess error
         with patch.object(
-            coordinator, "_run_fix_command", side_effect=Exception("Test error"),
+            coordinator,
+            "_run_fix_command",
+            side_effect=Exception("Test error"),
         ):
             result = coordinator.apply_autofix_for_hooks("fast", hook_results)
 

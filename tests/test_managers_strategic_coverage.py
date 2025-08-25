@@ -60,10 +60,17 @@ class TestPublishManagerImpl:
 
     def test_bump_version_patch(self, publish_manager) -> None:
         """Test patch version bumping."""
-        with patch.object(
-            publish_manager, "_get_current_version", return_value="1.0.0",
-        ), patch.object(
-            publish_manager, "_update_version_in_file", return_value=True,
+        with (
+            patch.object(
+                publish_manager,
+                "_get_current_version",
+                return_value="1.0.0",
+            ),
+            patch.object(
+                publish_manager,
+                "_update_version_in_file",
+                return_value=True,
+            ),
         ):
             result = publish_manager.bump_version("patch")
 
@@ -71,10 +78,17 @@ class TestPublishManagerImpl:
 
     def test_bump_version_minor(self, publish_manager) -> None:
         """Test minor version bumping."""
-        with patch.object(
-            publish_manager, "_get_current_version", return_value="1.0.0",
-        ), patch.object(
-            publish_manager, "_update_version_in_file", return_value=True,
+        with (
+            patch.object(
+                publish_manager,
+                "_get_current_version",
+                return_value="1.0.0",
+            ),
+            patch.object(
+                publish_manager,
+                "_update_version_in_file",
+                return_value=True,
+            ),
         ):
             result = publish_manager.bump_version("minor")
 
@@ -82,10 +96,17 @@ class TestPublishManagerImpl:
 
     def test_bump_version_major(self, publish_manager) -> None:
         """Test major version bumping."""
-        with patch.object(
-            publish_manager, "_get_current_version", return_value="1.0.0",
-        ), patch.object(
-            publish_manager, "_update_version_in_file", return_value=True,
+        with (
+            patch.object(
+                publish_manager,
+                "_get_current_version",
+                return_value="1.0.0",
+            ),
+            patch.object(
+                publish_manager,
+                "_update_version_in_file",
+                return_value=True,
+            ),
         ):
             result = publish_manager.bump_version("major")
 
@@ -93,10 +114,17 @@ class TestPublishManagerImpl:
 
     def test_publish_package_success(self, publish_manager) -> None:
         """Test successful package publishing."""
-        with patch.object(
-            publish_manager, "_validate_prerequisites", return_value=True,
-        ), patch.object(
-            publish_manager, "_perform_publish_workflow", return_value=True,
+        with (
+            patch.object(
+                publish_manager,
+                "_validate_prerequisites",
+                return_value=True,
+            ),
+            patch.object(
+                publish_manager,
+                "_perform_publish_workflow",
+                return_value=True,
+            ),
         ):
             result = publish_manager.publish_package()
 
@@ -105,7 +133,9 @@ class TestPublishManagerImpl:
     def test_publish_package_failure(self, publish_manager) -> None:
         """Test failed package publishing."""
         with patch.object(
-            publish_manager, "_validate_prerequisites", return_value=False,
+            publish_manager,
+            "_validate_prerequisites",
+            return_value=False,
         ):
             result = publish_manager.publish_package()
 
@@ -113,10 +143,17 @@ class TestPublishManagerImpl:
 
     def test_validate_auth(self, publish_manager) -> None:
         """Test authentication validation."""
-        with patch.object(
-            publish_manager, "_collect_auth_methods", return_value=["env_token"],
-        ), patch.object(
-            publish_manager, "_report_auth_status", return_value=True,
+        with (
+            patch.object(
+                publish_manager,
+                "_collect_auth_methods",
+                return_value=["env_token"],
+            ),
+            patch.object(
+                publish_manager,
+                "_report_auth_status",
+                return_value=True,
+            ),
         ):
             result = publish_manager.validate_auth()
 

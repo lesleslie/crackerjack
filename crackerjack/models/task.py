@@ -80,7 +80,10 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
             self.metadata = {}
 
     def start_task(
-        self, task_id: str, task_name: str, details: str | None = None,
+        self,
+        task_id: str,
+        task_name: str,
+        details: str | None = None,
     ) -> None:
         task = TaskStatusData(
             id=task_id,

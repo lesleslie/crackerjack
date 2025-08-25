@@ -253,7 +253,9 @@ class TestMoreAgentCoverage:
 
         # Test with fixes applied
         result_with_fixes = FixResult(
-            success=True, confidence=0.9, fixes_applied=["fix1", "fix2"],
+            success=True,
+            confidence=0.9,
+            fixes_applied=["fix1", "fix2"],
         )
         assert len(result_with_fixes.fixes_applied) == 2
 

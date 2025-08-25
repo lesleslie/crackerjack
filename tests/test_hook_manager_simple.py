@@ -32,7 +32,11 @@ class TestHookManager:
     @patch("crackerjack.managers.hook_manager.HookConfigLoader")
     @patch("crackerjack.managers.hook_manager.HookExecutor")
     def test_init_with_mocks(
-        self, mock_executor_class, mock_loader_class, console, pkg_path,
+        self,
+        mock_executor_class,
+        mock_loader_class,
+        console,
+        pkg_path,
     ) -> None:
         HookManagerImpl(console, pkg_path)
 

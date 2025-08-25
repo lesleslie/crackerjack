@@ -439,7 +439,10 @@ class DynamicConfigGenerator:
         self.template = jinja2.Template(PRE_COMMIT_TEMPLATE)
 
     def _should_include_hook(
-        self, hook: HookMetadata, config: ConfigMode, enabled_experimental: list[str],
+        self,
+        hook: HookMetadata,
+        config: ConfigMode,
+        enabled_experimental: list[str],
     ) -> bool:
         if hook["tier"] not in config["tiers"]:
             return False
@@ -451,7 +454,9 @@ class DynamicConfigGenerator:
         return not hook["time_estimate"] > config["max_time"]
 
     def filter_hooks_for_mode(
-        self, mode: str, enabled_experimental: list[str] | None = None,
+        self,
+        mode: str,
+        enabled_experimental: list[str] | None = None,
     ) -> list[HookMetadata]:
         config = CONFIG_MODES[mode]
         filtered_hooks: list[HookMetadata] = []
@@ -464,7 +469,8 @@ class DynamicConfigGenerator:
         return filtered_hooks
 
     def group_hooks_by_repo(
-        self, hooks: list[HookMetadata],
+        self,
+        hooks: list[HookMetadata],
     ) -> dict[tuple[str, str], list[HookMetadata]]:
         repo_groups: dict[tuple[str, str], list[HookMetadata]] = {}
         for hook in hooks:
@@ -492,7 +498,9 @@ class DynamicConfigGenerator:
         return None
 
     def _merge_configs(
-        self, base_config: dict[str, t.Any], new_config: dict[str, t.Any],
+        self,
+        base_config: dict[str, t.Any],
+        new_config: dict[str, t.Any],
     ) -> dict[str, t.Any]:
         result = base_config.copy()
 
@@ -509,7 +517,9 @@ class DynamicConfigGenerator:
         return result
 
     def generate_config(
-        self, mode: str, enabled_experimental: list[str] | None = None,
+        self,
+        mode: str,
+        enabled_experimental: list[str] | None = None,
     ) -> str:
         filtered_hooks = self.filter_hooks_for_mode(mode, enabled_experimental)
         repo_groups = self.group_hooks_by_repo(filtered_hooks)
@@ -526,7 +536,9 @@ class DynamicConfigGenerator:
         return self.template.render(repos=repos)
 
     def create_temp_config(
-        self, mode: str, enabled_experimental: list[str] | None = None,
+        self,
+        mode: str,
+        enabled_experimental: list[str] | None = None,
     ) -> Path:
         config_content = self.generate_config(mode, enabled_experimental)
         temp_file = tempfile.NamedTemporaryFile(
@@ -544,7 +556,8 @@ class DynamicConfigGenerator:
 
 
 def generate_config_for_mode(
-    mode: str, enabled_experimental: list[str] | None = None,
+    mode: str,
+    enabled_experimental: list[str] | None = None,
 ) -> Path:
     return DynamicConfigGenerator().create_temp_config(mode, enabled_experimental)
 

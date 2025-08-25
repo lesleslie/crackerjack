@@ -313,7 +313,9 @@ class WorkflowPipeline:
 
         if self._should_debug():
             self.debugger.log_workflow_phase(
-                "ai_agent_fixing", "started", details={"ai_agent": True},
+                "ai_agent_fixing",
+                "started",
+                details={"ai_agent": True},
             )
 
         try:
@@ -381,7 +383,9 @@ class WorkflowPipeline:
 
             if self._should_debug():
                 self.debugger.log_workflow_phase(
-                    "ai_agent_fixing", "failed", details={"error": str(e)},
+                    "ai_agent_fixing",
+                    "failed",
+                    details={"error": str(e)},
                 )
 
             return False
@@ -394,7 +398,8 @@ class WorkflowPipeline:
 
         # Collect test failures
         if hasattr(self.phases, "test_manager") and hasattr(
-            self.phases.test_manager, "get_test_failures",
+            self.phases.test_manager,
+            "get_test_failures",
         ):
             test_failures = self.phases.test_manager.get_test_failures()
             test_count = len(test_failures)
@@ -461,7 +466,9 @@ class WorkflowOrchestrator:
         from .container import create_container
 
         self.container = create_container(
-            console=self.console, pkg_path=self.pkg_path, dry_run=self.dry_run,
+            console=self.console,
+            pkg_path=self.pkg_path,
+            dry_run=self.dry_run,
         )
 
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)

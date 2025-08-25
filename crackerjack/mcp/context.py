@@ -49,7 +49,9 @@ class BatchedStateSaver:
         await self._flush_saves()
 
     async def schedule_save(
-        self, save_id: str, save_func: t.Callable[[], None],
+        self,
+        save_id: str,
+        save_func: t.Callable[[], None],
     ) -> None:
         async with self._lock:
             self._pending_saves[save_id] = save_func
@@ -166,7 +168,8 @@ class MCPServerContext:
             self.progress_dir.mkdir(exist_ok=True)
 
             self.cli_runner = WorkflowOrchestrator(
-                console=self.console, pkg_path=self.config.project_path,
+                console=self.console,
+                pkg_path=self.config.project_path,
             )
 
             self.state_manager = StateManager(
@@ -512,7 +515,9 @@ class MCPServerContext:
         return self.progress_dir / f"job-{job_id}.json"
 
     async def schedule_state_save(
-        self, save_id: str, save_func: t.Callable[[], None],
+        self,
+        save_id: str,
+        save_func: t.Callable[[], None],
     ) -> None:
         await self.batched_saver.schedule_save(save_id, save_func)
 

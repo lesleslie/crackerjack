@@ -52,14 +52,16 @@ class ProjectHealth:
 
         if self.lint_error_trend:
             recent_errors = sum(self.lint_error_trend[-5:]) / min(
-                len(self.lint_error_trend), 5,
+                len(self.lint_error_trend),
+                5,
             )
             lint_score = max(0, 1.0 - (recent_errors / 100))
             scores.append(lint_score)
 
         if self.test_coverage_trend:
             recent_coverage = sum(self.test_coverage_trend[-5:]) / min(
-                len(self.test_coverage_trend), 5,
+                len(self.test_coverage_trend),
+                5,
             )
             coverage_score = recent_coverage / 100.0
             scores.append(coverage_score)
@@ -177,7 +179,8 @@ class HealthMetricsService:
         with suppress(Exception):
             result = subprocess.run(
                 ["uv", "run", "ruff", "check", ".", "--output-format=json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=30,
                 cwd=self.project_root,
@@ -223,7 +226,8 @@ class HealthMetricsService:
                         "-q",
                         "--maxfail=1",
                     ],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=60,
                     cwd=self.project_root,
@@ -237,7 +241,8 @@ class HealthMetricsService:
 
             result = subprocess.run(
                 ["uv", "run", "coverage", "report", "--format=json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=15,
                 cwd=self.project_root,
@@ -536,4 +541,3 @@ class HealthMetricsService:
                 "config_completeness": health.config_completeness,
             },
         }
-

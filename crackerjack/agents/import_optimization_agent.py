@@ -106,7 +106,8 @@ class ImportOptimizationAgent(SubAgent):
         )
 
     def _find_mixed_imports(
-        self, module_imports: dict[str, list[dict[str, t.Any]]],
+        self,
+        module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> list[str]:
         mixed: list[str] = []
         for module, imports in module_imports.items():
@@ -128,7 +129,8 @@ class ImportOptimizationAgent(SubAgent):
         return redundant
 
     def _find_optimization_opportunities(
-        self, module_imports: dict[str, list[dict[str, t.Any]]],
+        self,
+        module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> list[str]:
         opportunities: list[str] = []
 

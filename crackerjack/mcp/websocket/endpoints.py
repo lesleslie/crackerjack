@@ -501,7 +501,9 @@ def _get_monitor_html(job_id: str) -> str:
 
 
 def register_endpoints(
-    app: FastAPI, job_manager: JobManager, progress_dir: Path,
+    app: FastAPI,
+    job_manager: JobManager,
+    progress_dir: Path,
 ) -> None:
     @app.get("/")
     async def get_status():

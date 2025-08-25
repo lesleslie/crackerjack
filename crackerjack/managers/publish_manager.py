@@ -18,13 +18,16 @@ class PublishManagerImpl:
         self.security = SecurityService()
 
     def _run_command(
-        self, cmd: list[str], timeout: int = 300,
+        self,
+        cmd: list[str],
+        timeout: int = 300,
     ) -> subprocess.CompletedProcess[str]:
         secure_env = self.security.create_secure_command_env()
 
         result = subprocess.run(
             cmd,
-            check=False, cwd=self.pkg_path,
+            check=False,
+            cwd=self.pkg_path,
             capture_output=True,
             text=True,
             timeout=timeout,

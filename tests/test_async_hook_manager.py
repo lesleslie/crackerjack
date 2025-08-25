@@ -32,7 +32,11 @@ class TestAsyncHookManager:
     @patch("crackerjack.managers.async_hook_manager.HookConfigLoader")
     @patch("crackerjack.managers.async_hook_manager.AsyncHookExecutor")
     def test_init_with_mocks(
-        self, mock_executor_class, mock_loader_class, console, pkg_path,
+        self,
+        mock_executor_class,
+        mock_loader_class,
+        console,
+        pkg_path,
     ) -> None:
         AsyncHookManager(console, pkg_path, max_concurrent=3)
 
@@ -95,7 +99,8 @@ class TestAsyncHookManager:
 
     def test_run_comprehensive_hooks_sync(self, async_hook_manager) -> None:
         with patch.object(
-            async_hook_manager, "run_comprehensive_hooks_async",
+            async_hook_manager,
+            "run_comprehensive_hooks_async",
         ) as mock_async:
             mock_async.return_value = [
                 HookResult(id="test", name="test hook", status="passed", duration=1.0),

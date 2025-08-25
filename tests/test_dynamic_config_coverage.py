@@ -92,7 +92,9 @@ class TestDynamicConfigGenerator:
         enabled_experimental = ["other - hook"]
 
         result = config_generator._should_include_hook(
-            hook, config, enabled_experimental,
+            hook,
+            config,
+            enabled_experimental,
         )
         assert result is False
 

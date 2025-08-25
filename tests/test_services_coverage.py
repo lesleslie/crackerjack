@@ -36,7 +36,8 @@ class TestUnifiedConfigService:
         pkg_path = Path("/test")
 
         with patch(
-            "crackerjack.services.unified_config.Path.exists", return_value=True,
+            "crackerjack.services.unified_config.Path.exists",
+            return_value=True,
         ):
             service = UnifiedConfigurationService(console, pkg_path)
             assert service is not None

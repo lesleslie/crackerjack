@@ -27,7 +27,9 @@ class RateLimitConfig:
 
 class RateLimiter:
     def __init__(
-        self, requests_per_minute: int = 30, requests_per_hour: int = 300,
+        self,
+        requests_per_minute: int = 30,
+        requests_per_hour: int = 300,
     ) -> None:
         self.requests_per_minute = requests_per_minute
         self.requests_per_hour = requests_per_hour
@@ -45,7 +47,8 @@ class RateLimiter:
         self._lock = asyncio.Lock()
 
     async def is_allowed(
-        self, client_id: str = "default",
+        self,
+        client_id: str = "default",
     ) -> tuple[bool, dict[str, t.Any]]:
         async with self._lock:
             now = time.time()
@@ -264,7 +267,8 @@ class RateLimitMiddleware:
     def __init__(self, config: RateLimitConfig | None = None) -> None:
         self.config = config or RateLimitConfig()
         self.rate_limiter = RateLimiter(
-            self.config.requests_per_minute, self.config.requests_per_hour,
+            self.config.requests_per_minute,
+            self.config.requests_per_hour,
         )
         self.resource_monitor = ResourceMonitor(self.config)
 
@@ -285,7 +289,8 @@ class RateLimitMiddleware:
         console.print("[yellow]🛡️ Rate limiting middleware stopped[/yellow]")
 
     async def check_request_allowed(
-        self, client_id: str = "default",
+        self,
+        client_id: str = "default",
     ) -> tuple[bool, dict[str, t.Any]]:
         return await self.rate_limiter.is_allowed(client_id)
 

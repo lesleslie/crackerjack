@@ -150,7 +150,8 @@ class HookExecutor:
             clean_env = self._get_clean_environment()
             result = subprocess.run(
                 hook.get_command(),
-                check=False, cwd=self.pkg_path,
+                check=False,
+                cwd=self.pkg_path,
                 text=True,
                 timeout=hook.timeout,
                 env=clean_env,
@@ -192,7 +193,8 @@ class HookExecutor:
             )
 
     def _parse_hook_output(
-        self, result: subprocess.CompletedProcess[str],
+        self,
+        result: subprocess.CompletedProcess[str],
     ) -> dict[str, t.Any]:
         output = result.stdout + result.stderr
         return {
@@ -212,7 +214,9 @@ class HookExecutor:
         )
 
     def _handle_retries(
-        self, strategy: HookStrategy, results: list[HookResult],
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> list[HookResult]:
         if strategy.retry_policy == RetryPolicy.FORMATTING_ONLY:
             return self._retry_formatting_hooks(strategy, results)
@@ -221,7 +225,9 @@ class HookExecutor:
         return results
 
     def _retry_formatting_hooks(
-        self, strategy: HookStrategy, results: list[HookResult],
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> list[HookResult]:
         formatting_hooks_failed: set[str] = set()
 
@@ -245,7 +251,9 @@ class HookExecutor:
         return updated_results
 
     def _retry_all_hooks(
-        self, strategy: HookStrategy, results: list[HookResult],
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> list[HookResult]:
         failed_hooks = [i for i, r in enumerate(results) if r.status == "failed"]
 
@@ -297,7 +305,10 @@ class HookExecutor:
         return clean_env
 
     def _print_summary(
-        self, strategy: HookStrategy, results: list[HookResult], success: bool,
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
+        success: bool,
     ) -> None:
         if success:
             self.console.print(

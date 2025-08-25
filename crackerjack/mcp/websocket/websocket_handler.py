@@ -67,7 +67,9 @@ class WebSocketHandler:
 
 
 def register_websocket_routes(
-    app: FastAPI, job_manager: JobManager, progress_dir: Path,
+    app: FastAPI,
+    job_manager: JobManager,
+    progress_dir: Path,
 ) -> None:
     handler = WebSocketHandler(job_manager, progress_dir)
 

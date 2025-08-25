@@ -166,7 +166,8 @@ class FileConfigSource(ConfigSource):
                 )
             else:
                 self.logger.warning(
-                    "Unknown config file format", path=str(self.file_path),
+                    "Unknown config file format",
+                    path=str(self.file_path),
                 )
                 return {}
 
@@ -179,7 +180,9 @@ class FileConfigSource(ConfigSource):
 
         except Exception as e:
             self.logger.exception(
-                "Failed to load config file", path=str(self.file_path), error=str(e),
+                "Failed to load config file",
+                path=str(self.file_path),
+                error=str(e),
             )
             return {}
 

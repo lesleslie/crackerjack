@@ -195,7 +195,9 @@ class TestGitService:
     def test_git_commit(self, mock_run, temp_project) -> None:
         """Test git commit functionality."""
         mock_run.return_value = Mock(
-            returncode=0, stdout="[main abc1234] Test commit", stderr="",
+            returncode=0,
+            stdout="[main abc1234] Test commit",
+            stderr="",
         )
 
         service = GitService(pkg_path=temp_project)
@@ -219,7 +221,9 @@ class TestGitService:
     def test_git_branch_operations(self, mock_run, temp_project) -> None:
         """Test git branch operations."""
         mock_run.return_value = Mock(
-            returncode=0, stdout="* main\n  feature-branch", stderr="",
+            returncode=0,
+            stdout="* main\n  feature-branch",
+            stderr="",
         )
 
         service = GitService(pkg_path=temp_project)
@@ -232,7 +236,9 @@ class TestGitService:
     def test_git_error_handling(self, mock_run, temp_project) -> None:
         """Test git error handling."""
         mock_run.return_value = Mock(
-            returncode=1, stdout="", stderr="fatal: not a git repository",
+            returncode=1,
+            stdout="",
+            stderr="fatal: not a git repository",
         )
 
         service = GitService(pkg_path=temp_project)
@@ -332,7 +338,8 @@ class TestSecurityService:
         service = SecurityService()
 
         temp_file = service.create_secure_temp_file(
-            content="test content", directory=temp_project,
+            content="test content",
+            directory=temp_project,
         )
 
         assert isinstance(temp_file, Path)

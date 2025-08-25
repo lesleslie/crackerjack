@@ -86,7 +86,9 @@ class TestWorkflowOptionsBackwardCompatibility:
             testing=TestConfig(test=False),
             hooks=HookConfig(skip_hooks=False),
             execution=ExecutionConfig(
-                interactive=False, verbose=False, no_config_updates=False,
+                interactive=False,
+                verbose=False,
+                no_config_updates=False,
             ),
             git=GitConfig(commit=False),
             publishing=PublishConfig(publish=None, bump=None),

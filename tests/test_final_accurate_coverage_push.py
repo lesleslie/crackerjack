@@ -216,7 +216,8 @@ def test_dependency_monitor_service_instantiation() -> None:
         # Test instantiation with console
         mock_console = Mock()
         service_with_console = DependencyMonitorService(
-            filesystem=mock_filesystem, console=mock_console,
+            filesystem=mock_filesystem,
+            console=mock_console,
         )
         assert service_with_console.console == mock_console
 
@@ -245,20 +246,24 @@ def test_dependency_monitor_check_dependency_updates() -> None:
             [project]
             dependencies = ["requests>=2.25.0", "pytest>=7.0.0"]
             """
-            with patch(
-                "builtins.open",
-                mock=Mock(
-                    return_value=Mock(
-                        __enter__=Mock(
-                            return_value=Mock(read=Mock(return_value=mock_content)),
+            with (
+                patch(
+                    "builtins.open",
+                    mock=Mock(
+                        return_value=Mock(
+                            __enter__=Mock(
+                                return_value=Mock(read=Mock(return_value=mock_content)),
+                            ),
+                            __exit__=Mock(),
                         ),
-                        __exit__=Mock(),
                     ),
                 ),
-            ), patch(
-                "tomllib.loads",
-                return_value={"project": {"dependencies": ["requests>=2.25.0"]}},
-            ), patch("subprocess.run") as mock_subprocess:
+                patch(
+                    "tomllib.loads",
+                    return_value={"project": {"dependencies": ["requests>=2.25.0"]}},
+                ),
+                patch("subprocess.run") as mock_subprocess,
+            ):
                 mock_subprocess.return_value.returncode = 0
                 mock_subprocess.return_value.stdout = (
                     '{"name": "requests", "version": "2.28.0"}'
@@ -559,7 +564,6 @@ def test_final_accurate_coverage_summary() -> None:
 
     assert len(tested_modules) >= 4
     assert len(coverage_strategies) >= 6
-
 
     # This test always passes - it's documentation
     assert True

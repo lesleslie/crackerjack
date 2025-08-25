@@ -87,7 +87,10 @@ def _handle_get_job_progress(job_id: str) -> str:
 
 
 def _execute_session_action(
-    state_manager, action: str, checkpoint_name: str | None, context,
+    state_manager,
+    action: str,
+    checkpoint_name: str | None,
+    context,
 ) -> str:
     if action == "start":
         state_manager.start_session()
@@ -132,6 +135,7 @@ def register_progress_tools(mcp_app: t.Any) -> None:
 
     @mcp_app.tool()
     async def session_management(
-        action: str, checkpoint_name: str | None = None,
+        action: str,
+        checkpoint_name: str | None = None,
     ) -> str:
         return _handle_session_management(action, checkpoint_name)

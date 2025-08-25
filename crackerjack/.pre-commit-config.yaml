@@ -49,7 +49,6 @@ repos:
     rev: v0.12.3
     hooks:
       - id: ruff-check
-        files: ^crackerjack/.*\.py$
         exclude: ^\.venv/
       - id: ruff-format
         exclude: ^\.venv/

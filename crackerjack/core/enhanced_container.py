@@ -82,7 +82,9 @@ class ServiceScope:
                         instance.dispose()
                     except Exception as e:
                         self.logger.exception(
-                            "Error disposing service", service=key, error=str(e),
+                            "Error disposing service",
+                            service=key,
+                            error=str(e),
                         )
 
             self._instances.clear()
@@ -97,7 +99,9 @@ class DependencyResolver:
         self.logger = get_logger("crackerjack.container.resolver")
 
     def create_instance(
-        self, descriptor: ServiceDescriptor, scope: ServiceScope | None = None,
+        self,
+        descriptor: ServiceDescriptor,
+        scope: ServiceScope | None = None,
     ) -> Any:
         """Create service instance with dependency injection."""
         if descriptor.instance is not None:
@@ -164,7 +168,8 @@ class DependencyResolver:
 
             instance = implementation(**kwargs)
             self.logger.debug(
-                "Instance created with DI", implementation_class=implementation.__name__,
+                "Instance created with DI",
+                implementation_class=implementation.__name__,
             )
             return instance
 
@@ -318,7 +323,9 @@ class EnhancedDependencyContainer:
                         instance.dispose()
                     except Exception as e:
                         self.logger.exception(
-                            "Error disposing singleton", service=key, error=str(e),
+                            "Error disposing singleton",
+                            service=key,
+                            error=str(e),
                         )
 
             self._singletons.clear()
@@ -331,7 +338,9 @@ class EnhancedDependencyContainer:
         self.logger.info("Container disposed", name=self.name)
 
     def _create_service_instance(
-        self, descriptor: ServiceDescriptor, scope: ServiceScope | None = None,
+        self,
+        descriptor: ServiceDescriptor,
+        scope: ServiceScope | None = None,
     ) -> Any:
         """Create service instance based on lifetime."""
         if descriptor.lifetime == ServiceLifetime.SINGLETON:
@@ -356,7 +365,9 @@ class EnhancedDependencyContainer:
         return instance
 
     def _get_or_create_scoped(
-        self, descriptor: ServiceDescriptor, scope: ServiceScope | None,
+        self,
+        descriptor: ServiceDescriptor,
+        scope: ServiceScope | None,
     ) -> Any:
         """Get or create scoped instance."""
         if scope is None:
@@ -425,14 +436,16 @@ class ServiceCollectionBuilder:
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
 
         self.container.register_singleton(
-            FileSystemInterface, factory=lambda: EnhancedFileSystemService(),
+            FileSystemInterface,
+            factory=lambda: EnhancedFileSystemService(),
         )
 
         # Git service
         from crackerjack.services.git import GitService
 
         self.container.register_transient(
-            GitInterface, factory=lambda: GitService(console=console, pkg_path=pkg_path),
+            GitInterface,
+            factory=lambda: GitService(console=console, pkg_path=pkg_path),
         )
 
         # Async hook manager
@@ -457,7 +470,9 @@ class ServiceCollectionBuilder:
         self.container.register_transient(
             PublishManager,
             factory=lambda: PublishManagerImpl(
-                console=console, pkg_path=pkg_path, dry_run=self.dry_run,
+                console=console,
+                pkg_path=pkg_path,
+                dry_run=self.dry_run,
             ),
         )
 

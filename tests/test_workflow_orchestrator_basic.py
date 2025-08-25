@@ -44,7 +44,9 @@ class TestWorkflowOrchestrator:
             mock_create_container.return_value = mock_container
 
             return WorkflowOrchestrator(
-                console=mock_console, pkg_path=pkg_path, dry_run=False,
+                console=mock_console,
+                pkg_path=pkg_path,
+                dry_run=False,
             )
 
     def test_orchestrator_initialization(self, mock_console) -> None:
@@ -53,7 +55,9 @@ class TestWorkflowOrchestrator:
 
         with patch("crackerjack.core.workflow_orchestrator.create_container"):
             orchestrator = WorkflowOrchestrator(
-                console=mock_console, pkg_path=pkg_path, dry_run=True,
+                console=mock_console,
+                pkg_path=pkg_path,
+                dry_run=True,
             )
 
             assert orchestrator.console is mock_console

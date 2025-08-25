@@ -82,11 +82,16 @@ class SecurityAgent(SubAgent):
             self.log(f"Identified vulnerability type: {vulnerability_type}")
 
             fixes_applied, files_modified = await self._apply_vulnerability_fixes(
-                vulnerability_type, issue, fixes_applied, files_modified,
+                vulnerability_type,
+                issue,
+                fixes_applied,
+                files_modified,
             )
 
             fixes_applied, files_modified = await self._apply_additional_fixes(
-                issue, fixes_applied, files_modified,
+                issue,
+                fixes_applied,
+                files_modified,
             )
 
             success = len(fixes_applied) > 0
@@ -131,7 +136,10 @@ class SecurityAgent(SubAgent):
         return fixes_applied, files_modified
 
     async def _apply_additional_fixes(
-        self, issue: Issue, fixes_applied: list[str], files_modified: list[str],
+        self,
+        issue: Issue,
+        fixes_applied: list[str],
+        files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         if not fixes_applied:
             bandit_fixes = await self._run_bandit_analysis()
@@ -327,7 +335,8 @@ class SecurityAgent(SubAgent):
         return {"fixes": fixes, "files": files}
 
     def _process_hardcoded_secrets_in_lines(
-        self, lines: list[str],
+        self,
+        lines: list[str],
     ) -> tuple[list[str], bool]:
         modified = False
 
@@ -496,7 +505,6 @@ class SecurityAgent(SubAgent):
         content = self._add_secrets_import_if_needed(content)
 
         return re.sub(r"random\.choice\(([^)]+)\)", r"secrets.choice(\1)", content)
-
 
     def _add_secrets_import_if_needed(self, content: str) -> str:
         if "import secrets" in content:

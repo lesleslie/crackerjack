@@ -142,7 +142,9 @@ class ServiceWatchdog:
         return True
 
     async def _handle_process_died(
-        self, service: ServiceConfig, exit_code: int,
+        self,
+        service: ServiceConfig,
+        exit_code: int,
     ) -> bool:
         stdout, stderr = service.process.communicate()
         error_msg = f"Process died (exit: {exit_code})"
@@ -164,11 +166,15 @@ class ServiceWatchdog:
         return service.is_healthy
 
     async def _handle_service_start_error(
-        self, service: ServiceConfig, error: Exception,
+        self,
+        service: ServiceConfig,
+        error: Exception,
     ) -> bool:
         service.last_error = str(error)
         await self._emit_event(
-            "start_error", service.name, f"Failed: {str(error)[:30]}",
+            "start_error",
+            service.name,
+            f"Failed: {str(error)[:30]}",
         )
         return False
 
@@ -215,7 +221,9 @@ class ServiceWatchdog:
             if service.process:
                 exit_code = service.process.poll()
                 await self._emit_event(
-                    "died", service.name, f"Process died (exit: {exit_code})",
+                    "died",
+                    service.name,
+                    f"Process died (exit: {exit_code})",
                 )
             else:
                 await self._emit_event("not_started", service.name, "Not started")
@@ -234,7 +242,9 @@ class ServiceWatchdog:
 
             if not service.is_healthy:
                 await self._emit_event(
-                    "health_fail", service.name, "Health check failed",
+                    "health_fail",
+                    service.name,
+                    "Health check failed",
                 )
                 await self._restart_service(service)
                 return False
@@ -261,7 +271,9 @@ class ServiceWatchdog:
         return await self._perform_health_check_if_needed(service)
 
     async def _handle_monitoring_error(
-        self, service: ServiceConfig, error: Exception,
+        self,
+        service: ServiceConfig,
+        error: Exception,
     ) -> None:
         service.last_error = str(error)
         console.print(f"[red]❌ Error monitoring {service.name}: {error}[/red]")
@@ -316,7 +328,9 @@ class ServiceWatchdog:
         )
 
     async def _check_restart_rate_limit(
-        self, service: ServiceConfig, current_time: float,
+        self,
+        service: ServiceConfig,
+        current_time: float,
     ) -> bool:
         service.restart_timestamps = [
             ts
@@ -356,7 +370,9 @@ class ServiceWatchdog:
         await asyncio.sleep(service.restart_delay)
 
     async def _execute_service_restart(
-        self, service: ServiceConfig, current_time: float,
+        self,
+        service: ServiceConfig,
+        current_time: float,
     ) -> None:
         service.restart_timestamps.append(current_time)
         service.restart_count += 1
@@ -420,7 +436,10 @@ class ServiceWatchdog:
         return error
 
     async def _emit_event(
-        self, event_type: str, service_name: str, message: str,
+        self,
+        event_type: str,
+        service_name: str,
+        message: str,
     ) -> None:
         if self.event_queue:
             from contextlib import suppress

@@ -67,7 +67,8 @@ class HookManagerImpl:
         try:
             result = subprocess.run(
                 ["pre-commit", "install"],
-                check=False, cwd=self.pkg_path,
+                check=False,
+                cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -87,7 +88,8 @@ class HookManagerImpl:
         try:
             result = subprocess.run(
                 ["pre-commit", "autoupdate"],
-                check=False, cwd=self.pkg_path,
+                check=False,
+                cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
                 timeout=60,

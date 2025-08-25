@@ -449,7 +449,9 @@ class MetricsCollector:
             }
 
     def _update_daily_summary(
-        self, conn: sqlite3.Connection, date: datetime.date,
+        self,
+        conn: sqlite3.Connection,
+        date: datetime.date,
     ) -> None:
         job_stats = conn.execute(
             """

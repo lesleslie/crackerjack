@@ -99,7 +99,10 @@ class TestHookManagerImpl:
 
     @patch("subprocess.run")
     def test_run_comprehensive_hooks_success(
-        self, mock_run, console, temp_project,
+        self,
+        mock_run,
+        console,
+        temp_project,
     ) -> None:
         """Test successful comprehensive hooks execution."""
         mock_run.return_value = Mock(returncode=0, stdout="All hooks passed", stderr="")
@@ -157,7 +160,11 @@ class TestTestManagementImpl:
     @patch("crackerjack.managers.test_manager.subprocess.Popen")
     @patch("crackerjack.managers.test_manager.subprocess.run")
     def test_run_tests_failure(
-        self, mock_run, mock_popen, console, temp_project,
+        self,
+        mock_run,
+        mock_popen,
+        console,
+        temp_project,
     ) -> None:
         """Test test execution failure."""
         # Mock subprocess.run (for basic execution)
@@ -184,7 +191,8 @@ class TestTestManagementImpl:
         manager = TestManagementImpl(console=console, pkg_path=temp_project)
         # Force non-progress mode to use subprocess.run
         options = MockOptions(
-            test=True, benchmark=True,
+            test=True,
+            benchmark=True,
         )  # benchmark mode forces standard execution
 
         result = manager.run_tests(options)
@@ -202,7 +210,9 @@ class TestTestManagementImpl:
     def test_benchmark_mode(self, mock_run, console, temp_project) -> None:
         """Test benchmark mode execution."""
         mock_run.return_value = Mock(
-            returncode=0, stdout="Benchmark complete", stderr="",
+            returncode=0,
+            stdout="Benchmark complete",
+            stderr="",
         )
 
         manager = TestManagementImpl(console=console, pkg_path=temp_project)
@@ -280,7 +290,9 @@ class TestPublishManagerImpl:
     def test_publish_to_pypi(self, mock_run, console, temp_project) -> None:
         """Test PyPI publishing."""
         mock_run.return_value = Mock(
-            returncode=0, stdout="Published successfully", stderr="",
+            returncode=0,
+            stdout="Published successfully",
+            stderr="",
         )
 
         manager = PublishManagerImpl(console=console, pkg_path=temp_project)
@@ -300,11 +312,15 @@ class TestPublishManagerImpl:
     def test_dry_run_mode(self, mock_run, console, temp_project) -> None:
         """Test dry run mode for publishing."""
         mock_run.return_value = Mock(
-            returncode=0, stdout="Dry run successful", stderr="",
+            returncode=0,
+            stdout="Dry run successful",
+            stderr="",
         )
 
         manager = PublishManagerImpl(
-            console=console, pkg_path=temp_project, dry_run=True,
+            console=console,
+            pkg_path=temp_project,
+            dry_run=True,
         )
 
         result = manager.publish_package()
@@ -402,7 +418,8 @@ class TestManagerConfiguration:
             else:
                 result = manager.publish_package()
             assert isinstance(
-                result, bool | str,
+                result,
+                bool | str,
             )  # bump_version returns str, publish_package returns bool
 
 
@@ -411,7 +428,10 @@ class TestManagerErrorHandling:
 
     @patch("subprocess.run")
     def test_hook_manager_subprocess_error(
-        self, mock_run, console, temp_project,
+        self,
+        mock_run,
+        console,
+        temp_project,
     ) -> None:
         """Test hook manager handling subprocess errors."""
         mock_run.side_effect = subprocess.CalledProcessError(1, ["cmd"])
@@ -424,7 +444,10 @@ class TestManagerErrorHandling:
 
     @patch("subprocess.run")
     def test_test_manager_subprocess_error(
-        self, mock_run, console, temp_project,
+        self,
+        mock_run,
+        console,
+        temp_project,
     ) -> None:
         """Test test manager handling subprocess errors."""
         mock_run.side_effect = subprocess.CalledProcessError(1, ["pytest"])
@@ -438,7 +461,10 @@ class TestManagerErrorHandling:
 
     @patch("subprocess.run")
     def test_publish_manager_subprocess_error(
-        self, mock_run, console, temp_project,
+        self,
+        mock_run,
+        console,
+        temp_project,
     ) -> None:
         """Test publish manager handling subprocess errors."""
         mock_run.side_effect = subprocess.CalledProcessError(1, ["uv", "build"])

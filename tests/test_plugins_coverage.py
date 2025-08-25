@@ -98,7 +98,8 @@ class TestPluginManager:
         assert hasattr(plugin_manager.discovery, "auto_discover_and_load")
 
         with patch.object(
-            plugin_manager.discovery, "auto_discover_and_load",
+            plugin_manager.discovery,
+            "auto_discover_and_load",
         ) as mock_discover:
             mock_discover.return_value = {}
             result = plugin_manager.discovery.auto_discover_and_load(
