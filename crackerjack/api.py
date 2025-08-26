@@ -200,7 +200,7 @@ class CrackerjackAPI:
         if failed > 0:
             self.console.print(f"[red]❌ Failed to clean {failed} files[/red]")
 
-    def _handle_cleaning_error(self, error: Exception) -> None:
+    def _handle_cleaning_error(self, error: Exception) -> t.NoReturn:
         """Handle code cleaning errors."""
         self.logger.error(f"Code cleaning failed: {error}")
         raise CrackerjackError(
@@ -401,7 +401,7 @@ class CrackerjackAPI:
         try:
             test_manager = self.orchestrator.phases.test_manager
             if hasattr(test_manager, "get_test_results"):
-                results = test_manager.get_test_results()
+                results = t.cast(t.Any, test_manager).get_test_results()
                 return getattr(results, "passed_count", 0)
             return 0
         except Exception:
@@ -411,7 +411,7 @@ class CrackerjackAPI:
         try:
             test_manager = self.orchestrator.phases.test_manager
             if hasattr(test_manager, "get_test_results"):
-                results = test_manager.get_test_results()
+                results = t.cast(t.Any, test_manager).get_test_results()
                 return getattr(results, "failed_count", 0)
             return 0
         except Exception:
@@ -421,7 +421,7 @@ class CrackerjackAPI:
         try:
             test_manager = self.orchestrator.phases.test_manager
             if hasattr(test_manager, "get_test_results"):
-                results = test_manager.get_test_results()
+                results = t.cast(t.Any, test_manager).get_test_results()
                 return getattr(results, "coverage_percentage", 0.0)
             return 0.0
         except Exception:
@@ -466,7 +466,7 @@ class CrackerjackAPI:
 
     def _get_python_files_for_todo_check(self, target_dir: Path) -> list[Path]:
         """Get list of Python files to check for TODOs, excluding ignored directories."""
-        python_files = []
+        python_files: list[Path] = []
         ignore_patterns = self._get_ignore_patterns()
 
         for py_file in target_dir.rglob("*.py"):
@@ -500,7 +500,7 @@ class CrackerjackAPI:
         todo_pattern: t.Any,
     ) -> list[tuple[Path, int, str]]:
         """Scan Python files for TODO comments."""
-        todos_found = []
+        todos_found: list[tuple[Path, int, str]] = []
 
         for file_path in python_files:
             file_todos = self._scan_single_file_for_todos(file_path, todo_pattern)
@@ -514,14 +514,14 @@ class CrackerjackAPI:
         todo_pattern: t.Any,
     ) -> list[tuple[Path, int, str]]:
         """Scan a single file for TODO comments."""
-        todos = []
-        try:
-            with file_path.open("r", encoding="utf-8") as f:
+        todos: list[tuple[Path, int, str]] = []
+        from contextlib import suppress
+
+        with suppress(UnicodeDecodeError, PermissionError):
+            with file_path.open("r") as f:
                 for line_no, line in enumerate(f, 1):
                     if todo_pattern.search(line):
                         todos.append((file_path, line_no, line))
-        except (UnicodeDecodeError, PermissionError):
-            pass  # Skip files that can't be read
 
         return todos
 

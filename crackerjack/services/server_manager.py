@@ -19,7 +19,7 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
             check=True,
         )
 
-        processes = []
+        processes: list[dict[str, t.Any]] = []
         str(Path.cwd())
 
         for line in result.stdout.splitlines():
@@ -56,7 +56,7 @@ def find_websocket_server_processes() -> list[dict[str, t.Any]]:
             check=True,
         )
 
-        processes = []
+        processes: list[dict[str, t.Any]] = []
 
         for line in result.stdout.splitlines():
             if "crackerjack" in line and "--start-websocket-server" in line:

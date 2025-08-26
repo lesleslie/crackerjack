@@ -1,6 +1,6 @@
----
-description: Check comprehensive Crackerjack system status including running jobs, MCP server health, WebSocket connections, and progress monitoring with real-time updates.
----
+______________________________________________________________________
+
+## description: Check comprehensive Crackerjack system status including running jobs, MCP server health, WebSocket connections, and progress monitoring with real-time updates.
 
 # /crackerjack:status - Comprehensive System Status
 
@@ -121,7 +121,7 @@ The status information comes from the same sources that power the TUI monitor an
 When using this command in Claude Code, the AI agent will:
 
 1. Call the `get_comprehensive_status` MCP tool
-2. Parse the JSON response for relevant information
-3. Present a formatted summary of system health
-4. Highlight any issues requiring attention
-5. Suggest next actions based on current status
+1. Parse the JSON response for relevant information
+1. Present a formatted summary of system health
+1. Highlight any issues requiring attention
+1. Suggest next actions based on current status

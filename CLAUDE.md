@@ -364,6 +364,7 @@ python -m crackerjack -p patch
 ### Component Interaction Patterns
 
 **Dependency Flow:**
+
 ```
 WorkflowOrchestrator → SessionCoordinator → PhaseCoordinator → Managers
                    ↓
@@ -371,6 +372,7 @@ Container (DI) → Protocols → Concrete Implementations
 ```
 
 **Critical Interfaces in `models/protocols.py`:**
+
 - `HookManagerProtocol`, `TestManagerProtocol`, `PublishManagerProtocol`
 - Always import protocols, never concrete classes for dependency injection
 - **Common Error**: `from ..managers.test_manager import TestManager` ❌
@@ -564,11 +566,12 @@ return "🤖"
 return AGENT_EMOJIS.get(agent_type, "🤖")
 
 # AVOID: Lambda for simple attribute access (FURB118)
-sorted_items = sorted(items, key=lambda x: x['priority'])
+sorted_items = sorted(items, key=lambda x: x["priority"])
 
 # USE: operator.itemgetter
 from operator import itemgetter
-sorted_items = sorted(items, key=itemgetter('priority'))
+
+sorted_items = sorted(items, key=itemgetter("priority"))
 ```
 
 ## Development Workflow
@@ -834,20 +837,23 @@ Default configuration monitors:
 ## Current Quality Status (January 2025)
 
 **✅ COMPLETED:**
+
 - All 31+ refurb violations fixed in agents directory
 - Fast hooks: All 5 passing consistently
 - Major complexity reductions (34→3, 33→2)
 - Import errors and protocol compliance fixed
 
 **🔄 IN PROGRESS:**
+
 - Complexipy violations: 29 functions still > 15 (reduced from 32)
 - Test coverage: 18.16% → need 42%
 
 **⚠️ CRITICAL PRIORITIES:**
+
 1. **Fix existing test failures first** (before adding new tests)
-2. Add tests strategically to reach 42% coverage
-3. Complete remaining complexity reductions
-4. Final integration and release preparation
+1. Add tests strategically to reach 42% coverage
+1. Complete remaining complexity reductions
+1. Final integration and release preparation
 
 **Key User Directive**: Always prioritize fixing failures of existing tests over creating new tests, especially when coverage issues are being addressed.
 
@@ -918,12 +924,14 @@ result = toolkit.execute_with_verification(
 ## Common Failure Patterns to Avoid
 
 ### Async Test Hangs
+
 ```python
 # AVOID: Complex async tests that can hang
 @pytest.mark.asyncio
 async def test_batch_processing(self, batched_saver):
     await batched_saver.start()
     # Complex async workflow that might hang
+
 
 # PREFER: Simple synchronous config tests
 def test_batch_configuration(self, batched_saver):
@@ -932,6 +940,7 @@ def test_batch_configuration(self, batched_saver):
 ```
 
 ### Import Error Prevention
+
 ```python
 # WRONG: Importing concrete classes instead of protocols
 from ..managers.test_manager import TestManager

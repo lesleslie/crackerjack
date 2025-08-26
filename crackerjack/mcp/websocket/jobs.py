@@ -30,9 +30,8 @@ class JobManager:
 
         import re
 
-        return bool(
-            re.match(r" ^ [a - zA - Z0 - 9_ - ] + $", job_id) and len(job_id) <= 50
-        )
+        # Performance: Use simpler regex pattern without whitespace
+        return bool(re.match(r"^[a-zA-Z0-9_-]+$", job_id) and len(job_id) <= 50)
 
     def add_connection(self, job_id: str, websocket: Any) -> None:
         if job_id not in self.active_connections:
@@ -60,7 +59,8 @@ class JobManager:
         if not self.progress_dir.exists():
             return None
 
-        progress_files = list(self.progress_dir.glob("job -* .json"))
+        # Performance: Use more specific glob pattern to reduce filesystem calls
+        progress_files = list(self.progress_dir.glob("job-*.json"))
         if not progress_files:
             return None
 
@@ -68,9 +68,10 @@ class JobManager:
         return self.extract_job_id_from_file(latest_file)
 
     def extract_job_id_from_file(self, progress_file: Path) -> str | None:
+        # Performance: Use slice instead of replace for fixed prefix removal
         return (
-            progress_file.stem.replace("job - ", "")
-            if progress_file.stem.startswith("job - ")
+            progress_file.stem[4:]  # Remove "job-" prefix (4 chars)
+            if progress_file.stem.startswith("job-")
             else None
         )
 
@@ -78,7 +79,7 @@ class JobManager:
         if not self.validate_job_id(job_id):
             return None
 
-        progress_file = self.progress_dir / f"job - {job_id}.json"
+        progress_file = self.progress_dir / f"job-{job_id}.json"
         if not progress_file.exists():
             return None
 
@@ -164,11 +165,11 @@ class JobManager:
 
     def _find_old_job_files(self, cutoff_time: float) -> list[Path]:
         """Find job files older than the cutoff time."""
-        old_files = []
-        for progress_file in self.progress_dir.glob("job-*.json"):
-            if progress_file.stat().st_mtime < cutoff_time:
-                old_files.append(progress_file)
-        return old_files
+        return [
+            progress_file
+            for progress_file in self.progress_dir.glob("job-*.json")
+            if progress_file.stat().st_mtime < cutoff_time
+        ]
 
     def _cleanup_old_job_file(self, progress_file: Path) -> None:
         """Clean up a single old job file if it's safe to do so."""

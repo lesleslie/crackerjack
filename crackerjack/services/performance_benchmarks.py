@@ -384,7 +384,7 @@ class PerformanceBenchmarkService:
 
         return baseline_comparison
 
-    def _load_performance_history(self) -> list[dict] | None:
+    def _load_performance_history(self) -> list[dict[str, Any]] | None:
         """Load performance history from file."""
         if not self.history_file.exists():
             return None
@@ -397,8 +397,8 @@ class PerformanceBenchmarkService:
     def _add_overall_performance_comparison(
         self,
         current_report: PerformanceReport,
-        history: list[dict],
-        comparison: dict,
+        history: list[dict[str, Any]],
+        comparison: dict[str, Any],
     ) -> None:
         """Add overall performance comparison to baseline."""
         recent_runs = history[-5:]
@@ -414,8 +414,8 @@ class PerformanceBenchmarkService:
     def _add_component_performance_comparison(
         self,
         current_report: PerformanceReport,
-        history: list[dict],
-        comparison: dict,
+        history: list[dict[str, Any]],
+        comparison: dict[str, Any],
     ) -> None:
         """Add component-level performance comparison."""
         recent_runs = history[-5:]
@@ -540,7 +540,7 @@ class PerformanceBenchmarkService:
 
         self.console.print("[bold]📊 Performance Comparison[/bold]")
         for metric, value in report.baseline_comparison.items():
-            if isinstance(value, int | float) and "percent" in metric:
+            if isinstance(value, float | int) and "percent" in metric:
                 color = "green" if value < 0 else "red" if value > 10 else "yellow"
                 direction = "faster" if value < 0 else "slower"
                 self.console.print(
@@ -575,7 +575,7 @@ class PerformanceBenchmarkService:
         except Exception as e:
             return {"error": f"Could not analyze trends: {e}"}
 
-    def _get_recent_history(self, days: int) -> list[dict] | None:
+    def _get_recent_history(self, days: int) -> list[dict[str, Any]] | None:
         """Get recent performance history within specified days."""
         if not self.history_file.exists():
             return None
@@ -594,7 +594,9 @@ class PerformanceBenchmarkService:
             return {"error": "No performance history available"}
         return {"error": "Insufficient data for trend analysis"}
 
-    def _add_duration_trends(self, recent_history: list[dict], trends: dict) -> None:
+    def _add_duration_trends(
+        self, recent_history: list[dict[str, Any]], trends: dict[str, Any]
+    ) -> None:
         """Add overall duration trends to results."""
         durations = [r["total_duration"] for r in recent_history]
         trends["duration_trend"] = {
@@ -603,7 +605,9 @@ class PerformanceBenchmarkService:
             "trend": self._determine_trend_direction(durations),
         }
 
-    def _add_component_trends(self, recent_history: list[dict], trends: dict) -> None:
+    def _add_component_trends(
+        self, recent_history: list[dict[str, Any]], trends: dict[str, Any]
+    ) -> None:
         """Add component-level trends to results."""
         component_trends = {}
         latest_components = recent_history[-1].get("component_durations", {})
@@ -624,7 +628,7 @@ class PerformanceBenchmarkService:
 
     def _extract_component_durations(
         self,
-        recent_history: list[dict],
+        recent_history: list[dict[str, Any]],
         component: str,
     ) -> list[float]:
         """Extract duration data for a specific component."""

@@ -29,6 +29,7 @@ def _check_tool_updates(self) -> bool:
 
     return False
 
+
 def _fetch_latest_version(self, tool: str) -> str:
     """Fetch latest version from PyPI or GitHub."""
     # Could use httpx to check PyPI API
@@ -37,6 +38,7 @@ def _fetch_latest_version(self, tool: str) -> str:
 ```
 
 **Benefits**:
+
 - Always use latest tool improvements
 - Security patches applied promptly
 - New features available immediately
@@ -57,9 +59,7 @@ def _check_config_integrity(self) -> bool:
 
     for file, checksum in config_checksums.items():
         if checksum != expected_checksums.get(file):
-            self.console.print(
-                f"[yellow]⚠️ {file} has been modified manually[/yellow]"
-            )
+            self.console.print(f"[yellow]⚠️ {file} has been modified manually[/yellow]")
             return True
 
     # Also check for required sections
@@ -67,6 +67,7 @@ def _check_config_integrity(self) -> bool:
         return True
 
     return False
+
 
 def _has_required_config_sections(self) -> bool:
     """Check if all required configuration sections exist."""
@@ -79,6 +80,7 @@ def _has_required_config_sections(self) -> bool:
 ```
 
 **Benefits**:
+
 - Prevents configuration decay
 - Maintains consistency across team
 - Catches accidental deletions
@@ -115,17 +117,17 @@ def _should_scheduled_init(self) -> bool:
 
     return False
 
+
 def _has_recent_activity(self) -> bool:
     """Check if project has recent git activity."""
     result = subprocess.run(
-        ["git", "log", "-1", "--since=24.hours"],
-        capture_output=True,
-        text=True
+        ["git", "log", "-1", "--since=24.hours"], capture_output=True, text=True
     )
     return bool(result.stdout.strip())
 ```
 
 **Benefits**:
+
 - Team-specific scheduling
 - Activity-aware updates
 - Flexible timing options
@@ -173,6 +175,7 @@ def main():
 ```
 
 **Benefits**:
+
 - Catches issues before commits
 - Gentle reminder system
 - Can be bypassed when needed
@@ -203,6 +206,7 @@ def _check_dependency_updates(self) -> bool:
 
     return False
 
+
 def _check_safety_db(self, deps: dict[str, str]) -> list[str]:
     """Check dependencies against security database."""
     # Could integrate with safety-db or GitHub advisory database
@@ -211,6 +215,7 @@ def _check_safety_db(self, deps: dict[str, str]) -> list[str]:
 ```
 
 **Benefits**:
+
 - Security-first approach
 - Controlled major version updates
 - Dependency health monitoring
@@ -223,6 +228,7 @@ Track project health indicators to suggest initialization.
 @dataclass
 class ProjectHealth:
     """Track various project health metrics."""
+
     lint_error_trend: list[int]  # Errors over time
     test_coverage_trend: list[float]  # Coverage over time
     dependency_age: dict[str, int]  # Days since last update
@@ -250,6 +256,7 @@ class ProjectHealth:
 ```
 
 **Benefits**:
+
 - Proactive quality maintenance
 - Data-driven decisions
 - Trend-based interventions
@@ -257,16 +264,19 @@ class ProjectHealth:
 ## 🚀 Implementation Priority
 
 1. **High Priority** (Most valuable, easiest to implement):
+
    - Tool version checks
    - Dependency security updates
    - Git hook integration
 
-2. **Medium Priority** (Valuable but more complex):
+1. **Medium Priority** (Valuable but more complex):
+
    - Configuration drift detection
    - Smart scheduling
    - Project health metrics
 
-3. **Low Priority** (Nice to have):
+1. **Low Priority** (Nice to have):
+
    - Complex heuristics
    - ML-based predictions
    - Team behavior learning
@@ -305,10 +315,10 @@ health_threshold = 0.7
 ## 🎯 Next Steps
 
 1. **Community Feedback**: Gather user preferences on auto-init behavior
-2. **Gradual Rollout**: Implement features behind feature flags
-3. **Telemetry**: Anonymous usage data to improve heuristics
-4. **Integration**: Work with popular CI/CD platforms
-5. **Documentation**: Comprehensive guides for each feature
+1. **Gradual Rollout**: Implement features behind feature flags
+1. **Telemetry**: Anonymous usage data to improve heuristics
+1. **Integration**: Work with popular CI/CD platforms
+1. **Documentation**: Comprehensive guides for each feature
 
 ## 🖥️ MCP Server Clustering
 
@@ -344,7 +354,7 @@ class MCPCluster:
             criteria={
                 "load": request.estimated_complexity,
                 "affinity": request.session_id,  # Session stickiness
-                "capabilities": request.required_tools
+                "capabilities": request.required_tools,
             }
         )
 
@@ -363,12 +373,14 @@ class MCPCluster:
 ```
 
 **Benefits**:
+
 - High availability for enterprise deployments
 - Horizontal scaling for large development teams
 - Automatic failover and recovery
 - Session persistence across node failures
 
 **Configuration**:
+
 ```yaml
 # mcp-cluster.yaml
 cluster:
@@ -399,7 +411,7 @@ Add comprehensive documentation generation capabilities using MkDocs Material th
 
 ### Implementation Strategy
 
-```python
+````python
 class DocsGenerator:
     """Generate beautiful documentation using MkDocs Material with AI-enhanced virtual docstrings."""
 
@@ -425,7 +437,7 @@ class DocsGenerator:
                     "search.highlight",
                     "search.share",
                     "content.code.copy",
-                    "content.code.annotate"
+                    "content.code.annotate",
                 ],
                 "palette": [
                     {
@@ -434,8 +446,8 @@ class DocsGenerator:
                         "accent": "blue",
                         "toggle": {
                             "icon": "material/brightness-7",
-                            "name": "Switch to dark mode"
-                        }
+                            "name": "Switch to dark mode",
+                        },
                     },
                     {
                         "scheme": "slate",
@@ -443,10 +455,10 @@ class DocsGenerator:
                         "accent": "blue",
                         "toggle": {
                             "icon": "material/brightness-4",
-                            "name": "Switch to light mode"
-                        }
-                    }
-                ]
+                            "name": "Switch to light mode",
+                        },
+                    },
+                ],
             },
             "markdown_extensions": [
                 "pymdownx.highlight",
@@ -454,15 +466,11 @@ class DocsGenerator:
                 "pymdownx.tabbed",
                 "pymdownx.snippets",
                 "admonition",
-                "pymdownx.details"
+                "pymdownx.details",
             ],
-            "plugins": [
-                "search",
-                "mkdocstrings",
-                "git-revision-date-localized"
-            ],
+            "plugins": ["search", "mkdocstrings", "git-revision-date-localized"],
             # Point mkdocstrings to virtual docs with AI-generated docstrings
-            "watch": [str(self.virtual_docs_path)]
+            "watch": [str(self.virtual_docs_path)],
         }
 
         with open(self.mkdocs_config, "w") as f:
@@ -474,10 +482,13 @@ class DocsGenerator:
 
         # Find all Python files (excluding tests)
         source_files = list(self.project_path.rglob("*.py"))
-        source_files = [f for f in source_files if not any(
-            part.startswith(("test_", "__pycache__", "."))
-            for part in f.parts
-        )]
+        source_files = [
+            f
+            for f in source_files
+            if not any(
+                part.startswith(("test_", "__pycache__", ".")) for part in f.parts
+            )
+        ]
 
         for source_file in source_files:
             virtual_file = await self._create_virtual_docstring_file(source_file)
@@ -498,10 +509,7 @@ class DocsGenerator:
 
         # Generate AI docstrings using existing docs as reference
         enhanced_code = await self._add_ai_docstrings(
-            source_code,
-            tree,
-            existing_docs_context,
-            source_file
+            source_code, tree, existing_docs_context, source_file
         )
 
         # Create virtual file in temp location
@@ -541,7 +549,7 @@ class DocsGenerator:
         source_code: str,
         tree: ast.AST,
         docs_context: dict[str, str],
-        source_file: Path
+        source_file: Path,
     ) -> str:
         """Use AI to generate accurate docstrings based on existing documentation."""
 
@@ -580,7 +588,9 @@ class DocsGenerator:
 
         return enhanced_code
 
-    async def _validate_against_markdown_docs(self, virtual_file: Path, source_file: Path):
+    async def _validate_against_markdown_docs(
+        self, virtual_file: Path, source_file: Path
+    ):
         """Ensure generated docstrings don't contradict existing markdown documentation."""
 
         # Read the generated docstrings
@@ -623,7 +633,7 @@ class DocsGenerator:
         self,
         virtual_file: Path,
         conflicts: list[dict],
-        authoritative_claims: list[dict]
+        authoritative_claims: list[dict],
     ):
         """Regenerate docstrings to resolve conflicts with authoritative markdown docs."""
 
@@ -640,55 +650,61 @@ class DocsGenerator:
         Regenerate the Python file with corrected docstrings that match the markdown documentation.
         """
 
-        corrected_code = await self.ai_client.resolve_conflicts(conflict_resolution_prompt)
+        corrected_code = await self.ai_client.resolve_conflicts(
+            conflict_resolution_prompt
+        )
         virtual_file.write_text(corrected_code)
-```
+````
 
 ### Pre-commit Hook Integration
 
 ```python
 # Add to dynamic_config.py HOOKS_REGISTRY
-{
-    "id": "ai-docs-generate",
-    "name": "ai-docs-generate",
-    "repo": "local",
-    "rev": "",
-    "tier": 2,
-    "time_estimate": 15.0,  # AI generation takes longer
-    "stages": ["pre-push", "manual"],
-    "args": ["--generate-virtual-docstrings"],
-    "files": "^(src/|crackerjack/.*\\.py)$",
-    "exclude": "__pycache__|test_|virtual_docs/",
-    "additional_dependencies": [
-        "openai>=1.0.0",  # or anthropic for Claude
-        "tiktoken>=0.5.0"
-    ],
-    "types_or": ["python"],
-    "language": "python",
-    "entry": "python -m crackerjack._internal.ai_docs_generator",
-    "experimental": False,
-},
-{
-    "id": "mkdocs-build-virtual",
-    "name": "mkdocs-build-virtual",
-    "repo": "local",
-    "rev": "",
-    "tier": 2,
-    "time_estimate": 3.0,
-    "stages": ["pre-push", "manual"],
-    "args": ["--config-file", "mkdocs.yml", "--strict"],
-    "files": "^(docs/|mkdocs\\.yml|README\\.md|\\.cache/virtual_docs/)",
-    "exclude": None,
-    "additional_dependencies": [
-        "mkdocs-material>=9.0.0",
-        "mkdocstrings[python]>=0.20.0",
-        "mkdocs-git-revision-date-localized-plugin"
-    ],
-    "types_or": None,
-    "language": "python",
-    "entry": "mkdocs build",
-    "experimental": False,
-},
+(
+    {
+        "id": "ai-docs-generate",
+        "name": "ai-docs-generate",
+        "repo": "local",
+        "rev": "",
+        "tier": 2,
+        "time_estimate": 15.0,  # AI generation takes longer
+        "stages": ["pre-push", "manual"],
+        "args": ["--generate-virtual-docstrings"],
+        "files": "^(src/|crackerjack/.*\\.py)$",
+        "exclude": "__pycache__|test_|virtual_docs/",
+        "additional_dependencies": [
+            "openai>=1.0.0",  # or anthropic for Claude
+            "tiktoken>=0.5.0",
+        ],
+        "types_or": ["python"],
+        "language": "python",
+        "entry": "python -m crackerjack._internal.ai_docs_generator",
+        "experimental": False,
+    },
+)
+(
+    {
+        "id": "mkdocs-build-virtual",
+        "name": "mkdocs-build-virtual",
+        "repo": "local",
+        "rev": "",
+        "tier": 2,
+        "time_estimate": 3.0,
+        "stages": ["pre-push", "manual"],
+        "args": ["--config-file", "mkdocs.yml", "--strict"],
+        "files": "^(docs/|mkdocs\\.yml|README\\.md|\\.cache/virtual_docs/)",
+        "exclude": None,
+        "additional_dependencies": [
+            "mkdocs-material>=9.0.0",
+            "mkdocstrings[python]>=0.20.0",
+            "mkdocs-git-revision-date-localized-plugin",
+        ],
+        "types_or": None,
+        "language": "python",
+        "entry": "mkdocs build",
+        "experimental": False,
+    },
+)
 {
     "id": "docs-accuracy-check",
     "name": "docs-accuracy-check",
@@ -764,12 +780,14 @@ class AIDocsGenerator:
         for function_name, auth_claim in authoritative.items():
             gen_claim = generated.get(function_name)
             if gen_claim and auth_claim != gen_claim:
-                conflicts.append({
-                    "function": function_name,
-                    "authoritative": auth_claim,
-                    "generated": gen_claim,
-                    "conflict_type": "claim_mismatch"
-                })
+                conflicts.append(
+                    {
+                        "function": function_name,
+                        "authoritative": auth_claim,
+                        "generated": gen_claim,
+                        "conflict_type": "claim_mismatch",
+                    }
+                )
 
         return conflicts
 ```
@@ -806,6 +824,7 @@ def generate_docs_structure(self):
 
     self._create_docs_files(docs_structure)
 
+
 def _generate_api_reference(self) -> str:
     """Generate API reference from docstrings."""
     return """
@@ -834,6 +853,7 @@ def _generate_api_reference(self) -> str:
 ### Documentation Features
 
 **Automated Features:**
+
 - **API Documentation**: Auto-generated from docstrings using mkdocstrings
 - **CLI Reference**: Auto-generated command documentation
 - **Code Examples**: Extracted from tests and README
@@ -842,6 +862,7 @@ def _generate_api_reference(self) -> str:
 - **Tutorial**: Step-by-step guides like FastAPI docs
 
 **Enhanced Navigation:**
+
 - **Search**: Full-text search with highlighting
 - **Dark/Light Mode**: Automatic theme switching
 - **Mobile-Friendly**: Responsive design for all devices
@@ -867,6 +888,7 @@ python -m crackerjack --docs-deploy   # Deploy to GitHub Pages
 ### Benefits
 
 **Developer Experience:**
+
 - **Professional Documentation**: Match quality of FastAPI/Starlette docs
 - **No-Docstring Codebase**: Respects preference for clean, docstring-free code
 - **AI-Enhanced Accuracy**: Generated docstrings validated against authoritative markdown docs
@@ -876,18 +898,21 @@ python -m crackerjack --docs-deploy   # Deploy to GitHub Pages
 - **Searchable**: Full-text search across all documentation
 
 **Documentation Integrity:**
+
 - **Consistency Validation**: Ensures virtual docstrings match existing markdown documentation
 - **Authoritative Source**: Markdown docs remain the single source of truth
 - **Conflict Resolution**: AI automatically resolves inconsistencies with markdown docs
 - **Accuracy Checks**: Pre-commit hooks validate documentation consistency
 
 **Project Quality:**
+
 - **Increased Adoption**: Professional docs attract users while preserving clean codebase
 - **Reduced Support**: Self-service documentation without polluting source code
 - **Better Onboarding**: Clear tutorials and examples
 - **API Discoverability**: Complete reference documentation from AI-generated virtual files
 
 **Unique Advantages:**
+
 - **Best of Both Worlds**: Professional API docs without source code docstrings
 - **Markdown-First**: Existing markdown documentation drives AI docstring generation
 - **Temporary Generation**: Virtual docstring files exist only during documentation build
@@ -982,8 +1007,14 @@ class JobHistoryViewer:
         """Create table showing job history with filtering."""
         table = DataTable()
         table.add_columns(
-            "Date", "Project", "Duration", "Iterations",
-            "Fixes", "Errors", "Status", "Actions"
+            "Date",
+            "Project",
+            "Duration",
+            "Iterations",
+            "Fixes",
+            "Errors",
+            "Status",
+            "Actions",
         )
 
         # Load historical jobs
@@ -998,7 +1029,7 @@ class JobHistoryViewer:
                 str(job.total_fixes),
                 str(job.total_errors),
                 job.final_status,
-                "View Details"
+                "View Details",
             )
 
         return table
@@ -1034,7 +1065,7 @@ class LogViewer:
         self.filters = {
             "level": "ALL",  # DEBUG, INFO, WARNING, ERROR, ALL
             "component": "ALL",  # hooks, tests, autofix, ALL
-            "search": ""
+            "search": "",
         }
 
     async def stream_logs(self) -> AsyncIterator[str]:
@@ -1046,7 +1077,7 @@ class LogViewer:
             return
 
         # Follow log file like `tail -f`
-        async with aiofiles.open(log_file, 'r') as f:
+        async with aiofiles.open(log_file, "r") as f:
             # Seek to end for live streaming
             await f.seek(0, 2)
 
@@ -1107,11 +1138,7 @@ class JobController:
         if not self.client:
             await self.connect()
 
-        message = {
-            "action": "pause_job",
-            "job_id": job_id,
-            "timestamp": time.time()
-        }
+        message = {"action": "pause_job", "job_id": job_id, "timestamp": time.time()}
 
         await self.client.send(json.dumps(message))
         response = await self.client.recv()
@@ -1120,11 +1147,7 @@ class JobController:
 
     async def resume_job(self, job_id: str) -> bool:
         """Send resume signal to paused job."""
-        message = {
-            "action": "resume_job",
-            "job_id": job_id,
-            "timestamp": time.time()
-        }
+        message = {"action": "resume_job", "job_id": job_id, "timestamp": time.time()}
 
         await self.client.send(json.dumps(message))
         response = await self.client.recv()
@@ -1139,7 +1162,7 @@ class JobController:
             "action": "restart_job",
             "original_job_id": job_id,
             "config": job_config,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
         await self.client.send(json.dumps(message))
@@ -1161,34 +1184,45 @@ class ProgressReporter:
         """Export current job status to CSV."""
         import csv
 
-        with open(output_path, 'w', newline='') as csvfile:
+        with open(output_path, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow([
-                'Job ID', 'Project', 'Status', 'Progress %',
-                'Current Stage', 'Iteration', 'Elapsed Time',
-                'Fixes Applied', 'Errors Found', 'Started At'
-            ])
+            writer.writerow(
+                [
+                    "Job ID",
+                    "Project",
+                    "Status",
+                    "Progress %",
+                    "Current Stage",
+                    "Iteration",
+                    "Elapsed Time",
+                    "Fixes Applied",
+                    "Errors Found",
+                    "Started At",
+                ]
+            )
 
             for job in self.jobs.values():
-                writer.writerow([
-                    job.job_id,
-                    job.project_name,
-                    job.status,
-                    job.overall_progress,
-                    job.current_stage,
-                    f"{job.iteration}/{job.max_iterations}",
-                    f"{job.elapsed_time:.1f}s",
-                    job.fixes_applied,
-                    job.errors_count["total"],
-                    datetime.fromtimestamp(job.start_time).isoformat()
-                ])
+                writer.writerow(
+                    [
+                        job.job_id,
+                        job.project_name,
+                        job.status,
+                        job.overall_progress,
+                        job.current_stage,
+                        f"{job.iteration}/{job.max_iterations}",
+                        f"{job.elapsed_time:.1f}s",
+                        job.fixes_applied,
+                        job.errors_count["total"],
+                        datetime.fromtimestamp(job.start_time).isoformat(),
+                    ]
+                )
 
     def export_json(self, output_path: Path) -> None:
         """Export detailed job data as JSON."""
         export_data = {
             "export_timestamp": datetime.now().isoformat(),
             "total_jobs": len(self.jobs),
-            "jobs": []
+            "jobs": [],
         }
 
         for job in self.jobs.values():
@@ -1201,27 +1235,27 @@ class ProgressReporter:
                     "overall_progress": job.overall_progress,
                     "iteration": job.iteration,
                     "max_iterations": job.max_iterations,
-                    "current_stage": job.current_stage
+                    "current_stage": job.current_stage,
                 },
                 "metrics": {
                     "fixes_applied": job.fixes_applied,
                     "errors_count": job.errors_count,
-                    "failures_count": job.failures_count
+                    "failures_count": job.failures_count,
                 },
                 "timing": {
                     "start_time": job.start_time,
                     "elapsed_time": job.elapsed_time,
-                    "estimated_completion": job.estimated_completion
+                    "estimated_completion": job.estimated_completion,
                 },
                 "stages": {
                     "results": job.stage_results,
                     "progress": job.stage_progress,
-                    "durations": job.stage_durations
-                }
+                    "durations": job.stage_durations,
+                },
             }
             export_data["jobs"].append(job_data)
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(export_data, f, indent=2)
 
     def generate_html_report(self, output_path: Path) -> None:
@@ -1260,10 +1294,10 @@ class ProgressReporter:
         html_content = html_template.format(
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             total_jobs=len(self.jobs),
-            job_cards=job_cards
+            job_cards=job_cards,
         )
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             f.write(html_content)
 ```
 
@@ -1286,24 +1320,28 @@ python -m crackerjack --job-control logs <job_id>       # Stream job logs
 ### Benefits of Textual TUI
 
 **Advanced Interactivity:**
+
 - **Keyboard Navigation**: Efficient job browsing and control
 - **Mouse Support**: Click to select jobs, scroll logs, resize panes
 - **Real-time Updates**: Live refresh without clearing terminal history
 - **Multi-pane Layout**: View multiple data sources simultaneously
 
 **Enhanced Monitoring:**
+
 - **Job History**: Review past executions and trends
 - **Live Log Streaming**: Real-time error analysis and debugging
 - **Interactive Filtering**: Focus on specific error types or components
 - **Progress Analytics**: Identify performance patterns and bottlenecks
 
 **Professional Workflow:**
+
 - **Export Capabilities**: CSV, JSON, HTML reports for sharing
 - **Job Control**: Pause, resume, restart operations
 - **Session Persistence**: Maintain view state across terminal sessions
 - **Customizable Views**: Filter and organize based on preferences
 
 **Development Integration:**
+
 - **Terminal Compatibility**: Works in tmux, screen, and modern terminals
 - **CI/CD Integration**: Export data for build pipeline analysis
 - **Team Collaboration**: Shareable progress reports and analytics

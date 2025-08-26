@@ -48,12 +48,10 @@ class AgentStatusPanel(Widget):
             agents_table.styles.max_height = "8"
 
     def update_agent_data(self, agent_data: dict) -> None:
-        try:
+        with suppress(Exception):
             self._update_coordinator_status(agent_data)
             self._update_agents_table(agent_data)
             self._update_stats(agent_data)
-        except Exception:
-            pass
 
     def _update_coordinator_status(self, data: dict) -> None:
         with suppress(Exception):
@@ -900,7 +898,7 @@ async def run_progress_monitor(
     enable_watchdog: bool = True,
     dev_mode: bool = False,
 ) -> None:
-    try:
+    with suppress(Exception):
         console = Console()
         console.print(
             "[bold green]🚀 Starting Crackerjack Progress Monitor[/bold green]",
@@ -918,14 +916,12 @@ async def run_progress_monitor(
             app.dev = True
 
         await app.run_async()
-    except Exception:
-        pass
 
 
 async def run_crackerjack_with_progress(
     command: str = " / crackerjack: run",
 ) -> None:
-    try:
+    with suppress(Exception):
         console = Console()
         console.print(
             "[bold green]🚀 Starting Crackerjack Progress Monitor[/bold green]",
@@ -933,8 +929,6 @@ async def run_crackerjack_with_progress(
 
         app = CrackerjackDashboard()
         await app.run_async()
-    except Exception:
-        pass
 
 
 def main() -> None:

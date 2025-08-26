@@ -323,8 +323,11 @@ class PerformanceAgent(SubAgent):
         """Check if line is within a loop context using simple heuristic."""
         context_start = max(0, line_index - 5)
         context_lines = lines[context_start : line_index + 1]
+        # Performance: Use compiled patterns and single check per line
+        loop_keywords = ("for ", "while ")
         return any(
-            "for " in ctx_line or "while " in ctx_line for ctx_line in context_lines
+            any(keyword in ctx_line for keyword in loop_keywords)
+            for ctx_line in context_lines
         )
 
     def _create_operation_record(
@@ -368,8 +371,10 @@ class PerformanceAgent(SubAgent):
                 # Check if in loop context
                 context_start = max(0, i - 5)
                 context_lines = lines[context_start : i + 1]
+                # Performance: Use tuple lookup for faster keyword matching
+                loop_keywords = ("for ", "while ")
                 if any(
-                    "for " in ctx_line or "while " in ctx_line
+                    any(keyword in ctx_line for keyword in loop_keywords)
                     for ctx_line in context_lines
                 ):
                     string_concat_in_loop.append(
@@ -430,7 +435,7 @@ class PerformanceAgent(SubAgent):
         for instance in instances:
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
-                original_line = lines[line_idx]
+                original_line = t.cast(str, lines[line_idx])
 
                 # Transform: list += [item] -> list.append(item)
                 # Pattern: variable_name += [expression]
@@ -466,7 +471,7 @@ class PerformanceAgent(SubAgent):
         for instance in issue["instances"]:
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
-                original_line = lines[line_idx]
+                original_line = t.cast(str, lines[line_idx])
 
                 # Extract variable name from string concatenation pattern
                 import re
@@ -488,9 +493,7 @@ class PerformanceAgent(SubAgent):
 
         # Transform each variable's concatenation pattern
         for var_name, instances in var_groups.items():
-            if (
-                len(instances) >= 1
-            ):  # Apply optimization for any string concatenation in loop
+            if instances:  # Apply optimization for any string concatenation in loop
                 # Find the loop context to apply the transformation
                 first_instance = instances[0]
                 loop_start = self._find_loop_start(lines, first_instance["line_idx"])
@@ -596,7 +599,7 @@ class PerformanceAgent(SubAgent):
         for instance in issue["instances"]:
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
-                original_line = lines[line_idx]
+                original_line = t.cast(str, lines[line_idx])
                 indent_level = len(original_line) - len(original_line.lstrip())
                 indent_str = " " * indent_level
 

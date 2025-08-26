@@ -167,15 +167,15 @@ def _initialize_context(context: MCPServerContext) -> None:
 
 
 def _stop_websocket_server() -> None:
-    try:
+    from contextlib import suppress
+
+    with suppress(RuntimeError):
+        # Context not initialized, nothing to stop
         context = get_context()
         if context and hasattr(context, "_stop_websocket_server"):
             # The websocket cleanup is handled asynchronously
             # and called from the context's cleanup handlers
             pass
-    except RuntimeError:
-        # Context not initialized, nothing to stop
-        pass
 
 
 def main(project_path_arg: str = ".", websocket_port: int | None = None) -> None:

@@ -1,6 +1,6 @@
----
-description: Run Crackerjack with advanced orchestrated AI-powered auto-fix mode to automatically resolve all code quality issues with intelligent execution strategies and granular progress tracking.
----
+______________________________________________________________________
+
+## description: Run Crackerjack with advanced orchestrated AI-powered auto-fix mode to automatically resolve all code quality issues with intelligent execution strategies and granular progress tracking.
 
 # /crackerjack:run
 

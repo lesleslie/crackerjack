@@ -16,24 +16,27 @@ This slash command initializes a new Python project with crackerjack's best prac
 ## What It Does
 
 1. **Checks Project State**: Verifies which configuration files exist
-2. **Creates Missing Files**:
+1. **Creates Missing Files**:
    - `pyproject.toml` - Project metadata and dependencies
    - `.pre-commit-config.yaml` - Code quality hooks
    - `CLAUDE.md` - AI assistant guidelines
    - `RULES.md` - Project coding standards
-3. **Updates Outdated Configs**: Refreshes configurations older than 30 days
-4. **Installs Pre-commit Hooks**: Sets up git hooks for quality enforcement
+1. **Updates Outdated Configs**: Refreshes configurations older than 30 days
+1. **Installs Pre-commit Hooks**: Sets up git hooks for quality enforcement
 
 ## When to Use /init
 
 ### Automatic Detection
+
 The MCP server can detect when initialization is needed:
+
 - **Missing Core Files**: No pyproject.toml or .pre-commit-config.yaml
 - **New Project**: Git repository just initialized
 - **Outdated Hooks**: Pre-commit hooks older than 30 days
 - **Manual Request**: User explicitly asks for initialization
 
 ### Recommended Frequency
+
 - **New Projects**: Always run on project creation
 - **Weekly**: For active development projects
 - **After Tool Updates**: When crackerjack or dependencies update
@@ -65,8 +68,9 @@ Your project now follows Python best practices!
 ## Auto-Init Behavior
 
 When connected via MCP, crackerjack can automatically suggest initialization when:
+
 1. Running `/crackerjack` in an uninitialized project
-2. Detecting missing critical configuration files
-3. Finding outdated pre-commit hooks (>30 days old)
+1. Detecting missing critical configuration files
+1. Finding outdated pre-commit hooks (>30 days old)
 
 This ensures projects always have up-to-date quality standards without manual intervention.

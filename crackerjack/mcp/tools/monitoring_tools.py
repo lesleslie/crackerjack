@@ -1,6 +1,7 @@
 import json
 import time
 import typing as t
+from contextlib import suppress
 
 from crackerjack.mcp.context import get_context
 
@@ -86,7 +87,7 @@ def _get_active_jobs(context) -> list[dict[str, t.Any]]:
     if not context.progress_dir.exists():
         return jobs
 
-    try:
+    with suppress(Exception):
         for progress_file in context.progress_dir.glob("job-*.json"):
             try:
                 progress_data = json.loads(progress_file.read_text())
@@ -106,8 +107,6 @@ def _get_active_jobs(context) -> list[dict[str, t.Any]]:
                 )
             except (json.JSONDecodeError, KeyError):
                 continue
-    except Exception:
-        pass
 
     return jobs
 
@@ -337,6 +336,70 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
             )
 
 
+def _validate_status_components(components: str) -> tuple[set[str], str | None]:
+    """Validate and parse status components."""
+    valid_components = {"services", "jobs", "resources", "all"}
+    requested = {c.strip().lower() for c in components.split(",")}
+
+    invalid = requested - valid_components
+    if invalid:
+        return set(), f"Invalid components: {invalid}. Valid: {valid_components}"
+
+    return requested, None
+
+
+def _get_services_status() -> dict:
+    """Get services status information."""
+    from crackerjack.services.server_manager import (
+        find_mcp_server_processes,
+        find_websocket_server_processes,
+    )
+
+    mcp_processes = find_mcp_server_processes()
+    websocket_processes = find_websocket_server_processes()
+
+    return {
+        "mcp_server": {
+            "running": len(mcp_processes) > 0,
+            "processes": mcp_processes,
+        },
+        "websocket_server": {
+            "running": len(websocket_processes) > 0,
+            "processes": websocket_processes,
+        },
+    }
+
+
+def _get_resources_status(context: t.Any) -> dict:
+    """Get resources status information."""
+    temp_files_count = (
+        len(list(context.progress_dir.glob("*.json")))
+        if context.progress_dir.exists()
+        else 0
+    )
+
+    return {
+        "temp_files_count": temp_files_count,
+        "progress_dir": str(context.progress_dir),
+    }
+
+
+def _build_filtered_status(requested: set[str], context: t.Any) -> dict:
+    """Build filtered status based on requested components."""
+    filtered_status = {"timestamp": time.time()}
+
+    if "services" in requested:
+        filtered_status["services"] = _get_services_status()
+
+    if "jobs" in requested:
+        filtered_status["jobs"] = {"active": _get_active_jobs(context)}
+
+    if "resources" in requested:
+        filtered_status["resources"] = _get_resources_status(context)
+
+    return filtered_status
+
+
 def _register_filtered_status_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def get_filtered_status(components: str = "all") -> str:
@@ -347,65 +410,22 @@ def _register_filtered_status_tool(mcp_app: t.Any) -> None:
                        'services', 'jobs', 'resources', 'all' (default)
         """
         try:
-            valid_components = {"services", "jobs", "resources", "all"}
-            requested = set(c.strip().lower() for c in components.split(","))
-
-            # Validate components
-            invalid = requested - valid_components
-            if invalid:
-                return json.dumps(
-                    {
-                        "error": f"Invalid components: {invalid}. Valid: {valid_components}",
-                        "success": False,
-                    },
-                    indent=2,
-                )
+            requested, error = _validate_status_components(components)
+            if error:
+                return json.dumps({"error": error, "success": False}, indent=2)
 
             # If 'all' is requested, get everything
             if "all" in requested:
                 status = await _get_comprehensive_status()
                 return json.dumps(status, indent=2)
 
-            # Build filtered status
             context = get_context()
             if not context:
                 return json.dumps(
                     {"error": "Server context not available", "success": False}
                 )
 
-            filtered_status = {"timestamp": time.time()}
-
-            if "services" in requested:
-                from crackerjack.services.server_manager import (
-                    find_mcp_server_processes,
-                    find_websocket_server_processes,
-                )
-
-                mcp_processes = find_mcp_server_processes()
-                websocket_processes = find_websocket_server_processes()
-
-                filtered_status["services"] = {
-                    "mcp_server": {
-                        "running": len(mcp_processes) > 0,
-                        "processes": mcp_processes,
-                    },
-                    "websocket_server": {
-                        "running": len(websocket_processes) > 0,
-                        "processes": websocket_processes,
-                    },
-                }
-
-            if "jobs" in requested:
-                filtered_status["jobs"] = {"active": _get_active_jobs(context)}
-
-            if "resources" in requested:
-                filtered_status["resources"] = {
-                    "temp_files_count": len(list(context.progress_dir.glob("*.json")))
-                    if context.progress_dir.exists()
-                    else 0,
-                    "progress_dir": str(context.progress_dir),
-                }
-
+            filtered_status = _build_filtered_status(requested, context)
             return json.dumps(filtered_status, indent=2)
 
         except Exception as e:

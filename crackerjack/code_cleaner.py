@@ -365,7 +365,9 @@ class CodeCleaner(BaseModel):
 
         def __call__(self, code: str, file_path: Path) -> str:
             lines = code.split("\n")
-            return "\n".join(self._process_line_for_comments(line) for line in lines)
+            # Performance: Use list comprehension instead of generator for small-to-medium files
+            processed_lines = [self._process_line_for_comments(line) for line in lines]
+            return "\n".join(processed_lines)
 
         def _process_line_for_comments(self, line: str) -> str:
             """Process a single line to remove comments while preserving strings."""
@@ -417,7 +419,7 @@ class CodeCleaner(BaseModel):
 
         def _is_string_start(self, char: str, state: dict[str, t.Any]) -> bool:
             """Check if character starts a string."""
-            return not state["in_string"] and char in ['"', "'"]
+            return not state["in_string"] and char in ('"', "'")
 
         def _is_string_end(
             self,
@@ -441,9 +443,19 @@ class CodeCleaner(BaseModel):
         docstring_nodes: list[ast.AST],
     ) -> type[ast.NodeVisitor]:
         class DocstringFinder(ast.NodeVisitor):
+            def _is_docstring_node(self, node: ast.AST) -> bool:
+                return (
+                    hasattr(node, "body")
+                    and node.body
+                    and isinstance(node.body[0], ast.Expr)
+                    and isinstance(node.body[0].value, ast.Constant)
+                    and isinstance(node.body[0].value.value, str)
+                )
+
             def _add_if_docstring(self, node: ast.AST) -> None:
-                if self._is_docstring_node(node):
-                    docstring_nodes.append(node.body[0])
+                if self._is_docstring_node(node) and hasattr(node, "body"):
+                    body: list[ast.stmt] = node.body
+                    docstring_nodes.append(body[0])
                 self.generic_visit(node)
 
             def visit_Module(self, node: ast.Module) -> None:
@@ -510,8 +522,7 @@ class DocstringStep:
         for node in docstring_nodes:
             start_line = node.lineno - 1
             end_line = node.end_lineno - 1 if node.end_lineno else start_line
-            for line_num in range(start_line, end_line + 1):
-                lines_to_remove.add(line_num)
+            lines_to_remove.update(range(start_line, end_line + 1))
         return lines_to_remove
 
     def _filter_docstring_lines(

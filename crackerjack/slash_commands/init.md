@@ -1,6 +1,6 @@
----
-description: Initialize or update crackerjack configuration for a Python project with best practices, quality hooks, and AI guidelines.
----
+______________________________________________________________________
+
+## description: Initialize or update crackerjack configuration for a Python project with best practices, quality hooks, and AI guidelines.
 
 # /crackerjack:init
 

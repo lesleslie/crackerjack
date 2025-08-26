@@ -688,6 +688,12 @@ class InitializationService:
         with target_file.open("r") as f:
             target_config = yaml.safe_load(f)
 
+        # Ensure configs are dictionaries
+        if not isinstance(source_config, dict):
+            source_config = {}
+        if not isinstance(target_config, dict):
+            target_config = {}
+
         # Merge hooks without duplication
         source_repos = source_config.get("repos", [])
         target_repos = target_config.get("repos", [])

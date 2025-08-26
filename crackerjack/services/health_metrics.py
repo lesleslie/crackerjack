@@ -38,14 +38,16 @@ class ProjectHealth:
             return False
 
         recent = values[-min_points:]
-        return all(recent[i] <= recent[i + 1] for i in range(len(recent) - 1))
+        # Performance: Use pairwise comparison with zip
+        return all(a <= b for a, b in zip(recent, recent[1:]))
 
     def _is_trending_down(self, values: list[float], min_points: int = 3) -> bool:
         if len(values) < min_points:
             return False
 
         recent = values[-min_points:]
-        return all(recent[i] >= recent[i + 1] for i in range(len(recent) - 1))
+        # Performance: Use pairwise comparison with zip
+        return all(a >= b for a, b in zip(recent, recent[1:]))
 
     def get_health_score(self) -> float:
         scores: list[float] = []

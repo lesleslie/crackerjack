@@ -95,7 +95,7 @@ class TestProgress:
     def _add_test_stats(self, progress_text: Text) -> None:
         """Add test execution statistics to progress text."""
         progress_text.append("🧪 Tests: ", style="bold cyan")
-        progress_text.append(f"{self.passed}", style="green")
+        progress_text.append(str(self.passed), style="green")
         progress_text.append(f"/{self.total_tests} passed", style="white")
 
         if self.failed > 0:
@@ -379,11 +379,11 @@ class TestManagementImpl:
         cmd: list[str],
         timeout: int,
     ) -> subprocess.CompletedProcess[str]:
-        try:
+        from contextlib import suppress
+
+        with suppress(Exception):
             self.console.print(f"[red]❌ Progress display failed: {error}[/red]")
             self.console.print("[yellow]⚠️ Falling back to standard mode[/yellow]")
-        except Exception:
-            pass
         return self._run_test_command(cmd, timeout)
 
     def _parse_test_line(self, line: str, progress: TestProgress) -> None:

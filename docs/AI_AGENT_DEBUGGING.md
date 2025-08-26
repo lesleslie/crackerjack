@@ -17,11 +17,13 @@ python -m crackerjack --ai-agent --verbose -t
 ## Debug Modes
 
 ### 1. Standard Mode (`--ai-agent`)
+
 - Basic AI agent functionality
 - Standard console output
 - Minimal debugging information
 
 ### 2. Debug Mode (`--ai-debug`)
+
 - **Implies `--ai-agent` and `--verbose`**
 - Detailed console output during execution
 - Comprehensive debug logging to file
@@ -30,6 +32,7 @@ python -m crackerjack --ai-agent --verbose -t
 - MCP operation monitoring
 
 ### 3. Verbose Mode (`--verbose`)
+
 - Enhanced console output
 - Detailed operation timings
 - Agent confidence scores
@@ -38,12 +41,14 @@ python -m crackerjack --ai-agent --verbose -t
 ## What Gets Debugged
 
 ### MCP Server Operations
+
 - **Tool Calls**: All MCP tool invocations with parameters and results
 - **Execution Times**: Duration of each MCP operation
 - **Error Tracking**: Detailed error information when operations fail
 - **Progress Updates**: Real-time job progress and status changes
 
 ### Sub-Agent Activities
+
 - **Agent Assignment**: Which agents are selected for specific issues
 - **Confidence Scores**: How confident each agent is about handling issues
 - **Processing Events**: Start/completion of agent processing
@@ -51,6 +56,7 @@ python -m crackerjack --ai-agent --verbose -t
 - **Cache Operations**: Hit/miss statistics for issue caching
 
 ### Workflow Phases
+
 - **Phase Transitions**: Start/completion of each workflow phase
 - **Timing Information**: Duration of each phase
 - **Success/Failure Status**: Detailed status reporting
@@ -59,20 +65,26 @@ python -m crackerjack --ai-agent --verbose -t
 ## Debug Output Locations
 
 ### Console Output
+
 When `--ai-debug` or `--verbose` is enabled, you'll see:
+
 - Real-time agent activity updates
 - MCP operation status
 - Workflow phase transitions
 - Error events with context
 
 ### Debug Log Files
+
 Automatically created debug logs:
+
 - `crackerjack-ai-debug-{session_id}.log` - Comprehensive debug log
 - Contains structured logging with timestamps and context
 - Includes all MCP operations, agent activities, and workflow events
 
 ### Debug Summary
+
 At the end of execution, a comprehensive summary shows:
+
 - Total MCP operations and tools used
 - Agent activity breakdown with confidence scores
 - Workflow phase completion status
@@ -137,13 +149,17 @@ The debug summary provides:
 | **Error Events** | Total errors, unique error types |
 
 ### Agent Activity Breakdown
+
 Shows per-agent statistics:
+
 - Number of activities
 - Average confidence score
 - Success rate
 
 ### MCP Tool Usage
+
 Shows per-tool statistics:
+
 - Number of calls
 - Error count
 - Average execution time
@@ -153,21 +169,25 @@ Shows per-tool statistics:
 ### Common Debugging Scenarios
 
 1. **Agent Selection Issues**
+
    - Check confidence scores in debug output
    - Review agent activity breakdown
    - Look for collaboration events
 
-2. **MCP Communication Problems**
+1. **MCP Communication Problems**
+
    - Monitor MCP operation timings
    - Check for error patterns in tool calls
    - Review connection status
 
-3. **Performance Issues**
+1. **Performance Issues**
+
    - Analyze phase durations
    - Check agent processing times
    - Review cache hit/miss ratios
 
-4. **Workflow Failures**
+1. **Workflow Failures**
+
    - Follow workflow phase transitions
    - Check error events for root causes
    - Review retry patterns
@@ -175,12 +195,14 @@ Shows per-tool statistics:
 ### Debug Log Analysis
 
 The debug log contains structured entries:
+
 ```
 2024-01-15T10:30:45.123 | crackerjack.agents | INFO | Agent processing_started: FormattingAgent
 2024-01-15T10:30:45.456 | crackerjack.mcp | INFO | MCP tool_call: execute_crackerjack
 ```
 
 Each entry includes:
+
 - Timestamp
 - Logger name (component)
 - Log level
@@ -189,6 +211,7 @@ Each entry includes:
 ## Performance Impact
 
 Debug mode adds minimal overhead:
+
 - **Console Output**: ~5-10ms per message
 - **File Logging**: ~1-2ms per log entry
 - **Summary Generation**: ~50-100ms total
@@ -199,13 +222,17 @@ Debug mode is designed to be safe for production troubleshooting when needed.
 ## Integration with Other Tools
 
 ### MCP Progress Monitoring
+
 Debug information integrates with:
+
 - WebSocket progress streaming
 - Progress monitor TUI
 - Service watchdog
 
 ### Log Aggregation
+
 Debug logs can be consumed by:
+
 - ELK Stack (Elasticsearch, Logstash, Kibana)
 - Grafana + Loki
 - CloudWatch Logs
@@ -214,10 +241,10 @@ Debug logs can be consumed by:
 ## Best Practices
 
 1. **Enable debug mode when troubleshooting** issues with AI agent workflows
-2. **Use verbose mode** for development and testing
-3. **Export debug data** for offline analysis of complex issues
-4. **Monitor debug summaries** to understand agent performance patterns
-5. **Correlate debug logs** with MCP server logs for complete visibility
+1. **Use verbose mode** for development and testing
+1. **Export debug data** for offline analysis of complex issues
+1. **Monitor debug summaries** to understand agent performance patterns
+1. **Correlate debug logs** with MCP server logs for complete visibility
 
 ## Advanced Configuration
 
@@ -234,6 +261,6 @@ debugger.log_agent_activity(
     agent_name="CustomAgent",
     activity="custom_processing",
     confidence=0.8,
-    metadata={"custom_data": "value"}
+    metadata={"custom_data": "value"},
 )
 ```

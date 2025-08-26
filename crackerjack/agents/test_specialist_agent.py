@@ -105,7 +105,7 @@ class TestSpecialistAgent(SubAgent):
 
         file_fixes, file_modified = await self._apply_file_fixes(issue)
         fixes_applied.extend(file_fixes)
-        if file_modified:
+        if file_modified and issue.file_path:
             files_modified.append(issue.file_path)
 
         general_fixes = await self._apply_general_test_fixes()

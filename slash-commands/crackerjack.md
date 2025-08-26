@@ -11,6 +11,7 @@ Run Crackerjack with AI-powered auto-fix mode to automatically resolve all code 
 ## Description
 
 This slash command runs Crackerjack with the optimal configuration for autonomous code quality enforcement:
+
 - `--ai-agent-autofix`: Combined AI agent and auto-fix mode
 - `--test`: Run tests after quality checks
 - `--track-progress`: Enable session progress tracking
@@ -19,12 +20,12 @@ This slash command runs Crackerjack with the optimal configuration for autonomou
 ## What It Does
 
 1. 🚀 **Fast Hooks**: Runs basic formatting and linting checks
-2. 🤖 **AI Auto-Fix**: Automatically fixes any issues found
-3. ✅ **Tests**: Runs test suite (only if fast hooks pass)
-4. 🤖 **AI Auto-Fix**: Fixes any test-related issues
-5. 🔍 **Comprehensive Hooks**: Runs advanced analysis (security, types, complexity)
-6. 🤖 **AI Auto-Fix**: Applies advanced fixes for remaining issues
-7. 🎉 **Success**: Perfect code quality achieved automatically!
+1. 🤖 **AI Auto-Fix**: Automatically fixes any issues found
+1. ✅ **Tests**: Runs test suite (only if fast hooks pass)
+1. 🤖 **AI Auto-Fix**: Fixes any test-related issues
+1. 🔍 **Comprehensive Hooks**: Runs advanced analysis (security, types, complexity)
+1. 🤖 **AI Auto-Fix**: Applies advanced fixes for remaining issues
+1. 🎉 **Success**: Perfect code quality achieved automatically!
 
 ## Example
 

@@ -293,7 +293,7 @@ class ServiceWatchdog:
         if not self.session:
             return False
 
-        try:
+        with suppress(Exception):
             async with self.session.get("http: // localhost: 8675 / ") as response:
                 if response.status == 200:
                     data = await response.json()
@@ -303,8 +303,6 @@ class ServiceWatchdog:
                         and "Crackerjack" in data.get("message", "")
                         and "progress_dir" in data
                     )
-        except Exception:
-            pass
         return False
 
     async def _restart_service(self, service: ServiceConfig) -> None:

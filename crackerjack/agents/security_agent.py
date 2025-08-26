@@ -73,9 +73,9 @@ class SecurityAgent(SubAgent):
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         self.log(f"Analyzing security issue: {issue.message}")
 
-        fixes_applied = []
-        files_modified = []
-        recommendations = []
+        fixes_applied: list[str] = []
+        files_modified: list[str] = []
+        recommendations: list[str] = []
 
         try:
             vulnerability_type = self._identify_vulnerability_type(issue)

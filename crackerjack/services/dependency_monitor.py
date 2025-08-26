@@ -88,7 +88,7 @@ class DependencyMonitorService:
 
     def _extract_main_dependencies(
         self,
-        project_data: dict,
+        project_data: dict[str, t.Any],
         dependencies: dict[str, str],
     ) -> None:
         """Extract main dependencies from project data."""
@@ -102,7 +102,7 @@ class DependencyMonitorService:
 
     def _extract_optional_dependencies(
         self,
-        project_data: dict,
+        project_data: dict[str, t.Any],
         dependencies: dict[str, str],
     ) -> None:
         """Extract optional dependencies from project data."""
@@ -306,7 +306,7 @@ class DependencyMonitorService:
         self,
         package: str,
         current_version: str,
-        cache: dict,
+        cache: dict[str, t.Any],
         current_time: float,
     ) -> MajorUpdate | None:
         """Check if a specific package has a major update available."""
@@ -339,7 +339,7 @@ class DependencyMonitorService:
     def _get_cached_major_update(
         self,
         cache_key: str,
-        cache: dict,
+        cache: dict[str, t.Any],
         current_time: float,
         package: str,
         current_version: str,
@@ -361,7 +361,7 @@ class DependencyMonitorService:
     def _is_cache_entry_valid(
         self,
         cache_key: str,
-        cache: dict,
+        cache: dict[str, t.Any],
         current_time: float,
     ) -> bool:
         """Check if cache entry exists and is not expired."""
@@ -376,7 +376,7 @@ class DependencyMonitorService:
         self,
         package: str,
         current_version: str,
-        cached_data: dict,
+        cached_data: dict[str, t.Any],
     ) -> MajorUpdate:
         """Create MajorUpdate instance from cached data."""
         return MajorUpdate(
@@ -392,7 +392,7 @@ class DependencyMonitorService:
         package: str,
         current_version: str,
         cache_key: str,
-        cache: dict,
+        cache: dict[str, t.Any],
         current_time: float,
     ) -> MajorUpdate | None:
         """Fetch latest version info and cache the result."""
@@ -424,7 +424,7 @@ class DependencyMonitorService:
         self,
         package: str,
         current_version: str,
-        latest_info: dict,
+        latest_info: dict[str, t.Any],
         has_major_update: bool,
     ) -> MajorUpdate | None:
         """Create MajorUpdate instance if there is a major update available."""
@@ -441,11 +441,11 @@ class DependencyMonitorService:
 
     def _update_cache_entry(
         self,
-        cache: dict,
+        cache: dict[str, t.Any],
         cache_key: str,
         current_time: float,
         has_major_update: bool,
-        latest_info: dict,
+        latest_info: dict[str, t.Any],
     ) -> None:
         """Update cache with latest version information."""
         cache[cache_key] = {

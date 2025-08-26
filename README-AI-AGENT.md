@@ -13,16 +13,19 @@ Crackerjack includes **9 specialized sub-agents** that automatically detect and 
 #### Performance & Code Quality Agents
 
 - **PerformanceAgent**: Automatically optimizes performance anti-patterns
+
   - Transforms `list += [item]` → `list.append(item)`
   - Optimizes string concatenation → list.append + join patterns
   - Detects and comments on nested loops and expensive operations
 
 - **RefactoringAgent**: Reduces complexity and removes dead code
+
   - Breaks down complex functions (cognitive complexity ≤13)
   - Removes unused imports, variables, and functions
   - Extracts common patterns into reusable utilities
 
 - **DRYAgent**: Eliminates code duplication
+
   - Detects duplicate code patterns
   - Suggests extracting common functionality
   - Recommends base classes and mixins
@@ -30,21 +33,26 @@ Crackerjack includes **9 specialized sub-agents** that automatically detect and 
 #### Specialized Fix Agents
 
 - **DocumentationAgent**: Maintains documentation consistency and changelogs
+
   - Auto-generates changelog entries from git commits during version bumps
   - Ensures consistent agent counts and references across all .md files
   - Updates README examples when APIs change
   - Integrates with publish workflow for automatic documentation updates
 
 - **SecurityAgent**: Fixes security vulnerabilities
+
   - Removes hardcoded paths and unsafe operations
   - Applies security best practices
 
 - **ImportOptimizationAgent**: Optimizes import statements
+
   - Consolidates and reorganizes imports
   - Removes unused imports and dead code
 
 - **FormattingAgent**: Handles code style and formatting
+
 - **TestCreationAgent**: Fixes test failures and improves coverage
+
 - **TestSpecialistAgent**: Manages complex testing scenarios
 
 #### Automatic Code Transformation

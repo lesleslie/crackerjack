@@ -1,5 +1,6 @@
 import time
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from rich.console import Console, Group
@@ -161,7 +162,7 @@ class ProgressStreamer:
             self._update_websocket_progress(update_data)
 
     def _update_websocket_progress(self, update_data: dict[str, t.Any]) -> None:
-        try:
+        with suppress(Exception):
             if hasattr(self.session, "progress_file") and self.session.progress_file:
                 import json
 
@@ -185,9 +186,6 @@ class ProgressStreamer:
 
                 with self.session.progress_file.open("w") as f:
                     json.dump(progress_data, f, indent=2)
-
-        except Exception:
-            pass
 
 
 class AdvancedWorkflowOrchestrator:
@@ -456,9 +454,9 @@ class AdvancedWorkflowOrchestrator:
             strategy_switches=strategy_switches,
             correlation_insights=correlation_data,
             total_execution_time_ms=total_time,
-            hooks_execution_time_ms=int(hooks_time),
-            tests_execution_time_ms=int(tests_time),
-            ai_analysis_time_ms=int(ai_time),
+            hooks_execution_time_ms=hooks_time,
+            tests_execution_time_ms=tests_time,
+            ai_analysis_time_ms=ai_time,
         )
 
         return success

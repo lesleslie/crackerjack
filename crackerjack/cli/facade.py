@@ -32,7 +32,7 @@ class CrackerjackCLIFacade:
             if self._should_handle_special_mode(options):
                 self._handle_special_modes(options)
                 return
-            success = self.orchestrator.run_complete_workflow(options)
+            success = asyncio.run(self.orchestrator.run_complete_workflow(options))
             if not success:
                 self.console.print("[red]❌ Workflow completed with errors[/red]")
             else:
@@ -89,12 +89,20 @@ class CrackerjackCLIFacade:
             from crackerjack.mcp_enterprise import run_enterprise_batch
 
             enterprise_batch = options.enterprise_batch
-            project_paths = [path.strip() for path in enterprise_batch.split(",")]
+            if not enterprise_batch:
+                self.console.print(
+                    "[red]❌ No projects specified for batch processing[/red]"
+                )
+                raise SystemExit(1)
+
+            project_paths: list[str] = [
+                path.strip() for path in enterprise_batch.split(",")
+            ]
             self.console.print(
                 "[bold cyan]🏢 Starting Enterprise Batch Processing...[/bold cyan]",
             )
             self.console.print(f"[dim]Processing {len(project_paths)} projects[/dim]")
-            stages = ["fast", "comprehensive"]
+            stages: list[str] = ["fast", "comprehensive"]
             if hasattr(options, "test") and options.test:
                 stages.insert(1, "tests")
             result = asyncio.run(
@@ -128,7 +136,13 @@ class CrackerjackCLIFacade:
             from crackerjack.mcp_monitor import start_monitoring_dashboard
 
             monitor_dashboard = options.monitor_dashboard
-            project_paths = [path.strip() for path in monitor_dashboard.split(",")]
+            if not monitor_dashboard:
+                self.console.print("[red]❌ No projects specified for monitoring[/red]")
+                raise SystemExit(1)
+
+            project_paths: list[str] = [
+                path.strip() for path in monitor_dashboard.split(",")
+            ]
             self.console.print(
                 "[bold cyan]🖥️ Starting Real-Time Monitoring Dashboard...[/bold cyan]",
             )

@@ -427,11 +427,10 @@ class IndividualHookExecutor:
             progress.error_details = parsed_output["errors"] + parsed_output["warnings"]
 
             hook_result = HookResult(
+                id=hook.name,
                 name=hook.name,
                 status="passed" if result.returncode == 0 else "failed",
                 duration=progress.duration or 0,
-                output=result.stdout,
-                error=result.stderr if result.returncode != 0 else None,
             )
 
             self._print_hook_summary(hook.name, hook_result, progress)
@@ -444,11 +443,10 @@ class IndividualHookExecutor:
             self.console.print(f"[red]⏰ {error_msg}[/red]")
 
             return HookResult(
+                id=hook.name,
                 name=hook.name,
                 status="failed",
                 duration=hook.timeout,
-                output="",
-                error=error_msg,
             )
 
     async def _run_command_with_streaming(
@@ -485,7 +483,6 @@ class IndividualHookExecutor:
             cwd=self.pkg_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            text=True,
         )
 
     def _create_stream_reader_tasks(

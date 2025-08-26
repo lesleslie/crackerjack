@@ -418,7 +418,7 @@ class RefactoringAgent(SubAgent):
         return extracted_methods
 
     def _analyze_dead_code(self, tree: ast.AST, content: str) -> dict[str, t.Any]:
-        analysis = {
+        analysis: dict[str, list[t.Any]] = {
             "unused_imports": [],
             "unused_variables": [],
             "unused_functions": [],
@@ -475,7 +475,8 @@ class RefactoringAgent(SubAgent):
         analysis: dict[str, t.Any],
         analyzer_result: dict[str, t.Any],
     ) -> None:
-        for line_no, name, import_type in analyzer_result["import_lines"]:
+        import_lines: list[tuple[int, str, str]] = analyzer_result["import_lines"]
+        for line_no, name, import_type in import_lines:
             if name not in analyzer_result["used_names"]:
                 analysis["unused_imports"].append(
                     {
@@ -491,31 +492,48 @@ class RefactoringAgent(SubAgent):
         analysis: dict[str, t.Any],
         analyzer_result: dict[str, t.Any],
     ) -> None:
+        all_unused_functions: list[dict[str, t.Any]] = analyzer_result[
+            "unused_functions"
+        ]
         unused_functions = [
             func
-            for func in analyzer_result["unused_functions"]
+            for func in all_unused_functions
             if func["name"] not in analyzer_result["used_names"]
         ]
         analysis["unused_functions"] = unused_functions
         for func in unused_functions:
             analysis["removable_items"].append(f"unused function: {func['name']}")
 
-    def _remove_dead_code_items(self, content: str, analysis: dict[str, t.Any]) -> str:
-        lines = content.split("\n")
+    def _should_remove_import_line(self, line: str, unused_import: dict) -> bool:
+        """Check if an import line should be removed."""
+        if unused_import["type"] == "import":
+            return f"import {unused_import['name']}" in line
+        elif unused_import["type"] == "from_import":
+            return (
+                "from " in line
+                and unused_import["name"] in line
+                and line.strip().endswith(unused_import["name"])
+            )
+        return False
+
+    def _find_lines_to_remove(
+        self, lines: list[str], analysis: dict[str, t.Any]
+    ) -> set[int]:
+        """Find line indices that should be removed."""
         lines_to_remove: set[int] = set()
 
         for unused_import in analysis["unused_imports"]:
             line_idx = unused_import["line"] - 1
             if 0 <= line_idx < len(lines):
-                line = lines[line_idx]
+                line = t.cast(str, lines[line_idx])
+                if self._should_remove_import_line(line, unused_import):
+                    lines_to_remove.add(line_idx)
 
-                if unused_import["type"] == "import":
-                    if f"import {unused_import['name']}" in line:
-                        lines_to_remove.add(line_idx)
-                elif unused_import["type"] == "from_import":
-                    if "from " in line and unused_import["name"] in line:
-                        if line.strip().endswith(unused_import["name"]):
-                            lines_to_remove.add(line_idx)
+        return lines_to_remove
+
+    def _remove_dead_code_items(self, content: str, analysis: dict[str, t.Any]) -> str:
+        lines = content.split("\n")
+        lines_to_remove = self._find_lines_to_remove(lines, analysis)
 
         filtered_lines = [
             line for i, line in enumerate(lines) if i not in lines_to_remove

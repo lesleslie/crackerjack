@@ -129,22 +129,25 @@ Add agent information to individual job panels:
 ### Phase 1: Data Integration
 
 1. **Extend MCP Server**: Add agent tracking to `mcp/server.py`
+
    - Track agent initialization in `_apply_intelligent_fixes`
    - Log agent performance metrics
    - Store agent status in progress data
 
-2. **Update Progress Data Structure**: Extend job progress JSON to include agent data:
+1. **Update Progress Data Structure**: Extend job progress JSON to include agent data:
+
    ```python
    progress_data = {
        # ... existing fields ...
        "agent_activity": agent_tracker.get_status(),
-       "agent_performance": agent_tracker.get_metrics()
+       "agent_performance": agent_tracker.get_metrics(),
    }
    ```
 
 ### Phase 2: UI Implementation
 
 1. **Create AgentStatusPanel**: New widget for agent monitoring
+
    ```python
    class AgentStatusPanel(Widget):
        def __init__(self, agent_data: dict):
@@ -153,15 +156,15 @@ Add agent information to individual job panels:
            # Progress indicators for active agents
    ```
 
-2. **Integrate into CrackerjackDashboard**: Add agent panel to main layout
+1. **Integrate into CrackerjackDashboard**: Add agent panel to main layout
 
-3. **Update JobPanel**: Add agent mini-status to individual jobs
+1. **Update JobPanel**: Add agent mini-status to individual jobs
 
 ### Phase 3: Real-time Updates
 
 1. **Agent Status Streaming**: WebSocket updates for agent status changes
-2. **Performance Metrics**: Rolling averages for processing times
-3. **Cache Hit Visualization**: Show cached vs. new fixes
+1. **Performance Metrics**: Rolling averages for processing times
+1. **Cache Hit Visualization**: Show cached vs. new fixes
 
 ## Technical Requirements
 
@@ -189,31 +192,31 @@ class AgentTracker:
 ### Integration Points
 
 1. **AgentCoordinator**: Instrument with tracking calls
-2. **MCP Server**: Include agent data in progress updates
-3. **Progress Monitor**: Parse and display agent data
+1. **MCP Server**: Include agent data in progress updates
+1. **Progress Monitor**: Parse and display agent data
 
 ## Benefits
 
 1. **Transparency**: Users see which agents are working on their code
-2. **Performance Insight**: Identify slow or failing agents
-3. **Debugging**: Understand agent routing decisions
-4. **Trust Building**: Show AI agent decision-making process
-5. **Optimization**: Identify bottlenecks in agent processing
+1. **Performance Insight**: Identify slow or failing agents
+1. **Debugging**: Understand agent routing decisions
+1. **Trust Building**: Show AI agent decision-making process
+1. **Optimization**: Identify bottlenecks in agent processing
 
 ## Example Flow
 
 1. User runs `/crackerjack:run`
-2. Coordinator initializes 9 agents
-3. Progress TUI shows "🤖 AI Agents: 9 ready"
-4. Issues detected: 10 formatting, 3 security, 5 performance, 2 complexity, 1 DRY violation, 2 test failures
-5. Agent assignment displayed in real-time:
+1. Coordinator initializes 9 agents
+1. Progress TUI shows "🤖 AI Agents: 9 ready"
+1. Issues detected: 10 formatting, 3 security, 5 performance, 2 complexity, 1 DRY violation, 2 test failures
+1. Agent assignment displayed in real-time:
    - FormattingAgent: 10 issues (confidence 95%)
    - SecurityAgent: 3 issues (confidence 90%)
    - PerformanceAgent: 5 issues (confidence 85%)
    - RefactoringAgent: 2 issues (confidence 90%)
    - DRYAgent: 1 issue (confidence 90%)
    - TestSpecialistAgent: 2 issues (confidence 88%)
-6. Processing updates show in agent panel
-7. Completion shows success rates and times
+1. Processing updates show in agent panel
+1. Completion shows success rates and times
 
 This design provides comprehensive visibility into the multi-agent system while integrating seamlessly with the existing progress monitoring infrastructure.

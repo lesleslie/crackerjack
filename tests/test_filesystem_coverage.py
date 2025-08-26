@@ -244,13 +244,13 @@ class TestFileSystemServiceGlob:
             yield temp_path
 
     def test_glob_success(self, fs_service, temp_dir) -> None:
-        results = fs_service.glob(" * .txt", temp_dir)
+        results = fs_service.glob("*.txt", temp_dir)
         assert len(results) == 2
         assert all(r.suffix == ".txt" for r in results)
 
     def test_glob_no_path(self, fs_service) -> None:
         with patch.object(Path, "glob", return_value=[]):
-            results = fs_service.glob(" * .txt")
+            results = fs_service.glob("*.txt")
             assert results == []
 
     def test_glob_base_path_not_exists(self, fs_service, temp_dir) -> None:

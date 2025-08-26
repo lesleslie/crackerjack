@@ -61,6 +61,8 @@ class Options(BaseModel):
     dev: bool = False
     dashboard: bool = False
     max_iterations: int = 10
+    enterprise_batch: str | None = None
+    monitor_dashboard: str | None = None
 
     @classmethod
     @field_validator("publish", "bump", mode="before")

@@ -7,6 +7,7 @@ Every action in our workflow must be verified. Success is never assumed - it mus
 ## Verification Protocol
 
 ### 1. Pre-Action State Capture
+
 ```python
 def capture_pre_action_state():
     """Capture complete system state before any action."""
@@ -16,27 +17,28 @@ def capture_pre_action_state():
             "desktop": get_current_desktop(),
             "app": get_frontmost_app(),
             "window": get_window_info(),
-            "tab": get_tab_info()
+            "tab": get_tab_info(),
         },
         "processes": {
             "mcp_server": check_process("crackerjack.*mcp"),
             "websocket": check_process("websocket.*8675"),
-            "monitor": check_process("enhanced_progress_monitor")
+            "monitor": check_process("enhanced_progress_monitor"),
         },
         "network": {
             "websocket_port": check_port(8675),
-            "websocket_responsive": test_websocket_connection()
+            "websocket_responsive": test_websocket_connection(),
         },
         "files": {
             "progress_dir": list_progress_files(),
-            "active_jobs": get_active_job_ids()
+            "active_jobs": get_active_job_ids(),
         },
-        "screenshot": take_screenshot("pre_action")
+        "screenshot": take_screenshot("pre_action"),
     }
     return state
 ```
 
 ### 2. Action Execution with Logging
+
 ```python
 def execute_action_with_verification(action_func, *args, **kwargs):
     """Execute action with comprehensive logging and verification."""
@@ -73,11 +75,12 @@ def execute_action_with_verification(action_func, *args, **kwargs):
         "execution_time": execution_time,
         "pre_state": pre_state,
         "post_state": post_state,
-        "verification": verification
+        "verification": verification,
     }
 ```
 
 ### 3. Multi-Point Verification
+
 ```python
 def verify_action_success(pre_state, post_state, expected_result):
     """Verify action success through multiple checks."""
@@ -86,14 +89,14 @@ def verify_action_success(pre_state, post_state, expected_result):
         "process_healthy": False,
         "network_accessible": False,
         "expected_changes": False,
-        "no_errors": False
+        "no_errors": False,
     }
 
     # Location verification
     if action_type == "window_switch":
         checks["location_correct"] = (
-            post_state["location"]["window"] == expected_window and
-            post_state["location"]["tab"] == expected_tab
+            post_state["location"]["window"] == expected_window
+            and post_state["location"]["tab"] == expected_tab
         )
 
     # Process verification
@@ -104,8 +107,8 @@ def verify_action_success(pre_state, post_state, expected_result):
     # Network verification
     if requires_network:
         checks["network_accessible"] = (
-            post_state["network"]["websocket_responsive"] and
-            post_state["network"]["websocket_port"]
+            post_state["network"]["websocket_responsive"]
+            and post_state["network"]["websocket_port"]
         )
 
     # Expected changes verification
@@ -120,7 +123,7 @@ def verify_action_success(pre_state, post_state, expected_result):
     return {
         "verified": verified,
         "checks": checks,
-        "details": generate_verification_report(checks, pre_state, post_state)
+        "details": generate_verification_report(checks, pre_state, post_state),
     }
 ```
 
@@ -187,7 +190,7 @@ def execute_monitor_command(self):
     pre_checks = {
         "websocket_running": self.check_websocket_server(),
         "port_available": not self.check_port_in_use(8675),
-        "no_existing_monitor": not self.check_process("enhanced_progress_monitor")
+        "no_existing_monitor": not self.check_process("enhanced_progress_monitor"),
     }
 
     if not all(pre_checks.values()):
@@ -213,7 +216,7 @@ def execute_monitor_command(self):
 
         # Check if monitor process started
         if self.check_process("enhanced_progress_monitor"):
-            print(f"✅ Monitor process detected after {i+1} seconds")
+            print(f"✅ Monitor process detected after {i + 1} seconds")
             break
 
         # Check for error output
@@ -230,7 +233,7 @@ def execute_monitor_command(self):
         "process_running": self.check_process("enhanced_progress_monitor"),
         "ui_visible": self.verify_textual_ui_active(),
         "websocket_connected": self.verify_websocket_connection(),
-        "panels_rendered": self.verify_monitor_panels()
+        "panels_rendered": self.verify_monitor_panels(),
     }
 
     print("🔍 Verifying monitor functionality...")
@@ -267,34 +270,31 @@ def check_process(self, pattern):
     """Check if process matching pattern is running."""
     try:
         result = subprocess.run(
-            ["pgrep", "-f", pattern],
-            capture_output=True,
-            text=True
+            ["pgrep", "-f", pattern], capture_output=True, text=True
         )
         return result.returncode == 0
     except Exception:
         return False
 
+
 def get_process_info(self, pattern):
     """Get detailed process information."""
     try:
-        result = subprocess.run(
-            ["ps", "aux"],
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(["ps", "aux"], capture_output=True, text=True)
 
         processes = []
-        for line in result.stdout.split('\n'):
-            if pattern in line and 'grep' not in line:
+        for line in result.stdout.split("\n"):
+            if pattern in line and "grep" not in line:
                 parts = line.split()
-                processes.append({
-                    "user": parts[0],
-                    "pid": parts[1],
-                    "cpu": parts[2],
-                    "mem": parts[3],
-                    "command": ' '.join(parts[10:])
-                })
+                processes.append(
+                    {
+                        "user": parts[0],
+                        "pid": parts[1],
+                        "cpu": parts[2],
+                        "mem": parts[3],
+                        "command": " ".join(parts[10:]),
+                    }
+                )
 
         return processes
     except Exception as e:
@@ -307,6 +307,7 @@ def get_process_info(self, pattern):
 ### For Every Action:
 
 - [ ] **Pre-Action**
+
   - [ ] Capture current desktop/app/window/tab location
   - [ ] Take screenshot with timestamp
   - [ ] Check relevant process states
@@ -314,12 +315,14 @@ def get_process_info(self, pattern):
   - [ ] Log complete state to file
 
 - [ ] **During Action**
+
   - [ ] Log action start time
   - [ ] Capture any output/errors
   - [ ] Monitor for unexpected behavior
   - [ ] Set reasonable timeout
 
 - [ ] **Post-Action**
+
   - [ ] Wait brief moment for state to settle
   - [ ] Capture new desktop/app/window/tab location
   - [ ] Take screenshot with timestamp
@@ -328,6 +331,7 @@ def get_process_info(self, pattern):
   - [ ] Verify no unexpected changes occurred
 
 - [ ] **Verification**
+
   - [ ] Compare pre/post states
   - [ ] Verify all expected changes
   - [ ] Check for error conditions
@@ -335,6 +339,7 @@ def get_process_info(self, pattern):
   - [ ] Make success/failure determination
 
 - [ ] **Recovery**
+
   - [ ] If verification fails, attempt recovery
   - [ ] Log failure details
   - [ ] Take diagnostic screenshots
@@ -390,9 +395,9 @@ def start_monitor_with_paranoid_verification(self):
 ## Key Principles
 
 1. **Never Trust, Always Verify**: Every action must be verified
-2. **Multiple Verification Points**: Use screenshots, process checks, socket tests, and state comparison
-3. **Detailed Logging**: Every step creates evidence of what happened
-4. **Graceful Failure**: When verification fails, gather diagnostics and attempt recovery
-5. **Clear Reporting**: Success and failure must be unambiguous
+1. **Multiple Verification Points**: Use screenshots, process checks, socket tests, and state comparison
+1. **Detailed Logging**: Every step creates evidence of what happened
+1. **Graceful Failure**: When verification fails, gather diagnostics and attempt recovery
+1. **Clear Reporting**: Success and failure must be unambiguous
 
 This paranoid verification approach ensures reliability and provides clear diagnostics when things go wrong.

@@ -3,6 +3,7 @@ import json
 import time
 import typing as t
 import uuid
+from contextlib import suppress
 
 from crackerjack.mcp.context import get_context
 
@@ -109,14 +110,12 @@ def _handle_task_exception(job_id: str, task: asyncio.Task) -> None:
                 )
     except Exception as e:
         # If we can't even log the error, at least try to create a simple file
-        try:
+        with suppress(Exception):
             debug_file = (
                 Path(tempfile.gettempdir()) / f"crackerjack-logging-error-{job_id}.log"
             )
             with debug_file.open("w") as f:
                 f.write(f"Failed to log task exception: {e}\n")
-        except Exception:
-            pass  # Give up if we can't even do that
 
 
 def _parse_kwargs(kwargs: str) -> dict[str, t.Any]:
@@ -548,13 +547,11 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
 
     # Check if WebSocket server is running
     websocket_running = False
-    try:
+    with suppress(Exception):
         from crackerjack.services.server_manager import find_websocket_server_processes
 
         websocket_processes = find_websocket_server_processes()
         websocket_running = len(websocket_processes) > 0
-    except Exception:
-        pass
 
     if not websocket_running:
         _update_progress(
@@ -576,13 +573,11 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
 
             # Wait for server to start
             for _i in range(10):
-                try:
+                with suppress(Exception):
                     websocket_processes = find_websocket_server_processes()
-                    if len(websocket_processes) > 0:
+                    if websocket_processes:
                         context.safe_print("✅ WebSocket server started successfully")
                         break
-                except Exception:
-                    pass
                 await asyncio.sleep(0.5)
             else:
                 context.safe_print("⚠️ WebSocket server may not have started properly")
@@ -736,7 +731,7 @@ async def _cleanup_stale_jobs(context: t.Any) -> None:
     current_time = time.time()
     cleaned_count = 0
 
-    try:
+    with suppress(Exception):
         for progress_file in context.progress_dir.glob("job-*.json"):
             try:
                 import json
@@ -760,14 +755,9 @@ async def _cleanup_stale_jobs(context: t.Any) -> None:
 
             except (json.JSONDecodeError, OSError):
                 # Clean up malformed files
-                try:
+                with suppress(OSError):
                     progress_file.unlink()
                     cleaned_count += 1
-                except OSError:
-                    pass
-
-    except Exception:
-        pass
 
     if cleaned_count > 0:
         context.safe_print(f"🗑️ Cleaned up {cleaned_count} stale job files")
@@ -792,7 +782,7 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
             )
 
         # Parse arguments
-        target_path = args.strip() if args.strip() else None
+        target_path = args.strip() or None
 
         try:
             extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}

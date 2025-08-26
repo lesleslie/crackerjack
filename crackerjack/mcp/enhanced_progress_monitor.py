@@ -38,7 +38,7 @@ class MetricCard(Widget):
         self.color = color
 
     def render(self) -> str:
-        trend_icon = self.trend if self.trend else ""
+        trend_icon = self.trend or ""
         return f"[{self.color}]{self.label}[/]\n[bold {self.color}]{self.value}[/] {trend_icon}"
 
 
@@ -414,7 +414,7 @@ class EnhancedCrackerjackDashboard(App):
                                 if agent_type == "RefactoringAgent"
                                 else "formatting",
                             }
-                            for agent_type in ["RefactoringAgent", "FormattingAgent"]
+                            for agent_type in ("RefactoringAgent", "FormattingAgent")
                         ],
                     )
 

@@ -158,7 +158,7 @@ class PytestOutputParser:
         suite_info: TestSuiteProgress,
     ) -> None:
         if match := self.DETAILED_TEST_PATTERN.match(line):
-            file_path, test_name, status, progress, timing = match.groups()
+            file_path, test_name, status, _progress, _timing = match.groups()
             test_id = f"{file_path}::{test_name}"
 
             if test_id not in tests:
@@ -214,7 +214,7 @@ class PytestOutputParser:
         suite_info: TestSuiteProgress,
     ) -> None:
         if "::" in line and any(
-            status in line for status in ["PASSED", "FAILED", "SKIPPED", "ERROR"]
+            status in line for status in ("PASSED", "FAILED", "SKIPPED", "ERROR")
         ):
             suite_info.current_test = line.split()[0] if line.split() else None
 
@@ -251,7 +251,7 @@ class PytestOutputParser:
         return line.startswith("_") and "::" in line
 
     def _should_add_to_traceback(self, current_test: str | None, line: str) -> bool:
-        return current_test is not None and line.strip()
+        return current_test is not None and bool(line.strip())
 
     def _save_current_failure(
         self,
@@ -319,7 +319,9 @@ class TestProgressStreamer:
 
     def _finalize_suite_progress(self, suite_progress: TestSuiteProgress) -> None:
         suite_progress.end_time = time.time()
-        suite_progress.duration = suite_progress.end_time - suite_progress.start_time
+        suite_progress.duration = suite_progress.end_time - (
+            suite_progress.start_time or 0
+        )
 
     def _attach_failure_details(
         self,
@@ -354,7 +356,9 @@ class TestProgressStreamer:
     ) -> dict[str, t.Any]:
         self.console.print(f"[red]❌ Test execution failed: {error}[/red]")
         suite_progress.end_time = time.time()
-        suite_progress.duration = suite_progress.end_time - suite_progress.start_time
+        suite_progress.duration = suite_progress.end_time - (
+            suite_progress.start_time or 0
+        )
 
         return {
             "success": False,
@@ -490,7 +494,7 @@ class TestProgressStreamer:
     async def _cleanup_process_and_tasks(
         self,
         process: asyncio.subprocess.Process,
-        tasks: list[asyncio.Task],
+        tasks: list[asyncio.Task[t.Any]],
     ) -> None:
         process.kill()
         for task in tasks:
@@ -516,7 +520,7 @@ class TestProgressStreamer:
         suite_progress: TestSuiteProgress,
     ) -> None:
         if "::" in line and any(
-            status in line for status in ["PASSED", "FAILED", "SKIPPED", "ERROR"]
+            status in line for status in ("PASSED", "FAILED", "SKIPPED", "ERROR")
         ):
             parts = line.split()
             if parts:

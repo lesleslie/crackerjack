@@ -418,7 +418,7 @@ class WorkflowPipeline:
         # Collect hook failures from session
         if hasattr(self.session, "_failed_tasks"):
             for task_id, error_msg in self.session._failed_tasks.items():
-                if task_id in ["fast_hooks", "comprehensive_hooks"]:
+                if task_id in ("fast_hooks", "comprehensive_hooks"):
                     hook_count += 1
                     issue_type = (
                         IssueType.FORMATTING

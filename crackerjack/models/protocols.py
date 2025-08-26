@@ -42,6 +42,9 @@ class OptionsProtocol(t.Protocol):
     track_progress: bool = False
     fast: bool = False
     comp: bool = False
+    enterprise_batch: str | None = None
+    monitor_dashboard: str | None = None
+    coverage: bool = False
 
 
 @t.runtime_checkable

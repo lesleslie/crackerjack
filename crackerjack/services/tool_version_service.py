@@ -30,47 +30,68 @@ class ToolVersionService:
             "uv": self._get_uv_version,
         }
 
+    def _create_installed_version_info(
+        self, tool_name: str, current_version: str, latest_version: str | None
+    ) -> VersionInfo:
+        """Create version info for installed tool."""
+        update_available = (
+            latest_version is not None
+            and self._version_compare(current_version, latest_version) < 0
+        )
+
+        if update_available:
+            self.console.print(
+                f"[yellow]🔄 {tool_name} update available: "
+                f"{current_version} → {latest_version}[/yellow]"
+            )
+
+        return VersionInfo(
+            tool_name=tool_name,
+            current_version=current_version,
+            latest_version=latest_version,
+            update_available=update_available,
+        )
+
+    def _create_missing_tool_info(self, tool_name: str) -> VersionInfo:
+        """Create version info for missing tool."""
+        self.console.print(f"[red]⚠️ {tool_name} not installed[/red]")
+        return VersionInfo(
+            tool_name=tool_name,
+            current_version="not installed",
+            error=f"{tool_name} not found or not installed",
+        )
+
+    def _create_error_version_info(
+        self, tool_name: str, error: Exception
+    ) -> VersionInfo:
+        """Create version info for tool with error."""
+        self.console.print(f"[red]❌ Error checking {tool_name}: {error}[/red]")
+        return VersionInfo(
+            tool_name=tool_name,
+            current_version="unknown",
+            error=str(error),
+        )
+
+    async def _check_single_tool(self, tool_name: str, version_getter) -> VersionInfo:
+        """Check updates for a single tool."""
+        try:
+            current_version = version_getter()
+            if current_version:
+                latest_version = await self._fetch_latest_version(tool_name)
+                return self._create_installed_version_info(
+                    tool_name, current_version, latest_version
+                )
+            else:
+                return self._create_missing_tool_info(tool_name)
+        except Exception as e:
+            return self._create_error_version_info(tool_name, e)
+
     async def check_tool_updates(self) -> dict[str, VersionInfo]:
         results = {}
-
         for tool_name, version_getter in self.tools_to_check.items():
-            try:
-                current_version = version_getter()
-                if current_version:
-                    latest_version = await self._fetch_latest_version(tool_name)
-                    update_available = (
-                        latest_version is not None
-                        and self._version_compare(current_version, latest_version) < 0
-                    )
-
-                    results[tool_name] = VersionInfo(
-                        tool_name=tool_name,
-                        current_version=current_version,
-                        latest_version=latest_version,
-                        update_available=update_available,
-                    )
-
-                    if update_available:
-                        self.console.print(
-                            f"[yellow]🔄 {tool_name} update available: "
-                            f"{current_version} → {latest_version}[/yellow]",
-                        )
-                else:
-                    results[tool_name] = VersionInfo(
-                        tool_name=tool_name,
-                        current_version="not installed",
-                        error=f"{tool_name} not found or not installed",
-                    )
-                    self.console.print(f"[red]⚠️ {tool_name} not installed[/red]")
-
-            except Exception as e:
-                results[tool_name] = VersionInfo(
-                    tool_name=tool_name,
-                    current_version="unknown",
-                    error=str(e),
-                )
-                self.console.print(f"[red]❌ Error checking {tool_name}: {e}[/red]")
-
+            results[tool_name] = await self._check_single_tool(
+                tool_name, version_getter
+            )
         return results
 
     def _get_ruff_version(self) -> str | None:
@@ -767,58 +788,71 @@ class EnhancedErrorCategorizationService:
         self.console = console
         self.project_path = project_path
         self.error_patterns = self._initialize_error_patterns()
-        self.error_history = []
+        self.error_history: list[dict[str, t.Any]] = []
 
-    def _initialize_error_patterns(self) -> dict[str, dict[str, t.Any]]:
+    def _create_import_error_pattern(self) -> dict[str, t.Any]:
+        """Create import error pattern configuration."""
         return {
-            "import_error": {
-                "patterns": [
-                    r"ModuleNotFoundError: No module named '(.+ )'",
-                    r"ImportError: cannot import name '(.+ )' from '(.+ )'",
-                    r"ImportError: No module named (.+ )",
-                ],
-                "category": "dependency",
-                "severity": "high",
-                "auto_fixable": True,
-                "priority": 1,
-                "description": "Missing dependencies or import issues",
-            },
-            "syntax_error": {
-                "patterns": [
-                    r"SyntaxError: (.+ )",
-                    r"IndentationError: (.+ )",
-                    r"TabError: (.+ )",
-                ],
-                "category": "syntax",
-                "severity": "critical",
-                "auto_fixable": True,
-                "priority": 1,
-                "description": "Python syntax and indentation errors",
-            },
-            "type_error": {
-                "patterns": [
-                    r"error: (.+ ) \[(.+ )\]",
-                    r"TypeError: (.+ )",
-                    r"Argument .+ to .+ has incompatible type",
-                ],
-                "category": "typing",
-                "severity": "medium",
-                "auto_fixable": True,
-                "priority": 2,
-                "description": "Type checking and annotation issues",
-            },
-            "security_issue": {
-                "patterns": [
-                    r"B\d+ : (.+ )",
-                    r"Security issue: (.+ )",
-                    r"Vulnerability: (.+ )",
-                ],
-                "category": "security",
-                "severity": "high",
-                "auto_fixable": False,
-                "priority": 1,
-                "description": "Security vulnerabilities requiring attention",
-            },
+            "patterns": [
+                r"ModuleNotFoundError: No module named '(.+ )'",
+                r"ImportError: cannot import name '(.+ )' from '(.+ )'",
+                r"ImportError: No module named (.+ )",
+            ],
+            "category": "dependency",
+            "severity": "high",
+            "auto_fixable": True,
+            "priority": 1,
+            "description": "Missing dependencies or import issues",
+        }
+
+    def _create_syntax_error_pattern(self) -> dict[str, t.Any]:
+        """Create syntax error pattern configuration."""
+        return {
+            "patterns": [
+                r"SyntaxError: (.+ )",
+                r"IndentationError: (.+ )",
+                r"TabError: (.+ )",
+            ],
+            "category": "syntax",
+            "severity": "critical",
+            "auto_fixable": True,
+            "priority": 1,
+            "description": "Python syntax and indentation errors",
+        }
+
+    def _create_type_error_pattern(self) -> dict[str, t.Any]:
+        """Create type error pattern configuration."""
+        return {
+            "patterns": [
+                r"error: (.+ ) \[(.+ )\]",
+                r"TypeError: (.+ )",
+                r"Argument .+ to .+ has incompatible type",
+            ],
+            "category": "typing",
+            "severity": "medium",
+            "auto_fixable": True,
+            "priority": 2,
+            "description": "Type checking and annotation issues",
+        }
+
+    def _create_security_pattern(self) -> dict[str, t.Any]:
+        """Create security issue pattern configuration."""
+        return {
+            "patterns": [
+                r"B\d+ : (.+ )",
+                r"Security issue: (.+ )",
+                r"Vulnerability: (.+ )",
+            ],
+            "category": "security",
+            "severity": "high",
+            "auto_fixable": False,
+            "priority": 1,
+            "description": "Security vulnerabilities requiring attention",
+        }
+
+    def _create_quality_patterns(self) -> dict[str, dict[str, t.Any]]:
+        """Create quality-related error patterns."""
+        return {
             "complexity_violation": {
                 "patterns": [
                     r"C901 (.+ ) is too complex \((\d+ )\)",
@@ -844,19 +878,6 @@ class EnhancedErrorCategorizationService:
                 "priority": 4,
                 "description": "Unused imports, variables, and functions",
             },
-            "test_failure": {
-                "patterns": [
-                    r"FAILED (.+ ) - (.+ )",
-                    r"AssertionError: (.+ )",
-                    r"pytest.main\(\) returned (.+ )",
-                    r"(\d+ ) failed, (\d+ ) passed",
-                ],
-                "category": "testing",
-                "severity": "high",
-                "auto_fixable": False,
-                "priority": 2,
-                "description": "Test failures requiring investigation",
-            },
             "formatting_issue": {
                 "patterns": [
                     r"would reformat (.+ )",
@@ -869,6 +890,24 @@ class EnhancedErrorCategorizationService:
                 "auto_fixable": True,
                 "priority": 5,
                 "description": "Code formatting and style issues",
+            },
+        }
+
+    def _create_test_and_dependency_patterns(self) -> dict[str, dict[str, t.Any]]:
+        """Create test and dependency error patterns."""
+        return {
+            "test_failure": {
+                "patterns": [
+                    r"FAILED (.+ ) - (.+ )",
+                    r"AssertionError: (.+ )",
+                    r"pytest.main\(\) returned (.+ )",
+                    r"(\d+ ) failed, (\d+ ) passed",
+                ],
+                "category": "testing",
+                "severity": "high",
+                "auto_fixable": False,
+                "priority": 2,
+                "description": "Test failures requiring investigation",
             },
             "dependency_conflict": {
                 "patterns": [
@@ -884,13 +923,27 @@ class EnhancedErrorCategorizationService:
             },
         }
 
+    def _initialize_error_patterns(self) -> dict[str, dict[str, t.Any]]:
+        """Initialize error patterns for categorization."""
+        patterns = {
+            "import_error": self._create_import_error_pattern(),
+            "syntax_error": self._create_syntax_error_pattern(),
+            "type_error": self._create_type_error_pattern(),
+            "security_issue": self._create_security_pattern(),
+        }
+
+        patterns.update(self._create_quality_patterns())
+        patterns.update(self._create_test_and_dependency_patterns())
+
+        return patterns
+
     def categorize_errors(self, error_text: str | list[str]) -> list[dict[str, t.Any]]:
         if isinstance(error_text, str):
             error_lines = error_text.split("\n")
         else:
             error_lines = error_text
 
-        categorized_errors = []
+        categorized_errors: list[dict[str, t.Any]] = []
 
         for line in error_lines:
             if not line.strip():
@@ -999,10 +1052,10 @@ class EnhancedErrorCategorizationService:
                 "recommended_actions": [],
             }
 
-        by_category = {}
-        by_severity = {}
+        by_category: dict[str, int] = {}
+        by_severity: dict[str, int] = {}
         auto_fixable_count = 0
-        critical_issues = []
+        critical_issues: list[dict[str, t.Any]] = []
 
         for error in errors:
             category = error["category"]
@@ -1050,7 +1103,7 @@ class EnhancedErrorCategorizationService:
         by_severity: dict[str, int],
         auto_fixable: int,
     ) -> list[str]:
-        actions = []
+        actions: list[str] = []
 
         critical_count = by_severity.get("critical", 0) + by_severity.get("high", 0)
         if critical_count > 0:

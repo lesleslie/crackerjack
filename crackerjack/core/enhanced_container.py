@@ -44,11 +44,7 @@ class ServiceDescriptor:
     dependencies: list[type] = field(default_factory=list)
 
     def __post_init__(self):
-        if (
-            self.implementation is None
-            and self.factory is None
-            and self.instance is None
-        ):
+        if self.implementation is self.factory is self.instance is None:
             msg = "Must provide either implementation, factory, or instance"
             raise ValueError(msg)
 
@@ -437,7 +433,7 @@ class ServiceCollectionBuilder:
 
         self.container.register_singleton(
             FileSystemInterface,
-            factory=lambda: EnhancedFileSystemService(),
+            factory=EnhancedFileSystemService,
         )
 
         # Git service

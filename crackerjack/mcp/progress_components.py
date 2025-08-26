@@ -546,7 +546,7 @@ class TerminalRestorer:
             )
 
         except Exception:
-            try:
+            with suppress(Exception):
                 import subprocess
                 import sys
 
@@ -567,5 +567,3 @@ class TerminalRestorer:
                     capture_output=True,
                     timeout=1,
                 )
-            except Exception:
-                pass
