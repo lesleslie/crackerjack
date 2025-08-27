@@ -2,6 +2,7 @@ import json
 import statistics
 import subprocess
 import time
+import typing as t
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -546,7 +547,7 @@ class PerformanceBenchmarkService:
         """Print performance comparison header."""
         self.console.print("[bold]📊 Performance Comparison[/bold]")
 
-    def _print_comparison_metrics(self, baseline_comparison: dict) -> None:
+    def _print_comparison_metrics(self, baseline_comparison: dict[str, t.Any]) -> None:
         """Print individual comparison metrics with appropriate colors."""
         for metric, value in baseline_comparison.items():
             if isinstance(value, float | int) and "percent" in metric:

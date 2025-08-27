@@ -8,7 +8,7 @@ import hashlib
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -37,7 +37,7 @@ class TestFileCache:
     def test_cache_put_and_get(self, cache):
         """Test basic cache put and get operations."""
         cache.put("key1", "content1")
-        
+
         result = cache.get("key1")
         assert result == "content1"
 
@@ -49,13 +49,13 @@ class TestFileCache:
     def test_cache_ttl_expiration(self, cache):
         """Test cache entries expire based on TTL."""
         cache.put("key1", "content1", ttl=0.1)
-        
+
         # Content should be available immediately
         assert cache.get("key1") == "content1"
-        
+
         # Wait for TTL to expire
         time.sleep(0.2)
-        
+
         # Content should be expired
         result = cache.get("key1")
         assert result is None
@@ -64,17 +64,17 @@ class TestFileCache:
         """Test LRU eviction when cache reaches max size."""
         # Fill cache to max capacity
         cache.put("key1", "content1")
-        cache.put("key2", "content2") 
+        cache.put("key2", "content2")
         cache.put("key3", "content3")
-        
+
         # Access key1 to make it recently used
         cache.get("key1")
-        
+
         # Add new entry, should evict key2 (least recently used)
         cache.put("key4", "content4")
-        
+
         assert cache.get("key1") == "content1"  # Still present
-        assert cache.get("key2") is None       # Evicted
+        assert cache.get("key2") is None  # Evicted
         assert cache.get("key3") == "content3"  # Still present
         assert cache.get("key4") == "content4"  # New entry
 
@@ -82,9 +82,9 @@ class TestFileCache:
         """Test cache clear functionality."""
         cache.put("key1", "content1")
         cache.put("key2", "content2")
-        
+
         cache.clear()
-        
+
         assert cache.get("key1") is None
         assert cache.get("key2") is None
         assert len(cache._cache) == 0
@@ -94,9 +94,9 @@ class TestFileCache:
         """Test cache statistics calculation."""
         cache.put("key1", "short")
         cache.put("key2", "much longer content")
-        
+
         stats = cache.get_stats()
-        
+
         assert stats["entries"] == 2
         assert stats["max_size"] == 3
         assert stats["total_content_size"] == len("short") + len("much longer content")
@@ -106,9 +106,9 @@ class TestFileCache:
         """Test cache with custom TTL per entry."""
         cache.put("short_ttl", "content1", ttl=0.1)
         cache.put("long_ttl", "content2", ttl=10.0)
-        
+
         time.sleep(0.2)
-        
+
         assert cache.get("short_ttl") is None  # Expired
         assert cache.get("long_ttl") == "content2"  # Still valid
 
@@ -116,7 +116,7 @@ class TestFileCache:
         """Test internal eviction method."""
         cache.put("key1", "content1")
         assert cache.get("key1") == "content1"
-        
+
         # Test internal eviction
         cache._evict("key1")
         assert cache.get("key1") is None
@@ -138,10 +138,7 @@ class TestEnhancedFileSystemService:
     @pytest.fixture
     def enhanced_fs(self):
         return EnhancedFileSystemService(
-            cache_size=10,
-            cache_ttl=1.0,
-            batch_size=2,
-            enable_async=True
+            cache_size=10, cache_ttl=1.0, batch_size=2, enable_async=True
         )
 
     @pytest.fixture
@@ -172,7 +169,9 @@ class TestEnhancedFileSystemService:
         assert content1 == "cached content"
 
         # Mock the internal direct read method to verify cache hit
-        with patch.object(enhanced_fs, '_read_file_direct', return_value="new content") as mock_read:
+        with patch.object(
+            enhanced_fs, "_read_file_direct", return_value="new content"
+        ) as mock_read:
             content2 = enhanced_fs.read_file(test_file)
             # Should get cached content, not call direct read
             assert content2 == "cached content"
@@ -213,18 +212,20 @@ class TestEnhancedFileSystemService:
     def test_cache_key_generation(self, enhanced_fs, temp_dir):
         """Test cache key generation uses file path hash."""
         test_file = temp_dir / "test.txt"
-        
+
         cache_key = enhanced_fs._get_cache_key(test_file)
-        
+
         expected_path = str(test_file.resolve())
-        expected_hash = hashlib.md5(expected_path.encode(), usedforsecurity=False).hexdigest()
+        expected_hash = hashlib.md5(
+            expected_path.encode(), usedforsecurity=False
+        ).hexdigest()
         assert cache_key == expected_hash
 
     def test_get_from_cache_nonexistent_file(self, enhanced_fs, temp_dir):
         """Test cache lookup for nonexistent file returns None."""
         nonexistent_file = temp_dir / "nonexistent.txt"
         cache_key = "test_key"
-        
+
         result = enhanced_fs._get_from_cache(cache_key, nonexistent_file)
         assert result is None
 
@@ -232,13 +233,15 @@ class TestEnhancedFileSystemService:
         """Test cache invalidation when file is modified after caching."""
         test_file = temp_dir / "test.txt"
         test_file.write_text("original content")
-        
+
         cache_key = enhanced_fs._get_cache_key(test_file)
-        
+
         # Populate cache and timestamp
         enhanced_fs.cache.put(cache_key, "cached content")
-        enhanced_fs._file_timestamps[str(test_file)] = test_file.stat().st_mtime - 1  # Older timestamp
-        
+        enhanced_fs._file_timestamps[str(test_file)] = (
+            test_file.stat().st_mtime - 1
+        )  # Older timestamp
+
         # Should detect modification and invalidate cache
         result = enhanced_fs._get_from_cache(cache_key, test_file)
         assert result is None
@@ -254,8 +257,10 @@ class TestEnhancedFileSystemService:
         """Test FileError handling for read permission errors."""
         test_file = temp_dir / "test.txt"
         test_file.write_text("content")
-        
-        with patch.object(Path, 'read_text', side_effect=PermissionError("Access denied")):
+
+        with patch.object(
+            Path, "read_text", side_effect=PermissionError("Access denied")
+        ):
             with pytest.raises(FileError, match="Permission denied reading file"):
                 enhanced_fs.read_file(test_file)
 
@@ -263,8 +268,12 @@ class TestEnhancedFileSystemService:
         """Test FileError handling for unicode decode errors."""
         test_file = temp_dir / "test.txt"
         test_file.write_text("content")
-        
-        with patch.object(Path, 'read_text', side_effect=UnicodeDecodeError('utf-8', b'', 0, 1, 'invalid')):
+
+        with patch.object(
+            Path,
+            "read_text",
+            side_effect=UnicodeDecodeError("utf-8", b"", 0, 1, "invalid"),
+        ):
             with pytest.raises(FileError, match="Unable to decode file as UTF-8"):
                 enhanced_fs.read_file(test_file)
 
@@ -272,32 +281,34 @@ class TestEnhancedFileSystemService:
         """Test FileError handling for OS errors on read."""
         test_file = temp_dir / "test.txt"
         test_file.write_text("content")
-        
-        with patch.object(Path, 'read_text', side_effect=OSError("Disk error")):
+
+        with patch.object(Path, "read_text", side_effect=OSError("Disk error")):
             with pytest.raises(FileError, match="System error reading file"):
                 enhanced_fs.read_file(test_file)
 
     def test_file_error_handling_write_permission(self, enhanced_fs, temp_dir):
         """Test FileError handling for write permission errors."""
         test_file = temp_dir / "test.txt"
-        
-        with patch.object(Path, 'write_text', side_effect=PermissionError("Access denied")):
+
+        with patch.object(
+            Path, "write_text", side_effect=PermissionError("Access denied")
+        ):
             with pytest.raises(FileError, match="Permission denied writing file"):
                 enhanced_fs.write_file(test_file, "content")
 
     def test_file_error_handling_os_error_write(self, enhanced_fs, temp_dir):
         """Test FileError handling for OS errors on write."""
         test_file = temp_dir / "test.txt"
-        
-        with patch.object(Path, 'write_text', side_effect=OSError("Disk full")):
+
+        with patch.object(Path, "write_text", side_effect=OSError("Disk full")):
             with pytest.raises(FileError, match="System error writing file"):
                 enhanced_fs.write_file(test_file, "content")
 
     def test_file_error_handling_mkdir_error(self, enhanced_fs, temp_dir):
         """Test FileError handling for directory creation errors."""
         test_file = temp_dir / "nested" / "test.txt"
-        
-        with patch.object(Path, 'mkdir', side_effect=OSError("Permission denied")):
+
+        with patch.object(Path, "mkdir", side_effect=OSError("Permission denied")):
             with pytest.raises(FileError, match="Cannot create parent directory"):
                 enhanced_fs.write_file(test_file, "content")
 
@@ -329,8 +340,8 @@ class TestEnhancedFileSystemService:
     def test_create_directory_error(self, enhanced_fs, temp_dir):
         """Test directory creation error handling."""
         new_dir = temp_dir / "new_directory"
-        
-        with patch.object(Path, 'mkdir', side_effect=OSError("Permission denied")):
+
+        with patch.object(Path, "mkdir", side_effect=OSError("Permission denied")):
             with pytest.raises(FileError, match="Cannot create directory"):
                 enhanced_fs.create_directory(new_dir)
 
@@ -358,8 +369,8 @@ class TestEnhancedFileSystemService:
         """Test delete file error handling."""
         test_file = temp_dir / "test.txt"
         test_file.write_text("content")
-        
-        with patch.object(Path, 'unlink', side_effect=OSError("Permission denied")):
+
+        with patch.object(Path, "unlink", side_effect=OSError("Permission denied")):
             with pytest.raises(FileError, match="Cannot delete file"):
                 enhanced_fs.delete_file(test_file)
 
@@ -389,7 +400,7 @@ class TestEnhancedFileSystemService:
 
     def test_list_files_os_error(self, enhanced_fs, temp_dir):
         """Test listing files with OS error."""
-        with patch.object(Path, 'glob', side_effect=OSError("Permission denied")):
+        with patch.object(Path, "glob", side_effect=OSError("Permission denied")):
             with pytest.raises(FileError, match="Cannot list files in directory"):
                 list(enhanced_fs.list_files(temp_dir))
 
@@ -425,8 +436,8 @@ class TestEnhancedFileSystemService:
     def test_mkdir_error(self, enhanced_fs, temp_dir):
         """Test mkdir method error handling."""
         new_dir = temp_dir / "mkdir_test"
-        
-        with patch.object(Path, 'mkdir', side_effect=OSError("Permission denied")):
+
+        with patch.object(Path, "mkdir", side_effect=OSError("Permission denied")):
             with pytest.raises(FileError, match="Cannot create directory"):
                 enhanced_fs.mkdir(new_dir)
 
@@ -444,7 +455,7 @@ class TestEnhancedFileSystemService:
 
         # Clear cache
         enhanced_fs.clear_cache()
-        
+
         stats_after = enhanced_fs.get_cache_stats()
         assert stats_after["entries"] == 0
 
@@ -455,7 +466,7 @@ class TestEnhancedFileSystemService:
         # Use string path
         enhanced_fs.write_file(str(test_file), "string path content")
         content = enhanced_fs.read_file(str(test_file))
-        
+
         assert content == "string path content"
         assert enhanced_fs.file_exists(str(test_file))
 
@@ -474,7 +485,7 @@ class TestEnhancedFileSystemService:
     def test_direct_file_operations(self, enhanced_fs, temp_dir):
         """Test internal direct file operations."""
         test_file = temp_dir / "direct_test.txt"
-        
+
         # Test direct read of nonexistent file
         with pytest.raises(FileError):
             enhanced_fs._read_file_direct(test_file)
@@ -491,10 +502,10 @@ class TestEnhancedFileSystemService:
 
         # Read to populate cache and timestamps
         enhanced_fs.read_file(test_file)
-        
+
         # Verify timestamp was recorded
         assert str(test_file) in enhanced_fs._file_timestamps
-        
+
         # Clear cache should also clear timestamps
         enhanced_fs.clear_cache()
         assert str(test_file) not in enhanced_fs._file_timestamps

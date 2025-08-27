@@ -6,18 +6,18 @@ toward the 42% target. Tests cover the entire plugin architecture lifecycle and 
 
 Target Modules:
 - crackerjack/plugins/base.py - Plugin base classes and registry (124 statements)
-- crackerjack/plugins/hooks.py - Hook plugin system (125 statements)  
+- crackerjack/plugins/hooks.py - Hook plugin system (125 statements)
 - crackerjack/plugins/loader.py - Plugin discovery and loading (178 statements)
 - crackerjack/plugins/managers.py - Plugin orchestration and management (149 statements)
 
 Combined Impact: 576 statements = potential 3.5% overall coverage boost
 """
+
 import json
-import tempfile
-import typing as t
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import subprocess
+import tempfile
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 from rich.console import Console
@@ -35,11 +35,10 @@ from crackerjack.plugins.base import (
 from crackerjack.plugins.hooks import (
     CustomHookDefinition,
     CustomHookPlugin,
-    HookPluginBase,
     HookPluginRegistry,
     get_hook_plugin_registry,
 )
-from crackerjack.plugins.loader import PluginDiscovery, PluginLoadError, PluginLoader
+from crackerjack.plugins.loader import PluginDiscovery, PluginLoader, PluginLoadError
 from crackerjack.plugins.managers import PluginManager
 
 
@@ -63,12 +62,9 @@ class TestPluginBase:
                 "properties": {
                     "api_key": {"type": "string"},
                     "timeout": {"type": "integer", "minimum": 1},
-                    "enabled_checks": {
-                        "type": "array",
-                        "items": {"type": "string"}
-                    }
-                }
-            }
+                    "enabled_checks": {"type": "array", "items": {"type": "string"}},
+                },
+            },
         )
 
         # Test all properties
@@ -96,7 +92,7 @@ class TestPluginBase:
 
     def test_plugin_base_configuration_validation(self) -> None:
         """Test plugin configuration validation with schema."""
-        
+
         class ConfigurablePlugin(PluginBase):
             def activate(self) -> bool:
                 return True
@@ -115,9 +111,9 @@ class TestPluginBase:
                 "properties": {
                     "database_url": {"type": "string"},
                     "max_connections": {"type": "integer"},
-                    "ssl_verify": {"type": "boolean", "default": True}
-                }
-            }
+                    "ssl_verify": {"type": "boolean", "default": True},
+                },
+            },
         )
 
         plugin = ConfigurablePlugin(metadata)
@@ -126,7 +122,7 @@ class TestPluginBase:
         valid_config = {
             "database_url": "postgresql://localhost/test",
             "max_connections": 10,
-            "ssl_verify": False
+            "ssl_verify": False,
         }
         plugin.configure(valid_config)
         assert plugin.get_config("database_url") == "postgresql://localhost/test"
@@ -136,7 +132,9 @@ class TestPluginBase:
 
         # Test missing required field
         invalid_config = {"database_url": "postgresql://localhost/test"}
-        with pytest.raises(ValueError, match="Required config key 'max_connections' missing"):
+        with pytest.raises(
+            ValueError, match="Required config key 'max_connections' missing"
+        ):
             plugin.configure(invalid_config)
 
         # Test plugin without schema (should not raise)
@@ -144,7 +142,7 @@ class TestPluginBase:
             name="no-schema",
             version="1.0.0",
             plugin_type=PluginType.WORKFLOW,
-            description="Plugin without schema"
+            description="Plugin without schema",
         )
         plugin_no_schema = ConfigurablePlugin(metadata_no_schema)
         plugin_no_schema.configure({"any": "config"})  # Should not raise
@@ -157,21 +155,33 @@ class TestPluginBase:
         class TestHookPlugin(PluginBase):
             def activate(self) -> bool:
                 return True
+
             def deactivate(self) -> bool:
                 return True
 
         class TestFormatterPlugin(PluginBase):
             def activate(self) -> bool:
                 return True
+
             def deactivate(self) -> bool:
                 return True
 
-        hook_plugin = TestHookPlugin(PluginMetadata(
-            name="hook-1", version="1.0", plugin_type=PluginType.HOOK, description="Hook"
-        ))
-        formatter_plugin = TestFormatterPlugin(PluginMetadata(
-            name="formatter-1", version="1.0", plugin_type=PluginType.FORMATTER, description="Formatter"
-        ))
+        hook_plugin = TestHookPlugin(
+            PluginMetadata(
+                name="hook-1",
+                version="1.0",
+                plugin_type=PluginType.HOOK,
+                description="Hook",
+            )
+        )
+        formatter_plugin = TestFormatterPlugin(
+            PluginMetadata(
+                name="formatter-1",
+                version="1.0",
+                plugin_type=PluginType.FORMATTER,
+                description="Formatter",
+            )
+        )
 
         # Test registration
         assert registry.register(hook_plugin) is True
@@ -240,7 +250,7 @@ class TestPluginBase:
         # Test activation with exceptions
         failing_plugin = FlakyPlugin(
             PluginMetadata("fail-activate", "1.0", PluginType.HOOK, "Failing"),
-            activate_fails=True
+            activate_fails=True,
         )
         registry.register(failing_plugin)
 
@@ -250,7 +260,7 @@ class TestPluginBase:
         # Test deactivation with exceptions
         deactivate_fail_plugin = FlakyPlugin(
             PluginMetadata("fail-deactivate", "1.0", PluginType.HOOK, "Failing"),
-            deactivate_fails=True
+            deactivate_fails=True,
         )
         registry.register(deactivate_fail_plugin)
 
@@ -267,13 +277,19 @@ class TestPluginBase:
         class TestPlugin(PluginBase):
             def activate(self) -> bool:
                 return True
+
             def deactivate(self) -> bool:
                 return True
 
-        plugin = TestPlugin(PluginMetadata(
-            name="singleton-test", version="1.0", plugin_type=PluginType.INTEGRATION, description="Test"
-        ))
-        
+        plugin = TestPlugin(
+            PluginMetadata(
+                name="singleton-test",
+                version="1.0",
+                plugin_type=PluginType.INTEGRATION,
+                description="Test",
+            )
+        )
+
         registry1.register(plugin)
         assert registry2.get("singleton-test") is plugin
 
@@ -291,7 +307,7 @@ class TestCustomHookSystem:
             timeout=120,
             stage=HookStage.FAST,
             requires_files=True,
-            parallel_safe=False
+            parallel_safe=False,
         )
 
         assert hook_def.name == "comprehensive-linter"
@@ -316,7 +332,7 @@ class TestCustomHookSystem:
         comprehensive_hook = CustomHookDefinition(
             name="comprehensive-check",
             description="Comprehensive checking",
-            stage=HookStage.COMPREHENSIVE
+            stage=HookStage.COMPREHENSIVE,
         )
         comp_def = comprehensive_hook.to_hook_definition()
         assert comp_def.manual_stage is True  # COMPREHENSIVE stage
@@ -330,27 +346,27 @@ class TestCustomHookSystem:
             command=["echo", "formatting"],
             timeout=10,
             stage=HookStage.FAST,
-            requires_files=False
+            requires_files=False,
         )
-        
+
         file_specific_hook = CustomHookDefinition(
             name="python-check",
             description="Python file checking",
             command=["echo", "checking"],
             file_patterns=["*.py"],
             timeout=30,
-            requires_files=True
+            requires_files=True,
         )
 
         metadata = PluginMetadata(
             name="test-hook-plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
-            description="Test hook plugin"
+            description="Test hook plugin",
         )
 
         plugin = CustomHookPlugin(metadata, [fast_hook, file_specific_hook])
-        
+
         # Initialize plugin
         console = Console()
         pkg_path = Path("/test/project")
@@ -368,7 +384,7 @@ class TestCustomHookSystem:
         # Test file filtering
         python_files = [Path("test.py"), Path("main.py")]
         js_files = [Path("script.js"), Path("app.js")]
-        
+
         # Should run python-check on Python files
         assert plugin.should_run_hook("python-check", python_files) is True
         # Should not run python-check on JS files
@@ -377,28 +393,24 @@ class TestCustomHookSystem:
         assert plugin.should_run_hook("quick-format", js_files) is True
         assert plugin.should_run_hook("quick-format", []) is True
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_custom_hook_plugin_command_execution(self, mock_run: Mock) -> None:
         """Test actual command execution in CustomHookPlugin."""
         # Mock successful command execution
-        mock_run.return_value = Mock(
-            returncode=0,
-            stdout="Success output",
-            stderr=""
-        )
+        mock_run.return_value = Mock(returncode=0, stdout="Success output", stderr="")
 
         hook_def = CustomHookDefinition(
             name="test-command",
             description="Test command execution",
             command=["echo", "test"],
-            requires_files=True
+            requires_files=True,
         )
 
         metadata = PluginMetadata(
             name="command-plugin",
-            version="1.0.0", 
+            version="1.0.0",
             plugin_type=PluginType.HOOK,
-            description="Command test plugin"
+            description="Command test plugin",
         )
 
         plugin = CustomHookPlugin(metadata, [hook_def])
@@ -419,13 +431,16 @@ class TestCustomHookSystem:
         call_args = mock_run.call_args
         assert call_args[0][0] == ["echo", "test", "test.py"]
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_custom_hook_plugin_error_scenarios(self, mock_run: Mock) -> None:
         """Test error scenarios in CustomHookPlugin execution."""
         metadata = PluginMetadata(
-            name="error-plugin", version="1.0.0", plugin_type=PluginType.HOOK, description="Error test"
+            name="error-plugin",
+            version="1.0.0",
+            plugin_type=PluginType.HOOK,
+            description="Error test",
         )
-        
+
         # Test hook not found
         plugin = CustomHookPlugin(metadata, [])
         result = plugin.execute_hook("nonexistent", [], Mock())
@@ -441,30 +456,39 @@ class TestCustomHookSystem:
 
         # Test command failure
         mock_run.return_value = Mock(returncode=1, stderr="Command failed")
-        cmd_hook = CustomHookDefinition(name="fail-cmd", description="Failing command", command=["false"])
+        cmd_hook = CustomHookDefinition(
+            name="fail-cmd", description="Failing command", command=["false"]
+        )
         plugin = CustomHookPlugin(metadata, [cmd_hook])
         plugin.initialize(Console(), Path("/test"))
-        
+
         result = plugin.execute_hook("fail-cmd", [], Mock())
         assert result.status == "failed"
         assert "Command failed" in result.issues_found[0]
 
         # Test timeout
         mock_run.side_effect = subprocess.TimeoutExpired(["timeout-cmd"], 5)
-        timeout_hook = CustomHookDefinition(name="timeout-cmd", description="Timeout command", command=["sleep", "10"], timeout=5)
+        timeout_hook = CustomHookDefinition(
+            name="timeout-cmd",
+            description="Timeout command",
+            command=["sleep", "10"],
+            timeout=5,
+        )
         plugin = CustomHookPlugin(metadata, [timeout_hook])
         plugin.initialize(Console(), Path("/test"))
-        
+
         result = plugin.execute_hook("timeout-cmd", [], Mock())
         assert result.status == "timeout"
         assert "timed out after 5s" in result.issues_found[0]
 
         # Test general exception
         mock_run.side_effect = RuntimeError("Unexpected error")
-        error_hook = CustomHookDefinition(name="error-cmd", description="Error command", command=["error"])
+        error_hook = CustomHookDefinition(
+            name="error-cmd", description="Error command", command=["error"]
+        )
         plugin = CustomHookPlugin(metadata, [error_hook])
         plugin.initialize(Console(), Path("/test"))
-        
+
         result = plugin.execute_hook("error-cmd", [], Mock())
         assert result.status == "error"
         assert "Execution error: Unexpected error" in result.issues_found[0]
@@ -474,15 +498,22 @@ class TestCustomHookSystem:
         registry = HookPluginRegistry()
 
         # Create test hook plugins
-        hook1 = CustomHookDefinition(name="hook-1", description="Hook 1", command=["echo", "1"])
-        hook2 = CustomHookDefinition(name="hook-2", description="Hook 2", command=["echo", "2"], file_patterns=["*.py"])
-        
+        hook1 = CustomHookDefinition(
+            name="hook-1", description="Hook 1", command=["echo", "1"]
+        )
+        hook2 = CustomHookDefinition(
+            name="hook-2",
+            description="Hook 2",
+            command=["echo", "2"],
+            file_patterns=["*.py"],
+        )
+
         metadata1 = PluginMetadata("plugin-1", "1.0", PluginType.HOOK, "Plugin 1")
         metadata2 = PluginMetadata("plugin-2", "1.0", PluginType.HOOK, "Plugin 2")
-        
+
         plugin1 = CustomHookPlugin(metadata1, [hook1])
         plugin2 = CustomHookPlugin(metadata2, [hook2])
-        
+
         # Test registration
         assert registry.register_hook_plugin(plugin1) is True
         assert registry.register_hook_plugin(plugin2) is True
@@ -508,8 +539,10 @@ class TestCustomHookSystem:
 
         # Test hook execution
         plugin1.enable()
-        with patch.object(plugin1, 'execute_hook') as mock_execute:
-            mock_execute.return_value = HookResult("hook-1", "hook-1", "passed", 0.1, [])
+        with patch.object(plugin1, "execute_hook") as mock_execute:
+            mock_execute.return_value = HookResult(
+                "hook-1", "hook-1", "passed", 0.1, []
+            )
             result = registry.execute_custom_hook("hook-1", [], Mock())
             assert result is not None
             assert result.status == "passed"
@@ -540,9 +573,11 @@ class TestPluginLoader:
         assert str(error) == "Test error message"
         assert isinstance(error, Exception)
 
-    @patch('importlib.util.spec_from_file_location')
-    @patch('importlib.util.module_from_spec')
-    def test_plugin_loader_file_loading_success(self, mock_module_from_spec: Mock, mock_spec: Mock) -> None:
+    @patch("importlib.util.spec_from_file_location")
+    @patch("importlib.util.module_from_spec")
+    def test_plugin_loader_file_loading_success(
+        self, mock_module_from_spec: Mock, mock_spec: Mock
+    ) -> None:
         """Test successful plugin loading from file."""
         # Create test plugin file
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp_file:
@@ -561,18 +596,19 @@ class TestPluginLoader:
             class TestFilePlugin(PluginBase):
                 def activate(self) -> bool:
                     return True
+
                 def deactivate(self) -> bool:
                     return True
 
-            test_plugin = TestFilePlugin(PluginMetadata(
-                "file-plugin", "1.0", PluginType.HOOK, "File plugin"
-            ))
-            
+            test_plugin = TestFilePlugin(
+                PluginMetadata("file-plugin", "1.0", PluginType.HOOK, "File plugin")
+            )
+
             # Mock plugin extraction
             loader = PluginLoader()
-            with patch.object(loader, '_extract_plugin_from_module') as mock_extract:
+            with patch.object(loader, "_extract_plugin_from_module") as mock_extract:
                 mock_extract.return_value = test_plugin
-                
+
                 result = loader.load_plugin_from_file(plugin_file)
                 assert result is test_plugin
                 assert isinstance(result, PluginBase)
@@ -593,14 +629,14 @@ class TestPluginLoader:
             with pytest.raises(PluginLoadError, match="Plugin file must be .py"):
                 loader.load_plugin_from_file(Path(tmp_file.name))
 
-    @patch('importlib.util.spec_from_file_location')
+    @patch("importlib.util.spec_from_file_location")
     def test_plugin_loader_spec_creation_failure(self, mock_spec: Mock) -> None:
         """Test plugin loading when spec creation fails."""
         mock_spec.return_value = None
-        
+
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp_file:
             plugin_file = Path(tmp_file.name)
-            
+
         try:
             loader = PluginLoader()
             with pytest.raises(PluginLoadError, match="Could not create module spec"):
@@ -627,19 +663,21 @@ class TestPluginLoader:
                     "timeout": 45,
                     "stage": "fast",
                     "requires_files": True,
-                    "parallel_safe": False
+                    "parallel_safe": False,
                 }
-            ]
+            ],
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as tmp_file:
             json.dump(config, tmp_file)
             config_file = Path(tmp_file.name)
 
         try:
             loader = PluginLoader()
             plugin = loader.load_plugin_from_config(config_file)
-            
+
             assert isinstance(plugin, CustomHookPlugin)
             assert plugin.name == "json-plugin"
             assert plugin.version == "2.0.0"
@@ -661,7 +699,7 @@ class TestPluginLoader:
         finally:
             config_file.unlink(missing_ok=True)
 
-    @patch('yaml.safe_load')
+    @patch("yaml.safe_load")
     def test_plugin_loader_config_loading_yaml(self, mock_yaml: Mock) -> None:
         """Test plugin loading from YAML configuration."""
         yaml_config = {
@@ -674,11 +712,11 @@ class TestPluginLoader:
                     "name": "yaml-formatter",
                     "description": "YAML formatter hook",  # Added required description
                     "command": ["yamlfmt"],
-                    "stage": "comprehensive"
+                    "stage": "comprehensive",
                 }
-            ]
+            ],
         }
-        
+
         mock_yaml.return_value = yaml_config
 
         with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as tmp_file:
@@ -687,10 +725,10 @@ class TestPluginLoader:
         try:
             loader = PluginLoader()
             plugin = loader.load_plugin_from_config(config_file)
-            
+
             assert plugin.name == "yaml-plugin"
             assert plugin.metadata.plugin_type == PluginType.HOOK
-            
+
             hook_defs = plugin.get_hook_definitions()
             assert len(hook_defs) == 1
             assert hook_defs[0].stage == HookStage.COMPREHENSIVE
@@ -713,7 +751,9 @@ class TestPluginLoader:
                 loader.load_plugin_from_config(config_file)
 
         # Test invalid JSON
-        with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as tmp_file:
             tmp_file.write("invalid json content")
             config_file = Path(tmp_file.name)
 
@@ -728,10 +768,12 @@ class TestPluginLoader:
         config = {
             "name": "unsupported-plugin",
             "type": "unsupported_type",  # This will cause enum error first
-            "description": "Unsupported plugin type"
+            "description": "Unsupported plugin type",
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as tmp_file:
             json.dump(config, tmp_file)
             config_file = Path(tmp_file.name)
 
@@ -752,17 +794,19 @@ class TestPluginLoader:
             "name": "register-test",
             "type": "hook",
             "description": "Registration test plugin",
-            "hooks": [{"name": "test-hook", "command": ["echo", "test"]}]
+            "hooks": [{"name": "test-hook", "command": ["echo", "test"]}],
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as tmp_file:
             json.dump(config, tmp_file)
             config_file = Path(tmp_file.name)
 
         try:
             result = loader.load_and_register(config_file)
             assert result is True
-            
+
             # Verify plugin was registered
             registered_plugin = loader.registry.get("register-test")
             assert registered_plugin is not None
@@ -788,33 +832,33 @@ class TestPluginDiscovery:
         """Test plugin discovery in specific directory."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
-            
+
             # Create test plugin files
             plugin_py = tmp_path / "test_plugin.py"
             plugin_py.write_text("# Test plugin")
-            
+
             plugin_json = tmp_path / "hook_config.json"
             plugin_json.write_text('{"name": "test", "type": "hook"}')
-            
+
             plugin_yaml = tmp_path / "formatter_plugin.yaml"
-            plugin_yaml.write_text('name: formatter')
-            
+            plugin_yaml.write_text("name: formatter")
+
             # Create files that should be ignored
             init_file = tmp_path / "__init__.py"
             init_file.write_text("")
-            
+
             test_file = tmp_path / "test_something.py"
             test_file.write_text("")
-            
+
             hidden_file = tmp_path / ".hidden_plugin.py"
             hidden_file.write_text("")
 
             discovery = PluginDiscovery()
-            
+
             # Test non-recursive discovery
             found_files = discovery.discover_in_directory(tmp_path, recursive=False)
             found_names = [f.name for f in found_files]
-            
+
             assert "test_plugin.py" in found_names
             assert "hook_config.json" in found_names
             assert "formatter_plugin.yaml" in found_names
@@ -826,52 +870,54 @@ class TestPluginDiscovery:
         """Test recursive plugin discovery."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
-            
+
             # Create nested structure
             sub_dir = tmp_path / "plugins" / "custom"
             sub_dir.mkdir(parents=True)
-            
+
             nested_plugin = sub_dir / "nested_plugin.py"
             nested_plugin.write_text("# Nested plugin")
 
             discovery = PluginDiscovery()
-            
+
             # Test recursive discovery
             found_files = discovery.discover_in_directory(tmp_path, recursive=True)
             found_paths = [str(f) for f in found_files]
-            
+
             assert any("nested_plugin.py" in path for path in found_paths)
 
     def test_plugin_discovery_nonexistent_directory(self) -> None:
         """Test discovery in non-existent directory."""
         discovery = PluginDiscovery()
-        
-        found_files = discovery.discover_in_directory(Path("/nonexistent"), recursive=False)
+
+        found_files = discovery.discover_in_directory(
+            Path("/nonexistent"), recursive=False
+        )
         assert found_files == []
 
     def test_plugin_discovery_in_project(self) -> None:
         """Test discovery in project structure."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_path = Path(tmp_dir)
-            
+
             # Create expected plugin directories
             plugins_dir = project_path / "plugins"
             plugins_dir.mkdir()
-            
+
             cache_dir = project_path / ".cache" / "crackerjack" / "plugins"
             cache_dir.mkdir(parents=True)
-            
+
             tools_dir = project_path / "tools" / "crackerjack"
             tools_dir.mkdir(parents=True)
 
             # Add plugin files in each directory
             (plugins_dir / "main_plugin.py").write_text("# Main plugin")
             (cache_dir / "cached_plugin.json").write_text('{"name": "cached"}')
-            (tools_dir / "tool_plugin.yaml").write_text('name: tool')
+            (tools_dir / "tool_plugin.yaml").write_text("name: tool")
 
             discovery = PluginDiscovery()
             found_files = discovery.discover_in_project(project_path)
-            
+
             found_names = [f.name for f in found_files]
             assert "main_plugin.py" in found_names
             assert "cached_plugin.json" in found_names
@@ -889,20 +935,20 @@ class TestPluginDiscovery:
                 "name": "auto-discovered",
                 "type": "hook",
                 "description": "Auto-discovered plugin",
-                "hooks": [{"name": "auto-hook", "command": ["echo", "auto"]}]
+                "hooks": [{"name": "auto-hook", "command": ["echo", "auto"]}],
             }
-            
+
             plugin_file = plugins_dir / "auto_plugin.json"
-            with plugin_file.open('w') as f:
+            with plugin_file.open("w") as f:
                 json.dump(plugin_config, f)
 
             # Create mock loader
             mock_loader = Mock()
             mock_loader.load_and_register.return_value = True
-            
+
             discovery = PluginDiscovery(loader=mock_loader)
             results = discovery.auto_discover_and_load(project_path)
-            
+
             assert len(results) == 1
             assert str(plugin_file) in results
             assert results[str(plugin_file)] is True
@@ -911,7 +957,7 @@ class TestPluginDiscovery:
     def test_plugin_discovery_looks_like_plugin_file(self) -> None:
         """Test plugin file detection logic."""
         discovery = PluginDiscovery()
-        
+
         # Files that should be detected as plugins
         plugin_files = [
             Path("my_plugin.py"),
@@ -921,11 +967,13 @@ class TestPluginDiscovery:
             Path("crackerjack_tool.py"),
             Path("quality_check.py"),
             Path("code_format.json"),
-            Path("hook_plugin.yaml")
+            Path("hook_plugin.yaml"),
         ]
-        
+
         for file_path in plugin_files:
-            assert discovery._looks_like_plugin_file(file_path), f"{file_path} should be detected as plugin"
+            assert discovery._looks_like_plugin_file(file_path), (
+                f"{file_path} should be detected as plugin"
+            )
 
         # Files that should NOT be detected as plugins
         non_plugin_files = [
@@ -936,11 +984,13 @@ class TestPluginDiscovery:
             Path("__pycache__/module.py"),
             Path(".hidden_file.py"),
             Path("regular_module.py"),
-            Path("utils.py")
+            Path("utils.py"),
         ]
-        
+
         for file_path in non_plugin_files:
-            assert not discovery._looks_like_plugin_file(file_path), f"{file_path} should NOT be detected as plugin"
+            assert not discovery._looks_like_plugin_file(file_path), (
+                f"{file_path} should NOT be detected as plugin"
+            )
 
 
 class TestPluginManager:
@@ -953,36 +1003,41 @@ class TestPluginManager:
         project_path = Path("/test/project")
         return PluginManager(console=console, project_path=project_path)
 
-    def test_plugin_manager_initialization_lifecycle(self, plugin_manager: PluginManager) -> None:
+    def test_plugin_manager_initialization_lifecycle(
+        self, plugin_manager: PluginManager
+    ) -> None:
         """Test plugin manager complete initialization lifecycle."""
         assert not plugin_manager._initialized
-        
-        with patch.object(plugin_manager.discovery, 'auto_discover_and_load') as mock_discover:
-            with patch.object(plugin_manager.registry, 'activate_all') as mock_activate:
+
+        with patch.object(
+            plugin_manager.discovery, "auto_discover_and_load"
+        ) as mock_discover:
+            with patch.object(plugin_manager.registry, "activate_all") as mock_activate:
                 mock_discover.return_value = {
                     "/test/plugin1.py": True,
                     "/test/plugin2.json": True,
-                    "/test/plugin3.yaml": False
+                    "/test/plugin3.yaml": False,
                 }
-                mock_activate.return_value = {
-                    "plugin1": True,
-                    "plugin2": True
-                }
-                
+                mock_activate.return_value = {"plugin1": True, "plugin2": True}
+
                 result = plugin_manager.initialize()
-                
+
                 assert result is True
                 assert plugin_manager._initialized is True
                 mock_discover.assert_called_once_with(plugin_manager.project_path)
                 mock_activate.assert_called_once()
 
-    def test_plugin_manager_initialization_failure(self, plugin_manager: PluginManager) -> None:
+    def test_plugin_manager_initialization_failure(
+        self, plugin_manager: PluginManager
+    ) -> None:
         """Test plugin manager initialization failure handling."""
-        with patch.object(plugin_manager.discovery, 'auto_discover_and_load') as mock_discover:
+        with patch.object(
+            plugin_manager.discovery, "auto_discover_and_load"
+        ) as mock_discover:
             mock_discover.side_effect = RuntimeError("Discovery failed")
-            
+
             result = plugin_manager.initialize()
-            
+
             assert result is False
             assert not plugin_manager._initialized
 
@@ -990,32 +1045,35 @@ class TestPluginManager:
         """Test plugin manager shutdown process."""
         # Initialize first
         plugin_manager._initialized = True
-        
-        with patch.object(plugin_manager.registry, 'deactivate_all') as mock_deactivate:
+
+        with patch.object(plugin_manager.registry, "deactivate_all") as mock_deactivate:
             mock_deactivate.return_value = {
                 "plugin1": True,
                 "plugin2": False,
-                "plugin3": True
+                "plugin3": True,
             }
-            
+
             plugin_manager.shutdown()
-            
+
             assert not plugin_manager._initialized
             mock_deactivate.assert_called_once()
 
-    def test_plugin_manager_shutdown_error_handling(self, plugin_manager: PluginManager) -> None:
+    def test_plugin_manager_shutdown_error_handling(
+        self, plugin_manager: PluginManager
+    ) -> None:
         """Test plugin manager shutdown error handling."""
         plugin_manager._initialized = True
-        
-        with patch.object(plugin_manager.registry, 'deactivate_all') as mock_deactivate:
+
+        with patch.object(plugin_manager.registry, "deactivate_all") as mock_deactivate:
             mock_deactivate.side_effect = RuntimeError("Deactivation failed")
-            
+
             # Should not raise exception
             plugin_manager.shutdown()
             assert not plugin_manager._initialized
 
     def test_plugin_manager_plugin_control(self, plugin_manager: PluginManager) -> None:
         """Test plugin enable/disable/reload/configure operations."""
+
         # Create test plugin
         class TestPlugin(PluginBase):
             def __init__(self, metadata):
@@ -1036,9 +1094,9 @@ class TestPluginManager:
             version="1.0",
             plugin_type=PluginType.HOOK,
             description="Control test plugin",
-            config_schema={"required": ["setting"]}
+            config_schema={"required": ["setting"]},
         )
-        
+
         plugin = TestPlugin(metadata)
         plugin_manager.registry.register(plugin)
 
@@ -1071,9 +1129,11 @@ class TestPluginManager:
         result = plugin_manager.reload_plugin("control-test")
         assert result is True
         assert plugin.deactivate_count == 2  # One more deactivation
-        assert plugin.activate_count == 2    # One more activation
+        assert plugin.activate_count == 2  # One more activation
 
-    def test_plugin_manager_plugin_control_errors(self, plugin_manager: PluginManager) -> None:
+    def test_plugin_manager_plugin_control_errors(
+        self, plugin_manager: PluginManager
+    ) -> None:
         """Test error scenarios in plugin control operations."""
         # Test operations on non-existent plugin
         assert plugin_manager.enable_plugin("nonexistent") is False
@@ -1082,26 +1142,31 @@ class TestPluginManager:
 
     def test_plugin_manager_list_plugins(self, plugin_manager: PluginManager) -> None:
         """Test plugin listing functionality."""
+
         # Create test plugins of different types
         class TestHookPlugin(PluginBase):
             def activate(self) -> bool:
                 return True
+
             def deactivate(self) -> bool:
                 return True
 
         class TestFormatterPlugin(PluginBase):
             def activate(self) -> bool:
                 return True
+
             def deactivate(self) -> bool:
                 return True
 
-        hook_plugin = TestHookPlugin(PluginMetadata(
-            "hook-plugin", "1.0", PluginType.HOOK, "Hook plugin"
-        ))
-        formatter_plugin = TestFormatterPlugin(PluginMetadata(
-            "formatter-plugin", "1.0", PluginType.FORMATTER, "Formatter plugin"
-        ))
-        
+        hook_plugin = TestHookPlugin(
+            PluginMetadata("hook-plugin", "1.0", PluginType.HOOK, "Hook plugin")
+        )
+        formatter_plugin = TestFormatterPlugin(
+            PluginMetadata(
+                "formatter-plugin", "1.0", PluginType.FORMATTER, "Formatter plugin"
+            )
+        )
+
         plugin_manager.registry.register(hook_plugin)
         plugin_manager.registry.register(formatter_plugin)
 
@@ -1123,40 +1188,46 @@ class TestPluginManager:
     def test_plugin_manager_stats(self, plugin_manager: PluginManager) -> None:
         """Test plugin manager statistics functionality."""
         # Create hook plugin with custom hooks
-        hook_def = CustomHookDefinition(name="stat-hook", description="Statistics hook", command=["echo", "stats"])
+        hook_def = CustomHookDefinition(
+            name="stat-hook", description="Statistics hook", command=["echo", "stats"]
+        )
         hook_metadata = PluginMetadata("stats-plugin", "1.0", PluginType.HOOK, "Stats")
         hook_plugin = CustomHookPlugin(hook_metadata, [hook_def])
-        
+
         plugin_manager.registry.register(hook_plugin)
         plugin_manager.hook_registry.register_hook_plugin(hook_plugin)
 
         stats = plugin_manager.get_plugin_stats()
-        
+
         assert stats["total_plugins"] == 1
         assert stats["hook_plugins"]["active_plugins"] == 1
         assert stats["hook_plugins"]["total_custom_hooks"] == 1
         assert "stat-hook" in stats["hook_plugins"]["hook_names"]
 
-    def test_plugin_manager_install_from_file(self, plugin_manager: PluginManager) -> None:
+    def test_plugin_manager_install_from_file(
+        self, plugin_manager: PluginManager
+    ) -> None:
         """Test plugin installation from file."""
         config = {
             "name": "install-test",
             "type": "hook",
             "description": "Installation test plugin",
-            "hooks": [{"name": "install-hook", "command": ["echo", "install"]}]
+            "hooks": [{"name": "install-hook", "command": ["echo", "install"]}],
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as tmp_file:
             json.dump(config, tmp_file)
             plugin_file = Path(tmp_file.name)
 
         try:
             # Initialize plugin manager to test auto-enable
             plugin_manager._initialized = True
-            
+
             result = plugin_manager.install_plugin_from_file(plugin_file)
             assert result is True
-            
+
             # Verify plugin was installed and registered
             installed_plugin = plugin_manager.registry.get("install-test")
             assert installed_plugin is not None
@@ -1167,12 +1238,18 @@ class TestPluginManager:
     def test_plugin_manager_custom_hooks(self, plugin_manager: PluginManager) -> None:
         """Test custom hook management."""
         # Create hook plugin
-        hook_def1 = CustomHookDefinition(name="custom-1", description="Custom hook 1", command=["echo", "1"])
-        hook_def2 = CustomHookDefinition(name="custom-2", description="Custom hook 2", command=["echo", "2"])
-        
-        metadata = PluginMetadata("custom-hooks", "1.0", PluginType.HOOK, "Custom hooks")
+        hook_def1 = CustomHookDefinition(
+            name="custom-1", description="Custom hook 1", command=["echo", "1"]
+        )
+        hook_def2 = CustomHookDefinition(
+            name="custom-2", description="Custom hook 2", command=["echo", "2"]
+        )
+
+        metadata = PluginMetadata(
+            "custom-hooks", "1.0", PluginType.HOOK, "Custom hooks"
+        )
         hook_plugin = CustomHookPlugin(metadata, [hook_def1, hook_def2])
-        
+
         plugin_manager.registry.register(hook_plugin)
         plugin_manager.hook_registry.register_hook_plugin(hook_plugin)
 
@@ -1184,11 +1261,11 @@ class TestPluginManager:
         # Test hook execution
         mock_options = Mock(spec=OptionsProtocol)
         files = [Path("test.py")]
-        
-        with patch.object(hook_plugin, 'execute_hook') as mock_execute:
+
+        with patch.object(hook_plugin, "execute_hook") as mock_execute:
             mock_result = HookResult("custom-1", "custom-1", "passed", 0.5, [])
             mock_execute.return_value = mock_result
-            
+
             result = plugin_manager.execute_custom_hook("custom-1", files, mock_options)
             assert result == mock_result
             mock_execute.assert_called_once_with("custom-1", files, mock_options)
@@ -1222,20 +1299,20 @@ class TestPluginIntegration:
                         "timeout": 30,
                         "stage": "fast",
                         "requires_files": True,
-                        "parallel_safe": True
+                        "parallel_safe": True,
                     },
                     {
                         "name": "e2e-lint",
-                        "description": "End-to-end linting", 
+                        "description": "End-to-end linting",
                         "command": ["echo", "linting"],
                         "stage": "comprehensive",
-                        "requires_files": False
-                    }
-                ]
+                        "requires_files": False,
+                    },
+                ],
             }
 
             plugin_file = plugins_dir / "e2e_plugin.json"
-            with plugin_file.open('w') as f:
+            with plugin_file.open("w") as f:
                 json.dump(plugin_config, f)
 
             # Initialize plugin manager
@@ -1266,11 +1343,13 @@ class TestPluginIntegration:
             # Test hook execution
             mock_options = Mock(spec=OptionsProtocol)
             python_files = [Path("test.py")]
-            
-            with patch('subprocess.run') as mock_run:
+
+            with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=0, stdout="success", stderr="")
-                
-                result = plugin_manager.execute_custom_hook("e2e-format", python_files, mock_options)
+
+                result = plugin_manager.execute_custom_hook(
+                    "e2e-format", python_files, mock_options
+                )
                 assert result is not None
                 assert result.status == "passed"
                 assert result.name == "e2e-format"
@@ -1296,21 +1375,21 @@ class TestPluginIntegration:
                 "name": "valid-plugin",
                 "type": "hook",
                 "description": "Valid plugin",
-                "hooks": [{"name": "valid-hook", "command": ["echo", "valid"]}]
+                "hooks": [{"name": "valid-hook", "command": ["echo", "valid"]}],
             }
-            
+
             invalid_config = {
                 "name": "invalid-plugin",
                 # Missing required 'type' field
-                "description": "Invalid plugin"
+                "description": "Invalid plugin",
             }
 
             valid_file = plugins_dir / "valid_plugin.json"
-            with valid_file.open('w') as f:
+            with valid_file.open("w") as f:
                 json.dump(valid_config, f)
 
             invalid_file = plugins_dir / "invalid_plugin.json"
-            with invalid_file.open('w') as f:
+            with invalid_file.open("w") as f:
                 json.dump(invalid_config, f)
 
             console = Console()
@@ -1341,6 +1420,7 @@ class TestPluginIntegration:
         # Create multiple plugins
         plugins = []
         for i in range(3):
+
             class TestPlugin(PluginBase):
                 def __init__(self, metadata):
                     super().__init__(metadata)
@@ -1354,10 +1434,7 @@ class TestPluginIntegration:
                     return True
 
             metadata = PluginMetadata(
-                f"concurrent-{i}",
-                "1.0",
-                PluginType.HOOK,
-                f"Concurrent test plugin {i}"
+                f"concurrent-{i}", "1.0", PluginType.HOOK, f"Concurrent test plugin {i}"
             )
             plugin = TestPlugin(metadata)
             plugins.append(plugin)

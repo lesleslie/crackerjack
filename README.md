@@ -235,7 +235,7 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
    Add to your MCP configuration file (`mcp.json`):
 
    **For installed crackerjack (from PyPI):**
-   
+
    ```json
    {
      "mcpServers": {

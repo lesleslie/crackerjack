@@ -314,13 +314,13 @@ class CodeCleaner(BaseModel):
 
     def clean_file(self, file_path: Path) -> CleaningResult:
         cleaning_steps = [
-            self._create_line_comment_step(),  # type: ignore[attr-defined]
-            self._create_docstring_step(),  # type: ignore[attr-defined]
+            self._create_line_comment_step(),
+            self._create_docstring_step(),
             self._create_whitespace_step(),  # type: ignore[attr-defined]
             self._create_formatting_step(),  # type: ignore[attr-defined]
         ]
 
-        return self.pipeline.clean_file(file_path, cleaning_steps)  # type: ignore[attr-defined]
+        return self.pipeline.clean_file(file_path, cleaning_steps)
 
     def clean_files(self, pkg_dir: Path | None = None) -> list[CleaningResult]:
         if pkg_dir is None:
@@ -490,43 +490,51 @@ class DocstringStep:
         )
 
     def _find_docstrings(self, tree: ast.AST) -> list[ast.AST]:
-        docstring_nodes = []
-        finder_class = self._create_docstring_finder_class(docstring_nodes)
-        finder = finder_class()
-        finder._is_docstring_node = self._is_docstring_node
+        docstring_nodes: list[ast.AST] = []
+        finder = self._DocstringFinder(docstring_nodes, self._is_docstring_node)
         finder.visit(tree)
         return docstring_nodes
 
-    def _create_docstring_finder_class(
-        self,
-        docstring_nodes: list[ast.AST],
-    ) -> type[ast.NodeVisitor]:
-        class DocstringFinder(ast.NodeVisitor):
-            def _add_if_docstring(self, node: ast.AST) -> None:
-                if self._is_docstring_node(node):
-                    docstring_nodes.append(node.body[0])
-                self.generic_visit(node)
+    class _DocstringFinder(ast.NodeVisitor):
+        def __init__(
+            self,
+            docstring_nodes: list[ast.AST],
+            is_docstring_node: t.Callable[[ast.AST], bool],
+        ):
+            self.docstring_nodes = docstring_nodes
+            self.is_docstring_node = is_docstring_node
 
-            def visit_Module(self, node: ast.Module) -> None:
-                self._add_if_docstring(node)
+        def _add_if_docstring(self, node: ast.AST) -> None:
+            if self.is_docstring_node(node):
+                # Check if node has body attribute
+                if hasattr(node, "body") and node.body:  # type: ignore[attr-defined]
+                    self.docstring_nodes.append(node.body[0])  # type: ignore[attr-defined]
+            self.generic_visit(node)
 
-            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-                self._add_if_docstring(node)
+        def visit_Module(self, node: ast.Module) -> None:
+            self._add_if_docstring(node)
 
-            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-                self._add_if_docstring(node)
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            self._add_if_docstring(node)
 
-            def visit_ClassDef(self, node: ast.ClassDef) -> None:
-                self._add_if_docstring(node)
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            self._add_if_docstring(node)
 
-        return DocstringFinder
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            self._add_if_docstring(node)
 
     def _get_lines_to_remove(self, docstring_nodes: list[ast.AST]) -> set[int]:
         lines_to_remove = set()
         for node in docstring_nodes:
-            start_line = node.lineno - 1
-            end_line = node.end_lineno - 1 if node.end_lineno else start_line
-            lines_to_remove.update(range(start_line, end_line + 1))
+            # Use hasattr to check for line number attributes
+            if hasattr(node, "lineno"):
+                start_line = node.lineno - 1  # type: ignore[attr-defined]
+                end_line = (
+                    (node.end_lineno - 1)  # type: ignore[attr-defined]
+                    if hasattr(node, "end_lineno") and node.end_lineno  # type: ignore[attr-defined]
+                    else start_line
+                )
+                lines_to_remove.update(range(start_line, end_line + 1))
         return lines_to_remove
 
     def _filter_docstring_lines(

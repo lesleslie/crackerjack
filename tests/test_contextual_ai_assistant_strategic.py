@@ -8,9 +8,8 @@ Target: 150-200 statements covered for ~3-4% overall coverage boost.
 
 import json
 import subprocess
-import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch, mock_open
+from unittest.mock import Mock, patch
 
 import pytest
 from rich.console import Console
@@ -78,7 +77,7 @@ def sample_recommendations():
         ),
         AIRecommendation(
             category="security",
-            priority="high", 
+            priority="high",
             title="Address Security Issues",
             description="Found 2 security issues in dependencies",
             action_command="python -m crackerjack --check-dependencies",
@@ -205,7 +204,10 @@ class TestContextualAIAssistantInit:
 
         assert assistant.project_root == mock_project_root
         assert assistant.pyproject_path == mock_project_root / "pyproject.toml"
-        assert assistant.cache_file == mock_project_root / ".crackerjack" / "ai_context.json"
+        assert (
+            assistant.cache_file
+            == mock_project_root / ".crackerjack" / "ai_context.json"
+        )
 
 
 class TestGetContextualRecommendations:
@@ -223,7 +225,9 @@ class TestGetContextualRecommendations:
         recommendations = [
             AIRecommendation("test", "low", "Low Priority", "desc", confidence=0.9),
             AIRecommendation("test", "high", "High Priority", "desc", confidence=0.8),
-            AIRecommendation("test", "medium", "Medium Priority", "desc", confidence=0.7),
+            AIRecommendation(
+                "test", "medium", "Medium Priority", "desc", confidence=0.7
+            ),
             AIRecommendation("test", "high", "High Priority 2", "desc", confidence=0.9),
         ]
         mock_generate.return_value = recommendations
@@ -606,49 +610,51 @@ class TestHasTestDirectory:
 
     def test_has_test_directory_tests_folder(self, ai_assistant):
         """Test detection of 'tests' directory."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
             mock_path = Mock()
             mock_path.exists.return_value = True
             mock_div.return_value = mock_path
-            
+
             result = ai_assistant._has_test_directory()
             assert result is True
 
     def test_has_test_directory_test_folder(self, ai_assistant):
         """Test detection of 'test' directory."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
+
             def path_side_effect(dirname):
                 mock_path = Mock()
                 # Return True only for 'test' directory
-                mock_path.exists.return_value = (dirname == "test")
+                mock_path.exists.return_value = dirname == "test"
                 return mock_path
-            
+
             mock_div.side_effect = path_side_effect
-            
+
             result = ai_assistant._has_test_directory()
             assert result is True
 
     def test_has_test_directory_testing_folder(self, ai_assistant):
-        """Test detection of 'testing' directory."""  
-        with patch.object(Path, '__truediv__') as mock_div:
+        """Test detection of 'testing' directory."""
+        with patch.object(Path, "__truediv__") as mock_div:
+
             def path_side_effect(dirname):
                 mock_path = Mock()
                 # Return True only for 'testing' directory
-                mock_path.exists.return_value = (dirname == "testing")
+                mock_path.exists.return_value = dirname == "testing"
                 return mock_path
-            
+
             mock_div.side_effect = path_side_effect
-            
+
             result = ai_assistant._has_test_directory()
             assert result is True
 
     def test_has_test_directory_none_exist(self, ai_assistant):
         """Test when no test directories exist."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
             mock_path = Mock()
             mock_path.exists.return_value = False
             mock_div.return_value = mock_path
-            
+
             result = ai_assistant._has_test_directory()
             assert result is False
 
@@ -661,11 +667,9 @@ class TestGetCurrentCoverage:
     def test_get_current_coverage_success(self, mock_run, mock_exists, ai_assistant):
         """Test successful coverage retrieval."""
         mock_exists.return_value = True
-        
+
         # Mock successful coverage command
-        coverage_data = {
-            "totals": {"percent_covered": 85.5}
-        }
+        coverage_data = {"totals": {"percent_covered": 85.5}}
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = json.dumps(coverage_data)
@@ -694,7 +698,9 @@ class TestGetCurrentCoverage:
 
     @patch("pathlib.Path.exists")
     @patch("subprocess.run")
-    def test_get_current_coverage_command_fails(self, mock_run, mock_exists, ai_assistant):
+    def test_get_current_coverage_command_fails(
+        self, mock_run, mock_exists, ai_assistant
+    ):
         """Test when coverage command fails."""
         mock_exists.return_value = True
         mock_run.side_effect = subprocess.TimeoutExpired("coverage", 10)
@@ -705,10 +711,12 @@ class TestGetCurrentCoverage:
 
     @patch("pathlib.Path.exists")
     @patch("subprocess.run")
-    def test_get_current_coverage_invalid_json(self, mock_run, mock_exists, ai_assistant):
+    def test_get_current_coverage_invalid_json(
+        self, mock_run, mock_exists, ai_assistant
+    ):
         """Test handling of invalid JSON from coverage command."""
         mock_exists.return_value = True
-        
+
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = "invalid json"
@@ -730,7 +738,7 @@ class TestCountCurrentLintErrors:
             {"file": "test2.py", "message": "Error 2"},
             {"file": "test3.py", "message": "Error 3"},
         ]
-        
+
         mock_result = Mock()
         mock_result.returncode = 1  # ruff returns 1 when errors found
         mock_result.stdout = json.dumps(lint_data)
@@ -822,51 +830,58 @@ class TestDetectMainLanguages:
 
     def test_detect_python_only(self, ai_assistant):
         """Test detection of Python-only project."""
-        with patch.object(Path, '__truediv__') as mock_div, \
-             patch.object(Path, 'glob') as mock_glob:
-            
+        with (
+            patch.object(Path, "__truediv__") as mock_div,
+            patch.object(Path, "glob") as mock_glob,
+        ):
+
             def path_side_effect(filename):
                 mock_path = Mock()
                 # Return True only for pyproject.toml
-                mock_path.exists.return_value = (filename == "pyproject.toml")
+                mock_path.exists.return_value = filename == "pyproject.toml"
                 return mock_path
-            
+
             mock_div.side_effect = path_side_effect
             mock_glob.return_value = []  # No TypeScript files
-            
+
             result = ai_assistant._detect_main_languages()
             assert result == ["python"]
 
     def test_detect_multiple_languages(self, ai_assistant):
         """Test detection of multiple languages."""
-        with patch.object(Path, '__truediv__') as mock_div, \
-             patch.object(Path, 'glob') as mock_glob:
-            
+        with (
+            patch.object(Path, "__truediv__") as mock_div,
+            patch.object(Path, "glob") as mock_glob,
+        ):
+
             def path_side_effect(filename):
                 mock_path = Mock()
                 # Return True for multiple config files
                 mock_path.exists.return_value = filename in [
-                    "pyproject.toml", "package.json", "Cargo.toml"
+                    "pyproject.toml",
+                    "package.json",
+                    "Cargo.toml",
                 ]
                 return mock_path
-            
+
             mock_div.side_effect = path_side_effect
             mock_glob.return_value = [Path("app.ts"), Path("utils.ts")]
-            
+
             result = ai_assistant._detect_main_languages()
             expected = ["python", "javascript", "typescript", "rust"]
             assert set(result) == set(expected)
 
     def test_detect_no_known_languages(self, ai_assistant):
         """Test fallback when no known languages detected."""
-        with patch.object(Path, '__truediv__') as mock_div, \
-             patch.object(Path, 'glob') as mock_glob:
-            
+        with (
+            patch.object(Path, "__truediv__") as mock_div,
+            patch.object(Path, "glob") as mock_glob,
+        ):
             mock_path = Mock()
             mock_path.exists.return_value = False
             mock_div.return_value = mock_path
             mock_glob.return_value = []
-            
+
             result = ai_assistant._detect_main_languages()
             assert result == ["python"]  # Default fallback
 
@@ -876,39 +891,41 @@ class TestHasCICDConfig:
 
     def test_has_github_workflow(self, ai_assistant):
         """Test detection of GitHub Actions workflow."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
+
             def path_side_effect(path_str):
                 mock_path = Mock()
                 # Return True only for .github/workflows
-                mock_path.exists.return_value = (path_str == ".github/workflows")
+                mock_path.exists.return_value = path_str == ".github/workflows"
                 return mock_path
-            
+
             mock_div.side_effect = path_side_effect
-            
+
             result = ai_assistant._has_ci_cd_config()
             assert result is True
 
     def test_has_gitlab_ci(self, ai_assistant):
         """Test detection of GitLab CI."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
+
             def path_side_effect(path_str):
                 mock_path = Mock()
                 # Return True only for .gitlab-ci.yml
-                mock_path.exists.return_value = (path_str == ".gitlab-ci.yml")
+                mock_path.exists.return_value = path_str == ".gitlab-ci.yml"
                 return mock_path
-            
+
             mock_div.side_effect = path_side_effect
-            
+
             result = ai_assistant._has_ci_cd_config()
             assert result is True
 
     def test_no_cicd_config(self, ai_assistant):
         """Test when no CI/CD configuration exists."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
             mock_path = Mock()
             mock_path.exists.return_value = False
             mock_div.return_value = mock_path
-            
+
             result = ai_assistant._has_ci_cd_config()
             assert result is False
 
@@ -918,39 +935,41 @@ class TestHasDocumentation:
 
     def test_has_readme_md(self, ai_assistant):
         """Test detection of README.md."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
+
             def path_side_effect(path_str):
                 mock_path = Mock()
                 # Return True only for README.md
-                mock_path.exists.return_value = (path_str == "README.md")
+                mock_path.exists.return_value = path_str == "README.md"
                 return mock_path
-            
+
             mock_div.side_effect = path_side_effect
-            
+
             result = ai_assistant._has_documentation()
             assert result is True
 
     def test_has_docs_directory(self, ai_assistant):
         """Test detection of docs directory."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
+
             def path_side_effect(path_str):
                 mock_path = Mock()
                 # Return True only for docs directory
-                mock_path.exists.return_value = (path_str == "docs")
+                mock_path.exists.return_value = path_str == "docs"
                 return mock_path
-            
+
             mock_div.side_effect = path_side_effect
-            
+
             result = ai_assistant._has_documentation()
             assert result is True
 
     def test_no_documentation(self, ai_assistant):
         """Test when no documentation exists."""
-        with patch.object(Path, '__truediv__') as mock_div:
+        with patch.object(Path, "__truediv__") as mock_div:
             mock_path = Mock()
             mock_path.exists.return_value = False
             mock_div.return_value = mock_path
-            
+
             result = ai_assistant._has_documentation()
             assert result is False
 
@@ -1042,7 +1061,7 @@ class TestDisplayRecommendations:
 
         # Should print header, recommendation, and confidence bar
         assert mock_console.print.call_count >= 5
-        
+
         # Check that key information was printed
         printed_content = " ".join(
             str(call.args[0]) for call in mock_console.print.call_args_list
@@ -1052,19 +1071,23 @@ class TestDisplayRecommendations:
         assert "python -m crackerjack -t" in printed_content
         assert "Tests prevent bugs" in printed_content
 
-    def test_display_multiple_recommendations(self, ai_assistant, mock_console, sample_recommendations):
+    def test_display_multiple_recommendations(
+        self, ai_assistant, mock_console, sample_recommendations
+    ):
         """Test displaying multiple recommendations."""
         ai_assistant.display_recommendations(sample_recommendations)
 
         # Should print header + multiple recommendations
         assert mock_console.print.call_count > len(sample_recommendations) * 3
-        
+
         # Verify both recommendations appear in output
         printed_content = " ".join(
             str(call.args[0]) for call in mock_console.print.call_args_list if call.args
         )
         assert "Improve Test Coverage" in printed_content
-        assert "Address Security" in printed_content  # Partial match for "Address Security Issues"
+        assert (
+            "Address Security" in printed_content
+        )  # Partial match for "Address Security Issues"
 
 
 # Integration tests for complex workflows
@@ -1074,27 +1097,31 @@ class TestIntegrationWorkflows:
     @patch("subprocess.run")
     @patch("pathlib.Path.exists")
     @patch("pathlib.Path.rglob")
-    def test_full_recommendation_workflow(self, mock_rglob, mock_exists, mock_run, ai_assistant):
+    def test_full_recommendation_workflow(
+        self, mock_rglob, mock_exists, mock_run, ai_assistant
+    ):
         """Test complete workflow from analysis to recommendations."""
         # Setup mocks for project analysis
         mock_exists.return_value = True
-        mock_rglob.return_value = [Path(f"file{i}.py") for i in range(15)]  # medium project
-        
+        mock_rglob.return_value = [
+            Path(f"file{i}.py") for i in range(15)
+        ]  # medium project
+
         # Mock coverage command
         coverage_result = Mock()
         coverage_result.returncode = 0
         coverage_result.stdout = json.dumps({"totals": {"percent_covered": 25.0}})
-        
+
         # Mock lint command
         lint_result = Mock()
         lint_result.returncode = 1
         lint_result.stdout = json.dumps([{"error": f"lint{i}"} for i in range(8)])
-        
+
         # Mock other commands to return empty/success
         default_result = Mock()
         default_result.returncode = 0
         default_result.stdout = ""
-        
+
         def run_side_effect(cmd, **kwargs):
             if "coverage" in cmd:
                 return coverage_result
@@ -1102,7 +1129,7 @@ class TestIntegrationWorkflows:
                 return lint_result
             else:
                 return default_result
-        
+
         mock_run.side_effect = run_side_effect
 
         # Get recommendations

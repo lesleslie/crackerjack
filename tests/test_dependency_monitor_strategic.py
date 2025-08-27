@@ -6,11 +6,9 @@ Focuses on real logic to maximize coverage toward 42% requirement.
 
 import json
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
-from urllib.error import URLError
 
 import pytest
 
@@ -80,11 +78,11 @@ def mock_pyproject_path(dependency_monitor, sample_pyproject_content, tmp_path):
     test_dir.mkdir()
     pyproject_path = test_dir / "pyproject.toml"
     pyproject_path.write_bytes(sample_pyproject_content)
-    
+
     # Set the dependency monitor to use the test directory
     dependency_monitor.project_root = test_dir
     dependency_monitor.pyproject_path = pyproject_path
-    
+
     yield pyproject_path
 
 
@@ -102,7 +100,7 @@ class TestDependencyDataClasses:
             vulnerable_versions="<2.25.0",
             patched_version="2.25.0",
         )
-        
+
         assert vuln.package == "requests"
         assert vuln.installed_version == "2.24.0"
         assert vuln.vulnerability_id == "CVE-2023-1234"
@@ -120,7 +118,7 @@ class TestDependencyDataClasses:
             release_date="2023-06-15T10:30:00",
             breaking_changes=True,
         )
-        
+
         assert update.package == "fastapi"
         assert update.current_version == "0.68.0"
         assert update.latest_version == "1.0.0"
@@ -138,17 +136,19 @@ class TestDependencyMonitorInitialization:
             filesystem=mock_filesystem,
             console=mock_console,
         )
-        
+
         assert service.filesystem == mock_filesystem
         assert service.console == mock_console
         assert service.project_root == Path.cwd()
         assert service.pyproject_path == Path.cwd() / "pyproject.toml"
-        assert service.cache_file == Path.cwd() / ".crackerjack" / "dependency_cache.json"
+        assert (
+            service.cache_file == Path.cwd() / ".crackerjack" / "dependency_cache.json"
+        )
 
     def test_initialization_without_console(self, mock_filesystem):
         """Test service initialization with default console."""
         service = DependencyMonitorService(filesystem=mock_filesystem)
-        
+
         assert service.filesystem == mock_filesystem
         assert service.console is not None  # Default Rich Console created
         assert service.project_root == Path.cwd()
@@ -160,14 +160,16 @@ class TestDependencyParsing:
     def test_parse_dependencies_success(self, dependency_monitor, mock_pyproject_path):
         """Test successful dependency parsing from pyproject.toml."""
         dependencies = dependency_monitor._parse_dependencies()
-        
+
         # Check main dependencies (parser extracts version part after first operator)
         assert dependencies["requests"] == "2.25.0"
-        assert dependencies["click"] == "8.0.0"  
+        assert dependencies["click"] == "8.0.0"
         assert dependencies["pydantic"] == "1.10.0"
-        assert dependencies["fastapi"] == "0.68.0,<0.100.0"  # Splits on ">=" and keeps rest
+        assert (
+            dependencies["fastapi"] == "0.68.0,<0.100.0"
+        )  # Splits on ">=" and keeps rest
         assert dependencies["uvicorn"] == "latest"  # No version specified
-        
+
         # Check optional dependencies
         assert dependencies["pytest"] == "6.0.0"
         assert dependencies["black"] == "22.3.0"
@@ -178,29 +180,31 @@ class TestDependencyParsing:
         # Create a temporary directory without pyproject.toml
         test_dir = tmp_path / "test_project"
         test_dir.mkdir()
-        
+
         # Set the dependency monitor to use the test directory
         dependency_monitor.project_root = test_dir
         dependency_monitor.pyproject_path = test_dir / "pyproject.toml"
-        
+
         dependencies = dependency_monitor._parse_dependencies()
         assert dependencies == {}
 
-    def test_parse_dependencies_invalid_toml(self, dependency_monitor, mock_console, tmp_path):
+    def test_parse_dependencies_invalid_toml(
+        self, dependency_monitor, mock_console, tmp_path
+    ):
         """Test dependency parsing with invalid TOML content."""
         # Create a temporary directory with invalid pyproject.toml
         test_dir = tmp_path / "test_project"
         test_dir.mkdir()
         pyproject_path = test_dir / "pyproject.toml"
         pyproject_path.write_text("invalid toml content [[[")
-        
+
         # Set the dependency monitor to use the test directory
         dependency_monitor.project_root = test_dir
         dependency_monitor.pyproject_path = pyproject_path
-        
+
         dependencies = dependency_monitor._parse_dependencies()
         assert dependencies == {}
-        
+
         # Check warning was printed
         mock_console.print.assert_called_once()
         args = mock_console.print.call_args[0]
@@ -220,7 +224,7 @@ class TestDependencyParsing:
             ("", (None, None)),
             ("-e git+https://github.com/user/repo.git", (None, None)),
         ]
-        
+
         for spec, expected in test_cases:
             result = dependency_monitor._parse_dependency_spec(spec)
             assert result == expected
@@ -229,15 +233,17 @@ class TestDependencyParsing:
         """Test extracting main dependencies when no project section exists."""
         dependencies = {}
         project_data = {}  # No dependencies key
-        
+
         dependency_monitor._extract_main_dependencies(project_data, dependencies)
         assert dependencies == {}
 
-    def test_extract_optional_dependencies_no_optional_section(self, dependency_monitor):
+    def test_extract_optional_dependencies_no_optional_section(
+        self, dependency_monitor
+    ):
         """Test extracting optional dependencies when no optional section exists."""
         dependencies = {}
         project_data = {}  # No optional-dependencies key
-        
+
         dependency_monitor._extract_optional_dependencies(project_data, dependencies)
         assert dependencies == {}
 
@@ -250,11 +256,11 @@ class TestVulnerabilityChecking:
         # Create a temporary directory without pyproject.toml
         test_dir = tmp_path / "test_project"
         test_dir.mkdir()
-        
+
         # Set the dependency monitor to use the test directory
         dependency_monitor.project_root = test_dir
         dependency_monitor.pyproject_path = test_dir / "pyproject.toml"
-        
+
         result = dependency_monitor.check_dependency_updates()
         assert result is False
 
@@ -264,7 +270,9 @@ class TestVulnerabilityChecking:
             result = dependency_monitor.check_dependency_updates()
             assert result is False
 
-    def test_check_dependency_updates_with_vulnerabilities(self, dependency_monitor, mock_console):
+    def test_check_dependency_updates_with_vulnerabilities(
+        self, dependency_monitor, mock_console
+    ):
         """Test update check when vulnerabilities are found."""
         mock_dependencies = {"requests": "2.24.0"}
         mock_vulnerabilities = [
@@ -278,16 +286,26 @@ class TestVulnerabilityChecking:
                 patched_version="2.25.0",
             )
         ]
-        
-        with patch.object(dependency_monitor, "_parse_dependencies", return_value=mock_dependencies):
-            with patch.object(dependency_monitor, "_check_security_vulnerabilities", return_value=mock_vulnerabilities):
-                with patch.object(dependency_monitor, "_report_vulnerabilities") as mock_report:
+
+        with patch.object(
+            dependency_monitor, "_parse_dependencies", return_value=mock_dependencies
+        ):
+            with patch.object(
+                dependency_monitor,
+                "_check_security_vulnerabilities",
+                return_value=mock_vulnerabilities,
+            ):
+                with patch.object(
+                    dependency_monitor, "_report_vulnerabilities"
+                ) as mock_report:
                     result = dependency_monitor.check_dependency_updates()
-                    
+
                     assert result is True
                     mock_report.assert_called_once_with(mock_vulnerabilities)
 
-    def test_check_dependency_updates_with_major_updates(self, dependency_monitor, mock_console):
+    def test_check_dependency_updates_with_major_updates(
+        self, dependency_monitor, mock_console
+    ):
         """Test update check when major updates are available."""
         mock_dependencies = {"fastapi": "0.68.0"}
         mock_major_updates = [
@@ -299,14 +317,28 @@ class TestVulnerabilityChecking:
                 breaking_changes=True,
             )
         ]
-        
-        with patch.object(dependency_monitor, "_parse_dependencies", return_value=mock_dependencies):
-            with patch.object(dependency_monitor, "_check_security_vulnerabilities", return_value=[]):
-                with patch.object(dependency_monitor, "_check_major_updates", return_value=mock_major_updates):
-                    with patch.object(dependency_monitor, "_should_notify_major_updates", return_value=True):
-                        with patch.object(dependency_monitor, "_report_major_updates") as mock_report:
+
+        with patch.object(
+            dependency_monitor, "_parse_dependencies", return_value=mock_dependencies
+        ):
+            with patch.object(
+                dependency_monitor, "_check_security_vulnerabilities", return_value=[]
+            ):
+                with patch.object(
+                    dependency_monitor,
+                    "_check_major_updates",
+                    return_value=mock_major_updates,
+                ):
+                    with patch.object(
+                        dependency_monitor,
+                        "_should_notify_major_updates",
+                        return_value=True,
+                    ):
+                        with patch.object(
+                            dependency_monitor, "_report_major_updates"
+                        ) as mock_report:
                             result = dependency_monitor.check_dependency_updates()
-                            
+
                             assert result is True
                             mock_report.assert_called_once_with(mock_major_updates)
 
@@ -317,19 +349,19 @@ class TestVulnerabilityChecking:
             "click": "latest",
             "pydantic": "1.10.0",
         }
-        
+
         temp_file = dependency_monitor._create_requirements_file(dependencies)
-        
+
         try:
-            with open(temp_file, "r") as f:
+            with open(temp_file) as f:
                 content = f.read()
-                
+
             expected_lines = [
                 "requests==2.25.0\n",
                 "click\n",  # No version for "latest"
                 "pydantic==1.10.0\n",
             ]
-            
+
             for line in expected_lines:
                 assert line in content
         finally:
@@ -339,18 +371,18 @@ class TestVulnerabilityChecking:
         """Test execution of vulnerability scanning command."""
         command_template = ["uv", "run", "safety", "--file", "__TEMP_FILE__"]
         temp_file = "/tmp/requirements.txt"
-        
+
         with patch("subprocess.run") as mock_run:
             mock_result = Mock()
             mock_result.returncode = 0
             mock_result.stdout = ""
             mock_result.stderr = ""
             mock_run.return_value = mock_result
-            
+
             result = dependency_monitor._execute_vulnerability_command(
                 command_template, temp_file
             )
-            
+
             expected_cmd = ["uv", "run", "safety", "--file", temp_file]
             mock_run.assert_called_once_with(
                 expected_cmd,
@@ -366,19 +398,23 @@ class TestVulnerabilityChecking:
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = ""
-        
+
         parser_func = Mock(return_value=[])
-        result = dependency_monitor._process_vulnerability_result(mock_result, parser_func)
-        
+        result = dependency_monitor._process_vulnerability_result(
+            mock_result, parser_func
+        )
+
         assert result == []
         parser_func.assert_not_called()
 
-    def test_process_vulnerability_result_with_vulnerabilities(self, dependency_monitor):
+    def test_process_vulnerability_result_with_vulnerabilities(
+        self, dependency_monitor
+    ):
         """Test processing vulnerability scan result with vulnerabilities found."""
         mock_result = Mock()
         mock_result.returncode = 1  # Non-zero indicates vulnerabilities found
         mock_result.stdout = '{"vulnerabilities": []}'
-        
+
         expected_vulnerabilities = [
             DependencyVulnerability(
                 package="test",
@@ -390,10 +426,12 @@ class TestVulnerabilityChecking:
                 patched_version="",
             )
         ]
-        
+
         parser_func = Mock(return_value=expected_vulnerabilities)
-        result = dependency_monitor._process_vulnerability_result(mock_result, parser_func)
-        
+        result = dependency_monitor._process_vulnerability_result(
+            mock_result, parser_func
+        )
+
         assert result == expected_vulnerabilities
         parser_func.assert_called_once_with({"vulnerabilities": []})
 
@@ -410,9 +448,9 @@ class TestVulnerabilityChecking:
                 "analyzed_version": "2.25.0",
             }
         ]
-        
+
         vulnerabilities = dependency_monitor._parse_safety_output(safety_data)
-        
+
         assert len(vulnerabilities) == 1
         vuln = vulnerabilities[0]
         assert vuln.package == "requests"
@@ -435,9 +473,9 @@ class TestVulnerabilityChecking:
                 }
             ]
         }
-        
+
         vulnerabilities = dependency_monitor._parse_pip_audit_output(audit_data)
-        
+
         assert len(vulnerabilities) == 1
         vuln = vulnerabilities[0]
         assert vuln.package == "flask"
@@ -457,7 +495,7 @@ class TestMajorUpdateChecking:
             ("0.68.0", "1.0.0"),  # 0 -> 1
             ("2.1.5", "3.0.0"),  # 2 -> 3
         ]
-        
+
         for current, latest in test_cases:
             result = dependency_monitor._is_major_version_update(current, latest)
             assert result is True, f"Expected {current} -> {latest} to be major update"
@@ -470,10 +508,12 @@ class TestMajorUpdateChecking:
             ("3.0.0", "2.9.0"),  # Downgrade
             ("1.0.0", "1.0.0"),  # Same version
         ]
-        
+
         for current, latest in test_cases:
             result = dependency_monitor._is_major_version_update(current, latest)
-            assert result is False, f"Expected {current} -> {latest} to NOT be major update"
+            assert result is False, (
+                f"Expected {current} -> {latest} to NOT be major update"
+            )
 
     def test_is_major_version_update_invalid_versions(self, dependency_monitor):
         """Test major version update detection with invalid version strings."""
@@ -483,7 +523,7 @@ class TestMajorUpdateChecking:
             ("invalid", "2.0.0"),
             ("1.0.0", "invalid"),
         ]
-        
+
         for current, latest in test_cases:
             result = dependency_monitor._is_major_version_update(current, latest)
             assert result is False
@@ -491,7 +531,7 @@ class TestMajorUpdateChecking:
     def test_has_breaking_changes_true(self, dependency_monitor):
         """Test breaking changes detection for versions that likely have breaking changes."""
         test_cases = ["1.0.0", "2.5.0", "3.1.4", "10.0.0"]
-        
+
         for version in test_cases:
             result = dependency_monitor._has_breaking_changes(version)
             assert result is True, f"Expected {version} to have breaking changes"
@@ -499,7 +539,7 @@ class TestMajorUpdateChecking:
     def test_has_breaking_changes_false(self, dependency_monitor):
         """Test breaking changes detection for versions that likely don't have breaking changes."""
         test_cases = ["0.1.0", "0.68.0", "0.99.9"]
-        
+
         for version in test_cases:
             result = dependency_monitor._has_breaking_changes(version)
             assert result is False, f"Expected {version} to NOT have breaking changes"
@@ -507,7 +547,7 @@ class TestMajorUpdateChecking:
     def test_has_breaking_changes_invalid(self, dependency_monitor):
         """Test breaking changes detection for invalid versions."""
         test_cases = ["", "invalid", "1"]
-        
+
         for version in test_cases:
             result = dependency_monitor._has_breaking_changes(version)
             # Should handle gracefully and return False for any invalid input
@@ -526,8 +566,10 @@ class TestCacheManagement:
         """Test cache entry validation when key doesn't exist."""
         cache = {}
         current_time = time.time()
-        
-        result = dependency_monitor._is_cache_entry_valid("missing_key", cache, current_time)
+
+        result = dependency_monitor._is_cache_entry_valid(
+            "missing_key", cache, current_time
+        )
         assert result is False
 
     def test_is_cache_entry_valid_expired(self, dependency_monitor):
@@ -535,11 +577,14 @@ class TestCacheManagement:
         current_time = time.time()
         cache = {
             "test_key": {
-                "timestamp": current_time - 90000,  # Older than 24 hours (86400 seconds)
+                "timestamp": current_time
+                - 90000,  # Older than 24 hours (86400 seconds)
             }
         }
-        
-        result = dependency_monitor._is_cache_entry_valid("test_key", cache, current_time)
+
+        result = dependency_monitor._is_cache_entry_valid(
+            "test_key", cache, current_time
+        )
         assert result is False
 
     def test_is_cache_entry_valid_fresh(self, dependency_monitor):
@@ -550,8 +595,10 @@ class TestCacheManagement:
                 "timestamp": current_time - 3600,  # 1 hour ago, within 24 hour limit
             }
         }
-        
-        result = dependency_monitor._is_cache_entry_valid("test_key", cache, current_time)
+
+        result = dependency_monitor._is_cache_entry_valid(
+            "test_key", cache, current_time
+        )
         assert result is True
 
     def test_create_major_update_from_cache(self, dependency_monitor):
@@ -561,11 +608,11 @@ class TestCacheManagement:
             "release_date": "2023-06-15T10:30:00",
             "breaking_changes": True,
         }
-        
+
         update = dependency_monitor._create_major_update_from_cache(
             "fastapi", "1.0.0", cached_data
         )
-        
+
         assert isinstance(update, MajorUpdate)
         assert update.package == "fastapi"
         assert update.current_version == "1.0.0"
@@ -583,11 +630,11 @@ class TestCacheManagement:
             "release_date": "2023-06-15",
             "breaking_changes": True,
         }
-        
+
         dependency_monitor._update_cache_entry(
             cache, cache_key, current_time, True, latest_info
         )
-        
+
         assert cache_key in cache
         entry = cache[cache_key]
         assert entry["timestamp"] == current_time
@@ -598,39 +645,41 @@ class TestCacheManagement:
 
     def test_load_update_cache_missing_file(self, dependency_monitor, tmp_path):
         """Test loading cache when file doesn't exist."""
-        # Set cache file to a non-existent file in temp directory  
-        dependency_monitor.cache_file = tmp_path / ".crackerjack" / "dependency_cache.json"
-        
+        # Set cache file to a non-existent file in temp directory
+        dependency_monitor.cache_file = (
+            tmp_path / ".crackerjack" / "dependency_cache.json"
+        )
+
         cache = dependency_monitor._load_update_cache()
         assert cache == {}
 
     def test_load_update_cache_success(self, dependency_monitor, tmp_path):
         """Test successful cache loading."""
         mock_cache_data = {"test_key": {"timestamp": 12345}}
-        
+
         # Create a temporary cache file with data
         cache_dir = tmp_path / ".crackerjack"
         cache_dir.mkdir()
         cache_file = cache_dir / "dependency_cache.json"
         cache_file.write_text(json.dumps(mock_cache_data))
-        
+
         # Set dependency monitor to use the temp cache file
         dependency_monitor.cache_file = cache_file
-        
+
         cache = dependency_monitor._load_update_cache()
         assert cache == mock_cache_data
 
     def test_save_update_cache(self, dependency_monitor, tmp_path):
         """Test saving cache data."""
         cache_data = {"test_key": {"timestamp": 12345}}
-        
+
         # Set up temp cache file path
         cache_file = tmp_path / ".crackerjack" / "dependency_cache.json"
         dependency_monitor.cache_file = cache_file
-        
+
         # Save cache data
         dependency_monitor._save_update_cache(cache_data)
-        
+
         # Verify file was created and contains correct data
         assert cache_file.exists()
         saved_data = json.loads(cache_file.read_text())
@@ -647,7 +696,7 @@ class TestPyPIIntegration:
             "https://pypi.org/pypi/django/json",
             "https://pypi.org/pypi/flask/json",
         ]
-        
+
         for url in valid_urls:
             # Should not raise exception
             dependency_monitor._validate_pypi_url(url)
@@ -659,7 +708,7 @@ class TestPyPIIntegration:
             "https://malicious.com/pypi/requests/json",  # Wrong domain
             "ftp://pypi.org/pypi/requests/json",  # Wrong protocol
         ]
-        
+
         for url in invalid_urls:
             with pytest.raises(ValueError, match="Invalid URL scheme"):
                 dependency_monitor._validate_pypi_url(url)
@@ -668,13 +717,11 @@ class TestPyPIIntegration:
         """Test extracting version information from PyPI response."""
         mock_data = {
             "info": {"version": "2.0.0"},
-            "releases": {
-                "2.0.0": [{"upload_time": "2023-06-15T10:30:00"}]
-            }
+            "releases": {"2.0.0": [{"upload_time": "2023-06-15T10:30:00"}]},
         }
-        
+
         result = dependency_monitor._extract_version_info(mock_data)
-        
+
         assert result is not None
         assert result["version"] == "2.0.0"
         assert result["release_date"] == "2023-06-15T10:30:00"
@@ -683,7 +730,7 @@ class TestPyPIIntegration:
     def test_extract_version_info_no_version(self, dependency_monitor):
         """Test extracting version information when no version is available."""
         mock_data = {"info": {}, "releases": {}}
-        
+
         result = dependency_monitor._extract_version_info(mock_data)
         assert result is None
 
@@ -693,21 +740,21 @@ class TestPyPIIntegration:
             "2.0.0": [{"upload_time": "2023-06-15T10:30:00"}],
             "1.0.0": [{"upload_time": "2022-01-01T00:00:00"}],
         }
-        
+
         result = dependency_monitor._get_release_date(releases, "2.0.0")
         assert result == "2023-06-15T10:30:00"
 
     def test_get_release_date_missing_version(self, dependency_monitor):
         """Test getting release date for missing version."""
         releases = {"1.0.0": [{"upload_time": "2022-01-01T00:00:00"}]}
-        
+
         result = dependency_monitor._get_release_date(releases, "2.0.0")
         assert result == ""
 
     def test_get_release_date_empty_releases(self, dependency_monitor):
         """Test getting release date when releases list is empty."""
         releases = {"2.0.0": []}
-        
+
         result = dependency_monitor._get_release_date(releases, "2.0.0")
         assert result == ""
 
@@ -720,7 +767,7 @@ class TestNotificationLogic:
         with patch.object(dependency_monitor, "_load_update_cache", return_value={}):
             with patch.object(dependency_monitor, "_save_update_cache") as mock_save:
                 result = dependency_monitor._should_notify_major_updates()
-                
+
                 assert result is True
                 mock_save.assert_called_once()
 
@@ -728,7 +775,7 @@ class TestNotificationLogic:
         """Test major update notification when recent notification exists."""
         current_time = time.time()
         recent_notification = current_time - 3600  # 1 hour ago
-        
+
         cache = {"last_major_notification": recent_notification}
         with patch.object(dependency_monitor, "_load_update_cache", return_value=cache):
             result = dependency_monitor._should_notify_major_updates()
@@ -738,12 +785,12 @@ class TestNotificationLogic:
         """Test major update notification when old notification exists."""
         current_time = time.time()
         old_notification = current_time - 700000  # More than a week ago
-        
+
         cache = {"last_major_notification": old_notification}
         with patch.object(dependency_monitor, "_load_update_cache", return_value=cache):
             with patch.object(dependency_monitor, "_save_update_cache") as mock_save:
                 result = dependency_monitor._should_notify_major_updates()
-                
+
                 assert result is True
                 mock_save.assert_called_once()
 
@@ -764,21 +811,21 @@ class TestReporting:
                 patched_version="2.25.0",
             )
         ]
-        
+
         dependency_monitor._report_vulnerabilities(vulnerabilities)
-        
+
         # Verify multiple print calls were made
         assert mock_console.print.call_count >= 5
-        
+
         # Check that vulnerability information was printed
         print_calls = []
         for call in mock_console.print.call_args_list:
             if call[0]:  # Positional arguments exist
                 print_calls.append(str(call[0][0]))
-            elif 'end' in call[1]:  # Keyword arguments
+            elif "end" in call[1]:  # Keyword arguments
                 print_calls.append(str(call[1]))
         vulnerability_text = " ".join(print_calls)
-        
+
         assert "Security Vulnerabilities Found" in vulnerability_text
         assert "requests" in vulnerability_text
         assert "CVE-2023-1234" in vulnerability_text
@@ -795,21 +842,21 @@ class TestReporting:
                 breaking_changes=True,
             )
         ]
-        
+
         dependency_monitor._report_major_updates(updates)
-        
+
         # Verify multiple print calls were made
         assert mock_console.print.call_count >= 5
-        
-        # Check that update information was printed  
+
+        # Check that update information was printed
         print_calls = []
         for call in mock_console.print.call_args_list:
             if call[0]:  # Positional arguments exist
                 print_calls.append(str(call[0][0]))
-            elif 'end' in call[1]:  # Keyword arguments
+            elif "end" in call[1]:  # Keyword arguments
                 print_calls.append(str(call[1]))
         update_text = " ".join(print_calls)
-        
+
         assert "Major Version Updates Available" in update_text
         assert "fastapi" in update_text
         assert "0.68.0" in update_text
@@ -820,39 +867,45 @@ class TestReporting:
 class TestForceCheckUpdates:
     """Test forced update checking functionality."""
 
-    def test_force_check_updates_no_pyproject(self, dependency_monitor, mock_console, tmp_path):
+    def test_force_check_updates_no_pyproject(
+        self, dependency_monitor, mock_console, tmp_path
+    ):
         """Test forced update check when pyproject.toml doesn't exist."""
         # Create a temporary directory without pyproject.toml
         test_dir = tmp_path / "test_project"
         test_dir.mkdir()
-        
+
         # Set the dependency monitor to use the test directory
         dependency_monitor.project_root = test_dir
         dependency_monitor.pyproject_path = test_dir / "pyproject.toml"
-        
+
         vulnerabilities, major_updates = dependency_monitor.force_check_updates()
-        
+
         assert vulnerabilities == []
         assert major_updates == []
-        mock_console.print.assert_called_with("[yellow]⚠️ No pyproject.toml found[/yellow]")
+        mock_console.print.assert_called_with(
+            "[yellow]⚠️ No pyproject.toml found[/yellow]"
+        )
 
-    def test_force_check_updates_no_dependencies(self, dependency_monitor, mock_console, tmp_path):
+    def test_force_check_updates_no_dependencies(
+        self, dependency_monitor, mock_console, tmp_path
+    ):
         """Test forced update check when no dependencies found."""
         # Create a temporary directory with empty pyproject.toml
         test_dir = tmp_path / "test_project"
         test_dir.mkdir()
         pyproject_path = test_dir / "pyproject.toml"
         pyproject_path.write_text("[project]\nname = 'test'\n")  # No dependencies
-        
+
         # Set the dependency monitor to use the test directory
         dependency_monitor.project_root = test_dir
         dependency_monitor.pyproject_path = pyproject_path
-        
+
         vulnerabilities, major_updates = dependency_monitor.force_check_updates()
-        
+
         assert vulnerabilities == []
         assert major_updates == []
-        
+
         # Check warning message was printed
         print_calls = []
         for call in mock_console.print.call_args_list:
@@ -884,16 +937,28 @@ class TestForceCheckUpdates:
                 breaking_changes=True,
             )
         ]
-        
+
         # This test mocks all the internal methods, so Path exists doesn't matter much
-        with patch.object(dependency_monitor, "_parse_dependencies", return_value=mock_dependencies):
-            with patch.object(dependency_monitor, "_check_security_vulnerabilities", return_value=mock_vulnerabilities):
-                with patch.object(dependency_monitor, "_check_major_updates", return_value=mock_major_updates):
-                    vulnerabilities, major_updates = dependency_monitor.force_check_updates()
-                    
+        with patch.object(
+            dependency_monitor, "_parse_dependencies", return_value=mock_dependencies
+        ):
+            with patch.object(
+                dependency_monitor,
+                "_check_security_vulnerabilities",
+                return_value=mock_vulnerabilities,
+            ):
+                with patch.object(
+                    dependency_monitor,
+                    "_check_major_updates",
+                    return_value=mock_major_updates,
+                ):
+                    vulnerabilities, major_updates = (
+                        dependency_monitor.force_check_updates()
+                    )
+
                     assert vulnerabilities == mock_vulnerabilities
                     assert major_updates == mock_major_updates
-                    
+
                     # Check progress messages were printed
                     print_calls = []
                     for call in mock_console.print.call_args_list:
@@ -914,17 +979,23 @@ class TestIntegrationWorkflows:
         dependencies = {"requests": "2.24.0"}
         command_template = ["uv", "run", "safety", "--file", "__TEMP_FILE__"]
         parser_func = Mock()
-        
-        with patch.object(dependency_monitor, "_create_requirements_file") as mock_create:
-            with patch.object(dependency_monitor, "_execute_vulnerability_command") as mock_execute:
+
+        with patch.object(
+            dependency_monitor, "_create_requirements_file"
+        ) as mock_create:
+            with patch.object(
+                dependency_monitor, "_execute_vulnerability_command"
+            ) as mock_execute:
                 with patch("pathlib.Path.unlink") as mock_unlink:
                     mock_create.return_value = "/tmp/test.txt"
-                    mock_execute.side_effect = subprocess.CalledProcessError(1, "safety")
-                    
+                    mock_execute.side_effect = subprocess.CalledProcessError(
+                        1, "safety"
+                    )
+
                     result = dependency_monitor._run_vulnerability_tool(
                         dependencies, command_template, parser_func
                     )
-                    
+
                     assert result == []
                     mock_unlink.assert_called_once_with(missing_ok=True)
 
@@ -932,7 +1003,7 @@ class TestIntegrationWorkflows:
         """Test successful vulnerability tool execution."""
         dependencies = {"requests": "2.24.0"}
         command_template = ["uv", "run", "safety", "--file", "__TEMP_FILE__"]
-        
+
         mock_vulnerabilities = [
             DependencyVulnerability(
                 package="requests",
@@ -944,22 +1015,28 @@ class TestIntegrationWorkflows:
                 patched_version="",
             )
         ]
-        
+
         parser_func = Mock(return_value=mock_vulnerabilities)
-        
-        with patch.object(dependency_monitor, "_create_requirements_file") as mock_create:
-            with patch.object(dependency_monitor, "_execute_vulnerability_command") as mock_execute:
-                with patch.object(dependency_monitor, "_process_vulnerability_result") as mock_process:
+
+        with patch.object(
+            dependency_monitor, "_create_requirements_file"
+        ) as mock_create:
+            with patch.object(
+                dependency_monitor, "_execute_vulnerability_command"
+            ) as mock_execute:
+                with patch.object(
+                    dependency_monitor, "_process_vulnerability_result"
+                ) as mock_process:
                     with patch("pathlib.Path.unlink") as mock_unlink:
                         mock_create.return_value = "/tmp/test.txt"
                         mock_result = Mock()
                         mock_execute.return_value = mock_result
                         mock_process.return_value = mock_vulnerabilities
-                        
+
                         result = dependency_monitor._run_vulnerability_tool(
                             dependencies, command_template, parser_func
                         )
-                        
+
                         assert result == mock_vulnerabilities
                         mock_create.assert_called_once_with(dependencies)
                         mock_execute.assert_called_once()

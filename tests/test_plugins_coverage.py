@@ -59,6 +59,7 @@ class TestPluginManager:
     @pytest.fixture
     def plugin_manager(self):
         from rich.console import Console
+
         mock_console = Console()
         mock_project_path = Path("/test/project")
         return PluginManager(console=mock_console, project_path=mock_project_path)
@@ -144,7 +145,7 @@ class TestPluginManager:
         assert result is True
         assert plugin.activated is True
 
-        result = plugin_manager.disable_plugin("lifecycle-plugin") 
+        result = plugin_manager.disable_plugin("lifecycle-plugin")
         assert result is True
         assert plugin.deactivated is True
 
@@ -287,8 +288,10 @@ class TestPluginIntegration:
         assert plugin_manager.project_path == project_path
         assert plugin_manager.registry is not None
 
-        # Test discovery functionality 
-        with patch.object(plugin_manager.discovery, "auto_discover_and_load") as mock_discover:
+        # Test discovery functionality
+        with patch.object(
+            plugin_manager.discovery, "auto_discover_and_load"
+        ) as mock_discover:
             mock_discover.return_value = {}
             plugins = plugin_manager.discovery.auto_discover_and_load(project_path)
             assert isinstance(plugins, dict)
@@ -316,7 +319,7 @@ class TestPluginIntegration:
             plugin_type=PluginType.HOOK,
             description="Plugin with rich metadata",
             author="Test Author",
-            dependencies=["utility", "testing", "automation"]
+            dependencies=["utility", "testing", "automation"],
         )
 
         assert metadata.name == "metadata-plugin"
@@ -402,6 +405,7 @@ class TestPluginSecurity:
 
     def test_plugin_validation(self) -> None:
         from rich.console import Console
+
         from crackerjack.plugins.base import PluginMetadata, PluginType
 
         mock_console = Console()
@@ -431,7 +435,7 @@ class TestPluginSecurity:
         assert result is True
 
         # Test invalid plugin (not PluginBase subclass) - should not be registerable
-        invalid_plugin = InvalidPlugin()
+        InvalidPlugin()
         # Can't register non-PluginBase objects, this would raise TypeError
         # Just test that the PluginManager has proper validation
         assert hasattr(plugin_manager.registry, "register")

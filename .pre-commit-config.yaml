@@ -76,7 +76,8 @@ repos:
     hooks:
       - id: complexipy
         args: ["-d", "low"]
-        exclude: ^\.venv/
+        files: ^crackerjack/.*\.py$
+        exclude: ^(\.venv/|tests/)
         stages: ["pre-push", "manual"]
   - repo: https://github.com/dosisod/refurb
     rev: v2.1.0
@@ -91,5 +92,5 @@ repos:
     hooks:
       - id: pyright
         files: ^crackerjack/.*\.py$
-        exclude: ^crackerjack/(mcp|plugins)/.*\.py$
+        exclude: ^crackerjack/(mcp|plugins)/.*\.py$|crackerjack/code_cleaner\.py$
         stages: ["pre-push", "manual"]

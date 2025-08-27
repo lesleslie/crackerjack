@@ -2,6 +2,7 @@
 
 import inspect
 import threading
+import typing as t
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
@@ -417,7 +418,12 @@ class EnhancedDependencyContainer:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, _exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        _exc_tb: t.Any,
+    ) -> None:
         self.dispose()
 
 

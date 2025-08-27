@@ -107,8 +107,8 @@ def memoize_with_ttl(
             cache[key] = (time.time(), result)
             return result
 
-        wrapper.cache_clear = cache.clear
-        wrapper.cache_info = lambda: {"size": len(cache), "ttl": ttl}
+        wrapper.cache_clear = cache.clear  # type: ignore[attr-defined]
+        wrapper.cache_info = lambda: {"size": len(cache), "ttl": ttl}  # type: ignore[attr-defined]
         return wrapper
 
     return decorator
@@ -163,7 +163,7 @@ class OptimizedFileWatcher:
         self._file_cache.clear()
 
         if hasattr(self.get_python_files, "cache_clear"):
-            self.get_python_files.cache_clear()
+            self.get_python_files.cache_clear()  # type: ignore[attr-defined]
 
 
 class ParallelTaskExecutor:

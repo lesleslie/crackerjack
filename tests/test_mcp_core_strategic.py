@@ -3,21 +3,19 @@ Strategic comprehensive tests for high-impact MCP modules to reach 42% coverage.
 
 Target Modules (0-30% coverage):
 - crackerjack.mcp.server_core (16% coverage, 144 statements)
-- crackerjack.mcp.state (30% coverage, 263 statements) 
+- crackerjack.mcp.state (30% coverage, 263 statements)
 - crackerjack.mcp.cache (26% coverage, 219 statements)
 - crackerjack.mcp.rate_limiter (25% coverage, 181 statements)
 
 Total: 807 statements, targeting 60-80% coverage per module.
 """
 
-import asyncio
-import json
 import tempfile
 import time
 import uuid
 from collections import deque
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -43,7 +41,6 @@ from crackerjack.mcp.state import (
     StateManager,
 )
 
-
 # =============================================================================
 # SERVER CORE TESTS
 # =============================================================================
@@ -55,7 +52,7 @@ class TestMCPOptions:
     def test_mcp_options_default_initialization(self):
         """Test default MCPOptions initialization."""
         options = MCPOptions()
-        
+
         assert options.commit is False
         assert options.interactive is False
         assert options.no_config_updates is False
@@ -84,7 +81,7 @@ class TestMCPOptions:
             bump="minor",
             unknown_param="ignored",  # Should be ignored
         )
-        
+
         assert options.commit is True
         assert options.interactive is True
         assert options.verbose is True
@@ -99,11 +96,11 @@ class TestMCPOptions:
     def test_mcp_options_partial_kwargs(self):
         """Test MCPOptions with partial kwargs."""
         options = MCPOptions(ai_debug=True, testing=True)
-        
+
         # Updated values
         assert options.ai_debug is True
         assert options.testing is True
-        
+
         # Defaults remain
         assert options.commit is False
         assert options.autofix is True
@@ -122,7 +119,7 @@ class TestJobIdValidation:
             "simple123",
             "a" * 50,  # Max length
         ]
-        
+
         for job_id in valid_ids:
             assert _validate_job_id(job_id), f"Should be valid: {job_id}"
 
@@ -140,7 +137,7 @@ class TestJobIdValidation:
             "job#hash",  # Hash
             "job$dollar",  # Dollar sign
         ]
-        
+
         for job_id in invalid_ids:
             assert not _validate_job_id(job_id), f"Should be invalid: {job_id}"
 
@@ -151,44 +148,43 @@ class TestJobIdValidation:
         assert _validate_job_id("1")
         assert _validate_job_id("-")
         assert _validate_job_id("_")
-        
+
         # Mixed patterns
         assert _validate_job_id("a1-b2_c3")
         assert _validate_job_id("123-abc_XYZ")
 
 
 @pytest.mark.skipif(
-    not hasattr(pytest, "importorskip"), 
-    reason="Skip if MCP not available"
+    not hasattr(pytest, "importorskip"), reason="Skip if MCP not available"
 )
 class TestServerCreation:
     """Test MCP server creation and configuration."""
 
-    @patch('crackerjack.mcp.server_core.MCP_AVAILABLE', True)
-    @patch('crackerjack.mcp.server_core.FastMCP')
+    @patch("crackerjack.mcp.server_core.MCP_AVAILABLE", True)
+    @patch("crackerjack.mcp.server_core.FastMCP")
     def test_create_mcp_server_success(self, mock_fastmcp):
         """Test successful MCP server creation."""
         mock_app = Mock()
         mock_fastmcp.return_value = mock_app
-        
-        with patch('crackerjack.slash_commands.get_slash_command_path') as mock_path:
+
+        with patch("crackerjack.slash_commands.get_slash_command_path") as mock_path:
             mock_file = Mock()
             mock_file.read_text.return_value = "command content"
             mock_path.return_value = mock_file
-            
+
             result = create_mcp_server()
-            
+
             assert result == mock_app
             mock_fastmcp.assert_called_once_with("crackerjack-mcp-server")
 
-    @patch('crackerjack.mcp.server_core.MCP_AVAILABLE', False)
+    @patch("crackerjack.mcp.server_core.MCP_AVAILABLE", False)
     def test_create_mcp_server_not_available(self):
         """Test MCP server creation when MCP not available."""
         result = create_mcp_server()
         assert result is None
 
-    @patch('crackerjack.mcp.server_core.MCP_AVAILABLE', True)
-    @patch('crackerjack.mcp.server_core.FastMCP', None)
+    @patch("crackerjack.mcp.server_core.MCP_AVAILABLE", True)
+    @patch("crackerjack.mcp.server_core.FastMCP", None)
     def test_create_mcp_server_fastmcp_none(self):
         """Test MCP server creation when FastMCP is None."""
         result = create_mcp_server()
@@ -198,62 +194,65 @@ class TestServerCreation:
 class TestServerCommandHandling:
     """Test MCP server command handling."""
 
-    @patch('subprocess.run')
-    @patch('crackerjack.mcp.server_core.console')
+    @patch("subprocess.run")
+    @patch("crackerjack.mcp.server_core.console")
     def test_handle_stop_command(self, mock_console, mock_run):
         """Test stopping MCP server."""
         mock_run.return_value = Mock(returncode=0)
-        
+
         handle_mcp_server_command(stop=True)
-        
+
         mock_run.assert_called_once()
         call_args = mock_run.call_args
         assert "pkill" in call_args[0][0]
         assert "crackerjack-mcp-server" in call_args[0][0]
-        
+
         # Should print success message
         mock_console.print.assert_any_call("[green]✅ MCP servers stopped[/green]")
 
-    @patch('subprocess.run')
-    @patch('crackerjack.mcp.server_core.console')
+    @patch("subprocess.run")
+    @patch("crackerjack.mcp.server_core.console")
     def test_handle_stop_command_no_servers(self, mock_console, mock_run):
         """Test stopping when no servers running."""
         mock_run.return_value = Mock(returncode=1)
-        
+
         handle_mcp_server_command(stop=True)
-        
+
         mock_console.print.assert_any_call("[dim]No MCP servers were running[/dim]")
 
-    @patch('subprocess.run')
-    @patch('crackerjack.mcp.server_core.console')
+    @patch("subprocess.run")
+    @patch("crackerjack.mcp.server_core.console")
     def test_handle_stop_command_timeout(self, mock_console, mock_run):
         """Test stop command with timeout."""
         from subprocess import TimeoutExpired
+
         mock_run.side_effect = TimeoutExpired("pkill", 10)
-        
+
         handle_mcp_server_command(stop=True)
-        
+
         mock_console.print.assert_any_call("[red]Timeout stopping MCP servers[/red]")
 
-    @patch('crackerjack.mcp.server_core.main')
-    @patch('crackerjack.mcp.server_core.console')
+    @patch("crackerjack.mcp.server_core.main")
+    @patch("crackerjack.mcp.server_core.console")
     def test_handle_start_command(self, mock_console, mock_main):
         """Test starting MCP server."""
         handle_mcp_server_command(start=True, websocket_port=8080)
-        
+
         mock_main.assert_called_once_with(".", 8080)
         mock_console.print.assert_any_call("[green]Starting MCP server...[/green]")
 
-    @patch('subprocess.run')
-    @patch('time.sleep')
-    @patch('crackerjack.mcp.server_core.main')
-    @patch('crackerjack.mcp.server_core.console')
-    def test_handle_restart_command(self, mock_console, mock_main, mock_sleep, mock_run):
+    @patch("subprocess.run")
+    @patch("time.sleep")
+    @patch("crackerjack.mcp.server_core.main")
+    @patch("crackerjack.mcp.server_core.console")
+    def test_handle_restart_command(
+        self, mock_console, mock_main, mock_sleep, mock_run
+    ):
         """Test restarting MCP server."""
         mock_run.return_value = Mock(returncode=0)
-        
+
         handle_mcp_server_command(restart=True)
-        
+
         # Should stop first
         mock_run.assert_called_once()
         # Should wait
@@ -307,7 +306,7 @@ class TestIssue:
             message="Syntax error",
             file_path="test.py",
         )
-        
+
         assert issue.id == "test-1"
         assert issue.type == "syntax"
         assert issue.message == "Syntax error"
@@ -331,7 +330,7 @@ class TestIssue:
             suggested_fix="Break into smaller functions",
             auto_fixable=True,
         )
-        
+
         assert issue.id == "complex-1"
         assert issue.type == "complexity"
         assert issue.message == "Function too complex"
@@ -351,9 +350,9 @@ class TestIssue:
             file_path="test.py",
             line_number=10,
         )
-        
+
         result = issue.to_dict()
-        
+
         expected = {
             "id": "dict-test",
             "type": "test",
@@ -365,7 +364,7 @@ class TestIssue:
             "suggested_fix": None,
             "auto_fixable": False,
         }
-        
+
         assert result == expected
 
 
@@ -380,7 +379,7 @@ class TestStageResult:
             status=StageStatus.RUNNING,
             start_time=start_time,
         )
-        
+
         assert result.stage == "test"
         assert result.status == StageStatus.RUNNING
         assert result.start_time == start_time
@@ -394,14 +393,14 @@ class TestStageResult:
         """Test StageResult with completion data."""
         start_time = time.time()
         end_time = start_time + 10
-        
+
         result = StageResult(
             stage="complete",
             status=StageStatus.COMPLETED,
             start_time=start_time,
             end_time=end_time,
         )
-        
+
         assert result.duration == 10.0
 
     def test_stage_result_to_dict(self):
@@ -412,7 +411,7 @@ class TestStageResult:
             message="Test issue",
             file_path="test.py",
         )
-        
+
         result = StageResult(
             stage="test",
             status=StageStatus.COMPLETED,
@@ -421,9 +420,9 @@ class TestStageResult:
             issues_found=[issue],
             fixes_applied=["fix1", "fix2"],
         )
-        
+
         result_dict = result.to_dict()
-        
+
         assert result_dict["stage"] == "test"
         assert result_dict["status"] == StageStatus.COMPLETED
         assert result_dict["duration"] == 10.0
@@ -442,7 +441,7 @@ class TestSessionState:
             session_id="test-session",
             start_time=start_time,
         )
-        
+
         assert session.session_id == "test-session"
         assert session.start_time == start_time
         assert session.current_stage is None
@@ -459,14 +458,14 @@ class TestSessionState:
             message="Session test",
             file_path="session.py",
         )
-        
+
         stage_result = StageResult(
             stage="test-stage",
             status=StageStatus.COMPLETED,
             start_time=1000.0,
             end_time=1005.0,
         )
-        
+
         session = SessionState(
             session_id="complex-session",
             start_time=1000.0,
@@ -476,9 +475,9 @@ class TestSessionState:
             fixes_applied=["fix1"],
             metadata={"key": "value"},
         )
-        
+
         result = session.to_dict()
-        
+
         assert result["session_id"] == "complex-session"
         assert result["current_stage"] == "active"
         assert "test-stage" in result["stages"]
@@ -506,7 +505,7 @@ class TestStateManager:
     def test_state_manager_initialization(self, temp_dir):
         """Test StateManager initialization."""
         manager = StateManager(state_dir=temp_dir)
-        
+
         assert manager.state_dir == temp_dir
         assert manager.state_dir.exists()
         assert manager.checkpoints_dir.exists()
@@ -516,7 +515,7 @@ class TestStateManager:
     def test_generate_session_id(self, state_manager):
         """Test session ID generation."""
         session_id = state_manager._generate_session_id()
-        
+
         assert len(session_id) == 8
         assert isinstance(session_id, str)
         # Should be valid UUID prefix
@@ -526,10 +525,10 @@ class TestStateManager:
     async def test_start_stage(self, state_manager):
         """Test starting a stage."""
         await state_manager.start_stage("test-stage")
-        
+
         assert state_manager.session_state.current_stage == "test-stage"
         assert "test-stage" in state_manager.session_state.stages
-        
+
         stage_result = state_manager.session_state.stages["test-stage"]
         assert stage_result.stage == "test-stage"
         assert stage_result.status == StageStatus.RUNNING
@@ -540,24 +539,26 @@ class TestStateManager:
         """Test completing a stage."""
         # Start stage first
         await state_manager.start_stage("complete-test")
-        
-        issues = [Issue(
-            id="completion-issue",
-            type="test",
-            message="Completion test",
-            file_path="test.py",
-        )]
+
+        issues = [
+            Issue(
+                id="completion-issue",
+                type="test",
+                message="Completion test",
+                file_path="test.py",
+            )
+        ]
         fixes = ["fix1", "fix2"]
-        
+
         await state_manager.complete_stage("complete-test", issues=issues, fixes=fixes)
-        
+
         stage_result = state_manager.session_state.stages["complete-test"]
         assert stage_result.status == StageStatus.COMPLETED
         assert stage_result.end_time is not None
         assert stage_result.duration is not None
         assert stage_result.issues_found == issues
         assert stage_result.fixes_applied == fixes
-        
+
         # Check global state updates
         assert len(state_manager.session_state.global_issues) == 1
         assert state_manager.session_state.global_issues[0].id == "completion-issue"
@@ -568,9 +569,9 @@ class TestStateManager:
     async def test_fail_stage(self, state_manager):
         """Test failing a stage."""
         await state_manager.start_stage("fail-test")
-        
+
         await state_manager.fail_stage("fail-test", "Test error message")
-        
+
         stage_result = state_manager.session_state.stages["fail-test"]
         assert stage_result.status == StageStatus.FAILED
         assert stage_result.error_message == "Test error message"
@@ -583,11 +584,11 @@ class TestStateManager:
         """Test updating stage status."""
         # Update non-existent stage
         await state_manager.update_stage_status("new-stage", "running")
-        
+
         assert "new-stage" in state_manager.session_state.stages
         stage_result = state_manager.session_state.stages["new-stage"]
         assert stage_result.status == StageStatus.RUNNING
-        
+
         # Update to completed
         await state_manager.update_stage_status("new-stage", "completed")
         assert stage_result.status == StageStatus.COMPLETED
@@ -602,27 +603,31 @@ class TestStateManager:
             message="Addition test",
             file_path="add.py",
         )
-        
+
         await state_manager.add_issue(issue)
-        
+
         assert len(state_manager.session_state.global_issues) == 1
         assert state_manager.session_state.global_issues[0] == issue
 
     def test_remove_issue(self, state_manager):
         """Test removing issues."""
         # Add issues first
-        issue1 = Issue(id="remove-1", type="test", message="Remove 1", file_path="test.py")
-        issue2 = Issue(id="remove-2", type="test", message="Remove 2", file_path="test.py")
-        
+        issue1 = Issue(
+            id="remove-1", type="test", message="Remove 1", file_path="test.py"
+        )
+        issue2 = Issue(
+            id="remove-2", type="test", message="Remove 2", file_path="test.py"
+        )
+
         state_manager.session_state.global_issues = [issue1, issue2]
-        
+
         # Remove one issue
         result = state_manager.remove_issue("remove-1")
-        
+
         assert result is True
         assert len(state_manager.session_state.global_issues) == 1
         assert state_manager.session_state.global_issues[0].id == "remove-2"
-        
+
         # Try to remove non-existent issue
         result = state_manager.remove_issue("non-existent")
         assert result is False
@@ -630,20 +635,26 @@ class TestStateManager:
     def test_get_issues_by_priority(self, state_manager):
         """Test getting issues by priority."""
         high_issue = Issue(
-            id="high-1", type="test", message="High", 
-            file_path="test.py", priority=Priority.HIGH
+            id="high-1",
+            type="test",
+            message="High",
+            file_path="test.py",
+            priority=Priority.HIGH,
         )
         medium_issue = Issue(
-            id="med-1", type="test", message="Medium", 
-            file_path="test.py", priority=Priority.MEDIUM
+            id="med-1",
+            type="test",
+            message="Medium",
+            file_path="test.py",
+            priority=Priority.MEDIUM,
         )
-        
+
         state_manager.session_state.global_issues = [high_issue, medium_issue]
-        
+
         high_issues = state_manager.get_issues_by_priority(Priority.HIGH)
         assert len(high_issues) == 1
         assert high_issues[0].id == "high-1"
-        
+
         low_issues = state_manager.get_issues_by_priority(Priority.LOW)
         assert len(low_issues) == 0
 
@@ -655,29 +666,35 @@ class TestStateManager:
         complexity_issue = Issue(
             id="complex-1", type="complexity", message="Complex", file_path="test.py"
         )
-        
+
         state_manager.session_state.global_issues = [syntax_issue, complexity_issue]
-        
+
         syntax_issues = state_manager.get_issues_by_type("syntax")
         assert len(syntax_issues) == 1
         assert syntax_issues[0].id == "syntax-1"
-        
+
         logic_issues = state_manager.get_issues_by_type("logic")
         assert len(logic_issues) == 0
 
     def test_get_auto_fixable_issues(self, state_manager):
         """Test getting auto-fixable issues."""
         fixable_issue = Issue(
-            id="fixable-1", type="format", message="Fixable", 
-            file_path="test.py", auto_fixable=True
+            id="fixable-1",
+            type="format",
+            message="Fixable",
+            file_path="test.py",
+            auto_fixable=True,
         )
         manual_issue = Issue(
-            id="manual-1", type="logic", message="Manual", 
-            file_path="test.py", auto_fixable=False
+            id="manual-1",
+            type="logic",
+            message="Manual",
+            file_path="test.py",
+            auto_fixable=False,
         )
-        
+
         state_manager.session_state.global_issues = [fixable_issue, manual_issue]
-        
+
         fixable_issues = state_manager.get_auto_fixable_issues()
         assert len(fixable_issues) == 1
         assert fixable_issues[0].id == "fixable-1"
@@ -686,26 +703,33 @@ class TestStateManager:
         """Test getting session summary."""
         # Add some test data
         issue1 = Issue(
-            id="summary-1", type="syntax", message="Summary 1", 
-            file_path="test.py", priority=Priority.HIGH, auto_fixable=True
+            id="summary-1",
+            type="syntax",
+            message="Summary 1",
+            file_path="test.py",
+            priority=Priority.HIGH,
+            auto_fixable=True,
         )
         issue2 = Issue(
-            id="summary-2", type="complexity", message="Summary 2", 
-            file_path="test.py", priority=Priority.MEDIUM
+            id="summary-2",
+            type="complexity",
+            message="Summary 2",
+            file_path="test.py",
+            priority=Priority.MEDIUM,
         )
-        
+
         state_manager.session_state.global_issues = [issue1, issue2]
         state_manager.session_state.fixes_applied = ["fix1", "fix2", "fix3"]
-        
+
         stage_result = StageResult(
             stage="summary-stage",
             status=StageStatus.COMPLETED,
             start_time=1000.0,
         )
         state_manager.session_state.stages = {"summary-stage": stage_result}
-        
+
         summary = state_manager.get_session_summary()
-        
+
         assert summary["session_id"] == state_manager.session_state.session_id
         assert summary["total_issues"] == 2
         assert summary["issues_by_priority"]["high"] == 1
@@ -718,7 +742,7 @@ class TestStateManager:
 
 
 # =============================================================================
-# ERROR CACHE TESTS  
+# ERROR CACHE TESTS
 # =============================================================================
 
 
@@ -733,7 +757,7 @@ class TestErrorPattern:
             error_code="E302",
             message_pattern="expected 2 blank lines",
         )
-        
+
         assert pattern.pattern_id == "test-pattern"
         assert pattern.error_type == "ruff"
         assert pattern.error_code == "E302"
@@ -748,7 +772,7 @@ class TestErrorPattern:
         """Test ErrorPattern creation with all parameters."""
         common_fixes = ["fix1", "fix2"]
         last_seen = time.time()
-        
+
         pattern = ErrorPattern(
             pattern_id="full-pattern",
             error_type="pyright",
@@ -760,7 +784,7 @@ class TestErrorPattern:
             frequency=5,
             last_seen=last_seen,
         )
-        
+
         assert pattern.pattern_id == "full-pattern"
         assert pattern.error_type == "pyright"
         assert pattern.error_code == "reportGeneralTypeIssues"
@@ -779,9 +803,9 @@ class TestErrorPattern:
             error_code="B108",
             message_pattern="hardcoded temp file",
         )
-        
+
         result = pattern.to_dict()
-        
+
         assert result["pattern_id"] == "dict-pattern"
         assert result["error_type"] == "bandit"
         assert result["error_code"] == "B108"
@@ -801,7 +825,7 @@ class TestFixResult:
             time_taken=2.5,
             error_message=None,
         )
-        
+
         assert result.fix_id == "fix-1"
         assert result.pattern_id == "pattern-1"
         assert result.success is True
@@ -819,7 +843,7 @@ class TestFixResult:
             time_taken=0.1,
             error_message="Fix failed",
         )
-        
+
         assert result.success is False
         assert result.error_message == "Fix failed"
 
@@ -832,9 +856,9 @@ class TestFixResult:
             files_affected=["test.py"],
             time_taken=1.0,
         )
-        
+
         dict_result = result.to_dict()
-        
+
         assert dict_result["fix_id"] == "dict-fix"
         assert dict_result["success"] is True
         assert dict_result["files_affected"] == ["test.py"]
@@ -857,7 +881,7 @@ class TestErrorCache:
     def test_error_cache_initialization(self, temp_dir):
         """Test ErrorCache initialization."""
         cache = ErrorCache(cache_dir=temp_dir)
-        
+
         assert cache.cache_dir == temp_dir
         assert cache.patterns_file.exists() or not cache.patterns_file.exists()
         assert cache.fixes_file.exists() or not cache.fixes_file.exists()
@@ -873,9 +897,9 @@ class TestErrorCache:
             error_code="E501",
             message_pattern="line too long",
         )
-        
+
         await error_cache.add_pattern(pattern)
-        
+
         assert "new-pattern" in error_cache.patterns
         stored_pattern = error_cache.patterns["new-pattern"]
         assert stored_pattern.pattern_id == "new-pattern"
@@ -891,11 +915,11 @@ class TestErrorCache:
             message_pattern="line too long",
             common_fixes=["break line"],
         )
-        
+
         # Add first time
         await error_cache.add_pattern(pattern)
         original_time = error_cache.patterns["existing-pattern"].last_seen
-        
+
         # Add again with new fixes
         pattern_update = ErrorPattern(
             pattern_id="existing-pattern",
@@ -904,9 +928,9 @@ class TestErrorCache:
             message_pattern="line too long",
             common_fixes=["use parentheses"],
         )
-        
+
         await error_cache.add_pattern(pattern_update)
-        
+
         updated_pattern = error_cache.patterns["existing-pattern"]
         assert updated_pattern.frequency == 2
         assert updated_pattern.last_seen > original_time
@@ -922,44 +946,56 @@ class TestErrorCache:
             message_pattern="blank lines",
         )
         error_cache.patterns["get-test"] = pattern
-        
+
         result = error_cache.get_pattern("get-test")
         assert result == pattern
-        
+
         result = error_cache.get_pattern("non-existent")
         assert result is None
 
     def test_find_patterns_by_type(self, error_cache):
         """Test finding patterns by error type."""
         ruff_pattern = ErrorPattern(
-            pattern_id="ruff-1", error_type="ruff", error_code="E302", message_pattern="ruff error"
+            pattern_id="ruff-1",
+            error_type="ruff",
+            error_code="E302",
+            message_pattern="ruff error",
         )
         pyright_pattern = ErrorPattern(
-            pattern_id="pyright-1", error_type="pyright", error_code="type", message_pattern="type error"
+            pattern_id="pyright-1",
+            error_type="pyright",
+            error_code="type",
+            message_pattern="type error",
         )
-        
+
         error_cache.patterns["ruff-1"] = ruff_pattern
         error_cache.patterns["pyright-1"] = pyright_pattern
-        
+
         ruff_results = error_cache.find_patterns_by_type("ruff")
         assert len(ruff_results) == 1
         assert ruff_results[0].pattern_id == "ruff-1"
-        
+
         bandit_results = error_cache.find_patterns_by_type("bandit")
         assert len(bandit_results) == 0
 
     def test_find_patterns_by_code(self, error_cache):
         """Test finding patterns by error code."""
         pattern1 = ErrorPattern(
-            pattern_id="code-1", error_type="ruff", error_code="E302", message_pattern="blank lines"
+            pattern_id="code-1",
+            error_type="ruff",
+            error_code="E302",
+            message_pattern="blank lines",
         )
         pattern2 = ErrorPattern(
-            pattern_id="code-2", error_type="ruff", error_code="E501", message_pattern="line length"
+            pattern_id="code-2",
+            error_type="ruff",
+            error_code="E501",
+            message_pattern="line length",
         )
-        
+
         error_cache.patterns["code-1"] = pattern1
         error_cache.patterns["code-2"] = pattern2
-        
+
         e302_results = error_cache.find_patterns_by_code("E302")
         assert len(e302_results) == 1
         assert e302_results[0].pattern_id == "code-1"
@@ -967,22 +1003,35 @@ class TestErrorCache:
     def test_get_common_patterns(self, error_cache):
         """Test getting common patterns sorted by frequency."""
         pattern1 = ErrorPattern(
-            pattern_id="freq-1", error_type="ruff", error_code="E1", 
-            message_pattern="error 1", frequency=5
+            pattern_id="freq-1",
+            error_type="ruff",
+            error_code="E1",
+            message_pattern="error 1",
+            frequency=5,
         )
         pattern2 = ErrorPattern(
-            pattern_id="freq-2", error_type="ruff", error_code="E2", 
-            message_pattern="error 2", frequency=10
+            pattern_id="freq-2",
+            error_type="ruff",
+            error_code="E2",
+            message_pattern="error 2",
+            frequency=10,
         )
         pattern3 = ErrorPattern(
-            pattern_id="freq-3", error_type="ruff", error_code="E3", 
-            message_pattern="error 3", frequency=3
+            pattern_id="freq-3",
+            error_type="ruff",
+            error_code="E3",
+            message_pattern="error 3",
+            frequency=3,
         )
-        
-        error_cache.patterns = {"freq-1": pattern1, "freq-2": pattern2, "freq-3": pattern3}
-        
+
+        error_cache.patterns = {
+            "freq-1": pattern1,
+            "freq-2": pattern2,
+            "freq-3": pattern3,
+        }
+
         common_patterns = error_cache.get_common_patterns(limit=2)
-        
+
         assert len(common_patterns) == 2
         assert common_patterns[0].pattern_id == "freq-2"  # Highest frequency
         assert common_patterns[1].pattern_id == "freq-1"  # Second highest
@@ -990,18 +1039,24 @@ class TestErrorCache:
     def test_get_auto_fixable_patterns(self, error_cache):
         """Test getting auto-fixable patterns."""
         fixable_pattern = ErrorPattern(
-            pattern_id="fixable", error_type="ruff", error_code="E1", 
-            message_pattern="fixable", auto_fixable=True
+            pattern_id="fixable",
+            error_type="ruff",
+            error_code="E1",
+            message_pattern="fixable",
+            auto_fixable=True,
         )
         manual_pattern = ErrorPattern(
-            pattern_id="manual", error_type="pyright", error_code="T1", 
-            message_pattern="manual", auto_fixable=False
+            pattern_id="manual",
+            error_type="pyright",
+            error_code="T1",
+            message_pattern="manual",
+            auto_fixable=False,
         )
-        
+
         error_cache.patterns = {"fixable": fixable_pattern, "manual": manual_pattern}
-        
+
         auto_fixable = error_cache.get_auto_fixable_patterns()
-        
+
         assert len(auto_fixable) == 1
         assert auto_fixable[0].pattern_id == "fixable"
 
@@ -1016,7 +1071,7 @@ class TestErrorCache:
             message_pattern="blank lines",
         )
         error_cache.patterns["fix-pattern"] = pattern
-        
+
         fix_result = FixResult(
             fix_id="fix-1",
             pattern_id="fix-pattern",
@@ -1024,27 +1079,30 @@ class TestErrorCache:
             files_affected=["test.py"],
             time_taken=1.0,
         )
-        
+
         await error_cache.add_fix_result(fix_result)
-        
+
         assert len(error_cache.fix_results) == 1
         assert error_cache.fix_results[0] == fix_result
-        
+
         # Check that pattern was updated to auto_fixable
         assert error_cache.patterns["fix-pattern"].auto_fixable is True
-        assert "Auto-fix applied for fix-pattern" in error_cache.patterns["fix-pattern"].common_fixes
+        assert (
+            "Auto-fix applied for fix-pattern"
+            in error_cache.patterns["fix-pattern"].common_fixes
+        )
 
     def test_get_fix_success_rate(self, error_cache):
         """Test getting fix success rate."""
         fix1 = FixResult("fix1", "pattern1", True, ["file1.py"], 1.0)
         fix2 = FixResult("fix2", "pattern1", False, ["file2.py"], 0.5)
         fix3 = FixResult("fix3", "pattern1", True, ["file3.py"], 1.5)
-        
+
         error_cache.fix_results = [fix1, fix2, fix3]
-        
+
         success_rate = error_cache.get_fix_success_rate("pattern1")
-        assert success_rate == 2/3  # 2 successful out of 3
-        
+        assert success_rate == 2 / 3  # 2 successful out of 3
+
         # Non-existent pattern
         success_rate = error_cache.get_fix_success_rate("non-existent")
         assert success_rate == 0.0
@@ -1054,20 +1112,26 @@ class TestErrorCache:
         now = time.time()
         old_time = now - (25 * 3600)  # 25 hours ago
         recent_time = now - (1 * 3600)  # 1 hour ago
-        
+
         old_pattern = ErrorPattern(
-            pattern_id="old", error_type="ruff", error_code="E1", 
-            message_pattern="old", last_seen=old_time
+            pattern_id="old",
+            error_type="ruff",
+            error_code="E1",
+            message_pattern="old",
+            last_seen=old_time,
         )
         recent_pattern = ErrorPattern(
-            pattern_id="recent", error_type="ruff", error_code="E2", 
-            message_pattern="recent", last_seen=recent_time
+            pattern_id="recent",
+            error_type="ruff",
+            error_code="E2",
+            message_pattern="recent",
+            last_seen=recent_time,
         )
-        
+
         error_cache.patterns = {"old": old_pattern, "recent": recent_pattern}
-        
+
         recent_patterns = error_cache.get_recent_patterns(hours=24)
-        
+
         assert len(recent_patterns) == 1
         assert recent_patterns[0].pattern_id == "recent"
 
@@ -1083,7 +1147,7 @@ class TestRateLimitConfig:
     def test_rate_limit_config_defaults(self):
         """Test RateLimitConfig default values."""
         config = RateLimitConfig()
-        
+
         assert config.requests_per_minute == 30
         assert config.requests_per_hour == 300
         assert config.max_concurrent_jobs == 5
@@ -1100,7 +1164,7 @@ class TestRateLimitConfig:
             requests_per_hour=600,
             max_concurrent_jobs=10,
         )
-        
+
         assert config.requests_per_minute == 60
         assert config.requests_per_hour == 600
         assert config.max_concurrent_jobs == 10
@@ -1118,25 +1182,25 @@ class TestRateLimiter:
     async def test_is_allowed_first_request(self, rate_limiter):
         """Test first request is allowed."""
         allowed, info = await rate_limiter.is_allowed("client1")
-        
+
         assert allowed is True
         assert info["allowed"] is True
         assert info["minute_requests_remaining"] == 2  # 3 - 1
-        assert info["hour_requests_remaining"] == 9   # 10 - 1
+        assert info["hour_requests_remaining"] == 9  # 10 - 1
 
     @pytest.mark.asyncio
     async def test_minute_limit_exceeded(self, rate_limiter):
         """Test minute limit exceeded."""
         client_id = "minute_test"
-        
+
         # Use up the minute limit (3 requests)
         for _ in range(3):
             allowed, _ = await rate_limiter.is_allowed(client_id)
             assert allowed is True
-        
+
         # Fourth request should be denied
         allowed, info = await rate_limiter.is_allowed(client_id)
-        
+
         assert allowed is False
         assert info["reason"] == "minute_limit_exceeded"
         assert info["limit"] == 3
@@ -1146,13 +1210,13 @@ class TestRateLimiter:
     async def test_hour_limit_exceeded(self, rate_limiter):
         """Test hour limit exceeded."""
         client_id = "hour_test"
-        
+
         # Fill hour window directly (bypass minute limit)
         now = time.time()
         rate_limiter.hour_windows[client_id] = deque([now] * 10, maxlen=10)
-        
+
         allowed, info = await rate_limiter.is_allowed(client_id)
-        
+
         assert allowed is False
         assert info["reason"] == "hour_limit_exceeded"
         assert info["retry_after"] == 3600
@@ -1163,9 +1227,9 @@ class TestRateLimiter:
         # Fill global minute window (3 * 10 = 30 requests)
         now = time.time()
         rate_limiter.global_minute_window = deque([now] * 30, maxlen=30)
-        
+
         allowed, info = await rate_limiter.is_allowed("global_test")
-        
+
         assert allowed is False
         assert info["reason"] == "global_minute_limit_exceeded"
 
@@ -1174,24 +1238,24 @@ class TestRateLimiter:
         """Test cleanup of expired entries."""
         client_id = "cleanup_test"
         old_minute_time = time.time() - 120  # 2 minutes ago (beyond minute window)
-        old_hour_time = time.time() - 7200   # 2 hours ago (beyond hour window)
-        
+        old_hour_time = time.time() - 7200  # 2 hours ago (beyond hour window)
+
         # Add old entries manually
         rate_limiter.minute_windows[client_id].extend([old_minute_time] * 2)
         rate_limiter.hour_windows[client_id].extend([old_hour_time] * 2)
-        
+
         # Make a new request (should trigger cleanup)
         allowed, info = await rate_limiter.is_allowed(client_id)
-        
+
         assert allowed is True
         # Old entries should be cleaned up, only new request remains
         assert len(rate_limiter.minute_windows[client_id]) == 1  # Only new request
-        assert len(rate_limiter.hour_windows[client_id]) == 1    # Only new request
+        assert len(rate_limiter.hour_windows[client_id]) == 1  # Only new request
 
     def test_get_stats(self, rate_limiter):
         """Test getting rate limiter stats."""
         stats = rate_limiter.get_stats()
-        
+
         assert "active_clients" in stats
         assert "global_minute_requests" in stats
         assert "global_hour_requests" in stats
@@ -1213,7 +1277,7 @@ class TestResourceMonitor:
     async def test_acquire_job_slot_success(self, resource_monitor):
         """Test successful job slot acquisition."""
         success = await resource_monitor.acquire_job_slot("job1")
-        
+
         assert success is True
         assert "job1" in resource_monitor.active_jobs
         assert len(resource_monitor.active_jobs) == 1
@@ -1224,10 +1288,10 @@ class TestResourceMonitor:
         # Acquire maximum slots
         await resource_monitor.acquire_job_slot("job1")
         await resource_monitor.acquire_job_slot("job2")
-        
+
         # Third job should be rejected
         success = await resource_monitor.acquire_job_slot("job3")
-        
+
         assert success is False
         assert "job3" not in resource_monitor.active_jobs
         assert len(resource_monitor.active_jobs) == 2
@@ -1236,9 +1300,9 @@ class TestResourceMonitor:
     async def test_release_job_slot(self, resource_monitor):
         """Test releasing job slot."""
         await resource_monitor.acquire_job_slot("release_test")
-        
+
         await resource_monitor.release_job_slot("release_test")
-        
+
         assert "release_test" not in resource_monitor.active_jobs
         assert len(resource_monitor.active_jobs) == 0
 
@@ -1248,12 +1312,12 @@ class TestResourceMonitor:
         # Add a stale job (simulate old start time)
         old_time = time.time() - 120  # 2 minutes ago (exceeds 1 minute limit)
         resource_monitor.active_jobs["stale_job"] = old_time
-        
+
         # Add a fresh job
         await resource_monitor.acquire_job_slot("fresh_job")
-        
+
         cleaned = await resource_monitor.cleanup_stale_jobs()
-        
+
         assert cleaned == 1
         assert "stale_job" not in resource_monitor.active_jobs
         assert "fresh_job" in resource_monitor.active_jobs
@@ -1263,27 +1327,27 @@ class TestResourceMonitor:
         with tempfile.NamedTemporaryFile() as temp_file:
             temp_file.write(b"small content")
             temp_file.flush()
-            
+
             result = resource_monitor.check_file_size(Path(temp_file.name))
-            
+
             assert result is True
 
     def test_check_file_size_non_existent(self, resource_monitor):
         """Test file size check for non-existent file."""
         result = resource_monitor.check_file_size(Path("/non/existent/file"))
-        
+
         assert result is True  # Non-existent files are allowed
 
     def test_get_stats(self, resource_monitor):
         """Test getting resource monitor stats."""
         stats = resource_monitor.get_stats()
-        
+
         assert "active_jobs" in stats
         assert "max_concurrent_jobs" in stats
         assert "available_slots" in stats
         assert "job_details" in stats
         assert "limits" in stats
-        
+
         assert stats["max_concurrent_jobs"] == 2
         assert stats["active_jobs"] == 0
 
@@ -1307,7 +1371,7 @@ class TestRateLimitMiddleware:
         await middleware.start()
         assert middleware._running is True
         assert middleware._cleanup_task is not None
-        
+
         await middleware.stop()
         assert middleware._running is False
 
@@ -1315,7 +1379,7 @@ class TestRateLimitMiddleware:
     async def test_check_request_allowed(self, middleware):
         """Test request rate limiting through middleware."""
         allowed, info = await middleware.check_request_allowed("test_client")
-        
+
         assert allowed is True
         assert info["allowed"] is True
 
@@ -1325,10 +1389,10 @@ class TestRateLimitMiddleware:
         # Acquire job
         success = await middleware.acquire_job_resources("middleware_job")
         assert success is True
-        
+
         # Release job
         await middleware.release_job_resources("middleware_job")
-        
+
         stats = middleware.get_comprehensive_stats()
         assert stats["resource_usage"]["active_jobs"] == 0
 
@@ -1337,18 +1401,18 @@ class TestRateLimitMiddleware:
         with tempfile.NamedTemporaryFile() as temp_file:
             temp_file.write(b"test content")
             temp_file.flush()
-            
+
             result = middleware.validate_file_size(Path(temp_file.name))
             assert result is True
 
     def test_get_comprehensive_stats(self, middleware):
         """Test comprehensive stats collection."""
         stats = middleware.get_comprehensive_stats()
-        
+
         assert "rate_limiting" in stats
-        assert "resource_usage" in stats  
+        assert "resource_usage" in stats
         assert "config" in stats
-        
+
         config = stats["config"]
         assert config["requests_per_minute"] == 5
         assert config["requests_per_hour"] == 50

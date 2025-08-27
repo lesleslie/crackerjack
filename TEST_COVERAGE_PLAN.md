@@ -12,7 +12,7 @@
 Target the largest 0% coverage modules first for maximum impact:
 
 1. **services/tool_version_service.py** (629 statements, 0%)
-2. **orchestration/advanced_orchestrator.py** (338 statements, 0%) 
+2. **orchestration/advanced_orchestrator.py** (338 statements, 0%)
 3. **services/health_metrics.py** (356 statements, 0%)
 4. **mcp/dashboard.py** (354 statements, 0%)
 5. **services/dependency_monitor.py** (291 statements, 0%)
@@ -30,7 +30,7 @@ Focus on the critical path that users actually use:
 Leverage the agent system's specialized test creation capabilities:
 
 - **TestCreationAgent** - Can generate tests automatically
-- **TestSpecialistAgent** - Handles complex test scenarios  
+- **TestSpecialistAgent** - Handles complex test scenarios
 - **AgentCoordinator** - Routes test generation to appropriate agents
 
 ## Improved Crackerjack Workflow for Test Generation
@@ -94,7 +94,7 @@ def test_actual_functionality():
 ## Expected Outcome
 This approach will efficiently reach 42% coverage by focusing on high-impact modules with meaningful tests rather than trivial import checks.
 
-**Coverage Math**: 
+**Coverage Math**:
 - Current: 2,829 statements covered (17.32%)
 - Need: 6,859 statements covered (42%)
 - Gap: 4,030 additional statements needed
