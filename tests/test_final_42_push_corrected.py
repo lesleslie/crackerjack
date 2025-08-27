@@ -8,8 +8,10 @@ PROVEN STRATEGY: Use only successful import patterns, avoid complex instantiatio
 Focus on modules we know work from previous successful runs.
 """
 
+import unittest
 
-class TestMegaServicesModulesImportOnly:
+
+class TestMegaServicesModulesImportOnly(unittest.TestCase):
     """Use proven import-only strategy for maximum coverage with minimum failures."""
 
     def test_all_services_comprehensive_import_sweep(self):

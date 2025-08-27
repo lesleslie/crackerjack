@@ -340,15 +340,30 @@ def test_monitoring_tools_utility_functions() -> None:
         assert "Fast" in next_action["reason"]
 
         # Test _determine_next_action - all stages completed
-        mock_state_manager.get_stage_status.return_value = "completed"
+        mock_state_manager.get_stage_status.side_effect = lambda stage: "completed"
         next_action = _determine_next_action(mock_state_manager)
         assert next_action["recommended_action"] == "complete"
         assert "All stages completed" in next_action["reason"]
 
         # Test _build_server_stats
         mock_context = Mock()
+        mock_context.config.project_path = "/test/path"
+        mock_context.websocket_server_port = 8675
+        mock_context.websocket_server_process = None
+        mock_context.rate_limiter = None
+        
+        # Mock progress_dir with proper exists() and glob() methods
+        mock_progress_dir = Mock()
+        mock_progress_dir.exists.return_value = True
+        mock_progress_dir.glob.return_value = ["file1.json", "file2.json"]
+        mock_context.progress_dir = mock_progress_dir
+        
         stats = _build_server_stats(mock_context)
         assert isinstance(stats, dict)
+        assert "server_info" in stats
+        assert "rate_limiting" in stats
+        assert "resource_usage" in stats
+        assert stats["resource_usage"]["temp_files_count"] == 2
 
     except ImportError as e:
         pytest.skip(f"monitoring_tools utility functions test failed: {e}")

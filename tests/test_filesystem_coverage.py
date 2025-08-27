@@ -257,39 +257,39 @@ class TestFileSystemServiceGlob:
         non_existent = temp_dir / "non_existent"
 
         with pytest.raises(FileError) as exc_info:
-            fs_service.glob(" * .txt", non_existent)
+            fs_service.glob("*.txt", non_existent)
 
         assert exc_info.value.error_code == ErrorCode.FILE_NOT_FOUND
 
     def test_glob_permission_error(self, fs_service, temp_dir) -> None:
         with patch.object(Path, "glob", side_effect=PermissionError("Access denied")):
             with pytest.raises(FileError) as exc_info:
-                fs_service.glob(" * .txt", temp_dir)
+                fs_service.glob("*.txt", temp_dir)
 
             assert exc_info.value.error_code == ErrorCode.PERMISSION_ERROR
 
     def test_glob_os_error(self, fs_service, temp_dir) -> None:
         with patch.object(Path, "glob", side_effect=OSError("Disk error")):
             with pytest.raises(FileError) as exc_info:
-                fs_service.glob(" * .txt", temp_dir)
+                fs_service.glob("*.txt", temp_dir)
 
             assert exc_info.value.error_code == ErrorCode.FILE_READ_ERROR
 
     def test_rglob_success(self, fs_service, temp_dir) -> None:
-        results = fs_service.rglob(" * .txt", temp_dir)
+        results = fs_service.rglob("*.txt", temp_dir)
         assert len(results) == 3
         assert all(r.suffix == ".txt" for r in results)
 
     def test_rglob_no_path(self, fs_service) -> None:
         with patch.object(Path, "rglob", return_value=[]):
-            results = fs_service.rglob(" * .txt")
+            results = fs_service.rglob("*.txt")
             assert results == []
 
     def test_rglob_base_path_not_exists(self, fs_service, temp_dir) -> None:
         non_existent = temp_dir / "non_existent"
 
         with pytest.raises(FileError) as exc_info:
-            fs_service.rglob(" * .txt", non_existent)
+            fs_service.rglob("*.txt", non_existent)
 
         assert exc_info.value.error_code == ErrorCode.FILE_NOT_FOUND
 
