@@ -135,40 +135,8 @@ class DependencyResolver:
     def _create_from_class(self, implementation: type) -> Any:
         """Create instance using class constructor with dependency injection."""
         try:
-            init_sig = inspect.signature(implementation.__init__)
-            kwargs = {}
-
-            for param_name, param in init_sig.parameters.items():
-                if param_name == "self":
-                    continue
-
-                if param.annotation != inspect.Parameter.empty:
-                    try:
-                        dependency = self.container.get(param.annotation)
-                        kwargs[param_name] = dependency
-                    except Exception as e:
-                        if param.default == inspect.Parameter.empty:
-                            self.logger.exception(
-                                "Required dependency not available",
-                                implementation_class=implementation.__name__,
-                                parameter=param_name,
-                                type=param.annotation,
-                                error=str(e),
-                            )
-                            raise
-                        self.logger.debug(
-                            "Optional dependency not available, using default",
-                            parameter=param_name,
-                            type=param.annotation,
-                        )
-
-            instance = implementation(**kwargs)
-            self.logger.debug(
-                "Instance created with DI",
-                implementation_class=implementation.__name__,
-            )
-            return instance
-
+            kwargs = self._build_constructor_kwargs(implementation)
+            return self._instantiate_with_logging(implementation, kwargs)
         except Exception as e:
             self.logger.exception(
                 "Failed to create instance",
@@ -176,6 +144,60 @@ class DependencyResolver:
                 error=str(e),
             )
             raise
+
+    def _build_constructor_kwargs(self, implementation: type) -> dict[str, Any]:
+        """Build constructor kwargs by resolving dependencies."""
+        init_sig = inspect.signature(implementation.__init__)
+        kwargs = {}
+
+        for param_name, param in init_sig.parameters.items():
+            if param_name == "self":
+                continue
+
+            if param.annotation != inspect.Parameter.empty:
+                self._resolve_parameter_dependency(
+                    kwargs, param_name, param, implementation.__name__
+                )
+
+        return kwargs
+
+    def _resolve_parameter_dependency(
+        self,
+        kwargs: dict[str, Any],
+        param_name: str,
+        param: inspect.Parameter,
+        class_name: str,
+    ) -> None:
+        """Resolve a single parameter dependency."""
+        try:
+            dependency = self.container.get(param.annotation)
+            kwargs[param_name] = dependency
+        except Exception as e:
+            if param.default == inspect.Parameter.empty:
+                self.logger.exception(
+                    "Required dependency not available",
+                    implementation_class=class_name,
+                    parameter=param_name,
+                    type=param.annotation,
+                    error=str(e),
+                )
+                raise
+            self.logger.debug(
+                "Optional dependency not available, using default",
+                parameter=param_name,
+                type=param.annotation,
+            )
+
+    def _instantiate_with_logging(
+        self, implementation: type, kwargs: dict[str, Any]
+    ) -> Any:
+        """Create instance and log the creation."""
+        instance = implementation(**kwargs)
+        self.logger.debug(
+            "Instance created with DI",
+            implementation_class=implementation.__name__,
+        )
+        return instance
 
 
 class EnhancedDependencyContainer:

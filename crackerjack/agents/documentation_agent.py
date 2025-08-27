@@ -206,49 +206,59 @@ class DocumentationAgent(SubAgent):
     def _get_recent_changes(self) -> list[dict[str, str]]:
         """Get recent git commits since last version tag."""
         try:
-            # Get the latest tag
-            result = subprocess.run(
-                ["git", "describe", "--tags", "--abbrev=0"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if result.returncode == 0:
-                last_tag = result.stdout.strip()
-                # Get commits since last tag
-                commit_range = f"{last_tag}..HEAD"
-            else:
-                # No tags found, get last 10 commits
-                commit_range = "-10"
-
-            # Get commit messages
-            result = subprocess.run(
-                ["git", "log", commit_range, "--pretty=format:%s|%h|%an"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if result.returncode != 0:
+            commit_range = self._get_commit_range()
+            if not commit_range:
                 return []
 
-            changes: list[dict[str, str]] = []
-            for line in result.stdout.strip().split("\n"):
-                if line:
-                    parts = line.split("|")
-                    if len(parts) >= 2:
-                        change_info: dict[str, str] = {
-                            "message": parts[0],
-                            "hash": parts[1],
-                            "author": parts[2] if len(parts) > 2 else "Unknown",
-                        }
-                        changes.append(change_info)
-
-            return changes
+            commit_messages = self._get_commit_messages(commit_range)
+            return self._parse_commit_messages(commit_messages)
 
         except Exception:
             return []
+
+    def _get_commit_range(self) -> str:
+        """Determine the commit range for changelog generation."""
+        result = subprocess.run(
+            ["git", "describe", "--tags", "--abbrev=0"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode == 0:
+            last_tag = result.stdout.strip()
+            return f"{last_tag}..HEAD"
+
+        # No tags found, get last 10 commits
+        return "-10"
+
+    def _get_commit_messages(self, commit_range: str) -> str:
+        """Get formatted commit messages for the given range."""
+        result = subprocess.run(
+            ["git", "log", commit_range, "--pretty=format:%s|%h|%an"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        return result.stdout.strip() if result.returncode == 0 else ""
+
+    def _parse_commit_messages(self, commit_output: str) -> list[dict[str, str]]:
+        """Parse git log output into structured change information."""
+        changes: list[dict[str, str]] = []
+
+        for line in commit_output.split("\n"):
+            if line:
+                parts = line.split("|")
+                if len(parts) >= 2:
+                    change_info: dict[str, str] = {
+                        "message": parts[0],
+                        "hash": parts[1],
+                        "author": parts[2] if len(parts) > 2 else "Unknown",
+                    }
+                    changes.append(change_info)
+
+        return changes
 
     def _generate_changelog_entry(self, changes: list[dict[str, str]]) -> str:
         """Generate a formatted changelog entry."""
@@ -356,32 +366,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         """Check for inconsistent agent count references across documentation."""
         expected_count = 9  # Current total with DocumentationAgent
         issues: list[tuple[Path, int, int]] = []
+        patterns = self._get_agent_count_patterns()
 
-        # Patterns to detect agent count references
-        patterns = [
+        for file_path in md_files:
+            issue = self._check_file_agent_count(file_path, patterns, expected_count)
+            if issue:
+                issues.append(issue)
+
+        return issues
+
+    def _get_agent_count_patterns(self) -> list[str]:
+        """Get regex patterns for detecting agent count references."""
+        return [
             r"(\d+)\s+agents",
             r"(\d+)\s+specialized\s+agents",
             r'total_agents["\']:\s*(\d+)',
             r"(\d+)\s+sub-agents",
         ]
 
-        for file_path in md_files:
-            with suppress(Exception):
-                content = self.context.get_file_content(file_path)
-                if not content:
-                    continue
+    def _check_file_agent_count(
+        self,
+        file_path: Path,
+        patterns: list[str],
+        expected_count: int,
+    ) -> tuple[Path, int, int] | None:
+        """Check a single file for agent count inconsistencies."""
+        with suppress(Exception):
+            content = self.context.get_file_content(file_path)
+            if not content:
+                return None
 
-                for pattern in patterns:
-                    matches = re.findall(pattern, content, re.IGNORECASE)
-                    for match in matches:
-                        count = int(match)
-                        if (
-                            count != expected_count and count > 4
-                        ):  # Filter out unrelated numbers
-                            issues.append((file_path, count, expected_count))
-                            break  # Only report first issue per file
+            for pattern in patterns:
+                matches = re.findall(pattern, content, re.IGNORECASE)
+                for match in matches:
+                    count = int(match)
+                    if (
+                        count != expected_count and count > 4
+                    ):  # Filter out unrelated numbers
+                        return (file_path, count, expected_count)
 
-        return issues
+        return None
 
     def _fix_agent_count_references(
         self,

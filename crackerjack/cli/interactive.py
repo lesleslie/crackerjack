@@ -96,12 +96,21 @@ class InteractiveWorkflowManager:
 
     def setup_workflow(self, options: OptionsProtocol) -> None:
         self.tasks.clear()
+        self._setup_cleaning_task(options)
+        self._setup_hooks_task(options)
+        self._setup_testing_task(options)
+        self._setup_publishing_task(options)
+        self._setup_commit_task(options)
+
+    def _setup_cleaning_task(self, options: OptionsProtocol) -> None:
         if options.clean:
             self.add_task(
                 "cleaning",
                 "Clean code (remove docstrings, comments)",
                 "run_cleaning_phase",
             )
+
+    def _setup_hooks_task(self, options: OptionsProtocol) -> None:
         if not options.skip_hooks:
             deps = ["cleaning"] if options.clean else []
             self.add_task(
@@ -110,6 +119,8 @@ class InteractiveWorkflowManager:
                 "run_hooks_phase",
                 dependencies=deps,
             )
+
+    def _setup_testing_task(self, options: OptionsProtocol) -> None:
         if options.test:
             deps = (
                 ["hooks"]
@@ -122,20 +133,18 @@ class InteractiveWorkflowManager:
                 "run_testing_phase",
                 dependencies=deps,
             )
+
+    def _setup_publishing_task(self, options: OptionsProtocol) -> None:
         if options.publish or options.all or options.bump:
-            all_deps: list[str] = []
-            if "testing" in self.tasks:
-                all_deps.append("testing")
-            elif "hooks" in self.tasks:
-                all_deps.append("hooks")
-            elif "cleaning" in self.tasks:
-                all_deps.append("cleaning")
+            all_deps = self._get_publishing_dependencies()
             self.add_task(
                 "publishing",
                 "Version bump and publish to PyPI",
                 "run_publishing_phase",
                 dependencies=all_deps,
             )
+
+    def _setup_commit_task(self, options: OptionsProtocol) -> None:
         if options.commit:
             all_deps = list(self.tasks.keys())
             self.add_task(
@@ -144,6 +153,15 @@ class InteractiveWorkflowManager:
                 "run_commit_phase",
                 dependencies=all_deps[:-1] if all_deps else [],
             )
+
+    def _get_publishing_dependencies(self) -> list[str]:
+        if "testing" in self.tasks:
+            return ["testing"]
+        elif "hooks" in self.tasks:
+            return ["hooks"]
+        elif "cleaning" in self.tasks:
+            return ["cleaning"]
+        return []
 
     def add_task(
         self,

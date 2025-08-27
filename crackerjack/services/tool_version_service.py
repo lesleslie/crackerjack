@@ -72,7 +72,9 @@ class ToolVersionService:
             error=str(error),
         )
 
-    async def _check_single_tool(self, tool_name: str, version_getter) -> VersionInfo:
+    async def _check_single_tool(
+        self, tool_name: str, version_getter: t.Callable[[], str | None]
+    ) -> VersionInfo:
         """Check updates for a single tool."""
         try:
             current_version = version_getter()
@@ -183,50 +185,90 @@ class ToolVersionService:
 
     def _version_compare(self, current: str, latest: str) -> int:
         try:
-            current_parts = [int(x) for x in current.split(".")]
-            latest_parts = [int(x) for x in latest.split(".")]
+            current_parts, current_len = self._parse_version_parts(current)
+            latest_parts, latest_len = self._parse_version_parts(latest)
 
-            # Store original lengths for specificity comparison
-            current_len = len(current_parts)
-            latest_len = len(latest_parts)
+            # Normalize lengths
+            normalized_current, normalized_latest = self._normalize_version_parts(
+                current_parts, latest_parts
+            )
 
-            max_len = max(current_len, latest_len)
-            current_parts.extend([0] * (max_len - current_len))
-            latest_parts.extend([0] * (max_len - latest_len))
+            # Compare numeric values
+            numeric_result = self._compare_numeric_parts(
+                normalized_current, normalized_latest
+            )
+            if numeric_result != 0:
+                return numeric_result
 
-            # Compare numeric values first
-            for i in range(max_len):
-                if current_parts[i] < latest_parts[i]:
-                    return -1
-                if current_parts[i] > latest_parts[i]:
-                    return 1
-
-            # Special case: If numeric values are equal but lengths differ
-            # "1.0" should be less than "1.0.0" but "1" should equal "1.0"
-            # Only when we have explicit zero in the longer version
-            if current_len != latest_len:
-                if current_len < latest_len:
-                    # Check if the extra parts in latest are zeros
-                    extra_parts = latest_parts[current_len:]
-                    if any(part != 0 for part in extra_parts):
-                        return -1
-                    # If extra parts are all zeros, treat as equal unless current has explicit zeros
-                    if current_len > 1:  # "1.0" vs "1.0.0"
-                        return -1
-                    return 0  # "1" vs "1.0"
-                # current_len > latest_len
-                extra_parts = current_parts[latest_len:]
-                if any(part != 0 for part in extra_parts):
-                    return 1
-                # If extra parts are all zeros, treat as equal unless latest has explicit zeros
-                if latest_len > 1:  # "1.0.0" vs "1.0"
-                    return 1
-                return 0  # "1.0" vs "1"
-
-            return 0
+            # Handle length differences when numeric values are equal
+            return self._handle_length_differences(
+                current_len, latest_len, normalized_current, normalized_latest
+            )
 
         except (ValueError, AttributeError):
             return 0
+
+    def _parse_version_parts(self, version: str) -> tuple[list[int], int]:
+        """Parse version string into integer parts and return original length."""
+        parts = [int(x) for x in version.split(".")]
+        return parts, len(parts)
+
+    def _normalize_version_parts(
+        self, current_parts: list[int], latest_parts: list[int]
+    ) -> tuple[list[int], list[int]]:
+        """Extend version parts to same length with zeros."""
+        max_len = max(len(current_parts), len(latest_parts))
+        current_normalized = current_parts + [0] * (max_len - len(current_parts))
+        latest_normalized = latest_parts + [0] * (max_len - len(latest_parts))
+        return current_normalized, latest_normalized
+
+    def _compare_numeric_parts(
+        self, current_parts: list[int], latest_parts: list[int]
+    ) -> int:
+        """Compare version parts numerically."""
+        for current_part, latest_part in zip(current_parts, latest_parts):
+            if current_part < latest_part:
+                return -1
+            if current_part > latest_part:
+                return 1
+        return 0
+
+    def _handle_length_differences(
+        self,
+        current_len: int,
+        latest_len: int,
+        current_parts: list[int],
+        latest_parts: list[int],
+    ) -> int:
+        """Handle version comparison when lengths differ but numeric values are equal."""
+        if current_len == latest_len:
+            return 0
+
+        if current_len < latest_len:
+            return self._compare_when_current_shorter(
+                current_len, latest_len, latest_parts
+            )
+        return self._compare_when_latest_shorter(latest_len, current_len, current_parts)
+
+    def _compare_when_current_shorter(
+        self, current_len: int, latest_len: int, latest_parts: list[int]
+    ) -> int:
+        """Compare when current version has fewer parts than latest."""
+        extra_parts = latest_parts[current_len:]
+        if any(part != 0 for part in extra_parts):
+            return -1
+        # "1.0" vs "1.0.0" should return -1, but "1" vs "1.0" should return 0
+        return -1 if current_len > 1 else 0
+
+    def _compare_when_latest_shorter(
+        self, latest_len: int, current_len: int, current_parts: list[int]
+    ) -> int:
+        """Compare when latest version has fewer parts than current."""
+        extra_parts = current_parts[latest_len:]
+        if any(part != 0 for part in extra_parts):
+            return 1
+        # "1.0.0" vs "1.0" should return 1, but "1.0" vs "1" should return 0
+        return 1 if latest_len > 1 else 0
 
 
 class ConfigIntegrityService:
@@ -567,37 +609,43 @@ class UnifiedConfigurationService:
         config = {"tools": {}, "hooks": {}, "testing": {}, "quality": {}}
 
         package_json = self.project_path / "package.json"
-        if package_json.exists():
-            try:
-                import json
+        if not package_json.exists():
+            return config
 
-                with package_json.open() as f:
-                    pkg_data = json.load(f)
-
-                if "scripts" in pkg_data:
-                    scripts = pkg_data["scripts"]
-                    if "lint" in scripts:
-                        config["quality"]["eslint"] = {
-                            "enabled": True,
-                            "priority": "high",
-                        }
-                    if "test" in scripts:
-                        config["testing"]["jest"] = {
-                            "enabled": True,
-                            "priority": "critical",
-                        }
-                    if "format" in scripts:
-                        config["tools"]["prettier"] = {
-                            "enabled": True,
-                            "priority": "medium",
-                        }
-
-            except Exception as e:
-                self.console.print(
-                    f"[yellow]⚠️ Error loading package.json: {e}[/yellow]",
-                )
+        try:
+            pkg_data = self._load_package_json(package_json)
+            if pkg_data and "scripts" in pkg_data:
+                self._configure_node_tools_from_scripts(config, pkg_data["scripts"])
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️ Error loading package.json: {e}[/yellow]",
+            )
 
         return config
+
+    def _load_package_json(self, package_json: Path) -> dict[str, t.Any] | None:
+        """Load and parse package.json file."""
+        import json
+
+        with package_json.open() as f:
+            return json.load(f)
+
+    def _configure_node_tools_from_scripts(
+        self, config: dict[str, t.Any], scripts: dict[str, str]
+    ) -> None:
+        """Configure Node.js tools based on package.json scripts."""
+        script_mappings = {
+            "lint": ("quality", "eslint", "high"),
+            "test": ("testing", "jest", "critical"),
+            "format": ("tools", "prettier", "medium"),
+        }
+
+        for script_name, (section, tool_name, priority) in script_mappings.items():
+            if script_name in scripts:
+                config[section][tool_name] = {
+                    "enabled": True,
+                    "priority": priority,
+                }
 
     def _load_rust_config(self) -> dict[str, t.Any]:
         config = {"tools": {}, "hooks": {}, "testing": {}, "quality": {}}

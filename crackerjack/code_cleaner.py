@@ -314,13 +314,13 @@ class CodeCleaner(BaseModel):
 
     def clean_file(self, file_path: Path) -> CleaningResult:
         cleaning_steps = [
-            self._create_line_comment_step(),
-            self._create_docstring_step(),
-            self._create_whitespace_step(),
-            self._create_formatting_step(),
+            self._create_line_comment_step(),  # type: ignore[attr-defined]
+            self._create_docstring_step(),  # type: ignore[attr-defined]
+            self._create_whitespace_step(),  # type: ignore[attr-defined]
+            self._create_formatting_step(),  # type: ignore[attr-defined]
         ]
 
-        return self.pipeline.clean_file(file_path, cleaning_steps)
+        return self.pipeline.clean_file(file_path, cleaning_steps)  # type: ignore[attr-defined]
 
     def clean_files(self, pkg_dir: Path | None = None) -> list[CleaningResult]:
         if pkg_dir is None:
@@ -444,17 +444,19 @@ class CodeCleaner(BaseModel):
     ) -> type[ast.NodeVisitor]:
         class DocstringFinder(ast.NodeVisitor):
             def _is_docstring_node(self, node: ast.AST) -> bool:
+                body = getattr(node, "body", None)
                 return (
                     hasattr(node, "body")
-                    and node.body
-                    and isinstance(node.body[0], ast.Expr)
-                    and isinstance(node.body[0].value, ast.Constant)
-                    and isinstance(node.body[0].value.value, str)
+                    and body is not None
+                    and len(body) > 0
+                    and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)
                 )
 
             def _add_if_docstring(self, node: ast.AST) -> None:
                 if self._is_docstring_node(node) and hasattr(node, "body"):
-                    body: list[ast.stmt] = node.body
+                    body: list[ast.stmt] = getattr(node, "body")
                     docstring_nodes.append(body[0])
                 self.generic_visit(node)
 
@@ -477,12 +479,14 @@ class DocstringStep:
     name = "remove_docstrings"
 
     def _is_docstring_node(self, node: ast.AST) -> bool:
+        body = getattr(node, "body", None)
         return (
             hasattr(node, "body")
-            and node.body
-            and isinstance(node.body[0], ast.Expr)
-            and isinstance(node.body[0].value, ast.Constant)
-            and isinstance(node.body[0].value.value, str)
+            and body is not None
+            and len(body) > 0
+            and isinstance(body[0], ast.Expr)
+            and isinstance(body[0].value, ast.Constant)
+            and isinstance(body[0].value.value, str)
         )
 
     def _find_docstrings(self, tree: ast.AST) -> list[ast.AST]:

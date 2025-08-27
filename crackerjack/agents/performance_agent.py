@@ -464,51 +464,73 @@ class PerformanceAgent(SubAgent):
         issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         """Fix inefficient string concatenation in loops by transforming to list.append + join pattern."""
+        var_groups = self._group_concatenation_instances(lines, issue["instances"])
+        return self._apply_concatenation_optimizations(lines, var_groups)
+
+    def _group_concatenation_instances(
+        self,
+        lines: list[str],
+        instances: list[dict[str, t.Any]],
+    ) -> dict[str, list[dict[str, t.Any]]]:
+        """Group string concatenation instances by variable name."""
+        var_groups: dict[str, list[dict[str, t.Any]]] = {}
+
+        for instance in instances:
+            line_info = self._parse_concatenation_line(lines, instance)
+            if line_info:
+                var_name = line_info["var_name"]
+                if var_name not in var_groups:
+                    var_groups[var_name] = []
+                var_groups[var_name].append(line_info)
+
+        return var_groups
+
+    def _parse_concatenation_line(
+        self,
+        lines: list[str],
+        instance: dict[str, t.Any],
+    ) -> dict[str, t.Any] | None:
+        """Parse a string concatenation line to extract variable info."""
+        line_idx = instance["line_number"] - 1
+        if line_idx >= len(lines):
+            return None
+
+        original_line = t.cast(str, lines[line_idx])
+
+        import re
+
+        pattern = r"(\s*)(\w+)\s*\+=\s*(.+)"
+        match = re.match(pattern, original_line)
+
+        if match:
+            indent, var_name, expr = match.groups()
+            return {
+                "line_idx": line_idx,
+                "indent": indent,
+                "var_name": var_name,
+                "expr": expr.strip(),
+                "original_line": original_line,
+            }
+        return None
+
+    def _apply_concatenation_optimizations(
+        self,
+        lines: list[str],
+        var_groups: dict[str, list[dict[str, t.Any]]],
+    ) -> tuple[list[str], bool]:
+        """Apply string building optimizations for each variable group."""
         modified = False
 
-        # Group instances by the string variable being concatenated to
-        var_groups: dict[str, list[dict[str, t.Any]]] = {}
-        for instance in issue["instances"]:
-            line_idx = instance["line_number"] - 1
-            if line_idx < len(lines):
-                original_line = t.cast(str, lines[line_idx])
-
-                # Extract variable name from string concatenation pattern
-                import re
-
-                pattern = r"(\s*)(\w+)\s*\+=\s*(.+)"
-                match = re.match(pattern, original_line)
-                if match:
-                    indent, var_name, expr = match.groups()
-                    if var_name not in var_groups:
-                        var_groups[var_name] = []
-                    var_groups[var_name].append(
-                        {
-                            "line_idx": line_idx,
-                            "indent": indent,
-                            "expr": expr.strip(),
-                            "original_line": original_line,
-                        },
-                    )
-
-        # Transform each variable's concatenation pattern
         for var_name, instances in var_groups.items():
-            if instances:  # Apply optimization for any string concatenation in loop
-                # Find the loop context to apply the transformation
+            if instances:
                 first_instance = instances[0]
                 loop_start = self._find_loop_start(lines, first_instance["line_idx"])
 
                 if loop_start is not None:
-                    # Apply the string building optimization
-                    modified = (
-                        self._apply_string_building_optimization(
-                            lines,
-                            var_name,
-                            instances,
-                            loop_start,
-                        )
-                        or modified
+                    optimization_applied = self._apply_string_building_optimization(
+                        lines, var_name, instances, loop_start
                     )
+                    modified = modified or optimization_applied
 
         return lines, modified
 
@@ -537,38 +559,71 @@ class PerformanceAgent(SubAgent):
         first_instance = instances[0]
         indent = first_instance["indent"]
 
-        # Find variable initialization (look backwards from loop)
-        init_line_idx = None
-        for i in range(loop_start - 1, -1, -1):
-            line = lines[i].strip()
-            if f"{var_name} =" in line and '""' in line:
-                init_line_idx = i
-                break
-            # Don't search too far back
-            if i < loop_start - 10:
-                break
-
+        init_line_idx = self._find_variable_initialization(lines, var_name, loop_start)
         if init_line_idx is not None:
-            # Transform the initialization
-            lines[init_line_idx] = (
-                f"{indent}{var_name}_parts = []  # Performance: Use list for string building"
+            self._transform_string_initialization(
+                lines, init_line_idx, var_name, indent
             )
-
-            # Replace concatenations with list appends
-            for instance in instances:
-                line_idx = instance["line_idx"]
-                expr = instance["expr"]
-                lines[line_idx] = f"{indent}{var_name}_parts.append({expr})"
-
-            # Add join after the loop
-            loop_end = self._find_loop_end(lines, loop_start)
-            if loop_end is not None:
-                join_line = f"{indent}{var_name} = ''.join({var_name}_parts)  # Performance: Join string parts"
-                lines.insert(loop_end + 1, join_line)
-
+            self._replace_concatenations_with_appends(
+                lines, instances, var_name, indent
+            )
+            self._add_join_after_loop(lines, var_name, indent, loop_start)
             return True
 
         return False
+
+    def _find_variable_initialization(
+        self,
+        lines: list[str],
+        var_name: str,
+        loop_start: int,
+    ) -> int | None:
+        """Find the line where the string variable is initialized."""
+        search_start = max(0, loop_start - 10)
+
+        for i in range(loop_start - 1, search_start - 1, -1):
+            line = lines[i].strip()
+            if f"{var_name} =" in line and '""' in line:
+                return i
+        return None
+
+    def _transform_string_initialization(
+        self,
+        lines: list[str],
+        init_line_idx: int,
+        var_name: str,
+        indent: str,
+    ) -> None:
+        """Transform string initialization to list initialization."""
+        lines[init_line_idx] = (
+            f"{indent}{var_name}_parts = []  # Performance: Use list for string building"
+        )
+
+    def _replace_concatenations_with_appends(
+        self,
+        lines: list[str],
+        instances: list[dict[str, t.Any]],
+        var_name: str,
+        indent: str,
+    ) -> None:
+        """Replace string concatenations with list appends."""
+        for instance in instances:
+            line_idx = instance["line_idx"]
+            expr = instance["expr"]
+            lines[line_idx] = f"{indent}{var_name}_parts.append({expr})"
+
+    def _add_join_after_loop(
+        self,
+        lines: list[str],
+        var_name: str,
+        indent: str,
+        loop_start: int,
+    ) -> None:
+        """Add join operation after the loop ends."""
+        loop_end = self._find_loop_end(lines, loop_start)
+        if loop_end is not None:
+            join_line = f"{indent}{var_name} = ''.join({var_name}_parts)  # Performance: Join string parts"
+            lines.insert(loop_end + 1, join_line)
 
     def _find_loop_end(self, lines: list[str], loop_start: int) -> int | None:
         """Find the end of the loop (last line with same or greater indentation)."""

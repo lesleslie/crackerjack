@@ -504,7 +504,9 @@ class RefactoringAgent(SubAgent):
         for func in unused_functions:
             analysis["removable_items"].append(f"unused function: {func['name']}")
 
-    def _should_remove_import_line(self, line: str, unused_import: dict) -> bool:
+    def _should_remove_import_line(
+        self, line: str, unused_import: dict[str, str]
+    ) -> bool:
         """Check if an import line should be removed."""
         if unused_import["type"] == "import":
             return f"import {unused_import['name']}" in line

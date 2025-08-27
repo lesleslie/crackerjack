@@ -48,6 +48,7 @@ class Options(BaseModel):
     keep_releases: int = 10
     track_progress: bool = False
     orchestrated: bool = False
+    coverage: bool = False
     orchestration_strategy: str = "adaptive"
     orchestration_progress: str = "granular"
     orchestration_ai_mode: str = "single-agent"

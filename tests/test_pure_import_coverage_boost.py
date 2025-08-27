@@ -1,8 +1,8 @@
 """Pure import-focused coverage boost - NO method calls, just imports and instantiation.
 
-STRATEGY: 
+STRATEGY:
 - Current: 17.39% coverage (from cumulative tests)
-- Target: 42% minimum requirement  
+- Target: 42% minimum requirement
 - Gap: 24.61 percentage points needed
 - Approach: ZERO method calls that can fail, pure imports + basic object creation
 
@@ -12,51 +12,64 @@ Target the biggest impact opportunities with ZERO risk of failure.
 # Import everything from major modules to hit import-time coverage
 import pytest
 
-# Tool Version Service - 593 statements, currently 14% covered
-from crackerjack.services.tool_version_service import (
-    ToolVersionService, VersionInfo, ConfigIntegrityService, 
-    SmartSchedulingService, UnifiedConfigurationService,
-    EnhancedErrorCategorizationService, GitHookService
+# Major orchestration modules
+from crackerjack.orchestration.advanced_orchestrator import (
+    AdvancedWorkflowOrchestrator,
+    ProgressStreamer,
 )
 
-# Performance Benchmarks - 304 statements, currently 29% covered  
-from crackerjack.services.performance_benchmarks import (
-    PerformanceBenchmarkService, BenchmarkResult, PerformanceReport
-)
-
-# Health Metrics - 306 statements, currently 22% covered
-from crackerjack.services.health_metrics import (
-    HealthMetricsService, ProjectHealth
-)
+# Plugin system modules
+from crackerjack.plugins.base import PluginBase
+from crackerjack.plugins.loader import PluginLoader
+from crackerjack.plugins.managers import PluginManager
 
 # Contextual AI Assistant - 241 statements, currently 24% covered
 from crackerjack.services.contextual_ai_assistant import (
-    ContextualAIAssistant, AIRecommendation, ProjectContext
-)
-
-# Enhanced Filesystem - 263 statements, currently 32% covered
-from crackerjack.services.enhanced_filesystem import (
-    EnhancedFileSystemService, FileCache, BatchFileOperations
-)
-
-# Dependency Monitor - 291 statements, currently 24% covered
-from crackerjack.services.dependency_monitor import (
-    DependencyMonitorService, DependencyVulnerability, MajorUpdate
+    AIRecommendation,
+    ContextualAIAssistant,
+    ProjectContext,
 )
 
 # Other high-statement modules for coverage boost
 from crackerjack.services.debug import AIAgentDebugger
-from crackerjack.services.initialization import InitializationService
-from crackerjack.services.server_manager import find_mcp_server_processes, find_websocket_server_processes
-from crackerjack.services.metrics import MetricsCollector  # Import main class from metrics
 
-# Major orchestration modules
-from crackerjack.orchestration.advanced_orchestrator import AdvancedWorkflowOrchestrator, ProgressStreamer
+# Dependency Monitor - 291 statements, currently 24% covered
+from crackerjack.services.dependency_monitor import (
+    DependencyMonitorService,
+    DependencyVulnerability,
+    MajorUpdate,
+)
 
-# Plugin system modules  
-from crackerjack.plugins.base import PluginBase
-from crackerjack.plugins.loader import PluginLoader
-from crackerjack.plugins.managers import PluginManager
+# Enhanced Filesystem - 263 statements, currently 32% covered
+from crackerjack.services.enhanced_filesystem import (
+    BatchFileOperations,
+    EnhancedFileSystemService,
+    FileCache,
+)
+
+# Health Metrics - 306 statements, currently 22% covered
+from crackerjack.services.health_metrics import HealthMetricsService, ProjectHealth
+
+# Performance Benchmarks - 304 statements, currently 29% covered
+from crackerjack.services.performance_benchmarks import (
+    BenchmarkResult,
+    PerformanceBenchmarkService,
+    PerformanceReport,
+)
+from crackerjack.services.server_manager import (
+    find_mcp_server_processes,
+    find_websocket_server_processes,
+)
+
+# Tool Version Service - 593 statements, currently 14% covered
+from crackerjack.services.tool_version_service import (
+    ConfigIntegrityService,
+    EnhancedErrorCategorizationService,
+    GitHookService,
+    SmartSchedulingService,
+    ToolVersionService,
+    VersionInfo,
+)
 
 
 def test_imports_successful():
@@ -76,20 +89,22 @@ def test_dataclass_creation_no_args():
     # Create objects that require no arguments
     version_info = VersionInfo("test", "1.0")
     assert version_info.tool_name == "test"
-    
+
     project_health = ProjectHealth()
     assert project_health is not None
-    
-    ai_rec = AIRecommendation("test", "low", "title", "desc") 
+
+    ai_rec = AIRecommendation("test", "low", "title", "desc")
     assert ai_rec.category == "test"
-    
+
     project_context = ProjectContext()
     assert project_context is not None
-    
-    dep_vuln = DependencyVulnerability("pkg", "1.0", "CVE-123", "low", "url", "<2.0", "2.0")
+
+    dep_vuln = DependencyVulnerability(
+        "pkg", "1.0", "CVE-123", "low", "url", "<2.0", "2.0"
+    )
     assert dep_vuln.package == "pkg"
-    
-    major_update = MajorUpdate("pkg", "1.0", "2.0", "2023-01-01", False)  
+
+    major_update = MajorUpdate("pkg", "1.0", "2.0", "2023-01-01", False)
     assert major_update.package == "pkg"
 
 
@@ -99,7 +114,7 @@ def test_service_class_references():
         ToolVersionService,
         ConfigIntegrityService,
         SmartSchedulingService,
-        EnhancedErrorCategorizationService, 
+        EnhancedErrorCategorizationService,
         GitHookService,
         PerformanceBenchmarkService,
         HealthMetricsService,
@@ -111,12 +126,12 @@ def test_service_class_references():
         ProgressStreamer,
         PluginBase,
         PluginLoader,
-        PluginManager
+        PluginManager,
     ]
-    
+
     for service_class in service_classes:
         assert service_class is not None
-        assert hasattr(service_class, '__name__')
+        assert hasattr(service_class, "__name__")
 
 
 def test_file_cache_basic_creation():
@@ -127,7 +142,7 @@ def test_file_cache_basic_creation():
 
 
 def test_batch_operations_basic_creation():
-    """Test BatchFileOperations with basic parameters."""  
+    """Test BatchFileOperations with basic parameters."""
     batch_ops = BatchFileOperations(batch_size=1)
     assert batch_ops.batch_size == 1
 
@@ -145,14 +160,14 @@ def test_utility_functions_exist():
     # Test that imported functions exist
     assert find_mcp_server_processes is not None
     assert find_websocket_server_processes is not None
-    
+
     # Call them but don't assert on results (they might fail but that's OK)
     try:
         mcp_procs = find_mcp_server_processes()
         assert isinstance(mcp_procs, list)
     except Exception:
         pass  # Function exists, execution might fail, that's fine
-        
+
     try:
         ws_procs = find_websocket_server_processes()
         assert isinstance(ws_procs, list)
@@ -179,9 +194,9 @@ def test_performance_report_minimal_creation():
 def test_coverage_math_final():
     """Final verification of coverage progress."""
     current_coverage = 17.39  # From cumulative test run
-    target_coverage = 42.0    # Required minimum
+    target_coverage = 42.0  # Required minimum
     gap = target_coverage - current_coverage
-    
+
     assert gap == pytest.approx(24.61, rel=0.01)
     assert current_coverage > 10.0  # We've made progress from 10.46%
     assert target_coverage == 42.0
@@ -189,16 +204,16 @@ def test_coverage_math_final():
 
 def test_import_statements_hit_coverage():
     """The import statements at the top of this file provide coverage.
-    
+
     This test exists to document that the import statements themselves
     provide significant coverage by executing module-level code.
     """
     # The imports at the top of this file hit:
     # - Class definitions
-    # - Dataclass definitions  
+    # - Dataclass definitions
     # - Function definitions
     # - Module-level constants
     # - Import-time initialization code
-    
+
     # This provides substantial coverage without any method calls
     assert True  # The imports already happened and provided coverage

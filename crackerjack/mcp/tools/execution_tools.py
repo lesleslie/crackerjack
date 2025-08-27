@@ -777,69 +777,89 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
         """
         context = get_context()
         if not context:
-            return json.dumps(
-                {"error": "Server context not available", "success": False}
-            )
+            return _create_init_error_response("Server context not available")
 
-        # Parse arguments
-        target_path = args.strip() or None
-
-        try:
-            extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}
-        except json.JSONDecodeError as e:
-            return json.dumps(
-                {"error": f"Invalid JSON in kwargs: {e}", "success": False}
-            )
-
-        force = extra_kwargs.get("force", False)
+        target_path, force, parse_error = _parse_init_arguments(args, kwargs)
+        if parse_error:
+            return parse_error
 
         try:
-            from pathlib import Path
-
-            from crackerjack.services.filesystem import FileSystemService
-            from crackerjack.services.git import GitService
-            from crackerjack.services.initialization import InitializationService
-
-            # Determine target path
-            if target_path:
-                target_path = Path(target_path).resolve()
-            else:
-                target_path = Path.cwd()
-
-            # Validate target path exists
-            if not target_path.exists():
-                return json.dumps(
-                    {
-                        "error": f"Target path does not exist: {target_path}",
-                        "success": False,
-                    }
-                )
-
-            # Initialize services
-            filesystem = FileSystemService()
-            git_service = GitService(context.console, context.config.project_path)
-
-            init_service = InitializationService(
-                context.console, filesystem, git_service, context.config.project_path
-            )
-
-            # Run initialization
-            results = init_service.initialize_project(
-                target_path=target_path, force=force
-            )
-
-            # Add summary information
-            results["command"] = "init_crackerjack"
-            results["target_path"] = str(target_path)
-            results["force"] = force
-
-            return json.dumps(results, indent=2)
-
+            results = _execute_initialization(context, target_path, force)
+            return _create_init_success_response(results, target_path, force)
         except Exception as e:
-            error_result = {
-                "error": f"Initialization failed: {e}",
-                "success": False,
-                "command": "init_crackerjack",
-                "target_path": str(target_path) if target_path else "current_directory",
-            }
-            return json.dumps(error_result, indent=2)
+            return _create_init_exception_response(e, target_path)
+
+
+def _create_init_error_response(message: str) -> str:
+    """Create standardized error response for initialization."""
+    return json.dumps({"error": message, "success": False}, indent=2)
+
+
+def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | None]:
+    """Parse and validate initialization arguments."""
+    from pathlib import Path
+
+    target_path = args.strip() or None
+
+    try:
+        extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+    except json.JSONDecodeError as e:
+        return None, False, _create_init_error_response(f"Invalid JSON in kwargs: {e}")
+
+    force = extra_kwargs.get("force", False)
+
+    # Determine target path
+    if target_path:
+        target_path = Path(target_path).resolve()
+    else:
+        target_path = Path.cwd()
+
+    # Validate target path exists
+    if not target_path.exists():
+        return (
+            None,
+            False,
+            _create_init_error_response(f"Target path does not exist: {target_path}"),
+        )
+
+    return target_path, force, None
+
+
+def _execute_initialization(
+    context: t.Any, target_path: t.Any, force: bool
+) -> dict[str, t.Any]:
+    """Execute the initialization process."""
+    from crackerjack.services.filesystem import FileSystemService
+    from crackerjack.services.git import GitService
+    from crackerjack.services.initialization import InitializationService
+
+    # Initialize services
+    filesystem = FileSystemService()
+    git_service = GitService(context.console, context.config.project_path)
+    init_service = InitializationService(
+        context.console, filesystem, git_service, context.config.project_path
+    )
+
+    # Run initialization
+    return init_service.initialize_project(target_path=target_path, force=force)
+
+
+def _create_init_success_response(
+    results: dict[str, t.Any], target_path: t.Any, force: bool
+) -> str:
+    """Create success response with summary information."""
+    results["command"] = "init_crackerjack"
+    results["target_path"] = str(target_path)
+    results["force"] = force
+    return json.dumps(results, indent=2)
+
+
+def _create_init_exception_response(error: Exception, target_path: t.Any) -> str:
+    """Create exception response for initialization failures."""
+    error_result = {
+        "error": f"Initialization failed: {error}",
+        "success": False,
+        "command": "init_crackerjack",
+        "target_path": str(target_path) if target_path else "current_directory",
+    }
+    return json.dumps(error_result, indent=2)

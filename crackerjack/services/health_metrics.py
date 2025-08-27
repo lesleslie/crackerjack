@@ -202,57 +202,73 @@ class HealthMetricsService:
 
     def _get_test_coverage(self) -> float | None:
         with suppress(Exception):
-            coverage_files = [
-                self.project_root / ".coverage",
-                self.project_root / "htmlcov" / "index.html",
-                self.project_root / "coverage.xml",
-            ]
+            existing_coverage = self._check_existing_coverage_files()
+            if existing_coverage is not None:
+                return existing_coverage
 
-            coverage_file = None
-            for file in coverage_files:
-                if file.exists():
-                    coverage_file = file
-                    break
+            generated_coverage = self._generate_coverage_report()
+            if generated_coverage is not None:
+                return generated_coverage
 
-            if not coverage_file:
-                result = subprocess.run(
-                    [
-                        "uv",
-                        "run",
-                        "python",
-                        "-m",
-                        "pytest",
-                        "--cov=.",
-                        "--cov-report=json",
-                        "--tb=no",
-                        "-q",
-                        "--maxfail=1",
-                    ],
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
-                    cwd=self.project_root,
-                )
+            return self._get_coverage_from_command()
 
-                coverage_json = self.project_root / "coverage.json"
-                if coverage_json.exists():
-                    with coverage_json.open() as f:
-                        data = json.load(f)
-                        return float(data.get("totals", {}).get("percent_covered", 0))
+        return None
 
-            result = subprocess.run(
-                ["uv", "run", "coverage", "report", "--format=json"],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=15,
-                cwd=self.project_root,
-            )
+    def _check_existing_coverage_files(self) -> float | None:
+        coverage_files = [
+            self.project_root / ".coverage",
+            self.project_root / "htmlcov" / "index.html",
+            self.project_root / "coverage.xml",
+        ]
 
-            if result.returncode == 0 and result.stdout:
-                data = json.loads(result.stdout)
+        for coverage_file in coverage_files:
+            if coverage_file.exists():
+                return self._get_coverage_from_command()
+
+        return None
+
+    def _generate_coverage_report(self) -> float | None:
+        subprocess.run(
+            [
+                "uv",
+                "run",
+                "python",
+                "-m",
+                "pytest",
+                "--cov=.",
+                "--cov-report=json",
+                "--tb=no",
+                "-q",
+                "--maxfail=1",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=self.project_root,
+        )
+
+        coverage_json = self.project_root / "coverage.json"
+        if coverage_json.exists():
+            with coverage_json.open() as f:
+                data = json.load(f)
                 return float(data.get("totals", {}).get("percent_covered", 0))
+
+        return None
+
+    def _get_coverage_from_command(self) -> float | None:
+        result = subprocess.run(
+            ["uv", "run", "coverage", "report", "--format=json"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            cwd=self.project_root,
+        )
+
+        if result.returncode == 0 and result.stdout:
+            data = json.loads(result.stdout)
+            return float(data.get("totals", {}).get("percent_covered", 0))
 
         return None
 
@@ -263,24 +279,37 @@ class HealthMetricsService:
             if not self.pyproject_path.exists():
                 return dependency_ages
 
-            with self.pyproject_path.open("rb") as f:
-                data = tomllib.load(f)
+            project_data = self._load_project_data()
+            dependencies = self._extract_all_dependencies(project_data)
+            dependency_ages = self._get_ages_for_dependencies(dependencies)
 
-            dependencies: list[str] = []
+        return dependency_ages
 
-            if "dependencies" in data.get("project", {}):
-                dependencies.extend(data["project"]["dependencies"])
+    def _load_project_data(self) -> dict:
+        with self.pyproject_path.open("rb") as f:
+            return tomllib.load(f)
 
-            if "optional-dependencies" in data.get("project", {}):
-                for group_deps in data["project"]["optional-dependencies"].values():
-                    dependencies.extend(group_deps)
+    def _extract_all_dependencies(self, project_data: dict) -> list[str]:
+        dependencies: list[str] = []
 
-            for dep_spec in dependencies:
-                package_name = self._extract_package_name(dep_spec)
-                if package_name:
-                    age = self._get_package_age(package_name)
-                    if age is not None:
-                        dependency_ages[package_name] = age
+        if "dependencies" in project_data.get("project", {}):
+            dependencies.extend(project_data["project"]["dependencies"])
+
+        if "optional-dependencies" in project_data.get("project", {}):
+            for group_deps in project_data["project"]["optional-dependencies"].values():
+                dependencies.extend(group_deps)
+
+        return dependencies
+
+    def _get_ages_for_dependencies(self, dependencies: list[str]) -> dict[str, int]:
+        dependency_ages: dict[str, int] = {}
+
+        for dep_spec in dependencies:
+            package_name = self._extract_package_name(dep_spec)
+            if package_name:
+                age = self._get_package_age(package_name)
+                if age is not None:
+                    dependency_ages[package_name] = age
 
         return dependency_ages
 
@@ -296,40 +325,52 @@ class HealthMetricsService:
 
     def _get_package_age(self, package_name: str) -> int | None:
         try:
+            package_data = self._fetch_package_data(package_name)
+            if not package_data:
+                return None
+
+            upload_time = self._extract_upload_time(package_data)
+            if not upload_time:
+                return None
+
+            return self._calculate_days_since_upload(upload_time)
+        except Exception:
+            return None
+
+    def _fetch_package_data(self, package_name: str) -> dict | None:
+        try:
             import urllib.error
             import urllib.request
 
             url = f"https://pypi.org/pypi/{package_name}/json"
 
-            # Validate URL scheme for security
             if not url.startswith("https://pypi.org/"):
                 msg = f"Invalid URL scheme: {url}"
                 raise ValueError(msg)
 
             with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
-                data = json.load(response)
+                return json.load(response)
+        except Exception:
+            return None
 
-            info = data.get("info", {})
-            releases = data.get("releases", {})
+    def _extract_upload_time(self, package_data: dict) -> str | None:
+        info = package_data.get("info", {})
+        releases = package_data.get("releases", {})
 
-            latest_version = info.get("version", "")
-            if not latest_version or latest_version not in releases:
-                return None
+        latest_version = info.get("version", "")
+        if not latest_version or latest_version not in releases:
+            return None
 
-            release_info = releases[latest_version]
-            if not release_info:
-                return None
+        release_info = releases[latest_version]
+        if not release_info:
+            return None
 
-            upload_time = release_info[0].get("upload_time", "")
-            if not upload_time:
-                return None
+        return release_info[0].get("upload_time", "")
 
-            try:
-                upload_date = datetime.fromisoformat(upload_time)
-                return (datetime.now(upload_date.tzinfo) - upload_date).days
-            except Exception:
-                return None
-
+    def _calculate_days_since_upload(self, upload_time: str) -> int | None:
+        try:
+            upload_date = datetime.fromisoformat(upload_time)
+            return (datetime.now(upload_date.tzinfo) - upload_date).days
         except Exception:
             return None
 
@@ -509,37 +550,58 @@ class HealthMetricsService:
             "needs_attention": health.needs_init(),
             "recommendations": health.get_recommendations(),
             "metrics": {
-                "lint_errors": {
-                    "current": health.lint_error_trend[-1]
-                    if health.lint_error_trend
-                    else None,
-                    "trend": "up"
-                    if health._is_trending_up(health.lint_error_trend)
-                    else "down"
-                    if health._is_trending_down(health.lint_error_trend)
-                    else "stable",
-                },
-                "test_coverage": {
-                    "current": health.test_coverage_trend[-1]
-                    if health.test_coverage_trend
-                    else None,
-                    "trend": "up"
-                    if health._is_trending_up(
-                        [int(x) for x in health.test_coverage_trend],
-                    )
-                    else "down"
-                    if health._is_trending_down(health.test_coverage_trend)
-                    else "stable",
-                },
-                "dependency_age": {
-                    "average": sum(health.dependency_age.values())
-                    / len(health.dependency_age)
-                    if health.dependency_age
-                    else None,
-                    "outdated_count": sum(
-                        1 for age in health.dependency_age.values() if age > 180
-                    ),
-                },
+                "lint_errors": self._get_lint_errors_metrics(health),
+                "test_coverage": self._get_test_coverage_metrics(health),
+                "dependency_age": self._get_dependency_age_metrics(health),
                 "config_completeness": health.config_completeness,
             },
         }
+
+    def _get_lint_errors_metrics(
+        self, health: ProjectHealth
+    ) -> dict[str, str | int | None]:
+        return {
+            "current": health.lint_error_trend[-1] if health.lint_error_trend else None,
+            "trend": self._get_trend_direction(health, health.lint_error_trend),
+        }
+
+    def _get_test_coverage_metrics(
+        self, health: ProjectHealth
+    ) -> dict[str, str | float | None]:
+        return {
+            "current": health.test_coverage_trend[-1]
+            if health.test_coverage_trend
+            else None,
+            "trend": self._get_coverage_trend_direction(
+                health, health.test_coverage_trend
+            ),
+        }
+
+    def _get_dependency_age_metrics(
+        self, health: ProjectHealth
+    ) -> dict[str, float | int | None]:
+        if not health.dependency_age:
+            return {"average": None, "outdated_count": 0}
+
+        return {
+            "average": sum(health.dependency_age.values()) / len(health.dependency_age),
+            "outdated_count": sum(
+                1 for age in health.dependency_age.values() if age > 180
+            ),
+        }
+
+    def _get_trend_direction(self, health: ProjectHealth, trend_data: list[int]) -> str:
+        if health._is_trending_up(trend_data):
+            return "up"
+        elif health._is_trending_down(trend_data):
+            return "down"
+        return "stable"
+
+    def _get_coverage_trend_direction(
+        self, health: ProjectHealth, coverage_trend: list[float]
+    ) -> str:
+        if health._is_trending_up([int(x) for x in coverage_trend]):
+            return "up"
+        elif health._is_trending_down(coverage_trend):
+            return "down"
+        return "stable"

@@ -264,6 +264,8 @@ exclude-deps = [
     "websockets",
     "watchdog",
     "ruff",
+    "hypothesis",
+    "psutil",
 ]
 
 [tool.refurb]

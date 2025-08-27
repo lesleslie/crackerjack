@@ -162,30 +162,47 @@ class FileSystemService:
             ) from e
 
     def copy_file(self, src: str | Path, dst: str | Path) -> None:
+        src_path, dst_path = self._normalize_copy_paths(src, dst)
+        self._validate_copy_source(src_path)
+        self._prepare_copy_destination(dst_path)
+        self._perform_file_copy(src_path, dst_path, src, dst)
+
+    def _normalize_copy_paths(
+        self, src: str | Path, dst: str | Path
+    ) -> tuple[Path, Path]:
+        src_path = Path(src) if isinstance(src, str) else src
+        dst_path = Path(dst) if isinstance(dst, str) else dst
+        return src_path, dst_path
+
+    def _validate_copy_source(self, src_path: Path) -> None:
+        if not src_path.exists():
+            raise FileError(
+                message=f"Source file does not exist: {src_path}",
+                details=f"Attempted to copy from {src_path.absolute()}",
+                recovery="Check source file path and ensure file exists",
+            )
+        if not src_path.is_file():
+            raise FileError(
+                message=f"Source is not a file: {src_path}",
+                details=f"Source is a {src_path.stat().st_mode} type",
+                recovery="Ensure source path points to a regular file",
+            )
+
+    def _prepare_copy_destination(self, dst_path: Path) -> None:
         try:
-            src_path = Path(src) if isinstance(src, str) else src
-            dst_path = Path(dst) if isinstance(dst, str) else dst
-            if not src_path.exists():
-                raise FileError(
-                    message=f"Source file does not exist: {src_path}",
-                    details=f"Attempted to copy from {src_path.absolute()}",
-                    recovery="Check source file path and ensure file exists",
-                )
-            if not src_path.is_file():
-                raise FileError(
-                    message=f"Source is not a file: {src_path}",
-                    details=f"Source is a {src_path.stat().st_mode} type",
-                    recovery="Ensure source path points to a regular file",
-                )
-            try:
-                dst_path.parent.mkdir(parents=True, exist_ok=True)
-            except OSError as e:
-                raise FileError(
-                    message=f"Cannot create destination parent directories: {dst_path.parent}",
-                    error_code=ErrorCode.FILE_WRITE_ERROR,
-                    details=str(e),
-                    recovery="Check disk space and directory permissions",
-                ) from e
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise FileError(
+                message=f"Cannot create destination parent directories: {dst_path.parent}",
+                error_code=ErrorCode.FILE_WRITE_ERROR,
+                details=str(e),
+                recovery="Check disk space and directory permissions",
+            ) from e
+
+    def _perform_file_copy(
+        self, src_path: Path, dst_path: Path, src: str | Path, dst: str | Path
+    ) -> None:
+        try:
             shutil.copy2(src_path, dst_path)
         except PermissionError as e:
             raise FileError(

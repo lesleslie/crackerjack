@@ -85,10 +85,10 @@ class TestEnvironmentConfigSource:
         assert source._convert_value("0") is False
 
         assert source._convert_value("42") == 42
-        assert source._convert_value(" - 10") == -10
+        assert source._convert_value("-10") == -10
 
         assert source._convert_value("3.141592653589793") == math.pi
-        assert source._convert_value(" - 2.5") == -2.5
+        assert source._convert_value("-2.5") == -2.5
 
         assert source._convert_value("hello") == "hello"
 

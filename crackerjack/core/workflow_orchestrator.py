@@ -159,35 +159,70 @@ class WorkflowPipeline:
         return self._execute_standard_hooks_workflow(options)
 
     async def _execute_test_workflow(self, options: OptionsProtocol) -> bool:
-        # Start iteration tracking for AI agent mode
+        iteration = self._start_iteration_tracking(options)
+
+        if not self._run_initial_fast_hooks(options, iteration):
+            return False
+
+        testing_passed, comprehensive_passed = self._run_main_quality_phases(options)
+
+        if options.ai_agent:
+            return await self._handle_ai_agent_workflow(
+                options, iteration, testing_passed, comprehensive_passed
+            )
+
+        return self._handle_standard_workflow(
+            options, iteration, testing_passed, comprehensive_passed
+        )
+
+    def _start_iteration_tracking(self, options: OptionsProtocol) -> int:
+        """Start iteration tracking for AI agent mode."""
         iteration = 1
         if options.ai_agent and self._should_debug():
             self.debugger.log_iteration_start(iteration)
+        return iteration
 
-        # Collect ALL failures before determining success
+    def _run_initial_fast_hooks(self, options: OptionsProtocol, iteration: int) -> bool:
+        """Run initial fast hooks phase and handle failure."""
         fast_hooks_passed = self._run_fast_hooks_phase(options)
         if not fast_hooks_passed:
             if options.ai_agent and self._should_debug():
                 self.debugger.log_iteration_end(iteration, False)
             return False  # Fast hooks must pass before proceeding
+        return True
 
-        # Run tests and comprehensive hooks regardless of individual failures
-        # to collect ALL issues for AI agent analysis
+    def _run_main_quality_phases(self, options: OptionsProtocol) -> tuple[bool, bool]:
+        """Run tests and comprehensive hooks to collect ALL issues."""
         testing_passed = self._run_testing_phase(options)
         comprehensive_passed = self._run_comprehensive_hooks_phase(options)
+        return testing_passed, comprehensive_passed
 
-        # AI agent mode: Collect failures and let agents fix them
-        if options.ai_agent:
-            if not testing_passed or not comprehensive_passed:
-                success = await self._run_ai_agent_fixing_phase(options)
-                if self._should_debug():
-                    self.debugger.log_iteration_end(iteration, success)
-                return success
+    async def _handle_ai_agent_workflow(
+        self,
+        options: OptionsProtocol,
+        iteration: int,
+        testing_passed: bool,
+        comprehensive_passed: bool,
+    ) -> bool:
+        """Handle AI agent workflow with failure collection and fixing."""
+        if not testing_passed or not comprehensive_passed:
+            success = await self._run_ai_agent_fixing_phase(options)
             if self._should_debug():
-                self.debugger.log_iteration_end(iteration, True)
-            return True  # All phases passed, no fixes needed
+                self.debugger.log_iteration_end(iteration, success)
+            return success
 
-        # Non-AI agent mode: All phases must pass
+        if self._should_debug():
+            self.debugger.log_iteration_end(iteration, True)
+        return True  # All phases passed, no fixes needed
+
+    def _handle_standard_workflow(
+        self,
+        options: OptionsProtocol,
+        iteration: int,
+        testing_passed: bool,
+        comprehensive_passed: bool,
+    ) -> bool:
+        """Handle standard workflow where all phases must pass."""
         success = testing_passed and comprehensive_passed
         if options.ai_agent and self._should_debug():
             self.debugger.log_iteration_end(iteration, success)
@@ -393,10 +428,22 @@ class WorkflowPipeline:
     async def _collect_issues_from_failures(self) -> list[Issue]:
         """Collect issues from test and comprehensive hook failures."""
         issues: list[Issue] = []
-        test_count = 0
-        hook_count = 0
 
-        # Collect test failures
+        test_issues, test_count = self._collect_test_failure_issues()
+        hook_issues, hook_count = self._collect_hook_failure_issues()
+
+        issues.extend(test_issues)
+        issues.extend(hook_issues)
+
+        self._log_failure_counts_if_debugging(test_count, hook_count)
+
+        return issues
+
+    def _collect_test_failure_issues(self) -> tuple[list[Issue], int]:
+        """Collect test failure issues and return count."""
+        issues: list[Issue] = []
+        test_count = 0
+
         if hasattr(self.phases, "test_manager") and hasattr(
             self.phases.test_manager,
             "get_test_failures",
@@ -415,7 +462,13 @@ class WorkflowPipeline:
                 )
                 issues.append(issue)
 
-        # Collect hook failures from session
+        return issues, test_count
+
+    def _collect_hook_failure_issues(self) -> tuple[list[Issue], int]:
+        """Collect hook failure issues and return count."""
+        issues: list[Issue] = []
+        hook_count = 0
+
         if hasattr(self.session, "_failed_tasks"):
             for task_id, error_msg in self.session._failed_tasks.items():
                 if task_id in ("fast_hooks", "comprehensive_hooks"):
@@ -434,12 +487,15 @@ class WorkflowPipeline:
                     )
                     issues.append(issue)
 
-        # Log failure counts for debugging
+        return issues, hook_count
+
+    def _log_failure_counts_if_debugging(
+        self, test_count: int, hook_count: int
+    ) -> None:
+        """Log failure counts if debugging is enabled."""
         if self._should_debug():
             self.debugger.log_test_failures(test_count)
             self.debugger.log_hook_failures(hook_count)
-
-        return issues
 
 
 class WorkflowOrchestrator:

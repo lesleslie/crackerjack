@@ -38,6 +38,7 @@ class OptionsProtocol(t.Protocol):
     no_git_tags: bool = False
     skip_version_check: bool = False
     cleanup_pypi: bool = False
+    coverage: bool = False
     keep_releases: int = 10
     track_progress: bool = False
     fast: bool = False

@@ -195,34 +195,15 @@ class FormattingAgent(SubAgent):
 
         try:
             path = Path(file_path)
-            if not path.exists() or not path.is_file():
-                return fixes
-
-            content = self.context.get_file_content(path)
+            content = self._validate_and_get_file_content(path)
             if not content:
                 return fixes
 
             original_content = content
+            cleaned_content = self._apply_content_formatting(content)
 
-            content = re.sub(r"[ \t]+$", "", content, flags=re.MULTILINE)
-
-            if content and not content.endswith("\n"):
-                content += "\n"
-
-            content = re.sub(r"\n{3,}", "\n\n", content)
-
-            lines = content.split("\n")
-            fixed_lines: list[str] = []
-
-            for line in lines:
-                if "\t" in line:
-                    line = line.expandtabs(4)
-                fixed_lines.append(line)
-
-            content = "\n".join(fixed_lines)
-
-            if content != original_content:
-                if self.context.write_file_content(path, content):
+            if cleaned_content != original_content:
+                if self.context.write_file_content(path, cleaned_content):
                     fixes.append(f"Fixed formatting in {file_path}")
                     self.log(f"Applied file-specific fixes to {file_path}")
 
@@ -230,6 +211,35 @@ class FormattingAgent(SubAgent):
             self.log(f"Error fixing file {file_path}: {e}", "ERROR")
 
         return fixes
+
+    def _validate_and_get_file_content(self, path: Path) -> str | None:
+        """Validate file exists and retrieve its content."""
+        if not path.exists() or not path.is_file():
+            return None
+
+        content = self.context.get_file_content(path)
+        return content or None
+
+    def _apply_content_formatting(self, content: str) -> str:
+        """Apply all formatting fixes to content."""
+        # Remove trailing whitespace
+        content = re.sub(r"[ \t]+$", "", content, flags=re.MULTILINE)
+
+        # Ensure file ends with newline
+        if content and not content.endswith("\n"):
+            content += "\n"
+
+        # Normalize excessive blank lines
+        content = re.sub(r"\n{3,}", "\n\n", content)
+
+        # Convert tabs to spaces
+        return self._convert_tabs_to_spaces(content)
+
+    def _convert_tabs_to_spaces(self, content: str) -> str:
+        """Convert tab characters to 4 spaces."""
+        lines = content.split("\n")
+        fixed_lines = [line.expandtabs(4) for line in lines]
+        return "\n".join(fixed_lines)
 
 
 agent_registry.register(FormattingAgent)

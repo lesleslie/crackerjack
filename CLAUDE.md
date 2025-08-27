@@ -948,3 +948,5 @@ from ..managers.test_manager import TestManager
 # CORRECT: Use protocol interfaces for dependency injection
 from ..models.protocols import TestManagerProtocol
 ```
+
+- DO NOT CREATE ANY NEW TESTS UNTIL CURRENTLY FAILING OR ERRORING TESTS HAVE EITHER BEEN FIXED OR REMOVED!

@@ -85,77 +85,14 @@ class CrackerjackCLIFacade:
             raise SystemExit(1)
 
     def _handle_enterprise_batch(self, options: OptionsProtocol) -> None:
-        try:
-            from crackerjack.mcp_enterprise import run_enterprise_batch
-
-            enterprise_batch = options.enterprise_batch
-            if not enterprise_batch:
-                self.console.print(
-                    "[red]❌ No projects specified for batch processing[/red]"
-                )
-                raise SystemExit(1)
-
-            project_paths: list[str] = [
-                path.strip() for path in enterprise_batch.split(",")
-            ]
-            self.console.print(
-                "[bold cyan]🏢 Starting Enterprise Batch Processing...[/bold cyan]",
-            )
-            self.console.print(f"[dim]Processing {len(project_paths)} projects[/dim]")
-            stages: list[str] = ["fast", "comprehensive"]
-            if hasattr(options, "test") and options.test:
-                stages.insert(1, "tests")
-            result = asyncio.run(
-                run_enterprise_batch(
-                    project_paths,
-                    stages=stages,
-                    fail_fast=False,
-                    create_reports=True,
-                ),
-            )
-            if result.failed_projects == 0:
-                self.console.print(
-                    "[bold green]🎉 All projects processed successfully![/bold green]",
-                )
-            else:
-                self.console.print(
-                    f"[bold yellow]⚠️ {result.failed_projects} projects failed[/bold yellow]",
-                )
-                raise SystemExit(1)
-        except ImportError:
-            self.console.print(
-                "[red]❌ Enterprise features require additional dependencies[/red]",
-            )
-            raise SystemExit(1)
-        except Exception as e:
-            self.console.print(f"[red]❌ Enterprise batch processing failed: {e}[/red]")
-            raise SystemExit(1)
+        self.console.print(
+            "[red]❌ Enterprise batch processing is not yet implemented[/red]"
+        )
+        raise SystemExit(1)
 
     def _handle_monitor_dashboard(self, options: OptionsProtocol) -> None:
-        try:
-            from crackerjack.mcp_monitor import start_monitoring_dashboard
-
-            monitor_dashboard = options.monitor_dashboard
-            if not monitor_dashboard:
-                self.console.print("[red]❌ No projects specified for monitoring[/red]")
-                raise SystemExit(1)
-
-            project_paths: list[str] = [
-                path.strip() for path in monitor_dashboard.split(",")
-            ]
-            self.console.print(
-                "[bold cyan]🖥️ Starting Real-Time Monitoring Dashboard...[/bold cyan]",
-            )
-            self.console.print(f"[dim]Monitoring {len(project_paths)} projects[/dim]")
-            asyncio.run(start_monitoring_dashboard(project_paths))
-        except ImportError:
-            self.console.print(
-                "[red]❌ Monitoring features require additional dependencies[/red]",
-            )
-            raise SystemExit(1)
-        except Exception as e:
-            self.console.print(f"[red]❌ Monitoring dashboard failed: {e}[/red]")
-            raise SystemExit(1)
+        self.console.print("[red]❌ Monitoring dashboard is not yet implemented[/red]")
+        raise SystemExit(1)
 
 
 def create_crackerjack_runner(

@@ -538,15 +538,23 @@ class PerformanceBenchmarkService:
         if not report.baseline_comparison:
             return
 
+        self._print_comparison_header()
+        self._print_comparison_metrics(report.baseline_comparison)
+        self.console.print()
+
+    def _print_comparison_header(self) -> None:
+        """Print performance comparison header."""
         self.console.print("[bold]📊 Performance Comparison[/bold]")
-        for metric, value in report.baseline_comparison.items():
+
+    def _print_comparison_metrics(self, baseline_comparison: dict) -> None:
+        """Print individual comparison metrics with appropriate colors."""
+        for metric, value in baseline_comparison.items():
             if isinstance(value, float | int) and "percent" in metric:
                 color = "green" if value < 0 else "red" if value > 10 else "yellow"
                 direction = "faster" if value < 0 else "slower"
                 self.console.print(
                     f" {metric}: [{color}]{abs(value):.1f}% {direction}[/{color}]",
                 )
-        self.console.print()
 
     def _display_recommendations(self, report: PerformanceReport) -> None:
         if report.recommendations:

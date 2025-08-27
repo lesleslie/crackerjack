@@ -58,7 +58,8 @@ class TestHighImpactModulesFixed:
 
         assert dependency_monitor is not None
         dir(dependency_monitor)
-        assert len(dependency_monitor) > 5
+        module_contents = dir(dependency_monitor)
+        assert len(module_contents) > 5
 
     def test_performance_benchmarks_comprehensive(self) -> None:
         """Test services/performance_benchmarks.py (246 statements, 18% coverage)."""
@@ -108,10 +109,10 @@ class TestMCPModulesFixed:
 
         options = MCPOptions(verbose=True, test=True, commit=True)
 
-        # Should still have default values (kwargs are captured but not used)
-        assert options.commit is False  # Defaults override kwargs
-        assert options.verbose is False
-        assert options.test is False
+        # Should have the values passed via kwargs
+        assert options.commit is True
+        assert options.verbose is True
+        assert options.test is True
 
     def test_batched_state_saver_safe_methods(self) -> None:
         """Test BatchedStateSaver with safe method calls."""
@@ -123,13 +124,11 @@ class TestMCPModulesFixed:
         assert saver.debounce_delay == 0.1
         assert saver.max_batch_size == 10
 
-        # Test safe methods that don't require async
-        count = saver.get_pending_count()
-        assert isinstance(count, int)
-        assert count >= 0
-
-        running = saver.is_running()
-        assert isinstance(running, bool)
+        # Test get_stats method that exists
+        stats = saver.get_stats()
+        assert isinstance(stats, dict)
+        assert "running" in stats
+        assert "pending_saves" in stats
 
     def test_mcp_context_comprehensive(self) -> None:
         """Test MCP context module comprehensively."""
@@ -187,8 +186,8 @@ class TestServiceModulesFixed:
         try:
             service.read_file(non_existent)
             # If it returns something, that's fine
-        except (FileNotFoundError, OSError):
-            # Expected for non-existent file
+        except Exception:
+            # Expected for non-existent file (FileError, FileNotFoundError, etc.)
             pass
 
     def test_security_service_safe_methods(self) -> None:
@@ -204,17 +203,21 @@ class TestServiceModulesFixed:
 
     def test_configuration_service_safe_methods(self) -> None:
         """Test ConfigurationService with working methods."""
+        from rich.console import Console
+
         from crackerjack.services.config import ConfigurationService
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            service = ConfigurationService(pkg_path=Path(tmpdir))
+            console = Console()
+            service = ConfigurationService(console=console, pkg_path=Path(tmpdir))
 
             # Test safe method calls
-            pyproject_config = service.load_pyproject_config()
-            assert isinstance(pyproject_config, dict)
+            config_info = service.get_config_info()
+            assert isinstance(config_info, dict)
 
-            precommit_config = service.load_precommit_config()
-            assert isinstance(precommit_config, dict)
+            # Test validate_config method
+            is_valid = service.validate_config()
+            assert isinstance(is_valid, bool)
 
 
 class TestCoreModulesFixed:
@@ -259,8 +262,8 @@ class TestCoreModulesFixed:
         # Test metric recording
         monitor.record_metric("test_metric", 42.0)
 
-        # Test stats retrieval
-        stats = monitor.get_stats()
+        # Test stats retrieval with metric name
+        stats = monitor.get_stats("test_metric")
         assert isinstance(stats, dict)
 
     def test_file_cache_comprehensive(self) -> None:
@@ -274,9 +277,8 @@ class TestCoreModulesFixed:
         assert hasattr(cache, "set")
         assert hasattr(cache, "clear")
 
-        # Test basic cache operations
-        test_path = Path("/tmp/test")
-        cache.set(test_path, "test_content")
+        # Test basic cache operations - use string key
+        cache.set("test_key", "test_content")
 
         # Clear to test that method
         cache.clear()

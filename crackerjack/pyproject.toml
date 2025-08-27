@@ -42,6 +42,8 @@ dependencies = [
     "pytest-mock>=3.14.1",
     "pytest-timeout>=2.4",
     "pytest-xdist>=3.8",
+    "hypothesis>=6.100",
+    "psutil>=6.1.0",
     "pyyaml>=6.0.2",
     "refurb>=2.1",
     "rich>=14.1",
@@ -130,6 +132,11 @@ markers = [
     "database: marks test as database test",
     "external: marks test requiring external services",
     "no_leaks: detect asyncio task leaks",
+    "property: marks test as property-based test",
+    "mutation: marks test as mutation testing",
+    "chaos: marks test as chaos engineering test",
+    "ai_generated: marks test as AI-generated test",
+    "breakthrough: marks test as breakthrough frontier test",
 ]
 
 [tool.pytest.benchmark]
@@ -257,6 +264,8 @@ exclude-deps = [
     "websockets",
     "watchdog",
     "ruff",
+    "hypothesis",
+    "psutil",
 ]
 
 [tool.refurb]
