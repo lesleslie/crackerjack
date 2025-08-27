@@ -271,22 +271,14 @@ async def _setup_orchestrator(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> tuple[t.Any, bool]:
-    """Set up the appropriate orchestrator (advanced or standard)."""
-    try:
-        orchestrator = await _create_advanced_orchestrator(job_id, kwargs, context)
-        use_advanced_orchestrator = True
-    except ImportError as e:
-        context.safe_print(f"Advanced orchestration not available: {e}")
-        context.safe_print("Falling back to standard WorkflowOrchestrator")
-        orchestrator = _create_standard_orchestrator(job_id, kwargs, context)
-        use_advanced_orchestrator = False
+    """Set up the appropriate orchestrator (force standard for MCP compatibility)."""
+    # Force standard orchestrator for MCP server to ensure proper progress reporting
+    context.safe_print("Using Standard WorkflowOrchestrator for MCP compatibility")
+    orchestrator = _create_standard_orchestrator(job_id, kwargs, context)
+    use_advanced_orchestrator = False
 
     # Update progress to show orchestrator mode
-    orchestrator_type = (
-        "Advanced Orchestrator (COORDINATOR + ADAPTIVE)"
-        if use_advanced_orchestrator
-        else "Standard Orchestrator"
-    )
+    orchestrator_type = "Standard Orchestrator (MCP Compatible)"
     _update_progress(
         job_id=job_id,
         status="running",

@@ -127,11 +127,14 @@ reset
 python -m crackerjack --ai-agent -t
 
 # The AI agent follows this optimal workflow order in each iteration:
-# 1. Fast Hooks (formatting) → Retry if any fail (fixes often cascade)
+# 1. Fast Hooks (formatting) → Retry once if any fail (fixes often cascade)
 # 2. Full Test Suite → Collect ALL test failures (don't stop on first)
 # 3. Comprehensive Hooks → Collect ALL quality issues (don't stop on first)
 # 4. AI Analysis & Batch Fixing → Fix ALL collected issues in one pass
 # 5. Repeat entire cycle until all checks pass (up to 10 iterations)
+
+# CRITICAL: The AI agent only moves to the next iteration AFTER applying fixes
+# This ensures that each iteration validates the fixes from the previous iteration
 ```
 
 **What the AI Agent Auto-Fixes:**
