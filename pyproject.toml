@@ -62,6 +62,9 @@ dependencies = [
 [project.license]
 text = "BSD-3-CLAUSE"
 
+[project.scripts]
+crackerjack = "crackerjack.__main__:cli"
+
 [project.urls]
 documentation = "https://github.com/lesleslie/crackerjack"
 homepage = "https://github.com/lesleslie/crackerjack"

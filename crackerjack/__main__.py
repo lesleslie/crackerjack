@@ -233,5 +233,10 @@ def main(
         handle_standard_mode(options, async_mode, job_id, orchestrated)
 
 
+def cli() -> None:
+    """Entry point for console script."""
+    app()
+
+
 if __name__ == "__main__":
     app()
