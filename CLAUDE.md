@@ -340,6 +340,24 @@ python -m crackerjack --bump patch --skip-version-check
 python -m crackerjack -p patch
 ```
 
+### UVX Integration
+
+**Crackerjack can be executed via uvx for isolated environments:**
+
+```bash
+# For installed crackerjack (from PyPI)
+uvx crackerjack --help
+uvx crackerjack -t
+uvx crackerjack --start-mcp-server
+
+# For local development version
+uvx --from /Users/les/Projects/crackerjack crackerjack --help
+uvx --from /Users/les/Projects/crackerjack crackerjack -t
+uvx --from /Users/les/Projects/crackerjack crackerjack --start-mcp-server
+```
+
+**Benefits**: Isolated execution, no dependency conflicts, consistent environment across systems.
+
 ## Architecture Overview
 
 **Recently refactored from monolithic `crackerjack.py` to modular architecture:**

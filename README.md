@@ -141,7 +141,7 @@ The AI agent intelligently fixes:
 
 ```bash
 # Standard AI agent mode (recommended)
-python -m crackerjack --ai-agent --test --verbose
+python -m crackerjack --ai-agent -t -v
 
 # MCP server with WebSocket support (localhost:8675)
 python -m crackerjack --start-mcp-server
@@ -174,7 +174,7 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 
 **With AI integration:**
 
-- `--autofix` flag enables automatic error resolution
+- `--ai-agent` flag enables automatic error resolution
 - MCP server allows AI agents to run crackerjack commands
 - Structured error output for programmatic fixes
 
@@ -234,12 +234,39 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
 
    Add to your MCP configuration file (`mcp.json`):
 
+   **For installed crackerjack (from PyPI):**
+   
    ```json
    {
      "mcpServers": {
        "crackerjack": {
-         "command": "python",
-         "args": ["-m", "crackerjack", "--start-mcp-server"],
+         "command": "uvx",
+         "args": [
+           "crackerjack",
+           "--start-mcp-server"
+         ],
+         "env": {
+           "UV_KEYRING_PROVIDER": "subprocess",
+           "EDITOR": "code --wait"
+         }
+       }
+     }
+   }
+   ```
+
+   **For local development version:**
+
+   ```json
+   {
+     "mcpServers": {
+       "crackerjack": {
+         "command": "uvx",
+         "args": [
+           "--from",
+           "/path/to/crackerjack",
+           "crackerjack",
+           "--start-mcp-server"
+         ],
          "env": {
            "UV_KEYRING_PROVIDER": "subprocess",
            "EDITOR": "code --wait"
@@ -284,8 +311,13 @@ keyring set https://upload.pypi.org/legacy/ __token__
 {
   "mcpServers": {
     "crackerjack": {
-      "command": "python",
-      "args": ["-m", "crackerjack", "--start-mcp-server"],
+      "command": "uvx",
+      "args": [
+        "--from",
+        "/path/to/crackerjack",
+        "crackerjack",
+        "--start-mcp-server"
+      ],
       "env": {
         "UV_KEYRING_PROVIDER": "subprocess",
         "EDITOR": "code --wait",
@@ -484,8 +516,13 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 {
   "mcpServers": {
     "crackerjack": {
-      "command": "python",
-      "args": ["-m", "crackerjack", "--start-mcp-server"]
+      "command": "uvx",
+      "args": [
+        "--from",
+        "/path/to/crackerjack",
+        "crackerjack",
+        "--start-mcp-server"
+      ]
     }
   }
 }

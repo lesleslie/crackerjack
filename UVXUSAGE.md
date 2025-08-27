@@ -8,17 +8,21 @@ Crackerjack can now be executed using `uvx` for isolated execution environments.
 
 ### Direct uvx Command
 
+**For installed crackerjack (from PyPI):**
 ```bash
-# Run crackerjack with uvx (installs in isolated environment)
+# Run crackerjack with uvx (uses installed package)
+uvx crackerjack --help
+uvx crackerjack -t
+uvx crackerjack --start-mcp-server
+uvx crackerjack --start-websocket-server
+```
+
+**For local development version:**
+```bash
+# Run crackerjack with uvx (uses local development version)
 uvx --from /Users/les/Projects/crackerjack crackerjack --help
-
-# Run crackerjack with tests
 uvx --from /Users/les/Projects/crackerjack crackerjack -t
-
-# Start MCP server
 uvx --from /Users/les/Projects/crackerjack crackerjack --start-mcp-server
-
-# Start WebSocket server
 uvx --from /Users/les/Projects/crackerjack crackerjack --start-websocket-server
 ```
 
@@ -27,7 +31,10 @@ uvx --from /Users/les/Projects/crackerjack crackerjack --start-websocket-server
 Add to your shell configuration file (`.bashrc`, `.zshrc`, etc.):
 
 ```bash
-# Crackerjack uvx alias
+# For installed version:
+alias crackerjack-uvx='uvx crackerjack'
+
+# For local development version:
 alias crackerjack-uvx='uvx --from /Users/les/Projects/crackerjack crackerjack'
 ```
 
@@ -87,7 +94,7 @@ All MCP servers in `~/Projects` have been automatically updated to use the uvx c
 Test the setup:
 
 ```bash
-# Test basic functionality
+# Test basic functionality (local development version)
 uvx --from /Users/les/Projects/crackerjack crackerjack --help
 
 # Test MCP server (should start and be accessible)
@@ -99,4 +106,4 @@ cd /tmp && uvx --from /Users/les/Projects/crackerjack crackerjack --help
 
 ## Note
 
-The uvx installation uses the local development version of crackerjack from `/Users/les/Projects/crackerjack`, ensuring you're always using the latest local changes.
+For local development, the uvx installation uses `--from /Users/les/Projects/crackerjack` to reference the local development version. For production use with installed crackerjack (from PyPI), you can use the cleaner `uvx crackerjack` command.
