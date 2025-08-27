@@ -4,7 +4,19 @@ Crackerjack provides seamless integration with AI assistants like Claude, ChatGP
 
 ## AI Agent Mode Overview
 
-AI agent mode transforms Crackerjack's output into structured, machine-readable formats that AI assistants can easily parse and reason about, enabling them to provide more accurate guidance and automation.
+AI agent mode provides **intelligent, iterative code fixing** that goes far beyond structured output. The AI agent automatically detects issues, applies fixes, and validates results through multiple iterations until code quality is achieved.
+
+### Core AI Agent Workflow
+
+**CRITICAL**: The AI agent follows a strict iteration protocol to ensure fixes are properly applied and validated:
+
+1. **Fast Hooks** (Formatting) → Retry once if any fail
+2. **Collect ALL Test Failures** → Don't stop on first failure  
+3. **Collect ALL Hook Issues** → Don't stop on first failure
+4. **Apply AI Fixes** → Process all collected issues in batch
+5. **Validate in Next Iteration** → Repeat until all checks pass (max 10 iterations)
+
+This ensures that **fixes are applied between iterations**, not just the same checks repeated.
 
 ### Specialized Sub-Agent Architecture
 
@@ -61,34 +73,83 @@ These agents don't just provide recommendations—they **actually modify your co
 
 ### Enabling AI Agent Mode
 
-You can enable AI agent mode by adding the `--ai-agent` flag to any Crackerjack command:
+**Recommended AI Agent Workflow:**
 
 ```bash
-# Run tests with AI agent mode enabled
-python -m crackerjack --ai-agent --test
+# Standard AI agent mode with iterative fixing and testing (RECOMMENDED)
+python -m crackerjack --ai-agent -t
 
-# Run benchmark tests with AI agent mode
+# AI agent mode with full debugging output
+python -m crackerjack --ai-debug -t
+
+# Other AI agent commands
 python -m crackerjack --ai-agent --test --benchmark
-
-# Run benchmark regression tests with AI agent mode
-python -m crackerjack --ai-agent --test --benchmark-regression
-
-# Run benchmark regression tests with custom threshold (10%)
-python -m crackerjack --ai-agent --test --benchmark-regression --benchmark-regression-threshold=10.0
-
-# Run a full development cycle with AI agent mode
 python -m crackerjack --ai-agent -a minor
 ```
+
+### MCP Server Integration
+
+**For real-time progress monitoring and enhanced AI integration:**
+
+```bash
+# Step 1: Start WebSocket progress server (separate terminal)
+python -m crackerjack --start-websocket-server
+
+# Step 2: Use MCP tools in Claude with `/crackerjack:run`
+# Progress available at: ws://localhost:8675/ws/progress/{job_id}
+```
+
+**Available MCP Tools:**
+- `execute_crackerjack`: Start iterative auto-fixing workflow
+- `get_job_progress`: Get current progress for running jobs  
+- `get_comprehensive_status`: Get complete system status
 
 ### Key Benefits
 
 When AI agent mode is enabled, Crackerjack:
 
-1. Outputs results in structured JSON format for reliable parsing
-1. Provides clear status indicators for each operation (running, success, failed)
-1. Includes detailed action tracking to help AI assistants understand the workflow
-1. Reduces noise and formats output specifically for machine consumption
-1. Generates machine-readable output files for test results, coverage, and benchmarks
+1. **Intelligent Code Fixing**: Automatically applies fixes between iterations (not just detects issues)
+2. **Iterative Validation**: Each iteration validates fixes from the previous iteration  
+3. **Batch Processing**: Collects ALL issues before applying fixes (no early exit on first failure)
+4. **Real-time Progress**: WebSocket-based progress monitoring with iteration boundaries
+5. **Structured Output**: JSON format for reliable AI assistant parsing
+6. **Comprehensive Coverage**: Tests + hooks + quality checks in coordinated workflow
+
+## AI Agent Iteration Protocol
+
+### How the Iteration Workflow Works
+
+The AI agent follows a **strict sequence** in each iteration:
+
+```
+Iteration 1:
+├── Fast Hooks (formatting) → Retry if needed
+├── Collect ALL test failures (don't stop on first)  
+├── Collect ALL hook issues (don't stop on first)
+├── Apply AI fixes for ALL collected issues
+└── Move to Iteration 2
+
+Iteration 2:
+├── Fast Hooks → Validate previous fixes worked
+├── Collect remaining test failures
+├── Collect remaining hook issues  
+├── Apply AI fixes for remaining issues
+└── Continue until success or max iterations (10)
+```
+
+### Critical Success Factors
+
+- **No Early Exit**: Issues are collected completely before fixing
+- **Batch Fixing**: All issues processed together for optimal results
+- **Fix Validation**: Next iteration proves previous fixes worked
+- **Progress Boundaries**: Clear iteration boundaries for monitoring
+
+### Workflow Implementation
+
+This iteration logic is implemented in:
+- `AsyncWorkflowOrchestrator._execute_ai_agent_workflow_async()`
+- Used automatically when `--ai-agent` flag is enabled
+- Compatible with MCP server WebSocket progress reporting
 
 ## Structured Output Format
 
@@ -331,32 +392,42 @@ def run_crackerjack_with_ai(command):
 
 ## AI-Assisted Development Workflows
 
-Crackerjack's AI agent mode enables powerful workflows for AI-assisted development:
+### Autonomous Code Quality Improvement (Recommended)
 
-### Code Quality Improvement
+**Primary Workflow:**
+```bash
+python -m crackerjack --ai-agent -t
+```
 
-1. **AI Analysis**: AI assistant analyzes code and suggests improvements
-1. **Targeted Execution**: `python -m crackerjack --ai-agent --clean`
-1. **Structured Feedback**: AI parses results to identify which files were modified
-1. **Intelligent Review**: AI explains the changes made and why they improve the code
+**What Happens:**
+1. **Iteration 1-N**: AI agent automatically collects ALL issues (tests + hooks)
+2. **Batch Fixing**: AI applies fixes for all collected issues simultaneously  
+3. **Validation**: Next iteration validates fixes worked and finds remaining issues
+4. **Completion**: Process repeats until all quality checks pass (or 10 iterations max)
 
-### Test-Driven Development
+**Benefits:**
+- **Fully Autonomous**: No manual intervention required
+- **Intelligent Fixing**: Real code modifications, not just detection
+- **Comprehensive**: Handles tests, formatting, security, complexity, typing
 
-1. **Test Creation**: AI helps write tests for new functionality
-1. **Verification**: `python -m crackerjack --ai-agent --test -s`
-1. **Structured Analysis**: AI parses `test-results.xml` and `coverage.json` files for detailed insights
-1. **Failure Analysis**: AI analyzes test failures from JUnit XML with precise file locations and error details
-1. **Coverage-Driven Implementation**: AI uses coverage data to identify untested code paths and suggest implementation priorities
-1. **Implementation Guidance**: AI provides targeted implementation advice based on structured test results
+### MCP-Enhanced Workflows
 
-### Continuous Improvement
+**With real-time progress monitoring:**
+```bash
+# Terminal 1: Start progress server
+python -m crackerjack --start-websocket-server
 
-1. **Project Scan**: `python -m crackerjack --ai-agent --verbose`
-1. **Opportunity Identification**: AI analyzes output to find improvement opportunities
-1. **Recommendation**: AI suggests specific improvements with rationale
-1. **Implementation**: AI assists with implementing the suggested changes
+# Terminal 2: Use Claude with /crackerjack:run
+# Real-time progress at ws://localhost:8675/ws/progress/{job_id}
+```
 
-These workflows demonstrate how Crackerjack's structured output enables AI assistants to provide more contextual, accurate, and helpful guidance throughout the development process.
+### Legacy Structured Output Workflows
+
+**For custom AI integrations:**
+1. **Structured Analysis**: AI parses `test-results.xml` and `coverage.json` 
+2. **Failure Analysis**: AI analyzes JUnit XML with precise error details
+3. **Coverage-Driven**: AI uses coverage data for implementation priorities
+4. **Custom Processing**: AI processes JSON output for specialized workflows
 
 ## Future Directions
 
@@ -367,10 +438,24 @@ The integration between Crackerjack and AI assistants continues to evolve. Futur
 - **Interactive Workflows**: Supporting multi-step AI-guided processes with feedback loops
 - **Custom AI Plugins**: Allowing developers to create specialized AI integrations for Crackerjack
 
+## Technical Documentation
+
+For developers implementing AI agent integration or debugging workflow issues:
+
+- **[AI-AGENT-RULES.md](AI-AGENT-RULES.md)**: Technical specification of the iteration protocol, implementation details, and error patterns to avoid
+- **[RULES.md](RULES.md)**: Complete code quality standards and AI agent integration guidelines  
+- **[CLAUDE.md](CLAUDE.md)**: Project-specific AI agent configuration and usage patterns
+
 ## Conclusion
 
-Crackerjack's AI agent integration represents a step toward more intelligent, context-aware development tools. By providing structured, machine-readable output, Crackerjack enables AI assistants to better understand your Python projects and provide more valuable assistance.
+Crackerjack's AI agent integration represents a significant advancement in intelligent, autonomous code quality improvement. The **iterative fixing protocol** ensures that AI agents don't just detect issues—they actually fix them and validate the results.
 
-Whether you're using AI to help with code reviews, test development, or project maintenance, Crackerjack's AI agent mode provides the structured data needed for AI tools to deliver meaningful insights and recommendations.
+Key advantages:
+- **Autonomous Operation**: Fixes code without manual intervention
+- **Intelligent Validation**: Each iteration proves previous fixes worked
+- **Real-time Monitoring**: WebSocket progress tracking for long-running workflows
+- **Comprehensive Coverage**: Tests, formatting, security, complexity, and typing
+
+Whether you're using the MCP server integration with Claude or building custom AI tools, Crackerjack's AI agent mode provides the autonomous fixing capabilities needed for maintainable, high-quality Python code.
 
 For questions, suggestions, or contributions to Crackerjack's AI integration features, please open an issue or pull request on the [GitHub repository](https://github.com/lesleslie/crackerjack).

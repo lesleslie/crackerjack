@@ -38,7 +38,7 @@
   - Avoid unnecessary line comments - use them sparingly only for complex logic
   - Use protocols (`t.Protocol`) instead of abstract base classes
   - Choose clear, descriptive variable and function names that make the code self-documenting (even in map/filter functions)
-  - **Keep cognitive complexity under 15 per function** - extract helper methods if needed (KISS principle)
+  - **Keep cognitive complexity ≤13 per function** - extract helper methods if needed (KISS principle)
 
 - **Code Organization**
 
@@ -52,6 +52,11 @@
   - Structure projects with clear separation of concerns
   - Follow standard package layout conventions
   - Use [pyproject.toml](https://github.com/lesleslie/crackerjack/blob/main/pyproject.toml) for all configuration
+  - **Modular Architecture**: Use protocol-based dependency injection
+    - Core orchestration layer: `WorkflowOrchestrator`, `AsyncWorkflowOrchestrator`
+    - Coordinator layer: `SessionCoordinator`, `PhaseCoordinator`  
+    - Domain managers: `HookManager`, `TestManager`, `PublishManager`
+    - Infrastructure services: filesystem, git, config, security
 
 ## Tool Integration
 
@@ -166,7 +171,7 @@ def _should_process(self, data: dict) -> bool:
 
   - **Complexipy Code Complexity (KISS Enforcement):**
 
-    - Keep cognitive complexity under 20 per function/method
+    - Keep cognitive complexity ≤13 per function/method
     - Break complex methods into 3-5 smaller helper functions with single responsibilities
     - Use descriptive function names that explain their purpose
     - Remember: complexity is the enemy of maintainability
@@ -284,7 +289,8 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
 
 - **Test Coverage Improvement (MANDATORY)**
 
-  - **Always improve coverage incrementally** when working on projects with pytest coverage below 100%
+  - **Maintain 42% minimum coverage**: Never reduce coverage below 42% in config files
+  - **Always improve coverage incrementally** when working on projects with pytest coverage below the target
   - **Check coverage first**: Run `uv run pytest --cov=<package_name> --cov-report=term-missing` to see current status
   - **Target 2-5% improvement per session**: Add 1-3 focused tests that cover uncovered lines
   - **Prioritize easy wins**: Test simple functions, error paths, edge cases, and validation logic
@@ -333,6 +339,27 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
   - Progress tracking is now handled automatically by the MCP WebSocket server
   - Real-time progress monitoring available at `ws://localhost:8675`
   - Use `--resume-from` to continue interrupted sessions rather than starting over
+
+## AI Agent Integration
+
+- **AI Agent Iteration Workflow (CRITICAL)**
+
+  - AI agent mode (`--ai-agent`) follows strict iteration protocol:
+    1. **Fast Hooks** → Retry once if any fail (formatting fixes often cascade)  
+    2. **Collect ALL Test Failures** → Don't stop on first failure, gather complete list
+    3. **Collect ALL Hook Issues** → Don't stop on first failure, gather complete list
+    4. **Apply AI Fixes** → Process ALL collected issues in batch, then move to next iteration
+  - **CRITICAL**: AI agent only advances to next iteration AFTER applying fixes
+  - This ensures each iteration validates fixes from the previous iteration
+  - Maximum 10 iterations to prevent infinite loops
+  - AsyncWorkflowOrchestrator implements this logic for MCP server compatibility
+
+- **MCP Server Integration**
+
+  - Use standard orchestrator for MCP compatibility (not advanced orchestrator)
+  - WebSocket progress reporting requires proper iteration boundaries
+  - Real-time progress available at `ws://localhost:8675/ws/progress/{job_id}`
+  - MCP tools: `execute_crackerjack`, `get_job_progress`, `get_comprehensive_status`
 
 ## AI Assistant Self-Maintenance
 
