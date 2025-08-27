@@ -1,7 +1,5 @@
 """Strategic test coverage for __main__.py - Main entry point module."""
 
-from unittest.mock import Mock, patch
-
 import pytest
 import typer
 from rich.console import Console
@@ -13,29 +11,30 @@ class TestMainModuleImports:
     def test_console_creation(self) -> None:
         """Test that console is created properly."""
         import crackerjack.__main__ as main_module
-        
+
         # Test that console exists and is properly configured
         assert hasattr(main_module, "console")
         console = main_module.console
         assert console is not None
-        
+
         # Test that we can create a console with the same parameters
-        from rich.console import Console
+
         test_console = Console(force_terminal=True)
         assert test_console is not None
 
     def test_typer_app_creation(self) -> None:
         """Test that typer app is created properly."""
         import crackerjack.__main__ as main_module
-        
+
         # Test that app exists and is properly configured
         assert hasattr(main_module, "app")
         app = main_module.app
         assert app is not None
         assert callable(app)
-        
+
         # Test that we can create a typer app with the same parameters
         import typer
+
         test_app = typer.Typer(
             help="Crackerjack: Your Python project setup and style enforcement tool."
         )
@@ -173,7 +172,6 @@ class TestMainModuleInitialization:
     def test_console_initialization(self) -> None:
         """Test console initialization with correct parameters."""
         # Test that console creation works
-        from rich.console import Console
 
         # Create console with same parameters as main module
         console = Console(force_terminal=True)

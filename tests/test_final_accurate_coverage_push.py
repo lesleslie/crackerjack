@@ -351,13 +351,13 @@ def test_monitoring_tools_utility_functions() -> None:
         mock_context.websocket_server_port = 8675
         mock_context.websocket_server_process = None
         mock_context.rate_limiter = None
-        
+
         # Mock progress_dir with proper exists() and glob() methods
         mock_progress_dir = Mock()
         mock_progress_dir.exists.return_value = True
         mock_progress_dir.glob.return_value = ["file1.json", "file2.json"]
         mock_context.progress_dir = mock_progress_dir
-        
+
         stats = _build_server_stats(mock_context)
         assert isinstance(stats, dict)
         assert "server_info" in stats

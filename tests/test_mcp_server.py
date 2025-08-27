@@ -11,15 +11,16 @@ class TestMCPOptions:
     def test_default_options(self) -> None:
         """Test default MCPOptions."""
         options = MCPOptions()
-        assert options.websocket_port is None
         assert options.verbose is False
-        assert options.cache_dir is None
+        assert options.commit is False
+        assert options.interactive is False
 
     def test_custom_options(self) -> None:
         """Test custom MCPOptions."""
-        options = MCPOptions(websocket_port=8675, verbose=True)
-        assert options.websocket_port == 8675
+        options = MCPOptions(verbose=True, commit=True, interactive=True)
         assert options.verbose is True
+        assert options.commit is True
+        assert options.interactive is True
 
 
 class TestMCPServerIntegration:
