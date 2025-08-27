@@ -904,7 +904,7 @@ class AdvancedWorkflowOrchestrator:
             "vulture": IssueType.DEAD_CODE,
             "refurb": IssueType.COMPLEXITY,
             "creosote": IssueType.DEPENDENCY,
-            "detect-secrets": IssueType.SECURITY,
+            "gitleaks": IssueType.SECURITY,
             "trailing-whitespace": IssueType.FORMATTING,
             "end-of-file-fixer": IssueType.FORMATTING,
         }

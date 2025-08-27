@@ -432,7 +432,7 @@ Container (DI) → Protocols → Concrete Implementations
 
 **Proper execution order for maximum efficiency (used by `/crackerjack:run`):**
 
-1. **Fast Hooks First** (~5 seconds): `trailing-whitespace`, `end-of-file-fixer`, `ruff-format`, `ruff-check`, `detect-secrets`
+1. **Fast Hooks First** (~5 seconds): `trailing-whitespace`, `end-of-file-fixer`, `ruff-format`, `ruff-check`, `gitleaks`
 
    - **Package-focused**: `ruff-check` now runs only on `crackerjack/` package code, excludes `tests/`
    - **Repository-wide**: Other fast hooks (formatting) still run on entire repository

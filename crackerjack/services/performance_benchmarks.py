@@ -160,7 +160,7 @@ class PerformanceBenchmarkService:
             "end-of-file-fixer",
             "ruff-format",
             "ruff-check",
-            "detect-secrets",
+            "gitleaks",
             "pyright",
             "bandit",
             "vulture",

@@ -676,7 +676,7 @@ class InitializationService:
 
         if not target_file.exists():
             # No existing file, just copy without trailing newline
-            content = source_file.read_text().rstrip('\n')
+            content = source_file.read_text().rstrip("\n")
             self._write_file_and_track(
                 target_file,
                 content,
@@ -718,10 +718,10 @@ class InitializationService:
                 target_config,
                 default_flow_style=False,
                 sort_keys=False,
-                width=float('inf')
+                width=float("inf"),
             )
             with target_file.open("w") as f:
-                f.write(yaml_content.rstrip('\n'))
+                f.write(yaml_content.rstrip("\n"))
 
             t.cast("list[str]", results["files_copied"]).append(
                 ".pre-commit-config.yaml (merged)",

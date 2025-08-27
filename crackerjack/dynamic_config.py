@@ -139,10 +139,10 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
     ],
     "security": [
         {
-            "id": "detect-secrets",
+            "id": "gitleaks",
             "name": None,
-            "repo": "https://github.com/Yelp/detect-secrets",
-            "rev": "v1.5.0",
+            "repo": "https://github.com/gitleaks/gitleaks",
+            "rev": "v8.28.0",
             "tier": 2,
             "time_estimate": 1.0,
             "stages": None,
@@ -488,7 +488,7 @@ class DynamicConfigGenerator:
         }
         if repo_url in repo_comments:
             return repo_comments[repo_url]
-        security_keywords = ["security", "bandit", "detect-secrets"]
+        security_keywords = ["security", "bandit", "gitleaks"]
         if any(keyword in repo_url for keyword in security_keywords):
             return "Security checks"
         formatting_keywords = ["ruff", "mdformat", "codespell"]

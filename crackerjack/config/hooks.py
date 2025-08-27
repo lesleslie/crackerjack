@@ -69,8 +69,8 @@ FAST_HOOKS = [
         command=["pre-commit", "run", "ruff-check", "--all-files"],
     ),
     HookDefinition(
-        name="detect-secrets",
-        command=["pre-commit", "run", "detect-secrets", "--all-files"],
+        name="gitleaks",
+        command=["pre-commit", "run", "gitleaks", "--all-files"],
     ),
 ]
 
