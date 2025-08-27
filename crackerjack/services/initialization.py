@@ -675,10 +675,11 @@ class InitializationService:
             source_config = yaml.safe_load(f)
 
         if not target_file.exists():
-            # No existing file, just copy
+            # No existing file, just copy without trailing newline
+            content = source_file.read_text().rstrip('\n')
             self._write_file_and_track(
                 target_file,
-                source_file.read_text(),
+                content,
                 ".pre-commit-config.yaml",
                 results,
             )
@@ -712,9 +713,15 @@ class InitializationService:
             target_repos.extend(new_repos)
             target_config["repos"] = target_repos
 
-            # Write merged config
+            # Write merged config without trailing newline
+            yaml_content = yaml.dump(
+                target_config,
+                default_flow_style=False,
+                sort_keys=False,
+                width=float('inf')
+            )
             with target_file.open("w") as f:
-                yaml.dump(target_config, f, default_flow_style=False, sort_keys=False)
+                f.write(yaml_content.rstrip('\n'))
 
             t.cast("list[str]", results["files_copied"]).append(
                 ".pre-commit-config.yaml (merged)",
