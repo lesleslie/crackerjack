@@ -76,7 +76,7 @@ repos:
     hooks:
       - id: complexipy
         args: ["-d", "low"]
-        exclude: ^(\.venv/|tests/.*\.py$)
+        exclude: ^\.venv/
         stages: ["pre-push", "manual"]
   - repo: https://github.com/dosisod/refurb
     rev: v2.1.0

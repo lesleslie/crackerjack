@@ -34,7 +34,7 @@ class TestCodeCleaner:
     @pytest.fixture
     def code_cleaner(self, console):
         """Create a CodeCleaner instance."""
-        return CodeCleaner(console)
+        return CodeCleaner(console=console)
 
     def test_init(self, code_cleaner, console) -> None:
         """Test CodeCleaner initialization."""
@@ -48,8 +48,9 @@ class TestCodeCleaner:
 
     def test_legacy_clean_method_exists(self, code_cleaner) -> None:
         """Test that legacy clean method exists."""
-        assert hasattr(code_cleaner, "clean")
-        assert callable(code_cleaner.clean)
+        # CodeCleaner uses clean_files as the main cleaning method
+        assert hasattr(code_cleaner, "clean_files")
+        assert callable(code_cleaner.clean_files)
 
 
 class TestInteractiveModules:

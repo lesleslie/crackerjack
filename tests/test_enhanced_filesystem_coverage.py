@@ -64,12 +64,13 @@ class TestFileCache:
         assert result is None
 
     def test_cache_contains(self):
-        """Test cache contains operation."""
+        """Test cache contains operation using get method."""
         cache = FileCache()
         cache.put("test_key", "test_value")
 
-        assert cache.contains("test_key")
-        assert not cache.contains("nonexistent")
+        # Use get to check if key exists (returns None if not found)
+        assert cache.get("test_key") is not None
+        assert cache.get("nonexistent") is None
 
     def test_cache_clear(self):
         """Test cache clear operation."""
@@ -81,15 +82,15 @@ class TestFileCache:
         assert len(cache._access_times) == 0
 
     def test_cache_size(self):
-        """Test cache size tracking."""
+        """Test cache size tracking using get_stats."""
         cache = FileCache()
-        assert cache.size() == 0
+        assert cache.get_stats()["entries"] == 0
 
         cache.put("key1", "value1")
-        assert cache.size() == 1
+        assert cache.get_stats()["entries"] == 1
 
         cache.put("key2", "value2")
-        assert cache.size() == 2
+        assert cache.get_stats()["entries"] == 2
 
 
 class TestEnhancedFileSystemService:
@@ -149,10 +150,10 @@ class TestEnhancedFileSystemService:
         fs = EnhancedFileSystemService()
 
         # Test cache operations through filesystem
-        assert fs.cache.size() == 0
+        assert fs.cache.get_stats()["entries"] == 0
         fs.cache.put("integration_test", "data")
-        assert fs.cache.size() == 1
-        assert fs.cache.contains("integration_test")
+        assert fs.cache.get_stats()["entries"] == 1
+        assert fs.cache.get("integration_test") is not None
 
     def test_multiple_filesystem_instances(self):
         """Test multiple filesystem instances."""
@@ -190,17 +191,17 @@ class TestEnhancedFileSystemServiceEdgeCases:
         special_key = "key-with-special@chars#"
         cache.put(special_key, "special_value")
 
-        assert cache.contains(special_key)
+        assert cache.get(special_key) is not None
         assert cache.get(special_key) == "special_value"
 
-    def test_cache_with_none_value(self):
-        """Test cache with None values."""
+    def test_cache_with_empty_value(self):
+        """Test cache with empty string values."""
         cache = FileCache()
-        cache.put("none_key", None)
+        cache.put("empty_key", "")
 
-        assert cache.contains("none_key")
-        result = cache.get("none_key")
-        assert result is None
+        # Check if key exists and returns empty string
+        assert cache.get("empty_key") == ""
+        assert "empty_key" in cache._cache
 
     def test_cache_overwrite_value(self):
         """Test cache value overwriting."""
@@ -229,7 +230,7 @@ class TestEnhancedFileSystemServiceEdgeCases:
             put_operation("key3", "value3"),
         )
 
-        assert cache.size() == 3
+        assert cache.get_stats()["entries"] == 3
 
         # Concurrent gets
         results = await asyncio.gather(

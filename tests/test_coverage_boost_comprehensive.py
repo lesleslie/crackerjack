@@ -247,7 +247,7 @@ class TestErrorHandlingCoverage:
     def test_errors_module_functionality(self) -> None:
         """Test errors module functionality."""
         try:
-            from crackerjack.errors import CrackerjackError, FileError, ErrorCode
+            from crackerjack.errors import CrackerjackError, ErrorCode, FileError
 
             # Test error classes exist and can be instantiated
             error = CrackerjackError("test error", ErrorCode.GENERAL_ERROR)
@@ -331,10 +331,7 @@ class TestModelsCoverage:
 
             # Test creating task results
             hook_result = HookResult(
-                id="test-hook-id",
-                name="test-hook",
-                status="success",
-                duration=1.0
+                id="test-hook-id", name="test-hook", status="success", duration=1.0
             )
             assert hook_result.id == "test-hook-id"
             assert hook_result.name == "test-hook"
