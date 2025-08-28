@@ -1,7 +1,7 @@
 repos:
   # File structure and format validators
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         name: trailing-whitespace
@@ -19,7 +19,7 @@ repos:
         name: check-added-large-files
         exclude: ^\.venv/
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.7.21
+    rev: 0.8.13
     hooks:
       - id: uv-lock
         files: ^pyproject\.toml$
@@ -46,7 +46,7 @@ repos:
         additional_dependencies: ["tomli"]
   # Code formatting and quality
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.3
+    rev: v0.12.10
     hooks:
       - id: ruff-check
         exclude: ^\.venv/
@@ -66,13 +66,13 @@ repos:
         files: ^crackerjack/.*\.py$
         stages: ["pre-push", "manual"]
   - repo: https://github.com/fredrikaverpil/creosote
-    rev: v4.0.3
+    rev: v4.1.0
     hooks:
       - id: creosote
         exclude: ^\.venv/
         stages: ["pre-push", "manual"]
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
-    rev: v3.0.0
+    rev: v3.3.0
     hooks:
       - id: complexipy
         args: ["-d", "low"]
@@ -88,7 +88,7 @@ repos:
         exclude: ^tests/.*\.py$
         stages: ["pre-push", "manual"]
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.403
+    rev: v1.1.404
     hooks:
       - id: pyright
         files: ^crackerjack/.*\.py$

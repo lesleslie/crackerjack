@@ -155,13 +155,17 @@ class AsyncWorkflowPipeline:
     async def _run_testing_phase_async(self, options: OptionsProtocol) -> bool:
         return await asyncio.to_thread(self.phases.run_testing_phase, options)
 
-    async def _execute_ai_agent_workflow_async(self, options: OptionsProtocol, max_iterations: int = 10) -> bool:
+    async def _execute_ai_agent_workflow_async(
+        self, options: OptionsProtocol, max_iterations: int = 10
+    ) -> bool:
         """Execute AI agent workflow with iterative fixing between iterations."""
-        self.console.print(f"🤖 Starting AI Agent workflow (max {max_iterations} iterations)")
-        
+        self.console.print(
+            f"🤖 Starting AI Agent workflow (max {max_iterations} iterations)"
+        )
+
         # Always run configuration phase first
         self.phases.run_configuration_phase(options)
-        
+
         # Run cleaning phase if requested
         if not await self._execute_cleaning_phase_async(options):
             self.session.fail_task("workflow", "Cleaning phase failed")
@@ -170,33 +174,41 @@ class AsyncWorkflowPipeline:
         # Iterative quality improvement with AI fixing
         for iteration in range(1, max_iterations + 1):
             self.console.print(f"\n🔄 Iteration {iteration}/{max_iterations}")
-            
+
             # Step 1: Fast hooks with retry logic
             fast_hooks_success = await self._run_fast_hooks_with_retry_async(options)
-            
+
             # Step 2: Collect ALL test failures (don't stop on first)
             test_issues = await self._collect_test_issues_async(options)
-            
-            # Step 3: Collect ALL comprehensive hook issues (don't stop on first) 
+
+            # Step 3: Collect ALL comprehensive hook issues (don't stop on first)
             hook_issues = await self._collect_comprehensive_hook_issues_async(options)
-            
+
             # If everything passes, we're done
             if fast_hooks_success and not test_issues and not hook_issues:
                 self.console.print("✅ All quality checks passed!")
                 break
-                
+
             # Step 4: Apply AI fixes for ALL collected issues
             if test_issues or hook_issues:
-                fix_success = await self._apply_ai_fixes_async(options, test_issues, hook_issues, iteration)
+                fix_success = await self._apply_ai_fixes_async(
+                    options, test_issues, hook_issues, iteration
+                )
                 if not fix_success:
                     self.console.print(f"❌ AI fixing failed in iteration {iteration}")
-                    self.session.fail_task("workflow", f"AI fixing failed in iteration {iteration}")
+                    self.session.fail_task(
+                        "workflow", f"AI fixing failed in iteration {iteration}"
+                    )
                     return False
-                
+
         else:
             # If we exhausted all iterations without success
-            self.console.print(f"❌ Failed to achieve code quality after {max_iterations} iterations")
-            self.session.fail_task("workflow", f"Failed after {max_iterations} iterations")
+            self.console.print(
+                f"❌ Failed to achieve code quality after {max_iterations} iterations"
+            )
+            self.session.fail_task(
+                "workflow", f"Failed after {max_iterations} iterations"
+            )
             return False
 
         # Run remaining phases
@@ -222,7 +234,7 @@ class AsyncWorkflowPipeline:
         """Collect all test failures without stopping on first failure."""
         if not options.test:
             return []
-            
+
         try:
             success = await self._run_testing_phase_async(options)
             if success:
@@ -232,7 +244,9 @@ class AsyncWorkflowPipeline:
         except Exception as e:
             return [f"Test execution error: {e}"]
 
-    async def _collect_comprehensive_hook_issues_async(self, options: OptionsProtocol) -> list[str]:
+    async def _collect_comprehensive_hook_issues_async(
+        self, options: OptionsProtocol
+    ) -> list[str]:
         """Collect all comprehensive hook issues without stopping on first failure."""
         try:
             success = await self._run_comprehensive_hooks_async(options)
@@ -243,14 +257,22 @@ class AsyncWorkflowPipeline:
         except Exception as e:
             return [f"Comprehensive hooks error: {e}"]
 
-    async def _apply_ai_fixes_async(self, options: OptionsProtocol, test_issues: list[str], hook_issues: list[str], iteration: int) -> bool:
+    async def _apply_ai_fixes_async(
+        self,
+        options: OptionsProtocol,
+        test_issues: list[str],
+        hook_issues: list[str],
+        iteration: int,
+    ) -> bool:
         """Apply AI fixes for all collected issues in batch."""
         all_issues = test_issues + hook_issues
         if not all_issues:
             return True
-            
-        self.console.print(f"🔧 Applying AI fixes for {len(all_issues)} issues in iteration {iteration}")
-        
+
+        self.console.print(
+            f"🔧 Applying AI fixes for {len(all_issues)} issues in iteration {iteration}"
+        )
+
         # This would integrate with the AI agent system to actually apply fixes
         # For now, we'll simulate the fixing process
         try:
@@ -259,13 +281,13 @@ class AsyncWorkflowPipeline:
             # 2. Generate fixes using AI agents
             # 3. Apply the fixes to source code
             # 4. Return success/failure status
-            
+
             # Placeholder for actual AI fixing logic
             await asyncio.sleep(0.1)  # Simulate processing time
-            
+
             self.console.print(f"✅ AI fixes applied for iteration {iteration}")
             return True
-            
+
         except Exception as e:
             self.logger.error(f"AI fixing failed: {e}")
             return False

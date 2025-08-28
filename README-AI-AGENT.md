@@ -11,7 +11,7 @@ AI agent mode provides **intelligent, iterative code fixing** that goes far beyo
 **CRITICAL**: The AI agent follows a strict iteration protocol to ensure fixes are properly applied and validated:
 
 1. **Fast Hooks** (Formatting) → Retry once if any fail
-2. **Collect ALL Test Failures** → Don't stop on first failure  
+2. **Collect ALL Test Failures** → Don't stop on first failure
 3. **Collect ALL Hook Issues** → Don't stop on first failure
 4. **Apply AI Fixes** → Process all collected issues in batch
 5. **Validate in Next Iteration** → Repeat until all checks pass (max 10 iterations)
@@ -101,7 +101,7 @@ python -m crackerjack --start-websocket-server
 
 **Available MCP Tools:**
 - `execute_crackerjack`: Start iterative auto-fixing workflow
-- `get_job_progress`: Get current progress for running jobs  
+- `get_job_progress`: Get current progress for running jobs
 - `get_comprehensive_status`: Get complete system status
 
 ### Key Benefits
@@ -109,7 +109,7 @@ python -m crackerjack --start-websocket-server
 When AI agent mode is enabled, Crackerjack:
 
 1. **Intelligent Code Fixing**: Automatically applies fixes between iterations (not just detects issues)
-2. **Iterative Validation**: Each iteration validates fixes from the previous iteration  
+2. **Iterative Validation**: Each iteration validates fixes from the previous iteration
 3. **Batch Processing**: Collects ALL issues before applying fixes (no early exit on first failure)
 4. **Real-time Progress**: WebSocket-based progress monitoring with iteration boundaries
 5. **Structured Output**: JSON format for reliable AI assistant parsing
@@ -124,7 +124,7 @@ The AI agent follows a **strict sequence** in each iteration:
 ```
 Iteration 1:
 ├── Fast Hooks (formatting) → Retry if needed
-├── Collect ALL test failures (don't stop on first)  
+├── Collect ALL test failures (don't stop on first)
 ├── Collect ALL hook issues (don't stop on first)
 ├── Apply AI fixes for ALL collected issues
 └── Move to Iteration 2
@@ -132,7 +132,7 @@ Iteration 1:
 Iteration 2:
 ├── Fast Hooks → Validate previous fixes worked
 ├── Collect remaining test failures
-├── Collect remaining hook issues  
+├── Collect remaining hook issues
 ├── Apply AI fixes for remaining issues
 └── Continue until success or max iterations (10)
 ```
@@ -401,7 +401,7 @@ python -m crackerjack --ai-agent -t
 
 **What Happens:**
 1. **Iteration 1-N**: AI agent automatically collects ALL issues (tests + hooks)
-2. **Batch Fixing**: AI applies fixes for all collected issues simultaneously  
+2. **Batch Fixing**: AI applies fixes for all collected issues simultaneously
 3. **Validation**: Next iteration validates fixes worked and finds remaining issues
 4. **Completion**: Process repeats until all quality checks pass (or 10 iterations max)
 
@@ -424,7 +424,7 @@ python -m crackerjack --start-websocket-server
 ### Legacy Structured Output Workflows
 
 **For custom AI integrations:**
-1. **Structured Analysis**: AI parses `test-results.xml` and `coverage.json` 
+1. **Structured Analysis**: AI parses `test-results.xml` and `coverage.json`
 2. **Failure Analysis**: AI analyzes JUnit XML with precise error details
 3. **Coverage-Driven**: AI uses coverage data for implementation priorities
 4. **Custom Processing**: AI processes JSON output for specialized workflows
@@ -443,7 +443,7 @@ The integration between Crackerjack and AI assistants continues to evolve. Futur
 For developers implementing AI agent integration or debugging workflow issues:
 
 - **[AI-AGENT-RULES.md](AI-AGENT-RULES.md)**: Technical specification of the iteration protocol, implementation details, and error patterns to avoid
-- **[RULES.md](RULES.md)**: Complete code quality standards and AI agent integration guidelines  
+- **[RULES.md](RULES.md)**: Complete code quality standards and AI agent integration guidelines
 - **[CLAUDE.md](CLAUDE.md)**: Project-specific AI agent configuration and usage patterns
 
 ## Conclusion

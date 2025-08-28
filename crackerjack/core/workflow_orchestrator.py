@@ -471,14 +471,17 @@ class WorkflowPipeline:
 
         if self.session.session_tracker:
             for task_id, task_data in self.session.session_tracker.tasks.items():
-                if task_data.status == "failed" and task_id in ("fast_hooks", "comprehensive_hooks"):
+                if task_data.status == "failed" and task_id in (
+                    "fast_hooks",
+                    "comprehensive_hooks",
+                ):
                     hook_count += 1
                     issue_type = (
                         IssueType.FORMATTING
                         if "fast" in task_id
                         else IssueType.TYPE_ERROR
                     )
-                    error_msg = getattr(task_data, 'error_message', 'Unknown error')
+                    error_msg = getattr(task_data, "error_message", "Unknown error")
                     issue = Issue(
                         id=f"hook_failure_{task_id}",
                         type=issue_type,

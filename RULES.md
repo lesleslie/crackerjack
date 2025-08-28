@@ -54,7 +54,7 @@
   - Use [pyproject.toml](https://github.com/lesleslie/crackerjack/blob/main/pyproject.toml) for all configuration
   - **Modular Architecture**: Use protocol-based dependency injection
     - Core orchestration layer: `WorkflowOrchestrator`, `AsyncWorkflowOrchestrator`
-    - Coordinator layer: `SessionCoordinator`, `PhaseCoordinator`  
+    - Coordinator layer: `SessionCoordinator`, `PhaseCoordinator`
     - Domain managers: `HookManager`, `TestManager`, `PublishManager`
     - Infrastructure services: filesystem, git, config, security
 
@@ -345,7 +345,7 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
 - **AI Agent Iteration Workflow (CRITICAL)**
 
   - AI agent mode (`--ai-agent`) follows strict iteration protocol:
-    1. **Fast Hooks** → Retry once if any fail (formatting fixes often cascade)  
+    1. **Fast Hooks** → Retry once if any fail (formatting fixes often cascade)
     2. **Collect ALL Test Failures** → Don't stop on first failure, gather complete list
     3. **Collect ALL Hook Issues** → Don't stop on first failure, gather complete list
     4. **Apply AI Fixes** → Process ALL collected issues in batch, then move to next iteration

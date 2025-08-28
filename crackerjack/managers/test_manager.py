@@ -27,6 +27,7 @@ class TestProgress:
         self.files_discovered: int = 0
         self.collection_status: str = "Starting collection..."
         self._lock = threading.Lock()
+        self._seen_files: set[str] = set()  # Track seen files to prevent duplicates
 
     @property
     def completed(self) -> int:
@@ -68,7 +69,12 @@ class TestProgress:
         self._add_collection_stats(progress_text)
         self._add_duration_info(progress_text)
 
-        return Panel(progress_text, title="Test Collection", border_style="yellow")
+        return Panel(
+            progress_text,
+            title="Test Collection",
+            border_style="yellow",
+            expand=False,  # Don't expand to full terminal width
+        )
 
     def _add_collection_stats(self, progress_text: Text) -> None:
         """Add collection statistics to progress text."""
@@ -283,6 +289,7 @@ class TestManagementImpl:
     ) -> t.Callable[[], None]:
         def read_output() -> None:
             last_refresh = 0
+            last_update_content = ""
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
                     if not line:
@@ -293,11 +300,18 @@ class TestManagementImpl:
                         self._parse_test_line(line, progress)
                         activity_tracker["last_time"] = time.time()
 
-                        # Update display every 0.25 seconds for more responsive UI
+                        # Update display with longer intervals and content change detection
                         current_time = time.time()
-                        if current_time - last_refresh > 0.25:
+                        refresh_interval = 1.0 if progress.is_collecting else 0.25
+                        current_content = f"{progress.collection_status}:{progress.files_discovered}:{progress.total_tests}"
+
+                        if (
+                            current_time - last_refresh > refresh_interval
+                            or current_content != last_update_content
+                        ):
                             live.update(progress.format_progress())
                             last_refresh = current_time
+                            last_update_content = current_content
 
         return read_output
 
@@ -417,16 +431,35 @@ class TestManagementImpl:
         return False
 
     def _handle_collection_progress(self, line: str, progress: TestProgress) -> bool:
-        if not progress.is_collecting or not (".py" in line or "test_" in line):
+        if not progress.is_collecting:
             return False
 
-        if "::" in line or line.strip().endswith(".py"):
-            progress.update(files_discovered=progress.files_discovered + 1)
-            if ".py" in line:
-                filename = line.split("/")[-1] if "/" in line else line
-                if filename.endswith(".py"):
-                    progress.update(collection_status=f"Found: {filename}")
-        return True
+        # Only process meaningful collection lines, not every line containing ".py"
+        if line.strip().startswith("collecting") or "collecting" in line.lower():
+            progress.update(collection_status="Collecting tests...")
+            return True
+
+        # Very restrictive file discovery - only count actual test discoveries
+        if (
+            "::" in line
+            and ".py" in line
+            and ("test_" in line or "tests/" in line)
+            and not any(
+                status in line for status in ("PASSED", "FAILED", "SKIPPED", "ERROR")
+            )
+        ):
+            # Only update if we haven't seen this file before
+            filename = line.split("/")[-1] if "/" in line else line.split("::")[0]
+            if filename.endswith(".py") and filename not in progress._seen_files:
+                progress._seen_files.add(filename)
+                new_count = progress.files_discovered + 1
+                progress.update(
+                    files_discovered=new_count,
+                    collection_status=f"Discovering tests... ({new_count} files)",
+                )
+            return True
+
+        return False
 
     def _handle_test_execution(self, line: str, progress: TestProgress) -> bool:
         if not (

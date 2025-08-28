@@ -18,7 +18,7 @@ Each iteration follows this strict sequence:
    - **Collect ALL test failures** - don't stop on first failure
    - **Return**: List of all test issues found
 
-3. **Comprehensive Hooks Phase** (Don't Stop on First Failure) 
+3. **Comprehensive Hooks Phase** (Don't Stop on First Failure)
    - Run: `pyright`, `bandit`, `vulture`, `refurb`, `creosote`, `complexipy`
    - **Collect ALL hook issues** - don't stop on first failure
    - **Return**: List of all quality issues found
@@ -40,17 +40,17 @@ Each iteration follows this strict sequence:
 for iteration in range(1, max_iterations + 1):
     # Step 1: Fast hooks with retry
     fast_hooks_success = await self._run_fast_hooks_with_retry_async(options)
-    
+
     # Step 2: Collect ALL test issues (don't stop on first)
     test_issues = await self._collect_test_issues_async(options)
-    
+
     # Step 3: Collect ALL hook issues (don't stop on first)
     hook_issues = await self._collect_comprehensive_hook_issues_async(options)
-    
+
     # Exit if everything passes
     if fast_hooks_success and not test_issues and not hook_issues:
         break
-        
+
     # Step 4: Apply AI fixes for ALL collected issues
     fix_success = await self._apply_ai_fixes_async(options, test_issues, hook_issues, iteration)
     if not fix_success:
@@ -63,7 +63,7 @@ for iteration in range(1, max_iterations + 1):
 - **WRONG**: Stop on first test failure or first hook failure
 - **CORRECT**: Collect ALL failures before moving to fixing phase
 
-### 2. Batch Fixing Approach  
+### 2. Batch Fixing Approach
 - **WRONG**: Fix one issue, then re-run checks, then fix next issue
 - **CORRECT**: Collect all issues, then apply all fixes in one batch
 
@@ -72,7 +72,7 @@ for iteration in range(1, max_iterations + 1):
 - **CORRECT**: Apply fixes ONLY at the end of iteration, validate in next iteration
 
 ### 4. Progress Validation
-- **WRONG**: Assume fixes worked without validation  
+- **WRONG**: Assume fixes worked without validation
 - **CORRECT**: Next iteration validates that previous fixes were successful
 
 ## MCP Server Integration
@@ -97,7 +97,7 @@ for iteration in range(max_iterations):
         break  # No fixes applied!
 ```
 
-### 2. Early Exit on First Failure  
+### 2. Early Exit on First Failure
 ```python
 # WRONG: Stop collecting issues on first failure
 if test_fails:
@@ -130,7 +130,7 @@ python -m crackerjack --ai-debug -t
 
 The AI agent workflow is working correctly when:
 1. **Progress Through Iterations**: Each iteration shows different results as fixes are applied
-2. **Issue Reduction**: Number of issues decreases between iterations  
+2. **Issue Reduction**: Number of issues decreases between iterations
 3. **Eventual Success**: Workflow completes with all checks passing
 4. **No Infinite Loops**: Workflow terminates within 10 iterations
 5. **Real-time Progress**: WebSocket shows meaningful progress updates

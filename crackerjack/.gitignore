@@ -40,3 +40,5 @@ __pycache__/
 .mcp.json
 /tests/htmlcov/
 /tests/.benchmarks/
+/.hypothesis/
+/crackerjack.egg-info/
