@@ -16,6 +16,7 @@ This module provides health analysis for Python projects including:
 """
 
 import json
+import shutil
 import subprocess
 import tempfile
 import time
@@ -522,7 +523,9 @@ class TestHealthHistoryManagement:
         health_service.console = mock_console
         health = ProjectHealth()
 
-        # Make directory creation fail by setting it to a file
+        # Make directory creation fail by replacing the directory with a file
+        if health_service.health_cache.parent.exists():
+            shutil.rmtree(health_service.health_cache.parent)
         health_service.health_cache.parent.touch()
 
         # Should not raise exception, just warn
