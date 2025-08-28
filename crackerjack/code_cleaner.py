@@ -583,6 +583,8 @@ class DocstringStep:
         for pattern in patterns:
             result = re.sub(pattern, "", result, flags=re.MULTILINE | re.DOTALL)
         return result
+
+    def _create_whitespace_step(self) -> CleaningStepProtocol:
         class WhitespaceStep:
             name = "remove_extra_whitespace"
 

@@ -265,7 +265,7 @@ class ConfigurationService:
 
             import yaml
 
-            with open(config_file) as f:
+            with config_file.open() as f:
                 config = yaml.safe_load(f)
 
             if not config or "repos" not in config:

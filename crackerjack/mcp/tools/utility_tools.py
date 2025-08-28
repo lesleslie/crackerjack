@@ -1,6 +1,7 @@
 import json
 import time
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.mcp.context import get_context
@@ -22,14 +23,12 @@ def _clean_file_if_old(
     file_path: Path, cutoff_time: float, dry_run: bool, file_type: str
 ) -> dict | None:
     """Clean a single file if it's older than cutoff time."""
-    try:
+    with suppress(OSError):
         if file_path.stat().st_mtime < cutoff_time:
             file_size = file_path.stat().st_size
             if not dry_run:
                 file_path.unlink()
             return {"path": str(file_path), "size": file_size, "type": file_type}
-    except OSError:
-        pass
     return None
 
 
