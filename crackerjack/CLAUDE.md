@@ -368,13 +368,23 @@ uvx --from /Users/les/Projects/crackerjack crackerjack --start-mcp-server
 ### Core Orchestration Layer
 
 - **`core/workflow_orchestrator.py`**: Main entry point with `WorkflowOrchestrator` and `WorkflowPipeline` classes
-- **`core/container.py`**: Dependency injection container using protocols for loose coupling
+- **`core/container.py`**: Basic dependency injection container using protocols for loose coupling
+- **`core/enhanced_container.py`**: Advanced DI container with lifecycle management
+  - **ServiceLifetime** enum: `SINGLETON`, `TRANSIENT`, `SCOPED` service lifetimes
+  - **ServiceDescriptor** dataclass: Comprehensive service registration with factory support
+  - **Thread-safe**: Singleton instances with thread-local scoping
+  - **Dependency resolution**: Automatic dependency injection with circular dependency detection
 - **`__main__.py`**: Simplified CLI entry point (reduced from 601 to 122 lines via modularization)
 
 ### Coordinator Layer (Workflow Management)
 
 - **`core/session_coordinator.py`**: Session tracking, cleanup handlers, progress management
 - **`core/phase_coordinator.py`**: Individual workflow phases (cleaning, config, hooks, testing, publishing, commit)
+- **`core/async_workflow_orchestrator.py`**: Async workflow coordination with parallel execution
+  - **Async/await patterns**: Non-blocking workflow execution
+  - **Parallel hook execution**: Concurrent pre-commit hook processing
+  - **Progress streaming**: Real-time progress updates via WebSocket
+  - **Error aggregation**: Collects all errors before batch processing by AI agents
 
 ### Domain Managers (Business Logic)
 
@@ -399,12 +409,45 @@ Container (DI) → Protocols → Concrete Implementations
 - **Common Error**: `from ..managers.test_manager import TestManager` ❌
 - **Correct**: `from ..models.protocols import TestManagerProtocol` ✅
 
+**Enhanced Dependency Injection Patterns** (using `EnhancedContainer`):
+
+```python
+from crackerjack.core.enhanced_container import EnhancedContainer, ServiceLifetime
+
+# Service registration with lifecycle management
+container.register_service(
+    interface=HookManagerProtocol,
+    implementation=AsyncHookManager,
+    lifetime=ServiceLifetime.SINGLETON  # Shared instance
+)
+
+# Factory-based registration for complex initialization
+container.register_factory(
+    interface=TestManagerProtocol,
+    factory=lambda: create_test_manager_with_config(),
+    lifetime=ServiceLifetime.SCOPED  # Per-session instance
+)
+
+# Automatic dependency resolution
+hook_manager = container.resolve(HookManagerProtocol)  # Returns singleton
+test_manager = container.resolve(TestManagerProtocol)  # Creates scoped instance
+```
+
 ### Infrastructure Services
 
-- **`services/filesystem.py`**: File operations with caching, batching, and security validation
+- **`services/filesystem.py`**: Basic file operations with caching, batching, and security validation
+- **`services/enhanced_filesystem.py`**: Advanced filesystem operations
+  - **Atomic Operations**: Ensures file consistency during concurrent operations
+  - **XDG Compliance**: Follows XDG Base Directory Specification for config/cache/data
+  - **Backup Management**: Automatic backup creation with rotation policies
+  - **Performance Monitoring**: File operation timing and performance metrics
+  - **Security Validation**: Path traversal prevention and secure temp file handling
 - **`services/git.py`**: Git operations (commit, push, file tracking) with intelligent commit messages
 - **`services/config.py`**: Configuration management for pyproject.toml and .pre-commit-config.yaml
+- **`services/unified_config.py`**: Centralized configuration management across all components
 - **`services/security.py`**: Token handling, command validation, secure temp file creation
+- **`services/health_metrics.py`**: System health monitoring and performance benchmarking
+- **`services/contextual_ai_assistant.py`**: AI-powered code analysis and suggestions
 
 ### MCP Integration (AI Agent Support)
 
@@ -439,6 +482,19 @@ Container (DI) → Protocols → Concrete Implementations
 - **`cli/options.py`**: CLI option definitions and models (213 lines)
 - **`cli/handlers.py`**: Mode handlers for different execution types (124 lines)
 - **`cli/utils.py`**: CLI utility functions (17 lines)
+
+### Advanced Orchestration
+
+- **`orchestration/advanced_orchestrator.py`**: Advanced workflow orchestration with parallel execution strategies
+- **`orchestration/execution_strategies.py`**: Pluggable execution strategies for different workflow types
+- **`orchestration/test_progress_streamer.py`**: Real-time test progress streaming with Rich UI
+
+### Plugin System
+
+- **`plugins/base.py`**: Base plugin interface and lifecycle management
+- **`plugins/loader.py`**: Dynamic plugin loading with dependency resolution
+- **`plugins/hooks.py`**: Pre-commit hook plugins with custom validation rules
+- **`plugins/managers.py`**: Plugin-specific manager implementations
 
 ### Legacy Components (Stable, Integrated)
 
@@ -844,6 +900,9 @@ Default configuration monitors:
 - **Better testability** with focused, isolated modules
 - **Enhanced security** with modular validation and error handling
 - **Protocol-based interfaces** for better dependency injection and testing
+- **Performance Improvements**: Enhanced async/await patterns, parallel execution, and caching strategies
+- **Plugin Architecture**: Extensible plugin system for custom hooks and workflow extensions
+- **Health Monitoring**: Comprehensive system health metrics and performance benchmarking
 
 ## Test Coverage Requirements
 
@@ -878,43 +937,15 @@ Default configuration monitors:
 
 **Key User Directive**: Always prioritize fixing failures of existing tests over creating new tests, especially when coverage issues are being addressed.
 
-## 🚨 SESSION INITIALIZATION PROTOCOL
+### Current Test Strategy (Post-Architectural Refactoring)
 
-**CRITICAL FIRST STEP**: Before starting any work, check the global workspace:
+**Strategic Testing Approach**:
+- **Import-only tests**: Fast, reliable coverage for basic module loading and interface compliance
+- **Protocol compliance tests**: Ensure all implementations properly follow interface contracts
+- **Async pattern testing**: Comprehensive validation of async/await workflows without hanging tests
+- **Integration testing**: End-to-end validation of dependency injection and workflow orchestration
+- **Performance regression testing**: Automated detection of performance degradation in async workflows
 
-```bash
-cat ~/Projects/claude/SESSION_INITIALIZATION_CHECKLIST.md
-ls ~/Projects/claude/toolkits/
-cat ~/Projects/claude/WORKFLOW_AUTOMATION_SYSTEM.md
-```
-
-**Global Resources Available:**
-
-- **Global Toolkits**: `~/Projects/claude/toolkits/` (Reusable verification, automation tools)
-- **Automation Tools**: `~/Projects/claude/automation-tools/`
-- **GUI Prompt System**: `~/Projects/claude/experiments/gui_prompt_system.py`
-- **Testing Guide**: `~/Projects/claude/TESTING_QUICK_REFERENCE.md`
-- **Verification Patterns**: Complete paranoid verification methodology
-- **Location Tracking**: Window/tab tracking with AppleScript integration
-
-**Never rebuild these - they exist and are tested!**
-
-### Global Toolkit Integration
-
-```python
-# Import global verification toolkit
-import sys
-
-sys.path.append(os.path.expanduser("~/Projects/claude/toolkits"))
-
-from verification.verification_toolkit import VerificationToolkit
-
-# Use with crackerjack workflows
-toolkit = VerificationToolkit()
-result = toolkit.execute_with_verification(
-    "crackerjack_run", lambda: subprocess.run(...)
-)
-```
 
 ## Important Instruction Reminders
 
@@ -923,7 +954,6 @@ result = toolkit.execute_with_verification(
 - ALWAYS prefer editing an existing file to creating a new one
 - NEVER proactively create documentation files (\*.md) or README files unless explicitly requested
 - MAINTAIN 42% test coverage - add tests rather than reducing the requirement
-- **ALWAYS use global workspace tools** - Check `~/Projects/claude/` first before building anything new
 
 ## Coding Standards Memories
 

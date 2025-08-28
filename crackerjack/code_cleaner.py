@@ -316,8 +316,8 @@ class CodeCleaner(BaseModel):
         cleaning_steps = [
             self._create_line_comment_step(),
             self._create_docstring_step(),
-            self._create_whitespace_step(),  # type: ignore[attr-defined]
-            self._create_formatting_step(),  # type: ignore[attr-defined]
+            self._create_whitespace_step(),
+            self._create_formatting_step(),
         ]
 
         return self.pipeline.clean_file(file_path, cleaning_steps)
@@ -360,7 +360,98 @@ class CodeCleaner(BaseModel):
 
     def _create_docstring_step(self) -> CleaningStepProtocol:
         """Create a step for removing docstrings."""
-        return DocstringStep()
+        return self._DocstringStep()
+
+    class _DocstringStep:
+        """Step implementation for removing docstrings."""
+
+        name = "remove_docstrings"
+
+        def _is_docstring_node(self, node: ast.AST) -> bool:
+            body = getattr(node, "body", None)
+            return (
+                hasattr(node, "body")
+                and body is not None
+                and len(body) > 0
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)
+            )
+
+        def _find_docstrings(self, tree: ast.AST) -> list[ast.AST]:
+            docstring_nodes: list[ast.AST] = []
+            finder = self._DocstringFinder(docstring_nodes, self._is_docstring_node)
+            finder.visit(tree)
+            return docstring_nodes
+
+        class _DocstringFinder(ast.NodeVisitor):
+            def __init__(
+                self,
+                docstring_nodes: list[ast.AST],
+                is_docstring_node: t.Callable[[ast.AST], bool],
+            ):
+                self.docstring_nodes = docstring_nodes
+                self.is_docstring_node = is_docstring_node
+
+            def _add_if_docstring(self, node: ast.AST) -> None:
+                if self.is_docstring_node(node) and hasattr(node, "body"):
+                    body: list[ast.stmt] = getattr(node, "body")
+                    self.docstring_nodes.append(body[0])
+                self.generic_visit(node)
+
+            def visit_Module(self, node: ast.Module) -> None:
+                self._add_if_docstring(node)
+
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+                self._add_if_docstring(node)
+
+            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+                self._add_if_docstring(node)
+
+            def visit_ClassDef(self, node: ast.ClassDef) -> None:
+                self._add_if_docstring(node)
+
+        def __call__(self, code: str, file_path: Path) -> str:
+            try:
+                tree = ast.parse(code, filename=str(file_path))
+            except SyntaxError:
+                return self._regex_fallback_removal(code)
+
+            docstring_nodes = self._find_docstrings(tree)
+
+            if not docstring_nodes:
+                return code
+
+            lines = code.split("\n")
+            lines_to_remove = set()
+
+            for node in docstring_nodes:
+                # Most AST nodes have lineno and end_lineno attributes
+                start_line = getattr(node, "lineno", 1)
+                end_line = getattr(node, "end_lineno", start_line + 1)
+                lines_to_remove.update(range(start_line, end_line))
+
+            result_lines = []
+            for i, line in enumerate(lines, 1):
+                if i not in lines_to_remove:
+                    result_lines.append(line)
+
+            result = "\n".join(result_lines)
+            return self._regex_fallback_removal(result)
+
+        def _regex_fallback_removal(self, code: str) -> str:
+            import re
+
+            patterns = [
+                r'^\s*""".*?"""\s*$',
+                r"^\s*'''.*?'''\s*$",
+                r'^\s*""".*?"""\s*$',
+                r"^\s*'''.*?'''\s*$",
+            ]
+            result = code
+            for pattern in patterns:
+                result = re.sub(pattern, "", result, flags=re.MULTILINE | re.DOTALL)
+            return result
 
     class _LineCommentStep:
         """Step implementation for removing line comments."""
@@ -439,9 +530,6 @@ class CodeCleaner(BaseModel):
                 and (index == 0 or line[index - 1] != "\\")
             )
 
-    def _create_docstring_step(self) -> CleaningStepProtocol:
-        return DocstringStep()
-
     def _create_docstring_finder_class(
         self,
         docstring_nodes: list[ast.AST],
@@ -477,112 +565,6 @@ class CodeCleaner(BaseModel):
                 self._add_if_docstring(node)
 
         return DocstringFinder
-
-
-class DocstringStep:
-    name = "remove_docstrings"
-
-    def _is_docstring_node(self, node: ast.AST) -> bool:
-        body = getattr(node, "body", None)
-        return (
-            hasattr(node, "body")
-            and body is not None
-            and len(body) > 0
-            and isinstance(body[0], ast.Expr)
-            and isinstance(body[0].value, ast.Constant)
-            and isinstance(body[0].value.value, str)
-        )
-
-    def _find_docstrings(self, tree: ast.AST) -> list[ast.AST]:
-        docstring_nodes: list[ast.AST] = []
-        finder = self._DocstringFinder(docstring_nodes, self._is_docstring_node)
-        finder.visit(tree)
-        return docstring_nodes
-
-    class _DocstringFinder(ast.NodeVisitor):
-        def __init__(
-            self,
-            docstring_nodes: list[ast.AST],
-            is_docstring_node: t.Callable[[ast.AST], bool],
-        ):
-            self.docstring_nodes = docstring_nodes
-            self.is_docstring_node = is_docstring_node
-
-        def _add_if_docstring(self, node: ast.AST) -> None:
-            if self.is_docstring_node(node):
-                # Check if node has body attribute
-                if hasattr(node, "body") and node.body:  # type: ignore[attr-defined]
-                    self.docstring_nodes.append(node.body[0])  # type: ignore[attr-defined]
-            self.generic_visit(node)
-
-        def visit_Module(self, node: ast.Module) -> None:
-            self._add_if_docstring(node)
-
-        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-            self._add_if_docstring(node)
-
-        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-            self._add_if_docstring(node)
-
-        def visit_ClassDef(self, node: ast.ClassDef) -> None:
-            self._add_if_docstring(node)
-
-    def _get_lines_to_remove(self, docstring_nodes: list[ast.AST]) -> set[int]:
-        lines_to_remove = set()
-        for node in docstring_nodes:
-            # Use hasattr to check for line number attributes
-            if hasattr(node, "lineno"):
-                start_line = node.lineno - 1  # type: ignore[attr-defined]
-                end_line = (
-                    (node.end_lineno - 1)  # type: ignore[attr-defined]
-                    if hasattr(node, "end_lineno") and node.end_lineno  # type: ignore[attr-defined]
-                    else start_line
-                )
-                lines_to_remove.update(range(start_line, end_line + 1))
-        return lines_to_remove
-
-    def _filter_docstring_lines(
-        self,
-        lines: list[str],
-        lines_to_remove: set[int],
-    ) -> list[str]:
-        filtered_lines = []
-        for i, line in enumerate(lines):
-            if i not in lines_to_remove:
-                filtered_lines.append(line)
-            elif line.strip() and not any(
-                lines[j].strip()
-                for j in range(max(0, i - 2), min(len(lines), i + 3))
-                if j != i
-            ):
-                filtered_lines.append("")
-        return filtered_lines
-
-    def __call__(self, code: str, file_path: Path) -> str:
-        try:
-            tree = ast.parse(code)
-            docstring_nodes = self._find_docstrings(tree)
-            lines = code.split("\n")
-            lines_to_remove = self._get_lines_to_remove(docstring_nodes)
-            filtered_lines = self._filter_docstring_lines(lines, lines_to_remove)
-            return "\n".join(filtered_lines)
-
-        except (SyntaxError, ValueError):
-            return self._regex_fallback_removal(code)
-
-    def _regex_fallback_removal(self, code: str) -> str:
-        import re
-
-        patterns = [
-            r'^\s*""".*?"""\s*$',
-            r"^\s*'''.*?'''\s*$",
-            r'^\s*""".*?"""\s*$',
-            r"^\s*'''.*?'''\s*$",
-        ]
-        result = code
-        for pattern in patterns:
-            result = re.sub(pattern, "", result, flags=re.MULTILINE | re.DOTALL)
-        return result
 
     def _create_whitespace_step(self) -> CleaningStepProtocol:
         class WhitespaceStep:
@@ -626,9 +608,6 @@ class DocstringStep:
                 return result
 
         return WhitespaceStep()
-
-    def _create_docstring_step(self) -> CleaningStepProtocol:
-        return DocstringStep()
 
     def _create_formatting_step(self) -> CleaningStepProtocol:
         class FormattingStep:
