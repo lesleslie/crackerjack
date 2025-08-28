@@ -5,10 +5,10 @@ import time
 import typing as t
 from pathlib import Path
 
+from rich.align import Align
 from rich.console import Console
 from rich.live import Live
-from rich.panel import Panel
-from rich.text import Text
+from rich.table import Table
 
 from crackerjack.models.protocols import OptionsProtocol
 
@@ -53,79 +53,116 @@ class TestProgress:
                 if hasattr(self, key):
                     setattr(self, key, value)
 
-    def format_progress(self) -> Panel:
+    def format_progress(self) -> Align:
         """Format test progress display with appropriate phase-specific content."""
         with self._lock:
             if self.is_collecting:
-                return self._format_collection_progress()
-            return self._format_execution_progress()
+                table = self._format_collection_progress()
+            else:
+                table = self._format_execution_progress()
+            # Left-align the table as requested
+            return Align.left(table)
 
-    def _format_collection_progress(self) -> Panel:
+    def _format_collection_progress(self) -> Table:
         """Format progress display for test collection phase."""
-        progress_text = Text()
-        progress_text.append("🔍 ", style="bold cyan")
-        progress_text.append(self.collection_status, style="cyan")
-
-        self._add_collection_stats(progress_text)
-        self._add_duration_info(progress_text)
-
-        return Panel(
-            progress_text,
-            title="Test Collection",
+        table = Table(
+            title="🔍 Test Collection",
+            show_header=True,
+            header_style="bold yellow",
+            show_lines=True,
             border_style="yellow",
-            expand=False,  # Don't expand to full terminal width
+            title_style="bold yellow",
+            expand=True,  # Use full terminal width like rich.live demo
+            min_width=80,  # Ensure minimum width
         )
 
-    def _add_collection_stats(self, progress_text: Text) -> None:
-        """Add collection statistics to progress text."""
+        # Add multiple columns for better alignment (like complexipy)
+        table.add_column("Type", style="cyan", justify="left", ratio=1)
+        table.add_column(
+            "Details", style="white", justify="left", ratio=3
+        )  # Wider middle column
+        table.add_column("Count", style="green", justify="right", ratio=1)
+
+        # Add status
+        table.add_row("Status", self.collection_status, "")
+
+        # Add collection stats
         if self.files_discovered > 0:
-            progress_text.append("\n📁 Discovered: ", style="dim")
-            progress_text.append(
-                f"{self.files_discovered} test files",
-                style="dim yellow",
-            )
+            table.add_row("Files", "Test files discovered", str(self.files_discovered))
 
         if self.total_tests > 0:
-            progress_text.append("\n🧪 Found: ", style="dim")
-            progress_text.append(f"{self.total_tests} tests", style="dim green")
+            table.add_row("Tests", "Total tests found", str(self.total_tests))
 
-    def _format_execution_progress(self) -> Panel:
+        # Add progress bar
+        if self.files_discovered > 0:
+            progress_chars = "▓" * min(self.files_discovered, 15) + "░" * max(
+                0, 15 - self.files_discovered
+            )
+            table.add_row(
+                "Progress", f"[{progress_chars}]", f"{self.files_discovered}/15"
+            )
+
+        # Add duration
+        table.add_row("Duration", f"{self.elapsed_time:.1f} seconds", "")
+
+        return table
+
+    def _format_execution_progress(self) -> Table:
         """Format progress display for test execution phase."""
-        progress_text = Text()
-        self._add_test_stats(progress_text)
-        self._add_current_test_info(progress_text)
-        self._add_timing_info(progress_text)
+        table = Table(
+            title="🧪 Test Execution",
+            show_header=True,
+            header_style="bold cyan",
+            show_lines=True,
+            border_style="cyan",
+            title_style="bold cyan",
+            expand=True,  # Use full terminal width like rich.live demo
+            min_width=80,  # Ensure minimum width
+        )
 
-        return Panel(progress_text, title="Test Execution", border_style="cyan")
+        # Add multiple columns for better alignment (like complexipy)
+        table.add_column("Metric", style="cyan", justify="left", ratio=1)
+        table.add_column(
+            "Details", style="white", justify="left", ratio=3
+        )  # Wider middle column
+        table.add_column("Count", style="green", justify="right", ratio=1)
 
-    def _add_test_stats(self, progress_text: Text) -> None:
-        """Add test execution statistics to progress text."""
-        progress_text.append("🧪 Tests: ", style="bold cyan")
-        progress_text.append(str(self.passed), style="green")
-        progress_text.append(f"/{self.total_tests} passed", style="white")
+        # Test results summary
+        if self.total_tests > 0:
+            table.add_row("Total", "Total tests", str(self.total_tests))
+            table.add_row("Passed", "Tests passed", f"[green]{self.passed}[/green]")
 
-        if self.failed > 0:
-            progress_text.append(f", {self.failed} failed", style="red")
-        if self.skipped > 0:
-            progress_text.append(f", {self.skipped} skipped", style="yellow")
-        if self.errors > 0:
-            progress_text.append(f", {self.errors} errors", style="bright_red")
+            if self.failed > 0:
+                table.add_row("Failed", "Tests failed", f"[red]{self.failed}[/red]")
+            if self.skipped > 0:
+                table.add_row(
+                    "Skipped", "Tests skipped", f"[yellow]{self.skipped}[/yellow]"
+                )
+            if self.errors > 0:
+                table.add_row("Errors", "Test errors", f"[red]{self.errors}[/red]")
 
-    def _add_current_test_info(self, progress_text: Text) -> None:
-        """Add current test information to progress text."""
+        # Progress percentage and bar
+        if self.total_tests > 0:
+            percentage = (self.completed / self.total_tests) * 100
+            filled = int((self.completed / self.total_tests) * 15)
+            bar = "█" * filled + "░" * (15 - filled)
+            table.add_row("Progress", f"[{bar}]", f"{percentage:.1f}%")
+
+        # Current test
         if self.current_test:
-            progress_text.append("\n📍 Current: ", style="dim")
-            progress_text.append(self.current_test, style="dim cyan")
+            test_name = self.current_test
+            if len(test_name) > 40:  # Reasonable truncation
+                test_name = test_name[:37] + "..."
+            table.add_row("Current", test_name, "")
 
-    def _add_timing_info(self, progress_text: Text) -> None:
-        """Add timing information to progress text."""
-        self._add_duration_info(progress_text)
+        # Duration and ETA
+        duration_text = f"{self.elapsed_time:.1f}s"
         if self.eta_seconds is not None and self.eta_seconds > 0:
-            progress_text.append(f" | ETA: ~{self.eta_seconds:.0f}s", style="dim")
+            table.add_row("Duration", duration_text, f"ETA: ~{self.eta_seconds:.0f}s")
+        else:
+            table.add_row("Duration", duration_text, "")
 
-    def _add_duration_info(self, progress_text: Text) -> None:
-        """Add duration information to progress text."""
-        progress_text.append(f"\n⏱️  Duration: {self.elapsed_time:.1f}s", style="dim")
+        return table
 
 
 class TestManagementImpl:
@@ -195,9 +232,13 @@ class TestManagementImpl:
         with (
             Live(
                 progress.format_progress(),
-                refresh_per_second=4,
+                refresh_per_second=2,
                 console=self.console,
-                auto_refresh=True,
+                auto_refresh=False,
+                transient=True,
+                screen=False,
+                redirect_stdout=False,
+                redirect_stderr=False,
             ) as live,
             subprocess.Popen(
                 cmd,
@@ -310,6 +351,7 @@ class TestManagementImpl:
                             or current_content != last_update_content
                         ):
                             live.update(progress.format_progress())
+                            live.refresh()
                             last_refresh = current_time
                             last_update_content = current_content
 
@@ -360,6 +402,7 @@ class TestManagementImpl:
                 current_test=f"{progress.current_test} (possibly stuck - {stuck_time:.0f}s)",
             )
             live.update(progress.format_progress())
+            live.refresh()
 
     def _wait_for_completion(
         self,
@@ -374,6 +417,7 @@ class TestManagementImpl:
             process.kill()
             progress.update(current_test="TIMEOUT - Process killed")
             live.update(progress.format_progress())
+            live.refresh()
             raise
 
     def _cleanup_threads(
@@ -386,6 +430,7 @@ class TestManagementImpl:
         threads["stderr"].join(timeout=1)
         progress.is_complete = True
         live.update(progress.format_progress())
+        live.refresh()
 
     def _handle_progress_error(
         self,

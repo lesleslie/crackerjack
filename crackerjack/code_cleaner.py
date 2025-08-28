@@ -358,6 +358,10 @@ class CodeCleaner(BaseModel):
         """Create a step for removing line comments while preserving special comments."""
         return self._LineCommentStep()
 
+    def _create_docstring_step(self) -> CleaningStepProtocol:
+        """Create a step for removing docstrings."""
+        return DocstringStep()
+
     class _LineCommentStep:
         """Step implementation for removing line comments."""
 
@@ -579,8 +583,6 @@ class DocstringStep:
         for pattern in patterns:
             result = re.sub(pattern, "", result, flags=re.MULTILINE | re.DOTALL)
         return result
-
-    def _create_whitespace_step(self) -> CleaningStepProtocol:
         class WhitespaceStep:
             name = "remove_extra_whitespace"
 
@@ -622,6 +624,9 @@ class DocstringStep:
                 return result
 
         return WhitespaceStep()
+
+    def _create_docstring_step(self) -> CleaningStepProtocol:
+        return DocstringStep()
 
     def _create_formatting_step(self) -> CleaningStepProtocol:
         class FormattingStep:

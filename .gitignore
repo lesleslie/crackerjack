@@ -38,3 +38,7 @@ __pycache__/
 /.crackerjack/
 /.claude/
 .mcp.json
+/tests/htmlcov/
+/tests/.benchmarks/
+/.hypothesis/
+/crackerjack.egg-info/

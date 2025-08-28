@@ -36,8 +36,10 @@ class ConfigurationService:
                 if success:
                     self.console.print("[green]✅[/green] Pre-commit hooks updated")
                 else:
-                    self.console.print("[yellow]⚠️[/yellow] Pre-commit autoupdate had issues")
-                
+                    self.console.print(
+                        "[yellow]⚠️[/yellow] Pre-commit autoupdate had issues"
+                    )
+
                 # Also update dynamic config versions
                 self._update_dynamic_config_versions()
 
@@ -214,7 +216,7 @@ class ConfigurationService:
     def _run_precommit_autoupdate(self) -> bool:
         """Run pre-commit autoupdate to get latest hook versions."""
         import subprocess
-        
+
         try:
             self.console.print("[cyan]🔄[/cyan] Running pre-commit autoupdate...")
             result = subprocess.run(
@@ -222,82 +224,97 @@ class ConfigurationService:
                 cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
-            
+
             if result.returncode == 0:
                 # Show updated versions if any
-                if "updating" in result.stdout.lower() or "updated" in result.stdout.lower():
-                    for line in result.stdout.split('\n'):
-                        if 'updating' in line.lower() or '->' in line:
+                if (
+                    "updating" in result.stdout.lower()
+                    or "updated" in result.stdout.lower()
+                ):
+                    for line in result.stdout.split("\n"):
+                        if "updating" in line.lower() or "->" in line:
                             self.console.print(f"[dim]  {line.strip()}[/dim]")
                 return True
             else:
                 if result.stderr:
-                    self.console.print(f"[yellow]Pre-commit autoupdate stderr:[/yellow] {result.stderr}")
+                    self.console.print(
+                        f"[yellow]Pre-commit autoupdate stderr:[/yellow] {result.stderr}"
+                    )
                 return False
-                
+
         except subprocess.TimeoutExpired:
             self.console.print("[red]❌[/red] Pre-commit autoupdate timed out")
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Failed to run pre-commit autoupdate: {e}")
+            self.console.print(
+                f"[red]❌[/red] Failed to run pre-commit autoupdate: {e}"
+            )
             return False
 
     def _update_dynamic_config_versions(self) -> None:
         """Update hardcoded versions in dynamic_config.py based on .pre-commit-config.yaml."""
         try:
             self.console.print("[cyan]🔄[/cyan] Updating dynamic config versions...")
-            
+
             # Read the updated .pre-commit-config.yaml
             config_file = self.pkg_path / ".pre-commit-config.yaml"
             if not config_file.exists():
                 return
-            
+
             import yaml
+
             with open(config_file) as f:
                 config = yaml.safe_load(f)
-            
-            if not config or 'repos' not in config:
+
+            if not config or "repos" not in config:
                 return
-                
+
             # Extract version mappings from updated config
             version_updates = {}
-            for repo in config['repos']:
-                repo_url = repo.get('repo', '')
-                rev = repo.get('rev', '')
+            for repo in config["repos"]:
+                repo_url = repo.get("repo", "")
+                rev = repo.get("rev", "")
                 if repo_url and rev:
                     version_updates[repo_url] = rev
-            
+
             # Update dynamic_config.py
             dynamic_config_path = self.pkg_path / "crackerjack" / "dynamic_config.py"
             if dynamic_config_path.exists():
                 self._apply_version_updates(dynamic_config_path, version_updates)
-                
-        except Exception as e:
-            self.console.print(f"[yellow]⚠️[/yellow] Failed to update dynamic config versions: {e}")
 
-    def _apply_version_updates(self, config_path: Path, version_updates: dict[str, str]) -> None:
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Failed to update dynamic config versions: {e}"
+            )
+
+    def _apply_version_updates(
+        self, config_path: Path, version_updates: dict[str, str]
+    ) -> None:
         """Apply version updates to dynamic_config.py."""
         try:
             content = config_path.read_text()
             updated = False
-            
+
             for repo_url, new_rev in version_updates.items():
                 # Find and update the revision for this repo
                 import re
+
                 pattern = rf'("repo": "{re.escape(repo_url)}".*?"rev": )"([^"]+)"'
                 replacement = rf'\1"{new_rev}"'
-                
+
                 new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
                 if new_content != content:
                     content = new_content
                     updated = True
                     self.console.print(f"[dim]  Updated {repo_url} to {new_rev}[/dim]")
-            
+
             if updated:
                 config_path.write_text(content)
                 self.console.print("[green]✅[/green] Dynamic config versions updated")
-                
+
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/yellow] Failed to apply version updates: {e}")
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Failed to apply version updates: {e}"
+            )

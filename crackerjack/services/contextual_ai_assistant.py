@@ -485,17 +485,18 @@ class ContextualAIAssistant:
     def get_quick_help(self, query: str) -> str:
         query_lower = query.lower()
 
-        if "test" in query_lower:
-            return "Run tests with: python -m crackerjack -t\nFor AI-powered test fixes: python -m crackerjack --ai-agent -t"
+        # Check for more specific patterns first
+        if "coverage" in query_lower:
+            return "Check test coverage with: python -m crackerjack -t\nView HTML report: uv run coverage html"
+
+        if "security" in query_lower or "vulnerabilit" in query_lower:
+            return "Check security with: python -m crackerjack --check-dependencies\nRun security audit: uv run bandit -r ."
 
         if "lint" in query_lower or "format" in query_lower:
             return "Fix code style with: python -m crackerjack\nFor AI-powered fixes: python -m crackerjack --ai-agent"
 
-        if "security" in query_lower or "vulnerability" in query_lower:
-            return "Check security with: python -m crackerjack --check-dependencies\nRun security audit: uv run bandit -r ."
-
-        if "coverage" in query_lower:
-            return "Check test coverage with: python -m crackerjack -t\nView HTML report: uv run coverage html"
+        if "test" in query_lower:
+            return "Run tests with: python -m crackerjack -t\nFor AI-powered test fixes: python -m crackerjack --ai-agent -t"
 
         if "publish" in query_lower or "release" in query_lower:
             return "Publish to PyPI: python -m crackerjack -p patch\nBump version only: python -m crackerjack -b patch"

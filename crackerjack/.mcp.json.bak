@@ -75,10 +75,10 @@
     },
     "github": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github@latest"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN_USE_GHCLI": "true"
-      }
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ]
     },
     "obsidian": {
       "command": "npx",
@@ -179,7 +179,7 @@
       }
     },
     "sentry": {
-      "command": "npx",
+      "type": "http",
       "url": "https://mcp.sentry.dev/mcp"
     }
   }
