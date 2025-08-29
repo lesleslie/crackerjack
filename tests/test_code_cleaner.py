@@ -178,7 +178,6 @@ class TestCleaningErrorHandler:
         assert "100 → 80 bytes" in output
 
 
-
 class TestCodeCleaner:
     """Test CodeCleaner class."""
 

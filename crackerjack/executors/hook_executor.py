@@ -50,9 +50,10 @@ class HookExecutionResult:
 
 
 class HookExecutor:
-    def __init__(self, console: Console, pkg_path: Path) -> None:
+    def __init__(self, console: Console, pkg_path: Path, verbose: bool = False) -> None:
         self.console = console
         self.pkg_path = pkg_path
+        self.verbose = verbose
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         start_time = time.time()
@@ -155,9 +156,17 @@ class HookExecutor:
                 text=True,
                 timeout=hook.timeout,
                 env=clean_env,
+                capture_output=True,
             )
 
             duration = time.time() - start_time
+
+            # Only display raw output in verbose mode, and only for failed hooks
+            if result.returncode != 0 and self.verbose:
+                if result.stdout:
+                    self.console.print(result.stdout)
+                if result.stderr:
+                    self.console.print(result.stderr)
 
             return HookResult(
                 id=hook.name,

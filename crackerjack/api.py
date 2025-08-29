@@ -55,6 +55,7 @@ class CrackerjackAPI:
         self.orchestrator = WorkflowOrchestrator(
             console=self.console,
             pkg_path=self.project_path,
+            verbose=self.verbose,
         )
 
         self.container = self.orchestrator.container

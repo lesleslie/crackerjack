@@ -329,33 +329,74 @@ class TestManagementImpl:
         activity_tracker: dict[str, float],
     ) -> t.Callable[[], None]:
         def read_output() -> None:
-            last_refresh = 0
-            last_update_content = ""
+            refresh_state = {"last_refresh": 0, "last_content": ""}
+            
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
                     if not line:
                         break
-                    line = line.rstrip()
-                    if line.strip():
-                        stdout_lines.append(line)
-                        self._parse_test_line(line, progress)
-                        activity_tracker["last_time"] = time.time()
-
-                        # Update display with longer intervals and content change detection
-                        current_time = time.time()
-                        refresh_interval = 1.0 if progress.is_collecting else 0.25
-                        current_content = f"{progress.collection_status}:{progress.files_discovered}:{progress.total_tests}"
-
-                        if (
-                            current_time - last_refresh > refresh_interval
-                            or current_content != last_update_content
-                        ):
-                            live.update(progress.format_progress())
-                            live.refresh()
-                            last_refresh = current_time
-                            last_update_content = current_content
+                    
+                    processed_line = line.rstrip()
+                    if processed_line.strip():
+                        self._process_test_output_line(
+                            processed_line, stdout_lines, progress, activity_tracker
+                        )
+                        self._update_display_if_needed(
+                            progress, live, refresh_state
+                        )
 
         return read_output
+
+    def _process_test_output_line(
+        self,
+        line: str,
+        stdout_lines: list[str],
+        progress: TestProgress,
+        activity_tracker: dict[str, float],
+    ) -> None:
+        """Process a single line of test output."""
+        stdout_lines.append(line)
+        self._parse_test_line(line, progress)
+        activity_tracker["last_time"] = time.time()
+
+    def _update_display_if_needed(
+        self,
+        progress: TestProgress,
+        live: Live,
+        refresh_state: dict[str, t.Any],
+    ) -> None:
+        """Update display if refresh criteria are met."""
+        current_time = time.time()
+        refresh_interval = self._get_refresh_interval(progress)
+        current_content = self._get_current_content_signature(progress)
+
+        if self._should_refresh_display(
+            current_time, refresh_state, refresh_interval, current_content
+        ):
+            live.update(progress.format_progress())
+            live.refresh()
+            refresh_state["last_refresh"] = current_time
+            refresh_state["last_content"] = current_content
+
+    def _get_refresh_interval(self, progress: TestProgress) -> float:
+        """Get appropriate refresh interval based on test phase."""
+        return 1.0 if progress.is_collecting else 0.25
+
+    def _get_current_content_signature(self, progress: TestProgress) -> str:
+        """Get a signature of current progress content for change detection."""
+        return f"{progress.collection_status}:{progress.files_discovered}:{progress.total_tests}"
+
+    def _should_refresh_display(
+        self,
+        current_time: float,
+        refresh_state: dict[str, t.Any],
+        refresh_interval: float,
+        current_content: str,
+    ) -> bool:
+        """Determine if display should be refreshed."""
+        time_elapsed = current_time - refresh_state["last_refresh"] > refresh_interval
+        content_changed = current_content != refresh_state["last_content"]
+        return time_elapsed or content_changed
 
     def _create_stderr_reader(
         self,

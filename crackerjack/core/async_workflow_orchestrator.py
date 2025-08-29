@@ -172,46 +172,71 @@ class AsyncWorkflowPipeline:
             return False
 
         # Iterative quality improvement with AI fixing
-        for iteration in range(1, max_iterations + 1):
-            self.console.print(f"\n🔄 Iteration {iteration}/{max_iterations}")
-
-            # Step 1: Fast hooks with retry logic
-            fast_hooks_success = await self._run_fast_hooks_with_retry_async(options)
-
-            # Step 2: Collect ALL test failures (don't stop on first)
-            test_issues = await self._collect_test_issues_async(options)
-
-            # Step 3: Collect ALL comprehensive hook issues (don't stop on first)
-            hook_issues = await self._collect_comprehensive_hook_issues_async(options)
-
-            # If everything passes, we're done
-            if fast_hooks_success and not test_issues and not hook_issues:
-                self.console.print("✅ All quality checks passed!")
-                break
-
-            # Step 4: Apply AI fixes for ALL collected issues
-            if test_issues or hook_issues:
-                fix_success = await self._apply_ai_fixes_async(
-                    options, test_issues, hook_issues, iteration
-                )
-                if not fix_success:
-                    self.console.print(f"❌ AI fixing failed in iteration {iteration}")
-                    self.session.fail_task(
-                        "workflow", f"AI fixing failed in iteration {iteration}"
-                    )
-                    return False
-
-        else:
-            # If we exhausted all iterations without success
-            self.console.print(
-                f"❌ Failed to achieve code quality after {max_iterations} iterations"
-            )
-            self.session.fail_task(
-                "workflow", f"Failed after {max_iterations} iterations"
-            )
+        iteration_success = await self._run_iterative_quality_improvement(
+            options, max_iterations
+        )
+        if not iteration_success:
             return False
 
         # Run remaining phases
+        return await self._run_final_workflow_phases(options)
+
+    async def _run_iterative_quality_improvement(
+        self, options: OptionsProtocol, max_iterations: int
+    ) -> bool:
+        """Run iterative quality improvement until all checks pass."""
+        for iteration in range(1, max_iterations + 1):
+            self.console.print(f"\n🔄 Iteration {iteration}/{max_iterations}")
+
+            iteration_result = await self._execute_single_iteration(options, iteration)
+            
+            if iteration_result == "success":
+                self.console.print("✅ All quality checks passed!")
+                return True
+            elif iteration_result == "failed":
+                return False
+            # Continue to next iteration if result == "continue"
+
+        # If we exhausted all iterations without success
+        self.console.print(
+            f"❌ Failed to achieve code quality after {max_iterations} iterations"
+        )
+        self.session.fail_task(
+            "workflow", f"Failed after {max_iterations} iterations"
+        )
+        return False
+
+    async def _execute_single_iteration(
+        self, options: OptionsProtocol, iteration: int
+    ) -> str:
+        """Execute a single AI agent iteration. Returns 'success', 'failed', or 'continue'."""
+        # Step 1: Fast hooks with retry logic
+        fast_hooks_success = await self._run_fast_hooks_with_retry_async(options)
+
+        # Step 2 & 3: Collect ALL issues
+        test_issues = await self._collect_test_issues_async(options)
+        hook_issues = await self._collect_comprehensive_hook_issues_async(options)
+
+        # If everything passes, we're done
+        if fast_hooks_success and not test_issues and not hook_issues:
+            return "success"
+
+        # Step 4: Apply AI fixes for ALL collected issues
+        if test_issues or hook_issues:
+            fix_success = await self._apply_ai_fixes_async(
+                options, test_issues, hook_issues, iteration
+            )
+            if not fix_success:
+                self.console.print(f"❌ AI fixing failed in iteration {iteration}")
+                self.session.fail_task(
+                    "workflow", f"AI fixing failed in iteration {iteration}"
+                )
+                return "failed"
+
+        return "continue"
+
+    async def _run_final_workflow_phases(self, options: OptionsProtocol) -> bool:
+        """Run the final publishing and commit phases."""
         if not self.phases.run_publishing_phase(options):
             self.session.fail_task("workflow", "Publishing failed")
             return False

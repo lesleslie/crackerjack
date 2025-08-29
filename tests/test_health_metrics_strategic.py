@@ -1062,7 +1062,7 @@ class TestConfigurationAssessment:
 
         score, checks = health_service._assess_tool_configs(project_data)
 
-        assert score == 0.15  # 3 tools * 0.05 each
+        assert abs(score - 0.15) < 1e-10  # 3 tools * 0.05 each
         assert checks == 3
 
     def test_assess_precommit_config_exists(self, health_service):

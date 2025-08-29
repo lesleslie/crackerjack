@@ -10,10 +10,10 @@ from crackerjack.models.task import HookResult
 
 
 class HookManagerImpl:
-    def __init__(self, console: Console, pkg_path: Path) -> None:
+    def __init__(self, console: Console, pkg_path: Path, verbose: bool = False) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        self.executor = HookExecutor(console, pkg_path)
+        self.executor = HookExecutor(console, pkg_path, verbose)
         self.config_loader = HookConfigLoader()
         self._config_path: Path | None = None
 

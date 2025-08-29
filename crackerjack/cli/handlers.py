@@ -183,6 +183,7 @@ def handle_standard_mode(
                 console=console,
                 pkg_path=pkg_path,
                 web_job_id=job_id,
+                verbose=options.verbose,
             )
             success = asyncio.run(orchestrator.run_complete_workflow(options))
 

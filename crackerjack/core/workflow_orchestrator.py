@@ -509,11 +509,13 @@ class WorkflowOrchestrator:
         pkg_path: Path | None = None,
         dry_run: bool = False,
         web_job_id: str | None = None,
+        verbose: bool = False,
     ) -> None:
         self.console = console or Console(force_terminal=True)
         self.pkg_path = pkg_path or Path.cwd()
         self.dry_run = dry_run
         self.web_job_id = web_job_id
+        self.verbose = verbose
 
         from crackerjack.models.protocols import (
             FileSystemInterface,
@@ -529,6 +531,7 @@ class WorkflowOrchestrator:
             console=self.console,
             pkg_path=self.pkg_path,
             dry_run=self.dry_run,
+            verbose=self.verbose,
         )
 
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)

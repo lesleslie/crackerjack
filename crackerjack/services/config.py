@@ -219,29 +219,13 @@ class ConfigurationService:
 
         try:
             self.console.print("[cyan]🔄[/cyan] Running pre-commit autoupdate...")
-            result = subprocess.run(
-                ["uv", "run", "pre-commit", "autoupdate"],
-                cwd=self.pkg_path,
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-
+            result = self._execute_precommit_autoupdate()
+            
             if result.returncode == 0:
-                # Show updated versions if any
-                if (
-                    "updating" in result.stdout.lower()
-                    or "updated" in result.stdout.lower()
-                ):
-                    for line in result.stdout.split("\n"):
-                        if "updating" in line.lower() or "->" in line:
-                            self.console.print(f"[dim]  {line.strip()}[/dim]")
+                self._display_autoupdate_results(result.stdout)
                 return True
             else:
-                if result.stderr:
-                    self.console.print(
-                        f"[yellow]Pre-commit autoupdate stderr:[/yellow] {result.stderr}"
-                    )
+                self._handle_autoupdate_error(result.stderr)
                 return False
 
         except subprocess.TimeoutExpired:
@@ -252,6 +236,41 @@ class ConfigurationService:
                 f"[red]❌[/red] Failed to run pre-commit autoupdate: {e}"
             )
             return False
+
+    def _execute_precommit_autoupdate(self) -> "subprocess.CompletedProcess[str]":
+        """Execute the pre-commit autoupdate command."""
+        import subprocess
+        
+        return subprocess.run(
+            ["uv", "run", "pre-commit", "autoupdate"],
+            cwd=self.pkg_path,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+
+    def _display_autoupdate_results(self, stdout: str) -> None:
+        """Display updated versions if any."""
+        if self._has_updates(stdout):
+            for line in stdout.split("\n"):
+                if self._is_update_line(line):
+                    self.console.print(f"[dim]  {line.strip()}[/dim]")
+
+    def _has_updates(self, stdout: str) -> bool:
+        """Check if the output contains update information."""
+        stdout_lower = stdout.lower()
+        return "updating" in stdout_lower or "updated" in stdout_lower
+
+    def _is_update_line(self, line: str) -> bool:
+        """Check if a line contains update information."""
+        return "updating" in line.lower() or "->" in line
+
+    def _handle_autoupdate_error(self, stderr: str) -> None:
+        """Handle pre-commit autoupdate error output."""
+        if stderr:
+            self.console.print(
+                f"[yellow]Pre-commit autoupdate stderr:[/yellow] {stderr}"
+            )
 
     def _update_dynamic_config_versions(self) -> None:
         """Update hardcoded versions in dynamic_config.py based on .pre-commit-config.yaml."""

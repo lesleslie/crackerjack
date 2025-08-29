@@ -41,6 +41,7 @@ class DependencyContainer:
         console: Console | None = None,
         pkg_path: Path | None = None,
         dry_run: bool = False,
+        verbose: bool = False,
     ) -> "DependencyContainer":
         if console is None:
             console = Console(force_terminal=True)
@@ -63,7 +64,7 @@ class DependencyContainer:
 
         self.register_transient(
             HookManager,
-            lambda: HookManagerImpl(console=console, pkg_path=pkg_path),
+            lambda: HookManagerImpl(console=console, pkg_path=pkg_path, verbose=verbose),
         )
 
         from crackerjack.managers.test_manager import TestManagementImpl
@@ -91,9 +92,11 @@ def create_container(
     console: Console | None = None,
     pkg_path: Path | None = None,
     dry_run: bool = False,
+    verbose: bool = False,
 ) -> DependencyContainer:
     return DependencyContainer().create_default_container(
         console=console,
         pkg_path=pkg_path,
         dry_run=dry_run,
+        verbose=verbose,
     )
