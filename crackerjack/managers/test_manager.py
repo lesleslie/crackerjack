@@ -330,20 +330,18 @@ class TestManagementImpl:
     ) -> t.Callable[[], None]:
         def read_output() -> None:
             refresh_state = {"last_refresh": 0, "last_content": ""}
-            
+
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
                     if not line:
                         break
-                    
+
                     processed_line = line.rstrip()
                     if processed_line.strip():
                         self._process_test_output_line(
                             processed_line, stdout_lines, progress, activity_tracker
                         )
-                        self._update_display_if_needed(
-                            progress, live, refresh_state
-                        )
+                        self._update_display_if_needed(progress, live, refresh_state)
 
         return read_output
 
@@ -842,7 +840,6 @@ class TestManagementImpl:
 
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:
         """Handle test execution errors."""
-        time.time() - start_time
         self.console.print(f"[red]💥[/red] Test execution failed: {error}")
         return False
 
@@ -858,7 +855,7 @@ class TestManagementImpl:
         needs_verbose = (not is_ai_mode and not options.benchmark) or (
             is_ai_mode and self._progress_callback
         )
-        self._add_verbosity_options(cmd, options, force_verbose=needs_verbose)
+        self._add_verbosity_options(cmd, options, force_verbose=bool(needs_verbose))
         self._add_test_path(cmd)
 
         return cmd

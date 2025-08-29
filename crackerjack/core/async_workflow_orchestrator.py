@@ -189,7 +189,7 @@ class AsyncWorkflowPipeline:
             self.console.print(f"\n🔄 Iteration {iteration}/{max_iterations}")
 
             iteration_result = await self._execute_single_iteration(options, iteration)
-            
+
             if iteration_result == "success":
                 self.console.print("✅ All quality checks passed!")
                 return True
@@ -201,9 +201,7 @@ class AsyncWorkflowPipeline:
         self.console.print(
             f"❌ Failed to achieve code quality after {max_iterations} iterations"
         )
-        self.session.fail_task(
-            "workflow", f"Failed after {max_iterations} iterations"
-        )
+        self.session.fail_task("workflow", f"Failed after {max_iterations} iterations")
         return False
 
     async def _execute_single_iteration(

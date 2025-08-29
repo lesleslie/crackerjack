@@ -40,7 +40,7 @@ class TestHookManager:
     ) -> None:
         HookManagerImpl(console, pkg_path)
 
-        mock_executor_class.assert_called_once_with(console, pkg_path)
+        mock_executor_class.assert_called_once_with(console, pkg_path, False)
         mock_loader_class.assert_called_once()
 
     def test_get_hook_summary_empty(self, hook_manager) -> None:

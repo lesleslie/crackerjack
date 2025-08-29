@@ -64,7 +64,9 @@ class DependencyContainer:
 
         self.register_transient(
             HookManager,
-            lambda: HookManagerImpl(console=console, pkg_path=pkg_path, verbose=verbose),
+            lambda: HookManagerImpl(
+                console=console, pkg_path=pkg_path, verbose=verbose
+            ),
         )
 
         from crackerjack.managers.test_manager import TestManagementImpl

@@ -473,9 +473,9 @@ class AdvancedWorkflowOrchestrator:
             strategy_switches=strategy_switches,
             correlation_insights=correlation_data,
             total_execution_time_ms=total_time,
-            hooks_execution_time_ms=hooks_time,
-            tests_execution_time_ms=tests_time,
-            ai_analysis_time_ms=ai_time,
+            hooks_execution_time_ms=round(hooks_time * 1000),
+            tests_execution_time_ms=round(tests_time * 1000),
+            ai_analysis_time_ms=round(ai_time * 1000),
         )
 
         return success

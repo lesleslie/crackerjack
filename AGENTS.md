@@ -112,17 +112,17 @@ Iteration Cycle (Repeats until success or max 10 iterations):
 for iteration in range(1, max_iterations + 1):
     # Step 1: Fast hooks with retry logic
     fast_hooks_success = await self._run_fast_hooks_with_retry_async(options)
-    
+
     # Step 2: Collect ALL test issues (don't stop on first)
     test_issues = await self._collect_test_issues_async(options)
-    
-    # Step 3: Collect ALL hook issues (don't stop on first) 
+
+    # Step 3: Collect ALL hook issues (don't stop on first)
     hook_issues = await self._collect_comprehensive_hook_issues_async(options)
-    
+
     # Exit condition: everything passes
     if fast_hooks_success and not test_issues and not hook_issues:
         break
-        
+
     # Step 4: Apply AI fixes for ALL collected issues
     fix_success = await self._apply_ai_fixes_async(options, test_issues, hook_issues, iteration)
     if not fix_success:
@@ -181,7 +181,7 @@ Crackerjack provides comprehensive MCP (Model Context Protocol) integration for 
 ### 2. Progress Monitoring Integration
 
 **WebSocket-based real-time progress**:
-- **Server**: Automatically starts on `localhost:8675` 
+- **Server**: Automatically starts on `localhost:8675`
 - **Progress URL**: `ws://localhost:8675/ws/progress/{job_id}`
 - **Test Interface**: `http://localhost:8675/test`
 
@@ -271,7 +271,7 @@ if result.success:
 
 **What AI Agents Actually Fix**:
 - ✅ **Type Errors**: Adds missing type annotations, fixes type mismatches
-- ✅ **Security Issues**: Removes hardcoded paths, fixes vulnerabilities  
+- ✅ **Security Issues**: Removes hardcoded paths, fixes vulnerabilities
 - ✅ **Dead Code**: Removes unused imports, variables, functions
 - ✅ **Test Failures**: Fixes missing fixtures, import errors, assertions
 - ✅ **Code Quality**: Applies refactoring, reduces complexity
@@ -351,7 +351,7 @@ PYTEST_REPORT_FORMAT=json           # Structured test results
 
 ### 4. Respect the Philosophy
 - **Code minimalism**: Less code is better code
-- **Quality over quantity**: Fix root causes, not just symptoms  
+- **Quality over quantity**: Fix root causes, not just symptoms
 - **Autonomous operation**: Trust the AI agents to handle complex fixes
 
 ## Troubleshooting for AI Systems
@@ -403,7 +403,7 @@ PYTEST_REPORT_FORMAT=json           # Structured test results
 When adding new AI capabilities:
 
 1. **Follow the iteration protocol** - ensure fixes are applied between iterations
-2. **Add MCP tools** - use `@mcp.tool()` decorator with proper documentation  
+2. **Add MCP tools** - use `@mcp.tool()` decorator with proper documentation
 3. **Update slash commands** - add corresponding `@mcp.prompt()` for user access
 4. **Test with AI assistants** - validate with Claude, ChatGPT, and other LLMs
 5. **Document in AGENTS.md** - update this file with new capabilities

@@ -146,8 +146,6 @@ class HookExecutor:
         start_time = time.time()
 
         try:
-            self.console.print(f"\n[cyan]Running {hook.name}...[/cyan]")
-
             clean_env = self._get_clean_environment()
             result = subprocess.run(
                 hook.get_command(),
@@ -216,11 +214,19 @@ class HookExecutor:
 
     def _display_hook_result(self, result: HookResult) -> None:
         status_icon = "✅" if result.status == "passed" else "❌"
-        status_text = "PASSED" if result.status == "passed" else "FAILED"
 
-        self.console.print(
-            f"{status_icon} {result.name}: {status_text} ({result.duration:.1f}s)",
-        )
+        # Create dot-filled line like classic pre-commit format
+        max_width = 70  # Leave room for terminal margins
+
+        if len(result.name) > max_width:
+            # Truncate long names
+            line = result.name[: max_width - 3] + "..."
+        else:
+            # Fill with dots to reach max width
+            dots_needed = max_width - len(result.name)
+            line = result.name + ("." * dots_needed)
+
+        self.console.print(f"{line} {status_icon}")
 
     def _handle_retries(
         self,

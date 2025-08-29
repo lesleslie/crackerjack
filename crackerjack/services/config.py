@@ -220,7 +220,7 @@ class ConfigurationService:
         try:
             self.console.print("[cyan]🔄[/cyan] Running pre-commit autoupdate...")
             result = self._execute_precommit_autoupdate()
-            
+
             if result.returncode == 0:
                 self._display_autoupdate_results(result.stdout)
                 return True
@@ -240,7 +240,7 @@ class ConfigurationService:
     def _execute_precommit_autoupdate(self) -> "subprocess.CompletedProcess[str]":
         """Execute the pre-commit autoupdate command."""
         import subprocess
-        
+
         return subprocess.run(
             ["uv", "run", "pre-commit", "autoupdate"],
             cwd=self.pkg_path,
