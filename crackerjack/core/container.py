@@ -65,7 +65,7 @@ class DependencyContainer:
         self.register_transient(
             HookManager,
             lambda: HookManagerImpl(
-                console=console, pkg_path=pkg_path, verbose=verbose
+                console=console, pkg_path=pkg_path, verbose=verbose, quiet=True
             ),
         )
 

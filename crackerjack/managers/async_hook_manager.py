@@ -22,6 +22,7 @@ class AsyncHookManager:
             console,
             pkg_path,
             max_concurrent=max_concurrent,
+            quiet=True,
         )
         self.config_loader = HookConfigLoader()
 

@@ -50,10 +50,17 @@ class HookExecutionResult:
 
 
 class HookExecutor:
-    def __init__(self, console: Console, pkg_path: Path, verbose: bool = False) -> None:
+    def __init__(
+        self,
+        console: Console,
+        pkg_path: Path,
+        verbose: bool = False,
+        quiet: bool = False,
+    ) -> None:
         self.console = console
         self.pkg_path = pkg_path
         self.verbose = verbose
+        self.quiet = quiet
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         start_time = time.time()
@@ -71,7 +78,8 @@ class HookExecutor:
         total_duration = time.time() - start_time
         success = all(r.status == "passed" for r in results)
 
-        self._print_summary(strategy, results, success)
+        if not self.quiet:
+            self._print_summary(strategy, results, success)
 
         return HookExecutionResult(
             strategy_name=strategy.name,

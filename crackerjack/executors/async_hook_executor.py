@@ -57,11 +57,13 @@ class AsyncHookExecutor:
         pkg_path: Path,
         max_concurrent: int = 4,
         timeout: int = 300,
+        quiet: bool = False,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
         self.max_concurrent = max_concurrent
         self.timeout = timeout
+        self.quiet = quiet
         self.logger = get_logger("crackerjack.async_hook_executor")
 
         self._semaphore = asyncio.Semaphore(max_concurrent)
@@ -116,7 +118,8 @@ class AsyncHookExecutor:
                 errors=sum(1 for r in results if r.status in ("timeout", "error")),
             )
 
-            self._print_summary(strategy, results, success, performance_gain)
+            if not self.quiet:
+                self._print_summary(strategy, results, success, performance_gain)
 
             return AsyncHookExecutionResult(
                 strategy_name=strategy.name,
