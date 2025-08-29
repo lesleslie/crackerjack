@@ -207,10 +207,10 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 
 #### Coverage Ratchet Philosophy
 
-🎯 **Target: 100% Coverage** - Not an arbitrary number, but true comprehensive testing  
-📈 **Continuous Improvement** - Each test run can only maintain or improve coverage  
-🏆 **Milestone System** - Celebrate achievements at 15%, 25%, 50%, 75%, 90%, and 100%  
-🚫 **No Regression** - Once you achieve a coverage level, you can't go backward  
+🎯 **Target: 100% Coverage** - Not an arbitrary number, but true comprehensive testing
+📈 **Continuous Improvement** - Each test run can only maintain or improve coverage
+🏆 **Milestone System** - Celebrate achievements at 15%, 25%, 50%, 75%, 90%, and 100%
+🚫 **No Regression** - Once you achieve a coverage level, you can't go backward
 
 ```bash
 # Show coverage progress

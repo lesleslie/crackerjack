@@ -181,15 +181,17 @@ class TestManagementImpl:
     ) -> None:
         """Set callback for AI mode structured progress updates."""
         self._progress_callback = callback
-        
+
     def set_coverage_ratchet_enabled(self, enabled: bool) -> None:
         """Enable or disable the coverage ratchet system."""
         self.coverage_ratchet_enabled = enabled
         if enabled:
-            self.console.print("[cyan]📊[/cyan] Coverage ratchet enabled - targeting 100% coverage")
+            self.console.print(
+                "[cyan]📊[/cyan] Coverage ratchet enabled - targeting 100% coverage"
+            )
         else:
             self.console.print("[yellow]⚠️[/yellow] Coverage ratchet disabled")
-            
+
     def get_coverage_ratchet_status(self) -> dict[str, t.Any]:
         """Get comprehensive coverage ratchet status."""
         return self.coverage_ratchet.get_status_report()
@@ -930,34 +932,41 @@ class TestManagementImpl:
     ) -> bool:
         output = result.stdout + result.stderr
         success = result.returncode == 0
-        
+
         # Process coverage ratchet if enabled and tests passed
         if self.coverage_ratchet_enabled and success:
             coverage_data = self.get_coverage()
             if coverage_data:
                 current_coverage = coverage_data.get("total_coverage", 0)
                 ratchet_result = self.coverage_ratchet.update_coverage(current_coverage)
-                
+
                 if ratchet_result["status"] == "improved":
                     self.console.print(f"[green]🎉 {ratchet_result['message']}[/green]")
                     if "milestones" in ratchet_result and ratchet_result["milestones"]:
-                        self.coverage_ratchet.display_milestone_celebration(ratchet_result["milestones"])
-                    if "next_milestone" in ratchet_result and ratchet_result["next_milestone"]:
+                        self.coverage_ratchet.display_milestone_celebration(
+                            ratchet_result["milestones"]
+                        )
+                    if (
+                        "next_milestone" in ratchet_result
+                        and ratchet_result["next_milestone"]
+                    ):
                         next_milestone = ratchet_result["next_milestone"]
                         points_needed = ratchet_result.get("points_to_next", 0)
-                        self.console.print(f"[cyan]🎯 Next milestone: {next_milestone:.0f}% (+{points_needed:.2f}% needed)[/cyan]")
+                        self.console.print(
+                            f"[cyan]🎯 Next milestone: {next_milestone:.0f}% (+{points_needed:.2f}% needed)[/cyan]"
+                        )
                 elif ratchet_result["status"] == "regression":
                     self.console.print(f"[red]📉 {ratchet_result['message']}[/red]")
                     return False  # Fail the test run on coverage regression
                 elif ratchet_result["status"] == "maintained":
                     self.console.print(f"[cyan]📊 {ratchet_result['message']}[/cyan]")
-                    
+
                 # Show progress visualization
                 progress_viz = self.coverage_ratchet.get_progress_visualization()
-                for line in progress_viz.split('\n'):
+                for line in progress_viz.split("\n"):
                     if line.strip():
                         self.console.print(f"[dim]{line}[/dim]")
-        
+
         if success:
             return self._handle_test_success(output, duration)
         return self._handle_test_failure(output, duration)

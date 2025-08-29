@@ -168,6 +168,9 @@ def main(
     dev: bool = CLI_OPTIONS["dev"],
     dashboard: bool = CLI_OPTIONS["dashboard"],
     max_iterations: int = CLI_OPTIONS["max_iterations"],
+    coverage_status: bool = CLI_OPTIONS["coverage_status"],
+    coverage_goal: float | None = CLI_OPTIONS["coverage_goal"],
+    no_coverage_ratchet: bool = CLI_OPTIONS["no_coverage_ratchet"],
 ) -> None:
     options = create_options(
         commit,
@@ -201,6 +204,9 @@ def main(
         dev,
         dashboard,
         max_iterations,
+        coverage_status,
+        coverage_goal,
+        no_coverage_ratchet,
     )
 
     if ai_debug:

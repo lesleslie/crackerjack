@@ -113,7 +113,7 @@ ignore-words-list = "crate,uptodate,nd,nin"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 timeout = 300
-addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --cov-fail-under=10 --strict-markers --strict-config -ra --tb=short"
+addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --cov-fail-under=16 --strict-markers --strict-config -ra --tb=short"
 testpaths = [
     "tests",
 ]
