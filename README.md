@@ -1,7 +1,7 @@
 # Crackerjack: Opinionated Python Project Management
 
 [![Python: 3.13+](https://img.shields.io/badge/python-3.13%2B-green)](https://www.python.org/downloads/)
-[![pytest](https://img.shields.io/badge/pytest-42%25%20coverage-blue)](https://pytest.org)
+[![pytest](https://img.shields.io/badge/pytest-coverage%20ratchet-blue)](https://pytest.org)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
@@ -194,13 +194,37 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 - **Interactive Checks:** Supports interactive pre-commit hooks (like `refurb`, `bandit`, and `pyright`) to fix issues in real-time
 - **Static Type Checking:** Enforces type safety with Pyright integration
 
-### Testing & Deployment
+### Testing & Coverage Ratchet System
 
 - **Built-in Testing:** Automatically runs tests using `pytest` with intelligent parallelization
-- **Coverage Reports:** Generates comprehensive test coverage analysis
+- **Coverage Ratchet:** Revolutionary coverage system that targets 100% - coverage can only increase, never decrease
+- **Milestone Celebrations:** Progress tracking with milestone achievements (15%, 20%, 25%... → 100%)
+- **No Arbitrary Limits:** Replaced traditional hard limits with continuous improvement toward perfection
+- **Visual Progress:** Rich terminal displays showing journey to 100% coverage
 - **Benchmark Testing:** Performance regression detection and monitoring
 - **Easy Version Bumping:** Provides commands to bump the project version (patch, minor, or major)
 - **Simplified Publishing:** Automates publishing to PyPI via UV with enhanced authentication
+
+#### Coverage Ratchet Philosophy
+
+🎯 **Target: 100% Coverage** - Not an arbitrary number, but true comprehensive testing  
+📈 **Continuous Improvement** - Each test run can only maintain or improve coverage  
+🏆 **Milestone System** - Celebrate achievements at 15%, 25%, 50%, 75%, 90%, and 100%  
+🚫 **No Regression** - Once you achieve a coverage level, you can't go backward  
+
+```bash
+# Show coverage progress
+python -m crackerjack --coverage-status
+
+# Run tests with ratchet system
+python -m crackerjack -t
+
+# Example output:
+# 🎉 Coverage improved from 10.11% to 15.50%!
+# 🏆 Milestone achieved: 15% coverage!
+# 📈 Progress: [███░░░░░░░░░░░░░░░░░] 15.50% → 100%
+# 🎯 Next milestone: 20% (+4.50% needed)
+```
 
 ### Git Integration
 

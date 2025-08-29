@@ -116,15 +116,19 @@ class ContextualAIAssistant:
                     confidence=0.9,
                 ),
             )
-        elif context.test_coverage < 42:
+        elif context.test_coverage < 100:
+            # Calculate next milestone
+            milestones = [15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]
+            next_milestone = next((m for m in milestones if m > context.test_coverage), 100)
+            
             recommendations.append(
                 AIRecommendation(
                     category="testing",
                     priority="medium",
-                    title="Improve Test Coverage",
-                    description=f"Current coverage is {context.test_coverage:.1f}%, below the 42% minimum requirement.",
+                    title="Progress Toward 100% Coverage",
+                    description=f"Current coverage: {context.test_coverage:.1f}%. Next milestone: {next_milestone}% on the journey to 100%.",
                     action_command="python -m crackerjack -t",
-                    reasoning="Low test coverage indicates untested code paths that may fail in production",
+                    reasoning="Coverage ratchet system prevents regression and targets 100% coverage incrementally",
                     confidence=0.85,
                 ),
             )

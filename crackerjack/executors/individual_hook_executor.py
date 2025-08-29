@@ -280,8 +280,8 @@ class HookOutputParser:
                 )
 
     def _parse_generic_output(self, output_lines: list[str]) -> dict[str, t.Any]:
-        errors = []
-        warnings = []
+        errors: list[dict[str, str]] = []
+        warnings: list[dict[str, str]] = []
 
         error_keywords = ["error", "failed", "violation", "issue"]
         warning_keywords = ["warning", "caution", "note"]
@@ -618,7 +618,7 @@ class IndividualHookExecutor:
         status_icon = "✅" if result.status == "passed" else "❌"
         duration_str = f"{progress.duration:.1f}s" if progress.duration else "0.0s"
 
-        summary_parts = []
+        summary_parts: list[str] = []
         if progress.errors_found > 0:
             summary_parts.append(f"{progress.errors_found} errors")
         if progress.warnings_found > 0:

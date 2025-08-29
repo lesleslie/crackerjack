@@ -501,11 +501,7 @@ class AdvancedWorkflowOrchestrator:
         ai_fixes = []
         if not (
             all(r.status == "passed" for r in hook_results)
-            and (
-                test_results.get("success", False)
-                if isinstance(test_results, dict)
-                else False
-            )
+            and test_results.get("success", False)
         ):
             ai_start = time.time()
             ai_fixes = await self._execute_ai_phase(plan, hook_results, test_results)
@@ -641,8 +637,8 @@ class AdvancedWorkflowOrchestrator:
                 )
                 return second_attempt
 
-        # Should never reach here, but return last results as fallback
-        return second_attempt
+        # Should never reach here, but return empty results as fallback
+        return []
 
     async def _execute_fast_hooks_attempt(
         self,

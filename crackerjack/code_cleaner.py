@@ -423,7 +423,7 @@ class CodeCleaner(BaseModel):
                 return code
 
             lines = code.split("\n")
-            lines_to_remove = set()
+            lines_to_remove: set[int] = set()
 
             for node in docstring_nodes:
                 # Most AST nodes have lineno and end_lineno attributes
@@ -573,7 +573,7 @@ class CodeCleaner(BaseModel):
                 import re
 
                 lines = code.split("\n")
-                cleaned_lines = []
+                cleaned_lines: list[str] = []
 
                 empty_line_count = 0
 
@@ -616,7 +616,7 @@ class CodeCleaner(BaseModel):
                 import re
 
                 lines = code.split("\n")
-                formatted_lines = []
+                formatted_lines: list[str] = []
 
                 for line in lines:
                     if line.strip():

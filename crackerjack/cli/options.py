@@ -64,6 +64,9 @@ class Options(BaseModel):
     max_iterations: int = 10
     enterprise_batch: str | None = None
     monitor_dashboard: str | None = None
+    coverage_status: bool = False
+    coverage_goal: float | None = None
+    no_coverage_ratchet: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -306,6 +309,21 @@ CLI_OPTIONS = {
         "--orchestration-ai-mode",
         help="AI coordination mode: single-agent, multi-agent, coordinator (default: single-agent).",
     ),
+    "coverage_status": typer.Option(
+        False,
+        "--coverage-status",
+        help="Show current coverage ratchet status and progress toward 100%.",
+    ),
+    "coverage_goal": typer.Option(
+        None,
+        "--coverage-goal",
+        help="Set explicit coverage target for this session (e.g., 15.0).",
+    ),
+    "no_coverage_ratchet": typer.Option(
+        False,
+        "--no-coverage-ratchet",
+        help="Disable coverage ratchet system temporarily (for experiments).",
+    ),
 }
 
 
@@ -341,6 +359,9 @@ def create_options(
     dev: bool,
     dashboard: bool,
     max_iterations: int,
+    coverage_status: bool,
+    coverage_goal: float | None,
+    no_coverage_ratchet: bool,
 ) -> Options:
     return Options(
         commit=commit,
@@ -374,4 +395,7 @@ def create_options(
         dev=dev,
         dashboard=dashboard,
         max_iterations=max_iterations,
+        coverage_status=coverage_status,
+        coverage_goal=coverage_goal,
+        no_coverage_ratchet=no_coverage_ratchet,
     )
