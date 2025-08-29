@@ -431,10 +431,9 @@ class CodeCleaner(BaseModel):
                 end_line = getattr(node, "end_lineno", start_line + 1)
                 lines_to_remove.update(range(start_line, end_line))
 
-            result_lines = []
-            for i, line in enumerate(lines, 1):
-                if i not in lines_to_remove:
-                    result_lines.append(line)
+            result_lines = [
+                line for i, line in enumerate(lines, 1) if i not in lines_to_remove
+            ]
 
             result = "\n".join(result_lines)
             return self._regex_fallback_removal(result)

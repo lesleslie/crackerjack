@@ -254,6 +254,22 @@ class AdvancedWorkflowOrchestrator:
         )
         self.test_streamer.set_progress_callback(self._update_test_suite_progress)
 
+    def _configure_verbose_mode(self, options: OptionsProtocol) -> None:
+        """Configure hook output verbosity based on user options."""
+        # Enable verbose output if explicitly requested, otherwise use quiet mode
+        verbose_mode = getattr(options, "verbose", False)
+        
+        # Don't override MCP mode detection - only configure if not already in MCP mode
+        if not hasattr(self.console.file, "getvalue"):
+            # Set quiet mode (suppress realtime output) unless verbose mode is enabled
+            quiet_mode = not verbose_mode
+            self.individual_executor.set_mcp_mode(quiet_mode)
+            
+            if verbose_mode:
+                self.console.print(
+                    "[dim]🔧 Verbose mode enabled - showing detailed hook output[/dim]",
+                )
+
     def _initialize_multi_agent_system(self) -> None:
         self.console.print(
             "[bold cyan]🤖 Initializing Multi-Agent AI System[/bold cyan]",
@@ -363,6 +379,9 @@ class AdvancedWorkflowOrchestrator:
         options: OptionsProtocol,
         max_iterations: int = 10,
     ) -> bool:
+        # Configure verbose mode before starting workflow
+        self._configure_verbose_mode(options)
+        
         workflow_start_time = time.time()
         job_id = (
             getattr(self.session, "job_id", None) or f"orchestration_{int(time.time())}"
