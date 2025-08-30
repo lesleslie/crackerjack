@@ -71,12 +71,6 @@ FAST_HOOKS = [
         command=["pre-commit", "run", "check-added-large-files", "--all-files"],
     ),
     HookDefinition(
-        name="pyproject-fmt",
-        command=["pre-commit", "run", "pyproject-fmt", "--all-files"],
-        is_formatting=True,
-        retry_on_failure=True,
-    ),
-    HookDefinition(
         name="uv-lock",
         command=["pre-commit", "run", "uv-lock", "--all-files"],
     ),

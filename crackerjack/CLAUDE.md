@@ -19,6 +19,41 @@ Crackerjack is an opinionated Python project management tool that unifies UV, Ru
 
 **Key Dependencies**: Python 3.13+, UV package manager, pre-commit hooks, pytest
 
+## Recommended Claude Code Agents
+
+For optimal crackerjack development experience, use these specialized agents:
+
+### **Primary Agents (Use for all crackerjack development)**
+
+- **🏗️ crackerjack-architect**: Expert in crackerjack's modular architecture, sub-agent orchestration, and Python project management patterns. **Use PROACTIVELY** for all crackerjack feature development, architectural decisions, and system integration.
+
+- **🧪 crackerjack-test-specialist**: Advanced testing specialist for crackerjack's complex testing scenarios, fixtures, and coverage optimization. Use for test creation, debugging test failures, and coverage improvements.
+
+### **Task-Specific Agents**
+
+- **🐍 python-pro**: Modern Python development with type hints, async/await patterns, and clean architecture
+- **🧪 pytest-hypothesis-specialist**: Advanced testing patterns, property-based testing, and test optimization  
+- **🏗️ backend-architect**: System design, API architecture, and service integration patterns
+- **🔒 security-auditor**: Security analysis, vulnerability detection, and secure coding practices
+
+### **Agent Usage Patterns**
+
+```bash
+# Start development with architecture planning
+Task tool with subagent_type="crackerjack-architect" for feature planning
+
+# Implement with Python best practices  
+Task tool with subagent_type="python-pro" for code implementation
+
+# Add comprehensive testing
+Task tool with subagent_type="crackerjack-test-specialist" for test development
+
+# Security review before completion
+Task tool with subagent_type="security-auditor" for security analysis
+```
+
+**💡 Pro Tip**: The crackerjack-architect agent automatically ensures code follows crackerjack patterns from the start, eliminating the need for retrofitting and quality fixes.
+
 ## Core Development Commands
 
 ### Primary Workflows

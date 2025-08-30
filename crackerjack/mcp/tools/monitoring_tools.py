@@ -6,6 +6,57 @@ from contextlib import suppress
 from crackerjack.mcp.context import get_context
 
 
+def _suggest_agent_for_context(state_manager) -> dict[str, t.Any]:
+    """Suggest appropriate agents based on current development context."""
+    suggestions = {
+        "recommended_agent": None,
+        "reason": "",
+        "usage": "",
+        "priority": "MEDIUM"
+    }
+    
+    # Check for errors or failures that need specific agents
+    with suppress(Exception):
+        recent_errors = getattr(state_manager, "recent_errors", [])
+        stage_statuses = _get_stage_status_dict(state_manager)
+        
+        # Test failures suggest test specialist
+        if (stage_statuses.get("tests") == "failed" or 
+            any("test" in str(error).lower() for error in recent_errors)):
+            suggestions.update({
+                "recommended_agent": "crackerjack-test-specialist",
+                "reason": "Test failures detected - specialist needed for debugging and fixes",
+                "usage": "Task tool with subagent_type=\"crackerjack-test-specialist\"",
+                "priority": "HIGH"
+            })
+        # Security issues suggest security auditor
+        elif any("security" in str(error).lower() or "bandit" in str(error).lower() for error in recent_errors):
+            suggestions.update({
+                "recommended_agent": "security-auditor", 
+                "reason": "Security issues detected - immediate audit required",
+                "usage": "Task tool with subagent_type=\"security-auditor\"",
+                "priority": "HIGH"  
+            })
+        # Complexity issues suggest architect
+        elif any("complex" in str(error).lower() for error in recent_errors):
+            suggestions.update({
+                "recommended_agent": "crackerjack-architect",
+                "reason": "Complexity issues detected - architectural review needed", 
+                "usage": "Task tool with subagent_type=\"crackerjack-architect\"",
+                "priority": "HIGH"
+            })
+        # Default recommendation for Python projects
+        else:
+            suggestions.update({
+                "recommended_agent": "crackerjack-architect",
+                "reason": "Python project - ensure crackerjack compliance from the start",
+                "usage": "Task tool with subagent_type=\"crackerjack-architect\"", 
+                "priority": "MEDIUM"
+            })
+    
+    return suggestions
+
+
 def _create_error_response(message: str, success: bool = False) -> str:
     """Utility function to create standardized error responses."""
     import json
@@ -176,6 +227,10 @@ async def _get_comprehensive_status() -> dict[str, t.Any]:
         # Add state manager stats
         state_manager = getattr(context, "state_manager", None)
         _add_state_manager_stats(status["server_stats"], state_manager)
+
+        # Add agent suggestions based on current context
+        if state_manager:
+            status["agent_suggestions"] = _suggest_agent_for_context(state_manager)
 
         return status
 

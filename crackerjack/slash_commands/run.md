@@ -28,6 +28,22 @@ This slash command runs Crackerjack with AI agent mode for autonomous code quali
 - `--test`: Run tests with comprehensive test coverage
 - `--verbose`: Show detailed AI decision-making and execution details
 
+## 💡 Agent Recommendation
+
+**For optimal results, use the `crackerjack-architect` agent alongside `/crackerjack:run`:**
+
+```bash
+# 1. Plan with crackerjack-architect first
+Task tool with subagent_type="crackerjack-architect" for feature planning
+
+# 2. Run crackerjack for quality enforcement
+/crackerjack:run
+
+# 3. Use crackerjack-architect for any remaining issues
+```
+
+**Why?** The crackerjack-architect agent ensures code follows crackerjack patterns from the start, reducing the number of iterations needed for `/crackerjack:run` to achieve full compliance.
+
 ## What It Does
 
 **Iterative AI-Powered Auto-Fixing Process (up to 10 iterations):**
