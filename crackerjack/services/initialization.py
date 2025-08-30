@@ -632,10 +632,10 @@ class InitializationService:
         if isinstance(addopts, str):
             original_addopts = addopts
             # Remove --cov-fail-under=N pattern
-            addopts = re.sub(r'--cov-fail-under=\d+\.?\d*\s*', '', addopts).strip()
+            addopts = re.sub(r"--cov-fail-under=\d+\.?\d*\s*", "", addopts).strip()
             # Clean up extra spaces
-            addopts = ' '.join(addopts.split())
-            
+            addopts = " ".join(addopts.split())
+
             if original_addopts != addopts:
                 target_coverage["addopts"] = addopts
                 self.console.print(
@@ -643,7 +643,9 @@ class InitializationService:
                 )
 
         # Remove fail_under from coverage.report section
-        coverage_report = target_config.get("tool", {}).get("coverage", {}).get("report", {})
+        coverage_report = (
+            target_config.get("tool", {}).get("coverage", {}).get("report", {})
+        )
         if "fail_under" in coverage_report:
             original_fail_under = coverage_report["fail_under"]
             coverage_report["fail_under"] = 0

@@ -346,9 +346,9 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
 
   - AI agent mode (`--ai-agent`) follows strict iteration protocol:
     1. **Fast Hooks** → Retry once if any fail (formatting fixes often cascade)
-    2. **Collect ALL Test Failures** → Don't stop on first failure, gather complete list
-    3. **Collect ALL Hook Issues** → Don't stop on first failure, gather complete list
-    4. **Apply AI Fixes** → Process ALL collected issues in batch, then move to next iteration
+    1. **Collect ALL Test Failures** → Don't stop on first failure, gather complete list
+    1. **Collect ALL Hook Issues** → Don't stop on first failure, gather complete list
+    1. **Apply AI Fixes** → Process ALL collected issues in batch, then move to next iteration
   - **CRITICAL**: AI agent only advances to next iteration AFTER applying fixes
   - This ensures each iteration validates fixes from the previous iteration
   - Maximum 10 iterations to prevent infinite loops

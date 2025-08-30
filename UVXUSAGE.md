@@ -9,6 +9,7 @@ Crackerjack can now be executed using `uvx` for isolated execution environments.
 ### Direct uvx Command
 
 **For installed crackerjack (from PyPI):**
+
 ```bash
 # Run crackerjack with uvx (uses installed package)
 uvx crackerjack --help
@@ -18,6 +19,7 @@ uvx crackerjack --start-websocket-server
 ```
 
 **For local development version:**
+
 ```bash
 # Run crackerjack with uvx (uses local development version)
 uvx --from /Users/les/Projects/crackerjack crackerjack --help
@@ -84,10 +86,10 @@ All MCP servers in `~/Projects` have been automatically updated to use the uvx c
 ## Benefits
 
 1. **Isolated Environment**: Each uvx execution runs in its own isolated Python environment
-2. **No Dependency Conflicts**: Avoids conflicts with system or other project dependencies
-3. **Consistent Execution**: Same environment across different projects and systems
-4. **MCP Integration**: Works seamlessly with MCP server configurations
-5. **Development Convenience**: Can be used from any directory without virtual environment activation
+1. **No Dependency Conflicts**: Avoids conflicts with system or other project dependencies
+1. **Consistent Execution**: Same environment across different projects and systems
+1. **MCP Integration**: Works seamlessly with MCP server configurations
+1. **Development Convenience**: Can be used from any directory without virtual environment activation
 
 ## Verification
 

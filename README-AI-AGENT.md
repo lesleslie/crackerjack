@@ -11,10 +11,10 @@ AI agent mode provides **intelligent, iterative code fixing** that goes far beyo
 **CRITICAL**: The AI agent follows a strict iteration protocol to ensure fixes are properly applied and validated:
 
 1. **Fast Hooks** (Formatting) → Retry once if any fail
-2. **Collect ALL Test Failures** → Don't stop on first failure
-3. **Collect ALL Hook Issues** → Don't stop on first failure
-4. **Apply AI Fixes** → Process all collected issues in batch
-5. **Validate in Next Iteration** → Repeat until all checks pass (max 10 iterations)
+1. **Collect ALL Test Failures** → Don't stop on first failure
+1. **Collect ALL Hook Issues** → Don't stop on first failure
+1. **Apply AI Fixes** → Process all collected issues in batch
+1. **Validate in Next Iteration** → Repeat until all checks pass (max 10 iterations)
 
 This ensures that **fixes are applied between iterations**, not just the same checks repeated.
 
@@ -100,6 +100,7 @@ python -m crackerjack --start-websocket-server
 ```
 
 **Available MCP Tools:**
+
 - `execute_crackerjack`: Start iterative auto-fixing workflow
 - `get_job_progress`: Get current progress for running jobs
 - `get_comprehensive_status`: Get complete system status
@@ -109,11 +110,11 @@ python -m crackerjack --start-websocket-server
 When AI agent mode is enabled, Crackerjack:
 
 1. **Intelligent Code Fixing**: Automatically applies fixes between iterations (not just detects issues)
-2. **Iterative Validation**: Each iteration validates fixes from the previous iteration
-3. **Batch Processing**: Collects ALL issues before applying fixes (no early exit on first failure)
-4. **Real-time Progress**: WebSocket-based progress monitoring with iteration boundaries
-5. **Structured Output**: JSON format for reliable AI assistant parsing
-6. **Comprehensive Coverage**: Tests + hooks + quality checks in coordinated workflow
+1. **Iterative Validation**: Each iteration validates fixes from the previous iteration
+1. **Batch Processing**: Collects ALL issues before applying fixes (no early exit on first failure)
+1. **Real-time Progress**: WebSocket-based progress monitoring with iteration boundaries
+1. **Structured Output**: JSON format for reliable AI assistant parsing
+1. **Comprehensive Coverage**: Tests + hooks + quality checks in coordinated workflow
 
 ## AI Agent Iteration Protocol
 
@@ -147,6 +148,7 @@ Iteration 2:
 ### Workflow Implementation
 
 This iteration logic is implemented in:
+
 - `AsyncWorkflowOrchestrator._execute_ai_agent_workflow_async()`
 - Used automatically when `--ai-agent` flag is enabled
 - Compatible with MCP server WebSocket progress reporting
@@ -395,17 +397,20 @@ def run_crackerjack_with_ai(command):
 ### Autonomous Code Quality Improvement (Recommended)
 
 **Primary Workflow:**
+
 ```bash
 python -m crackerjack --ai-agent -t
 ```
 
 **What Happens:**
+
 1. **Iteration 1-N**: AI agent automatically collects ALL issues (tests + hooks)
-2. **Batch Fixing**: AI applies fixes for all collected issues simultaneously
-3. **Validation**: Next iteration validates fixes worked and finds remaining issues
-4. **Completion**: Process repeats until all quality checks pass (or 10 iterations max)
+1. **Batch Fixing**: AI applies fixes for all collected issues simultaneously
+1. **Validation**: Next iteration validates fixes worked and finds remaining issues
+1. **Completion**: Process repeats until all quality checks pass (or 10 iterations max)
 
 **Benefits:**
+
 - **Fully Autonomous**: No manual intervention required
 - **Intelligent Fixing**: Real code modifications, not just detection
 - **Comprehensive**: Handles tests, formatting, security, complexity, typing
@@ -413,6 +418,7 @@ python -m crackerjack --ai-agent -t
 ### MCP-Enhanced Workflows
 
 **With real-time progress monitoring:**
+
 ```bash
 # Terminal 1: Start progress server
 python -m crackerjack --start-websocket-server
@@ -424,10 +430,11 @@ python -m crackerjack --start-websocket-server
 ### Legacy Structured Output Workflows
 
 **For custom AI integrations:**
+
 1. **Structured Analysis**: AI parses `test-results.xml` and `coverage.json`
-2. **Failure Analysis**: AI analyzes JUnit XML with precise error details
-3. **Coverage-Driven**: AI uses coverage data for implementation priorities
-4. **Custom Processing**: AI processes JSON output for specialized workflows
+1. **Failure Analysis**: AI analyzes JUnit XML with precise error details
+1. **Coverage-Driven**: AI uses coverage data for implementation priorities
+1. **Custom Processing**: AI processes JSON output for specialized workflows
 
 ## Future Directions
 
@@ -451,6 +458,7 @@ For developers implementing AI agent integration or debugging workflow issues:
 Crackerjack's AI agent integration represents a significant advancement in intelligent, autonomous code quality improvement. The **iterative fixing protocol** ensures that AI agents don't just detect issues—they actually fix them and validate the results.
 
 Key advantages:
+
 - **Autonomous Operation**: Fixes code without manual intervention
 - **Intelligent Validation**: Each iteration proves previous fixes worked
 - **Real-time Monitoring**: WebSocket progress tracking for long-running workflows

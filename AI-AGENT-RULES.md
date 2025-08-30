@@ -9,26 +9,31 @@
 Each iteration follows this strict sequence:
 
 1. **Fast Hooks Phase** (Formatting & Quick Fixes)
+
    - Run: `trailing-whitespace`, `end-of-file-fixer`, `ruff-format`, `ruff-check`, `gitleaks`
    - **Retry Logic**: If any fast hooks fail, retry once (formatting fixes often cascade)
    - **Proceed Only When**: Fast hooks pass OR have been retried once
 
-2. **Test Collection Phase** (Don't Stop on First Failure)
+1. **Test Collection Phase** (Don't Stop on First Failure)
+
    - Run complete test suite: `uv run pytest`
    - **Collect ALL test failures** - don't stop on first failure
    - **Return**: List of all test issues found
 
-3. **Comprehensive Hooks Phase** (Don't Stop on First Failure)
+1. **Comprehensive Hooks Phase** (Don't Stop on First Failure)
+
    - Run: `pyright`, `bandit`, `vulture`, `refurb`, `creosote`, `complexipy`
    - **Collect ALL hook issues** - don't stop on first failure
    - **Return**: List of all quality issues found
 
-4. **AI Fixing Phase** (CRITICAL STEP)
+1. **AI Fixing Phase** (CRITICAL STEP)
+
    - **Process ALL collected issues in batch** (tests + hooks)
    - **Apply fixes to source code** using AI agent analysis
    - **ONLY AFTER fixes are applied**, proceed to next iteration
 
-5. **Validation Phase** (Next Iteration)
+1. **Validation Phase** (Next Iteration)
+
    - Next iteration validates that fixes from previous iteration worked
    - If all checks pass, workflow completes successfully
    - If issues remain, repeat cycle (max 10 iterations)
@@ -52,7 +57,9 @@ for iteration in range(1, max_iterations + 1):
         break
 
     # Step 4: Apply AI fixes for ALL collected issues
-    fix_success = await self._apply_ai_fixes_async(options, test_issues, hook_issues, iteration)
+    fix_success = await self._apply_ai_fixes_async(
+        options, test_issues, hook_issues, iteration
+    )
     if not fix_success:
         return False  # Fail the workflow
 ```
@@ -60,29 +67,35 @@ for iteration in range(1, max_iterations + 1):
 ## Critical Design Principles
 
 ### 1. No Early Exit During Collection
+
 - **WRONG**: Stop on first test failure or first hook failure
 - **CORRECT**: Collect ALL failures before moving to fixing phase
 
 ### 2. Batch Fixing Approach
+
 - **WRONG**: Fix one issue, then re-run checks, then fix next issue
 - **CORRECT**: Collect all issues, then apply all fixes in one batch
 
 ### 3. Iteration Boundaries
+
 - **WRONG**: Apply fixes in the middle of an iteration
 - **CORRECT**: Apply fixes ONLY at the end of iteration, validate in next iteration
 
 ### 4. Progress Validation
+
 - **WRONG**: Assume fixes worked without validation
 - **CORRECT**: Next iteration validates that previous fixes were successful
 
 ## MCP Server Integration
 
 ### Orchestrator Selection
+
 - **Standard Orchestrator**: Use for MCP server compatibility
 - **Advanced Orchestrator**: Internal iteration loop conflicts with MCP progress reporting
 - **Forced Selection**: MCP server forces standard orchestrator in `execution_tools.py:274-292`
 
 ### WebSocket Progress Reporting
+
 - **Real-time Updates**: Each phase reports progress via WebSocket
 - **Job Tracking**: Progress available at `ws://localhost:8675/ws/progress/{job_id}`
 - **Iteration Tracking**: Clear iteration boundaries for progress monitoring
@@ -90,6 +103,7 @@ for iteration in range(1, max_iterations + 1):
 ## Error Patterns to Avoid
 
 ### 1. Missing AI Fixing Stage
+
 ```python
 # WRONG: Just run checks in loop without applying fixes
 for iteration in range(max_iterations):
@@ -98,6 +112,7 @@ for iteration in range(max_iterations):
 ```
 
 ### 2. Early Exit on First Failure
+
 ```python
 # WRONG: Stop collecting issues on first failure
 if test_fails:
@@ -105,6 +120,7 @@ if test_fails:
 ```
 
 ### 3. Iteration Logic Without Fixes
+
 ```python
 # WRONG: Iterate without applying fixes between iterations
 for i in range(10):
@@ -114,6 +130,7 @@ for i in range(10):
 ## Validation Commands
 
 Test the AI agent workflow:
+
 ```bash
 # Standard AI agent workflow
 python -m crackerjack --ai-agent -t
@@ -129,17 +146,19 @@ python -m crackerjack --ai-debug -t
 ## Success Criteria
 
 The AI agent workflow is working correctly when:
+
 1. **Progress Through Iterations**: Each iteration shows different results as fixes are applied
-2. **Issue Reduction**: Number of issues decreases between iterations
-3. **Eventual Success**: Workflow completes with all checks passing
-4. **No Infinite Loops**: Workflow terminates within 10 iterations
-5. **Real-time Progress**: WebSocket shows meaningful progress updates
+1. **Issue Reduction**: Number of issues decreases between iterations
+1. **Eventual Success**: Workflow completes with all checks passing
+1. **No Infinite Loops**: Workflow terminates within 10 iterations
+1. **Real-time Progress**: WebSocket shows meaningful progress updates
 
 ## Failure Indicators
 
 The AI agent workflow is broken when:
+
 1. **Same Issues Every Iteration**: No fixes being applied between iterations
-2. **Stuck on Single Issue**: Same failure repeats across all iterations
-3. **No Progress Updates**: WebSocket shows no meaningful progress
-4. **Quick Cycling**: 10 iterations complete very quickly without fixes
-5. **Missing Phases**: Skipping test or comprehensive hook phases
+1. **Stuck on Single Issue**: Same failure repeats across all iterations
+1. **No Progress Updates**: WebSocket shows no meaningful progress
+1. **Quick Cycling**: 10 iterations complete very quickly without fixes
+1. **Missing Phases**: Skipping test or comprehensive hook phases

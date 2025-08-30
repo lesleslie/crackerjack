@@ -7,11 +7,13 @@ This directory contains practical examples demonstrating Crackerjack's features 
 ### Hook Plugins
 
 - **[`custom_hook_plugin.py`](custom_hook_plugin.py)** - Complete custom hook plugin implementation
+
   - Shows custom hook definitions for TODO/FIXME checking, print statement detection, and JSON validation
   - Demonstrates plugin metadata, activation/deactivation, and custom execution logic
   - Uses modern plugin architecture with `HookPluginBase` and `CustomHookDefinition`
 
 - **[`plugin_config.json`](plugin_config.json)** - Configuration-based hook definitions
+
   - Example JSON configuration for defining hooks without writing Python code
   - Shows file size checking and security scanning hook configurations
   - Demonstrates `fast` vs `comprehensive` stage assignments
@@ -21,11 +23,13 @@ This directory contains practical examples demonstrating Crackerjack's features 
 ### Real-Time Progress Display
 
 - **[`enhanced_monitor_demo.py`](enhanced_monitor_demo.py)** - Enhanced multi-project monitor demonstration
+
   - Shows AsyncIO-based progress monitoring with Textual TUI support
   - Includes command-line options for refresh rate and display mode
   - Demonstrates integration with `crackerjack.mcp.enhanced_progress_monitor`
 
 - **[`enhanced_monitor_demo_fixed.py`](enhanced_monitor_demo_fixed.py)** - Improved monitor demo
+
   - Fixed version with better error handling and timeout protection
   - Shows watchdog service integration and graceful shutdown
   - Includes WebSocket connection with fallback mechanisms
@@ -33,16 +37,19 @@ This directory contains practical examples demonstrating Crackerjack's features 
 ### Progress API Integration
 
 - **[`enhanced_progress_example.py`](enhanced_progress_example.py)** - WebSocket progress monitoring example
+
   - Demonstrates WebSocket-based real-time progress updates
   - Shows Rich console formatting with progress bars and displays
   - Includes API integration patterns and feature detection
 
 - **[`slash_command_progress_example.py`](slash_command_progress_example.py)** - Simulated MCP progress polling
+
   - Shows realistic progress sequence with multiple stages
   - Demonstrates progress display with iteration tracking
   - Useful for understanding AI agent workflow progress
 
 - **[`test_progress_display.py`](test_progress_display.py)** - Progress display testing utility
+
   - Simple demonstration of progress state transitions
   - Shows different stages: fast_hooks, comprehensive_hooks, tests, analyzing, fixing
   - Useful for testing progress display components
@@ -125,6 +132,7 @@ python examples/orchestrated_workflow_demo.py
 ```python
 from crackerjack.plugins import HookPluginBase, CustomHookDefinition
 from crackerjack.models.task import HookResult
+
 
 class MyHookPlugin(HookPluginBase):
     def get_hook_definitions(self) -> list[CustomHookDefinition]:

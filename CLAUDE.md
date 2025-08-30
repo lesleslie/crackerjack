@@ -418,14 +418,14 @@ from crackerjack.core.enhanced_container import EnhancedContainer, ServiceLifeti
 container.register_service(
     interface=HookManagerProtocol,
     implementation=AsyncHookManager,
-    lifetime=ServiceLifetime.SINGLETON  # Shared instance
+    lifetime=ServiceLifetime.SINGLETON,  # Shared instance
 )
 
 # Factory-based registration for complex initialization
 container.register_factory(
     interface=TestManagerProtocol,
     factory=lambda: create_test_manager_with_config(),
-    lifetime=ServiceLifetime.SCOPED  # Per-session instance
+    lifetime=ServiceLifetime.SCOPED,  # Per-session instance
 )
 
 # Automatic dependency resolution
@@ -940,12 +940,12 @@ Default configuration monitors:
 ### Current Test Strategy (Post-Architectural Refactoring)
 
 **Strategic Testing Approach**:
+
 - **Import-only tests**: Fast, reliable coverage for basic module loading and interface compliance
 - **Protocol compliance tests**: Ensure all implementations properly follow interface contracts
 - **Async pattern testing**: Comprehensive validation of async/await workflows without hanging tests
 - **Integration testing**: End-to-end validation of dependency injection and workflow orchestration
 - **Performance regression testing**: Automated detection of performance degradation in async workflows
-
 
 ## Important Instruction Reminders
 
