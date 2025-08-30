@@ -485,8 +485,8 @@ class InitializationService:
         # 2. Merge tool configurations
         self._merge_tool_configurations(target_config, source_config)
 
-        # 3. Preserve higher coverage requirements
-        self._preserve_higher_coverage_requirement(target_config, source_config)
+        # 3. Remove any fixed coverage requirements (use ratchet system instead)
+        self._remove_fixed_coverage_requirements(target_config)
 
         # Write merged config
         with target_file.open("wb") as f:
@@ -616,42 +616,40 @@ class InitializationService:
                 f"[green]➕[/green] Added pytest markers: {len(new_markers)}",
             )
 
-    def _preserve_higher_coverage_requirement(
+    def _remove_fixed_coverage_requirements(
         self,
         target_config: dict[str, t.Any],
-        source_config: dict[str, t.Any],
     ) -> None:
-        """Preserve higher coverage requirements."""
-        source_coverage = (
-            source_config.get("tool", {}).get("pytest", {}).get("ini_options", {})
-        )
+        """Remove fixed coverage requirements in favor of ratchet system."""
+        import re
+
         target_coverage = (
             target_config.get("tool", {}).get("pytest", {}).get("ini_options", {})
         )
 
-        source_cov_fail = self._extract_coverage_requirement(
-            source_coverage.get("addopts", ""),
-        )
-        target_cov_fail = self._extract_coverage_requirement(
-            target_coverage.get("addopts", ""),
-        )
-
-        if source_cov_fail and target_cov_fail:
-            if target_cov_fail > source_cov_fail:
-                self.console.print(
-                    f"[green]📊[/green] Preserving higher coverage requirement: {target_cov_fail}%",
-                )
-            elif source_cov_fail > target_cov_fail:
-                # Update to higher requirement
-                addopts = target_coverage.get("addopts", "")
-                addopts = addopts.replace(
-                    f"--cov-fail-under={target_cov_fail}",
-                    f"--cov-fail-under={source_cov_fail}",
-                )
+        # Remove --cov-fail-under from pytest addopts
+        addopts = target_coverage.get("addopts", "")
+        if isinstance(addopts, str):
+            original_addopts = addopts
+            # Remove --cov-fail-under=N pattern
+            addopts = re.sub(r'--cov-fail-under=\d+\.?\d*\s*', '', addopts).strip()
+            # Clean up extra spaces
+            addopts = ' '.join(addopts.split())
+            
+            if original_addopts != addopts:
                 target_coverage["addopts"] = addopts
                 self.console.print(
-                    f"[yellow]📊[/yellow] Updated coverage requirement: {source_cov_fail}%",
+                    "[green]🔄[/green] Removed fixed coverage requirement (using ratchet system)",
                 )
+
+        # Remove fail_under from coverage.report section
+        coverage_report = target_config.get("tool", {}).get("coverage", {}).get("report", {})
+        if "fail_under" in coverage_report:
+            original_fail_under = coverage_report["fail_under"]
+            coverage_report["fail_under"] = 0
+            self.console.print(
+                f"[green]🔄[/green] Reset coverage.report.fail_under from {original_fail_under} to 0 (ratchet system)",
+            )
 
     def _extract_coverage_requirement(self, addopts: str | list[str]) -> int | None:
         """Extract coverage requirement from pytest addopts."""
@@ -721,7 +719,12 @@ class InitializationService:
                 width=float("inf"),
             )
             with target_file.open("w") as f:
-                f.write(yaml_content.rstrip("\n"))
+                content = (
+                    yaml_content.decode()
+                    if isinstance(yaml_content, bytes)
+                    else yaml_content
+                )
+                f.write(content.rstrip("\n"))
 
             t.cast("list[str]", results["files_copied"]).append(
                 ".pre-commit-config.yaml (merged)",

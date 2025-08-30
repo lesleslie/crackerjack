@@ -254,8 +254,14 @@ class LogManager:
         total_size = 0.0
 
         for log_type, data in stats.items():
-            count = data["count"]
-            size = data["size_mb"]
+            count = (
+                int(data["count"]) if isinstance(data["count"], str) else data["count"]
+            )
+            size = (
+                float(data["size_mb"])
+                if isinstance(data["size_mb"], str)
+                else data["size_mb"]
+            )
 
             total_files += count
             total_size += size

@@ -116,7 +116,7 @@ class ContextualAIAssistant:
                     confidence=0.9,
                 ),
             )
-        elif context.test_coverage < 100:
+        elif context.test_coverage < 75:
             # Calculate next milestone
             milestones = [15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]
             next_milestone = next(

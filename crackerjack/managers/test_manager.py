@@ -935,41 +935,61 @@ class TestManagementImpl:
 
         # Process coverage ratchet if enabled and tests passed
         if self.coverage_ratchet_enabled and success:
-            coverage_data = self.get_coverage()
-            if coverage_data:
-                current_coverage = coverage_data.get("total_coverage", 0)
-                ratchet_result = self.coverage_ratchet.update_coverage(current_coverage)
-
-                if ratchet_result["status"] == "improved":
-                    self.console.print(f"[green]🎉 {ratchet_result['message']}[/green]")
-                    if "milestones" in ratchet_result and ratchet_result["milestones"]:
-                        self.coverage_ratchet.display_milestone_celebration(
-                            ratchet_result["milestones"]
-                        )
-                    if (
-                        "next_milestone" in ratchet_result
-                        and ratchet_result["next_milestone"]
-                    ):
-                        next_milestone = ratchet_result["next_milestone"]
-                        points_needed = ratchet_result.get("points_to_next", 0)
-                        self.console.print(
-                            f"[cyan]🎯 Next milestone: {next_milestone:.0f}% (+{points_needed:.2f}% needed)[/cyan]"
-                        )
-                elif ratchet_result["status"] == "regression":
-                    self.console.print(f"[red]📉 {ratchet_result['message']}[/red]")
-                    return False  # Fail the test run on coverage regression
-                elif ratchet_result["status"] == "maintained":
-                    self.console.print(f"[cyan]📊 {ratchet_result['message']}[/cyan]")
-
-                # Show progress visualization
-                progress_viz = self.coverage_ratchet.get_progress_visualization()
-                for line in progress_viz.split("\n"):
-                    if line.strip():
-                        self.console.print(f"[dim]{line}[/dim]")
+            if not self._process_coverage_ratchet():
+                return False  # Coverage regression detected
 
         if success:
             return self._handle_test_success(output, duration)
         return self._handle_test_failure(output, duration)
+
+    def _process_coverage_ratchet(self) -> bool:
+        """Process coverage ratchet and return False if regression detected."""
+        coverage_data = self.get_coverage()
+        if not coverage_data:
+            return True
+
+        current_coverage = coverage_data.get("total_coverage", 0)
+        ratchet_result = self.coverage_ratchet.update_coverage(current_coverage)
+
+        return self._handle_ratchet_result(ratchet_result)
+
+    def _handle_ratchet_result(self, ratchet_result: dict[str, t.Any]) -> bool:
+        """Handle coverage ratchet result and return False if regression detected."""
+        status = ratchet_result["status"]
+
+        if status == "improved":
+            self._handle_coverage_improvement(ratchet_result)
+        elif status == "regression":
+            self.console.print(f"[red]📉 {ratchet_result['message']}[/red]")
+            return False  # Fail the test run on coverage regression
+        elif status == "maintained":
+            self.console.print(f"[cyan]📊 {ratchet_result['message']}[/cyan]")
+
+        self._display_progress_visualization()
+        return True
+
+    def _handle_coverage_improvement(self, ratchet_result: dict[str, t.Any]) -> None:
+        """Handle coverage improvement display and milestone celebration."""
+        self.console.print(f"[green]🎉 {ratchet_result['message']}[/green]")
+
+        if "milestones" in ratchet_result and ratchet_result["milestones"]:
+            self.coverage_ratchet.display_milestone_celebration(
+                ratchet_result["milestones"]
+            )
+
+        if "next_milestone" in ratchet_result and ratchet_result["next_milestone"]:
+            next_milestone = ratchet_result["next_milestone"]
+            points_needed = ratchet_result.get("points_to_next", 0)
+            self.console.print(
+                f"[cyan]🎯 Next milestone: {next_milestone:.0f}% (+{points_needed:.2f}% needed)[/cyan]"
+            )
+
+    def _display_progress_visualization(self) -> None:
+        """Display coverage progress visualization."""
+        progress_viz = self.coverage_ratchet.get_progress_visualization()
+        for line in progress_viz.split("\n"):
+            if line.strip():
+                self.console.print(f"[dim]{line}[/dim]")
 
     def _handle_test_success(self, output: str, duration: float) -> bool:
         self.console.print(f"[green]✅[/green] Tests passed ({duration:.1f}s)")

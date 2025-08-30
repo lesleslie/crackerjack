@@ -59,18 +59,50 @@ FAST_HOOKS = [
         retry_on_failure=True,
     ),
     HookDefinition(
-        name="ruff-format",
-        command=["pre-commit", "run", "ruff-format", "--all-files"],
+        name="check-yaml",
+        command=["pre-commit", "run", "check-yaml", "--all-files"],
+    ),
+    HookDefinition(
+        name="check-toml",
+        command=["pre-commit", "run", "check-toml", "--all-files"],
+    ),
+    HookDefinition(
+        name="check-added-large-files",
+        command=["pre-commit", "run", "check-added-large-files", "--all-files"],
+    ),
+    HookDefinition(
+        name="pyproject-fmt",
+        command=["pre-commit", "run", "pyproject-fmt", "--all-files"],
         is_formatting=True,
         retry_on_failure=True,
+    ),
+    HookDefinition(
+        name="uv-lock",
+        command=["pre-commit", "run", "uv-lock", "--all-files"],
+    ),
+    HookDefinition(
+        name="gitleaks",
+        command=["pre-commit", "run", "gitleaks", "--all-files"],
+    ),
+    HookDefinition(
+        name="codespell",
+        command=["pre-commit", "run", "codespell", "--all-files"],
     ),
     HookDefinition(
         name="ruff-check",
         command=["pre-commit", "run", "ruff-check", "--all-files"],
     ),
     HookDefinition(
-        name="gitleaks",
-        command=["pre-commit", "run", "gitleaks", "--all-files"],
+        name="ruff-format",
+        command=["pre-commit", "run", "ruff-format", "--all-files"],
+        is_formatting=True,
+        retry_on_failure=True,
+    ),
+    HookDefinition(
+        name="mdformat",
+        command=["pre-commit", "run", "mdformat", "--all-files"],
+        is_formatting=True,
+        retry_on_failure=True,
     ),
 ]
 

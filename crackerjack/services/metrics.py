@@ -2,7 +2,7 @@ import json
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -451,7 +451,7 @@ class MetricsCollector:
     def _update_daily_summary(
         self,
         conn: sqlite3.Connection,
-        date: datetime.date,
+        date: date,
     ) -> None:
         job_stats = conn.execute(
             """

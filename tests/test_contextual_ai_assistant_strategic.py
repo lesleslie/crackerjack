@@ -425,9 +425,9 @@ class TestTestingRecommendations:
         rec = recommendations[0]
         assert rec.category == "testing"
         assert rec.priority == "medium"
-        assert rec.title == "Improve Test Coverage"
+        assert rec.title == "Progress Toward 100% Coverage"
         assert "35.0%" in rec.description
-        assert "42% minimum requirement" in rec.description
+        assert "40% on the journey to 100%" in rec.description
         assert rec.confidence == 0.85
 
     def test_adequate_coverage_no_recommendation(self, ai_assistant):

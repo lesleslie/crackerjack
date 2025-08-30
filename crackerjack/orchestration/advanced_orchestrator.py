@@ -532,11 +532,7 @@ class AdvancedWorkflowOrchestrator:
         )
 
         all_hooks_passed = all(r.status == "passed" for r in hook_results)
-        all_tests_passed = (
-            test_results.get("success", False)
-            if isinstance(test_results, dict)
-            else False
-        )
+        all_tests_passed = test_results.get("success", False)
 
         return all_hooks_passed and all_tests_passed, phase_times
 
@@ -710,11 +706,7 @@ class AdvancedWorkflowOrchestrator:
     ) -> dict[str, t.Any]:
         self.progress_streamer.update_stage("tests", "starting")
 
-        test_mode = (
-            plan.test_plan.get("mode", "full_suite")
-            if isinstance(plan.test_plan, dict)
-            else "full_suite"
-        )
+        test_mode = plan.test_plan.get("mode", "full_suite")
 
         if test_mode in ("individual_with_progress", "selective"):
             test_results = await self.test_streamer.run_tests_with_streaming(
@@ -726,11 +718,7 @@ class AdvancedWorkflowOrchestrator:
                 getattr(self.session, "job_id", None)
                 or f"orchestration_{int(time.time())}"
             )
-            individual_tests = (
-                test_results.get("individual_tests", [])
-                if isinstance(test_results, dict)
-                else []
-            )
+            individual_tests = test_results.get("individual_tests", [])
 
             for test in individual_tests:
                 self.metrics.record_individual_test(
@@ -772,17 +760,9 @@ class AdvancedWorkflowOrchestrator:
         self.progress_streamer.update_stage("ai_analysis", "analyzing_failures")
 
         failed_hooks = [r for r in hook_results if r.status == "failed"]
-        failed_tests = (
-            test_results.get("failed_tests", [])
-            if isinstance(test_results, dict)
-            else []
-        )
+        failed_tests = test_results.get("failed_tests", [])
 
-        individual_tests = (
-            test_results.get("individual_tests", [])
-            if isinstance(test_results, dict)
-            else []
-        )
+        individual_tests = test_results.get("individual_tests", [])
         failed_individual_tests = [t for t in individual_tests if t.status == "failed"]
 
         correlation_data = self.correlation_tracker.get_correlation_data()
@@ -839,12 +819,16 @@ class AdvancedWorkflowOrchestrator:
         for hook_result in failed_hooks:
             issue_type = self._map_hook_to_issue_type(hook_result.name)
             issue = Issue(
-                id=f"hook_{hook_result.name}_{hash(hook_result.error)}",
+                id=f"hook_{hook_result.name}_{hash(str(hook_result.issues_found))}",
                 type=issue_type,
                 severity=Priority.HIGH
                 if hook_result.name in correlation_data.get("problematic_hooks", [])
                 else Priority.MEDIUM,
-                message=hook_result.error or f"{hook_result.name} failed",
+                message=(
+                    hook_result.issues_found[0]
+                    if hook_result.issues_found
+                    else f"{hook_result.name} failed"
+                ),
                 stage="hooks",
                 details=getattr(hook_result, "error_details", []),
             )

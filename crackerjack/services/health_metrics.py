@@ -2,6 +2,7 @@ import json
 import subprocess
 import time
 import tomllib
+import typing as t
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -33,7 +34,9 @@ class ProjectHealth:
 
         return self.config_completeness < 0.8
 
-    def _is_trending_up(self, values: list[int], min_points: int = 3) -> bool:
+    def _is_trending_up(
+        self, values: list[int] | list[float], min_points: int = 3
+    ) -> bool:
         if len(values) < min_points:
             return False
 
@@ -41,7 +44,9 @@ class ProjectHealth:
         # Performance: Use pairwise comparison with zip
         return all(a <= b for a, b in zip(recent, recent[1:]))
 
-    def _is_trending_down(self, values: list[float], min_points: int = 3) -> bool:
+    def _is_trending_down(
+        self, values: list[int] | list[float], min_points: int = 3
+    ) -> bool:
         if len(values) < min_points:
             return False
 
@@ -285,11 +290,11 @@ class HealthMetricsService:
 
         return dependency_ages
 
-    def _load_project_data(self) -> dict:
+    def _load_project_data(self) -> dict[str, t.Any]:
         with self.pyproject_path.open("rb") as f:
             return tomllib.load(f)
 
-    def _extract_all_dependencies(self, project_data: dict) -> list[str]:
+    def _extract_all_dependencies(self, project_data: dict[str, t.Any]) -> list[str]:
         dependencies: list[str] = []
 
         if "dependencies" in project_data.get("project", {}):
@@ -337,9 +342,8 @@ class HealthMetricsService:
         except Exception:
             return None
 
-    def _fetch_package_data(self, package_name: str) -> dict | None:
+    def _fetch_package_data(self, package_name: str) -> dict[str, t.Any] | None:
         try:
-            import urllib.error
             import urllib.request
 
             url = f"https://pypi.org/pypi/{package_name}/json"
@@ -353,7 +357,7 @@ class HealthMetricsService:
         except Exception:
             return None
 
-    def _extract_upload_time(self, package_data: dict) -> str | None:
+    def _extract_upload_time(self, package_data: dict[str, t.Any]) -> str | None:
         info = package_data.get("info", {})
         releases = package_data.get("releases", {})
 
@@ -419,7 +423,7 @@ class HealthMetricsService:
 
         return score, total_checks
 
-    def _assess_project_metadata(self, data: dict) -> tuple[float, int]:
+    def _assess_project_metadata(self, data: dict[str, t.Any]) -> tuple[float, int]:
         score = 0.0
         total_checks = 0
 
@@ -436,7 +440,7 @@ class HealthMetricsService:
 
         return score, total_checks
 
-    def _assess_tool_configs(self, data: dict) -> tuple[float, int]:
+    def _assess_tool_configs(self, data: dict[str, t.Any]) -> tuple[float, int]:
         score = 0.0
         tool_configs = ["tool.ruff", "tool.pytest", "tool.coverage"]
 
@@ -591,9 +595,9 @@ class HealthMetricsService:
         }
 
     def _get_trend_direction(self, health: ProjectHealth, trend_data: list[int]) -> str:
-        if health._is_trending_up(trend_data):
+        if health._is_trending_up([float(x) for x in trend_data]):
             return "up"
-        elif health._is_trending_down(trend_data):
+        elif health._is_trending_down([float(x) for x in trend_data]):
             return "down"
         return "stable"
 

@@ -425,7 +425,6 @@ class TestProgressStreamer:
             cwd=self.pkg_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            text=True,
         )
 
     async def _process_streams(

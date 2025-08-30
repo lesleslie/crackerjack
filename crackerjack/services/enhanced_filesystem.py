@@ -192,11 +192,10 @@ class EnhancedFileSystemService(FileSystemInterface):
             return content
 
     def write_file(self, path: str | Path, content: str) -> None:
-        path_obj = Path(path) if isinstance(path, str) else path
+        if not isinstance(content, str):  # type: ignore[arg-type]
+            raise TypeError("Content must be a string")
 
-        if not isinstance(content, str):
-            msg = "Content must be a string"
-            raise TypeError(msg)
+        path_obj = Path(path) if isinstance(path, str) else path
 
         with LoggingContext("write_file", path=str(path_obj), size=len(content)):
             self._write_file_direct(path_obj, content)

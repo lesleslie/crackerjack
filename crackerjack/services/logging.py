@@ -52,12 +52,12 @@ def setup_structured_logging(
     ]
 
     if json_output:
-        processors.append(structlog.processors.JSONRenderer())
+        processors.append(structlog.processors.JSONRenderer())  # type: ignore[arg-type]
     else:
-        processors.append(structlog.dev.ConsoleRenderer(colors=True))
+        processors.append(structlog.dev.ConsoleRenderer(colors=True))  # type: ignore[arg-type]
 
     structlog.configure(
-        processors=processors,
+        processors=processors,  # type: ignore[arg-type]
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,

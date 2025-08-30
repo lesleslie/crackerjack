@@ -16,7 +16,7 @@ class TestCreationAgent(SubAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self.test_frameworks = ["pytest", "unittest"]
-        self.coverage_threshold = 0.42
+        # No fixed coverage threshold - use ratchet system instead
 
     def get_supported_types(self) -> set[IssueType]:
         return {
@@ -73,7 +73,6 @@ class TestCreationAgent(SubAgent):
             "no tests found",
             "test coverage",
             "coverage requirement",
-            "42%",
             "coverage gap",
         ]
         return (
@@ -251,7 +250,7 @@ class TestCreationAgent(SubAgent):
         current_coverage = 0.35
 
         return {
-            "below_threshold": current_coverage < self.coverage_threshold,
+            "below_threshold": False,  # Always use ratchet system, not thresholds
             "current_coverage": current_coverage,
             "uncovered_modules": uncovered_modules,
         }

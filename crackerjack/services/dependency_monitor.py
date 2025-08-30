@@ -465,7 +465,6 @@ class DependencyMonitorService:
 
     def _fetch_pypi_data(self, package: str) -> dict[str, t.Any]:
         """Fetch package data from PyPI API."""
-        import urllib.error
         import urllib.request
 
         url = f"https://pypi.org/pypi/{package}/json"

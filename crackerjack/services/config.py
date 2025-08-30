@@ -1,3 +1,4 @@
+import subprocess
 import typing as t
 from pathlib import Path
 
@@ -196,7 +197,7 @@ class ConfigurationService:
                     "ini_options": {
                         "asyncio_mode": "auto",
                         "timeout": 300,
-                        "addopts": "--cov=crackerjack --cov-report=term --cov-fail-under=10",
+                        "addopts": "--cov=crackerjack --cov-report=term",
                         "markers": [
                             "unit: marks test as a unit test",
                             "benchmark: mark test as a benchmark",
@@ -237,9 +238,8 @@ class ConfigurationService:
             )
             return False
 
-    def _execute_precommit_autoupdate(self) -> "subprocess.CompletedProcess[str]":
+    def _execute_precommit_autoupdate(self) -> subprocess.CompletedProcess[str]:
         """Execute the pre-commit autoupdate command."""
-        import subprocess
 
         return subprocess.run(
             ["uv", "run", "pre-commit", "autoupdate"],
@@ -277,36 +277,44 @@ class ConfigurationService:
         try:
             self.console.print("[cyan]🔄[/cyan] Updating dynamic config versions...")
 
-            # Read the updated .pre-commit-config.yaml
-            config_file = self.pkg_path / ".pre-commit-config.yaml"
-            if not config_file.exists():
-                return
-
-            import yaml
-
-            with config_file.open() as f:
-                config = yaml.safe_load(f)
-
-            if not config or "repos" not in config:
-                return
-
-            # Extract version mappings from updated config
-            version_updates = {}
-            for repo in config["repos"]:
-                repo_url = repo.get("repo", "")
-                rev = repo.get("rev", "")
-                if repo_url and rev:
-                    version_updates[repo_url] = rev
-
-            # Update dynamic_config.py
-            dynamic_config_path = self.pkg_path / "crackerjack" / "dynamic_config.py"
-            if dynamic_config_path.exists():
-                self._apply_version_updates(dynamic_config_path, version_updates)
+            version_updates = self._extract_version_updates()
+            if version_updates:
+                self._update_dynamic_config_file(version_updates)
 
         except Exception as e:
             self.console.print(
                 f"[yellow]⚠️[/yellow] Failed to update dynamic config versions: {e}"
             )
+
+    def _extract_version_updates(self) -> dict[str, str]:
+        """Extract version mappings from .pre-commit-config.yaml."""
+        config_file = self.pkg_path / ".pre-commit-config.yaml"
+        if not config_file.exists():
+            return {}
+
+        import yaml
+
+        with config_file.open() as f:
+            config = yaml.safe_load(f)
+
+        if not config or "repos" not in config:
+            return {}
+
+        version_updates = {}
+        repos = config.get("repos", []) if isinstance(config, dict) else []
+        for repo in repos:
+            repo_url = repo.get("repo", "")
+            rev = repo.get("rev", "")
+            if repo_url and rev:
+                version_updates[repo_url] = rev
+
+        return version_updates
+
+    def _update_dynamic_config_file(self, version_updates: dict[str, str]) -> None:
+        """Update dynamic_config.py with version mappings."""
+        dynamic_config_path = self.pkg_path / "crackerjack" / "dynamic_config.py"
+        if dynamic_config_path.exists():
+            self._apply_version_updates(dynamic_config_path, version_updates)
 
     def _apply_version_updates(
         self, config_path: Path, version_updates: dict[str, str]
