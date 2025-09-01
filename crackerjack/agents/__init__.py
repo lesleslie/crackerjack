@@ -1,5 +1,6 @@
 # Import all agent modules to trigger registration
 from . import (
+    architect_agent,
     documentation_agent,
     dry_agent,
     formatting_agent,
@@ -25,6 +26,7 @@ __all__ = [
     "Priority",
     "SubAgent",
     # Agent modules (imported for registration)
+    "architect_agent",
     "documentation_agent",
     "dry_agent",
     "formatting_agent",

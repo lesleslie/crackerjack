@@ -29,6 +29,7 @@ from .tools import (
     register_execution_tools,
     register_monitoring_tools,
     register_progress_tools,
+    register_proactive_tools,
     register_utility_tools,
 )
 
@@ -114,6 +115,7 @@ def create_mcp_server() -> t.Any | None:
     register_execution_tools(mcp_app)
     register_monitoring_tools(mcp_app)
     register_progress_tools(mcp_app)
+    register_proactive_tools(mcp_app)
     register_utility_tools(mcp_app)
 
     return mcp_app

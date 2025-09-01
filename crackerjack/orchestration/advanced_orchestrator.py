@@ -857,7 +857,8 @@ class AdvancedWorkflowOrchestrator:
         )
 
         assert self.agent_coordinator is not None
-        result = await self.agent_coordinator.handle_issues(issues)
+        # Use proactive handling by default for better architectural planning
+        result = await self.agent_coordinator.handle_issues_proactively(issues)
 
         ai_fixes = []
         if result.fixes_applied:

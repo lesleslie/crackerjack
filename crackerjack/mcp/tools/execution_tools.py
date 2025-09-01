@@ -435,6 +435,8 @@ def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
     options.testing.test = kwargs.get("test", True)
     options.ai_agent = kwargs.get("ai_agent", True)
     options.skip_hooks = kwargs.get("skip_hooks", False)
+    # Enable proactive mode by default for better architectural planning
+    options.proactive_mode = kwargs.get("proactive_mode", True)
     return options
 
 
@@ -1006,80 +1008,103 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             "detection_reasoning": "",
         }
 
-        f"{error_context} {file_patterns} {recent_changes}".lower()
+        # Add urgent agents based on error context
+        _add_urgent_agents_for_errors(recommendations, error_context)
 
-        # Urgent agent recommendations based on errors
-        if any(
-            word in error_context.lower()
-            for word in ("test fail", "coverage", "pytest", "assertion")
-        ):
-            recommendations["urgent_agents"].append(
-                {
-                    "agent": "crackerjack-test-specialist",
-                    "reason": "Test failures detected - specialist needed for debugging and fixes",
-                    "action": 'Task tool with subagent_type="crackerjack-test-specialist" to analyze and fix test issues',
-                }
-            )
+        # Add general suggestions for Python projects
+        _add_python_project_suggestions(recommendations, file_patterns)
 
-        if any(
-            word in error_context.lower()
-            for word in ("security", "vulnerability", "bandit", "unsafe")
-        ):
-            recommendations["urgent_agents"].append(
-                {
-                    "agent": "security-auditor",
-                    "reason": "Security issues detected - immediate audit required",
-                    "action": 'Task tool with subagent_type="security-auditor" to review and fix security vulnerabilities',
-                }
-            )
+        # Set workflow recommendations
+        _set_workflow_recommendations(recommendations)
 
-        if any(
-            word in error_context.lower()
-            for word in ("complexity", "refactor", "too complex")
-        ):
-            recommendations["urgent_agents"].append(
-                {
-                    "agent": "crackerjack-architect",
-                    "reason": "Complexity issues detected - architectural review needed",
-                    "action": 'Task tool with subagent_type="crackerjack-architect" to simplify and restructure code',
-                }
-            )
-
-        # General suggestions for Python projects
-        if "python" in file_patterns.lower() or ".py" in file_patterns:
-            recommendations["suggested_agents"].extend(
-                [
-                    {
-                        "agent": "crackerjack-architect",
-                        "reason": "Python project detected - ensure crackerjack compliance",
-                        "priority": "HIGH",
-                    },
-                    {
-                        "agent": "python-pro",
-                        "reason": "Python development best practices",
-                        "priority": "HIGH",
-                    },
-                ]
-            )
-
-        # Workflow recommendations
-        if recommendations["urgent_agents"]:
-            recommendations["workflow_recommendations"] = [
-                "Address urgent issues first with specialized agents",
-                "Run crackerjack quality checks after fixes: python -m crackerjack -t",
-                "Use crackerjack-architect for ongoing compliance",
-            ]
-        else:
-            recommendations["workflow_recommendations"] = [
-                "Start with crackerjack-architect for proper planning",
-                "Use python-pro for implementation",
-                "Run continuous quality checks: python -m crackerjack",
-            ]
-
-        recommendations["detection_reasoning"] = (
-            f"Analysis of context revealed {len(recommendations['urgent_agents'])} urgent issues "
-            f"and {len(recommendations['suggested_agents'])} general recommendations. "
-            "Prioritize urgent agents first, then follow standard workflow patterns."
-        )
+        # Generate detection reasoning
+        _generate_detection_reasoning(recommendations)
 
         return json.dumps(recommendations, indent=2)
+
+
+def _add_urgent_agents_for_errors(
+    recommendations: dict[str, t.Any], error_context: str
+) -> None:
+    """Add urgent agent recommendations based on error context."""
+    if any(
+        word in error_context.lower()
+        for word in ("test fail", "coverage", "pytest", "assertion")
+    ):
+        recommendations["urgent_agents"].append(
+            {
+                "agent": "crackerjack-test-specialist",
+                "reason": "Test failures detected - specialist needed for debugging and fixes",
+                "action": 'Task tool with subagent_type="crackerjack-test-specialist" to analyze and fix test issues',
+            }
+        )
+
+    if any(
+        word in error_context.lower()
+        for word in ("security", "vulnerability", "bandit", "unsafe")
+    ):
+        recommendations["urgent_agents"].append(
+            {
+                "agent": "security-auditor",
+                "reason": "Security issues detected - immediate audit required",
+                "action": 'Task tool with subagent_type="security-auditor" to review and fix security vulnerabilities',
+            }
+        )
+
+    if any(
+        word in error_context.lower()
+        for word in ("complexity", "refactor", "too complex")
+    ):
+        recommendations["urgent_agents"].append(
+            {
+                "agent": "crackerjack-architect",
+                "reason": "Complexity issues detected - architectural review needed",
+                "action": 'Task tool with subagent_type="crackerjack-architect" to simplify and restructure code',
+            }
+        )
+
+
+def _add_python_project_suggestions(
+    recommendations: dict[str, t.Any], file_patterns: str
+) -> None:
+    """Add general suggestions for Python projects."""
+    if "python" in file_patterns.lower() or ".py" in file_patterns:
+        recommendations["suggested_agents"].extend(
+            [
+                {
+                    "agent": "crackerjack-architect",
+                    "reason": "Python project detected - ensure crackerjack compliance",
+                    "priority": "HIGH",
+                },
+                {
+                    "agent": "python-pro",
+                    "reason": "Python development best practices",
+                    "priority": "HIGH",
+                },
+            ]
+        )
+
+
+def _set_workflow_recommendations(recommendations: dict[str, t.Any]) -> None:
+    """Set workflow recommendations based on urgent agents."""
+    if recommendations["urgent_agents"]:
+        recommendations["workflow_recommendations"] = [
+            "Address urgent issues first with specialized agents",
+            "Run crackerjack quality checks after fixes: python -m crackerjack -t",
+            "Use crackerjack-architect for ongoing compliance",
+        ]
+    else:
+        recommendations["workflow_recommendations"] = [
+            "Start with crackerjack-architect for proper planning",
+            "Use python-pro for implementation",
+            "Run continuous quality checks: python -m crackerjack",
+        ]
+
+
+def _generate_detection_reasoning(recommendations: dict[str, t.Any]) -> None:
+    """Generate detection reasoning based on recommendations."""
+    recommendations["detection_reasoning"] = (
+        f"Analysis of context revealed {len(recommendations['urgent_agents'])} urgent issues "
+        f"and {len(recommendations['suggested_agents'])} general recommendations. "
+        "Prioritize urgent agents first, then follow standard workflow patterns."
+    )

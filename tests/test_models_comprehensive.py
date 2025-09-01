@@ -12,7 +12,6 @@ from crackerjack.models.config import (
 from crackerjack.models.task import (
     HookResult,
     SessionTracker,
-    TaskStatus,
     TaskStatusData,
 )
 
