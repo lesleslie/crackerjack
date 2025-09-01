@@ -234,11 +234,11 @@ class TestExecutor:
 
     def _handle_session_events(self, line: str, progress: TestProgress) -> bool:
         """Handle pytest session events."""
-        if "session starts" in line:
-            progress.update(collection_status="Session starting...")
+        if "session starts" in line and progress.collection_status != "Session started":
+            progress.update(collection_status="Session started")
             return True
-        elif "test session starts" in line:
-            progress.update(collection_status="Starting test collection...")
+        elif "test session starts" in line and progress.collection_status != "Test collection started":
+            progress.update(collection_status="Test collection started")
             return True
         return False
 
@@ -308,7 +308,12 @@ class TestExecutor:
 
     def _should_refresh_display(self, progress: TestProgress) -> bool:
         """Determine if display should be refreshed."""
-        return True  # Simplified - let Rich handle refresh rate
+        # Only refresh on significant changes to reduce spam
+        return (
+            progress.is_complete 
+            or progress.total_tests > 0 
+            or len(progress.current_test) > 0
+        )
 
     def _mark_test_as_stuck(self, progress: TestProgress, test_name: str) -> None:
         """Mark a test as potentially stuck."""

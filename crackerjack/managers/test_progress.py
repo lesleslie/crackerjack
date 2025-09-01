@@ -58,87 +58,56 @@ class TestProgress:
                 if hasattr(self, key):
                     setattr(self, key, value)
 
-    def format_progress(self) -> Align:
+    def format_progress(self) -> str:
         """Format progress display for Rich output."""
         if self.is_collecting:
-            return Align.center(self._format_collection_progress())
-        return Align.center(self._format_execution_progress())
+            return self._format_collection_progress()
+        return self._format_execution_progress()
 
-    def _format_collection_progress(self) -> Table:
+    def _format_collection_progress(self) -> str:
         """Format test collection progress display."""
-        table = Table.grid(padding=(0, 2))
-        table.add_column()
-        table.add_column(justify="center")
-
-        # Collection status
-        table.add_row(
-            "[yellow]📋[/yellow] Test Collection",
-            f"[dim]{self.collection_status}[/dim]",
-        )
-
-        # Files discovered
+        status_parts = [self.collection_status]
+        
         if self.files_discovered > 0:
-            table.add_row(
-                "[cyan]📁[/cyan] Files Found",
-                f"[green]{self.files_discovered}[/green] test files",
-            )
-
-        # Elapsed time
+            status_parts.append(f"{self.files_discovered} test files")
+            
         elapsed = self.elapsed_time
         if elapsed > 1:
-            table.add_row("[blue]⏱️[/blue] Elapsed", f"[dim]{elapsed:.1f}s[/dim]")
+            status_parts.append(f"{elapsed:.1f}s")
+        
+        return " | ".join(status_parts)
 
-        return table
-
-    def _format_execution_progress(self) -> Table:
+    def _format_execution_progress(self) -> str:
         """Format test execution progress display."""
-        table = Table.grid(padding=(0, 2))
-        table.add_column()
-        table.add_column(justify="center")
-
-        # Progress bar representation
+        parts = []
+        
+        # Test progress
         if self.total_tests > 0:
             progress_pct = (self.completed / self.total_tests) * 100
-            completed_blocks = int((self.completed / self.total_tests) * 20)
-            remaining_blocks = 20 - completed_blocks
-            progress_bar = "█" * completed_blocks + "░" * remaining_blocks
-
-            table.add_row(
-                "[yellow]⚡[/yellow] Progress",
-                f"[green]{progress_bar}[/green] {progress_pct:.1f}%",
-            )
-
-        # Test counts
-        table.add_row("[green]✅[/green] Passed", f"[green]{self.passed}[/green]")
-
+            parts.append(f"{self.completed}/{self.total_tests} ({progress_pct:.1f}%)")
+        
+        # Status counts 
+        status_parts = []
+        if self.passed > 0:
+            status_parts.append(f"✅ {self.passed}")
         if self.failed > 0:
-            table.add_row("[red]❌[/red] Failed", f"[red]{self.failed}[/red]")
-
+            status_parts.append(f"❌ {self.failed}")
         if self.skipped > 0:
-            table.add_row(
-                "[yellow]⏭️[/yellow] Skipped", f"[yellow]{self.skipped}[/yellow]"
-            )
-
+            status_parts.append(f"⏭ {self.skipped}")
         if self.errors > 0:
-            table.add_row("[red]💥[/red] Errors", f"[red]{self.errors}[/red]")
-
-        # Current test
+            status_parts.append(f"💥 {self.errors}")
+            
+        if status_parts:
+            parts.append(" ".join(status_parts))
+        
+        # Current test (truncated)
         if self.current_test and not self.is_complete:
-            table.add_row(
-                "[blue]🔄[/blue] Running",
-                f"[dim]{self.current_test[:50]}...[/dim]"
-                if len(self.current_test) > 50
-                else f"[dim]{self.current_test}[/dim]",
-            )
-
-        # Timing information
+            test_name = self.current_test[:30] + "..." if len(self.current_test) > 30 else self.current_test
+            parts.append(f"Running: {test_name}")
+        
+        # Timing
         elapsed = self.elapsed_time
         if elapsed > 1:
-            table.add_row("[blue]⏱️[/blue] Elapsed", f"[dim]{elapsed:.1f}s[/dim]")
-
-        # ETA
-        eta = self.eta_seconds
-        if eta and eta > 1 and not self.is_complete:
-            table.add_row("[blue]📅[/blue] ETA", f"[dim]{eta:.1f}s[/dim]")
-
-        return table
+            parts.append(f"{elapsed:.1f}s")
+            
+        return " | ".join(parts)
