@@ -233,7 +233,29 @@ class PublishManagerImpl:
         self.console.print("[yellow]🔍[/yellow] Would build package")
         return True
 
+    def _clean_dist_directory(self) -> None:
+        """Clean dist directory to ensure only current version artifacts are uploaded."""
+        dist_dir = self.pkg_path / "dist"
+        if not dist_dir.exists():
+            return
+
+        try:
+            import shutil
+
+            # Remove entire dist directory and recreate it
+            shutil.rmtree(dist_dir)
+            dist_dir.mkdir(exist_ok=True)
+            self.console.print("[cyan]🧹[/cyan] Cleaned dist directory for fresh build")
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Warning: Could not clean dist directory: {e}"
+            )
+            # Continue with build anyway - uv publish will fail with clear error
+
     def _execute_build(self) -> bool:
+        # Clean dist directory before building to avoid uploading multiple versions
+        self._clean_dist_directory()
+
         result = self._run_command(["uv", "build"])
 
         if result.returncode != 0:
