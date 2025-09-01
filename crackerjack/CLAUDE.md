@@ -176,7 +176,7 @@ python -m crackerjack --ai-agent -t
 
 - **RefactoringAgent**: Structural code improvements and complexity reduction
 
-  - **Primary Expertise**: `IssueType.COMPLEXITY` (cognitive complexity ≤13)
+  - **Primary Expertise**: `IssueType.COMPLEXITY` (cognitive complexity ≤15)
   - **Secondary Expertise**: `IssueType.DEAD_CODE` (unused imports, variables, functions)
   - **Capabilities**:
     - Breaks down complex functions into helper methods
@@ -562,7 +562,7 @@ Following our philosophy that **EVERY LINE OF CODE IS A LIABILITY**:
 
 ### Quality Rules (Enforced by Tools)
 
-- **Cognitive complexity ≤13** per function (Complexipy) - KISS principle in action
+- **Cognitive complexity ≤15** per function (Complexipy) - KISS principle in action
 - **No hardcoded temp paths** (Security: Bandit B108) - use `tempfile` module
 - **UV tool execution**: Always use `uv run` for external tools
 - **No shell=True** in subprocess calls

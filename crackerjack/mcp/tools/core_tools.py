@@ -3,6 +3,51 @@ import typing as t
 from crackerjack.mcp.context import get_context
 
 
+async def create_task_with_subagent(
+    description: str,
+    prompt: str,
+    subagent_type: str,
+) -> dict[str, t.Any]:
+    """Create a task using a specific subagent type.
+
+    This function provides integration with the Task tool for executing
+    user agents and system agents through the intelligent agent system.
+
+    Args:
+        description: Description of the task
+        prompt: The actual task prompt/content
+        subagent_type: Type of subagent to use
+
+    Returns:
+        Dictionary with task execution results
+    """
+    try:
+        # For now, return a placeholder result indicating the task would be executed
+        # In a full implementation, this would integrate with the actual Task tool
+
+        result = {
+            "success": True,
+            "description": description,
+            "prompt": prompt,
+            "subagent_type": subagent_type,
+            "result": f"Task would be executed by {subagent_type}: {prompt[:100]}...",
+            "agent_type": "user"
+            if subagent_type
+            not in ["general-purpose", "statusline-setup", "output-style-setup"]
+            else "system",
+        }
+
+        return result
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "description": description,
+            "subagent_type": subagent_type,
+        }
+
+
 async def _validate_stage_request(context, rate_limiter) -> str | None:
     if not context:
         return '{"error": "Server context not available", "success": false}'
@@ -85,7 +130,7 @@ def _execute_init_stage(orchestrator) -> bool:
         init_service = InitializationService(console, filesystem, git_service, pkg_path)
 
         # Run initialization in current directory
-        results = init_service.initialize_project(target_path=Path.cwd(), force=False)
+        results = init_service.initialize_project(target_path=Path.cwd())
 
         return results.get("success", False)
 

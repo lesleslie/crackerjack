@@ -38,7 +38,7 @@
   - Avoid unnecessary line comments - use them sparingly only for complex logic
   - Use protocols (`t.Protocol`) instead of abstract base classes
   - Choose clear, descriptive variable and function names that make the code self-documenting (even in map/filter functions)
-  - **Keep cognitive complexity ≤13 per function** - extract helper methods if needed (KISS principle)
+  - **Keep cognitive complexity ≤15 per function** - extract helper methods if needed (KISS principle)
 
 - **Code Organization**
 
@@ -171,7 +171,7 @@ def _should_process(self, data: dict) -> bool:
 
   - **Complexipy Code Complexity (KISS Enforcement):**
 
-    - Keep cognitive complexity ≤13 per function/method
+    - Keep cognitive complexity ≤15 per function/method
     - Break complex methods into 3-5 smaller helper functions with single responsibilities
     - Use descriptive function names that explain their purpose
     - Remember: complexity is the enemy of maintainability

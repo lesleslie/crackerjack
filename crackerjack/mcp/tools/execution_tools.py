@@ -137,7 +137,9 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
 
     # Check rate limits if available
     if hasattr(context, "rate_limiter"):
-        try:
+        from contextlib import suppress
+
+        with suppress(Exception):
             allowed = await context.rate_limiter.acquire("execute_crackerjack")
             if not allowed:
                 return json.dumps(
@@ -146,8 +148,6 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
                         "message": "Rate limit exceeded. Please wait before retrying.",
                     }
                 )
-        except Exception:
-            pass  # Continue if rate limiting fails
 
     return None
 
@@ -272,7 +272,7 @@ def _analyze_task_for_agents(
     current_context.lower()
 
     # Code quality and testing agents
-    if any(keyword in task_lower for keyword in ["test", "quality", "fix", "error"]):
+    if any(keyword in task_lower for keyword in ("test", "quality", "fix", "error")):
         agents.extend(
             [
                 {
@@ -291,7 +291,7 @@ def _analyze_task_for_agents(
 
     # Security-related tasks
     if any(
-        keyword in task_lower for keyword in ["security", "vulnerability", "secure"]
+        keyword in task_lower for keyword in ("security", "vulnerability", "secure")
     ):
         agents.append(
             {
@@ -305,7 +305,7 @@ def _analyze_task_for_agents(
     # Performance optimization
     if any(
         keyword in task_lower
-        for keyword in ["performance", "optimize", "speed", "slow"]
+        for keyword in ("performance", "optimize", "speed", "slow")
     ):
         agents.append(
             {
@@ -318,7 +318,7 @@ def _analyze_task_for_agents(
 
     # Documentation tasks
     if any(
-        keyword in task_lower for keyword in ["document", "readme", "doc", "explain"]
+        keyword in task_lower for keyword in ("document", "readme", "doc", "explain")
     ):
         agents.append(
             {
@@ -332,7 +332,7 @@ def _analyze_task_for_agents(
     # Import and dependency management
     if any(
         keyword in task_lower
-        for keyword in ["import", "dependency", "package", "module"]
+        for keyword in ("import", "dependency", "package", "module")
     ):
         agents.append(
             {

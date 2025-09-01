@@ -142,8 +142,7 @@ def _classify_error_pattern(pattern: t.Any) -> str:
         keyword in pattern_str for keyword in ("format", "style", "ruff", "black")
     ):
         return "formatting_issues"
-    else:
-        return "unknown"
+    return "unknown"
 
 
 def _generate_error_recommendations(categories: dict[str, list[t.Any]]) -> list[str]:
@@ -156,53 +155,69 @@ def _generate_error_recommendations(categories: dict[str, list[t.Any]]) -> list[
         )
 
     if categories.get("import_errors"):
-        recommendations.extend([
-            "📦 Check imports and module dependencies",
-            "🔍 Verify all required packages are installed",
-        ])
+        recommendations.extend(
+            [
+                "📦 Check imports and module dependencies",
+                "🔍 Verify all required packages are installed",
+            ]
+        )
 
     if categories.get("type_errors"):
-        recommendations.extend([
-            "🏷️ Add missing type annotations",
-            "🔧 Fix type mismatches and annotation issues",
-        ])
+        recommendations.extend(
+            [
+                "🏷️ Add missing type annotations",
+                "🔧 Fix type mismatches and annotation issues",
+            ]
+        )
 
     if categories.get("test_failures"):
-        recommendations.extend([
-            "🧪 Fix failing tests and improve test reliability",
-            "🔬 Review test fixtures and dependencies",
-        ])
+        recommendations.extend(
+            [
+                "🧪 Fix failing tests and improve test reliability",
+                "🔬 Review test fixtures and dependencies",
+            ]
+        )
 
     if categories.get("security_issues"):
-        recommendations.extend([
-            "🔒 Address security vulnerabilities immediately",
-            "🛡️ Follow security best practices",
-        ])
+        recommendations.extend(
+            [
+                "🔒 Address security vulnerabilities immediately",
+                "🛡️ Follow security best practices",
+            ]
+        )
 
     if categories.get("complexity_issues"):
-        recommendations.extend([
-            "📐 Refactor complex functions to reduce cognitive load",
-            "🔄 Break down large functions into smaller components",
-        ])
+        recommendations.extend(
+            [
+                "📐 Refactor complex functions to reduce cognitive load",
+                "🔄 Break down large functions into smaller components",
+            ]
+        )
 
     if categories.get("dependency_issues"):
-        recommendations.extend([
-            "📚 Update dependency management",
-            "🔄 Review and clean up requirements",
-        ])
+        recommendations.extend(
+            [
+                "📚 Update dependency management",
+                "🔄 Review and clean up requirements",
+            ]
+        )
 
     if categories.get("formatting_issues"):
-        recommendations.extend([
-            "💅 Apply code formatting and style fixes",
-            "📋 Ensure consistent code style",
-        ])
+        recommendations.extend(
+            [
+                "💅 Apply code formatting and style fixes",
+                "📋 Ensure consistent code style",
+            ]
+        )
 
     # Add general recommendations
     if len(categories) > 3:
-        recommendations.extend([
-            "🎯 Consider running AI agent auto-fixing for comprehensive resolution",
-            "📊 Monitor quality metrics to prevent regression",
-        ])
+        recommendations.extend(
+            [
+                "🎯 Consider running AI agent auto-fixing for comprehensive resolution",
+                "📊 Monitor quality metrics to prevent regression",
+            ]
+        )
 
     return recommendations
 

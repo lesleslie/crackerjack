@@ -27,6 +27,7 @@ from .rate_limiter import RateLimitConfig
 from .tools import (
     register_core_tools,
     register_execution_tools,
+    register_intelligence_tools,
     register_monitoring_tools,
     register_proactive_tools,
     register_progress_tools,
@@ -113,6 +114,7 @@ def create_mcp_server() -> t.Any | None:
 
     register_core_tools(mcp_app)
     register_execution_tools(mcp_app)
+    register_intelligence_tools(mcp_app)
     register_monitoring_tools(mcp_app)
     register_progress_tools(mcp_app)
     register_proactive_tools(mcp_app)

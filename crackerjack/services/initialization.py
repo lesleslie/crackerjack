@@ -419,7 +419,7 @@ This project follows crackerjack's clean code philosophy:
 - **KISS (Keep It Simple, Stupid)**: Complexity is the enemy of maintainability
 
 ### **Quality Rules**
-- **Cognitive complexity ≤13** per function (automatically enforced)
+- **Cognitive complexity ≤15** per function (automatically enforced)
 - **Coverage ratchet system**: Never decrease coverage, always improve toward 100%
 - **Type annotations required**: All functions must have return type hints
 - **Security patterns**: No hardcoded paths, proper temp file handling

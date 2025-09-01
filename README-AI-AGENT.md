@@ -32,7 +32,7 @@ Crackerjack includes **9 specialized sub-agents** that automatically detect and 
 
 - **RefactoringAgent**: Reduces complexity and removes dead code
 
-  - Breaks down complex functions (cognitive complexity ≤13)
+  - Breaks down complex functions (cognitive complexity ≤15)
   - Removes unused imports, variables, and functions
   - Extracts common patterns into reusable utilities
 

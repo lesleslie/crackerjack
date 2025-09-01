@@ -1,0 +1,549 @@
+"""Multi-Agent Execution Orchestrator.
+
+Coordinates execution of multiple agents with smart routing, fallback strategies,
+and result aggregation.
+"""
+
+import asyncio
+import logging
+import typing as t
+from dataclasses import dataclass
+from enum import Enum
+
+from crackerjack.agents.base import AgentContext, Issue
+
+from .agent_registry import (
+    AgentRegistry,
+    AgentSource,
+    RegisteredAgent,
+    get_agent_registry,
+)
+from .agent_selector import AgentScore, AgentSelector, TaskDescription
+
+
+class ExecutionStrategy(Enum):
+    """Strategy for multi-agent execution."""
+
+    SINGLE_BEST = "single_best"  # Use only the highest-scored agent
+    PARALLEL = "parallel"  # Run multiple agents in parallel
+    SEQUENTIAL = "sequential"  # Run agents one by one until success
+    CONSENSUS = "consensus"  # Run multiple agents and compare results
+
+
+class ExecutionMode(Enum):
+    """Mode of execution."""
+
+    AUTONOMOUS = "autonomous"  # Full automation
+    GUIDED = "guided"  # With human oversight
+    ADVISORY = "advisory"  # Recommendations only
+
+
+@dataclass
+class ExecutionRequest:
+    """Request for agent execution."""
+
+    task: TaskDescription
+    strategy: ExecutionStrategy = ExecutionStrategy.SINGLE_BEST
+    mode: ExecutionMode = ExecutionMode.AUTONOMOUS
+    max_agents: int = 3
+    timeout_seconds: int = 300
+    fallback_to_system: bool = True
+    context: AgentContext | None = None
+
+
+@dataclass
+class ExecutionResult:
+    """Result of agent execution."""
+
+    success: bool
+    primary_result: t.Any | None  # Main result from best agent
+    all_results: list[tuple[RegisteredAgent, t.Any]]  # All agent results
+    execution_time: float
+    agents_used: list[str]
+    strategy_used: ExecutionStrategy
+    error_message: str | None = None
+    recommendations: list[str] | None = None
+
+
+class AgentOrchestrator:
+    """Multi-agent execution orchestrator."""
+
+    def __init__(
+        self,
+        registry: AgentRegistry | None = None,
+        selector: AgentSelector | None = None,
+    ) -> None:
+        self.logger = logging.getLogger(__name__)
+        self.registry = registry
+        self.selector = selector or AgentSelector(registry)
+        self._execution_stats: dict[str, int] = {}
+
+    async def execute(self, request: ExecutionRequest) -> ExecutionResult:
+        """Execute a request using the intelligent agent system."""
+        start_time = asyncio.get_event_loop().time()
+
+        try:
+            self.logger.info(
+                f"Executing request: {request.task.description[:50]}... "
+                f"(strategy: {request.strategy.value})"
+            )
+
+            # Get agent candidates
+            candidates = await self.selector.select_agents(
+                request.task, max_candidates=request.max_agents
+            )
+
+            if not candidates:
+                return self._create_error_result(
+                    "No suitable agents found for task",
+                    start_time,
+                    request.strategy,
+                )
+
+            # Execute based on strategy
+            if request.strategy == ExecutionStrategy.SINGLE_BEST:
+                result = await self._execute_single_best(request, candidates)
+            elif request.strategy == ExecutionStrategy.PARALLEL:
+                result = await self._execute_parallel(request, candidates)
+            elif request.strategy == ExecutionStrategy.SEQUENTIAL:
+                result = await self._execute_sequential(request, candidates)
+            elif request.strategy == ExecutionStrategy.CONSENSUS:
+                result = await self._execute_consensus(request, candidates)
+            else:
+                result = await self._execute_single_best(request, candidates)
+
+            execution_time = asyncio.get_event_loop().time() - start_time
+            result.execution_time = execution_time
+
+            # Update stats
+            for agent_name in result.agents_used:
+                self._execution_stats[agent_name] = (
+                    self._execution_stats.get(agent_name, 0) + 1
+                )
+
+            self.logger.info(
+                f"Execution completed in {execution_time:.2f}s: "
+                f"{'success' if result.success else 'failure'} "
+                f"using {len(result.agents_used)} agents"
+            )
+
+            return result
+
+        except Exception as e:
+            self.logger.exception(f"Execution failed: {e}")
+            return self._create_error_result(
+                f"Execution error: {e}",
+                start_time,
+                request.strategy,
+            )
+
+    async def _execute_single_best(
+        self,
+        request: ExecutionRequest,
+        candidates: list[AgentScore],
+    ) -> ExecutionResult:
+        """Execute using the single best agent."""
+        best_candidate = candidates[0]
+
+        try:
+            result = await self._execute_agent(best_candidate.agent, request)
+
+            return ExecutionResult(
+                success=True,
+                primary_result=result,
+                all_results=[(best_candidate.agent, result)],
+                execution_time=0.0,  # Will be set by caller
+                agents_used=[best_candidate.agent.metadata.name],
+                strategy_used=ExecutionStrategy.SINGLE_BEST,
+                recommendations=self._generate_recommendations(best_candidate),
+            )
+
+        except Exception as e:
+            # Fallback to next best agent if available
+            if len(candidates) > 1 and request.fallback_to_system:
+                self.logger.warning(
+                    f"Primary agent {best_candidate.agent.metadata.name} failed: {e}. "
+                    f"Trying fallback..."
+                )
+
+                fallback_request = ExecutionRequest(
+                    task=request.task,
+                    strategy=ExecutionStrategy.SEQUENTIAL,
+                    mode=request.mode,
+                    max_agents=len(candidates) - 1,
+                    timeout_seconds=request.timeout_seconds,
+                    fallback_to_system=False,  # Prevent infinite recursion
+                    context=request.context,
+                )
+
+                return await self._execute_sequential(fallback_request, candidates[1:])
+
+            return ExecutionResult(
+                success=False,
+                primary_result=None,
+                all_results=[(best_candidate.agent, e)],
+                execution_time=0.0,
+                agents_used=[],
+                strategy_used=ExecutionStrategy.SINGLE_BEST,
+                error_message=str(e),
+            )
+
+    async def _execute_parallel(
+        self,
+        request: ExecutionRequest,
+        candidates: list[AgentScore],
+    ) -> ExecutionResult:
+        """Execute multiple agents in parallel."""
+        tasks = []
+        agents_to_execute = candidates[: request.max_agents]
+
+        for candidate in agents_to_execute:
+            task = asyncio.create_task(
+                self._execute_agent_safe(candidate.agent, request)
+            )
+            tasks.append((candidate.agent, task))
+
+        # Wait for all tasks to complete
+        results = []
+        successful_results = []
+
+        for agent, task in tasks:
+            try:
+                result = await asyncio.wait_for(task, timeout=request.timeout_seconds)
+                results.append((agent, result))
+                if not isinstance(result, Exception):
+                    successful_results.append((agent, result))
+            except TimeoutError:
+                results.append((agent, TimeoutError("Agent execution timed out")))
+            except Exception as e:
+                results.append((agent, e))
+
+        # Choose best successful result
+        primary_result = None
+        agents_used = []
+
+        if successful_results:
+            # Use result from highest-priority agent
+            successful_results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
+            primary_result = successful_results[0][1]
+            agents_used = [agent.metadata.name for agent, _ in successful_results]
+
+        return ExecutionResult(
+            success=len(successful_results) > 0,
+            primary_result=primary_result,
+            all_results=results,
+            execution_time=0.0,
+            agents_used=agents_used,
+            strategy_used=ExecutionStrategy.PARALLEL,
+            error_message=None if successful_results else "All parallel agents failed",
+        )
+
+    async def _execute_sequential(
+        self,
+        request: ExecutionRequest,
+        candidates: list[AgentScore],
+    ) -> ExecutionResult:
+        """Execute agents sequentially until one succeeds."""
+        results = []
+
+        for candidate in candidates[: request.max_agents]:
+            try:
+                result = await asyncio.wait_for(
+                    self._execute_agent(candidate.agent, request),
+                    timeout=request.timeout_seconds,
+                )
+
+                results.append((candidate.agent, result))
+
+                # Success - return immediately
+                return ExecutionResult(
+                    success=True,
+                    primary_result=result,
+                    all_results=results,
+                    execution_time=0.0,
+                    agents_used=[candidate.agent.metadata.name],
+                    strategy_used=ExecutionStrategy.SEQUENTIAL,
+                    recommendations=self._generate_recommendations(candidate),
+                )
+
+            except Exception as e:
+                results.append((candidate.agent, e))
+                self.logger.warning(
+                    f"Sequential agent {candidate.agent.metadata.name} failed: {e}"
+                )
+                continue
+
+        # All agents failed
+        return ExecutionResult(
+            success=False,
+            primary_result=None,
+            all_results=results,
+            execution_time=0.0,
+            agents_used=[],
+            strategy_used=ExecutionStrategy.SEQUENTIAL,
+            error_message="All sequential agents failed",
+        )
+
+    async def _execute_consensus(
+        self,
+        request: ExecutionRequest,
+        candidates: list[AgentScore],
+    ) -> ExecutionResult:
+        """Execute multiple agents and build consensus from results."""
+        # First run parallel execution
+        parallel_request = ExecutionRequest(
+            task=request.task,
+            strategy=ExecutionStrategy.PARALLEL,
+            mode=request.mode,
+            max_agents=min(request.max_agents, 3),  # Limit for consensus
+            timeout_seconds=request.timeout_seconds,
+            fallback_to_system=False,
+            context=request.context,
+        )
+
+        parallel_result = await self._execute_parallel(parallel_request, candidates)
+
+        if not parallel_result.success:
+            return parallel_result
+
+        # Analyze results for consensus
+        successful_results = [
+            (agent, result)
+            for agent, result in parallel_result.all_results
+            if not isinstance(result, Exception)
+        ]
+
+        if len(successful_results) < 2:
+            # Not enough results for consensus - return best result
+            return parallel_result
+
+        # Build consensus (simplified - could be much more sophisticated)
+        consensus_result = self._build_consensus(successful_results)
+
+        return ExecutionResult(
+            success=True,
+            primary_result=consensus_result,
+            all_results=parallel_result.all_results,
+            execution_time=parallel_result.execution_time,
+            agents_used=parallel_result.agents_used,
+            strategy_used=ExecutionStrategy.CONSENSUS,
+            recommendations=["Results validated through multi-agent consensus"],
+        )
+
+    async def _execute_agent(
+        self, agent: RegisteredAgent, request: ExecutionRequest
+    ) -> t.Any:
+        """Execute a specific agent."""
+        if agent.agent is not None:
+            # Crackerjack agent
+            return await self._execute_crackerjack_agent(agent, request)
+        elif agent.agent_path is not None:
+            # User agent
+            return await self._execute_user_agent(agent, request)
+        elif agent.subagent_type is not None:
+            # System agent
+            return await self._execute_system_agent(agent, request)
+        else:
+            raise ValueError(f"Invalid agent configuration: {agent.metadata.name}")
+
+    async def _execute_agent_safe(
+        self, agent: RegisteredAgent, request: ExecutionRequest
+    ) -> t.Any:
+        """Execute an agent with exception handling."""
+        try:
+            return await self._execute_agent(agent, request)
+        except Exception as e:
+            return e
+
+    async def _execute_crackerjack_agent(
+        self,
+        agent: RegisteredAgent,
+        request: ExecutionRequest,
+    ) -> t.Any:
+        """Execute a built-in crackerjack agent."""
+        if not agent.agent:
+            raise ValueError("No crackerjack agent instance available")
+
+        # Convert task to Issue for crackerjack agents
+        issue = Issue(
+            id="orchestrated_task",
+            type=self._map_task_to_issue_type(request.task),
+            severity=self._map_task_priority_to_severity(request.task),
+            message=request.task.description,
+            file_path=None,  # Could be extracted from task if needed
+        )
+
+        # Execute agent
+        result = await agent.agent.analyze_and_fix(issue)
+        return result
+
+    async def _execute_user_agent(
+        self,
+        agent: RegisteredAgent,
+        request: ExecutionRequest,
+    ) -> t.Any:
+        """Execute a user agent via Task tool."""
+        # Import Task tool dynamically to avoid circular imports
+        from crackerjack.mcp.tools.core_tools import create_task_with_subagent
+
+        # Use Task tool to execute user agent
+        result = await create_task_with_subagent(
+            description=f"Execute task using {agent.metadata.name}",
+            prompt=request.task.description,
+            subagent_type=agent.metadata.name,
+        )
+
+        return result
+
+    async def _execute_system_agent(
+        self,
+        agent: RegisteredAgent,
+        request: ExecutionRequest,
+    ) -> t.Any:
+        """Execute a system agent via Task tool."""
+        if not agent.subagent_type:
+            raise ValueError("No subagent type specified for system agent")
+
+        # Import Task tool dynamically
+        from crackerjack.mcp.tools.core_tools import create_task_with_subagent
+
+        # Use Task tool to execute system agent
+        result = await create_task_with_subagent(
+            description=f"Execute task using {agent.metadata.name}",
+            prompt=request.task.description,
+            subagent_type=agent.subagent_type,
+        )
+
+        return result
+
+    def _map_task_to_issue_type(self, task: TaskDescription):
+        """Map task context to Issue type for crackerjack agents."""
+        # Import IssueType here to avoid circular imports
+        from crackerjack.agents.base import IssueType
+
+        # Simple mapping - could be more sophisticated
+        context_map = {
+            "code_quality": IssueType.FORMATTING,
+            "refactoring": IssueType.COMPLEXITY,
+            "testing": IssueType.TEST_FAILURE,
+            "security": IssueType.SECURITY,
+            "performance": IssueType.PERFORMANCE,
+            "documentation": IssueType.DOCUMENTATION,
+        }
+
+        if task.context and task.context.value in context_map:
+            return context_map[task.context.value]
+
+        # Analyze task description for hints
+        desc_lower = task.description.lower()
+        if "test" in desc_lower:
+            return IssueType.TEST_FAILURE
+        elif "refurb" in desc_lower or "complexity" in desc_lower:
+            return IssueType.COMPLEXITY
+        elif "security" in desc_lower:
+            return IssueType.SECURITY
+        elif "format" in desc_lower:
+            return IssueType.FORMATTING
+        else:
+            return IssueType.FORMATTING  # Default
+
+    def _map_task_priority_to_severity(self, task: TaskDescription):
+        """Map task priority to Issue severity."""
+        from crackerjack.agents.base import Priority
+
+        if task.priority >= 80:
+            return Priority.HIGH
+        elif task.priority >= 50:
+            return Priority.MEDIUM
+        else:
+            return Priority.LOW
+
+    def _build_consensus(self, results: list[tuple[RegisteredAgent, t.Any]]) -> t.Any:
+        """Build consensus from multiple agent results."""
+        # Simplified consensus - could be much more sophisticated
+        # For now, just return the result from the highest-priority agent
+        results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
+        return results[0][1]
+
+    def _generate_recommendations(self, candidate: AgentScore) -> list[str]:
+        """Generate recommendations based on agent selection."""
+        recommendations = []
+
+        if candidate.final_score > 0.8:
+            recommendations.append("High confidence in agent selection")
+        elif candidate.final_score > 0.6:
+            recommendations.append("Good agent match for this task")
+        else:
+            recommendations.append("Consider manual review of results")
+
+        if candidate.agent.metadata.source == AgentSource.CRACKERJACK:
+            recommendations.append("Using specialized built-in agent")
+        elif candidate.agent.metadata.source == AgentSource.USER:
+            recommendations.append("Using custom user agent")
+        else:
+            recommendations.append("Using general-purpose system agent")
+
+        return recommendations
+
+    def _create_error_result(
+        self,
+        error_message: str,
+        start_time: float,
+        strategy: ExecutionStrategy,
+    ) -> ExecutionResult:
+        """Create an error result."""
+        execution_time = asyncio.get_event_loop().time() - start_time
+
+        return ExecutionResult(
+            success=False,
+            primary_result=None,
+            all_results=[],
+            execution_time=execution_time,
+            agents_used=[],
+            strategy_used=strategy,
+            error_message=error_message,
+        )
+
+    def get_execution_stats(self) -> dict[str, t.Any]:
+        """Get execution statistics."""
+        return {
+            "total_executions": sum(self._execution_stats.values()),
+            "agent_usage": dict(self._execution_stats),
+            "most_used_agent": max(
+                self._execution_stats.items(), key=lambda x: x[1], default=("none", 0)
+            )[0]
+            if self._execution_stats
+            else "none",
+        }
+
+    async def analyze_task_routing(self, task: TaskDescription) -> dict[str, t.Any]:
+        """Analyze how a task would be routed through the system."""
+        analysis = await self.selector.analyze_task_complexity(task)
+
+        # Add orchestration recommendations
+        if analysis["complexity_level"] == "high":
+            analysis["recommended_strategy"] = ExecutionStrategy.CONSENSUS
+        elif analysis["candidate_count"] > 3:
+            analysis["recommended_strategy"] = ExecutionStrategy.PARALLEL
+        elif analysis["candidate_count"] > 1:
+            analysis["recommended_strategy"] = ExecutionStrategy.SEQUENTIAL
+        else:
+            analysis["recommended_strategy"] = ExecutionStrategy.SINGLE_BEST
+
+        return analysis
+
+
+# Global orchestrator instance
+_orchestrator_instance: AgentOrchestrator | None = None
+
+
+async def get_agent_orchestrator() -> AgentOrchestrator:
+    """Get or create the global agent orchestrator."""
+    global _orchestrator_instance
+
+    if _orchestrator_instance is None:
+        registry = await get_agent_registry()
+        selector = AgentSelector(registry)
+        _orchestrator_instance = AgentOrchestrator(registry, selector)
+
+    return _orchestrator_instance

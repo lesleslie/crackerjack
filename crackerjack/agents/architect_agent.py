@@ -121,19 +121,18 @@ class ArchitectAgent(ProactiveAgent):
 
     def _get_internal_approach(self, issue: Issue) -> str:
         """Get internal approach for simpler issues."""
-        approaches = {
+        return {
             IssueType.FORMATTING: "apply_standard_formatting",
             IssueType.IMPORT_ERROR: "optimize_imports",
             IssueType.TYPE_ERROR: "add_type_annotations",
             IssueType.TEST_FAILURE: "fix_test_patterns",
             IssueType.DEAD_CODE: "remove_unused_code",
             IssueType.DOCUMENTATION: "update_documentation",
-        }
-        return approaches.get(issue.type, "apply_standard_fix")
+        }.get(issue.type, "apply_standard_fix")
 
     def _get_recommended_patterns(self, issue: Issue) -> list[str]:
         """Get patterns recommended by crackerjack-architect."""
-        patterns = {
+        return {
             IssueType.COMPLEXITY: [
                 "extract_method",
                 "dependency_injection",
@@ -158,8 +157,7 @@ class ArchitectAgent(ProactiveAgent):
                 "safe_subprocess",
                 "token_handling",
             ],
-        }
-        return patterns.get(issue.type, ["standard_patterns"])
+        }.get(issue.type, ["standard_patterns"])
 
     def _get_cached_patterns_for_issue(self, issue: Issue) -> list[str]:
         """Get cached patterns that match this issue type."""

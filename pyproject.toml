@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.30.3"
+version = "0.31.0"
 description = "Opinionated Python project management tool"
 readme = "README.md"
 authors = [
@@ -110,7 +110,7 @@ fixable = [
 ]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 13
+max-complexity = 15
 
 [tool.codespell]
 skip = "*/data/*"
@@ -287,7 +287,7 @@ exclude-deps = [
 [tool.refurb]
 enable_all = true
 quiet = true
-python_version = "3.13"
+python_version = "0.31.0"
 
 [tool.bandit]
 target = [

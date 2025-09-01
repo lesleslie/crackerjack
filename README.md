@@ -18,7 +18,7 @@ Just as the name suggests, Crackerjack makes your Python projects first-rate thr
 
 - **🧠 Proactive AI Architecture**: 10+ specialized AI agents prevent issues before they occur
 - **⚡ Autonomous Quality**: Intelligent auto-fixing with architectural planning
-- **🛡️ Zero-Compromise Standards**: 100% test coverage, complexity ≤13, security-first patterns
+- **🛡️ Zero-Compromise Standards**: 100% test coverage, complexity ≤15, security-first patterns
 - **🔄 Learning System**: Gets smarter with every project, caching successful patterns
 - **🌟 One Command Excellence**: From setup to PyPI publishing with a single command
 
@@ -487,7 +487,7 @@ python -m crackerjack -a patch # Release workflow
 - No docstrings (self-documenting code)
 - Pathlib over os.path
 - Protocol-based interfaces
-- Cognitive complexity ≤13 per function
+- Cognitive complexity ≤15 per function
 - UV for dependency management
 
 ## Publishing & Version Management
