@@ -260,7 +260,7 @@ class InitializationService:
 
         try:
             # Load the crackerjack MCP servers to add
-            with source_file.open("r") as f:
+            with source_file.open() as f:
                 source_config = json.load(f)
 
             if not isinstance(source_config.get("mcpServers"), dict):
@@ -307,7 +307,7 @@ class InitializationService:
         """Merge crackerjack servers into existing .mcp.json."""
         try:
             # Load existing config
-            with target_file.open("r") as f:
+            with target_file.open() as f:
                 existing_config = json.load(f)
 
             if not isinstance(existing_config.get("mcpServers"), dict):
@@ -772,7 +772,7 @@ python -m crackerjack -a patch
     ) -> None:
         """Smart merge for .pre-commit-config.yaml."""
         # Load source config
-        with source_file.open("r") as f:
+        with source_file.open() as f:
             source_config = yaml.safe_load(f)
 
         if not target_file.exists():
@@ -787,7 +787,7 @@ python -m crackerjack -a patch
             return
 
         # Load existing config
-        with target_file.open("r") as f:
+        with target_file.open() as f:
             target_config = yaml.safe_load(f)
 
         # Ensure configs are dictionaries

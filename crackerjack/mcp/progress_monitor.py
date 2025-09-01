@@ -136,7 +136,7 @@ class AgentStatusPanel(Widget):
             "RefactoringAgent": "🔧",
             "ImportOptimizationAgent": "📦",
         }
-        return emojis.get(agent_type, "🤖")
+        return emojis.get(agent_type) or "🤖"
 
     def _get_status_emoji(self, status: str) -> str:
         emojis = {
@@ -146,7 +146,7 @@ class AgentStatusPanel(Widget):
             "failed": "❌",
             "idle": "⏸️",
         }
-        return emojis.get(status.lower(), "❓")
+        return emojis.get(status.lower()) or "❓"
 
 
 class JobPanel(Widget):
@@ -402,10 +402,6 @@ class JobPanel(Widget):
         with Container(classes="job-errors"):
             yield DataTable(
                 id=f"job-errors-{self.job_data.get('job_id', 'unknown')}",
-                show_header=False,
-                zebra_stripes=False,
-                show_cursor=False,
-                show_row_labels=False,
             )
 
 
@@ -457,18 +453,12 @@ class CrackerjackDashboard(App):
         with Container(id="jobs-panel"):
             yield DataTable(
                 id="jobs-table",
-                show_header=False,
-                zebra_stripes=False,
-                show_cursor=False,
             )
 
     def _compose_errors_panel(self) -> ComposeResult:
         with Container(id="errors-panel"):
             yield DataTable(
                 id="errors-table",
-                show_header=False,
-                zebra_stripes=False,
-                show_cursor=False,
             )
 
     def _compose_services_panel(self) -> ComposeResult:
@@ -476,7 +466,6 @@ class CrackerjackDashboard(App):
             yield DataTable(
                 id="services-table",
                 zebra_stripes=True,
-                show_cursor=False,
             )
 
     def _compose_discovery_section(self) -> ComposeResult:

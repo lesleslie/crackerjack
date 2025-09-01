@@ -318,7 +318,6 @@ class AIAgentDebugger:
         # Main debug summary table
         table = Table(
             title=f"[{title_style}]AI Agent Debug Summary[/{title_style}]",
-            show_header=True,
             border_style=border_style,
         )
         table.add_column("Category", style="cyan")
@@ -384,7 +383,6 @@ class AIAgentDebugger:
 
         table = Table(
             title="[cyan]Iteration Breakdown[/cyan]",
-            show_header=True,
             border_style=border_style,
         )
         table.add_column("Iteration", style="yellow")
@@ -429,7 +427,6 @@ class AIAgentDebugger:
 
         table = Table(
             title="[cyan]Agent Activity Breakdown[/cyan]",
-            show_header=True,
             border_style=border_style,
         )
         table.add_column("Agent", style="blue")
@@ -454,7 +451,6 @@ class AIAgentDebugger:
 
         table = Table(
             title=f"[{status_style}]{success_icon} TOTAL WORKFLOW STATISTICS {success_icon}[/{status_style}]",
-            show_header=True,
             border_style=border_style,
         )
         table.add_column("Metric", style="cyan")
@@ -502,7 +498,6 @@ class AIAgentDebugger:
 
         table = Table(
             title="[cyan]MCP Tool Usage[/cyan]",
-            show_header=True,
             border_style=border_style,
         )
         table.add_column("Tool", style="cyan")

@@ -61,9 +61,10 @@ class PublishManagerImpl:
             content = self.filesystem.read_file(pyproject_path)
             import re
 
-            pattern = r'(version\s*=\s*["\'])([^"\']+)(["\'])'
+            # More specific pattern to only match project version, not tool versions
+            pattern = r'^(version\s*=\s*["\'])([^"\']+)(["\'])$'
             replacement = f"\\g<1>{new_version}\\g<3>"
-            new_content = re.sub(pattern, replacement, content)
+            new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
             if content != new_content:
                 if not self.dry_run:
                     self.filesystem.write_file(pyproject_path, new_content)
@@ -105,6 +106,11 @@ class PublishManagerImpl:
             msg = "Cannot determine current version"
             raise ValueError(msg)
         self.console.print(f"[cyan]📦[/cyan] Current version: {current_version}")
+
+        # Handle interactive version selection
+        if version_type == "interactive":
+            version_type = self._prompt_for_version_type()
+
         try:
             new_version = self._calculate_next_version(current_version, version_type)
             if self.dry_run:
@@ -123,6 +129,22 @@ class PublishManagerImpl:
         except Exception as e:
             self.console.print(f"[red]❌[/red] Version bump failed: {e}")
             raise
+
+    def _prompt_for_version_type(self) -> str:
+        """Prompt user to select version type interactively."""
+        try:
+            from rich.prompt import Prompt
+
+            return Prompt.ask(
+                "[cyan]📦[/cyan] Select version bump type",
+                choices=["patch", "minor", "major"],
+                default="patch",
+            )
+        except ImportError:
+            self.console.print(
+                "[yellow]⚠️[/yellow] Rich prompt not available, defaulting to patch"
+            )
+            return "patch"
 
     def validate_auth(self) -> bool:
         auth_methods = self._collect_auth_methods()

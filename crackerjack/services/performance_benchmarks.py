@@ -423,8 +423,7 @@ class PerformanceBenchmarkService:
         if not recent_runs:
             return
 
-        last_run = recent_runs[-1]
-        component_durations = last_run.get("component_durations", {})
+        component_durations = recent_runs[-1].get("component_durations", {})
 
         for component in current_report.workflow_benchmarks:
             if component.name in component_durations:

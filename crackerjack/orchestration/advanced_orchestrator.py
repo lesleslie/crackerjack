@@ -909,7 +909,7 @@ class AdvancedWorkflowOrchestrator:
             "end-of-file-fixer": IssueType.FORMATTING,
         }
 
-        return hook_type_mapping.get(hook_name, IssueType.FORMATTING)
+        return hook_type_mapping.get(hook_name) or IssueType.FORMATTING
 
     def _adapt_execution_plan(
         self,

@@ -129,7 +129,7 @@ class AgentActivityWidget(Widget):
 
         status_icons = {"active": "🟢", "processing": "🔄", "idle": "⏸️", "error": "🔴"}
 
-        icon = status_icons.get(status, "⏸️")
+        icon = status_icons.get(status) or "⏸️"
         status_bar = self.query_one("#coordinator - status - bar", Label)
         status_bar.update(
             f"{icon} Coordinator: {status.title()} ({total_agents} agents available)",

@@ -189,8 +189,10 @@ def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]
     from crackerjack.services.initialization import InitializationService
 
     console = Console()
-    
-    return InitializationService(console, target_path).initialize_project(force_update=force)
+
+    return InitializationService(console, target_path).initialize_project(
+        force_update=force
+    )
 
 
 def _create_init_error_response(message: str) -> str:

@@ -149,7 +149,7 @@ class FileCache:
             return None
 
         try:
-            with cache_file.open("r", encoding="utf-8") as f:
+            with cache_file.open(encoding="utf-8") as f:
                 data = json.load(f)
                 entry = CacheEntry.from_dict(data)
 
@@ -202,7 +202,7 @@ class FileCache:
         removed = 0
         for cache_file in self.cache_dir.glob("*.cache"):
             try:
-                with cache_file.open("r", encoding="utf-8") as f:
+                with cache_file.open(encoding="utf-8") as f:
                     data = json.load(f)
                     entry = CacheEntry.from_dict(data)
 
@@ -231,7 +231,7 @@ class CrackerjackCache:
         self.enable_disk_cache = enable_disk_cache
 
         self.hook_results_cache = InMemoryCache(max_entries=500, default_ttl=1800)
-        self.file_hash_cache = InMemoryCache(max_entries=2000, default_ttl=3600)
+        self.file_hash_cache = InMemoryCache(max_entries=2000)
         self.config_cache = InMemoryCache(max_entries=100, default_ttl=7200)
 
         if enable_disk_cache:

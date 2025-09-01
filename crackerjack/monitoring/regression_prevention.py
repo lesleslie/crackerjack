@@ -496,7 +496,6 @@ class RegressionPreventionSystem:
         """Create regression prevention dashboard."""
         table = Table(
             title="Regression Prevention Dashboard",
-            show_header=True,
             header_style="bold magenta",
         )
 

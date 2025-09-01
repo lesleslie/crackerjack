@@ -474,8 +474,7 @@ class TestProgressStreamer:
                 break
 
     def _process_stream_line(self, line: bytes | str) -> str:
-        line_str = line.decode() if isinstance(line, bytes) else line
-        return line_str.rstrip()
+        return (line.decode() if isinstance(line, bytes) else line).rstrip()
 
     def _handle_line_output(
         self,

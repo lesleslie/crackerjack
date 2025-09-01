@@ -470,8 +470,6 @@ async def create_default_watchdog(
                 "crackerjack",
                 " -- start - mcp - server",
             ],
-            health_check_url=None,
-            health_check_interval=30.0,
         ),
         ServiceConfig(
             name="WebSocket Server",
@@ -482,7 +480,6 @@ async def create_default_watchdog(
                 " -- websocket - server",
             ],
             health_check_url="http: // localhost: 8675 / ",
-            health_check_interval=30.0,
         ),
     ]
 

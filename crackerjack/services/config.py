@@ -71,7 +71,7 @@ class ConfigurationService:
                 return False
             import yaml
 
-            with config_file.open("r") as f:
+            with config_file.open() as f:
                 yaml_result = yaml.safe_load(f)
                 _ = (
                     t.cast("dict[str, t.Any]", yaml_result)
@@ -128,7 +128,7 @@ class ConfigurationService:
                 return {"exists": False}
             import yaml
 
-            with config_file.open("r") as f:
+            with config_file.open() as f:
                 yaml_result = yaml.safe_load(f)
                 config_data = (
                     t.cast("dict[str, t.Any]", yaml_result)
@@ -172,7 +172,7 @@ class ConfigurationService:
 
             from tomli_w import dumps
 
-            with pyproject_file.open("r") as f:
+            with pyproject_file.open() as f:
                 content = f.read()
             config = loads(content)
             if "tool" not in config:

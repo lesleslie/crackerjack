@@ -334,7 +334,7 @@ class FileSystemService:
                     recovery="Check file path and ensure file exists",
                 )
 
-            with path_obj.open("r", encoding="utf-8") as file:
+            with path_obj.open(encoding="utf-8") as file:
                 while chunk := file.read(chunk_size):
                     yield chunk
 
@@ -369,7 +369,7 @@ class FileSystemService:
                     details=f"Attempted to read file at {path_obj.absolute()}",
                     recovery="Check file path and ensure file exists",
                 )
-            with path_obj.open("r", encoding="utf-8") as file:
+            with path_obj.open(encoding="utf-8") as file:
                 for line in file:
                     yield line.rstrip("\n\r")
         except PermissionError as e:

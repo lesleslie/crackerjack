@@ -237,7 +237,7 @@ class PatternCache:
             "total_usage": total_usage,
             "average_success_rate": avg_success_rate,
             "cache_file": str(self.cache_file),
-            "most_used_patterns": self._get_most_used_patterns(limit=5),
+            "most_used_patterns": self._get_most_used_patterns(),
         }
 
     def _get_most_used_patterns(self, limit: int = 5) -> list[dict[str, t.Any]]:

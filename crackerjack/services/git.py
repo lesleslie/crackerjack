@@ -151,8 +151,7 @@ class GitService:
             "ci": "Update CI/CD configuration",
             "deps": "Update dependencies",
         }
-        message = category_messages.get(category, "Update core functionality")
-        return [message]
+        return [category_messages.get(category, "Update core functionality")]
 
     def _generate_specific_messages(self, files: list[str]) -> list[str]:
         messages: list[str] = []

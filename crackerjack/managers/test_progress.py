@@ -67,7 +67,7 @@ class TestProgress:
     def _format_collection_progress(self) -> Table:
         """Format test collection progress display."""
         table = Table.grid(padding=(0, 2))
-        table.add_column(justify="left")
+        table.add_column()
         table.add_column(justify="center")
 
         # Collection status
@@ -93,7 +93,7 @@ class TestProgress:
     def _format_execution_progress(self) -> Table:
         """Format test execution progress display."""
         table = Table.grid(padding=(0, 2))
-        table.add_column(justify="left")
+        table.add_column()
         table.add_column(justify="center")
 
         # Progress bar representation

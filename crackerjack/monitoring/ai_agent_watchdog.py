@@ -227,7 +227,7 @@ class AIAgentWatchdog:
     async def _handle_alert(self, alert: WatchdogAlert):
         """Handle watchdog alert."""
         colors = {"warning": "yellow", "error": "red", "critical": "bold red"}
-        color = colors.get(alert.level, "white")
+        color = colors.get(alert.level) or "white"
 
         icon = {"warning": "⚠️", "error": "🚨", "critical": "🔥"}[alert.level]
 
@@ -250,7 +250,6 @@ class AIAgentWatchdog:
         """Create real-time monitoring dashboard."""
         table = Table(
             title="AI Agent Watchdog Dashboard",
-            show_header=True,
             header_style="bold magenta",
         )
 

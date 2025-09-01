@@ -68,7 +68,6 @@ class TestProgress:
         """Format progress display for test collection phase."""
         table = Table(
             title="🔍 Test Collection",
-            show_header=True,
             header_style="bold yellow",
             show_lines=True,
             border_style="yellow",
@@ -78,11 +77,9 @@ class TestProgress:
         )
 
         # Add multiple columns for better alignment (like complexipy)
-        table.add_column("Type", style="cyan", justify="left", ratio=1)
-        table.add_column(
-            "Details", style="white", justify="left", ratio=3
-        )  # Wider middle column
-        table.add_column("Count", style="green", justify="right", ratio=1)
+        table.add_column("Type", style="cyan", ratio=1)
+        table.add_column("Details", style="white", ratio=3)  # Wider middle column
+        table.add_column("Count", style="green", ratio=1)
 
         # Add status
         table.add_row("Status", self.collection_status, "")
@@ -112,7 +109,6 @@ class TestProgress:
         """Format progress display for test execution phase."""
         table = Table(
             title="🧪 Test Execution",
-            show_header=True,
             header_style="bold cyan",
             show_lines=True,
             border_style="cyan",
@@ -122,11 +118,9 @@ class TestProgress:
         )
 
         # Add multiple columns for better alignment (like complexipy)
-        table.add_column("Metric", style="cyan", justify="left", ratio=1)
-        table.add_column(
-            "Details", style="white", justify="left", ratio=3
-        )  # Wider middle column
-        table.add_column("Count", style="green", justify="right", ratio=1)
+        table.add_column("Metric", style="cyan", ratio=1)
+        table.add_column("Details", style="white", ratio=3)  # Wider middle column
+        table.add_column("Count", style="green", ratio=1)
 
         # Test results summary
         if self.total_tests > 0:
@@ -253,9 +247,6 @@ class TestManagementImpl:
                 console=self.console,
                 auto_refresh=False,
                 transient=True,
-                screen=False,
-                redirect_stdout=False,
-                redirect_stderr=False,
             ) as live,
             subprocess.Popen(
                 cmd,
