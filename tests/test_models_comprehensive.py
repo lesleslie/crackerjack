@@ -13,6 +13,7 @@ from crackerjack.models.task import (
     HookResult,
     SessionTracker,
     TaskStatus,
+    TaskStatusData,
 )
 
 """
@@ -100,7 +101,7 @@ class TestWorkflowOptions:
 
 class TestTaskModels:
     def test_task_status_creation(self) -> None:
-        status = TaskStatus(
+        status = TaskStatusData(
             id="task_1",
             name="Test Task",
             status="running",
@@ -118,7 +119,7 @@ class TestTaskModels:
         assert status.details == "Task is running"
 
     def test_task_status_defaults(self) -> None:
-        status = TaskStatus(
+        status = TaskStatusData(
             id="task_2",
             name="Simple Task",
             status="pending",
@@ -185,7 +186,7 @@ class TestTaskModels:
         from rich.console import Console
 
         console = Console()
-        task_status = TaskStatus(
+        task_data = TaskStatusData(
             id="task_1",
             name="Test Task",
             status="completed",
@@ -196,12 +197,12 @@ class TestTaskModels:
             session_id="session_456",
             start_time=2000.0,
             progress_file=Path(str(Path(tempfile.gettempdir()) / "progress2.json")),
-            tasks={"task_1": task_status},
+            tasks={"task_1": task_data},
             current_task="task_1",
         )
 
         assert "task_1" in tracker.tasks
-        assert tracker.tasks["task_1"] == task_status
+        assert tracker.tasks["task_1"] == task_data
         assert tracker.current_task == "task_1"
 
 
@@ -310,7 +311,7 @@ class TestModelIntegration:
         assert options.execution.verbose is True
 
     def test_task_workflow_integration(self) -> None:
-        task_status = TaskStatus(
+        task_data = TaskStatusData(
             id="integration_task",
             name="Integration Task",
             status="running",
@@ -334,10 +335,10 @@ class TestModelIntegration:
             session_id="integration_session",
             start_time=1000.0,
             progress_file=Path(str(Path(tempfile.gettempdir()) / "integration.json")),
-            tasks={"integration_task": task_status},
+            tasks={"integration_task": task_data},
             current_task="integration_task",
         )
 
-        assert tracker.current_task == task_status.id
-        assert tracker.tasks[task_status.id] == task_status
+        assert tracker.current_task == task_data.id
+        assert tracker.tasks[task_data.id] == task_data
         assert hook_result.status == "passed"

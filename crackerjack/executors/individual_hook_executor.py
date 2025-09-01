@@ -126,8 +126,9 @@ class HookOutputParser:
             "complexipy": self._parse_complexipy,
         }
 
-        parser = parser_map.get(hook_name, self._parse_default_hook)
-        parser(output_lines, patterns, result)
+        parser_map.get(hook_name, self._parse_default_hook)(
+            output_lines, patterns, result
+        )
 
         result["files_processed"] = list(result["files_processed"])
         return result
@@ -533,8 +534,7 @@ class IndividualHookExecutor:
 
     def _process_stream_line(self, line: bytes | str) -> str:
         """Process a line from stream into clean string."""
-        line_str = line.decode() if isinstance(line, bytes) else line
-        return line_str.rstrip()
+        return (line.decode() if isinstance(line, bytes) else line).rstrip()
 
     def _update_progress_with_line(
         self,

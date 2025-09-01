@@ -387,7 +387,7 @@ For optimal development experience with this crackerjack-enabled project, use th
 ### **Task-Specific Agents**
 
 - **🧪 crackerjack-test-specialist**: Advanced testing specialist for complex testing scenarios and coverage optimization
-- **🏗️ backend-architect**: System design, API architecture, and service integration patterns  
+- **🏗️ backend-architect**: System design, API architecture, and service integration patterns
 - **🔒 security-auditor**: Security analysis, vulnerability detection, and secure coding practices
 
 ### **Agent Usage Patterns**
@@ -432,7 +432,7 @@ This project follows crackerjack's clean code philosophy:
 # Quality checks (fast feedback during development)
 python -m crackerjack
 
-# With comprehensive testing  
+# With comprehensive testing
 python -m crackerjack -t
 
 # AI agent mode with autonomous fixing
@@ -474,7 +474,9 @@ python -m crackerjack -a patch
             # For external projects, generate customized crackerjack guidance
             source_content = self._generate_project_claude_content(project_name)
         else:
-            source_content = self._read_and_process_content(source_file, True, project_name)
+            source_content = self._read_and_process_content(
+                source_file, True, project_name
+            )
 
         if not target_file.exists():
             # No existing file, just copy

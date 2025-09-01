@@ -68,6 +68,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     console: Console
     session_id: str
     start_time: float
+    progress_file: t.Any = None
     tasks: dict[str, TaskStatusData] = {}
     current_task: str | None = None
     metadata: dict[str, t.Any] = {}

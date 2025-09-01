@@ -12,48 +12,60 @@ def _suggest_agent_for_context(state_manager) -> dict[str, t.Any]:
         "recommended_agent": None,
         "reason": "",
         "usage": "",
-        "priority": "MEDIUM"
+        "priority": "MEDIUM",
     }
-    
+
     # Check for errors or failures that need specific agents
     with suppress(Exception):
         recent_errors = getattr(state_manager, "recent_errors", [])
         stage_statuses = _get_stage_status_dict(state_manager)
-        
+
         # Test failures suggest test specialist
-        if (stage_statuses.get("tests") == "failed" or 
-            any("test" in str(error).lower() for error in recent_errors)):
-            suggestions.update({
-                "recommended_agent": "crackerjack-test-specialist",
-                "reason": "Test failures detected - specialist needed for debugging and fixes",
-                "usage": "Task tool with subagent_type=\"crackerjack-test-specialist\"",
-                "priority": "HIGH"
-            })
+        if stage_statuses.get("tests") == "failed" or any(
+            "test" in str(error).lower() for error in recent_errors
+        ):
+            suggestions.update(
+                {
+                    "recommended_agent": "crackerjack-test-specialist",
+                    "reason": "Test failures detected - specialist needed for debugging and fixes",
+                    "usage": 'Task tool with subagent_type="crackerjack-test-specialist"',
+                    "priority": "HIGH",
+                }
+            )
         # Security issues suggest security auditor
-        elif any("security" in str(error).lower() or "bandit" in str(error).lower() for error in recent_errors):
-            suggestions.update({
-                "recommended_agent": "security-auditor", 
-                "reason": "Security issues detected - immediate audit required",
-                "usage": "Task tool with subagent_type=\"security-auditor\"",
-                "priority": "HIGH"  
-            })
+        elif any(
+            "security" in str(error).lower() or "bandit" in str(error).lower()
+            for error in recent_errors
+        ):
+            suggestions.update(
+                {
+                    "recommended_agent": "security-auditor",
+                    "reason": "Security issues detected - immediate audit required",
+                    "usage": 'Task tool with subagent_type="security-auditor"',
+                    "priority": "HIGH",
+                }
+            )
         # Complexity issues suggest architect
         elif any("complex" in str(error).lower() for error in recent_errors):
-            suggestions.update({
-                "recommended_agent": "crackerjack-architect",
-                "reason": "Complexity issues detected - architectural review needed", 
-                "usage": "Task tool with subagent_type=\"crackerjack-architect\"",
-                "priority": "HIGH"
-            })
+            suggestions.update(
+                {
+                    "recommended_agent": "crackerjack-architect",
+                    "reason": "Complexity issues detected - architectural review needed",
+                    "usage": 'Task tool with subagent_type="crackerjack-architect"',
+                    "priority": "HIGH",
+                }
+            )
         # Default recommendation for Python projects
         else:
-            suggestions.update({
-                "recommended_agent": "crackerjack-architect",
-                "reason": "Python project - ensure crackerjack compliance from the start",
-                "usage": "Task tool with subagent_type=\"crackerjack-architect\"", 
-                "priority": "MEDIUM"
-            })
-    
+            suggestions.update(
+                {
+                    "recommended_agent": "crackerjack-architect",
+                    "reason": "Python project - ensure crackerjack compliance from the start",
+                    "usage": 'Task tool with subagent_type="crackerjack-architect"',
+                    "priority": "MEDIUM",
+                }
+            )
+
     return suggestions
 
 

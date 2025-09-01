@@ -860,7 +860,7 @@ def _create_init_exception_response(error: Exception, target_path: t.Any) -> str
 
 def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
     """Register tool for suggesting appropriate Claude Code agents."""
-    
+
     @mcp_app.tool()
     async def suggest_agents(
         task_description: str = "",
@@ -868,12 +868,12 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
         current_context: str = "",
     ) -> str:
         """Suggest appropriate Claude Code agents based on task and context.
-        
+
         Args:
             task_description: Description of the task being performed
-            project_type: Type of project (python, web, etc.)  
+            project_type: Type of project (python, web, etc.)
             current_context: Current development context or issues
-            
+
         Returns:
             JSON with suggested agents and usage patterns
         """
@@ -881,85 +881,108 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             "primary_agents": [],
             "task_specific_agents": [],
             "usage_patterns": [],
-            "rationale": ""
+            "rationale": "",
         }
-        
+
         # Always recommend crackerjack-architect for Python projects
         if project_type.lower() == "python" or "python" in task_description.lower():
-            suggestions["primary_agents"].append({
-                "name": "crackerjack-architect",
-                "emoji": "🏗️",
-                "description": "Expert in crackerjack's modular architecture and Python project management patterns",
-                "usage": "Use PROACTIVELY for all feature development, architectural decisions, and ensuring code follows crackerjack standards",
-                "priority": "HIGH"
-            })
-            
-            suggestions["primary_agents"].append({
-                "name": "python-pro", 
-                "emoji": "🐍",
-                "description": "Modern Python development with type hints, async/await patterns, and clean architecture",
-                "usage": "Use for implementing Python code with best practices",
-                "priority": "HIGH"
-            })
-        
+            suggestions["primary_agents"].append(
+                {
+                    "name": "crackerjack-architect",
+                    "emoji": "🏗️",
+                    "description": "Expert in crackerjack's modular architecture and Python project management patterns",
+                    "usage": "Use PROACTIVELY for all feature development, architectural decisions, and ensuring code follows crackerjack standards",
+                    "priority": "HIGH",
+                }
+            )
+
+            suggestions["primary_agents"].append(
+                {
+                    "name": "python-pro",
+                    "emoji": "🐍",
+                    "description": "Modern Python development with type hints, async/await patterns, and clean architecture",
+                    "usage": "Use for implementing Python code with best practices",
+                    "priority": "HIGH",
+                }
+            )
+
         # Task-specific agent suggestions
         task_lower = task_description.lower()
         context_lower = current_context.lower()
-        
-        if any(word in task_lower + context_lower for word in ["test", "testing", "coverage", "pytest"]):
-            suggestions["task_specific_agents"].append({
-                "name": "crackerjack-test-specialist",
-                "emoji": "🧪", 
-                "description": "Advanced testing specialist for complex scenarios and coverage optimization",
-                "usage": "Use for test creation, debugging test failures, and coverage improvements",
-                "priority": "HIGH"
-            })
-            
-            suggestions["task_specific_agents"].append({
-                "name": "pytest-hypothesis-specialist",
-                "emoji": "🧪",
-                "description": "Advanced testing patterns and property-based testing", 
-                "usage": "Use for comprehensive test development and optimization",
-                "priority": "MEDIUM"
-            })
-        
-        if any(word in task_lower + context_lower for word in ["security", "vulnerability", "auth", "permission"]):
-            suggestions["task_specific_agents"].append({
-                "name": "security-auditor",
-                "emoji": "🔒",
-                "description": "Security analysis, vulnerability detection, and secure coding practices",
-                "usage": "Use for security review and vulnerability assessment",
-                "priority": "HIGH"
-            })
-        
-        if any(word in task_lower + context_lower for word in ["architecture", "design", "api", "backend"]):
-            suggestions["task_specific_agents"].append({
-                "name": "backend-architect", 
-                "emoji": "🏗️",
-                "description": "System design, API architecture, and service integration patterns",
-                "usage": "Use for architectural planning and system design",
-                "priority": "MEDIUM"
-            })
-        
+
+        if any(
+            word in task_lower + context_lower
+            for word in ("test", "testing", "coverage", "pytest")
+        ):
+            suggestions["task_specific_agents"].append(
+                {
+                    "name": "crackerjack-test-specialist",
+                    "emoji": "🧪",
+                    "description": "Advanced testing specialist for complex scenarios and coverage optimization",
+                    "usage": "Use for test creation, debugging test failures, and coverage improvements",
+                    "priority": "HIGH",
+                }
+            )
+
+            suggestions["task_specific_agents"].append(
+                {
+                    "name": "pytest-hypothesis-specialist",
+                    "emoji": "🧪",
+                    "description": "Advanced testing patterns and property-based testing",
+                    "usage": "Use for comprehensive test development and optimization",
+                    "priority": "MEDIUM",
+                }
+            )
+
+        if any(
+            word in task_lower + context_lower
+            for word in ("security", "vulnerability", "auth", "permission")
+        ):
+            suggestions["task_specific_agents"].append(
+                {
+                    "name": "security-auditor",
+                    "emoji": "🔒",
+                    "description": "Security analysis, vulnerability detection, and secure coding practices",
+                    "usage": "Use for security review and vulnerability assessment",
+                    "priority": "HIGH",
+                }
+            )
+
+        if any(
+            word in task_lower + context_lower
+            for word in ("architecture", "design", "api", "backend")
+        ):
+            suggestions["task_specific_agents"].append(
+                {
+                    "name": "backend-architect",
+                    "emoji": "🏗️",
+                    "description": "System design, API architecture, and service integration patterns",
+                    "usage": "Use for architectural planning and system design",
+                    "priority": "MEDIUM",
+                }
+            )
+
         # Usage patterns
         suggestions["usage_patterns"] = [
-            "Task tool with subagent_type=\"crackerjack-architect\" for feature planning and architecture",
-            "Task tool with subagent_type=\"python-pro\" for implementation with best practices", 
-            "Task tool with subagent_type=\"crackerjack-test-specialist\" for comprehensive testing",
-            "Task tool with subagent_type=\"security-auditor\" for security validation"
+            'Task tool with subagent_type="crackerjack-architect" for feature planning and architecture',
+            'Task tool with subagent_type="python-pro" for implementation with best practices',
+            'Task tool with subagent_type="crackerjack-test-specialist" for comprehensive testing',
+            'Task tool with subagent_type="security-auditor" for security validation',
         ]
-        
+
         # Rationale
-        if "crackerjack-architect" in [agent["name"] for agent in suggestions["primary_agents"]]:
+        if "crackerjack-architect" in [
+            agent["name"] for agent in suggestions["primary_agents"]
+        ]:
             suggestions["rationale"] = (
                 "The crackerjack-architect agent is essential for this Python project as it ensures "
                 "code follows crackerjack patterns from the start, eliminating retrofitting needs. "
                 "Combined with python-pro for implementation and task-specific agents for specialized "
                 "work, this provides comprehensive development support with built-in quality assurance."
             )
-        
+
         return json.dumps(suggestions, indent=2)
-    
+
     @mcp_app.tool()
     async def detect_agent_needs(
         error_context: str = "",
@@ -967,12 +990,12 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
         recent_changes: str = "",
     ) -> str:
         """Detect and suggest agents based on current development context.
-        
+
         Args:
             error_context: Current errors or issues being faced
             file_patterns: File types or patterns being worked on
             recent_changes: Recent changes or commits
-            
+
         Returns:
             JSON with agent recommendations based on context analysis
         """
@@ -980,66 +1003,83 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             "urgent_agents": [],
             "suggested_agents": [],
             "workflow_recommendations": [],
-            "detection_reasoning": ""
+            "detection_reasoning": "",
         }
-        
-        all_context = f"{error_context} {file_patterns} {recent_changes}".lower()
-        
+
+        f"{error_context} {file_patterns} {recent_changes}".lower()
+
         # Urgent agent recommendations based on errors
-        if any(word in error_context.lower() for word in ["test fail", "coverage", "pytest", "assertion"]):
-            recommendations["urgent_agents"].append({
-                "agent": "crackerjack-test-specialist",
-                "reason": "Test failures detected - specialist needed for debugging and fixes",
-                "action": "Task tool with subagent_type=\"crackerjack-test-specialist\" to analyze and fix test issues"
-            })
-        
-        if any(word in error_context.lower() for word in ["security", "vulnerability", "bandit", "unsafe"]):
-            recommendations["urgent_agents"].append({
-                "agent": "security-auditor", 
-                "reason": "Security issues detected - immediate audit required",
-                "action": "Task tool with subagent_type=\"security-auditor\" to review and fix security vulnerabilities"
-            })
-        
-        if any(word in error_context.lower() for word in ["complexity", "refactor", "too complex"]):
-            recommendations["urgent_agents"].append({
-                "agent": "crackerjack-architect",
-                "reason": "Complexity issues detected - architectural review needed",
-                "action": "Task tool with subagent_type=\"crackerjack-architect\" to simplify and restructure code"
-            })
-        
+        if any(
+            word in error_context.lower()
+            for word in ("test fail", "coverage", "pytest", "assertion")
+        ):
+            recommendations["urgent_agents"].append(
+                {
+                    "agent": "crackerjack-test-specialist",
+                    "reason": "Test failures detected - specialist needed for debugging and fixes",
+                    "action": 'Task tool with subagent_type="crackerjack-test-specialist" to analyze and fix test issues',
+                }
+            )
+
+        if any(
+            word in error_context.lower()
+            for word in ("security", "vulnerability", "bandit", "unsafe")
+        ):
+            recommendations["urgent_agents"].append(
+                {
+                    "agent": "security-auditor",
+                    "reason": "Security issues detected - immediate audit required",
+                    "action": 'Task tool with subagent_type="security-auditor" to review and fix security vulnerabilities',
+                }
+            )
+
+        if any(
+            word in error_context.lower()
+            for word in ("complexity", "refactor", "too complex")
+        ):
+            recommendations["urgent_agents"].append(
+                {
+                    "agent": "crackerjack-architect",
+                    "reason": "Complexity issues detected - architectural review needed",
+                    "action": 'Task tool with subagent_type="crackerjack-architect" to simplify and restructure code',
+                }
+            )
+
         # General suggestions for Python projects
         if "python" in file_patterns.lower() or ".py" in file_patterns:
-            recommendations["suggested_agents"].extend([
-                {
-                    "agent": "crackerjack-architect", 
-                    "reason": "Python project detected - ensure crackerjack compliance",
-                    "priority": "HIGH"
-                },
-                {
-                    "agent": "python-pro",
-                    "reason": "Python development best practices",
-                    "priority": "HIGH"
-                }
-            ])
-        
+            recommendations["suggested_agents"].extend(
+                [
+                    {
+                        "agent": "crackerjack-architect",
+                        "reason": "Python project detected - ensure crackerjack compliance",
+                        "priority": "HIGH",
+                    },
+                    {
+                        "agent": "python-pro",
+                        "reason": "Python development best practices",
+                        "priority": "HIGH",
+                    },
+                ]
+            )
+
         # Workflow recommendations
         if recommendations["urgent_agents"]:
             recommendations["workflow_recommendations"] = [
                 "Address urgent issues first with specialized agents",
                 "Run crackerjack quality checks after fixes: python -m crackerjack -t",
-                "Use crackerjack-architect for ongoing compliance"
+                "Use crackerjack-architect for ongoing compliance",
             ]
         else:
             recommendations["workflow_recommendations"] = [
                 "Start with crackerjack-architect for proper planning",
-                "Use python-pro for implementation", 
-                "Run continuous quality checks: python -m crackerjack"
+                "Use python-pro for implementation",
+                "Run continuous quality checks: python -m crackerjack",
             ]
-        
+
         recommendations["detection_reasoning"] = (
             f"Analysis of context revealed {len(recommendations['urgent_agents'])} urgent issues "
             f"and {len(recommendations['suggested_agents'])} general recommendations. "
             "Prioritize urgent agents first, then follow standard workflow patterns."
         )
-        
+
         return json.dumps(recommendations, indent=2)
