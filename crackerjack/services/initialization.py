@@ -843,6 +843,10 @@ python -m crackerjack -a patch
                 else yaml_content
             )
 
+            # Ensure content is not None before cleaning
+            if content is None:
+                content = ""
+
             # Clean trailing whitespace and ensure single trailing newline
             from crackerjack.services.filesystem import FileSystemService
 

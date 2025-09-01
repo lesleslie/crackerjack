@@ -140,12 +140,14 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
         from contextlib import suppress
 
         with suppress(Exception):
-            allowed = await context.rate_limiter.acquire("execute_crackerjack")
+            allowed, details = await context.rate_limiter.check_request_allowed(
+                "execute_crackerjack"
+            )
             if not allowed:
                 return json.dumps(
                     {
                         "status": "error",
-                        "message": "Rate limit exceeded. Please wait before retrying.",
+                        "message": f"Rate limit exceeded: {details}. Please wait before retrying.",
                     }
                 )
 

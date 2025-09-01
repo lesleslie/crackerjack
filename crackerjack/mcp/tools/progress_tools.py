@@ -27,7 +27,9 @@ def _create_progress_file(job_id: str) -> Path:
 
 def _update_progress(
     job_id: str,
-    status: str = "running",
+    progress_data: dict[str, t.Any] | str = None,
+    context: t.Any = None,
+    # Legacy parameters for backward compatibility
     iteration: int = 1,
     max_iterations: int = 10,
     overall_progress: int = 0,
@@ -38,24 +40,47 @@ def _update_progress(
     try:
         progress_file = _create_progress_file(job_id)
 
-        progress_data = {
-            "job_id": job_id,
-            "status": status,
-            "iteration": iteration,
-            "max_iterations": max_iterations,
-            "overall_progress": min(100, max(0, overall_progress)),
-            "current_stage": current_stage,
-            "stage_progress": min(100, max(0, stage_progress)),
-            "message": message,
-            "timestamp": get_context().get_current_time() if get_context() else "",
-        }
+        # Handle new dictionary format or legacy individual parameters
+        if isinstance(progress_data, dict):
+            # New format - use provided dictionary
+            final_progress_data = {
+                "job_id": job_id,
+                "status": progress_data.get("status", "running"),
+                "iteration": progress_data.get("iteration", iteration),
+                "max_iterations": progress_data.get("max_iterations", max_iterations),
+                "overall_progress": min(
+                    100, max(0, progress_data.get("overall_progress", overall_progress))
+                ),
+                "current_stage": progress_data.get(
+                    "type", current_stage
+                ),  # Use "type" from dict as current_stage
+                "stage_progress": min(
+                    100, max(0, progress_data.get("stage_progress", stage_progress))
+                ),
+                "message": progress_data.get("message", message),
+                "timestamp": get_context().get_current_time() if get_context() else "",
+            }
+        else:
+            # Legacy format - use individual parameters (progress_data might be status string)
+            status = progress_data if isinstance(progress_data, str) else "running"
+            final_progress_data = {
+                "job_id": job_id,
+                "status": status,
+                "iteration": iteration,
+                "max_iterations": max_iterations,
+                "overall_progress": min(100, max(0, overall_progress)),
+                "current_stage": current_stage,
+                "stage_progress": min(100, max(0, stage_progress)),
+                "message": message,
+                "timestamp": get_context().get_current_time() if get_context() else "",
+            }
 
-        progress_file.write_text(json.dumps(progress_data, indent=2))
+        progress_file.write_text(json.dumps(final_progress_data, indent=2))
 
         context = get_context()
         if context and hasattr(context, "websocket_progress_queue"):
             with contextlib.suppress(Exception):
-                context.websocket_progress_queue.put_nowait(progress_data)
+                context.websocket_progress_queue.put_nowait(final_progress_data)
 
     except Exception as e:
         context = get_context()

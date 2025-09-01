@@ -83,7 +83,18 @@ class GitService:
             if result.returncode == 0:
                 self.console.print(f"[green]✅[/green] Committed: {message}")
                 return True
-            self.console.print(f"[red]❌[/red] Commit failed: {result.stderr}")
+
+            # When git commit fails due to pre-commit hooks, stderr contains hook output
+            # Use a more appropriate error message for commit failures
+            if "pre-commit" in result.stderr or "hook" in result.stderr.lower():
+                self.console.print("[red]❌[/red] Commit blocked by pre-commit hooks")
+                if result.stderr.strip():
+                    # Show hook output in a more readable way
+                    self.console.print(
+                        f"[yellow]Hook output:[/yellow]\n{result.stderr.strip()}"
+                    )
+            else:
+                self.console.print(f"[red]❌[/red] Commit failed: {result.stderr}")
             return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error committing: {e}")

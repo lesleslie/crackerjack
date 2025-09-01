@@ -41,7 +41,7 @@ class CoverageImprovementOrchestrator:
                 current_coverage = coverage_status.get("current_coverage", 0.0)
 
             # Always try to improve if coverage is below 100%
-            if current_coverage < 100.0:
+            if current_coverage is not None and current_coverage < 100.0:
                 self.logger.info(
                     f"Coverage at {current_coverage:.1f}% - improvement recommended"
                 )
@@ -77,7 +77,7 @@ class CoverageImprovementOrchestrator:
         message = (
             f"Proactive coverage improvement requested. "
             f"Gap to 100%: {coverage_gap:.1f}%. "
-            f"Target improvement: {min(self.min_coverage_improvement, coverage_gap):.1f}%"
+            f"Target improvement: {min(self.min_coverage_improvement, coverage_gap) if coverage_gap is not None else self.min_coverage_improvement:.1f}%"
         )
 
         return Issue(
@@ -181,7 +181,9 @@ class CoverageImprovementOrchestrator:
             "Add parametrized tests for different input scenarios",
         ]
 
-        try:
+        from contextlib import suppress
+
+        with suppress(Exception):
             # Add coverage-specific recommendations based on current state
             coverage_status = self.coverage_service.get_status_report()
             current_coverage = coverage_status.get("current_coverage", 0.0)
@@ -196,10 +198,6 @@ class CoverageImprovementOrchestrator:
                 recommendations.insert(0, "Add tests for internal helper methods")
             else:
                 recommendations.insert(0, "Target remaining edge cases and error paths")
-
-        except Exception:
-            # If we can't determine coverage, use general recommendations
-            pass
 
         return recommendations
 

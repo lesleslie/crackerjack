@@ -521,6 +521,12 @@ class MCPServerContext:
     ) -> None:
         await self.batched_saver.schedule_save(save_id, save_func)
 
+    def get_current_time(self) -> str:
+        """Get current timestamp as string for progress tracking."""
+        import datetime
+
+        return datetime.datetime.now().isoformat()
+
     def get_context_stats(self) -> dict[str, t.Any]:
         return {
             "initialized": self._initialized,
