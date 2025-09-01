@@ -64,7 +64,7 @@ class AsyncHookManager:
             if process.returncode == 0:
                 self.console.print("[green]✅[/green] Pre-commit hooks installed")
                 return True
-            error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
+            error_msg = stderr.decode() if stderr else "Unknown error"
             self.console.print(
                 f"[red]❌[/red] Failed to install hooks: {error_msg}",
             )
@@ -95,7 +95,7 @@ class AsyncHookManager:
             if process.returncode == 0:
                 self.console.print("[green]✅[/green] Pre-commit hooks updated")
                 return True
-            error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
+            error_msg = stderr.decode() if stderr else "Unknown error"
             self.console.print(f"[red]❌[/red] Failed to update hooks: {error_msg}")
             return False
 

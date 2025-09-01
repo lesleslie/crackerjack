@@ -1001,3 +1001,4 @@ from ..models.protocols import TestManagerProtocol
 ```
 
 - DO NOT CREATE ANY NEW TESTS UNTIL CURRENTLY FAILING OR ERRORING TESTS HAVE EITHER BEEN FIXED OR REMOVED!
+- always be honest with your answers. do not embelish on progress.

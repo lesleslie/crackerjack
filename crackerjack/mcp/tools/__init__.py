@@ -1,8 +1,8 @@
 from .core_tools import register_core_tools
 from .execution_tools import register_execution_tools
 from .monitoring_tools import register_monitoring_tools
-from .progress_tools import register_progress_tools
 from .proactive_tools import register_proactive_tools
+from .progress_tools import register_progress_tools
 from .utility_tools import register_utility_tools
 
 __all__ = [

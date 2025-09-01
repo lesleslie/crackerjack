@@ -26,7 +26,7 @@ class CachedHookExecutor:
         self.cache = cache or CrackerjackCache()
         self.cache_ttl_seconds = cache_ttl_seconds
         self.file_hasher = FileHasher(self.cache)
-        self.base_executor = HookExecutor(console, pkg_path, verbose=False, quiet=True)
+        self.base_executor = HookExecutor(console, pkg_path, quiet=True)
         self.logger = logging.getLogger("crackerjack.cached_executor")
 
         self.file_patterns = {

@@ -1,0 +1,248 @@
+"""Core version checking and comparison functionality.
+
+This module handles tool version detection, comparison, and update notifications.
+Split from tool_version_service.py to follow single responsibility principle.
+"""
+
+import subprocess
+import typing as t
+from dataclasses import dataclass
+
+import aiohttp
+from rich.console import Console
+
+
+@dataclass
+class VersionInfo:
+    """Information about a tool's version and update status."""
+
+    tool_name: str
+    current_version: str
+    latest_version: str | None = None
+    update_available: bool = False
+    error: str | None = None
+
+
+class VersionChecker:
+    """Service for checking tool versions and updates."""
+
+    def __init__(self, console: Console) -> None:
+        self.console = console
+        self.tools_to_check = {
+            "ruff": self._get_ruff_version,
+            "pyright": self._get_pyright_version,
+            "pre-commit": self._get_precommit_version,
+            "uv": self._get_uv_version,
+        }
+
+    async def check_tool_updates(self) -> dict[str, VersionInfo]:
+        """Check updates for all registered tools."""
+        results = {}
+        for tool_name, version_getter in self.tools_to_check.items():
+            results[tool_name] = await self._check_single_tool(
+                tool_name, version_getter
+            )
+        return results
+
+    async def _check_single_tool(
+        self, tool_name: str, version_getter: t.Callable[[], str | None]
+    ) -> VersionInfo:
+        """Check updates for a single tool."""
+        try:
+            current_version = version_getter()
+            if current_version:
+                latest_version = await self._fetch_latest_version(tool_name)
+                return self._create_installed_version_info(
+                    tool_name, current_version, latest_version
+                )
+            else:
+                return self._create_missing_tool_info(tool_name)
+        except Exception as e:
+            return self._create_error_version_info(tool_name, e)
+
+    def _create_installed_version_info(
+        self, tool_name: str, current_version: str, latest_version: str | None
+    ) -> VersionInfo:
+        """Create version info for installed tool."""
+        update_available = (
+            latest_version is not None
+            and self._version_compare(current_version, latest_version) < 0
+        )
+
+        if update_available:
+            self.console.print(
+                f"[yellow]🔄 {tool_name} update available: "
+                f"{current_version} → {latest_version}[/yellow]"
+            )
+
+        return VersionInfo(
+            tool_name=tool_name,
+            current_version=current_version,
+            latest_version=latest_version,
+            update_available=update_available,
+        )
+
+    def _create_missing_tool_info(self, tool_name: str) -> VersionInfo:
+        """Create version info for missing tool."""
+        self.console.print(f"[red]⚠️ {tool_name} not installed[/red]")
+        return VersionInfo(
+            tool_name=tool_name,
+            current_version="not installed",
+            error=f"{tool_name} not found or not installed",
+        )
+
+    def _create_error_version_info(
+        self, tool_name: str, error: Exception
+    ) -> VersionInfo:
+        """Create version info for tool with error."""
+        self.console.print(f"[red]❌ Error checking {tool_name}: {error}[/red]")
+        return VersionInfo(
+            tool_name=tool_name,
+            current_version="unknown",
+            error=str(error),
+        )
+
+    def _get_ruff_version(self) -> str | None:
+        """Get currently installed Ruff version."""
+        return self._get_tool_version("ruff")
+
+    def _get_pyright_version(self) -> str | None:
+        """Get currently installed Pyright version."""
+        return self._get_tool_version("pyright")
+
+    def _get_precommit_version(self) -> str | None:
+        """Get currently installed pre-commit version."""
+        return self._get_tool_version("pre-commit")
+
+    def _get_uv_version(self) -> str | None:
+        """Get currently installed UV version."""
+        return self._get_tool_version("uv")
+
+    def _get_tool_version(self, tool_name: str) -> str | None:
+        """Generic method to get tool version via subprocess."""
+        try:
+            result = subprocess.run(
+                [tool_name, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            if result.returncode == 0:
+                version_line = result.stdout.strip()
+                return version_line.split()[-1] if version_line else None
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+        return None
+
+    async def _fetch_latest_version(self, tool_name: str) -> str | None:
+        """Fetch latest version from PyPI."""
+        try:
+            pypi_urls = {
+                "ruff": "https://pypi.org/pypi/ruff/json",
+                "pyright": "https://pypi.org/pypi/pyright/json",
+                "pre-commit": "https://pypi.org/pypi/pre-commit/json",
+                "uv": "https://pypi.org/pypi/uv/json",
+            }
+
+            url = pypi_urls.get(tool_name)
+            if not url:
+                return None
+
+            timeout = aiohttp.ClientTimeout(total=10.0)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return data.get("info", {}).get("version")
+
+        except Exception:
+            return None
+
+    def _version_compare(self, current: str, latest: str) -> int:
+        """Compare two version strings. Returns -1 if current < latest, 0 if equal, 1 if current > latest."""
+        try:
+            current_parts, current_len = self._parse_version_parts(current)
+            latest_parts, latest_len = self._parse_version_parts(latest)
+
+            # Normalize lengths
+            normalized_current, normalized_latest = self._normalize_version_parts(
+                current_parts, latest_parts
+            )
+
+            # Compare numeric values
+            numeric_result = self._compare_numeric_parts(
+                normalized_current, normalized_latest
+            )
+            if numeric_result != 0:
+                return numeric_result
+
+            # Handle length differences when numeric values are equal
+            return self._handle_length_differences(
+                current_len, latest_len, normalized_current, normalized_latest
+            )
+
+        except (ValueError, AttributeError):
+            return 0
+
+    def _parse_version_parts(self, version: str) -> tuple[list[int], int]:
+        """Parse version string into integer parts and return original length."""
+        parts = [int(x) for x in version.split(".")]
+        return parts, len(parts)
+
+    def _normalize_version_parts(
+        self, current_parts: list[int], latest_parts: list[int]
+    ) -> tuple[list[int], list[int]]:
+        """Extend version parts to same length with zeros."""
+        max_len = max(len(current_parts), len(latest_parts))
+        current_normalized = current_parts + [0] * (max_len - len(current_parts))
+        latest_normalized = latest_parts + [0] * (max_len - len(latest_parts))
+        return current_normalized, latest_normalized
+
+    def _compare_numeric_parts(
+        self, current_parts: list[int], latest_parts: list[int]
+    ) -> int:
+        """Compare version parts numerically."""
+        for current_part, latest_part in zip(current_parts, latest_parts):
+            if current_part < latest_part:
+                return -1
+            if current_part > latest_part:
+                return 1
+        return 0
+
+    def _handle_length_differences(
+        self,
+        current_len: int,
+        latest_len: int,
+        current_parts: list[int],
+        latest_parts: list[int],
+    ) -> int:
+        """Handle version comparison when lengths differ but numeric values are equal."""
+        if current_len == latest_len:
+            return 0
+
+        if current_len < latest_len:
+            return self._compare_when_current_shorter(
+                current_len, latest_len, latest_parts
+            )
+        return self._compare_when_latest_shorter(latest_len, current_len, current_parts)
+
+    def _compare_when_current_shorter(
+        self, current_len: int, latest_len: int, latest_parts: list[int]
+    ) -> int:
+        """Compare when current version has fewer parts than latest."""
+        extra_parts = latest_parts[current_len:]
+        if any(part != 0 for part in extra_parts):
+            return -1
+        # "1.0" vs "1.0.0" should return -1, but "1" vs "1.0" should return 0
+        return -1 if current_len > 1 else 0
+
+    def _compare_when_latest_shorter(
+        self, latest_len: int, current_len: int, current_parts: list[int]
+    ) -> int:
+        """Compare when latest version has fewer parts than current."""
+        extra_parts = current_parts[latest_len:]
+        if any(part != 0 for part in extra_parts):
+            return 1
+        # "1.0.0" vs "1.0" should return 1, but "1.0" vs "1" should return 0
+        return 1 if latest_len > 1 else 0

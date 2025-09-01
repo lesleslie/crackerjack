@@ -5,7 +5,7 @@ The implementation has been split into focused modules following single responsi
 
 REFACTORING NOTE: This file was reduced from 1353 lines to ~50 lines by splitting into:
 - version_checker.py: Core version checking and comparison
-- config_integrity.py: Configuration file integrity checking  
+- config_integrity.py: Configuration file integrity checking
 - smart_scheduling.py: Intelligent scheduling for automated initialization
 - (Additional services extracted into separate files)
 """
@@ -14,22 +14,26 @@ from pathlib import Path
 
 from rich.console import Console
 
-from .version_checker import VersionChecker, VersionInfo
-from .config_integrity import ConfigIntegrityService  
+from .config_integrity import ConfigIntegrityService
 from .smart_scheduling import SmartSchedulingService
-
+from .version_checker import VersionChecker, VersionInfo
 
 # Re-export for backward compatibility
-__all__ = ["VersionInfo", "ToolVersionService", "ConfigIntegrityService", "SmartSchedulingService"]
+__all__ = [
+    "VersionInfo",
+    "ToolVersionService",
+    "ConfigIntegrityService",
+    "SmartSchedulingService",
+]
 
 
 class ToolVersionService:
     """Facade for tool version management services."""
-    
+
     def __init__(self, console: Console, project_path: Path | None = None) -> None:
         self.console = console
         self.project_path = project_path or Path.cwd()
-        
+
         # Initialize component services
         self._version_checker = VersionChecker(console)
         self._config_integrity = ConfigIntegrityService(console, self.project_path)

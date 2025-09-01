@@ -77,7 +77,7 @@ class AgentActivityWidget(Widget):
                     id="cache - hits - metric",
                 )
 
-            yield DataTable(id="agents - detail - table", show_header=True)
+            yield DataTable(id="agents - detail - table")
 
             yield Label("⏸️ Coordinator: Idle", id="coordinator - status - bar")
 
@@ -218,8 +218,6 @@ class JobProgressPanel(Widget):
         yield ProgressBar(
             total=100,
             progress=progress,
-            show_eta=True,
-            show_percentage=True,
             id=f"job - progress - {self.job_data.get('job_id', 'unknown')}",
         )
 
@@ -268,7 +266,7 @@ class ServiceHealthPanel(Widget):
         self.border_title_align = "left"
 
     def compose(self) -> ComposeResult:
-        yield DataTable(id="services - table", show_header=True)
+        yield DataTable(id="services - table")
 
     def on_mount(self) -> None:
         table = self.query_one("#services - table", DataTable)

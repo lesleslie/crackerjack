@@ -202,7 +202,7 @@ class AdvancedWorkflowOrchestrator:
         self.config = config or OrchestrationConfig()
 
         self.hook_config_loader = HookConfigLoader()
-        self.batch_executor = HookExecutor(console, pkg_path, verbose=False, quiet=True)
+        self.batch_executor = HookExecutor(console, pkg_path, quiet=True)
         self.individual_executor = IndividualHookExecutor(console, pkg_path)
         self.test_manager = TestManagementImpl(console, pkg_path)
         self.test_streamer = TestProgressStreamer(console, pkg_path)

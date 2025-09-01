@@ -327,73 +327,77 @@ class AgentCoordinator:
 
         # Phase 1: Create architectural plan
         architectural_plan = await self._create_architectural_plan(issues)
-        
-        # Phase 2: Apply fixes following the plan  
+
+        # Phase 2: Apply fixes following the plan
         overall_result = await self._apply_fixes_with_plan(issues, architectural_plan)
-        
+
         # Phase 3: Validate against plan
-        validation_result = await self._validate_against_plan(overall_result, architectural_plan)
-        
+        validation_result = await self._validate_against_plan(
+            overall_result, architectural_plan
+        )
+
         return validation_result
 
     async def _create_architectural_plan(self, issues: list[Issue]) -> dict[str, t.Any]:
         """Create architectural plan using ArchitectAgent."""
         architect = self._get_architect_agent()
-        
+
         if not architect:
             self.logger.warning("No ArchitectAgent available for planning")
             return {"strategy": "reactive_fallback", "patterns": []}
 
         # Analyze all issues together for comprehensive planning
         complex_issues = [
-            issue for issue in issues 
-            if issue.type in {IssueType.COMPLEXITY, IssueType.DRY_VIOLATION, IssueType.PERFORMANCE}
+            issue
+            for issue in issues
+            if issue.type
+            in {IssueType.COMPLEXITY, IssueType.DRY_VIOLATION, IssueType.PERFORMANCE}
         ]
-        
+
         if not complex_issues:
             return {"strategy": "simple_fixes", "patterns": ["standard_patterns"]}
 
         # Use the first complex issue for planning (represents the architectural challenge)
         primary_issue = complex_issues[0]
-        
+
         try:
-            # Get plan from ArchitectAgent 
+            # Get plan from ArchitectAgent
             plan = await architect.plan_before_action(primary_issue)
-            
+
             # Extend plan to cover all issues
             plan["all_issues"] = [issue.id for issue in issues]
-            plan["issue_types"] = list(set(issue.type.value for issue in issues))
-            
-            self.logger.info(f"Created architectural plan: {plan.get('strategy', 'unknown')}")
+            plan["issue_types"] = list({issue.type.value for issue in issues})
+
+            self.logger.info(
+                f"Created architectural plan: {plan.get('strategy', 'unknown')}"
+            )
             return plan
-            
+
         except Exception as e:
             self.logger.exception(f"Failed to create architectural plan: {e}")
             return {"strategy": "reactive_fallback", "patterns": [], "error": str(e)}
 
     async def _apply_fixes_with_plan(
-        self, 
-        issues: list[Issue], 
-        plan: dict[str, t.Any]
+        self, issues: list[Issue], plan: dict[str, t.Any]
     ) -> FixResult:
         """Apply fixes following the architectural plan."""
         strategy = plan.get("strategy", "reactive_fallback")
-        
+
         if strategy == "reactive_fallback":
             # Fallback to standard processing
             return await self.handle_issues(issues)
 
         self.logger.info(f"Applying fixes with {strategy} strategy")
-        
+
         # Group issues by priority based on plan
         prioritized_issues = self._prioritize_issues_by_plan(issues, plan)
-        
+
         overall_result = FixResult(success=True, confidence=1.0)
-        
+
         for issue_group in prioritized_issues:
             group_result = await self._handle_issue_group_with_plan(issue_group, plan)
             overall_result = overall_result.merge_with(group_result)
-            
+
             # If a critical group fails, consider the overall strategy
             if not group_result.success and self._is_critical_group(issue_group, plan):
                 overall_result.success = False
@@ -404,28 +408,28 @@ class AgentCoordinator:
         return overall_result
 
     async def _validate_against_plan(
-        self, 
-        result: FixResult, 
-        plan: dict[str, t.Any]
+        self, result: FixResult, plan: dict[str, t.Any]
     ) -> FixResult:
         """Validate the results against the architectural plan."""
         validation_steps = plan.get("validation", [])
-        
+
         if not validation_steps:
             return result
-        
+
         self.logger.info(f"Validating against plan: {validation_steps}")
-        
+
         # Add validation recommendations
-        result.recommendations.extend([
-            f"Validate with: {', '.join(validation_steps)}",
-            f"Applied strategy: {plan.get('strategy', 'unknown')}",
-            f"Used patterns: {', '.join(plan.get('patterns', []))}",
-        ])
-        
+        result.recommendations.extend(
+            [
+                f"Validate with: {', '.join(validation_steps)}",
+                f"Applied strategy: {plan.get('strategy', 'unknown')}",
+                f"Used patterns: {', '.join(plan.get('patterns', []))}",
+            ]
+        )
+
         return result
 
-    def _get_architect_agent(self) -> t.Optional[SubAgent]:
+    def _get_architect_agent(self) -> SubAgent | None:
         """Get the ArchitectAgent from available agents."""
         for agent in self.agents:
             if agent.__class__.__name__ == "ArchitectAgent":
@@ -433,75 +437,67 @@ class AgentCoordinator:
         return None
 
     def _prioritize_issues_by_plan(
-        self, 
-        issues: list[Issue], 
-        plan: dict[str, t.Any]
+        self, issues: list[Issue], plan: dict[str, t.Any]
     ) -> list[list[Issue]]:
         """Prioritize issues based on the architectural plan."""
         strategy = plan.get("strategy", "reactive_fallback")
-        
+
         if strategy == "external_specialist_guided":
             # Handle complex issues first, then simple ones
             complex_issues = [
-                issue for issue in issues 
+                issue
+                for issue in issues
                 if issue.type in {IssueType.COMPLEXITY, IssueType.DRY_VIOLATION}
             ]
-            other_issues = [
-                issue for issue in issues 
-                if issue not in complex_issues
-            ]
+            other_issues = [issue for issue in issues if issue not in complex_issues]
             return [complex_issues, other_issues] if complex_issues else [other_issues]
-        
+
         # Default: group by type for parallel processing
         groups = self._group_issues_by_type(issues)
         return list(groups.values())
 
     async def _handle_issue_group_with_plan(
-        self, 
-        issues: list[Issue], 
-        plan: dict[str, t.Any]
+        self, issues: list[Issue], plan: dict[str, t.Any]
     ) -> FixResult:
         """Handle a group of issues with architectural guidance."""
         if not issues:
             return FixResult(success=True, confidence=1.0)
-        
+
         # Get the best agent for this group, preferring ArchitectAgent for complex issues
         representative_issue = issues[0]
-        
+
         if self._should_use_architect_for_group(issues, plan):
             architect = self._get_architect_agent()
             if architect:
                 # Use architect for the whole group
                 group_result = FixResult(success=True, confidence=1.0)
-                
+
                 for issue in issues:
                     issue_result = await architect.analyze_and_fix(issue)
                     group_result = group_result.merge_with(issue_result)
-                
+
                 return group_result
-        
+
         # Use standard routing for simpler issues
         return await self._handle_issues_by_type(representative_issue.type, issues)
 
     def _should_use_architect_for_group(
-        self, 
-        issues: list[Issue], 
-        plan: dict[str, t.Any]
+        self, issues: list[Issue], plan: dict[str, t.Any]
     ) -> bool:
         """Determine if ArchitectAgent should handle this group."""
         strategy = plan.get("strategy", "")
-        
+
         # Always use architect for specialist-guided strategies
         if strategy == "external_specialist_guided":
             return True
-        
+
         # Use architect for complex or architectural issues
         architectural_types = {
-            IssueType.COMPLEXITY, 
-            IssueType.DRY_VIOLATION, 
-            IssueType.PERFORMANCE
+            IssueType.COMPLEXITY,
+            IssueType.DRY_VIOLATION,
+            IssueType.PERFORMANCE,
         }
-        
+
         return any(issue.type in architectural_types for issue in issues)
 
     def _is_critical_group(self, issues: list[Issue], plan: dict[str, t.Any]) -> bool:

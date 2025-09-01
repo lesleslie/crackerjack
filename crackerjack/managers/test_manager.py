@@ -19,23 +19,23 @@ from rich.console import Console
 
 from crackerjack.models.protocols import OptionsProtocol
 from crackerjack.services.coverage_ratchet import CoverageRatchetService
-from .test_executor import TestExecutor
+
 from .test_command_builder import TestCommandBuilder
-from .test_progress import TestProgress
+from .test_executor import TestExecutor
 
 
 class TestManager:
     """Refactored test manager with modular architecture."""
-    
+
     def __init__(self, console: Console, pkg_path: Path) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        
+
         # Initialize specialized components
         self.executor = TestExecutor(console, pkg_path)
         self.command_builder = TestCommandBuilder(pkg_path)
         self.coverage_ratchet = CoverageRatchetService(pkg_path, console)
-        
+
         # State
         self._last_test_failures: list[str] = []
         self._progress_callback: t.Callable[[dict[str, t.Any]], None] | None = None
@@ -61,32 +61,34 @@ class TestManager:
     def run_tests(self, options: OptionsProtocol) -> bool:
         """Run tests with comprehensive progress tracking and coverage analysis."""
         start_time = time.time()
-        
+
         try:
             result = self._execute_test_workflow(options)
             duration = time.time() - start_time
-            
+
             if result:
                 return self._handle_test_success(result.stdout, duration)
             else:
-                return self._handle_test_failure(result.stderr if result else "", duration)
-                
+                return self._handle_test_failure(
+                    result.stderr if result else "", duration
+                )
+
         except Exception as e:
             return self._handle_test_error(start_time, e)
 
     def run_specific_tests(self, test_pattern: str) -> bool:
         """Run tests matching a specific pattern."""
         self.console.print(f"[cyan]🧪[/cyan] Running tests matching: {test_pattern}")
-        
+
         cmd = self.command_builder.build_specific_test_command(test_pattern)
         result = self.executor.execute_with_progress(cmd)
-        
+
         success = result.returncode == 0
         if success:
             self.console.print("[green]✅[/green] Specific tests passed")
         else:
             self.console.print("[red]❌[/red] Some specific tests failed")
-            
+
         return success
 
     def validate_test_environment(self) -> bool:
@@ -98,7 +100,7 @@ class TestManager:
         # Test basic pytest collection
         cmd = self.command_builder.build_validation_command()
         result = subprocess.run(cmd, cwd=self.pkg_path, capture_output=True, text=True)
-        
+
         if result.returncode != 0:
             self.console.print("[red]❌[/red] Test environment validation failed")
             self.console.print(result.stderr)
@@ -138,63 +140,68 @@ class TestManager:
         """Check if project has tests."""
         test_directories = ["tests", "test"]
         test_files = ["test_*.py", "*_test.py"]
-        
+
         for test_dir in test_directories:
             test_path = self.pkg_path / test_dir
             if test_path.exists() and test_path.is_dir():
                 for test_file_pattern in test_files:
                     if list(test_path.glob(f"**/{test_file_pattern}")):
                         return True
-        
+
         # Check for test files in root directory
         for test_file_pattern in test_files:
             if list(self.pkg_path.glob(test_file_pattern)):
                 return True
-                
+
         return False
 
     # Private implementation methods
 
-    def _execute_test_workflow(self, options: OptionsProtocol) -> subprocess.CompletedProcess[str]:
+    def _execute_test_workflow(
+        self, options: OptionsProtocol
+    ) -> subprocess.CompletedProcess[str]:
         """Execute the complete test workflow."""
         self._print_test_start_message(options)
-        
+
         cmd = self.command_builder.build_command(options)
-        
+
         if self._progress_callback:
             return self.executor.execute_with_ai_progress(
                 cmd, self._progress_callback, self._get_timeout(options)
             )
-        else:
-            return self.executor.execute_with_progress(cmd, self._get_timeout(options))
+        return self.executor.execute_with_progress(cmd, self._get_timeout(options))
 
     def _print_test_start_message(self, options: OptionsProtocol) -> None:
         """Print test execution start message."""
         workers = self.command_builder.get_optimal_workers(options)
         timeout = self.command_builder.get_test_timeout(options)
-        
-        self.console.print(f"[cyan]🧪[/cyan] Running tests (workers: {workers}, timeout: {timeout}s)")
+
+        self.console.print(
+            f"[cyan]🧪[/cyan] Running tests (workers: {workers}, timeout: {timeout}s)"
+        )
 
     def _handle_test_success(self, output: str, duration: float) -> bool:
         """Handle successful test execution."""
         self.console.print(f"[green]✅[/green] Tests passed in {duration:.1f}s")
-        
+
         if self.coverage_ratchet_enabled:
             return self._process_coverage_ratchet()
-        
+
         return True
 
     def _handle_test_failure(self, output: str, duration: float) -> bool:
         """Handle failed test execution."""
         self.console.print(f"[red]❌[/red] Tests failed in {duration:.1f}s")
-        
+
         self._last_test_failures = self._extract_failure_lines(output)
         return False
 
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:
         """Handle test execution errors."""
         duration = time.time() - start_time
-        self.console.print(f"[red]💥[/red] Test execution error after {duration:.1f}s: {error}")
+        self.console.print(
+            f"[red]💥[/red] Test execution error after {duration:.1f}s: {error}"
+        )
         return False
 
     def _process_coverage_ratchet(self) -> bool:
@@ -223,7 +230,7 @@ class TestManager:
         """Handle coverage improvements."""
         improvement = ratchet_result.get("improvement", 0)
         current = ratchet_result.get("current_coverage", 0)
-        
+
         self.console.print(
             f"[green]📈[/green] Coverage improved by {improvement:.2f}% "
             f"to {current:.2f}%"
@@ -233,11 +240,13 @@ class TestManager:
         """Extract failure information from test output."""
         failures = []
         lines = output.split("\n")
-        
+
         for line in lines:
-            if any(keyword in line for keyword in ["FAILED", "ERROR", "AssertionError"]):
+            if any(
+                keyword in line for keyword in ("FAILED", "ERROR", "AssertionError")
+            ):
                 failures.append(line.strip())
-        
+
         return failures[:10]  # Limit to first 10 failures
 
     def _get_timeout(self, options: OptionsProtocol) -> int:

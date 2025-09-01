@@ -274,7 +274,7 @@ class InteractiveWorkflowManager:
         if not self._initialize_workflow(options, pkg_version):
             return False
 
-        with Live(self.layout, refresh_per_second=4) as live:
+        with Live(self.layout) as live:
             if not self._execute_workflow_tasks(live, options, pkg_version):
                 return False
 

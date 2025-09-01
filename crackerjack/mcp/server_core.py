@@ -28,8 +28,8 @@ from .tools import (
     register_core_tools,
     register_execution_tools,
     register_monitoring_tools,
-    register_progress_tools,
     register_proactive_tools,
+    register_progress_tools,
     register_utility_tools,
 )
 

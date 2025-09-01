@@ -606,7 +606,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
                     )
                 current_section = [line]
                 section_type = "conditional"
-            elif stripped.startswith("for ") or stripped.startswith("while "):
+            elif stripped.startswith(("for ", "while ")):
                 # Loop section
                 if current_section and section_type != "loop":
                     sections.append(

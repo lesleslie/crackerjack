@@ -24,7 +24,6 @@ class CrackerjackCLIFacade:
         self.orchestrator = WorkflowOrchestrator(
             console=self.console,
             pkg_path=self.pkg_path,
-            dry_run=False,
         )
 
     def process(self, options: OptionsProtocol) -> None:

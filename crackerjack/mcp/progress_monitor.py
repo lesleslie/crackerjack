@@ -475,7 +475,6 @@ class CrackerjackDashboard(App):
         with Container(id="services-panel"):
             yield DataTable(
                 id="services-table",
-                show_header=True,
                 zebra_stripes=True,
                 show_cursor=False,
             )

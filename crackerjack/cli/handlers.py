@@ -53,7 +53,7 @@ def handle_monitor_mode(dev_mode: bool = False) -> None:
     )
 
     try:
-        asyncio.run(run_progress_monitor(enable_watchdog=True, dev_mode=dev_mode))
+        asyncio.run(run_progress_monitor(dev_mode=dev_mode))
     except KeyboardInterrupt:
         console.print("\n[yellow]🛑 Monitor stopped[/yellow]")
 
@@ -211,7 +211,7 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
     except ImportError as e:
         console.print(f"[red]Orchestrated mode not available: {e}[/red]")
         console.print("[yellow]Falling back to standard mode[/yellow]")
-        handle_standard_mode(options, False, job_id, False)
+        handle_standard_mode(options, False, job_id)
         return
 
     try:

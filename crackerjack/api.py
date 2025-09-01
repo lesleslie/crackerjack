@@ -519,7 +519,7 @@ class CrackerjackAPI:
         from contextlib import suppress
 
         with suppress(UnicodeDecodeError, PermissionError):
-            with file_path.open("r") as f:
+            with file_path.open() as f:
                 for line_no, line in enumerate(f, 1):
                     if todo_pattern.search(line):
                         todos.append((file_path, line_no, line))
