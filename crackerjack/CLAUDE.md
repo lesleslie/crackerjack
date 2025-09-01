@@ -74,6 +74,9 @@ python -m crackerjack --restart-mcp-server --websocket-port 8675
 
 # Start service watchdog to monitor and auto-restart MCP and WebSocket servers
 python -m crackerjack --watchdog
+
+# Disable automatic coverage improvement (enabled by default)
+python -m crackerjack -t --no-boost-coverage
 ```
 
 ### Terminal Recovery
@@ -154,6 +157,7 @@ python -m crackerjack --ai-agent -t
 - **Comprehensive Coverage**: Fixes all error types, not just formatting
 - **Iterative Improvement**: Continues until perfect code quality achieved
 - **Learning Capability**: Adapts fixing strategies based on codebase patterns
+- **Automatic Coverage Improvement**: Proactively generates tests to boost coverage toward 100%
 
 #### Sub-Agent Architecture
 
@@ -273,6 +277,89 @@ python -m crackerjack --ai-agent -t
 # - Real code transformations with AST-based detection
 
 # Works with all agents for comprehensive code quality fixes
+```
+
+#### Automatic Test Coverage Improvement
+
+**Crackerjack now automatically improves test coverage with each successful workflow execution.**
+
+**How It Works:**
+
+1. **Triggers After Success**: When all quality checks pass, coverage improvement automatically starts
+2. **Coverage Gap Analysis**: Analyzes current coverage vs. 100% target using the ratchet system
+3. **Intelligent Test Generation**: Uses TestCreationAgent to create tests for uncovered code
+4. **AST-Based Analysis**: Identifies functions, classes, and methods lacking test coverage
+5. **Smart Test Creation**: Generates appropriate test stubs and integration points
+
+**Coverage Improvement Process:**
+
+```bash
+# Standard AI agent workflow now includes coverage improvement by default
+python -m crackerjack --ai-agent -t
+
+# Workflow execution order with coverage improvement:
+# 1. Fast Hooks (formatting) → Pass
+# 2. Full Test Suite → Pass  
+# 3. Comprehensive Hooks → Pass
+# 4. AI Analysis & Batch Fixing → Pass
+# 5. Automatic Coverage Improvement ← NEW STEP
+#    ↳ Analyzes coverage gaps (e.g., 10.17% → 100% target)
+#    ↳ Generates tests for uncovered modules and functions
+#    ↳ Creates test files with import-only tests, basic instantiation, etc.
+#    ↳ Improves coverage incrementally (targets 2%+ improvement per run)
+```
+
+**Coverage Improvement Features:**
+
+- **Project-Wide Analysis**: Scans entire package for uncovered code
+- **Incremental Progress**: Targets realistic improvements (2%+ per run) toward 100%
+- **Test Organization**: Creates well-structured test files following pytest patterns
+- **Integration with Ratchet**: Works with existing coverage ratchet system
+- **Configurable**: Can be disabled with `--no-boost-coverage` if needed
+
+**Generated Test Examples:**
+
+```python
+# Example generated test file: tests/test_coverage_improvement.py
+"""Tests for coverage_improvement."""
+
+import pytest
+from pathlib import Path
+
+from crackerjack.orchestration.coverage_improvement import *
+
+
+class TestCoverageImprovement:
+    """Test suite for coverage_improvement module."""
+
+    def test_module_imports(self):
+        """Test that module imports successfully."""
+        import crackerjack.orchestration.coverage_improvement
+        assert crackerjack.orchestration.coverage_improvement is not None
+
+    def test_coverage_improvement_orchestrator_creation(self):
+        """Test CoverageImprovementOrchestrator class creation."""
+        try:
+            project_path = Path("/tmp")
+            instance = CoverageImprovementOrchestrator(project_path)
+            assert instance is not None
+            assert isinstance(instance, CoverageImprovementOrchestrator)
+        except TypeError:
+            pytest.skip("Class requires specific constructor arguments - manual implementation needed")
+```
+
+**Control Options:**
+
+```bash
+# Enable coverage improvement (default behavior)
+python -m crackerjack --ai-agent -t --boost-coverage
+
+# Disable coverage improvement temporarily  
+python -m crackerjack --ai-agent -t --no-boost-coverage
+
+# The feature integrates seamlessly with all existing workflows
+python -m crackerjack -t    # Includes coverage improvement
+python -m crackerjack       # Quality-only mode (no coverage improvement)
 ```
 
 ### Temporary File Management

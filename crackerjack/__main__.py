@@ -171,6 +171,7 @@ def main(
     coverage_status: bool = CLI_OPTIONS["coverage_status"],
     coverage_goal: float | None = CLI_OPTIONS["coverage_goal"],
     no_coverage_ratchet: bool = CLI_OPTIONS["no_coverage_ratchet"],
+    boost_coverage: bool = CLI_OPTIONS["boost_coverage"],
 ) -> None:
     options = create_options(
         commit,
@@ -207,6 +208,7 @@ def main(
         coverage_status,
         coverage_goal,
         no_coverage_ratchet,
+        boost_coverage,
     )
 
     if ai_debug:

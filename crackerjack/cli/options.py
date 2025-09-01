@@ -48,6 +48,7 @@ class Options(BaseModel):
     keep_releases: int = 10
     track_progress: bool = False
     orchestrated: bool = False
+    boost_coverage: bool = True
     coverage: bool = False
     orchestration_strategy: str = "adaptive"
     orchestration_progress: str = "granular"
@@ -324,6 +325,11 @@ CLI_OPTIONS = {
         "--no-coverage-ratchet",
         help="Disable coverage ratchet system temporarily (for experiments).",
     ),
+    "boost_coverage": typer.Option(
+        True,
+        "--boost-coverage/--no-boost-coverage",
+        help="Automatically improve test coverage after successful workflow execution (default: True).",
+    ),
 }
 
 
@@ -362,6 +368,7 @@ def create_options(
     coverage_status: bool,
     coverage_goal: float | None,
     no_coverage_ratchet: bool,
+    boost_coverage: bool,
 ) -> Options:
     return Options(
         commit=commit,
@@ -398,4 +405,5 @@ def create_options(
         coverage_status=coverage_status,
         coverage_goal=coverage_goal,
         no_coverage_ratchet=no_coverage_ratchet,
+        boost_coverage=boost_coverage,
     )

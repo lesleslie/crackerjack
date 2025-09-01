@@ -250,7 +250,15 @@ async def _run_workflow_iterations(
             )
 
             if success:
-                return _create_success_result(job_id, iteration + 1, context)
+                # Attempt coverage improvement after successful execution (if enabled)
+                coverage_result = None
+                if kwargs.get("boost_coverage", True):
+                    coverage_result = await _attempt_coverage_improvement(
+                        job_id, orchestrator, context
+                    )
+                return _create_success_result(
+                    job_id, iteration + 1, context, coverage_result
+                )
 
             # Handle retry logic
             if iteration < max_iterations - 1:
@@ -293,10 +301,10 @@ async def _execute_single_iteration(
 
 
 def _create_success_result(
-    job_id: str, iterations: int, context: t.Any
+    job_id: str, iterations: int, context: t.Any, coverage_result: dict[str, t.Any] | None = None
 ) -> dict[str, t.Any]:
     """Create success result with completion data."""
-    return {
+    result = {
         "job_id": job_id,
         "status": "completed",
         "iterations": iterations,
@@ -304,6 +312,11 @@ def _create_success_result(
         "timestamp": time.time(),
         "success": True,
     }
+    
+    if coverage_result:
+        result["coverage_improvement"] = coverage_result
+        
+    return result
 
 
 async def _handle_iteration_retry(job_id: str, iteration: int, context: t.Any) -> None:
@@ -345,6 +358,117 @@ async def _handle_iteration_error(
         "timestamp": time.time(),
         "success": False,
     }
+
+
+async def _attempt_coverage_improvement(
+    job_id: str, orchestrator: t.Any, context: t.Any
+) -> dict[str, t.Any]:
+    """Attempt proactive coverage improvement after successful workflow execution."""
+    try:
+        await _update_progress(
+            job_id,
+            {
+                "type": "coverage_improvement",
+                "status": "starting",
+                "message": "Analyzing coverage for improvement opportunities...",
+            },
+            context,
+        )
+
+        # Get project path from orchestrator
+        project_path = getattr(orchestrator, "pkg_path", None)
+        if not project_path:
+            return {"status": "skipped", "reason": "No project path available"}
+
+        # Import coverage improvement orchestrator
+        from crackerjack.orchestration.coverage_improvement import (
+            create_coverage_improvement_orchestrator,
+        )
+
+        # Create coverage orchestrator
+        coverage_orchestrator = await create_coverage_improvement_orchestrator(
+            project_path,
+            console=getattr(orchestrator, "console", None),
+        )
+
+        # Check if improvement is needed
+        should_improve = await coverage_orchestrator.should_improve_coverage()
+        if not should_improve:
+            await _update_progress(
+                job_id,
+                {
+                    "type": "coverage_improvement",
+                    "status": "skipped",
+                    "message": "Coverage improvement not needed (already at 100%)",
+                },
+                context,
+            )
+            return {"status": "skipped", "reason": "Coverage at 100%"}
+
+        # Create agent context (simplified)
+        from crackerjack.agents.base import AgentContext
+
+        agent_context = AgentContext(project_path=project_path, console=None)
+
+        # Execute coverage improvement
+        await _update_progress(
+            job_id,
+            {
+                "type": "coverage_improvement", 
+                "status": "executing",
+                "message": "Generating tests to improve coverage...",
+            },
+            context,
+        )
+
+        improvement_result = await coverage_orchestrator.execute_coverage_improvement(
+            agent_context
+        )
+
+        # Update progress with results
+        if improvement_result["status"] == "completed":
+            await _update_progress(
+                job_id,
+                {
+                    "type": "coverage_improvement",
+                    "status": "completed",
+                    "message": f"Coverage improvement: {len(improvement_result.get('fixes_applied', []))} tests created",
+                    "fixes_applied": improvement_result.get("fixes_applied", []),
+                    "files_modified": improvement_result.get("files_modified", []),
+                },
+                context,
+            )
+        else:
+            await _update_progress(
+                job_id,
+                {
+                    "type": "coverage_improvement",
+                    "status": "completed_with_issues",
+                    "message": f"Coverage improvement attempted: {improvement_result.get('status', 'unknown')}",
+                },
+                context,
+            )
+
+        return improvement_result
+
+    except Exception as e:
+        await _update_progress(
+            job_id,
+            {
+                "type": "coverage_improvement",
+                "status": "failed", 
+                "error": str(e),
+                "message": f"Coverage improvement failed: {e}",
+            },
+            context,
+        )
+        
+        return {
+            "status": "failed",
+            "error": str(e),
+            "fixes_applied": [],
+            "files_modified": [],
+        }
 
 
 def _create_failure_result(

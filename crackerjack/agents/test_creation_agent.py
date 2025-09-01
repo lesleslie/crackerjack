@@ -23,6 +23,7 @@ class TestCreationAgent(SubAgent):
             IssueType.TEST_FAILURE,
             IssueType.DEPENDENCY,
             IssueType.TEST_ORGANIZATION,
+            IssueType.COVERAGE_IMPROVEMENT,
         }
 
     async def can_handle(self, issue: Issue) -> float:
@@ -30,6 +31,10 @@ class TestCreationAgent(SubAgent):
             return 0.0
 
         message_lower = issue.message.lower()
+
+        # Handle coverage improvement requests with perfect confidence
+        if issue.type == IssueType.COVERAGE_IMPROVEMENT:
+            return 1.0
 
         # Handle test organization issues with high confidence
         if issue.type == IssueType.TEST_ORGANIZATION:
