@@ -259,7 +259,7 @@ class WorkflowPipeline:
 
         success = self.phases.run_comprehensive_hooks_only(options)
         if not success:
-            self.session.fail_task("workflow", "Comprehensive hooks failed")
+            self.session.fail_task("comprehensive_hooks", "Comprehensive hooks failed")
             self._update_mcp_status("comprehensive", "failed")
             # In AI agent mode, continue to collect more failures
             # In non-AI mode, this will be handled by caller
@@ -345,7 +345,25 @@ class WorkflowPipeline:
         """Run AI agent fixing phase to analyze and fix collected failures."""
         self._update_mcp_status("ai_fixing", "running")
         self.logger.info("Starting AI agent fixing phase")
+        self._log_debug_phase_start()
 
+        try:
+            agent_coordinator = self._setup_agent_coordinator()
+            issues = await self._collect_issues_from_failures()
+
+            if not issues:
+                return self._handle_no_issues_found()
+
+            self.logger.info(f"AI agents will attempt to fix {len(issues)} issues")
+            fix_result = await agent_coordinator.handle_issues(issues)
+
+            return await self._process_fix_results(options, fix_result)
+
+        except Exception as e:
+            return self._handle_fixing_phase_error(e)
+
+    def _log_debug_phase_start(self) -> None:
+        """Log debug information for phase start."""
         if self._should_debug():
             self.debugger.log_workflow_phase(
                 "ai_agent_fixing",
@@ -353,77 +371,150 @@ class WorkflowPipeline:
                 details={"ai_agent": True},
             )
 
-        try:
-            # Create AI agent context
-            agent_context = AgentContext(
-                project_path=self.pkg_path,
-                session_id=getattr(self.session, "session_id", None),
+    def _setup_agent_coordinator(self) -> AgentCoordinator:
+        """Set up agent coordinator with proper context."""
+        from crackerjack.agents.coordinator import AgentCoordinator
+
+        agent_context = AgentContext(
+            project_path=self.pkg_path,
+            session_id=getattr(self.session, "session_id", None),
+        )
+
+        agent_coordinator = AgentCoordinator(agent_context)
+        agent_coordinator.initialize_agents()
+        return agent_coordinator
+
+    def _handle_no_issues_found(self) -> bool:
+        """Handle case when no issues are collected."""
+        self.logger.info("No issues collected for AI agent fixing")
+        self._update_mcp_status("ai_fixing", "completed")
+        return True
+
+    async def _process_fix_results(
+        self, options: OptionsProtocol, fix_result: t.Any
+    ) -> bool:
+        """Process fix results and verify success."""
+        verification_success = await self._verify_fixes_applied(options, fix_result)
+        success = fix_result.success and verification_success
+
+        if success:
+            self._handle_successful_fixes(fix_result)
+        else:
+            self._handle_failed_fixes(fix_result, verification_success)
+
+        self._log_debug_phase_completion(success, fix_result)
+        return success
+
+    def _handle_successful_fixes(self, fix_result: t.Any) -> None:
+        """Handle successful fix results."""
+        self.logger.info(
+            "AI agents successfully fixed all issues and verification passed"
+        )
+        self._update_mcp_status("ai_fixing", "completed")
+        self._log_fix_counts_if_debugging(fix_result)
+
+    def _handle_failed_fixes(
+        self, fix_result: t.Any, verification_success: bool
+    ) -> None:
+        """Handle failed fix results."""
+        if not verification_success:
+            self.logger.warning(
+                "AI agent fixes did not pass verification - issues still exist"
+            )
+        else:
+            self.logger.warning(
+                f"AI agents could not fix all issues: {fix_result.remaining_issues}",
+            )
+        self._update_mcp_status("ai_fixing", "failed")
+
+    def _log_fix_counts_if_debugging(self, fix_result: t.Any) -> None:
+        """Log fix counts for debugging if debug mode is enabled."""
+        if not self._should_debug():
+            return
+
+        total_fixes = len(fix_result.fixes_applied)
+        test_fixes = len(
+            [f for f in fix_result.fixes_applied if "test" in f.lower()],
+        )
+        hook_fixes = total_fixes - test_fixes
+        self.debugger.log_test_fixes(test_fixes)
+        self.debugger.log_hook_fixes(hook_fixes)
+
+    def _log_debug_phase_completion(self, success: bool, fix_result: t.Any) -> None:
+        """Log debug information for phase completion."""
+        if self._should_debug():
+            self.debugger.log_workflow_phase(
+                "ai_agent_fixing",
+                "completed" if success else "failed",
+                details={
+                    "confidence": fix_result.confidence,
+                    "fixes_applied": len(fix_result.fixes_applied),
+                    "remaining_issues": len(fix_result.remaining_issues),
+                },
             )
 
-            # Initialize agent coordinator
-            agent_coordinator = AgentCoordinator(agent_context)
-            agent_coordinator.initialize_agents()
+    def _handle_fixing_phase_error(self, error: Exception) -> bool:
+        """Handle errors during the fixing phase."""
+        self.logger.exception(f"AI agent fixing phase failed: {error}")
+        self.session.fail_task("ai_fixing", f"AI agent fixing failed: {error}")
+        self._update_mcp_status("ai_fixing", "failed")
 
-            # Collect issues from failures
-            issues = await self._collect_issues_from_failures()
+        if self._should_debug():
+            self.debugger.log_workflow_phase(
+                "ai_agent_fixing",
+                "failed",
+                details={"error": str(error)},
+            )
 
-            if not issues:
-                self.logger.info("No issues collected for AI agent fixing")
-                self._update_mcp_status("ai_fixing", "completed")
-                return True
+        return False
 
-            self.logger.info(f"AI agents will attempt to fix {len(issues)} issues")
+    async def _verify_fixes_applied(
+        self, options: OptionsProtocol, fix_result: t.Any
+    ) -> bool:
+        """Verify that AI agent fixes actually resolved the issues by re-running checks."""
+        if not fix_result.fixes_applied:
+            return True  # No fixes were applied, nothing to verify
 
-            # Let agents handle the issues
-            fix_result = await agent_coordinator.handle_issues(issues)
+        self.logger.info("Verifying AI agent fixes by re-running quality checks")
 
-            success = fix_result.success
-            if success:
-                self.logger.info("AI agents successfully fixed all issues")
-                self._update_mcp_status("ai_fixing", "completed")
+        # Re-run the phases that previously failed to verify fixes
+        verification_success = True
 
-                # Log fix counts for debugging
-                if self._should_debug():
-                    total_fixes = len(fix_result.fixes_applied)
-                    # Estimate test vs hook fixes based on original issue types
-                    test_fixes = len(
-                        [f for f in fix_result.fixes_applied if "test" in f.lower()],
-                    )
-                    hook_fixes = total_fixes - test_fixes
-                    self.debugger.log_test_fixes(test_fixes)
-                    self.debugger.log_hook_fixes(hook_fixes)
-            else:
+        # Check if we need to re-run tests
+        if any("test" in fix.lower() for fix in fix_result.fixes_applied):
+            self.logger.info("Re-running tests to verify test fixes")
+            test_success = self.phases.run_testing_phase(options)
+            if not test_success:
                 self.logger.warning(
-                    f"AI agents could not fix all issues: {fix_result.remaining_issues}",
+                    "Test verification failed - test fixes did not work"
                 )
-                self._update_mcp_status("ai_fixing", "failed")
+                verification_success = False
 
-            if self._should_debug():
-                self.debugger.log_workflow_phase(
-                    "ai_agent_fixing",
-                    "completed" if success else "failed",
-                    details={
-                        "confidence": fix_result.confidence,
-                        "fixes_applied": len(fix_result.fixes_applied),
-                        "remaining_issues": len(fix_result.remaining_issues),
-                    },
+        # Check if we need to re-run comprehensive hooks
+        hook_fixes = [
+            f
+            for f in fix_result.fixes_applied
+            if "hook" not in f.lower()
+            or "complexity" in f.lower()
+            or "type" in f.lower()
+        ]
+        if hook_fixes:
+            self.logger.info("Re-running comprehensive hooks to verify hook fixes")
+            hook_success = self.phases.run_comprehensive_hooks_only(options)
+            if not hook_success:
+                self.logger.warning(
+                    "Hook verification failed - hook fixes did not work"
                 )
+                verification_success = False
 
-            return success
+        if verification_success:
+            self.logger.info("All AI agent fixes verified successfully")
+        else:
+            self.logger.error(
+                "Verification failed - some fixes did not resolve the issues"
+            )
 
-        except Exception as e:
-            self.logger.exception(f"AI agent fixing phase failed: {e}")
-            self.session.fail_task("ai_fixing", f"AI agent fixing failed: {e}")
-            self._update_mcp_status("ai_fixing", "failed")
-
-            if self._should_debug():
-                self.debugger.log_workflow_phase(
-                    "ai_agent_fixing",
-                    "failed",
-                    details={"error": str(e)},
-                )
-
-            return False
+        return verification_success
 
     async def _collect_issues_from_failures(self) -> list[Issue]:
         """Collect issues from test and comprehensive hook failures."""
@@ -469,29 +560,124 @@ class WorkflowPipeline:
         issues: list[Issue] = []
         hook_count = 0
 
-        if self.session.session_tracker:
-            for task_id, task_data in self.session.session_tracker.tasks.items():
-                if task_data.status == "failed" and task_id in (
-                    "fast_hooks",
-                    "comprehensive_hooks",
-                ):
-                    hook_count += 1
-                    issue_type = (
-                        IssueType.FORMATTING
-                        if "fast" in task_id
-                        else IssueType.TYPE_ERROR
-                    )
-                    error_msg = getattr(task_data, "error_message", "Unknown error")
-                    issue = Issue(
-                        id=f"hook_failure_{task_id}",
-                        type=issue_type,
-                        severity=Priority.MEDIUM,
-                        message=error_msg,
-                        stage=task_id.replace("_hooks", ""),
-                    )
-                    issues.append(issue)
+        if not self.session.session_tracker:
+            return issues, hook_count
+
+        for task_id, task_data in self.session.session_tracker.tasks.items():
+            if self._is_failed_hook_task(task_data, task_id):
+                hook_count += 1
+                hook_issues = self._process_hook_failure(task_id, task_data)
+                issues.extend(hook_issues)
 
         return issues, hook_count
+
+    def _is_failed_hook_task(self, task_data: t.Any, task_id: str) -> bool:
+        """Check if a task is a failed hook task."""
+        return task_data.status == "failed" and task_id in (
+            "fast_hooks",
+            "comprehensive_hooks",
+        )
+
+    def _process_hook_failure(self, task_id: str, task_data: t.Any) -> list[Issue]:
+        """Process a single hook failure and return corresponding issues."""
+        error_msg = getattr(task_data, "error_message", "Unknown error")
+        specific_issues = self._parse_hook_error_details(task_id, error_msg)
+
+        if specific_issues:
+            return specific_issues
+
+        return [self._create_generic_hook_issue(task_id, error_msg)]
+
+    def _create_generic_hook_issue(self, task_id: str, error_msg: str) -> Issue:
+        """Create a generic issue for unspecific hook failures."""
+        issue_type = IssueType.FORMATTING if "fast" in task_id else IssueType.TYPE_ERROR
+        return Issue(
+            id=f"hook_failure_{task_id}",
+            type=issue_type,
+            severity=Priority.MEDIUM,
+            message=error_msg,
+            stage=task_id.replace("_hooks", ""),
+        )
+
+    def _parse_hook_error_details(self, task_id: str, error_msg: str) -> list[Issue]:
+        """Parse specific hook failure details to create targeted issues."""
+        issues: list[Issue] = []
+
+        # For comprehensive hooks, parse specific tool failures
+        if task_id == "comprehensive_hooks":
+            # Check for complexipy failures (complexity violations)
+            if "complexipy" in error_msg.lower():
+                issues.append(
+                    Issue(
+                        id="complexipy_violation",
+                        type=IssueType.COMPLEXITY,
+                        severity=Priority.HIGH,
+                        message="Code complexity violation detected by complexipy",
+                        stage="comprehensive",
+                    )
+                )
+
+            # Check for pyright failures (type errors)
+            if "pyright" in error_msg.lower():
+                issues.append(
+                    Issue(
+                        id="pyright_type_error",
+                        type=IssueType.TYPE_ERROR,
+                        severity=Priority.HIGH,
+                        message="Type checking errors detected by pyright",
+                        stage="comprehensive",
+                    )
+                )
+
+            # Check for bandit failures (security issues)
+            if "bandit" in error_msg.lower():
+                issues.append(
+                    Issue(
+                        id="bandit_security_issue",
+                        type=IssueType.SECURITY,
+                        severity=Priority.HIGH,
+                        message="Security vulnerabilities detected by bandit",
+                        stage="comprehensive",
+                    )
+                )
+
+            # Check for refurb failures (code quality issues)
+            if "refurb" in error_msg.lower():
+                issues.append(
+                    Issue(
+                        id="refurb_quality_issue",
+                        type=IssueType.PERFORMANCE,  # Use PERFORMANCE as closest match for refurb issues
+                        severity=Priority.MEDIUM,
+                        message="Code quality issues detected by refurb",
+                        stage="comprehensive",
+                    )
+                )
+
+            # Check for vulture failures (dead code)
+            if "vulture" in error_msg.lower():
+                issues.append(
+                    Issue(
+                        id="vulture_dead_code",
+                        type=IssueType.DEAD_CODE,
+                        severity=Priority.MEDIUM,
+                        message="Dead code detected by vulture",
+                        stage="comprehensive",
+                    )
+                )
+
+        elif task_id == "fast_hooks":
+            # Fast hooks are typically formatting issues
+            issues.append(
+                Issue(
+                    id="fast_hooks_formatting",
+                    type=IssueType.FORMATTING,
+                    severity=Priority.LOW,
+                    message="Code formatting issues detected",
+                    stage="fast",
+                )
+            )
+
+        return issues
 
     def _log_failure_counts_if_debugging(
         self, test_count: int, hook_count: int

@@ -501,11 +501,35 @@ class PhaseCoordinator:
         self.console.print(
             f"[red]❌[/red] {hook_type.title()} hooks failed: {summary['failed']} failed, {summary['errors']} errors",
         )
+
+        # Collect detailed hook failure information for AI agent processing
+        detailed_error_msg = self._build_detailed_hook_error_message(results, summary)
+
         self.session.fail_task(
             f"{hook_type}_hooks",
-            f"{summary['failed']} failed, {summary['errors']} errors",
+            detailed_error_msg,
         )
         return False
+
+    def _build_detailed_hook_error_message(
+        self, results: list[t.Any], summary: dict[str, t.Any]
+    ) -> str:
+        """Build detailed error message with specific hook failure information."""
+        error_parts = [f"{summary['failed']} failed, {summary['errors']} errors"]
+
+        # Extract specific hook failures
+        failed_hooks = []
+        for result in results:
+            if hasattr(result, "failed") and result.failed:
+                hook_name = getattr(result, "hook_id", "") or getattr(
+                    result, "name", "unknown"
+                )
+                failed_hooks.append(hook_name.lower())
+
+        if failed_hooks:
+            error_parts.append(f"Failed hooks: {', '.join(failed_hooks)}")
+
+        return " | ".join(error_parts)
 
     def _should_retry_fast_hooks(self, results: list[t.Any]) -> bool:
         formatting_hooks = {

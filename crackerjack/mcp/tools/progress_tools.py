@@ -25,6 +25,73 @@ def _create_progress_file(job_id: str) -> Path:
     return progress_dir / f"job-{job_id}.json"
 
 
+def _clamp_progress(value: int) -> int:
+    return min(100, max(0, value))
+
+
+def _get_timestamp() -> str:
+    context = get_context()
+    return context.get_current_time() if context else ""
+
+
+def _build_dict_format_progress(
+    job_id: str,
+    progress_data: dict[str, t.Any],
+    iteration: int,
+    max_iterations: int,
+    overall_progress: int,
+    current_stage: str,
+    stage_progress: int,
+    message: str,
+) -> dict[str, t.Any]:
+    return {
+        "job_id": job_id,
+        "status": progress_data.get("status", "running"),
+        "iteration": progress_data.get("iteration", iteration),
+        "max_iterations": progress_data.get("max_iterations", max_iterations),
+        "overall_progress": _clamp_progress(
+            progress_data.get("overall_progress", overall_progress)
+        ),
+        "current_stage": progress_data.get("type", current_stage),
+        "stage_progress": _clamp_progress(
+            progress_data.get("stage_progress", stage_progress)
+        ),
+        "message": progress_data.get("message", message),
+        "timestamp": _get_timestamp(),
+    }
+
+
+def _build_legacy_format_progress(
+    job_id: str,
+    progress_data: str | None,
+    iteration: int,
+    max_iterations: int,
+    overall_progress: int,
+    current_stage: str,
+    stage_progress: int,
+    message: str,
+) -> dict[str, t.Any]:
+    status = progress_data if isinstance(progress_data, str) else "running"
+    return {
+        "job_id": job_id,
+        "status": status,
+        "iteration": iteration,
+        "max_iterations": max_iterations,
+        "overall_progress": _clamp_progress(overall_progress),
+        "current_stage": current_stage,
+        "stage_progress": _clamp_progress(stage_progress),
+        "message": message,
+        "timestamp": _get_timestamp(),
+    }
+
+
+def _notify_websocket(final_progress_data: dict[str, t.Any]) -> None:
+    context = get_context()
+    if context and hasattr(context, "websocket_progress_queue"):
+        with contextlib.suppress(Exception):
+            context.websocket_progress_queue.put_nowait(final_progress_data)
+
+
 def _update_progress(
     job_id: str,
     progress_data: dict[str, t.Any] | str = None,
@@ -40,47 +107,31 @@ def _update_progress(
     try:
         progress_file = _create_progress_file(job_id)
 
-        # Handle new dictionary format or legacy individual parameters
         if isinstance(progress_data, dict):
-            # New format - use provided dictionary
-            final_progress_data = {
-                "job_id": job_id,
-                "status": progress_data.get("status", "running"),
-                "iteration": progress_data.get("iteration", iteration),
-                "max_iterations": progress_data.get("max_iterations", max_iterations),
-                "overall_progress": min(
-                    100, max(0, progress_data.get("overall_progress", overall_progress))
-                ),
-                "current_stage": progress_data.get(
-                    "type", current_stage
-                ),  # Use "type" from dict as current_stage
-                "stage_progress": min(
-                    100, max(0, progress_data.get("stage_progress", stage_progress))
-                ),
-                "message": progress_data.get("message", message),
-                "timestamp": get_context().get_current_time() if get_context() else "",
-            }
+            final_progress_data = _build_dict_format_progress(
+                job_id,
+                progress_data,
+                iteration,
+                max_iterations,
+                overall_progress,
+                current_stage,
+                stage_progress,
+                message,
+            )
         else:
-            # Legacy format - use individual parameters (progress_data might be status string)
-            status = progress_data if isinstance(progress_data, str) else "running"
-            final_progress_data = {
-                "job_id": job_id,
-                "status": status,
-                "iteration": iteration,
-                "max_iterations": max_iterations,
-                "overall_progress": min(100, max(0, overall_progress)),
-                "current_stage": current_stage,
-                "stage_progress": min(100, max(0, stage_progress)),
-                "message": message,
-                "timestamp": get_context().get_current_time() if get_context() else "",
-            }
+            final_progress_data = _build_legacy_format_progress(
+                job_id,
+                progress_data,
+                iteration,
+                max_iterations,
+                overall_progress,
+                current_stage,
+                stage_progress,
+                message,
+            )
 
         progress_file.write_text(json.dumps(final_progress_data, indent=2))
-
-        context = get_context()
-        if context and hasattr(context, "websocket_progress_queue"):
-            with contextlib.suppress(Exception):
-                context.websocket_progress_queue.put_nowait(final_progress_data)
+        _notify_websocket(final_progress_data)
 
     except Exception as e:
         context = get_context()

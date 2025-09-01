@@ -105,67 +105,81 @@ class CoverageImprovementOrchestrator:
 
             # Check if improvement is needed
             if not await self.should_improve_coverage():
-                return {
-                    "status": "skipped",
-                    "reason": "Coverage improvement not needed",
-                    "coverage_at_100": True,
-                }
+                return self._create_skipped_result("Coverage improvement not needed")
 
-            # Create coverage improvement issue
+            # Create coverage improvement issue and agent
             issue = await self.create_coverage_improvement_issue()
-
-            # Initialize and execute TestCreationAgent
             test_agent = TestCreationAgent(agent_context)
 
-            # Verify agent can handle the issue
+            # Validate agent confidence
             confidence = await test_agent.can_handle(issue)
             if confidence < 0.5:
-                self.logger.warning(
-                    f"TestCreationAgent confidence too low: {confidence}"
-                )
-                return {
-                    "status": "skipped",
-                    "reason": "Agent confidence too low",
-                    "confidence": confidence,
-                }
+                return self._create_low_confidence_result(confidence)
 
             # Execute the coverage improvement
             fix_result = await test_agent.analyze_and_fix(issue)
+            result = self._create_completion_result(fix_result)
 
-            result = {
-                "status": "completed" if fix_result.success else "failed",
-                "confidence": fix_result.confidence,
-                "fixes_applied": fix_result.fixes_applied,
-                "files_modified": fix_result.files_modified,
-                "recommendations": fix_result.recommendations,
-            }
-
-            if fix_result.success:
-                self.logger.info(
-                    f"Coverage improvement successful: {len(fix_result.fixes_applied)} fixes applied"
-                )
-                if self.console:
-                    self.console.print(
-                        f"[green]📈[/green] Coverage improved: {len(fix_result.fixes_applied)} "
-                        f"tests created in {len(fix_result.files_modified)} files"
-                    )
-            else:
-                self.logger.warning("Coverage improvement failed")
-                if self.console:
-                    self.console.print(
-                        "[yellow]⚠️[/yellow] Coverage improvement attempt completed with issues"
-                    )
-
+            self._log_and_display_results(fix_result)
             return result
 
         except Exception as e:
-            self.logger.error(f"Coverage improvement failed with error: {e}")
-            return {
-                "status": "error",
-                "error": str(e),
-                "fixes_applied": [],
-                "files_modified": [],
-            }
+            return self._create_error_result(e)
+
+    def _create_skipped_result(self, reason: str) -> dict[str, t.Any]:
+        """Create result dict for skipped coverage improvement."""
+        return {
+            "status": "skipped",
+            "reason": reason,
+            "coverage_at_100": True,
+        }
+
+    def _create_low_confidence_result(self, confidence: float) -> dict[str, t.Any]:
+        """Create result dict for low confidence scenario."""
+        self.logger.warning(f"TestCreationAgent confidence too low: {confidence}")
+        return {
+            "status": "skipped",
+            "reason": "Agent confidence too low",
+            "confidence": confidence,
+        }
+
+    def _create_completion_result(self, fix_result: t.Any) -> dict[str, t.Any]:
+        """Create result dict from fix results."""
+        return {
+            "status": "completed" if fix_result.success else "failed",
+            "confidence": fix_result.confidence,
+            "fixes_applied": fix_result.fixes_applied,
+            "files_modified": fix_result.files_modified,
+            "recommendations": fix_result.recommendations,
+        }
+
+    def _log_and_display_results(self, fix_result: t.Any) -> None:
+        """Log and display the results of coverage improvement."""
+        if fix_result.success:
+            self.logger.info(
+                f"Coverage improvement successful: {len(fix_result.fixes_applied)} fixes applied"
+            )
+            if self.console:
+                self.console.print(
+                    f"[green]📈[/green] Coverage improved: {len(fix_result.fixes_applied)} "
+                    f"tests created in {len(fix_result.files_modified)} files"
+                )
+        else:
+            self.logger.warning("Coverage improvement failed")
+            if self.console:
+                self.console.print(
+                    "[yellow]⚠️[/yellow] Coverage improvement attempt completed with issues"
+                )
+
+    def _create_error_result(self, error: Exception) -> dict[str, t.Any]:
+        """Create result dict for error scenarios."""
+        self.logger.error(f"Coverage improvement failed with error: {error}")
+        return {
+            "status": "error",
+            "error": str(error),
+            "fixes_applied": [],
+            "files_modified": [],
+        }
 
     async def get_coverage_improvement_recommendations(self) -> list[str]:
         """Get recommendations for coverage improvement strategies.
