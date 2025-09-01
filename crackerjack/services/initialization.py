@@ -589,9 +589,21 @@ python -m crackerjack -a patch
         # 3. Remove any fixed coverage requirements (use ratchet system instead)
         self._remove_fixed_coverage_requirements(target_config)
 
-        # Write merged config
-        with target_file.open("wb") as f:
-            tomli_w.dump(target_config, f)
+        # Write merged config with proper formatting
+        import io
+
+        # Use in-memory buffer to clean content before writing
+        buffer = io.BytesIO()
+        tomli_w.dump(target_config, buffer)
+        content = buffer.getvalue().decode("utf-8")
+
+        # Clean trailing whitespace and ensure single trailing newline
+        from crackerjack.services.filesystem import FileSystemService
+
+        content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
+
+        with target_file.open("w", encoding="utf-8") as f:
+            f.write(content)
 
         t.cast("list[str]", results["files_copied"]).append("pyproject.toml (merged)")
 
@@ -776,8 +788,12 @@ python -m crackerjack -a patch
             source_config = yaml.safe_load(f)
 
         if not target_file.exists():
-            # No existing file, just copy without trailing newline
-            content = source_file.read_text().rstrip("\n")
+            # No existing file, just copy with proper formatting
+            content = source_file.read_text()
+            # Clean trailing whitespace and ensure single trailing newline
+            from crackerjack.services.filesystem import FileSystemService
+
+            content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
             self._write_file_and_track(
                 target_file,
                 content,
@@ -814,20 +830,26 @@ python -m crackerjack -a patch
             target_repos.extend(new_repos)
             target_config["repos"] = target_repos
 
-            # Write merged config without trailing newline
+            # Write merged config with proper formatting
             yaml_content = yaml.dump(
                 target_config,
                 default_flow_style=False,
                 sort_keys=False,
                 width=float("inf"),
             )
+            content = (
+                yaml_content.decode()
+                if isinstance(yaml_content, bytes)
+                else yaml_content
+            )
+
+            # Clean trailing whitespace and ensure single trailing newline
+            from crackerjack.services.filesystem import FileSystemService
+
+            content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
+
             with target_file.open("w") as f:
-                content = (
-                    yaml_content.decode()
-                    if isinstance(yaml_content, bytes)
-                    else yaml_content
-                )
-                f.write(content.rstrip("\n"))
+                f.write(content)
 
             t.cast("list[str]", results["files_copied"]).append(
                 ".pre-commit-config.yaml (merged)",

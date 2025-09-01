@@ -237,7 +237,10 @@ class TestExecutor:
         if "session starts" in line and progress.collection_status != "Session started":
             progress.update(collection_status="Session started")
             return True
-        elif "test session starts" in line and progress.collection_status != "Test collection started":
+        elif (
+            "test session starts" in line
+            and progress.collection_status != "Test collection started"
+        ):
             progress.update(collection_status="Test collection started")
             return True
         return False
@@ -310,8 +313,8 @@ class TestExecutor:
         """Determine if display should be refreshed."""
         # Only refresh on significant changes to reduce spam
         return (
-            progress.is_complete 
-            or progress.total_tests > 0 
+            progress.is_complete
+            or progress.total_tests > 0
             or len(progress.current_test) > 0
         )
 

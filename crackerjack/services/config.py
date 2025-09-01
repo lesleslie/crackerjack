@@ -26,6 +26,12 @@ class ConfigurationService:
 
             config_file = self.pkg_path / ".pre-commit-config.yaml"
             config_content = config_temp_path.read_text()
+            # Clean trailing whitespace and ensure single trailing newline
+            from crackerjack.services.filesystem import FileSystemService
+
+            config_content = FileSystemService.clean_trailing_whitespace_and_newlines(
+                config_content
+            )
             config_file.write_text(config_content)
 
             self._temp_config_path = config_temp_path
@@ -206,8 +212,13 @@ class ConfigurationService:
                         ],
                     },
                 }
+            # Clean the content before writing to prevent hook failures
+            from crackerjack.services.filesystem import FileSystemService
+
+            content = dumps(config)
+            content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
             with pyproject_file.open("w") as f:
-                f.write(dumps(config))
+                f.write(content)
             self.console.print("[green]✅[/green] pyproject.toml configuration updated")
             return True
         except Exception as e:

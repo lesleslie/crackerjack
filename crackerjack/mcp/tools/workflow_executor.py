@@ -301,7 +301,10 @@ async def _execute_single_iteration(
 
 
 def _create_success_result(
-    job_id: str, iterations: int, context: t.Any, coverage_result: dict[str, t.Any] | None = None
+    job_id: str,
+    iterations: int,
+    context: t.Any,
+    coverage_result: dict[str, t.Any] | None = None,
 ) -> dict[str, t.Any]:
     """Create success result with completion data."""
     result = {
@@ -312,10 +315,10 @@ def _create_success_result(
         "timestamp": time.time(),
         "success": True,
     }
-    
+
     if coverage_result:
         result["coverage_improvement"] = coverage_result
-        
+
     return result
 
 
@@ -414,7 +417,7 @@ async def _attempt_coverage_improvement(
         await _update_progress(
             job_id,
             {
-                "type": "coverage_improvement", 
+                "type": "coverage_improvement",
                 "status": "executing",
                 "message": "Generating tests to improve coverage...",
             },
@@ -456,13 +459,13 @@ async def _attempt_coverage_improvement(
             job_id,
             {
                 "type": "coverage_improvement",
-                "status": "failed", 
+                "status": "failed",
                 "error": str(e),
                 "message": f"Coverage improvement failed: {e}",
             },
             context,
         )
-        
+
         return {
             "status": "failed",
             "error": str(e),

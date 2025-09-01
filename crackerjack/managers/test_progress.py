@@ -8,9 +8,6 @@ import threading
 import time
 import typing as t
 
-from rich.align import Align
-from rich.table import Table
-
 
 class TestProgress:
     """Tracks test execution progress with thread-safe updates."""
@@ -67,26 +64,26 @@ class TestProgress:
     def _format_collection_progress(self) -> str:
         """Format test collection progress display."""
         status_parts = [self.collection_status]
-        
+
         if self.files_discovered > 0:
             status_parts.append(f"{self.files_discovered} test files")
-            
+
         elapsed = self.elapsed_time
         if elapsed > 1:
             status_parts.append(f"{elapsed:.1f}s")
-        
+
         return " | ".join(status_parts)
 
     def _format_execution_progress(self) -> str:
         """Format test execution progress display."""
         parts = []
-        
+
         # Test progress
         if self.total_tests > 0:
             progress_pct = (self.completed / self.total_tests) * 100
             parts.append(f"{self.completed}/{self.total_tests} ({progress_pct:.1f}%)")
-        
-        # Status counts 
+
+        # Status counts
         status_parts = []
         if self.passed > 0:
             status_parts.append(f"✅ {self.passed}")
@@ -96,18 +93,22 @@ class TestProgress:
             status_parts.append(f"⏭ {self.skipped}")
         if self.errors > 0:
             status_parts.append(f"💥 {self.errors}")
-            
+
         if status_parts:
             parts.append(" ".join(status_parts))
-        
+
         # Current test (truncated)
         if self.current_test and not self.is_complete:
-            test_name = self.current_test[:30] + "..." if len(self.current_test) > 30 else self.current_test
+            test_name = (
+                self.current_test[:30] + "..."
+                if len(self.current_test) > 30
+                else self.current_test
+            )
             parts.append(f"Running: {test_name}")
-        
+
         # Timing
         elapsed = self.elapsed_time
         if elapsed > 1:
             parts.append(f"{elapsed:.1f}s")
-            
+
         return " | ".join(parts)

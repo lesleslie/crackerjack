@@ -189,6 +189,15 @@ class CoverageRatchetService:
             updated_content = re.sub(pattern, replacement, content)
 
             if updated_content != content:
+                # Clean trailing whitespace and ensure single trailing newline
+                from crackerjack.services.filesystem import FileSystemService
+
+                updated_content = (
+                    FileSystemService.clean_trailing_whitespace_and_newlines(
+                        updated_content
+                    )
+                )
+
                 self.pyproject_file.write_text(updated_content)
                 self.console.print(
                     f"[cyan]📝[/cyan] Updated pyproject.toml coverage requirement to {new_coverage:.0f}%"
