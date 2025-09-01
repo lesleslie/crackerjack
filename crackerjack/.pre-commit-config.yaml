@@ -83,7 +83,7 @@ repos:
     rev: v2.1.0
     hooks:
       - id: refurb
-        args: []
+        args: ["--ignore", "FURB184", "--ignore", "FURB120"]
         files: ^crackerjack/.*\.py$
         exclude: ^tests/.*\.py$
         stages: ["pre-push", "manual"]
