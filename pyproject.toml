@@ -287,7 +287,7 @@ exclude-deps = [
 [tool.refurb]
 enable_all = true
 quiet = true
-python_version = "0.31.0"
+python_version = "3.13"
 
 [tool.bandit]
 target = [

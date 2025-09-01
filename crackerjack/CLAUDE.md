@@ -176,7 +176,7 @@ python -m crackerjack --ai-agent -t
 
 - **RefactoringAgent**: Structural code improvements and complexity reduction
 
-  - **Primary Expertise**: `IssueType.COMPLEXITY` (cognitive complexity ≤15)
+  - **Primary Expertise**: `IssueType.COMPLEXITY` (cognitive complexity ≤13)
   - **Secondary Expertise**: `IssueType.DEAD_CODE` (unused imports, variables, functions)
   - **Capabilities**:
     - Breaks down complex functions into helper methods

@@ -168,7 +168,7 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
     try:
         target_path = args.strip() or "."
         kwargs_dict = json.loads(kwargs) if kwargs.strip() else {}
-        force = kwargs_dict.get("force", False)
+        force = kwargs_dict.get("force") or False
 
         from pathlib import Path
 
@@ -189,9 +189,8 @@ def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]
     from crackerjack.services.initialization import InitializationService
 
     console = Console()
-    init_service = InitializationService(console, target_path)
-
-    return init_service.initialize_project(force_update=force)
+    
+    return InitializationService(console, target_path).initialize_project(force_update=force)
 
 
 def _create_init_error_response(message: str) -> str:

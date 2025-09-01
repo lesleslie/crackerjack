@@ -444,8 +444,8 @@ class AgentOrchestrator:
             return IssueType.SECURITY
         elif "format" in desc_lower:
             return IssueType.FORMATTING
-        else:
-            return IssueType.FORMATTING  # Default
+
+        return IssueType.FORMATTING  # Default
 
     def _map_task_priority_to_severity(self, task: TaskDescription):
         """Map task priority to Issue severity."""
@@ -455,8 +455,8 @@ class AgentOrchestrator:
             return Priority.HIGH
         elif task.priority >= 50:
             return Priority.MEDIUM
-        else:
-            return Priority.LOW
+
+        return Priority.LOW
 
     def _build_consensus(self, results: list[tuple[RegisteredAgent, t.Any]]) -> t.Any:
         """Build consensus from multiple agent results."""
@@ -506,11 +506,13 @@ class AgentOrchestrator:
 
     def get_execution_stats(self) -> dict[str, t.Any]:
         """Get execution statistics."""
+        from operator import itemgetter
+
         return {
             "total_executions": sum(self._execution_stats.values()),
-            "agent_usage": dict(self._execution_stats),
+            "agent_usage": self._execution_stats.copy(),
             "most_used_agent": max(
-                self._execution_stats.items(), key=lambda x: x[1], default=("none", 0)
+                self._execution_stats.items(), key=itemgetter(1), default=("none", 0)
             )[0]
             if self._execution_stats
             else "none",

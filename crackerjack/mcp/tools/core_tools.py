@@ -33,7 +33,7 @@ async def create_task_with_subagent(
             "result": f"Task would be executed by {subagent_type}: {prompt[:100]}...",
             "agent_type": "user"
             if subagent_type
-            not in ["general-purpose", "statusline-setup", "output-style-setup"]
+            not in ("general-purpose", "statusline-setup", "output-style-setup")
             else "system",
         }
 
@@ -193,7 +193,7 @@ def _get_error_suggestion(error_type: str) -> str:
         "test_failure": "Review test assertions and expected behavior",
         "hook_failure": "Run hooks individually to identify specific failures",
     }
-    return suggestions.get(error_type, "No specific suggestion available")
+    return suggestions.get(error_type) or "No specific suggestion available"
 
 
 def _detect_errors_and_suggestions(

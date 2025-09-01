@@ -82,55 +82,55 @@ class AdaptiveLearningSystem:
     def _load_existing_data(self) -> None:
         """Load existing learning data from disk."""
         try:
-            # Load execution records
-            if self.execution_log_path.exists():
-                with self.execution_log_path.open("r") as f:
-                    for line in f:
-                        if line.strip():
-                            data = json.loads(line)
-                            data["timestamp"] = datetime.fromisoformat(
-                                data["timestamp"]
-                            )
-                            record = ExecutionRecord(**data)
-                            self._execution_records.append(record)
-
-                self.logger.debug(
-                    f"Loaded {len(self._execution_records)} execution records"
-                )
-
-            # Load agent metrics
-            if self.metrics_path.exists():
-                with self.metrics_path.open("r") as f:
-                    metrics_data = json.load(f)
-                    for agent_name, data in metrics_data.items():
-                        data["last_updated"] = datetime.fromisoformat(
-                            data["last_updated"]
-                        )
-                        self._agent_metrics[agent_name] = AgentPerformanceMetrics(
-                            **data
-                        )
-
-                self.logger.debug(
-                    f"Loaded metrics for {len(self._agent_metrics)} agents"
-                )
-
-            # Load learning insights
-            if self.insights_path.exists():
-                with self.insights_path.open("r") as f:
-                    insights_data = json.load(f)
-                    for insight_data in insights_data:
-                        insight_data["discovered_at"] = datetime.fromisoformat(
-                            insight_data["discovered_at"]
-                        )
-                        insight = LearningInsight(**insight_data)
-                        self._learning_insights.append(insight)
-
-                self.logger.debug(
-                    f"Loaded {len(self._learning_insights)} learning insights"
-                )
-
+            self._load_execution_records()
+            self._load_agent_metrics()
+            self._load_learning_insights()
         except Exception as e:
             self.logger.warning(f"Error loading existing learning data: {e}")
+
+    def _load_execution_records(self) -> None:
+        """Load execution records from disk."""
+        if not self.execution_log_path.exists():
+            return
+
+        with self.execution_log_path.open("r") as f:
+            for line in f:
+                if line.strip():
+                    data = json.loads(line)
+                    data["timestamp"] = datetime.fromisoformat(data["timestamp"])
+                    record = ExecutionRecord(**data)
+                    self._execution_records.append(record)
+
+        self.logger.debug(f"Loaded {len(self._execution_records)} execution records")
+
+    def _load_agent_metrics(self) -> None:
+        """Load agent metrics from disk."""
+        if not self.metrics_path.exists():
+            return
+
+        with self.metrics_path.open("r") as f:
+            metrics_data = json.load(f)
+            for agent_name, data in metrics_data.items():
+                data["last_updated"] = datetime.fromisoformat(data["last_updated"])
+                self._agent_metrics[agent_name] = AgentPerformanceMetrics(**data)
+
+        self.logger.debug(f"Loaded metrics for {len(self._agent_metrics)} agents")
+
+    def _load_learning_insights(self) -> None:
+        """Load learning insights from disk."""
+        if not self.insights_path.exists():
+            return
+
+        with self.insights_path.open("r") as f:
+            insights_data = json.load(f)
+            for insight_data in insights_data:
+                insight_data["discovered_at"] = datetime.fromisoformat(
+                    insight_data["discovered_at"]
+                )
+                insight = LearningInsight(**insight_data)
+                self._learning_insights.append(insight)
+
+        self.logger.debug(f"Loaded {len(self._learning_insights)} learning insights")
 
     async def record_execution(
         self,
@@ -182,27 +182,24 @@ class AdaptiveLearningSystem:
 
     def _infer_task_capabilities(self, task: TaskDescription) -> set[AgentCapability]:
         """Infer capabilities needed for a task (simplified version)."""
-        # This could import from agent_selector, but kept simple to avoid circular imports
         capabilities = set()
-
         text = task.description.lower()
 
-        if any(word in text for word in ["architect", "design", "structure"]):
-            capabilities.add(AgentCapability.ARCHITECTURE)
-        if any(word in text for word in ["refactor", "clean", "improve"]):
-            capabilities.add(AgentCapability.REFACTORING)
-        if any(word in text for word in ["test", "pytest", "coverage"]):
-            capabilities.add(AgentCapability.TESTING)
-        if any(word in text for word in ["security", "secure", "vulnerability"]):
-            capabilities.add(AgentCapability.SECURITY)
-        if any(word in text for word in ["performance", "optimize", "speed"]):
-            capabilities.add(AgentCapability.PERFORMANCE)
-        if any(word in text for word in ["document", "readme", "comment"]):
-            capabilities.add(AgentCapability.DOCUMENTATION)
-        if any(word in text for word in ["format", "style", "lint"]):
-            capabilities.add(AgentCapability.FORMATTING)
-        if any(word in text for word in ["debug", "fix", "error"]):
-            capabilities.add(AgentCapability.DEBUGGING)
+        # Capability mapping for efficiency
+        capability_keywords = {
+            AgentCapability.ARCHITECTURE: ("architect", "design", "structure"),
+            AgentCapability.REFACTORING: ("refactor", "clean", "improve"),
+            AgentCapability.TESTING: ("test", "pytest", "coverage"),
+            AgentCapability.SECURITY: ("security", "secure", "vulnerability"),
+            AgentCapability.PERFORMANCE: ("performance", "optimize", "speed"),
+            AgentCapability.DOCUMENTATION: ("document", "readme", "comment"),
+            AgentCapability.FORMATTING: ("format", "style", "lint"),
+            AgentCapability.DEBUGGING: ("debug", "fix", "error"),
+        }
+
+        for capability, keywords in capability_keywords.items():
+            if any(word in text for word in keywords):
+                capabilities.add(capability)
 
         if not capabilities:
             capabilities.add(AgentCapability.CODE_ANALYSIS)
@@ -221,57 +218,66 @@ class AdaptiveLearningSystem:
     async def _update_agent_metrics(self, record: ExecutionRecord) -> None:
         """Update metrics for an agent based on execution record."""
         agent_name = record.agent_name
+        metrics = self._ensure_agent_metrics(agent_name)
 
+        self._update_basic_counters(metrics, record)
+        self._update_execution_averages(metrics, record)
+        self._update_capability_success_rates(metrics, record, agent_name)
+        self._update_performance_trend(metrics, agent_name)
+
+        metrics.last_updated = datetime.now()
+        await self._persist_agent_metrics()
+
+    def _ensure_agent_metrics(self, agent_name: str) -> AgentPerformanceMetrics:
+        """Ensure agent metrics exist and return them."""
         if agent_name not in self._agent_metrics:
             self._agent_metrics[agent_name] = AgentPerformanceMetrics()
+        return self._agent_metrics[agent_name]
 
-        metrics = self._agent_metrics[agent_name]
-
-        # Update basic counters
+    def _update_basic_counters(
+        self, metrics: AgentPerformanceMetrics, record: ExecutionRecord
+    ) -> None:
+        """Update basic execution counters and success rate."""
         metrics.total_executions += 1
         if record.success:
             metrics.successful_executions += 1
         else:
             metrics.failed_executions += 1
-
-        # Update success rate
         metrics.success_rate = metrics.successful_executions / metrics.total_executions
 
-        # Update average execution time (weighted average)
+    def _update_execution_averages(
+        self, metrics: AgentPerformanceMetrics, record: ExecutionRecord
+    ) -> None:
+        """Update execution time and confidence averages."""
         if metrics.total_executions == 1:
             metrics.average_execution_time = record.execution_time
+            metrics.average_confidence = record.confidence_score
         else:
-            # Exponential moving average with alpha=0.3
             alpha = 0.3
             metrics.average_execution_time = (
                 alpha * record.execution_time
                 + (1 - alpha) * metrics.average_execution_time
             )
-
-        # Update average confidence
-        if metrics.total_executions == 1:
-            metrics.average_confidence = record.confidence_score
-        else:
-            alpha = 0.3
             metrics.average_confidence = (
                 alpha * record.confidence_score
                 + (1 - alpha) * metrics.average_confidence
             )
 
-        # Update capability-specific success rates
+    def _update_capability_success_rates(
+        self, metrics: AgentPerformanceMetrics, record: ExecutionRecord, agent_name: str
+    ) -> None:
+        """Update capability-specific success rates."""
+        success_value = 1.0 if record.success else 0.0
+
         for capability in record.task_capabilities:
             if capability not in metrics.capability_success_rates:
                 metrics.capability_success_rates[capability] = 0.0
 
-            # Update capability success rate with weighted average
             current_rate = metrics.capability_success_rates[capability]
-            success_value = 1.0 if record.success else 0.0
-
-            # Simple moving average for capability success
             capability_executions = len(
                 [
                     r
-                    for r in self._execution_records[-50:]  # Last 50 records
+                    for r in self._execution_records[-50:]
                     if r.agent_name == agent_name and capability in r.task_capabilities
                 ]
             )
@@ -279,28 +285,24 @@ class AdaptiveLearningSystem:
             if capability_executions <= 1:
                 metrics.capability_success_rates[capability] = success_value
             else:
-                alpha = min(0.5, 2.0 / capability_executions)  # Adaptive learning rate
+                alpha = min(0.5, 2.0 / capability_executions)
                 metrics.capability_success_rates[capability] = (
                     alpha * success_value + (1 - alpha) * current_rate
                 )
 
-        # Calculate recent performance trend (last 10 executions)
+    def _update_performance_trend(
+        self, metrics: AgentPerformanceMetrics, agent_name: str
+    ) -> None:
+        """Update recent performance trend."""
         recent_records = [
             r for r in self._execution_records[-20:] if r.agent_name == agent_name
-        ][-10:]  # Last 10 for this agent
+        ][-10:]
 
         if len(recent_records) >= 5:
-            # Calculate trend using linear regression (simplified)
-            recent_success_rates = []
-            window_size = 3
-
-            for i in range(len(recent_records) - window_size + 1):
-                window = recent_records[i : i + window_size]
-                window_success_rate = sum(1 for r in window if r.success) / len(window)
-                recent_success_rates.append(window_success_rate)
-
+            recent_success_rates = self._calculate_windowed_success_rates(
+                recent_records
+            )
             if len(recent_success_rates) >= 2:
-                # Simple trend: compare first half to second half
                 mid = len(recent_success_rates) // 2
                 first_half_avg = sum(recent_success_rates[:mid]) / max(mid, 1)
                 second_half_avg = sum(recent_success_rates[mid:]) / max(
@@ -308,10 +310,19 @@ class AdaptiveLearningSystem:
                 )
                 metrics.recent_performance_trend = second_half_avg - first_half_avg
 
-        metrics.last_updated = datetime.now()
+    def _calculate_windowed_success_rates(
+        self, recent_records: list[ExecutionRecord]
+    ) -> list[float]:
+        """Calculate success rates using sliding window."""
+        window_size = 3
+        success_rates = []
 
-        # Persist metrics
-        await self._persist_agent_metrics()
+        for i in range(len(recent_records) - window_size + 1):
+            window = recent_records[i : i + window_size]
+            window_success_rate = sum(1 for r in window if r.success) / len(window)
+            success_rates.append(window_success_rate)
+
+        return success_rates
 
     async def _persist_execution_record(self, record: ExecutionRecord) -> None:
         """Persist execution record to disk."""
@@ -384,80 +395,138 @@ class AdaptiveLearningSystem:
 
     def _analyze_capability_strengths(self) -> list[LearningInsight]:
         """Analyze which agents excel at which capabilities."""
+        capability_performance = self._group_capability_performance()
         insights = []
 
-        # Group records by capability
+        for capability, agents in capability_performance.items():
+            insights.extend(self._find_capability_experts(capability, agents))
+
+        return insights
+
+    def _group_capability_performance(self) -> dict[str, dict[str, list[bool]]]:
+        """Group execution records by capability and agent."""
         capability_performance = defaultdict(lambda: defaultdict(list))
 
-        for record in self._execution_records[-100:]:  # Last 100 records
+        for record in self._execution_records[-100:]:
             for capability in record.task_capabilities:
                 capability_performance[capability][record.agent_name].append(
                     record.success
                 )
 
-        # Find agents with exceptional performance in specific capabilities
-        for capability, agents in capability_performance.items():
-            for agent_name, successes in agents.items():
-                if len(successes) >= 3:  # Minimum sample size
-                    success_rate = sum(successes) / len(successes)
+        return dict(capability_performance)
 
-                    if success_rate >= 0.9:  # High success rate
-                        insight = LearningInsight(
-                            insight_type="capability_strength",
-                            agent_name=agent_name,
-                            confidence=min(success_rate, len(successes) / 10.0),
-                            description=f"{agent_name} excels at {capability} tasks (success rate: {success_rate:.1%})",
-                            supporting_evidence={
-                                "capability": capability,
-                                "success_rate": success_rate,
-                                "sample_size": len(successes),
-                                "recent_performance": successes,
-                            },
-                        )
-                        insights.append(insight)
+    def _find_capability_experts(
+        self, capability: str, agents: dict[str, list[bool]]
+    ) -> list[LearningInsight]:
+        """Find agents with exceptional performance in a specific capability."""
+        insights = []
+
+        for agent_name, successes in agents.items():
+            if len(successes) >= 3:  # Minimum sample size
+                success_rate = sum(successes) / len(successes)
+
+                if success_rate >= 0.9:  # High success rate
+                    insight = LearningInsight(
+                        insight_type="capability_strength",
+                        agent_name=agent_name,
+                        confidence=min(success_rate, len(successes) / 10.0),
+                        description=f"{agent_name} excels at {capability} tasks (success rate: {success_rate:.1%})",
+                        supporting_evidence={
+                            "capability": capability,
+                            "success_rate": success_rate,
+                            "sample_size": len(successes),
+                            "recent_performance": successes,
+                        },
+                    )
+                    insights.append(insight)
 
         return insights
 
     def _analyze_failure_patterns(self) -> list[LearningInsight]:
         """Analyze common failure patterns."""
-        insights = []
+        failure_patterns = self._group_failure_patterns()
+        return self._extract_significant_failure_insights(failure_patterns)
 
-        # Group failures by agent and error patterns
+    def _group_failure_patterns(self) -> dict[str, dict[str, int]]:
+        """Group failure patterns by agent and error type."""
         failure_patterns = defaultdict(lambda: defaultdict(int))
 
         for record in self._execution_records[-100:]:
             if not record.success and record.error_message:
-                # Extract error pattern (simplified)
                 error_type = self._categorize_error(record.error_message)
                 failure_patterns[record.agent_name][error_type] += 1
 
-        # Find significant failure patterns
+        return {
+            agent_name: dict(patterns)
+            for agent_name, patterns in failure_patterns.items()
+        }
+
+    def _extract_significant_failure_insights(
+        self, failure_patterns: dict[str, dict[str, int]]
+    ) -> list[LearningInsight]:
+        """Extract significant failure pattern insights."""
+        insights = []
+
         for agent_name, patterns in failure_patterns.items():
-            total_failures = sum(patterns.values())
-            if total_failures >= 3:  # Minimum sample size
-                for error_type, count in patterns.items():
-                    if count / total_failures >= 0.5:  # Common pattern
-                        insight = LearningInsight(
-                            insight_type="failure_pattern",
-                            agent_name=agent_name,
-                            confidence=count / total_failures,
-                            description=f"{agent_name} commonly fails with {error_type} errors",
-                            supporting_evidence={
-                                "error_type": error_type,
-                                "occurrence_rate": count / total_failures,
-                                "total_failures": total_failures,
-                                "pattern_count": count,
-                            },
-                        )
-                        insights.append(insight)
+            agent_insights = self._extract_agent_failure_insights(agent_name, patterns)
+            insights.extend(agent_insights)
 
         return insights
 
+    def _extract_agent_failure_insights(
+        self, agent_name: str, patterns: dict[str, int]
+    ) -> list[LearningInsight]:
+        """Extract failure insights for a specific agent."""
+        total_failures = sum(patterns.values())
+        if total_failures < 3:  # Minimum sample size
+            return []
+
+        insights = []
+        for error_type, count in patterns.items():
+            if count / total_failures >= 0.5:  # Common pattern
+                insight = self._create_failure_insight(
+                    agent_name, error_type, count, total_failures
+                )
+                insights.append(insight)
+
+        return insights
+
+    def _create_failure_insight(
+        self, agent_name: str, error_type: str, count: int, total_failures: int
+    ) -> LearningInsight:
+        """Create a failure pattern insight."""
+        return LearningInsight(
+            insight_type="failure_pattern",
+            agent_name=agent_name,
+            confidence=count / total_failures,
+            description=f"{agent_name} commonly fails with {error_type} errors",
+            supporting_evidence={
+                "error_type": error_type,
+                "occurrence_rate": count / total_failures,
+                "total_failures": total_failures,
+                "pattern_count": count,
+            },
+        )
+
     def _analyze_task_patterns(self) -> list[LearningInsight]:
         """Analyze task patterns and agent preferences."""
+        task_performance = self._group_task_performance()
         insights = []
 
-        # Group by task hash to find patterns
+        for task_hash, agents in task_performance.items():
+            if len(agents) > 1:  # Multiple agents tried this task type
+                best_agent, best_rate = self._find_best_performing_agent(agents)
+
+                if best_agent and best_rate >= 0.8:
+                    insight = self._create_task_pattern_insight(
+                        task_hash, best_agent, best_rate, agents
+                    )
+                    insights.append(insight)
+
+        return insights
+
+    def _group_task_performance(self) -> dict[str, dict[str, list[bool]]]:
+        """Group task performance by hash and agent."""
         task_performance = defaultdict(lambda: defaultdict(list))
 
         for record in self._execution_records[-100:]:
@@ -466,45 +535,53 @@ class AdaptiveLearningSystem:
                     record.success
                 )
 
-        # Find task types where specific agents consistently perform well
-        for task_hash, agents in task_performance.items():
-            if len(agents) > 1:  # Multiple agents tried this task type
-                best_agent = None
-                best_rate = 0.0
+        return dict(task_performance)
 
-                for agent_name, successes in agents.items():
-                    if len(successes) >= 2:  # Minimum attempts
-                        success_rate = sum(successes) / len(successes)
-                        if success_rate > best_rate:
-                            best_rate = success_rate
-                            best_agent = agent_name
+    def _find_best_performing_agent(
+        self, agents: dict[str, list[bool]]
+    ) -> tuple[str | None, float]:
+        """Find the best performing agent for a task pattern."""
+        best_agent = None
+        best_rate = 0.0
 
-                if best_agent and best_rate >= 0.8:
-                    # Get example task description
-                    example_task = next(
-                        (
-                            r.task_description
-                            for r in self._execution_records
-                            if r.task_hash == task_hash and r.agent_name == best_agent
-                        ),
-                        "Unknown task pattern",
-                    )
+        for agent_name, successes in agents.items():
+            if len(successes) >= 2:  # Minimum attempts
+                success_rate = sum(successes) / len(successes)
+                if success_rate > best_rate:
+                    best_rate = success_rate
+                    best_agent = agent_name
 
-                    insight = LearningInsight(
-                        insight_type="task_pattern",
-                        agent_name=best_agent,
-                        confidence=best_rate,
-                        description=f"{best_agent} is preferred for tasks like: {example_task[:100]}...",
-                        supporting_evidence={
-                            "task_pattern": task_hash,
-                            "success_rate": best_rate,
-                            "example_task": example_task,
-                            "competing_agents": list(agents.keys()),
-                        },
-                    )
-                    insights.append(insight)
+        return best_agent, best_rate
 
-        return insights
+    def _create_task_pattern_insight(
+        self,
+        task_hash: str,
+        best_agent: str,
+        best_rate: float,
+        agents: dict[str, list[bool]],
+    ) -> LearningInsight:
+        """Create a task pattern insight."""
+        example_task = next(
+            (
+                r.task_description
+                for r in self._execution_records
+                if r.task_hash == task_hash and r.agent_name == best_agent
+            ),
+            "Unknown task pattern",
+        )
+
+        return LearningInsight(
+            insight_type="task_pattern",
+            agent_name=best_agent,
+            confidence=best_rate,
+            description=f"{best_agent} is preferred for tasks like: {example_task[:100]}...",
+            supporting_evidence={
+                "task_pattern": task_hash,
+                "success_rate": best_rate,
+                "example_task": example_task,
+                "competing_agents": list(agents.keys()),
+            },
+        )
 
     def _categorize_error(self, error_message: str) -> str:
         """Categorize error message into type."""
@@ -522,8 +599,8 @@ class AdaptiveLearningSystem:
             return "not_found"
         elif "syntax" in error_lower:
             return "syntax_error"
-        else:
-            return "other"
+
+        return "other"
 
     def _is_duplicate_insight(self, new_insight: LearningInsight) -> bool:
         """Check if insight already exists."""
@@ -572,7 +649,7 @@ class AdaptiveLearningSystem:
         return score
 
     def _calculate_metrics_score(
-        self, metrics: "AgentMetrics", task_capabilities: list[str]
+        self, metrics: AgentPerformanceMetrics, task_capabilities: list[str]
     ) -> float:
         """Calculate score based on agent metrics."""
         score = metrics.success_rate * 0.4

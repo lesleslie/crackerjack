@@ -225,9 +225,9 @@ class AgentSelector:
         capabilities = set()
         for pattern in task.file_patterns:
             pattern_lower = pattern.lower()
-            if any(ext in pattern_lower for ext in [".py", ".pyi"]):
+            if any(ext in pattern_lower for ext in (".py", ".pyi")):
                 capabilities.add(AgentCapability.CODE_ANALYSIS)
-            if any(test in pattern_lower for test in ["test_", "_test", "tests/"]):
+            if any(test in pattern_lower for test in ("test_", "_test", "tests/")):
                 capabilities.add(AgentCapability.TESTING)
 
         return capabilities
@@ -314,32 +314,56 @@ class AgentSelector:
         """Calculate how well an agent matches the task context."""
         score = 0.0
 
-        # Agent name matching
         agent_name_lower = agent.metadata.name.lower()
         task_text = task.description.lower()
 
-        # Direct name matches
+        score += self._score_name_matches(agent_name_lower, task_text)
+        score += self._score_description_matches(agent, task_text)
+        score += self._score_keyword_matches(agent, task)
+        score += self._score_special_patterns(agent_name_lower, task_text)
+
+        return min(score, 1.0)
+
+    def _score_name_matches(self, agent_name_lower: str, task_text: str) -> float:
+        """Score direct name matches between agent and task."""
         if any(keyword in agent_name_lower for keyword in task_text.split()):
-            score += 0.3
+            return 0.3
+        return 0.0
 
-        # Description matching
-        if agent.metadata.description:
-            desc_words = set(agent.metadata.description.lower().split())
-            task_words = set(task_text.split())
-            common_words = desc_words & task_words
-            if common_words:
-                score += len(common_words) / max(len(task_words), 1) * 0.2
+    def _score_description_matches(
+        self, agent: RegisteredAgent, task_text: str
+    ) -> float:
+        """Score description word overlap."""
+        if not agent.metadata.description:
+            return 0.0
 
-        # Keyword matching
-        if task.keywords:
-            task_keywords = set(k.lower() for k in task.keywords)
-            if agent.metadata.tags:
-                agent_tags = set(t.lower() for t in agent.metadata.tags)
-                overlap = len(task_keywords & agent_tags)
-                if overlap > 0:
-                    score += overlap / len(task_keywords) * 0.3
+        desc_words = set(agent.metadata.description.lower().split())
+        task_words = set(task_text.split())
+        common_words = desc_words & task_words
 
-        # Special bonuses for specific patterns
+        if common_words:
+            return len(common_words) / max(len(task_words), 1) * 0.2
+        return 0.0
+
+    def _score_keyword_matches(
+        self, agent: RegisteredAgent, task: TaskDescription
+    ) -> float:
+        """Score keyword/tag overlap."""
+        if not task.keywords or not agent.metadata.tags:
+            return 0.0
+
+        task_keywords = {k.lower() for k in task.keywords}
+        agent_tags = {t.lower() for t in agent.metadata.tags}
+        overlap = len(task_keywords & agent_tags)
+
+        if overlap > 0:
+            return overlap / len(task_keywords) * 0.3
+        return 0.0
+
+    def _score_special_patterns(self, agent_name_lower: str, task_text: str) -> float:
+        """Score special pattern bonuses."""
+        score = 0.0
+
         if "architect" in agent_name_lower and (
             "architect" in task_text or "design" in task_text
         ):
@@ -349,7 +373,7 @@ class AgentSelector:
         if "test" in agent_name_lower and "test" in task_text:
             score += 0.2
 
-        return min(score, 1.0)
+        return score
 
     def _generate_score_reasoning(
         self,
@@ -436,8 +460,8 @@ class AgentSelector:
             return "medium"
         elif not scores or scores[0].final_score < 0.3:
             return "high"  # No good matches = complex
-        else:
-            return "low"
+
+        return "low"
 
     def _generate_recommendations(
         self,

@@ -207,7 +207,6 @@ async def _execute_crackerjack_sync(
             status="failed",
             iteration=current_iteration,
             max_iterations=max_iterations,
-            overall_progress=0,
             current_stage="error",
             message=f"Execution failed: {e}",
         )
@@ -224,11 +223,9 @@ async def _initialize_execution(
     """Initialize execution with status checks and service preparation."""
     _update_progress(
         job_id=job_id,
-        status="running",
         iteration=current_iteration,
         max_iterations=max_iterations,
         overall_progress=2,
-        current_stage="initialization",
         message="Initializing crackerjack execution",
     )
 
@@ -240,7 +237,6 @@ async def _initialize_execution(
 
     _update_progress(
         job_id=job_id,
-        status="running",
         iteration=current_iteration,
         max_iterations=max_iterations,
         overall_progress=5,
@@ -256,7 +252,6 @@ async def _initialize_execution(
 
     _update_progress(
         job_id=job_id,
-        status="running",
         iteration=current_iteration,
         max_iterations=max_iterations,
         overall_progress=10,
@@ -282,7 +277,6 @@ async def _setup_orchestrator(
     orchestrator_type = "Standard Orchestrator (MCP Compatible)"
     _update_progress(
         job_id=job_id,
-        status="running",
         iteration=current_iteration,
         max_iterations=max_iterations,
         overall_progress=15,
@@ -386,7 +380,6 @@ async def _run_workflow_iterations(
 
         _update_progress(
             job_id=job_id,
-            status="running",
             iteration=current_iteration,
             max_iterations=max_iterations,
             overall_progress=int((iteration / max_iterations) * 80),
@@ -484,7 +477,6 @@ async def _handle_iteration_retry(
     """Handle iteration retry logic."""
     _update_progress(
         job_id=job_id,
-        status="running",
         iteration=current_iteration,
         max_iterations=max_iterations,
         overall_progress=int((iteration / max_iterations) * 80),
@@ -535,7 +527,6 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
 
     _update_progress(
         job_id=job_id,
-        status="running",
         current_stage="service_startup",
         message="Checking required services...",
     )
@@ -551,7 +542,6 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
     if not websocket_running:
         _update_progress(
             job_id=job_id,
-            status="running",
             current_stage="service_startup",
             message="Starting WebSocket server...",
         )
@@ -587,7 +577,6 @@ async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.
     """Check comprehensive system status and prepare for execution."""
     _update_progress(
         job_id=job_id,
-        status="running",
         current_stage="status_check",
         message="🔍 Checking system status to prevent conflicts...",
     )
@@ -831,12 +820,10 @@ def _execute_initialization(
     # Initialize services
     filesystem = FileSystemService()
     git_service = GitService(context.console, context.config.project_path)
-    init_service = InitializationService(
-        context.console, filesystem, git_service, context.config.project_path
-    )
-
     # Run initialization
-    return init_service.initialize_project(target_path=target_path, force=force)
+    return InitializationService(
+        context.console, filesystem, git_service, context.config.project_path
+    ).initialize_project(target_path=target_path, force=force)
 
 
 def _create_init_success_response(

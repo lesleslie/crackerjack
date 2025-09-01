@@ -203,39 +203,43 @@ class AgentRegistry:
         """Parse a user agent markdown file."""
         try:
             content = agent_file.read_text(encoding="utf-8")
-
-            # Parse YAML frontmatter
-            if not content.startswith("---\n"):
-                return None
-
-            lines = content.split("\n")
-            yaml_end = -1
-
-            for i, line in enumerate(lines[1:], 1):
-                if line == "---":
-                    yaml_end = i
-                    break
-
-            if yaml_end == -1:
-                return None
-
-            # Extract YAML section
-            yaml_lines = lines[1:yaml_end]
-            agent_data = {}
-
-            for line in yaml_lines:
-                if ":" in line:
-                    key, value = line.split(":", 1)
-                    agent_data[key.strip()] = value.strip()
-
-            # Extract content
-            agent_data["content"] = "\n".join(lines[yaml_end + 1 :])
-
-            return agent_data
-
+            return self._extract_agent_data_from_content(content)
         except Exception as e:
             self.logger.error(f"Error parsing agent file {agent_file}: {e}")
             return None
+
+    def _extract_agent_data_from_content(self, content: str) -> dict[str, t.Any] | None:
+        """Extract agent data from file content."""
+        if not content.startswith("---\n"):
+            return None
+
+        lines = content.split("\n")
+        yaml_end = self._find_yaml_end_marker(lines)
+
+        if yaml_end == -1:
+            return None
+
+        return self._build_agent_data(lines, yaml_end)
+
+    def _find_yaml_end_marker(self, lines: list[str]) -> int:
+        """Find the end marker for YAML frontmatter."""
+        for i, line in enumerate(lines[1:], 1):
+            if line == "---":
+                return i
+        return -1
+
+    def _build_agent_data(self, lines: list[str], yaml_end: int) -> dict[str, t.Any]:
+        """Build agent data from parsed lines."""
+        yaml_lines = lines[1:yaml_end]
+        agent_data = {}
+
+        for line in yaml_lines:
+            if ":" in line:
+                key, value = line.split(":", 1)
+                agent_data[key.strip()] = value.strip()
+
+        agent_data["content"] = "\n".join(lines[yaml_end + 1 :])
+        return agent_data
 
     def _infer_capabilities_from_agent(self, agent: SubAgent) -> set[AgentCapability]:
         """Infer capabilities from a crackerjack agent."""
@@ -354,7 +358,7 @@ class AgentRegistry:
                 self._capability_map[capability].append(agent_name)
 
         # Sort by priority within each capability
-        for capability, agent_names in self._capability_map.items():
+        for agent_names in self._capability_map.values():
             agent_names.sort(
                 key=lambda name: self._agents[name].metadata.priority, reverse=True
             )
@@ -378,7 +382,7 @@ class AgentRegistry:
 
     def get_agent_stats(self) -> dict[str, t.Any]:
         """Get statistics about registered agents."""
-        stats = {
+        stats: dict[str, t.Any] = {
             "total_agents": len(self._agents),
             "by_source": {},
             "by_capability": {},

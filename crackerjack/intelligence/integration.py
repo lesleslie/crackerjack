@@ -156,26 +156,25 @@ class IntelligentAgentSystem:
         smart_result = await self.execute_smart_task(
             description=task.description,
             context=task_context,
-            strategy=ExecutionStrategy.SINGLE_BEST,
             context_data=context,
         )
 
         # Convert result back to FixResult
         if smart_result.success and isinstance(smart_result.result, FixResult):
             return smart_result.result
-        else:
-            # Create fallback FixResult
-            return FixResult(
-                success=smart_result.success,
-                confidence=smart_result.confidence,
-                remaining_issues=[issue.message] if not smart_result.success else [],
-                recommendations=smart_result.recommendations,
-                fixes_applied=[
-                    f"Applied using intelligent agent: {', '.join(smart_result.agents_used)}"
-                ]
-                if smart_result.success
-                else [],
-            )
+
+        # Create fallback FixResult
+        return FixResult(
+            success=smart_result.success,
+            confidence=smart_result.confidence,
+            remaining_issues=[issue.message] if not smart_result.success else [],
+            recommendations=smart_result.recommendations,
+            fixes_applied=[
+                f"Applied using intelligent agent: {', '.join(smart_result.agents_used)}"
+            ]
+            if smart_result.success
+            else [],
+        )
 
     async def get_best_agent_for_task(
         self,
@@ -218,9 +217,9 @@ class IntelligentAgentSystem:
             IssueType.TEST_ORGANIZATION: TaskContext.TESTING,
         }
 
-        return mapping.get(issue.type, TaskContext.GENERAL)
+        return mapping.get(issue.type) or TaskContext.GENERAL
 
-    def _map_severity_to_priority(self, severity) -> int:
+    def _map_severity_to_priority(self, severity: t.Any) -> int:
         """Map crackerjack Priority to task priority."""
         from crackerjack.agents.base import Priority
 
@@ -230,7 +229,7 @@ class IntelligentAgentSystem:
             Priority.LOW: 30,
         }
 
-        return mapping.get(severity, 50)
+        return mapping.get(severity) or 50
 
     async def get_system_status(self) -> dict[str, t.Any]:
         """Get comprehensive system status."""
