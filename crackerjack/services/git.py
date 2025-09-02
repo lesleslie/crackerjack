@@ -29,18 +29,27 @@ class GitService:
 
     def get_changed_files(self) -> list[str]:
         try:
-            staged_result = self._run_git_command(["diff", "--cached", "--name-only"])
+            # Get staged files excluding deletions
+            staged_result = self._run_git_command(
+                ["diff", "--cached", "--name-only", "--diff-filter=ACMRT"]
+            )
             staged_files = (
                 staged_result.stdout.strip().split("\n")
                 if staged_result.stdout.strip()
                 else []
             )
-            unstaged_result = self._run_git_command(["diff", "--name-only"])
+
+            # Get unstaged files excluding deletions
+            unstaged_result = self._run_git_command(
+                ["diff", "--name-only", "--diff-filter=ACMRT"]
+            )
             unstaged_files = (
                 unstaged_result.stdout.strip().split("\n")
                 if unstaged_result.stdout.strip()
                 else []
             )
+
+            # Get untracked files
             untracked_result = self._run_git_command(
                 ["ls-files", "--others", "--exclude-standard"],
             )
@@ -49,6 +58,7 @@ class GitService:
                 if untracked_result.stdout.strip()
                 else []
             )
+
             all_files = set(staged_files + unstaged_files + untracked_files)
             return [f for f in all_files if f]
         except Exception as e:
@@ -84,21 +94,57 @@ class GitService:
                 self.console.print(f"[green]✅[/green] Committed: {message}")
                 return True
 
-            # When git commit fails due to pre-commit hooks, stderr contains hook output
-            # Use a more appropriate error message for commit failures
-            if "pre-commit" in result.stderr or "hook" in result.stderr.lower():
-                self.console.print("[red]❌[/red] Commit blocked by pre-commit hooks")
-                if result.stderr.strip():
-                    # Show hook output in a more readable way
-                    self.console.print(
-                        f"[yellow]Hook output:[/yellow]\n{result.stderr.strip()}"
-                    )
-            else:
-                self.console.print(f"[red]❌[/red] Commit failed: {result.stderr}")
-            return False
+            return self._handle_commit_failure(result, message)
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error committing: {e}")
             return False
+
+    def _handle_commit_failure(
+        self, result: subprocess.CompletedProcess[str], message: str
+    ) -> bool:
+        # Check if pre-commit hooks modified files and need re-staging
+        if "files were modified by this hook" in result.stderr:
+            return self._retry_commit_after_restage(message)
+
+        return self._handle_hook_error(result)
+
+    def _retry_commit_after_restage(self, message: str) -> bool:
+        self.console.print(
+            "[yellow]🔄[/yellow] Pre-commit hooks modified files - attempting to re-stage and retry commit"
+        )
+
+        # Re-stage all modified files
+        add_result = self._run_git_command(["add", "-u"])
+        if add_result.returncode != 0:
+            self.console.print(
+                f"[red]❌[/red] Failed to re-stage files: {add_result.stderr}"
+            )
+            return False
+
+        # Retry the commit
+        retry_result = self._run_git_command(["commit", "-m", message])
+        if retry_result.returncode == 0:
+            self.console.print(
+                f"[green]✅[/green] Committed after re-staging: {message}"
+            )
+            return True
+
+        self.console.print(
+            f"[red]❌[/red] Commit failed on retry: {retry_result.stderr}"
+        )
+        return False
+
+    def _handle_hook_error(self, result: subprocess.CompletedProcess[str]) -> bool:
+        # When git commit fails due to pre-commit hooks, stderr contains hook output
+        if "pre-commit" in result.stderr or "hook" in result.stderr.lower():
+            self.console.print("[red]❌[/red] Commit blocked by pre-commit hooks")
+            if result.stderr.strip():
+                self.console.print(
+                    f"[yellow]Hook output:[/yellow]\n{result.stderr.strip()}"
+                )
+        else:
+            self.console.print(f"[red]❌[/red] Commit failed: {result.stderr}")
+        return False
 
     def push(self) -> bool:
         try:

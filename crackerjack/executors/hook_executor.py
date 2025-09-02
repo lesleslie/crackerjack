@@ -154,58 +154,106 @@ class HookExecutor:
         start_time = time.time()
 
         try:
-            clean_env = self._get_clean_environment()
-            result = subprocess.run(
-                hook.get_command(),
-                check=False,
-                cwd=self.pkg_path,
-                text=True,
-                timeout=hook.timeout,
-                env=clean_env,
-                capture_output=True,
-            )
-
+            result = self._run_hook_subprocess(hook)
             duration = time.time() - start_time
 
-            # Only display raw output in verbose mode, and only for failed hooks
-            if result.returncode != 0 and self.verbose:
-                if result.stdout:
-                    self.console.print(result.stdout)
-                if result.stderr:
-                    self.console.print(result.stderr)
-
-            return HookResult(
-                id=hook.name,
-                name=hook.name,
-                status="passed" if result.returncode == 0 else "failed",
-                duration=duration,
-                files_processed=0,
-                issues_found=[]
-                if result.returncode == 0
-                else [f"Hook failed with code {result.returncode}"],
-                stage=hook.stage.value,
-            )
+            self._display_hook_output_if_needed(result)
+            return self._create_hook_result_from_process(hook, result, duration)
 
         except subprocess.TimeoutExpired:
-            duration = time.time() - start_time
-            return HookResult(
-                id=hook.name,
-                name=hook.name,
-                status="timeout",
-                duration=duration,
-                issues_found=[f"Hook timed out after {duration:.1f}s"],
-                stage=hook.stage.value,
-            )
+            return self._create_timeout_result(hook, start_time)
+
         except Exception as e:
-            duration = time.time() - start_time
-            return HookResult(
-                id=hook.name,
-                name=hook.name,
-                status="error",
-                duration=duration,
-                issues_found=[str(e)],
-                stage=hook.stage.value,
-            )
+            return self._create_error_result(hook, start_time, e)
+
+    def _run_hook_subprocess(
+        self, hook: HookDefinition
+    ) -> subprocess.CompletedProcess[str]:
+        """Execute hook subprocess with clean environment."""
+        clean_env = self._get_clean_environment()
+        return subprocess.run(
+            hook.get_command(),
+            check=False,
+            cwd=self.pkg_path,
+            text=True,
+            timeout=hook.timeout,
+            env=clean_env,
+            capture_output=True,
+        )
+
+    def _display_hook_output_if_needed(
+        self, result: subprocess.CompletedProcess[str]
+    ) -> None:
+        """Display hook output in verbose mode for failed hooks."""
+        if result.returncode == 0 or not self.verbose:
+            return
+
+        if result.stdout:
+            self.console.print(result.stdout)
+        if result.stderr:
+            self.console.print(result.stderr)
+
+    def _create_hook_result_from_process(
+        self,
+        hook: HookDefinition,
+        result: subprocess.CompletedProcess[str],
+        duration: float,
+    ) -> HookResult:
+        """Create HookResult from successful subprocess execution."""
+        status = "passed" if result.returncode == 0 else "failed"
+        issues_found = self._extract_issues_from_process_output(result)
+
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status=status,
+            duration=duration,
+            files_processed=0,
+            issues_found=issues_found,
+            stage=hook.stage.value,
+        )
+
+    def _extract_issues_from_process_output(
+        self, result: subprocess.CompletedProcess[str]
+    ) -> list[str]:
+        """Extract specific issues from subprocess output for failed hooks."""
+        if result.returncode == 0:
+            return []
+
+        error_output = (result.stdout + result.stderr).strip()
+        if error_output:
+            return [line.strip() for line in error_output.split("\n") if line.strip()]
+
+        # Fallback to generic message if no output captured
+        return [f"Hook failed with code {result.returncode}"]
+
+    def _create_timeout_result(
+        self, hook: HookDefinition, start_time: float
+    ) -> HookResult:
+        """Create HookResult for timeout scenarios."""
+        duration = time.time() - start_time
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="timeout",
+            duration=duration,
+            issues_found=[f"Hook timed out after {duration:.1f}s"],
+            stage=hook.stage.value,
+        )
+
+    def _create_error_result(
+        self, hook: HookDefinition, start_time: float, error: Exception
+    ) -> HookResult:
+        """Create HookResult for general exception scenarios."""
+        duration = time.time() - start_time
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="error",
+            duration=duration,
+            issues_found=[str(error)],
+            stage=hook.stage.value,
+        )
 
     def _parse_hook_output(
         self,

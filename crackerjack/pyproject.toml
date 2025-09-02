@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.31.7"
+version = "0.31.9"
 description = "Opinionated Python project management tool"
 readme = "README.md"
 authors = [
@@ -312,3 +312,9 @@ exclude_patterns = [
     "**/test_*.py",
 ]
 max_complexity = 15
+
+[dependency-groups]
+dev = [
+    "excalidraw-mcp>=0.1.2",
+    "session-mgmt-mcp>=0.1.3",
+]

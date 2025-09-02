@@ -62,81 +62,122 @@ class WorkflowPipeline:
             skip_hooks=getattr(options, "skip_hooks", False),
         ):
             start_time = time.time()
-            self.session.initialize_session_tracking(options)
-            self.session.track_task("workflow", "Complete crackerjack workflow")
-
-            if self._should_debug():
-                self.debugger.log_workflow_phase(
-                    "workflow_execution",
-                    "started",
-                    details={
-                        "testing": getattr(options, "testing", False),
-                        "skip_hooks": getattr(options, "skip_hooks", False),
-                        "ai_agent": getattr(options, "ai_agent", False),
-                    },
-                )
-
-            if hasattr(options, "cleanup"):
-                self.session.set_cleanup_config(options.cleanup)
-
-            self.logger.info(
-                "Starting complete workflow execution",
-                testing=getattr(options, "testing", False),
-                skip_hooks=getattr(options, "skip_hooks", False),
-                package_path=str(self.pkg_path),
-            )
+            self._initialize_workflow_session(options)
 
             try:
-                success = await self._execute_workflow_phases(options)
-                self.session.finalize_session(start_time, success)
-
-                duration = time.time() - start_time
-                self.logger.info(
-                    "Workflow execution completed",
-                    success=success,
-                    duration_seconds=round(duration, 2),
-                )
-
-                if self._should_debug():
-                    # Set final workflow success status
-                    self.debugger.set_workflow_success(success)
-
-                    self.debugger.log_workflow_phase(
-                        "workflow_execution",
-                        "completed" if success else "failed",
-                        duration=duration,
-                    )
-                    if self.debugger.enabled:
-                        self.debugger.print_debug_summary()
-
+                success = await self._execute_workflow_with_timing(options, start_time)
                 return success
 
             except KeyboardInterrupt:
-                self.console.print("Interrupted by user")
-                self.session.fail_task("workflow", "Interrupted by user")
-                self.logger.warning("Workflow interrupted by user")
-                return False
+                return self._handle_user_interruption()
 
             except Exception as e:
-                self.console.print(f"Error: {e}")
-                self.session.fail_task("workflow", f"Unexpected error: {e}")
-                self.logger.exception(
-                    "Workflow execution failed",
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
-                return False
+                return self._handle_workflow_exception(e)
 
             finally:
                 self.session.cleanup_resources()
 
+    def _initialize_workflow_session(self, options: OptionsProtocol) -> None:
+        """Initialize session tracking and debug logging for workflow execution."""
+        self.session.initialize_session_tracking(options)
+        self.session.track_task("workflow", "Complete crackerjack workflow")
+
+        self._log_workflow_startup_debug(options)
+        self._configure_session_cleanup(options)
+        self._log_workflow_startup_info(options)
+
+    def _log_workflow_startup_debug(self, options: OptionsProtocol) -> None:
+        """Log debug information for workflow startup."""
+        if not self._should_debug():
+            return
+
+        self.debugger.log_workflow_phase(
+            "workflow_execution",
+            "started",
+            details={
+                "testing": getattr(options, "testing", False),
+                "skip_hooks": getattr(options, "skip_hooks", False),
+                "ai_agent": getattr(options, "ai_agent", False),
+            },
+        )
+
+    def _configure_session_cleanup(self, options: OptionsProtocol) -> None:
+        """Configure session cleanup settings if specified."""
+        if hasattr(options, "cleanup"):
+            self.session.set_cleanup_config(options.cleanup)
+
+    def _log_workflow_startup_info(self, options: OptionsProtocol) -> None:
+        """Log informational message about workflow startup."""
+        self.logger.info(
+            "Starting complete workflow execution",
+            testing=getattr(options, "testing", False),
+            skip_hooks=getattr(options, "skip_hooks", False),
+            package_path=str(self.pkg_path),
+        )
+
+    async def _execute_workflow_with_timing(
+        self, options: OptionsProtocol, start_time: float
+    ) -> bool:
+        """Execute workflow phases and handle success/completion logging."""
+        success = await self._execute_workflow_phases(options)
+        self.session.finalize_session(start_time, success)
+
+        duration = time.time() - start_time
+        self._log_workflow_completion(success, duration)
+        self._log_workflow_completion_debug(success, duration)
+
+        return success
+
+    def _log_workflow_completion(self, success: bool, duration: float) -> None:
+        """Log workflow completion information."""
+        self.logger.info(
+            "Workflow execution completed",
+            success=success,
+            duration_seconds=round(duration, 2),
+        )
+
+    def _log_workflow_completion_debug(self, success: bool, duration: float) -> None:
+        """Log debug information for workflow completion."""
+        if not self._should_debug():
+            return
+
+        self.debugger.set_workflow_success(success)
+        self.debugger.log_workflow_phase(
+            "workflow_execution",
+            "completed" if success else "failed",
+            duration=duration,
+        )
+
+        if self.debugger.enabled:
+            self.debugger.print_debug_summary()
+
+    def _handle_user_interruption(self) -> bool:
+        """Handle KeyboardInterrupt gracefully."""
+        self.console.print("Interrupted by user")
+        self.session.fail_task("workflow", "Interrupted by user")
+        self.logger.warning("Workflow interrupted by user")
+        return False
+
+    def _handle_workflow_exception(self, error: Exception) -> bool:
+        """Handle unexpected workflow exceptions."""
+        self.console.print(f"Error: {error}")
+        self.session.fail_task("workflow", f"Unexpected error: {error}")
+        self.logger.exception(
+            "Workflow execution failed",
+            error=str(error),
+            error_type=type(error).__name__,
+        )
+        return False
+
     async def _execute_workflow_phases(self, options: OptionsProtocol) -> bool:
         success = True
         self.phases.run_configuration_phase(options)
+
         if not self.phases.run_cleaning_phase(options):
             success = False
             self.session.fail_task("workflow", "Cleaning phase failed")
             return False
+
         if not await self._execute_quality_phase(options):
             success = False
             return False
@@ -224,6 +265,21 @@ class WorkflowPipeline:
     ) -> bool:
         """Handle standard workflow where all phases must pass."""
         success = testing_passed and comprehensive_passed
+
+        # Debug information for workflow continuation issues
+        if not success and getattr(options, "verbose", False):
+            self.console.print(
+                f"[yellow]⚠️  Workflow stopped - testing_passed: {testing_passed}, comprehensive_passed: {comprehensive_passed}[/yellow]"
+            )
+            if not testing_passed:
+                self.console.print(
+                    "[yellow]   → Tests reported failure despite appearing successful[/yellow]"
+                )
+            if not comprehensive_passed:
+                self.console.print(
+                    "[yellow]   → Comprehensive hooks reported failure despite appearing successful[/yellow]"
+                )
+
         if options.ai_agent and self._should_debug():
             self.debugger.log_iteration_end(iteration, success)
         return success
@@ -560,6 +616,80 @@ class WorkflowPipeline:
         issues: list[Issue] = []
         hook_count = 0
 
+        try:
+            hook_results = self.phases.hook_manager.run_comprehensive_hooks()
+            issues, hook_count = self._process_hook_results(hook_results)
+        except Exception:
+            issues, hook_count = self._fallback_to_session_tracker()
+
+        return issues, hook_count
+
+    def _process_hook_results(self, hook_results: t.Any) -> tuple[list[Issue], int]:
+        """Process hook results and extract issues."""
+        issues: list[Issue] = []
+        hook_count = 0
+
+        for result in hook_results:
+            if not self._is_hook_result_failed(result):
+                continue
+
+            hook_count += 1
+            result_issues = self._extract_issues_from_hook_result(result)
+            issues.extend(result_issues)
+
+        return issues, hook_count
+
+    def _is_hook_result_failed(self, result: t.Any) -> bool:
+        """Check if hook result indicates failure."""
+        return result.status in ("failed", "error", "timeout")
+
+    def _extract_issues_from_hook_result(self, result: t.Any) -> list[Issue]:
+        """Extract issues from a single hook result."""
+        if result.issues_found:
+            return self._create_specific_issues_from_hook_result(result)
+        return [self._create_generic_issue_from_hook_result(result)]
+
+    def _create_specific_issues_from_hook_result(self, result: t.Any) -> list[Issue]:
+        """Create specific issues from hook result with detailed information."""
+        issues: list[Issue] = []
+        hook_context = f"{result.name}: "
+
+        for issue_text in result.issues_found:
+            parsed_issues = self._parse_issues_for_agents([hook_context + issue_text])
+            issues.extend(parsed_issues)
+
+        return issues
+
+    def _create_generic_issue_from_hook_result(self, result: t.Any) -> Issue:
+        """Create a generic issue for hook failure without specific details."""
+        issue_type = self._determine_hook_issue_type(result.name)
+        return Issue(
+            id=f"hook_failure_{result.name}",
+            type=issue_type,
+            severity=Priority.MEDIUM,
+            message=f"Hook {result.name} failed with no specific details",
+            stage="comprehensive",
+        )
+
+    def _determine_hook_issue_type(self, hook_name: str) -> IssueType:
+        """Determine issue type based on hook name."""
+        formatting_hooks = {
+            "trailing-whitespace",
+            "end-of-file-fixer",
+            "ruff-format",
+            "ruff-check",
+        }
+        return (
+            IssueType.FORMATTING
+            if hook_name in formatting_hooks
+            else IssueType.TYPE_ERROR
+        )
+
+    def _fallback_to_session_tracker(self) -> tuple[list[Issue], int]:
+        """Fallback to session tracker if hook manager fails."""
+        issues: list[Issue] = []
+        hook_count = 0
+
         if not self.session.session_tracker:
             return issues, hook_count
 
@@ -676,6 +806,61 @@ class WorkflowPipeline:
                     stage="fast",
                 )
             )
+
+        return issues
+
+    def _parse_issues_for_agents(self, issue_strings: list[str]) -> list[Issue]:
+        """Parse string issues into structured Issue objects for AI agents."""
+        issues: list[Issue] = []
+
+        for i, issue_str in enumerate(issue_strings):
+            # Determine issue type from content patterns
+            issue_type = IssueType.FORMATTING
+            priority = Priority.MEDIUM
+
+            if any(
+                keyword in issue_str.lower()
+                for keyword in ("type", "annotation", "pyright")
+            ):
+                issue_type = IssueType.TYPE_ERROR
+                priority = Priority.HIGH
+            elif any(
+                keyword in issue_str.lower()
+                for keyword in ("security", "bandit", "hardcoded")
+            ):
+                issue_type = IssueType.SECURITY
+                priority = Priority.HIGH
+            elif any(
+                keyword in issue_str.lower() for keyword in ("complexity", "complexipy")
+            ):
+                issue_type = IssueType.COMPLEXITY
+                priority = Priority.HIGH
+            elif any(
+                keyword in issue_str.lower()
+                for keyword in ("unused", "dead", "vulture")
+            ):
+                issue_type = IssueType.DEAD_CODE
+                priority = Priority.MEDIUM
+            elif any(
+                keyword in issue_str.lower()
+                for keyword in ("performance", "refurb", "furb")
+            ):
+                issue_type = IssueType.PERFORMANCE
+                priority = Priority.MEDIUM
+            elif any(
+                keyword in issue_str.lower() for keyword in ("import", "creosote")
+            ):
+                issue_type = IssueType.IMPORT_ERROR
+                priority = Priority.MEDIUM
+
+            issue = Issue(
+                id=f"parsed_issue_{i}",
+                type=issue_type,
+                severity=priority,
+                message=issue_str.strip(),
+                stage="comprehensive",
+            )
+            issues.append(issue)
 
         return issues
 

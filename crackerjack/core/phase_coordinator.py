@@ -157,7 +157,7 @@ class PhaseCoordinator:
                 "CLAUDE.md",
                 "RULES.md",
                 ".gitignore",
-                "mcp.json",
+                "example.mcp.json",
                 "uv.lock",
             ]
 

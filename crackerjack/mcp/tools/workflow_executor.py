@@ -342,19 +342,20 @@ async def _execute_single_iteration(
     """Execute a single workflow iteration."""
     try:
         # Check for orchestrator workflow methods
-        if hasattr(orchestrator, "run_complete_workflow"):
-            # Standard WorkflowOrchestrator method is async
-            result = orchestrator.run_complete_workflow(options)
-            if result is None:
-                raise ValueError(
-                    "Method run_complete_workflow returned None instead of awaitable"
-                )
-            return await result
-        elif hasattr(orchestrator, "run_complete_workflow_async"):
+        if hasattr(orchestrator, "run_complete_workflow_async"):
+            # AsyncWorkflowOrchestrator - method returns awaitable
             result = orchestrator.run_complete_workflow_async(options)
             if result is None:
                 raise ValueError(
                     "Method run_complete_workflow_async returned None instead of awaitable"
+                )
+            return await result
+        elif hasattr(orchestrator, "run_complete_workflow"):
+            # Standard WorkflowOrchestrator - method is async and returns awaitable boolean
+            result = orchestrator.run_complete_workflow(options)
+            if result is None:
+                raise ValueError(
+                    "Method run_complete_workflow returned None instead of awaitable"
                 )
             return await result
         elif hasattr(orchestrator, "execute_workflow"):

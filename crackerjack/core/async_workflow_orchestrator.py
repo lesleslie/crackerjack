@@ -6,6 +6,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
 from crackerjack.models.protocols import OptionsProtocol
 
 from .phase_coordinator import PhaseCoordinator
@@ -233,6 +234,113 @@ class AsyncWorkflowPipeline:
 
         return "continue"
 
+    def _parse_issues_for_agents(
+        self, test_issues: list[str], hook_issues: list[str]
+    ) -> list[Issue]:
+        """Parse string issues into structured Issue objects for AI agent processing."""
+        structured_issues = []
+
+        # Parse hook issues using dedicated parsers
+        for issue in hook_issues:
+            parsed_issue = self._parse_single_hook_issue(issue)
+            structured_issues.append(parsed_issue)
+
+        # Parse test issues using dedicated parser
+        for issue in test_issues:
+            parsed_issue = self._parse_single_test_issue(issue)
+            structured_issues.append(parsed_issue)
+
+        return structured_issues
+
+    def _parse_single_hook_issue(self, issue: str) -> Issue:
+        """Parse a single hook issue into structured format."""
+        from crackerjack.agents.base import IssueType, Priority
+
+        # Try refurb-specific parsing first
+        if "refurb:" in issue and "[FURB" in issue:
+            return self._parse_refurb_issue(issue)
+
+        # Use generic hook issue parsers
+        hook_type_mapping = {
+            "pyright:": (IssueType.TYPE_ERROR, Priority.HIGH, "pyright"),
+            "Type error": (IssueType.TYPE_ERROR, Priority.HIGH, "pyright"),
+            "bandit:": (IssueType.SECURITY, Priority.HIGH, "bandit"),
+            "vulture:": (IssueType.DEAD_CODE, Priority.MEDIUM, "vulture"),
+            "complexipy:": (IssueType.COMPLEXITY, Priority.MEDIUM, "complexipy"),
+        }
+
+        for keyword, (issue_type, priority, stage) in hook_type_mapping.items():
+            if keyword in issue:
+                return self._create_generic_issue(issue, issue_type, priority, stage)
+
+        # Default to generic hook issue
+        return self._create_generic_issue(
+            issue, IssueType.FORMATTING, Priority.MEDIUM, "hook"
+        )
+
+    def _parse_refurb_issue(self, issue: str) -> Issue:
+        """Parse refurb-specific issue format."""
+        import re
+        import uuid
+
+        from crackerjack.agents.base import Issue, IssueType, Priority
+
+        match = re.search(r"refurb:\s*(.+?):(\d+):(\d+)\s+\[(\w+)\]:\s*(.+)", issue)
+        if match:
+            file_path, line_num, _, error_code, message = match.groups()
+            return Issue(
+                id=str(uuid.uuid4()),
+                type=IssueType.FORMATTING,
+                severity=Priority.MEDIUM,
+                message=f"[{error_code}] {message}",
+                file_path=file_path,
+                line_number=int(line_num),
+                details=[issue],
+                stage="refurb",
+            )
+
+        # Fallback to generic parsing if regex fails
+        return self._create_generic_issue(
+            issue, IssueType.FORMATTING, Priority.MEDIUM, "refurb"
+        )
+
+    def _parse_single_test_issue(self, issue: str) -> Issue:
+        """Parse a single test issue into structured format."""
+        import uuid
+
+        from crackerjack.agents.base import Issue, IssueType, Priority
+
+        if "FAILED" in issue or "ERROR" in issue:
+            severity = Priority.HIGH
+        else:
+            severity = Priority.MEDIUM
+
+        return Issue(
+            id=str(uuid.uuid4()),
+            type=IssueType.TEST_FAILURE,
+            severity=severity,
+            message=issue,
+            details=[issue],
+            stage="test",
+        )
+
+    def _create_generic_issue(
+        self, issue: str, issue_type: IssueType, priority: Priority, stage: str
+    ) -> Issue:
+        """Create a generic Issue object with standard fields."""
+        import uuid
+
+        from crackerjack.agents.base import Issue
+
+        return Issue(
+            id=str(uuid.uuid4()),
+            type=issue_type,
+            severity=priority,
+            message=issue,
+            details=[issue],
+            stage=stage,
+        )
+
     async def _run_final_workflow_phases(self, options: OptionsProtocol) -> bool:
         """Run the final publishing and commit phases."""
         if not self.phases.run_publishing_phase(options):
@@ -263,7 +371,13 @@ class AsyncWorkflowPipeline:
             if success:
                 return []
             else:
-                return ["Test failures detected - see logs for details"]
+                # Get specific test failure details from test manager
+                test_failures = self.phases.test_manager.get_test_failures()
+                if test_failures:
+                    return [f"Test failure: {failure}" for failure in test_failures]
+                else:
+                    # Fallback if no specific failures captured
+                    return ["Test failures detected - see logs for details"]
         except Exception as e:
             return [f"Test execution error: {e}"]
 
@@ -272,11 +386,25 @@ class AsyncWorkflowPipeline:
     ) -> list[str]:
         """Collect all comprehensive hook issues without stopping on first failure."""
         try:
-            success = await self._run_comprehensive_hooks_async(options)
-            if success:
-                return []
-            else:
-                return ["Comprehensive hook failures detected - see logs for details"]
+            # Run hooks and capture detailed results
+            hook_results = await asyncio.to_thread(
+                self.phases.hook_manager.run_comprehensive_hooks,
+            )
+
+            # Extract specific issues from failed hooks
+            all_issues = []
+            for result in hook_results:
+                if (
+                    result.status in ("failed", "error", "timeout")
+                    and result.issues_found
+                ):
+                    # Add hook context to each issue for better AI agent understanding
+                    hook_context = f"{result.name}: "
+                    for issue in result.issues_found:
+                        all_issues.append(hook_context + issue)
+
+            return all_issues
+
         except Exception as e:
             return [f"Comprehensive hooks error: {e}"]
 
@@ -287,7 +415,7 @@ class AsyncWorkflowPipeline:
         hook_issues: list[str],
         iteration: int,
     ) -> bool:
-        """Apply AI fixes for all collected issues in batch."""
+        """Apply AI fixes for all collected issues in batch using AgentCoordinator."""
         all_issues = test_issues + hook_issues
         if not all_issues:
             return True
@@ -296,24 +424,62 @@ class AsyncWorkflowPipeline:
             f"🔧 Applying AI fixes for {len(all_issues)} issues in iteration {iteration}"
         )
 
-        # This would integrate with the AI agent system to actually apply fixes
-        # For now, we'll simulate the fixing process
         try:
-            # In a real implementation, this would:
-            # 1. Analyze all collected issues
-            # 2. Generate fixes using AI agents
-            # 3. Apply the fixes to source code
-            # 4. Return success/failure status
+            return await self._execute_ai_fix_workflow(
+                test_issues, hook_issues, iteration
+            )
+        except Exception as e:
+            return self._handle_ai_fix_error(e)
 
-            # Placeholder for actual AI fixing logic
-            await asyncio.sleep(0.1)  # Simulate processing time
+    async def _execute_ai_fix_workflow(
+        self, test_issues: list[str], hook_issues: list[str], iteration: int
+    ) -> bool:
+        """Execute the AI fix workflow and return success status."""
+        structured_issues = self._parse_issues_for_agents(test_issues, hook_issues)
 
-            self.console.print(f"✅ AI fixes applied for iteration {iteration}")
+        if not structured_issues:
+            self.console.print("⚠️ No actionable issues found for AI agents")
             return True
 
-        except Exception as e:
-            self.logger.error(f"AI fixing failed: {e}")
-            return False
+        coordinator = self._create_agent_coordinator()
+        fix_result = await coordinator.handle_issues(structured_issues)
+
+        self._report_fix_results(fix_result, iteration)
+        return fix_result.success
+
+    def _create_agent_coordinator(self):
+        """Create and configure the AI agent coordinator."""
+        from crackerjack.agents.base import AgentContext
+        from crackerjack.agents.coordinator import AgentCoordinator
+
+        context = AgentContext(project_path=self.pkg_path)
+        return AgentCoordinator(context)
+
+    def _report_fix_results(self, fix_result: FixResult, iteration: int) -> None:
+        """Report the results of AI fix attempts to the console."""
+        if fix_result.success:
+            self._report_successful_fixes(fix_result, iteration)
+        else:
+            self._report_failed_fixes(fix_result, iteration)
+
+    def _report_successful_fixes(self, fix_result: FixResult, iteration: int) -> None:
+        """Report successful AI fixes to the console."""
+        self.console.print(f"✅ AI fixes applied successfully in iteration {iteration}")
+        if fix_result.fixes_applied:
+            self.console.print(f"   Applied {len(fix_result.fixes_applied)} fixes")
+
+    def _report_failed_fixes(self, fix_result: FixResult, iteration: int) -> None:
+        """Report failed AI fixes to the console."""
+        self.console.print(f"⚠️ Some AI fixes failed in iteration {iteration}")
+        if fix_result.remaining_issues:
+            for error in fix_result.remaining_issues[:3]:  # Show first 3 errors
+                self.console.print(f"   Error: {error}")
+
+    def _handle_ai_fix_error(self, error: Exception) -> bool:
+        """Handle errors during AI fix execution."""
+        self.logger.error(f"AI fixing failed: {error}")
+        self.console.print(f"❌ AI agent system error: {error}")
+        return False
 
 
 class AsyncWorkflowOrchestrator:

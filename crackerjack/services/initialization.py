@@ -72,7 +72,7 @@ class InitializationService:
             "pyproject.toml": "smart_merge",
             "CLAUDE.md": "smart_append",
             "RULES.md": "replace_if_missing",
-            "mcp.json": "special",  # Special handling: mcp.json -> .mcp.json with merging
+            "example.mcp.json": "special",  # Special handling: example.mcp.json -> .mcp.json with merging
         }
 
     def _process_config_file(
@@ -84,8 +84,8 @@ class InitializationService:
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        # Special handling for mcp.json -> .mcp.json
-        if file_name == "mcp.json":
+        # Special handling for example.mcp.json -> .mcp.json
+        if file_name == "example.mcp.json":
             self._process_mcp_config(target_path, force, results)
             return
 
@@ -248,14 +248,14 @@ class InitializationService:
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        """Handle special processing for mcp.json -> .mcp.json with merging."""
-        # Source: mcp.json in crackerjack package (contains servers to add to projects)
-        source_file = self.pkg_path / "mcp.json"
+        """Handle special processing for example.mcp.json -> .mcp.json with merging."""
+        # Source: example.mcp.json in crackerjack package (contains servers to add to projects)
+        source_file = self.pkg_path / "example.mcp.json"
         # Target: .mcp.json in target project
         target_file = target_path / ".mcp.json"
 
         if not source_file.exists():
-            self._handle_missing_source_file("mcp.json", results)
+            self._handle_missing_source_file("example.mcp.json", results)
             return
 
         try:
@@ -265,8 +265,8 @@ class InitializationService:
 
             if not isinstance(source_config.get("mcpServers"), dict):
                 self._handle_file_processing_error(
-                    "mcp.json",
-                    ValueError("Invalid mcp.json format: missing mcpServers"),
+                    "example.mcp.json",
+                    ValueError("Invalid example.mcp.json format: missing mcpServers"),
                     results,
                 )
                 return
@@ -543,6 +543,7 @@ python -m crackerjack -a patch
             self._smart_merge_pre_commit_config(
                 source_file,
                 target_file,
+                project_name,
                 force,
                 results,
             )
@@ -584,7 +585,7 @@ python -m crackerjack -a patch
         self._ensure_crackerjack_dev_dependency(target_config, source_config)
 
         # 2. Merge tool configurations
-        self._merge_tool_configurations(target_config, source_config)
+        self._merge_tool_configurations(target_config, source_config, project_name)
 
         # 3. Remove any fixed coverage requirements (use ratchet system instead)
         self._remove_fixed_coverage_requirements(target_config)
@@ -638,6 +639,7 @@ python -m crackerjack -a patch
         self,
         target_config: dict[str, t.Any],
         source_config: dict[str, t.Any],
+        project_name: str,
     ) -> None:
         """Merge tool configurations, preserving existing settings."""
         source_tools = source_config.get("tool", {})
@@ -662,8 +664,10 @@ python -m crackerjack -a patch
         for tool_name in tools_to_merge:
             if tool_name in source_tools:
                 if tool_name not in target_tools:
-                    # Tool missing, add it
-                    target_tools[tool_name] = source_tools[tool_name]
+                    # Tool missing, add it with project-name replacement
+                    target_tools[tool_name] = self._replace_project_name_in_tool_config(
+                        source_tools[tool_name], project_name
+                    )
                     self.console.print(
                         f"[green]➕[/green] Added [tool.{tool_name}] configuration",
                     )
@@ -673,6 +677,7 @@ python -m crackerjack -a patch
                         target_tools[tool_name],
                         source_tools[tool_name],
                         tool_name,
+                        project_name,
                     )
 
         # Special handling for pytest.ini_options markers
@@ -683,13 +688,16 @@ python -m crackerjack -a patch
         target_tool: dict[str, t.Any],
         source_tool: dict[str, t.Any],
         tool_name: str,
+        project_name: str,
     ) -> None:
         """Merge individual tool settings."""
         updated_keys = []
 
         for key, value in source_tool.items():
             if key not in target_tool:
-                target_tool[key] = value
+                target_tool[key] = self._replace_project_name_in_config_value(
+                    value, project_name
+                )
                 updated_keys.append(key)
 
         if updated_keys:
@@ -779,6 +787,7 @@ python -m crackerjack -a patch
         self,
         source_file: Path,
         target_file: Path,
+        project_name: str,
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
@@ -788,8 +797,12 @@ python -m crackerjack -a patch
             source_config = yaml.safe_load(f)
 
         if not target_file.exists():
-            # No existing file, just copy with proper formatting
-            content = source_file.read_text()
+            # No existing file, copy with project-specific replacements
+            content = self._read_and_process_content(
+                source_file,
+                True,  # should_replace
+                project_name,
+            )
             # Clean trailing whitespace and ensure single trailing newline
             from crackerjack.services.filesystem import FileSystemService
 
@@ -871,3 +884,39 @@ python -m crackerjack -a patch
             )
         else:
             self._skip_existing_file(".pre-commit-config.yaml (no new repos)", results)
+
+    def _replace_project_name_in_tool_config(
+        self, tool_config: dict[str, t.Any], project_name: str
+    ) -> dict[str, t.Any]:
+        """Replace project name in entire tool configuration."""
+        if project_name == "crackerjack":
+            return tool_config  # No replacement needed
+
+        # Deep copy to avoid modifying original
+        import copy
+
+        result = copy.deepcopy(tool_config)
+
+        # Recursively replace in the configuration
+        return self._replace_project_name_in_config_value(result, project_name)
+
+    def _replace_project_name_in_config_value(
+        self, value: t.Any, project_name: str
+    ) -> t.Any:
+        """Replace project name in a configuration value (recursive)."""
+        if project_name == "crackerjack":
+            return value  # No replacement needed
+
+        if isinstance(value, str):
+            return value.replace("crackerjack", project_name)
+        elif isinstance(value, list):
+            return [
+                self._replace_project_name_in_config_value(item, project_name)
+                for item in value
+            ]
+        elif isinstance(value, dict):
+            return {
+                key: self._replace_project_name_in_config_value(val, project_name)
+                for key, val in value.items()
+            }
+        return value  # Numbers, booleans, etc. - no replacement needed
