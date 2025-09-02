@@ -136,6 +136,36 @@ class TestManager:
         except Exception:
             return None
 
+    def get_coverage(self) -> dict[str, t.Any]:
+        """Get coverage information as required by TestManagerProtocol."""
+        try:
+            # Get the ratchet status which includes coverage information
+            status = self.coverage_ratchet.get_status_report()
+
+            if status.get("status") == "not_initialized":
+                return {
+                    "status": "not_initialized",
+                    "coverage_percent": 0.0,
+                    "message": "Coverage ratchet not initialized",
+                }
+
+            return {
+                "status": "active",
+                "coverage_percent": status.get("current_coverage", 0.0),
+                "target_coverage": status.get("target_coverage", 100.0),
+                "next_milestone": status.get("next_milestone"),
+                "progress_percent": status.get("progress_percent", 0.0),
+                "last_updated": status.get("last_updated"),
+                "milestones_achieved": status.get("milestones_achieved", []),
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "coverage_percent": 0.0,
+                "error": str(e),
+                "message": "Failed to get coverage information",
+            }
+
     def has_tests(self) -> bool:
         """Check if project has tests."""
         test_directories = ["tests", "test"]
@@ -219,11 +249,17 @@ class TestManager:
                 self._handle_coverage_improvement(ratchet_result)
             return True
         else:
-            self.console.print(
-                f"[red]📉[/red] Coverage regression: "
-                f"{ratchet_result.get('current_coverage', 0):.2f}% < "
-                f"{ratchet_result.get('previous_coverage', 0):.2f}%"
-            )
+            # Use the message from the ratchet result if available, or construct from available data
+            if "message" in ratchet_result:
+                self.console.print(f"[red]📉[/red] {ratchet_result['message']}")
+            else:
+                # Fallback to constructing message from available keys
+                current = ratchet_result.get("current_coverage", 0)
+                previous = ratchet_result.get("previous_coverage", 0)
+                self.console.print(
+                    f"[red]📉[/red] Coverage regression: "
+                    f"{current:.2f}% < {previous:.2f}%"
+                )
             return False
 
     def _handle_coverage_improvement(self, ratchet_result: dict[str, t.Any]) -> None:
