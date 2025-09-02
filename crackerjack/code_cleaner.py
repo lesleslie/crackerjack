@@ -65,7 +65,7 @@ class FileProcessor(BaseModel):
 
     def read_file_safely(self, file_path: Path) -> str:
         try:
-            return file_path.read_text(encoding="utf - 8")
+            return file_path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             for encoding in ("latin1", "cp1252"):
                 try:
@@ -88,7 +88,7 @@ class FileProcessor(BaseModel):
 
     def write_file_safely(self, file_path: Path, content: str) -> None:
         try:
-            file_path.write_text(content, encoding="utf - 8")
+            file_path.write_text(content, encoding="utf-8")
         except Exception as e:
             raise ExecutionError(
                 message=f"Failed to write file {file_path}: {e}",
@@ -185,7 +185,7 @@ class CleaningPipeline(BaseModel):
         self.logger.info(f"Starting clean_file for {file_path}")
         try:
             original_code = self.file_processor.read_file_safely(file_path)
-            original_size = len(original_code.encode("utf - 8"))
+            original_size = len(original_code.encode("utf-8"))
 
             result = self._apply_cleaning_pipeline(
                 original_code,
@@ -195,7 +195,7 @@ class CleaningPipeline(BaseModel):
 
             if result.success and result.cleaned_code != original_code:
                 self.file_processor.write_file_safely(file_path, result.cleaned_code)
-                cleaned_size = len(result.cleaned_code.encode("utf - 8"))
+                cleaned_size = len(result.cleaned_code.encode("utf-8"))
             else:
                 cleaned_size = original_size
 
@@ -326,7 +326,7 @@ class CodeCleaner(BaseModel):
         if pkg_dir is None:
             pkg_dir = Path.cwd()
 
-        python_files = list(pkg_dir.rglob(" * .py"))
+        python_files = list(pkg_dir.rglob("*.py"))
         results: list[CleaningResult] = []
 
         self.logger.info(f"Starting clean_files for {len(python_files)} files")
@@ -342,7 +342,7 @@ class CodeCleaner(BaseModel):
             "__pycache__",
             ".git",
             ".venv",
-            "site - packages",
+            "site-packages",
             ".pytest_cache",
             "build",
             "dist",
@@ -428,8 +428,9 @@ class CodeCleaner(BaseModel):
             for node in docstring_nodes:
                 # Most AST nodes have lineno and end_lineno attributes
                 start_line = getattr(node, "lineno", 1)
-                end_line = getattr(node, "end_lineno", start_line + 1)
-                lines_to_remove.update(range(start_line, end_line))
+                end_line = getattr(node, "end_lineno", start_line)
+                # Include end_line in removal (range is exclusive of end)
+                lines_to_remove.update(range(start_line, end_line + 1))
 
             result_lines = [
                 line for i, line in enumerate(lines, 1) if i not in lines_to_remove
@@ -479,7 +480,7 @@ class CodeCleaner(BaseModel):
         def _has_preserved_pattern(self, stripped_line: str) -> bool:
             """Check if line contains preserved comment patterns."""
             preserved_patterns = ["coding: ", "encoding: ", "type: ", "noqa", "pragma"]
-            return stripped_line.startswith("# !/ ") or any(
+            return stripped_line.startswith("#!/") or any(
                 pattern in stripped_line for pattern in preserved_patterns
             )
 
@@ -592,7 +593,7 @@ class CodeCleaner(BaseModel):
                         )
                         content = cleaned_line.lstrip()
 
-                        content = re.sub(r" {2, }", " ", content)
+                        content = re.sub(r" {2,}", " ", content)
 
                         cleaned_line = cleaned_line[:leading_whitespace] + content
                         cleaned_lines.append(cleaned_line)
@@ -612,6 +613,16 @@ class CodeCleaner(BaseModel):
         class FormattingStep:
             name = "format_code"
 
+            def _is_preserved_comment_line(self, line: str) -> bool:
+                """Check if this comment line should not be formatted."""
+                stripped = line.strip()
+                if not stripped.startswith("#"):
+                    return False
+                preserved_patterns = ["coding:", "encoding:", "type:", "noqa", "pragma"]
+                return stripped.startswith("#!/") or any(
+                    pattern in stripped for pattern in preserved_patterns
+                )
+
             def __call__(self, code: str, file_path: Path) -> str:
                 import re
 
@@ -620,25 +631,30 @@ class CodeCleaner(BaseModel):
 
                 for line in lines:
                     if line.strip():
+                        # Skip formatting for preserved comment lines
+                        if self._is_preserved_comment_line(line):
+                            formatted_lines.append(line)
+                            continue
+
                         leading_whitespace = len(line) - len(line.lstrip())
                         content = line.lstrip()
 
+                        # Fix spacing around operators (simplified and safer)
                         content = re.sub(
-                            r"([ =+ \ -*/%<>!&|^ ])([ ^ =+ \ -*/%<>!&|^ ])",
-                            r"\1 \2",
-                            content,
+                            r"([=+\-*/%<>!&|^])([=+\-*/%<>!&|^])", r"\1 \2", content
                         )
                         content = re.sub(
-                            r"([ ^ =+ \ -*/%<>!&|^ ])([ =+ \ -*/%<>!&|^ ])",
-                            r"\1 \2",
-                            content,
+                            r"([a-zA-Z0-9_])([=+\-*/%<>!&|^])", r"\1 \2", content
+                        )
+                        content = re.sub(
+                            r"([=+\-*/%<>!&|^])([a-zA-Z0-9_])", r"\1 \2", content
                         )
 
-                        content = re.sub(r", ([ ^ \n])", r", \1", content)
+                        # Fix spacing after commas and colons (simplified)
+                        content = re.sub(r",([^ \n])", r", \1", content)
+                        content = re.sub(r":([^ \n:])", r": \1", content)
 
-                        content = re.sub(r": ([ ^ \n: ])", r": \1", content)
-
-                        content = re.sub(r" {2, }", " ", content)
+                        content = re.sub(r" {2,}", " ", content)
 
                         formatted_line = line[:leading_whitespace] + content
                         formatted_lines.append(formatted_line)

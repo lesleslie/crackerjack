@@ -354,12 +354,9 @@ class AsyncWorkflowPipeline:
         return True
 
     async def _run_fast_hooks_with_retry_async(self, options: OptionsProtocol) -> bool:
-        """Run fast hooks with one retry if they fail."""
-        success = await self._run_fast_hooks_async(options)
-        if not success:
-            self.console.print("⚠️ Fast hooks failed, retrying once...")
-            success = await self._run_fast_hooks_async(options)
-        return success
+        """Run fast hooks with retry logic - any failure triggers one retry."""
+        # Use the phase coordinator's retry logic which handles all fast hook failures
+        return await asyncio.to_thread(self.phases.run_fast_hooks_only, options)
 
     async def _collect_test_issues_async(self, options: OptionsProtocol) -> list[str]:
         """Collect all test failures without stopping on first failure."""

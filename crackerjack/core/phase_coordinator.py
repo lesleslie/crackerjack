@@ -60,11 +60,11 @@ class PhaseCoordinator:
             return False
 
     def _display_cleaning_header(self) -> None:
-        self.console.print("\n" + " - " * 80)
+        self.console.print("\n" + "-" * 80)
         self.console.print(
             "[bold bright_magenta]🛠️ SETUP[/bold bright_magenta] [bold bright_white]Initializing project structure[/bold bright_white]",
         )
-        self.console.print(" - " * 80 + "\n")
+        self.console.print("-" * 80 + "\n")
         self.console.print("[yellow]🧹[/yellow] Starting code cleaning...")
 
     def _execute_cleaning_process(self) -> bool:
@@ -532,31 +532,14 @@ class PhaseCoordinator:
         return " | ".join(error_parts)
 
     def _should_retry_fast_hooks(self, results: list[t.Any]) -> bool:
-        formatting_hooks = {
-            "ruff-format",
-            "ruff-check",
-            "trailing-whitespace",
-            "end-of-file-fixer",
-        }
-
+        """Any failed fast hook should trigger a retry since fixes often cascade."""
         for result in results:
-            hook_id = getattr(result, "hook_id", "") or getattr(result, "name", "")
-            if (
-                hook_id in formatting_hooks
-                and hasattr(result, "failed")
-                and result.failed
-            ):
-                output = getattr(result, "output", "") or getattr(result, "stdout", "")
-                if any(
-                    phrase in output.lower()
-                    for phrase in (
-                        "files were modified",
-                        "fixed",
-                        "reformatted",
-                        "fixing",
-                    )
-                ):
-                    return True
+            if hasattr(result, "failed") and result.failed:
+                return True
+            # Also check for status-based failures
+            status = getattr(result, "status", "")
+            if status in ("failed", "error", "timeout"):
+                return True
         return False
 
     def _apply_retry_backoff(self, attempt: int) -> None:
