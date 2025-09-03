@@ -31,6 +31,7 @@ python -m crackerjack
 python -m crackerjack -t
 
 # Code cleaning with TODO detection (blocks if TODOs found)
+# Note: Automatically creates backups in temp directory for safety
 python -m crackerjack -x
 
 # Full release workflow with version bump and publishing
@@ -908,7 +909,8 @@ Default configuration monitors:
 
 **CRITICAL**: The coverage ratchet system prevents regression and targets 100% coverage.
 
-- **Never reduce coverage below current baseline** - coverage can only improve
+- **2% Tolerance Margin**: Coverage within 2% of baseline passes to prevent test flakiness
+- **Never reduce coverage below baseline - 2%** - allows small fluctuations but prevents regression
 - **Add tests to increase coverage** incrementally toward 100%
 - **Current Status**: Test coverage at 10.11% baseline, targeting 100%
 - Existing test files cover various modules including core components, managers, and async workflows
@@ -922,6 +924,7 @@ Default configuration monitors:
 - Fast hooks: All 5 passing consistently
 - Major complexity reductions (34→3, 33→2)
 - Import errors and protocol compliance fixed
+- Documentation reorganization: Security reports moved to `docs/security/`, implementation docs to `docs/`
 
 **🔄 IN PROGRESS:**
 
@@ -1003,3 +1006,6 @@ from ..models.protocols import TestManagerProtocol
 - DO NOT CREATE ANY NEW TESTS UNTIL CURRENTLY FAILING OR ERRORING TESTS HAVE EITHER BEEN FIXED OR REMOVED!
 - always be honest with your answers. do not embelish on progress.
 - always clean up after yourself
+- Always use IDE diagnostics to validate code after implementation if available
+- Always use IDE diagnostics to validate code after implementation if available
+- Always use IDE diagnostics to validate code after implementation if available

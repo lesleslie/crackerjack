@@ -1,5 +1,3 @@
-# !/ usr / bin / env python3
-
 import time
 
 from crackerjack.mcp.progress_monitor import display_progress_update

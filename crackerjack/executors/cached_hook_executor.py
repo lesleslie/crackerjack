@@ -95,7 +95,7 @@ class CachedHookExecutor:
         success = all(result.status == "passed" for result in results)
 
         self.logger.info(
-            f"Cached strategy '{strategy.name}' completed in {total_time: .2f}s - "
+            f"Cached strategy '{strategy.name}' completed in {total_time: .2f}s-"
             f"Success: {success}, Cache hits: {cache_hits}, Cache misses: {cache_misses}",
         )
 
@@ -124,8 +124,8 @@ class CachedHookExecutor:
 
     def _strategy_affects_python_only(self, strategy: HookStrategy) -> bool:
         python_only_hooks = {
-            "ruff - format",
-            "ruff - check",
+            "ruff-format",
+            "ruff-check",
             "pyright",
             "bandit",
             "vulture",
@@ -140,17 +140,17 @@ class CachedHookExecutor:
 
     def _should_ignore_file(self, file_path: Path) -> bool:
         ignore_patterns = [
-            ".git/",
-            ".venv/",
-            "__pycache__/",
-            ".pytest_cache/",
+            ".git /",
+            ".venv /",
+            "__pycache__ /",
+            ".pytest_cache /",
             ".coverage",
-            ".crackerjack_cache/",
-            "node_modules/",
-            ".tox/",
-            "dist/",
-            "build/",
-            ".egg - info/",
+            ".crackerjack_cache /",
+            "node_modules /",
+            ".tox /",
+            "dist /",
+            "build /",
+            ".egg-info /",
         ]
 
         path_str = str(file_path)
@@ -188,7 +188,7 @@ class SmartCacheManager:
         hook_name: str,
         project_state: dict[str, t.Any],
     ) -> bool:
-        external_hooks = {"detect - secrets"}
+        external_hooks = {"detect-secrets"}
         if hook_name in external_hooks:
             return False
 

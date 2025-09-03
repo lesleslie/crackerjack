@@ -50,7 +50,6 @@ class RefactoringAgent(SubAgent):
 
         file_path = Path(issue.file_path)
 
-        # CRITICAL FIX: For known functions, apply proven refactoring patterns directly
         if "detect_agent_needs" in issue.message:
             return await self._apply_known_complexity_fix(file_path, issue)
 
@@ -64,7 +63,6 @@ class RefactoringAgent(SubAgent):
     async def _apply_known_complexity_fix(
         self, file_path: Path, issue: Issue
     ) -> FixResult:
-        """Apply known working fixes for specific complex functions."""
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -73,11 +71,9 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {file_path}"],
             )
 
-        # Apply the proven refactoring pattern
         refactored_content = self._refactor_detect_agent_needs_pattern(content)
 
         if refactored_content != content:
-            # Save the refactored content
             success = self.context.write_file_content(file_path, refactored_content)
             if success:
                 return FixResult(
@@ -110,7 +106,6 @@ class RefactoringAgent(SubAgent):
             )
 
     def _validate_complexity_issue(self, issue: Issue) -> FixResult | None:
-        """Validate the complexity issue has required information."""
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -129,7 +124,6 @@ class RefactoringAgent(SubAgent):
         return None
 
     async def _process_complexity_reduction(self, file_path: Path) -> FixResult:
-        """Process complexity reduction for a file."""
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -156,7 +150,6 @@ class RefactoringAgent(SubAgent):
         content: str,
         complex_functions: list[dict[str, t.Any]],
     ) -> FixResult:
-        """Apply refactoring and save changes."""
         refactored_content = self._apply_complexity_reduction(
             content,
             complex_functions,
@@ -182,7 +175,6 @@ class RefactoringAgent(SubAgent):
         )
 
     def _create_no_changes_result(self) -> FixResult:
-        """Create result for when no changes could be applied."""
         return FixResult(
             success=False,
             confidence=0.5,
@@ -195,7 +187,6 @@ class RefactoringAgent(SubAgent):
         )
 
     def _create_syntax_error_result(self, error: SyntaxError) -> FixResult:
-        """Create result for syntax errors."""
         return FixResult(
             success=False,
             confidence=0.0,
@@ -203,7 +194,6 @@ class RefactoringAgent(SubAgent):
         )
 
     def _create_general_error_result(self, error: Exception) -> FixResult:
-        """Create result for general errors."""
         return FixResult(
             success=False,
             confidence=0.0,
@@ -232,7 +222,6 @@ class RefactoringAgent(SubAgent):
             return self._create_dead_code_error_result(e)
 
     def _validate_dead_code_issue(self, issue: Issue) -> FixResult | None:
-        """Validate the dead code issue has required information."""
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -251,7 +240,6 @@ class RefactoringAgent(SubAgent):
         return None
 
     async def _process_dead_code_removal(self, file_path: Path) -> FixResult:
-        """Process dead code removal for a file."""
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -278,7 +266,6 @@ class RefactoringAgent(SubAgent):
         content: str,
         analysis: dict[str, t.Any],
     ) -> FixResult:
-        """Apply dead code cleanup and save changes."""
         cleaned_content = self._remove_dead_code_items(content, analysis)
 
         if cleaned_content == content:
@@ -302,7 +289,6 @@ class RefactoringAgent(SubAgent):
         )
 
     def _create_no_cleanup_result(self) -> FixResult:
-        """Create result for when no cleanup could be applied."""
         return FixResult(
             success=False,
             confidence=0.5,
@@ -314,7 +300,6 @@ class RefactoringAgent(SubAgent):
         )
 
     def _create_dead_code_error_result(self, error: Exception) -> FixResult:
-        """Create result for dead code processing errors."""
         return FixResult(
             success=False,
             confidence=0.0,
@@ -353,7 +338,6 @@ class RefactoringAgent(SubAgent):
                 self.generic_visit(node)
 
             def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-                # Handle async functions like regular functions for complexity analysis
                 complexity = self.calc_complexity(node)
                 if complexity > 15:
                     complex_functions.append(
@@ -424,19 +408,16 @@ class RefactoringAgent(SubAgent):
         content: str,
         complex_functions: list[dict[str, t.Any]],
     ) -> str:
-        """Apply enhanced complexity reduction using proven patterns."""
         lines = content.split("\n")
 
         for func_info in complex_functions:
             func_name = func_info.get("name", "unknown")
 
-            # Apply specific known patterns for functions we've successfully refactored
             if func_name == "detect_agent_needs":
                 refactored = self._refactor_detect_agent_needs_pattern(content)
                 if refactored != content:
                     return refactored
 
-            # Apply generic function extraction for other cases
             func_content = self._extract_function_content(lines, func_info)
             if func_content:
                 extracted_helpers = self._extract_logical_sections(
@@ -449,18 +430,14 @@ class RefactoringAgent(SubAgent):
                     if modified_content != content:
                         return modified_content
 
-        return content  # Return original if no modifications applied
+        return content
 
     def _refactor_detect_agent_needs_pattern(self, content: str) -> str:
-        """Apply the specific refactoring pattern that successfully reduced complexity 22→11."""
-        # Look for the detect_agent_needs function signature
         detect_func_start = "async def detect_agent_needs("
         if detect_func_start not in content:
             return content
 
-        # Apply the proven refactoring pattern
-        # This transforms the complex function into helper method calls
-        original_pattern = """    recommendations = {
+        original_pattern = """ recommendations = {
         "urgent_agents": [],
         "suggested_agents": [],
         "workflow_recommendations": [],
@@ -469,7 +446,7 @@ class RefactoringAgent(SubAgent):
 
     if error_context:"""
 
-        replacement_pattern = '''    recommendations = {
+        replacement_pattern = """ recommendations = {
         "urgent_agents": [],
         "suggested_agents": [],
         "workflow_recommendations": [],
@@ -485,7 +462,7 @@ class RefactoringAgent(SubAgent):
 
 
 def _add_urgent_agents_for_errors(recommendations: dict, error_context: str) -> None:
-    """Add urgent agents based on error context."""
+
     if not error_context:
         return
 
@@ -507,7 +484,7 @@ def _add_urgent_agents_for_errors(recommendations: dict, error_context: str) -> 
 
 
 def _add_python_project_suggestions(recommendations: dict, file_patterns: str) -> None:
-    """Add suggestions for Python projects based on file patterns."""
+
     if not file_patterns:
         return
 
@@ -529,7 +506,7 @@ def _add_python_project_suggestions(recommendations: dict, file_patterns: str) -
 
 
 def _set_workflow_recommendations(recommendations: dict) -> None:
-    """Set workflow recommendations."""
+
     recommendations["workflow_recommendations"] = [
         "Run crackerjack quality checks first",
         "Use AI agent auto-fixing for complex issues",
@@ -538,7 +515,7 @@ def _set_workflow_recommendations(recommendations: dict) -> None:
 
 
 def _generate_detection_reasoning(recommendations: dict) -> None:
-    """Generate reasoning for the recommendations."""
+
     agent_count = len(recommendations["urgent_agents"]) + len(recommendations["suggested_agents"])
 
     if agent_count == 0:
@@ -558,16 +535,14 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
 
         recommendations["detection_reasoning"] = reasoning
 
-    # Find the end of the complex logic and replace it
-    if error_context:'''
+
+    if error_context:"""
 
         if original_pattern in content:
-            # Find the complex section and replace with helper calls
             modified_content = content.replace(original_pattern, replacement_pattern)
-            # Remove the old complex logic (everything until the return statement)
+
             import re
 
-            # Remove the old complex conditional logic
             pattern = r"if error_context:.*?(?=return json\.dumps)"
             modified_content = re.sub(pattern, "", modified_content, flags=re.DOTALL)
             return modified_content
@@ -577,14 +552,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
     def _extract_logical_sections(
         self, func_content: str, func_info: dict[str, t.Any]
     ) -> list[dict[str, str]]:
-        """Extract logical sections from complex function for helper method creation."""
         sections = []
-
-        # Look for common patterns that can be extracted:
-        # 1. Large conditional blocks
-        # 2. Repeated operations
-        # 3. Complex computations
-        # 4. Data processing sections
 
         lines = func_content.split("\n")
         current_section = []
@@ -593,9 +561,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
         for line in lines:
             stripped = line.strip()
 
-            # Detect section boundaries
             if stripped.startswith("if ") and len(stripped) > 50:
-                # Large conditional - potential extraction candidate
                 if current_section:
                     sections.append(
                         {
@@ -607,7 +573,6 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
                 current_section = [line]
                 section_type = "conditional"
             elif stripped.startswith(("for ", "while ")):
-                # Loop section
                 if current_section and section_type != "loop":
                     sections.append(
                         {
@@ -621,7 +586,6 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
             else:
                 current_section.append(line)
 
-        # Add final section
         if current_section:
             sections.append(
                 {
@@ -631,13 +595,11 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
                 }
             )
 
-        # Only return sections that are substantial enough to extract
         return [s for s in sections if len(s["content"].split("\n")) >= 5]
 
     def _extract_function_content(
         self, lines: list[str], func_info: dict[str, t.Any]
     ) -> str:
-        """Extract function content for analysis."""
         start_line = func_info.get("line_start", 0)
         end_line = func_info.get("line_end", len(lines))
 
@@ -650,12 +612,9 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
     def _apply_function_extraction(
         self, content: str, func_info: dict[str, t.Any], helpers: list[dict[str, str]]
     ) -> str:
-        """Apply function extraction by adding helper methods and replacing complex sections."""
         if not helpers:
             return content
 
-        # For now, return original content as this requires careful AST manipulation
-        # The detect_agent_needs pattern above handles the critical known case
         return content
 
     def _analyze_dead_code(self, tree: ast.AST, content: str) -> dict[str, t.Any]:
@@ -748,7 +707,6 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
     def _should_remove_import_line(
         self, line: str, unused_import: dict[str, str]
     ) -> bool:
-        """Check if an import line should be removed."""
         if unused_import["type"] == "import":
             return f"import {unused_import['name']}" in line
         elif unused_import["type"] == "from_import":
@@ -762,7 +720,6 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
     def _find_lines_to_remove(
         self, lines: list[str], analysis: dict[str, t.Any]
     ) -> set[int]:
-        """Find line indices that should be removed."""
         lines_to_remove: set[int] = set()
 
         for unused_import in analysis["unused_imports"]:

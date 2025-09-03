@@ -31,7 +31,9 @@ def add_correlation_id(_: Any, __: Any, event_dict: dict[str, Any]) -> dict[str,
 
 
 def add_timestamp(_: Any, __: Any, event_dict: dict[str, Any]) -> dict[str, Any]:
-    event_dict["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    event_dict["timestamp"] = (
+        time.strftime("% Y - % m-% dT % H: % M: % S.% f")[:-3] + "Z"
+    )
     return event_dict
 
 
@@ -52,12 +54,12 @@ def setup_structured_logging(
     ]
 
     if json_output:
-        processors.append(structlog.processors.JSONRenderer())  # type: ignore[arg-type]
+        processors.append(structlog.processors.JSONRenderer())
     else:
-        processors.append(structlog.dev.ConsoleRenderer(colors=True))  # type: ignore[arg-type]
+        processors.append(structlog.dev.ConsoleRenderer(colors=True))
 
     structlog.configure(
-        processors=processors,  # type: ignore[arg-type]
+        processors=processors,
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,

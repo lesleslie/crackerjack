@@ -130,7 +130,7 @@ CLI_OPTIONS = {
         False,
         "-x",
         "--clean",
-        help="Remove docstrings, line comments, and unnecessary whitespace from source code (doesn't affect test files).",
+        help="Remove docstrings, line comments, and unnecessary whitespace from source code with automatic backup protection (doesn't affect test files).",
     ),
     "test": typer.Option(False, "-t", "--test", help="Run tests."),
     "benchmark": typer.Option(

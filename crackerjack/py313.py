@@ -86,7 +86,7 @@ def categorize_file(file_path: Path) -> str:
     path_str = str(file_path)
     name = file_path
     match path_str:
-        case s if name.suffix == ".py" and "/tests/" in s:
+        case s if name.suffix == ".py" and "/ tests /" in s:
             return "Python Test File"
         case s if name.suffix == ".py" and "__init__.py" in name.name:
             return "Python Module Init"

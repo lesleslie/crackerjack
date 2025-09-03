@@ -4,25 +4,31 @@ import typing as t
 from pathlib import Path
 
 from crackerjack.mcp.context import get_context
+from crackerjack.services.input_validator import get_input_validator
 
 
 def _create_progress_file(job_id: str) -> Path:
-    import re
     import tempfile
 
-    if not job_id or not isinstance(job_id, str):
-        msg = f"Invalid job_id: {job_id}"
+    # Use secure input validation
+    validator = get_input_validator()
+    job_id_result = validator.validate_job_id(job_id)
+
+    if not job_id_result.valid:
+        msg = f"Invalid job_id: {job_id_result.error_message}"
         raise ValueError(msg)
-    if not re.match(r"^[a-zA-Z0-9_-]+$", job_id):
-        msg = f"Invalid job_id format: {job_id}"
-        raise ValueError(msg)
+
+    # Use sanitized job ID
+    sanitized_job_id = job_id_result.sanitized_value
 
     context = get_context()
     if context:
-        return context.progress_dir / f"job-{job_id}.json"
+        return context.progress_dir / f"job-{sanitized_job_id}.json"
+
+    # Create secure temporary directory
     progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
-    progress_dir.mkdir(exist_ok=True)
-    return progress_dir / f"job-{job_id}.json"
+    progress_dir.mkdir(exist_ok=True, mode=0o750)  # Restrictive permissions
+    return progress_dir / f"job-{sanitized_job_id}.json"
 
 
 def _clamp_progress(value: int) -> int:
@@ -96,7 +102,6 @@ def _update_progress(
     job_id: str,
     progress_data: dict[str, t.Any] | str = None,
     context: t.Any = None,
-    # Legacy parameters for backward compatibility
     iteration: int = 1,
     max_iterations: int = 10,
     overall_progress: int = 0,
@@ -162,7 +167,7 @@ def _handle_get_job_progress(job_id: str) -> str:
         return f'{{"error": "Failed to get progress for job {job_id}: {e}"}}'
 
 
-def _execute_session_action(
+async def _execute_session_action(
     state_manager,
     action: str,
     checkpoint_name: str | None,
@@ -174,7 +179,7 @@ def _execute_session_action(
 
     if action == "checkpoint":
         checkpoint_name = checkpoint_name or f"checkpoint_{context.get_current_time()}"
-        state_manager.create_checkpoint(checkpoint_name)
+        await state_manager.save_checkpoint(checkpoint_name)
         return f'{{"status": "checkpoint_created", "action": "checkpoint", "name": "{checkpoint_name}"}}'
 
     if action == "complete":
@@ -188,7 +193,9 @@ def _execute_session_action(
     return f'{{"error": "Invalid action: {action}. Valid actions: start, checkpoint, complete, reset"}}'
 
 
-def _handle_session_management(action: str, checkpoint_name: str | None = None) -> str:
+async def _handle_session_management(
+    action: str, checkpoint_name: str | None = None
+) -> str:
     context = get_context()
     if not context:
         return '{"error": "Server context not available"}'
@@ -198,7 +205,9 @@ def _handle_session_management(action: str, checkpoint_name: str | None = None) 
         if not state_manager:
             return '{"error": "State manager not available"}'
 
-        return _execute_session_action(state_manager, action, checkpoint_name, context)
+        return await _execute_session_action(
+            state_manager, action, checkpoint_name, context
+        )
 
     except Exception as e:
         return f'{{"error": "Session management failed: {e}"}}'
@@ -214,4 +223,4 @@ def register_progress_tools(mcp_app: t.Any) -> None:
         action: str,
         checkpoint_name: str | None = None,
     ) -> str:
-        return _handle_session_management(action, checkpoint_name)
+        return await _handle_session_management(action, checkpoint_name)

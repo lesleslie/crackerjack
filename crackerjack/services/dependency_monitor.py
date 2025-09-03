@@ -67,7 +67,6 @@ class DependencyMonitorService:
         return False
 
     def _parse_dependencies(self) -> dict[str, str]:
-        """Parse dependencies from pyproject.toml file."""
         try:
             with self.pyproject_path.open("rb") as f:
                 data = tomllib.load(f)
@@ -82,7 +81,7 @@ class DependencyMonitorService:
 
         except Exception as e:
             self.console.print(
-                f"[yellow]Warning: Failed to parse pyproject.toml: {e}[/yellow]",
+                f"[yellow]Warning: Failed to parse pyproject.toml: {e}[/ yellow]",
             )
             return {}
 
@@ -91,7 +90,6 @@ class DependencyMonitorService:
         project_data: dict[str, t.Any],
         dependencies: dict[str, str],
     ) -> None:
-        """Extract main dependencies from project data."""
         if "dependencies" not in project_data:
             return
 
@@ -105,7 +103,6 @@ class DependencyMonitorService:
         project_data: dict[str, t.Any],
         dependencies: dict[str, str],
     ) -> None:
-        """Extract optional dependencies from project data."""
         if "optional-dependencies" not in project_data:
             return
 
@@ -119,7 +116,7 @@ class DependencyMonitorService:
         if not spec or spec.startswith("-"):
             return None, None
 
-        for operator in (">=", "<=", "==", "~=", "!=", ">", "<"):
+        for operator in ("> =", "< =", "= =", "~=", "! =", ">", "<"):
             if operator in spec:
                 parts = spec.split(operator, 1)
                 if len(parts) == 2:
@@ -180,7 +177,6 @@ class DependencyMonitorService:
         command_template: list[str],
         parser_func: t.Callable[[t.Any], list[DependencyVulnerability]],
     ) -> list[DependencyVulnerability]:
-        """Common logic for running vulnerability scanning tools."""
         try:
             temp_file = self._create_requirements_file(dependencies)
             try:
@@ -197,14 +193,13 @@ class DependencyMonitorService:
             json.JSONDecodeError,
             Exception,
         ):
-            return []  # Vulnerability check failed, return empty list
+            return []
 
     def _create_requirements_file(self, dependencies: dict[str, str]) -> str:
-        """Create temporary requirements file for vulnerability scanning."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             for package, version in dependencies.items():
                 if version != "latest":
-                    f.write(f"{package}=={version}\n")
+                    f.write(f"{package}= ={version}\n")
                 else:
                     f.write(f"{package}\n")
             return f.name
@@ -214,7 +209,6 @@ class DependencyMonitorService:
         command_template: list[str],
         temp_file: str,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute vulnerability scanning command with temp file."""
         cmd = [part.replace("__TEMP_FILE__", temp_file) for part in command_template]
         return subprocess.run(
             cmd,
@@ -229,7 +223,6 @@ class DependencyMonitorService:
         result: subprocess.CompletedProcess[str],
         parser_func: t.Callable[[t.Any], list[DependencyVulnerability]],
     ) -> list[DependencyVulnerability]:
-        """Process vulnerability scan result using appropriate parser."""
         if result.returncode == 0:
             return []
 
@@ -309,10 +302,8 @@ class DependencyMonitorService:
         cache: dict[str, t.Any],
         current_time: float,
     ) -> MajorUpdate | None:
-        """Check if a specific package has a major update available."""
         cache_key = self._build_cache_key(package, current_version)
 
-        # Try to get from cache first
         cached_update = self._get_cached_major_update(
             cache_key,
             cache,
@@ -323,7 +314,6 @@ class DependencyMonitorService:
         if cached_update is not None:
             return cached_update
 
-        # Check for updates and update cache
         return self._fetch_and_cache_update_info(
             package,
             current_version,
@@ -333,7 +323,6 @@ class DependencyMonitorService:
         )
 
     def _build_cache_key(self, package: str, current_version: str) -> str:
-        """Build cache key for package version."""
         return f"{package}_{current_version}"
 
     def _get_cached_major_update(
@@ -344,7 +333,6 @@ class DependencyMonitorService:
         package: str,
         current_version: str,
     ) -> MajorUpdate | None:
-        """Get major update from cache if available and valid."""
         if not self._is_cache_entry_valid(cache_key, cache, current_time):
             return None
 
@@ -364,13 +352,12 @@ class DependencyMonitorService:
         cache: dict[str, t.Any],
         current_time: float,
     ) -> bool:
-        """Check if cache entry exists and is not expired."""
         if cache_key not in cache:
             return False
 
         cached_data = cache[cache_key]
         cache_age = current_time - cached_data["timestamp"]
-        return cache_age < 86400  # Not expired (24 hours)
+        return cache_age < 86400
 
     def _create_major_update_from_cache(
         self,
@@ -378,7 +365,6 @@ class DependencyMonitorService:
         current_version: str,
         cached_data: dict[str, t.Any],
     ) -> MajorUpdate:
-        """Create MajorUpdate instance from cached data."""
         return MajorUpdate(
             package=package,
             current_version=current_version,
@@ -395,7 +381,6 @@ class DependencyMonitorService:
         cache: dict[str, t.Any],
         current_time: float,
     ) -> MajorUpdate | None:
-        """Fetch latest version info and cache the result."""
         latest_info = self._get_latest_version_info(package)
         if not latest_info:
             return None
@@ -427,7 +412,6 @@ class DependencyMonitorService:
         latest_info: dict[str, t.Any],
         has_major_update: bool,
     ) -> MajorUpdate | None:
-        """Create MajorUpdate instance if there is a major update available."""
         if not has_major_update:
             return None
 
@@ -447,7 +431,6 @@ class DependencyMonitorService:
         has_major_update: bool,
         latest_info: dict[str, t.Any],
     ) -> None:
-        """Update cache with latest version information."""
         cache[cache_key] = {
             "timestamp": current_time,
             "has_major_update": has_major_update,
@@ -464,23 +447,38 @@ class DependencyMonitorService:
             return None
 
     def _fetch_pypi_data(self, package: str) -> dict[str, t.Any]:
-        """Fetch package data from PyPI API."""
         import urllib.request
+        from urllib.parse import urlparse
 
         url = f"https://pypi.org/pypi/{package}/json"
         self._validate_pypi_url(url)
 
-        with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.netloc != "pypi.org":
+            msg = f"Invalid URL: only https://pypi.org URLs are allowed, got {url}"
+            raise ValueError(msg)
+
+        with urllib.request.urlopen(url, timeout=10) as response:
             return json.load(response)
 
     def _validate_pypi_url(self, url: str) -> None:
-        """Validate PyPI URL for security."""
-        if not url.startswith("https://pypi.org/"):
-            msg = f"Invalid URL scheme: {url}"
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+
+        if parsed.scheme != "https":
+            msg = f"Invalid URL scheme '{parsed.scheme}': only HTTPS is allowed"
+            raise ValueError(msg)
+
+        if parsed.netloc != "pypi.org":
+            msg = f"Invalid hostname '{parsed.netloc}': only pypi.org is allowed"
+            raise ValueError(msg)
+
+        if not parsed.path.startswith("/pypi/") or not parsed.path.endswith("/json"):
+            msg = f"Invalid PyPI API path: {parsed.path}"
             raise ValueError(msg)
 
     def _extract_version_info(self, data: dict[str, t.Any]) -> dict[str, t.Any] | None:
-        """Extract version information from PyPI response data."""
         info = data.get("info", {})
         releases = data.get("releases", {})
 
@@ -498,14 +496,12 @@ class DependencyMonitorService:
         }
 
     def _get_release_date(self, releases: dict[str, t.Any], version: str) -> str:
-        """Extract release date for a specific version."""
         release_info = releases.get(version, [])
         if release_info:
             return release_info[0].get("upload_time", "")
         return ""
 
     def _has_breaking_changes(self, version: str) -> bool:
-        """Determine if version likely has breaking changes based on major version."""
         return version.split(".")[0] != "0" if "." in version else False
 
     def _is_major_version_update(self, current: str, latest: str) -> bool:
@@ -549,69 +545,73 @@ class DependencyMonitorService:
         self,
         vulnerabilities: list[DependencyVulnerability],
     ) -> None:
-        self.console.print("\n[bold red]🚨 Security Vulnerabilities Found![/bold red]")
         self.console.print(
-            "[red]Please update the following packages immediately:[/red]\n",
+            "\n[bold red]🚨 Security Vulnerabilities Found ![/ bold red]"
+        )
+        self.console.print(
+            "[red]Please update the following packages immediately: [/ red]\n",
         )
 
         for vuln in vulnerabilities:
-            self.console.print(f"[red]• {vuln.package} {vuln.installed_version}[/red]")
-            self.console.print(f" [dim]Vulnerability ID: {vuln.vulnerability_id}[/dim]")
-            self.console.print(f" [dim]Severity: {vuln.severity.upper()}[/dim]")
+            self.console.print(f"[red]• {vuln.package} {vuln.installed_version}[/ red]")
+            self.console.print(
+                f" [dim]Vulnerability ID: {vuln.vulnerability_id}[/ dim]"
+            )
+            self.console.print(f" [dim]Severity: {vuln.severity.upper()}[/ dim]")
             if vuln.patched_version:
                 self.console.print(
-                    f" [green]Fix available: {vuln.patched_version}[/green]",
+                    f" [green]Fix available: {vuln.patched_version}[/ green]",
                 )
             if vuln.advisory_url:
-                self.console.print(f" [dim]More info: {vuln.advisory_url}[/dim]")
+                self.console.print(f" [dim]More info: {vuln.advisory_url}[/ dim]")
             self.console.print()
 
     def _report_major_updates(self, major_updates: list[MajorUpdate]) -> None:
         self.console.print(
-            "\n[bold yellow]📦 Major Version Updates Available[/bold yellow]",
+            "\n[bold yellow]📦 Major Version Updates Available[/ bold yellow]",
         )
         self.console.print(
-            "[yellow]The following packages have major updates:[/yellow]\n",
+            "[yellow]The following packages have major updates: [/ yellow]\n",
         )
 
         for update in major_updates:
-            self.console.print(f"[yellow]• {update.package}[/yellow]")
-            self.console.print(f" [dim]Current: {update.current_version}[/dim]")
-            self.console.print(f" [dim]Latest: {update.latest_version}[/dim]")
+            self.console.print(f"[yellow]• {update.package}[/ yellow]")
+            self.console.print(f" [dim]Current: {update.current_version}[/ dim]")
+            self.console.print(f" [dim]Latest: {update.latest_version}[/ dim]")
             if update.release_date:
                 release_date = update.release_date[:10]
-                self.console.print(f" [dim]Released: {release_date}[/dim]")
+                self.console.print(f" [dim]Released: {release_date}[/ dim]")
             if update.breaking_changes:
-                self.console.print(" [red]⚠️ May contain breaking changes[/red]")
+                self.console.print(" [red]⚠️ May contain breaking changes[/ red]")
             self.console.print()
 
         self.console.print(
-            "[dim]Review changelogs before updating to major versions.[/dim]",
+            "[dim]Review changelogs before updating to major versions.[/ dim]",
         )
 
     def force_check_updates(
         self,
     ) -> tuple[list[DependencyVulnerability], list[MajorUpdate]]:
         if not self.pyproject_path.exists():
-            self.console.print("[yellow]⚠️ No pyproject.toml found[/yellow]")
+            self.console.print("[yellow]⚠️ No pyproject.toml found[/ yellow]")
             return [], []
 
-        self.console.print("[dim]Parsing dependencies from pyproject.toml...[/dim]")
+        self.console.print("[dim]Parsing dependencies from pyproject.toml...[/ dim]")
         dependencies = self._parse_dependencies()
         if not dependencies:
             self.console.print(
-                "[yellow]⚠️ No dependencies found in pyproject.toml[/yellow]",
+                "[yellow]⚠️ No dependencies found in pyproject.toml[/ yellow]",
             )
             return [], []
 
         self.console.print(
-            f"[dim]Found {len(dependencies)} dependencies to check[/dim]",
+            f"[dim]Found {len(dependencies)} dependencies to check[/ dim]",
         )
 
-        self.console.print("[dim]Checking for security vulnerabilities...[/dim]")
+        self.console.print("[dim]Checking for security vulnerabilities...[/ dim]")
         vulnerabilities = self._check_security_vulnerabilities(dependencies)
 
-        self.console.print("[dim]Checking for major version updates...[/dim]")
+        self.console.print("[dim]Checking for major version updates...[/ dim]")
         major_updates = self._check_major_updates(dependencies)
 
         return vulnerabilities, major_updates

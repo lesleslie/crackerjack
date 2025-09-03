@@ -1,5 +1,3 @@
-# !/ usr / bin / env python3
-
 import asyncio
 import sys
 from pathlib import Path
@@ -16,17 +14,17 @@ async def main():
         description="Enhanced Multi - Project Crackerjack Progress Monitor Demo"
     )
     parser.add_argument(
-        " -- no - clear",
+        " - - no - clear",
         action="store_true",
         help="Don't clear terminal before displaying",
     )
     parser.add_argument(
-        " -- textual",
+        " - - textual",
         action="store_true",
         help="Use Textual TUI instead of Rich display",
     )
     parser.add_argument(
-        " -- refresh",
+        " - - refresh",
         type=float,
         default=0.5,
         help="Refresh interval in seconds (default: 0.5 for lively updates)",
@@ -49,9 +47,12 @@ async def main():
 
     if args.textual:
         try:
-            import textual.app  # noqa: F401
+            import importlib.util
 
-            print("🎨 Using Textual TUI interface...")
+            if importlib.util.find_spec("textual.app") is not None:
+                print("🎨 Using Textual TUI interface...")
+            else:
+                raise ImportError("textual.app not found")
         except ImportError:
             print("⚠️ Textual not available, falling back to Rich display")
             args.textual = False

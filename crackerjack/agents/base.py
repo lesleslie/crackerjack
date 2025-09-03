@@ -145,11 +145,9 @@ class SubAgent(ABC):
         pass
 
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
-        """Plan actions before executing fixes. Override in subclasses."""
         return {"strategy": "default", "confidence": 0.5}
 
     def get_cached_patterns(self) -> dict[str, t.Any]:
-        """Get cached patterns for this agent. Override in subclasses."""
         return {}
 
 

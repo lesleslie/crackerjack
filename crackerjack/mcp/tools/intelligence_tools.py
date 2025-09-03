@@ -1,5 +1,3 @@
-"""MCP tools for the Intelligent Agent Selection System."""
-
 import asyncio
 import logging
 import typing as t
@@ -16,23 +14,10 @@ async def execute_smart_agent_task(
     max_agents: int = 3,
     use_learning: bool = True,
 ) -> dict[str, t.Any]:
-    """Execute a task using intelligent agent selection.
-
-    Args:
-        task_description: Description of the task to execute
-        context_type: Type of task context (architecture, refactoring, testing, etc.)
-        strategy: Execution strategy (single_best, parallel, sequential, consensus)
-        max_agents: Maximum number of agents to consider
-        use_learning: Whether to apply adaptive learning
-
-    Returns:
-        Dictionary with execution results and metadata
-    """
     get_context()
     logger = logging.getLogger(__name__)
 
     try:
-        # Parse context type
         task_context = None
         context_map = {
             "architecture": TaskContext.ARCHITECTURE,
@@ -50,7 +35,6 @@ async def execute_smart_agent_task(
         if context_type.lower() in context_map:
             task_context = context_map[context_type.lower()]
 
-        # Parse strategy
         strategy_map = {
             "single_best": ExecutionStrategy.SINGLE_BEST,
             "parallel": ExecutionStrategy.PARALLEL,
@@ -62,7 +46,6 @@ async def execute_smart_agent_task(
             strategy.lower(), ExecutionStrategy.SINGLE_BEST
         )
 
-        # Get intelligent agent system
         system = await get_intelligent_agent_system()
 
         logger.info(
@@ -70,14 +53,12 @@ async def execute_smart_agent_task(
             f"(context: {context_type}, strategy: {strategy})"
         )
 
-        # Execute task
         result = await system.execute_smart_task(
             description=task_description,
             context=task_context,
             strategy=execution_strategy,
         )
 
-        # Prepare response
         response = {
             "success": result.success,
             "agents_used": result.agents_used,
@@ -90,12 +71,9 @@ async def execute_smart_agent_task(
             "strategy_used": strategy,
         }
 
-        # Add result based on type
         if hasattr(result.result, "__dict__"):
-            # Complex object - convert to dict
             try:
                 if hasattr(result.result, "success"):
-                    # Looks like FixResult
                     response["fix_result"] = {
                         "success": getattr(result.result, "success", False),
                         "confidence": getattr(result.result, "confidence", 0.0),
@@ -118,7 +96,7 @@ async def execute_smart_agent_task(
         if result.success:
             logger.info(
                 f"Smart task completed successfully using {len(result.agents_used)} agents "
-                f"in {result.execution_time:.2f}s"
+                f"in {result.execution_time: .2f}s"
             )
         else:
             logger.warning(f"Smart task failed: {result.recommendations}")
@@ -141,20 +119,9 @@ async def get_smart_agent_recommendation(
     context_type: str = "general",
     include_analysis: bool = True,
 ) -> dict[str, t.Any]:
-    """Get agent recommendation for a task without executing it.
-
-    Args:
-        task_description: Description of the task
-        context_type: Type of task context
-        include_analysis: Whether to include complexity analysis
-
-    Returns:
-        Dictionary with recommendation details
-    """
     logger = logging.getLogger(__name__)
 
     try:
-        # Parse context type
         task_context = None
         context_map = {
             "architecture": TaskContext.ARCHITECTURE,
@@ -172,10 +139,8 @@ async def get_smart_agent_recommendation(
         if context_type.lower() in context_map:
             task_context = context_map[context_type.lower()]
 
-        # Get intelligent agent system
         system = await get_intelligent_agent_system()
 
-        # Get recommendation
         recommendation = await system.get_best_agent_for_task(
             description=task_description,
             context=task_context,
@@ -205,7 +170,6 @@ async def get_smart_agent_recommendation(
                 }
             )
 
-        # Add complexity analysis if requested
         if include_analysis:
             try:
                 analysis = await system.analyze_task_complexity(task_description)
@@ -228,18 +192,12 @@ async def get_smart_agent_recommendation(
 
 
 async def get_intelligence_system_status() -> dict[str, t.Any]:
-    """Get comprehensive status of the intelligent agent system.
-
-    Returns:
-        Dictionary with system status and statistics
-    """
     logger = logging.getLogger(__name__)
 
     try:
         system = await get_intelligent_agent_system()
         status = await system.get_system_status()
 
-        # Add additional runtime information
         status["runtime_info"] = {
             "system_initialized": system._initialized,
             "components_loaded": {
@@ -261,24 +219,16 @@ async def get_intelligence_system_status() -> dict[str, t.Any]:
 
 
 async def analyze_agent_performance() -> dict[str, t.Any]:
-    """Analyze agent performance and learning insights.
-
-    Returns:
-        Dictionary with performance analysis and insights
-    """
     logger = logging.getLogger(__name__)
 
     try:
         system = await get_intelligent_agent_system()
         await system.initialize()
 
-        # Get learning summary
         learning_summary = system.learning_system.get_learning_summary()
 
-        # Get orchestrator stats
         orchestration_stats = system.orchestrator.get_execution_stats()
 
-        # Get agent capabilities overview
         registry_stats = system.registry.get_agent_stats()
 
         performance_analysis = {
@@ -288,7 +238,6 @@ async def analyze_agent_performance() -> dict[str, t.Any]:
             "analysis_timestamp": asyncio.get_event_loop().time(),
         }
 
-        # Add insights if available
         if hasattr(system.learning_system, "_learning_insights"):
             recent_insights = [
                 {
@@ -297,9 +246,7 @@ async def analyze_agent_performance() -> dict[str, t.Any]:
                     "confidence": insight.confidence,
                     "description": insight.description,
                 }
-                for insight in system.learning_system._learning_insights[
-                    -10:
-                ]  # Last 10 insights
+                for insight in system.learning_system._learning_insights[-10:]
             ]
             performance_analysis["recent_insights"] = recent_insights
 

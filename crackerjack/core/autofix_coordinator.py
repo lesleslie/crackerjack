@@ -1,5 +1,3 @@
-"""Autofix coordination and retry logic for crackerjack workflows."""
-
 import logging
 import subprocess
 import typing as t
@@ -21,7 +19,7 @@ class AutofixCoordinator:
         try:
             if self._should_skip_autofix(hook_results):
                 self.logger.info(
-                    f"Skipping autofix for {mode} - unfixable error patterns detected",
+                    f"Skipping autofix for {mode}-unfixable error patterns detected",
                 )
                 return False
             if mode == "fast":
@@ -36,35 +34,28 @@ class AutofixCoordinator:
             return False
         except Exception as e:
             self.logger.error(f"Auto-fix error in {mode} mode: {e}", exc_info=True)
-            self.console.print(f"[dim red]Auto-fix error: {e}[/dim red]")
+            self.console.print(f"[dim red]Auto-fix error: {e}[/ dim red]")
             return False
 
     def apply_fast_stage_fixes(self) -> bool:
-        """Public interface for applying fast stage fixes."""
         return self._apply_fast_stage_fixes()
 
     def apply_comprehensive_stage_fixes(self, hook_results: list[t.Any]) -> bool:
-        """Public interface for applying comprehensive stage fixes."""
         return self._apply_comprehensive_stage_fixes(hook_results)
 
     def run_fix_command(self, cmd: list[str], description: str) -> bool:
-        """Public interface for running fix commands."""
         return self._run_fix_command(cmd, description)
 
     def check_tool_success_patterns(self, cmd: list[str], result: t.Any) -> bool:
-        """Public interface for checking tool success patterns."""
         return self._check_tool_success_patterns(cmd, result)
 
     def validate_fix_command(self, cmd: list[str]) -> bool:
-        """Public interface for validating fix commands."""
         return self._validate_fix_command(cmd)
 
     def validate_hook_result(self, result: t.Any) -> bool:
-        """Public interface for validating hook results."""
         return self._validate_hook_result(result)
 
     def should_skip_autofix(self, hook_results: list[t.Any]) -> bool:
-        """Public interface for checking if autofix should be skipped."""
         return self._should_skip_autofix(hook_results)
 
     def _apply_fast_stage_fixes(self) -> bool:
@@ -112,7 +103,10 @@ class AutofixCoordinator:
         hook_specific_fixes: list[tuple[list[str], str]] = []
         if "bandit" in failed_hooks:
             hook_specific_fixes.append(
-                (["uv", "run", "bandit", "-f", "json", ".", "-ll"], "bandit analysis"),
+                (
+                    ["uv", "run", "bandit", "- f", "json", ".", "- ll"],
+                    "bandit analysis",
+                ),
             )
 
         return hook_specific_fixes
@@ -145,17 +139,14 @@ class AutofixCoordinator:
         return "fixed" in output or "reformatted" in output
 
     def _check_tool_success_patterns(self, cmd: list[str], result: t.Any) -> bool:
-        """Check if a tool command result indicates success."""
         if not cmd or len(cmd) < 3:
             return False
 
         tool_name = cmd[2] if len(cmd) > 2 else ""
 
-        # Check if result is a subprocess.CompletedProcess
         if hasattr(result, "returncode"):
             return result.returncode == 0
 
-        # Check for specific tool success patterns
         if isinstance(result, str):
             output_lower = result.lower()
             if "ruff" in tool_name:
@@ -194,7 +185,7 @@ class AutofixCoordinator:
                 output = getattr(result, "raw_output", "")
                 if "ModuleNotFoundError" in output or "ImportError" in output:
                     self.console.print(
-                        "[dim yellow]  → Skipping autofix (import errors)[/dim yellow]",
+                        "[dim yellow] → Skipping autofix (import errors)[/ dim yellow]",
                     )
                     return True
         return False

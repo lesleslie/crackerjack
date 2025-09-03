@@ -16,7 +16,6 @@ class TestCreationAgent(SubAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self.test_frameworks = ["pytest", "unittest"]
-        # No fixed coverage threshold - use ratchet system instead
 
     def get_supported_types(self) -> set[IssueType]:
         return {
@@ -32,11 +31,9 @@ class TestCreationAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-        # Handle coverage improvement requests with perfect confidence
         if issue.type == IssueType.COVERAGE_IMPROVEMENT:
             return 1.0
 
-        # Handle test organization issues with high confidence
         if issue.type == IssueType.TEST_ORGANIZATION:
             return self._check_test_organization_confidence(message_lower)
 
@@ -51,7 +48,6 @@ class TestCreationAgent(SubAgent):
         return self._check_file_path_test_indicators(issue.file_path)
 
     def _check_test_organization_confidence(self, message_lower: str) -> float:
-        """Check confidence for test organization issues."""
         organization_keywords = [
             "redundant tests",
             "duplicate tests",
@@ -255,7 +251,7 @@ class TestCreationAgent(SubAgent):
         current_coverage = 0.35
 
         return {
-            "below_threshold": False,  # Always use ratchet system, not thresholds
+            "below_threshold": False,
             "current_coverage": current_coverage,
             "uncovered_modules": uncovered_modules,
         }
@@ -568,20 +564,13 @@ from {module_name} import *
 
 
 class Test{module_file.stem.title()}:
-    """Test suite for {module_file.stem} module."""
 
     def test_module_imports(self):
-        """Test that module imports successfully."""
+
         import {module_name}
         assert {module_name} is not None
-'''
 
-    def _generate_function_tests(self, functions: list[dict[str, Any]]) -> str:
-        content = ""
-        for func in functions:
-            content += f'''
     def test_{func["name"]}_basic(self):
-        """Test basic functionality of {func["name"]}."""
 
         try:
             result = {func["name"]}()
@@ -591,15 +580,8 @@ class Test{module_file.stem.title()}:
             pytest.skip("Function requires specific arguments - manual implementation needed")
         except Exception as e:
             pytest.fail(f"Unexpected error in {func["name"]}: {{e}}")
-'''
-        return content
 
-    def _generate_class_tests(self, classes: list[dict[str, Any]]) -> str:
-        content = ""
-        for cls in classes:
-            content += f'''
     def test_{cls["name"].lower()}_creation(self):
-        """Test {cls["name"]} class creation."""
 
         try:
             instance = {cls["name"]}()
@@ -610,25 +592,6 @@ class Test{module_file.stem.title()}:
             pytest.skip("Class requires specific constructor arguments - manual implementation needed")
         except Exception as e:
             pytest.fail(f"Unexpected error creating {cls["name"]}: {{e}}")
-'''
-        return content
-
-    async def _generate_function_test(self, func_info: dict[str, Any]) -> str:
-        return f'''def test_{func_info["name"]}_basic():
-    """Test basic functionality of {func_info["name"]}."""
-
-    try:
-        result = {func_info["name"]}()
-        assert result is not None or result is None
-    except TypeError:
-
-        import inspect
-        assert callable({func_info["name"]}), "Function should be callable"
-        sig = inspect.signature({func_info["name"]})
-        assert sig is not None, "Function should have valid signature"
-        pytest.skip("Function requires specific arguments - manual implementation needed")
-    except Exception as e:
-        pytest.fail(f"Unexpected error in {func_info["name"]}: {{e}}")
 '''
 
     async def _generate_minimal_test_file(self, func_info: dict[str, Any]) -> str:

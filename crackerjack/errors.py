@@ -314,9 +314,9 @@ def _format_error_for_console(error: CrackerjackError, verbose: bool) -> Panel:
     content = [error.message]
 
     if verbose and error.details:
-        content.extend(("\n[white]Details: [/white]", str(error.details)))
+        content.extend(("\n[white]Details: [/ white]", str(error.details)))
     if error.recovery:
-        content.extend(("\n[green]Recovery suggestion: [/green]", str(error.recovery)))
+        content.extend(("\n[green]Recovery suggestion: [/ green]", str(error.recovery)))
 
     return Panel(
         "\n".join(content),
@@ -336,7 +336,7 @@ def handle_error(
 ) -> None:
     if ai_agent:
         formatted_json = _format_error_for_ai_agent(error, verbose)
-        console.print(f"[json]{formatted_json}[/json]")
+        console.print(f"[json]{formatted_json}[/ json]")
     else:
         panel = _format_error_for_console(error, verbose)
         console.print(panel)
@@ -375,5 +375,4 @@ def check_command_result(
 
 
 def format_error_report(error: CrackerjackError) -> str:
-    """Format an error for reporting purposes."""
     return f"Error {error.error_code.value}: {error.message}"

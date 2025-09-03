@@ -8,19 +8,9 @@ from crackerjack.errors import ErrorCode, FileError, ResourceError
 class FileSystemService:
     @staticmethod
     def clean_trailing_whitespace_and_newlines(content: str) -> str:
-        """Clean trailing whitespace from all lines and ensure single trailing newline.
-
-        Args:
-            content: File content to clean
-
-        Returns:
-            Cleaned content with no trailing whitespace and single trailing newline
-        """
-        # Remove trailing whitespace from each line
         lines = content.splitlines()
         cleaned_lines = [line.rstrip() for line in lines]
 
-        # Join lines and ensure exactly one trailing newline
         result = "\n".join(cleaned_lines)
         if result and not result.endswith("\n"):
             result += "\n"
@@ -49,7 +39,7 @@ class FileSystemService:
                 message=f"Unable to decode file as UTF-8: {path}",
                 error_code=ErrorCode.FILE_READ_ERROR,
                 details=str(e),
-                recovery="Ensure file is text-based and UTF-8 encoded",
+                recovery="Ensure file is text - based and UTF-8 encoded",
             ) from e
         except OSError as e:
             raise FileError(
@@ -72,7 +62,6 @@ class FileSystemService:
                     recovery="Check disk space and directory permissions",
                 ) from e
 
-            # Auto-clean configuration files to prevent pre-commit hook failures
             if path_obj.name in {".pre-commit-config.yaml", "pyproject.toml"}:
                 content = self.clean_trailing_whitespace_and_newlines(content)
 

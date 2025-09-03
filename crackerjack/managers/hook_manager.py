@@ -52,7 +52,7 @@ class HookManagerImpl:
     def validate_hooks_config(self) -> bool:
         try:
             result = subprocess.run(
-                ["pre-commit", "validate-config"],
+                ["uv", "run", "pre-commit", "validate-config"],
                 cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
@@ -72,7 +72,7 @@ class HookManagerImpl:
     def install_hooks(self) -> bool:
         try:
             result = subprocess.run(
-                ["pre-commit", "install"],
+                ["uv", "run", "pre-commit", "install"],
                 check=False,
                 cwd=self.pkg_path,
                 capture_output=True,
@@ -80,20 +80,20 @@ class HookManagerImpl:
                 timeout=30,
             )
             if result.returncode == 0:
-                self.console.print("[green]✅[/green] Pre-commit hooks installed")
+                self.console.print("[green]✅[/ green] Pre-commit hooks installed")
                 return True
             self.console.print(
-                f"[red]❌[/red] Failed to install hooks: {result.stderr}",
+                f"[red]❌[/ red] Failed to install hooks: {result.stderr}",
             )
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Error installing hooks: {e}")
+            self.console.print(f"[red]❌[/ red] Error installing hooks: {e}")
             return False
 
     def update_hooks(self) -> bool:
         try:
             result = subprocess.run(
-                ["pre-commit", "autoupdate"],
+                ["uv", "run", "pre-commit", "autoupdate"],
                 check=False,
                 cwd=self.pkg_path,
                 capture_output=True,
@@ -101,14 +101,14 @@ class HookManagerImpl:
                 timeout=60,
             )
             if result.returncode == 0:
-                self.console.print("[green]✅[/green] Pre-commit hooks updated")
+                self.console.print("[green]✅[/ green] Pre-commit hooks updated")
                 return True
             self.console.print(
-                f"[red]❌[/red] Failed to update hooks: {result.stderr}",
+                f"[red]❌[/ red] Failed to update hooks: {result.stderr}",
             )
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Error updating hooks: {e}")
+            self.console.print(f"[red]❌[/ red] Error updating hooks: {e}")
             return False
 
     def get_hook_summary(self, results: list[HookResult]) -> dict[str, t.Any]:

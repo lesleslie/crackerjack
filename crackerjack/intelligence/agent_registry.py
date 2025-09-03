@@ -1,9 +1,3 @@
-"""Intelligent Agent Registry System.
-
-Unifies access to crackerjack agents, user agents, and system agents with smart
-prioritization and capability mapping.
-"""
-
 import logging
 import typing as t
 from dataclasses import dataclass
@@ -14,16 +8,12 @@ from crackerjack.agents.base import SubAgent, agent_registry
 
 
 class AgentSource(Enum):
-    """Source of an agent."""
-
     CRACKERJACK = "crackerjack"
     USER = "user"
     SYSTEM = "system"
 
 
 class AgentCapability(Enum):
-    """Agent capability categories."""
-
     ARCHITECTURE = "architecture"
     REFACTORING = "refactoring"
     TESTING = "testing"
@@ -38,13 +28,11 @@ class AgentCapability(Enum):
 
 @dataclass
 class AgentMetadata:
-    """Metadata about an agent."""
-
     name: str
     source: AgentSource
     capabilities: set[AgentCapability]
-    priority: int  # Higher is better
-    confidence_factor: float  # Multiplier for confidence scores
+    priority: int
+    confidence_factor: float
     description: str
     model: str | None = None
     tags: list[str] | None = None
@@ -52,17 +40,13 @@ class AgentMetadata:
 
 @dataclass
 class RegisteredAgent:
-    """A registered agent with metadata and access."""
-
     metadata: AgentMetadata
-    agent: SubAgent | None = None  # None for user/system agents
-    agent_path: Path | None = None  # Path to user agent file
-    subagent_type: str | None = None  # For system agents
+    agent: SubAgent | None = None
+    agent_path: Path | None = None
+    subagent_type: str | None = None
 
 
 class AgentRegistry:
-    """Registry of all available agents across all systems."""
-
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self._agents: dict[str, RegisteredAgent] = {}
@@ -70,15 +54,12 @@ class AgentRegistry:
         self._user_agent_cache: dict[str, dict[str, t.Any]] = {}
 
     async def initialize(self) -> None:
-        """Initialize the registry with all available agents."""
         self.logger.info("Initializing Intelligent Agent Registry")
 
-        # Load agents in priority order
         await self._register_crackerjack_agents()
         await self._register_user_agents()
         await self._register_system_agents()
 
-        # Build capability mapping
         self._build_capability_map()
 
         self.logger.info(
@@ -89,13 +70,10 @@ class AgentRegistry:
         )
 
     async def _register_crackerjack_agents(self) -> None:
-        """Register built-in crackerjack agents."""
         self.logger.debug("Registering crackerjack agents")
 
-        # Get all registered crackerjack agents
         from crackerjack.agents.base import AgentContext
 
-        # Create a dummy context to get agents
         context = AgentContext(
             project_path=Path.cwd(),
         )
@@ -109,7 +87,7 @@ class AgentRegistry:
                 name=agent.name,
                 source=AgentSource.CRACKERJACK,
                 capabilities=capabilities,
-                priority=100,  # Highest priority
+                priority=100,
                 confidence_factor=1.0,
                 description=f"Built-in crackerjack {agent.__class__.__name__}",
             )
@@ -123,7 +101,6 @@ class AgentRegistry:
             self.logger.debug(f"Registered crackerjack agent: {agent.name}")
 
     async def _register_user_agents(self) -> None:
-        """Register user agents from ~/.claude/agents/."""
         self.logger.debug("Registering user agents")
 
         user_agents_dir = Path.home() / ".claude" / "agents"
@@ -141,7 +118,7 @@ class AgentRegistry:
                         name=agent_data["name"],
                         source=AgentSource.USER,
                         capabilities=capabilities,
-                        priority=80,  # Second priority
+                        priority=80,
                         confidence_factor=0.9,
                         description=agent_data.get("description", "User agent"),
                         model=agent_data.get("model"),
@@ -161,10 +138,8 @@ class AgentRegistry:
                 self.logger.warning(f"Failed to parse user agent {agent_file}: {e}")
 
     async def _register_system_agents(self) -> None:
-        """Register built-in system agents from Task tool."""
         self.logger.debug("Registering system agents")
 
-        # Known system agents from Task tool
         system_agents = [
             (
                 "general-purpose",
@@ -174,7 +149,7 @@ class AgentRegistry:
                 "statusline-setup",
                 "Configure the user's Claude Code status line setting",
             ),
-            ("output-style-setup", "Create a Claude Code output style"),
+            ("output - style-setup", "Create a Claude Code output style"),
         ]
 
         for agent_name, description in system_agents:
@@ -186,7 +161,7 @@ class AgentRegistry:
                 name=agent_name,
                 source=AgentSource.SYSTEM,
                 capabilities=capabilities,
-                priority=60,  # Lowest priority
+                priority=60,
                 confidence_factor=0.7,
                 description=description,
             )
@@ -200,7 +175,6 @@ class AgentRegistry:
             self.logger.debug(f"Registered system agent: {agent_name}")
 
     async def _parse_user_agent_file(self, agent_file: Path) -> dict[str, t.Any] | None:
-        """Parse a user agent markdown file."""
         try:
             content = agent_file.read_text(encoding="utf-8")
             return self._extract_agent_data_from_content(content)
@@ -209,8 +183,7 @@ class AgentRegistry:
             return None
 
     def _extract_agent_data_from_content(self, content: str) -> dict[str, t.Any] | None:
-        """Extract agent data from file content."""
-        if not content.startswith("---\n"):
+        if not content.startswith("- --\n"):
             return None
 
         lines = content.split("\n")
@@ -222,30 +195,26 @@ class AgentRegistry:
         return self._build_agent_data(lines, yaml_end)
 
     def _find_yaml_end_marker(self, lines: list[str]) -> int:
-        """Find the end marker for YAML frontmatter."""
         for i, line in enumerate(lines[1:], 1):
-            if line == "---":
+            if line == "- --":
                 return i
         return -1
 
     def _build_agent_data(self, lines: list[str], yaml_end: int) -> dict[str, t.Any]:
-        """Build agent data from parsed lines."""
         yaml_lines = lines[1:yaml_end]
         agent_data = {}
 
         for line in yaml_lines:
-            if ":" in line:
-                key, value = line.split(":", 1)
+            if ": " in line:
+                key, value = line.split(": ", 1)
                 agent_data[key.strip()] = value.strip()
 
         agent_data["content"] = "\n".join(lines[yaml_end + 1 :])
         return agent_data
 
     def _infer_capabilities_from_agent(self, agent: SubAgent) -> set[AgentCapability]:
-        """Infer capabilities from a crackerjack agent."""
         capabilities = set()
 
-        # Map agent class names to capabilities
         class_name = agent.__class__.__name__.lower()
 
         if "architect" in class_name:
@@ -269,7 +238,6 @@ class AgentRegistry:
         if "dry" in class_name:
             capabilities.add(AgentCapability.REFACTORING)
 
-        # Fallback to general code analysis
         if not capabilities:
             capabilities.add(AgentCapability.CODE_ANALYSIS)
 
@@ -278,7 +246,6 @@ class AgentRegistry:
     def _infer_capabilities_from_user_agent(
         self, agent_data: dict[str, t.Any]
     ) -> set[AgentCapability]:
-        """Infer capabilities from user agent metadata."""
         capabilities = set()
 
         name = agent_data.get("name", "").lower()
@@ -287,7 +254,6 @@ class AgentRegistry:
 
         text = f"{name} {description} {content}"
 
-        # Keyword mapping
         keyword_map = {
             AgentCapability.ARCHITECTURE: [
                 "architect",
@@ -320,7 +286,6 @@ class AgentRegistry:
             if any(keyword in text for keyword in keywords):
                 capabilities.add(capability)
 
-        # Fallback
         if not capabilities:
             capabilities.add(AgentCapability.CODE_ANALYSIS)
 
@@ -329,7 +294,6 @@ class AgentRegistry:
     def _infer_capabilities_from_system_agent(
         self, name: str, description: str
     ) -> set[AgentCapability]:
-        """Infer capabilities from system agent."""
         capabilities = set()
 
         text = f"{name} {description}".lower()
@@ -341,14 +305,12 @@ class AgentRegistry:
         if "output" in text or "style" in text:
             capabilities.add(AgentCapability.FORMATTING)
 
-        # Fallback
         if not capabilities:
             capabilities.add(AgentCapability.CODE_ANALYSIS)
 
         return capabilities
 
     def _build_capability_map(self) -> None:
-        """Build mapping from capabilities to agent names."""
         self._capability_map.clear()
 
         for agent_name, registered_agent in self._agents.items():
@@ -357,7 +319,6 @@ class AgentRegistry:
                     self._capability_map[capability] = []
                 self._capability_map[capability].append(agent_name)
 
-        # Sort by priority within each capability
         for agent_names in self._capability_map.values():
             agent_names.sort(
                 key=lambda name: self._agents[name].metadata.priority, reverse=True
@@ -366,36 +327,30 @@ class AgentRegistry:
     def get_agents_by_capability(
         self, capability: AgentCapability
     ) -> list[RegisteredAgent]:
-        """Get agents that have a specific capability, sorted by priority."""
         agent_names = self._capability_map.get(capability, [])
         return [self._agents[name] for name in agent_names]
 
     def get_agent_by_name(self, name: str) -> RegisteredAgent | None:
-        """Get a specific agent by name."""
         return self._agents.get(name)
 
     def list_all_agents(self) -> list[RegisteredAgent]:
-        """List all registered agents, sorted by priority."""
         agents = list(self._agents.values())
         agents.sort(key=lambda a: a.metadata.priority, reverse=True)
         return agents
 
     def get_agent_stats(self) -> dict[str, t.Any]:
-        """Get statistics about registered agents."""
         stats: dict[str, t.Any] = {
             "total_agents": len(self._agents),
             "by_source": {},
             "by_capability": {},
         }
 
-        # Count by source
         for source in AgentSource:
             count = len(
                 [a for a in self._agents.values() if a.metadata.source == source]
             )
             stats["by_source"][source.value] = count
 
-        # Count by capability
         for capability in AgentCapability:
             count = len(self._capability_map.get(capability, []))
             stats["by_capability"][capability.value] = count
@@ -403,12 +358,10 @@ class AgentRegistry:
         return stats
 
 
-# Global registry instance
 agent_registry_instance = AgentRegistry()
 
 
 async def get_agent_registry() -> AgentRegistry:
-    """Get the initialized agent registry."""
     if not agent_registry_instance._agents:
         await agent_registry_instance.initialize()
     return agent_registry_instance

@@ -1,9 +1,3 @@
-"""CLI Facade for backward compatibility.
-
-This module provides a bridge between the existing CLI interface and the new
-workflow orchestrator, ensuring all existing functionality continues to work.
-"""
-
 import asyncio
 from pathlib import Path
 
@@ -33,18 +27,20 @@ class CrackerjackCLIFacade:
                 return
             success = asyncio.run(self.orchestrator.run_complete_workflow(options))
             if not success:
-                self.console.print("[red]❌ Workflow completed with errors[/red]")
+                self.console.print("[red]❌ Workflow completed with errors[/ red]")
             else:
-                self.console.print("[green]🎉 Workflow completed successfully![/green]")
+                self.console.print(
+                    "[green]🎉 Workflow completed successfully ![/ green]"
+                )
         except KeyboardInterrupt:
-            self.console.print("\n[yellow]⏹️ Operation cancelled by user[/yellow]")
+            self.console.print("\n[yellow]⏹️ Operation cancelled by user[/ yellow]")
             raise SystemExit(130)
         except Exception as e:
-            self.console.print(f"[red]💥 Unexpected error: {e}[/red]")
+            self.console.print(f"[red]💥 Unexpected error: {e}[/ red]")
             if options.verbose:
                 import traceback
 
-                self.console.print(f"[dim]{traceback.format_exc()}[/dim]")
+                self.console.print(f"[dim]{traceback.format_exc()}[/ dim]")
             raise SystemExit(1)
 
     async def process_async(self, options: OptionsProtocol) -> None:
@@ -70,27 +66,27 @@ class CrackerjackCLIFacade:
             from crackerjack.mcp.server import main as start_mcp_main
 
             self.console.print(
-                "[bold cyan]🤖 Starting Crackerjack MCP Server...[/bold cyan]",
+                "[bold cyan]🤖 Starting Crackerjack MCP Server...[/ bold cyan]",
             )
             start_mcp_main(str(self.pkg_path))
         except ImportError:
             self.console.print(
-                "[red]❌ MCP server requires additional dependencies[/red]",
+                "[red]❌ MCP server requires additional dependencies[/ red]",
             )
-            self.console.print("[yellow]Install with: uv sync --group mcp[/yellow]")
+            self.console.print("[yellow]Install with: uv sync --group mcp[/ yellow]")
             raise SystemExit(1)
         except Exception as e:
-            self.console.print(f"[red]❌ Failed to start MCP server: {e}[/red]")
+            self.console.print(f"[red]❌ Failed to start MCP server: {e}[/ red]")
             raise SystemExit(1)
 
     def _handle_enterprise_batch(self, options: OptionsProtocol) -> None:
         self.console.print(
-            "[red]❌ Enterprise batch processing is not yet implemented[/red]"
+            "[red]❌ Enterprise batch processing is not yet implemented[/ red]"
         )
         raise SystemExit(1)
 
     def _handle_monitor_dashboard(self, options: OptionsProtocol) -> None:
-        self.console.print("[red]❌ Monitoring dashboard is not yet implemented[/red]")
+        self.console.print("[red]❌ Monitoring dashboard is not yet implemented[/ red]")
         raise SystemExit(1)
 
 

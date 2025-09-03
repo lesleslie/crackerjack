@@ -52,7 +52,7 @@ class PublishManagerImpl:
             data = loads(content)
             return data.get("project", {}).get("version")
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/yellow] Error reading version: {e}")
+            self.console.print(f"[yellow]⚠️[/ yellow] Error reading version: {e}")
             return None
 
     def _update_version_in_file(self, new_version: str) -> bool:
@@ -61,23 +61,22 @@ class PublishManagerImpl:
             content = self.filesystem.read_file(pyproject_path)
             import re
 
-            # More specific pattern to only match project version, not tool versions
-            pattern = r'^(version\s*=\s*["\'])([^"\']+)(["\'])$'
-            replacement = f"\\g<1>{new_version}\\g<3>"
+            pattern = r'^(version\s * =\s *["\'])([^"\']+)(["\'])$'
+            replacement = f"\\g < 1 >{new_version}\\g < 3 >"
             new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
             if content != new_content:
                 if not self.dry_run:
                     self.filesystem.write_file(pyproject_path, new_content)
                 self.console.print(
-                    f"[green]✅[/green] Updated version to {new_version}",
+                    f"[green]✅[/ green] Updated version to {new_version}",
                 )
                 return True
             self.console.print(
-                "[yellow]⚠️[/yellow] Version pattern not found in pyproject.toml",
+                "[yellow]⚠️[/ yellow] Version pattern not found in pyproject.toml",
             )
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Error updating version: {e}")
+            self.console.print(f"[red]❌[/ red] Error updating version: {e}")
             return False
 
     def _calculate_next_version(self, current: str, bump_type: str) -> str:
@@ -96,18 +95,17 @@ class PublishManagerImpl:
             msg = f"Invalid bump type: {bump_type}"
             raise ValueError(msg)
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Error calculating version: {e}")
+            self.console.print(f"[red]❌[/ red] Error calculating version: {e}")
             raise
 
     def bump_version(self, version_type: str) -> str:
         current_version = self._get_current_version()
         if not current_version:
-            self.console.print("[red]❌[/red] Could not determine current version")
+            self.console.print("[red]❌[/ red] Could not determine current version")
             msg = "Cannot determine current version"
             raise ValueError(msg)
-        self.console.print(f"[cyan]📦[/cyan] Current version: {current_version}")
+        self.console.print(f"[cyan]📦[/ cyan] Current version: {current_version}")
 
-        # Handle interactive version selection
         if version_type == "interactive":
             version_type = self._prompt_for_version_type()
 
@@ -115,11 +113,11 @@ class PublishManagerImpl:
             new_version = self._calculate_next_version(current_version, version_type)
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/yellow] Would bump {version_type} version: {current_version} → {new_version}",
+                    f"[yellow]🔍[/ yellow] Would bump {version_type} version: {current_version} → {new_version}",
                 )
             elif self._update_version_in_file(new_version):
                 self.console.print(
-                    f"[green]🚀[/green] Bumped {version_type} version: {current_version} → {new_version}",
+                    f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
             else:
                 msg = "Failed to update version in file"
@@ -127,22 +125,21 @@ class PublishManagerImpl:
 
             return new_version
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Version bump failed: {e}")
+            self.console.print(f"[red]❌[/ red] Version bump failed: {e}")
             raise
 
     def _prompt_for_version_type(self) -> str:
-        """Prompt user to select version type interactively."""
         try:
             from rich.prompt import Prompt
 
             return Prompt.ask(
-                "[cyan]📦[/cyan] Select version bump type",
+                "[cyan]📦[/ cyan] Select version bump type",
                 choices=["patch", "minor", "major"],
                 default="patch",
             )
         except ImportError:
             self.console.print(
-                "[yellow]⚠️[/yellow] Rich prompt not available, defaulting to patch"
+                "[yellow]⚠️[/ yellow] Rich prompt not available, defaulting to patch"
             )
             return "patch"
 
@@ -172,24 +169,29 @@ class PublishManagerImpl:
 
         if self.security.validate_token_format(token, "pypi"):
             masked_token = self.security.mask_tokens(token)
-            self.console.print(f"[dim]Token format: {masked_token}[/dim]", style="dim")
+            self.console.print(f"[dim]Token format: {masked_token}[/ dim]", style="dim")
             return "Environment variable (UV_PUBLISH_TOKEN)"
         self.console.print(
-            "[yellow]⚠️[/yellow] UV_PUBLISH_TOKEN format appears invalid",
+            "[yellow]⚠️[/ yellow] UV_PUBLISH_TOKEN format appears invalid",
         )
         return None
 
     def _check_keyring_auth(self) -> str | None:
         try:
             result = self._run_command(
-                ["keyring", "get", "https://upload.pypi.org/legacy/", "__token__"],
+                [
+                    "keyring",
+                    "get",
+                    "https: / / upload.pypi.org / legacy /",
+                    "__token__",
+                ],
             )
             if result.returncode == 0 and result.stdout.strip():
                 keyring_token = result.stdout.strip()
                 if self.security.validate_token_format(keyring_token, "pypi"):
                     return "Keyring storage"
                 self.console.print(
-                    "[yellow]⚠️[/yellow] Keyring token format appears invalid",
+                    "[yellow]⚠️[/ yellow] Keyring token format appears invalid",
                 )
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
             pass
@@ -197,44 +199,43 @@ class PublishManagerImpl:
 
     def _report_auth_status(self, auth_methods: list[str]) -> bool:
         if auth_methods:
-            self.console.print("[green]✅[/green] PyPI authentication available: ")
+            self.console.print("[green]✅[/ green] PyPI authentication available: ")
             for method in auth_methods:
-                self.console.print(f" - {method}")
+                self.console.print(f"-{method}")
             return True
         self._display_auth_setup_instructions()
         return False
 
     def _display_auth_setup_instructions(self) -> None:
-        self.console.print("[red]❌[/red] No valid PyPI authentication found")
-        self.console.print("\n[yellow]💡[/yellow] Setup options: ")
+        self.console.print("[red]❌[/ red] No valid PyPI authentication found")
+        self.console.print("\n[yellow]💡[/ yellow] Setup options: ")
         self.console.print(
-            " 1. Set environment variable: export UV_PUBLISH_TOKEN=<your-pypi-token>",
+            " 1. Set environment variable: export UV_PUBLISH_TOKEN=< your - pypi-token >",
         )
         self.console.print(
-            " 2. Use keyring: keyring set https://upload.pypi.org/legacy/ __token__",
+            " 2. Use keyring: keyring set https: / / upload.pypi.org / legacy / __token__",
         )
         self.console.print(
-            " 3. Ensure token starts with 'pypi-' and is properly formatted",
+            " 3. Ensure token starts with 'pypi -' and is properly formatted",
         )
 
     def build_package(self) -> bool:
         try:
-            self.console.print("[yellow]🔨[/yellow] Building package...")
+            self.console.print("[yellow]🔨[/ yellow] Building package...")
 
             if self.dry_run:
                 return self._handle_dry_run_build()
 
             return self._execute_build()
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Build error: {e}")
+            self.console.print(f"[red]❌[/ red] Build error: {e}")
             return False
 
     def _handle_dry_run_build(self) -> bool:
-        self.console.print("[yellow]🔍[/yellow] Would build package")
+        self.console.print("[yellow]🔍[/ yellow] Would build package")
         return True
 
     def _clean_dist_directory(self) -> None:
-        """Clean dist directory to ensure only current version artifacts are uploaded."""
         dist_dir = self.pkg_path / "dist"
         if not dist_dir.exists():
             return
@@ -242,27 +243,26 @@ class PublishManagerImpl:
         try:
             import shutil
 
-            # Remove entire dist directory and recreate it
             shutil.rmtree(dist_dir)
             dist_dir.mkdir(exist_ok=True)
-            self.console.print("[cyan]🧹[/cyan] Cleaned dist directory for fresh build")
+            self.console.print(
+                "[cyan]🧹[/ cyan] Cleaned dist directory for fresh build"
+            )
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Warning: Could not clean dist directory: {e}"
+                f"[yellow]⚠️[/ yellow] Warning: Could not clean dist directory: {e}"
             )
-            # Continue with build anyway - uv publish will fail with clear error
 
     def _execute_build(self) -> bool:
-        # Clean dist directory before building to avoid uploading multiple versions
         self._clean_dist_directory()
 
         result = self._run_command(["uv", "build"])
 
         if result.returncode != 0:
-            self.console.print(f"[red]❌[/red] Build failed: {result.stderr}")
+            self.console.print(f"[red]❌[/ red] Build failed: {result.stderr}")
             return False
 
-        self.console.print("[green]✅[/green] Package built successfully")
+        self.console.print("[green]✅[/ green] Package built successfully")
         self._display_build_artifacts()
         return True
 
@@ -272,26 +272,26 @@ class PublishManagerImpl:
             return
 
         artifacts = list(dist_dir.glob("*"))
-        self.console.print(f"[cyan]📦[/cyan] Build artifacts ({len(artifacts)}): ")
+        self.console.print(f"[cyan]📦[/ cyan] Build artifacts ({len(artifacts)}): ")
 
         for artifact in artifacts[-5:]:
             size_str = self._format_file_size(artifact.stat().st_size)
-            self.console.print(f" - {artifact.name} ({size_str})")
+            self.console.print(f"-{artifact.name} ({size_str})")
 
     def _format_file_size(self, size: int) -> str:
         if size < 1024 * 1024:
-            return f"{size / 1024:.1f}KB"
-        return f"{size / (1024 * 1024):.1f}MB"
+            return f"{size / 1024: .1f}KB"
+        return f"{size / (1024 * 1024): .1f}MB"
 
     def publish_package(self) -> bool:
         if not self._validate_prerequisites():
             return False
 
         try:
-            self.console.print("[yellow]🚀[/yellow] Publishing to PyPI...")
+            self.console.print("[yellow]🚀[/ yellow] Publishing to PyPI...")
             return self._perform_publish_workflow()
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Publish error: {e}")
+            self.console.print(f"[red]❌[/ red] Publish error: {e}")
             return False
 
     def _validate_prerequisites(self) -> bool:
@@ -307,7 +307,7 @@ class PublishManagerImpl:
         return self._execute_publish()
 
     def _handle_dry_run_publish(self) -> bool:
-        self.console.print("[yellow]🔍[/yellow] Would publish package to PyPI")
+        self.console.print("[yellow]🔍[/ yellow] Would publish package to PyPI")
         return True
 
     def _execute_publish(self) -> bool:
@@ -321,10 +321,10 @@ class PublishManagerImpl:
         return True
 
     def _handle_publish_failure(self, error_msg: str) -> None:
-        self.console.print(f"[red]❌[/red] Publish failed: {error_msg}")
+        self.console.print(f"[red]❌[/ red] Publish failed: {error_msg}")
 
     def _handle_publish_success(self) -> None:
-        self.console.print("[green]🎉[/green] Package published successfully!")
+        self.console.print("[green]🎉[/ green] Package published successfully !")
         self._display_package_url()
 
     def _display_package_url(self) -> None:
@@ -332,8 +332,8 @@ class PublishManagerImpl:
         package_name = self._get_package_name()
 
         if package_name and current_version:
-            url = f"https://pypi.org/project/{package_name}/{current_version}/"
-            self.console.print(f"[cyan]🔗[/cyan] Package URL: {url}")
+            url = f"https: / / pypi.org / project /{package_name}/{current_version}/"
+            self.console.print(f"[cyan]🔗[/ cyan] Package URL: {url}")
 
     def _get_package_name(self) -> str | None:
         pyproject_path = self.pkg_path / "pyproject.toml"
@@ -350,11 +350,11 @@ class PublishManagerImpl:
     def cleanup_old_releases(self, keep_releases: int = 10) -> bool:
         try:
             self.console.print(
-                f"[yellow]🧹[/yellow] Cleaning up old releases (keeping {keep_releases})...",
+                f"[yellow]🧹[/ yellow] Cleaning up old releases (keeping {keep_releases})...",
             )
             if self.dry_run:
                 self.console.print(
-                    "[yellow]🔍[/yellow] Would clean up old PyPI releases",
+                    "[yellow]🔍[/ yellow] Would clean up old PyPI releases",
                 )
                 return True
             pyproject_path = self.pkg_path / "pyproject.toml"
@@ -365,48 +365,48 @@ class PublishManagerImpl:
             package_name = data.get("project", {}).get("name", "")
             if not package_name:
                 self.console.print(
-                    "[yellow]⚠️[/yellow] Could not determine package name",
+                    "[yellow]⚠️[/ yellow] Could not determine package name",
                 )
                 return False
             self.console.print(
-                f"[cyan]📦[/cyan] Would analyze releases for {package_name}",
+                f"[cyan]📦[/ cyan] Would analyze releases for {package_name}",
             )
             self.console.print(
-                f"[cyan]🔧[/cyan] Would keep {keep_releases} most recent releases",
+                f"[cyan]🔧[/ cyan] Would keep {keep_releases} most recent releases",
             )
 
             return True
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Cleanup error: {e}")
+            self.console.print(f"[red]❌[/ red] Cleanup error: {e}")
             return False
 
     def create_git_tag(self, version: str) -> bool:
         try:
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/yellow] Would create git tag: v{version}",
+                    f"[yellow]🔍[/ yellow] Would create git tag: v{version}",
                 )
                 return True
             result = self._run_command(["git", "tag", f"v{version}"])
             if result.returncode == 0:
-                self.console.print(f"[green]🏷️[/green] Created git tag: v{version}")
+                self.console.print(f"[green]🏷️[/ green] Created git tag: v{version}")
                 push_result = self._run_command(
                     ["git", "push", "origin", f"v{version}"],
                 )
                 if push_result.returncode == 0:
-                    self.console.print("[green]📤[/green] Pushed tag to remote")
+                    self.console.print("[green]📤[/ green] Pushed tag to remote")
                 else:
                     self.console.print(
-                        f"[yellow]⚠️[/yellow] Tag created but push failed: {push_result.stderr}",
+                        f"[yellow]⚠️[/ yellow] Tag created but push failed: {push_result.stderr}",
                     )
 
                 return True
             self.console.print(
-                f"[red]❌[/red] Failed to create tag: {result.stderr}",
+                f"[red]❌[/ red] Failed to create tag: {result.stderr}",
             )
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Tag creation error: {e}")
+            self.console.print(f"[red]❌[/ red] Tag creation error: {e}")
             return False
 
     def get_package_info(self) -> dict[str, t.Any]:
@@ -429,5 +429,5 @@ class PublishManagerImpl:
                 "python_requires": project.get("requires-python", ""),
             }
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/yellow] Error reading package info: {e}")
+            self.console.print(f"[yellow]⚠️[/ yellow] Error reading package info: {e}")
             return {}

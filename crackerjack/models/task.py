@@ -95,7 +95,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
         )
         self.tasks[task_id] = task
         self.current_task = task_id
-        self.console.print(f"[yellow]⏳[/yellow] Started: {task_name}")
+        self.console.print(f"[yellow]⏳[/ yellow] Started: {task_name}")
 
     def complete_task(
         self,
@@ -112,7 +112,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
                 task.details = details
             if files_changed:
                 task.files_changed = files_changed
-                self.console.print(f"[green]✅[/green] Completed: {task.name}")
+                self.console.print(f"[green]✅[/ green] Completed: {task.name}")
             if self.current_task == task_id:
                 self.current_task = None
 
@@ -131,7 +131,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
             if details:
                 task.details = details
                 self.console.print(
-                    f"[red]❌[/red] Failed: {task.name} - {error_message}",
+                    f"[red]❌[/ red] Failed: {task.name} - {error_message}",
                 )
             if self.current_task == task_id:
                 self.current_task = None

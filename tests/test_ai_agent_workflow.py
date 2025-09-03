@@ -1,5 +1,3 @@
-# !/ usr / bin / env python3
-
 import asyncio
 import json
 import os
@@ -21,7 +19,7 @@ except ImportError:
 
 class AIAgentWorkflowTester:
     def __init__(self) -> None:
-        self.project_root = Path("/Users / les / Projects / crackerjack")
+        self.project_root = Path("/ Users / les / Projects / crackerjack")
         self.test_results = {}
         self.verification_toolkit = None
 
@@ -34,13 +32,13 @@ class AIAgentWorkflowTester:
             "git_status": self._get_git_status(),
             "test_status": self._run_quick_test_check(),
             "hook_status": self._run_quick_hook_check(),
-            "python_files": list(self.project_root.glob(" **/* .py")),
+            "python_files": list(self.project_root.glob(" **/ * .py")),
         }
 
     def _get_git_status(self) -> dict[str, list[str]]:
         try:
             result = subprocess.run(
-                ["git", "status", " -- porcelain"],
+                ["git", "status", " - - porcelain"],
                 check=False,
                 cwd=self.project_root,
                 capture_output=True,
@@ -76,7 +74,7 @@ class AIAgentWorkflowTester:
     def _run_quick_test_check(self) -> dict[str, Any]:
         try:
             result = subprocess.run(
-                ["python", " - m", "pytest", " -- tb = no", " - q"],
+                ["python", " - m", "pytest", " - - tb = no", " - q"],
                 check=False,
                 cwd=self.project_root,
                 capture_output=True,
@@ -103,8 +101,8 @@ class AIAgentWorkflowTester:
                     "python",
                     " - m",
                     "crackerjack",
-                    " -- skip - comprehensive",
-                    " -- skip - tests",
+                    " - - skip - comprehensive",
+                    " - - skip - tests",
                 ],
                 check=False,
                 cwd=self.project_root,
@@ -137,9 +135,9 @@ class AIAgentWorkflowTester:
                     "python",
                     " - m",
                     "crackerjack",
-                    " -- ai - agent",
+                    " - - ai - agent",
                     " - t",
-                    " -- verbose",
+                    " - - verbose",
                 ],
                 check=False,
                 cwd=self.project_root,
@@ -171,9 +169,9 @@ class AIAgentWorkflowTester:
                     "python",
                     " - m",
                     "crackerjack",
-                    " -- ai - agent",
+                    " - - ai - agent",
                     " - t",
-                    " -- verbose",
+                    " - - verbose",
                 ],
                 check=False,
                 cwd=self.project_root,
@@ -271,7 +269,7 @@ class AIAgentWorkflowTester:
         try:
             import re
 
-            match = re.search(r"(\d+)\s+fixes?\s+applied", line.lower())
+            match = re.search(r"(\d +)\s + fixes?\s + applied", line.lower())
             if match:
                 current_iteration["errors_fixed"] += int(match.group(1))
         except (ValueError, AttributeError, ImportError):

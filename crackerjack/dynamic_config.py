@@ -123,12 +123,12 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "id": "uv-lock",
             "name": None,
             "repo": "https://github.com/astral-sh/uv-pre-commit",
-            "rev": "0.8.14",
+            "rev": "0.8.15",
             "tier": 1,
             "time_estimate": 0.5,
             "stages": None,
             "args": None,
-            "files": r"^pyproject\.toml$",
+            "files": r"^ pyproject\.toml$",
             "exclude": None,
             "additional_dependencies": None,
             "types_or": None,
@@ -392,7 +392,7 @@ CONFIG_MODES: dict[str, ConfigMode] = {
 PRE_COMMIT_TEMPLATE = """repos:
 {%- for repo in repos %}
   {%- if repo.comment %}
-  # {{ repo.comment }}
+
   {%- endif %}
   - repo: {{ repo.repo }}
     {%- if repo.rev %}
@@ -430,7 +430,7 @@ PRE_COMMIT_TEMPLATE = """repos:
         {%- endif %}
     {%- endfor %}
 
-{%- endfor %}
+{%-endfor %}
 """
 
 

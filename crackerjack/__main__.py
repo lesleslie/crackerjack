@@ -35,7 +35,6 @@ def _handle_monitoring_commands(
     watchdog: bool,
     dev: bool,
 ) -> bool:
-    """Handle monitoring commands."""
     if monitor:
         handle_monitor_mode(dev_mode=dev)
         return True
@@ -57,7 +56,6 @@ def _handle_websocket_commands(
     restart_websocket_server: bool,
     websocket_port: int | None,
 ) -> bool:
-    """Handle WebSocket server commands."""
     if start_websocket_server:
         port = websocket_port or 8675
         handle_start_websocket_server(port)
@@ -78,7 +76,6 @@ def _handle_mcp_commands(
     restart_mcp_server: bool,
     websocket_port: int | None,
 ) -> bool:
-    """Handle MCP server commands."""
     if start_mcp_server:
         handle_mcp_server(websocket_port)
         return True
@@ -105,7 +102,6 @@ def _handle_server_commands(
     websocket_port: int | None,
     dev: bool,
 ) -> bool:
-    """Handle server-related commands. Returns True if a server command was handled."""
     return (
         _handle_monitoring_commands(monitor, enhanced_monitor, dashboard, watchdog, dev)
         or _handle_websocket_commands(
@@ -217,7 +213,6 @@ def main(
 
     setup_ai_agent_env(ai_agent, verbose or ai_debug)
 
-    # Handle server commands
     if _handle_server_commands(
         monitor,
         enhanced_monitor,
@@ -234,7 +229,6 @@ def main(
     ):
         return
 
-    # Handle main workflow
     if interactive:
         handle_interactive_mode(options)
     else:
@@ -242,7 +236,6 @@ def main(
 
 
 def cli() -> None:
-    """Entry point for console script."""
     app()
 
 

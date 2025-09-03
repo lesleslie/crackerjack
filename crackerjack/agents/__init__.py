@@ -1,4 +1,3 @@
-# Import all agent modules to trigger registration
 from . import (
     architect_agent,
     documentation_agent,
@@ -20,12 +19,10 @@ __all__ = [
     "AgentCoordinator",
     "AgentTracker",
     "FixResult",
-    # Exported classes
     "Issue",
     "IssueType",
     "Priority",
     "SubAgent",
-    # Agent modules (imported for registration)
     "architect_agent",
     "documentation_agent",
     "dry_agent",

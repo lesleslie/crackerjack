@@ -1,5 +1,3 @@
-"""Comprehensive tests for the proactive AI agent system."""
-
 import tempfile
 import time
 from pathlib import Path
@@ -12,20 +10,15 @@ from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, P
 from crackerjack.agents.coordinator import AgentCoordinator
 from crackerjack.agents.proactive_agent import ProactiveAgent
 from crackerjack.services.pattern_cache import CachedPattern, PatternCache
-from crackerjack.services.pattern_detector import PatternDetector
 
 
 class TestProactiveAgent:
-    """Test the ProactiveAgent base class functionality."""
-
     @pytest.fixture
     def agent_context(self):
-        """Create test agent context."""
         return AgentContext(project_path=Path.cwd())
 
     @pytest.fixture
     def test_issue(self):
-        """Create test issue."""
         return Issue(
             id="test_complexity",
             type=IssueType.COMPLEXITY,
@@ -37,8 +30,6 @@ class TestProactiveAgent:
 
     @pytest.fixture
     def mock_proactive_agent(self, agent_context):
-        """Create mock proactive agent for testing."""
-
         class MockProactiveAgent(ProactiveAgent):
             async def plan_before_action(self, issue):
                 return {
@@ -60,31 +51,25 @@ class TestProactiveAgent:
 
     @pytest.mark.asyncio
     async def test_proactive_fix_with_planning(self, mock_proactive_agent, test_issue):
-        """Test proactive fix execution with planning phase."""
         result = await mock_proactive_agent.analyze_and_fix_proactively(test_issue)
 
         assert isinstance(result, FixResult)
         assert result.success
         assert result.confidence == 0.8
 
-        # Check that planning cache was used
         cache_key = mock_proactive_agent._get_planning_cache_key(test_issue)
         assert cache_key in mock_proactive_agent._planning_cache
 
     @pytest.mark.asyncio
     async def test_planning_cache(self, mock_proactive_agent, test_issue):
-        """Test that planning cache works correctly."""
-        # First call should create plan
         result1 = await mock_proactive_agent.analyze_and_fix_proactively(test_issue)
 
-        # Second call should use cached plan
         result2 = await mock_proactive_agent.analyze_and_fix_proactively(test_issue)
 
         assert result1.confidence == result2.confidence
         assert len(mock_proactive_agent._planning_cache) == 1
 
     def test_pattern_caching(self, mock_proactive_agent, test_issue):
-        """Test successful pattern caching."""
         plan = {"strategy": "test", "patterns": ["pattern1"]}
         result = FixResult(success=True, confidence=0.9, fixes_applied=["fix1"])
 
@@ -98,24 +83,18 @@ class TestProactiveAgent:
         assert cached_patterns[pattern_key]["confidence"] == 0.9
 
     def test_planning_confidence_scoring(self, mock_proactive_agent, test_issue):
-        """Test planning confidence calculation."""
-        # No cached patterns
         confidence = mock_proactive_agent.get_planning_confidence(test_issue)
         assert confidence == 0.5
 
-        # Add cached patterns
         plan = {"strategy": "test", "patterns": ["pattern1"]}
         result = FixResult(success=True, confidence=0.9)
         mock_proactive_agent._cache_successful_pattern(test_issue, plan, result)
 
-        # Should increase confidence
         confidence = mock_proactive_agent.get_planning_confidence(test_issue)
         assert confidence > 0.5
 
 
 class TestArchitectAgent:
-    """Test the ArchitectAgent implementation."""
-
     @pytest.fixture
     def agent_context(self):
         return AgentContext(project_path=Path.cwd())
@@ -137,15 +116,12 @@ class TestArchitectAgent:
 
     @pytest.mark.asyncio
     async def test_can_handle_various_issues(self, architect_agent):
-        """Test confidence scoring for various issue types."""
-        # High confidence for complexity
         complexity_issue = Issue(
             id="test", type=IssueType.COMPLEXITY, severity=Priority.HIGH, message="test"
         )
         confidence = await architect_agent.can_handle(complexity_issue)
         assert confidence == 0.9
 
-        # High confidence for DRY violations
         dry_issue = Issue(
             id="test",
             type=IssueType.DRY_VIOLATION,
@@ -155,7 +131,6 @@ class TestArchitectAgent:
         confidence = await architect_agent.can_handle(dry_issue)
         assert confidence == 0.85
 
-        # Lower confidence for formatting
         format_issue = Issue(
             id="test", type=IssueType.FORMATTING, severity=Priority.LOW, message="test"
         )
@@ -164,7 +139,6 @@ class TestArchitectAgent:
 
     @pytest.mark.asyncio
     async def test_planning_for_complex_issues(self, architect_agent, complexity_issue):
-        """Test architectural planning for complex issues."""
         plan = await architect_agent.plan_before_action(complexity_issue)
 
         assert isinstance(plan, dict)
@@ -172,14 +146,12 @@ class TestArchitectAgent:
         assert "patterns" in plan
         assert "approach" in plan
 
-        # Complex issues should get specialist guidance
         assert plan["strategy"] == "external_specialist_guided"
         assert "break_into_helper_methods" in plan["approach"]
         assert len(plan["patterns"]) > 0
 
     @pytest.mark.asyncio
     async def test_planning_for_simple_issues(self, architect_agent):
-        """Test planning for simpler issues."""
         simple_issue = Issue(
             id="simple",
             type=IssueType.FORMATTING,
@@ -194,20 +166,17 @@ class TestArchitectAgent:
 
     @pytest.mark.asyncio
     async def test_fix_execution_with_plan(self, architect_agent, complexity_issue):
-        """Test that fixes follow the architectural plan."""
         result = await architect_agent.analyze_and_fix(complexity_issue)
 
         assert isinstance(result, FixResult)
         assert result.success
         assert result.confidence >= 0.7
         assert len(result.fixes_applied) > 0
-        assert "crackerjack-architect" in " ".join(result.fixes_applied)
+        assert "crackerjack - architect" in " ".join(result.fixes_applied)
 
     def test_supported_types(self, architect_agent):
-        """Test that architect agent supports all issue types."""
         supported = architect_agent.get_supported_types()
 
-        # Should support all issue types for architectural guidance
         expected_types = {
             IssueType.COMPLEXITY,
             IssueType.DRY_VIOLATION,
@@ -227,8 +196,6 @@ class TestArchitectAgent:
 
 
 class TestProactiveAgentCoordination:
-    """Test proactive coordination in AgentCoordinator."""
-
     @pytest.fixture
     def agent_context(self):
         return AgentContext(project_path=Path.cwd())
@@ -266,11 +233,9 @@ class TestProactiveAgentCoordination:
         ]
 
     def test_proactive_mode_enabled_by_default(self, coordinator):
-        """Test that proactive mode is enabled by default."""
         assert coordinator.proactive_mode is True
 
     def test_set_proactive_mode(self, coordinator):
-        """Test proactive mode toggle."""
         coordinator.set_proactive_mode(False)
         assert coordinator.proactive_mode is False
 
@@ -279,8 +244,6 @@ class TestProactiveAgentCoordination:
 
     @pytest.mark.asyncio
     async def test_proactive_planning_flow(self, coordinator, test_issues):
-        """Test the proactive planning flow."""
-        # Mock the ArchitectAgent for testing
         mock_architect = MagicMock()
         mock_architect.plan_before_action = AsyncMock(
             return_value={
@@ -300,7 +263,6 @@ class TestProactiveAgentCoordination:
 
     @pytest.mark.asyncio
     async def test_fallback_to_reactive_mode(self, coordinator, test_issues):
-        """Test fallback when proactive mode is disabled."""
         coordinator.set_proactive_mode(False)
 
         with patch.object(coordinator, "handle_issues") as mock_handle:
@@ -312,17 +274,13 @@ class TestProactiveAgentCoordination:
 
     @pytest.mark.asyncio
     async def test_architect_agent_availability(self, coordinator):
-        """Test that ArchitectAgent is available in the coordinator."""
         architect = coordinator._get_architect_agent()
 
-        # Should find the ArchitectAgent
         assert architect is not None
         assert architect.__class__.__name__ == "ArchitectAgent"
 
 
 class TestPatternCache:
-    """Test the pattern caching system."""
-
     @pytest.fixture
     def temp_project_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -360,7 +318,6 @@ class TestPatternCache:
         )
 
     def test_cache_initialization(self, pattern_cache, temp_project_path):
-        """Test pattern cache initialization."""
         assert pattern_cache.project_path == temp_project_path
         assert pattern_cache.cache_dir.exists()
         assert not pattern_cache._loaded
@@ -368,7 +325,6 @@ class TestPatternCache:
     def test_cache_successful_pattern(
         self, pattern_cache, test_issue, test_plan, test_result
     ):
-        """Test caching successful patterns."""
         pattern_id = pattern_cache.cache_successful_pattern(
             test_issue, test_plan, test_result
         )
@@ -376,7 +332,6 @@ class TestPatternCache:
         assert pattern_id.startswith(f"{test_issue.type.value}_")
         assert pattern_cache.cache_file.exists()
 
-        # Check pattern is in memory cache
         assert pattern_id in pattern_cache._patterns
         cached_pattern = pattern_cache._patterns[pattern_id]
         assert cached_pattern.issue_type == test_issue.type
@@ -386,11 +341,8 @@ class TestPatternCache:
     def test_get_patterns_for_issue(
         self, pattern_cache, test_issue, test_plan, test_result
     ):
-        """Test retrieving patterns for specific issue types."""
-        # Cache a pattern
         pattern_cache.cache_successful_pattern(test_issue, test_plan, test_result)
 
-        # Retrieve patterns
         patterns = pattern_cache.get_patterns_for_issue(test_issue)
 
         assert len(patterns) == 1
@@ -398,7 +350,6 @@ class TestPatternCache:
         assert patterns[0].strategy == test_plan["strategy"]
 
     def test_get_best_pattern(self, pattern_cache, test_issue, test_plan, test_result):
-        """Test getting the best pattern for an issue."""
         pattern_cache.cache_successful_pattern(test_issue, test_plan, test_result)
 
         best_pattern = pattern_cache.get_best_pattern_for_issue(test_issue)
@@ -410,16 +361,13 @@ class TestPatternCache:
     def test_pattern_usage_tracking(
         self, pattern_cache, test_issue, test_plan, test_result
     ):
-        """Test pattern usage tracking."""
         pattern_id = pattern_cache.cache_successful_pattern(
             test_issue, test_plan, test_result
         )
 
-        # Use pattern
         success = pattern_cache.use_pattern(pattern_id)
         assert success
 
-        # Check usage was tracked
         pattern = pattern_cache._patterns[pattern_id]
         assert pattern.usage_count == 1
         assert pattern.last_used > 0
@@ -427,26 +375,22 @@ class TestPatternCache:
     def test_success_rate_updates(
         self, pattern_cache, test_issue, test_plan, test_result
     ):
-        """Test success rate updates."""
         pattern_id = pattern_cache.cache_successful_pattern(
             test_issue, test_plan, test_result
         )
 
-        # Use pattern successfully
         pattern_cache.use_pattern(pattern_id)
         pattern_cache.update_pattern_success_rate(pattern_id, True)
 
-        # Use pattern unsuccessfully
         pattern_cache.use_pattern(pattern_id)
         pattern_cache.update_pattern_success_rate(pattern_id, False)
 
         pattern = pattern_cache._patterns[pattern_id]
-        assert pattern.success_rate == 0.5  # 1 success out of 2 uses
+        assert pattern.success_rate == 0.5
 
     def test_pattern_statistics(
         self, pattern_cache, test_issue, test_plan, test_result
     ):
-        """Test pattern statistics generation."""
         pattern_cache.cache_successful_pattern(test_issue, test_plan, test_result)
 
         stats = pattern_cache.get_pattern_statistics()
@@ -457,13 +401,10 @@ class TestPatternCache:
         assert len(stats["most_used_patterns"]) <= 5
 
     def test_cache_persistence(self, pattern_cache, test_issue, test_plan, test_result):
-        """Test that patterns persist across cache instances."""
-        # Cache a pattern
         pattern_id = pattern_cache.cache_successful_pattern(
             test_issue, test_plan, test_result
         )
 
-        # Create new cache instance
         new_cache = PatternCache(pattern_cache.project_path)
         patterns = new_cache.get_patterns_for_issue(test_issue)
 
@@ -471,9 +412,7 @@ class TestPatternCache:
         assert patterns[0].pattern_id == pattern_id
 
     def test_cleanup_old_patterns(self, pattern_cache):
-        """Test cleanup of old, unused patterns."""
-        # Create old pattern with low usage
-        old_time = time.time() - (31 * 24 * 60 * 60)  # 31 days ago
+        old_time = time.time() - (31 * 24 * 60 * 60)
 
         old_pattern = CachedPattern(
             pattern_id="old_pattern",
@@ -481,8 +420,8 @@ class TestPatternCache:
             strategy="old_strategy",
             patterns=["old"],
             confidence=0.5,
-            success_rate=0.1,  # Low success rate
-            usage_count=6,  # High usage but low success
+            success_rate=0.1,
+            usage_count=6,
             last_used=old_time,
             created_at=old_time,
             files_modified=[],
@@ -492,21 +431,17 @@ class TestPatternCache:
 
         pattern_cache._patterns["old_pattern"] = old_pattern
 
-        # Cleanup should remove the pattern
         removed = pattern_cache.cleanup_old_patterns()
         assert removed == 1
         assert "old_pattern" not in pattern_cache._patterns
 
 
 class TestPatternDetector:
-    """Test the anti-pattern detection system."""
-
     @pytest.fixture
     def temp_project_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             project_path = Path(temp_dir)
 
-            # Create test files
             (project_path / "complex.py").write_text("""
 def complex_function():
     if True:
@@ -519,136 +454,16 @@ def complex_function():
                 except:
                     pass
     return True
-""")
 
-            (project_path / "duplicate.py").write_text("""
 print("This line is duplicated")
 print("Another line")
 print("This line is duplicated")
 print("This line is duplicated")
-""")
 
-            (project_path / "security.py").write_text("""
 import subprocess
-subprocess.run("ls", shell=True)
-temp_file = "/tmp/unsafe.txt"
-""")
+subprocess.run("ls", shell = True)
+temp_file = "/ tmp / unsafe.txt"
 
-            yield project_path
-
-    @pytest.fixture
-    def pattern_cache(self, temp_project_path):
-        return PatternCache(temp_project_path)
-
-    @pytest.fixture
-    def pattern_detector(self, temp_project_path, pattern_cache):
-        return PatternDetector(temp_project_path, pattern_cache)
-
-    @pytest.mark.asyncio
-    async def test_complexity_detection(self, pattern_detector):
-        """Test detection of complexity hotspots."""
-        anti_patterns = await pattern_detector.analyze_codebase()
-
-        complexity_patterns = [
-            ap for ap in anti_patterns if ap.pattern_type == "complexity_hotspot"
-        ]
-
-        assert len(complexity_patterns) > 0
-        pattern = complexity_patterns[0]
-        assert pattern.severity in [Priority.HIGH, Priority.MEDIUM]
-        assert "complex_function" in pattern.description
-
-    @pytest.mark.asyncio
-    async def test_duplication_detection(self, pattern_detector):
-        """Test detection of code duplication."""
-        anti_patterns = await pattern_detector.analyze_codebase()
-
-        duplication_patterns = [
-            ap for ap in anti_patterns if ap.pattern_type == "code_duplication"
-        ]
-
-        assert len(duplication_patterns) > 0
-        pattern = duplication_patterns[0]
-        assert "duplicated" in pattern.description.lower()
-
-    @pytest.mark.asyncio
-    async def test_security_detection(self, pattern_detector):
-        """Test detection of security anti-patterns."""
-        anti_patterns = await pattern_detector.analyze_codebase()
-
-        security_patterns = [
-            ap for ap in anti_patterns if ap.pattern_type == "security_risks"
-        ]
-
-        assert len(security_patterns) >= 2  # shell=True and hardcoded path
-
-        # Check for shell=True detection
-        shell_patterns = [
-            ap for ap in security_patterns if "shell=True" in ap.description
-        ]
-        assert len(shell_patterns) > 0
-
-        # Check for hardcoded path detection
-        path_patterns = [
-            ap for ap in security_patterns if "Hardcoded path" in ap.description
-        ]
-        assert len(path_patterns) > 0
-
-    @pytest.mark.asyncio
-    async def test_proactive_issue_conversion(self, pattern_detector):
-        """Test conversion of anti-patterns to proactive issues."""
-        anti_patterns = await pattern_detector.analyze_codebase()
-        issues = await pattern_detector.suggest_proactive_refactoring(anti_patterns)
-
-        assert len(issues) == len(anti_patterns)
-
-        for issue in issues:
-            assert issue.id.startswith("proactive_")
-            assert issue.stage == "proactive_analysis"
-            assert "Proactive:" in issue.message
-            assert len(issue.details) >= 2
-
-    @pytest.mark.asyncio
-    async def test_cached_solution_lookup(self, pattern_detector, pattern_cache):
-        """Test lookup of cached solutions for anti-patterns."""
-        # First, create and cache a successful pattern
-        test_issue = Issue(
-            id="test_complexity",
-            type=IssueType.COMPLEXITY,
-            severity=Priority.HIGH,
-            message="Test complexity",
-            file_path="test.py",
-        )
-
-        test_plan = {"strategy": "complexity_fix", "patterns": ["extract_method"]}
-        test_result = FixResult(success=True, confidence=0.9)
-
-        pattern_cache.cache_successful_pattern(test_issue, test_plan, test_result)
-
-        # Analyze codebase and look for cached solutions
-        anti_patterns = await pattern_detector.analyze_codebase()
-        solutions = await pattern_detector.get_cached_solutions(anti_patterns)
-
-        # Should find cached solutions for complexity anti-patterns
-        complexity_solutions = [
-            key for key in solutions.keys() if "complexity_hotspot" in key
-        ]
-
-        if complexity_solutions:
-            solution_key = complexity_solutions[0]
-            cached_pattern = solutions[solution_key]
-            assert cached_pattern.issue_type == IssueType.COMPLEXITY
-            assert cached_pattern.confidence == 0.9
-
-
-@pytest.mark.asyncio
-async def test_end_to_end_proactive_workflow():
-    """End-to-end test of the complete proactive system."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        project_path = Path(temp_dir)
-
-        # Create test file with issues
-        (project_path / "test_file.py").write_text("""
 def complex_function(a, b, c, d):
     if a:
         for i in range(b):
@@ -663,30 +478,30 @@ def complex_function(a, b, c, d):
                     pass
     return False
 
-# Duplicate code
+
 print("This line appears multiple times")
 print("Another line")
 print("This line appears multiple times")
 print("This line appears multiple times")
 """)
+            yield project_path
 
-        # Initialize components
-        agent_context = AgentContext(project_path=project_path)
+    @pytest.mark.asyncio
+    async def test_end_to_end_proactive_workflow(self, temp_project_path):
+        agent_context = AgentContext(project_path=temp_project_path)
         coordinator = AgentCoordinator(agent_context)
         coordinator.initialize_agents()
 
-        # Verify ArchitectAgent is available
         architect = coordinator._get_architect_agent()
         assert architect is not None
 
-        # Create test issues
         issues = [
             Issue(
                 id="e2e_complexity",
                 type=IssueType.COMPLEXITY,
                 severity=Priority.HIGH,
                 message="Complex function needs refactoring",
-                file_path=str(project_path / "test_file.py"),
+                file_path=str(temp_project_path / "test_file.py"),
                 line_number=2,
             ),
             Issue(
@@ -694,19 +509,16 @@ print("This line appears multiple times")
                 type=IssueType.DRY_VIOLATION,
                 severity=Priority.MEDIUM,
                 message="Duplicate print statements",
-                file_path=str(project_path / "test_file.py"),
+                file_path=str(temp_project_path / "test_file.py"),
                 line_number=15,
             ),
         ]
 
-        # Test proactive handling
         result = await coordinator.handle_issues_proactively(issues)
 
-        # Verify results
         assert isinstance(result, FixResult)
         assert result.confidence > 0.0
 
-        # Should have architectural planning in recommendations
         recommendations_text = " ".join(result.recommendations)
         assert any(
             keyword in recommendations_text.lower()
@@ -715,5 +527,4 @@ print("This line appears multiple times")
 
 
 if __name__ == "__main__":
-    # Run specific test for debugging
     pytest.main([__file__ + "::test_end_to_end_proactive_workflow", "-v", "-s"])

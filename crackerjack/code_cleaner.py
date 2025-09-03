@@ -1,4 +1,5 @@
 import ast
+import re
 import typing as t
 from dataclasses import dataclass
 from enum import Enum
@@ -9,6 +10,60 @@ from pydantic import BaseModel, ConfigDict
 from rich.console import Console
 
 from .errors import ErrorCode, ExecutionError
+from .services.backup_service import BackupMetadata, PackageBackupService
+from .services.secure_path_utils import (
+    AtomicFileOperations,
+    SecurePathValidator,
+)
+from .services.security_logger import (
+    SecurityEventLevel,
+    SecurityEventType,
+    get_security_logger,
+)
+
+
+class CompiledPatterns:
+    def __init__(self) -> None:
+        self.docstring_patterns = [
+            re.compile(r'^\s*""".*?"""\s*$', re.MULTILINE | re.DOTALL),
+            re.compile(r"^\s*'''.*?'''\s*$", re.MULTILINE | re.DOTALL),
+        ]
+
+        self.operator_patterns: list[tuple[re.Pattern[str], str]] = []
+
+        self.spacing_patterns = [
+            (re.compile(r", ([^ \n])"), r", \1"),
+            (re.compile(r": ([^ \n: ])"), r": \1"),
+            (re.compile(r" {2,}"), " "),
+        ]
+
+        self.preserved_comment_pattern = re.compile(
+            r"#.*?(?: coding: | encoding: | type: | noqa | pragma)"
+        )
+
+    def apply_docstring_patterns(self, code: str) -> str:
+        result = code
+        for pattern in self.docstring_patterns:
+            result = pattern.sub("", result)
+        return result
+
+    def apply_formatting_patterns(self, content: str) -> str:
+        for pattern, replacement in self.operator_patterns:
+            content = pattern.sub(replacement, content)
+
+        for pattern, replacement in self.spacing_patterns:
+            content = pattern.sub(replacement, content)
+
+        return content
+
+    def has_preserved_comment(self, line: str) -> bool:
+        return (
+            line.strip().startswith("#! /")
+            or self.preserved_comment_pattern.search(line) is not None
+        )
+
+
+_compiled_patterns = CompiledPatterns()
 
 
 class CleaningStepResult(Enum):
@@ -26,6 +81,18 @@ class CleaningResult:
     warnings: list[str]
     original_size: int
     cleaned_size: int
+    backup_metadata: BackupMetadata | None = None
+
+
+@dataclass
+class PackageCleaningResult:
+    total_files: int
+    successful_files: int
+    failed_files: int
+    file_results: list[CleaningResult]
+    backup_metadata: BackupMetadata | None
+    backup_restored: bool = False
+    overall_success: bool = False
 
 
 class FileProcessorProtocol(Protocol):
@@ -52,10 +119,12 @@ class ErrorHandlerProtocol(Protocol):
 
 
 class FileProcessor(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     console: Console
     logger: t.Any = None
+    base_directory: Path | None = None
+    security_logger: t.Any = None
 
     def model_post_init(self, _: t.Any) -> None:
         if self.logger is None:
@@ -63,24 +132,55 @@ class FileProcessor(BaseModel):
 
             self.logger = logging.getLogger("crackerjack.code_cleaner.file_processor")
 
+        if self.security_logger is None:
+            self.security_logger = get_security_logger()
+
     def read_file_safely(self, file_path: Path) -> str:
+        validated_path = SecurePathValidator.validate_file_path(
+            file_path, self.base_directory
+        )
+        SecurePathValidator.validate_file_size(validated_path)
+
+        self.security_logger.log_security_event(
+            SecurityEventType.FILE_CLEANED,
+            SecurityEventLevel.LOW,
+            f"Reading file for cleaning: {validated_path}",
+            file_path=validated_path,
+        )
+
         try:
-            return file_path.read_text(encoding="utf-8")
+            return validated_path.read_text(encoding="utf-8")
+
         except UnicodeDecodeError:
             for encoding in ("latin1", "cp1252"):
                 try:
-                    content = file_path.read_text(encoding=encoding)
+                    content = validated_path.read_text(encoding=encoding)
                     self.logger.warning(
-                        f"File {file_path} read with {encoding} encoding",
+                        f"File {validated_path} read with {encoding} encoding",
                     )
                     return content
                 except UnicodeDecodeError:
                     continue
+
+            self.security_logger.log_validation_failed(
+                "encoding",
+                file_path,
+                "Could not decode file with any supported encoding",
+            )
+
             raise ExecutionError(
                 message=f"Could not decode file {file_path}",
                 error_code=ErrorCode.FILE_READ_ERROR,
             )
+
+        except ExecutionError:
+            raise
+
         except Exception as e:
+            self.security_logger.log_validation_failed(
+                "file_read", file_path, f"Unexpected error during file read: {e}"
+            )
+
             raise ExecutionError(
                 message=f"Failed to read file {file_path}: {e}",
                 error_code=ErrorCode.FILE_READ_ERROR,
@@ -88,19 +188,42 @@ class FileProcessor(BaseModel):
 
     def write_file_safely(self, file_path: Path, content: str) -> None:
         try:
-            file_path.write_text(content, encoding="utf-8")
+            AtomicFileOperations.atomic_write(file_path, content, self.base_directory)
+
+            self.security_logger.log_atomic_operation("write", file_path, True)
+
+        except ExecutionError:
+            self.security_logger.log_atomic_operation("write", file_path, False)
+            raise
+
         except Exception as e:
+            self.security_logger.log_atomic_operation(
+                "write", file_path, False, error=str(e)
+            )
+
             raise ExecutionError(
                 message=f"Failed to write file {file_path}: {e}",
                 error_code=ErrorCode.FILE_WRITE_ERROR,
             ) from e
 
     def backup_file(self, file_path: Path) -> Path:
-        backup_path = file_path.with_suffix(f"{file_path.suffix}.backup")
         try:
-            backup_path.write_bytes(file_path.read_bytes())
+            backup_path = AtomicFileOperations.atomic_backup_and_write(
+                file_path, file_path.read_bytes(), self.base_directory
+            )
+
+            self.security_logger.log_backup_created(file_path, backup_path)
+
             return backup_path
+
+        except ExecutionError:
+            raise
+
         except Exception as e:
+            self.security_logger.log_validation_failed(
+                "backup_creation", file_path, f"Backup creation failed: {e}"
+            )
+
             raise ExecutionError(
                 message=f"Failed to create backup for {file_path}: {e}",
                 error_code=ErrorCode.FILE_WRITE_ERROR,
@@ -121,7 +244,7 @@ class CleaningErrorHandler(BaseModel):
 
     def handle_file_error(self, file_path: Path, error: Exception, step: str) -> None:
         self.console.print(
-            f"[bold bright_yellow]⚠️ Warning: {step} failed for {file_path}: {error}[/bold bright_yellow]",
+            f"[bold bright_yellow]⚠️ Warning: {step} failed for {file_path}: {error}[/ bold bright_yellow]",
         )
 
         self.logger.warning(
@@ -137,18 +260,18 @@ class CleaningErrorHandler(BaseModel):
     def log_cleaning_result(self, result: CleaningResult) -> None:
         if result.success:
             self.console.print(
-                f"[green]✅ Cleaned {result.file_path}[/green] "
+                f"[green]✅ Cleaned {result.file_path}[/ green] "
                 f"({result.original_size} → {result.cleaned_size} bytes)",
             )
         else:
             self.console.print(
-                f"[red]❌ Failed to clean {result.file_path}[/red] "
+                f"[red]❌ Failed to clean {result.file_path}[/ red] "
                 f"({len(result.steps_failed)} steps failed)",
             )
 
         if result.warnings:
             for warning in result.warnings:
-                self.console.print(f"[yellow]⚠️ {warning}[/yellow]")
+                self.console.print(f"[yellow]⚠️ {warning}[/ yellow]")
 
         self.logger.info(
             "File cleaning completed",
@@ -193,11 +316,10 @@ class CleaningPipeline(BaseModel):
                 cleaning_steps,
             )
 
+            cleaned_size = original_size
             if result.success and result.cleaned_code != original_code:
                 self.file_processor.write_file_safely(file_path, result.cleaned_code)
                 cleaned_size = len(result.cleaned_code.encode("utf-8"))
-            else:
-                cleaned_size = original_size
 
             cleaning_result = CleaningResult(
                 file_path=file_path,
@@ -285,13 +407,16 @@ class CleaningPipeline(BaseModel):
 
 
 class CodeCleaner(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     console: Console
     file_processor: t.Any = None
     error_handler: t.Any = None
     pipeline: t.Any = None
     logger: t.Any = None
+    base_directory: Path | None = None
+    security_logger: t.Any = None
+    backup_service: t.Any = None
 
     def model_post_init(self, _: t.Any) -> None:
         if self.logger is None:
@@ -299,8 +424,13 @@ class CodeCleaner(BaseModel):
 
             self.logger = logging.getLogger("crackerjack.code_cleaner")
 
+        if self.base_directory is None:
+            self.base_directory = Path.cwd()
+
         if self.file_processor is None:
-            self.file_processor = FileProcessor(console=self.console)
+            self.file_processor = FileProcessor(
+                console=self.console, base_directory=self.base_directory
+            )
 
         if self.error_handler is None:
             self.error_handler = CleaningErrorHandler(console=self.console)
@@ -312,6 +442,12 @@ class CodeCleaner(BaseModel):
                 console=self.console,
             )
 
+        if self.security_logger is None:
+            self.security_logger = get_security_logger()
+
+        if self.backup_service is None:
+            self.backup_service = PackageBackupService()
+
     def clean_file(self, file_path: Path) -> CleaningResult:
         cleaning_steps = [
             self._create_line_comment_step(),
@@ -322,49 +458,517 @@ class CodeCleaner(BaseModel):
 
         return self.pipeline.clean_file(file_path, cleaning_steps)
 
-    def clean_files(self, pkg_dir: Path | None = None) -> list[CleaningResult]:
+    def clean_files(
+        self, pkg_dir: Path | None = None, use_backup: bool = True
+    ) -> list[CleaningResult] | PackageCleaningResult:
+        """Clean package files with optional backup protection.
+
+        Args:
+            pkg_dir: Package directory to clean (defaults to current directory)
+            use_backup: Whether to use backup protection (default: True for safety)
+
+        Returns:
+            PackageCleaningResult with backup protection (default), list[CleaningResult] if use_backup=False (legacy)
+        """
+        if use_backup:
+            # Use the comprehensive backup system for maximum safety
+            package_result = self.clean_files_with_backup(pkg_dir)
+            self.logger.info(
+                f"Package cleaning with backup completed: "
+                f"success={package_result.overall_success}, "
+                f"restored={package_result.backup_restored}"
+            )
+            return package_result
+
+        # Legacy non-backup mode (deprecated, kept for compatibility)
+        self.console.print(
+            "[yellow]⚠️ WARNING: Running without backup protection. "
+            "Consider using use_backup=True for safety.[/yellow]"
+        )
+
         if pkg_dir is None:
             pkg_dir = Path.cwd()
 
         python_files = list(pkg_dir.rglob("*.py"))
-        results: list[CleaningResult] = []
 
-        self.logger.info(f"Starting clean_files for {len(python_files)} files")
-        for file_path in python_files:
-            if self.should_process_file(file_path):
-                result = self.clean_file(file_path)
-                results.append(result)
+        files_to_process = [
+            file_path
+            for file_path in python_files
+            if self.should_process_file(file_path)
+        ]
+
+        results: list[CleaningResult] = []
+        self.logger.info(f"Starting clean_files for {len(files_to_process)} files")
+
+        cleaning_steps = [
+            self._create_line_comment_step(),
+            self._create_docstring_step(),
+            self._create_whitespace_step(),
+            self._create_formatting_step(),
+        ]
+
+        for file_path in files_to_process:
+            result = self.pipeline.clean_file(file_path, cleaning_steps)
+            results.append(result)
 
         return results
 
-    def should_process_file(self, file_path: Path) -> bool:
-        ignore_patterns = {
-            "__pycache__",
-            ".git",
-            ".venv",
-            "site-packages",
-            ".pytest_cache",
-            "build",
-            "dist",
+    def clean_files_with_backup(
+        self, pkg_dir: Path | None = None
+    ) -> PackageCleaningResult:
+        validated_pkg_dir = self._prepare_package_directory(pkg_dir)
+
+        self.logger.info(
+            f"Starting safe package cleaning with backup: {validated_pkg_dir}"
+        )
+        self.console.print(
+            "[cyan]🛡️ Starting package cleaning with backup protection...[/cyan]"
+        )
+
+        backup_metadata: BackupMetadata | None = None
+
+        try:
+            backup_metadata = self._create_backup(validated_pkg_dir)
+            files_to_process = self._find_files_to_process(validated_pkg_dir)
+
+            if not files_to_process:
+                return self._handle_no_files_to_process(backup_metadata)
+
+            cleaning_result = self._execute_cleaning_with_backup(
+                files_to_process, backup_metadata
+            )
+
+            return self._finalize_cleaning_result(cleaning_result, backup_metadata)
+
+        except Exception as e:
+            return self._handle_critical_error(e, backup_metadata)
+
+    def _prepare_package_directory(self, pkg_dir: Path | None) -> Path:
+        if pkg_dir is None:
+            pkg_dir = Path.cwd()
+
+        return SecurePathValidator.validate_file_path(pkg_dir, self.base_directory)
+
+    def _create_backup(self, validated_pkg_dir: Path) -> BackupMetadata:
+        self.console.print(
+            "[yellow]📦 Creating backup of all package files...[/yellow]"
+        )
+
+        backup_metadata = self.backup_service.create_package_backup(
+            validated_pkg_dir, self.base_directory
+        )
+
+        self.console.print(
+            f"[green]✅ Backup created: {backup_metadata.backup_id}[/green] "
+            f"({backup_metadata.total_files} files, {backup_metadata.total_size} bytes)"
+        )
+
+        return backup_metadata
+
+    def _find_files_to_process(self, validated_pkg_dir: Path) -> list[Path]:
+        python_files = list(validated_pkg_dir.rglob("*.py"))
+        return [
+            file_path
+            for file_path in python_files
+            if self.should_process_file(file_path)
+        ]
+
+    def _handle_no_files_to_process(
+        self, backup_metadata: BackupMetadata
+    ) -> PackageCleaningResult:
+        self.console.print("[yellow]⚠️ No files found to process[/yellow]")
+        self.backup_service.cleanup_backup(backup_metadata)
+
+        return PackageCleaningResult(
+            total_files=0,
+            successful_files=0,
+            failed_files=0,
+            file_results=[],
+            backup_metadata=None,
+            backup_restored=False,
+            overall_success=True,
+        )
+
+    def _execute_cleaning_with_backup(
+        self, files_to_process: list[Path], backup_metadata: BackupMetadata
+    ) -> dict[str, t.Any]:
+        self.console.print(f"[cyan]🧹 Cleaning {len(files_to_process)} files...[/cyan]")
+
+        cleaning_steps = [
+            self._create_line_comment_step(),
+            self._create_docstring_step(),
+            self._create_whitespace_step(),
+            self._create_formatting_step(),
+        ]
+
+        file_results: list[CleaningResult] = []
+        cleaning_errors: list[Exception] = []
+
+        for file_path in files_to_process:
+            try:
+                result = self.pipeline.clean_file(file_path, cleaning_steps)
+                result.backup_metadata = backup_metadata
+                file_results.append(result)
+
+                if not result.success:
+                    cleaning_errors.append(
+                        ExecutionError(
+                            message=f"Cleaning failed for {file_path}: {result.steps_failed}",
+                            error_code=ErrorCode.CODE_CLEANING_ERROR,
+                        )
+                    )
+            except Exception as e:
+                cleaning_errors.append(e)
+                file_results.append(
+                    CleaningResult(
+                        file_path=file_path,
+                        success=False,
+                        steps_completed=[],
+                        steps_failed=["file_processing"],
+                        warnings=[f"Exception during cleaning: {e}"],
+                        original_size=0,
+                        cleaned_size=0,
+                        backup_metadata=backup_metadata,
+                    )
+                )
+
+        return {
+            "file_results": file_results,
+            "cleaning_errors": cleaning_errors,
+            "files_to_process": files_to_process,
         }
 
-        for parent in file_path.parents:
-            if parent.name in ignore_patterns:
+    def _finalize_cleaning_result(
+        self, cleaning_result: dict[str, t.Any], backup_metadata: BackupMetadata
+    ) -> PackageCleaningResult:
+        file_results = cleaning_result["file_results"]
+        cleaning_errors = cleaning_result["cleaning_errors"]
+        files_to_process = cleaning_result["files_to_process"]
+
+        successful_files = sum(1 for result in file_results if result.success)
+        failed_files = len(file_results) - successful_files
+
+        if cleaning_errors or failed_files > 0:
+            return self._handle_cleaning_failure(
+                backup_metadata,
+                file_results,
+                files_to_process,
+                successful_files,
+                failed_files,
+                cleaning_errors,
+            )
+
+        return self._handle_cleaning_success(
+            backup_metadata, file_results, files_to_process, successful_files
+        )
+
+    def _handle_cleaning_failure(
+        self,
+        backup_metadata: BackupMetadata,
+        file_results: list[CleaningResult],
+        files_to_process: list[Path],
+        successful_files: int,
+        failed_files: int,
+        cleaning_errors: list[Exception],
+    ) -> PackageCleaningResult:
+        self.console.print(
+            f"[red]❌ Cleaning failed ({failed_files} files failed). "
+            f"Restoring from backup...[/red]"
+        )
+
+        self.logger.error(
+            f"Package cleaning failed with {len(cleaning_errors)} errors, "
+            f"restoring from backup {backup_metadata.backup_id}"
+        )
+
+        self.backup_service.restore_from_backup(backup_metadata, self.base_directory)
+
+        self.console.print("[green]✅ Files restored from backup successfully[/green]")
+
+        return PackageCleaningResult(
+            total_files=len(files_to_process),
+            successful_files=successful_files,
+            failed_files=failed_files,
+            file_results=file_results,
+            backup_metadata=backup_metadata,
+            backup_restored=True,
+            overall_success=False,
+        )
+
+    def _handle_cleaning_success(
+        self,
+        backup_metadata: BackupMetadata,
+        file_results: list[CleaningResult],
+        files_to_process: list[Path],
+        successful_files: int,
+    ) -> PackageCleaningResult:
+        self.console.print(
+            f"[green]✅ Package cleaning completed successfully![/green] "
+            f"({successful_files} files cleaned)"
+        )
+
+        self.backup_service.cleanup_backup(backup_metadata)
+
+        return PackageCleaningResult(
+            total_files=len(files_to_process),
+            successful_files=successful_files,
+            failed_files=0,
+            file_results=file_results,
+            backup_metadata=None,
+            backup_restored=False,
+            overall_success=True,
+        )
+
+    def _handle_critical_error(
+        self, error: Exception, backup_metadata: BackupMetadata | None
+    ) -> PackageCleaningResult:
+        self.logger.error(f"Critical error during package cleaning: {error}")
+        self.console.print(f"[red]💥 Critical error: {error}[/red]")
+
+        backup_restored = False
+
+        if backup_metadata:
+            backup_restored = self._attempt_emergency_restoration(backup_metadata)
+
+        return PackageCleaningResult(
+            total_files=0,
+            successful_files=0,
+            failed_files=0,
+            file_results=[],
+            backup_metadata=backup_metadata,
+            backup_restored=backup_restored,
+            overall_success=False,
+        )
+
+    def _attempt_emergency_restoration(self, backup_metadata: BackupMetadata) -> bool:
+        try:
+            self.console.print(
+                "[yellow]🔄 Attempting emergency restoration...[/yellow]"
+            )
+            self.backup_service.restore_from_backup(
+                backup_metadata, self.base_directory
+            )
+            self.console.print("[green]✅ Emergency restoration completed[/green]")
+            return True
+
+        except Exception as restore_error:
+            self.logger.error(f"Emergency restoration failed: {restore_error}")
+            self.console.print(
+                f"[red]💥 Emergency restoration failed: {restore_error}[/red]\n"
+                f"[yellow]⚠️ Manual restoration may be needed from: "
+                f"{backup_metadata.backup_directory}[/yellow]"
+            )
+            return False
+
+    def restore_from_backup_metadata(self, backup_metadata: BackupMetadata) -> None:
+        """Manually restore from backup metadata.
+
+        Args:
+            backup_metadata: Backup metadata containing restoration information
+        """
+        self.console.print(
+            f"[yellow]🔄 Manually restoring from backup: {backup_metadata.backup_id}[/yellow]"
+        )
+
+        self.backup_service.restore_from_backup(backup_metadata, self.base_directory)
+
+        self.console.print(
+            f"[green]✅ Manual restoration completed from backup: "
+            f"{backup_metadata.backup_id}[/green]"
+        )
+
+    def create_emergency_backup(self, pkg_dir: Path | None = None) -> BackupMetadata:
+        """Create an emergency backup before potentially risky operations.
+
+        Args:
+            pkg_dir: Package directory to backup (defaults to current directory)
+
+        Returns:
+            BackupMetadata for the created backup
+        """
+        validated_pkg_dir = self._prepare_package_directory(pkg_dir)
+
+        self.console.print(
+            "[cyan]🛡️ Creating emergency backup before risky operation...[/cyan]"
+        )
+
+        backup_metadata = self._create_backup(validated_pkg_dir)
+
+        self.console.print(
+            f"[green]✅ Emergency backup created: {backup_metadata.backup_id}[/green]"
+        )
+
+        return backup_metadata
+
+    def restore_emergency_backup(self, backup_metadata: BackupMetadata) -> bool:
+        """Restore from an emergency backup with enhanced error handling.
+
+        Args:
+            backup_metadata: Backup metadata for restoration
+
+        Returns:
+            True if restoration succeeded, False otherwise
+        """
+        try:
+            self.console.print(
+                f"[yellow]🔄 Restoring emergency backup: {backup_metadata.backup_id}[/yellow]"
+            )
+
+            self.backup_service.restore_from_backup(
+                backup_metadata, self.base_directory
+            )
+
+            self.console.print(
+                f"[green]✅ Emergency backup restored successfully: {backup_metadata.backup_id}[/green]"
+            )
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Emergency backup restoration failed: {e}")
+            self.console.print(
+                f"[red]💥 Emergency backup restoration failed: {e}[/red]\n"
+                f"[yellow]⚠️ Manual intervention required. Backup location: "
+                f"{backup_metadata.backup_directory}[/yellow]"
+            )
+
+            return False
+
+    def verify_backup_integrity(self, backup_metadata: BackupMetadata) -> bool:
+        """Verify the integrity of a backup without restoring it.
+
+        Args:
+            backup_metadata: Backup metadata to verify
+
+        Returns:
+            True if backup is valid and can be restored, False otherwise
+        """
+        try:
+            validation_result = self.backup_service._validate_backup(backup_metadata)
+
+            if validation_result.is_valid:
+                self.console.print(
+                    f"[green]✅ Backup verification passed: {backup_metadata.backup_id}[/green] "
+                    f"({validation_result.total_validated} files verified)"
+                )
+                return True
+            else:
+                self.console.print(
+                    f"[red]❌ Backup verification failed: {backup_metadata.backup_id}[/red]"
+                )
+
+                for error in validation_result.validation_errors[
+                    :3
+                ]:  # Show first 3 errors
+                    self.console.print(f"[red]  • {error}[/red]")
+
+                if len(validation_result.validation_errors) > 3:
+                    remaining = len(validation_result.validation_errors) - 3
+                    self.console.print(f"[red]  ... and {remaining} more errors[/red]")
+
                 return False
 
-        return not (file_path.name.startswith(".") or file_path.suffix != ".py")
+        except Exception as e:
+            self.logger.error(f"Backup verification failed with exception: {e}")
+            self.console.print(f"[red]💥 Backup verification error: {e}[/red]")
+            return False
+
+    def list_available_backups(self) -> list[Path]:
+        """List all available backup directories.
+
+        Returns:
+            List of backup directory paths
+        """
+        if (
+            not self.backup_service.backup_root
+            or not self.backup_service.backup_root.exists()
+        ):
+            self.console.print("[yellow]⚠️ No backup root directory found[/yellow]")
+            return []
+
+        try:
+            backup_dirs = [
+                path
+                for path in self.backup_service.backup_root.iterdir()
+                if path.is_dir() and path.name.startswith("backup_")
+            ]
+
+            if backup_dirs:
+                self.console.print(
+                    f"[cyan]📦 Found {len(backup_dirs)} available backups:[/cyan]"
+                )
+                for backup_dir in sorted(backup_dirs):
+                    self.console.print(f"  • {backup_dir.name}")
+            else:
+                self.console.print("[yellow]⚠️ No backups found[/yellow]")
+
+            return backup_dirs
+
+        except Exception as e:
+            self.logger.error(f"Failed to list backups: {e}")
+            self.console.print(f"[red]💥 Error listing backups: {e}[/red]")
+            return []
+
+    def should_process_file(self, file_path: Path) -> bool:
+        try:
+            validated_path = SecurePathValidator.validate_file_path(
+                file_path, self.base_directory
+            )
+
+            SecurePathValidator.validate_file_size(validated_path)
+
+            ignore_patterns = {
+                "__pycache__",
+                ".git",
+                ".venv",
+                "site-packages",
+                ".pytest_cache",
+                "build",
+                "dist",
+                "tests",
+                "test",
+                "examples",
+                "example",
+            }
+
+            for parent in validated_path.parents:
+                if parent.name in ignore_patterns:
+                    return False
+
+            should_process = not (
+                validated_path.name.startswith(".") or validated_path.suffix != ".py"
+            )
+
+            if should_process:
+                self.security_logger.log_security_event(
+                    SecurityEventType.FILE_CLEANED,
+                    SecurityEventLevel.LOW,
+                    f"File approved for processing: {validated_path}",
+                    file_path=validated_path,
+                )
+
+            return should_process
+
+        except ExecutionError as e:
+            self.security_logger.log_validation_failed(
+                "file_processing_check",
+                file_path,
+                f"File failed security validation: {e}",
+            )
+
+            return False
+
+        except Exception as e:
+            self.logger.warning(f"Unexpected error checking file {file_path}: {e}")
+            return False
 
     def _create_line_comment_step(self) -> CleaningStepProtocol:
-        """Create a step for removing line comments while preserving special comments."""
         return self._LineCommentStep()
 
     def _create_docstring_step(self) -> CleaningStepProtocol:
-        """Create a step for removing docstrings."""
         return self._DocstringStep()
 
     class _DocstringStep:
-        """Step implementation for removing docstrings."""
-
         name = "remove_docstrings"
 
         def _is_docstring_node(self, node: ast.AST) -> bool:
@@ -426,10 +1030,9 @@ class CodeCleaner(BaseModel):
             lines_to_remove: set[int] = set()
 
             for node in docstring_nodes:
-                # Most AST nodes have lineno and end_lineno attributes
                 start_line = getattr(node, "lineno", 1)
                 end_line = getattr(node, "end_lineno", start_line)
-                # Include end_line in removal (range is exclusive of end)
+
                 lines_to_remove.update(range(start_line, end_line + 1))
 
             result_lines = [
@@ -440,95 +1043,58 @@ class CodeCleaner(BaseModel):
             return self._regex_fallback_removal(result)
 
         def _regex_fallback_removal(self, code: str) -> str:
-            import re
-
-            patterns = [
-                r'^\s*""".*?"""\s*$',
-                r"^\s*'''.*?'''\s*$",
-                r'^\s*""".*?"""\s*$',
-                r"^\s*'''.*?'''\s*$",
-            ]
-            result = code
-            for pattern in patterns:
-                result = re.sub(pattern, "", result, flags=re.MULTILINE | re.DOTALL)
-            return result
+            return _compiled_patterns.apply_docstring_patterns(code)
 
     class _LineCommentStep:
-        """Step implementation for removing line comments."""
-
         name = "remove_line_comments"
 
         def __call__(self, code: str, file_path: Path) -> str:
             lines = code.split("\n")
-            # Performance: Use list comprehension instead of generator for small-to-medium files
+
             processed_lines = [self._process_line_for_comments(line) for line in lines]
             return "\n".join(processed_lines)
 
         def _process_line_for_comments(self, line: str) -> str:
-            """Process a single line to remove comments while preserving strings."""
             if not line.strip() or self._is_preserved_comment_line(line):
                 return line
             return self._remove_comment_from_line(line)
 
         def _is_preserved_comment_line(self, line: str) -> bool:
-            """Check if this comment line should be preserved."""
             stripped = line.strip()
             if not stripped.startswith("#"):
                 return False
             return self._has_preserved_pattern(stripped)
 
         def _has_preserved_pattern(self, stripped_line: str) -> bool:
-            """Check if line contains preserved comment patterns."""
-            preserved_patterns = ["coding: ", "encoding: ", "type: ", "noqa", "pragma"]
-            return stripped_line.startswith("#!/") or any(
-                pattern in stripped_line for pattern in preserved_patterns
-            )
+            return _compiled_patterns.has_preserved_comment(stripped_line)
 
         def _remove_comment_from_line(self, line: str) -> str:
-            """Remove comments from a line while preserving string literals."""
-            result: list[str] = []
-            string_state: dict[str, t.Any] = {"in_string": False, "quote_char": None}
-            for i, char in enumerate(line):
-                if self._should_break_at_comment(char, string_state):
-                    break
-                self._update_string_state(char, i, line, string_state)
-                result.append(char)
-            return "".join(result).rstrip()
+            if '"' not in line and "'" not in line and "#" not in line:
+                return line
 
-        def _should_break_at_comment(self, char: str, state: dict[str, t.Any]) -> bool:
-            """Check if we should break at a comment character."""
-            return not state["in_string"] and char == "#"
+            result_chars = []
+            in_string = False
+            quote_char = None
+            i = 0
+            length = len(line)
 
-        def _update_string_state(
-            self,
-            char: str,
-            index: int,
-            line: str,
-            state: dict[str, t.Any],
-        ) -> None:
-            """Update string parsing state based on current character."""
-            if self._is_string_start(char, state):
-                state["in_string"], state["quote_char"] = True, char
-            elif self._is_string_end(char, index, line, state):
-                state["in_string"], state["quote_char"] = False, None
+            while i < length:
+                char = line[i]
 
-        def _is_string_start(self, char: str, state: dict[str, t.Any]) -> bool:
-            """Check if character starts a string."""
-            return not state["in_string"] and char in ('"', "'")
+                if not in_string:
+                    if char == "#":
+                        break
+                    elif char in ('"', "'"):
+                        in_string = True
+                        quote_char = char
+                elif char == quote_char and (i == 0 or line[i - 1] != "\\"):
+                    in_string = False
+                    quote_char = None
 
-        def _is_string_end(
-            self,
-            char: str,
-            index: int,
-            line: str,
-            state: dict[str, t.Any],
-        ) -> bool:
-            """Check if character ends a string."""
-            return (
-                state["in_string"]
-                and char == state["quote_char"]
-                and (index == 0 or line[index - 1] != "\\")
-            )
+                result_chars.append(char)
+                i += 1
+
+            return "".join(result_chars).rstrip()
 
     def _create_docstring_finder_class(
         self,
@@ -570,12 +1136,11 @@ class CodeCleaner(BaseModel):
         class WhitespaceStep:
             name = "remove_extra_whitespace"
 
-            def __call__(self, code: str, file_path: Path) -> str:
-                import re
+            _whitespace_pattern = re.compile(r" {2,}")
 
+            def __call__(self, code: str, file_path: Path) -> str:
                 lines = code.split("\n")
                 cleaned_lines: list[str] = []
-
                 empty_line_count = 0
 
                 for line in lines:
@@ -587,13 +1152,12 @@ class CodeCleaner(BaseModel):
                             cleaned_lines.append("")
                     else:
                         empty_line_count = 0
-
                         leading_whitespace = len(cleaned_line) - len(
-                            cleaned_line.lstrip(),
+                            cleaned_line.lstrip()
                         )
                         content = cleaned_line.lstrip()
 
-                        content = re.sub(r" {2,}", " ", content)
+                        content = self._whitespace_pattern.sub(" ", content)
 
                         cleaned_line = cleaned_line[:leading_whitespace] + content
                         cleaned_lines.append(cleaned_line)
@@ -614,24 +1178,17 @@ class CodeCleaner(BaseModel):
             name = "format_code"
 
             def _is_preserved_comment_line(self, line: str) -> bool:
-                """Check if this comment line should not be formatted."""
                 stripped = line.strip()
                 if not stripped.startswith("#"):
                     return False
-                preserved_patterns = ["coding:", "encoding:", "type:", "noqa", "pragma"]
-                return stripped.startswith("#!/") or any(
-                    pattern in stripped for pattern in preserved_patterns
-                )
+                return _compiled_patterns.has_preserved_comment(line)
 
             def __call__(self, code: str, file_path: Path) -> str:
-                import re
-
                 lines = code.split("\n")
                 formatted_lines: list[str] = []
 
                 for line in lines:
                     if line.strip():
-                        # Skip formatting for preserved comment lines
                         if self._is_preserved_comment_line(line):
                             formatted_lines.append(line)
                             continue
@@ -639,22 +1196,7 @@ class CodeCleaner(BaseModel):
                         leading_whitespace = len(line) - len(line.lstrip())
                         content = line.lstrip()
 
-                        # Fix spacing around operators (simplified and safer)
-                        content = re.sub(
-                            r"([=+\-*/%<>!&|^])([=+\-*/%<>!&|^])", r"\1 \2", content
-                        )
-                        content = re.sub(
-                            r"([a-zA-Z0-9_])([=+\-*/%<>!&|^])", r"\1 \2", content
-                        )
-                        content = re.sub(
-                            r"([=+\-*/%<>!&|^])([a-zA-Z0-9_])", r"\1 \2", content
-                        )
-
-                        # Fix spacing after commas and colons (simplified)
-                        content = re.sub(r",([^ \n])", r", \1", content)
-                        content = re.sub(r":([^ \n:])", r": \1", content)
-
-                        content = re.sub(r" {2,}", " ", content)
+                        content = _compiled_patterns.apply_formatting_patterns(content)
 
                         formatted_line = line[:leading_whitespace] + content
                         formatted_lines.append(formatted_line)

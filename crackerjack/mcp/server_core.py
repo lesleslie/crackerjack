@@ -67,7 +67,7 @@ def _validate_job_id(job_id: str) -> bool:
 
     import re
 
-    return bool(re.match(r"^[a-zA-Z0-9_-]+$", job_id))
+    return bool(re.match(r"^[a - zA - Z0-9_ -]+$", job_id))
 
 
 async def _start_websocket_server() -> bool:
@@ -81,7 +81,7 @@ def create_mcp_server() -> t.Any | None:
     if not MCP_AVAILABLE or FastMCP is None:
         return None
 
-    mcp_app = FastMCP("crackerjack-mcp-server")
+    mcp_app = FastMCP("crackerjack - mcp-server")
 
     from crackerjack.slash_commands import get_slash_command_path
 
@@ -129,39 +129,37 @@ def handle_mcp_server_command(
     restart: bool = False,
     websocket_port: int | None = None,
 ) -> None:
-    """Handle MCP server start/stop/restart commands."""
     if stop or restart:
-        console.print("[yellow]Stopping MCP servers...[/yellow]")
-        # Kill any existing MCP server processes
+        console.print("[yellow]Stopping MCP servers...[/ yellow]")
+
         try:
             result = subprocess.run(
-                ["pkill", "-f", "crackerjack-mcp-server"],
+                ["pkill", "- f", "crackerjack - mcp-server"],
                 check=False,
                 capture_output=True,
                 text=True,
                 timeout=10,
             )
             if result.returncode == 0:
-                console.print("[green]✅ MCP servers stopped[/green]")
+                console.print("[green]✅ MCP servers stopped[/ green]")
             else:
-                console.print("[dim]No MCP servers were running[/dim]")
+                console.print("[dim]No MCP servers were running[/ dim]")
         except subprocess.TimeoutExpired:
-            console.print("[red]Timeout stopping MCP servers[/red]")
+            console.print("[red]Timeout stopping MCP servers[/ red]")
         except Exception as e:
-            console.print(f"[red]Error stopping MCP servers: {e}[/red]")
+            console.print(f"[red]Error stopping MCP servers: {e}[/ red]")
 
         if stop:
             return
 
-        # For restart, wait a moment before starting again
         time.sleep(2)
 
     if start or restart:
-        console.print("[green]Starting MCP server...[/green]")
+        console.print("[green]Starting MCP server...[/ green]")
         try:
             main(".", websocket_port)
         except Exception as e:
-            console.print(f"[red]Failed to start MCP server: {e}[/red]")
+            console.print(f"[red]Failed to start MCP server: {e}[/ red]")
 
 
 def _initialize_context(context: MCPServerContext) -> None:
@@ -174,11 +172,8 @@ def _stop_websocket_server() -> None:
     from contextlib import suppress
 
     with suppress(RuntimeError):
-        # Context not initialized, nothing to stop
         context = get_context()
         if context and hasattr(context, "_stop_websocket_server"):
-            # The websocket cleanup is handled asynchronously
-            # and called from the context's cleanup handlers
             pass
 
 
@@ -197,7 +192,6 @@ def main(project_path_arg: str = ".", websocket_port: int | None = None) -> None
         context = MCPServerContext(config)
         context.console = console
 
-        # Set custom WebSocket port if specified
         if websocket_port:
             context.websocket_server_port = websocket_port
 
@@ -205,19 +199,19 @@ def main(project_path_arg: str = ".", websocket_port: int | None = None) -> None
 
         mcp_app = create_mcp_server()
         if not mcp_app:
-            console.print("[red]Failed to create MCP server[/red]")
+            console.print("[red]Failed to create MCP server[/ red]")
             return
 
-        console.print("[green]Starting Crackerjack MCP Server...[/green]")
+        console.print("[green]Starting Crackerjack MCP Server...[/ green]")
         console.print(f"Project path: {project_path}")
         if websocket_port:
             console.print(f"WebSocket port: {websocket_port}")
 
-        console.print("[yellow]MCP app created, about to run...[/yellow]")
+        console.print("[yellow]MCP app created, about to run...[/ yellow]")
         try:
             mcp_app.run()
         except Exception as e:
-            console.print(f"[red]MCP run failed: {e}[/red]")
+            console.print(f"[red]MCP run failed: {e}[/ red]")
             import traceback
 
             traceback.print_exc()

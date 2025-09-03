@@ -1,10 +1,3 @@
-"""Workflow execution engine for MCP tools.
-
-This module handles the core workflow execution logic, including orchestrator setup,
-iteration management, and result handling. Split from execution_tools.py for better
-separation of concerns.
-"""
-
 import asyncio
 import time
 import typing as t
@@ -18,13 +11,11 @@ from .progress_tools import _update_progress
 async def execute_crackerjack_workflow(
     args: str, kwargs: dict[str, t.Any]
 ) -> dict[str, t.Any]:
-    """Execute the main crackerjack workflow with progress tracking."""
     job_id = str(uuid.uuid4())[:8]
 
     try:
         return await _execute_crackerjack_sync(job_id, args, kwargs, get_context())
     except Exception as e:
-        # Add full traceback for debugging
         import traceback
 
         error_details = traceback.format_exc()
@@ -43,13 +34,10 @@ async def _execute_crackerjack_sync(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> dict[str, t.Any]:
-    """Execute crackerjack workflow synchronously with progress tracking."""
-    # Initialize execution environment
     setup_result = await _initialize_execution(job_id, args, kwargs, context)
     if setup_result.get("status") == "failed":
         return setup_result
 
-    # Set up orchestrator
     orchestrator_result = await _setup_orchestrator(
         job_id, args, kwargs, setup_result["working_dir"], context
     )
@@ -58,7 +46,6 @@ async def _execute_crackerjack_sync(
 
     orchestrator = orchestrator_result["orchestrator"]
 
-    # Run workflow iterations
     return await _run_workflow_iterations(job_id, orchestrator, kwargs, context)
 
 
@@ -68,7 +55,6 @@ async def _initialize_execution(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> dict[str, t.Any]:
-    """Initialize execution environment and validate parameters."""
     _update_progress(
         job_id,
         {
@@ -79,7 +65,6 @@ async def _initialize_execution(
         context,
     )
 
-    # Validate working directory
     working_dir = kwargs.get("working_directory", ".")
     from pathlib import Path
 
@@ -115,7 +100,6 @@ async def _setup_orchestrator(
     working_dir: t.Any,
     context: t.Any,
 ) -> dict[str, t.Any]:
-    """Set up the appropriate orchestrator based on configuration."""
     _update_progress(
         job_id,
         {
@@ -126,9 +110,7 @@ async def _setup_orchestrator(
         context,
     )
 
-    use_advanced = kwargs.get(
-        "advanced_orchestration", False
-    )  # Temporarily disable advanced orchestration
+    use_advanced = kwargs.get("advanced_orchestration", False)
 
     try:
         if use_advanced:
@@ -155,7 +137,6 @@ async def _setup_orchestrator(
 async def _create_advanced_orchestrator(
     working_dir: t.Any, kwargs: dict[str, t.Any], context: t.Any
 ) -> t.Any:
-    """Create advanced async orchestrator with dependency injection."""
     from pathlib import Path
 
     from crackerjack.core.async_workflow_orchestrator import AsyncWorkflowOrchestrator
@@ -163,7 +144,6 @@ async def _create_advanced_orchestrator(
 
     container = EnhancedContainer()
 
-    # Register services with the container
     await _register_core_services(container, Path(working_dir))
 
     orchestrator = AsyncWorkflowOrchestrator(
@@ -176,7 +156,6 @@ async def _create_advanced_orchestrator(
 def _create_standard_orchestrator(
     working_dir: t.Any, kwargs: dict[str, t.Any]
 ) -> t.Any:
-    """Create standard synchronous orchestrator."""
     from pathlib import Path
 
     from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
@@ -185,7 +164,6 @@ def _create_standard_orchestrator(
 
 
 async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
-    """Register core services with the dependency injection container."""
     from rich.console import Console
 
     from crackerjack.core.enhanced_container import ServiceLifetime
@@ -201,7 +179,6 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
 
     console = Console()
 
-    # Register managers
     container.register_service(
         HookManagerProtocol,
         AsyncHookManager(console, working_dir),
@@ -220,7 +197,6 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
         ServiceLifetime.SINGLETON,
     )
 
-    # Register filesystem service
     container.register_service(
         EnhancedFileSystemService,
         EnhancedFileSystemService(),
@@ -234,7 +210,6 @@ async def _run_workflow_iterations(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> dict[str, t.Any]:
-    """Run workflow iterations until completion or max attempts."""
     options = _create_workflow_options(kwargs)
     max_iterations = kwargs.get("max_iterations", 10)
 
@@ -256,9 +231,8 @@ async def _run_workflow_iterations(
             )
 
             if success:
-                # Attempt coverage improvement after successful execution (if enabled)
                 coverage_result = None
-                if kwargs.get("boost_coverage", False):  # Temporarily disabled
+                if kwargs.get("boost_coverage", False):
                     coverage_result = await _attempt_coverage_improvement(
                         job_id, orchestrator, context
                     )
@@ -266,7 +240,6 @@ async def _run_workflow_iterations(
                     job_id, iteration + 1, context, coverage_result
                 )
 
-            # Handle retry logic
             if iteration < max_iterations - 1:
                 await _handle_iteration_retry(job_id, iteration, context)
 
@@ -277,13 +250,10 @@ async def _run_workflow_iterations(
 
 
 def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
-    """Create workflow options from kwargs."""
     from types import SimpleNamespace
 
-    # Create options object with all required attributes from OptionsProtocol
     options = SimpleNamespace()
 
-    # Core execution options
     options.commit = kwargs.get("commit", False)
     options.interactive = kwargs.get("interactive", False)
     options.no_config_updates = kwargs.get("no_config_updates", False)
@@ -295,11 +265,9 @@ def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
     options.ai_agent = kwargs.get("ai_agent", True)
     options.async_mode = kwargs.get("async_mode", True)
 
-    # Test options
     options.test_workers = kwargs.get("test_workers", 0)
     options.test_timeout = kwargs.get("test_timeout", 0)
 
-    # Publishing options
     options.publish = kwargs.get("publish")
     options.bump = kwargs.get("bump")
     options.all = kwargs.get("all")
@@ -309,23 +277,18 @@ def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
     options.cleanup_pypi = kwargs.get("cleanup_pypi", False)
     options.keep_releases = kwargs.get("keep_releases", 10)
 
-    # Server options
     options.start_mcp_server = kwargs.get("start_mcp_server", False)
 
-    # Hook options
     options.update_precommit = kwargs.get("update_precommit", False)
     options.experimental_hooks = kwargs.get("experimental_hooks", False)
     options.enable_pyrefly = kwargs.get("enable_pyrefly", False)
     options.enable_ty = kwargs.get("enable_ty", False)
 
-    # Cleanup options
     options.cleanup = kwargs.get("cleanup")
 
-    # Coverage and progress
     options.coverage = kwargs.get("coverage", False)
     options.track_progress = kwargs.get("track_progress", False)
 
-    # Speed options
     options.fast = kwargs.get("fast", False)
     options.comp = kwargs.get("comp", False)
 
@@ -339,11 +302,8 @@ async def _execute_single_iteration(
     iteration: int,
     context: t.Any,
 ) -> bool:
-    """Execute a single workflow iteration."""
     try:
-        # Check for orchestrator workflow methods
         if hasattr(orchestrator, "run_complete_workflow_async"):
-            # AsyncWorkflowOrchestrator - method returns awaitable
             result = orchestrator.run_complete_workflow_async(options)
             if result is None:
                 raise ValueError(
@@ -351,7 +311,6 @@ async def _execute_single_iteration(
                 )
             return await result
         elif hasattr(orchestrator, "run_complete_workflow"):
-            # Standard WorkflowOrchestrator - method is async and returns awaitable boolean
             result = orchestrator.run_complete_workflow(options)
             if result is None:
                 raise ValueError(
@@ -366,14 +325,12 @@ async def _execute_single_iteration(
                 )
             return await result
         elif hasattr(orchestrator, "run"):
-            # Fallback for synchronous orchestrators
             return orchestrator.run(options)
         else:
             raise ValueError(
                 f"Orchestrator {type(orchestrator)} has no recognized workflow execution method"
             )
     except Exception as e:
-        # Add detailed error info for debugging
         raise RuntimeError(
             f"Error in _execute_single_iteration (iteration {iteration}): {e}"
         ) from e
@@ -385,7 +342,6 @@ def _create_success_result(
     context: t.Any,
     coverage_result: dict[str, t.Any] | None = None,
 ) -> dict[str, t.Any]:
-    """Create success result with completion data."""
     result = {
         "job_id": job_id,
         "status": "completed",
@@ -402,7 +358,6 @@ def _create_success_result(
 
 
 async def _handle_iteration_retry(job_id: str, iteration: int, context: t.Any) -> None:
-    """Handle retry logic between iterations."""
     _update_progress(
         job_id,
         {
@@ -414,14 +369,12 @@ async def _handle_iteration_retry(job_id: str, iteration: int, context: t.Any) -
         context,
     )
 
-    # Brief pause between iterations
     await asyncio.sleep(1)
 
 
 async def _handle_iteration_error(
     job_id: str, iteration: int, error: Exception, context: t.Any
 ) -> dict[str, t.Any]:
-    """Handle errors during iteration execution."""
     _update_progress(
         job_id,
         {
@@ -445,7 +398,6 @@ async def _handle_iteration_error(
 async def _attempt_coverage_improvement(
     job_id: str, orchestrator: t.Any, context: t.Any
 ) -> dict[str, t.Any]:
-    """Attempt proactive coverage improvement after successful workflow execution."""
     try:
         _update_progress(
             job_id,
@@ -457,23 +409,19 @@ async def _attempt_coverage_improvement(
             context,
         )
 
-        # Get project path from orchestrator
         project_path = getattr(orchestrator, "pkg_path", None)
         if not project_path:
             return {"status": "skipped", "reason": "No project path available"}
 
-        # Import coverage improvement orchestrator
         from crackerjack.orchestration.coverage_improvement import (
             create_coverage_improvement_orchestrator,
         )
 
-        # Create coverage orchestrator
         coverage_orchestrator = await create_coverage_improvement_orchestrator(
             project_path,
             console=getattr(orchestrator, "console", None),
         )
 
-        # Check if improvement is needed
         should_improve = await coverage_orchestrator.should_improve_coverage()
         if not should_improve:
             _update_progress(
@@ -481,18 +429,16 @@ async def _attempt_coverage_improvement(
                 {
                     "type": "coverage_improvement",
                     "status": "skipped",
-                    "message": "Coverage improvement not needed (already at 100%)",
+                    "message": "Coverage improvement not needed (already at 100 %)",
                 },
                 context,
             )
-            return {"status": "skipped", "reason": "Coverage at 100%"}
+            return {"status": "skipped", "reason": "Coverage at 100 %"}
 
-        # Create agent context (simplified)
         from crackerjack.agents.base import AgentContext
 
         agent_context = AgentContext(project_path=project_path, console=None)
 
-        # Execute coverage improvement
         _update_progress(
             job_id,
             {
@@ -507,7 +453,6 @@ async def _attempt_coverage_improvement(
             agent_context
         )
 
-        # Update progress with results
         if improvement_result["status"] == "completed":
             _update_progress(
                 job_id,
@@ -556,7 +501,6 @@ async def _attempt_coverage_improvement(
 def _create_failure_result(
     job_id: str, max_iterations: int, context: t.Any
 ) -> dict[str, t.Any]:
-    """Create failure result when max iterations exceeded."""
     return {
         "job_id": job_id,
         "status": "failed",

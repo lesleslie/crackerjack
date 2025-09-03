@@ -1,12 +1,10 @@
-# !/ usr / bin / env python3
-
 import asyncio
 
 import httpx
 
 
 class CrackerjackMCPClient:
-    def __init__(self, server_url: str = "http: // localhost: 8000") -> None:
+    def __init__(self, server_url: str = "http: / / localhost: 8000") -> None:
         self.server_url = server_url
         self.client = httpx.AsyncClient()
 
@@ -127,7 +125,7 @@ async def main() -> None:
     except Exception as e:
         print(f"❌ Client error: {e}")
         print("Make sure the MCP server is running: ")
-        print("python - m crackerjack -- start - mcp - server")
+        print("python - m crackerjack - - start - mcp - server")
 
     finally:
         await client.close()

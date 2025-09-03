@@ -19,15 +19,20 @@ import contextlib
 
 from rich.console import Console
 
+from crackerjack.services.secure_path_utils import SecurePathValidator
+
 console = Console()
 
 
 if WATCHDOG_AVAILABLE:
 
     class ProgressFileHandler(FileSystemEventHandler):
-        def __init__(self, callback: Callable[[str, dict], None]) -> None:
+        def __init__(
+            self, callback: Callable[[str, dict], None], progress_dir: Path
+        ) -> None:
             super().__init__()
             self.callback = callback
+            self.progress_dir = SecurePathValidator.validate_safe_path(progress_dir)
             self._last_processed: dict[str, float] = {}
             self._debounce_delay = 0.1
 
@@ -35,29 +40,47 @@ if WATCHDOG_AVAILABLE:
             if event.is_directory:
                 return
 
-            file_path = Path(event.src_path)
+            try:
+                file_path = Path(event.src_path)
 
-            if not file_path.name.startswith("job - ") or file_path.suffix != ".json":
-                return
+                # Validate that the file path is within our allowed progress directory
+                validated_path = SecurePathValidator.validate_safe_path(
+                    file_path, self.progress_dir
+                )
 
-            now = time.time()
-            if file_path.name in self._last_processed:
-                if now - self._last_processed[file_path.name] < self._debounce_delay:
+                if (
+                    not validated_path.name.startswith("job-")
+                    or validated_path.suffix != ".json"
+                ):
                     return
 
-            self._last_processed[file_path.name] = now
+                now = time.time()
+                if validated_path.name in self._last_processed:
+                    if (
+                        now - self._last_processed[validated_path.name]
+                        < self._debounce_delay
+                    ):
+                        return
 
-            job_id = file_path.stem.replace("job - ", "")
+                self._last_processed[validated_path.name] = now
+
+                job_id = validated_path.stem.replace("job-", "")
+            except Exception:
+                # If path validation fails, skip processing this file
+                return
 
             try:
-                with file_path.open() as f:
+                # Validate file size before reading
+                SecurePathValidator.validate_file_size(validated_path)
+
+                with validated_path.open() as f:
                     progress_data = json.load(f)
 
                 self.callback(job_id, progress_data)
 
             except (json.JSONDecodeError, FileNotFoundError, OSError) as e:
                 console.print(
-                    f"[yellow]Warning: Failed to read progress file {file_path}: {e}[/yellow]",
+                    f"[yellow]Warning: Failed to read progress file {file_path}: {e}[/ yellow]",
                 )
 
         def on_created(self, event: FileSystemEvent) -> None:
@@ -71,7 +94,7 @@ else:
 
 class AsyncProgressMonitor:
     def __init__(self, progress_dir: Path) -> None:
-        self.progress_dir = progress_dir
+        self.progress_dir = SecurePathValidator.validate_safe_path(progress_dir)
         self.observer: Observer | None = None
         self.subscribers: dict[str, set[Callable[[dict], None]]] = {}
         self._running = False
@@ -80,7 +103,7 @@ class AsyncProgressMonitor:
 
         if not WATCHDOG_AVAILABLE:
             console.print(
-                "[yellow]Warning: watchdog not available, falling back to polling[/yellow]",
+                "[yellow]Warning: watchdog not available, falling back to polling[/ yellow]",
             )
 
     async def start(self) -> None:
@@ -89,14 +112,14 @@ class AsyncProgressMonitor:
 
         self._running = True
 
-        handler = ProgressFileHandler(self._on_file_changed)
+        handler = ProgressFileHandler(self._on_file_changed, self.progress_dir)
 
         self.observer = Observer()
         self.observer.schedule(handler, str(self.progress_dir), recursive=False)
         self.observer.start()
 
         console.print(
-            f"[green]📁 Started monitoring progress directory: {self.progress_dir}[/green]",
+            f"[green]📁 Started monitoring progress directory: {self.progress_dir}[/ green]",
         )
 
     async def stop(self) -> None:
@@ -107,14 +130,14 @@ class AsyncProgressMonitor:
             self.observer.join()
             self.observer = None
 
-        console.print("[yellow]📁 Stopped progress directory monitoring[/yellow]")
+        console.print("[yellow]📁 Stopped progress directory monitoring[/ yellow]")
 
     def subscribe(self, job_id: str, callback: Callable[[dict], None]) -> None:
         if job_id not in self.subscribers:
             self.subscribers[job_id] = set()
 
         self.subscribers[job_id].add(callback)
-        console.print(f"[cyan]📋 Subscribed to job updates: {job_id}[/cyan]")
+        console.print(f"[cyan]📋 Subscribed to job updates: {job_id}[/ cyan]")
 
     def unsubscribe(self, job_id: str, callback: Callable[[dict], None]) -> None:
         if job_id in self.subscribers:
@@ -123,7 +146,7 @@ class AsyncProgressMonitor:
             if not self.subscribers[job_id]:
                 del self.subscribers[job_id]
 
-        console.print(f"[cyan]📋 Unsubscribed from job updates: {job_id}[/cyan]")
+        console.print(f"[cyan]📋 Unsubscribed from job updates: {job_id}[/ cyan]")
 
     def _on_file_changed(self, job_id: str, progress_data: dict) -> None:
         if job_id in self.subscribers:
@@ -132,13 +155,13 @@ class AsyncProgressMonitor:
                     callback(progress_data)
                 except Exception as e:
                     console.print(
-                        f"[red]Error in progress callback for job {job_id}: {e}[/red]",
+                        f"[red]Error in progress callback for job {job_id}: {e}[/ red]",
                     )
 
                     self.subscribers[job_id].discard(callback)
 
     async def get_current_progress(self, job_id: str) -> dict | None:
-        progress_file = self.progress_dir / f"job - {job_id}.json"
+        progress_file = self.progress_dir / f"job-{job_id}.json"
 
         if not progress_file.exists():
             return None
@@ -156,7 +179,7 @@ class AsyncProgressMonitor:
         cleaned = 0
         cutoff_time = time.time() - (max_age_minutes * 60)
 
-        for progress_file in self.progress_dir.glob("job -* .json"):
+        for progress_file in self.progress_dir.glob("job-* .json"):
             try:
                 if progress_file.stat().st_mtime < cutoff_time:
                     with progress_file.open() as f:
@@ -166,7 +189,7 @@ class AsyncProgressMonitor:
                         progress_file.unlink()
                         cleaned += 1
                         console.print(
-                            f"[dim]🧹 Cleaned up old progress file: {progress_file.name}[/dim]",
+                            f"[dim]🧹 Cleaned up old progress file: {progress_file.name}[/ dim]",
                         )
 
             except (json.JSONDecodeError, OSError, KeyError):
@@ -176,7 +199,7 @@ class AsyncProgressMonitor:
                     progress_file.unlink()
                     cleaned += 1
                     console.print(
-                        f"[dim]🧹 Removed corrupted progress file: {progress_file.name}[/dim]",
+                        f"[dim]🧹 Removed corrupted progress file: {progress_file.name}[/ dim]",
                     )
 
         return cleaned
@@ -184,7 +207,7 @@ class AsyncProgressMonitor:
 
 class PollingProgressMonitor:
     def __init__(self, progress_dir: Path) -> None:
-        self.progress_dir = progress_dir
+        self.progress_dir = SecurePathValidator.validate_safe_path(progress_dir)
         self.subscribers: dict[str, set[Callable[[dict], None]]] = {}
         self._running = False
         self._poll_task: asyncio.Task | None = None
@@ -196,7 +219,7 @@ class PollingProgressMonitor:
         self._running = True
         self._poll_task = asyncio.create_task(self._poll_loop())
         console.print(
-            f"[yellow]📁 Started polling progress directory: {self.progress_dir}[/yellow]",
+            f"[yellow]📁 Started polling progress directory: {self.progress_dir}[/ yellow]",
         )
 
     async def stop(self) -> None:
@@ -208,7 +231,7 @@ class PollingProgressMonitor:
                 await self._poll_task
             self._poll_task = None
 
-        console.print("[yellow]📁 Stopped progress directory polling[/yellow]")
+        console.print("[yellow]📁 Stopped progress directory polling[/ yellow]")
 
     async def _poll_loop(self) -> None:
         while self._running:
@@ -218,7 +241,7 @@ class PollingProgressMonitor:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                console.print(f"[red]Error in polling loop: {e}[/red]")
+                console.print(f"[red]Error in polling loop: {e}[/ red]")
                 await asyncio.sleep(1)
 
     async def _check_files(self) -> None:
@@ -227,26 +250,33 @@ class PollingProgressMonitor:
 
         current_files = {}
 
-        for progress_file in self.progress_dir.glob("job -* .json"):
+        for progress_file in self.progress_dir.glob("job-*.json"):
             try:
-                mtime = progress_file.stat().st_mtime
-                current_files[progress_file.name] = mtime
+                # Validate file path is within our allowed directory
+                validated_file = SecurePathValidator.validate_safe_path(
+                    progress_file, self.progress_dir
+                )
+
+                mtime = validated_file.stat().st_mtime
+                current_files[validated_file.name] = mtime
 
                 if (
-                    progress_file.name not in self._file_mtimes
-                    or mtime > self._file_mtimes[progress_file.name]
+                    validated_file.name not in self._file_mtimes
+                    or mtime > self._file_mtimes[validated_file.name]
                 ):
-                    job_id = progress_file.stem.replace("job - ", "")
+                    job_id = validated_file.stem.replace("job-", "")
 
                     try:
-                        with progress_file.open() as f:
+                        # Validate file size before reading
+                        SecurePathValidator.validate_file_size(validated_file)
+                        with validated_file.open() as f:
                             progress_data = json.load(f)
 
                         self._notify_subscribers(job_id, progress_data)
 
                     except (json.JSONDecodeError, OSError) as e:
                         console.print(
-                            f"[yellow]Warning: Failed to read progress file {progress_file}: {e}[/yellow]",
+                            f"[yellow]Warning: Failed to read progress file {progress_file}: {e}[/ yellow]",
                         )
 
             except OSError:
@@ -261,7 +291,7 @@ class PollingProgressMonitor:
                     callback(progress_data)
                 except Exception as e:
                     console.print(
-                        f"[red]Error in progress callback for job {job_id}: {e}[/red]",
+                        f"[red]Error in progress callback for job {job_id}: {e}[/ red]",
                     )
                     self.subscribers[job_id].discard(callback)
 
@@ -270,7 +300,7 @@ class PollingProgressMonitor:
             self.subscribers[job_id] = set()
 
         self.subscribers[job_id].add(callback)
-        console.print(f"[cyan]📋 Subscribed to job updates: {job_id} (polling)[/cyan]")
+        console.print(f"[cyan]📋 Subscribed to job updates: {job_id} (polling)[/ cyan]")
 
     def unsubscribe(self, job_id: str, callback: Callable[[dict], None]) -> None:
         if job_id in self.subscribers:
@@ -280,11 +310,11 @@ class PollingProgressMonitor:
                 del self.subscribers[job_id]
 
         console.print(
-            f"[cyan]📋 Unsubscribed from job updates: {job_id} (polling)[/cyan]",
+            f"[cyan]📋 Unsubscribed from job updates: {job_id} (polling)[/ cyan]",
         )
 
     async def get_current_progress(self, job_id: str) -> dict | None:
-        progress_file = self.progress_dir / f"job - {job_id}.json"
+        progress_file = self.progress_dir / f"job-{job_id}.json"
 
         if not progress_file.exists():
             return None
@@ -302,7 +332,7 @@ class PollingProgressMonitor:
         cleaned = 0
         cutoff_time = time.time() - (max_age_minutes * 60)
 
-        for progress_file in self.progress_dir.glob("job -* .json"):
+        for progress_file in self.progress_dir.glob("job-* .json"):
             try:
                 if progress_file.stat().st_mtime < cutoff_time:
                     with progress_file.open() as f:
@@ -312,7 +342,7 @@ class PollingProgressMonitor:
                         progress_file.unlink()
                         cleaned += 1
                         console.print(
-                            f"[dim]🧹 Cleaned up old progress file: {progress_file.name}[/dim]",
+                            f"[dim]🧹 Cleaned up old progress file: {progress_file.name}[/ dim]",
                         )
 
             except (json.JSONDecodeError, OSError, KeyError):
@@ -322,7 +352,7 @@ class PollingProgressMonitor:
                     progress_file.unlink()
                     cleaned += 1
                     console.print(
-                        f"[dim]🧹 Removed corrupted progress file: {progress_file.name}[/dim]",
+                        f"[dim]🧹 Removed corrupted progress file: {progress_file.name}[/ dim]",
                     )
 
         return cleaned

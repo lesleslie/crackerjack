@@ -110,14 +110,13 @@ class ContextualAIAssistant:
                     category="testing",
                     priority="high",
                     title="Add Test Suite",
-                    description="No test directory found. Adding tests improves code reliability and enables CI/CD.",
-                    action_command="python -m crackerjack -t",
-                    reasoning="Projects without tests have 40% more bugs in production",
+                    description="No test directory found. Adding tests improves code reliability and enables CI / CD.",
+                    action_command="python - m crackerjack-t",
+                    reasoning="Projects without tests have 40 % more bugs in production",
                     confidence=0.9,
                 ),
             )
         elif context.test_coverage < 75:
-            # Calculate next milestone
             milestones = [15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]
             next_milestone = next(
                 (m for m in milestones if m > context.test_coverage), 100
@@ -127,10 +126,10 @@ class ContextualAIAssistant:
                 AIRecommendation(
                     category="testing",
                     priority="medium",
-                    title="Progress Toward 100% Coverage",
-                    description=f"Current coverage: {context.test_coverage:.1f}%. Next milestone: {next_milestone}% on the journey to 100%.",
-                    action_command="python -m crackerjack -t",
-                    reasoning="Coverage ratchet system prevents regression and targets 100% coverage incrementally",
+                    title="Progress Toward 100 % Coverage",
+                    description=f"Current coverage: {context.test_coverage: .1f}%. Next milestone: {next_milestone}% on the journey to 100 %.",
+                    action_command="python - m crackerjack-t",
+                    reasoning="Coverage ratchet system prevents regression and targets 100 % coverage incrementally",
                     confidence=0.85,
                 ),
             )
@@ -150,7 +149,7 @@ class ContextualAIAssistant:
                     priority="high",
                     title="Fix Lint Errors",
                     description=f"Found {context.lint_errors_count} lint errors that should be addressed.",
-                    action_command="python -m crackerjack --ai-agent",
+                    action_command="python - m crackerjack - - ai-agent",
                     reasoning="High lint error count indicates technical debt and potential bugs",
                     confidence=0.95,
                 ),
@@ -162,7 +161,7 @@ class ContextualAIAssistant:
                     priority="medium",
                     title="Clean Up Code Style",
                     description=f"Found {context.lint_errors_count} minor lint issues to resolve.",
-                    action_command="python -m crackerjack",
+                    action_command="python-m crackerjack",
                     reasoning="Clean code is easier to maintain and has fewer bugs",
                     confidence=0.8,
                 ),
@@ -183,7 +182,7 @@ class ContextualAIAssistant:
                     priority="high",
                     title="Address Security Vulnerabilities",
                     description=f"Found {len(context.security_issues)} security issues in dependencies.",
-                    action_command="python -m crackerjack --check-dependencies",
+                    action_command="python - m crackerjack - - check-dependencies",
                     reasoning="Security vulnerabilities can expose your application to attacks",
                     confidence=0.95,
                 ),
@@ -204,7 +203,7 @@ class ContextualAIAssistant:
                     priority="medium",
                     title="Update Dependencies",
                     description=f"Found {len(context.outdated_dependencies)} outdated dependencies.",
-                    action_command="python -m crackerjack --check-dependencies",
+                    action_command="python - m crackerjack - - check-dependencies",
                     reasoning="Outdated dependencies may have security vulnerabilities or performance issues",
                     confidence=0.75,
                 ),
@@ -224,8 +223,8 @@ class ContextualAIAssistant:
                     category="workflow",
                     priority="medium",
                     title="Set Up CI / CD Pipeline",
-                    description="No CI/CD configuration found. Automated testing and deployment improve reliability.",
-                    reasoning="CI/CD prevents 60% of deployment issues and improves team productivity",
+                    description="No CI / CD configuration found. Automated testing and deployment improve reliability.",
+                    reasoning="CI / CD prevents 60 % of deployment issues and improves team productivity",
                     confidence=0.8,
                 ),
             )
@@ -281,7 +280,7 @@ class ContextualAIAssistant:
 
         with suppress(Exception):
             result = subprocess.run(
-                ["uv", "run", "ruff", "check", ".", "--output-format=json"],
+                ["uv", "run", "ruff", "check", ".", "- - output-format=json"],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -328,7 +327,7 @@ class ContextualAIAssistant:
 
     def _has_ci_cd_config(self) -> bool:
         ci_files = [
-            ".github/workflows",
+            ".github / workflows",
             ".gitlab-ci.yml",
             "azure-pipelines.yml",
             "Jenkinsfile",
@@ -375,7 +374,7 @@ class ContextualAIAssistant:
 
         with suppress(Exception):
             result = subprocess.run(
-                ["git", "log", "-1", "--format=%ct"],
+                ["git", "log", "- 1", "--format=% ct"],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -395,7 +394,7 @@ class ContextualAIAssistant:
 
         with suppress(Exception):
             result = subprocess.run(
-                ["uv", "run", "bandit", "-r", ".", "-f", "json"],
+                ["uv", "run", "bandit", "- r", ".", "- f", "json"],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -441,12 +440,12 @@ class ContextualAIAssistant:
     def display_recommendations(self, recommendations: list[AIRecommendation]) -> None:
         if not recommendations:
             self.console.print(
-                "[green]✨ Great job! No immediate recommendations.[/green]",
+                "[green]✨ Great job ! No immediate recommendations.[/ green]",
             )
             return
 
-        self.console.print("\n[bold cyan]🤖 AI Assistant Recommendations[/bold cyan]")
-        self.console.print("[dim]Based on your current project context[/dim]\n")
+        self.console.print("\n[bold cyan]🤖 AI Assistant Recommendations[/ bold cyan]")
+        self.console.print("[dim]Based on your current project context[/ dim]\n")
 
         for i, rec in enumerate(recommendations, 1):
             priority_color = {"high": "red", "medium": "yellow", "low": "blue"}.get(
@@ -466,23 +465,23 @@ class ContextualAIAssistant:
             }.get(rec.category, "💡")
 
             self.console.print(
-                f"[bold]{i}. {category_emoji} {rec.title}[/bold] [{priority_color}]({rec.priority})[/{priority_color}]",
+                f"[bold]{i}. {category_emoji} {rec.title}[/ bold] [{priority_color}]({rec.priority})[/{priority_color}]",
             )
             self.console.print(f" {rec.description}")
 
             if rec.action_command:
                 self.console.print(
-                    f" [dim]Run:[/dim] [cyan]{rec.action_command}[/cyan]",
+                    f" [dim]Run: [/ dim] [cyan]{rec.action_command}[/ cyan]",
                 )
 
             if rec.reasoning:
-                self.console.print(f" [dim italic]💭 {rec.reasoning}[/dim italic]")
+                self.console.print(f" [dim italic]💭 {rec.reasoning}[/ dim italic]")
 
             confidence_bar = "█" * int(rec.confidence * 10) + "▒" * (
                 10 - int(rec.confidence * 10)
             )
             self.console.print(
-                f" [dim]Confidence: [{confidence_bar}] {rec.confidence:.1%}[/dim]",
+                f" [dim]Confidence: [{confidence_bar}] {rec.confidence: .1 %}[/ dim]",
             )
 
             if i < len(recommendations):
@@ -491,26 +490,25 @@ class ContextualAIAssistant:
     def get_quick_help(self, query: str) -> str:
         query_lower = query.lower()
 
-        # Check for more specific patterns first
         if "coverage" in query_lower:
-            return "Check test coverage with: python -m crackerjack -t\nView HTML report: uv run coverage html"
+            return "Check test coverage with: python - m crackerjack-t\nView HTML report: uv run coverage html"
 
         if "security" in query_lower or "vulnerabilit" in query_lower:
-            return "Check security with: python -m crackerjack --check-dependencies\nRun security audit: uv run bandit -r ."
+            return "Check security with: python - m crackerjack - - check - dependencies\nRun security audit: uv run bandit-r ."
 
         if "lint" in query_lower or "format" in query_lower:
-            return "Fix code style with: python -m crackerjack\nFor AI-powered fixes: python -m crackerjack --ai-agent"
+            return "Fix code style with: python - m crackerjack\nFor AI - powered fixes: python - m crackerjack - - ai-agent"
 
         if "test" in query_lower:
-            return "Run tests with: python -m crackerjack -t\nFor AI-powered test fixes: python -m crackerjack --ai-agent -t"
+            return "Run tests with: python - m crackerjack - t\nFor AI - powered test fixes: python - m crackerjack - - ai - agent-t"
 
         if "publish" in query_lower or "release" in query_lower:
-            return "Publish to PyPI: python -m crackerjack -p patch\nBump version only: python -m crackerjack -b patch"
+            return "Publish to PyPI: python - m crackerjack - p patch\nBump version only: python - m crackerjack-b patch"
 
         if "clean" in query_lower:
-            return "Clean code: python -m crackerjack -x\nNote: Resolve TODOs first before cleaning"
+            return "Clean code: python - m crackerjack-x\nNote: Resolve TODOs first before cleaning"
 
         if "dashboard" in query_lower or "monitor" in query_lower:
-            return "Start monitoring dashboard: python -m crackerjack --dashboard\nStart WebSocket server: python -m crackerjack --start-websocket-server"
+            return "Start monitoring dashboard: python - m crackerjack - - dashboard\nStart WebSocket server: python - m crackerjack - - start - websocket-server"
 
-        return "For full help, run: python -m crackerjack --help\nFor AI assistance: python -m crackerjack --ai-agent"
+        return "For full help, run: python - m crackerjack - - help\nFor AI assistance: python - m crackerjack - - ai-agent"

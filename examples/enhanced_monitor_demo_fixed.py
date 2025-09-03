@@ -1,5 +1,3 @@
-# !/ usr / bin / env python3
-
 import argparse
 import asyncio
 
@@ -11,14 +9,16 @@ async def main():
         description="Enhanced Progress Monitor Demo (Fixed)"
     )
     parser.add_argument(
-        " -- no - clear", action="store_true", help="Don't clear terminal"
-    )
-    parser.add_argument(" -- refresh", type=float, default=0.5, help="Refresh interval")
-    parser.add_argument(
-        " -- no - watchdog", action="store_true", help="Disable watchdog services"
+        " - - no - clear", action="store_true", help="Don't clear terminal"
     )
     parser.add_argument(
-        " -- no - textual", action="store_true", help="Use Rich instead of Textual"
+        " - - refresh", type=float, default=0.5, help="Refresh interval"
+    )
+    parser.add_argument(
+        " - - no - watchdog", action="store_true", help="Disable watchdog services"
+    )
+    parser.add_argument(
+        " - - no - textual", action="store_true", help="Use Rich instead of Textual"
     )
 
     args = parser.parse_args()
@@ -36,7 +36,7 @@ async def main():
         use_textual=not args.no_textual,
         refresh_interval=args.refresh,
         enable_watchdog=not args.no_watchdog,
-        websocket_url="ws: // localhost: 8675",
+        websocket_url="ws: / / localhost: 8675",
     )
 
 

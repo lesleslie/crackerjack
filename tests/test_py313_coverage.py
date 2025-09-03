@@ -226,46 +226,46 @@ class TestModernConfigManager:
 
 class TestCategorizeFile:
     def test_python_test_file(self) -> None:
-        test_file = Path("/project / tests / test_main.py")
+        test_file = Path("/ project / tests / test_main.py")
 
         category = categorize_file(test_file)
 
         assert category == "Python Test File"
 
     def test_python_init_file(self) -> None:
-        init_file = Path("/project / src / package / __init__.py")
+        init_file = Path("/ project / src / package / __init__.py")
 
         category = categorize_file(init_file)
 
         assert category == "Python Module Init"
 
     def test_python_source_file(self) -> None:
-        source_file = Path("/project / src / main.py")
+        source_file = Path("/ project / src / main.py")
 
         category = categorize_file(source_file)
 
         assert category == "Python Source File"
 
     def test_documentation_files(self) -> None:
-        md_file = Path("/project / README.md")
-        rst_file = Path("/project / docs / index.rst")
-        txt_file = Path("/project / CHANGELOG.txt")
+        md_file = Path("/ project / README.md")
+        rst_file = Path("/ project / docs / index.rst")
+        txt_file = Path("/ project / CHANGELOG.txt")
 
         assert categorize_file(md_file) == "Documentation File"
         assert categorize_file(rst_file) == "Documentation File"
         assert categorize_file(txt_file) == "Documentation File"
 
     def test_configuration_files(self) -> None:
-        gitignore = Path("/project / .gitignore")
-        precommit = Path("/project / .pre - commit - config.yaml")
-        hidden_file = Path("/project / .env")
+        gitignore = Path("/ project / .gitignore")
+        precommit = Path("/ project / .pre - commit - config.yaml")
+        hidden_file = Path("/ project / .env")
 
         assert categorize_file(gitignore) == "Configuration File"
         assert categorize_file(precommit) == "Configuration File"
         assert categorize_file(hidden_file) == "Configuration File"
 
     def test_unknown_file_type(self) -> None:
-        binary_file = Path("/project / image.png")
+        binary_file = Path("/ project / image.png")
 
         category = categorize_file(binary_file)
 

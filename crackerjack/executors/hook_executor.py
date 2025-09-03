@@ -10,6 +10,8 @@ from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
 from crackerjack.models.task import HookResult
+from crackerjack.services.secure_subprocess import execute_secure_subprocess
+from crackerjack.services.security_logger import get_security_logger
 
 
 @dataclass
@@ -92,15 +94,15 @@ class HookExecutor:
         self.console.print("\n" + "-" * 80)
         if strategy.name == "fast":
             self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks[/bold bright_white]",
+                "[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running code quality checks[/ bold bright_white]",
             )
         elif strategy.name == "comprehensive":
             self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running comprehensive quality checks[/bold bright_white]",
+                "[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running comprehensive quality checks[/ bold bright_white]",
             )
         else:
             self.console.print(
-                f"[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running {strategy.name} hooks[/bold bright_white]",
+                f"[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running {strategy.name} hooks[/ bold bright_white]",
             )
         self.console.print("-" * 80 + "\n")
 
@@ -169,22 +171,45 @@ class HookExecutor:
     def _run_hook_subprocess(
         self, hook: HookDefinition
     ) -> subprocess.CompletedProcess[str]:
-        """Execute hook subprocess with clean environment."""
+        """Run hook subprocess with comprehensive security validation."""
+        # Get sanitized environment
         clean_env = self._get_clean_environment()
-        return subprocess.run(
-            hook.get_command(),
-            check=False,
-            cwd=self.pkg_path,
-            text=True,
-            timeout=hook.timeout,
-            env=clean_env,
-            capture_output=True,
-        )
+
+        # Use secure subprocess execution
+        try:
+            # Pre-commit must run from repository root, not package directory
+            repo_root = self.pkg_path.parent if self.pkg_path.name == "crackerjack" else self.pkg_path
+            return execute_secure_subprocess(
+                command=hook.get_command(),
+                cwd=repo_root,
+                env=clean_env,
+                timeout=hook.timeout,
+                capture_output=True,
+                text=True,
+                check=False,  # Don't raise on non-zero exit codes
+            )
+        except Exception as e:
+            # Log security issues but convert to subprocess-compatible result
+            security_logger = get_security_logger()
+            security_logger.log_subprocess_failure(
+                command=hook.get_command(),
+                exit_code=-1,
+                error_output=str(e),
+            )
+
+            # Create a compatible result object for hook processing
+            class FailedProcessResult:
+                def __init__(self, command: list[str], error: str):
+                    self.args = command
+                    self.returncode = -1
+                    self.stdout = ""
+                    self.stderr = f"Security validation failed: {error}"
+
+            return FailedProcessResult(hook.get_command(), str(e))
 
     def _display_hook_output_if_needed(
         self, result: subprocess.CompletedProcess[str]
     ) -> None:
-        """Display hook output in verbose mode for failed hooks."""
         if result.returncode == 0 or not self.verbose:
             return
 
@@ -199,7 +224,6 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
         duration: float,
     ) -> HookResult:
-        """Create HookResult from successful subprocess execution."""
         status = "passed" if result.returncode == 0 else "failed"
         issues_found = self._extract_issues_from_process_output(result)
 
@@ -216,7 +240,6 @@ class HookExecutor:
     def _extract_issues_from_process_output(
         self, result: subprocess.CompletedProcess[str]
     ) -> list[str]:
-        """Extract specific issues from subprocess output for failed hooks."""
         if result.returncode == 0:
             return []
 
@@ -224,27 +247,24 @@ class HookExecutor:
         if error_output:
             return [line.strip() for line in error_output.split("\n") if line.strip()]
 
-        # Fallback to generic message if no output captured
         return [f"Hook failed with code {result.returncode}"]
 
     def _create_timeout_result(
         self, hook: HookDefinition, start_time: float
     ) -> HookResult:
-        """Create HookResult for timeout scenarios."""
         duration = time.time() - start_time
         return HookResult(
             id=hook.name,
             name=hook.name,
             status="timeout",
             duration=duration,
-            issues_found=[f"Hook timed out after {duration:.1f}s"],
+            issues_found=[f"Hook timed out after {duration: .1f}s"],
             stage=hook.stage.value,
         )
 
     def _create_error_result(
         self, hook: HookDefinition, start_time: float, error: Exception
     ) -> HookResult:
-        """Create HookResult for general exception scenarios."""
         duration = time.time() - start_time
         return HookResult(
             id=hook.name,
@@ -271,14 +291,11 @@ class HookExecutor:
     def _display_hook_result(self, result: HookResult) -> None:
         status_icon = "✅" if result.status == "passed" else "❌"
 
-        # Create dot-filled line like classic pre-commit format
-        max_width = 70  # Leave room for terminal margins
+        max_width = 70
 
         if len(result.name) > max_width:
-            # Truncate long names
             line = result.name[: max_width - 3] + "..."
         else:
-            # Fill with dots to reach max width
             dots_needed = max_width - len(result.name)
             line = result.name + ("." * dots_needed)
 
@@ -344,6 +361,13 @@ class HookExecutor:
         return updated_results
 
     def _get_clean_environment(self) -> dict[str, str]:
+        """
+        Get a sanitized environment for hook execution.
+
+        This method now delegates to the secure subprocess utilities
+        for comprehensive environment sanitization with security logging.
+        """
+        # Create base environment with essential variables
         clean_env = {
             "HOME": os.environ.get("HOME", ""),
             "USER": os.environ.get("USER", ""),
@@ -353,12 +377,14 @@ class HookExecutor:
             "TERM": os.environ.get("TERM", "xterm-256color"),
         }
 
+        # Handle PATH sanitization with venv filtering
         system_path = os.environ.get("PATH", "")
         if system_path:
             venv_bin = str(Path(self.pkg_path) / ".venv" / "bin")
             path_parts = [p for p in system_path.split(":") if p != venv_bin]
             clean_env["PATH"] = ":".join(path_parts)
 
+        # Define Python-specific variables to exclude
         python_vars_to_exclude = {
             "VIRTUAL_ENV",
             "PYTHONPATH",
@@ -366,12 +392,41 @@ class HookExecutor:
             "PIP_CONFIG_FILE",
             "PYTHONHOME",
             "CONDA_DEFAULT_ENV",
+            "PIPENV_ACTIVE",
+            "POETRY_ACTIVE",
         }
+
+        # Add other safe environment variables
+        security_logger = get_security_logger()
+        original_count = len(os.environ)
+        filtered_count = 0
 
         for key, value in os.environ.items():
             if key not in python_vars_to_exclude and key not in clean_env:
-                if not key.startswith(("PYTHON", "PIP_", "CONDA_", "VIRTUAL_")):
-                    clean_env[key] = value
+                # Additional security filtering
+                if not key.startswith(
+                    ("PYTHON", "PIP_", "CONDA_", "VIRTUAL_", "__PYVENV")
+                ):
+                    # Check for dangerous environment variables
+                    if key not in {"LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "IFS", "PS4"}:
+                        clean_env[key] = value
+                    else:
+                        filtered_count += 1
+                        security_logger.log_environment_variable_filtered(
+                            variable_name=key,
+                            reason="dangerous environment variable",
+                            value_preview=str(value)[:50] if value else None,
+                        )
+                else:
+                    filtered_count += 1
+
+        # Log environment sanitization if significant filtering occurred
+        if filtered_count > 5:  # Only log if substantial filtering
+            security_logger.log_subprocess_environment_sanitized(
+                original_count=original_count,
+                sanitized_count=len(clean_env),
+                filtered_vars=[],  # Don't expose all filtered vars for performance
+            )
 
         return clean_env
 
@@ -383,11 +438,11 @@ class HookExecutor:
     ) -> None:
         if success:
             self.console.print(
-                f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)}",
+                f"[green]✅[/ green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)}",
             )
         else:
             failed_count = sum(1 for r in results if r.status == "failed")
             error_count = sum(1 for r in results if r.status in ("timeout", "error"))
             self.console.print(
-                f"[red]❌[/red] {strategy.name.title()} hooks failed: {failed_count} failed, {error_count} errors",
+                f"[red]❌[/ red] {strategy.name.title()} hooks failed: {failed_count} failed, {error_count} errors",
             )

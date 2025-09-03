@@ -27,7 +27,7 @@ class CrackerjackConfig(BaseModel):
 
     test_timeout: int = 300
     test_workers: int = Field(default_factory=lambda: os.cpu_count() or 1)
-    min_coverage: float = 10.11  # Baseline from coverage ratchet system
+    min_coverage: float = 10.11
 
     log_level: str = "INFO"
     log_json: bool = False
@@ -279,9 +279,6 @@ class UnifiedConfigurationService:
                 PyprojectConfigSource(pyproject_path),
             ),
         )
-
-        # .crackerjack.* config files are no longer supported
-        # Configuration should be done through pyproject.toml
 
         self.sources.append(EnvironmentConfigSource())
 

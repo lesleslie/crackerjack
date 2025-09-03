@@ -86,7 +86,7 @@ class TestErrorHandlingIntegration:
 
         console = Console(force_terminal=False)
         cleaner = CodeCleaner(console=console)
-        test_path = Path("/nonexistent / file.py")
+        test_path = Path("/ nonexistent / file.py")
         with patch("pathlib.Path.read_text") as mock_read:
             mock_read.side_effect = FileNotFoundError(
                 f"[Errno 2] No such file or directory: '{test_path}'",
@@ -122,7 +122,7 @@ class TestErrorHandlingIntegration:
             message="Test failed",
             error_code=ErrorCode.TEST_FAILURE,
             details="Test details",
-            recovery="Try running with -- verbose",
+            recovery="Try running with - - verbose",
         )
         output_io = io.StringIO()
         console = Console(file=output_io, width=80)
@@ -134,7 +134,7 @@ class TestErrorHandlingIntegration:
         assert "Details: " in output
         assert "Test details" in output
         assert "Recovery suggestion: " in output
-        assert "Try running with -- verbose" in output
+        assert "Try running with - - verbose" in output
 
     def test_ai_agent_error_format(self) -> None:
         error = ExecutionError(

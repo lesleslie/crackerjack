@@ -146,12 +146,12 @@ class SessionCoordinator:
         if success:
             self.complete_task(
                 "workflow",
-                f"Completed successfully in {total_time:.1f}s",
+                f"Completed successfully in {total_time: .1f}s",
             )
         else:
             self.complete_task(
                 "workflow",
-                f"Completed with issues in {total_time:.1f}s",
+                f"Completed with issues in {total_time: .1f}s",
             )
 
     def register_cleanup(self, cleanup_handler: t.Callable[[], None]) -> None:
@@ -195,7 +195,7 @@ class SessionCoordinator:
                 max_age_days=7,
             )
 
-            legacy_pattern = "crackerjack-debug-*.log"
+            legacy_pattern = "crackerjack - debug-*.log"
             legacy_files = sorted(
                 self.pkg_path.glob(legacy_pattern),
                 key=lambda p: p.stat().st_mtime,
@@ -207,10 +207,9 @@ class SessionCoordinator:
 
     def _cleanup_coverage_files(self, keep_recent: int = 10) -> None:
         with suppress(Exception):
-            # Clean up coverage files from cache directory
             cache_dir = Path.home() / ".cache" / "crackerjack" / "coverage"
             if cache_dir.exists():
-                pattern = ".coverage*"
+                pattern = ".coverage *"
                 coverage_files = sorted(
                     cache_dir.glob(pattern),
                     key=lambda p: p.stat().st_mtime,
@@ -220,7 +219,6 @@ class SessionCoordinator:
                     with suppress(FileNotFoundError, PermissionError):
                         old_file.unlink()
 
-            # Also clean up any legacy coverage files from project root
             pattern = ".coverage.*"
             coverage_files = sorted(
                 self.pkg_path.glob(pattern),
@@ -232,11 +230,9 @@ class SessionCoordinator:
                     old_file.unlink()
 
     def _cleanup_pycache_directories(self) -> None:
-        """Remove __pycache__ directories from the package to keep repo clean."""
         with suppress(Exception):
             import shutil
 
-            # Clean __pycache__ directories in package
             for pycache_dir in self.pkg_path.rglob("__pycache__"):
                 if pycache_dir.is_dir():
                     with suppress(FileNotFoundError, PermissionError):
@@ -253,8 +249,8 @@ class SessionCoordinator:
     def _setup_websocket_progress_file(self) -> None:
         import tempfile
 
-        self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
-        self.progress_file = self.progress_dir / f"job-{self.web_job_id}.json"
+        self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack - mcp-progress"
+        self.progress_file = self.progress_dir / f"job -{self.web_job_id}.json"
 
         if self.progress_file.exists():
             self._update_websocket_progress("running", "Crackerjack process started")
@@ -281,7 +277,7 @@ class SessionCoordinator:
 
         except Exception as e:
             self.console.print(
-                f"[dim yellow]Warning: Could not update progress file: {e}[/dim yellow]",
+                f"[dim yellow]Warning: Could not update progress file: {e}[/ dim yellow]",
             )
 
     def update_stage(self, stage: str, status: str) -> None:

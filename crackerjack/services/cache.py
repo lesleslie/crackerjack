@@ -30,12 +30,10 @@ class CacheEntry:
         self.access_count += 1
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to JSON-serializable dict."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> "CacheEntry":
-        """Create from dict loaded from JSON."""
         return cls(**data)
 
 
@@ -256,26 +254,26 @@ class CrackerjackCache:
 
     def get_file_hash(self, file_path: Path) -> str | None:
         stat = file_path.stat()
-        cache_key = f"file_hash:{file_path}:{stat.st_mtime}:{stat.st_size}"
+        cache_key = f"file_hash: {file_path}: {stat.st_mtime}: {stat.st_size}"
         return self.file_hash_cache.get(cache_key)
 
     def set_file_hash(self, file_path: Path, file_hash: str) -> None:
         stat = file_path.stat()
-        cache_key = f"file_hash:{file_path}:{stat.st_mtime}:{stat.st_size}"
+        cache_key = f"file_hash: {file_path}: {stat.st_mtime}: {stat.st_size}"
         self.file_hash_cache.set(cache_key, file_hash, ttl_seconds=3600)
 
     def get_config_data(self, config_key: str) -> t.Any | None:
-        return self.config_cache.get(f"config:{config_key}")
+        return self.config_cache.get(f"config: {config_key}")
 
     def set_config_data(self, config_key: str, data: t.Any) -> None:
-        self.config_cache.set(f"config:{config_key}", data, ttl_seconds=7200)
+        self.config_cache.set(f"config: {config_key}", data, ttl_seconds=7200)
 
     def invalidate_hook_cache(self, hook_name: str | None = None) -> None:
         if hook_name:
             keys_to_remove = [
                 key
                 for key in self.hook_results_cache._cache
-                if key.startswith(f"hook_result:{hook_name}:")
+                if key.startswith(f"hook_result: {hook_name}: ")
             ]
             for key in keys_to_remove:
                 self.hook_results_cache.invalidate(key)
@@ -308,7 +306,7 @@ class CrackerjackCache:
 
     def _get_hook_cache_key(self, hook_name: str, file_hashes: list[str]) -> str:
         hash_signature = hashlib.md5(
-            ",".join(sorted(file_hashes)).encode(),
+            ", ".join(sorted(file_hashes)).encode(),
             usedforsecurity=False,
         ).hexdigest()
-        return f"hook_result:{hook_name}:{hash_signature}"
+        return f"hook_result: {hook_name}: {hash_signature}"

@@ -11,6 +11,7 @@ from crackerjack.models.protocols import OptionsProtocol
 
 from .phase_coordinator import PhaseCoordinator
 from .session_coordinator import SessionCoordinator
+from .timeout_manager import TimeoutStrategy, get_timeout_manager
 
 
 class AsyncWorkflowPipeline:
@@ -26,6 +27,7 @@ class AsyncWorkflowPipeline:
         self.session = session
         self.phases = phases
         self.logger = logging.getLogger("crackerjack.async_pipeline")
+        self.timeout_manager = get_timeout_manager()
 
     async def run_complete_workflow_async(self, options: OptionsProtocol) -> bool:
         start_time = time.time()
@@ -33,12 +35,15 @@ class AsyncWorkflowPipeline:
         self.session.track_task("workflow", "Complete async crackerjack workflow")
 
         try:
-            if hasattr(options, "ai_agent") and options.ai_agent:
-                success = await self._execute_ai_agent_workflow_async(options)
-            else:
-                success = await self._execute_workflow_phases_async(options)
-            self.session.finalize_session(start_time, success)
-            return success
+            async with self.timeout_manager.timeout_context(
+                "complete_workflow", strategy=TimeoutStrategy.GRACEFUL_DEGRADATION
+            ):
+                if hasattr(options, "ai_agent") and options.ai_agent:
+                    success = await self._execute_ai_agent_workflow_async(options)
+                else:
+                    success = await self._execute_workflow_phases_async(options)
+                self.session.finalize_session(start_time, success)
+                return success
         except KeyboardInterrupt:
             self.console.print("Interrupted by user")
             self.session.fail_task("workflow", "Interrupted by user")
@@ -76,11 +81,39 @@ class AsyncWorkflowPipeline:
 
         return success
 
+    async def _cleanup_active_tasks(self) -> None:
+        """Clean up all active tasks."""
+        if not self._active_tasks:
+            return
+
+        self.logger.info(f"Cleaning up {len(self._active_tasks)} active tasks")
+
+        # Cancel all active tasks
+        for task in self._active_tasks:
+            if not task.done():
+                task.cancel()
+
+        # Wait for tasks to complete with timeout
+        if self._active_tasks:
+            try:
+                await asyncio.wait_for(
+                    asyncio.gather(*self._active_tasks, return_exceptions=True),
+                    timeout=30.0,
+                )
+            except TimeoutError:
+                self.logger.warning("Timeout waiting for task cleanup")
+
+        self._active_tasks.clear()
+
     async def _execute_cleaning_phase_async(self, options: OptionsProtocol) -> bool:
         if not options.clean:
             return True
 
-        return await asyncio.to_thread(self.phases.run_cleaning_phase, options)
+        return await self.timeout_manager.with_timeout(
+            "file_operations",
+            asyncio.to_thread(self.phases.run_cleaning_phase, options),
+            strategy=TimeoutStrategy.RETRY_WITH_BACKOFF,
+        )
 
     async def _execute_quality_phase_async(self, options: OptionsProtocol) -> bool:
         if hasattr(options, "fast") and options.fast:
@@ -94,42 +127,79 @@ class AsyncWorkflowPipeline:
     async def _execute_test_workflow_async(self, options: OptionsProtocol) -> bool:
         overall_success = True
 
+        # Fast hooks with timeout
         if not await self._run_fast_hooks_async(options):
             overall_success = False
-
             self.session.fail_task("workflow", "Fast hooks failed")
             return False
 
-        test_task = asyncio.create_task(self._run_testing_phase_async(options))
-        hooks_task = asyncio.create_task(self._run_comprehensive_hooks_async(options))
+        # Run tests and comprehensive hooks in parallel with proper timeout handling
+        try:
+            # Create tasks with individual timeout handling
+            test_task = asyncio.create_task(
+                self.timeout_manager.with_timeout(
+                    "test_execution",
+                    self._run_testing_phase_async(options),
+                    strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
+                )
+            )
+            hooks_task = asyncio.create_task(
+                self.timeout_manager.with_timeout(
+                    "comprehensive_hooks",
+                    self._run_comprehensive_hooks_async(options),
+                    strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
+                )
+            )
 
-        test_success, hooks_success = await asyncio.gather(
-            test_task,
-            hooks_task,
-            return_exceptions=True,
-        )
+            # Use asyncio.wait with timeout for the gather operation
+            done, pending = await asyncio.wait(
+                [test_task, hooks_task],
+                timeout=self.timeout_manager.get_timeout("test_execution")
+                + self.timeout_manager.get_timeout("comprehensive_hooks")
+                + 60,  # Extra buffer
+                return_when=asyncio.ALL_COMPLETED,
+            )
 
-        if isinstance(test_success, Exception):
-            self.logger.error(f"Test execution error: {test_success}")
-            test_success = False
+            # Cancel any pending tasks
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
 
-        if isinstance(hooks_success, Exception):
-            self.logger.error(f"Hooks execution error: {hooks_success}")
-            hooks_success = False
+            # Process results
+            test_success = hooks_success = False
+            for task in done:
+                try:
+                    result = await task
+                    if task == test_task:
+                        test_success = result
+                    elif task == hooks_task:
+                        hooks_success = result
+                except Exception as e:
+                    self.logger.error(f"Task execution error: {e}")
+                    if task == test_task:
+                        test_success = False
+                    elif task == hooks_task:
+                        hooks_success = False
 
-        if not test_success:
-            overall_success = False
+            if not test_success:
+                overall_success = False
+                self.session.fail_task("workflow", "Testing failed")
+                return False
 
-            self.session.fail_task("workflow", "Testing failed")
+            if not hooks_success:
+                overall_success = False
+                self.session.fail_task("workflow", "Comprehensive hooks failed")
+                return False
+
+            return overall_success
+
+        except Exception as e:
+            self.logger.error(f"Test workflow execution error: {e}")
+            self.session.fail_task("workflow", f"Test workflow error: {e}")
             return False
-
-        if not hooks_success:
-            overall_success = False
-
-            self.session.fail_task("workflow", "Comprehensive hooks failed")
-            return False
-
-        return overall_success
 
     async def _execute_standard_hooks_workflow_async(
         self,
@@ -141,64 +211,97 @@ class AsyncWorkflowPipeline:
             return False
         return True
 
+    async def _create_managed_task(
+        self,
+        coro: t.Awaitable[t.Any],
+        timeout: float = 300.0,
+        task_name: str = "workflow_task",
+    ) -> asyncio.Task:
+        """Create a managed task with automatic cleanup."""
+        task = asyncio.create_task(coro, name=task_name)
+
+        if self.resource_context:
+            self.resource_context.managed_task(task, timeout)
+
+        self._active_tasks.append(task)
+        return task
+
     async def _run_fast_hooks_async(self, options: OptionsProtocol) -> bool:
-        return await asyncio.to_thread(self.phases.run_fast_hooks_only, options)
+        return await self.timeout_manager.with_timeout(
+            "fast_hooks",
+            asyncio.to_thread(self.phases.run_fast_hooks_only, options),
+            strategy=TimeoutStrategy.RETRY_WITH_BACKOFF,
+        )
 
     async def _run_comprehensive_hooks_async(self, options: OptionsProtocol) -> bool:
-        return await asyncio.to_thread(
-            self.phases.run_comprehensive_hooks_only,
-            options,
+        return await self.timeout_manager.with_timeout(
+            "comprehensive_hooks",
+            asyncio.to_thread(self.phases.run_comprehensive_hooks_only, options),
+            strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         )
 
     async def _run_hooks_phase_async(self, options: OptionsProtocol) -> bool:
-        return await asyncio.to_thread(self.phases.run_hooks_phase, options)
+        return await self.timeout_manager.with_timeout(
+            "comprehensive_hooks",
+            asyncio.to_thread(self.phases.run_hooks_phase, options),
+            strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
+        )
 
     async def _run_testing_phase_async(self, options: OptionsProtocol) -> bool:
-        return await asyncio.to_thread(self.phases.run_testing_phase, options)
+        return await self.timeout_manager.with_timeout(
+            "test_execution",
+            asyncio.to_thread(self.phases.run_testing_phase, options),
+            strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
+        )
 
     async def _execute_ai_agent_workflow_async(
         self, options: OptionsProtocol, max_iterations: int = 10
     ) -> bool:
-        """Execute AI agent workflow with iterative fixing between iterations."""
         self.console.print(
             f"🤖 Starting AI Agent workflow (max {max_iterations} iterations)"
         )
 
-        # Always run configuration phase first
         self.phases.run_configuration_phase(options)
 
-        # Run cleaning phase if requested
         if not await self._execute_cleaning_phase_async(options):
             self.session.fail_task("workflow", "Cleaning phase failed")
             return False
 
-        # Iterative quality improvement with AI fixing
         iteration_success = await self._run_iterative_quality_improvement(
             options, max_iterations
         )
         if not iteration_success:
             return False
 
-        # Run remaining phases
         return await self._run_final_workflow_phases(options)
 
     async def _run_iterative_quality_improvement(
         self, options: OptionsProtocol, max_iterations: int
     ) -> bool:
-        """Run iterative quality improvement until all checks pass."""
         for iteration in range(1, max_iterations + 1):
             self.console.print(f"\n🔄 Iteration {iteration}/{max_iterations}")
 
-            iteration_result = await self._execute_single_iteration(options, iteration)
+            try:
+                # Each iteration has its own timeout
+                iteration_result = await self.timeout_manager.with_timeout(
+                    "workflow_iteration",
+                    self._execute_single_iteration(options, iteration),
+                    strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
+                )
 
-            if iteration_result == "success":
-                self.console.print("✅ All quality checks passed!")
-                return True
-            elif iteration_result == "failed":
-                return False
-            # Continue to next iteration if result == "continue"
+                if iteration_result == "success":
+                    self.console.print("✅ All quality checks passed !")
+                    return True
+                elif iteration_result == "failed":
+                    return False
 
-        # If we exhausted all iterations without success
+            except Exception as e:
+                self.logger.error(f"Iteration {iteration} failed with error: {e}")
+                self.console.print(f"⚠️ Iteration {iteration} failed: {e}")
+                # Continue to next iteration unless it's a critical error
+                if iteration == max_iterations:
+                    return False
+
         self.console.print(
             f"❌ Failed to achieve code quality after {max_iterations} iterations"
         )
@@ -208,19 +311,14 @@ class AsyncWorkflowPipeline:
     async def _execute_single_iteration(
         self, options: OptionsProtocol, iteration: int
     ) -> str:
-        """Execute a single AI agent iteration. Returns 'success', 'failed', or 'continue'."""
-        # Step 1: Fast hooks with retry logic
         fast_hooks_success = await self._run_fast_hooks_with_retry_async(options)
 
-        # Step 2 & 3: Collect ALL issues
         test_issues = await self._collect_test_issues_async(options)
         hook_issues = await self._collect_comprehensive_hook_issues_async(options)
 
-        # If everything passes, we're done
         if fast_hooks_success and not test_issues and not hook_issues:
             return "success"
 
-        # Step 4: Apply AI fixes for ALL collected issues
         if test_issues or hook_issues:
             fix_success = await self._apply_ai_fixes_async(
                 options, test_issues, hook_issues, iteration
@@ -237,15 +335,12 @@ class AsyncWorkflowPipeline:
     def _parse_issues_for_agents(
         self, test_issues: list[str], hook_issues: list[str]
     ) -> list[Issue]:
-        """Parse string issues into structured Issue objects for AI agent processing."""
         structured_issues = []
 
-        # Parse hook issues using dedicated parsers
         for issue in hook_issues:
             parsed_issue = self._parse_single_hook_issue(issue)
             structured_issues.append(parsed_issue)
 
-        # Parse test issues using dedicated parser
         for issue in test_issues:
             parsed_issue = self._parse_single_test_issue(issue)
             structured_issues.append(parsed_issue)
@@ -253,39 +348,36 @@ class AsyncWorkflowPipeline:
         return structured_issues
 
     def _parse_single_hook_issue(self, issue: str) -> Issue:
-        """Parse a single hook issue into structured format."""
         from crackerjack.agents.base import IssueType, Priority
 
-        # Try refurb-specific parsing first
-        if "refurb:" in issue and "[FURB" in issue:
+        if "refurb: " in issue and "[FURB" in issue:
             return self._parse_refurb_issue(issue)
 
-        # Use generic hook issue parsers
         hook_type_mapping = {
-            "pyright:": (IssueType.TYPE_ERROR, Priority.HIGH, "pyright"),
+            "pyright: ": (IssueType.TYPE_ERROR, Priority.HIGH, "pyright"),
             "Type error": (IssueType.TYPE_ERROR, Priority.HIGH, "pyright"),
-            "bandit:": (IssueType.SECURITY, Priority.HIGH, "bandit"),
-            "vulture:": (IssueType.DEAD_CODE, Priority.MEDIUM, "vulture"),
-            "complexipy:": (IssueType.COMPLEXITY, Priority.MEDIUM, "complexipy"),
+            "bandit: ": (IssueType.SECURITY, Priority.HIGH, "bandit"),
+            "vulture: ": (IssueType.DEAD_CODE, Priority.MEDIUM, "vulture"),
+            "complexipy: ": (IssueType.COMPLEXITY, Priority.MEDIUM, "complexipy"),
         }
 
         for keyword, (issue_type, priority, stage) in hook_type_mapping.items():
             if keyword in issue:
                 return self._create_generic_issue(issue, issue_type, priority, stage)
 
-        # Default to generic hook issue
         return self._create_generic_issue(
             issue, IssueType.FORMATTING, Priority.MEDIUM, "hook"
         )
 
     def _parse_refurb_issue(self, issue: str) -> Issue:
-        """Parse refurb-specific issue format."""
         import re
         import uuid
 
         from crackerjack.agents.base import Issue, IssueType, Priority
 
-        match = re.search(r"refurb:\s*(.+?):(\d+):(\d+)\s+\[(\w+)\]:\s*(.+)", issue)
+        match = re.search(
+            r"refurb: \s *(.+?): (\d +): (\d +)\s +\[(\w +)\]: \s *(.+)", issue
+        )
         if match:
             file_path, line_num, _, error_code, message = match.groups()
             return Issue(
@@ -299,13 +391,11 @@ class AsyncWorkflowPipeline:
                 stage="refurb",
             )
 
-        # Fallback to generic parsing if regex fails
         return self._create_generic_issue(
             issue, IssueType.FORMATTING, Priority.MEDIUM, "refurb"
         )
 
     def _parse_single_test_issue(self, issue: str) -> Issue:
-        """Parse a single test issue into structured format."""
         import uuid
 
         from crackerjack.agents.base import Issue, IssueType, Priority
@@ -327,7 +417,6 @@ class AsyncWorkflowPipeline:
     def _create_generic_issue(
         self, issue: str, issue_type: IssueType, priority: Priority, stage: str
     ) -> Issue:
-        """Create a generic Issue object with standard fields."""
         import uuid
 
         from crackerjack.agents.base import Issue
@@ -342,7 +431,6 @@ class AsyncWorkflowPipeline:
         )
 
     async def _run_final_workflow_phases(self, options: OptionsProtocol) -> bool:
-        """Run the final publishing and commit phases."""
         if not self.phases.run_publishing_phase(options):
             self.session.fail_task("workflow", "Publishing failed")
             return False
@@ -354,48 +442,45 @@ class AsyncWorkflowPipeline:
         return True
 
     async def _run_fast_hooks_with_retry_async(self, options: OptionsProtocol) -> bool:
-        """Run fast hooks with retry logic - any failure triggers one retry."""
-        # Use the phase coordinator's retry logic which handles all fast hook failures
         return await asyncio.to_thread(self.phases.run_fast_hooks_only, options)
 
     async def _collect_test_issues_async(self, options: OptionsProtocol) -> list[str]:
-        """Collect all test failures without stopping on first failure."""
         if not options.test:
             return []
 
         try:
-            success = await self._run_testing_phase_async(options)
+            success = await self.timeout_manager.with_timeout(
+                "test_execution",
+                self._run_testing_phase_async(options),
+                strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
+            )
             if success:
                 return []
             else:
-                # Get specific test failure details from test manager
                 test_failures = self.phases.test_manager.get_test_failures()
                 if test_failures:
                     return [f"Test failure: {failure}" for failure in test_failures]
                 else:
-                    # Fallback if no specific failures captured
-                    return ["Test failures detected - see logs for details"]
+                    return ["Test failures detected-see logs for details"]
         except Exception as e:
             return [f"Test execution error: {e}"]
 
     async def _collect_comprehensive_hook_issues_async(
         self, options: OptionsProtocol
     ) -> list[str]:
-        """Collect all comprehensive hook issues without stopping on first failure."""
         try:
-            # Run hooks and capture detailed results
-            hook_results = await asyncio.to_thread(
-                self.phases.hook_manager.run_comprehensive_hooks,
+            hook_results = await self.timeout_manager.with_timeout(
+                "comprehensive_hooks",
+                asyncio.to_thread(self.phases.hook_manager.run_comprehensive_hooks),
+                strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             )
 
-            # Extract specific issues from failed hooks
             all_issues = []
             for result in hook_results:
                 if (
                     result.status in ("failed", "error", "timeout")
                     and result.issues_found
                 ):
-                    # Add hook context to each issue for better AI agent understanding
                     hook_context = f"{result.name}: "
                     for issue in result.issues_found:
                         all_issues.append(hook_context + issue)
@@ -412,7 +497,6 @@ class AsyncWorkflowPipeline:
         hook_issues: list[str],
         iteration: int,
     ) -> bool:
-        """Apply AI fixes for all collected issues in batch using AgentCoordinator."""
         all_issues = test_issues + hook_issues
         if not all_issues:
             return True
@@ -422,8 +506,10 @@ class AsyncWorkflowPipeline:
         )
 
         try:
-            return await self._execute_ai_fix_workflow(
-                test_issues, hook_issues, iteration
+            return await self.timeout_manager.with_timeout(
+                "ai_agent_processing",
+                self._execute_ai_fix_workflow(test_issues, hook_issues, iteration),
+                strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             )
         except Exception as e:
             return self._handle_ai_fix_error(e)
@@ -431,7 +517,6 @@ class AsyncWorkflowPipeline:
     async def _execute_ai_fix_workflow(
         self, test_issues: list[str], hook_issues: list[str], iteration: int
     ) -> bool:
-        """Execute the AI fix workflow and return success status."""
         structured_issues = self._parse_issues_for_agents(test_issues, hook_issues)
 
         if not structured_issues:
@@ -439,13 +524,18 @@ class AsyncWorkflowPipeline:
             return True
 
         coordinator = self._create_agent_coordinator()
-        fix_result = await coordinator.handle_issues(structured_issues)
+
+        # Apply timeout to AI coordinator processing
+        fix_result = await self.timeout_manager.with_timeout(
+            "ai_agent_processing",
+            coordinator.handle_issues(structured_issues),
+            strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
+        )
 
         self._report_fix_results(fix_result, iteration)
         return fix_result.success
 
     def _create_agent_coordinator(self):
-        """Create and configure the AI agent coordinator."""
         from crackerjack.agents.base import AgentContext
         from crackerjack.agents.coordinator import AgentCoordinator
 
@@ -453,27 +543,23 @@ class AsyncWorkflowPipeline:
         return AgentCoordinator(context)
 
     def _report_fix_results(self, fix_result: FixResult, iteration: int) -> None:
-        """Report the results of AI fix attempts to the console."""
         if fix_result.success:
             self._report_successful_fixes(fix_result, iteration)
         else:
             self._report_failed_fixes(fix_result, iteration)
 
     def _report_successful_fixes(self, fix_result: FixResult, iteration: int) -> None:
-        """Report successful AI fixes to the console."""
         self.console.print(f"✅ AI fixes applied successfully in iteration {iteration}")
         if fix_result.fixes_applied:
-            self.console.print(f"   Applied {len(fix_result.fixes_applied)} fixes")
+            self.console.print(f" Applied {len(fix_result.fixes_applied)} fixes")
 
     def _report_failed_fixes(self, fix_result: FixResult, iteration: int) -> None:
-        """Report failed AI fixes to the console."""
         self.console.print(f"⚠️ Some AI fixes failed in iteration {iteration}")
         if fix_result.remaining_issues:
-            for error in fix_result.remaining_issues[:3]:  # Show first 3 errors
-                self.console.print(f"   Error: {error}")
+            for error in fix_result.remaining_issues[:3]:
+                self.console.print(f" Error: {error}")
 
     def _handle_ai_fix_error(self, error: Exception) -> bool:
-        """Handle errors during AI fix execution."""
         self.logger.error(f"AI fixing failed: {error}")
         self.console.print(f"❌ AI agent system error: {error}")
         return False

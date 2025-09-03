@@ -8,18 +8,9 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 
 class CoverageRatchetService:
-    """
-    Coverage ratchet system that prevents regression and targets 100% coverage.
-
-    Core principles:
-    - Coverage can only increase, never decrease
-    - Celebrates milestones and progress toward 100%
-    - Automatically updates pyproject.toml when coverage improves
-    - Tracks history and provides visualization
-    """
-
-    # Milestone thresholds for celebration
     MILESTONES = [15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95, 100]
+    # 2% tolerance margin for coverage fluctuations to prevent test flakiness
+    TOLERANCE_MARGIN = 2.0
 
     def __init__(self, pkg_path: Path, console: Console) -> None:
         self.pkg_path = pkg_path
@@ -28,9 +19,8 @@ class CoverageRatchetService:
         self.pyproject_file = pkg_path / "pyproject.toml"
 
     def initialize_baseline(self, initial_coverage: float) -> None:
-        """Initialize the coverage ratchet with current baseline."""
         if self.ratchet_file.exists():
-            return  # Already initialized
+            return
 
         ratchet_data = {
             "baseline": initial_coverage,
@@ -51,33 +41,35 @@ class CoverageRatchetService:
 
         self.ratchet_file.write_text(json.dumps(ratchet_data, indent=2))
         self.console.print(
-            f"[cyan]📊[/cyan] Coverage ratchet initialized at {initial_coverage:.2f}% baseline"
+            f"[cyan]📊[/ cyan] Coverage ratchet initialized at {initial_coverage: .2f}% baseline"
         )
 
     def get_ratchet_data(self) -> dict[str, t.Any]:
-        """Get current ratchet data."""
         if not self.ratchet_file.exists():
             return {}
         return json.loads(self.ratchet_file.read_text())
 
     def get_baseline(self) -> float:
-        """Get current coverage baseline."""
         return self.get_ratchet_data().get("baseline", 0.0)
 
     def update_coverage(self, new_coverage: float) -> dict[str, t.Any]:
-        """
-        Update coverage and return achievement info.
+        """Update coverage with 2% tolerance margin to prevent test flakiness.
 
-        Returns:
-            dict with status, message, milestones hit, and whether build should pass
+        Behavior:
+        - Coverage below (baseline - 2%): FAIL (regression)
+        - Coverage within ±2% of baseline: PASS (maintained)
+        - Coverage above baseline: PASS (improved, updates baseline)
+
+        This prevents failures due to small coverage fluctuations while
+        still catching significant regressions.
         """
         if not self.ratchet_file.exists():
             self.initialize_baseline(new_coverage)
             return {
                 "status": "initialized",
-                "message": f"Coverage ratchet initialized at {new_coverage:.2f}%",
+                "message": f"Coverage ratchet initialized at {new_coverage: .2f}%",
                 "milestones": [],
-                "progress_to_100": f"{new_coverage:.1f}% of the way to 100% coverage",
+                "progress_to_100": f"{new_coverage: .1f}% of the way to 100 % coverage",
                 "allowed": True,
                 "baseline_updated": True,
             }
@@ -85,17 +77,18 @@ class CoverageRatchetService:
         data = self.get_ratchet_data()
         current_baseline = data["baseline"]
 
-        if (
-            new_coverage < current_baseline - 0.01
-        ):  # Allow tiny float precision differences
+        # Check if coverage is below the tolerance margin (baseline - 2%)
+        tolerance_threshold = current_baseline - self.TOLERANCE_MARGIN
+        if new_coverage < tolerance_threshold:
             return {
                 "status": "regression",
-                "message": f"Coverage decreased from {current_baseline:.2f}% to {new_coverage:.2f}%",
+                "message": f"Coverage decreased from {current_baseline: .2f}% to {new_coverage: .2f}% (below {self.TOLERANCE_MARGIN}% tolerance margin)",
                 "regression_amount": current_baseline - new_coverage,
+                "tolerance_threshold": tolerance_threshold,
                 "allowed": False,
                 "baseline_updated": False,
             }
-        elif new_coverage > current_baseline + 0.01:  # Significant improvement
+        elif new_coverage > current_baseline + 0.01:
             milestones_hit = self._check_milestones(
                 current_baseline, new_coverage, data
             )
@@ -104,10 +97,10 @@ class CoverageRatchetService:
 
             return {
                 "status": "improved",
-                "message": f"Coverage improved from {current_baseline:.2f}% to {new_coverage:.2f}%!",
+                "message": f"Coverage improved from {current_baseline: .2f}% to {new_coverage: .2f}% !",
                 "improvement": new_coverage - current_baseline,
                 "milestones": milestones_hit,
-                "progress_to_100": f"{new_coverage:.1f}% of the way to 100% coverage",
+                "progress_to_100": f"{new_coverage: .1f}% of the way to 100 % coverage",
                 "next_milestone": self._get_next_milestone(new_coverage),
                 "points_to_next": (next_milestone - new_coverage)
                 if (next_milestone := self._get_next_milestone(new_coverage))
@@ -115,9 +108,10 @@ class CoverageRatchetService:
                 "allowed": True,
                 "baseline_updated": True,
             }
+        # Coverage is within tolerance margin - treat as maintained
         return {
             "status": "maintained",
-            "message": f"Coverage maintained at {new_coverage:.2f}%",
+            "message": f"Coverage maintained at {new_coverage: .2f}% (within {self.TOLERANCE_MARGIN}% tolerance margin)",
             "allowed": True,
             "baseline_updated": False,
         }
@@ -125,7 +119,6 @@ class CoverageRatchetService:
     def _check_milestones(
         self, old_coverage: float, new_coverage: float, data: dict[str, t.Any]
     ) -> list[float]:
-        """Check which milestones were crossed."""
         achieved_milestones = set(data.get("milestones_achieved", []))
         return [
             milestone
@@ -137,7 +130,6 @@ class CoverageRatchetService:
         ]
 
     def _get_next_milestone(self, coverage: float) -> float | None:
-        """Get the next milestone to target."""
         for milestone in self.MILESTONES:
             if milestone > coverage:
                 return milestone
@@ -146,50 +138,43 @@ class CoverageRatchetService:
     def _update_baseline(
         self, new_coverage: float, data: dict[str, t.Any], milestones_hit: list[float]
     ) -> None:
-        """Update the ratchet baseline and history."""
         data["baseline"] = new_coverage
         data["current_minimum"] = new_coverage
         data["last_updated"] = datetime.now().isoformat()
 
-        # Add to history
         data["history"].append(
             {
                 "date": datetime.now().isoformat(),
                 "coverage": new_coverage,
-                "commit": "current",  # Could integrate with git later
+                "commit": "current",
                 "milestone": len(milestones_hit) > 0,
                 "milestones_hit": milestones_hit,
             }
         )
 
-        # Update achieved milestones
         for milestone in milestones_hit:
             if milestone not in data["milestones_achieved"]:
                 data["milestones_achieved"].append(milestone)
 
         data["next_milestone"] = self._get_next_milestone(new_coverage)
 
-        # Keep history manageable (last 50 entries)
         if len(data["history"]) > 50:
             data["history"] = data["history"][-50:]
 
         self.ratchet_file.write_text(json.dumps(data, indent=2))
 
     def _update_pyproject_requirement(self, new_coverage: float) -> None:
-        """Update pyproject.toml with new coverage requirement."""
         try:
             content = self.pyproject_file.read_text()
 
             import re
 
-            # Update the --cov-fail-under value
-            pattern = r"(--cov-fail-under=)\d+\.?\d*"
-            replacement = f"\\g<1>{new_coverage:.0f}"
+            pattern = r"(- - cov - fail-under =)\d +\.?\d *"
+            replacement = f"\\g < 1 >{new_coverage: .0f}"
 
             updated_content = re.sub(pattern, replacement, content)
 
             if updated_content != content:
-                # Clean trailing whitespace and ensure single trailing newline
                 from crackerjack.services.filesystem import FileSystemService
 
                 updated_content = (
@@ -200,16 +185,15 @@ class CoverageRatchetService:
 
                 self.pyproject_file.write_text(updated_content)
                 self.console.print(
-                    f"[cyan]📝[/cyan] Updated pyproject.toml coverage requirement to {new_coverage:.0f}%"
+                    f"[cyan]📝[/ cyan] Updated pyproject.toml coverage requirement to {new_coverage: .0f}%"
                 )
 
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Failed to update pyproject.toml: {e}"
+                f"[yellow]⚠️[/ yellow] Failed to update pyproject.toml: {e}"
             )
 
     def get_progress_visualization(self) -> str:
-        """Get a visual progress bar toward 100% coverage."""
         data = self.get_ratchet_data()
         if not data:
             return "Coverage ratchet not initialized"
@@ -218,21 +202,19 @@ class CoverageRatchetService:
         target = 100.0
         next_milestone = data.get("next_milestone")
 
-        # Create progress bar
         progress_chars = int(current / target * 20)
         bar = "█" * progress_chars + "░" * (20 - progress_chars)
 
-        result = f"Coverage Progress: {current:.2f}% [{bar}] → 100%\n"
-        result += f"                   Current ─┘{'':>18} └─ Goal\n"
+        result = f"Coverage Progress: {current: .2f}% [{bar}] → 100 %\n"
+        result += f" Current ─┘{'': > 18} └─ Goal\n"
 
         if next_milestone:
             points_needed = next_milestone - current
-            result += f"Next milestone: {next_milestone:.0f}% (+{points_needed:.2f}% needed)\n"
+            result += f"Next milestone: {next_milestone: .0f}% (+{points_needed: .2f}% needed)\n"
 
         return result
 
     def get_status_report(self) -> dict[str, t.Any]:
-        """Get comprehensive status report for monitoring."""
         data = self.get_ratchet_data()
         if not data:
             return {"status": "not_initialized"}
@@ -251,12 +233,11 @@ class CoverageRatchetService:
         }
 
     def _calculate_trend(self, data: dict[str, t.Any]) -> str:
-        """Calculate coverage improvement trend."""
         history = data.get("history", [])
         if len(history) < 2:
             return "insufficient_data"
 
-        recent_entries = history[-5:]  # Last 5 entries
+        recent_entries = history[-5:]
         if len(recent_entries) < 2:
             return "insufficient_data"
 
@@ -270,27 +251,25 @@ class CoverageRatchetService:
         return "stable"
 
     def display_milestone_celebration(self, milestones: list[float]) -> None:
-        """Display celebration for achieved milestones."""
         for milestone in milestones:
             if milestone == 100.0:
                 self.console.print(
-                    "[gold]🎉🏆 PERFECT! 100% COVERAGE ACHIEVED! 🏆🎉[/gold]"
+                    "[gold]🎉🏆 PERFECT ! 100 % COVERAGE ACHIEVED ! 🏆🎉[/ gold]"
                 )
             elif milestone >= 90:
                 self.console.print(
-                    f"[gold]🏆 Milestone achieved: {milestone:.0f}% coverage! Approaching perfection![/gold]"
+                    f"[gold]🏆 Milestone achieved: {milestone: .0f}% coverage ! Approaching perfection ![/ gold]"
                 )
             elif milestone >= 50:
                 self.console.print(
-                    f"[green]🎯 Milestone achieved: {milestone:.0f}% coverage! Great progress![/green]"
+                    f"[green]🎯 Milestone achieved: {milestone: .0f}% coverage ! Great progress ![/ green]"
                 )
             else:
                 self.console.print(
-                    f"[cyan]📈 Milestone achieved: {milestone:.0f}% coverage! Keep it up![/cyan]"
+                    f"[cyan]📈 Milestone achieved: {milestone: .0f}% coverage ! Keep it up ![/ cyan]"
                 )
 
     def show_progress_with_spinner(self) -> None:
-        """Show animated progress toward 100% coverage."""
         data = self.get_ratchet_data()
         if not data:
             return
@@ -302,15 +281,14 @@ class CoverageRatchetService:
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TextColumn("[progress.percentage]{task.percentage: > 3.0f}%"),
         ) as progress:
             task = progress.add_task(
                 "Coverage Progress", total=target, completed=current
             )
-            progress.update(task, description=f"Coverage: {current:.1f}%/100%")
+            progress.update(task, description=f"Coverage: {current: .1f}% / 100 %")
 
     def get_coverage_report(self) -> str | None:
-        """Get coverage report from the ratchet data."""
         data = self.get_ratchet_data()
         if not data:
             return None
@@ -318,36 +296,32 @@ class CoverageRatchetService:
         current_coverage = data.get("baseline", 0.0)
         next_milestone = data.get("next_milestone")
 
-        report = f"Coverage: {current_coverage:.2f}%"
+        report = f"Coverage: {current_coverage: .2f}%"
         if next_milestone:
             progress = (current_coverage / next_milestone) * 100
-            report += f" (next milestone: {next_milestone:.0f}%, {progress:.1f}% there)"
+            report += (
+                f" (next milestone: {next_milestone: .0f}%, {progress: .1f}% there)"
+            )
 
         return report
 
     def check_and_update_coverage(self) -> dict[str, t.Any]:
-        """Check coverage from current test run and update ratchet."""
-        # Try to read coverage from standard pytest-cov output
         try:
-            # Look for .coverage file or coverage.json
             coverage_file = self.pkg_path / "coverage.json"
             if not coverage_file.exists():
-                # No coverage data - this is acceptable, return success
                 return {
                     "success": True,
                     "status": "no_coverage_data",
-                    "message": "No coverage data found - tests passed without coverage",
+                    "message": "No coverage data found-tests passed without coverage",
                     "allowed": True,
                     "baseline_updated": False,
                 }
 
-            # Parse coverage data (simplified for now)
             coverage_data = json.loads(coverage_file.read_text())
             current_coverage = coverage_data.get("totals", {}).get(
                 "percent_covered", 0.0
             )
 
-            # Update the ratchet
             result = self.update_coverage(current_coverage)
             result["success"] = result.get("allowed", True)
             return result

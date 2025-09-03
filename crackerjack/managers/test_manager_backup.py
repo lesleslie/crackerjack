@@ -28,7 +28,7 @@ class TestProgress:
         self.files_discovered: int = 0
         self.collection_status: str = "Starting collection..."
         self._lock = threading.Lock()
-        self._seen_files: set[str] = set()  # Track seen files to prevent duplicates
+        self._seen_files: set[str] = set()
 
     @property
     def completed(self) -> int:
@@ -55,105 +55,92 @@ class TestProgress:
                     setattr(self, key, value)
 
     def format_progress(self) -> Align:
-        """Format test progress display with appropriate phase-specific content."""
         with self._lock:
             if self.is_collecting:
                 table = self._format_collection_progress()
             else:
                 table = self._format_execution_progress()
-            # Left-align the table as requested
+
             return Align.left(table)
 
     def _format_collection_progress(self) -> Table:
-        """Format progress display for test collection phase."""
         table = Table(
             title="🔍 Test Collection",
             header_style="bold yellow",
             show_lines=True,
             border_style="yellow",
             title_style="bold yellow",
-            expand=True,  # Use full terminal width like rich.live demo
-            min_width=80,  # Ensure minimum width
+            expand=True,
+            min_width=80,
         )
 
-        # Add multiple columns for better alignment (like complexipy)
         table.add_column("Type", style="cyan", ratio=1)
-        table.add_column("Details", style="white", ratio=3)  # Wider middle column
+        table.add_column("Details", style="white", ratio=3)
         table.add_column("Count", style="green", ratio=1)
 
-        # Add status
         table.add_row("Status", self.collection_status, "")
 
-        # Add collection stats
         if self.files_discovered > 0:
             table.add_row("Files", "Test files discovered", str(self.files_discovered))
 
         if self.total_tests > 0:
             table.add_row("Tests", "Total tests found", str(self.total_tests))
 
-        # Add progress bar
         if self.files_discovered > 0:
             progress_chars = "▓" * min(self.files_discovered, 15) + "░" * max(
                 0, 15 - self.files_discovered
             )
             table.add_row(
-                "Progress", f"[{progress_chars}]", f"{self.files_discovered}/15"
+                "Progress", f"[{progress_chars}]", f"{self.files_discovered}/ 15"
             )
 
-        # Add duration
-        table.add_row("Duration", f"{self.elapsed_time:.1f} seconds", "")
+        table.add_row("Duration", f"{self.elapsed_time: .1f} seconds", "")
 
         return table
 
     def _format_execution_progress(self) -> Table:
-        """Format progress display for test execution phase."""
         table = Table(
             title="🧪 Test Execution",
             header_style="bold cyan",
             show_lines=True,
             border_style="cyan",
             title_style="bold cyan",
-            expand=True,  # Use full terminal width like rich.live demo
-            min_width=80,  # Ensure minimum width
+            expand=True,
+            min_width=80,
         )
 
-        # Add multiple columns for better alignment (like complexipy)
         table.add_column("Metric", style="cyan", ratio=1)
-        table.add_column("Details", style="white", ratio=3)  # Wider middle column
+        table.add_column("Details", style="white", ratio=3)
         table.add_column("Count", style="green", ratio=1)
 
-        # Test results summary
         if self.total_tests > 0:
             table.add_row("Total", "Total tests", str(self.total_tests))
-            table.add_row("Passed", "Tests passed", f"[green]{self.passed}[/green]")
+            table.add_row("Passed", "Tests passed", f"[green]{self.passed}[/ green]")
 
             if self.failed > 0:
-                table.add_row("Failed", "Tests failed", f"[red]{self.failed}[/red]")
+                table.add_row("Failed", "Tests failed", f"[red]{self.failed}[/ red]")
             if self.skipped > 0:
                 table.add_row(
-                    "Skipped", "Tests skipped", f"[yellow]{self.skipped}[/yellow]"
+                    "Skipped", "Tests skipped", f"[yellow]{self.skipped}[/ yellow]"
                 )
             if self.errors > 0:
-                table.add_row("Errors", "Test errors", f"[red]{self.errors}[/red]")
+                table.add_row("Errors", "Test errors", f"[red]{self.errors}[/ red]")
 
-        # Progress percentage and bar
         if self.total_tests > 0:
             percentage = (self.completed / self.total_tests) * 100
             filled = int((self.completed / self.total_tests) * 15)
             bar = "█" * filled + "░" * (15 - filled)
-            table.add_row("Progress", f"[{bar}]", f"{percentage:.1f}%")
+            table.add_row("Progress", f"[{bar}]", f"{percentage: .1f}%")
 
-        # Current test
         if self.current_test:
             test_name = self.current_test
-            if len(test_name) > 40:  # Reasonable truncation
+            if len(test_name) > 40:
                 test_name = test_name[:37] + "..."
             table.add_row("Current", test_name, "")
 
-        # Duration and ETA
-        duration_text = f"{self.elapsed_time:.1f}s"
+        duration_text = f"{self.elapsed_time: .1f}s"
         if self.eta_seconds is not None and self.eta_seconds > 0:
-            table.add_row("Duration", duration_text, f"ETA: ~{self.eta_seconds:.0f}s")
+            table.add_row("Duration", duration_text, f"ETA: ~{self.eta_seconds: .0f}s")
         else:
             table.add_row("Duration", duration_text, "")
 
@@ -173,21 +160,18 @@ class TestManagementImpl:
         self,
         callback: t.Callable[[dict[str, t.Any]], None] | None,
     ) -> None:
-        """Set callback for AI mode structured progress updates."""
         self._progress_callback = callback
 
     def set_coverage_ratchet_enabled(self, enabled: bool) -> None:
-        """Enable or disable the coverage ratchet system."""
         self.coverage_ratchet_enabled = enabled
         if enabled:
             self.console.print(
-                "[cyan]📊[/cyan] Coverage ratchet enabled - targeting 100% coverage"
+                "[cyan]📊[/ cyan] Coverage ratchet enabled-targeting 100 % coverage"
             )
         else:
-            self.console.print("[yellow]⚠️[/yellow] Coverage ratchet disabled")
+            self.console.print("[yellow]⚠️[/ yellow] Coverage ratchet disabled")
 
     def get_coverage_ratchet_status(self) -> dict[str, t.Any]:
-        """Get comprehensive coverage ratchet status."""
         return self.coverage_ratchet.get_status_report()
 
     def _run_test_command(
@@ -198,7 +182,6 @@ class TestManagementImpl:
         import os
         from pathlib import Path
 
-        # Set up coverage data file in cache directory
         cache_dir = Path.home() / ".cache" / "crackerjack" / "coverage"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -237,7 +220,7 @@ class TestManagementImpl:
         progress = self._initialize_progress()
         stdout_lines: list[str] = []
         stderr_lines: list[str] = []
-        # Use a mutable container to share last_activity_time between threads
+
         activity_tracker = {"last_time": time.time()}
 
         with (
@@ -360,7 +343,6 @@ class TestManagementImpl:
         progress: TestProgress,
         activity_tracker: dict[str, float],
     ) -> None:
-        """Process a single line of test output."""
         stdout_lines.append(line)
         self._parse_test_line(line, progress)
         activity_tracker["last_time"] = time.time()
@@ -371,7 +353,6 @@ class TestManagementImpl:
         live: Live,
         refresh_state: dict[str, t.Any],
     ) -> None:
-        """Update display if refresh criteria are met."""
         current_time = time.time()
         refresh_interval = self._get_refresh_interval(progress)
         current_content = self._get_current_content_signature(progress)
@@ -385,12 +366,10 @@ class TestManagementImpl:
             refresh_state["last_content"] = current_content
 
     def _get_refresh_interval(self, progress: TestProgress) -> float:
-        """Get appropriate refresh interval based on test phase."""
         return 1.0 if progress.is_collecting else 0.25
 
     def _get_current_content_signature(self, progress: TestProgress) -> str:
-        """Get a signature of current progress content for change detection."""
-        return f"{progress.collection_status}:{progress.files_discovered}:{progress.total_tests}"
+        return f"{progress.collection_status}: {progress.files_discovered}: {progress.total_tests}"
 
     def _should_refresh_display(
         self,
@@ -399,7 +378,6 @@ class TestManagementImpl:
         refresh_interval: float,
         current_content: str,
     ) -> bool:
-        """Determine if display should be refreshed."""
         time_elapsed = current_time - refresh_state["last_refresh"] > refresh_interval
         content_changed = current_content != refresh_state["last_content"]
         return time_elapsed or content_changed
@@ -446,7 +424,7 @@ class TestManagementImpl:
     ) -> None:
         if progress.current_test and "stuck" not in progress.current_test.lower():
             progress.update(
-                current_test=f"{progress.current_test} (possibly stuck - {stuck_time:.0f}s)",
+                current_test=f"{progress.current_test} (possibly stuck-{stuck_time: .0f}s)",
             )
             live.update(progress.format_progress())
             live.refresh()
@@ -462,7 +440,7 @@ class TestManagementImpl:
             return process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             process.kill()
-            progress.update(current_test="TIMEOUT - Process killed")
+            progress.update(current_test="TIMEOUT-Process killed")
             live.update(progress.format_progress())
             live.refresh()
             raise
@@ -488,8 +466,8 @@ class TestManagementImpl:
         from contextlib import suppress
 
         with suppress(Exception):
-            self.console.print(f"[red]❌ Progress display failed: {error}[/red]")
-            self.console.print("[yellow]⚠️ Falling back to standard mode[/yellow]")
+            self.console.print(f"[red]❌ Progress display failed: {error}[/ red]")
+            self.console.print("[yellow]⚠️ Falling back to standard mode[/ yellow]")
         return self._run_test_command(cmd, timeout)
 
     def _parse_test_line(self, line: str, progress: TestProgress) -> None:
@@ -504,7 +482,7 @@ class TestManagementImpl:
         self._handle_running_test(line, progress)
 
     def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
-        if match := re.search(r"collected (\d+) items?", line):
+        if match := re.search(r"collected (\d +) items?", line):
             progress.update(
                 total_tests=int(match.group(1)),
                 is_collecting=False,
@@ -526,22 +504,19 @@ class TestManagementImpl:
         if not progress.is_collecting:
             return False
 
-        # Only process meaningful collection lines, not every line containing ".py"
         if line.strip().startswith("collecting") or "collecting" in line.lower():
             progress.update(collection_status="Collecting tests...")
             return True
 
-        # Very restrictive file discovery - only count actual test discoveries
         if (
-            "::" in line
+            ":: " in line
             and ".py" in line
-            and ("test_" in line or "tests/" in line)
+            and ("test_" in line or "tests /" in line)
             and not any(
                 status in line for status in ("PASSED", "FAILED", "SKIPPED", "ERROR")
             )
         ):
-            # Only update if we haven't seen this file before
-            filename = line.split("/")[-1] if "/" in line else line.split("::")[0]
+            filename = line.split("/")[-1] if "/" in line else line.split(":: ")[0]
             if filename.endswith(".py") and filename not in progress._seen_files:
                 progress._seen_files.add(filename)
                 new_count = progress.files_discovered + 1
@@ -555,7 +530,7 @@ class TestManagementImpl:
 
     def _handle_test_execution(self, line: str, progress: TestProgress) -> bool:
         if not (
-            "::" in line
+            ":: " in line
             and any(
                 status in line for status in ("PASSED", "FAILED", "SKIPPED", "ERROR")
             )
@@ -575,26 +550,25 @@ class TestManagementImpl:
         return True
 
     def _handle_running_test(self, line: str, progress: TestProgress) -> None:
-        if "::" not in line or any(
+        if ":: " not in line or any(
             status in line for status in ("PASSED", "FAILED", "SKIPPED", "ERROR")
         ):
             return
 
         parts = line.split()
-        if parts and "::" in parts[0]:
+        if parts and ":: " in parts[0]:
             test_path = parts[0]
             if "/" in test_path:
                 test_path = test_path.split("/")[-1]
             progress.update(current_test=f"Running: {test_path}")
 
     def _extract_current_test(self, line: str, progress: TestProgress) -> None:
-        # Extract test name from pytest output line
         parts = line.split()
-        if parts and "::" in parts[0]:
+        if parts and ":: " in parts[0]:
             test_path = parts[0]
-            # Simplify the test path for display
+
             if "/" in test_path:
-                test_path = test_path.split("/")[-1]  # Get just the filename part
+                test_path = test_path.split("/")[-1]
             progress.update(current_test=test_path)
 
     def _run_test_command_with_ai_progress(
@@ -602,7 +576,6 @@ class TestManagementImpl:
         cmd: list[str],
         timeout: int = 600,
     ) -> subprocess.CompletedProcess[str]:
-        """Run tests with periodic structured progress updates for AI mode."""
         try:
             env = self._setup_coverage_env()
             progress = TestProgress()
@@ -610,11 +583,9 @@ class TestManagementImpl:
 
             return self._execute_test_process_with_progress(cmd, timeout, env, progress)
         except Exception:
-            # Fallback to standard mode
             return self._run_test_command(cmd, timeout)
 
     def _setup_coverage_env(self) -> dict[str, str]:
-        """Set up environment with coverage configuration."""
         import os
         from pathlib import Path
 
@@ -632,10 +603,9 @@ class TestManagementImpl:
         env: dict[str, str],
         progress: TestProgress,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute test process with progress tracking."""
         stdout_lines: list[str] = []
         stderr_lines: list[str] = []
-        last_update_time = [time.time()]  # Use list for mutable reference
+        last_update_time = [time.time()]
 
         with subprocess.Popen(
             cmd,
@@ -645,7 +615,6 @@ class TestManagementImpl:
             text=True,
             env=env,
         ) as process:
-            # Start reader threads
             stdout_thread = threading.Thread(
                 target=self._read_stdout_with_progress,
                 args=(process, stdout_lines, progress, last_update_time),
@@ -660,14 +629,11 @@ class TestManagementImpl:
             stdout_thread.start()
             stderr_thread.start()
 
-            # Wait for process completion
             returncode = self._wait_for_process_completion(process, timeout)
 
-            # Clean up threads
             stdout_thread.join(timeout=1)
             stderr_thread.join(timeout=1)
 
-            # Final progress update
             progress.is_complete = True
             self._emit_ai_progress(progress)
 
@@ -685,7 +651,6 @@ class TestManagementImpl:
         progress: TestProgress,
         last_update_time: list[float],
     ) -> None:
-        """Read stdout and update progress."""
         if not process.stdout:
             return
 
@@ -696,7 +661,6 @@ class TestManagementImpl:
             stdout_lines.append(line)
             self._parse_test_line(line, progress)
 
-            # Emit structured progress every 10 seconds
             current_time = time.time()
             if current_time - last_update_time[0] >= 10:
                 self._emit_ai_progress(progress)
@@ -707,7 +671,6 @@ class TestManagementImpl:
         process: subprocess.Popen[str],
         stderr_lines: list[str],
     ) -> None:
-        """Read stderr lines."""
         if not process.stderr:
             return
 
@@ -721,7 +684,6 @@ class TestManagementImpl:
         process: subprocess.Popen[str],
         timeout: int,
     ) -> int:
-        """Wait for process completion with timeout handling."""
         try:
             return process.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
@@ -729,7 +691,6 @@ class TestManagementImpl:
             raise
 
     def _emit_ai_progress(self, progress: TestProgress) -> None:
-        """Emit structured progress data for AI consumption."""
         if not self._progress_callback:
             return
 
@@ -750,12 +711,11 @@ class TestManagementImpl:
             "eta_seconds": progress.eta_seconds,
         }
 
-        # Include console-friendly message for periodic updates
         if not progress.is_complete and progress.total_tests > 0:
             percentage = progress.completed / progress.total_tests * 100
             self.console.print(
-                f"📊 Progress update ({progress.elapsed_time:.0f}s): "
-                f"{progress.completed}/{progress.total_tests} tests completed ({percentage:.0f}%)",
+                f"📊 Progress update ({progress.elapsed_time: .0f}s): "
+                f"{progress.completed}/{progress.total_tests} tests completed ({percentage: .0f}%)",
             )
 
         self._progress_callback(progress_data)
@@ -766,7 +726,7 @@ class TestManagementImpl:
         import os
 
         cpu_count = os.cpu_count() or 1
-        test_files = list(self.pkg_path.glob("tests/test_*.py"))
+        test_files = list(self.pkg_path.glob("tests / test_ *.py"))
         if len(test_files) < 5:
             return min(2, cpu_count)
 
@@ -775,7 +735,7 @@ class TestManagementImpl:
     def _get_test_timeout(self, options: OptionsProtocol) -> int:
         if options.test_timeout > 0:
             return options.test_timeout
-        test_files = list(self.pkg_path.glob("tests/test_*.py"))
+        test_files = list(self.pkg_path.glob("tests / test_ *.py"))
         base_timeout = 300
 
         import math
@@ -784,7 +744,6 @@ class TestManagementImpl:
         return min(calculated_timeout, 600)
 
     def run_tests(self, options: OptionsProtocol) -> bool:
-        """Main entry point for test execution with proper error handling."""
         self._last_test_failures = []
         start_time = time.time()
 
@@ -800,7 +759,6 @@ class TestManagementImpl:
         options: OptionsProtocol,
         start_time: float,
     ) -> bool:
-        """Execute the complete test workflow."""
         cmd = self._build_test_command(options)
         timeout = self._get_test_timeout(options)
         result = self._execute_tests_with_appropriate_mode(cmd, timeout, options)
@@ -813,7 +771,6 @@ class TestManagementImpl:
         timeout: int,
         options: OptionsProtocol,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute tests using the appropriate mode based on options."""
         execution_mode = self._determine_execution_mode(options)
         extended_timeout = timeout + 60
 
@@ -825,12 +782,11 @@ class TestManagementImpl:
             )
         if execution_mode == "console_progress":
             return self._run_test_command_with_progress(cmd, timeout=extended_timeout)
-        # standard mode
+
         self._print_test_start_message(cmd, timeout, options)
         return self._run_test_command(cmd, timeout=extended_timeout)
 
     def _determine_execution_mode(self, options: OptionsProtocol) -> str:
-        """Determine which execution mode to use based on options."""
         is_ai_mode = getattr(options, "ai_agent", False)
         is_benchmark = options.benchmark
 
@@ -841,24 +797,21 @@ class TestManagementImpl:
         return "standard"
 
     def _handle_test_timeout(self, start_time: float) -> bool:
-        """Handle test execution timeout."""
         duration = time.time() - start_time
-        self.console.print(f"[red]⏰[/red] Tests timed out after {duration:.1f}s")
+        self.console.print(f"[red]⏰[/ red] Tests timed out after {duration: .1f}s")
         return False
 
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:
-        """Handle test execution errors."""
-        self.console.print(f"[red]💥[/red] Test execution failed: {error}")
+        self.console.print(f"[red]💥[/ red] Test execution failed: {error}")
         return False
 
     def _build_test_command(self, options: OptionsProtocol) -> list[str]:
-        cmd = ["python", "-m", "pytest"]
+        cmd = ["python", "- m", "pytest"]
         self._add_coverage_options(cmd, options)
         self._add_worker_options(cmd, options)
         self._add_benchmark_options(cmd, options)
         self._add_timeout_options(cmd, options)
 
-        # For progress modes, we need verbose output to parse test names
         is_ai_mode = getattr(options, "ai_agent", False)
         needs_verbose = (not is_ai_mode and not options.benchmark) or (
             is_ai_mode and self._progress_callback
@@ -870,21 +823,21 @@ class TestManagementImpl:
 
     def _add_coverage_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         if not options.benchmark:
-            cmd.extend(["--cov=crackerjack", "--cov-report=term-missing"])
+            cmd.extend(["--cov=crackerjack", "- - cov - report=term-missing"])
 
     def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         if not options.benchmark:
             workers = self._get_optimal_workers(options)
             if workers > 1:
-                cmd.extend(["-n", str(workers)])
-                self.console.print(f"[cyan]🔧[/cyan] Using {workers} test workers")
+                cmd.extend(["- n", str(workers)])
+                self.console.print(f"[cyan]🔧[/ cyan] Using {workers} test workers")
 
     def _add_benchmark_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         if options.benchmark:
             self.console.print(
-                "[cyan]📊[/cyan] Running in benchmark mode (no parallelization)",
+                "[cyan]📊[/ cyan] Running in benchmark mode (no parallelization)",
             )
-            cmd.append("--benchmark-only")
+            cmd.append("- - benchmark-only")
 
     def _add_timeout_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         timeout = self._get_test_timeout(options)
@@ -897,7 +850,7 @@ class TestManagementImpl:
         force_verbose: bool = False,
     ) -> None:
         if options.verbose or force_verbose:
-            cmd.append("-v")
+            cmd.append("- v")
 
     def _add_test_path(self, cmd: list[str]) -> None:
         test_path = self.pkg_path / "tests"
@@ -911,10 +864,10 @@ class TestManagementImpl:
         options: OptionsProtocol,
     ) -> None:
         self.console.print(
-            f"[yellow]🧪[/yellow] Running tests... (timeout: {timeout}s)",
+            f"[yellow]🧪[/ yellow] Running tests... (timeout: {timeout}s)",
         )
         if options.verbose:
-            self.console.print(f"[dim]Command: {' '.join(cmd)}[/dim]")
+            self.console.print(f"[dim]Command: {' '.join(cmd)}[/ dim]")
 
     def _process_test_results(
         self,
@@ -924,17 +877,15 @@ class TestManagementImpl:
         output = result.stdout + result.stderr
         success = result.returncode == 0
 
-        # Process coverage ratchet if enabled and tests passed
         if self.coverage_ratchet_enabled and success:
             if not self._process_coverage_ratchet():
-                return False  # Coverage regression detected
+                return False
 
         if success:
             return self._handle_test_success(output, duration)
         return self._handle_test_failure(output, duration)
 
     def _process_coverage_ratchet(self) -> bool:
-        """Process coverage ratchet and return False if regression detected."""
         coverage_data = self.get_coverage()
         if not coverage_data:
             return True
@@ -945,23 +896,21 @@ class TestManagementImpl:
         return self._handle_ratchet_result(ratchet_result)
 
     def _handle_ratchet_result(self, ratchet_result: dict[str, t.Any]) -> bool:
-        """Handle coverage ratchet result and return False if regression detected."""
         status = ratchet_result["status"]
 
         if status == "improved":
             self._handle_coverage_improvement(ratchet_result)
         elif status == "regression":
-            self.console.print(f"[red]📉 {ratchet_result['message']}[/red]")
-            return False  # Fail the test run on coverage regression
+            self.console.print(f"[red]📉 {ratchet_result['message']}[/ red]")
+            return False
         elif status == "maintained":
-            self.console.print(f"[cyan]📊 {ratchet_result['message']}[/cyan]")
+            self.console.print(f"[cyan]📊 {ratchet_result['message']}[/ cyan]")
 
         self._display_progress_visualization()
         return True
 
     def _handle_coverage_improvement(self, ratchet_result: dict[str, t.Any]) -> None:
-        """Handle coverage improvement display and milestone celebration."""
-        self.console.print(f"[green]🎉 {ratchet_result['message']}[/green]")
+        self.console.print(f"[green]🎉 {ratchet_result['message']}[/ green]")
 
         if "milestones" in ratchet_result and ratchet_result["milestones"]:
             self.coverage_ratchet.display_milestone_celebration(
@@ -972,34 +921,33 @@ class TestManagementImpl:
             next_milestone = ratchet_result["next_milestone"]
             points_needed = ratchet_result.get("points_to_next", 0)
             self.console.print(
-                f"[cyan]🎯 Next milestone: {next_milestone:.0f}% (+{points_needed:.2f}% needed)[/cyan]"
+                f"[cyan]🎯 Next milestone: {next_milestone: .0f}% (+{points_needed: .2f}% needed)[/ cyan]"
             )
 
     def _display_progress_visualization(self) -> None:
-        """Display coverage progress visualization."""
         progress_viz = self.coverage_ratchet.get_progress_visualization()
         for line in progress_viz.split("\n"):
             if line.strip():
-                self.console.print(f"[dim]{line}[/dim]")
+                self.console.print(f"[dim]{line}[/ dim]")
 
     def _handle_test_success(self, output: str, duration: float) -> bool:
-        self.console.print(f"[green]✅[/green] Tests passed ({duration:.1f}s)")
+        self.console.print(f"[green]✅[/ green] Tests passed ({duration: .1f}s)")
         lines = output.split("\n")
         for line in lines:
             if "passed" in line and ("failed" in line or "error" in line):
-                self.console.print(f"[cyan]📊[/cyan] {line.strip()}")
+                self.console.print(f"[cyan]📊[/ cyan] {line.strip()}")
                 break
 
         return True
 
     def _handle_test_failure(self, output: str, duration: float) -> bool:
-        self.console.print(f"[red]❌[/red] Tests failed ({duration:.1f}s)")
+        self.console.print(f"[red]❌[/ red] Tests failed ({duration: .1f}s)")
         failure_lines = self._extract_failure_lines(output)
         if failure_lines:
-            self.console.print("[red]💥[/red] Failure summary: ")
+            self.console.print("[red]💥[/ red] Failure summary: ")
             for line in failure_lines[:10]:
                 if line.strip():
-                    self.console.print(f" [dim]{line}[/dim]")
+                    self.console.print(f" [dim]{line}[/ dim]")
 
         self._last_test_failures = failure_lines or ["Test execution failed"]
 
@@ -1022,7 +970,7 @@ class TestManagementImpl:
     def get_coverage(self) -> dict[str, t.Any]:
         try:
             result = self._run_test_command(
-                ["python", "-m", "coverage", "report", "--format=json"],
+                ["python", "- m", "coverage", "report", "--format=json"],
             )
             if result.returncode == 0:
                 import json
@@ -1037,32 +985,32 @@ class TestManagementImpl:
                     "files": coverage_data.get("files", {}),
                     "summary": coverage_data.get("totals", {}),
                 }
-            self.console.print("[yellow]⚠️[/yellow] Could not get coverage data")
+            self.console.print("[yellow]⚠️[/ yellow] Could not get coverage data")
             return {}
         except Exception as e:
-            self.console.print(f"[yellow]⚠️[/yellow] Error getting coverage: {e}")
+            self.console.print(f"[yellow]⚠️[/ yellow] Error getting coverage: {e}")
             return {}
 
     def run_specific_tests(self, test_pattern: str) -> bool:
         try:
-            cmd = ["python", "-m", "pytest", "-k", test_pattern, "-v"]
+            cmd = ["python", "- m", "pytest", "- k", test_pattern, "- v"]
             self.console.print(
-                f"[yellow]🎯[/yellow] Running tests matching: {test_pattern}",
+                f"[yellow]🎯[/ yellow] Running tests matching: {test_pattern}",
             )
             result = self._run_test_command(cmd)
             if result.returncode == 0:
-                self.console.print("[green]✅[/green] Specific tests passed")
+                self.console.print("[green]✅[/ green] Specific tests passed")
                 return True
-            self.console.print("[red]❌[/red] Specific tests failed")
+            self.console.print("[red]❌[/ red] Specific tests failed")
             return False
         except Exception as e:
-            self.console.print(f"[red]💥[/red] Error running specific tests: {e}")
+            self.console.print(f"[red]💥[/ red] Error running specific tests: {e}")
             return False
 
     def validate_test_environment(self) -> bool:
         issues: list[str] = []
         try:
-            result = self._run_test_command(["python", "-m", "pytest", "--version"])
+            result = self._run_test_command(["python", "- m", "pytest", "--version"])
             if result.returncode != 0:
                 issues.append("pytest not available")
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
@@ -1070,22 +1018,22 @@ class TestManagementImpl:
         test_dir = self.pkg_path / "tests"
         if not test_dir.exists():
             issues.append("tests directory not found")
-        test_files = list(test_dir.glob("test_*.py")) if test_dir.exists() else []
+        test_files = list(test_dir.glob("test_ *.py")) if test_dir.exists() else []
         if not test_files:
             issues.append("no test files found")
         if issues:
-            self.console.print("[red]❌[/red] Test environment issues: ")
+            self.console.print("[red]❌[/ red] Test environment issues: ")
             for issue in issues:
-                self.console.print(f" - {issue}")
+                self.console.print(f"-{issue}")
             return False
-        self.console.print("[green]✅[/green] Test environment validated")
+        self.console.print("[green]✅[/ green] Test environment validated")
         return True
 
     def get_test_stats(self) -> dict[str, t.Any]:
         test_dir = self.pkg_path / "tests"
         if not test_dir.exists():
             return {"test_files": 0, "total_tests": 0, "test_lines": 0}
-        test_files = list(test_dir.glob("test_*.py"))
+        test_files = list(test_dir.glob("test_ *.py"))
         total_lines = 0
         total_tests = 0
         for test_file in test_files:
@@ -1120,5 +1068,5 @@ class TestManagementImpl:
             return None
 
     def has_tests(self) -> bool:
-        test_files = list(self.pkg_path.glob("tests/test_*.py"))
+        test_files = list(self.pkg_path.glob("tests / test_ *.py"))
         return len(test_files) > 0

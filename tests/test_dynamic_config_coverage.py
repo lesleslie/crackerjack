@@ -28,7 +28,7 @@ class TestDynamicConfigGenerator:
         hook: HookMetadata = {
             "id": "test - hook",
             "name": "test - hook",
-            "repo": "https: // example.com",
+            "repo": "https: / / example.com",
             "rev": "v1.0.0",
             "tier": 3,
             "time_estimate": 1.0,
@@ -51,7 +51,7 @@ class TestDynamicConfigGenerator:
         hook: HookMetadata = {
             "id": "test - hook",
             "name": "test - hook",
-            "repo": "https: // example.com",
+            "repo": "https: / / example.com",
             "rev": "v1.0.0",
             "tier": 1,
             "time_estimate": 1.0,
@@ -74,7 +74,7 @@ class TestDynamicConfigGenerator:
         hook: HookMetadata = {
             "id": "test - hook",
             "name": "test - hook",
-            "repo": "https: // example.com",
+            "repo": "https: / / example.com",
             "rev": "v1.0.0",
             "tier": 1,
             "time_estimate": 1.0,
@@ -102,7 +102,7 @@ class TestDynamicConfigGenerator:
         hook: HookMetadata = {
             "id": "slow - hook",
             "name": "slow - hook",
-            "repo": "https: // example.com",
+            "repo": "https: / / example.com",
             "rev": "v1.0.0",
             "tier": 1,
             "time_estimate": 10.0,
@@ -146,7 +146,7 @@ class TestDynamicConfigGenerator:
             {
                 "id": "hook1",
                 "name": "hook1",
-                "repo": "https: // example.com / repo1",
+                "repo": "https: / / example.com / repo1",
                 "rev": "v1.0.0",
                 "tier": 1,
                 "time_estimate": 1.0,
@@ -163,7 +163,7 @@ class TestDynamicConfigGenerator:
             {
                 "id": "hook2",
                 "name": "hook2",
-                "repo": "https: // example.com / repo1",
+                "repo": "https: / / example.com / repo1",
                 "rev": "v1.0.0",
                 "tier": 1,
                 "time_estimate": 1.0,
@@ -183,13 +183,13 @@ class TestDynamicConfigGenerator:
 
         assert isinstance(result, dict)
         assert len(result) == 1
-        key = ("https: // example.com / repo1", "v1.0.0")
+        key = ("https: / / example.com / repo1", "v1.0.0")
         assert key in result
         assert len(result[key]) == 2
 
     def test_get_repo_comment_known_repos(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https://github.com/pre-commit/pre-commit-hooks",
+            "https: / / github.com / pre - commit / pre - commit - hooks",
         )
         assert result == "File structure and format validators"
 
@@ -198,19 +198,19 @@ class TestDynamicConfigGenerator:
 
     def test_get_repo_comment_security_keywords(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https: // github.com / security / bandit",
+            "https: / / github.com / security / bandit",
         )
         assert result == "Security checks"
 
     def test_get_repo_comment_formatting_keywords(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https: // github.com / astral - sh / ruff - pre - commit",
+            "https: / / github.com / astral - sh / ruff - pre - commit",
         )
         assert result == "Code formatting and quality"
 
     def test_get_repo_comment_unknown(self, config_generator) -> None:
         result = config_generator._get_repo_comment(
-            "https: // github.com / unknown / repo",
+            "https: / / github.com / unknown / repo",
         )
         assert result is None
 
@@ -229,9 +229,9 @@ class TestDynamicConfigGenerator:
         result = config_generator.generate_config("fast")
 
         assert isinstance(result, str)
-        assert "repos:" in result  # Remove space after colon
-        assert "- repo:" in result  # Remove leading space
-        assert "hooks:" in result  # Remove space after colon
+        assert "repos: " in result
+        assert "- repo: " in result
+        assert "hooks: " in result
 
     def test_create_temp_config(self, config_generator) -> None:
         result = config_generator.create_temp_config("fast")
@@ -239,10 +239,10 @@ class TestDynamicConfigGenerator:
         assert isinstance(result, Path)
         assert result.exists()
         assert result.suffix == ".yaml"
-        assert "crackerjack-fast-" in result.name  # Fix dash formatting
+        assert "crackerjack - fast -" in result.name
 
         content = result.read_text()
-        assert "repos:" in content  # Remove space after colon
+        assert "repos: " in content
 
         result.unlink()
 
@@ -271,7 +271,7 @@ class TestModuleFunctions:
         test_hook: HookMetadata = {
             "id": "test - experimental",
             "name": "test - experimental",
-            "repo": "https: // example.com",
+            "repo": "https: / / example.com",
             "rev": "v1.0.0",
             "tier": 3,
             "time_estimate": 2.0,
@@ -300,7 +300,7 @@ class TestModuleFunctions:
         test_hook: HookMetadata = {
             "id": "test - remove",
             "name": "test - remove",
-            "repo": "https: // example.com",
+            "repo": "https: / / example.com",
             "rev": "v1.0.0",
             "tier": 3,
             "time_estimate": 2.0,

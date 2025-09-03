@@ -15,18 +15,16 @@ class ConfigurationService:
         self.config_generator = DynamicConfigGenerator()
 
     def update_precommit_config(self, options: OptionsProtocol) -> bool:
-        """Update pre-commit configuration and dynamic config versions."""
         try:
-            # Generate config first
             mode = self._determine_config_mode(options)
             config_temp_path = generate_config_for_mode(mode)
             if not config_temp_path:
-                self.console.print("[yellow]⚠️ No configuration generated[/yellow]")
+                self.console.print("[yellow]⚠️ No configuration generated[/ yellow]")
                 return False
 
             config_file = self.pkg_path / ".pre-commit-config.yaml"
             config_content = config_temp_path.read_text()
-            # Clean trailing whitespace and ensure single trailing newline
+
             from crackerjack.services.filesystem import FileSystemService
 
             config_content = FileSystemService.clean_trailing_whitespace_and_newlines(
@@ -35,25 +33,23 @@ class ConfigurationService:
             config_file.write_text(config_content)
 
             self._temp_config_path = config_temp_path
-            self.console.print("[green]✅[/green] Pre-commit configuration generated")
+            self.console.print("[green]✅[/ green] Pre-commit configuration generated")
 
-            # Run pre-commit autoupdate if requested via -u flag
             if getattr(options, "update_precommit", False):
                 success = self._run_precommit_autoupdate()
                 if success:
-                    self.console.print("[green]✅[/green] Pre-commit hooks updated")
+                    self.console.print("[green]✅[/ green] Pre-commit hooks updated")
                 else:
                     self.console.print(
-                        "[yellow]⚠️[/yellow] Pre-commit autoupdate had issues"
+                        "[yellow]⚠️[/ yellow] Pre-commit autoupdate had issues"
                     )
 
-                # Also update dynamic config versions
                 self._update_dynamic_config_versions()
 
             return True
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Failed to generate pre-commit config: {e}",
+                f"[red]❌[/ red] Failed to generate pre-commit config: {e}",
             )
             return False
 
@@ -72,7 +68,7 @@ class ConfigurationService:
             config_file = self.pkg_path / ".pre-commit-config.yaml"
             if not config_file.exists():
                 self.console.print(
-                    "[yellow]⚠️ No pre-commit configuration found[/yellow]",
+                    "[yellow]⚠️ No pre-commit configuration found[/ yellow]",
                 )
                 return False
             import yaml
@@ -84,10 +80,10 @@ class ConfigurationService:
                     if yaml_result is not None
                     else {}
                 )
-            self.console.print("[green]✅[/green] Pre-commit configuration is valid")
+            self.console.print("[green]✅[/ green] Pre-commit configuration is valid")
             return True
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Configuration validation failed: {e}")
+            self.console.print(f"[red]❌[/ red] Configuration validation failed: {e}")
             return False
 
     def backup_config(self) -> Path | None:
@@ -101,12 +97,12 @@ class ConfigurationService:
             backup_file = self.pkg_path / f".pre-commit-config.yaml.backup.{timestamp}"
             backup_file.write_text(config_file.read_text())
             self.console.print(
-                f"[cyan]💾[/cyan] Configuration backed up to {backup_file.name}",
+                f"[cyan]💾[/ cyan] Configuration backed up to {backup_file.name}",
             )
             return backup_file
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Failed to backup configuration: {e}",
+                f"[yellow]⚠️[/ yellow] Failed to backup configuration: {e}",
             )
             return None
 
@@ -114,17 +110,17 @@ class ConfigurationService:
         try:
             if not backup_file.exists():
                 self.console.print(
-                    f"[red]❌[/red] Backup file not found: {backup_file}",
+                    f"[red]❌[/ red] Backup file not found: {backup_file}",
                 )
                 return False
             config_file = self.pkg_path / ".pre-commit-config.yaml"
             config_file.write_text(backup_file.read_text())
             self.console.print(
-                f"[green]✅[/green] Configuration restored from {backup_file.name}",
+                f"[green]✅[/ green] Configuration restored from {backup_file.name}",
             )
             return True
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Failed to restore configuration: {e}")
+            self.console.print(f"[red]❌[/ red] Failed to restore configuration: {e}")
             return False
 
     def get_config_info(self) -> dict[str, t.Any]:
@@ -172,7 +168,7 @@ class ConfigurationService:
         try:
             pyproject_file = self.pkg_path / "pyproject.toml"
             if not pyproject_file.exists():
-                self.console.print("[yellow]⚠️ No pyproject.toml found[/yellow]")
+                self.console.print("[yellow]⚠️ No pyproject.toml found[/ yellow]")
                 return False
             from tomllib import loads
 
@@ -192,7 +188,7 @@ class ConfigurationService:
                     "show-fixes": True,
                     "output-format": "full",
                 }
-                config["tool"]["ruff"]["format"] = {"docstring-code-format": True}
+                config["tool"]["ruff"]["format"] = {"docstring - code-format": True}
                 config["tool"]["ruff"]["lint"] = {
                     "extend-select": ["C901", "F", "I", "UP"],
                     "ignore": ["E402", "F821"],
@@ -203,7 +199,7 @@ class ConfigurationService:
                     "ini_options": {
                         "asyncio_mode": "auto",
                         "timeout": 300,
-                        "addopts": "--cov=crackerjack --cov-report=term",
+                        "addopts": "- - cov=crackerjack - - cov-report=term",
                         "markers": [
                             "unit: marks test as a unit test",
                             "benchmark: mark test as a benchmark",
@@ -212,25 +208,26 @@ class ConfigurationService:
                         ],
                     },
                 }
-            # Clean the content before writing to prevent hook failures
+
             from crackerjack.services.filesystem import FileSystemService
 
             content = dumps(config)
             content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
             with pyproject_file.open("w") as f:
                 f.write(content)
-            self.console.print("[green]✅[/green] pyproject.toml configuration updated")
+            self.console.print(
+                "[green]✅[/ green] pyproject.toml configuration updated"
+            )
             return True
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Failed to update pyproject.toml: {e}")
+            self.console.print(f"[red]❌[/ red] Failed to update pyproject.toml: {e}")
             return False
 
     def _run_precommit_autoupdate(self) -> bool:
-        """Run pre-commit autoupdate to get latest hook versions."""
         import subprocess
 
         try:
-            self.console.print("[cyan]🔄[/cyan] Running pre-commit autoupdate...")
+            self.console.print("[cyan]🔄[/ cyan] Running pre-commit autoupdate...")
             result = self._execute_precommit_autoupdate()
 
             if result.returncode == 0:
@@ -241,17 +238,15 @@ class ConfigurationService:
                 return False
 
         except subprocess.TimeoutExpired:
-            self.console.print("[red]❌[/red] Pre-commit autoupdate timed out")
+            self.console.print("[red]❌[/ red] Pre-commit autoupdate timed out")
             return False
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Failed to run pre-commit autoupdate: {e}"
+                f"[red]❌[/ red] Failed to run pre-commit autoupdate: {e}"
             )
             return False
 
     def _execute_precommit_autoupdate(self) -> subprocess.CompletedProcess[str]:
-        """Execute the pre-commit autoupdate command."""
-
         return subprocess.run(
             ["uv", "run", "pre-commit", "autoupdate"],
             cwd=self.pkg_path,
@@ -261,32 +256,27 @@ class ConfigurationService:
         )
 
     def _display_autoupdate_results(self, stdout: str) -> None:
-        """Display updated versions if any."""
         if self._has_updates(stdout):
             for line in stdout.split("\n"):
                 if self._is_update_line(line):
-                    self.console.print(f"[dim]  {line.strip()}[/dim]")
+                    self.console.print(f"[dim] {line.strip()}[/ dim]")
 
     def _has_updates(self, stdout: str) -> bool:
-        """Check if the output contains update information."""
         stdout_lower = stdout.lower()
         return "updating" in stdout_lower or "updated" in stdout_lower
 
     def _is_update_line(self, line: str) -> bool:
-        """Check if a line contains update information."""
-        return "updating" in line.lower() or "->" in line
+        return "updating" in line.lower() or "- >" in line
 
     def _handle_autoupdate_error(self, stderr: str) -> None:
-        """Handle pre-commit autoupdate error output."""
         if stderr:
             self.console.print(
-                f"[yellow]Pre-commit autoupdate stderr:[/yellow] {stderr}"
+                f"[yellow]Pre-commit autoupdate stderr: [/ yellow] {stderr}"
             )
 
     def _update_dynamic_config_versions(self) -> None:
-        """Update hardcoded versions in dynamic_config.py based on .pre-commit-config.yaml."""
         try:
-            self.console.print("[cyan]🔄[/cyan] Updating dynamic config versions...")
+            self.console.print("[cyan]🔄[/ cyan] Updating dynamic config versions...")
 
             version_updates = self._extract_version_updates()
             if version_updates:
@@ -294,11 +284,10 @@ class ConfigurationService:
 
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Failed to update dynamic config versions: {e}"
+                f"[yellow]⚠️[/ yellow] Failed to update dynamic config versions: {e}"
             )
 
     def _extract_version_updates(self) -> dict[str, str]:
-        """Extract version mappings from .pre-commit-config.yaml."""
         config_file = self.pkg_path / ".pre-commit-config.yaml"
         if not config_file.exists():
             return {}
@@ -322,7 +311,6 @@ class ConfigurationService:
         return version_updates
 
     def _update_dynamic_config_file(self, version_updates: dict[str, str]) -> None:
-        """Update dynamic_config.py with version mappings."""
         dynamic_config_path = self.pkg_path / "crackerjack" / "dynamic_config.py"
         if dynamic_config_path.exists():
             self._apply_version_updates(dynamic_config_path, version_updates)
@@ -330,13 +318,11 @@ class ConfigurationService:
     def _apply_version_updates(
         self, config_path: Path, version_updates: dict[str, str]
     ) -> None:
-        """Apply version updates to dynamic_config.py."""
         try:
             content = config_path.read_text()
             updated = False
 
             for repo_url, new_rev in version_updates.items():
-                # Find and update the revision for this repo
                 import re
 
                 pattern = rf'("repo": "{re.escape(repo_url)}".*?"rev": )"([^"]+)"'
@@ -346,13 +332,13 @@ class ConfigurationService:
                 if new_content != content:
                     content = new_content
                     updated = True
-                    self.console.print(f"[dim]  Updated {repo_url} to {new_rev}[/dim]")
+                    self.console.print(f"[dim] Updated {repo_url} to {new_rev}[/ dim]")
 
             if updated:
                 config_path.write_text(content)
-                self.console.print("[green]✅[/green] Dynamic config versions updated")
+                self.console.print("[green]✅[/ green] Dynamic config versions updated")
 
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Failed to apply version updates: {e}"
+                f"[yellow]⚠️[/ yellow] Failed to apply version updates: {e}"
             )

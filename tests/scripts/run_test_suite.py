@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""Comprehensive test runner for the crackerjack test harness.
-
-This script provides multiple test execution modes optimized for different
-scenarios: development, CI/CD, coverage analysis, and performance benchmarking.
-"""
 
 import argparse
 import os
@@ -14,149 +9,144 @@ from pathlib import Path
 
 
 class TestRunner:
-    """Comprehensive test runner with multiple execution modes."""
-
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root
         self.tests_dir = project_root / "tests"
 
     def run_fast_tests(self, verbose: bool = False) -> int:
-        """Run fast unit tests only."""
         cmd = [
             "python",
-            "-m",
+            "- m",
             "pytest",
-            "tests/unit/",
-            "-m",
+            "tests / unit /",
+            "- m",
             "not slow and not benchmark",
-            "--tb=short",
-            "-q" if not verbose else "-v",
+            "- - tb = short",
+            "- q" if not verbose else "- v",
         ]
 
         return self._execute_pytest(cmd, "Fast Unit Tests")
 
     def run_comprehensive_tests(self, verbose: bool = False) -> int:
-        """Run all tests including integration and slow tests."""
         cmd = [
             "python",
-            "-m",
+            "- m",
             "pytest",
-            "tests/",
-            "-m",
+            "tests /",
+            "- m",
             "not benchmark",
-            "--tb=short",
-            "-v" if verbose else "-q",
-            "--cov=crackerjack",
-            "--cov-report=term-missing:skip-covered",
-            "--cov-report=html:htmlcov",
-            "--cov-fail-under=42",
+            "- - tb = short",
+            "- v" if verbose else "- q",
+            "- - cov = crackerjack",
+            "- - cov - report = term - missing: skip - covered",
+            "- - cov - report = html: htmlcov",
+            "- - cov - fail - under = 42",
         ]
 
         return self._execute_pytest(cmd, "Comprehensive Test Suite")
 
     def run_coverage_focused(self, target_coverage: int = 42) -> int:
-        """Run tests with focus on achieving target coverage."""
         cmd = [
             "python",
-            "-m",
+            "- m",
             "pytest",
-            "tests/unit/",
-            "tests/integration/",
-            "--cov=crackerjack",
-            "--cov-report=term-missing",
-            "--cov-report=html:htmlcov",
-            "--cov-report=json",
-            f"--cov-fail-under={target_coverage}",
-            "-v",
+            "tests / unit /",
+            "tests / integration /",
+            "- - cov = crackerjack",
+            "- - cov - report = term - missing",
+            "- - cov - report = html: htmlcov",
+            "- - cov - report = json",
+            f"- - cov - fail - under ={target_coverage}",
+            "- v",
         ]
 
         return self._execute_pytest(
             cmd,
-            f"Coverage-Focused Tests (Target: {target_coverage}%)",
+            f"Coverage - Focused Tests (Target: {target_coverage}%)",
         )
 
     def run_performance_tests(self) -> int:
-        """Run performance benchmark tests."""
         cmd = [
             "python",
-            "-m",
+            "- m",
             "pytest",
-            "tests/performance/",
-            "--benchmark-only",
-            "--benchmark-sort=mean",
-            "-v",
+            "tests / performance /",
+            "- - benchmark - only",
+            "- - benchmark - sort = mean",
+            "- v",
         ]
 
         return self._execute_pytest(cmd, "Performance Benchmark Tests")
 
     def run_security_tests(self) -> int:
-        """Run security validation tests."""
-        cmd = ["python", "-m", "pytest", "tests/security/", "-m", "security", "-v"]
+        cmd = [
+            "python",
+            "- m",
+            "pytest",
+            "tests / security /",
+            "- m",
+            "security",
+            "- v",
+        ]
 
         return self._execute_pytest(cmd, "Security Validation Tests")
 
     def run_ci_tests(self, parallel: bool = True) -> int:
-        """Run tests optimized for CI environment."""
         cmd = [
             "python",
-            "-m",
+            "- m",
             "pytest",
-            "tests/",
-            "-m",
+            "tests /",
+            "- m",
             "not benchmark",
-            "--tb=short",
-            "-v",
-            "--cov=crackerjack",
-            "--cov-report=xml",  # For CI reporting
-            "--cov-report=term",
-            "--cov-fail-under=42",
-            "--timeout=300",  # 5 minute timeout per test
+            "- - tb = short",
+            "- v",
+            "- - cov = crackerjack",
+            "- - cov - report = xml",
+            "- - cov - report = term",
+            "- - cov - fail - under = 42",
+            "- - timeout = 300",
         ]
 
         if parallel and self._detect_ci_environment():
-            cmd.extend(["-n", "auto"])  # Parallel execution
+            cmd.extend(["- n", "auto"])
 
         return self._execute_pytest(cmd, "CI Test Suite")
 
     def run_specific_tests(self, test_paths: list[str], verbose: bool = False) -> int:
-        """Run specific test files or directories."""
-        cmd = ["python", "-m", "pytest", *test_paths, "-v" if verbose else "-q"]
+        cmd = ["python", "- m", "pytest", *test_paths, "- v" if verbose else "- q"]
 
         return self._execute_pytest(cmd, f"Specific Tests: {', '.join(test_paths)}")
 
     def run_failed_tests(self) -> int:
-        """Re-run only the tests that failed in the last run."""
         cmd = [
             "python",
-            "-m",
+            "- m",
             "pytest",
-            "--lf",  # Last failed
-            "-v",
+            "- - lf",
+            "- v",
         ]
 
-        return self._execute_pytest(cmd, "Re-running Failed Tests")
+        return self._execute_pytest(cmd, "Re - running Failed Tests")
 
     def run_test_discovery(self) -> int:
-        """Run test discovery to validate test structure."""
-        cmd = ["python", "-m", "pytest", "--collect-only", "-q"]
+        cmd = ["python", "- m", "pytest", "- - collect - only", "- q"]
 
         return self._execute_pytest(cmd, "Test Discovery")
 
     def generate_coverage_report(self) -> int:
-        """Generate detailed coverage report."""
-        # First run tests with coverage
         cmd = [
             "python",
-            "-m",
+            "- m",
             "pytest",
-            "tests/",
-            "-m",
+            "tests /",
+            "- m",
             "not benchmark",
-            "--cov=crackerjack",
-            "--cov-report=html:htmlcov",
-            "--cov-report=json",
-            "--cov-report=xml",
-            "-q",
+            "- - cov = crackerjack",
+            "- - cov - report = html: htmlcov",
+            "- - cov - report = json",
+            "- - cov - report = xml",
+            "- q",
         ]
 
         result = self._execute_pytest(cmd, "Coverage Analysis")
@@ -167,7 +157,6 @@ class TestRunner:
         return result
 
     def _execute_pytest(self, cmd: list[str], description: str) -> int:
-        """Execute pytest command with timing and error handling."""
         start_time = time.time()
 
         try:
@@ -175,7 +164,7 @@ class TestRunner:
                 cmd,
                 check=False,
                 cwd=self.project_root,
-                timeout=600,  # 10 minute timeout
+                timeout=600,
             )
 
             time.time() - start_time
@@ -197,7 +186,6 @@ class TestRunner:
             return 1
 
     def _detect_ci_environment(self) -> bool:
-        """Detect if running in CI environment."""
         ci_indicators = [
             "CI",
             "CONTINUOUS_INTEGRATION",
@@ -211,70 +199,69 @@ class TestRunner:
         return any(os.getenv(indicator) for indicator in ci_indicators)
 
     def print_test_summary(self) -> None:
-        """Print summary of available test suites."""
+        """Print a summary of test results."""
+        pass
 
 
 def main():
-    """Main entry point for test runner."""
     parser = argparse.ArgumentParser(
         description="Comprehensive test runner for crackerjack",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    # Test suite options
-    parser.add_argument("--fast", action="store_true", help="Run fast unit tests only")
     parser.add_argument(
-        "--comprehensive",
+        "- - fast", action="store_true", help="Run fast unit tests only"
+    )
+    parser.add_argument(
+        "- - comprehensive",
         action="store_true",
         help="Run full test suite",
     )
     parser.add_argument(
-        "--coverage",
+        "- - coverage",
         action="store_true",
-        help="Run coverage-focused tests",
+        help="Run coverage - focused tests",
     )
     parser.add_argument(
-        "--coverage-report",
+        "- - coverage - report",
         action="store_true",
         help="Generate coverage reports",
     )
     parser.add_argument(
-        "--performance",
+        "- - performance",
         action="store_true",
         help="Run performance tests",
     )
-    parser.add_argument("--security", action="store_true", help="Run security tests")
-    parser.add_argument("--ci", action="store_true", help="Run CI-optimized tests")
-    parser.add_argument("--failed", action="store_true", help="Re-run failed tests")
-    parser.add_argument("--discover", action="store_true", help="Run test discovery")
+    parser.add_argument("- - security", action="store_true", help="Run security tests")
+    parser.add_argument("- - ci", action="store_true", help="Run CI - optimized tests")
+    parser.add_argument("- - failed", action="store_true", help="Re - run failed tests")
+    parser.add_argument("- - discover", action="store_true", help="Run test discovery")
 
-    # Specific test options
-    parser.add_argument("--tests", nargs="+", help="Run specific test paths")
+    parser.add_argument("- - tests", nargs="+", help="Run specific test paths")
 
-    # Configuration options
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument(
-        "--target",
+        "- - verbose", "- v", action="store_true", help="Verbose output"
+    )
+    parser.add_argument(
+        "- - target",
         type=int,
         default=42,
         help="Coverage target percentage",
     )
     parser.add_argument(
-        "--no-parallel",
+        "- - no - parallel",
         action="store_true",
         help="Disable parallel execution",
     )
 
     args = parser.parse_args()
 
-    # Find project root (now located in tests/scripts/)
     current_dir = Path(__file__).parent.parent.parent
     if not (current_dir / "pyproject.toml").exists():
         return 1
 
     runner = TestRunner(current_dir)
 
-    # If no specific test suite requested, show help
     test_modes = [
         args.fast,
         args.comprehensive,
@@ -292,7 +279,6 @@ def main():
         runner.print_test_summary()
         return 0
 
-    # Execute requested test suites
     exit_code = 0
 
     if args.fast:

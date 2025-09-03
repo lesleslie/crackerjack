@@ -1,5 +1,3 @@
-"""Strategic test coverage for services modules with 0% coverage."""
-
 from pathlib import Path
 from unittest.mock import patch
 
@@ -7,8 +5,6 @@ from rich.console import Console
 
 
 class TestEnhancedFileSystemService:
-    """Test enhanced filesystem service."""
-
     def test_enhanced_filesystem_import(self) -> None:
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
 
@@ -22,8 +18,6 @@ class TestEnhancedFileSystemService:
 
 
 class TestUnifiedConfigService:
-    """Test unified configuration service."""
-
     def test_unified_config_import(self) -> None:
         from crackerjack.services.unified_config import UnifiedConfigurationService
 
@@ -33,7 +27,7 @@ class TestUnifiedConfigService:
         from crackerjack.services.unified_config import UnifiedConfigurationService
 
         console = Console()
-        pkg_path = Path("/test")
+        pkg_path = Path("/ test")
 
         with patch(
             "crackerjack.services.unified_config.Path.exists",
@@ -44,8 +38,6 @@ class TestUnifiedConfigService:
 
 
 class TestMetricsService:
-    """Test metrics service."""
-
     def test_metrics_import(self) -> None:
         from crackerjack.services.metrics import MetricsCollector
 
@@ -59,8 +51,6 @@ class TestMetricsService:
 
 
 class TestServerManagerService:
-    """Test server manager service."""
-
     def test_server_manager_import(self) -> None:
         import crackerjack.services.server_manager as server_manager_module
 
@@ -68,8 +58,6 @@ class TestServerManagerService:
 
 
 class TestToolVersionService:
-    """Test tool version service."""
-
     def test_tool_version_import(self) -> None:
         import crackerjack.services.tool_version_service as tool_version_module
 
@@ -77,8 +65,6 @@ class TestToolVersionService:
 
 
 class TestPerformanceBenchmarks:
-    """Test performance benchmarks service."""
-
     def test_performance_benchmarks_import(self) -> None:
         import crackerjack.services.performance_benchmarks as perf_module
 
@@ -86,8 +72,6 @@ class TestPerformanceBenchmarks:
 
 
 class TestHealthMetrics:
-    """Test health metrics service."""
-
     def test_health_metrics_import(self) -> None:
         import crackerjack.services.health_metrics as health_module
 
@@ -95,8 +79,6 @@ class TestHealthMetrics:
 
 
 class TestDependencyMonitor:
-    """Test dependency monitor service."""
-
     def test_dependency_monitor_import(self) -> None:
         import crackerjack.services.dependency_monitor as dep_module
 
@@ -104,8 +86,6 @@ class TestDependencyMonitor:
 
 
 class TestContextualAIAssistant:
-    """Test contextual AI assistant service."""
-
     def test_contextual_ai_import(self) -> None:
         import crackerjack.services.contextual_ai_assistant as ai_module
 
@@ -113,8 +93,6 @@ class TestContextualAIAssistant:
 
 
 class TestManagersModules:
-    """Test manager modules that have 0% coverage."""
-
     def test_async_hook_manager_import(self) -> None:
         import crackerjack.managers.async_hook_manager as async_hook_module
 
@@ -132,8 +110,6 @@ class TestManagersModules:
 
 
 class TestCoreModulesZeroCoverage:
-    """Test core modules with 0% coverage."""
-
     def test_async_workflow_orchestrator_import(self) -> None:
         import crackerjack.core.async_workflow_orchestrator as async_workflow_module
 
@@ -151,8 +127,6 @@ class TestCoreModulesZeroCoverage:
 
 
 class TestExecutorModules:
-    """Test executor modules with 0% coverage."""
-
     def test_async_hook_executor_import(self) -> None:
         from crackerjack.executors.async_hook_executor import AsyncHookExecutor
 
@@ -177,8 +151,6 @@ class TestExecutorModules:
 
 
 class TestPluginModules:
-    """Test plugin modules with 0% coverage."""
-
     def test_plugin_base_import(self) -> None:
         import crackerjack.plugins.base as plugin_base_module
 
@@ -196,8 +168,6 @@ class TestPluginModules:
 
 
 class TestMCPModulesBasic:
-    """Test basic MCP module imports that work."""
-
     def test_mcp_state_import(self) -> None:
         import crackerjack.mcp.state as mcp_state_module
 
@@ -225,8 +195,6 @@ class TestMCPModulesBasic:
 
 
 class TestOrchestrationModules:
-    """Test orchestration modules with 0% coverage."""
-
     def test_advanced_orchestrator_import(self) -> None:
         import crackerjack.orchestration.advanced_orchestrator as advanced_module
 
@@ -239,8 +207,6 @@ class TestOrchestrationModules:
 
 
 class TestPy313Module:
-    """Test Python 3.13 compatibility module."""
-
     def test_py313_import(self) -> None:
         import crackerjack.py313 as py313_module
 

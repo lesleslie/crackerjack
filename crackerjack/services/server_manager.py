@@ -1,6 +1,5 @@
 import os
 import signal
-import subprocess
 import sys
 import time
 import typing as t
@@ -8,22 +7,29 @@ from pathlib import Path
 
 from rich.console import Console
 
+from .secure_subprocess import execute_secure_subprocess
+from .security_logger import get_security_logger
+
 
 def find_mcp_server_processes() -> list[dict[str, t.Any]]:
-    """Find all running MCP server processes for this project."""
+    """Find running MCP server processes using secure subprocess execution."""
+    security_logger = get_security_logger()
+
     try:
-        result = subprocess.run(
-            ["ps", "aux"],
+        # Use secure subprocess execution with validation
+        result = execute_secure_subprocess(
+            command=["ps", "aux"],
             capture_output=True,
             text=True,
             check=True,
+            timeout=10.0,  # 10 second timeout for process listing
         )
 
         processes: list[dict[str, t.Any]] = []
         str(Path.cwd())
 
         for line in result.stdout.splitlines():
-            if "crackerjack" in line and "--start-mcp-server" in line:
+            if "crackerjack" in line and "- - start - mcp-server" in line:
                 parts = line.split()
                 if len(parts) >= 11:
                     try:
@@ -42,24 +48,33 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
 
         return processes
 
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except Exception as e:
+        security_logger.log_subprocess_failure(
+            command=["ps", "aux"],
+            exit_code=-1,
+            error_output=str(e),
+        )
         return []
 
 
 def find_websocket_server_processes() -> list[dict[str, t.Any]]:
-    """Find all running WebSocket server processes for this project."""
+    """Find running WebSocket server processes using secure subprocess execution."""
+    security_logger = get_security_logger()
+
     try:
-        result = subprocess.run(
-            ["ps", "aux"],
+        # Use secure subprocess execution with validation
+        result = execute_secure_subprocess(
+            command=["ps", "aux"],
             capture_output=True,
             text=True,
             check=True,
+            timeout=10.0,  # 10 second timeout for process listing
         )
 
         processes: list[dict[str, t.Any]] = []
 
         for line in result.stdout.splitlines():
-            if "crackerjack" in line and "--start-websocket-server" in line:
+            if "crackerjack" in line and "- - start - websocket-server" in line:
                 parts = line.split()
                 if len(parts) >= 11:
                     try:
@@ -78,12 +93,16 @@ def find_websocket_server_processes() -> list[dict[str, t.Any]]:
 
         return processes
 
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except Exception as e:
+        security_logger.log_subprocess_failure(
+            command=["ps", "aux"],
+            exit_code=-1,
+            error_output=str(e),
+        )
         return []
 
 
 def stop_process(pid: int, force: bool = False) -> bool:
-    """Stop a process by PID."""
     try:
         if force:
             os.kill(pid, signal.SIGKILL)
@@ -108,14 +127,13 @@ def stop_process(pid: int, force: bool = False) -> bool:
 
 
 def stop_mcp_server(console: Console | None = None) -> bool:
-    """Stop all MCP server processes."""
     if console is None:
         console = Console()
 
     processes = find_mcp_server_processes()
 
     if not processes:
-        console.print("[yellow]⚠️ No MCP server processes found[/yellow]")
+        console.print("[yellow]⚠️ No MCP server processes found[/ yellow]")
         return True
 
     success = True
@@ -131,14 +149,13 @@ def stop_mcp_server(console: Console | None = None) -> bool:
 
 
 def stop_websocket_server(console: Console | None = None) -> bool:
-    """Stop all WebSocket server processes."""
     if console is None:
         console = Console()
 
     processes = find_websocket_server_processes()
 
     if not processes:
-        console.print("[yellow]⚠️ No WebSocket server processes found[/yellow]")
+        console.print("[yellow]⚠️ No WebSocket server processes found[/ yellow]")
         return True
 
     success = True
@@ -154,7 +171,6 @@ def stop_websocket_server(console: Console | None = None) -> bool:
 
 
 def stop_all_servers(console: Console | None = None) -> bool:
-    """Stop all crackerjack server processes."""
     if console is None:
         console = Console()
 
@@ -168,11 +184,10 @@ def restart_mcp_server(
     websocket_port: int | None = None,
     console: Console | None = None,
 ) -> bool:
-    """Restart the MCP server."""
     if console is None:
         console = Console()
 
-    console.print("[bold cyan]🔄 Restarting MCP server...[/bold cyan]")
+    console.print("[bold cyan]🔄 Restarting MCP server...[/ bold cyan]")
 
     stop_mcp_server(console)
 
@@ -181,15 +196,28 @@ def restart_mcp_server(
 
     console.print("🚀 Starting new MCP server...")
     try:
+        # Build command with proper argument formatting
         cmd = [sys.executable, "-m", "crackerjack", "--start-mcp-server"]
         if websocket_port:
             cmd.extend(["--websocket-port", str(websocket_port)])
+
+        # Use secure subprocess execution for server restart
+        import subprocess
 
         subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
+        )
+
+        # Log the secure server start
+        security_logger = get_security_logger()
+        security_logger.log_subprocess_execution(
+            command=cmd,
+            cwd=None,
+            env_vars_count=0,
+            purpose="mcp_server_restart",
         )
 
         console.print("✅ MCP server restart initiated")
@@ -201,34 +229,33 @@ def restart_mcp_server(
 
 
 def list_server_status(console: Console | None = None) -> None:
-    """List status of all crackerjack servers."""
     if console is None:
         console = Console()
 
-    console.print("[bold cyan]📊 Crackerjack Server Status[/bold cyan]")
+    console.print("[bold cyan]📊 Crackerjack Server Status[/ bold cyan]")
 
     mcp_processes = find_mcp_server_processes()
     websocket_processes = find_websocket_server_processes()
 
     if mcp_processes:
-        console.print("\n[bold green]MCP Servers:[/bold green]")
+        console.print("\n[bold green]MCP Servers: [/ bold green]")
         for proc in mcp_processes:
             console.print(
-                f"  • PID {proc['pid']} - CPU: {proc['cpu']}% - Memory: {proc['mem']}%",
+                f" • PID {proc['pid']} - CPU: {proc['cpu']}%-Memory: {proc['mem']}%",
             )
-            console.print(f"    Command: {proc['command']}")
+            console.print(f" Command: {proc['command']}")
     else:
-        console.print("\n[yellow]MCP Servers: None running[/yellow]")
+        console.print("\n[yellow]MCP Servers: None running[/ yellow]")
 
     if websocket_processes:
-        console.print("\n[bold green]WebSocket Servers:[/bold green]")
+        console.print("\n[bold green]WebSocket Servers: [/ bold green]")
         for proc in websocket_processes:
             console.print(
-                f"  • PID {proc['pid']} - CPU: {proc['cpu']}% - Memory: {proc['mem']}%",
+                f" • PID {proc['pid']} - CPU: {proc['cpu']}%-Memory: {proc['mem']}%",
             )
-            console.print(f"    Command: {proc['command']}")
+            console.print(f" Command: {proc['command']}")
     else:
-        console.print("\n[yellow]WebSocket Servers: None running[/yellow]")
+        console.print("\n[yellow]WebSocket Servers: None running[/ yellow]")
 
     if not mcp_processes and not websocket_processes:
-        console.print("\n[dim]No crackerjack servers currently running[/dim]")
+        console.print("\n[dim]No crackerjack servers currently running[/ dim]")

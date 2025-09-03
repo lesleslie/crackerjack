@@ -30,8 +30,8 @@ class StreamingMode(str, Enum):
 
 
 class AICoordinationMode(str, Enum):
-    SINGLE_AGENT = "single - agent"
-    MULTI_AGENT = "multi - agent"
+    SINGLE_AGENT = "single-agent"
+    MULTI_AGENT = "multi-agent"
     COORDINATOR = "coordinator"
 
 
@@ -138,13 +138,13 @@ class StrategySelector:
 
         if len(context.previous_failures) > 5:
             self.console.print(
-                "[yellow]🧠 Switching to individual execution due to multiple failures[/yellow]",
+                "[yellow]🧠 Switching to individual execution due to multiple failures[/ yellow]",
             )
             return ExecutionStrategy.INDIVIDUAL
 
         if context.changed_files and len(context.changed_files) < 5:
             self.console.print(
-                "[cyan]🎯 Using selective execution for targeted file changes[/cyan]",
+                "[cyan]🎯 Using selective execution for targeted file changes[/ cyan]",
             )
             return ExecutionStrategy.SELECTIVE
 
@@ -174,11 +174,11 @@ class StrategySelector:
         if context.changed_files:
             for file_path in context.changed_files:
                 if file_path.suffix == ".py":
-                    priority_hooks.update(["pyright", "ruff - check", "ruff - format"])
+                    priority_hooks.update(["pyright", "ruff-check", "ruff-format"])
                 if "test" in str(file_path):
                     priority_hooks.update(["pytest", "coverage"])
                 if str(file_path).endswith(("setup.py", "pyproject.toml")):
-                    priority_hooks.update(["bandit", "creosote", "detect - secrets"])
+                    priority_hooks.update(["bandit", "creosote", "detect-secrets"])
 
         selected_hooks = [
             hook for hook in strategy.hooks if hook.name in priority_hooks
@@ -189,7 +189,7 @@ class StrategySelector:
 
         self.console.print(
             f"[cyan]🎯 Selected {len(selected_hooks)} hooks for targeted execution: "
-            f"{', '.join(h.name for h in selected_hooks)}[/cyan]",
+            f"{', '.join(h.name for h in selected_hooks)}[/ cyan]",
         )
 
         return HookStrategy(
@@ -303,35 +303,35 @@ class ExecutionPlan:
     def print_plan_summary(self, console: Console) -> None:
         console.print("\n" + "=" * 80)
         console.print(
-            "[bold bright_blue]🎯 ORCHESTRATED EXECUTION PLAN[/bold bright_blue]",
+            "[bold bright_blue]🎯 ORCHESTRATED EXECUTION PLAN[/ bold bright_blue]",
         )
         console.print("=" * 80)
 
-        console.print(f"[bold]Strategy: [/bold] {self.execution_strategy.value}")
+        console.print(f"[bold]Strategy: [/ bold] {self.execution_strategy.value}")
         console.print(
-            f"[bold]AI Mode: [/bold] {self.config.ai_coordination_mode.value}",
+            f"[bold]AI Mode: [/ bold] {self.config.ai_coordination_mode.value}",
         )
         console.print(
-            f"[bold]Progress Level: [/bold] {self.config.progress_level.value}",
+            f"[bold]Progress Level: [/ bold] {self.config.progress_level.value}",
         )
         console.print(
-            f"[bold]Estimated Duration: [/bold] {self.estimated_total_duration: .1f}s",
+            f"[bold]Estimated Duration: [/ bold] {self.estimated_total_duration: .1f}s",
         )
 
-        console.print("\n[bold cyan]Hook Execution: [/bold cyan]")
+        console.print("\n[bold cyan]Hook Execution: [/ bold cyan]")
         for i, plan in enumerate(self.hook_plans, 1):
             strategy = plan["strategy"]
             console.print(
-                f" {i}. {strategy.name} - {len(strategy.hooks)} hooks "
+                f" {i}. {strategy.name}-{len(strategy.hooks)} hooks "
                 f"({plan['estimated_duration']: .1f}s)",
             )
 
-        console.print("\n[bold green]Test Execution: [/bold green]")
+        console.print("\n[bold green]Test Execution: [/ bold green]")
         console.print(f" Mode: {self.test_plan['mode']}")
         console.print(f" Workers: {self.test_plan['parallel_workers']}")
         console.print(f" Duration: {self.test_plan['estimated_duration']: .1f}s")
 
-        console.print("\n[bold magenta]AI Coordination: [/bold magenta]")
+        console.print("\n[bold magenta]AI Coordination: [/ bold magenta]")
         console.print(f" Mode: {self.ai_plan['mode'].value}")
         console.print(f" Intelligence: {self.ai_plan['intelligence_level'].value}")
         console.print(

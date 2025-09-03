@@ -188,8 +188,8 @@ class ErrorCache:
     def _extract_pyright_info(self, line: str) -> tuple[str, str]:
         error_code = ""
         message_pattern = line
-        if " - error: " in line:
-            parts = line.split(" - error: ")
+        if "-error: " in line:
+            parts = line.split("-error: ")
             if len(parts) >= 2:
                 message_pattern = parts[1].strip()
                 if "(" in message_pattern and ")" in message_pattern:

@@ -1,0 +1,643 @@
+"""
+Comprehensive input validation framework for security hardening.
+
+This module provides defense-in-depth input validation to prevent:
+- Command injection attacks (CWE-77)
+- Path traversal attacks (CWE-22)
+- SQL injection (CWE-89)
+- JSON injection (CWE-91)
+- DoS via malformed input (CWE-400)
+- Code injection (CWE-94)
+"""
+
+import json
+import re
+import typing as t
+from functools import wraps
+from pathlib import Path
+
+from pydantic import BaseModel, Field
+
+from ..errors import ErrorCode, ExecutionError
+from .security_logger import (
+    SecurityEventLevel,
+    get_security_logger,
+)
+
+
+class ValidationConfig(BaseModel):
+    """Configuration for input validation rules."""
+
+    # String limits
+    MAX_STRING_LENGTH: int = Field(default=10000, ge=1)
+    MAX_PROJECT_NAME_LENGTH: int = Field(default=255, ge=1)
+    MAX_JOB_ID_LENGTH: int = Field(default=128, ge=1)
+    MAX_COMMAND_LENGTH: int = Field(default=1000, ge=1)
+
+    # JSON limits
+    MAX_JSON_SIZE: int = Field(default=1024 * 1024, ge=1)  # 1MB
+    MAX_JSON_DEPTH: int = Field(default=10, ge=1)
+
+    # Rate limiting
+    MAX_VALIDATION_FAILURES_PER_MINUTE: int = Field(default=10, ge=1)
+
+    # Pattern validation
+    ALLOW_SHELL_METACHARACTERS: bool = Field(default=False)
+    STRICT_ALPHANUMERIC_MODE: bool = Field(default=False)
+
+
+class ValidationResult(BaseModel):
+    """Result of input validation."""
+
+    valid: bool
+    sanitized_value: t.Any = None
+    error_message: str = ""
+    security_level: SecurityEventLevel = SecurityEventLevel.LOW
+    validation_type: str = ""
+
+
+class InputSanitizer:
+    """Provides secure input sanitization utilities."""
+
+    # Shell metacharacters that could enable command injection
+    SHELL_METACHARACTERS = {
+        ";",
+        "&",
+        "|",
+        "`",
+        "$",
+        "(",
+        ")",
+        "<",
+        ">",
+        "\n",
+        "\r",
+        "\\",
+        '"',
+        "'",
+        "*",
+        "?",
+        "[",
+        "]",
+        "{",
+        "}",
+        "~",
+        "^",
+    }
+
+    # Dangerous path components
+    DANGEROUS_PATH_COMPONENTS = {
+        "..",
+        ".",
+        "~",
+        "$",
+        "`",
+        ";",
+        "&",
+        "|",
+        "<",
+        ">",
+        "CON",
+        "PRN",
+        "AUX",
+        "NUL",
+        "COM1",
+        "COM2",
+        "COM3",
+        "COM4",
+        "COM5",
+        "COM6",
+        "COM7",
+        "COM8",
+        "COM9",
+        "LPT1",
+        "LPT2",
+        "LPT3",
+        "LPT4",
+        "LPT5",
+        "LPT6",
+        "LPT7",
+        "LPT8",
+        "LPT9",
+    }
+
+    # SQL injection patterns
+    SQL_INJECTION_PATTERNS = [
+        r"(\b(union|select|insert|update|delete|drop|create|alter|exec|execute)\b)",
+        r"(-{2,}|\/\*|\*\/)",  # SQL comments
+        r"(\bor\b.*=.*|\band\b.*=.*)",  # Boolean-based injection
+        r"(\bxp_cmdshell\b|\bsp_executesql\b)",  # SQL Server specific
+    ]
+
+    # Code injection patterns
+    CODE_INJECTION_PATTERNS = [
+        r"(eval\s*\(|exec\s*\(|execfile\s*\()",  # Python code execution
+        r"(__import__|getattr|setattr|delattr)",  # Dynamic attribute access
+        r"(subprocess|os\.system|os\.popen|commands\.)",  # System commands
+        r"(compile\s*\(|code\.compile)",  # Code compilation
+    ]
+
+    @classmethod
+    def sanitize_string(
+        cls,
+        value: str,
+        max_length: int = 10000,
+        allow_shell_chars: bool = False,
+        strict_alphanumeric: bool = False,
+    ) -> ValidationResult:
+        """Sanitize string input with configurable restrictions."""
+
+        if not isinstance(value, str):
+            return ValidationResult(
+                valid=False,
+                error_message=f"Expected string, got {type(value).__name__}",
+                security_level=SecurityEventLevel.MEDIUM,
+                validation_type="type_check",
+            )
+
+        # Length validation
+        if len(value) > max_length:
+            return ValidationResult(
+                valid=False,
+                error_message=f"String too long: {len(value)} > {max_length}",
+                security_level=SecurityEventLevel.HIGH,
+                validation_type="length_check",
+            )
+
+        # Null byte injection check
+        if "\x00" in value:
+            return ValidationResult(
+                valid=False,
+                error_message="Null byte detected in input",
+                security_level=SecurityEventLevel.CRITICAL,
+                validation_type="null_byte_injection",
+            )
+
+        # Control character check
+        if any(ord(c) < 32 and c not in "\t\n\r" for c in value):
+            return ValidationResult(
+                valid=False,
+                error_message="Control characters detected in input",
+                security_level=SecurityEventLevel.HIGH,
+                validation_type="control_chars",
+            )
+
+        # Shell metacharacter check
+        if not allow_shell_chars:
+            found_chars = [c for c in value if c in cls.SHELL_METACHARACTERS]
+            if found_chars:
+                return ValidationResult(
+                    valid=False,
+                    error_message=f"Shell metacharacters detected: {found_chars}",
+                    security_level=SecurityEventLevel.CRITICAL,
+                    validation_type="shell_injection",
+                )
+
+        # Strict alphanumeric mode
+        if (
+            strict_alphanumeric
+            and not value.replace("-", "").replace("_", "").isalnum()
+        ):
+            return ValidationResult(
+                valid=False,
+                error_message="Only alphanumeric characters, hyphens, and underscores allowed",
+                security_level=SecurityEventLevel.MEDIUM,
+                validation_type="alphanumeric_only",
+            )
+
+        # SQL injection pattern check
+        for pattern in cls.SQL_INJECTION_PATTERNS:
+            if re.search(pattern, value, re.IGNORECASE):
+                return ValidationResult(
+                    valid=False,
+                    error_message="SQL injection pattern detected",
+                    security_level=SecurityEventLevel.CRITICAL,
+                    validation_type="sql_injection",
+                )
+
+        # Code injection pattern check
+        for pattern in cls.CODE_INJECTION_PATTERNS:
+            if re.search(pattern, value, re.IGNORECASE):
+                return ValidationResult(
+                    valid=False,
+                    error_message="Code injection pattern detected",
+                    security_level=SecurityEventLevel.CRITICAL,
+                    validation_type="code_injection",
+                )
+
+        # Basic sanitization (remove leading/trailing whitespace)
+        sanitized = value.strip()
+
+        return ValidationResult(
+            valid=True, sanitized_value=sanitized, validation_type="string_sanitization"
+        )
+
+    @classmethod
+    def sanitize_json(
+        cls, value: str, max_size: int = 1024 * 1024, max_depth: int = 10
+    ) -> ValidationResult:
+        """Sanitize JSON input with size and depth limits."""
+
+        if len(value) > max_size:
+            return ValidationResult(
+                valid=False,
+                error_message=f"JSON too large: {len(value)} > {max_size} bytes",
+                security_level=SecurityEventLevel.HIGH,
+                validation_type="json_size",
+            )
+
+        try:
+            # Parse JSON to validate structure
+            parsed = json.loads(value)
+
+            # Check nesting depth
+            def check_depth(obj: t.Any, current_depth: int = 0) -> int:
+                if current_depth > max_depth:
+                    return current_depth
+
+                if isinstance(obj, dict):
+                    return (
+                        max(check_depth(v, current_depth + 1) for v in obj.values())
+                        if obj
+                        else current_depth
+                    )
+                elif isinstance(obj, list):
+                    return (
+                        max(check_depth(item, current_depth + 1) for item in obj)
+                        if obj
+                        else current_depth
+                    )
+                else:
+                    return current_depth
+
+            actual_depth = check_depth(parsed)
+            if actual_depth > max_depth:
+                return ValidationResult(
+                    valid=False,
+                    error_message=f"JSON nesting too deep: {actual_depth} > {max_depth}",
+                    security_level=SecurityEventLevel.HIGH,
+                    validation_type="json_depth",
+                )
+
+            return ValidationResult(
+                valid=True, sanitized_value=parsed, validation_type="json_parsing"
+            )
+
+        except json.JSONDecodeError as e:
+            return ValidationResult(
+                valid=False,
+                error_message=f"Invalid JSON: {e}",
+                security_level=SecurityEventLevel.MEDIUM,
+                validation_type="json_syntax",
+            )
+
+    @classmethod
+    def sanitize_path(
+        cls,
+        value: str | Path,
+        base_directory: Path | None = None,
+        allow_absolute: bool = False,
+    ) -> ValidationResult:
+        """Sanitize file path with traversal protection."""
+
+        try:
+            path = Path(value)
+
+            # Resolve to absolute path to eliminate .. components
+            resolved = path.resolve()
+
+            # Check for dangerous components
+            for part in resolved.parts:
+                if part.upper() in cls.DANGEROUS_PATH_COMPONENTS:
+                    return ValidationResult(
+                        valid=False,
+                        error_message=f"Dangerous path component: {part}",
+                        security_level=SecurityEventLevel.CRITICAL,
+                        validation_type="path_traversal",
+                    )
+
+            # Check base directory constraint
+            if base_directory:
+                base_resolved = base_directory.resolve()
+                try:
+                    resolved.relative_to(base_resolved)
+                except ValueError:
+                    return ValidationResult(
+                        valid=False,
+                        error_message=f"Path outside base directory: {resolved}",
+                        security_level=SecurityEventLevel.CRITICAL,
+                        validation_type="directory_escape",
+                    )
+
+            # Check absolute path restrictions
+            if not allow_absolute and resolved.is_absolute() and base_directory:
+                return ValidationResult(
+                    valid=False,
+                    error_message="Absolute paths not allowed",
+                    security_level=SecurityEventLevel.HIGH,
+                    validation_type="absolute_path",
+                )
+
+            return ValidationResult(
+                valid=True,
+                sanitized_value=resolved,
+                validation_type="path_sanitization",
+            )
+
+        except (OSError, ValueError) as e:
+            return ValidationResult(
+                valid=False,
+                error_message=f"Invalid path: {e}",
+                security_level=SecurityEventLevel.HIGH,
+                validation_type="path_syntax",
+            )
+
+
+class SecureInputValidator:
+    """Main input validation class with security logging."""
+
+    def __init__(self, config: ValidationConfig | None = None):
+        self.config = config or ValidationConfig()
+        self.logger = get_security_logger()
+        self.sanitizer = InputSanitizer()
+        self._failure_counts: dict[str, int] = {}
+
+    def validate_project_name(self, name: str) -> ValidationResult:
+        """Validate project name with security constraints."""
+
+        result = self.sanitizer.sanitize_string(
+            name,
+            max_length=self.config.MAX_PROJECT_NAME_LENGTH,
+            allow_shell_chars=False,
+            strict_alphanumeric=True,
+        )
+
+        if not result.valid:
+            self._log_validation_failure(
+                "project_name", name, result.error_message, result.security_level
+            )
+
+        return result
+
+    def validate_job_id(self, job_id: str) -> ValidationResult:
+        """Validate job ID with strict alphanumeric constraints."""
+
+        # Job IDs must be alphanumeric with hyphens only
+        if not re.match(r"^[a-zA-Z0-9\-_]+$", job_id):
+            result = ValidationResult(
+                valid=False,
+                error_message="Job ID must be alphanumeric with hyphens/underscores only",
+                security_level=SecurityEventLevel.HIGH,
+                validation_type="job_id_format",
+            )
+            self._log_validation_failure(
+                "job_id", job_id, result.error_message, result.security_level
+            )
+            return result
+
+        result = self.sanitizer.sanitize_string(
+            job_id,
+            max_length=self.config.MAX_JOB_ID_LENGTH,
+            allow_shell_chars=False,
+            strict_alphanumeric=True,
+        )
+
+        if not result.valid:
+            self._log_validation_failure(
+                "job_id", job_id, result.error_message, result.security_level
+            )
+
+        return result
+
+    def validate_command_args(self, args: str | list) -> ValidationResult:
+        """Validate command arguments to prevent injection."""
+
+        if isinstance(args, str):
+            result = self.sanitizer.sanitize_string(
+                args,
+                max_length=self.config.MAX_COMMAND_LENGTH,
+                allow_shell_chars=self.config.ALLOW_SHELL_METACHARACTERS,
+            )
+        elif isinstance(args, list):
+            # Validate each argument in the list
+            sanitized_args = []
+            for arg in args:
+                if not isinstance(arg, str):
+                    result = ValidationResult(
+                        valid=False,
+                        error_message=f"Command argument must be string, got {type(arg).__name__}",
+                        security_level=SecurityEventLevel.HIGH,
+                        validation_type="command_arg_type",
+                    )
+                    break
+
+                arg_result = self.sanitizer.sanitize_string(
+                    arg,
+                    max_length=self.config.MAX_COMMAND_LENGTH,
+                    allow_shell_chars=self.config.ALLOW_SHELL_METACHARACTERS,
+                )
+
+                if not arg_result.valid:
+                    result = arg_result
+                    break
+
+                sanitized_args.append(arg_result.sanitized_value)
+            else:
+                result = ValidationResult(
+                    valid=True,
+                    sanitized_value=sanitized_args,
+                    validation_type="command_args_list",
+                )
+        else:
+            result = ValidationResult(
+                valid=False,
+                error_message=f"Command args must be string or list, got {type(args).__name__}",
+                security_level=SecurityEventLevel.HIGH,
+                validation_type="command_args_type",
+            )
+
+        if not result.valid:
+            self._log_validation_failure(
+                "command_args", str(args), result.error_message, result.security_level
+            )
+
+        return result
+
+    def validate_json_payload(self, payload: str) -> ValidationResult:
+        """Validate JSON payload with size and structure limits."""
+
+        result = self.sanitizer.sanitize_json(
+            payload,
+            max_size=self.config.MAX_JSON_SIZE,
+            max_depth=self.config.MAX_JSON_DEPTH,
+        )
+
+        if not result.valid:
+            self._log_validation_failure(
+                "json_payload",
+                payload[:100] + "...",
+                result.error_message,
+                result.security_level,
+            )
+
+        return result
+
+    def validate_file_path(
+        self,
+        path: str | Path,
+        base_directory: Path | None = None,
+        allow_absolute: bool = False,
+    ) -> ValidationResult:
+        """Validate file path with traversal protection."""
+
+        result = self.sanitizer.sanitize_path(path, base_directory, allow_absolute)
+
+        if not result.valid:
+            self._log_validation_failure(
+                "file_path", str(path), result.error_message, result.security_level
+            )
+
+        return result
+
+    def validate_environment_var(self, name: str, value: str) -> ValidationResult:
+        """Validate environment variable name and value."""
+
+        # Environment variable names must be valid identifiers
+        if not re.match(r"^[A-Z_][A-Z0-9_]*$", name):
+            result = ValidationResult(
+                valid=False,
+                error_message="Invalid environment variable name format",
+                security_level=SecurityEventLevel.MEDIUM,
+                validation_type="env_var_name",
+            )
+            self._log_validation_failure(
+                "env_var_name", name, result.error_message, result.security_level
+            )
+            return result
+
+        # Validate environment variable value
+        result = self.sanitizer.sanitize_string(
+            value, max_length=self.config.MAX_STRING_LENGTH, allow_shell_chars=False
+        )
+
+        if not result.valid:
+            self._log_validation_failure(
+                "env_var_value",
+                f"{name}={value}",
+                result.error_message,
+                result.security_level,
+            )
+
+        return result
+
+    def _log_validation_failure(
+        self,
+        validation_type: str,
+        input_value: str,
+        reason: str,
+        level: SecurityEventLevel,
+    ) -> None:
+        """Log validation failure with rate limiting."""
+
+        self.logger.log_validation_failed(
+            validation_type=validation_type,
+            file_path=input_value,  # Reusing file_path field for input value
+            reason=reason,
+        )
+
+        # Track failure counts for rate limiting
+        self._failure_counts[validation_type] = (
+            self._failure_counts.get(validation_type, 0) + 1
+        )
+
+
+def validation_required(
+    *,
+    validate_args: bool = True,
+    validate_kwargs: bool = True,
+    config: ValidationConfig | None = None,
+):
+    """Decorator to add automatic input validation to functions."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            validator = SecureInputValidator(config)
+
+            # Validate string arguments
+            if validate_args:
+                for i, arg in enumerate(args):
+                    if isinstance(arg, str):
+                        result = validator.sanitizer.sanitize_string(arg)
+                        if not result.valid:
+                            raise ExecutionError(
+                                message=f"Validation failed for argument {i}: {result.error_message}",
+                                error_code=ErrorCode.VALIDATION_ERROR,
+                            )
+
+            # Validate keyword arguments
+            if validate_kwargs:
+                for key, value in kwargs.items():
+                    if isinstance(value, str):
+                        result = validator.sanitizer.sanitize_string(value)
+                        if not result.valid:
+                            raise ExecutionError(
+                                message=f"Validation failed for parameter {key}: {result.error_message}",
+                                error_code=ErrorCode.VALIDATION_ERROR,
+                            )
+
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def get_input_validator(
+    config: ValidationConfig | None = None,
+) -> SecureInputValidator:
+    """Get configured input validator instance."""
+    return SecureInputValidator(config)
+
+
+# Convenience validation functions
+def validate_and_sanitize_string(value: str, **kwargs) -> str:
+    """Validate and return sanitized string, raising on failure."""
+    validator = SecureInputValidator()
+    result = validator.sanitizer.sanitize_string(value, **kwargs)
+
+    if not result.valid:
+        raise ExecutionError(
+            message=f"String validation failed: {result.error_message}",
+            error_code=ErrorCode.VALIDATION_ERROR,
+        )
+
+    return result.sanitized_value
+
+
+def validate_and_sanitize_path(value: str | Path, **kwargs) -> Path:
+    """Validate and return sanitized path, raising on failure."""
+    validator = SecureInputValidator()
+    result = validator.sanitize_path(value, **kwargs)
+
+    if not result.valid:
+        raise ExecutionError(
+            message=f"Path validation failed: {result.error_message}",
+            error_code=ErrorCode.VALIDATION_ERROR,
+        )
+
+    return result.sanitized_value
+
+
+def validate_and_parse_json(value: str, **kwargs) -> t.Any:
+    """Validate and return parsed JSON, raising on failure."""
+    validator = SecureInputValidator()
+    result = validator.sanitizer.sanitize_json(value, **kwargs)
+
+    if not result.valid:
+        raise ExecutionError(
+            message=f"JSON validation failed: {result.error_message}",
+            error_code=ErrorCode.VALIDATION_ERROR,
+        )
+
+    return result.sanitized_value

@@ -10,8 +10,6 @@ from ..agents.base import FixResult, Issue, IssueType
 
 @dataclass
 class CachedPattern:
-    """A cached pattern from successful fixes."""
-
     pattern_id: str
     issue_type: IssueType
     strategy: str
@@ -27,27 +25,18 @@ class CachedPattern:
 
 
 class PatternCache:
-    """Cache for successful architectural patterns and fixes.
-
-    Learns from successful fixes and provides patterns for reuse,
-    reducing iteration cycles and improving code quality consistency.
-    """
-
     def __init__(self, project_path: Path) -> None:
         self.project_path = project_path
         self.cache_dir = project_path / ".crackerjack" / "patterns"
         self.cache_file = self.cache_dir / "pattern_cache.json"
         self.logger = logging.getLogger(__name__)
 
-        # In-memory cache for performance
         self._patterns: dict[str, CachedPattern] = {}
         self._loaded = False
 
-        # Ensure cache directory exists
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_patterns(self) -> None:
-        """Load patterns from disk cache."""
         if self._loaded:
             return
 
@@ -83,7 +72,6 @@ class PatternCache:
         self._loaded = True
 
     def _save_patterns(self) -> None:
-        """Save patterns to disk cache."""
         try:
             data = {
                 "version": "1.0",
@@ -105,22 +93,19 @@ class PatternCache:
     def cache_successful_pattern(
         self, issue: Issue, plan: dict[str, t.Any], result: FixResult
     ) -> str:
-        """Cache a successful pattern for future reuse."""
         self._load_patterns()
 
-        # Generate pattern ID
         pattern_id = (
             f"{issue.type.value}_{plan.get('strategy', 'default')}_{int(time.time())}"
         )
 
-        # Create cached pattern
         cached_pattern = CachedPattern(
             pattern_id=pattern_id,
             issue_type=issue.type,
             strategy=plan.get("strategy", "unknown"),
             patterns=plan.get("patterns", []),
             confidence=result.confidence,
-            success_rate=1.0,  # Initial success rate
+            success_rate=1.0,
             usage_count=0,
             last_used=0.0,
             created_at=time.time(),
@@ -138,7 +123,6 @@ class PatternCache:
             },
         )
 
-        # Store in memory and disk
         self._patterns[pattern_id] = cached_pattern
         self._save_patterns()
 
@@ -146,7 +130,6 @@ class PatternCache:
         return pattern_id
 
     def get_patterns_for_issue(self, issue: Issue) -> list[CachedPattern]:
-        """Get cached patterns that match the given issue type."""
         self._load_patterns()
 
         matching_patterns = [
@@ -155,7 +138,6 @@ class PatternCache:
             if pattern.issue_type == issue.type
         ]
 
-        # Sort by success rate and confidence
         matching_patterns.sort(
             key=lambda p: (p.success_rate, p.confidence), reverse=True
         )
@@ -163,17 +145,14 @@ class PatternCache:
         return matching_patterns
 
     def get_best_pattern_for_issue(self, issue: Issue) -> CachedPattern | None:
-        """Get the best cached pattern for the given issue."""
         patterns = self.get_patterns_for_issue(issue)
 
         if not patterns:
             return None
 
-        # Return the highest-rated pattern
         return patterns[0]
 
     def use_pattern(self, pattern_id: str) -> bool:
-        """Mark a pattern as used and update usage statistics."""
         self._load_patterns()
 
         if pattern_id not in self._patterns:
@@ -191,7 +170,6 @@ class PatternCache:
         return True
 
     def update_pattern_success_rate(self, pattern_id: str, success: bool) -> None:
-        """Update the success rate of a pattern based on usage outcome."""
         self._load_patterns()
 
         if pattern_id not in self._patterns:
@@ -199,7 +177,6 @@ class PatternCache:
 
         pattern = self._patterns[pattern_id]
 
-        # Update success rate using weighted average
         total_uses = pattern.usage_count
         if total_uses > 0:
             current_successes = pattern.success_rate * total_uses
@@ -209,11 +186,10 @@ class PatternCache:
 
         self._save_patterns()
         self.logger.debug(
-            f"Updated pattern {pattern_id} success rate: {pattern.success_rate:.2f}"
+            f"Updated pattern {pattern_id} success rate: {pattern.success_rate: .2f}"
         )
 
     def get_pattern_statistics(self) -> dict[str, t.Any]:
-        """Get statistics about cached patterns."""
         self._load_patterns()
 
         if not self._patterns:
@@ -241,7 +217,6 @@ class PatternCache:
         }
 
     def _get_most_used_patterns(self, limit: int = 5) -> list[dict[str, t.Any]]:
-        """Get the most frequently used patterns."""
         patterns = sorted(
             self._patterns.values(), key=lambda p: p.usage_count, reverse=True
         )[:limit]
@@ -261,7 +236,6 @@ class PatternCache:
     def cleanup_old_patterns(
         self, max_age_days: int = 30, min_usage_count: int = 2
     ) -> int:
-        """Clean up old, unused patterns to prevent cache bloat."""
         self._load_patterns()
 
         cutoff_time = time.time() - (max_age_days * 24 * 60 * 60)
@@ -285,7 +259,6 @@ class PatternCache:
         return len(patterns_to_remove)
 
     def clear_cache(self) -> None:
-        """Clear all cached patterns."""
         self._patterns.clear()
         self._loaded = False
 
@@ -295,7 +268,6 @@ class PatternCache:
         self.logger.info("Cleared pattern cache")
 
     def export_patterns(self, export_path: Path) -> bool:
-        """Export patterns to a file for sharing or backup."""
         self._load_patterns()
 
         try:
@@ -322,7 +294,6 @@ class PatternCache:
             return False
 
     def import_patterns(self, import_path: Path, merge: bool = True) -> bool:
-        """Import patterns from a file."""
         try:
             with import_path.open() as f:
                 data = json.load(f)

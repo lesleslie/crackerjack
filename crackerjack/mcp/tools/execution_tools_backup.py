@@ -33,7 +33,6 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
 
         extra_kwargs = kwargs_result["kwargs"]
 
-        # Run the workflow directly instead of in background
         try:
             result = await _execute_crackerjack_sync(
                 job_id,
@@ -78,7 +77,6 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
     if not context:
         return '{"error": "Server context not available"}'
 
-    # Rate limiting is optional - skip if not configured
     if context.rate_limiter:
         allowed, details = await context.rate_limiter.check_request_allowed("default")
         if not allowed:
@@ -88,16 +86,14 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
 
 
 def _handle_task_exception(job_id: str, task: asyncio.Task) -> None:
-    """Handle exceptions from background tasks."""
     import tempfile
     from pathlib import Path
 
     try:
         exception = task.exception()
         if exception:
-            # Log the exception to a debug file
             debug_file = (
-                Path(tempfile.gettempdir()) / f"crackerjack-task-error-{job_id}.log"
+                Path(tempfile.gettempdir()) / f"crackerjack - task-error -{job_id}.log"
             )
             with debug_file.open("w") as f:
                 f.write(
@@ -107,13 +103,13 @@ def _handle_task_exception(job_id: str, task: asyncio.Task) -> None:
                 import traceback
 
                 f.write(
-                    f"Traceback:\n{traceback.format_exception(type(exception), exception, exception.__traceback__)}\n",
+                    f"Traceback: \n{traceback.format_exception(type(exception), exception, exception.__traceback__)}\n",
                 )
     except Exception as e:
-        # If we can't even log the error, at least try to create a simple file
         with suppress(Exception):
             debug_file = (
-                Path(tempfile.gettempdir()) / f"crackerjack-logging-error-{job_id}.log"
+                Path(tempfile.gettempdir())
+                / f"crackerjack - logging-error -{job_id}.log"
             )
             with debug_file.open("w") as f:
                 f.write(f"Failed to log task exception: {e}\n")
@@ -220,7 +216,6 @@ async def _initialize_execution(
     current_iteration: int,
     context: t.Any,
 ) -> None:
-    """Initialize execution with status checks and service preparation."""
     _update_progress(
         job_id=job_id,
         iteration=current_iteration,
@@ -229,7 +224,6 @@ async def _initialize_execution(
         message="Initializing crackerjack execution",
     )
 
-    # Check comprehensive status first to prevent conflicts and perform cleanup
     status_result = await _check_status_and_prepare(job_id, context)
     if status_result.get("should_abort", False):
         msg = f"Execution aborted: {status_result['reason']}"
@@ -241,13 +235,11 @@ async def _initialize_execution(
         max_iterations=max_iterations,
         overall_progress=5,
         current_stage="status_verified",
-        message="Status check complete - no conflicts detected",
+        message="Status check complete-no conflicts detected",
     )
 
-    # Clean up stale jobs first
     await _cleanup_stale_jobs(context)
 
-    # Auto-start required services
     await _ensure_services_running(job_id, context)
 
     _update_progress(
@@ -267,13 +259,10 @@ async def _setup_orchestrator(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> tuple[t.Any, bool]:
-    """Set up the appropriate orchestrator (force standard for MCP compatibility)."""
-    # Force standard orchestrator for MCP server to ensure proper progress reporting
     context.safe_print("Using Standard WorkflowOrchestrator for MCP compatibility")
     orchestrator = _create_standard_orchestrator(job_id, kwargs, context)
     use_advanced_orchestrator = False
 
-    # Update progress to show orchestrator mode
     orchestrator_type = "Standard Orchestrator (MCP Compatible)"
     _update_progress(
         job_id=job_id,
@@ -292,7 +281,6 @@ async def _create_advanced_orchestrator(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> t.Any:
-    """Create and configure the advanced orchestrator."""
     from crackerjack.core.session_coordinator import SessionCoordinator
     from crackerjack.orchestration.advanced_orchestrator import (
         AdvancedWorkflowOrchestrator,
@@ -306,28 +294,23 @@ async def _create_advanced_orchestrator(
         StreamingMode,
     )
 
-    # Create optimal orchestration configuration for maximum efficiency
     optimal_config = OrchestrationConfig(
         execution_strategy=ExecutionStrategy.ADAPTIVE,
         progress_level=ProgressLevel.DETAILED,
         streaming_mode=StreamingMode.WEBSOCKET,
         ai_coordination_mode=AICoordinationMode.COORDINATOR,
         ai_intelligence=AIIntelligence.ADAPTIVE,
-        # Enable advanced features
         correlation_tracking=True,
         failure_analysis=True,
         intelligent_retry=True,
-        # Maximize parallelism for hook and test fixing
         max_parallel_hooks=3,
         max_parallel_tests=4,
         timeout_multiplier=1.0,
-        # Enhanced debugging and monitoring
         debug_level="standard",
         log_individual_outputs=False,
         preserve_temp_files=False,
     )
 
-    # Initialize advanced orchestrator with optimal config
     session = SessionCoordinator(
         context.console,
         context.config.project_path,
@@ -340,10 +323,9 @@ async def _create_advanced_orchestrator(
         config=optimal_config,
     )
 
-    # Override MCP mode if debug flag is set
     if kwargs.get("debug", False):
         orchestrator.individual_executor.set_mcp_mode(False)
-        context.safe_print("🐛 Debug mode enabled - full output mode")
+        context.safe_print("🐛 Debug mode enabled-full output mode")
 
     return orchestrator
 
@@ -353,7 +335,6 @@ def _create_standard_orchestrator(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> t.Any:
-    """Create the standard fallback orchestrator."""
     from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
     return WorkflowOrchestrator(
@@ -371,7 +352,6 @@ async def _run_workflow_iterations(
     use_advanced_orchestrator: bool,
     kwargs: dict[str, t.Any],
 ) -> dict[str, t.Any]:
-    """Run the main workflow iteration loop."""
     success = False
     current_iteration = 1
 
@@ -421,14 +401,13 @@ async def _run_workflow_iterations(
 
 
 def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
-    """Create WorkflowOptions from kwargs."""
     from crackerjack.models.config import WorkflowOptions
 
     options = WorkflowOptions()
     options.testing.test = kwargs.get("test", True)
     options.ai_agent = kwargs.get("ai_agent", True)
     options.skip_hooks = kwargs.get("skip_hooks", False)
-    # Enable proactive mode by default for better architectural planning
+
     options.proactive_mode = kwargs.get("proactive_mode", True)
     return options
 
@@ -438,7 +417,6 @@ async def _execute_single_iteration(
     use_advanced_orchestrator: bool,
     options: t.Any,
 ) -> bool:
-    """Execute a single workflow iteration."""
     if use_advanced_orchestrator:
         return await orchestrator.execute_orchestrated_workflow(options)
     return await orchestrator.run_complete_workflow(options)
@@ -450,7 +428,6 @@ def _create_success_result(
     max_iterations: int,
     iteration: int,
 ) -> dict[str, t.Any]:
-    """Create success result dictionary."""
     _update_progress(
         job_id=job_id,
         status="completed",
@@ -474,7 +451,6 @@ async def _handle_iteration_retry(
     max_iterations: int,
     iteration: int,
 ) -> None:
-    """Handle iteration retry logic."""
     _update_progress(
         job_id=job_id,
         iteration=current_iteration,
@@ -491,7 +467,6 @@ async def _handle_iteration_error(
     max_iterations: int,
     error: Exception,
 ) -> bool:
-    """Handle iteration errors. Returns True to continue, False to break."""
     if iteration >= max_iterations:
         return False
     await asyncio.sleep(1)
@@ -503,7 +478,6 @@ def _create_failure_result(
     current_iteration: int,
     max_iterations: int,
 ) -> dict[str, t.Any]:
-    """Create failure result dictionary."""
     _update_progress(
         job_id=job_id,
         status="failed",
@@ -522,7 +496,6 @@ def _create_failure_result(
 
 
 async def _ensure_services_running(job_id: str, context: t.Any) -> None:
-    """Ensure WebSocket server and watchdog are running before starting workflow."""
     import subprocess
 
     _update_progress(
@@ -531,7 +504,6 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
         message="Checking required services...",
     )
 
-    # Check if WebSocket server is running
     websocket_running = False
     with suppress(Exception):
         from crackerjack.services.server_manager import find_websocket_server_processes
@@ -547,16 +519,14 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
         )
 
         try:
-            # Start WebSocket server in background
             subprocess.Popen(
-                ["python", "-m", "crackerjack", "--start-websocket-server"],
+                ["python", "- m", "crackerjack", "- - start - websocket-server"],
                 cwd=context.config.project_path,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
             )
 
-            # Wait for server to start
             for _i in range(10):
                 with suppress(Exception):
                     websocket_processes = find_websocket_server_processes()
@@ -574,7 +544,6 @@ async def _ensure_services_running(job_id: str, context: t.Any) -> None:
 
 
 async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.Any]:
-    """Check comprehensive system status and prepare for execution."""
     _update_progress(
         job_id=job_id,
         current_stage="status_check",
@@ -588,16 +557,13 @@ async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.
 
         cleanup_performed = []
 
-        # Check for conflicting jobs
         _check_active_jobs(status_info, context)
 
-        # Check and flag resource cleanup needs
         cleanup_performed.extend(_check_resource_cleanup(status_info, context))
 
-        # Check service health
         _check_service_health(status_info, context)
 
-        context.safe_print("✅ Status check complete - ready to proceed")
+        context.safe_print("✅ Status check complete-ready to proceed")
 
         return {
             "should_abort": False,
@@ -611,7 +577,6 @@ async def _check_status_and_prepare(job_id: str, context: t.Any) -> dict[str, t.
 
 
 async def _get_status_info() -> dict[str, t.Any]:
-    """Get comprehensive system status."""
     from .monitoring_tools import _get_comprehensive_status
 
     return await _get_comprehensive_status()
@@ -621,7 +586,6 @@ def _handle_status_error(
     status_info: dict[str, t.Any],
     context: t.Any,
 ) -> dict[str, t.Any]:
-    """Handle status check failure."""
     context.safe_print(f"⚠️ Status check failed: {status_info['error']}")
     return {
         "should_abort": False,
@@ -632,7 +596,6 @@ def _handle_status_error(
 
 
 def _check_active_jobs(status_info: dict[str, t.Any], context: t.Any) -> None:
-    """Check for active jobs that might conflict."""
     active_jobs = [
         j
         for j in status_info.get("jobs", {}).get("details", [])
@@ -642,15 +605,13 @@ def _check_active_jobs(status_info: dict[str, t.Any], context: t.Any) -> None:
     if active_jobs:
         _handle_conflicting_jobs(active_jobs, context)
     else:
-        context.safe_print("✅ No active jobs detected - safe to proceed")
+        context.safe_print("✅ No active jobs detected-safe to proceed")
 
 
 def _handle_conflicting_jobs(
     active_jobs: list[dict[str, t.Any]],
     context: t.Any,
 ) -> None:
-    """Handle conflicting active jobs."""
-    # For now, assume all jobs could conflict (future: check project paths)
     conflicting_jobs = active_jobs
 
     if conflicting_jobs:
@@ -659,13 +620,12 @@ def _handle_conflicting_jobs(
             f"⚠️ Found {len(conflicting_jobs)} active job(s): {', '.join(job_ids[:3])}",
         )
         context.safe_print(
-            "   Running concurrent crackerjack instances may cause file conflicts",
+            " Running concurrent crackerjack instances may cause file conflicts",
         )
-        context.safe_print("   Proceeding with caution...")
+        context.safe_print(" Proceeding with caution...")
 
 
 def _check_resource_cleanup(status_info: dict[str, t.Any], context: t.Any) -> list[str]:
-    """Check if resource cleanup is needed."""
     cleanup_performed = []
 
     temp_files_count = (
@@ -676,7 +636,7 @@ def _check_resource_cleanup(status_info: dict[str, t.Any], context: t.Any) -> li
 
     if temp_files_count > 50:
         context.safe_print(
-            f"🗑️ Found {temp_files_count} temporary files - cleanup recommended",
+            f"🗑️ Found {temp_files_count} temporary files-cleanup recommended",
         )
         cleanup_performed.append("temp_files_flagged")
 
@@ -684,7 +644,6 @@ def _check_resource_cleanup(status_info: dict[str, t.Any], context: t.Any) -> li
 
 
 def _check_service_health(status_info: dict[str, t.Any], context: t.Any) -> None:
-    """Check health of required services."""
     services = status_info.get("services", {})
     mcp_running = services.get("mcp_server", {}).get("running", False)
     websocket_running = services.get("websocket_server", {}).get("running", False)
@@ -697,7 +656,6 @@ def _check_service_health(status_info: dict[str, t.Any], context: t.Any) -> None
 
 
 def _handle_status_exception(error: Exception, context: t.Any) -> dict[str, t.Any]:
-    """Handle status check exceptions."""
     context.safe_print(f"⚠️ Status check encountered error: {error}")
     return {
         "should_abort": False,
@@ -708,7 +666,6 @@ def _handle_status_exception(error: Exception, context: t.Any) -> dict[str, t.An
 
 
 async def _cleanup_stale_jobs(context: t.Any) -> None:
-    """Clean up stale job files with unknown IDs or stuck in processing state."""
     if not context.progress_dir.exists():
         return
 
@@ -722,15 +679,14 @@ async def _cleanup_stale_jobs(context: t.Any) -> None:
 
                 progress_data = json.loads(progress_file.read_text())
 
-                # Check if job is stale (older than 30 minutes and stuck)
                 last_update = progress_data.get("updated_at", 0)
                 age_minutes = (current_time - last_update) / 60
 
                 is_stale = (
-                    age_minutes > 30  # Older than 30 minutes
-                    or progress_data.get("job_id") == "unknown"  # Unknown job ID
+                    age_minutes > 30
+                    or progress_data.get("job_id") == "unknown"
                     or "analyzing_failures: processing"
-                    in progress_data.get("status", "")  # Stuck in processing
+                    in progress_data.get("status", "")
                 )
 
                 if is_stale:
@@ -738,7 +694,6 @@ async def _cleanup_stale_jobs(context: t.Any) -> None:
                     cleaned_count += 1
 
             except (json.JSONDecodeError, OSError):
-                # Clean up malformed files
                 with suppress(OSError):
                     progress_file.unlink()
                     cleaned_count += 1
@@ -750,15 +705,6 @@ async def _cleanup_stale_jobs(context: t.Any) -> None:
 def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def init_crackerjack(args: str = "", kwargs: str = "{}") -> str:
-        """Initialize or update crackerjack configuration in current project.
-
-        Args:
-            args: Optional target path (defaults to current directory)
-            kwargs: JSON string with options like {"force": true}
-
-        Returns:
-            JSON string with initialization results
-        """
         context = get_context()
         if not context:
             return _create_init_error_response("Server context not available")
@@ -775,12 +721,10 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 def _create_init_error_response(message: str) -> str:
-    """Create standardized error response for initialization."""
     return json.dumps({"error": message, "success": False}, indent=2)
 
 
 def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | None]:
-    """Parse and validate initialization arguments."""
     from pathlib import Path
 
     target_path = args.strip() or None
@@ -792,13 +736,11 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
 
     force = extra_kwargs.get("force", False)
 
-    # Determine target path
     if target_path:
         target_path = Path(target_path).resolve()
     else:
         target_path = Path.cwd()
 
-    # Validate target path exists
     if not target_path.exists():
         return (
             None,
@@ -812,15 +754,13 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
 def _execute_initialization(
     context: t.Any, target_path: t.Any, force: bool
 ) -> dict[str, t.Any]:
-    """Execute the initialization process."""
     from crackerjack.services.filesystem import FileSystemService
     from crackerjack.services.git import GitService
     from crackerjack.services.initialization import InitializationService
 
-    # Initialize services
     filesystem = FileSystemService()
     git_service = GitService(context.console, context.config.project_path)
-    # Run initialization
+
     return InitializationService(
         context.console, filesystem, git_service, context.config.project_path
     ).initialize_project(target_path=target_path, force=force)
@@ -829,7 +769,6 @@ def _execute_initialization(
 def _create_init_success_response(
     results: dict[str, t.Any], target_path: t.Any, force: bool
 ) -> str:
-    """Create success response with summary information."""
     results["command"] = "init_crackerjack"
     results["target_path"] = str(target_path)
     results["force"] = force
@@ -837,7 +776,6 @@ def _create_init_success_response(
 
 
 def _create_init_exception_response(error: Exception, target_path: t.Any) -> str:
-    """Create exception response for initialization failures."""
     error_result = {
         "error": f"Initialization failed: {error}",
         "success": False,
@@ -848,24 +786,12 @@ def _create_init_exception_response(error: Exception, target_path: t.Any) -> str
 
 
 def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
-    """Register tool for suggesting appropriate Claude Code agents."""
-
     @mcp_app.tool()
     async def suggest_agents(
         task_description: str = "",
         project_type: str = "python",
         current_context: str = "",
     ) -> str:
-        """Suggest appropriate Claude Code agents based on task and context.
-
-        Args:
-            task_description: Description of the task being performed
-            project_type: Type of project (python, web, etc.)
-            current_context: Current development context or issues
-
-        Returns:
-            JSON with suggested agents and usage patterns
-        """
         suggestions = {
             "primary_agents": [],
             "task_specific_agents": [],
@@ -873,7 +799,6 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             "rationale": "",
         }
 
-        # Always recommend crackerjack-architect for Python projects
         if project_type.lower() == "python" or "python" in task_description.lower():
             suggestions["primary_agents"].append(
                 {
@@ -889,13 +814,12 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
                 {
                     "name": "python-pro",
                     "emoji": "🐍",
-                    "description": "Modern Python development with type hints, async/await patterns, and clean architecture",
+                    "description": "Modern Python development with type hints, async / await patterns, and clean architecture",
                     "usage": "Use for implementing Python code with best practices",
                     "priority": "HIGH",
                 }
             )
 
-        # Task-specific agent suggestions
         task_lower = task_description.lower()
         context_lower = current_context.lower()
 
@@ -905,7 +829,7 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
         ):
             suggestions["task_specific_agents"].append(
                 {
-                    "name": "crackerjack-test-specialist",
+                    "name": "crackerjack - test-specialist",
                     "emoji": "🧪",
                     "description": "Advanced testing specialist for complex scenarios and coverage optimization",
                     "usage": "Use for test creation, debugging test failures, and coverage improvements",
@@ -915,7 +839,7 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
 
             suggestions["task_specific_agents"].append(
                 {
-                    "name": "pytest-hypothesis-specialist",
+                    "name": "pytest - hypothesis-specialist",
                     "emoji": "🧪",
                     "description": "Advanced testing patterns and property-based testing",
                     "usage": "Use for comprehensive test development and optimization",
@@ -951,22 +875,20 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
                 }
             )
 
-        # Usage patterns
         suggestions["usage_patterns"] = [
-            'Task tool with subagent_type="crackerjack-architect" for feature planning and architecture',
-            'Task tool with subagent_type="python-pro" for implementation with best practices',
-            'Task tool with subagent_type="crackerjack-test-specialist" for comprehensive testing',
-            'Task tool with subagent_type="security-auditor" for security validation',
+            'Task tool with subagent_type ="crackerjack-architect" for feature planning and architecture',
+            'Task tool with subagent_type ="python-pro" for implementation with best practices',
+            'Task tool with subagent_type ="crackerjack - test-specialist" for comprehensive testing',
+            'Task tool with subagent_type ="security-auditor" for security validation',
         ]
 
-        # Rationale
         if "crackerjack-architect" in [
             agent["name"] for agent in suggestions["primary_agents"]
         ]:
             suggestions["rationale"] = (
                 "The crackerjack-architect agent is essential for this Python project as it ensures "
                 "code follows crackerjack patterns from the start, eliminating retrofitting needs. "
-                "Combined with python-pro for implementation and task-specific agents for specialized "
+                "Combined with python - pro for implementation and task-specific agents for specialized "
                 "work, this provides comprehensive development support with built-in quality assurance."
             )
 
@@ -978,16 +900,6 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
         file_patterns: str = "",
         recent_changes: str = "",
     ) -> str:
-        """Detect and suggest agents based on current development context.
-
-        Args:
-            error_context: Current errors or issues being faced
-            file_patterns: File types or patterns being worked on
-            recent_changes: Recent changes or commits
-
-        Returns:
-            JSON with agent recommendations based on context analysis
-        """
         recommendations = {
             "urgent_agents": [],
             "suggested_agents": [],
@@ -995,16 +907,12 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             "detection_reasoning": "",
         }
 
-        # Add urgent agents based on error context
         _add_urgent_agents_for_errors(recommendations, error_context)
 
-        # Add general suggestions for Python projects
         _add_python_project_suggestions(recommendations, file_patterns)
 
-        # Set workflow recommendations
         _set_workflow_recommendations(recommendations)
 
-        # Generate detection reasoning
         _generate_detection_reasoning(recommendations)
 
         return json.dumps(recommendations, indent=2)
@@ -1013,16 +921,15 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
 def _add_urgent_agents_for_errors(
     recommendations: dict[str, t.Any], error_context: str
 ) -> None:
-    """Add urgent agent recommendations based on error context."""
     if any(
         word in error_context.lower()
         for word in ("test fail", "coverage", "pytest", "assertion")
     ):
         recommendations["urgent_agents"].append(
             {
-                "agent": "crackerjack-test-specialist",
-                "reason": "Test failures detected - specialist needed for debugging and fixes",
-                "action": 'Task tool with subagent_type="crackerjack-test-specialist" to analyze and fix test issues',
+                "agent": "crackerjack - test-specialist",
+                "reason": "Test failures detected-specialist needed for debugging and fixes",
+                "action": 'Task tool with subagent_type ="crackerjack - test-specialist" to analyze and fix test issues',
             }
         )
 
@@ -1033,8 +940,8 @@ def _add_urgent_agents_for_errors(
         recommendations["urgent_agents"].append(
             {
                 "agent": "security-auditor",
-                "reason": "Security issues detected - immediate audit required",
-                "action": 'Task tool with subagent_type="security-auditor" to review and fix security vulnerabilities',
+                "reason": "Security issues detected-immediate audit required",
+                "action": 'Task tool with subagent_type ="security-auditor" to review and fix security vulnerabilities',
             }
         )
 
@@ -1045,8 +952,8 @@ def _add_urgent_agents_for_errors(
         recommendations["urgent_agents"].append(
             {
                 "agent": "crackerjack-architect",
-                "reason": "Complexity issues detected - architectural review needed",
-                "action": 'Task tool with subagent_type="crackerjack-architect" to simplify and restructure code',
+                "reason": "Complexity issues detected-architectural review needed",
+                "action": 'Task tool with subagent_type ="crackerjack-architect" to simplify and restructure code',
             }
         )
 
@@ -1054,13 +961,12 @@ def _add_urgent_agents_for_errors(
 def _add_python_project_suggestions(
     recommendations: dict[str, t.Any], file_patterns: str
 ) -> None:
-    """Add general suggestions for Python projects."""
     if "python" in file_patterns.lower() or ".py" in file_patterns:
         recommendations["suggested_agents"].extend(
             [
                 {
                     "agent": "crackerjack-architect",
-                    "reason": "Python project detected - ensure crackerjack compliance",
+                    "reason": "Python project detected-ensure crackerjack compliance",
                     "priority": "HIGH",
                 },
                 {
@@ -1073,23 +979,21 @@ def _add_python_project_suggestions(
 
 
 def _set_workflow_recommendations(recommendations: dict[str, t.Any]) -> None:
-    """Set workflow recommendations based on urgent agents."""
     if recommendations["urgent_agents"]:
         recommendations["workflow_recommendations"] = [
             "Address urgent issues first with specialized agents",
-            "Run crackerjack quality checks after fixes: python -m crackerjack -t",
+            "Run crackerjack quality checks after fixes: python - m crackerjack-t",
             "Use crackerjack-architect for ongoing compliance",
         ]
     else:
         recommendations["workflow_recommendations"] = [
             "Start with crackerjack-architect for proper planning",
             "Use python-pro for implementation",
-            "Run continuous quality checks: python -m crackerjack",
+            "Run continuous quality checks: python-m crackerjack",
         ]
 
 
 def _generate_detection_reasoning(recommendations: dict[str, t.Any]) -> None:
-    """Generate detection reasoning based on recommendations."""
     recommendations["detection_reasoning"] = (
         f"Analysis of context revealed {len(recommendations['urgent_agents'])} urgent issues "
         f"and {len(recommendations['suggested_agents'])} general recommendations. "

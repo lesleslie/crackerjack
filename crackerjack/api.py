@@ -5,7 +5,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from .code_cleaner import CleaningResult, CodeCleaner
+from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
 from .core.workflow_orchestrator import WorkflowOrchestrator
 from .errors import CrackerjackError, ErrorCode
 from .interactive import InteractiveCLI
@@ -70,7 +70,9 @@ class CrackerjackAPI:
     @property
     def code_cleaner(self) -> CodeCleaner:
         if self._code_cleaner is None:
-            self._code_cleaner = CodeCleaner(console=self.console)
+            self._code_cleaner = CodeCleaner(
+                console=self.console, base_directory=self.project_path
+            )
         return self._code_cleaner
 
     @property
@@ -126,18 +128,38 @@ class CrackerjackAPI:
         self,
         target_dir: Path | None = None,
         backup: bool = True,
-    ) -> list[CleaningResult]:
-        """Clean code with TODO validation and comprehensive error handling."""
-        target_dir = target_dir or self.project_path
-        self.logger.info(f"Cleaning code in {target_dir}")
+        safe_mode: bool = True,
+    ) -> list[CleaningResult] | PackageCleaningResult:
+        """Clean code with comprehensive backup protection.
+
+        Args:
+            target_dir: Directory to clean (defaults to package root)
+            backup: Whether to create backup (deprecated, always True for safety)
+            safe_mode: Use comprehensive backup system (default: True, recommended)
+
+        Returns:
+            PackageCleaningResult with backup metadata if safe_mode=True,
+            otherwise list[CleaningResult] for legacy compatibility
+        """
+        target_dir = target_dir or self._get_package_root()
+        self.logger.info(f"Cleaning code in {target_dir} (safe_mode={safe_mode})")
 
         self._validate_code_before_cleaning(target_dir)
-        self._notify_backup_status(backup)
 
-        return self._execute_code_cleaning(target_dir)
+        if safe_mode:
+            self.console.print(
+                "[green]🛡️ Using safe mode with comprehensive backup protection[/green]"
+            )
+            return self._execute_safe_code_cleaning(target_dir)
+        else:
+            # Note: Legacy mode still uses backup protection for safety
+            self.console.print(
+                "[yellow]⚠️ Legacy mode - backup protection still enabled for safety[/yellow]"
+            )
+            self._notify_backup_status(backup)
+            return self._execute_code_cleaning(target_dir)
 
     def _validate_code_before_cleaning(self, target_dir: Path) -> None:
-        """Validate code state before cleaning, checking for TODOs."""
         todos_found = self._check_for_todos(target_dir)
         if todos_found:
             self._handle_todos_found(todos_found, target_dir)
@@ -147,11 +169,10 @@ class CrackerjackAPI:
         todos_found: list[tuple[Path, int, str]],
         target_dir: Path,
     ) -> None:
-        """Handle case where TODOs are found in codebase."""
         todo_count = len(todos_found)
-        self.console.print(f"[red]❌ Found {todo_count} TODO(s) in codebase[/red]")
+        self.console.print(f"[red]❌ Found {todo_count} TODO(s) in codebase[/ red]")
         self.console.print(
-            "[yellow]Please resolve all TODOs before running code cleaning ( - x)[/yellow]",
+            "[yellow]Please resolve all TODOs before running code cleaning (-x)[/ yellow]",
         )
 
         self._display_todo_summary(todos_found, target_dir, todo_count)
@@ -167,7 +188,6 @@ class CrackerjackAPI:
         target_dir: Path,
         todo_count: int,
     ) -> None:
-        """Display summary of found TODOs."""
         for _i, (file_path, line_no, content) in enumerate(todos_found[:5]):
             relative_path = file_path.relative_to(target_dir)
             self.console.print(f" {relative_path}: {line_no}: {content.strip()}")
@@ -176,33 +196,68 @@ class CrackerjackAPI:
             self.console.print(f" ... and {todo_count - 5} more")
 
     def _notify_backup_status(self, backup: bool) -> None:
-        """Notify user about backup file creation."""
         if backup:
-            self.console.print("[yellow]Note: Backup files will be created[/yellow]")
+            self.console.print("[yellow]Note: Backup files will be created[/ yellow]")
+
+    def _execute_safe_code_cleaning(self, target_dir: Path) -> PackageCleaningResult:
+        try:
+            result = self.code_cleaner.clean_files_with_backup(target_dir)
+            self._report_safe_cleaning_results(result)
+            return result
+        except Exception as e:
+            self._handle_cleaning_error(e)
 
     def _execute_code_cleaning(self, target_dir: Path) -> list[CleaningResult]:
-        """Execute code cleaning and handle results."""
         try:
-            results = self.code_cleaner.clean_files(target_dir)
-            self._report_cleaning_results(results)
+            # Use backup protection by default for safety
+            results = self.code_cleaner.clean_files(target_dir, use_backup=True)
+
+            # Handle both return types (legacy compatibility)
+            if isinstance(results, list):
+                self._report_cleaning_results(results)
+            else:
+                # PackageCleaningResult from backup mode
+                self._report_safe_cleaning_results(results)
+                results = results.file_results  # Extract list for compatibility
+
             return results
         except Exception as e:
             self._handle_cleaning_error(e)
 
+    def _report_safe_cleaning_results(self, result: PackageCleaningResult) -> None:
+        if result.overall_success:
+            self.console.print(
+                f"[green]🎉 Package cleaning completed successfully![/green] "
+                f"({result.successful_files}/{result.total_files} files cleaned)"
+            )
+        else:
+            self.console.print(
+                f"[red]❌ Package cleaning failed![/red] "
+                f"({result.failed_files}/{result.total_files} files failed)"
+            )
+
+            if result.backup_restored:
+                self.console.print(
+                    "[yellow]⚠️ Files were automatically restored from backup[/yellow]"
+                )
+
+            if result.backup_metadata:
+                self.console.print(
+                    f"[blue]📦 Backup available at: {result.backup_metadata.backup_directory}[/blue]"
+                )
+
     def _report_cleaning_results(self, results: list[CleaningResult]) -> None:
-        """Report cleaning results to user."""
         successful = sum(1 for r in results if r.success)
         failed = len(results) - successful
 
         if successful > 0:
             self.console.print(
-                f"[green]✅ Successfully cleaned {successful} files[/green]",
+                f"[green]✅ Successfully cleaned {successful} files[/ green]",
             )
         if failed > 0:
-            self.console.print(f"[red]❌ Failed to clean {failed} files[/red]")
+            self.console.print(f"[red]❌ Failed to clean {failed} files[/ red]")
 
     def _handle_cleaning_error(self, error: Exception) -> t.NoReturn:
-        """Handle code cleaning errors."""
         self.logger.error(f"Code cleaning failed: {error}")
         raise CrackerjackError(
             message=f"Code cleaning failed: {error}",
@@ -263,7 +318,7 @@ class CrackerjackAPI:
     ) -> PublishResult:
         try:
             self.logger.info(
-                f"Publishing package (version_bump = {version_bump}, dry_run = {dry_run})",
+                f"Publishing package (version_bump={version_bump}, dry_run={dry_run})",
             )
 
             options = self._create_options(
@@ -304,7 +359,7 @@ class CrackerjackAPI:
             return self.interactive_cli.run_interactive_workflow(options)
         except Exception as e:
             self.logger.exception(f"Interactive workflow failed: {e}")
-            self.console.print(f"[red]❌ Interactive workflow failed: {e}[/red]")
+            self.console.print(f"[red]❌ Interactive workflow failed: {e}[/ red]")
             return False
 
     def create_workflow_options(
@@ -371,7 +426,7 @@ class CrackerjackAPI:
                 "has_requirements_txt": (
                     self.project_path / "requirements.txt"
                 ).exists(),
-                "has_tests": any(self.project_path.rglob("test*.py")),
+                "has_tests": any(self.project_path.rglob("test *.py")),
             }
 
         except Exception as e:
@@ -458,15 +513,13 @@ class CrackerjackAPI:
             return "unknown"
 
     def _check_for_todos(self, target_dir: Path) -> list[tuple[Path, int, str]]:
-        """Check for TODO comments in Python files."""
         import re
 
-        task_pattern = re.compile(f"#.*?{'T'}{'O'}{'D'}{'O'}.*", re.IGNORECASE)
+        task_pattern = re.compile(r"#.*?TODO.*", re.IGNORECASE)
         python_files = self._get_python_files_for_todo_check(target_dir)
         return self._scan_files_for_todos(python_files, task_pattern)
 
     def _get_python_files_for_todo_check(self, target_dir: Path) -> list[Path]:
-        """Get list of Python files to check for TODOs, excluding ignored directories."""
         python_files: list[Path] = []
         ignore_patterns = self._get_ignore_patterns()
 
@@ -477,7 +530,6 @@ class CrackerjackAPI:
         return python_files
 
     def _get_ignore_patterns(self) -> set[str]:
-        """Get patterns for directories/files to ignore during TODO scanning."""
         return {
             "__pycache__",
             ".git",
@@ -486,10 +538,13 @@ class CrackerjackAPI:
             ".pytest_cache",
             "build",
             "dist",
+            "tests",
+            "test",
+            "examples",
+            "example",
         }
 
     def _should_skip_file(self, py_file: Path, ignore_patterns: set[str]) -> bool:
-        """Check if a Python file should be skipped during TODO scanning."""
         if py_file.name.startswith("."):
             return True
 
@@ -500,7 +555,6 @@ class CrackerjackAPI:
         python_files: list[Path],
         todo_pattern: t.Any,
     ) -> list[tuple[Path, int, str]]:
-        """Scan Python files for TODO comments."""
         todos_found: list[tuple[Path, int, str]] = []
 
         for file_path in python_files:
@@ -514,7 +568,6 @@ class CrackerjackAPI:
         file_path: Path,
         todo_pattern: t.Any,
     ) -> list[tuple[Path, int, str]]:
-        """Scan a single file for TODO comments."""
         todos: list[tuple[Path, int, str]] = []
         from contextlib import suppress
 
@@ -525,6 +578,52 @@ class CrackerjackAPI:
                         todos.append((file_path, line_no, line))
 
         return todos
+
+    def _get_package_root(self) -> Path:
+        package_name = self._read_package_name_from_pyproject()
+        if package_name:
+            package_dir = self._find_package_directory_by_name(package_name)
+            if package_dir:
+                return package_dir
+
+        fallback_dir = self._find_fallback_package_directory()
+        return fallback_dir or self.project_path
+
+    def _read_package_name_from_pyproject(self) -> str | None:
+        pyproject_path = self.project_path / "pyproject.toml"
+        if not pyproject_path.exists():
+            return None
+
+        from contextlib import suppress
+
+        with suppress(Exception):
+            import tomllib
+
+            with pyproject_path.open("rb") as f:
+                data = tomllib.load(f)
+
+            if "project" in data and "name" in data["project"]:
+                return data["project"]["name"]
+
+        return None
+
+    def _find_package_directory_by_name(self, package_name: str) -> Path | None:
+        package_dir = self.project_path / package_name
+        if package_dir.exists() and package_dir.is_dir():
+            return package_dir
+        return None
+
+    def _find_fallback_package_directory(self) -> Path | None:
+        for possible_name in ("src", self.project_path.name):
+            package_dir = self.project_path / possible_name
+            if self._is_valid_python_package_directory(package_dir):
+                return package_dir
+        return None
+
+    def _is_valid_python_package_directory(self, directory: Path) -> bool:
+        if not (directory.exists() and directory.is_dir()):
+            return False
+        return any(directory.glob("*.py"))
 
 
 def run_quality_checks(
@@ -541,8 +640,11 @@ def run_quality_checks(
 def clean_code(
     project_path: Path | None = None,
     backup: bool = True,
-) -> list[CleaningResult]:
-    return CrackerjackAPI(project_path=project_path).clean_code(backup=backup)
+    safe_mode: bool = True,
+) -> list[CleaningResult] | PackageCleaningResult:
+    return CrackerjackAPI(project_path=project_path).clean_code(
+        backup=backup, safe_mode=safe_mode
+    )
 
 
 def run_tests(project_path: Path | None = None, coverage: bool = False) -> TestResult:

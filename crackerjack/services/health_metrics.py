@@ -41,7 +41,7 @@ class ProjectHealth:
             return False
 
         recent = values[-min_points:]
-        # Performance: Use pairwise comparison with zip
+
         return all(a <= b for a, b in zip(recent, recent[1:]))
 
     def _is_trending_down(
@@ -51,7 +51,7 @@ class ProjectHealth:
             return False
 
         recent = values[-min_points:]
-        # Performance: Use pairwise comparison with zip
+
         return all(a >= b for a, b in zip(recent, recent[1:]))
 
     def get_health_score(self) -> float:
@@ -88,11 +88,11 @@ class ProjectHealth:
 
         if self._is_trending_up(self.lint_error_trend):
             recommendations.append(
-                "🔧 Lint errors are increasing - consider running formatting tools",
+                "🔧 Lint errors are increasing-consider running formatting tools",
             )
 
         if self._is_trending_down(self.test_coverage_trend):
-            recommendations.append("🧪 Test coverage is declining - add more tests")
+            recommendations.append("🧪 Test coverage is declining-add more tests")
 
         if any(age > 365 for age in self.dependency_age.values()):
             old_deps: list[str] = [
@@ -104,7 +104,7 @@ class ProjectHealth:
 
         if self.config_completeness < 0.5:
             recommendations.append(
-                "⚙️ Project configuration is incomplete - run crackerjack init",
+                "⚙️ Project configuration is incomplete-run crackerjack init",
             )
         elif self.config_completeness < 0.8:
             recommendations.append("⚙️ Project configuration could be improved")
@@ -179,13 +179,13 @@ class HealthMetricsService:
                 json.dump(data, f, indent=2)
         except Exception as e:
             self.console.print(
-                f"[yellow]Warning: Failed to save health metrics: {e}[/yellow]",
+                f"[yellow]Warning: Failed to save health metrics: {e}[/ yellow]",
             )
 
     def _count_lint_errors(self) -> int | None:
         with suppress(Exception):
             result = subprocess.run(
-                ["uv", "run", "ruff", "check", ".", "--output-format=json"],
+                ["uv", "run", "ruff", "check", ".", "- - output-format=json"],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -238,12 +238,12 @@ class HealthMetricsService:
                 "uv",
                 "run",
                 "python",
-                "-m",
+                "- m",
                 "pytest",
-                "--cov=.",
-                "--cov-report=json",
+                "--cov =.",
+                "- - cov-report=json",
                 "--tb=no",
-                "-q",
+                "- q",
                 "--maxfail=1",
             ],
             check=False,
@@ -322,7 +322,7 @@ class HealthMetricsService:
         if not dep_spec or dep_spec.startswith("-"):
             return None
 
-        for operator in (">=", "<=", "==", "~=", "!=", ">", "<"):
+        for operator in ("> =", "< =", "= =", "~=", "! =", ">", "<"):
             if operator in dep_spec:
                 return dep_spec.split(operator)[0].strip()
 
@@ -345,14 +345,22 @@ class HealthMetricsService:
     def _fetch_package_data(self, package_name: str) -> dict[str, t.Any] | None:
         try:
             import urllib.request
+            from urllib.parse import urlparse
 
             url = f"https://pypi.org/pypi/{package_name}/json"
 
-            if not url.startswith("https://pypi.org/"):
-                msg = f"Invalid URL scheme: {url}"
+            parsed = urlparse(url)
+            if parsed.scheme != "https" or parsed.netloc != "pypi.org":
+                msg = f"Invalid URL: only https://pypi.org URLs are allowed, got {url}"
                 raise ValueError(msg)
 
-            with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
+            if not parsed.path.startswith("/pypi/") or not parsed.path.endswith(
+                "/json"
+            ):
+                msg = f"Invalid PyPI API path: {parsed.path}"
+                raise ValueError(msg)
+
+            with urllib.request.urlopen(url, timeout=10) as response:
                 return json.load(response)
         except Exception:
             return None
@@ -457,7 +465,7 @@ class HealthMetricsService:
     def _assess_precommit_config(self) -> tuple[float, int]:
         precommit_files = [
             self.project_root / ".pre-commit-config.yaml",
-            self.project_root / ".pre-commit-config.yml",
+            self.project_root / ".pre - commit-config.yml",
         ]
         score = 0.1 if any(f.exists() for f in precommit_files) else 0.0
         return score, 1
@@ -489,7 +497,6 @@ class HealthMetricsService:
         return health
 
     def report_health_status(self, health: ProjectHealth) -> None:
-        """Generate and display comprehensive project health report."""
         health_score = health.get_health_score()
 
         self._print_health_summary(health_score)
@@ -497,18 +504,16 @@ class HealthMetricsService:
         self._print_health_recommendations(health)
 
     def _print_health_summary(self, health_score: float) -> None:
-        """Print the overall health score with appropriate styling."""
         status_icon, status_text, status_color = self._get_health_status_display(
             health_score,
         )
 
-        self.console.print("\n[bold]📊 Project Health Report[/bold]")
+        self.console.print("\n[bold]📊 Project Health Report[/ bold]")
         self.console.print(
-            f"{status_icon} Overall Health: [{status_color}]{status_text} ({health_score:.1%})[/{status_color}]",
+            f"{status_icon} Overall Health: [{status_color}]{status_text} ({health_score: .1 %})[/{status_color}]",
         )
 
     def _get_health_status_display(self, health_score: float) -> tuple[str, str, str]:
-        """Get display elements (icon, text, color) for health score."""
         if health_score >= 0.8:
             return "🟢", "Excellent", "green"
         if health_score >= 0.6:
@@ -518,32 +523,30 @@ class HealthMetricsService:
         return "🔴", "Poor", "red"
 
     def _print_health_metrics(self, health: ProjectHealth) -> None:
-        """Print detailed health metrics."""
         if health.lint_error_trend:
             recent_errors = health.lint_error_trend[-1]
             self.console.print(f"🔧 Lint Errors: {recent_errors}")
 
         if health.test_coverage_trend:
             recent_coverage = health.test_coverage_trend[-1]
-            self.console.print(f"🧪 Test Coverage: {recent_coverage:.1f}%")
+            self.console.print(f"🧪 Test Coverage: {recent_coverage: .1f}%")
 
         if health.dependency_age:
             avg_age = sum(health.dependency_age.values()) / len(health.dependency_age)
-            self.console.print(f"📦 Avg Dependency Age: {avg_age:.0f} days")
+            self.console.print(f"📦 Avg Dependency Age: {avg_age: .0f} days")
 
-        self.console.print(f"⚙️ Config Completeness: {health.config_completeness:.1%}")
+        self.console.print(f"⚙️ Config Completeness: {health.config_completeness: .1 %}")
 
     def _print_health_recommendations(self, health: ProjectHealth) -> None:
-        """Print health recommendations and init suggestions."""
         recommendations = health.get_recommendations()
         if recommendations:
-            self.console.print("\n[bold]💡 Recommendations:[/bold]")
+            self.console.print("\n[bold]💡 Recommendations: [/ bold]")
             for rec in recommendations:
                 self.console.print(f" {rec}")
 
         if health.needs_init():
             self.console.print(
-                "\n[bold yellow]⚠️ Consider running `crackerjack --init` to improve project health[/bold yellow]",
+                "\n[bold yellow]⚠️ Consider running `crackerjack --init` to improve project health[/ bold yellow]",
             )
 
     def get_health_trend_summary(self, days: int = 30) -> dict[str, Any]:

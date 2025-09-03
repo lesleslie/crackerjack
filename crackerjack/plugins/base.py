@@ -21,7 +21,7 @@ class PluginMetadata:
     description: str
     author: str = ""
     license: str = ""
-    requires_python: str = ">=3.11"
+    requires_python: str = "> = 3.11"
     dependencies: list[str] = field(default_factory=list)
     entry_point: str = ""
     config_schema: dict[str, t.Any] = field(default_factory=dict)

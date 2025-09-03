@@ -350,6 +350,21 @@ class StateManager:
         checkpoints.sort(key=operator.itemgetter("timestamp"), reverse=True)
         return checkpoints
 
+    def start_session(self) -> None:
+        """Start or initialize a session."""
+        # Session is already initialized in __init__, this is a no-op
+        # but provided for API compatibility
+        self._save_state()
+
+    def complete_session(self) -> None:
+        """Complete the current session."""
+        # Mark session as complete in metadata
+        if not self.session_state.metadata:
+            self.session_state.metadata = {}
+        self.session_state.metadata["status"] = "completed"
+        self.session_state.metadata["completed_time"] = time.time()
+        self._save_state()
+
     async def reset_session(self) -> None:
         async with self._lock:
             self.session_state = SessionState(

@@ -52,6 +52,8 @@ class AsyncHookManager:
     async def install_hooks_async(self) -> bool:
         try:
             process = await asyncio.create_subprocess_exec(
+                "uv",
+                "run",
                 "pre-commit",
                 "install",
                 cwd=self.pkg_path,
@@ -62,19 +64,19 @@ class AsyncHookManager:
             _, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
 
             if process.returncode == 0:
-                self.console.print("[green]✅[/green] Pre-commit hooks installed")
+                self.console.print("[green]✅[/ green] Pre-commit hooks installed")
                 return True
             error_msg = stderr.decode() if stderr else "Unknown error"
             self.console.print(
-                f"[red]❌[/red] Failed to install hooks: {error_msg}",
+                f"[red]❌[/ red] Failed to install hooks: {error_msg}",
             )
             return False
 
         except TimeoutError:
-            self.console.print("[red]❌[/red] Hook installation timed out")
+            self.console.print("[red]❌[/ red] Hook installation timed out")
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Error installing hooks: {e}")
+            self.console.print(f"[red]❌[/ red] Error installing hooks: {e}")
             return False
 
     def install_hooks(self) -> bool:
@@ -83,6 +85,8 @@ class AsyncHookManager:
     async def update_hooks_async(self) -> bool:
         try:
             process = await asyncio.create_subprocess_exec(
+                "uv",
+                "run",
                 "pre-commit",
                 "autoupdate",
                 cwd=self.pkg_path,
@@ -93,17 +97,17 @@ class AsyncHookManager:
             _, stderr = await asyncio.wait_for(process.communicate(), timeout=60)
 
             if process.returncode == 0:
-                self.console.print("[green]✅[/green] Pre-commit hooks updated")
+                self.console.print("[green]✅[/ green] Pre-commit hooks updated")
                 return True
             error_msg = stderr.decode() if stderr else "Unknown error"
-            self.console.print(f"[red]❌[/red] Failed to update hooks: {error_msg}")
+            self.console.print(f"[red]❌[/ red] Failed to update hooks: {error_msg}")
             return False
 
         except TimeoutError:
-            self.console.print("[red]❌[/red] Hook update timed out")
+            self.console.print("[red]❌[/ red] Hook update timed out")
             return False
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Error updating hooks: {e}")
+            self.console.print(f"[red]❌[/ red] Error updating hooks: {e}")
             return False
 
     def update_hooks(self) -> bool:

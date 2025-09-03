@@ -12,7 +12,13 @@ from types import TracebackType
 
 from rich.console import Console
 
+from crackerjack.core.resource_manager import (
+    ResourceManager,
+    register_global_resource_manager,
+)
+from crackerjack.core.websocket_lifecycle import NetworkResourceManager
 from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+from crackerjack.services.secure_path_utils import SecurePathValidator
 
 from .cache import ErrorCache
 from .rate_limiter import RateLimitConfig, RateLimitMiddleware
@@ -123,10 +129,30 @@ class MCPServerConfig:
     state_dir: Path | None = None
     cache_dir: Path | None = None
 
+    def __post_init__(self) -> None:
+        # Validate all paths using secure path validation
+        self.project_path = SecurePathValidator.validate_safe_path(self.project_path)
+
+        if self.progress_dir:
+            self.progress_dir = SecurePathValidator.validate_safe_path(
+                self.progress_dir
+            )
+
+        if self.state_dir:
+            self.state_dir = SecurePathValidator.validate_safe_path(self.state_dir)
+
+        if self.cache_dir:
+            self.cache_dir = SecurePathValidator.validate_safe_path(self.cache_dir)
+
 
 class MCPServerContext:
     def __init__(self, config: MCPServerConfig) -> None:
         self.config = config
+
+        # Resource management
+        self.resource_manager = ResourceManager()
+        self.network_manager = NetworkResourceManager()
+        register_global_resource_manager(self.resource_manager)
 
         self.console: Console | None = None
         self.cli_runner = None
@@ -202,6 +228,7 @@ class MCPServerContext:
         if not self._initialized:
             return
 
+        # Run custom shutdown tasks first
         for task in reversed(self._shutdown_tasks):
             try:
                 await task()
@@ -209,18 +236,39 @@ class MCPServerContext:
                 if self.console:
                     self.console.print(f"[red]Error during shutdown: {e}[/red]")
 
+        # Cancel health check task
         if self._websocket_health_check_task:
             self._websocket_health_check_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._websocket_health_check_task
             self._websocket_health_check_task = None
 
+        # Stop WebSocket server
         await self._stop_websocket_server()
 
+        # Stop rate limiter
         if self.rate_limiter:
             await self.rate_limiter.stop()
 
+        # Stop batched saver
         await self.batched_saver.stop()
+
+        # Clean up all managed resources
+        try:
+            await self.network_manager.cleanup_all()
+        except Exception as e:
+            if self.console:
+                self.console.print(
+                    f"[yellow]Warning: Network resource cleanup error: {e}[/yellow]"
+                )
+
+        try:
+            await self.resource_manager.cleanup_all()
+        except Exception as e:
+            if self.console:
+                self.console.print(
+                    f"[yellow]Warning: Resource cleanup error: {e}[/yellow]"
+                )
 
         self._initialized = False
 
@@ -243,7 +291,7 @@ class MCPServerContext:
 
         import re
 
-        if not re.match(r"^[a-zA-Z0-9_-]+$", job_id):
+        if not re.match(r"^[a - zA - Z0-9_ -]+$", job_id):
             return False
 
         if ".." in job_id or "/" in job_id or "\\" in job_id:
@@ -268,7 +316,7 @@ class MCPServerContext:
 
             if self.console:
                 self.console.print(
-                    f"🚀 Starting WebSocket server on localhost:{self.websocket_server_port}...",
+                    f"🚀 Starting WebSocket server on localhost: {self.websocket_server_port}...",
                 )
 
             try:
@@ -321,6 +369,13 @@ class MCPServerContext:
             start_new_session=True,
         )
 
+        # Register the process with the network resource manager for automatic cleanup
+        if self.websocket_server_process:
+            managed_process = self.network_manager.create_subprocess(
+                self.websocket_server_process, timeout=30.0
+            )
+            await managed_process.start_monitoring()
+
     async def _register_websocket_cleanup(self) -> None:
         if not self._websocket_cleanup_registered:
             self.add_shutdown_task(self._stop_websocket_server)
@@ -351,7 +406,7 @@ class MCPServerContext:
                         f"✅ WebSocket server started successfully on port {self.websocket_server_port}",
                     )
                     self.console.print(
-                        f"📊 Progress available at: ws://localhost:{self.websocket_server_port}/ws/progress/{{job_id}}",
+                        f"📊 Progress available at: ws: / / localhost: {self.websocket_server_port}/ ws / progress /{{job_id}}",
                     )
                 return True
 
@@ -512,7 +567,11 @@ class MCPServerContext:
         if not self.validate_job_id(job_id):
             msg = f"Invalid job_id: {job_id}"
             raise ValueError(msg)
-        return self.progress_dir / f"job-{job_id}.json"
+
+        # Use secure path joining to prevent directory traversal
+        return SecurePathValidator.secure_path_join(
+            self.progress_dir, f"job-{job_id}.json"
+        )
 
     async def schedule_state_save(
         self,
@@ -522,7 +581,6 @@ class MCPServerContext:
         await self.batched_saver.schedule_save(save_id, save_func)
 
     def get_current_time(self) -> str:
-        """Get current timestamp as string for progress tracking."""
         import datetime
 
         return datetime.datetime.now().isoformat()

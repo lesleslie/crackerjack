@@ -1,6 +1,9 @@
 import typing as t
 
 from crackerjack.mcp.context import get_context
+from crackerjack.services.input_validator import (
+    get_input_validator,
+)
 
 
 async def create_task_with_subagent(
@@ -8,31 +11,52 @@ async def create_task_with_subagent(
     prompt: str,
     subagent_type: str,
 ) -> dict[str, t.Any]:
-    """Create a task using a specific subagent type.
-
-    This function provides integration with the Task tool for executing
-    user agents and system agents through the intelligent agent system.
-
-    Args:
-        description: Description of the task
-        prompt: The actual task prompt/content
-        subagent_type: Type of subagent to use
-
-    Returns:
-        Dictionary with task execution results
-    """
     try:
-        # For now, return a placeholder result indicating the task would be executed
-        # In a full implementation, this would integrate with the actual Task tool
+        # Input validation with security checks
+        validator = get_input_validator()
+
+        # Validate description
+        desc_result = validator.validate_command_args(description)
+        if not desc_result.valid:
+            return {
+                "success": False,
+                "error": f"Invalid description: {desc_result.error_message}",
+                "validation_type": desc_result.validation_type,
+            }
+
+        # Validate prompt
+        prompt_result = validator.validate_command_args(prompt)
+        if not prompt_result.valid:
+            return {
+                "success": False,
+                "error": f"Invalid prompt: {prompt_result.error_message}",
+                "validation_type": prompt_result.validation_type,
+            }
+
+        # Validate subagent_type (should be safe identifier)
+        subagent_result = validator.sanitizer.sanitize_string(
+            subagent_type, max_length=100, strict_alphanumeric=True
+        )
+        if not subagent_result.valid:
+            return {
+                "success": False,
+                "error": f"Invalid subagent_type: {subagent_result.error_message}",
+                "validation_type": subagent_result.validation_type,
+            }
+
+        # Use sanitized values
+        sanitized_description = desc_result.sanitized_value or description
+        sanitized_prompt = prompt_result.sanitized_value or prompt
+        sanitized_subagent = subagent_result.sanitized_value
 
         result = {
             "success": True,
-            "description": description,
-            "prompt": prompt,
-            "subagent_type": subagent_type,
-            "result": f"Task would be executed by {subagent_type}: {prompt[:100]}...",
+            "description": sanitized_description,
+            "prompt": sanitized_prompt,
+            "subagent_type": sanitized_subagent,
+            "result": f"Task would be executed by {sanitized_subagent}: {sanitized_prompt[:100]}...",
             "agent_type": "user"
-            if subagent_type
+            if sanitized_subagent
             not in ("general-purpose", "statusline-setup", "output-style-setup")
             else "system",
         }
@@ -42,7 +66,7 @@ async def create_task_with_subagent(
     except Exception as e:
         return {
             "success": False,
-            "error": str(e),
+            "error": f"Task creation failed: {str(e)}",
             "description": description,
             "subagent_type": subagent_type,
         }
@@ -52,7 +76,6 @@ async def _validate_stage_request(context, rate_limiter) -> str | None:
     if not context:
         return '{"error": "Server context not available", "success": false}'
 
-    # Skip rate limiting if not configured
     if rate_limiter and hasattr(rate_limiter, "check_request_allowed"):
         allowed, details = await rate_limiter.check_request_allowed()
         if not allowed:
@@ -61,22 +84,42 @@ async def _validate_stage_request(context, rate_limiter) -> str | None:
 
 
 def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
-    stage = args.strip().lower()
-    valid_stages = {"fast", "comprehensive", "tests", "cleaning", "init"}
+    try:
+        # Input validation
+        validator = get_input_validator()
 
-    if stage not in valid_stages:
-        return f'{{"error": "Invalid stage: {stage}. Valid stages: {valid_stages}", "success": false}}'
+        # Validate stage argument
+        stage_result = validator.sanitizer.sanitize_string(
+            args.strip(), max_length=50, strict_alphanumeric=True
+        )
+        if not stage_result.valid:
+            return f'{{"error": "Invalid stage argument: {stage_result.error_message}", "success": false}}'
 
-    import json
+        stage = stage_result.sanitized_value.lower()
+        valid_stages = {"fast", "comprehensive", "tests", "cleaning", "init"}
 
-    extra_kwargs = {}
-    if kwargs.strip():
-        try:
-            extra_kwargs = json.loads(kwargs)
-        except json.JSONDecodeError as e:
-            return f'{{"error": "Invalid JSON in kwargs: {e}", "success": false}}'
+        if stage not in valid_stages:
+            return f'{{"error": "Invalid stage: {stage}. Valid stages: {valid_stages}", "success": false}}'
 
-    return stage, extra_kwargs
+        # Validate and parse JSON kwargs if provided
+        extra_kwargs = {}
+        if kwargs.strip():
+            kwargs_result = validator.validate_json_payload(kwargs.strip())
+            if not kwargs_result.valid:
+                return f'{{"error": "Invalid JSON in kwargs: {kwargs_result.error_message}", "success": false}}'
+
+            extra_kwargs = kwargs_result.sanitized_value
+
+            # Additional validation on JSON structure
+            if not isinstance(extra_kwargs, dict):
+                return f'{{"error": "kwargs must be a JSON object, got {type(extra_kwargs).__name__}", "success": false}}'
+
+        return stage, extra_kwargs
+
+    except Exception as e:
+        return (
+            f'{{"error": "Stage argument parsing failed: {str(e)}", "success": false}}'
+        )
 
 
 def _configure_stage_options(stage: str) -> "WorkflowOptions":
@@ -90,7 +133,6 @@ def _configure_stage_options(stage: str) -> "WorkflowOptions":
     elif stage == "cleaning":
         options.cleaning.clean = True
     elif stage == "init":
-        # Init stage doesn't use standard workflow options
         options.skip_hooks = True
     return options
 
@@ -110,7 +152,6 @@ def _execute_stage(orchestrator, stage: str, options) -> bool:
 
 
 def _execute_init_stage(orchestrator) -> bool:
-    """Execute project initialization stage."""
     try:
         from pathlib import Path
 
@@ -118,25 +159,21 @@ def _execute_init_stage(orchestrator) -> bool:
         from crackerjack.services.git import GitService
         from crackerjack.services.initialization import InitializationService
 
-        # Get orchestrator dependencies
         console = orchestrator.console
         pkg_path = orchestrator.pkg_path
 
-        # Create service dependencies
         filesystem = FileSystemService()
         git_service = GitService(console, pkg_path)
 
-        # Initialize the service
         init_service = InitializationService(console, filesystem, git_service, pkg_path)
 
-        # Run initialization in current directory
         results = init_service.initialize_project(target_path=Path.cwd())
 
         return results.get("success", False)
 
     except Exception as e:
         if hasattr(orchestrator, "console"):
-            orchestrator.console.print(f"[red]❌[/red] Initialization failed: {e}")
+            orchestrator.console.print(f"[red]❌[/ red] Initialization failed: {e}")
         return False
 
 
@@ -177,11 +214,11 @@ def register_core_tools(mcp_app: t.Any) -> None:
 
 def _get_error_patterns() -> list[tuple[str, str]]:
     return [
-        ("type_error", r"TypeError:|type object .* has no attribute"),
-        ("import_error", r"ImportError:|ModuleNotFoundError:"),
+        ("type_error", r"TypeError: | type object .* has no attribute"),
+        ("import_error", r"ImportError: | ModuleNotFoundError: "),
         ("attribute_error", r"AttributeError: "),
-        ("syntax_error", r"SyntaxError:|invalid syntax"),
-        ("test_failure", r"FAILED|AssertionError:"),
+        ("syntax_error", r"SyntaxError: | invalid syntax"),
+        ("test_failure", r"FAILED | AssertionError: "),
         ("hook_failure", r"hook .* failed"),
     ]
 

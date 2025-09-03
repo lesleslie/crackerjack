@@ -1,5 +1,3 @@
-"""Tests for the Intelligent Agent Selection System."""
-
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,58 +16,43 @@ from crackerjack.intelligence.integration import get_intelligent_agent_system
 
 
 class TestAgentRegistry:
-    """Test agent registry functionality."""
-
     @pytest.fixture
     async def registry(self):
-        """Create a test registry."""
         registry = AgentRegistry()
         await registry.initialize()
         return registry
 
     async def test_registry_initialization(self, registry):
-        """Test registry initializes with agents."""
         assert len(registry._agents) > 0
 
-        # Should have agents from all sources
         sources = {agent.metadata.source for agent in registry._agents.values()}
-        assert len(sources) >= 1  # At least crackerjack agents
+        assert len(sources) >= 1
 
     async def test_capability_mapping(self, registry):
-        """Test capability mapping works."""
-        # Get agents by capability
         arch_agents = registry.get_agents_by_capability(AgentCapability.ARCHITECTURE)
-        assert len(arch_agents) >= 0  # Might be 0 in test environment
+        assert len(arch_agents) >= 0
 
-        # Test stats
         stats = registry.get_agent_stats()
         assert "total_agents" in stats
         assert "by_source" in stats
         assert "by_capability" in stats
 
     async def test_agent_retrieval(self, registry):
-        """Test agent retrieval methods."""
         all_agents = registry.list_all_agents()
         assert len(all_agents) > 0
 
-        # Agents should be sorted by priority
         priorities = [agent.metadata.priority for agent in all_agents]
         assert priorities == sorted(priorities, reverse=True)
 
 
 class TestAgentSelector:
-    """Test agent selection functionality."""
-
     @pytest.fixture
     async def selector(self):
-        """Create a test selector."""
         registry = AgentRegistry()
         await registry.initialize()
         return AgentSelector(registry)
 
     async def test_task_capability_analysis(self, selector):
-        """Test task capability analysis."""
-        # Test architecture task
         arch_task = TaskDescription(
             description="Design a complex system architecture with multiple components",
             context=TaskContext.ARCHITECTURE,
@@ -79,7 +62,6 @@ class TestAgentSelector:
         assert AgentCapability.ARCHITECTURE in capabilities
 
     async def test_agent_selection(self, selector):
-        """Test agent selection for tasks."""
         task = TaskDescription(
             description="Fix refurb violations in Python code",
             context=TaskContext.CODE_QUALITY,
@@ -88,16 +70,13 @@ class TestAgentSelector:
 
         candidates = await selector.select_agents(task, max_candidates=3)
 
-        # Should return some candidates
         assert len(candidates) >= 0
 
-        # Candidates should be ordered by score
         if len(candidates) > 1:
             scores = [c.final_score for c in candidates]
             assert scores == sorted(scores, reverse=True)
 
     async def test_task_complexity_analysis(self, selector):
-        """Test task complexity analysis."""
         simple_task = TaskDescription(description="Format Python code")
         complex_task = TaskDescription(
             description="Refactor complex architecture with multiple design patterns",
@@ -112,10 +91,7 @@ class TestAgentSelector:
 
 
 class TestIntelligentAgentSystem:
-    """Test the integrated intelligent agent system."""
-
     async def test_system_initialization(self):
-        """Test system initialization."""
         system = await get_intelligent_agent_system()
         await system.initialize()
 
@@ -125,15 +101,13 @@ class TestIntelligentAgentSystem:
         assert system.learning_system is not None
 
     async def test_smart_task_execution(self):
-        """Test smart task execution."""
         system = await get_intelligent_agent_system()
 
-        # Mock the orchestrator execution to avoid complex setup
         with patch.object(system, "orchestrator") as mock_orchestrator:
             mock_result = MagicMock()
             mock_result.success = True
             mock_result.primary_result = "Test result"
-            mock_result.agents_used = ["test-agent"]
+            mock_result.agents_used = ["test - agent"]
             mock_result.execution_time = 1.0
             mock_result.error_message = None
             mock_result.recommendations = ["Test recommendation"]
@@ -141,7 +115,6 @@ class TestIntelligentAgentSystem:
             mock_orchestrator.execute = AsyncMock(return_value=mock_result)
             mock_orchestrator.selector.select_agents = AsyncMock(return_value=[])
 
-            # Mock learning system
             with patch.object(system, "learning_system") as mock_learning:
                 mock_learning.get_agent_recommendations = MagicMock(return_value={})
                 mock_learning.record_execution = AsyncMock()
@@ -153,26 +126,22 @@ class TestIntelligentAgentSystem:
 
                 assert result.success is True
                 assert result.result == "Test result"
-                assert result.agents_used == ["test-agent"]
+                assert result.agents_used == ["test - agent"]
 
     async def test_crackerjack_issue_handling(self):
-        """Test handling crackerjack issues."""
         system = await get_intelligent_agent_system()
 
-        # Create test issue
         issue = Issue(
-            id="test-issue",
+            id="test - issue",
             type=IssueType.FORMATTING,
             severity=Priority.MEDIUM,
             message="Test formatting issue",
         )
 
-        # Create test context
         context = AgentContext(
             project_path=Path.cwd(),
         )
 
-        # Mock the execute_smart_task to avoid complex setup
         with patch.object(system, "execute_smart_task") as mock_execute:
             from crackerjack.agents.base import FixResult
 
@@ -196,10 +165,8 @@ class TestIntelligentAgentSystem:
             assert result.confidence == 0.8
 
     async def test_system_status(self):
-        """Test system status reporting."""
         system = await get_intelligent_agent_system()
 
-        # Mock components to avoid complex initialization
         with patch.object(system, "registry") as mock_registry:
             mock_registry.get_agent_stats.return_value = {"total_agents": 5}
 
@@ -223,10 +190,7 @@ class TestIntelligentAgentSystem:
 
 
 class TestIntegrationFunctions:
-    """Test integration convenience functions."""
-
     async def test_smart_fix_issue(self):
-        """Test smart issue fixing function."""
         from crackerjack.intelligence.integration import smart_fix_issue
 
         issue = Issue(
@@ -252,7 +216,6 @@ class TestIntegrationFunctions:
             mock_system.handle_crackerjack_issue.assert_called_once_with(issue, context)
 
     async def test_smart_execute_task(self):
-        """Test smart task execution function."""
         from crackerjack.intelligence.integration import smart_execute_task
 
         with patch(

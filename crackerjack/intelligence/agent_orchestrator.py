@@ -1,9 +1,3 @@
-"""Multi-Agent Execution Orchestrator.
-
-Coordinates execution of multiple agents with smart routing, fallback strategies,
-and result aggregation.
-"""
-
 import asyncio
 import logging
 import typing as t
@@ -22,26 +16,20 @@ from .agent_selector import AgentScore, AgentSelector, TaskDescription
 
 
 class ExecutionStrategy(Enum):
-    """Strategy for multi-agent execution."""
-
-    SINGLE_BEST = "single_best"  # Use only the highest-scored agent
-    PARALLEL = "parallel"  # Run multiple agents in parallel
-    SEQUENTIAL = "sequential"  # Run agents one by one until success
-    CONSENSUS = "consensus"  # Run multiple agents and compare results
+    SINGLE_BEST = "single_best"
+    PARALLEL = "parallel"
+    SEQUENTIAL = "sequential"
+    CONSENSUS = "consensus"
 
 
 class ExecutionMode(Enum):
-    """Mode of execution."""
-
-    AUTONOMOUS = "autonomous"  # Full automation
-    GUIDED = "guided"  # With human oversight
-    ADVISORY = "advisory"  # Recommendations only
+    AUTONOMOUS = "autonomous"
+    GUIDED = "guided"
+    ADVISORY = "advisory"
 
 
 @dataclass
 class ExecutionRequest:
-    """Request for agent execution."""
-
     task: TaskDescription
     strategy: ExecutionStrategy = ExecutionStrategy.SINGLE_BEST
     mode: ExecutionMode = ExecutionMode.AUTONOMOUS
@@ -53,11 +41,9 @@ class ExecutionRequest:
 
 @dataclass
 class ExecutionResult:
-    """Result of agent execution."""
-
     success: bool
-    primary_result: t.Any | None  # Main result from best agent
-    all_results: list[tuple[RegisteredAgent, t.Any]]  # All agent results
+    primary_result: t.Any | None
+    all_results: list[tuple[RegisteredAgent, t.Any]]
     execution_time: float
     agents_used: list[str]
     strategy_used: ExecutionStrategy
@@ -66,8 +52,6 @@ class ExecutionResult:
 
 
 class AgentOrchestrator:
-    """Multi-agent execution orchestrator."""
-
     def __init__(
         self,
         registry: AgentRegistry | None = None,
@@ -79,7 +63,6 @@ class AgentOrchestrator:
         self._execution_stats: dict[str, int] = {}
 
     async def execute(self, request: ExecutionRequest) -> ExecutionResult:
-        """Execute a request using the intelligent agent system."""
         start_time = asyncio.get_event_loop().time()
 
         try:
@@ -88,7 +71,6 @@ class AgentOrchestrator:
                 f"(strategy: {request.strategy.value})"
             )
 
-            # Get agent candidates
             candidates = await self.selector.select_agents(
                 request.task, max_candidates=request.max_agents
             )
@@ -100,7 +82,6 @@ class AgentOrchestrator:
                     request.strategy,
                 )
 
-            # Execute based on strategy
             if request.strategy == ExecutionStrategy.SINGLE_BEST:
                 result = await self._execute_single_best(request, candidates)
             elif request.strategy == ExecutionStrategy.PARALLEL:
@@ -115,14 +96,13 @@ class AgentOrchestrator:
             execution_time = asyncio.get_event_loop().time() - start_time
             result.execution_time = execution_time
 
-            # Update stats
             for agent_name in result.agents_used:
                 self._execution_stats[agent_name] = (
                     self._execution_stats.get(agent_name, 0) + 1
                 )
 
             self.logger.info(
-                f"Execution completed in {execution_time:.2f}s: "
+                f"Execution completed in {execution_time: .2f}s: "
                 f"{'success' if result.success else 'failure'} "
                 f"using {len(result.agents_used)} agents"
             )
@@ -142,7 +122,6 @@ class AgentOrchestrator:
         request: ExecutionRequest,
         candidates: list[AgentScore],
     ) -> ExecutionResult:
-        """Execute using the single best agent."""
         best_candidate = candidates[0]
 
         try:
@@ -152,14 +131,13 @@ class AgentOrchestrator:
                 success=True,
                 primary_result=result,
                 all_results=[(best_candidate.agent, result)],
-                execution_time=0.0,  # Will be set by caller
+                execution_time=0.0,
                 agents_used=[best_candidate.agent.metadata.name],
                 strategy_used=ExecutionStrategy.SINGLE_BEST,
                 recommendations=self._generate_recommendations(best_candidate),
             )
 
         except Exception as e:
-            # Fallback to next best agent if available
             if len(candidates) > 1 and request.fallback_to_system:
                 self.logger.warning(
                     f"Primary agent {best_candidate.agent.metadata.name} failed: {e}. "
@@ -172,7 +150,7 @@ class AgentOrchestrator:
                     mode=request.mode,
                     max_agents=len(candidates) - 1,
                     timeout_seconds=request.timeout_seconds,
-                    fallback_to_system=False,  # Prevent infinite recursion
+                    fallback_to_system=False,
                     context=request.context,
                 )
 
@@ -193,7 +171,6 @@ class AgentOrchestrator:
         request: ExecutionRequest,
         candidates: list[AgentScore],
     ) -> ExecutionResult:
-        """Execute multiple agents in parallel."""
         tasks = []
         agents_to_execute = candidates[: request.max_agents]
 
@@ -203,7 +180,6 @@ class AgentOrchestrator:
             )
             tasks.append((candidate.agent, task))
 
-        # Wait for all tasks to complete
         results = []
         successful_results = []
 
@@ -218,12 +194,10 @@ class AgentOrchestrator:
             except Exception as e:
                 results.append((agent, e))
 
-        # Choose best successful result
         primary_result = None
         agents_used = []
 
         if successful_results:
-            # Use result from highest-priority agent
             successful_results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
             primary_result = successful_results[0][1]
             agents_used = [agent.metadata.name for agent, _ in successful_results]
@@ -243,7 +217,6 @@ class AgentOrchestrator:
         request: ExecutionRequest,
         candidates: list[AgentScore],
     ) -> ExecutionResult:
-        """Execute agents sequentially until one succeeds."""
         results = []
 
         for candidate in candidates[: request.max_agents]:
@@ -255,7 +228,6 @@ class AgentOrchestrator:
 
                 results.append((candidate.agent, result))
 
-                # Success - return immediately
                 return ExecutionResult(
                     success=True,
                     primary_result=result,
@@ -273,7 +245,6 @@ class AgentOrchestrator:
                 )
                 continue
 
-        # All agents failed
         return ExecutionResult(
             success=False,
             primary_result=None,
@@ -289,13 +260,11 @@ class AgentOrchestrator:
         request: ExecutionRequest,
         candidates: list[AgentScore],
     ) -> ExecutionResult:
-        """Execute multiple agents and build consensus from results."""
-        # First run parallel execution
         parallel_request = ExecutionRequest(
             task=request.task,
             strategy=ExecutionStrategy.PARALLEL,
             mode=request.mode,
-            max_agents=min(request.max_agents, 3),  # Limit for consensus
+            max_agents=min(request.max_agents, 3),
             timeout_seconds=request.timeout_seconds,
             fallback_to_system=False,
             context=request.context,
@@ -306,7 +275,6 @@ class AgentOrchestrator:
         if not parallel_result.success:
             return parallel_result
 
-        # Analyze results for consensus
         successful_results = [
             (agent, result)
             for agent, result in parallel_result.all_results
@@ -314,10 +282,8 @@ class AgentOrchestrator:
         ]
 
         if len(successful_results) < 2:
-            # Not enough results for consensus - return best result
             return parallel_result
 
-        # Build consensus (simplified - could be much more sophisticated)
         consensus_result = self._build_consensus(successful_results)
 
         return ExecutionResult(
@@ -333,15 +299,11 @@ class AgentOrchestrator:
     async def _execute_agent(
         self, agent: RegisteredAgent, request: ExecutionRequest
     ) -> t.Any:
-        """Execute a specific agent."""
         if agent.agent is not None:
-            # Crackerjack agent
             return await self._execute_crackerjack_agent(agent, request)
         elif agent.agent_path is not None:
-            # User agent
             return await self._execute_user_agent(agent, request)
         elif agent.subagent_type is not None:
-            # System agent
             return await self._execute_system_agent(agent, request)
         else:
             raise ValueError(f"Invalid agent configuration: {agent.metadata.name}")
@@ -349,7 +311,6 @@ class AgentOrchestrator:
     async def _execute_agent_safe(
         self, agent: RegisteredAgent, request: ExecutionRequest
     ) -> t.Any:
-        """Execute an agent with exception handling."""
         try:
             return await self._execute_agent(agent, request)
         except Exception as e:
@@ -360,20 +321,17 @@ class AgentOrchestrator:
         agent: RegisteredAgent,
         request: ExecutionRequest,
     ) -> t.Any:
-        """Execute a built-in crackerjack agent."""
         if not agent.agent:
             raise ValueError("No crackerjack agent instance available")
 
-        # Convert task to Issue for crackerjack agents
         issue = Issue(
             id="orchestrated_task",
             type=self._map_task_to_issue_type(request.task),
             severity=self._map_task_priority_to_severity(request.task),
             message=request.task.description,
-            file_path=None,  # Could be extracted from task if needed
+            file_path=None,
         )
 
-        # Execute agent
         result = await agent.agent.analyze_and_fix(issue)
         return result
 
@@ -382,11 +340,8 @@ class AgentOrchestrator:
         agent: RegisteredAgent,
         request: ExecutionRequest,
     ) -> t.Any:
-        """Execute a user agent via Task tool."""
-        # Import Task tool dynamically to avoid circular imports
         from crackerjack.mcp.tools.core_tools import create_task_with_subagent
 
-        # Use Task tool to execute user agent
         result = await create_task_with_subagent(
             description=f"Execute task using {agent.metadata.name}",
             prompt=request.task.description,
@@ -400,14 +355,11 @@ class AgentOrchestrator:
         agent: RegisteredAgent,
         request: ExecutionRequest,
     ) -> t.Any:
-        """Execute a system agent via Task tool."""
         if not agent.subagent_type:
             raise ValueError("No subagent type specified for system agent")
 
-        # Import Task tool dynamically
         from crackerjack.mcp.tools.core_tools import create_task_with_subagent
 
-        # Use Task tool to execute system agent
         result = await create_task_with_subagent(
             description=f"Execute task using {agent.metadata.name}",
             prompt=request.task.description,
@@ -417,11 +369,8 @@ class AgentOrchestrator:
         return result
 
     def _map_task_to_issue_type(self, task: TaskDescription):
-        """Map task context to Issue type for crackerjack agents."""
-        # Import IssueType here to avoid circular imports
         from crackerjack.agents.base import IssueType
 
-        # Simple mapping - could be more sophisticated
         context_map = {
             "code_quality": IssueType.FORMATTING,
             "refactoring": IssueType.COMPLEXITY,
@@ -434,7 +383,6 @@ class AgentOrchestrator:
         if task.context and task.context.value in context_map:
             return context_map[task.context.value]
 
-        # Analyze task description for hints
         desc_lower = task.description.lower()
         if "test" in desc_lower:
             return IssueType.TEST_FAILURE
@@ -445,10 +393,9 @@ class AgentOrchestrator:
         elif "format" in desc_lower:
             return IssueType.FORMATTING
 
-        return IssueType.FORMATTING  # Default
+        return IssueType.FORMATTING
 
     def _map_task_priority_to_severity(self, task: TaskDescription):
-        """Map task priority to Issue severity."""
         from crackerjack.agents.base import Priority
 
         if task.priority >= 80:
@@ -459,14 +406,10 @@ class AgentOrchestrator:
         return Priority.LOW
 
     def _build_consensus(self, results: list[tuple[RegisteredAgent, t.Any]]) -> t.Any:
-        """Build consensus from multiple agent results."""
-        # Simplified consensus - could be much more sophisticated
-        # For now, just return the result from the highest-priority agent
         results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
         return results[0][1]
 
     def _generate_recommendations(self, candidate: AgentScore) -> list[str]:
-        """Generate recommendations based on agent selection."""
         recommendations = []
 
         if candidate.final_score > 0.8:
@@ -491,7 +434,6 @@ class AgentOrchestrator:
         start_time: float,
         strategy: ExecutionStrategy,
     ) -> ExecutionResult:
-        """Create an error result."""
         execution_time = asyncio.get_event_loop().time() - start_time
 
         return ExecutionResult(
@@ -505,7 +447,6 @@ class AgentOrchestrator:
         )
 
     def get_execution_stats(self) -> dict[str, t.Any]:
-        """Get execution statistics."""
         from operator import itemgetter
 
         return {
@@ -519,10 +460,8 @@ class AgentOrchestrator:
         }
 
     async def analyze_task_routing(self, task: TaskDescription) -> dict[str, t.Any]:
-        """Analyze how a task would be routed through the system."""
         analysis = await self.selector.analyze_task_complexity(task)
 
-        # Add orchestration recommendations
         if analysis["complexity_level"] == "high":
             analysis["recommended_strategy"] = ExecutionStrategy.CONSENSUS
         elif analysis["candidate_count"] > 3:
@@ -535,12 +474,10 @@ class AgentOrchestrator:
         return analysis
 
 
-# Global orchestrator instance
 _orchestrator_instance: AgentOrchestrator | None = None
 
 
 async def get_agent_orchestrator() -> AgentOrchestrator:
-    """Get or create the global agent orchestrator."""
     global _orchestrator_instance
 
     if _orchestrator_instance is None:

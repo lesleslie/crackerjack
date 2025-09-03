@@ -10,6 +10,8 @@ from typing import Any
 import aiohttp
 from rich.console import Console
 
+from crackerjack.core.timeout_manager import TimeoutStrategy, get_timeout_manager
+
 
 class JobDataCollector:
     def __init__(self, progress_dir: Path, websocket_url: str) -> None:
@@ -48,7 +50,7 @@ class JobDataCollector:
             if not self.progress_dir.exists():
                 return jobs_data
 
-            for progress_file in self.progress_dir.glob("job -* .json"):
+            for progress_file in self.progress_dir.glob("job-* .json"):
                 self._process_progress_file(progress_file, jobs_data)
 
         return jobs_data
@@ -62,7 +64,7 @@ class JobDataCollector:
             with progress_file.open() as f:
                 data = json.load(f)
 
-            job_id = progress_file.stem.replace("job - ", "")
+            job_id = progress_file.stem.replace("job-", "")
             self._update_job_counters(data, jobs_data)
             self._aggregate_error_metrics(data, jobs_data)
             self._add_individual_job(job_id, data, jobs_data)
@@ -148,56 +150,67 @@ class JobDataCollector:
             "current_errors": 0,
         }
 
-        with suppress(Exception):
-            websocket_base = self.websocket_url.replace("ws: // ", "http: // ").replace(
-                "wss: // ",
-                "https: // ",
-            )
+        timeout_manager = get_timeout_manager()
 
-            async with (
-                aiohttp.ClientSession(
-                    timeout=aiohttp.ClientTimeout(total=3),
-                ) as session,
-                session.get(f"{websocket_base} / ") as response,
+        try:
+            async with timeout_manager.timeout_context(
+                "network_operations",
+                timeout=5.0,  # Short timeout for websocket discovery
+                strategy=TimeoutStrategy.FAIL_FAST,
             ):
-                if response.status == 200:
-                    data = await response.json()
+                websocket_base = self.websocket_url.replace("ws://", "http://").replace(
+                    "wss://",
+                    "https://",
+                )
 
-                    active_jobs = data.get("active_jobs_detailed", [])
+                async with (
+                    aiohttp.ClientSession(
+                        timeout=aiohttp.ClientTimeout(total=3),
+                    ) as session,
+                    session.get(f"{websocket_base}/") as response,
+                ):
+                    if response.status == 200:
+                        data = await response.json()
 
-                    for job in active_jobs:
-                        job_id = job.get("job_id", "unknown")
-                        status = job.get("status", "unknown")
+                        active_jobs = data.get("active_jobs_detailed", [])
 
-                        if status == "running":
-                            jobs_data["active"] += 1
-                        elif status == "completed":
-                            jobs_data["completed"] += 1
-                        elif status == "failed":
-                            jobs_data["failed"] += 1
+                        for job in active_jobs:
+                            job_id = job.get("job_id", "unknown")
+                            status = job.get("status", "unknown")
 
-                        jobs_data["total"] += 1
+                            if status == "running":
+                                jobs_data["active"] += 1
+                            elif status == "completed":
+                                jobs_data["completed"] += 1
+                            elif status == "failed":
+                                jobs_data["failed"] += 1
 
-                        job_entry = {
-                            "job_id": job_id,
-                            "status": status,
-                            "iteration": job.get("iteration", 1),
-                            "max_iterations": job.get("max_iterations", 10),
-                            "current_stage": job.get("current_stage", "unknown"),
-                            "message": job.get("message", "Processing..."),
-                            "project": job.get("project", "crackerjack"),
-                            "total_issues": job.get("total_issues", 0),
-                            "errors_fixed": job.get("errors_fixed", 0),
-                            "errors_failed": job.get("errors_failed", 0),
-                            "current_errors": job.get("current_errors", 0),
-                            "overall_progress": job.get("overall_progress", 0.0),
-                            "stage_progress": job.get("stage_progress", 0.0),
-                        }
-                        jobs_data["individual_jobs"].append(job_entry)
+                            jobs_data["total"] += 1
 
-                        jobs_data["total_issues"] += job.get("total_issues", 0)
-                        jobs_data["errors_fixed"] += job.get("errors_fixed", 0)
-                        jobs_data["errors_failed"] += job.get("errors_failed", 0)
+                            job_entry = {
+                                "job_id": job_id,
+                                "status": status,
+                                "iteration": job.get("iteration", 1),
+                                "max_iterations": job.get("max_iterations", 10),
+                                "current_stage": job.get("current_stage", "unknown"),
+                                "message": job.get("message", "Processing..."),
+                                "project": job.get("project", "crackerjack"),
+                                "total_issues": job.get("total_issues", 0),
+                                "errors_fixed": job.get("errors_fixed", 0),
+                                "errors_failed": job.get("errors_failed", 0),
+                                "current_errors": job.get("current_errors", 0),
+                                "overall_progress": job.get("overall_progress", 0.0),
+                                "stage_progress": job.get("stage_progress", 0.0),
+                            }
+                            jobs_data["individual_jobs"].append(job_entry)
+
+                            jobs_data["total_issues"] += job.get("total_issues", 0)
+                            jobs_data["errors_fixed"] += job.get("errors_fixed", 0)
+                            jobs_data["errors_failed"] += job.get("errors_failed", 0)
+
+        except Exception:
+            # Return empty data on timeout or error - fail gracefully
+            pass
 
         return jobs_data
 
@@ -226,23 +239,30 @@ class ServiceHealthChecker:
         return services
 
     async def _check_websocket_server(self) -> tuple[str, str, str]:
+        timeout_manager = get_timeout_manager()
+
         try:
-            async with (
-                aiohttp.ClientSession(
-                    timeout=aiohttp.ClientTimeout(total=2),
-                ) as session,
-                session.get("http: // localhost: 8675 / ") as response,
+            async with timeout_manager.timeout_context(
+                "network_operations",
+                timeout=3.0,  # Quick health check timeout
+                strategy=TimeoutStrategy.FAIL_FAST,
             ):
-                if response.status == 200:
-                    data = await response.json()
-                    connections = data.get("total_connections", 0)
-                    len(data.get("active_jobs", []))
-                    return (
-                        "WebSocket Server",
-                        f"🟢 Active ({connections} conn)",
-                        "0",
-                    )
-                return ("WebSocket Server", "🔴 HTTP Error", "1")
+                async with (
+                    aiohttp.ClientSession(
+                        timeout=aiohttp.ClientTimeout(total=2),
+                    ) as session,
+                    session.get("http://localhost:8675/") as response,
+                ):
+                    if response.status == 200:
+                        data = await response.json()
+                        connections = data.get("total_connections", 0)
+                        len(data.get("active_jobs", []))
+                        return (
+                            "WebSocket Server",
+                            f"🟢 Active ({connections} conn)",
+                            "0",
+                        )
+                    return ("WebSocket Server", "🔴 HTTP Error", "1")
         except Exception:
             return ("WebSocket Server", "🔴 Connection Failed", "1")
 
@@ -253,10 +273,13 @@ class ServiceHealthChecker:
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=5.0,  # Add timeout protection
             )
             if result.returncode == 0:
                 return ("MCP Server", "🟢 Process Active", "0")
             return ("MCP Server", "🔴 No Process", "0")
+        except subprocess.TimeoutExpired:
+            return ("MCP Server", "🔴 Process Check Timeout", "0")
         except Exception:
             return ("MCP Server", "🔴 Check Failed", "0")
 
@@ -267,10 +290,13 @@ class ServiceHealthChecker:
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=5.0,  # Add timeout protection
             )
             if result.returncode == 0:
                 return ("Service Watchdog", "🟢 Active", "0")
             return ("Service Watchdog", "🔴 Inactive", "0")
+        except subprocess.TimeoutExpired:
+            return ("Service Watchdog", "🔴 Process Check Timeout", "0")
         except Exception:
             return ("Service Watchdog", "🔴 Check Failed", "0")
 
@@ -294,13 +320,12 @@ class ErrorCollector:
                     "No recent errors found",
                     "Clean",
                 ),
-                (" -- : -- : -- ", "monitor", "System monitoring active", "Status"),
+                (" - - : - - : --", "monitor", "System monitoring active", "Status"),
             ]
 
         return errors[-5:]
 
     def _check_debug_logs(self) -> list[tuple[str, str, str, str]]:
-        """Check debug logs for recent errors."""
         errors = []
 
         with suppress(Exception):
@@ -314,7 +339,6 @@ class ErrorCollector:
         self,
         debug_log: Path,
     ) -> list[tuple[str, str, str, str]]:
-        """Extract error entries from debug log file."""
         errors = []
 
         with debug_log.open() as f:
@@ -329,11 +353,9 @@ class ErrorCollector:
         return errors
 
     def _is_debug_error_line(self, line: str) -> bool:
-        """Check if debug log line contains error indicators."""
         return any(indicator in line for indicator in ("ERROR", "Exception", "Failed"))
 
     def _parse_debug_error_line(self, line: str) -> tuple[str, str, str, str] | None:
-        """Parse debug error line into error entry tuple."""
         parts = line.strip().split(" ", 2)
         if len(parts) < 3:
             return None
@@ -343,29 +365,27 @@ class ErrorCollector:
         return (timestamp, "debug", error_msg, "System")
 
     def _truncate_debug_message(self, message: str) -> str:
-        """Truncate debug message to reasonable length."""
         return message[:40] + "..." if len(message) > 40 else message
 
     def _check_crackerjack_logs(self) -> list[tuple[str, str, str, str]]:
-        """Check crackerjack debug logs for recent errors."""
         errors = []
 
         with suppress(Exception):
-            for log_file in Path(tempfile.gettempdir()).glob("crackerjack-debug-*.log"):
+            for log_file in Path(tempfile.gettempdir()).glob(
+                "crackerjack - debug-*.log"
+            ):
                 if self._is_log_file_recent(log_file):
                     errors.extend(self._extract_errors_from_log_file(log_file))
 
         return errors
 
     def _is_log_file_recent(self, log_file: Path) -> bool:
-        """Check if log file was modified within the last hour."""
         return time.time() - log_file.stat().st_mtime < 3600
 
     def _extract_errors_from_log_file(
         self,
         log_file: Path,
     ) -> list[tuple[str, str, str, str]]:
-        """Extract error entries from a single log file."""
         errors = []
 
         with log_file.open() as f:
@@ -379,7 +399,6 @@ class ErrorCollector:
         return errors
 
     def _is_error_line(self, line: str) -> bool:
-        """Check if a log line contains error keywords."""
         return any(
             keyword in line.lower() for keyword in ("error", "failed", "exception")
         )
@@ -389,7 +408,6 @@ class ErrorCollector:
         line: str,
         log_file: Path,
     ) -> tuple[str, str, str, str]:
-        """Create error entry tuple from log line and file."""
         timestamp = time.strftime(
             " % H: % M: % S",
             time.localtime(log_file.stat().st_mtime),
@@ -398,7 +416,6 @@ class ErrorCollector:
         return (timestamp, "job", error_msg, "Crackerjack")
 
     def _truncate_error_message(self, message: str) -> str:
-        """Truncate error message to reasonable length."""
         return message[:50] + "..." if len(message) > 50 else message
 
 
@@ -430,12 +447,21 @@ class ServiceManager:
         ]
 
     async def _check_websocket_server(self) -> bool:
-        with suppress(Exception):
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=2),
-            ) as session:
-                async with session.get("http: // localhost: 8675 / ") as response:
-                    return response.status == 200
+        timeout_manager = get_timeout_manager()
+
+        try:
+            async with timeout_manager.timeout_context(
+                "network_operations",
+                timeout=3.0,  # Quick check timeout
+                strategy=TimeoutStrategy.FAIL_FAST,
+            ):
+                async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=2),
+                ) as session:
+                    async with session.get("http://localhost:8675/") as response:
+                        return response.status == 200
+        except Exception:
+            pass
         return False
 
     def _check_mcp_server(self) -> bool:
@@ -445,6 +471,7 @@ class ServiceManager:
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=5.0,  # Add timeout protection
             )
             return result.returncode == 0
         return False
@@ -478,12 +505,13 @@ class ServiceManager:
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=5.0,  # Add timeout protection
             )
             if result.returncode == 0:
                 return
 
             process = subprocess.Popen(
-                ["python", " - m", "crackerjack", " -- watchdog"],
+                ["python", "-m", "crackerjack", "--watchdog"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 start_new_session=True,

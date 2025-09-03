@@ -19,7 +19,7 @@ def setup_ai_agent_env(ai_agent: bool, verbose: bool = False) -> None:
         if verbose:
             console = Console()
             console.print(
-                "[bold cyan]🐛 AI Agent Debug Mode Configuration: [/bold cyan]",
+                "[bold cyan]🐛 AI Agent Debug Mode Configuration: [/ bold cyan]",
             )
             console.print(f" • AI Agent: {'✅ Enabled' if ai_agent else '❌ Disabled'}")
             console.print(
@@ -34,7 +34,6 @@ def setup_ai_agent_env(ai_agent: bool, verbose: bool = False) -> None:
 def handle_mcp_server(websocket_port: int | None = None) -> None:
     from crackerjack.mcp.server import main as start_mcp_main
 
-    # Always pass current working directory as project path
     project_path = str(Path.cwd())
 
     if websocket_port:
@@ -47,45 +46,45 @@ def handle_monitor_mode(dev_mode: bool = False) -> None:
     from crackerjack.mcp.progress_monitor import run_progress_monitor
 
     console = Console()
-    console.print("[bold cyan]🌟 Starting Multi-Project Progress Monitor[/bold cyan]")
+    console.print("[bold cyan]🌟 Starting Multi-Project Progress Monitor[/ bold cyan]")
     console.print(
-        "[bold yellow]🐕 With integrated Service Watchdog and WebSocket polling[/bold yellow]",
+        "[bold yellow]🐕 With integrated Service Watchdog and WebSocket polling[/ bold yellow]",
     )
 
     try:
         asyncio.run(run_progress_monitor(dev_mode=dev_mode))
     except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Monitor stopped[/yellow]")
+        console.print("\n[yellow]🛑 Monitor stopped[/ yellow]")
 
 
 def handle_enhanced_monitor_mode(dev_mode: bool = False) -> None:
     from crackerjack.mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
 
     console = Console()
-    console.print("[bold magenta]✨ Starting Enhanced Progress Monitor[/bold magenta]")
+    console.print("[bold magenta]✨ Starting Enhanced Progress Monitor[/ bold magenta]")
     console.print(
-        "[bold cyan]📊 With advanced MetricCard widgets and modern web UI patterns[/bold cyan]",
+        "[bold cyan]📊 With advanced MetricCard widgets and modern web UI patterns[/ bold cyan]",
     )
 
     try:
         asyncio.run(run_enhanced_progress_monitor(dev_mode=dev_mode))
     except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Enhanced Monitor stopped[/yellow]")
+        console.print("\n[yellow]🛑 Enhanced Monitor stopped[/ yellow]")
 
 
 def handle_dashboard_mode(dev_mode: bool = False) -> None:
     from crackerjack.mcp.dashboard import run_dashboard
 
     console = Console()
-    console.print("[bold green]🎯 Starting Comprehensive Dashboard[/bold green]")
+    console.print("[bold green]🎯 Starting Comprehensive Dashboard[/ bold green]")
     console.print(
-        "[bold cyan]📈 With system metrics, job tracking, and performance monitoring[/bold cyan]",
+        "[bold cyan]📈 With system metrics, job tracking, and performance monitoring[/ bold cyan]",
     )
 
     try:
         run_dashboard()
     except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Dashboard stopped[/yellow]")
+        console.print("\n[yellow]🛑 Dashboard stopped[/ yellow]")
 
 
 def handle_watchdog_mode() -> None:
@@ -95,7 +94,7 @@ def handle_watchdog_mode() -> None:
     try:
         asyncio.run(start_watchdog())
     except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Watchdog stopped[/yellow]")
+        console.print("\n[yellow]🛑 Watchdog stopped[/ yellow]")
 
 
 def handle_start_websocket_server(port: int = 8675) -> None:
@@ -120,14 +119,14 @@ def handle_stop_mcp_server() -> None:
     from crackerjack.services.server_manager import list_server_status, stop_all_servers
 
     console = Console()
-    console.print("[bold red]🛑 Stopping MCP Servers[/bold red]")
+    console.print("[bold red]🛑 Stopping MCP Servers[/ bold red]")
 
     list_server_status(console)
 
     if stop_all_servers(console):
-        console.print("\n[bold green]✅ All servers stopped successfully[/bold green]")
+        console.print("\n[bold green]✅ All servers stopped successfully[/ bold green]")
     else:
-        console.print("\n[bold red]❌ Some servers failed to stop[/bold red]")
+        console.print("\n[bold red]❌ Some servers failed to stop[/ bold red]")
         raise SystemExit(1)
 
 
@@ -136,9 +135,9 @@ def handle_restart_mcp_server(websocket_port: int | None = None) -> None:
 
     console = Console()
     if restart_mcp_server(websocket_port, console):
-        console.print("\n[bold green]✅ MCP server restart completed[/bold green]")
+        console.print("\n[bold green]✅ MCP server restart completed[/ bold green]")
     else:
-        console.print("\n[bold red]❌ MCP server restart failed[/bold red]")
+        console.print("\n[bold red]❌ MCP server restart failed[/ bold red]")
         raise SystemExit(1)
 
 
@@ -195,7 +194,7 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
     from rich.console import Console
 
     console = Console()
-    console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/bold bright_blue]")
+    console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
 
     try:
         from crackerjack.core.session_coordinator import SessionCoordinator
@@ -209,8 +208,8 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
             ProgressLevel,
         )
     except ImportError as e:
-        console.print(f"[red]Orchestrated mode not available: {e}[/red]")
-        console.print("[yellow]Falling back to standard mode[/yellow]")
+        console.print(f"[red]Orchestrated mode not available: {e}[/ red]")
+        console.print("[yellow]Falling back to standard mode[/ yellow]")
         handle_standard_mode(options, False, job_id)
         return
 
@@ -218,7 +217,7 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
         strategy = ExecutionStrategy(options.orchestration_strategy)
     except ValueError:
         console.print(
-            f"[red]Invalid orchestration strategy: {options.orchestration_strategy}[/red]",
+            f"[red]Invalid orchestration strategy: {options.orchestration_strategy}[/ red]",
         )
         strategy = ExecutionStrategy.ADAPTIVE
 
@@ -226,14 +225,14 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
         progress = ProgressLevel(options.orchestration_progress)
     except ValueError:
         console.print(
-            f"[red]Invalid progress level: {options.orchestration_progress}[/red]",
+            f"[red]Invalid progress level: {options.orchestration_progress}[/ red]",
         )
         progress = ProgressLevel.GRANULAR
 
     try:
         ai_mode = AICoordinationMode(options.orchestration_ai_mode)
     except ValueError:
-        console.print(f"[red]Invalid AI mode: {options.orchestration_ai_mode}[/red]")
+        console.print(f"[red]Invalid AI mode: {options.orchestration_ai_mode}[/ red]")
         ai_mode = AICoordinationMode.SINGLE_AGENT
 
     config = OrchestrationConfig(
@@ -242,9 +241,9 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
         ai_coordination_mode=ai_mode,
     )
 
-    console.print(f"[cyan]Execution Strategy: [/cyan] {strategy.value}")
-    console.print(f"[cyan]Progress Level: [/cyan] {progress.value}")
-    console.print(f"[cyan]AI Coordination: [/cyan] {ai_mode.value}")
+    console.print(f"[cyan]Execution Strategy: [/ cyan] {strategy.value}")
+    console.print(f"[cyan]Progress Level: [/ cyan] {progress.value}")
+    console.print(f"[cyan]AI Coordination: [/ cyan] {ai_mode.value}")
 
     pkg_path = Path.cwd()
     session = SessionCoordinator(console, pkg_path, web_job_id=job_id)
@@ -254,14 +253,14 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
         success = asyncio.run(orchestrator.execute_orchestrated_workflow(options))
         if success:
             console.print(
-                "\n[bold green]🎉 ORCHESTRATED WORKFLOW COMPLETED SUCCESSFULLY![/bold green]",
+                "\n[bold green]🎉 ORCHESTRATED WORKFLOW COMPLETED SUCCESSFULLY ![/ bold green]",
             )
         else:
-            console.print("\n[bold red]❌ ORCHESTRATED WORKFLOW FAILED[/bold red]")
+            console.print("\n[bold red]❌ ORCHESTRATED WORKFLOW FAILED[/ bold red]")
             sys.exit(1)
     except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Orchestrated workflow interrupted[/yellow]")
+        console.print("\n[yellow]🛑 Orchestrated workflow interrupted[/ yellow]")
         sys.exit(130)
     except Exception as e:
-        console.print(f"\n[red]💥 Orchestrated workflow error: {e}[/red]")
+        console.print(f"\n[red]💥 Orchestrated workflow error: {e}[/ red]")
         sys.exit(1)

@@ -110,7 +110,7 @@ class FileHasher:
         if file_path:
             stat = file_path.stat() if file_path.exists() else None
             if stat:
-                cache_key = f"file_hash:{file_path}:{stat.st_mtime}:{stat.st_size}"
+                cache_key = f"file_hash: {file_path}: {stat.st_mtime}: {stat.st_size}"
                 self.cache.file_hash_cache.invalidate(cache_key)
         else:
             self.cache.file_hash_cache.clear()

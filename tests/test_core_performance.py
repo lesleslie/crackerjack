@@ -110,7 +110,6 @@ class TestPerformanceMonitor:
 
         @monitor.time_operation("preserve_test")
         def test_function(x: int) -> int:
-            """Test function docstring."""
             return x
 
         assert test_function.__name__ == "test_function"

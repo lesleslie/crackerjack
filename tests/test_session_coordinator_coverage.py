@@ -52,18 +52,18 @@ class TestSessionCoordinator:
         mock_options,
     ) -> None:
         with patch.object(uuid, "uuid4") as mock_uuid:
-            mock_uuid.return_value.hex = "test-session-id"
-            mock_uuid.return_value.__str__ = lambda self: "test-session-id"
-            mock_uuid.return_value.__getitem__ = lambda self, idx: "test-session-id"[
-                :idx
-            ]
+            mock_uuid.return_value.hex = "test - session - id"
+            mock_uuid.return_value.__str__ = lambda self: "test - session - id"
+            mock_uuid.return_value.__getitem__ = (
+                lambda self, idx: "test - session - id"[:idx]
+            )
 
             coordinator.initialize_session_tracking(mock_options)
 
             assert coordinator.session_tracker is not None
             assert isinstance(coordinator.session_tracker, SessionTracker)
             coordinator.console.print.assert_called_with(
-                "[cyan]📊[/cyan] Session tracking enabled",
+                "[cyan]📊[/ cyan] Session tracking enabled",
             )
 
     def test_initialize_session_tracking_disabled(
@@ -292,7 +292,7 @@ class TestSessionCoordinator:
     def test_cleanup_debug_logs_with_files(self, coordinator, temp_dir) -> None:
         debug_files = []
         for i in range(8):
-            debug_file = temp_dir / f"crackerjack-debug-{i:03d}.log"
+            debug_file = temp_dir / f"crackerjack - debug -{i: 03d}.log"
             debug_file.write_text(f"Debug log {i}")
             debug_files.append(debug_file)
 
@@ -300,7 +300,7 @@ class TestSessionCoordinator:
 
         coordinator._cleanup_debug_logs(keep_recent=3)
 
-        remaining_files = list(temp_dir.glob("crackerjack-debug-*.log"))
+        remaining_files = list(temp_dir.glob("crackerjack - debug - *.log"))
         assert len(remaining_files) == 3
 
         for debug_file in debug_files[-3:]:
@@ -311,7 +311,7 @@ class TestSessionCoordinator:
         coordinator,
         temp_dir,
     ) -> None:
-        debug_file = temp_dir / "crackerjack-debug-001.log"
+        debug_file = temp_dir / "crackerjack - debug - 001.log"
         debug_file.write_text("Debug log")
 
         with patch.object(Path, "unlink", side_effect=PermissionError("Access denied")):
@@ -323,7 +323,7 @@ class TestSessionCoordinator:
     def test_cleanup_coverage_files_with_files(self, coordinator, temp_dir) -> None:
         coverage_files = []
         for i in range(15):
-            coverage_file = temp_dir / f".coverage.{i:03d}"
+            coverage_file = temp_dir / f".coverage.{i: 03d}"
             coverage_file.write_text(f"Coverage data {i}")
             coverage_files.append(coverage_file)
 
@@ -412,10 +412,10 @@ class TestSessionCoordinatorIntegration:
         coordinator = SessionCoordinator(console=console, pkg_path=temp_dir)
 
         for i in range(10):
-            debug_file = temp_dir / f"crackerjack-debug-{i:03d}.log"
+            debug_file = temp_dir / f"crackerjack - debug -{i: 03d}.log"
             debug_file.write_text(f"Debug log {i}")
 
-            coverage_file = temp_dir / f".coverage.{i:03d}"
+            coverage_file = temp_dir / f".coverage.{i: 03d}"
             coverage_file.write_text(f"Coverage data {i}")
 
         mock_config = Mock()
@@ -435,7 +435,7 @@ class TestSessionCoordinatorIntegration:
 
         assert len(cleanup_called) == 1
 
-        debug_files = list(temp_dir.glob("crackerjack-debug-*.log"))
+        debug_files = list(temp_dir.glob("crackerjack - debug - *.log"))
         coverage_files = list(temp_dir.glob(".coverage.*"))
 
         assert len(debug_files) == 3

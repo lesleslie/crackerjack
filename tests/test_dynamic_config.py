@@ -20,7 +20,7 @@ class TestDynamicConfigGenerator:
             "tier": 1,
             "experimental": True,
             "time_estimate": 5,
-            "repo": "https: // github.com / test / test",
+            "repo": "https: / / github.com / test / test",
             "rev": "v1.0.0",
             "stages": None,
             "args": None,
@@ -43,7 +43,7 @@ class TestDynamicConfigGenerator:
             "tier": 1,
             "experimental": True,
             "time_estimate": 5,
-            "repo": "https: // github.com / test / test",
+            "repo": "https: / / github.com / test / test",
             "rev": "v1.0.0",
             "stages": None,
             "args": None,
@@ -68,7 +68,7 @@ class TestDynamicConfigGenerator:
             "tier": 1,
             "experimental": False,
             "time_estimate": 15,
-            "repo": "https: // github.com / test / test",
+            "repo": "https: / / github.com / test / test",
             "rev": "v1.0.0",
             "stages": None,
             "args": None,
@@ -90,7 +90,7 @@ class TestDynamicConfigGenerator:
 
     def test_get_repo_comment_unknown(self) -> None:
         generator = DynamicConfigGenerator()
-        result = generator._get_repo_comment("https: // github.com / unknown / repo")
+        result = generator._get_repo_comment("https: / / github.com / unknown / repo")
         assert result is None
 
 
@@ -110,7 +110,7 @@ def test_add_experimental_hook() -> None:
         "tier": 2,
         "experimental": False,
         "time_estimate": 5,
-        "repo": "https: // github.com / test / test",
+        "repo": "https: / / github.com / test / test",
         "rev": "v1.0.0",
         "stages": None,
         "args": None,
@@ -134,7 +134,7 @@ def test_remove_experimental_hook() -> None:
         "tier": 2,
         "experimental": True,
         "time_estimate": 5,
-        "repo": "https: // github.com / test / test",
+        "repo": "https: / / github.com / test / test",
         "rev": "v1.0.0",
         "stages": None,
         "args": None,
@@ -154,7 +154,6 @@ def test_remove_experimental_hook() -> None:
 
 
 def test_generate_config_for_mode_basic() -> None:
-    """Test basic functionality of generate_config_for_mode."""
     try:
         result = generate_config_for_mode()
         assert result is not None or result is None
@@ -172,11 +171,9 @@ def test_generate_config_for_mode_basic() -> None:
 
 
 def test_filter_hooks_for_mode_basic() -> None:
-    """Test basic functionality of DynamicConfigGenerator.filter_hooks_for_mode."""
     generator = DynamicConfigGenerator()
 
     try:
-        # This method requires mode parameter
         result = generator.filter_hooks_for_mode("fast")
         assert result is not None
     except Exception as e:
@@ -184,11 +181,9 @@ def test_filter_hooks_for_mode_basic() -> None:
 
 
 def test_group_hooks_by_repo_basic() -> None:
-    """Test basic functionality of DynamicConfigGenerator.group_hooks_by_repo."""
     generator = DynamicConfigGenerator()
 
     try:
-        # This method requires hooks parameter
         result = generator.group_hooks_by_repo([])
         assert result is not None
     except Exception as e:
@@ -196,31 +191,27 @@ def test_group_hooks_by_repo_basic() -> None:
 
 
 def test_generate_config_basic() -> None:
-    """Test basic functionality via DynamicConfigGenerator.generate_config."""
     generator = DynamicConfigGenerator()
 
     try:
-        # Test the actual method that exists
         result = generator.generate_config(mode="fast", tiers=[1], experimental=False)
         assert result is not None
-        assert isinstance(result, str)  # Should return YAML config string
+        assert isinstance(result, str)
     except Exception as e:
         pytest.skip(f"Method requires specific implementation - skipped: {e}")
 
 
 def test_create_temp_config_basic() -> None:
-    """Test basic functionality via DynamicConfigGenerator.create_temp_config."""
     generator = DynamicConfigGenerator()
 
     try:
-        # Test the actual method that exists
         result = generator.create_temp_config(
             mode="fast",
             tiers=[1],
             experimental=False,
         )
         assert result is not None
-        # Should return a Path object to temp file
+
         from pathlib import Path
 
         assert isinstance(result, Path | str)

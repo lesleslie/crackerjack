@@ -4,10 +4,32 @@ import typing as t
 from contextlib import suppress
 
 from crackerjack.mcp.context import get_context
+from crackerjack.services.bounded_status_operations import (
+    execute_bounded_status_operation,
+)
+from crackerjack.services.secure_status_formatter import (
+    StatusVerbosity,
+    format_secure_status,
+    get_secure_status_formatter,
+)
+from crackerjack.services.status_authentication import (
+    authenticate_status_request,
+    get_status_authenticator,
+)
+from crackerjack.services.status_security_manager import (
+    get_status_security_manager,
+    secure_status_operation,
+    validate_status_request,
+)
+from crackerjack.services.thread_safe_status_collector import (
+    get_thread_safe_status_collector,
+)
+from crackerjack.services.websocket_resource_limiter import (
+    get_websocket_resource_limiter,
+)
 
 
 def _suggest_agent_for_context(state_manager) -> dict[str, t.Any]:
-    """Suggest appropriate agents based on current development context."""
     suggestions = {
         "recommended_agent": None,
         "reason": "",
@@ -15,24 +37,22 @@ def _suggest_agent_for_context(state_manager) -> dict[str, t.Any]:
         "priority": "MEDIUM",
     }
 
-    # Check for errors or failures that need specific agents
     with suppress(Exception):
         recent_errors = getattr(state_manager, "recent_errors", [])
         stage_statuses = _get_stage_status_dict(state_manager)
 
-        # Test failures suggest test specialist
         if stage_statuses.get("tests") == "failed" or any(
             "test" in str(error).lower() for error in recent_errors
         ):
             suggestions.update(
                 {
-                    "recommended_agent": "crackerjack-test-specialist",
-                    "reason": "Test failures detected - specialist needed for debugging and fixes",
-                    "usage": 'Task tool with subagent_type="crackerjack-test-specialist"',
+                    "recommended_agent": "crackerjack - test-specialist",
+                    "reason": "Test failures detected-specialist needed for debugging and fixes",
+                    "usage": 'Task tool with subagent_type ="crackerjack - test-specialist"',
                     "priority": "HIGH",
                 }
             )
-        # Security issues suggest security auditor
+
         elif any(
             "security" in str(error).lower() or "bandit" in str(error).lower()
             for error in recent_errors
@@ -40,28 +60,28 @@ def _suggest_agent_for_context(state_manager) -> dict[str, t.Any]:
             suggestions.update(
                 {
                     "recommended_agent": "security-auditor",
-                    "reason": "Security issues detected - immediate audit required",
-                    "usage": 'Task tool with subagent_type="security-auditor"',
+                    "reason": "Security issues detected-immediate audit required",
+                    "usage": 'Task tool with subagent_type ="security-auditor"',
                     "priority": "HIGH",
                 }
             )
-        # Complexity issues suggest architect
+
         elif any("complex" in str(error).lower() for error in recent_errors):
             suggestions.update(
                 {
                     "recommended_agent": "crackerjack-architect",
-                    "reason": "Complexity issues detected - architectural review needed",
-                    "usage": 'Task tool with subagent_type="crackerjack-architect"',
+                    "reason": "Complexity issues detected-architectural review needed",
+                    "usage": 'Task tool with subagent_type ="crackerjack-architect"',
                     "priority": "HIGH",
                 }
             )
-        # Default recommendation for Python projects
+
         else:
             suggestions.update(
                 {
                     "recommended_agent": "crackerjack-architect",
-                    "reason": "Python project - ensure crackerjack compliance from the start",
-                    "usage": 'Task tool with subagent_type="crackerjack-architect"',
+                    "reason": "Python project-ensure crackerjack compliance from the start",
+                    "usage": 'Task tool with subagent_type ="crackerjack-architect"',
                     "priority": "MEDIUM",
                 }
             )
@@ -70,7 +90,6 @@ def _suggest_agent_for_context(state_manager) -> dict[str, t.Any]:
 
 
 def _create_error_response(message: str, success: bool = False) -> str:
-    """Utility function to create standardized error responses."""
     import json
 
     return json.dumps({"error": message, "success": success})
@@ -145,7 +164,6 @@ def _add_state_manager_stats(stats: dict, state_manager) -> None:
 
 
 def _get_active_jobs(context) -> list[dict[str, t.Any]]:
-    """Get information about active jobs from progress files."""
     jobs = []
     if not context.progress_dir.exists():
         return jobs
@@ -174,8 +192,101 @@ def _get_active_jobs(context) -> list[dict[str, t.Any]]:
     return jobs
 
 
+async def _get_comprehensive_status_secure(
+    client_id: str = "mcp_client",
+    client_ip: str = "127.0.0.1",
+    auth_header: str | None = None,
+    verbosity: StatusVerbosity = StatusVerbosity.STANDARD,
+) -> dict[str, t.Any]:
+    """Get comprehensive status with full security integration."""
+
+    # 1. Authentication
+    auth_manager = get_status_authenticator()
+    try:
+        credentials = await authenticate_status_request(
+            auth_header, client_ip, "get_comprehensive_status"
+        )
+
+        # Check if operation is allowed for this auth level
+        if not auth_manager.is_operation_allowed(
+            "get_comprehensive_status", credentials.access_level
+        ):
+            return {"error": "Insufficient privileges for comprehensive status"}
+
+    except Exception as e:
+        return {"error": f"Authentication failed: {e}"}
+
+    # 2. Security validation
+    try:
+        await validate_status_request(client_id, "get_comprehensive_status", {})
+    except Exception as e:
+        return {"error": f"Security validation failed: {e}"}
+
+    # 3. Resource management with bounded operations
+    try:
+        return await execute_bounded_status_operation(
+            "status_collection",
+            client_id,
+            _collect_comprehensive_status_internal,
+            client_id=client_id,
+            verbosity=verbosity,
+        )
+    except Exception as e:
+        return {"error": f"Resource limit exceeded: {e}"}
+
+
+async def _collect_comprehensive_status_internal(
+    client_id: str = "mcp_client",
+    verbosity: StatusVerbosity = StatusVerbosity.STANDARD,
+) -> dict[str, t.Any]:
+    """Internal comprehensive status collection using thread-safe collector."""
+
+    # Use thread-safe status collector
+    collector = get_thread_safe_status_collector()
+
+    try:
+        # Collect status with thread safety and proper timeout handling
+        snapshot = await collector.collect_comprehensive_status(
+            client_id=client_id,
+            include_jobs=True,
+            include_services=True,
+            include_stats=True,
+        )
+
+        # Build final status from snapshot
+        status = {
+            "services": snapshot.services,
+            "jobs": snapshot.jobs,
+            "server_stats": snapshot.server_stats,
+            "collection_info": {
+                "timestamp": snapshot.timestamp,
+                "duration": snapshot.collection_duration,
+                "is_complete": snapshot.is_complete,
+                "errors": snapshot.errors,
+            },
+        }
+
+        # Add agent suggestions if available
+        context = None
+        try:
+            context = get_context()
+        except RuntimeError:
+            pass
+
+        if context:
+            state_manager = getattr(context, "state_manager", None)
+            if state_manager:
+                status["agent_suggestions"] = _suggest_agent_for_context(state_manager)
+
+        return status
+
+    except Exception as e:
+        return {"error": f"Failed to collect comprehensive status: {e}"}
+
+
 async def _get_comprehensive_status() -> dict[str, t.Any]:
-    """Get comprehensive status of MCP server, WebSocket server, and active jobs."""
+    """Legacy wrapper for backward compatibility."""
+    return await _get_comprehensive_status_secure()
     try:
         context = get_context()
     except RuntimeError:
@@ -185,7 +296,6 @@ async def _get_comprehensive_status() -> dict[str, t.Any]:
         return {"error": "Server context not available"}
 
     try:
-        # Get server status
         from crackerjack.services.server_manager import (
             find_mcp_server_processes,
             find_websocket_server_processes,
@@ -194,10 +304,8 @@ async def _get_comprehensive_status() -> dict[str, t.Any]:
         mcp_processes = find_mcp_server_processes()
         websocket_processes = find_websocket_server_processes()
 
-        # Get active jobs
         active_jobs = _get_active_jobs(context)
 
-        # Get WebSocket server status from context
         websocket_status = None
         try:
             websocket_status = await context.get_websocket_server_status()
@@ -206,7 +314,6 @@ async def _get_comprehensive_status() -> dict[str, t.Any]:
         except Exception as e:
             websocket_status = {"error": f"Status unavailable: {e}"}
 
-        # Build comprehensive status
         status = {
             "services": {
                 "mcp_server": {
@@ -236,11 +343,9 @@ async def _get_comprehensive_status() -> dict[str, t.Any]:
             "timestamp": time.time(),
         }
 
-        # Add state manager stats
         state_manager = getattr(context, "state_manager", None)
         _add_state_manager_stats(status["server_stats"], state_manager)
 
-        # Add agent suggestions based on current context
         if state_manager:
             status["agent_suggestions"] = _suggest_agent_for_context(state_manager)
 
@@ -262,20 +367,27 @@ def register_monitoring_tools(mcp_app: t.Any) -> None:
 def _register_stage_status_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def get_stage_status() -> str:
-        context = get_context()
-        if not context:
-            return _create_error_response("Server context not available")
+        client_id = "mcp_client"
 
         try:
+            # Security validation
+            await validate_status_request(client_id, "get_stage_status", {})
+
+            context = get_context()
+            if not context:
+                return _create_error_response("Server context not available")
+
             state_manager = getattr(context, "state_manager", None)
             if not state_manager:
                 return _create_error_response("State manager not available")
 
-            result = {
-                "stages": _get_stage_status_dict(state_manager),
-                "session": _get_session_info(state_manager),
-                "timestamp": time.time(),
-            }
+            # Use bounded operation for resource protection
+            result = await execute_bounded_status_operation(
+                "stage_status",
+                client_id,
+                _build_stage_status,
+                state_manager,
+            )
 
             return json.dumps(result, indent=2)
 
@@ -283,19 +395,40 @@ def _register_stage_status_tool(mcp_app: t.Any) -> None:
             return f'{{"error": "Failed to get stage status: {e}"}}'
 
 
+def _build_stage_status(state_manager) -> dict[str, t.Any]:
+    """Build stage status with bounded resource usage."""
+    return {
+        "stages": _get_stage_status_dict(state_manager),
+        "session": _get_session_info(state_manager),
+        "timestamp": time.time(),
+    }
+
+
 def _register_next_action_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def get_next_action() -> str:
-        context = get_context()
-        if not context:
-            return _create_error_response("Server context not available")
+        client_id = "mcp_client"
 
         try:
+            # Security validation
+            await validate_status_request(client_id, "get_next_action", {})
+
+            context = get_context()
+            if not context:
+                return _create_error_response("Server context not available")
+
             state_manager = getattr(context, "state_manager", None)
             if not state_manager:
                 return '{"recommended_action": "initialize", "reason": "No state manager available"}'
 
-            action = _determine_next_action(state_manager)
+            # Use bounded operation for consistency
+            action = await execute_bounded_status_operation(
+                "next_action",
+                client_id,
+                _determine_next_action,
+                state_manager,
+            )
+
             return json.dumps(action, indent=2)
 
         except Exception as e:
@@ -305,53 +438,130 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
 def _register_server_stats_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def get_server_stats() -> str:
-        context = get_context()
-        if not context:
-            return _create_error_response("Server context not available")
+        client_id = "mcp_client"
 
         try:
-            stats = _build_server_stats(context)
-            state_manager = getattr(context, "state_manager", None)
-            _add_state_manager_stats(stats, state_manager)
+            # Security validation
+            await validate_status_request(client_id, "get_server_stats", {})
 
-            return json.dumps(stats, indent=2)
+            # Use secure status operation with resource limits
+            async with await secure_status_operation(
+                client_id, "get_server_stats", timeout=15.0
+            ):
+                # Get context
+                context = get_context()
+                if not context:
+                    formatter = get_secure_status_formatter()
+                    error_response = formatter.format_error_response(
+                        "Server context not available",
+                        verbosity=StatusVerbosity.STANDARD,
+                    )
+                    return json.dumps(error_response, indent=2)
+
+                # Get raw stats with bounded operation
+                raw_stats = await execute_bounded_status_operation(
+                    "server_stats",
+                    client_id,
+                    _build_server_stats_secure,
+                    context,
+                )
+
+                # Apply secure formatting
+                secure_stats = format_secure_status(
+                    raw_stats,
+                    verbosity=StatusVerbosity.STANDARD,
+                    project_root=context.config.project_path,
+                    user_context="mcp_client",
+                )
+
+                return json.dumps(secure_stats, indent=2)
 
         except Exception as e:
-            return f'{{"error": "Failed to get server stats: {e}"}}'
+            # Use secure error formatting
+            formatter = get_secure_status_formatter()
+            error_response = formatter.format_error_response(
+                str(e),
+                verbosity=StatusVerbosity.STANDARD,
+            )
+            return json.dumps(error_response, indent=2)
+
+
+def _build_server_stats_secure(context) -> dict[str, t.Any]:
+    """Build server stats with security controls."""
+
+    # Build base stats
+    stats = _build_server_stats(context)
+
+    # Add state manager stats
+    state_manager = getattr(context, "state_manager", None)
+    _add_state_manager_stats(stats, state_manager)
+
+    # Add security status
+    security_manager = get_status_security_manager()
+    stats["security_status"] = security_manager.get_security_status()
+
+    # Add resource limiter status if available
+    try:
+        resource_limiter = get_websocket_resource_limiter()
+        stats["websocket_resources"] = resource_limiter.get_resource_status()
+    except Exception:
+        # Resource limiter may not be initialized
+        pass
+
+    return stats
 
 
 def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def get_comprehensive_status() -> str:
-        """Get comprehensive status of MCP server, WebSocket server, and active jobs.
+        client_id = "mcp_client"
+        client_ip = "127.0.0.1"
 
-        This is the main status tool used by the /crackerjack:status slash command.
-        Provides information about:
-        - MCP server status and processes
-        - WebSocket server status and connections
-        - Active, completed, and failed jobs
-        - Progress information for running jobs
-        - Error metrics and resolution counts
-        - Service health and resource usage
-        """
         try:
-            status = await _get_comprehensive_status()
-            return json.dumps(status, indent=2)
-        except Exception as e:
-            import traceback
+            # Use secure status operation with request lock
+            async with await secure_status_operation(
+                client_id, "get_comprehensive_status", timeout=30.0
+            ):
+                # Get raw status data with full security integration
+                raw_status = await _get_comprehensive_status_secure(
+                    client_id=client_id,
+                    client_ip=client_ip,
+                    auth_header=None,  # Local-only access
+                    verbosity=StatusVerbosity.STANDARD,
+                )
 
-            return f'{{"error": "Failed to get comprehensive status: {e}", "traceback": "{traceback.format_exc()}"}}'
+                # Apply secure formatting
+                context = get_context()
+                project_root = context.config.project_path if context else None
+
+                secure_status = format_secure_status(
+                    raw_status,
+                    verbosity=StatusVerbosity.STANDARD,
+                    project_root=project_root,
+                    user_context="mcp_client",
+                )
+
+                return json.dumps(secure_status, indent=2)
+
+        except Exception as e:
+            # Use secure error formatting
+            formatter = get_secure_status_formatter()
+            error_response = formatter.format_error_response(
+                str(e),
+                verbosity=StatusVerbosity.STANDARD,
+                include_details=False,
+            )
+            return json.dumps(error_response, indent=2)
 
 
 def _register_command_help_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def list_slash_commands() -> str:
-        """List all available crackerjack slash commands with descriptions and usage."""
         try:
             commands = {
-                "/crackerjack:run": {
+                "/ crackerjack: run": {
                     "description": "Run full iterative auto-fixing with AI agent, tests, progress tracking, and verbose output",
-                    "usage": "Direct execution - no parameters needed",
+                    "usage": "Direct execution-no parameters needed",
                     "features": [
                         "Up to 10 iterations of quality improvement",
                         "Real-time WebSocket progress streaming",
@@ -360,9 +570,9 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                         "Debug mode support",
                     ],
                 },
-                "/crackerjack:status": {
+                "/ crackerjack: status": {
                     "description": "Get comprehensive system status including servers, jobs, and resource usage",
-                    "usage": "Direct execution - no parameters needed",
+                    "usage": "Direct execution-no parameters needed",
                     "features": [
                         "MCP server health monitoring",
                         "WebSocket server status",
@@ -371,11 +581,11 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                         "Error counts and progress data",
                     ],
                 },
-                "/crackerjack:init": {
+                "/ crackerjack: init": {
                     "description": "Initialize or update crackerjack configuration with smart configuration merging",
                     "usage": "Optional parameters: target_path (defaults to current directory)",
                     "kwargs": {
-                        "force": "boolean - force overwrite existing configurations"
+                        "force": "boolean-force overwrite existing configurations"
                     },
                     "features": [
                         "Smart merge preserving existing configurations",
@@ -404,9 +614,8 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
 
 
 def _validate_status_components(components: str) -> tuple[set[str], str | None]:
-    """Validate and parse status components."""
     valid_components = {"services", "jobs", "resources", "all"}
-    requested = {c.strip().lower() for c in components.split(",")}
+    requested = {c.strip().lower() for c in components.split(", ")}
 
     invalid = requested - valid_components
     if invalid:
@@ -416,7 +625,6 @@ def _validate_status_components(components: str) -> tuple[set[str], str | None]:
 
 
 def _get_services_status() -> dict:
-    """Get services status information."""
     from crackerjack.services.server_manager import (
         find_mcp_server_processes,
         find_websocket_server_processes,
@@ -438,7 +646,6 @@ def _get_services_status() -> dict:
 
 
 def _get_resources_status(context: t.Any) -> dict:
-    """Get resources status information."""
     temp_files_count = (
         len(list(context.progress_dir.glob("*.json")))
         if context.progress_dir.exists()
@@ -452,7 +659,6 @@ def _get_resources_status(context: t.Any) -> dict:
 
 
 def _build_filtered_status(requested: set[str], context: t.Any) -> dict:
-    """Build filtered status based on requested components."""
     filtered_status = {"timestamp": time.time()}
 
     if "services" in requested:
@@ -470,33 +676,68 @@ def _build_filtered_status(requested: set[str], context: t.Any) -> dict:
 def _register_filtered_status_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def get_filtered_status(components: str = "all") -> str:
-        """Get specific status components for better performance.
+        client_id = "mcp_client"
 
-        Args:
-            components: Comma-separated list of components to include:
-                       'services', 'jobs', 'resources', 'all' (default)
-        """
         try:
+            # Security validation with component filter data
+            await validate_status_request(
+                client_id, "get_filtered_status", {"components": components}
+            )
+
             requested, error = _validate_status_components(components)
             if error:
-                return json.dumps({"error": error, "success": False}, indent=2)
+                formatter = get_secure_status_formatter()
+                error_response = formatter.format_error_response(
+                    error,
+                    verbosity=StatusVerbosity.STANDARD,
+                )
+                return json.dumps(error_response, indent=2)
 
-            # If 'all' is requested, get everything
-            if "all" in requested:
-                status = await _get_comprehensive_status()
-                return json.dumps(status, indent=2)
+            # Use secure status operation with timeout
+            async with await secure_status_operation(
+                client_id, "get_filtered_status", timeout=20.0
+            ):
+                context = get_context()
 
-            context = get_context()
-            if not context:
-                return json.dumps(
-                    {"error": "Server context not available", "success": False}
+                if "all" in requested:
+                    raw_status = await _get_comprehensive_status_secure(
+                        client_id=client_id,
+                        client_ip="127.0.0.1",
+                        verbosity=StatusVerbosity.STANDARD,
+                    )
+                else:
+                    if not context:
+                        formatter = get_secure_status_formatter()
+                        error_response = formatter.format_error_response(
+                            "Server context not available",
+                            verbosity=StatusVerbosity.STANDARD,
+                        )
+                        return json.dumps(error_response, indent=2)
+
+                    # Use bounded operation for filtered status
+                    raw_status = await execute_bounded_status_operation(
+                        "filtered_status",
+                        client_id,
+                        _build_filtered_status,
+                        requested,
+                        context,
+                    )
+
+                # Apply secure formatting
+                project_root = context.config.project_path if context else None
+                secure_status = format_secure_status(
+                    raw_status,
+                    verbosity=StatusVerbosity.STANDARD,
+                    project_root=project_root,
+                    user_context="mcp_client",
                 )
 
-            filtered_status = _build_filtered_status(requested, context)
-            return json.dumps(filtered_status, indent=2)
+                return json.dumps(secure_status, indent=2)
 
         except Exception as e:
-            return json.dumps(
-                {"error": f"Failed to get filtered status: {e}", "success": False},
-                indent=2,
+            formatter = get_secure_status_formatter()
+            error_response = formatter.format_error_response(
+                str(e),
+                verbosity=StatusVerbosity.STANDARD,
             )
+            return json.dumps(error_response, indent=2)

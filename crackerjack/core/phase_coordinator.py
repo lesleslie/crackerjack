@@ -5,7 +5,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.code_cleaner import CodeCleaner
+from crackerjack.code_cleaner import CodeCleaner, PackageCleaningResult
 from crackerjack.models.protocols import (
     FileSystemInterface,
     GitInterface,
@@ -41,7 +41,7 @@ class PhaseCoordinator:
         self.test_manager = test_manager
         self.publish_manager = publish_manager
 
-        self.code_cleaner = CodeCleaner(console=console)
+        self.code_cleaner = CodeCleaner(console=console, base_directory=pkg_path)
         self.config_service = ConfigurationService(console=console, pkg_path=pkg_path)
 
         self.logger = logging.getLogger("crackerjack.phases")
@@ -55,51 +55,81 @@ class PhaseCoordinator:
             self._display_cleaning_header()
             return self._execute_cleaning_process()
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Cleaning failed: {e}")
+            self.console.print(f"[red]❌[/ red] Cleaning failed: {e}")
             self.session.fail_task("cleaning", str(e))
             return False
 
     def _display_cleaning_header(self) -> None:
         self.console.print("\n" + "-" * 80)
         self.console.print(
-            "[bold bright_magenta]🛠️ SETUP[/bold bright_magenta] [bold bright_white]Initializing project structure[/bold bright_white]",
+            "[bold bright_magenta]🛠️ SETUP[/ bold bright_magenta] [bold bright_white]Initializing project structure[/ bold bright_white]",
         )
         self.console.print("-" * 80 + "\n")
-        self.console.print("[yellow]🧹[/yellow] Starting code cleaning...")
+        self.console.print("[yellow]🧹[/ yellow] Starting code cleaning...")
 
     def _execute_cleaning_process(self) -> bool:
-        python_files = list(self.pkg_path.rglob("*.py"))
+        # Use the comprehensive backup cleaning system for safety
+        cleaning_result = self.code_cleaner.clean_files(self.pkg_path, use_backup=True)
 
-        if not python_files:
-            return self._handle_no_files_to_clean()
-
-        cleaned_files = self._clean_python_files(python_files)
-        self._report_cleaning_results(cleaned_files)
-        return True
+        if isinstance(cleaning_result, list):
+            # Legacy mode (should not happen with use_backup=True, but handle gracefully)
+            cleaned_files = [str(r.file_path) for r in cleaning_result if r.success]
+            self._report_cleaning_results(cleaned_files)
+            return all(r.success for r in cleaning_result) if cleaning_result else True
+        else:
+            # PackageCleaningResult from backup mode
+            self._report_package_cleaning_results(cleaning_result)
+            return cleaning_result.overall_success
 
     def _handle_no_files_to_clean(self) -> bool:
-        self.console.print("[yellow]⚠️[/yellow] No Python files found to clean")
+        self.console.print("[yellow]⚠️[/ yellow] No Python files found to clean")
         self.session.complete_task("cleaning", "No files to clean")
         return True
 
-    def _clean_python_files(self, python_files: list[Path]) -> list[str]:
-        cleaned_files: list[str] = []
-        for file_path in python_files:
-            if self.code_cleaner.should_process_file(file_path):
-                if self.code_cleaner.clean_file(file_path):
-                    cleaned_files.append(str(file_path))
-        return cleaned_files
-
     def _report_cleaning_results(self, cleaned_files: list[str]) -> None:
         if cleaned_files:
-            self.console.print(f"[green]✅[/green] Cleaned {len(cleaned_files)} files")
+            self.console.print(f"[green]✅[/ green] Cleaned {len(cleaned_files)} files")
             self.session.complete_task(
                 "cleaning",
                 f"Cleaned {len(cleaned_files)} files",
             )
         else:
-            self.console.print("[green]✅[/green] No cleaning needed")
+            self.console.print("[green]✅[/ green] No cleaning needed")
             self.session.complete_task("cleaning", "No cleaning needed")
+
+    def _report_package_cleaning_results(self, result: PackageCleaningResult) -> None:
+        """Report package cleaning results with backup information."""
+        if result.overall_success:
+            self.console.print(
+                f"[green]✅[/ green] Package cleaning completed successfully! "
+                f"({result.successful_files}/{result.total_files} files cleaned)"
+            )
+            self.session.complete_task(
+                "cleaning",
+                f"Cleaned {result.successful_files}/{result.total_files} files with backup protection",
+            )
+        else:
+            self.console.print(
+                f"[red]❌[/ red] Package cleaning failed! "
+                f"({result.failed_files}/{result.total_files} files failed)"
+            )
+
+            if result.backup_restored:
+                self.console.print(
+                    "[yellow]⚠️[/ yellow] Files were automatically restored from backup"
+                )
+                self.session.complete_task(
+                    "cleaning", "Failed with automatic backup restoration"
+                )
+            else:
+                self.session.fail_task(
+                    "cleaning", f"Failed to clean {result.failed_files} files"
+                )
+
+            if result.backup_metadata:
+                self.console.print(
+                    f"[blue]📦[/ blue] Backup available at: {result.backup_metadata.backup_directory}"
+                )
 
     def run_configuration_phase(self, options: OptionsProtocol) -> bool:
         if options.no_config_updates:
@@ -108,7 +138,6 @@ class PhaseCoordinator:
         try:
             success = True
 
-            # Check if we're running from the crackerjack project root
             if self._is_crackerjack_project():
                 if not self._copy_config_files_to_package():
                     success = False
@@ -129,8 +158,6 @@ class PhaseCoordinator:
             return False
 
     def _is_crackerjack_project(self) -> bool:
-        """Check if we're running from the crackerjack project root."""
-        # Check for crackerjack-specific markers
         pyproject_path = self.pkg_path / "pyproject.toml"
         if not pyproject_path.exists():
             return False
@@ -141,16 +168,13 @@ class PhaseCoordinator:
             with pyproject_path.open("rb") as f:
                 data = tomllib.load(f)
 
-            # Check if this is the crackerjack project
             project_name = data.get("project", {}).get("name", "")
             return project_name == "crackerjack"
         except Exception:
             return False
 
     def _copy_config_files_to_package(self) -> bool:
-        """Copy configuration files from project root to package root."""
         try:
-            # Files to copy from project root to package root
             files_to_copy = [
                 "pyproject.toml",
                 ".pre-commit-config.yaml",
@@ -164,7 +188,7 @@ class PhaseCoordinator:
             package_dir = self.pkg_path / "crackerjack"
             if not package_dir.exists():
                 self.console.print(
-                    "[yellow]⚠️[/yellow] Package directory not found: crackerjack/",
+                    "[yellow]⚠️[/ yellow] Package directory not found: crackerjack /",
                 )
                 return False
 
@@ -181,18 +205,18 @@ class PhaseCoordinator:
                         self.logger.debug(f"Copied {filename} to package directory")
                     except Exception as e:
                         self.console.print(
-                            f"[yellow]⚠️[/yellow] Failed to copy {filename}: {e}",
+                            f"[yellow]⚠️[/ yellow] Failed to copy {filename}: {e}",
                         )
 
             if copied_count > 0:
                 self.console.print(
-                    f"[green]✅[/green] Copied {copied_count} config files to package directory",
+                    f"[green]✅[/ green] Copied {copied_count} config files to package directory",
                 )
 
             return True
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Failed to copy config files to package: {e}",
+                f"[red]❌[/ red] Failed to copy config files to package: {e}",
             )
             return False
 
@@ -236,7 +260,7 @@ class PhaseCoordinator:
         try:
             self.console.print("\n" + "-" * 80)
             self.console.print(
-                "[bold bright_blue]🧪 TESTS[/bold bright_blue] [bold bright_white]Running test suite[/bold bright_white]",
+                "[bold bright_blue]🧪 TESTS[/ bold bright_blue] [bold bright_white]Running test suite[/ bold bright_white]",
             )
             self.console.print("-" * 80 + "\n")
             if not self.test_manager.validate_test_environment():
@@ -247,7 +271,7 @@ class PhaseCoordinator:
                 coverage_info = self.test_manager.get_coverage()
                 self.session.complete_task(
                     "testing",
-                    f"Tests passed, coverage: {coverage_info.get('total_coverage', 0):.1f}%",
+                    f"Tests passed, coverage: {coverage_info.get('total_coverage', 0): .1f}%",
                 )
             else:
                 self.session.fail_task("testing", "Tests failed")
@@ -267,7 +291,7 @@ class PhaseCoordinator:
         try:
             return self._execute_publishing_workflow(options, version_type)
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Publishing failed: {e}")
+            self.console.print(f"[red]❌[/ red] Publishing failed: {e}")
             self.session.fail_task("publishing", str(e))
             return False
 
@@ -302,7 +326,7 @@ class PhaseCoordinator:
         options: OptionsProtocol,
         new_version: str,
     ) -> None:
-        self.console.print(f"[green]🚀[/green] Successfully published {new_version}!")
+        self.console.print(f"[green]🚀[/ green] Successfully published {new_version}!")
 
         if options.cleanup_pypi:
             self.publish_manager.cleanup_old_releases(options.keep_releases)
@@ -320,12 +344,12 @@ class PhaseCoordinator:
             commit_message = self._get_commit_message(changed_files, options)
             return self._execute_commit_and_push(changed_files, commit_message)
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Commit failed: {e}")
+            self.console.print(f"[red]❌[/ red] Commit failed: {e}")
             self.session.fail_task("commit", str(e))
             return False
 
     def _handle_no_changes_to_commit(self) -> bool:
-        self.console.print("[yellow]ℹ️[/yellow] No changes to commit")
+        self.console.print("[yellow]ℹ️[/ yellow] No changes to commit")
         self.session.complete_task("commit", "No changes to commit")
         return True
 
@@ -347,7 +371,7 @@ class PhaseCoordinator:
     def _handle_push_result(self, commit_message: str) -> bool:
         if self.git_service.push():
             self.console.print(
-                f"[green]🎉[/green] Committed and pushed: {commit_message}",
+                f"[green]🎉[/ green] Committed and pushed: {commit_message}",
             )
             self.session.complete_task(
                 "commit",
@@ -355,7 +379,7 @@ class PhaseCoordinator:
             )
         else:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Committed but push failed: {commit_message}",
+                f"[yellow]⚠️[/ yellow] Committed but push failed: {commit_message}",
             )
             self.session.complete_task(
                 "commit",
@@ -375,11 +399,11 @@ class PhaseCoordinator:
         self.session.track_task("version_bump", f"Version bump ({bump_type})")
         try:
             new_version = self.publish_manager.bump_version(bump_type)
-            self.console.print(f"[green]🎯[/green] Version bumped to {new_version}")
+            self.console.print(f"[green]🎯[/ green] Version bumped to {new_version}")
             self.session.complete_task("version_bump", f"Bumped to {new_version}")
             return True
         except Exception as e:
-            self.console.print(f"[red]❌[/red] Version bump failed: {e}")
+            self.console.print(f"[red]❌[/ red] Version bump failed: {e}")
             self.session.fail_task("version_bump", str(e))
             return False
 
@@ -403,14 +427,14 @@ class PhaseCoordinator:
 
         try:
             choice = self.console.input(
-                f"\nSelect message (1 - {len(suggestions)}) or enter custom: ",
+                f"\nSelect message (1-{len(suggestions)}) or enter custom: ",
             )
             return self._process_commit_choice(choice, suggestions)
         except (KeyboardInterrupt, EOFError):
             return suggestions[0]
 
     def _display_commit_suggestions(self, suggestions: list[str]) -> None:
-        self.console.print("[cyan]📝[/cyan] Commit message suggestions: ")
+        self.console.print("[cyan]📝[/ cyan] Commit message suggestions: ")
         for i, suggestion in enumerate(suggestions, 1):
             self.console.print(f" {i}. {suggestion}")
 
@@ -480,7 +504,7 @@ class PhaseCoordinator:
         if hook_type == "fast" and attempt < max_retries - 1:
             if self._should_retry_fast_hooks(results):
                 self.console.print(
-                    "[yellow]🔄[/yellow] Fast hooks modified files, retrying all fast hooks...",
+                    "[yellow]🔄[/ yellow] Fast hooks modified files, retrying all fast hooks...",
                 )
                 return True
         return False
@@ -499,10 +523,9 @@ class PhaseCoordinator:
         )
 
         self.console.print(
-            f"[red]❌[/red] {hook_type.title()} hooks failed: {summary['failed']} failed, {summary['errors']} errors",
+            f"[red]❌[/ red] {hook_type.title()} hooks failed: {summary['failed']} failed, {summary['errors']} errors",
         )
 
-        # Collect detailed hook failure information for AI agent processing
         detailed_error_msg = self._build_detailed_hook_error_message(results, summary)
 
         self.session.fail_task(
@@ -514,10 +537,8 @@ class PhaseCoordinator:
     def _build_detailed_hook_error_message(
         self, results: list[t.Any], summary: dict[str, t.Any]
     ) -> str:
-        """Build detailed error message with specific hook failure information."""
         error_parts = [f"{summary['failed']} failed, {summary['errors']} errors"]
 
-        # Extract specific hook failures
         failed_hooks = []
         for result in results:
             if hasattr(result, "failed") and result.failed:
@@ -532,11 +553,10 @@ class PhaseCoordinator:
         return " | ".join(error_parts)
 
     def _should_retry_fast_hooks(self, results: list[t.Any]) -> bool:
-        """Any failed fast hook should trigger a retry since fixes often cascade."""
         for result in results:
             if hasattr(result, "failed") and result.failed:
                 return True
-            # Also check for status-based failures
+
             status = getattr(result, "status", "")
             if status in ("failed", "error", "timeout"):
                 return True
@@ -546,7 +566,7 @@ class PhaseCoordinator:
         if attempt > 0:
             backoff_delay = 2 ** (attempt - 1)
             self.logger.debug(f"Applying exponential backoff: {backoff_delay}s")
-            self.console.print(f"[dim]Waiting {backoff_delay}s before retry...[/dim]")
+            self.console.print(f"[dim]Waiting {backoff_delay}s before retry...[/ dim]")
             time.sleep(backoff_delay)
 
     def _handle_hook_success(self, hook_type: str, summary: dict[str, t.Any]) -> bool:
@@ -554,7 +574,7 @@ class PhaseCoordinator:
             f"{hook_type} hooks passed: {summary['passed']} / {summary['total']}",
         )
         self.console.print(
-            f"[green]✅[/green] {hook_type.title()} hooks passed: {summary['passed']} / {summary['total']}",
+            f"[green]✅[/ green] {hook_type.title()} hooks passed: {summary['passed']} / {summary['total']}",
         )
         self.session.complete_task(
             f"{hook_type}_hooks",
@@ -563,6 +583,6 @@ class PhaseCoordinator:
         return True
 
     def _handle_hook_exception(self, hook_type: str, e: Exception) -> bool:
-        self.console.print(f"[red]❌[/red] {hook_type.title()} hooks error: {e}")
+        self.console.print(f"[red]❌[/ red] {hook_type.title()} hooks error: {e}")
         self.session.fail_task(f"{hook_type}_hooks", str(e))
         return False

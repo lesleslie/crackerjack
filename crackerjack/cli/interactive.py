@@ -115,7 +115,7 @@ class InteractiveWorkflowManager:
             deps = ["cleaning"] if options.clean else []
             self.add_task(
                 "hooks",
-                "Run pre - commit hooks (fast + comprehensive)",
+                "Run pre-commit hooks (fast + comprehensive)",
                 "run_hooks_phase",
                 dependencies=deps,
             )
@@ -284,7 +284,7 @@ class InteractiveWorkflowManager:
         self.setup_workflow(options)
         if not self.tasks:
             self.console.print(
-                "[yellow]⚠️ No tasks to execute based on options[/yellow]",
+                "[yellow]⚠️ No tasks to execute based on options[/ yellow]",
             )
             return True
 
@@ -292,7 +292,7 @@ class InteractiveWorkflowManager:
         self.console.print(self.layout)
 
         if not Confirm.ask("\n🚀 Start workflow?", default=True):
-            self.console.print("[yellow]⏹️ Workflow cancelled[/yellow]")
+            self.console.print("[yellow]⏹️ Workflow cancelled[/ yellow]")
             return False
 
         return True
@@ -328,7 +328,7 @@ class InteractiveWorkflowManager:
         )
 
         if not retry:
-            self.console.print("[red]⏹️ Workflow stopped due to task failure[/red]")
+            self.console.print("[red]⏹️ Workflow stopped due to task failure[/ red]")
             return False
 
         failed_task.skip()
@@ -373,7 +373,7 @@ class InteractiveWorkflowManager:
             }
             status_text = task.status.name
             style = status_styles.get(task.status, "white")
-            duration_text = f"{task.duration: .1f}s" if task.duration else " - "
+            duration_text = f"{task.duration: .1f}s" if task.duration else "-"
             details = task.error.message if task.error else task.description
             table.add_row(
                 task.name,
@@ -385,11 +385,11 @@ class InteractiveWorkflowManager:
         self.console.print(table)
         if failed_count == 0:
             self.console.print(
-                f"\n[bold green]🎉 Workflow completed ! {success_count} / {len(self.tasks)} tasks successful[/bold green]",
+                f"\n[bold green]🎉 Workflow completed ! {success_count} / {len(self.tasks)} tasks successful[/ bold green]",
             )
         else:
             self.console.print(
-                f"\n[bold yellow]⚠️ Workflow completed with issues: {failed_count} failed, {skipped_count} skipped[/bold yellow]",
+                f"\n[bold yellow]⚠️ Workflow completed with issues: {failed_count} failed, {skipped_count} skipped[/ bold yellow]",
             )
 
 
@@ -414,7 +414,7 @@ class InteractiveCLI:
             if not success:
                 raise SystemExit(1)
         except KeyboardInterrupt:
-            self.console.print("\n[yellow]⏹️ Interactive session cancelled[/yellow]")
+            self.console.print("\n[yellow]⏹️ Interactive session cancelled[/ yellow]")
             raise SystemExit(130)
         except Exception as e:
             error = CrackerjackError(
@@ -426,10 +426,10 @@ class InteractiveCLI:
 
     def _show_welcome(self) -> None:
         welcome_panel = Panel(
-            f"[bold cyan]Welcome to Crackerjack Interactive Mode ! [/bold cyan]\n\n"
+            f"[bold cyan]Welcome to Crackerjack Interactive Mode ! [/ bold cyan]\n\n"
             f"Version: {self.pkg_version}\n"
             f"This interactive interface will guide you through the crackerjack workflow\n"
-            f"with real - time feedback and customizable options.",
+            f"with real-time feedback and customizable options.",
             title="🚀 Crackerjack Interactive",
             border_style="cyan",
         )
@@ -437,7 +437,7 @@ class InteractiveCLI:
         self.console.print()
 
     def _get_user_preferences(self, options: OptionsProtocol) -> OptionsProtocol:
-        self.console.print("[bold]🔧 Workflow Configuration[/bold]")
+        self.console.print("[bold]🔧 Workflow Configuration[/ bold]")
         self.console.print("Configure your crackerjack workflow: \n")
         updated_options = type(options)(**vars(options))
         updated_options.clean = Confirm.ask(

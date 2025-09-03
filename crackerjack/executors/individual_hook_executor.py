@@ -75,30 +75,30 @@ class IndividualExecutionResult:
 class HookOutputParser:
     HOOK_PATTERNS: dict[str, dict[str, re.Pattern[str]]] = {
         "ruff-check": {
-            "error": re.compile(r"^(.+?):(\d+):(\d+):([A-Z]\d+) (.+)$"),
-            "summary": re.compile(r"Found (\d+) error"),
+            "error": re.compile(r"^(.+?): (\d +): (\d +): ([A-Z]\d +) (.+)$"),
+            "summary": re.compile(r"Found (\d +) error"),
         },
         "pyright": {
-            "error": re.compile(r"^(.+?):(\d+):(\d+) - error: (.+)$"),
-            "warning": re.compile(r"^(.+?):(\d+):(\d+) - warning: (.+)$"),
-            "summary": re.compile(r"(\d+) error[s]?, (\d+) warning[s]?"),
+            "error": re.compile(r"^(.+?): (\d +): (\d +)-error: (.+)$"),
+            "warning": re.compile(r"^(.+?): (\d +): (\d +)-warning: (.+)$"),
+            "summary": re.compile(r"(\d +) error[s]?, (\d +) warning[s]?"),
         },
         "bandit": {
-            "issue": re.compile(r" >> Issue: \[([A-Z]\d+): \w+\] (.+)"),
-            "location": re.compile(r" Location: (.+?):(\d+):(\d+)"),
-            "confidence": re.compile(r" Confidence: (\w+)"),
-            "severity": re.compile(r" Severity: (\w+)"),
+            "issue": re.compile(r" > > Issue: \[([A-Z]\d +): \w +\] (.+)"),
+            "location": re.compile(r" Location: (.+?): (\d +): (\d +)"),
+            "confidence": re.compile(r" Confidence: (\w +)"),
+            "severity": re.compile(r" Severity: (\w +)"),
         },
         "mypy": {
-            "error": re.compile(r"^(.+?):(\d+): error: (.+)$"),
-            "note": re.compile(r"^(.+?):(\d+): note: (.+)$"),
+            "error": re.compile(r"^(.+?): (\d +): error: (.+)$"),
+            "note": re.compile(r"^(.+?): (\d +): note: (.+)$"),
         },
         "vulture": {
-            "unused": re.compile(r"^(.+?):(\d+): unused (.+) '(.+)'"),
+            "unused": re.compile(r"^(.+?): (\d +): unused (.+) '(.+)'"),
         },
         "complexipy": {
             "complex": re.compile(
-                r"^(.+?):(\d+):(\d+) - (.+) is too complex \((\d+)\)",
+                r"^(.+?): (\d +): (\d +)-(.+) is too complex \((\d +)\)",
             ),
         },
     }
@@ -259,12 +259,11 @@ class HookOutputParser:
         patterns: dict[str, re.Pattern[str]],
         result: dict[str, t.Any],
     ) -> None:
-        # Default parser for hooks not specifically handled
         for line in output_lines:
             line = line.strip()
             if not line:
                 continue
-            # Simple heuristic - if it looks like an error, treat it as one
+
             if "error" in line.lower() or "fail" in line.lower():
                 result["errors"].append(
                     {
@@ -309,26 +308,20 @@ class IndividualHookExecutor:
         self.parser = HookOutputParser()
         self.progress_callback: t.Callable[[HookProgress], None] | None = None
         self.suppress_realtime_output = False
-        self.progress_callback_interval = (
-            1  # Only callback every N lines to reduce overhead
-        )
+        self.progress_callback_interval = 1
 
     def set_progress_callback(self, callback: t.Callable[[HookProgress], None]) -> None:
         self.progress_callback = callback
 
     def set_mcp_mode(self, enable: bool = True) -> None:
-        """Enable MCP mode which suppresses real-time output to prevent terminal lockup."""
         self.suppress_realtime_output = enable
         if enable:
-            self.progress_callback_interval = (
-                10  # Reduce callback frequency in MCP mode
-            )
+            self.progress_callback_interval = 10
 
     async def execute_strategy_individual(
         self,
         strategy: HookStrategy,
     ) -> IndividualExecutionResult:
-        """Execute all hooks in a strategy individually (non-parallel)."""
         start_time = time.time()
         self._print_strategy_header(strategy)
 
@@ -340,7 +333,6 @@ class IndividualHookExecutor:
         return self._finalize_execution_result(strategy, execution_state, start_time)
 
     def _initialize_execution_state(self) -> dict[str, t.Any]:
-        """Initialize state tracking for strategy execution."""
         return {"hook_results": [], "hook_progress": [], "execution_order": []}
 
     async def _execute_single_hook_in_strategy(
@@ -348,7 +340,6 @@ class IndividualHookExecutor:
         hook: HookDefinition,
         execution_state: dict[str, t.Any],
     ) -> None:
-        """Execute a single hook and update execution state."""
         execution_state["execution_order"].append(hook.name)
 
         progress = HookProgress(
@@ -368,7 +359,6 @@ class IndividualHookExecutor:
         progress: HookProgress,
         result: HookResult,
     ) -> None:
-        """Update progress status after hook execution."""
         progress.status = "completed" if result.status == "passed" else "failed"
         progress.end_time = time.time()
         progress.duration = progress.end_time - progress.start_time
@@ -382,7 +372,6 @@ class IndividualHookExecutor:
         execution_state: dict[str, t.Any],
         start_time: float,
     ) -> IndividualExecutionResult:
-        """Finalize and return the execution result."""
         total_duration = time.time() - start_time
         success = all(r.status == "passed" for r in execution_state["hook_results"])
 
@@ -410,7 +399,7 @@ class IndividualHookExecutor:
         if self.progress_callback:
             self.progress_callback(progress)
 
-        self.console.print(f"\n[bold cyan]🔍 Running {hook.name}[/bold cyan]")
+        self.console.print(f"\n[bold cyan]🔍 Running {hook.name}[/ bold cyan]")
 
         cmd = hook.get_command()
 
@@ -441,7 +430,7 @@ class IndividualHookExecutor:
         except TimeoutError:
             progress.status = "failed"
             error_msg = f"Hook {hook.name} timed out after {hook.timeout}s"
-            self.console.print(f"[red]⏰ {error_msg}[/red]")
+            self.console.print(f"[red]⏰ {error_msg}[/ red]")
 
             return HookResult(
                 id=hook.name,
@@ -456,7 +445,6 @@ class IndividualHookExecutor:
         timeout: int,
         progress: HookProgress,
     ) -> subprocess.CompletedProcess[str]:
-        """Run command with streaming output and progress tracking."""
         process = await self._create_subprocess(cmd)
 
         stdout_lines: list[str] = []
@@ -478,10 +466,11 @@ class IndividualHookExecutor:
         return self._create_completed_process(cmd, process, stdout_lines, stderr_lines)
 
     async def _create_subprocess(self, cmd: list[str]) -> asyncio.subprocess.Process:
-        """Create subprocess for command execution."""
+        # Pre-commit must run from repository root, not package directory
+        repo_root = self.pkg_path.parent if self.pkg_path.name == "crackerjack" else self.pkg_path
         return await asyncio.create_subprocess_exec(
             *cmd,
-            cwd=self.pkg_path,
+            cwd=repo_root,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -493,7 +482,6 @@ class IndividualHookExecutor:
         stderr_lines: list[str],
         progress: HookProgress,
     ) -> list[asyncio.Task[None]]:
-        """Create tasks for reading stdout and stderr streams."""
         return [
             asyncio.create_task(
                 self._read_stream(process.stdout, stdout_lines, progress),
@@ -509,7 +497,6 @@ class IndividualHookExecutor:
         output_list: list[str],
         progress: HookProgress,
     ) -> None:
-        """Read lines from stream and update progress."""
         if not stream:
             return
 
@@ -533,7 +520,6 @@ class IndividualHookExecutor:
                 break
 
     def _process_stream_line(self, line: bytes | str) -> str:
-        """Process a line from stream into clean string."""
         return (line.decode() if isinstance(line, bytes) else line).rstrip()
 
     def _update_progress_with_line(
@@ -543,7 +529,6 @@ class IndividualHookExecutor:
         progress: HookProgress,
         line_count: int,
     ) -> None:
-        """Update progress tracking with new line."""
         output_list.append(line_str)
         progress.output_lines = progress.output_lines or []
         progress.output_lines.append(line_str)
@@ -552,12 +537,10 @@ class IndividualHookExecutor:
         self._maybe_callback_progress(progress, line_count)
 
     def _maybe_print_line(self, line_str: str) -> None:
-        """Print line to console if not suppressed."""
         if not self.suppress_realtime_output and line_str.strip():
-            self.console.print(f"[dim] {line_str}[/dim]")
+            self.console.print(f"[dim] {line_str}[/ dim]")
 
     def _maybe_callback_progress(self, progress: HookProgress, line_count: int) -> None:
-        """Callback progress if conditions are met."""
         if self.progress_callback and (
             line_count % self.progress_callback_interval == 0
         ):
@@ -569,7 +552,6 @@ class IndividualHookExecutor:
         tasks: list[asyncio.Task[None]],
         timeout: int,
     ) -> None:
-        """Wait for process completion with timeout."""
         await asyncio.wait_for(process.wait(), timeout=timeout)
         await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -578,7 +560,6 @@ class IndividualHookExecutor:
         process: asyncio.subprocess.Process,
         tasks: list[asyncio.Task[None]],
     ) -> None:
-        """Handle process timeout by killing process and canceling tasks."""
         process.kill()
         for task in tasks:
             task.cancel()
@@ -590,7 +571,6 @@ class IndividualHookExecutor:
         stdout_lines: list[str],
         stderr_lines: list[str],
     ) -> subprocess.CompletedProcess[str]:
-        """Create CompletedProcess result."""
         return subprocess.CompletedProcess(
             args=cmd,
             returncode=process.returncode or 0,
@@ -601,11 +581,11 @@ class IndividualHookExecutor:
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
         self.console.print("\n" + "=" * 80)
         self.console.print(
-            f"[bold bright_cyan]🔍 INDIVIDUAL HOOK EXECUTION[/bold bright_cyan] "
-            f"[bold bright_white]{strategy.name.upper()} HOOKS[/bold bright_white]",
+            f"[bold bright_cyan]🔍 INDIVIDUAL HOOK EXECUTION[/ bold bright_cyan] "
+            f"[bold bright_white]{strategy.name.upper()} HOOKS[/ bold bright_white]",
         )
         self.console.print(
-            f"[dim]Running {len(strategy.hooks)} hooks individually with real-time streaming[/dim]",
+            f"[dim]Running {len(strategy.hooks)} hooks individually with real-time streaming[/ dim]",
         )
         self.console.print("=" * 80)
 
@@ -616,7 +596,7 @@ class IndividualHookExecutor:
         progress: HookProgress,
     ) -> None:
         status_icon = "✅" if result.status == "passed" else "❌"
-        duration_str = f"{progress.duration:.1f}s" if progress.duration else "0.0s"
+        duration_str = f"{progress.duration: .1f}s" if progress.duration else "0.0s"
 
         summary_parts: list[str] = []
         if progress.errors_found > 0:
@@ -629,7 +609,7 @@ class IndividualHookExecutor:
         summary = ", ".join(summary_parts) if summary_parts else "clean"
 
         self.console.print(
-            f"[bold]{status_icon} {hook_name}[/bold] - {duration_str} - {summary}",
+            f"[bold]{status_icon} {hook_name}[/ bold] - {duration_str}-{summary}",
         )
 
     def _print_individual_summary(
@@ -646,17 +626,17 @@ class IndividualHookExecutor:
 
         self.console.print("\n" + "-" * 80)
         self.console.print(
-            f"[bold]📊 INDIVIDUAL EXECUTION SUMMARY[/bold] - {strategy.name.upper()}",
+            f"[bold]📊 INDIVIDUAL EXECUTION SUMMARY[/ bold]-{strategy.name.upper()}",
         )
         self.console.print(f"✅ Passed: {passed} | ❌ Failed: {failed}")
         if total_errors > 0:
             self.console.print(f"🚨 Total Errors: {total_errors}")
         if total_warnings > 0:
             self.console.print(f"⚠️ Total Warnings: {total_warnings}")
-        self.console.print(f"⏱️ Total Duration: {total_duration:.1f}s")
+        self.console.print(f"⏱️ Total Duration: {total_duration: .1f}s")
 
         if failed > 0:
-            self.console.print("\n[bold red]Failed Hooks: [/bold red]")
+            self.console.print("\n[bold red]Failed Hooks: [/ bold red]")
             for progress in progress_list:
                 if progress.status == "failed":
                     error_summary = (
@@ -664,6 +644,6 @@ class IndividualHookExecutor:
                         if progress.errors_found > 0
                         else "failed"
                     )
-                    self.console.print(f" ❌ {progress.hook_name} - {error_summary}")
+                    self.console.print(f" ❌ {progress.hook_name}-{error_summary}")
 
         self.console.print("-" * 80)

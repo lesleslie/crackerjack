@@ -10,8 +10,8 @@ from crackerjack.agents.import_optimization_agent import ImportOptimizationAgent
 @pytest.fixture
 def agent_context():
     return AgentContext(
-        project_path=Path("/tmp / test"),
-        temp_dir=Path("/tmp / test"),
+        project_path=Path("/ tmp / test"),
+        temp_dir=Path("/ tmp / test"),
         config={},
     )
 
@@ -149,7 +149,7 @@ async def test_fix_issue_with_mixed_typing_imports(import_agent) -> None:
         f.write("""import typing
 from typing import Any, Dict
 
-def test_function(data: Any) -> Dict:
+def test_function(data: Any) ->  Dict:
     return {}
 """)
         temp_path = Path(f.name)

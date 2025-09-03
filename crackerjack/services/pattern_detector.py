@@ -1,16 +1,24 @@
 import ast
 import logging
+import typing as t
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from ..agents.base import Issue, IssueType, Priority
 from .pattern_cache import CachedPattern, PatternCache
 
+DetectorMethod = Callable[[Path, str, ast.AST], Awaitable[list["AntiPattern"]]]
+
+
+class AntiPatternConfig(t.TypedDict):
+    detector: DetectorMethod
+    description: str
+    prevention: str
+
 
 @dataclass
 class AntiPattern:
-    """Detected anti-pattern that could lead to issues."""
-
     pattern_type: str
     severity: Priority
     file_path: str
@@ -21,19 +29,12 @@ class AntiPattern:
 
 
 class PatternDetector:
-    """Detects anti-patterns and suggests proactive refactoring.
-
-    Analyzes code to identify patterns that commonly lead to quality
-    violations, allowing proactive fixes before issues occur.
-    """
-
     def __init__(self, project_path: Path, pattern_cache: PatternCache) -> None:
         self.project_path = project_path
         self.pattern_cache = pattern_cache
         self.logger = logging.getLogger(__name__)
 
-        # Known anti-patterns and their detection rules
-        self._anti_patterns = {
+        self._anti_patterns: dict[str, AntiPatternConfig] = {
             "complexity_hotspot": {
                 "detector": self._detect_complexity_hotspots,
                 "description": "Functions approaching complexity limits",
@@ -62,14 +63,12 @@ class PatternDetector:
         }
 
     async def analyze_codebase(self) -> list[AntiPattern]:
-        """Analyze the entire codebase for anti-patterns."""
         self.logger.info("Starting proactive anti-pattern analysis")
 
         anti_patterns = []
         python_files = list(self.project_path.glob("**/*.py"))
 
         for file_path in python_files:
-            # Skip files in common ignore patterns
             if self._should_skip_file(file_path):
                 continue
 
@@ -80,25 +79,21 @@ class PatternDetector:
         return anti_patterns
 
     async def _analyze_file(self, file_path: Path) -> list[AntiPattern]:
-        """Analyze a single file for anti-patterns."""
         anti_patterns = []
 
         try:
             content = file_path.read_text(encoding="utf-8")
 
-            # Parse AST for analysis
             try:
                 tree = ast.parse(content, filename=str(file_path))
             except SyntaxError as e:
-                # File has syntax errors, skip analysis
                 self.logger.warning(f"Syntax error in {file_path}: {e}")
                 return []
 
-            # Run all anti-pattern detectors
             for pattern_name, pattern_info in self._anti_patterns.items():
-                detector = pattern_info["detector"]
+                detector_method = pattern_info["detector"]
                 try:
-                    detected = await detector(file_path, content, tree)  # type: ignore[operator]
+                    detected = await detector_method(file_path, content, tree)
                     anti_patterns.extend(detected)
                 except Exception as e:
                     self.logger.warning(
@@ -113,18 +108,14 @@ class PatternDetector:
     async def _detect_complexity_hotspots(
         self, file_path: Path, content: str, tree: ast.AST
     ) -> list[AntiPattern]:
-        """Detect functions that are approaching complexity limits."""
         anti_patterns = []
 
         class ComplexityVisitor(ast.NodeVisitor):
             def __init__(self) -> None:
-                self.functions: list[
-                    tuple[str, int, int]
-                ] = []  # name, line, complexity_estimate
+                self.functions: list[tuple[str, int, int]] = []
 
             def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-                # Simple complexity estimation based on control structures
-                complexity = 1  # Base complexity
+                complexity = 1
 
                 for child in ast.walk(node):
                     if isinstance(child, ast.If | ast.For | ast.While | ast.With):
@@ -142,9 +133,8 @@ class PatternDetector:
         visitor = ComplexityVisitor()
         visitor.visit(tree)
 
-        # Flag functions approaching the complexity limit (13)
         for func_name, line_no, complexity in visitor.functions:
-            if complexity >= 10:  # Warn before hitting the limit
+            if complexity >= 10:
                 anti_patterns.append(
                     AntiPattern(
                         pattern_type="complexity_hotspot",
@@ -162,10 +152,8 @@ class PatternDetector:
     async def _detect_code_duplication(
         self, file_path: Path, content: str, tree: ast.AST
     ) -> list[AntiPattern]:
-        """Detect potential code duplication patterns."""
         anti_patterns = []
 
-        # Simple heuristic: look for repeated string literals or similar patterns
         lines = content.split("\n")
         line_groups = {}
 
@@ -177,9 +165,8 @@ class PatternDetector:
                 else:
                     line_groups[stripped] = [i]
 
-        # Flag lines that appear multiple times
         for line_content, line_numbers in line_groups.items():
-            if len(line_numbers) >= 3:  # Appears 3+ times
+            if len(line_numbers) >= 3:
                 anti_patterns.append(
                     AntiPattern(
                         pattern_type="code_duplication",
@@ -197,29 +184,24 @@ class PatternDetector:
     async def _detect_performance_issues(
         self, file_path: Path, content: str, tree: ast.AST
     ) -> list[AntiPattern]:
-        """Detect potential performance anti-patterns."""
         anti_patterns = []
 
         class PerformanceVisitor(ast.NodeVisitor):
             def __init__(self) -> None:
-                self.issues: list[
-                    tuple[int, str, str]
-                ] = []  # line, description, suggestion
+                self.issues: list[tuple[int, str, str]] = []
 
             def visit_For(self, node: ast.For) -> None:
-                # Check for nested loops (potential O(n²))
                 for child in ast.walk(node.body[0] if node.body else node):
                     if isinstance(child, ast.For | ast.While) and child != node:
                         self.issues.append(
                             (
                                 node.lineno,
-                                "Nested loop detected - potential O(n²) complexity",
+                                "Nested loop detected-potential O(n²) complexity",
                                 "Consider using dictionary lookups or set operations",
                             )
                         )
                         break
 
-                # Check for list concatenation in loops
                 for stmt in node.body:
                     if (
                         isinstance(stmt, ast.AugAssign)
@@ -229,7 +211,7 @@ class PatternDetector:
                         self.issues.append(
                             (
                                 stmt.lineno,
-                                "List concatenation in loop - inefficient",
+                                "List concatenation in loop-inefficient",
                                 "Use list.append() and join at the end",
                             )
                         )
@@ -257,14 +239,11 @@ class PatternDetector:
     async def _detect_security_risks(
         self, file_path: Path, content: str, tree: ast.AST
     ) -> list[AntiPattern]:
-        """Detect potential security anti-patterns."""
         anti_patterns = []
 
-        # Check for hardcoded paths
         hardcoded_path_patterns = self._check_hardcoded_paths(file_path, content)
         anti_patterns.extend(hardcoded_path_patterns)
 
-        # Check for subprocess security issues
         subprocess_patterns = self._check_subprocess_security(file_path, tree)
         anti_patterns.extend(subprocess_patterns)
 
@@ -273,7 +252,6 @@ class PatternDetector:
     def _check_hardcoded_paths(
         self, file_path: Path, content: str
     ) -> list[AntiPattern]:
-        """Check for hardcoded paths (common security issue)."""
         anti_patterns = []
 
         if "/tmp/" in content or "C:\\" in content:  # nosec B108
@@ -286,7 +264,7 @@ class PatternDetector:
                             severity=Priority.HIGH,
                             file_path=str(file_path),
                             line_number=i,
-                            description="Hardcoded path detected - potential security risk",
+                            description="Hardcoded path detected-potential security risk",
                             suggestion="Use tempfile module for temporary files",
                             prevention_strategy="use_secure_temp_files",
                         )
@@ -298,7 +276,6 @@ class PatternDetector:
     def _check_subprocess_security(
         self, file_path: Path, tree: ast.AST
     ) -> list[AntiPattern]:
-        """Check for shell=True in subprocess calls."""
         anti_patterns = []
 
         class SecurityVisitor(ast.NodeVisitor):
@@ -306,7 +283,6 @@ class PatternDetector:
                 self.issues: list[tuple[int, str, str]] = []
 
             def visit_Call(self, node: ast.Call) -> None:
-                # Check for subprocess with shell=True
                 if (
                     isinstance(node.func, ast.Attribute)
                     and isinstance(node.func.value, ast.Name)
@@ -321,7 +297,7 @@ class PatternDetector:
                             self.issues.append(
                                 (
                                     node.lineno,
-                                    "subprocess with shell=True - security risk",
+                                    "subprocess with shell=True-security risk",
                                     "Avoid shell=True or validate inputs carefully",
                                 )
                             )
@@ -349,7 +325,6 @@ class PatternDetector:
     async def _detect_import_complexity(
         self, file_path: Path, content: str, tree: ast.AST
     ) -> list[AntiPattern]:
-        """Detect complex or problematic import patterns."""
         anti_patterns = []
 
         class ImportVisitor(ast.NodeVisitor):
@@ -360,16 +335,14 @@ class PatternDetector:
             def visit_Import(self, node: ast.Import) -> None:
                 self.import_count += len(node.names)
                 for alias in node.names:
-                    if alias.name.count(".") > 2:  # Deep import
+                    if alias.name.count(".") > 2:
                         self.imports.append((node.lineno, f"Deep import: {alias.name}"))
                 self.generic_visit(node)
 
             def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
                 if node.module:
                     self.import_count += len(node.names) if node.names else 1
-                    if (
-                        node.names and len(node.names) > 10
-                    ):  # Many imports from one module
+                    if node.names and len(node.names) > 10:
                         self.imports.append(
                             (node.lineno, f"Many imports from {node.module}")
                         )
@@ -378,7 +351,6 @@ class PatternDetector:
         visitor = ImportVisitor()
         visitor.visit(tree)
 
-        # Flag files with excessive imports
         if visitor.import_count > 50:
             anti_patterns.append(
                 AntiPattern(
@@ -386,13 +358,12 @@ class PatternDetector:
                     severity=Priority.MEDIUM,
                     file_path=str(file_path),
                     line_number=1,
-                    description=f"File has {visitor.import_count} imports - may indicate tight coupling",
+                    description=f"File has {visitor.import_count} imports-may indicate tight coupling",
                     suggestion="Consider breaking file into smaller modules",
                     prevention_strategy="modular_design",
                 )
             )
 
-        # Flag specific problematic imports
         for line_no, description in visitor.imports:
             anti_patterns.append(
                 AntiPattern(
@@ -409,7 +380,6 @@ class PatternDetector:
         return anti_patterns
 
     def _should_skip_file(self, file_path: Path) -> bool:
-        """Check if file should be skipped in analysis."""
         skip_patterns = [
             "__pycache__",
             ".git",
@@ -428,11 +398,9 @@ class PatternDetector:
     async def suggest_proactive_refactoring(
         self, anti_patterns: list[AntiPattern]
     ) -> list[Issue]:
-        """Convert anti-patterns to proactive refactoring issues."""
         issues = []
 
         for anti_pattern in anti_patterns:
-            # Map anti-pattern types to issue types
             issue_type_map = {
                 "complexity_hotspot": IssueType.COMPLEXITY,
                 "code_duplication": IssueType.DRY_VIOLATION,
@@ -466,7 +434,6 @@ class PatternDetector:
     async def get_cached_solutions(
         self, anti_patterns: list[AntiPattern]
     ) -> dict[str, CachedPattern]:
-        """Get cached solutions for detected anti-patterns."""
         solutions = {}
 
         for anti_pattern in anti_patterns:
@@ -479,13 +446,11 @@ class PatternDetector:
         return solutions
 
     def _generate_solution_key(self, anti_pattern: AntiPattern) -> str:
-        """Generate unique key for anti-pattern solution."""
         return f"{anti_pattern.pattern_type}_{anti_pattern.file_path}_{anti_pattern.line_number}"
 
     def _find_cached_pattern_for_anti_pattern(
         self, anti_pattern: AntiPattern
     ) -> CachedPattern | None:
-        """Find cached pattern for a specific anti-pattern."""
         issue_type = self._map_anti_pattern_to_issue_type(anti_pattern.pattern_type)
         if not issue_type:
             return None
@@ -494,7 +459,6 @@ class PatternDetector:
         return self.pattern_cache.get_best_pattern_for_issue(temp_issue)
 
     def _map_anti_pattern_to_issue_type(self, pattern_type: str) -> IssueType | None:
-        """Map anti-pattern type to issue type."""
         return {
             "complexity_hotspot": IssueType.COMPLEXITY,
             "code_duplication": IssueType.DRY_VIOLATION,
@@ -505,7 +469,6 @@ class PatternDetector:
     def _create_temp_issue_for_lookup(
         self, anti_pattern: AntiPattern, issue_type: IssueType
     ) -> Issue:
-        """Create temporary issue for pattern cache lookup."""
         return Issue(
             id="temp",
             type=issue_type,

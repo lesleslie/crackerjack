@@ -1,10 +1,3 @@
-"""Intelligent Agent Selection System.
-
-This module provides intelligent selection and orchestration of agents from
-multiple sources (crackerjack, user, system) with smart prioritization and
-adaptive learning capabilities.
-"""
-
 from .adaptive_learning import AdaptiveLearningSystem, get_learning_system
 from .agent_orchestrator import (
     AgentOrchestrator,

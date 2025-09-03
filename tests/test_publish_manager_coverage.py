@@ -68,7 +68,7 @@ class TestPublishManagerCore:
         with patch.object(publish_manager.security, "mask_tokens") as mock_mask:
             mock_mask.side_effect = lambda x: x.replace(
                 "pypi - abcd1234efgh5678",
-                "pypi -**** ",
+                "pypi - **** ",
             )
 
             publish_manager._run_command(["test"])
@@ -558,8 +558,8 @@ name = "test - package"
 version = "1.0.0"
 description = "A test package"
 authors = [{"name": "Test Author", "email": "test@example.com"}]
-dependencies = ["requests >= 2.0.0"]
-requires - python = " >= 3.8"
+dependencies = ["requests >=    2.0.0"]
+requires - python = " >=    3.8"
 """
         with patch.object(
             publish_manager.filesystem,
@@ -573,7 +573,7 @@ requires - python = " >= 3.8"
             assert info["description"] == "A test package"
             assert len(info["authors"]) == 1
             assert len(info["dependencies"]) == 1
-            assert info["python_requires"] == " >= 3.8"
+            assert info["python_requires"] == " >=    3.8"
 
     def test_get_package_info_missing_file(self, publish_manager) -> None:
         info = publish_manager.get_package_info()

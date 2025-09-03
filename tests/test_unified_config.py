@@ -85,10 +85,10 @@ class TestEnvironmentConfigSource:
         assert source._convert_value("0") is False
 
         assert source._convert_value("42") == 42
-        assert source._convert_value("-10") == -10
+        assert source._convert_value("- 10") == -10
 
         assert source._convert_value("3.141592653589793") == math.pi
-        assert source._convert_value("-2.5") == -2.5
+        assert source._convert_value("- 2.5") == -2.5
 
         assert source._convert_value("hello") == "hello"
 
@@ -133,7 +133,7 @@ class TestFileConfigSource:
             config_path.unlink(missing_ok=True)
 
     def test_load_nonexistent_file(self) -> None:
-        nonexistent_path = Path("/nonexistent/config.yaml")
+        nonexistent_path = Path("/ nonexistent / config.yaml")
         source = FileConfigSource(nonexistent_path)
 
         assert source.is_available() is False
@@ -197,7 +197,6 @@ class TestUnifiedConfigurationService:
         assert config.log_level == "INFO"
 
     def test_config_merging_priority(self, console, temp_dir) -> None:
-        # Test priority: options override pyproject.toml
         pyproject_path = temp_dir / "pyproject.toml"
         pyproject_content = """
 [tool.crackerjack]
@@ -242,7 +241,6 @@ log_level = "DEBUG"
 
         config1 = service.get_config()
 
-        # Create pyproject.toml with updated config
         pyproject_file = temp_dir / "pyproject.toml"
         pyproject_content = """
 [tool.crackerjack]

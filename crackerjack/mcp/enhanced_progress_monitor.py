@@ -18,7 +18,7 @@ from .progress_components import (
 
 
 class MetricCard(Widget):
-    value = reactive(" -- ")
+    value = reactive(" --")
     label = reactive("Metric")
     trend = reactive("")
     color = reactive("white")
@@ -26,7 +26,7 @@ class MetricCard(Widget):
     def __init__(
         self,
         label: str,
-        value: str = " -- ",
+        value: str = " --",
         trend: str = "",
         color: str = "white",
         **kwargs,
@@ -50,39 +50,39 @@ class AgentActivityWidget(Widget):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            with Horizontal(id="agent - metrics"):
+            with Horizontal(id="agent-metrics"):
                 yield MetricCard(
                     "Active Agents",
                     "0",
                     color="cyan",
-                    id="active - agents - metric",
+                    id="active-agents-metric",
                 )
                 yield MetricCard(
                     "Issues Fixed",
                     "0",
                     "↑",
                     color="green",
-                    id="issues - fixed - metric",
+                    id="issues-fixed-metric",
                 )
                 yield MetricCard(
                     "Confidence",
-                    "0 % ",
+                    "0%",
                     color="yellow",
-                    id="confidence - metric",
+                    id="confidence-metric",
                 )
                 yield MetricCard(
                     "Cache Hits",
                     "0",
                     color="magenta",
-                    id="cache - hits - metric",
+                    id="cache-hits-metric",
                 )
 
-            yield DataTable(id="agents - detail - table")
+            yield DataTable(id="agents-detail-table")
 
-            yield Label("⏸️ Coordinator: Idle", id="coordinator - status - bar")
+            yield Label("⏸️ Coordinator: Idle", id="coordinator-status-bar")
 
     def on_mount(self) -> None:
-        table = self.query_one("#agents - detail - table", DataTable)
+        table = self.query_one("#agents-detail-table", DataTable)
         table.add_columns(
             ("Agent", 20),
             ("Status", 10),
@@ -100,7 +100,7 @@ class AgentActivityWidget(Widget):
             active_agents = activity.get("active_agents", [])
 
             active_count = len(active_agents)
-            self.query_one("#active - agents - metric", MetricCard).value = str(
+            self.query_one("#active-agents-metric", MetricCard).value = str(
                 active_count,
             )
 
@@ -110,14 +110,14 @@ class AgentActivityWidget(Widget):
             ) / max(active_count, 1)
             cache_hits = activity.get("cache_hits", 0)
 
-            self.query_one("#issues - fixed - metric", MetricCard).value = str(
+            self.query_one("#issues-fixed-metric", MetricCard).value = str(
                 total_fixed,
             )
             self.query_one(
-                "#confidence - metric",
+                "#confidence-metric",
                 MetricCard,
-            ).value = f"{avg_confidence: .0 % }"
-            self.query_one("#cache - hits - metric", MetricCard).value = str(cache_hits)
+            ).value = f"{avg_confidence:.0%}"
+            self.query_one("#cache-hits-metric", MetricCard).value = str(cache_hits)
 
             self._update_coordinator_status(activity)
 
@@ -130,25 +130,25 @@ class AgentActivityWidget(Widget):
         status_icons = {"active": "🟢", "processing": "🔄", "idle": "⏸️", "error": "🔴"}
 
         icon = status_icons.get(status) or "⏸️"
-        status_bar = self.query_one("#coordinator - status - bar", Label)
+        status_bar = self.query_one("#coordinator-status-bar", Label)
         status_bar.update(
             f"{icon} Coordinator: {status.title()} ({total_agents} agents available)",
         )
 
     def _update_agent_table(self, agents: list) -> None:
-        table = self.query_one("#agents - detail - table", DataTable)
+        table = self.query_one("#agents-detail-table", DataTable)
         table.clear()
 
         if not agents:
-            table.add_row("No active agents", " - ", " - ", " - ", " - ")
+            table.add_row("No active agents", "-", "-", "-", "-")
             return
 
         for agent in agents:
             name = agent.get("agent_type", "Unknown")
             status = agent.get("status", "idle")
-            issue_type = agent.get("issue_type", " - ")
-            confidence = f"{agent.get('confidence', 0): .0 % }"
-            time_elapsed = f"{agent.get('processing_time', 0): .1f}s"
+            issue_type = agent.get("issue_type", "-")
+            confidence = f"{agent.get('confidence', 0):.0%}"
+            time_elapsed = f"{agent.get('processing_time', 0):.1f}s"
 
             status_emoji = {
                 "processing": "🔄",
@@ -197,10 +197,10 @@ class JobProgressPanel(Widget):
         self.border_title_align = "left"
 
         with Horizontal():
-            with Vertical(id="job - progress - section"):
+            with Vertical(id="job-progress-section"):
                 yield self._compose_progress_section()
 
-            with Vertical(id="job - metrics - section"):
+            with Vertical(id="job-metrics-section"):
                 yield self._compose_metrics_section()
 
     def _compose_progress_section(self) -> ComposeResult:
@@ -211,14 +211,14 @@ class JobProgressPanel(Widget):
         stage = self.job_data.get("stage", "Unknown")
         status = self.job_data.get("status", "Unknown")
 
-        yield Label(f"Stage: {stage}", classes="stage - label")
-        yield Label(f"Status: {status}", classes="status - label")
+        yield Label(f"Stage: {stage}", classes="stage-label")
+        yield Label(f"Status: {status}", classes="status-label")
         yield Label(f"Iteration: {iteration} / {max_iterations}")
 
         yield ProgressBar(
             total=100,
             progress=progress,
-            id=f"job - progress - {self.job_data.get('job_id', 'unknown')}",
+            id=f"job-progress-{self.job_data.get('job_id', 'unknown')}",
         )
 
         elapsed = time.time() - self.start_time
@@ -229,7 +229,7 @@ class JobProgressPanel(Widget):
         fixed = self.job_data.get("errors_fixed", 0)
         remaining = max(0, total_issues - fixed)
 
-        with Horizontal(classes="metrics - grid"):
+        with Horizontal(classes="metrics-grid"):
             yield MetricCard("Issues Found", str(total_issues), color="yellow")
             yield MetricCard(
                 "Fixed",
@@ -247,16 +247,16 @@ class JobProgressPanel(Widget):
         if total_issues > 0:
             success_rate = (fixed / total_issues) * 100
             yield Label(
-                f"Success Rate: {success_rate: .1f} % ",
-                classes="success - rate",
+                f"Success Rate: {success_rate:.1f}%",
+                classes="success-rate",
             )
 
     def _format_time(self, seconds: float) -> str:
         if seconds < 60:
-            return f"{seconds: .0f}s"
+            return f"{seconds:.0f}s"
         if seconds < 3600:
-            return f"{seconds / 60: .0f}m {seconds % 60: .0f}s"
-        return f"{seconds / 3600: .0f}h {(seconds % 3600) / 60: .0f}m"
+            return f"{seconds / 60:.0f}m {seconds % 60:.0f}s"
+        return f"{seconds / 3600:.0f}h {(seconds % 3600) / 60:.0f}m"
 
 
 class ServiceHealthPanel(Widget):
@@ -266,10 +266,10 @@ class ServiceHealthPanel(Widget):
         self.border_title_align = "left"
 
     def compose(self) -> ComposeResult:
-        yield DataTable(id="services - table")
+        yield DataTable(id="services-table")
 
     def on_mount(self) -> None:
-        table = self.query_one("#services - table", DataTable)
+        table = self.query_one("#services-table", DataTable)
         table.add_columns(
             ("Service", 20),
             ("Status", 12),
@@ -280,7 +280,7 @@ class ServiceHealthPanel(Widget):
         table.zebra_stripes = True
 
     def update_services(self, services: list[dict]) -> None:
-        table = self.query_one("#services - table", DataTable)
+        table = self.query_one("#services-table", DataTable)
         table.clear()
 
         for service in services:
@@ -308,7 +308,7 @@ class ServiceHealthPanel(Widget):
 
             if isinstance(last_check, int | float):
                 last_check_str = datetime.fromtimestamp(last_check).strftime(
-                    " % H: % M: % S",
+                    "%H:%M:%S",
                 )
             else:
                 last_check_str = str(last_check)
@@ -323,12 +323,12 @@ class ServiceHealthPanel(Widget):
 
     def _format_uptime(self, seconds: float) -> str:
         if seconds < 60:
-            return f"{seconds: .0f}s"
+            return f"{seconds:.0f}s"
         if seconds < 3600:
-            return f"{seconds / 60: .0f}m"
+            return f"{seconds / 60:.0f}m"
         if seconds < 86400:
-            return f"{seconds / 3600: .1f}h"
-        return f"{seconds / 86400: .1f}d"
+            return f"{seconds / 3600:.1f}h"
+        return f"{seconds / 86400:.1f}d"
 
 
 class EnhancedCrackerjackDashboard(App):
@@ -349,13 +349,13 @@ class EnhancedCrackerjackDashboard(App):
     def compose(self) -> ComposeResult:
         yield Label("🚀 Crackerjack Progress Monitor", id="header")
 
-        with Container(id="main - content"):
-            yield AgentActivityWidget(id="agent - panel")
+        with Container(id="main-content"):
+            yield AgentActivityWidget(id="agent-panel")
 
-            yield ServiceHealthPanel(id="service - panel")
+            yield ServiceHealthPanel(id="service-panel")
 
-            with Container(id="jobs - container"):
-                yield Label("Loading jobs...", id="jobs - placeholder")
+            with Container(id="jobs-container"):
+                yield Label("Loading jobs...", id="jobs-placeholder")
 
         yield Footer()
 
@@ -368,7 +368,7 @@ class EnhancedCrackerjackDashboard(App):
             jobs_data = jobs_result.get("data", {})
 
             services = self.service_manager.check_all_services()
-            self.query_one("#service - panel", ServiceHealthPanel).update_services(
+            self.query_one("#service-panel", ServiceHealthPanel).update_services(
                 services,
             )
 
@@ -376,7 +376,7 @@ class EnhancedCrackerjackDashboard(App):
                 aggregated_agent_data = self._aggregate_agent_data(
                     jobs_data["individual_jobs"],
                 )
-                self.query_one("#agent - panel", AgentActivityWidget).update_metrics(
+                self.query_one("#agent-panel", AgentActivityWidget).update_metrics(
                     aggregated_agent_data,
                 )
 
@@ -419,13 +419,13 @@ class EnhancedCrackerjackDashboard(App):
         return aggregated
 
     def _update_job_panels(self, jobs: list[dict]) -> None:
-        container = self.query_one("#jobs - container", Container)
+        container = self.query_one("#jobs-container", Container)
 
         with suppress(Exception):
-            container.remove_children("#jobs - placeholder")
+            container.remove_children("#jobs-placeholder")
 
-        existing_job_ids = {panel.id for panel in container.query(".job - panel")}
-        current_job_ids = {f"job - {job['job_id']}" for job in jobs}
+        existing_job_ids = {panel.id for panel in container.query(".job-panel")}
+        current_job_ids = {f"job-{job['job_id']}" for job in jobs}
 
         for panel_id in existing_job_ids - current_job_ids:
             with suppress(Exception):
@@ -433,9 +433,9 @@ class EnhancedCrackerjackDashboard(App):
                 panel.remove()
 
         for job in jobs:
-            panel_id = f"job - {job['job_id']}"
+            panel_id = f"job-{job['job_id']}"
             if panel_id not in existing_job_ids:
-                panel = JobProgressPanel(job, id=panel_id, classes="job - panel")
+                panel = JobProgressPanel(job, id=panel_id, classes="job-panel")
                 container.mount(panel)
             else:
                 panel = container.query_one(f"#{panel_id}", JobProgressPanel)
@@ -461,7 +461,7 @@ async def run_enhanced_progress_monitor(
             from rich.console import Console
 
             console = Console()
-            console.print("[bold cyan]🛠️  Development Mode: Enabled[/bold cyan]")
+            console.print("[bold cyan]🛠️ Development Mode: Enabled[/bold cyan]")
             app.dev = True
 
         await app.run_async()

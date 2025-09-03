@@ -44,7 +44,7 @@ class PluginManager:
 
             if total_count > 0:
                 self.console.print(
-                    f"[green]✅[/green] Loaded {loaded_count} / {total_count} plugins",
+                    f"[green]✅[/ green] Loaded {loaded_count} / {total_count} plugins",
                 )
 
             activation_results = self.registry.activate_all()
@@ -54,7 +54,7 @@ class PluginManager:
 
             if activated_count > 0:
                 self.console.print(
-                    f"[green]✅[/green] Activated {activated_count} plugins",
+                    f"[green]✅[/ green] Activated {activated_count} plugins",
                 )
 
             hook_plugins = self.registry.get_enabled(PluginType.HOOK)
@@ -69,7 +69,7 @@ class PluginManager:
         except Exception as e:
             self.logger.exception(f"Failed to initialize plugin system: {e}")
             self.console.print(
-                f"[red]❌[/red] Plugin system initialization failed: {e}",
+                f"[red]❌[/ red] Plugin system initialization failed: {e}",
             )
             return False
 
@@ -85,7 +85,7 @@ class PluginManager:
 
             if deactivated_count > 0:
                 self.console.print(
-                    f"[yellow]⏹️[/yellow] Deactivated {deactivated_count} plugins",
+                    f"[yellow]⏹️[/ yellow] Deactivated {deactivated_count} plugins",
                 )
 
             self._initialized = False
@@ -128,12 +128,12 @@ class PluginManager:
     def enable_plugin(self, plugin_name: str) -> bool:
         plugin = self.registry.get(plugin_name)
         if not plugin:
-            self.console.print(f"[red]❌[/red] Plugin not found: {plugin_name}")
+            self.console.print(f"[red]❌[/ red] Plugin not found: {plugin_name}")
             return False
 
         if plugin.enabled:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Plugin already enabled: {plugin_name}",
+                f"[yellow]⚠️[/ yellow] Plugin already enabled: {plugin_name}",
             )
             return True
 
@@ -142,7 +142,7 @@ class PluginManager:
             success = plugin.activate()
 
             if success:
-                self.console.print(f"[green]✅[/green] Enabled plugin: {plugin_name}")
+                self.console.print(f"[green]✅[/ green] Enabled plugin: {plugin_name}")
 
                 if plugin.plugin_type == PluginType.HOOK:
                     self.hook_registry.register_hook_plugin(plugin)
@@ -150,25 +150,25 @@ class PluginManager:
                 return True
             plugin.disable()
             self.console.print(
-                f"[red]❌[/red] Failed to activate plugin: {plugin_name}",
+                f"[red]❌[/ red] Failed to activate plugin: {plugin_name}",
             )
             return False
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error enabling plugin {plugin_name}: {e}",
+                f"[red]❌[/ red] Error enabling plugin {plugin_name}: {e}",
             )
             return False
 
     def disable_plugin(self, plugin_name: str) -> bool:
         plugin = self.registry.get(plugin_name)
         if not plugin:
-            self.console.print(f"[red]❌[/red] Plugin not found: {plugin_name}")
+            self.console.print(f"[red]❌[/ red] Plugin not found: {plugin_name}")
             return False
 
         if not plugin.enabled:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Plugin already disabled: {plugin_name}",
+                f"[yellow]⚠️[/ yellow] Plugin already disabled: {plugin_name}",
             )
             return True
 
@@ -180,17 +180,19 @@ class PluginManager:
                 self.hook_registry.unregister_hook_plugin(plugin_name)
 
             if success:
-                self.console.print(f"[yellow]⏹️[/yellow] Disabled plugin: {plugin_name}")
+                self.console.print(
+                    f"[yellow]⏹️[/ yellow] Disabled plugin: {plugin_name}"
+                )
             else:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Plugin disabled with warnings: {plugin_name}",
+                    f"[yellow]⚠️[/ yellow] Plugin disabled with warnings: {plugin_name}",
                 )
 
             return True
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error disabling plugin {plugin_name}: {e}",
+                f"[red]❌[/ red] Error disabling plugin {plugin_name}: {e}",
             )
             return False
 
@@ -203,16 +205,16 @@ class PluginManager:
     def configure_plugin(self, plugin_name: str, config: dict[str, t.Any]) -> bool:
         plugin = self.registry.get(plugin_name)
         if not plugin:
-            self.console.print(f"[red]❌[/red] Plugin not found: {plugin_name}")
+            self.console.print(f"[red]❌[/ red] Plugin not found: {plugin_name}")
             return False
 
         try:
             plugin.configure(config)
-            self.console.print(f"[green]✅[/green] Configured plugin: {plugin_name}")
+            self.console.print(f"[green]✅[/ green] Configured plugin: {plugin_name}")
             return True
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error configuring plugin {plugin_name}: {e}",
+                f"[red]❌[/ red] Error configuring plugin {plugin_name}: {e}",
             )
             return False
 
@@ -222,7 +224,7 @@ class PluginManager:
 
             if success:
                 self.console.print(
-                    f"[green]✅[/green] Installed plugin from: {plugin_file}",
+                    f"[green]✅[/ green] Installed plugin from: {plugin_file}",
                 )
 
                 if self._initialized:
@@ -235,14 +237,14 @@ class PluginManager:
                         self.enable_plugin(latest_plugin_name)
             else:
                 self.console.print(
-                    f"[red]❌[/red] Failed to install plugin from: {plugin_file}",
+                    f"[red]❌[/ red] Failed to install plugin from: {plugin_file}",
                 )
 
             return success
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Error installing plugin {plugin_file}: {e}",
+                f"[red]❌[/ red] Error installing plugin {plugin_file}: {e}",
             )
             return False
 

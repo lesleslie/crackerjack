@@ -213,7 +213,6 @@ class FormattingAgent(SubAgent):
         return fixes
 
     def _validate_and_get_file_content(self, path: Path) -> str | None:
-        """Validate file exists and retrieve its content."""
         if not path.exists() or not path.is_file():
             return None
 
@@ -221,22 +220,16 @@ class FormattingAgent(SubAgent):
         return content or None
 
     def _apply_content_formatting(self, content: str) -> str:
-        """Apply all formatting fixes to content."""
-        # Remove trailing whitespace
         content = re.sub(r"[ \t]+$", "", content, flags=re.MULTILINE)
 
-        # Ensure file ends with newline
         if content and not content.endswith("\n"):
             content += "\n"
 
-        # Normalize excessive blank lines
         content = re.sub(r"\n{3,}", "\n\n", content)
 
-        # Convert tabs to spaces
         return self._convert_tabs_to_spaces(content)
 
     def _convert_tabs_to_spaces(self, content: str) -> str:
-        """Convert tab characters to 4 spaces."""
         lines = content.split("\n")
         fixed_lines = [line.expandtabs(4) for line in lines]
         return "\n".join(fixed_lines)

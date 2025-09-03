@@ -26,7 +26,21 @@ class HookDefinition:
     config_path: Path | None = None
 
     def get_command(self) -> list[str]:
-        cmd = ["pre-commit", "run"]
+        # Use direct pre-commit execution (pre-commit manages its own environments)
+        import shutil
+        from pathlib import Path
+
+        # Find pre-commit executable - prefer project venv, fallback to system
+        pre_commit_path = None
+        current_dir = Path.cwd()
+        project_pre_commit = current_dir / ".venv" / "bin" / "pre-commit"
+        if project_pre_commit.exists():
+            pre_commit_path = str(project_pre_commit)
+        else:
+            pre_commit_path = shutil.which("pre-commit") or "pre-commit"
+
+        # Build command for direct pre-commit execution
+        cmd = [pre_commit_path, "run"]
         if self.config_path:
             cmd.extend(["-c", str(self.config_path)])
         if self.manual_stage:
@@ -48,53 +62,53 @@ class HookStrategy:
 FAST_HOOKS = [
     HookDefinition(
         name="trailing-whitespace",
-        command=["pre-commit", "run", "trailing-whitespace", "--all-files"],
+        command=[],  # Dynamically built by get_command()
         is_formatting=True,
         retry_on_failure=True,
     ),
     HookDefinition(
         name="end-of-file-fixer",
-        command=["pre-commit", "run", "end-of-file-fixer", "--all-files"],
+        command=[],  # Dynamically built by get_command()
         is_formatting=True,
         retry_on_failure=True,
     ),
     HookDefinition(
         name="check-yaml",
-        command=["pre-commit", "run", "check-yaml", "--all-files"],
+        command=[],  # Dynamically built by get_command()
     ),
     HookDefinition(
         name="check-toml",
-        command=["pre-commit", "run", "check-toml", "--all-files"],
+        command=[],  # Dynamically built by get_command()
     ),
     HookDefinition(
         name="check-added-large-files",
-        command=["pre-commit", "run", "check-added-large-files", "--all-files"],
+        command=[],  # Dynamically built by get_command()
     ),
     HookDefinition(
         name="uv-lock",
-        command=["pre-commit", "run", "uv-lock", "--all-files"],
+        command=[],  # Dynamically built by get_command()
     ),
     HookDefinition(
         name="gitleaks",
-        command=["pre-commit", "run", "gitleaks", "--all-files"],
+        command=[],  # Dynamically built by get_command()
     ),
     HookDefinition(
         name="codespell",
-        command=["pre-commit", "run", "codespell", "--all-files"],
+        command=[],  # Dynamically built by get_command()
     ),
     HookDefinition(
         name="ruff-check",
-        command=["pre-commit", "run", "ruff-check", "--all-files"],
+        command=[],  # Dynamically built by get_command()
     ),
     HookDefinition(
         name="ruff-format",
-        command=["pre-commit", "run", "ruff-format", "--all-files"],
+        command=[],  # Dynamically built by get_command()
         is_formatting=True,
         retry_on_failure=True,
     ),
     HookDefinition(
         name="mdformat",
-        command=["pre-commit", "run", "mdformat", "--all-files"],
+        command=[],  # Dynamically built by get_command()
         is_formatting=True,
         retry_on_failure=True,
     ),
@@ -103,84 +117,42 @@ FAST_HOOKS = [
 COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="pyright",
-        command=[
-            "pre-commit",
-            "run",
-            "--hook-stage",
-            "manual",
-            "pyright",
-            "--all-files",
-        ],
+        command=[],  # Dynamically built by get_command()
         timeout=120,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
     ),
     HookDefinition(
         name="bandit",
-        command=[
-            "pre-commit",
-            "run",
-            "--hook-stage",
-            "manual",
-            "bandit",
-            "--all-files",
-        ],
+        command=[],  # Dynamically built by get_command()
         timeout=120,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
     ),
     HookDefinition(
         name="vulture",
-        command=[
-            "pre-commit",
-            "run",
-            "--hook-stage",
-            "manual",
-            "vulture",
-            "--all-files",
-        ],
+        command=[],  # Dynamically built by get_command()
         timeout=120,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
     ),
     HookDefinition(
         name="refurb",
-        command=[
-            "pre-commit",
-            "run",
-            "--hook-stage",
-            "manual",
-            "refurb",
-            "--all-files",
-        ],
+        command=[],  # Dynamically built by get_command()
         timeout=120,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
     ),
     HookDefinition(
         name="creosote",
-        command=[
-            "pre-commit",
-            "run",
-            "--hook-stage",
-            "manual",
-            "creosote",
-            "--all-files",
-        ],
+        command=[],  # Dynamically built by get_command()
         timeout=120,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
     ),
     HookDefinition(
         name="complexipy",
-        command=[
-            "pre-commit",
-            "run",
-            "--hook-stage",
-            "manual",
-            "complexipy",
-            "--all-files",
-        ],
+        command=[],  # Dynamically built by get_command()
         timeout=120,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,

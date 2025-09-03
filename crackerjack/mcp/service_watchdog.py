@@ -80,7 +80,7 @@ class ServiceWatchdog:
 
         for service in self.services:
             if service.process:
-                console.print(f"[yellow]🛑 Stopping {service.name}...[/yellow]")
+                console.print(f"[yellow]🛑 Stopping {service.name}...[/ yellow]")
                 service.process.terminate()
                 try:
                     service.process.wait(timeout=10)
@@ -112,7 +112,7 @@ class ServiceWatchdog:
             return await self._handle_service_start_error(service, e)
 
     async def _check_websocket_server_running(self, service: ServiceConfig) -> bool:
-        if "websocket - server" in " ".join(service.command):
+        if "websocket-server" in " ".join(service.command):
             if self._is_port_in_use(8675):
                 await self._emit_event(
                     "port_in_use",
@@ -149,7 +149,7 @@ class ServiceWatchdog:
         stdout, stderr = service.process.communicate()
         error_msg = f"Process died (exit: {exit_code})"
         if stderr and stderr.strip():
-            error_msg += f" - {stderr.strip()[:50]}"
+            error_msg += f"-{stderr.strip()[:50]}"
         service.last_error = error_msg
         await self._emit_event("process_died", service.name, error_msg)
         return False
@@ -179,7 +179,7 @@ class ServiceWatchdog:
         return False
 
     async def _handle_websocket_server_monitoring(self, service: ServiceConfig) -> bool:
-        if "websocket - server" not in " ".join(service.command):
+        if "websocket-server" not in " ".join(service.command):
             return False
 
         if self._is_port_in_use(8675):
@@ -276,7 +276,7 @@ class ServiceWatchdog:
         error: Exception,
     ) -> None:
         service.last_error = str(error)
-        console.print(f"[red]❌ Error monitoring {service.name}: {error}[/red]")
+        console.print(f"[red]❌ Error monitoring {service.name}: {error}[/ red]")
         await asyncio.sleep(10.0)
 
     async def _health_check(self, service: ServiceConfig) -> bool:
@@ -294,7 +294,7 @@ class ServiceWatchdog:
             return False
 
         with suppress(Exception):
-            async with self.session.get("http: // localhost: 8675 / ") as response:
+            async with self.session.get("http: / / localhost: 8675 / ") as response:
                 if response.status == 200:
                     data = await response.json()
 
@@ -309,7 +309,7 @@ class ServiceWatchdog:
         current_time = time.time()
         reason = self._determine_restart_reason(service)
 
-        await self._emit_event("restarting", service.name, f"Restarting - {reason}")
+        await self._emit_event("restarting", service.name, f"Restarting-{reason}")
 
         if not await self._check_restart_rate_limit(service, current_time):
             return
@@ -338,7 +338,7 @@ class ServiceWatchdog:
 
         if len(service.restart_timestamps) >= service.max_restarts:
             console.print(
-                f"[red]🚨 {service.name} exceeded restart limit ({service.max_restarts} in {service.restart_window}s)[/red]",
+                f"[red]🚨 {service.name} exceeded restart limit ({service.max_restarts} in {service.restart_window}s)[/ red]",
             )
             service.last_error = "Restart rate limit exceeded"
             await asyncio.sleep(60)
@@ -351,19 +351,19 @@ class ServiceWatchdog:
 
         try:
             console.print(
-                f"[yellow]🔪 Terminating existing {service.name} process (PID: {service.process.pid})[/yellow]",
+                f"[yellow]🔪 Terminating existing {service.name} process (PID: {service.process.pid})[/ yellow]",
             )
             service.process.terminate()
             service.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            console.print(f"[red]💀 Force killing {service.name} process[/red]")
+            console.print(f"[red]💀 Force killing {service.name} process[/ red]")
             service.process.kill()
         except Exception as e:
-            console.print(f"[yellow]⚠️ Error terminating {service.name}: {e}[/yellow]")
+            console.print(f"[yellow]⚠️ Error terminating {service.name}: {e}[/ yellow]")
 
     async def _wait_before_restart(self, service: ServiceConfig) -> None:
         console.print(
-            f"[yellow]⏳ Waiting {service.restart_delay}s before restarting {service.name}...[/yellow]",
+            f"[yellow]⏳ Waiting {service.restart_delay}s before restarting {service.name}...[/ yellow]",
         )
         await asyncio.sleep(service.restart_delay)
 
@@ -386,7 +386,7 @@ class ServiceWatchdog:
                 await asyncio.sleep(10.0)
 
             except Exception as e:
-                console.print(f"[red]Error updating display: {e}[/red]")
+                console.print(f"[red]Error updating display: {e}[/ red]")
                 await asyncio.sleep(5.0)
 
     async def _update_status_display(self) -> None:
@@ -402,7 +402,7 @@ class ServiceWatchdog:
             table.add_row(service.name, status, health, restarts, error)
 
         console.print(table)
-        console.print("\n[dim]Press Ctrl + C to stop monitoring[/dim]")
+        console.print("\n[dim]Press Ctrl + C to stop monitoring[/ dim]")
 
     def _create_status_table(self) -> Table:
         table = Table(title="🔍 Crackerjack Service Watchdog")
@@ -415,20 +415,20 @@ class ServiceWatchdog:
 
     def _get_service_status(self, service: ServiceConfig) -> str:
         if service.process and service.process.poll() is None:
-            return "[green]✅ Running[/green]"
-        return "[red]❌ Stopped[/red]"
+            return "[green]✅ Running[/ green]"
+        return "[red]❌ Stopped[/ red]"
 
     def _get_service_health(self, service: ServiceConfig) -> str:
         if service.health_check_url:
             return (
-                "[green]🟢 Healthy[/green]"
+                "[green]🟢 Healthy[/ green]"
                 if service.is_healthy
-                else "[red]🔴 Unhealthy[/red]"
+                else "[red]🔴 Unhealthy[/ red]"
             )
-        return "[dim]N / A[/dim]"
+        return "[dim]N / A[/ dim]"
 
     def _format_error_message(self, error_message: str | None) -> str:
-        error = error_message or "[dim]None[/dim]"
+        error = error_message or "[dim]None[/ dim]"
         if len(error) > 30:
             error = error[:27] + "..."
         return error
@@ -466,20 +466,20 @@ async def create_default_watchdog(
             name="MCP Server",
             command=[
                 python_path,
-                " - m",
+                "-m",
                 "crackerjack",
-                " -- start - mcp - server",
+                " - - start - mcp-server",
             ],
         ),
         ServiceConfig(
             name="WebSocket Server",
             command=[
                 python_path,
-                " - m",
+                "-m",
                 "crackerjack",
-                " -- websocket - server",
+                " - - websocket-server",
             ],
-            health_check_url="http: // localhost: 8675 / ",
+            health_check_url="http: / / localhost: 8675 / ",
         ),
     ]
 
@@ -492,7 +492,7 @@ async def main() -> None:
     try:
         await watchdog.start()
     except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Shutting down watchdog...[/yellow]")
+        console.print("\n[yellow]🛑 Shutting down watchdog...[/ yellow]")
     finally:
         await watchdog.stop()
 

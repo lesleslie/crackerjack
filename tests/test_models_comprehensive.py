@@ -133,33 +133,33 @@ class TestTaskModels:
     def test_hook_result_creation(self) -> None:
         result = HookResult(
             id="hook_1",
-            name="ruff-check",
+            name="ruff - check",
             status="passed",
             duration=2.5,
             files_processed=15,
             issues_found=["unused import in file.py"],
-            stage="pre-commit",
+            stage="pre - commit",
         )
 
         assert result.id == "hook_1"
-        assert result.name == "ruff-check"
+        assert result.name == "ruff - check"
         assert result.status == "passed"
         assert result.duration == 2.5
         assert result.files_processed == 15
         assert result.issues_found == ["unused import in file.py"]
-        assert result.stage == "pre-commit"
+        assert result.stage == "pre - commit"
 
     def test_hook_result_defaults(self) -> None:
         result = HookResult(
             id="hook_2",
-            name="trailing-whitespace",
+            name="trailing - whitespace",
             status="failed",
             duration=0.5,
         )
 
         assert result.files_processed == 0
         assert result.issues_found == []
-        assert result.stage == "pre-commit"
+        assert result.stage == "pre - commit"
 
     def test_session_tracker_creation(self) -> None:
         from rich.console import Console
@@ -320,7 +320,7 @@ class TestModelIntegration:
 
         hook_result = HookResult(
             id="integration_hook",
-            name="integration-check",
+            name="integration - check",
             status="passed",
             duration=5.0,
             files_processed=10,

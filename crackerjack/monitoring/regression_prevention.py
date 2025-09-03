@@ -1,10 +1,3 @@
-"""
-Regression Prevention System
-
-Prevents known failures from reoccurring in the AI agent pipeline.
-Creates a comprehensive safety net against surprise failures.
-"""
-
 import hashlib
 import json
 import typing as t
@@ -21,13 +14,11 @@ from rich.table import Table
 
 @dataclass
 class RegressionPattern:
-    """Known failure pattern to prevent regression."""
-
     pattern_id: str
     name: str
     description: str
-    issue_signature: str  # Hash of issue characteristics
-    failure_indicators: list[str]  # Strings that indicate this failure
+    issue_signature: str
+    failure_indicators: list[str]
     fix_applied_date: datetime
     agent_name: str
     issue_type: IssueType
@@ -37,34 +28,26 @@ class RegressionPattern:
 
 @dataclass
 class RegressionAlert:
-    """Alert for detected regression."""
-
     pattern_id: str
     pattern_name: str
     detected_at: datetime
     issue_id: str
     agent_name: str
     failure_evidence: list[str]
-    severity: str  # "warning", "error", "critical"
+    severity: str
 
 
 class RegressionPreventionSystem:
-    """System to prevent known failure patterns from recurring."""
-
     def __init__(self, console: Console | None = None):
         self.console = console or Console()
         self.known_patterns: dict[str, RegressionPattern] = {}
         self.regression_alerts: list[RegressionAlert] = []
         self.prevention_active = True
 
-        # Load known patterns
         self._initialize_known_patterns()
         self._load_patterns_from_file()
 
     def _initialize_known_patterns(self):
-        """Initialize patterns for known critical failures."""
-
-        # Pattern 1: detect_agent_needs complexity failure
         self.register_regression_pattern(
             pattern_id="detect_agent_needs_complexity_22",
             name="detect_agent_needs Complexity Failure",
@@ -72,7 +55,7 @@ class RegressionPreventionSystem:
             issue_signature=self._generate_issue_signature(
                 issue_type=IssueType.COMPLEXITY,
                 message="Function detect_agent_needs has complexity 22",
-                file_path="crackerjack/mcp/tools/execution_tools.py",
+                file_path="crackerjack / mcp / tools / execution_tools.py",
             ),
             failure_indicators=[
                 "Could not automatically reduce complexity",
@@ -88,7 +71,7 @@ class RegressionPreventionSystem:
                     "issue": {
                         "type": "COMPLEXITY",
                         "message": "Function detect_agent_needs has complexity 22 (exceeds limit of 15)",
-                        "file_path": "/Users/les/Projects/crackerjack/crackerjack/mcp/tools/execution_tools.py",
+                        "file_path": "/ Users / les / Projects / crackerjack / crackerjack / mcp / tools / execution_tools.py",
                     },
                     "expected_success": True,
                     "expected_confidence": 0.8,
@@ -96,7 +79,6 @@ class RegressionPreventionSystem:
             ],
         )
 
-        # Pattern 2: Agent coordination infinite loops
         self.register_regression_pattern(
             pattern_id="agent_coordination_infinite_loop",
             name="Agent Coordination Infinite Loop",
@@ -119,7 +101,6 @@ class RegressionPreventionSystem:
             ],
         )
 
-        # Pattern 3: RefactoringAgent returning no changes
         self.register_regression_pattern(
             pattern_id="refactoring_agent_no_changes",
             name="RefactoringAgent No Changes Applied",
@@ -140,7 +121,6 @@ class RegressionPreventionSystem:
             ],
         )
 
-        # Pattern 4: Import optimization failures
         self.register_regression_pattern(
             pattern_id="import_optimization_no_effect",
             name="Import Optimization No Effect",
@@ -156,7 +136,6 @@ class RegressionPreventionSystem:
             issue_type=IssueType.IMPORT_ERROR,
         )
 
-        # Pattern 5: Test agent failures
         self.register_regression_pattern(
             pattern_id="test_agent_instantiation_failure",
             name="Test Agent Instantiation Failure",
@@ -183,7 +162,6 @@ class RegressionPreventionSystem:
         issue_type: IssueType,
         test_cases: list[dict[str, Any]] | None = None,
     ):
-        """Register a new regression pattern."""
         pattern = RegressionPattern(
             pattern_id=pattern_id,
             name=name,
@@ -206,14 +184,12 @@ class RegressionPreventionSystem:
         file_path: str = "",
         line_number: int = 0,
     ) -> str:
-        """Generate unique signature for an issue."""
-        content = f"{issue_type.value}:{message}:{file_path}:{line_number}"
+        content = f"{issue_type.value}: {message}: {file_path}: {line_number}"
         return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:12]
 
     async def check_for_regression(
         self, agent_name: str, issue: Issue, result: FixResult
     ) -> RegressionAlert | None:
-        """Check if this represents a known regression pattern."""
         if not self.prevention_active:
             return None
 
@@ -224,7 +200,6 @@ class RegressionPreventionSystem:
             line_number=issue.line_number or 0,
         )
 
-        # Check against known patterns
         for pattern_id, pattern in self.known_patterns.items():
             if not pattern.prevention_enabled:
                 continue
@@ -252,16 +227,13 @@ class RegressionPreventionSystem:
         issue: Issue,
         result: FixResult,
     ) -> list[str] | None:
-        """Check if a pattern matches the current issue."""
         is_regression = False
         evidence = []
 
-        # Check signature match
         if pattern.issue_signature == issue_signature:
             is_regression = True
             evidence.append(f"Exact issue signature match: {issue_signature}")
 
-        # Check failure indicators
         failure_text = self._build_failure_text(result, issue)
         matched_indicators = self._find_matching_indicators(
             pattern.failure_indicators, failure_text
@@ -271,7 +243,6 @@ class RegressionPreventionSystem:
             is_regression = True
             evidence.extend([f"Matched indicator: {ind}" for ind in matched_indicators])
 
-        # Agent-specific checks
         if self._check_agent_specific_failure(pattern, agent_name, issue, result):
             is_regression = True
             evidence.append(
@@ -281,7 +252,6 @@ class RegressionPreventionSystem:
         return evidence if is_regression else None
 
     def _build_failure_text(self, result: FixResult, issue: Issue) -> str:
-        """Build concatenated text for failure indicator matching."""
         return " ".join(
             [
                 " ".join(result.remaining_issues),
@@ -295,7 +265,6 @@ class RegressionPreventionSystem:
     def _find_matching_indicators(
         self, indicators: list[str], failure_text: str
     ) -> list[str]:
-        """Find indicators that match in the failure text."""
         return [
             indicator
             for indicator in indicators
@@ -309,7 +278,6 @@ class RegressionPreventionSystem:
         issue: Issue,
         result: FixResult,
     ) -> bool:
-        """Check if this is an agent-specific failure pattern."""
         return (
             pattern.agent_name == agent_name
             and pattern.issue_type == issue.type
@@ -325,7 +293,6 @@ class RegressionPreventionSystem:
         issue: Issue,
         evidence: list[str],
     ) -> RegressionAlert:
-        """Create a regression alert with appropriate severity."""
         severity = self._determine_alert_severity(pattern_id)
 
         return RegressionAlert(
@@ -339,7 +306,6 @@ class RegressionPreventionSystem:
         )
 
     def _determine_alert_severity(self, pattern_id: str) -> str:
-        """Determine alert severity based on pattern type."""
         if "detect_agent_needs" in pattern_id:
             return "critical"
         elif "infinite_loop" in pattern_id:
@@ -347,7 +313,6 @@ class RegressionPreventionSystem:
         return "error"
 
     async def _handle_regression_alert(self, alert: RegressionAlert):
-        """Handle a detected regression alert."""
         color = {"warning": "yellow", "error": "red", "critical": "bold red"}.get(
             alert.severity, "white"
         )
@@ -357,32 +322,29 @@ class RegressionPreventionSystem:
         self.console.print(f"\n{icon} [bold {color}]REGRESSION DETECTED[/bold {color}]")
         self.console.print(
             Panel(
-                f"[bold]Pattern:[/bold] {alert.pattern_name}\n"
-                f"[bold]Agent:[/bold] {alert.agent_name}\n"
-                f"[bold]Issue ID:[/bold] {alert.issue_id}\n"
-                f"[bold]Evidence:[/bold]\n"
-                + "\n".join(f"  • {e}" for e in alert.failure_evidence),
+                f"[bold]Pattern: [/bold] {alert.pattern_name}\n"
+                f"[bold]Agent: [/bold] {alert.agent_name}\n"
+                f"[bold]Issue ID: [/bold] {alert.issue_id}\n"
+                f"[bold]Evidence: [/bold]\n"
+                + "\n".join(f" • {e}" for e in alert.failure_evidence),
                 title=f"{alert.severity.upper()} Regression Alert",
                 border_style=color,
             )
         )
 
-        # Immediate actions based on severity
         if alert.severity == "critical":
             self.console.print(
-                "[bold red]🚨 CRITICAL REGRESSION - IMMEDIATE ACTION REQUIRED[/bold red]"
+                "[bold red]🚨 CRITICAL REGRESSION-IMMEDIATE ACTION REQUIRED[/bold red]"
             )
-            self.console.print("Recommended actions:")
-            self.console.print("  1. Stop current AI agent execution")
-            self.console.print("  2. Run regression tests immediately")
-            self.console.print("  3. Check recent agent code changes")
-            self.console.print("  4. Verify fix implementation")
+            self.console.print("Recommended actions: ")
+            self.console.print(" 1. Stop current AI agent execution")
+            self.console.print(" 2. Run regression tests immediately")
+            self.console.print(" 3. Check recent agent code changes")
+            self.console.print(" 4. Verify fix implementation")
 
-            # Log to file for persistent tracking
             self._log_critical_regression(alert)
 
     def _log_critical_regression(self, alert: RegressionAlert):
-        """Log critical regression for persistent tracking."""
         log_file = Path(".crackerjack") / "critical_regressions.log"
         log_file.parent.mkdir(exist_ok=True)
 
@@ -399,7 +361,6 @@ class RegressionPreventionSystem:
             f.write(json.dumps(log_entry) + "\n")
 
     def run_regression_tests(self) -> dict[str, t.Any]:
-        """Run all regression test cases."""
         self.console.print("🧪 [bold]Running Regression Prevention Tests[/bold]")
 
         results: dict[str, t.Any] = {
@@ -410,7 +371,6 @@ class RegressionPreventionSystem:
             "failures": [],
         }
 
-        # Type hints for clarity
         patterns_tested: int = 0
         tests_passed: int = 0
         tests_failed: int = 0
@@ -425,13 +385,11 @@ class RegressionPreventionSystem:
 
             for i, test_case in enumerate(pattern.test_cases):
                 try:
-                    # This would need integration with actual agent testing
-                    # For now, simulate test execution
                     test_passed = self._simulate_regression_test(test_case, pattern)
 
                     if test_passed:
                         tests_passed += 1
-                        self.console.print(f"  ✅ Test case {i + 1} passed")
+                        self.console.print(f" ✅ Test case {i + 1} passed")
                     else:
                         tests_failed += 1
                         failures.append(
@@ -443,25 +401,23 @@ class RegressionPreventionSystem:
                                 ),
                             }
                         )
-                        self.console.print(f"  ❌ Test case {i + 1} failed")
+                        self.console.print(f" ❌ Test case {i + 1} failed")
 
                 except Exception as e:
                     tests_failed += 1
                     failures.append(
                         {"pattern_id": pattern_id, "test_case": i + 1, "error": str(e)}
                     )
-                    self.console.print(f"  ❌ Test case {i + 1} error: {e}")
+                    self.console.print(f" ❌ Test case {i + 1} error: {e}")
 
-        # Update results with final counts
         results["patterns_tested"] = patterns_tested
         results["tests_passed"] = tests_passed
         results["tests_failed"] = tests_failed
         results["failures"] = failures
 
-        # Report results
         if tests_failed > 0:
             self.console.print(
-                f"🚨 [bold red]{tests_failed} regression tests failed![/bold red]"
+                f"🚨 [bold red]{tests_failed} regression tests failed ![/bold red]"
             )
         else:
             self.console.print(
@@ -473,27 +429,19 @@ class RegressionPreventionSystem:
     def _simulate_regression_test(
         self, test_case: dict[str, Any], pattern: RegressionPattern
     ) -> bool:
-        """Simulate running a regression test case."""
-        # This is a placeholder - in practice would run actual agent tests
-
-        # Simulate test based on test case requirements
         if "expected_success" in test_case:
-            # Simulate that our fixes work
             if pattern.pattern_id == "detect_agent_needs_complexity_22":
-                return True  # Our fix should work
+                return True
 
         if "max_iterations" in test_case:
-            # Simulate that coordination doesn't loop infinitely
             return True
 
         if "should_modify_files" in test_case:
-            # Simulate that agents apply changes
             return True
 
-        return True  # Default to passing for now
+        return True
 
     def create_prevention_dashboard(self) -> Table:
-        """Create regression prevention dashboard."""
         table = Table(
             title="Regression Prevention Dashboard",
             header_style="bold magenta",
@@ -507,7 +455,6 @@ class RegressionPreventionSystem:
         table.add_column("Test Cases", justify="center", width=10)
 
         for pattern in self.known_patterns.values():
-            # Find recent alerts for this pattern
             recent_alerts = [
                 a
                 for a in self.regression_alerts
@@ -534,9 +481,9 @@ class RegressionPreventionSystem:
                 latest = max(recent_alerts, key=lambda a: a.detected_at)
                 delta = datetime.now() - latest.detected_at
                 if delta.seconds < 3600:
-                    last_alert = f"{delta.seconds // 60}m ago"
+                    last_alert = f"{delta.seconds / 60}m ago"
                 else:
-                    last_alert = f"{delta.seconds // 3600}h ago"
+                    last_alert = f"{delta.seconds / 3600}h ago"
 
             table.add_row(
                 pattern.name[:24] + ("..." if len(pattern.name) > 24 else ""),
@@ -550,12 +497,10 @@ class RegressionPreventionSystem:
         return table
 
     def get_recent_regressions(self, hours: int = 24) -> list[RegressionAlert]:
-        """Get regression alerts from recent hours."""
         cutoff = datetime.now() - timedelta(hours=hours)
         return [alert for alert in self.regression_alerts if alert.detected_at > cutoff]
 
     def _save_patterns_to_file(self):
-        """Save patterns to persistent storage."""
         patterns_file = Path(".crackerjack") / "regression_patterns.json"
         patterns_file.parent.mkdir(exist_ok=True)
 
@@ -581,7 +526,6 @@ class RegressionPreventionSystem:
             json.dump(data, f, indent=2)
 
     def _load_patterns_from_file(self):
-        """Load additional patterns from file."""
         patterns_file = Path(".crackerjack") / "regression_patterns.json"
         if not patterns_file.exists():
             return
@@ -591,7 +535,7 @@ class RegressionPreventionSystem:
                 data = json.load(f)
 
             for pid, pdata in data.get("patterns", {}).items():
-                if pid not in self.known_patterns:  # Don't override built-in patterns
+                if pid not in self.known_patterns:
                     pattern = RegressionPattern(
                         pattern_id=pid,
                         name=pdata["name"],
@@ -612,17 +556,14 @@ class RegressionPreventionSystem:
             self.console.print(f"⚠️ Warning: Could not load patterns from file: {e}")
 
 
-# Integration function for easy use
 async def monitor_for_regressions(
     agent_name: str, issue: Issue, result: FixResult
 ) -> RegressionAlert | None:
-    """Quick function to check for regressions during agent execution."""
     prevention_system = RegressionPreventionSystem()
     return await prevention_system.check_for_regression(agent_name, issue, result)
 
 
 if __name__ == "__main__":
-    # Demo the regression prevention system
     console = Console()
     system = RegressionPreventionSystem(console)
 
@@ -631,7 +572,6 @@ if __name__ == "__main__":
         f"\n📊 Monitoring {len(system.known_patterns)} known regression patterns"
     )
 
-    # Run regression tests
     results = system.run_regression_tests()
     console.print(f"\n✅ Regression testing complete: {results}")
 

@@ -1,9 +1,3 @@
-"""Adaptive Learning System for Agent Selection.
-
-Learns from execution results to improve agent selection over time through
-success tracking, capability refinement, and performance optimization.
-"""
-
 import asyncio
 import json
 import logging
@@ -19,8 +13,6 @@ from .agent_selector import AgentScore, TaskDescription
 
 @dataclass
 class ExecutionRecord:
-    """Record of an agent execution."""
-
     timestamp: datetime
     agent_name: str
     agent_source: str
@@ -31,13 +23,11 @@ class ExecutionRecord:
     confidence_score: float
     final_score: float
     error_message: str | None = None
-    task_hash: str | None = None  # For grouping similar tasks
+    task_hash: str | None = None
 
 
 @dataclass
 class AgentPerformanceMetrics:
-    """Performance metrics for an agent."""
-
     total_executions: int = 0
     successful_executions: int = 0
     failed_executions: int = 0
@@ -45,25 +35,21 @@ class AgentPerformanceMetrics:
     average_confidence: float = 0.0
     success_rate: float = 0.0
     capability_success_rates: dict[str, float] = field(default_factory=dict)
-    recent_performance_trend: float = 0.0  # -1 to 1, negative = declining
+    recent_performance_trend: float = 0.0
     last_updated: datetime = field(default_factory=datetime.now)
 
 
 @dataclass
 class LearningInsight:
-    """A learning insight discovered from execution data."""
-
-    insight_type: str  # "capability_strength", "task_pattern", "failure_pattern"
+    insight_type: str
     agent_name: str
-    confidence: float  # 0-1
+    confidence: float
     description: str
     supporting_evidence: dict[str, t.Any]
     discovered_at: datetime = field(default_factory=datetime.now)
 
 
 class AdaptiveLearningSystem:
-    """System that learns from agent execution results."""
-
     def __init__(self, data_dir: Path | None = None) -> None:
         self.logger = logging.getLogger(__name__)
         self.data_dir = data_dir or Path.home() / ".crackerjack" / "intelligence"
@@ -80,7 +66,6 @@ class AdaptiveLearningSystem:
         self._load_existing_data()
 
     def _load_existing_data(self) -> None:
-        """Load existing learning data from disk."""
         try:
             self._load_execution_records()
             self._load_agent_metrics()
@@ -89,7 +74,6 @@ class AdaptiveLearningSystem:
             self.logger.warning(f"Error loading existing learning data: {e}")
 
     def _load_execution_records(self) -> None:
-        """Load execution records from disk."""
         if not self.execution_log_path.exists():
             return
 
@@ -104,7 +88,6 @@ class AdaptiveLearningSystem:
         self.logger.debug(f"Loaded {len(self._execution_records)} execution records")
 
     def _load_agent_metrics(self) -> None:
-        """Load agent metrics from disk."""
         if not self.metrics_path.exists():
             return
 
@@ -117,7 +100,6 @@ class AdaptiveLearningSystem:
         self.logger.debug(f"Loaded metrics for {len(self._agent_metrics)} agents")
 
     def _load_learning_insights(self) -> None:
-        """Load learning insights from disk."""
         if not self.insights_path.exists():
             return
 
@@ -141,9 +123,7 @@ class AdaptiveLearningSystem:
         agent_score: AgentScore,
         error_message: str | None = None,
     ) -> None:
-        """Record the result of an agent execution."""
         try:
-            # Create execution record
             record = ExecutionRecord(
                 timestamp=datetime.now(),
                 agent_name=agent.metadata.name,
@@ -160,16 +140,12 @@ class AdaptiveLearningSystem:
                 task_hash=self._hash_task(task),
             )
 
-            # Add to records
             self._execution_records.append(record)
 
-            # Update agent metrics
             await self._update_agent_metrics(record)
 
-            # Persist to disk
             await self._persist_execution_record(record)
 
-            # Trigger learning analysis (async)
             asyncio.create_task(self._analyze_and_learn())
 
             self.logger.debug(
@@ -181,11 +157,9 @@ class AdaptiveLearningSystem:
             self.logger.error(f"Error recording execution: {e}")
 
     def _infer_task_capabilities(self, task: TaskDescription) -> set[AgentCapability]:
-        """Infer capabilities needed for a task (simplified version)."""
         capabilities = set()
         text = task.description.lower()
 
-        # Capability mapping for efficiency
         capability_keywords = {
             AgentCapability.ARCHITECTURE: ("architect", "design", "structure"),
             AgentCapability.REFACTORING: ("refactor", "clean", "improve"),
@@ -207,16 +181,11 @@ class AdaptiveLearningSystem:
         return capabilities
 
     def _hash_task(self, task: TaskDescription) -> str:
-        """Create a hash for grouping similar tasks."""
-        # Simple hash based on key words
         words = task.description.lower().split()
-        key_words = [w for w in words if len(w) > 3][
-            :10
-        ]  # Take first 10 significant words
+        key_words = [w for w in words if len(w) > 3][:10]
         return "_".join(sorted(key_words))
 
     async def _update_agent_metrics(self, record: ExecutionRecord) -> None:
-        """Update metrics for an agent based on execution record."""
         agent_name = record.agent_name
         metrics = self._ensure_agent_metrics(agent_name)
 
@@ -229,7 +198,6 @@ class AdaptiveLearningSystem:
         await self._persist_agent_metrics()
 
     def _ensure_agent_metrics(self, agent_name: str) -> AgentPerformanceMetrics:
-        """Ensure agent metrics exist and return them."""
         if agent_name not in self._agent_metrics:
             self._agent_metrics[agent_name] = AgentPerformanceMetrics()
         return self._agent_metrics[agent_name]
@@ -237,7 +205,6 @@ class AdaptiveLearningSystem:
     def _update_basic_counters(
         self, metrics: AgentPerformanceMetrics, record: ExecutionRecord
     ) -> None:
-        """Update basic execution counters and success rate."""
         metrics.total_executions += 1
         if record.success:
             metrics.successful_executions += 1
@@ -248,7 +215,6 @@ class AdaptiveLearningSystem:
     def _update_execution_averages(
         self, metrics: AgentPerformanceMetrics, record: ExecutionRecord
     ) -> None:
-        """Update execution time and confidence averages."""
         if metrics.total_executions == 1:
             metrics.average_execution_time = record.execution_time
             metrics.average_confidence = record.confidence_score
@@ -266,7 +232,6 @@ class AdaptiveLearningSystem:
     def _update_capability_success_rates(
         self, metrics: AgentPerformanceMetrics, record: ExecutionRecord, agent_name: str
     ) -> None:
-        """Update capability-specific success rates."""
         success_value = 1.0 if record.success else 0.0
 
         for capability in record.task_capabilities:
@@ -293,7 +258,6 @@ class AdaptiveLearningSystem:
     def _update_performance_trend(
         self, metrics: AgentPerformanceMetrics, agent_name: str
     ) -> None:
-        """Update recent performance trend."""
         recent_records = [
             r for r in self._execution_records[-20:] if r.agent_name == agent_name
         ][-10:]
@@ -313,7 +277,6 @@ class AdaptiveLearningSystem:
     def _calculate_windowed_success_rates(
         self, recent_records: list[ExecutionRecord]
     ) -> list[float]:
-        """Calculate success rates using sliding window."""
         window_size = 3
         success_rates = []
 
@@ -325,7 +288,6 @@ class AdaptiveLearningSystem:
         return success_rates
 
     async def _persist_execution_record(self, record: ExecutionRecord) -> None:
-        """Persist execution record to disk."""
         try:
             with self.execution_log_path.open("a") as f:
                 data = asdict(record)
@@ -335,7 +297,6 @@ class AdaptiveLearningSystem:
             self.logger.error(f"Error persisting execution record: {e}")
 
     async def _persist_agent_metrics(self) -> None:
-        """Persist agent metrics to disk."""
         try:
             metrics_data = {}
             for agent_name, metrics in self._agent_metrics.items():
@@ -350,7 +311,6 @@ class AdaptiveLearningSystem:
             self.logger.error(f"Error persisting agent metrics: {e}")
 
     async def _persist_learning_insights(self) -> None:
-        """Persist learning insights to disk."""
         try:
             insights_data = []
             for insight in self._learning_insights:
@@ -365,36 +325,29 @@ class AdaptiveLearningSystem:
             self.logger.error(f"Error persisting learning insights: {e}")
 
     async def _analyze_and_learn(self) -> None:
-        """Analyze execution data and generate learning insights."""
         try:
             new_insights = []
 
-            # Analyze capability strengths
             capability_insights = self._analyze_capability_strengths()
             new_insights.extend(capability_insights)
 
-            # Analyze failure patterns
             failure_insights = self._analyze_failure_patterns()
             new_insights.extend(failure_insights)
 
-            # Analyze task patterns
             task_pattern_insights = self._analyze_task_patterns()
             new_insights.extend(task_pattern_insights)
 
-            # Add new insights (avoid duplicates)
             for insight in new_insights:
                 if not self._is_duplicate_insight(insight):
                     self._learning_insights.append(insight)
                     self.logger.debug(f"New learning insight: {insight.description}")
 
-            # Persist insights
             await self._persist_learning_insights()
 
         except Exception as e:
             self.logger.error(f"Error in learning analysis: {e}")
 
     def _analyze_capability_strengths(self) -> list[LearningInsight]:
-        """Analyze which agents excel at which capabilities."""
         capability_performance = self._group_capability_performance()
         insights = []
 
@@ -404,7 +357,6 @@ class AdaptiveLearningSystem:
         return insights
 
     def _group_capability_performance(self) -> dict[str, dict[str, list[bool]]]:
-        """Group execution records by capability and agent."""
         capability_performance = defaultdict(lambda: defaultdict(list))
 
         for record in self._execution_records[-100:]:
@@ -418,19 +370,18 @@ class AdaptiveLearningSystem:
     def _find_capability_experts(
         self, capability: str, agents: dict[str, list[bool]]
     ) -> list[LearningInsight]:
-        """Find agents with exceptional performance in a specific capability."""
         insights = []
 
         for agent_name, successes in agents.items():
-            if len(successes) >= 3:  # Minimum sample size
+            if len(successes) >= 3:
                 success_rate = sum(successes) / len(successes)
 
-                if success_rate >= 0.9:  # High success rate
+                if success_rate >= 0.9:
                     insight = LearningInsight(
                         insight_type="capability_strength",
                         agent_name=agent_name,
                         confidence=min(success_rate, len(successes) / 10.0),
-                        description=f"{agent_name} excels at {capability} tasks (success rate: {success_rate:.1%})",
+                        description=f"{agent_name} excels at {capability} tasks (success rate: {success_rate: .1 %})",
                         supporting_evidence={
                             "capability": capability,
                             "success_rate": success_rate,
@@ -443,12 +394,10 @@ class AdaptiveLearningSystem:
         return insights
 
     def _analyze_failure_patterns(self) -> list[LearningInsight]:
-        """Analyze common failure patterns."""
         failure_patterns = self._group_failure_patterns()
         return self._extract_significant_failure_insights(failure_patterns)
 
     def _group_failure_patterns(self) -> dict[str, dict[str, int]]:
-        """Group failure patterns by agent and error type."""
         failure_patterns = defaultdict(lambda: defaultdict(int))
 
         for record in self._execution_records[-100:]:
@@ -464,7 +413,6 @@ class AdaptiveLearningSystem:
     def _extract_significant_failure_insights(
         self, failure_patterns: dict[str, dict[str, int]]
     ) -> list[LearningInsight]:
-        """Extract significant failure pattern insights."""
         insights = []
 
         for agent_name, patterns in failure_patterns.items():
@@ -476,14 +424,13 @@ class AdaptiveLearningSystem:
     def _extract_agent_failure_insights(
         self, agent_name: str, patterns: dict[str, int]
     ) -> list[LearningInsight]:
-        """Extract failure insights for a specific agent."""
         total_failures = sum(patterns.values())
-        if total_failures < 3:  # Minimum sample size
+        if total_failures < 3:
             return []
 
         insights = []
         for error_type, count in patterns.items():
-            if count / total_failures >= 0.5:  # Common pattern
+            if count / total_failures >= 0.5:
                 insight = self._create_failure_insight(
                     agent_name, error_type, count, total_failures
                 )
@@ -494,7 +441,6 @@ class AdaptiveLearningSystem:
     def _create_failure_insight(
         self, agent_name: str, error_type: str, count: int, total_failures: int
     ) -> LearningInsight:
-        """Create a failure pattern insight."""
         return LearningInsight(
             insight_type="failure_pattern",
             agent_name=agent_name,
@@ -509,12 +455,11 @@ class AdaptiveLearningSystem:
         )
 
     def _analyze_task_patterns(self) -> list[LearningInsight]:
-        """Analyze task patterns and agent preferences."""
         task_performance = self._group_task_performance()
         insights = []
 
         for task_hash, agents in task_performance.items():
-            if len(agents) > 1:  # Multiple agents tried this task type
+            if len(agents) > 1:
                 best_agent, best_rate = self._find_best_performing_agent(agents)
 
                 if best_agent and best_rate >= 0.8:
@@ -526,7 +471,6 @@ class AdaptiveLearningSystem:
         return insights
 
     def _group_task_performance(self) -> dict[str, dict[str, list[bool]]]:
-        """Group task performance by hash and agent."""
         task_performance = defaultdict(lambda: defaultdict(list))
 
         for record in self._execution_records[-100:]:
@@ -540,12 +484,11 @@ class AdaptiveLearningSystem:
     def _find_best_performing_agent(
         self, agents: dict[str, list[bool]]
     ) -> tuple[str | None, float]:
-        """Find the best performing agent for a task pattern."""
         best_agent = None
         best_rate = 0.0
 
         for agent_name, successes in agents.items():
-            if len(successes) >= 2:  # Minimum attempts
+            if len(successes) >= 2:
                 success_rate = sum(successes) / len(successes)
                 if success_rate > best_rate:
                     best_rate = success_rate
@@ -560,7 +503,6 @@ class AdaptiveLearningSystem:
         best_rate: float,
         agents: dict[str, list[bool]],
     ) -> LearningInsight:
-        """Create a task pattern insight."""
         example_task = next(
             (
                 r.task_description
@@ -584,7 +526,6 @@ class AdaptiveLearningSystem:
         )
 
     def _categorize_error(self, error_message: str) -> str:
-        """Categorize error message into type."""
         error_lower = error_message.lower()
 
         if "timeout" in error_lower:
@@ -603,7 +544,6 @@ class AdaptiveLearningSystem:
         return "other"
 
     def _is_duplicate_insight(self, new_insight: LearningInsight) -> bool:
-        """Check if insight already exists."""
         for existing in self._learning_insights:
             if (
                 existing.insight_type == new_insight.insight_type
@@ -618,7 +558,6 @@ class AdaptiveLearningSystem:
         task: TaskDescription,
         candidate_agents: list[str],
     ) -> dict[str, float]:
-        """Get recommendations for agents based on learning."""
         task_capabilities = [cap.value for cap in self._infer_task_capabilities(task)]
         task_hash = self._hash_task(task)
 
@@ -633,15 +572,12 @@ class AdaptiveLearningSystem:
     def _calculate_agent_score(
         self, agent_name: str, task_capabilities: list[str], task_hash: str
     ) -> float:
-        """Calculate recommendation score for a specific agent."""
         score = 0.0
 
-        # Base score from metrics
         if agent_name in self._agent_metrics:
             metrics = self._agent_metrics[agent_name]
             score += self._calculate_metrics_score(metrics, task_capabilities)
 
-        # Insights bonus/penalty
         score += self._calculate_insights_score(
             agent_name, task_capabilities, task_hash
         )
@@ -651,10 +587,8 @@ class AdaptiveLearningSystem:
     def _calculate_metrics_score(
         self, metrics: AgentPerformanceMetrics, task_capabilities: list[str]
     ) -> float:
-        """Calculate score based on agent metrics."""
         score = metrics.success_rate * 0.4
 
-        # Capability-specific performance
         capability_scores = [
             metrics.capability_success_rates[capability]
             for capability in task_capabilities
@@ -664,18 +598,16 @@ class AdaptiveLearningSystem:
         if capability_scores:
             score += (sum(capability_scores) / len(capability_scores)) * 0.4
 
-        # Recent trend adjustment
         if metrics.recent_performance_trend > 0:
             score += metrics.recent_performance_trend * 0.1
         elif metrics.recent_performance_trend < 0:
-            score += metrics.recent_performance_trend * 0.05  # Smaller penalty
+            score += metrics.recent_performance_trend * 0.05
 
         return score
 
     def _calculate_insights_score(
         self, agent_name: str, task_capabilities: list[str], task_hash: str
     ) -> float:
-        """Calculate score adjustment based on learning insights."""
         relevant_insights = [
             insight
             for insight in self._learning_insights
@@ -697,7 +629,6 @@ class AdaptiveLearningSystem:
         return score_adjustment
 
     def get_learning_summary(self) -> dict[str, t.Any]:
-        """Get a summary of learning progress."""
         total_records = len(self._execution_records)
 
         if total_records == 0:
@@ -708,7 +639,6 @@ class AdaptiveLearningSystem:
             recent_records
         )
 
-        # Agent performance summary
         agent_summary = {}
         for agent_name, metrics in self._agent_metrics.items():
             agent_summary[agent_name] = {
@@ -717,7 +647,6 @@ class AdaptiveLearningSystem:
                 "trend": metrics.recent_performance_trend,
             }
 
-        # Insights summary
         insights_by_type = defaultdict(int)
         for insight in self._learning_insights:
             insights_by_type[insight.insight_type] += 1
@@ -737,12 +666,10 @@ class AdaptiveLearningSystem:
         }
 
 
-# Global learning system instance
 _learning_system_instance: AdaptiveLearningSystem | None = None
 
 
 async def get_learning_system() -> AdaptiveLearningSystem:
-    """Get or create the global learning system."""
     global _learning_system_instance
 
     if _learning_system_instance is None:

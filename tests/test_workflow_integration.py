@@ -23,7 +23,7 @@ class TestHookResult:
         assert hook.duration == 1.5
         assert hook.files_processed == 10
         assert hook.issues_found == []
-        assert hook.stage == "pre-commit"
+        assert hook.stage == "pre - commit"
 
     def test_hook_result_post_init_issues(self) -> None:
         hook = HookResult(

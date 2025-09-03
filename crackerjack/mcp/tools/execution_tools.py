@@ -1,15 +1,3 @@
-"""Refactored MCP execution tools with focused responsibilities.
-
-This module provides the main MCP tool registration and high-level coordination.
-Implementation details are delegated to specialized modules:
-- workflow_executor.py: Core workflow execution logic
-- error_analyzer.py: Error analysis and pattern detection
-- (Additional initialization and suggestion modules as needed)
-
-REFACTORING NOTE: Original execution_tools.py was 1110 lines with 30+ functions.
-This refactored version is ~300 lines and delegates to focused modules.
-"""
-
 import json
 import typing as t
 
@@ -20,7 +8,6 @@ from .workflow_executor import execute_crackerjack_workflow
 
 
 def register_execution_tools(mcp_app: t.Any) -> None:
-    """Register all execution-related MCP tools."""
     _register_execute_crackerjack_tool(mcp_app)
     _register_smart_error_analysis_tool(mcp_app)
     _register_init_crackerjack_tool(mcp_app)
@@ -28,26 +15,20 @@ def register_execution_tools(mcp_app: t.Any) -> None:
 
 
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
-    """Register the main crackerjack execution tool."""
-
     @mcp_app.tool()
     async def execute_crackerjack(args: str, kwargs: str) -> str:
-        """Execute crackerjack workflow with AI agent auto-fixing."""
         context = get_context()
 
-        # Validate context and rate limits
         validation_error = await _validate_context_and_rate_limit(context)
         if validation_error:
             return validation_error
 
-        # Parse arguments
         kwargs_result = _parse_kwargs(kwargs)
         if "error" in kwargs_result:
             return json.dumps(kwargs_result)
 
         extra_kwargs = kwargs_result["kwargs"]
 
-        # Execute workflow
         try:
             result = await execute_crackerjack_workflow(args, extra_kwargs)
             return json.dumps(result, indent=2)
@@ -64,11 +45,8 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
-    """Register the smart error analysis tool."""
-
     @mcp_app.tool()
     async def smart_error_analysis(use_cache: bool = True) -> str:
-        """Analyze cached error patterns and provide intelligent recommendations."""
         context = get_context()
 
         try:
@@ -85,11 +63,8 @@ def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
 
 
 def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
-    """Register the crackerjack initialization tool."""
-
     @mcp_app.tool()
     def init_crackerjack(args: str = "", kwargs: str = "{}") -> str:
-        """Initialize or update crackerjack configuration in current project."""
         try:
             target_path, force, error = _parse_init_arguments(args, kwargs)
             if error:
@@ -103,15 +78,12 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
-    """Register the agent suggestions tool."""
-
     @mcp_app.tool()
     def suggest_agents(
         task_description: str = "",
         project_type: str = "python",
         current_context: str = "",
     ) -> str:
-        """Suggest appropriate Claude Code agents based on task and context."""
         try:
             recommendations = _generate_agent_recommendations(
                 task_description, project_type, current_context
@@ -127,15 +99,10 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             )
 
 
-# Helper functions for argument parsing and validation
-
-
 async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
-    """Validate MCP context and check rate limits."""
     if not context:
         return json.dumps({"status": "error", "message": "MCP context not available"})
 
-    # Check rate limits if available
     if hasattr(context, "rate_limiter"):
         from contextlib import suppress
 
@@ -155,18 +122,13 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
 
 
 def _parse_kwargs(kwargs: str) -> dict[str, t.Any]:
-    """Parse and validate kwargs string."""
     try:
         return {"kwargs": json.loads(kwargs) if kwargs.strip() else {}}
     except json.JSONDecodeError as e:
         return {"error": f"Invalid JSON in kwargs: {e}"}
 
 
-# Initialization helper functions
-
-
 def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | None]:
-    """Parse and validate initialization arguments."""
     try:
         target_path = args.strip() or "."
         kwargs_dict = json.loads(kwargs) if kwargs.strip() else {}
@@ -185,7 +147,6 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
 
 
 def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]:
-    """Execute crackerjack initialization."""
     from rich.console import Console
 
     from crackerjack.services.initialization import InitializationService
@@ -198,7 +159,6 @@ def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]
 
 
 def _create_init_error_response(message: str) -> str:
-    """Create initialization error response."""
     return json.dumps(
         {
             "status": "error",
@@ -209,7 +169,6 @@ def _create_init_error_response(message: str) -> str:
 
 
 def _create_init_success_response(result: dict[str, t.Any]) -> str:
-    """Create initialization success response."""
     return json.dumps(
         {
             "status": "success",
@@ -222,7 +181,6 @@ def _create_init_success_response(result: dict[str, t.Any]) -> str:
 
 
 def _create_init_exception_response(error: Exception, target_path: t.Any) -> str:
-    """Create initialization exception response."""
     return json.dumps(
         {
             "status": "error",
@@ -233,13 +191,9 @@ def _create_init_exception_response(error: Exception, target_path: t.Any) -> str
     )
 
 
-# Agent suggestion helper functions
-
-
 def _generate_agent_recommendations(
     task_description: str, project_type: str, current_context: str
 ) -> dict[str, t.Any]:
-    """Generate agent recommendations based on task context."""
     recommendations = {
         "status": "success",
         "task_analysis": {
@@ -252,7 +206,6 @@ def _generate_agent_recommendations(
         "reasoning": "",
     }
 
-    # Analyze task and context
     suggestions = _analyze_task_for_agents(
         task_description, project_type, current_context
     )
@@ -266,7 +219,6 @@ def _generate_agent_recommendations(
 def _analyze_task_for_agents(
     task_description: str, project_type: str, current_context: str
 ) -> dict[str, t.Any]:
-    """Analyze task description to determine appropriate agents."""
     agents = []
     workflows = []
     reasoning_parts = []
@@ -274,7 +226,6 @@ def _analyze_task_for_agents(
     task_lower = task_description.lower()
     current_context.lower()
 
-    # Code quality and testing agents
     if any(keyword in task_lower for keyword in ("test", "quality", "fix", "error")):
         agents.extend(
             [
@@ -292,7 +243,6 @@ def _analyze_task_for_agents(
         )
         reasoning_parts.append("Task involves testing or quality improvement")
 
-    # Security-related tasks
     if any(
         keyword in task_lower for keyword in ("security", "vulnerability", "secure")
     ):
@@ -305,7 +255,6 @@ def _analyze_task_for_agents(
         )
         reasoning_parts.append("Security concerns detected")
 
-    # Performance optimization
     if any(
         keyword in task_lower
         for keyword in ("performance", "optimize", "speed", "slow")
@@ -319,7 +268,6 @@ def _analyze_task_for_agents(
         )
         reasoning_parts.append("Performance optimization required")
 
-    # Documentation tasks
     if any(
         keyword in task_lower for keyword in ("document", "readme", "doc", "explain")
     ):
@@ -332,7 +280,6 @@ def _analyze_task_for_agents(
         )
         reasoning_parts.append("Documentation work identified")
 
-    # Import and dependency management
     if any(
         keyword in task_lower
         for keyword in ("import", "dependency", "package", "module")
@@ -344,9 +291,8 @@ def _analyze_task_for_agents(
                 "confidence": 0.7,
             }
         )
-        reasoning_parts.append("Import/dependency work detected")
+        reasoning_parts.append("Import / dependency work detected")
 
-    # Project type specific suggestions
     if project_type == "python":
         workflows.extend(
             [
@@ -356,7 +302,6 @@ def _analyze_task_for_agents(
             ]
         )
 
-    # Default fallback
     if not agents:
         agents.append(
             {

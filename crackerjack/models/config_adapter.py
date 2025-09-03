@@ -1,8 +1,3 @@
-"""Adapter for converting between the old OptionsProtocol and new WorkflowOptions.
-
-This provides backward compatibility during the migration period.
-"""
-
 import typing as t
 
 from .config import (
@@ -21,11 +16,8 @@ from .protocols import OptionsProtocol
 
 
 class OptionsAdapter:
-    """Adapter to convert between old and new configuration formats."""
-
     @staticmethod
     def from_options_protocol(options: OptionsProtocol) -> WorkflowOptions:
-        """Convert OptionsProtocol to WorkflowOptions."""
         return WorkflowOptions(
             cleaning=CleaningConfig(
                 clean=getattr(options, "clean", True),
@@ -60,7 +52,7 @@ class OptionsAdapter:
             ),
             ai=AIConfig(
                 ai_agent=getattr(options, "ai_agent", False),
-                autofix=getattr(options, "autofix", True),  # Default true per CLAUDE.md
+                autofix=getattr(options, "autofix", True),
                 ai_agent_autofix=getattr(options, "ai_agent_autofix", False),
                 start_mcp_server=getattr(options, "start_mcp_server", False),
                 max_iterations=getattr(options, "max_iterations", 10),
@@ -85,17 +77,12 @@ class OptionsAdapter:
     def to_options_protocol(
         workflow_options: WorkflowOptions,
     ) -> "LegacyOptionsWrapper":
-        """Convert WorkflowOptions back to OptionsProtocol for backward compatibility."""
         return LegacyOptionsWrapper(workflow_options)
 
 
 class LegacyOptionsWrapper:
-    """Wrapper that provides OptionsProtocol interface over WorkflowOptions."""
-
     def __init__(self, workflow_options: WorkflowOptions) -> None:
         self._options = workflow_options
-
-    # All the original OptionsProtocol attributes, delegating to the focused configs
 
     @property
     def commit(self) -> bool:
@@ -223,8 +210,8 @@ class LegacyOptionsWrapper:
 
     @property
     def enterprise_batch(self) -> str | None:
-        return None  # Deprecated field
+        return None
 
     @property
     def monitor_dashboard(self) -> str | None:
-        return None  # Deprecated field
+        return None

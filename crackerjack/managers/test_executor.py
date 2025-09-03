@@ -1,9 +1,3 @@
-"""Test execution engine with progress tracking and output parsing.
-
-This module handles the actual test execution, subprocess management, and real-time
-output parsing. Split from test_manager.py for better separation of concerns.
-"""
-
 import re
 import subprocess
 import threading
@@ -18,8 +12,6 @@ from .test_progress import TestProgress
 
 
 class TestExecutor:
-    """Handles test execution with real-time progress tracking."""
-
     def __init__(self, console: Console, pkg_path: Path) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -29,7 +21,6 @@ class TestExecutor:
         cmd: list[str],
         timeout: int = 600,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute test command with live progress display."""
         return self._execute_with_live_progress(cmd, timeout)
 
     def execute_with_ai_progress(
@@ -38,13 +29,11 @@ class TestExecutor:
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int = 600,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute test command with AI-compatible progress callbacks."""
         return self._run_test_command_with_ai_progress(cmd, progress_callback, timeout)
 
     def _execute_with_live_progress(
         self, cmd: list[str], timeout: int
     ) -> subprocess.CompletedProcess[str]:
-        """Execute tests with Rich live progress display."""
         progress = self._initialize_progress()
 
         with Live(progress.format_progress(), console=self.console) as live:
@@ -61,12 +50,10 @@ class TestExecutor:
                 env=env,
             )
 
-            # Start reader threads
             stdout_thread, stderr_thread, monitor_thread = self._start_reader_threads(
                 process, progress, live
             )
 
-            # Wait for completion
             try:
                 process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
@@ -74,10 +61,8 @@ class TestExecutor:
                     process, progress, "Test execution timed out"
                 )
 
-            # Cleanup
             self._cleanup_threads([stdout_thread, stderr_thread, monitor_thread])
 
-            # Return completed process with string output
             stdout_str = process.stdout.read() if process.stdout else ""
             stderr_str = process.stderr.read() if process.stderr else ""
             return subprocess.CompletedProcess(
@@ -90,7 +75,6 @@ class TestExecutor:
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int = 600,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute test command with AI progress callbacks."""
         progress = self._initialize_progress()
         env = self._setup_coverage_env()
 
@@ -101,13 +85,11 @@ class TestExecutor:
         return result
 
     def _initialize_progress(self) -> TestProgress:
-        """Initialize progress tracker."""
         progress = TestProgress()
         progress.start_time = time.time()
         return progress
 
     def _setup_test_environment(self) -> dict[str, str]:
-        """Set up environment variables for test execution."""
         import os
 
         cache_dir = Path.home() / ".cache" / "crackerjack" / "coverage"
@@ -119,7 +101,6 @@ class TestExecutor:
         return env
 
     def _setup_coverage_env(self) -> dict[str, str]:
-        """Set up coverage environment for AI mode."""
         import os
         from pathlib import Path
 
@@ -133,7 +114,6 @@ class TestExecutor:
     def _start_reader_threads(
         self, process: subprocess.Popen[str], progress: TestProgress, live: Live
     ) -> tuple[threading.Thread, threading.Thread, threading.Thread]:
-        """Start threads for reading stdout, stderr, and monitoring."""
         stdout_thread = self._create_stdout_reader(process, progress, live)
         stderr_thread = self._create_stderr_reader(process, progress, live)
         monitor_thread = self._create_monitor_thread(progress)
@@ -147,8 +127,6 @@ class TestExecutor:
     def _create_stdout_reader(
         self, process: subprocess.Popen[str], progress: TestProgress, live: Live
     ) -> threading.Thread:
-        """Create thread for reading stdout."""
-
         def read_output() -> None:
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
@@ -163,8 +141,6 @@ class TestExecutor:
     def _create_stderr_reader(
         self, process: subprocess.Popen[str], progress: TestProgress, live: Live
     ) -> threading.Thread:
-        """Create thread for reading stderr."""
-
         def read_stderr() -> None:
             if process.stderr:
                 for line in iter(process.stderr.readline, ""):
@@ -175,8 +151,6 @@ class TestExecutor:
         return threading.Thread(target=read_stderr, daemon=True)
 
     def _create_monitor_thread(self, progress: TestProgress) -> threading.Thread:
-        """Create thread for monitoring stuck tests."""
-
         def monitor_stuck_tests() -> None:
             last_update = time.time()
             last_test = ""
@@ -198,31 +172,24 @@ class TestExecutor:
         return threading.Thread(target=monitor_stuck_tests, daemon=True)
 
     def _process_test_output_line(self, line: str, progress: TestProgress) -> None:
-        """Process a single line of test output."""
         self._parse_test_line(line, progress)
 
     def _parse_test_line(self, line: str, progress: TestProgress) -> None:
-        """Parse test output line and update progress."""
-        # Handle collection completion
         if self._handle_collection_completion(line, progress):
             return
 
-        # Handle session events
         if self._handle_session_events(line, progress):
             return
 
-        # Handle collection progress
         if self._handle_collection_progress(line, progress):
             return
 
-        # Handle test execution
         if self._handle_test_execution(line, progress):
             return
 
     def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
-        """Handle test collection completion."""
         if "collected" in line and ("item" in line or "test" in line):
-            match = re.search(r"(\d+) (?:item|test)", line)
+            match = re.search(r"(\d +) (?: item | test)", line)
             if match:
                 progress.update(
                     total_tests=int(match.group(1)),
@@ -233,7 +200,6 @@ class TestExecutor:
         return False
 
     def _handle_session_events(self, line: str, progress: TestProgress) -> bool:
-        """Handle pytest session events."""
         if "session starts" in line and progress.collection_status != "Session started":
             progress.update(collection_status="Session started")
             return True
@@ -246,9 +212,7 @@ class TestExecutor:
         return False
 
     def _handle_collection_progress(self, line: str, progress: TestProgress) -> bool:
-        """Handle collection progress updates."""
         if progress.is_collecting:
-            # Look for file discovery patterns
             if line.endswith(".py") and ("test_" in line or "_test.py" in line):
                 with progress._lock:
                     if line not in progress._seen_files:
@@ -261,8 +225,6 @@ class TestExecutor:
         return False
 
     def _handle_test_execution(self, line: str, progress: TestProgress) -> bool:
-        """Handle test execution progress."""
-        # Test result patterns
         if " PASSED " in line:
             progress.update(passed=progress.passed + 1)
             self._extract_current_test(line, progress)
@@ -279,39 +241,32 @@ class TestExecutor:
             progress.update(errors=progress.errors + 1)
             self._extract_current_test(line, progress)
             return True
-        elif "::" in line and any(x in line for x in ("RUNNING", "test_")):
+        elif ":: " in line and any(x in line for x in ("RUNNING", "test_")):
             self._handle_running_test(line, progress)
             return True
 
         return False
 
     def _handle_running_test(self, line: str, progress: TestProgress) -> None:
-        """Handle currently running test indicator."""
-        if "::" in line:
-            # Extract test name from line
-            test_parts = line.split("::")
+        if ":: " in line:
+            test_parts = line.split(":: ")
             if len(test_parts) >= 2:
-                test_name = "::".join(test_parts[-2:])
+                test_name = ":: ".join(test_parts[-2:])
                 progress.update(current_test=test_name)
 
     def _extract_current_test(self, line: str, progress: TestProgress) -> None:
-        """Extract current test name from output line."""
-        if "::" in line:
-            # Extract test identifier
+        if ":: " in line:
             parts = line.split(" ")
             for part in parts:
-                if "::" in part:
+                if ":: " in part:
                     progress.update(current_test=part)
                     break
 
     def _update_display_if_needed(self, progress: TestProgress, live: Live) -> None:
-        """Update display if enough time has passed or significant change occurred."""
         if self._should_refresh_display(progress):
             live.update(progress.format_progress())
 
     def _should_refresh_display(self, progress: TestProgress) -> bool:
-        """Determine if display should be refreshed."""
-        # Only refresh on significant changes to reduce spam
         return (
             progress.is_complete
             or progress.total_tests > 0
@@ -319,12 +274,10 @@ class TestExecutor:
         )
 
     def _mark_test_as_stuck(self, progress: TestProgress, test_name: str) -> None:
-        """Mark a test as potentially stuck."""
         if test_name:
             progress.update(current_test=f"🐌 {test_name} (slow)")
 
     def _cleanup_threads(self, threads: list[threading.Thread]) -> None:
-        """Clean up reader threads."""
         for thread in threads:
             if thread.is_alive():
                 thread.join(timeout=1.0)
@@ -332,7 +285,6 @@ class TestExecutor:
     def _handle_progress_error(
         self, process: subprocess.Popen[str], progress: TestProgress, error_msg: str
     ) -> None:
-        """Handle progress tracking errors."""
         process.terminate()
         progress.update(is_complete=True, current_test=f"❌ {error_msg}")
 
@@ -344,7 +296,6 @@ class TestExecutor:
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute test process with AI progress tracking."""
         process = subprocess.Popen(
             cmd,
             cwd=self.pkg_path,
@@ -371,7 +322,6 @@ class TestExecutor:
         progress: TestProgress,
         progress_callback: t.Callable[[dict[str, t.Any]], None],
     ) -> list[str]:
-        """Read stdout with progress updates."""
         stdout_lines = []
 
         if process.stdout:
@@ -388,7 +338,6 @@ class TestExecutor:
         return stdout_lines
 
     def _read_stderr_lines(self, process: subprocess.Popen[str]) -> list[str]:
-        """Read stderr lines."""
         stderr_lines = []
 
         if process.stderr:
@@ -404,7 +353,6 @@ class TestExecutor:
     def _wait_for_process_completion(
         self, process: subprocess.Popen[str], timeout: int
     ) -> int:
-        """Wait for process completion with timeout."""
         try:
             process.wait(timeout=timeout)
             return process.returncode
@@ -417,7 +365,6 @@ class TestExecutor:
         progress: TestProgress,
         progress_callback: t.Callable[[dict[str, t.Any]], None],
     ) -> None:
-        """Emit progress update for AI consumption."""
         progress_data = {
             "type": "test_progress",
             "total_tests": progress.total_tests,
@@ -439,5 +386,4 @@ class TestExecutor:
         from contextlib import suppress
 
         with suppress(Exception):
-            # Don't let progress callback errors affect test execution
             progress_callback(progress_data)

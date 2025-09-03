@@ -14,6 +14,8 @@ from textual.containers import Container
 from textual.widget import Widget
 from textual.widgets import DataTable, Footer, Label, ProgressBar
 
+from crackerjack.core.timeout_manager import TimeoutStrategy, get_timeout_manager
+
 from .progress_components import (
     ErrorCollector,
     JobDataCollector,
@@ -75,7 +77,7 @@ class AgentStatusPanel(Widget):
             active_agents = activity.get("active_agents", [])
 
             if not active_agents:
-                agents_table.add_row("No active agents", " - ", " - ", " - ", " - ")
+                agents_table.add_row("No active agents", "-", "-", "-", "-")
                 return
 
             for agent in active_agents:
@@ -88,9 +90,9 @@ class AgentStatusPanel(Widget):
 
                 current_issue = agent.get("current_issue", {})
                 issue_type = (
-                    current_issue.get("type", " - ")
+                    current_issue.get("type", "-")
                     if current_issue
-                    else agent.get("issue_type", " - ")
+                    else agent.get("issue_type", "-")
                 )
 
                 status_display = f"{self._get_status_emoji(status)} {status.title()}"
@@ -99,8 +101,8 @@ class AgentStatusPanel(Widget):
                     f"{emoji} {agent_type}",
                     status_display,
                     issue_type,
-                    f"{confidence: .0 % }" if confidence > 0 else " - ",
-                    f"{processing_time: .1f}s" if processing_time > 0 else " - ",
+                    f"{confidence: .0 % }" if confidence > 0 else "-",
+                    f"{processing_time: .1f}s" if processing_time > 0 else "-",
                 )
 
     def _update_stats(self, data: dict) -> None:
@@ -212,7 +214,7 @@ class JobPanel(Widget):
             errors_container.border_title = "❌ Errors"
 
             errors_table = self.query_one(
-                f"#job-errors-{self.job_data.get('job_id', 'unknown')}",
+                f"#job-errors -{self.job_data.get('job_id', 'unknown')}",
                 DataTable,
             )
             errors_table.add_columns("", "", "", "")
@@ -222,7 +224,7 @@ class JobPanel(Widget):
     def _update_errors_table(self) -> None:
         with suppress(Exception):
             errors_table = self.query_one(
-                f"#job-errors-{self.job_data.get('job_id', 'unknown')}",
+                f"#job-errors -{self.job_data.get('job_id', 'unknown')}",
                 DataTable,
             )
             errors_table.clear()
@@ -276,7 +278,7 @@ class JobPanel(Widget):
     def _update_progress_bar(self) -> None:
         with suppress(Exception):
             progress_bar = self.query_one(
-                f"#job-progress-{self.job_data.get('job_id', 'unknown')}",
+                f"#job-progress -{self.job_data.get('job_id', 'unknown')}",
                 ProgressBar,
             )
             progress_value = self.iteration_count / max(self.max_iterations, 1) * 100
@@ -365,7 +367,7 @@ class JobPanel(Widget):
             total=100,
             show_eta=False,
             show_percentage=False,
-            id=f"job-progress-{self.job_data.get('job_id', 'unknown')}",
+            id=f"job-progress -{self.job_data.get('job_id', 'unknown')}",
         )
 
     def _compose_stage_and_status(self) -> ComposeResult:
@@ -401,7 +403,7 @@ class JobPanel(Widget):
     def _compose_errors_column(self) -> ComposeResult:
         with Container(classes="job-errors"):
             yield DataTable(
-                id=f"job-errors-{self.job_data.get('job_id', 'unknown')}",
+                id=f"job-errors -{self.job_data.get('job_id', 'unknown')}",
             )
 
 
@@ -415,12 +417,13 @@ class CrackerjackDashboard(App):
 
     def __init__(self) -> None:
         super().__init__()
-        self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
+        self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack - mcp-progress"
         self.websocket_url = "ws://localhost:8675"
         self.refresh_timer = None
         self.active_jobs = {}
         self.completed_jobs_stats = {}
         self.current_polling_method = "File"
+        self.timeout_manager = get_timeout_manager()
 
         self.job_collector = JobDataCollector(self.progress_dir, self.websocket_url)
         self.service_checker = ServiceHealthChecker()
@@ -442,7 +445,7 @@ class CrackerjackDashboard(App):
     def _compose_left_column(self) -> ComposeResult:
         with Container(id="left-column"):
             yield from self._compose_jobs_panel()
-            yield AgentStatusPanel(id="agent-status-panel")
+            yield AgentStatusPanel(id="agent - status-panel")
 
     def _compose_right_column(self) -> ComposeResult:
         with Container(id="right-column"):
@@ -470,7 +473,7 @@ class CrackerjackDashboard(App):
 
     def _compose_discovery_section(self) -> ComposeResult:
         with Container(id="discovery-section"):
-            yield Container(id="job-discovery-container")
+            yield Container(id="job - discovery-container")
 
     def on_mount(self) -> None:
         self._setup_border_titles()
@@ -528,43 +531,115 @@ class CrackerjackDashboard(App):
         self.refresh_timer = self.set_interval(0.5, self._refresh_data)
 
     async def _refresh_data(self) -> None:
-        with suppress(Exception):
-            if hasattr(self, "_refresh_counter"):
-                self._refresh_counter += 1
-            else:
-                self._refresh_counter = 0
+        try:
+            # Refresh cycle with timeout protection
+            async with self.timeout_manager.timeout_context(
+                "network_operations",
+                timeout=10.0,  # Total refresh timeout
+                strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
+            ):
+                if hasattr(self, "_refresh_counter"):
+                    self._refresh_counter += 1
+                else:
+                    self._refresh_counter = 0
 
-            if self._refresh_counter % 10 == 0:
-                await self._ensure_services_running()
+                # Ensure services running less frequently to avoid overhead
+                if self._refresh_counter % 20 == 0:  # Every 10 seconds instead of 5
+                    try:
+                        await self.timeout_manager.with_timeout(
+                            "network_operations",
+                            self._ensure_services_running(),
+                            timeout=5.0,
+                            strategy=TimeoutStrategy.FAIL_FAST,
+                        )
+                    except Exception:
+                        pass  # Fail silently for service checks
 
-            jobs_data = await self._discover_jobs()
+                # Collect data with individual timeouts
+                jobs_data = await self.timeout_manager.with_timeout(
+                    "network_operations",
+                    self._discover_jobs(),
+                    timeout=3.0,
+                    strategy=TimeoutStrategy.FAIL_FAST,
+                )
 
-            services_data = await self._collect_services_data()
+                services_data = await self.timeout_manager.with_timeout(
+                    "network_operations",
+                    self._collect_services_data(),
+                    timeout=2.0,
+                    strategy=TimeoutStrategy.FAIL_FAST,
+                )
 
-            errors_data = await self._collect_recent_errors()
+                errors_data = await self.timeout_manager.with_timeout(
+                    "file_operations",
+                    self._collect_recent_errors(),
+                    timeout=2.0,
+                    strategy=TimeoutStrategy.FAIL_FAST,
+                )
 
-            if jobs_data["individual_jobs"]:
-                jobs_data["individual_jobs"][0].get("project", "crackerjack")
+                # Update UI components
+                self.query_one("#services-panel").border_title = "🔧 Services"
 
-            self.query_one("#services-panel").border_title = "🔧 Services"
+                self._update_jobs_table(jobs_data)
+                self._update_services_table(services_data)
+                self._update_errors_table(errors_data)
+                self._update_job_panels(jobs_data)
+                self._update_agent_panel(jobs_data)
+                self._update_status_bars(jobs_data)
 
-            self._update_jobs_table(jobs_data)
-            self._update_services_table(services_data)
-            self._update_errors_table(errors_data)
-            self._update_job_panels(jobs_data)
-            self._update_agent_panel(jobs_data)
-            self._update_status_bars(jobs_data)
+        except Exception as e:
+            # Log error but don't crash the dashboard
+            with suppress(Exception):
+                console = Console()
+                console.print(f"[red]Dashboard refresh error: {e}[/red]")
 
     async def _discover_jobs(self) -> dict:
-        result = await self.job_collector.discover_jobs()
-        self.current_polling_method = result["method"]
-        return result["data"]
+        try:
+            result = await self.timeout_manager.with_timeout(
+                "network_operations",
+                self.job_collector.discover_jobs(),
+                timeout=5.0,
+                strategy=TimeoutStrategy.FAIL_FAST,
+            )
+            self.current_polling_method = result["method"]
+            return result["data"]
+        except Exception:
+            # Return empty data structure on timeout or error
+            return {
+                "active": 0,
+                "completed": 0,
+                "failed": 0,
+                "total": 0,
+                "individual_jobs": [],
+                "total_issues": 0,
+                "errors_fixed": 0,
+                "errors_failed": 0,
+                "current_errors": 0,
+            }
 
     async def _collect_services_data(self) -> list:
-        return await self.service_checker.collect_services_data()
+        try:
+            return await self.timeout_manager.with_timeout(
+                "network_operations",
+                self.service_checker.collect_services_data(),
+                timeout=3.0,
+                strategy=TimeoutStrategy.FAIL_FAST,
+            )
+        except Exception:
+            # Return minimal service data on timeout
+            return [("Services", "🔴 Timeout", "0")]
 
     async def _collect_recent_errors(self) -> list:
-        return await self.error_collector.collect_recent_errors()
+        try:
+            return await self.timeout_manager.with_timeout(
+                "file_operations",
+                self.error_collector.collect_recent_errors(),
+                timeout=2.0,
+                strategy=TimeoutStrategy.FAIL_FAST,
+            )
+        except Exception:
+            # Return empty error list on timeout
+            return []
 
     def _update_jobs_table(self, jobs_data: dict) -> None:
         with suppress(Exception):
@@ -696,7 +771,7 @@ class CrackerjackDashboard(App):
 
     def _update_agent_panel(self, jobs_data: dict) -> None:
         with suppress(Exception):
-            agent_panel = self.query_one("#agent-status-panel", AgentStatusPanel)
+            agent_panel = self.query_one("#agent - status-panel", AgentStatusPanel)
 
             agent_data = {}
             for job in jobs_data.get("individual_jobs", []):
@@ -709,7 +784,7 @@ class CrackerjackDashboard(App):
 
     def _update_job_panels(self, jobs_data: dict) -> None:
         with suppress(Exception):
-            container = self.query_one("#job-discovery-container")
+            container = self.query_one("#job - discovery-container")
             current_job_ids = self._get_current_job_ids(jobs_data)
 
             self._remove_obsolete_panels(current_job_ids)
@@ -792,17 +867,17 @@ class CrackerjackDashboard(App):
         container.mount(job_panel)
 
     def _handle_placeholder_visibility(self, container) -> None:
-        has_placeholder = bool(container.query("#no-jobs-label"))
+        has_placeholder = bool(container.query("#no - jobs-label"))
 
         if not self.active_jobs and not has_placeholder:
             container.mount(
                 Label(
                     "No active jobs detected. Start a Crackerjack job to see progress here.",
-                    id="no-jobs-label",
+                    id="no - jobs-label",
                 ),
             )
         elif self.active_jobs and has_placeholder:
-            container.query("#no-jobs-label").remove()
+            container.query("#no - jobs-label").remove()
 
     def _update_status_bars(self, jobs_data: dict) -> None:
         pass
@@ -816,7 +891,7 @@ class CrackerjackDashboard(App):
                 table = self.query_one(table_id, DataTable)
                 table.clear()
 
-            container = self.query_one("#job-discovery-container")
+            container = self.query_one("#job - discovery-container")
             container.query("JobPanel").remove()
             container.query("Label").remove()
             self.active_jobs.clear()
@@ -889,14 +964,14 @@ async def run_progress_monitor(
     with suppress(Exception):
         console = Console()
         console.print(
-            "[bold green]🚀 Starting Crackerjack Progress Monitor[/bold green]",
+            "[bold green]🚀 Starting Crackerjack Progress Monitor[/ bold green]",
         )
 
         if enable_watchdog:
-            console.print("[bold yellow]🐕 Service Watchdog: Enabled[/bold yellow]")
+            console.print("[bold yellow]🐕 Service Watchdog: Enabled[/ bold yellow]")
 
         if dev_mode:
-            console.print("[bold cyan]🛠️  Development Mode: Enabled[/bold cyan]")
+            console.print("[bold cyan]🛠️ Development Mode: Enabled[/ bold cyan]")
 
         app = CrackerjackDashboard()
 
@@ -912,7 +987,7 @@ async def run_crackerjack_with_progress(
     with suppress(Exception):
         console = Console()
         console.print(
-            "[bold green]🚀 Starting Crackerjack Progress Monitor[/bold green]",
+            "[bold green]🚀 Starting Crackerjack Progress Monitor[/ bold green]",
         )
 
         app = CrackerjackDashboard()

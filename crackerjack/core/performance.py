@@ -78,11 +78,11 @@ class PerformanceMonitor:
             stats = self.get_stats(name)
             if stats:
                 self.console.print(
-                    f"[cyan]📊 {name}: [/cyan] "
-                    f"avg = {stats['avg']:.3f}s, "
-                    f"min = {stats['min']:.3f}s, "
-                    f"max = {stats['max']:.3f}s, "
-                    f"count = {stats['count']}",
+                    f"[cyan]📊 {name}: [/ cyan] "
+                    f"avg={stats['avg']: .3f}s, "
+                    f"min={stats['min']: .3f}s, "
+                    f"max={stats['max']: .3f}s, "
+                    f"count={stats['count']}",
                 )
         else:
             for metric_name in self.metrics:
@@ -107,8 +107,8 @@ def memoize_with_ttl(
             cache[key] = (time.time(), result)
             return result
 
-        wrapper.cache_clear = cache.clear  # type: ignore[attr-defined]
-        wrapper.cache_info = lambda: {"size": len(cache), "ttl": ttl}  # type: ignore[attr-defined]
+        setattr(wrapper, "cache_clear", cache.clear)
+        setattr(wrapper, "cache_info", lambda: {"size": len(cache), "ttl": ttl})
         return wrapper
 
     return decorator
@@ -163,7 +163,8 @@ class OptimizedFileWatcher:
         self._file_cache.clear()
 
         if hasattr(self.get_python_files, "cache_clear"):
-            self.get_python_files.cache_clear()  # type: ignore[attr-defined]
+            cache_clear = getattr(self.get_python_files, "cache_clear")
+            cache_clear()
 
 
 class ParallelTaskExecutor:

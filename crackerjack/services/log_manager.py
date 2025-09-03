@@ -48,15 +48,15 @@ class LogManager:
     def create_debug_log_file(self, session_id: str | None = None) -> Path:
         timestamp = int(time.time())
         if session_id:
-            filename = f"debug-{timestamp}-{session_id}.log"
+            filename = f"debug -{timestamp}-{session_id}.log"
         else:
-            filename = f"debug-{timestamp}.log"
+            filename = f"debug -{timestamp}.log"
 
         return self.debug_dir / filename
 
     def create_error_log_file(self, error_type: str = "general") -> Path:
         timestamp = int(time.time())
-        filename = f"error-{error_type}-{timestamp}.log"
+        filename = f"error -{error_type}-{timestamp}.log"
         return self.error_dir / filename
 
     def rotate_logs(
@@ -95,7 +95,7 @@ class LogManager:
                     log_file.unlink()
                     removed_count += 1
                     console.print(
-                        f"[dim]🗑️ Removed old log: {log_file.name} ({reason})[/dim]",
+                        f"[dim]🗑️ Removed old log: {log_file.name} ({reason})[/ dim]",
                     )
 
         return removed_count
@@ -140,46 +140,46 @@ class LogManager:
         if not source_dir.exists():
             return {"moved": 0, "failed": 0, "found": 0}
 
-        debug_pattern = "crackerjack-debug-*.log"
+        debug_pattern = "crackerjack - debug-*.log"
         legacy_files = list(source_dir.glob(debug_pattern))
 
         results = {"found": len(legacy_files), "moved": 0, "failed": 0}
 
         if not legacy_files:
-            console.print("[green]✅ No legacy log files found to migrate[/green]")
+            console.print("[green]✅ No legacy log files found to migrate[/ green]")
             return results
 
         console.print(
-            f"[yellow]📦 Found {len(legacy_files)} legacy debug log files to migrate[/yellow]",
+            f"[yellow]📦 Found {len(legacy_files)} legacy debug log files to migrate[/ yellow]",
         )
 
         for legacy_file in legacy_files:
             try:
-                parts = legacy_file.stem.split(" - ")
+                parts = legacy_file.stem.split("-")
                 if len(parts) >= 3 and parts[-1].isdigit():
                     timestamp = parts[-1]
                 else:
                     timestamp = str(int(legacy_file.stat().st_mtime))
 
-                new_filename = f"debug-{timestamp}-migrated.log"
+                new_filename = f"debug -{timestamp}- migrated.log"
                 new_path = self.debug_dir / new_filename
 
                 if dry_run:
                     console.print(
-                        f"[cyan]📋 Would move: {legacy_file.name} → {new_filename}[/cyan]",
+                        f"[cyan]📋 Would move: {legacy_file.name} → {new_filename}[/ cyan]",
                     )
                     results["moved"] += 1
                 else:
                     shutil.move(str(legacy_file), str(new_path))
                     results["moved"] += 1
                     console.print(
-                        f"[green]✅ Moved: {legacy_file.name} → {new_filename}[/green]",
+                        f"[green]✅ Moved: {legacy_file.name} → {new_filename}[/ green]",
                     )
 
             except (OSError, ValueError) as e:
                 results["failed"] += 1
                 console.print(
-                    f"[red]❌ Failed to migrate {legacy_file.name}: {e}[/red]",
+                    f"[red]❌ Failed to migrate {legacy_file.name}: {e}[/ red]",
                 )
 
         return results
@@ -236,7 +236,7 @@ class LogManager:
         )
 
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "%(asctime)s - %(name)s - %(levelname)s-%(message)s",
         )
         handler.setFormatter(formatter)
 
@@ -247,8 +247,8 @@ class LogManager:
     def print_log_summary(self) -> None:
         stats = self.get_log_stats()
 
-        console.print("\n[bold]📊 Log File Summary[/bold]")
-        console.print(f"[dim]Location: {self.log_dir}[/dim]")
+        console.print("\n[bold]📊 Log File Summary[/ bold]")
+        console.print(f"[dim]Location: {self.log_dir}[/ dim]")
 
         total_files = 0
         total_size = 0.0
@@ -273,10 +273,10 @@ class LogManager:
 
         if total_files > 0:
             console.print(
-                f"\n[bold]Total: {total_files} files, {total_size:.2f}MB[/bold]",
+                f"\n[bold]Total: {total_files} files, {total_size: .2f}MB[/ bold]",
             )
         else:
-            console.print("\n[dim]No log files found[/dim]")
+            console.print("\n[dim]No log files found[/ dim]")
 
 
 log_manager = LogManager()

@@ -27,7 +27,7 @@ class AIAgentDebugger:
         if self.enabled:
             log_manager = get_log_manager()
             self.debug_log_path = log_manager.create_debug_log_file(
-                f"ai-agent-{self.session_id}",
+                f"ai-agent -{self.session_id}",
             )
         else:
             self.debug_log_path = None
@@ -37,7 +37,6 @@ class AIAgentDebugger:
         self.workflow_phases: list[dict[str, Any]] = []
         self.error_events: list[dict[str, Any]] = []
 
-        # Enhanced iteration tracking
         self.iteration_stats: list[dict[str, Any]] = []
         self.current_iteration = 0
         self.total_test_failures = 0
@@ -86,7 +85,7 @@ class AIAgentDebugger:
             else "Debug Log: None (disabled)"
         )
         header = Panel(
-            f"[bold cyan]🐛 AI Agent Debug Mode Active[/bold cyan]\n"
+            f"[bold cyan]🐛 AI Agent Debug Mode Active[/ bold cyan]\n"
             f"Session ID: {self.session_id}\n"
             f"{debug_log_info}\n"
             f"Verbose Mode: {'✅' if self.verbose else '❌'}",
@@ -94,7 +93,7 @@ class AIAgentDebugger:
             border_style="cyan",
         )
         self.console.print(header)
-        self.console.print()  # Add blank line after debug panel for better formatting
+        self.console.print()
 
     @contextmanager
     def debug_operation(self, operation: str, **kwargs: Any) -> t.Iterator[str]:
@@ -109,7 +108,7 @@ class AIAgentDebugger:
         self.logger.debug(f"Starting operation: {operation}", extra=kwargs)
 
         if self.verbose:
-            self.console.print(f"[dim]🔍 {operation} starting...[/dim]")
+            self.console.print(f"[dim]🔍 {operation} starting...[/ dim]")
 
         try:
             yield op_id
@@ -121,7 +120,7 @@ class AIAgentDebugger:
 
             if self.verbose:
                 self.console.print(
-                    f"[dim green]✅ {operation} completed ({duration:.2f}s)[/dim green]",
+                    f"[dim green]✅ {operation} completed ({duration: .2f}s)[/ dim green]",
                 )
 
         except Exception as e:
@@ -133,7 +132,7 @@ class AIAgentDebugger:
 
             if self.verbose:
                 self.console.print(
-                    f"[dim red]❌ {operation} failed ({duration:.2f}s): {e}[/dim red]",
+                    f"[dim red]❌ {operation} failed ({duration: .2f}s): {e}[/ dim red]",
                 )
             raise
 
@@ -180,12 +179,12 @@ class AIAgentDebugger:
 
             self.console.print(
                 f"[{status_color}]{status_icon} MCP {operation_type}[/{status_color}]: "
-                f"[bold]{tool_name}[/bold]"
-                + (f" ({duration:.2f}s)" if duration else ""),
+                f"[bold]{tool_name}[/ bold]"
+                + (f" ({duration: .2f}s)" if duration else ""),
             )
 
             if error and self.verbose:
-                self.console.print(f" [red]Error: {error}[/red]")
+                self.console.print(f" [red]Error: {error}[/ red]")
                 self.console.print()
 
     def log_agent_activity(
@@ -226,11 +225,11 @@ class AIAgentDebugger:
         )
 
         if self.verbose:
-            confidence_text = f" (confidence: {confidence:.2f})" if confidence else ""
+            confidence_text = f" (confidence: {confidence: .2f})" if confidence else ""
             issue_text = f" [issue: {issue_id}]" if issue_id else ""
 
             self.console.print(
-                f"[blue]🤖 {agent_name}[/blue]: {activity}{confidence_text}{issue_text}",
+                f"[blue]🤖 {agent_name}[/ blue]: {activity}{confidence_text}{issue_text}",
             )
 
     def log_workflow_phase(
@@ -270,7 +269,7 @@ class AIAgentDebugger:
             }
 
             color = status_colors.get(status, "white")
-            duration_text = f" ({duration:.2f}s)" if duration else ""
+            duration_text = f" ({duration: .2f}s)" if duration else ""
 
             self.console.print(
                 f"[{color}]📋 Workflow {status}: {phase}{duration_text}[/{color}]",
@@ -305,17 +304,15 @@ class AIAgentDebugger:
         )
 
         if self.verbose:
-            self.console.print(f"[red]💥 {error_type}: {message}[/red]")
+            self.console.print(f"[red]💥 {error_type}: {message}[/ red]")
 
     def print_debug_summary(self) -> None:
         if not self.enabled:
             return
 
-        # Determine border style based on workflow success
         border_style = "green" if self.workflow_success else "red"
         title_style = "green" if self.workflow_success else "red"
 
-        # Main debug summary table
         table = Table(
             title=f"[{title_style}]AI Agent Debug Summary[/{title_style}]",
             border_style=border_style,
@@ -348,7 +345,6 @@ class AIAgentDebugger:
             f"Types: {len({err['error_type'] for err in self.error_events})}",
         )
 
-        # Add iteration statistics row
         table.add_row(
             "Iterations Completed",
             str(self.current_iteration),
@@ -357,7 +353,6 @@ class AIAgentDebugger:
 
         self.console.print(table)
 
-        # Print iteration breakdown if we have iterations
         if self.iteration_stats:
             self._print_iteration_breakdown(border_style)
 
@@ -367,22 +362,20 @@ class AIAgentDebugger:
         if self.verbose and self.mcp_operations:
             self._print_mcp_operation_breakdown(border_style)
 
-        # Print total statistics
         self._print_total_statistics(border_style)
 
         self.console.print(
-            f"\n[dim]📝 Full debug log available at: {self.debug_log_path}[/dim]"
+            f"\n[dim]📝 Full debug log available at: {self.debug_log_path}[/ dim]"
             if self.debug_log_path
             else "",
         )
 
     def _print_iteration_breakdown(self, border_style: str = "red") -> None:
-        """Print detailed breakdown of each iteration."""
         if not self.iteration_stats:
             return
 
         table = Table(
-            title="[cyan]Iteration Breakdown[/cyan]",
+            title="[cyan]Iteration Breakdown[/ cyan]",
             border_style=border_style,
         )
         table.add_column("Iteration", style="yellow")
@@ -399,7 +392,9 @@ class AIAgentDebugger:
                 str(iteration["test_fixes"]),
                 str(iteration["hook_failures"]),
                 str(iteration["hook_fixes"]),
-                f"{iteration['duration']:.1f}s" if iteration.get("duration") else "N/A",
+                f"{iteration['duration']: .1f}s"
+                if iteration.get("duration")
+                else "N / A",
             )
 
         self.console.print(table)
@@ -426,7 +421,7 @@ class AIAgentDebugger:
                 )
 
         table = Table(
-            title="[cyan]Agent Activity Breakdown[/cyan]",
+            title="[cyan]Agent Activity Breakdown[/ cyan]",
             border_style=border_style,
         )
         table.add_column("Agent", style="blue")
@@ -435,16 +430,15 @@ class AIAgentDebugger:
 
         for agent, stats in sorted(agent_stats.items()):
             confidence_text = (
-                f"{stats['avg_confidence']:.2f}"
+                f"{stats['avg_confidence']: .2f}"
                 if stats["avg_confidence"] > 0
-                else "N/A"
+                else "N / A"
             )
             table.add_row(agent, str(stats["activities"]), confidence_text)
 
         self.console.print(table)
 
     def _print_total_statistics(self, border_style: str = "red") -> None:
-        """Print total cumulative statistics across all iterations."""
         success_icon = "✅" if self.workflow_success else "❌"
         status_text = "SUCCESS" if self.workflow_success else "IN PROGRESS"
         status_style = "green" if self.workflow_success else "red"
@@ -477,7 +471,7 @@ class AIAgentDebugger:
 
         table.add_row(
             "Overall Fix Rate",
-            f"{fix_rate:.1f}%",
+            f"{fix_rate: .1f}%",
             f"{total_fixes}/{total_issues} issues resolved",
         )
 
@@ -497,7 +491,7 @@ class AIAgentDebugger:
                 tool_stats[tool]["total_duration"] += op["duration"]
 
         table = Table(
-            title="[cyan]MCP Tool Usage[/cyan]",
+            title="[cyan]MCP Tool Usage[/ cyan]",
             border_style=border_style,
         )
         table.add_column("Tool", style="cyan")
@@ -513,13 +507,12 @@ class AIAgentDebugger:
                 tool,
                 str(stats["calls"]),
                 str(stats["errors"]),
-                f"{avg_duration:.2f}s" if avg_duration > 0 else "N/A",
+                f"{avg_duration: .2f}s" if avg_duration > 0 else "N / A",
             )
 
         self.console.print(table)
 
     def log_iteration_start(self, iteration_number: int) -> None:
-        """Log the start of a new iteration."""
         if not self.enabled:
             return
 
@@ -537,15 +530,13 @@ class AIAgentDebugger:
 
         if self.verbose:
             self.console.print(
-                f"[yellow]🔄 Starting Iteration {iteration_number}[/yellow]",
+                f"[yellow]🔄 Starting Iteration {iteration_number}[/ yellow]",
             )
 
     def log_iteration_end(self, iteration_number: int, success: bool) -> None:
-        """Log the end of an iteration with statistics."""
         if not self.enabled or not self.iteration_stats:
             return
 
-        # Find the iteration data
         iteration_data = None
         for data in self.iteration_stats:
             if data["iteration"] == iteration_number:
@@ -562,7 +553,6 @@ class AIAgentDebugger:
             )
 
     def log_test_failures(self, count: int) -> None:
-        """Log test failure count for current iteration."""
         if not self.enabled or not self.iteration_stats:
             return
 
@@ -571,7 +561,6 @@ class AIAgentDebugger:
             self.total_test_failures += count
 
     def log_test_fixes(self, count: int) -> None:
-        """Log test fix count for current iteration."""
         if not self.enabled or not self.iteration_stats:
             return
 
@@ -580,7 +569,6 @@ class AIAgentDebugger:
             self.total_test_fixes += count
 
     def log_hook_failures(self, count: int) -> None:
-        """Log hook failure count for current iteration."""
         if not self.enabled or not self.iteration_stats:
             return
 
@@ -589,7 +577,6 @@ class AIAgentDebugger:
             self.total_hook_failures += count
 
     def log_hook_fixes(self, count: int) -> None:
-        """Log hook fix count for current iteration."""
         if not self.enabled or not self.iteration_stats:
             return
 
@@ -598,7 +585,6 @@ class AIAgentDebugger:
             self.total_hook_fixes += count
 
     def set_workflow_success(self, success: bool) -> None:
-        """Set the overall workflow success status."""
         if not self.enabled:
             return
 
@@ -609,7 +595,7 @@ class AIAgentDebugger:
             return Path("debug_not_enabled.json")
 
         if output_path is None:
-            output_path = Path(f"crackerjack-debug-export-{self.session_id}.json")
+            output_path = Path(f"crackerjack - debug-export -{self.session_id}.json")
 
         debug_data = {
             "session_id": self.session_id,

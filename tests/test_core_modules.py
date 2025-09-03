@@ -402,8 +402,6 @@ class TestDependencyContainer:
 
 
 class TestEnhancedContainer:
-    """Test enhanced dependency injection container."""
-
     def test_enhanced_container_basic(self) -> None:
         from crackerjack.core.enhanced_container import (
             EnhancedDependencyContainer,
@@ -411,16 +409,13 @@ class TestEnhancedContainer:
             create_enhanced_container,
         )
 
-        # Test container creation
         container = EnhancedDependencyContainer("test")
         assert container.name == "test"
 
-        # Test service lifetimes
         assert ServiceLifetime.SINGLETON.value == "singleton"
         assert ServiceLifetime.TRANSIENT.value == "transient"
         assert ServiceLifetime.SCOPED.value == "scoped"
 
-        # Test enhanced container factory
         enhanced = create_enhanced_container()
         assert isinstance(enhanced, EnhancedDependencyContainer)
 
@@ -433,7 +428,6 @@ class TestEnhancedContainer:
         class TestService:
             pass
 
-        # Test with implementation
         descriptor = ServiceDescriptor(
             interface=TestService,
             implementation=TestService,
@@ -445,8 +439,6 @@ class TestEnhancedContainer:
 
 
 class TestCLIModulesBasic:
-    """Test basic CLI modules."""
-
     def test_cli_options_import(self) -> None:
         import crackerjack.cli.options as cli_options_module
 
@@ -464,8 +456,6 @@ class TestCLIModulesBasic:
 
 
 class TestMainEntryPoint:
-    """Test main entry point module."""
-
     def test_main_module_import(self) -> None:
         import crackerjack.__main__ as main_module
 
@@ -478,8 +468,6 @@ class TestMainEntryPoint:
 
 
 class TestProtocolsModule:
-    """Test protocols module."""
-
     def test_protocols_import(self) -> None:
         from crackerjack.models.protocols import (
             FileSystemInterface,
@@ -489,7 +477,6 @@ class TestProtocolsModule:
             TestManagerProtocol,
         )
 
-        # Basic import tests
         assert FileSystemInterface is not None
         assert GitInterface is not None
         assert HookManager is not None
@@ -498,8 +485,6 @@ class TestProtocolsModule:
 
 
 class TestConfigModels:
-    """Test configuration models."""
-
     def test_config_import(self) -> None:
         import crackerjack.models.config as config_module
 
@@ -512,8 +497,6 @@ class TestConfigModels:
 
 
 class TestErrorsModule:
-    """Test errors module."""
-
     def test_errors_import(self) -> None:
         from crackerjack.errors import CrackerjackError, ErrorCode
 

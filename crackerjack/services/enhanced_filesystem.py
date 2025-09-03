@@ -192,8 +192,8 @@ class EnhancedFileSystemService(FileSystemInterface):
             return content
 
     def write_file(self, path: str | Path, content: str) -> None:
-        if not isinstance(content, str):  # type: ignore[arg-type]
-            raise TypeError("Content must be a string")
+        if not content:
+            raise TypeError("Content must be a non-empty string")
 
         path_obj = Path(path) if isinstance(path, str) else path
 
@@ -325,7 +325,7 @@ class EnhancedFileSystemService(FileSystemInterface):
             raise FileError(
                 message=f"Unable to decode file as UTF-8: {path}",
                 details=str(e),
-                recovery="Ensure file is text-based and UTF-8 encoded",
+                recovery="Ensure file is text - based and UTF-8 encoded",
             ) from e
         except OSError as e:
             raise FileError(

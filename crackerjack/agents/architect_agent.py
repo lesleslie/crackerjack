@@ -5,15 +5,7 @@ from .proactive_agent import ProactiveAgent
 
 
 class ArchitectAgent(ProactiveAgent):
-    """Agent that provides architectural planning and guidance.
-
-    This agent bridges to the external crackerjack-architect specialist
-    for complex architectural decisions while handling simpler planning
-    internally through cached patterns.
-    """
-
     def get_supported_types(self) -> set[IssueType]:
-        """Support all issue types for architectural planning."""
         return {
             IssueType.COMPLEXITY,
             IssueType.DRY_VIOLATION,
@@ -30,58 +22,39 @@ class ArchitectAgent(ProactiveAgent):
         }
 
     async def can_handle(self, issue: Issue) -> float:
-        """Determine confidence in handling this issue architecturally."""
-        # High confidence for complex issues that benefit from planning
         if issue.type == IssueType.COMPLEXITY:
             return 0.9
 
-        # High confidence for DRY violations (architectural)
         if issue.type == IssueType.DRY_VIOLATION:
             return 0.85
 
-        # Medium-high confidence for performance issues
         if issue.type == IssueType.PERFORMANCE:
             return 0.8
 
-        # Medium confidence for security (architectural patterns)
         if issue.type == IssueType.SECURITY:
             return 0.75
 
-        # Lower confidence for formatting/imports (less architectural)
         if issue.type in {IssueType.FORMATTING, IssueType.IMPORT_ERROR}:
             return 0.4
 
-        # Medium confidence for other types
         return 0.6
 
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
-        """Create architectural plan for fixing the issue."""
-        # Check if this is a complex issue requiring external specialist
         if await self._needs_external_specialist(issue):
             return await self._get_specialist_plan(issue)
 
-        # Use internal planning for simpler issues
         return await self._get_internal_plan(issue)
 
     async def _needs_external_specialist(self, issue: Issue) -> bool:
-        """Determine if external crackerjack-architect specialist is needed."""
-        # Always use specialist for complexity issues
         if issue.type == IssueType.COMPLEXITY:
             return True
 
-        # Use specialist for DRY violations
         if issue.type == IssueType.DRY_VIOLATION:
             return True
 
-        # Use specialist for multiple related issues
-        # (This would be determined by the coordinator in practice)
         return False
 
     async def _get_specialist_plan(self, issue: Issue) -> dict[str, t.Any]:
-        """Get plan from external crackerjack-architect specialist."""
-        # This would use the Task tool to invoke crackerjack-architect
-        # For now, return a structured plan that mimics what the specialist would provide
-
         plan = {
             "strategy": "external_specialist_guided",
             "specialist": "crackerjack-architect",
@@ -95,7 +68,6 @@ class ArchitectAgent(ProactiveAgent):
         return plan
 
     async def _get_internal_plan(self, issue: Issue) -> dict[str, t.Any]:
-        """Create plan using internal architectural knowledge."""
         plan = {
             "strategy": "internal_pattern_based",
             "approach": self._get_internal_approach(issue),
@@ -108,7 +80,6 @@ class ArchitectAgent(ProactiveAgent):
         return plan
 
     def _get_specialist_approach(self, issue: Issue) -> str:
-        """Get the approach that crackerjack-architect would recommend."""
         if issue.type == IssueType.COMPLEXITY:
             return "break_into_helper_methods"
         elif issue.type == IssueType.DRY_VIOLATION:
@@ -120,7 +91,6 @@ class ArchitectAgent(ProactiveAgent):
         return "apply_clean_code_principles"
 
     def _get_internal_approach(self, issue: Issue) -> str:
-        """Get internal approach for simpler issues."""
         return {
             IssueType.FORMATTING: "apply_standard_formatting",
             IssueType.IMPORT_ERROR: "optimize_imports",
@@ -131,7 +101,6 @@ class ArchitectAgent(ProactiveAgent):
         }.get(issue.type, "apply_standard_fix")
 
     def _get_recommended_patterns(self, issue: Issue) -> list[str]:
-        """Get patterns recommended by crackerjack-architect."""
         return {
             IssueType.COMPLEXITY: [
                 "extract_method",
@@ -160,7 +129,6 @@ class ArchitectAgent(ProactiveAgent):
         }.get(issue.type, ["standard_patterns"])
 
     def _get_cached_patterns_for_issue(self, issue: Issue) -> list[str]:
-        """Get cached patterns that match this issue type."""
         cached = self.get_cached_patterns()
         matching_patterns = []
 
@@ -173,7 +141,6 @@ class ArchitectAgent(ProactiveAgent):
         return matching_patterns or ["default_pattern"]
 
     def _analyze_dependencies(self, issue: Issue) -> list[str]:
-        """Analyze what other changes might be needed."""
         dependencies = []
 
         if issue.type == IssueType.COMPLEXITY:
@@ -193,7 +160,6 @@ class ArchitectAgent(ProactiveAgent):
         return dependencies
 
     def _identify_risks(self, issue: Issue) -> list[str]:
-        """Identify potential risks in fixing this issue."""
         risks = []
 
         if issue.type == IssueType.COMPLEXITY:
@@ -211,7 +177,6 @@ class ArchitectAgent(ProactiveAgent):
         return risks
 
     def _get_validation_steps(self, issue: Issue) -> list[str]:
-        """Get steps to validate the fix."""
         return [
             "run_fast_hooks",
             "run_full_tests",
@@ -221,13 +186,11 @@ class ArchitectAgent(ProactiveAgent):
         ]
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        """Standard fix method - delegates to proactive version."""
         return await self.analyze_and_fix_proactively(issue)
 
     async def _execute_with_plan(
         self, issue: Issue, plan: dict[str, t.Any]
     ) -> FixResult:
-        """Execute fix following the architectural plan."""
         strategy = plan.get("strategy", "internal_pattern_based")
 
         if strategy == "external_specialist_guided":
@@ -237,10 +200,6 @@ class ArchitectAgent(ProactiveAgent):
     async def _execute_specialist_guided_fix(
         self, issue: Issue, plan: dict[str, t.Any]
     ) -> FixResult:
-        """Execute fix guided by external specialist plan."""
-        # This would invoke the actual Task tool with crackerjack-architect
-        # For now, return a structured result indicating the plan was followed
-
         return FixResult(
             success=True,
             confidence=0.9,
@@ -260,7 +219,6 @@ class ArchitectAgent(ProactiveAgent):
     async def _execute_pattern_based_fix(
         self, issue: Issue, plan: dict[str, t.Any]
     ) -> FixResult:
-        """Execute fix using cached patterns and internal logic."""
         patterns = plan.get("patterns", [])
         approach = plan.get("approach", "standard")
 
@@ -277,5 +235,4 @@ class ArchitectAgent(ProactiveAgent):
         )
 
 
-# Register the agent
 agent_registry.register(ArchitectAgent)

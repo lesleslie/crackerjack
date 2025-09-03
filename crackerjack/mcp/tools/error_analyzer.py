@@ -1,9 +1,3 @@
-"""Error analysis and pattern detection for MCP tools.
-
-This module handles intelligent error analysis, pattern caching, and diagnostic
-recommendations. Split from execution_tools.py for better separation of concerns.
-"""
-
 import typing as t
 from contextlib import suppress
 
@@ -11,7 +5,6 @@ from contextlib import suppress
 def analyze_errors_with_caching(
     context: t.Any, use_cache: bool = True
 ) -> dict[str, t.Any]:
-    """Analyze errors with intelligent caching and pattern detection."""
     try:
         cached_patterns = _get_cached_patterns(context, use_cache)
         return _build_error_analysis(cached_patterns, context)
@@ -26,7 +19,6 @@ def analyze_errors_with_caching(
 
 
 def _get_cached_patterns(context: t.Any, use_cache: bool) -> list[t.Any]:
-    """Get cached error patterns from context."""
     if not use_cache:
         return []
 
@@ -39,7 +31,6 @@ def _get_cached_patterns(context: t.Any, use_cache: bool) -> list[t.Any]:
 
 
 def _build_error_analysis(patterns: list[t.Any], context: t.Any) -> dict[str, t.Any]:
-    """Build comprehensive error analysis from patterns."""
     analysis = {
         "status": "success",
         "patterns_found": len(patterns),
@@ -52,7 +43,7 @@ def _build_error_analysis(patterns: list[t.Any], context: t.Any) -> dict[str, t.
     if not patterns:
         analysis.update(
             {
-                "message": "No cached error patterns found - this indicates clean execution history",
+                "message": "No cached error patterns found-this indicates clean execution history",
                 "recommendations": [
                     "Continue with current development practices",
                     "Consider running comprehensive quality checks if issues arise",
@@ -61,18 +52,14 @@ def _build_error_analysis(patterns: list[t.Any], context: t.Any) -> dict[str, t.
         )
         return analysis
 
-    # Categorize error patterns
     categories = _categorize_error_patterns(patterns)
     analysis["error_categories"] = categories
 
-    # Generate recommendations
     recommendations = _generate_error_recommendations(categories)
     analysis["recommendations"] = recommendations
 
-    # Determine urgency
     analysis["urgency_level"] = _calculate_urgency_level(categories)
 
-    # Generate fix suggestions
     analysis["fix_suggestions"] = _generate_fix_suggestions(categories)
 
     analysis["message"] = (
@@ -83,7 +70,6 @@ def _build_error_analysis(patterns: list[t.Any], context: t.Any) -> dict[str, t.
 
 
 def _categorize_error_patterns(patterns: list[t.Any]) -> dict[str, list[t.Any]]:
-    """Categorize error patterns by type."""
     categories = {
         "syntax_errors": [],
         "import_errors": [],
@@ -100,13 +86,10 @@ def _categorize_error_patterns(patterns: list[t.Any]) -> dict[str, list[t.Any]]:
         category = _classify_error_pattern(pattern)
         categories[category].append(pattern)
 
-    # Remove empty categories
     return {k: v for k, v in categories.items() if v}
 
 
 def _classify_error_pattern(pattern: t.Any) -> str:
-    """Classify a single error pattern into a category."""
-    # Convert pattern to string for analysis
     pattern_str = str(pattern).lower()
 
     if any(
@@ -146,7 +129,6 @@ def _classify_error_pattern(pattern: t.Any) -> str:
 
 
 def _generate_error_recommendations(categories: dict[str, list[t.Any]]) -> list[str]:
-    """Generate actionable recommendations based on error categories."""
     recommendations = []
 
     if categories.get("syntax_errors"):
@@ -210,7 +192,6 @@ def _generate_error_recommendations(categories: dict[str, list[t.Any]]) -> list[
             ]
         )
 
-    # Add general recommendations
     if len(categories) > 3:
         recommendations.extend(
             [
@@ -223,26 +204,20 @@ def _generate_error_recommendations(categories: dict[str, list[t.Any]]) -> list[
 
 
 def _calculate_urgency_level(categories: dict[str, list[t.Any]]) -> str:
-    """Calculate urgency level based on error categories and counts."""
     total_errors = sum(len(errors) for errors in categories.values())
 
-    # Security issues are always high priority
     if categories.get("security_issues"):
         return "high"
 
-    # Many test failures indicate critical issues
     if categories.get("test_failures") and len(categories["test_failures"]) > 5:
         return "high"
 
-    # Syntax errors block development
     if categories.get("syntax_errors"):
         return "medium"
 
-    # Large number of total errors
     if total_errors > 20:
         return "medium"
 
-    # Multiple categories indicate systemic issues
     if len(categories) > 4:
         return "medium"
 
@@ -252,7 +227,6 @@ def _calculate_urgency_level(categories: dict[str, list[t.Any]]) -> str:
 def _generate_fix_suggestions(
     categories: dict[str, list[t.Any]],
 ) -> list[dict[str, str]]:
-    """Generate specific fix suggestions with commands."""
     suggestions = []
 
     if categories.get("formatting_issues"):
@@ -260,7 +234,7 @@ def _generate_fix_suggestions(
             {
                 "category": "formatting",
                 "action": "Run code formatting",
-                "command": "python -m crackerjack --skip-tests",
+                "command": "python - m crackerjack - - skip-tests",
                 "description": "Fix formatting and style issues",
             }
         )
@@ -270,7 +244,7 @@ def _generate_fix_suggestions(
             {
                 "category": "types",
                 "action": "Fix type annotations",
-                "command": "python -m crackerjack --ai-agent",
+                "command": "python - m crackerjack - - ai-agent",
                 "description": "Add missing type hints and resolve type conflicts",
             }
         )
@@ -280,7 +254,7 @@ def _generate_fix_suggestions(
             {
                 "category": "tests",
                 "action": "Fix test failures",
-                "command": "python -m crackerjack -t --ai-agent",
+                "command": "python - m crackerjack - t - - ai-agent",
                 "description": "Run tests with AI auto-fixing enabled",
             }
         )
@@ -290,7 +264,7 @@ def _generate_fix_suggestions(
             {
                 "category": "security",
                 "action": "Address security issues",
-                "command": "python -m crackerjack --ai-agent -t",
+                "command": "python - m crackerjack - - ai - agent-t",
                 "description": "Fix security vulnerabilities with AI assistance",
             }
         )
@@ -300,7 +274,7 @@ def _generate_fix_suggestions(
             {
                 "category": "comprehensive",
                 "action": "Full quality check with AI fixing",
-                "command": "python -m crackerjack --ai-agent -t",
+                "command": "python - m crackerjack - - ai - agent-t",
                 "description": "Comprehensive quality check with autonomous fixing",
             }
         )

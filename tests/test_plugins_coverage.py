@@ -41,14 +41,14 @@ class TestPluginBase:
                 return True
 
         metadata = PluginMetadata(
-            name="test-plugin",
+            name="test - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Test plugin",
         )
 
         plugin = TestPlugin(metadata)
-        assert plugin.name == "test-plugin"
+        assert plugin.name == "test - plugin"
         assert plugin.version == "1.0.0"
         assert plugin.activate() is True
         assert plugin.deactivate() is True
@@ -61,7 +61,7 @@ class TestPluginManager:
         from rich.console import Console
 
         mock_console = Console()
-        mock_project_path = Path("/test/project")
+        mock_project_path = Path("/ test / project")
         return PluginManager(console=mock_console, project_path=mock_project_path)
 
     def test_plugin_manager_initialization(self, plugin_manager) -> None:
@@ -82,7 +82,7 @@ class TestPluginManager:
                 return True
 
         metadata = PluginMetadata(
-            name="mock-plugin",
+            name="mock - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Mock plugin for testing",
@@ -92,7 +92,7 @@ class TestPluginManager:
         result = plugin_manager.registry.register(mock_plugin)
         assert result is True
 
-        retrieved_plugin = plugin_manager.registry.get("mock-plugin")
+        retrieved_plugin = plugin_manager.registry.get("mock - plugin")
         assert retrieved_plugin == mock_plugin
 
     def test_plugin_discovery(self, plugin_manager) -> None:
@@ -127,7 +127,7 @@ class TestPluginManager:
                 return True
 
         metadata = PluginMetadata(
-            name="lifecycle-plugin",
+            name="lifecycle - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Lifecycle test plugin",
@@ -135,17 +135,15 @@ class TestPluginManager:
         plugin = LifecyclePlugin(metadata)
         plugin_manager.registry.register(plugin)
 
-        # Disable first to test proper lifecycle
         plugin.disable()
         plugin.activated = False
         plugin.deactivated = False
 
-        # Now test enable
-        result = plugin_manager.enable_plugin("lifecycle-plugin")
+        result = plugin_manager.enable_plugin("lifecycle - plugin")
         assert result is True
         assert plugin.activated is True
 
-        result = plugin_manager.disable_plugin("lifecycle-plugin")
+        result = plugin_manager.disable_plugin("lifecycle - plugin")
         assert result is True
         assert plugin.deactivated is True
 
@@ -162,7 +160,7 @@ class TestPluginManager:
                 raise Exception(msg)
 
         metadata = PluginMetadata(
-            name="error-plugin",
+            name="error - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Error test plugin",
@@ -170,28 +168,27 @@ class TestPluginManager:
         error_plugin = ErrorPlugin(metadata)
         plugin_manager.registry.register(error_plugin)
 
-        # Disable first to test proper error handling during enable
         error_plugin.disable()
 
-        result = plugin_manager.enable_plugin("error-plugin")
+        result = plugin_manager.enable_plugin("error - plugin")
         assert result is False
 
-        result = plugin_manager.disable_plugin("error-plugin")
+        result = plugin_manager.disable_plugin("error - plugin")
         assert isinstance(result, bool)
 
     def test_plugin_dependencies(self, plugin_manager) -> None:
         from crackerjack.plugins.base import PluginMetadata, PluginType
 
         metadata = PluginMetadata(
-            name="dependent-plugin",
+            name="dependent - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Plugin with dependencies",
-            dependencies=["base-plugin"],
+            dependencies=["base - plugin"],
         )
 
-        assert "base-plugin" in metadata.dependencies
-        assert metadata.to_dict()["dependencies"] == ["base-plugin"]
+        assert "base - plugin" in metadata.dependencies
+        assert metadata.to_dict()["dependencies"] == ["base - plugin"]
 
     def test_plugin_configuration(self, plugin_manager) -> None:
         from crackerjack.plugins.base import PluginMetadata, PluginType
@@ -204,7 +201,7 @@ class TestPluginManager:
                 return True
 
         metadata = PluginMetadata(
-            name="configurable-plugin",
+            name="configurable - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Configurable test plugin",
@@ -213,7 +210,7 @@ class TestPluginManager:
         plugin_manager.registry.register(plugin)
 
         config = {"setting1": "value1", "setting2": "value2"}
-        result = plugin_manager.configure_plugin("configurable-plugin", config)
+        result = plugin_manager.configure_plugin("configurable - plugin", config)
         assert isinstance(result, bool)
 
 
@@ -230,12 +227,12 @@ class TestPluginIntegration:
 
             def get_hooks(self) -> list[dict]:
                 return [
-                    {"name": "custom-hook", "command": ["echo", "custom"]},
-                    {"name": "validation-hook", "command": ["validate", "files"]},
+                    {"name": "custom - hook", "command": ["echo", "custom"]},
+                    {"name": "validation - hook", "command": ["validate", "files"]},
                 ]
 
         metadata = PluginMetadata(
-            name="hook-plugin",
+            name="hook - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Hook integration plugin",
@@ -244,8 +241,8 @@ class TestPluginIntegration:
         hooks = plugin.get_hooks()
 
         assert len(hooks) == 2
-        assert hooks[0]["name"] == "custom-hook"
-        assert hooks[1]["name"] == "validation-hook"
+        assert hooks[0]["name"] == "custom - hook"
+        assert hooks[1]["name"] == "validation - hook"
 
     def test_plugin_service_integration(self) -> None:
         from crackerjack.plugins.base import PluginMetadata, PluginType
@@ -265,7 +262,7 @@ class TestPluginIntegration:
                 return bool(self.filesystem_service)
 
         metadata = PluginMetadata(
-            name="service-plugin",
+            name="service - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Service integration plugin",
@@ -280,15 +277,13 @@ class TestPluginIntegration:
         from rich.console import Console
 
         mock_console = Console()
-        project_path = Path("/test/project")
+        project_path = Path("/ test / project")
         plugin_manager = PluginManager(console=mock_console, project_path=project_path)
 
-        # Test that the plugin manager is properly initialized with services
         assert plugin_manager.console is not None
         assert plugin_manager.project_path == project_path
         assert plugin_manager.registry is not None
 
-        # Test discovery functionality
         with patch.object(
             plugin_manager.discovery, "auto_discover_and_load"
         ) as mock_discover:
@@ -301,20 +296,17 @@ class TestPluginIntegration:
 
         loader = PluginLoader()
 
-        # Test that loader has required methods
         assert hasattr(loader, "load_plugin_from_file")
         assert hasattr(loader, "load_plugin_from_config")
         assert hasattr(loader, "load_and_register")
 
-        # Test registry access
         assert loader.registry is not None
 
     def test_plugin_metadata_handling(self) -> None:
         from crackerjack.plugins.base import PluginMetadata, PluginType
 
-        # Test metadata creation and handling
         metadata = PluginMetadata(
-            name="metadata-plugin",
+            name="metadata - plugin",
             version="2.1.0",
             plugin_type=PluginType.HOOK,
             description="Plugin with rich metadata",
@@ -322,17 +314,16 @@ class TestPluginIntegration:
             dependencies=["utility", "testing", "automation"],
         )
 
-        assert metadata.name == "metadata-plugin"
+        assert metadata.name == "metadata - plugin"
         assert metadata.version == "2.1.0"
         assert metadata.description == "Plugin with rich metadata"
         assert metadata.author == "Test Author"
         assert "utility" in metadata.dependencies
         assert "testing" in metadata.dependencies
 
-        # Test metadata dict conversion
         metadata_dict = metadata.to_dict()
         assert isinstance(metadata_dict, dict)
-        assert metadata_dict["name"] == "metadata-plugin"
+        assert metadata_dict["name"] == "metadata - plugin"
         assert metadata_dict["version"] == "2.1.0"
 
     def test_plugin_execution_context(self) -> None:
@@ -354,7 +345,7 @@ class TestPluginIntegration:
                 return True
 
         metadata = PluginMetadata(
-            name="context-plugin",
+            name="context - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Context execution plugin",
@@ -362,7 +353,7 @@ class TestPluginIntegration:
         plugin = ContextPlugin(metadata)
 
         test_context = {
-            "project_path": "/test/project",
+            "project_path": "/ test / project",
             "files": ["file1.py", "file2.py"],
             "config": {"setting": "value"},
         }
@@ -392,7 +383,7 @@ class TestPluginSecurity:
                 return True
 
         metadata = PluginMetadata(
-            name="sandboxed-plugin",
+            name="sandboxed - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Sandboxed security plugin",
@@ -409,7 +400,7 @@ class TestPluginSecurity:
         from crackerjack.plugins.base import PluginMetadata, PluginType
 
         mock_console = Console()
-        project_path = Path("/test/project")
+        project_path = Path("/ test / project")
         plugin_manager = PluginManager(console=mock_console, project_path=project_path)
 
         class ValidPlugin(PluginBase):
@@ -421,11 +412,10 @@ class TestPluginSecurity:
 
         class InvalidPlugin:
             def name(self) -> str:
-                return "invalid-plugin"
+                return "invalid - plugin"
 
-        # Test valid plugin registration
         metadata = PluginMetadata(
-            name="valid-plugin",
+            name="valid - plugin",
             version="1.0.0",
             plugin_type=PluginType.HOOK,
             description="Valid plugin for testing",
@@ -434,9 +424,7 @@ class TestPluginSecurity:
         result = plugin_manager.registry.register(valid_plugin)
         assert result is True
 
-        # Test invalid plugin (not PluginBase subclass) - should not be registerable
         InvalidPlugin()
-        # Can't register non-PluginBase objects, this would raise TypeError
-        # Just test that the PluginManager has proper validation
+
         assert hasattr(plugin_manager.registry, "register")
-        assert plugin_manager.registry.get("invalid-plugin") is None
+        assert plugin_manager.registry.get("invalid - plugin") is None

@@ -1,5 +1,3 @@
-# !/ usr / bin / env python3
-
 import asyncio
 from pathlib import Path
 
@@ -152,7 +150,7 @@ def main():
 
     console.print("\n[bold green]Demo completed ! [ / bold green]")
     console.print("\n[dim]To use the orchestrated workflow in practice: [ / dim]")
-    console.print("[dim] python - m crackerjack -- orchestrated - t[ / dim]")
+    console.print("[dim] python - m crackerjack - - orchestrated - t[ / dim]")
     console.print("[dim] / crackerjack: run (with enhanced MCP support)[ / dim]")
 
 

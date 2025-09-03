@@ -1,5 +1,3 @@
-# !/ usr / bin / env python3
-
 import asyncio
 import sys
 from pathlib import Path
@@ -45,7 +43,7 @@ async def demo_websocket_monitoring() -> None:
     console.print()
     console.print("[cyan]2. Monitor with custom WebSocket URL: [ / cyan]")
     console.print(
-        " python - m crackerjack.mcp.progress_monitor abc123 - def456 ws: // localhost: 8000"
+        " python - m crackerjack.mcp.progress_monitor abc123 - def456 ws: / / localhost: 8000"
     )
     console.print()
     console.print("[cyan]3. Use in Python code: [ / cyan]")
@@ -112,7 +110,7 @@ async def demo_api_integration() -> None:
 
         console.print("[green]✅ Would start job with WebSocket monitoring[ / green]")
         console.print(
-            "[blue]📡 Would connect to ws: // localhost: 8000 / ws / progress / demo - 123 - 456[ / blue]"
+            "[blue]📡 Would connect to ws: / / localhost: 8000 / ws / progress / demo - 123 - 456[ / blue]"
         )
         console.print(
             "[magenta]🎨 Would display real - time Rich progress bars[ / magenta]"

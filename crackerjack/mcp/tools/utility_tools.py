@@ -8,12 +8,10 @@ from crackerjack.mcp.context import get_context
 
 
 def _create_error_response(message: str, success: bool = False) -> str:
-    """Utility function to create standardized error responses."""
     return json.dumps({"error": message, "success": success}, indent=2)
 
 
 def register_utility_tools(mcp_app: t.Any) -> None:
-    """Register utility slash command tools."""
     _register_clean_tool(mcp_app)
     _register_config_tool(mcp_app)
     _register_analyze_tool(mcp_app)
@@ -22,7 +20,6 @@ def register_utility_tools(mcp_app: t.Any) -> None:
 def _clean_file_if_old(
     file_path: Path, cutoff_time: float, dry_run: bool, file_type: str
 ) -> dict | None:
-    """Clean a single file if it's older than cutoff time."""
     with suppress(OSError):
         if file_path.stat().st_mtime < cutoff_time:
             file_size = file_path.stat().st_size
@@ -33,14 +30,13 @@ def _clean_file_if_old(
 
 
 def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[dict], int]:
-    """Clean temporary files older than cutoff time."""
     import tempfile
 
     cleaned_files = []
     total_size = 0
     temp_dir = Path(tempfile.gettempdir())
 
-    patterns = ("crackerjack-*.log", "crackerjack-task-error-*.log", ".coverage.*")
+    patterns = ("crackerjack-*.log", "crackerjack - task - error-*.log", ".coverage.*")
     for pattern in patterns:
         for file_path in temp_dir.glob(pattern):
             file_info = _clean_file_if_old(file_path, cutoff_time, dry_run, "temp")
@@ -54,7 +50,6 @@ def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[dict], in
 def _clean_progress_files(
     context: t.Any, cutoff_time: float, dry_run: bool
 ) -> tuple[list[dict], int]:
-    """Clean progress files older than cutoff time."""
     cleaned_files = []
     total_size = 0
 
@@ -71,7 +66,6 @@ def _clean_progress_files(
 
 
 def _parse_cleanup_options(kwargs: str) -> tuple[dict, str | None]:
-    """Parse and validate cleanup options from kwargs string."""
     try:
         extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}
         return extra_kwargs, None
@@ -82,12 +76,6 @@ def _parse_cleanup_options(kwargs: str) -> tuple[dict, str | None]:
 def _register_clean_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def clean_crackerjack(args: str = "", kwargs: str = "{}") -> str:
-        """Clean up temporary files, stale progress data, and cached resources.
-
-        Args:
-            args: Optional cleanup scope: 'temp', 'progress', 'cache', 'all' (default)
-            kwargs: JSON with options like {"dry_run": true, "older_than": 24}
-        """
         context = get_context()
         if not context:
             return _create_error_response("Server context not available")
@@ -104,7 +92,6 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
 
 
 def _parse_clean_configuration(args: str, kwargs: str) -> dict:
-    """Parse and validate cleanup configuration from arguments."""
     extra_kwargs, parse_error = _parse_cleanup_options(kwargs)
     if parse_error:
         return {"error": parse_error}
@@ -117,7 +104,6 @@ def _parse_clean_configuration(args: str, kwargs: str) -> dict:
 
 
 def _execute_cleanup_operations(context: t.Any, clean_config: dict) -> dict:
-    """Execute the cleanup operations based on configuration."""
     from datetime import datetime, timedelta
 
     cutoff_time = (
@@ -126,13 +112,11 @@ def _execute_cleanup_operations(context: t.Any, clean_config: dict) -> dict:
     all_cleaned_files = []
     total_size = 0
 
-    # Clean temp files
     if clean_config["scope"] in ("temp", "all"):
         temp_files, temp_size = _clean_temp_files(cutoff_time, clean_config["dry_run"])
         all_cleaned_files.extend(temp_files)
         total_size += temp_size
 
-    # Clean progress files
     if clean_config["scope"] in ("progress", "all"):
         progress_files, progress_size = _clean_progress_files(
             context, cutoff_time, clean_config["dry_run"]
@@ -140,16 +124,13 @@ def _execute_cleanup_operations(context: t.Any, clean_config: dict) -> dict:
         all_cleaned_files.extend(progress_files)
         total_size += progress_size
 
-    # Clean cache files (if any caching is implemented)
     if clean_config["scope"] in ("cache", "all"):
-        # Placeholder for future cache cleaning
         pass
 
     return {"all_cleaned_files": all_cleaned_files, "total_size": total_size}
 
 
 def _create_cleanup_response(clean_config: dict, cleanup_results: dict) -> str:
-    """Create the cleanup response JSON."""
     all_cleaned_files = cleanup_results["all_cleaned_files"]
 
     return json.dumps(
@@ -170,7 +151,6 @@ def _create_cleanup_response(clean_config: dict, cleanup_results: dict) -> str:
 
 
 def _handle_config_list(context: t.Any) -> dict[str, t.Any]:
-    """Handle config list action."""
     return {
         "project_path": str(context.config.project_path),
         "rate_limiter": {
@@ -185,7 +165,6 @@ def _handle_config_list(context: t.Any) -> dict[str, t.Any]:
 
 
 def _handle_config_get(context: t.Any, key: str) -> dict[str, t.Any]:
-    """Handle config get action."""
     value = getattr(context.config, key, None)
     if value is None:
         value = getattr(context, key, "Key not found")
@@ -200,7 +179,6 @@ def _handle_config_get(context: t.Any, key: str) -> dict[str, t.Any]:
 
 
 def _handle_config_validate(context: t.Any) -> dict[str, t.Any]:
-    """Handle config validate action."""
     validation_results = {
         "project_path_exists": context.config.project_path.exists(),
         "progress_dir_writable": context.progress_dir.exists()
@@ -222,12 +200,6 @@ def _handle_config_validate(context: t.Any) -> dict[str, t.Any]:
 def _register_config_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def config_crackerjack(args: str = "", kwargs: str = "{}") -> str:
-        """View or update crackerjack configuration.
-
-        Args:
-            args: Action - 'get <key>', 'set <key=value>', 'list', or 'validate'
-            kwargs: JSON with additional options
-        """
         context = get_context()
         if not context:
             return _create_error_response("Server context not available")
@@ -254,7 +226,7 @@ def _register_config_tool(mcp_app: t.Any) -> None:
                 result = _handle_config_validate(context)
             else:
                 return _create_error_response(
-                    f"Invalid action '{action}'. Valid actions: list, get <key>, validate"
+                    f"Invalid action '{action}'. Valid actions: list, get < key >, validate"
                 )
 
             return json.dumps(result, indent=2)
@@ -264,7 +236,6 @@ def _register_config_tool(mcp_app: t.Any) -> None:
 
 
 def _run_hooks_analysis(orchestrator: t.Any, options: t.Any) -> dict:
-    """Run hooks analysis and return results."""
     fast_result = orchestrator.run_fast_hooks_only(options)
     comprehensive_result = orchestrator.run_comprehensive_hooks_only(options)
 
@@ -275,31 +246,23 @@ def _run_hooks_analysis(orchestrator: t.Any, options: t.Any) -> dict:
 
 
 def _run_tests_analysis(orchestrator: t.Any, options: t.Any) -> dict:
-    """Run tests analysis and return results."""
     test_result = orchestrator.run_testing_phase(options)
     return {"status": "passed" if test_result else "failed"}
 
 
 def _create_analysis_orchestrator(context: t.Any) -> t.Any:
-    """Create workflow orchestrator for analysis."""
     from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
     return WorkflowOrchestrator(
         console=context.console,
         pkg_path=context.config.project_path,
-        dry_run=True,  # Analysis only, no changes
+        dry_run=True,
     )
 
 
 def _register_analyze_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def analyze_crackerjack(args: str = "", kwargs: str = "{}") -> str:
-        """Analyze code quality without making changes.
-
-        Args:
-            args: Analysis scope - 'hooks', 'tests', 'all' (default)
-            kwargs: JSON with options like {"report_format": "summary"}
-        """
         context = get_context()
         if not context:
             return _create_error_response("Server context not available")

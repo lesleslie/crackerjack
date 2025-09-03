@@ -1,5 +1,3 @@
-"""Tests for SessionCoordinator class."""
-
 from pathlib import Path
 
 from rich.console import Console
@@ -8,9 +6,8 @@ from crackerjack.core.session_coordinator import SessionCoordinator
 
 
 def test_session_coordinator_initialization() -> None:
-    """Test SessionCoordinator initialization."""
     console = Console()
-    pkg_path = Path("/tmp/test")
+    pkg_path = Path("/ tmp / test")
     coordinator = SessionCoordinator(console, pkg_path)
 
     assert coordinator.session_id is not None
@@ -22,10 +19,9 @@ def test_session_coordinator_initialization() -> None:
 
 
 def test_session_coordinator_with_web_job_id() -> None:
-    """Test SessionCoordinator with web job ID."""
     console = Console()
-    pkg_path = Path("/tmp/test")
-    web_job_id = "test-job-123"
+    pkg_path = Path("/ tmp / test")
+    web_job_id = "test - job - 123"
     coordinator = SessionCoordinator(console, pkg_path, web_job_id)
 
     assert coordinator.session_id == web_job_id
@@ -33,22 +29,19 @@ def test_session_coordinator_with_web_job_id() -> None:
 
 
 def test_session_coordinator_start_session() -> None:
-    """Test starting a session task."""
     console = Console()
-    pkg_path = Path("/tmp/test")
+    pkg_path = Path("/ tmp / test")
     coordinator = SessionCoordinator(console, pkg_path)
 
     task_name = "test_task"
     coordinator.start_session(task_name)
 
-    # start_session only sets current_task, not tasks dict
     assert coordinator.current_task == task_name
 
 
 def test_session_coordinator_track_task() -> None:
-    """Test tracking a task."""
     console = Console()
-    pkg_path = Path("/tmp/test")
+    pkg_path = Path("/ tmp / test")
     coordinator = SessionCoordinator(console, pkg_path)
 
     task_id = "task_123"

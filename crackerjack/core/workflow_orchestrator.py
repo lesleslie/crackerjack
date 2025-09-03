@@ -78,7 +78,6 @@ class WorkflowPipeline:
                 self.session.cleanup_resources()
 
     def _initialize_workflow_session(self, options: OptionsProtocol) -> None:
-        """Initialize session tracking and debug logging for workflow execution."""
         self.session.initialize_session_tracking(options)
         self.session.track_task("workflow", "Complete crackerjack workflow")
 
@@ -87,7 +86,6 @@ class WorkflowPipeline:
         self._log_workflow_startup_info(options)
 
     def _log_workflow_startup_debug(self, options: OptionsProtocol) -> None:
-        """Log debug information for workflow startup."""
         if not self._should_debug():
             return
 
@@ -102,12 +100,10 @@ class WorkflowPipeline:
         )
 
     def _configure_session_cleanup(self, options: OptionsProtocol) -> None:
-        """Configure session cleanup settings if specified."""
         if hasattr(options, "cleanup"):
             self.session.set_cleanup_config(options.cleanup)
 
     def _log_workflow_startup_info(self, options: OptionsProtocol) -> None:
-        """Log informational message about workflow startup."""
         self.logger.info(
             "Starting complete workflow execution",
             testing=getattr(options, "testing", False),
@@ -118,7 +114,6 @@ class WorkflowPipeline:
     async def _execute_workflow_with_timing(
         self, options: OptionsProtocol, start_time: float
     ) -> bool:
-        """Execute workflow phases and handle success/completion logging."""
         success = await self._execute_workflow_phases(options)
         self.session.finalize_session(start_time, success)
 
@@ -129,7 +124,6 @@ class WorkflowPipeline:
         return success
 
     def _log_workflow_completion(self, success: bool, duration: float) -> None:
-        """Log workflow completion information."""
         self.logger.info(
             "Workflow execution completed",
             success=success,
@@ -137,7 +131,6 @@ class WorkflowPipeline:
         )
 
     def _log_workflow_completion_debug(self, success: bool, duration: float) -> None:
-        """Log debug information for workflow completion."""
         if not self._should_debug():
             return
 
@@ -152,14 +145,12 @@ class WorkflowPipeline:
             self.debugger.print_debug_summary()
 
     def _handle_user_interruption(self) -> bool:
-        """Handle KeyboardInterrupt gracefully."""
         self.console.print("Interrupted by user")
         self.session.fail_task("workflow", "Interrupted by user")
         self.logger.warning("Workflow interrupted by user")
         return False
 
     def _handle_workflow_exception(self, error: Exception) -> bool:
-        """Handle unexpected workflow exceptions."""
         self.console.print(f"Error: {error}")
         self.session.fail_task("workflow", f"Unexpected error: {error}")
         self.logger.exception(
@@ -217,23 +208,20 @@ class WorkflowPipeline:
         )
 
     def _start_iteration_tracking(self, options: OptionsProtocol) -> int:
-        """Start iteration tracking for AI agent mode."""
         iteration = 1
         if options.ai_agent and self._should_debug():
             self.debugger.log_iteration_start(iteration)
         return iteration
 
     def _run_initial_fast_hooks(self, options: OptionsProtocol, iteration: int) -> bool:
-        """Run initial fast hooks phase and handle failure."""
         fast_hooks_passed = self._run_fast_hooks_phase(options)
         if not fast_hooks_passed:
             if options.ai_agent and self._should_debug():
                 self.debugger.log_iteration_end(iteration, False)
-            return False  # Fast hooks must pass before proceeding
+            return False
         return True
 
     def _run_main_quality_phases(self, options: OptionsProtocol) -> tuple[bool, bool]:
-        """Run tests and comprehensive hooks to collect ALL issues."""
         testing_passed = self._run_testing_phase(options)
         comprehensive_passed = self._run_comprehensive_hooks_phase(options)
         return testing_passed, comprehensive_passed
@@ -245,7 +233,6 @@ class WorkflowPipeline:
         testing_passed: bool,
         comprehensive_passed: bool,
     ) -> bool:
-        """Handle AI agent workflow with failure collection and fixing."""
         if not testing_passed or not comprehensive_passed:
             success = await self._run_ai_agent_fixing_phase(options)
             if self._should_debug():
@@ -254,7 +241,7 @@ class WorkflowPipeline:
 
         if self._should_debug():
             self.debugger.log_iteration_end(iteration, True)
-        return True  # All phases passed, no fixes needed
+        return True
 
     def _handle_standard_workflow(
         self,
@@ -263,21 +250,19 @@ class WorkflowPipeline:
         testing_passed: bool,
         comprehensive_passed: bool,
     ) -> bool:
-        """Handle standard workflow where all phases must pass."""
         success = testing_passed and comprehensive_passed
 
-        # Debug information for workflow continuation issues
         if not success and getattr(options, "verbose", False):
             self.console.print(
-                f"[yellow]⚠️  Workflow stopped - testing_passed: {testing_passed}, comprehensive_passed: {comprehensive_passed}[/yellow]"
+                f"[yellow]⚠️ Workflow stopped-testing_passed: {testing_passed}, comprehensive_passed: {comprehensive_passed}[/ yellow]"
             )
             if not testing_passed:
                 self.console.print(
-                    "[yellow]   → Tests reported failure despite appearing successful[/yellow]"
+                    "[yellow] → Tests reported failure despite appearing successful[/ yellow]"
                 )
             if not comprehensive_passed:
                 self.console.print(
-                    "[yellow]   → Comprehensive hooks reported failure despite appearing successful[/yellow]"
+                    "[yellow] → Comprehensive hooks reported failure despite appearing successful[/ yellow]"
                 )
 
         if options.ai_agent and self._should_debug():
@@ -303,8 +288,7 @@ class WorkflowPipeline:
             self.session.fail_task("workflow", "Testing failed")
             self._handle_test_failures()
             self._update_mcp_status("tests", "failed")
-            # In AI agent mode, continue to collect more failures
-            # In non-AI mode, this will be handled by caller
+
         else:
             self._update_mcp_status("tests", "completed")
 
@@ -317,8 +301,7 @@ class WorkflowPipeline:
         if not success:
             self.session.fail_task("comprehensive_hooks", "Comprehensive hooks failed")
             self._update_mcp_status("comprehensive", "failed")
-            # In AI agent mode, continue to collect more failures
-            # In non-AI mode, this will be handled by caller
+
         else:
             self._update_mcp_status("comprehensive", "completed")
 
@@ -340,7 +323,6 @@ class WorkflowPipeline:
 
         failures = test_manager.get_test_failures()
 
-        # Log test failure count for debugging
         if self._should_debug():
             self.debugger.log_test_failures(len(failures))
 
@@ -351,7 +333,7 @@ class WorkflowPipeline:
                 id=f"test_failure_{i}",
                 type="test_failure",
                 message=failure.strip(),
-                file_path="tests/",
+                file_path="tests /",
                 priority=Priority.HIGH,
                 stage="tests",
                 auto_fixable=False,
@@ -359,7 +341,6 @@ class WorkflowPipeline:
             self._mcp_state_manager.add_issue(issue)
 
     def _execute_standard_hooks_workflow(self, options: OptionsProtocol) -> bool:
-        """Execute standard hooks workflow with proper state management."""
         self._update_hooks_status_running()
 
         hooks_success = self.phases.run_hooks_phase(options)
@@ -368,13 +349,11 @@ class WorkflowPipeline:
         return hooks_success
 
     def _update_hooks_status_running(self) -> None:
-        """Update MCP state to running for hook phases."""
         if self._has_mcp_state_manager():
             self._mcp_state_manager.update_stage_status("fast", "running")
             self._mcp_state_manager.update_stage_status("comprehensive", "running")
 
     def _handle_hooks_completion(self, hooks_success: bool) -> None:
-        """Handle hooks completion with appropriate status updates."""
         if not hooks_success:
             self.session.fail_task("workflow", "Hooks failed")
             self._update_hooks_status_failed()
@@ -382,23 +361,19 @@ class WorkflowPipeline:
             self._update_hooks_status_completed()
 
     def _has_mcp_state_manager(self) -> bool:
-        """Check if MCP state manager is available."""
         return hasattr(self, "_mcp_state_manager") and self._mcp_state_manager
 
     def _update_hooks_status_failed(self) -> None:
-        """Update MCP state to failed for hook phases."""
         if self._has_mcp_state_manager():
             self._mcp_state_manager.update_stage_status("fast", "failed")
             self._mcp_state_manager.update_stage_status("comprehensive", "failed")
 
     def _update_hooks_status_completed(self) -> None:
-        """Update MCP state to completed for hook phases."""
         if self._has_mcp_state_manager():
             self._mcp_state_manager.update_stage_status("fast", "completed")
             self._mcp_state_manager.update_stage_status("comprehensive", "completed")
 
     async def _run_ai_agent_fixing_phase(self, options: OptionsProtocol) -> bool:
-        """Run AI agent fixing phase to analyze and fix collected failures."""
         self._update_mcp_status("ai_fixing", "running")
         self.logger.info("Starting AI agent fixing phase")
         self._log_debug_phase_start()
@@ -419,7 +394,6 @@ class WorkflowPipeline:
             return self._handle_fixing_phase_error(e)
 
     def _log_debug_phase_start(self) -> None:
-        """Log debug information for phase start."""
         if self._should_debug():
             self.debugger.log_workflow_phase(
                 "ai_agent_fixing",
@@ -428,7 +402,6 @@ class WorkflowPipeline:
             )
 
     def _setup_agent_coordinator(self) -> AgentCoordinator:
-        """Set up agent coordinator with proper context."""
         from crackerjack.agents.coordinator import AgentCoordinator
 
         agent_context = AgentContext(
@@ -441,7 +414,6 @@ class WorkflowPipeline:
         return agent_coordinator
 
     def _handle_no_issues_found(self) -> bool:
-        """Handle case when no issues are collected."""
         self.logger.info("No issues collected for AI agent fixing")
         self._update_mcp_status("ai_fixing", "completed")
         return True
@@ -449,7 +421,6 @@ class WorkflowPipeline:
     async def _process_fix_results(
         self, options: OptionsProtocol, fix_result: t.Any
     ) -> bool:
-        """Process fix results and verify success."""
         verification_success = await self._verify_fixes_applied(options, fix_result)
         success = fix_result.success and verification_success
 
@@ -462,7 +433,6 @@ class WorkflowPipeline:
         return success
 
     def _handle_successful_fixes(self, fix_result: t.Any) -> None:
-        """Handle successful fix results."""
         self.logger.info(
             "AI agents successfully fixed all issues and verification passed"
         )
@@ -472,10 +442,9 @@ class WorkflowPipeline:
     def _handle_failed_fixes(
         self, fix_result: t.Any, verification_success: bool
     ) -> None:
-        """Handle failed fix results."""
         if not verification_success:
             self.logger.warning(
-                "AI agent fixes did not pass verification - issues still exist"
+                "AI agent fixes did not pass verification-issues still exist"
             )
         else:
             self.logger.warning(
@@ -484,7 +453,6 @@ class WorkflowPipeline:
         self._update_mcp_status("ai_fixing", "failed")
 
     def _log_fix_counts_if_debugging(self, fix_result: t.Any) -> None:
-        """Log fix counts for debugging if debug mode is enabled."""
         if not self._should_debug():
             return
 
@@ -497,7 +465,6 @@ class WorkflowPipeline:
         self.debugger.log_hook_fixes(hook_fixes)
 
     def _log_debug_phase_completion(self, success: bool, fix_result: t.Any) -> None:
-        """Log debug information for phase completion."""
         if self._should_debug():
             self.debugger.log_workflow_phase(
                 "ai_agent_fixing",
@@ -510,7 +477,6 @@ class WorkflowPipeline:
             )
 
     def _handle_fixing_phase_error(self, error: Exception) -> bool:
-        """Handle errors during the fixing phase."""
         self.logger.exception(f"AI agent fixing phase failed: {error}")
         self.session.fail_task("ai_fixing", f"AI agent fixing failed: {error}")
         self._update_mcp_status("ai_fixing", "failed")
@@ -527,26 +493,20 @@ class WorkflowPipeline:
     async def _verify_fixes_applied(
         self, options: OptionsProtocol, fix_result: t.Any
     ) -> bool:
-        """Verify that AI agent fixes actually resolved the issues by re-running checks."""
         if not fix_result.fixes_applied:
-            return True  # No fixes were applied, nothing to verify
+            return True
 
         self.logger.info("Verifying AI agent fixes by re-running quality checks")
 
-        # Re-run the phases that previously failed to verify fixes
         verification_success = True
 
-        # Check if we need to re-run tests
         if any("test" in fix.lower() for fix in fix_result.fixes_applied):
             self.logger.info("Re-running tests to verify test fixes")
             test_success = self.phases.run_testing_phase(options)
             if not test_success:
-                self.logger.warning(
-                    "Test verification failed - test fixes did not work"
-                )
+                self.logger.warning("Test verification failed-test fixes did not work")
                 verification_success = False
 
-        # Check if we need to re-run comprehensive hooks
         hook_fixes = [
             f
             for f in fix_result.fixes_applied
@@ -558,22 +518,19 @@ class WorkflowPipeline:
             self.logger.info("Re-running comprehensive hooks to verify hook fixes")
             hook_success = self.phases.run_comprehensive_hooks_only(options)
             if not hook_success:
-                self.logger.warning(
-                    "Hook verification failed - hook fixes did not work"
-                )
+                self.logger.warning("Hook verification failed-hook fixes did not work")
                 verification_success = False
 
         if verification_success:
             self.logger.info("All AI agent fixes verified successfully")
         else:
             self.logger.error(
-                "Verification failed - some fixes did not resolve the issues"
+                "Verification failed-some fixes did not resolve the issues"
             )
 
         return verification_success
 
     async def _collect_issues_from_failures(self) -> list[Issue]:
-        """Collect issues from test and comprehensive hook failures."""
         issues: list[Issue] = []
 
         test_issues, test_count = self._collect_test_failure_issues()
@@ -587,7 +544,6 @@ class WorkflowPipeline:
         return issues
 
     def _collect_test_failure_issues(self) -> tuple[list[Issue], int]:
-        """Collect test failure issues and return count."""
         issues: list[Issue] = []
         test_count = 0
 
@@ -599,7 +555,7 @@ class WorkflowPipeline:
             test_count = len(test_failures)
             for i, failure in enumerate(
                 test_failures[:20],
-            ):  # Limit to prevent overload
+            ):
                 issue = Issue(
                     id=f"test_failure_{i}",
                     type=IssueType.TEST_FAILURE,
@@ -612,7 +568,6 @@ class WorkflowPipeline:
         return issues, test_count
 
     def _collect_hook_failure_issues(self) -> tuple[list[Issue], int]:
-        """Collect hook failure issues and return count."""
         issues: list[Issue] = []
         hook_count = 0
 
@@ -625,7 +580,6 @@ class WorkflowPipeline:
         return issues, hook_count
 
     def _process_hook_results(self, hook_results: t.Any) -> tuple[list[Issue], int]:
-        """Process hook results and extract issues."""
         issues: list[Issue] = []
         hook_count = 0
 
@@ -640,17 +594,14 @@ class WorkflowPipeline:
         return issues, hook_count
 
     def _is_hook_result_failed(self, result: t.Any) -> bool:
-        """Check if hook result indicates failure."""
         return result.status in ("failed", "error", "timeout")
 
     def _extract_issues_from_hook_result(self, result: t.Any) -> list[Issue]:
-        """Extract issues from a single hook result."""
         if result.issues_found:
             return self._create_specific_issues_from_hook_result(result)
         return [self._create_generic_issue_from_hook_result(result)]
 
     def _create_specific_issues_from_hook_result(self, result: t.Any) -> list[Issue]:
-        """Create specific issues from hook result with detailed information."""
         issues: list[Issue] = []
         hook_context = f"{result.name}: "
 
@@ -661,7 +612,6 @@ class WorkflowPipeline:
         return issues
 
     def _create_generic_issue_from_hook_result(self, result: t.Any) -> Issue:
-        """Create a generic issue for hook failure without specific details."""
         issue_type = self._determine_hook_issue_type(result.name)
         return Issue(
             id=f"hook_failure_{result.name}",
@@ -672,10 +622,9 @@ class WorkflowPipeline:
         )
 
     def _determine_hook_issue_type(self, hook_name: str) -> IssueType:
-        """Determine issue type based on hook name."""
         formatting_hooks = {
             "trailing-whitespace",
-            "end-of-file-fixer",
+            "end - of - file-fixer",
             "ruff-format",
             "ruff-check",
         }
@@ -686,7 +635,6 @@ class WorkflowPipeline:
         )
 
     def _fallback_to_session_tracker(self) -> tuple[list[Issue], int]:
-        """Fallback to session tracker if hook manager fails."""
         issues: list[Issue] = []
         hook_count = 0
 
@@ -702,14 +650,12 @@ class WorkflowPipeline:
         return issues, hook_count
 
     def _is_failed_hook_task(self, task_data: t.Any, task_id: str) -> bool:
-        """Check if a task is a failed hook task."""
         return task_data.status == "failed" and task_id in (
             "fast_hooks",
             "comprehensive_hooks",
         )
 
     def _process_hook_failure(self, task_id: str, task_data: t.Any) -> list[Issue]:
-        """Process a single hook failure and return corresponding issues."""
         error_msg = getattr(task_data, "error_message", "Unknown error")
         specific_issues = self._parse_hook_error_details(task_id, error_msg)
 
@@ -719,7 +665,6 @@ class WorkflowPipeline:
         return [self._create_generic_hook_issue(task_id, error_msg)]
 
     def _create_generic_hook_issue(self, task_id: str, error_msg: str) -> Issue:
-        """Create a generic issue for unspecific hook failures."""
         issue_type = IssueType.FORMATTING if "fast" in task_id else IssueType.TYPE_ERROR
         return Issue(
             id=f"hook_failure_{task_id}",
@@ -730,12 +675,9 @@ class WorkflowPipeline:
         )
 
     def _parse_hook_error_details(self, task_id: str, error_msg: str) -> list[Issue]:
-        """Parse specific hook failure details to create targeted issues."""
         issues: list[Issue] = []
 
-        # For comprehensive hooks, parse specific tool failures
         if task_id == "comprehensive_hooks":
-            # Check for complexipy failures (complexity violations)
             if "complexipy" in error_msg.lower():
                 issues.append(
                     Issue(
@@ -747,7 +689,6 @@ class WorkflowPipeline:
                     )
                 )
 
-            # Check for pyright failures (type errors)
             if "pyright" in error_msg.lower():
                 issues.append(
                     Issue(
@@ -759,7 +700,6 @@ class WorkflowPipeline:
                     )
                 )
 
-            # Check for bandit failures (security issues)
             if "bandit" in error_msg.lower():
                 issues.append(
                     Issue(
@@ -771,19 +711,17 @@ class WorkflowPipeline:
                     )
                 )
 
-            # Check for refurb failures (code quality issues)
             if "refurb" in error_msg.lower():
                 issues.append(
                     Issue(
                         id="refurb_quality_issue",
-                        type=IssueType.PERFORMANCE,  # Use PERFORMANCE as closest match for refurb issues
+                        type=IssueType.PERFORMANCE,
                         severity=Priority.MEDIUM,
                         message="Code quality issues detected by refurb",
                         stage="comprehensive",
                     )
                 )
 
-            # Check for vulture failures (dead code)
             if "vulture" in error_msg.lower():
                 issues.append(
                     Issue(
@@ -796,7 +734,6 @@ class WorkflowPipeline:
                 )
 
         elif task_id == "fast_hooks":
-            # Fast hooks are typically formatting issues
             issues.append(
                 Issue(
                     id="fast_hooks_formatting",
@@ -810,11 +747,9 @@ class WorkflowPipeline:
         return issues
 
     def _parse_issues_for_agents(self, issue_strings: list[str]) -> list[Issue]:
-        """Parse string issues into structured Issue objects for AI agents."""
         issues: list[Issue] = []
 
         for i, issue_str in enumerate(issue_strings):
-            # Determine issue type from content patterns
             issue_type = IssueType.FORMATTING
             priority = Priority.MEDIUM
 
@@ -867,7 +802,6 @@ class WorkflowPipeline:
     def _log_failure_counts_if_debugging(
         self, test_count: int, hook_count: int
     ) -> None:
-        """Log failure counts if debugging is enabled."""
         if self._should_debug():
             self.debugger.log_test_failures(test_count)
             self.debugger.log_hook_failures(hook_count)

@@ -1,10 +1,3 @@
-"""
-AI Agent Watchdog System
-
-Monitors AI agent execution for failures, performance issues, and regression patterns.
-Provides real-time oversight to prevent surprise failures and ensure reliable auto-fixing.
-"""
-
 import asyncio
 import json
 import typing as t
@@ -21,8 +14,6 @@ from rich.table import Table
 
 @dataclass
 class AgentPerformanceMetrics:
-    """Track agent performance over time."""
-
     agent_name: str
     total_issues_handled: int = 0
     successful_fixes: int = 0
@@ -37,9 +28,7 @@ class AgentPerformanceMetrics:
 
 @dataclass
 class WatchdogAlert:
-    """Watchdog alert for monitoring issues."""
-
-    level: str  # "warning", "error", "critical"
+    level: str
     message: str
     agent_name: str | None = None
     issue_id: str | None = None
@@ -48,8 +37,6 @@ class WatchdogAlert:
 
 
 class AIAgentWatchdog:
-    """Monitors AI agent execution and prevents regression failures."""
-
     def __init__(self, console: Console | None = None):
         self.console = console or Console()
         self.performance_metrics: dict[str, AgentPerformanceMetrics] = {}
@@ -62,17 +49,14 @@ class AIAgentWatchdog:
         self.monitoring_active = False
         self.execution_history: list[dict[str, t.Any]] = []
 
-        # Performance thresholds
-        self.max_execution_time = 30.0  # seconds
-        self.min_success_rate = 0.6  # 60%
+        self.max_execution_time = 30.0
+        self.min_success_rate = 0.6
         self.max_recent_failures = 3
 
     async def start_monitoring(self, coordinator: AgentCoordinator):
-        """Start monitoring agent coordinator."""
         self.monitoring_active = True
         self.console.print("🔍 [bold green]AI Agent Watchdog Started[/bold green]")
 
-        # Initialize metrics for all agents
         coordinator.initialize_agents()
         for agent in coordinator.agents:
             agent_name = agent.__class__.__name__
@@ -86,7 +70,6 @@ class AIAgentWatchdog:
         )
 
     def stop_monitoring(self):
-        """Stop monitoring and generate final report."""
         self.monitoring_active = False
         self.console.print("🔍 [bold yellow]AI Agent Watchdog Stopped[/bold yellow]")
         self._generate_final_report()
@@ -94,7 +77,6 @@ class AIAgentWatchdog:
     async def monitor_issue_handling(
         self, agent_name: str, issue: Issue, result: FixResult, execution_time: float
     ):
-        """Monitor individual issue handling by agents."""
         if not self.monitoring_active:
             return
 
@@ -103,7 +85,6 @@ class AIAgentWatchdog:
             metrics = AgentPerformanceMetrics(agent_name=agent_name)
             self.performance_metrics[agent_name] = metrics
 
-        # Update metrics
         metrics.total_issues_handled += 1
         if result.success:
             metrics.successful_fixes += 1
@@ -113,11 +94,9 @@ class AIAgentWatchdog:
             failure_key = f"{issue.type.value}_{issue.message[:50]}"
             metrics.recent_failures.append(failure_key)
 
-            # Keep only recent failures
             if len(metrics.recent_failures) > self.max_recent_failures:
                 metrics.recent_failures.pop(0)
 
-        # Update averages
         total_fixes = metrics.successful_fixes + metrics.failed_fixes
         metrics.average_confidence = (
             metrics.average_confidence * (total_fixes - 1) + result.confidence
@@ -126,15 +105,12 @@ class AIAgentWatchdog:
             metrics.average_execution_time * (total_fixes - 1) + execution_time
         ) / total_fixes
 
-        # Track issue types
         metrics.issue_types_handled[issue.type] = (
             metrics.issue_types_handled.get(issue.type, 0) + 1
         )
 
-        # Check for alerts
         await self._check_for_alerts(agent_name, issue, result, execution_time, metrics)
 
-        # Store execution history
         self.execution_history.append(
             {
                 "timestamp": datetime.now().isoformat(),
@@ -147,7 +123,6 @@ class AIAgentWatchdog:
             }
         )
 
-        # Keep history manageable
         if len(self.execution_history) > 1000:
             self.execution_history = self.execution_history[-500:]
 
@@ -159,15 +134,13 @@ class AIAgentWatchdog:
         execution_time: float,
         metrics: AgentPerformanceMetrics,
     ):
-        """Check for alert conditions."""
         alerts = []
 
-        # Performance alerts
         if execution_time > self.max_execution_time:
             alerts.append(
                 WatchdogAlert(
                     level="warning",
-                    message=f"Agent took {execution_time:.1f}s (>{self.max_execution_time}s threshold)",
+                    message=f"Agent took {execution_time: .1f}s (>{self.max_execution_time}s threshold)",
                     agent_name=agent_name,
                     issue_id=issue.id,
                     details={
@@ -177,14 +150,13 @@ class AIAgentWatchdog:
                 )
             )
 
-        # Success rate alerts
-        if metrics.total_issues_handled >= 5:  # Only after handling multiple issues
+        if metrics.total_issues_handled >= 5:
             success_rate = metrics.successful_fixes / metrics.total_issues_handled
             if success_rate < self.min_success_rate:
                 alerts.append(
                     WatchdogAlert(
                         level="error",
-                        message=f"Agent success rate {success_rate:.1%} below {self.min_success_rate:.1%} threshold",
+                        message=f"Agent success rate {success_rate: .1 %} below {self.min_success_rate: .1 %} threshold",
                         agent_name=agent_name,
                         details={
                             "success_rate": success_rate,
@@ -193,7 +165,6 @@ class AIAgentWatchdog:
                     )
                 )
 
-        # Regression pattern alerts
         failure_signature = f"{agent_name}_{issue.type.value}_{issue.message[:30]}"
         if failure_signature in self.known_regressions and not result.success:
             alerts.append(
@@ -206,10 +177,9 @@ class AIAgentWatchdog:
                 )
             )
 
-        # Repeated failure alerts
         if len(metrics.recent_failures) >= self.max_recent_failures:
             unique_failures = set(metrics.recent_failures)
-            if len(unique_failures) == 1:  # Same failure repeated
+            if len(unique_failures) == 1:
                 alerts.append(
                     WatchdogAlert(
                         level="error",
@@ -219,13 +189,11 @@ class AIAgentWatchdog:
                     )
                 )
 
-        # Add alerts
         for alert in alerts:
             self.alerts.append(alert)
             await self._handle_alert(alert)
 
     async def _handle_alert(self, alert: WatchdogAlert):
-        """Handle watchdog alert."""
         colors = {"warning": "yellow", "error": "red", "critical": "bold red"}
         color = colors.get(alert.level) or "white"
 
@@ -235,19 +203,17 @@ class AIAgentWatchdog:
             f"{icon} [bold {color}]{alert.level.upper()}[/bold {color}]: {alert.message}"
         )
         if alert.agent_name:
-            self.console.print(f"   Agent: {alert.agent_name}")
+            self.console.print(f" Agent: {alert.agent_name}")
         if alert.issue_id:
-            self.console.print(f"   Issue: {alert.issue_id}")
+            self.console.print(f" Issue: {alert.issue_id}")
 
-        # For critical alerts, suggest immediate actions
         if alert.level == "critical":
-            self.console.print("   [bold red]IMMEDIATE ACTION REQUIRED[/bold red]")
+            self.console.print(" [bold red]IMMEDIATE ACTION REQUIRED[/bold red]")
             if "regression" in alert.message.lower():
-                self.console.print("   → Run regression tests immediately")
-                self.console.print("   → Check agent implementation for recent changes")
+                self.console.print(" → Run regression tests immediately")
+                self.console.print(" → Check agent implementation for recent changes")
 
     def create_monitoring_dashboard(self) -> Table:
-        """Create real-time monitoring dashboard."""
         table = Table(
             title="AI Agent Watchdog Dashboard",
             header_style="bold magenta",
@@ -267,7 +233,6 @@ class AIAgentWatchdog:
 
             success_rate = metrics.successful_fixes / metrics.total_issues_handled
 
-            # Status determination
             status_color = "green"
             status_text = "✅ OK"
 
@@ -284,16 +249,16 @@ class AIAgentWatchdog:
                 if delta.days > 0:
                     last_success = f"{delta.days}d ago"
                 elif delta.seconds > 3600:
-                    last_success = f"{delta.seconds // 3600}h ago"
+                    last_success = f"{delta.seconds / 3600}h ago"
                 else:
-                    last_success = f"{delta.seconds // 60}m ago"
+                    last_success = f"{delta.seconds / 60}m ago"
 
             table.add_row(
                 agent_name,
                 str(metrics.total_issues_handled),
-                f"{success_rate:.1%}",
-                f"{metrics.average_confidence:.2f}",
-                f"{metrics.average_execution_time:.1f}",
+                f"{success_rate: .1 %}",
+                f"{metrics.average_confidence: .2f}",
+                f"{metrics.average_execution_time: .1f}",
                 last_success,
                 f"[{status_color}]{status_text}[/{status_color}]",
             )
@@ -301,15 +266,12 @@ class AIAgentWatchdog:
         return table
 
     def get_recent_alerts(self, hours: int = 1) -> list[WatchdogAlert]:
-        """Get alerts from the last N hours."""
         cutoff = datetime.now() - timedelta(hours=hours)
         return [alert for alert in self.alerts if alert.timestamp > cutoff]
 
     def _generate_final_report(self):
-        """Generate final monitoring report."""
         self.console.print("\n📊 [bold]AI Agent Watchdog Final Report[/bold]")
 
-        # Summary statistics
         total_issues = sum(
             m.total_issues_handled for m in self.performance_metrics.values()
         )
@@ -320,10 +282,9 @@ class AIAgentWatchdog:
         if total_issues > 0:
             overall_success_rate = total_successes / total_issues
             self.console.print(
-                f"Overall Success Rate: {overall_success_rate:.1%} ({total_successes}/{total_issues})"
+                f"Overall Success Rate: {overall_success_rate: .1 %} ({total_successes}/{total_issues})"
             )
 
-        # Alert summary
         alert_counts = {"warning": 0, "error": 0, "critical": 0}
         for alert in self.alerts:
             alert_counts[alert.level] += 1
@@ -332,7 +293,6 @@ class AIAgentWatchdog:
             f"Alerts: {alert_counts['critical']} Critical, {alert_counts['error']} Errors, {alert_counts['warning']} Warnings"
         )
 
-        # Top performing agents
         if self.performance_metrics:
             best_agent = max(
                 (
@@ -348,14 +308,12 @@ class AIAgentWatchdog:
                     best_agent.successful_fixes / best_agent.total_issues_handled
                 )
                 self.console.print(
-                    f"Top Performer: {best_agent.agent_name} ({success_rate:.1%} success rate)"
+                    f"Top Performer: {best_agent.agent_name} ({success_rate: .1 %} success rate)"
                 )
 
-        # Save detailed report
         self._save_monitoring_report()
 
     def _save_monitoring_report(self):
-        """Save detailed monitoring report to file."""
         report_data = {
             "timestamp": datetime.now().isoformat(),
             "metrics": {
@@ -399,11 +357,9 @@ class AIAgentWatchdog:
 
 
 async def run_agent_monitoring_demo():
-    """Demo of the AI agent monitoring system."""
     console = Console()
     watchdog = AIAgentWatchdog(console)
 
-    # Simulate agent context and coordinator
     from crackerjack.agents.base import AgentContext
 
     context = AgentContext(project_path=Path.cwd())
@@ -411,12 +367,10 @@ async def run_agent_monitoring_demo():
 
     await watchdog.start_monitoring(coordinator)
 
-    # Simulate some agent executions with monitoring
     with Live(
         watchdog.create_monitoring_dashboard(), refresh_per_second=1, console=console
     ) as live:
         for i in range(10):
-            # Simulate issue handling
             issue = Issue(
                 id=f"demo_{i}",
                 type=IssueType.COMPLEXITY if i % 2 == 0 else IssueType.FORMATTING,
@@ -425,8 +379,7 @@ async def run_agent_monitoring_demo():
                 file_path="demo.py",
             )
 
-            # Simulate varying results
-            success = i % 3 != 0  # Fail every 3rd attempt
+            success = i % 3 != 0
             result = FixResult(
                 success=success,
                 confidence=0.8 if success else 0.3,
@@ -434,14 +387,14 @@ async def run_agent_monitoring_demo():
                 remaining_issues=[] if success else ["Demo failure"],
             )
 
-            execution_time = 2.0 + (i % 5) * 0.5  # Varying execution times
+            execution_time = 2.0 + (i % 5) * 0.5
 
             await watchdog.monitor_issue_handling(
                 "DemoAgent", issue, result, execution_time
             )
             live.update(watchdog.create_monitoring_dashboard())
 
-            await asyncio.sleep(0.5)  # Simulate work
+            await asyncio.sleep(0.5)
 
     watchdog.stop_monitoring()
 

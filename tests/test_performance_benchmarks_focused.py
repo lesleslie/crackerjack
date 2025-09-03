@@ -1,10 +1,3 @@
-"""Focused tests for PerformanceBenchmarkService with high-value coverage.
-
-This module tests the core performance benchmarking system functionality
-without complex file system mocking, focusing on business logic and
-data structures that provide maximum coverage impact.
-"""
-
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -20,10 +13,7 @@ from crackerjack.services.performance_benchmarks import (
 
 
 class TestBenchmarkDataStructures:
-    """Test BenchmarkResult and PerformanceReport data structures."""
-
     def test_benchmark_result_creation_and_defaults(self):
-        """Test BenchmarkResult creation with comprehensive data."""
         result = BenchmarkResult(
             name="test_benchmark",
             duration_seconds=1.5,
@@ -42,7 +32,6 @@ class TestBenchmarkDataStructures:
         assert result.metadata["complexity"] == "high"
 
     def test_benchmark_result_minimal(self):
-        """Test BenchmarkResult with minimal required fields."""
         result = BenchmarkResult(name="minimal", duration_seconds=0.5)
 
         assert result.name == "minimal"
@@ -53,7 +42,6 @@ class TestBenchmarkDataStructures:
         assert result.metadata == {}
 
     def test_performance_report_comprehensive(self):
-        """Test PerformanceReport with all fields populated."""
         benchmarks = [
             BenchmarkResult("component1", 2.0, metadata={"type": "discovery"}),
             BenchmarkResult("component2", 1.5, metadata={"type": "loading"}),
@@ -79,14 +67,12 @@ class TestBenchmarkDataStructures:
 
 @pytest.fixture
 def mock_filesystem():
-    """Mock filesystem interface."""
     filesystem = Mock(spec=FileSystemInterface)
     return filesystem
 
 
 @pytest.fixture
 def benchmark_service(mock_filesystem):
-    """Create PerformanceBenchmarkService with mocked dependencies."""
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
@@ -99,30 +85,25 @@ def benchmark_service(mock_filesystem):
 
 
 class TestPerformanceRecommendations:
-    """Test performance recommendation generation logic."""
-
     def test_comprehensive_recommendations(self, benchmark_service):
-        """Test comprehensive performance recommendations for all issue types."""
         report = PerformanceReport(
-            total_duration=400.0,  # Triggers overall recommendation
-            test_benchmarks={
-                "iteration_1": {"total_duration": 70.0, "success": True}  # Slow test
-            },
+            total_duration=400.0,
+            test_benchmarks={"iteration_1": {"total_duration": 70.0, "success": True}},
             hook_performance={
                 "pyright": {
                     "mean_duration": 45.0,
                     "min_duration": 40.0,
                     "max_duration": 50.0,
-                },  # Slow
+                },
                 "ruff": {
                     "mean_duration": 2.0,
                     "min_duration": 1.8,
                     "max_duration": 2.2,
-                },  # Fast
+                },
             },
             workflow_benchmarks=[
-                BenchmarkResult("slow_component", 8.0),  # Slow (>5s)
-                BenchmarkResult("fast_component", 1.0),  # Fast
+                BenchmarkResult("slow_component", 8.0),
+                BenchmarkResult("fast_component", 1.0),
             ],
         )
 
@@ -130,7 +111,6 @@ class TestPerformanceRecommendations:
             report
         )
 
-        # Verify all recommendation types are generated
         test_rec = next((r for r in recommendations if "test suite" in r), None)
         assert test_rec is not None
         assert "exceeds 1 minute" in test_rec
@@ -147,18 +127,17 @@ class TestPerformanceRecommendations:
         assert component_rec is not None
         assert "slow_component" in component_rec
 
-        overall_rec = next((r for r in recommendations if "--skip-hooks" in r), None)
+        overall_rec = next(
+            (r for r in recommendations if "- - skip - hooks" in r), None
+        )
         assert overall_rec is not None
 
     def test_no_recommendations_for_good_performance(self, benchmark_service):
-        """Test no recommendations when performance is good."""
         report = PerformanceReport(
-            total_duration=30.0,  # Fast
-            test_benchmarks={
-                "iteration_1": {"total_duration": 15.0, "success": True}
-            },  # Fast
-            hook_performance={"ruff": {"mean_duration": 2.0}},  # Fast
-            workflow_benchmarks=[BenchmarkResult("component", 1.0)],  # Fast
+            total_duration=30.0,
+            test_benchmarks={"iteration_1": {"total_duration": 15.0, "success": True}},
+            hook_performance={"ruff": {"mean_duration": 2.0}},
+            workflow_benchmarks=[BenchmarkResult("component", 1.0)],
         )
 
         recommendations = benchmark_service._generate_performance_recommendations(
@@ -167,7 +146,6 @@ class TestPerformanceRecommendations:
         assert recommendations == []
 
     def test_slow_hook_identification_logic(self, benchmark_service):
-        """Test slow hook identification with various data types."""
         hook_performance = {
             "fast_hook": {
                 "mean_duration": 5.0,
@@ -184,11 +162,11 @@ class TestPerformanceRecommendations:
                 "min_duration": 55.0,
                 "max_duration": 65.0,
             },
-            "invalid_data": "not_a_dict",  # Should be ignored
+            "invalid_data": "not_a_dict",
             "missing_mean": {
                 "min_duration": 2.0,
                 "max_duration": 3.0,
-            },  # Missing mean_duration
+            },
         }
 
         slow_hooks = benchmark_service._identify_slow_hooks(hook_performance)
@@ -197,42 +175,36 @@ class TestPerformanceRecommendations:
         assert ("slow_hook", 35.0) in slow_hooks
         assert ("very_slow_hook", 60.0) in slow_hooks
 
-        # Verify exclusions
         hook_names = [hook[0] for hook in slow_hooks]
         assert "fast_hook" not in hook_names
         assert "invalid_data" not in hook_names
         assert "missing_mean" not in hook_names
 
     def test_slow_hooks_message_formatting(self, benchmark_service):
-        """Test slow hooks message formatting with truncation."""
         slow_hooks = [
             ("pyright", 45.5),
             ("bandit", 32.1),
             ("vulture", 28.9),
-            ("creosote", 25.3),  # Should be truncated
-            ("extra_hook", 20.0),  # Should be truncated
+            ("creosote", 25.3),
+            ("extra_hook", 20.0),
         ]
 
         message = benchmark_service._format_slow_hooks_message(slow_hooks)
 
-        # Verify first 3 hooks are included
         assert "pyright(45.5s)" in message
         assert "bandit(32.1s)" in message
         assert "vulture(28.9s)" in message
 
-        # Verify truncation after 3 hooks
         assert "creosote" not in message
         assert "extra_hook" not in message
 
-        # Verify recommendation message
         assert "Consider hook optimization" in message
 
     def test_slow_component_identification(self, benchmark_service):
-        """Test slow component identification logic."""
         workflow_benchmarks = [
             BenchmarkResult("fast_component1", 2.0),
             BenchmarkResult("fast_component2", 3.5),
-            BenchmarkResult("borderline_component", 5.0),  # Exactly 5.0, not slow
+            BenchmarkResult("borderline_component", 5.0),
             BenchmarkResult("slow_component1", 8.0),
             BenchmarkResult("slow_component2", 12.0),
             BenchmarkResult("very_slow_component", 20.0),
@@ -242,42 +214,32 @@ class TestPerformanceRecommendations:
             workflow_benchmarks
         )
 
-        # Only components > 5 seconds should be identified as slow
         assert len(slow_components) == 3
         slow_names = [c.name for c in slow_components]
         assert "slow_component1" in slow_names
         assert "slow_component2" in slow_names
         assert "very_slow_component" in slow_names
 
-        # Verify exclusions
         assert "fast_component1" not in slow_names
         assert "fast_component2" not in slow_names
         assert "borderline_component" not in slow_names
 
 
 class TestBaselineComparison:
-    """Test baseline comparison logic without file system dependencies."""
-
     def test_performance_change_calculation(self, benchmark_service):
-        """Test performance change percentage calculation."""
-        # Improvement (20% faster)
         change = benchmark_service._calculate_performance_change(8.0, 10.0)
         assert change == -20.0
 
-        # Degradation (25% slower)
         change = benchmark_service._calculate_performance_change(12.5, 10.0)
         assert change == 25.0
 
-        # No change
         change = benchmark_service._calculate_performance_change(10.0, 10.0)
         assert change == 0.0
 
-        # Large improvement (50% faster)
         change = benchmark_service._calculate_performance_change(5.0, 10.0)
         assert change == -50.0
 
     def test_compare_with_baseline_no_history(self, benchmark_service):
-        """Test baseline comparison when no history is available."""
         current_report = PerformanceReport(total_duration=15.0)
 
         with patch.object(
@@ -287,7 +249,6 @@ class TestBaselineComparison:
             assert comparison == {}
 
     def test_compare_with_baseline_error_handling(self, benchmark_service):
-        """Test baseline comparison error handling."""
         current_report = PerformanceReport(total_duration=15.0)
 
         with patch.object(
@@ -301,10 +262,8 @@ class TestBaselineComparison:
             assert "Load error" in comparison["error"]
 
     def test_overall_performance_comparison_logic(self, benchmark_service):
-        """Test overall performance comparison calculation logic."""
         current_report = PerformanceReport(total_duration=20.0)
 
-        # Mock recent history with various durations
         mock_history = [
             {"total_duration": 30.0},
             {"total_duration": 25.0},
@@ -318,9 +277,8 @@ class TestBaselineComparison:
             current_report, mock_history, comparison
         )
 
-        # Baseline should be median of last 5 runs: median([30, 25, 35, 20, 30]) = 30
         baseline_median = 30.0
-        expected_change = ((20.0 - baseline_median) / baseline_median) * 100  # -33.33%
+        expected_change = ((20.0 - baseline_median) / baseline_median) * 100
 
         assert "overall_performance_change_percent" in comparison
         assert (
@@ -330,152 +288,125 @@ class TestBaselineComparison:
 
 
 class TestTrendAnalysis:
-    """Test trend analysis logic without complex file operations."""
-
     def test_trend_direction_determination(self, benchmark_service):
-        """Test trend direction determination logic."""
-        # Improving trend: current < historical average
         improving_durations = [
             10.0,
             9.5,
             9.0,
             8.5,
             7.0,
-        ]  # Current: 7.0, Avg of previous: 9.25
+        ]
         trend = benchmark_service._determine_trend_direction(improving_durations)
         assert trend == "improving"
 
-        # Degrading trend: current > historical average
         degrading_durations = [
             7.0,
             8.0,
             9.0,
             10.0,
             12.0,
-        ]  # Current: 12.0, Avg of previous: 8.5
+        ]
         trend = benchmark_service._determine_trend_direction(degrading_durations)
         assert trend == "degrading"
 
-        # Stable/equal trend (considered degrading)
-        stable_durations = [8.0, 8.0, 8.0, 8.0]  # Current: 8.0, Avg of previous: 8.0
+        stable_durations = [8.0, 8.0, 8.0, 8.0]
         trend = benchmark_service._determine_trend_direction(stable_durations)
-        assert trend == "degrading"  # Equal is considered degrading
+        assert trend == "degrading"
 
     def test_component_duration_extraction(self, benchmark_service):
-        """Test component duration extraction from history data."""
         history = [
             {"component_durations": {"file_discovery": 1.0, "config_loading": 0.5}},
             {"component_durations": {"file_discovery": 1.2, "other_component": 0.8}},
             {"component_durations": {"file_discovery": 0.9, "config_loading": 0.6}},
-            {"missing_components": "invalid_structure"},  # Missing component_durations
+            {"missing_components": "invalid_structure"},
         ]
 
-        # Extract file_discovery (present in all valid entries)
         file_durations = benchmark_service._extract_component_durations(
             history, "file_discovery"
         )
         assert file_durations == [1.0, 1.2, 0.9]
 
-        # Extract config_loading (missing from some entries)
         config_durations = benchmark_service._extract_component_durations(
             history, "config_loading"
         )
         assert config_durations == [0.5, 0.6]
 
-        # Extract non-existent component
         missing_durations = benchmark_service._extract_component_durations(
             history, "non_existent"
         )
         assert missing_durations == []
 
     def test_insufficient_trend_data_handling(self, benchmark_service):
-        """Test handling of insufficient data for trend analysis."""
-        # Test no history file
         with patch("pathlib.Path.exists", return_value=False):
             result = benchmark_service._handle_insufficient_trend_data()
             assert result["error"] == "No performance history available"
 
-        # Test file exists but insufficient data
         with patch("pathlib.Path.exists", return_value=True):
             result = benchmark_service._handle_insufficient_trend_data()
             assert result["error"] == "Insufficient data for trend analysis"
 
 
 class TestDisplayFunctionality:
-    """Test display and formatting functionality."""
-
     def test_display_minimal_report(self, benchmark_service):
-        """Test display of minimal performance report."""
         report = PerformanceReport(total_duration=15.0)
 
-        # Should not raise exceptions
         benchmark_service.display_performance_report(report)
 
-        # Verify console was called multiple times
         assert benchmark_service.console.print.call_count > 0
 
-        # Verify basic elements were displayed
         call_args_list = benchmark_service.console.print.call_args_list
         output_str = " ".join(str(call) for call in call_args_list)
-        assert "15.00s" in output_str  # Duration should be displayed
-        assert "No performance issues detected!" in output_str  # Empty recommendations
+        assert "15.00s" in output_str
+        assert "No performance issues detected !" in output_str
 
     def test_comparison_metrics_formatting(self, benchmark_service):
-        """Test performance comparison metrics formatting."""
         baseline_comparison = {
-            "overall_performance_change_percent": -12.5,  # Green (faster)
-            "component1_change_percent": 8.3,  # Yellow (slower, < 10%)
-            "component2_change_percent": 25.7,  # Red (slower, > 10%)
-            "non_percent_metric": "ignored",  # Should be ignored
-            "hook_count": 5,  # Should be ignored
+            "overall_performance_change_percent": -12.5,
+            "component1_change_percent": 8.3,
+            "component2_change_percent": 25.7,
+            "non_percent_metric": "ignored",
+            "hook_count": 5,
         }
 
         benchmark_service._print_comparison_metrics(baseline_comparison)
 
-        # Verify appropriate formatting calls were made
         assert benchmark_service.console.print.call_count > 0
         call_args_list = benchmark_service.console.print.call_args_list
 
-        # Check that percentage metrics were processed
         output_str = " ".join(str(call) for call in call_args_list)
-        assert "12.5%" in output_str  # Improvement
-        assert "8.3%" in output_str  # Minor degradation
-        assert "25.7%" in output_str  # Major degradation
+        assert "12.5 %" in output_str
+        assert "8.3 %" in output_str
+        assert "25.7 %" in output_str
 
     def test_overall_stats_display(self, benchmark_service):
-        """Test overall statistics display formatting."""
         report = PerformanceReport(total_duration=42.75)
 
         benchmark_service._display_overall_stats(report)
 
-        # Verify console was called and duration was formatted
         assert benchmark_service.console.print.call_count > 0
         call_args_list = benchmark_service.console.print.call_args_list
         output_str = " ".join(str(call) for call in call_args_list)
         assert "42.75s" in output_str
 
     def test_workflow_components_display_with_metadata(self, benchmark_service):
-        """Test workflow components display with metadata."""
         report = PerformanceReport(
             total_duration=10.0,
             workflow_benchmarks=[
                 BenchmarkResult(
                     "file_discovery", 2.5, metadata={"files": 150, "dirs": 10}
                 ),
-                BenchmarkResult("config_loading", 0.8, metadata={}),  # No metadata
+                BenchmarkResult("config_loading", 0.8, metadata={}),
                 BenchmarkResult("validation", 1.2, metadata={"checks": 5}),
             ],
         )
 
         benchmark_service._display_workflow_components(report)
 
-        # Verify table creation and console output
         assert benchmark_service.console.print.call_count > 0
         call_count = benchmark_service.console.print.call_count
-        assert call_count >= 2  # Table + empty line
+        assert call_count >= 2
 
     def test_hook_performance_display(self, benchmark_service):
-        """Test hook performance table display."""
         report = PerformanceReport(
             total_duration=10.0,
             hook_performance={
@@ -489,23 +420,19 @@ class TestDisplayFunctionality:
                     "min_duration": 11.0,
                     "max_duration": 14.0,
                 },
-                "invalid": "not_a_dict",  # Should be skipped
+                "invalid": "not_a_dict",
             },
         )
 
         benchmark_service._display_hook_performance(report)
 
-        # Verify table creation
         assert benchmark_service.console.print.call_count > 0
         call_count = benchmark_service.console.print.call_count
-        assert call_count >= 2  # Table + empty line
+        assert call_count >= 2
 
 
 class TestServiceInitialization:
-    """Test service initialization and configuration."""
-
     def test_service_initialization_paths(self, mock_filesystem):
-        """Test service initialization with correct paths."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
@@ -523,11 +450,9 @@ class TestServiceInitialization:
                     == temp_path / ".benchmarks" / "performance_history.json"
                 )
 
-                # Verify benchmarks directory was created
                 assert service.benchmarks_dir.exists()
 
     def test_service_initialization_console_default(self, mock_filesystem):
-        """Test service initialization with default console."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
@@ -537,22 +462,16 @@ class TestServiceInitialization:
             ):
                 service = PerformanceBenchmarkService(filesystem=mock_filesystem)
 
-                # Should create a Console instance
                 from rich.console import Console
 
                 assert isinstance(service.console, Console)
 
 
 class TestComprehensiveBenchmarkOrchestration:
-    """Test comprehensive benchmark orchestration logic."""
-
     @patch("crackerjack.services.performance_benchmarks.time.time")
     def test_comprehensive_benchmark_orchestration(self, mock_time, benchmark_service):
-        """Test comprehensive benchmark orchestration without subprocess calls."""
-        # Mock time progression
-        mock_time.side_effect = [1000.0, 1015.5]  # 15.5 second duration
+        mock_time.side_effect = [1000.0, 1015.5]
 
-        # Mock all component methods
         with (
             patch.object(benchmark_service, "_benchmark_test_suite") as mock_tests,
             patch.object(benchmark_service, "_benchmark_hooks") as mock_hooks,
@@ -568,7 +487,6 @@ class TestComprehensiveBenchmarkOrchestration:
             patch.object(benchmark_service, "_compare_with_baseline") as mock_baseline,
             patch.object(benchmark_service, "_save_performance_history") as mock_save,
         ):
-            # Configure realistic mock responses
             mock_tests.return_value = {
                 "iteration_1": {"success": True, "total_duration": 25.0},
                 "iteration_2": {"success": True, "total_duration": 23.0},
@@ -604,12 +522,10 @@ class TestComprehensiveBenchmarkOrchestration:
                 "file_discovery_change_percent": 10.0,
             }
 
-            # Execute comprehensive benchmark
             report = benchmark_service.run_comprehensive_benchmark(
                 run_tests=True, run_hooks=True, iterations=2
             )
 
-            # Verify orchestration results
             assert report.total_duration == 15.5
             assert len(report.test_benchmarks) == 2
             assert len(report.hook_performance) == 2
@@ -618,7 +534,6 @@ class TestComprehensiveBenchmarkOrchestration:
             assert len(report.recommendations) == 2
             assert len(report.baseline_comparison) == 2
 
-            # Verify all components were called with correct parameters
             mock_tests.assert_called_once_with(2)
             mock_hooks.assert_called_once_with(2)
             mock_workflow.assert_called_once_with(2)
@@ -629,8 +544,7 @@ class TestComprehensiveBenchmarkOrchestration:
 
     @patch("crackerjack.services.performance_benchmarks.time.time")
     def test_selective_benchmark_execution(self, mock_time, benchmark_service):
-        """Test selective benchmark execution (no tests, no hooks)."""
-        mock_time.side_effect = [1000.0, 1005.0]  # 5 second duration
+        mock_time.side_effect = [1000.0, 1005.0]
 
         with (
             patch.object(benchmark_service, "_benchmark_test_suite") as mock_tests,
@@ -647,21 +561,18 @@ class TestComprehensiveBenchmarkOrchestration:
             patch.object(benchmark_service, "_compare_with_baseline") as mock_baseline,
             patch.object(benchmark_service, "_save_performance_history") as mock_save,
         ):
-            # Configure minimal mock responses
             mock_workflow.return_value = []
             mock_file_ops.return_value = {}
             mock_recs.return_value = []
             mock_baseline.return_value = {}
 
-            # Execute selective benchmark
             report = benchmark_service.run_comprehensive_benchmark(
                 run_tests=False, run_hooks=False, iterations=1
             )
 
-            # Verify selective execution
             assert report.total_duration == 5.0
-            mock_tests.assert_not_called()  # Tests disabled
-            mock_hooks.assert_not_called()  # Hooks disabled
-            mock_workflow.assert_called_once_with(1)  # Always runs
-            mock_file_ops.assert_called_once()  # Always runs
+            mock_tests.assert_not_called()
+            mock_hooks.assert_not_called()
+            mock_workflow.assert_called_once_with(1)
+            mock_file_ops.assert_called_once()
             mock_save.assert_called_once_with(report)

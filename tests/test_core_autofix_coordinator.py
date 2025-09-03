@@ -1,5 +1,3 @@
-"""Strategic test coverage for core/autofix_coordinator.py - Auto-fixing coordination."""
-
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -10,22 +8,17 @@ from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
 
 class TestAutofixCoordinator:
-    """Test autofix coordination functionality."""
-
     @pytest.fixture
     def mock_console(self):
-        """Create mock console."""
         return Mock(spec=Console)
 
     @pytest.fixture
     def coordinator(self, mock_console):
-        """Create AutofixCoordinator instance."""
-        pkg_path = Path("/test/path")
+        pkg_path = Path("/ test / path")
         return AutofixCoordinator(console=mock_console, pkg_path=pkg_path)
 
     def test_coordinator_initialization(self, mock_console) -> None:
-        """Test coordinator initialization."""
-        pkg_path = Path("/test/path")
+        pkg_path = Path("/ test / path")
         coordinator = AutofixCoordinator(console=mock_console, pkg_path=pkg_path)
 
         assert coordinator.console is mock_console
@@ -33,7 +26,6 @@ class TestAutofixCoordinator:
         assert coordinator.logger.name == "crackerjack.autofix"
 
     def test_apply_autofix_for_hooks_fast_mode(self, coordinator) -> None:
-        """Test applying autofix for fast mode."""
         hook_results = [Mock(name="test_hook", status="Failed")]
 
         with (
@@ -45,7 +37,6 @@ class TestAutofixCoordinator:
             assert result is True
 
     def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator) -> None:
-        """Test applying autofix for comprehensive mode."""
         hook_results = [Mock(name="test_hook", status="Failed")]
 
         with (
@@ -61,7 +52,6 @@ class TestAutofixCoordinator:
             assert result is True
 
     def test_apply_autofix_for_hooks_skip_when_should_skip(self, coordinator) -> None:
-        """Test that autofix is skipped when should_skip is True."""
         hook_results = [Mock()]
 
         with patch.object(coordinator, "_should_skip_autofix", return_value=True):
@@ -70,7 +60,6 @@ class TestAutofixCoordinator:
             assert result is False
 
     def test_apply_autofix_for_hooks_unknown_mode(self, coordinator) -> None:
-        """Test handling of unknown autofix mode."""
         hook_results = []
 
         with patch.object(coordinator, "_should_skip_autofix", return_value=False):
@@ -79,7 +68,6 @@ class TestAutofixCoordinator:
             assert result is False
 
     def test_apply_autofix_for_hooks_exception_handling(self, coordinator) -> None:
-        """Test exception handling in apply_autofix_for_hooks."""
         hook_results = []
 
         with patch.object(
@@ -92,7 +80,6 @@ class TestAutofixCoordinator:
             assert result is False
 
     def test_public_interface_methods(self, coordinator) -> None:
-        """Test public interface methods delegate to private methods."""
         hook_results = [Mock()]
         cmd = ["uv", "run", "ruff", "format", "."]
         result_mock = Mock()
@@ -134,7 +121,6 @@ class TestAutofixCoordinator:
                 return_value=False,
             ) as mock_skip,
         ):
-            # Test all public interface methods
             assert coordinator.apply_fast_stage_fixes() is True
             mock_fast.assert_called_once()
 
@@ -157,7 +143,6 @@ class TestAutofixCoordinator:
             mock_skip.assert_called_once_with(hook_results)
 
     def test_execute_fast_fixes(self, coordinator) -> None:
-        """Test execution of fast fixes."""
         with patch.object(
             coordinator,
             "_run_fix_command",
@@ -166,17 +151,15 @@ class TestAutofixCoordinator:
             result = coordinator._execute_fast_fixes()
 
             assert result is True
-            assert mock_run.call_count == 2  # ruff format and ruff check
+            assert mock_run.call_count == 2
 
     def test_execute_fast_fixes_no_fixes_applied(self, coordinator) -> None:
-        """Test fast fixes when no fixes are applied."""
         with patch.object(coordinator, "_run_fix_command", return_value=False):
             result = coordinator._execute_fast_fixes()
 
             assert result is False
 
     def test_apply_comprehensive_stage_fixes(self, coordinator) -> None:
-        """Test comprehensive stage fixes."""
         hook_results = [Mock(name="bandit", status="Failed")]
 
         with (
@@ -190,8 +173,6 @@ class TestAutofixCoordinator:
             assert result is True
 
     def test_extract_failed_hooks(self, coordinator) -> None:
-        """Test extraction of failed hooks."""
-        # Create proper mock objects with the required attributes
         ruff_result = Mock()
         ruff_result.name = "ruff"
         ruff_result.status = "Failed"
@@ -211,7 +192,6 @@ class TestAutofixCoordinator:
         assert failed_hooks == {"ruff", "pyright"}
 
     def test_extract_failed_hooks_invalid_results(self, coordinator) -> None:
-        """Test extraction with invalid hook results."""
         hook_results = [Mock(), Mock()]
 
         with patch.object(coordinator, "_validate_hook_result", return_value=False):
@@ -220,17 +200,14 @@ class TestAutofixCoordinator:
             assert failed_hooks == set()
 
     def test_get_hook_specific_fixes(self, coordinator) -> None:
-        """Test getting hook-specific fixes."""
         failed_hooks = {"bandit", "ruff"}
 
         fixes = coordinator._get_hook_specific_fixes(failed_hooks)
 
-        # Should return bandit fix
         assert len(fixes) == 1
         assert fixes[0][1] == "bandit analysis"
 
     def test_get_hook_specific_fixes_no_matches(self, coordinator) -> None:
-        """Test hook-specific fixes with no matching hooks."""
         failed_hooks = {"ruff", "pyright"}
 
         fixes = coordinator._get_hook_specific_fixes(failed_hooks)
@@ -239,7 +216,6 @@ class TestAutofixCoordinator:
 
     @patch("subprocess.run")
     def test_run_fix_command_success(self, mock_subprocess, coordinator) -> None:
-        """Test successful fix command execution."""
         cmd = ["uv", "run", "ruff", "format", "."]
         mock_result = Mock(returncode=0, stdout="", stderr="")
         mock_subprocess.return_value = mock_result
@@ -252,7 +228,6 @@ class TestAutofixCoordinator:
 
     @patch("subprocess.run")
     def test_run_fix_command_invalid(self, mock_subprocess, coordinator) -> None:
-        """Test fix command with invalid command."""
         cmd = ["invalid", "command"]
 
         with patch.object(coordinator, "_validate_fix_command", return_value=False):
@@ -263,7 +238,6 @@ class TestAutofixCoordinator:
 
     @patch("subprocess.run")
     def test_run_fix_command_exception(self, mock_subprocess, coordinator) -> None:
-        """Test fix command with subprocess exception."""
         cmd = ["uv", "run", "ruff", "format", "."]
         mock_subprocess.side_effect = Exception("Test error")
 
@@ -273,7 +247,6 @@ class TestAutofixCoordinator:
             assert result is False
 
     def test_handle_command_result_success(self, coordinator) -> None:
-        """Test handling successful command result."""
         result = Mock(returncode=0, stdout="", stderr="")
 
         handled = coordinator._handle_command_result(result, "test")
@@ -281,7 +254,6 @@ class TestAutofixCoordinator:
         assert handled is True
 
     def test_handle_command_result_successful_fix(self, coordinator) -> None:
-        """Test handling command result with fix indicators."""
         result = Mock(returncode=1, stdout="Fixed 5 files", stderr="")
 
         with patch.object(coordinator, "_is_successful_fix", return_value=True):
@@ -290,7 +262,6 @@ class TestAutofixCoordinator:
             assert handled is True
 
     def test_handle_command_result_failure(self, coordinator) -> None:
-        """Test handling failed command result."""
         result = Mock(returncode=1, stdout="", stderr="")
 
         with patch.object(coordinator, "_is_successful_fix", return_value=False):
@@ -299,31 +270,23 @@ class TestAutofixCoordinator:
             assert handled is False
 
     def test_is_successful_fix(self, coordinator) -> None:
-        """Test successful fix detection."""
-        # Test "fixed" pattern
         result = Mock(stdout="Fixed 3 files")
         assert coordinator._is_successful_fix(result) is True
 
-        # Test "reformatted" pattern
         result = Mock(stdout="Reformatted code")
         assert coordinator._is_successful_fix(result) is True
 
-        # Test no success pattern
         result = Mock(stdout="No changes made")
         assert coordinator._is_successful_fix(result) is False
 
     def test_check_tool_success_patterns(self, coordinator) -> None:
-        """Test tool success pattern checking."""
-        # Test invalid command
         assert coordinator._check_tool_success_patterns([], None) is False
         assert coordinator._check_tool_success_patterns(["uv"], None) is False
 
-        # Test subprocess result
         cmd = ["uv", "run", "ruff"]
         result = Mock(returncode=0)
         assert coordinator._check_tool_success_patterns(cmd, result) is True
 
-        # Test string result with ruff
         cmd = ["uv", "run", "ruff"]
         assert coordinator._check_tool_success_patterns(cmd, "Fixed 5 files") is True
         assert (
@@ -331,67 +294,55 @@ class TestAutofixCoordinator:
             is True
         )
 
-        # Test trailing-whitespace
-        cmd = ["uv", "run", "trailing-whitespace"]
+        cmd = ["uv", "run", "trailing - whitespace"]
         assert (
             coordinator._check_tool_success_patterns(cmd, "Fixing whitespace") is True
         )
 
     def test_validate_fix_command(self, coordinator) -> None:
-        """Test fix command validation."""
-        # Valid commands
         assert (
             coordinator._validate_fix_command(["uv", "run", "ruff", "format"]) is True
         )
-        assert coordinator._validate_fix_command(["uv", "run", "bandit", "-ll"]) is True
+        assert (
+            coordinator._validate_fix_command(["uv", "run", "bandit", "- ll"]) is True
+        )
 
-        # Invalid commands
         assert coordinator._validate_fix_command([]) is False
         assert coordinator._validate_fix_command(["uv"]) is False
         assert coordinator._validate_fix_command(["python", "run", "ruff"]) is False
         assert coordinator._validate_fix_command(["uv", "run", "invalid_tool"]) is False
 
     def test_validate_hook_result(self, coordinator) -> None:
-        """Test hook result validation."""
-        # Valid result
         valid_result = Mock()
         valid_result.name = "test_hook"
         valid_result.status = "Failed"
         assert coordinator._validate_hook_result(valid_result) is True
 
-        # Invalid result - no name attribute
-        invalid_result1 = object()  # Basic object with no attributes
+        invalid_result1 = object()
         assert coordinator._validate_hook_result(invalid_result1) is False
 
-        # Invalid result - empty name
         invalid_result2 = Mock()
         invalid_result2.name = ""
         invalid_result2.status = "Failed"
         assert coordinator._validate_hook_result(invalid_result2) is False
 
-        # Invalid result - invalid status
         invalid_result3 = Mock()
         invalid_result3.name = "test"
         invalid_result3.status = "Invalid"
         assert coordinator._validate_hook_result(invalid_result3) is False
 
     def test_should_skip_autofix(self, coordinator) -> None:
-        """Test autofix skip logic."""
-        # No import errors
         normal_result = Mock(raw_output="Some normal output")
         assert coordinator._should_skip_autofix([normal_result]) is False
 
-        # ModuleNotFoundError
         import_error_result = Mock(
             raw_output="ModuleNotFoundError: No module named 'test'",
         )
         assert coordinator._should_skip_autofix([import_error_result]) is True
 
-        # ImportError
         import_error_result2 = Mock(raw_output="ImportError: cannot import name 'test'")
         assert coordinator._should_skip_autofix([import_error_result2]) is True
 
-        # No raw_output attribute
         no_output_result = Mock()
         if hasattr(no_output_result, "raw_output"):
             delattr(no_output_result, "raw_output")
@@ -399,17 +350,13 @@ class TestAutofixCoordinator:
 
 
 class TestAutofixCoordinatorIntegration:
-    """Integration tests for AutofixCoordinator."""
-
     @pytest.fixture
     def coordinator(self):
-        """Create coordinator for integration tests."""
         console = Mock(spec=Console)
-        pkg_path = Path("/test")
+        pkg_path = Path("/ test")
         return AutofixCoordinator(console=console, pkg_path=pkg_path)
 
     def test_full_fast_workflow(self, coordinator) -> None:
-        """Test complete fast autofix workflow."""
         hook_results = []
 
         with patch.object(
@@ -420,12 +367,10 @@ class TestAutofixCoordinatorIntegration:
             result = coordinator.apply_autofix_for_hooks("fast", hook_results)
 
             assert result is True
-            # Should run ruff format and ruff check
+
             assert mock_run.call_count == 2
 
     def test_full_comprehensive_workflow(self, coordinator) -> None:
-        """Test complete comprehensive autofix workflow."""
-        # Create proper mock objects with the required attributes
         ruff_result = Mock()
         ruff_result.name = "ruff"
         ruff_result.status = "Failed"
@@ -446,14 +391,12 @@ class TestAutofixCoordinatorIntegration:
             result = coordinator.apply_autofix_for_hooks("comprehensive", hook_results)
 
             assert result is True
-            # Should run fast fixes (2) + bandit fix (1)
+
             assert mock_run.call_count >= 2
 
     def test_error_recovery(self, coordinator) -> None:
-        """Test error recovery in autofix workflow."""
         hook_results = []
 
-        # Simulate subprocess error
         with patch.object(
             coordinator,
             "_run_fix_command",

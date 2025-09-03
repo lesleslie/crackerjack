@@ -133,15 +133,15 @@ class AsyncHookExecutor:
         self.console.print("\n" + "-" * 80)
         if strategy.name == "fast":
             self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks (async)[/bold bright_white]",
+                "[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running code quality checks (async)[/ bold bright_white]",
             )
         elif strategy.name == "comprehensive":
             self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running comprehensive quality checks (async)[/bold bright_white]",
+                "[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running comprehensive quality checks (async)[/ bold bright_white]",
             )
         else:
             self.console.print(
-                f"[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running {strategy.name} hooks (async)[/bold bright_white]",
+                f"[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running {strategy.name} hooks (async)[/ bold bright_white]",
             )
         self.console.print("-" * 80 + "\n")
 
@@ -210,9 +210,11 @@ class AsyncHookExecutor:
                 timeout=timeout_val,
             )
 
+            # Pre-commit must run from repository root, not package directory
+            repo_root = self.pkg_path.parent if self.pkg_path.name == "crackerjack" else self.pkg_path
             process = await asyncio.create_subprocess_exec(
                 *cmd,
-                cwd=self.pkg_path,
+                cwd=repo_root,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -419,13 +421,13 @@ class AsyncHookExecutor:
     ) -> None:
         if success:
             self.console.print(
-                f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
+                f"[green]✅[/ green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
                 f"(async, {performance_gain: .1f} % faster)",
             )
         else:
             failed_count = sum(1 for r in results if r.status == "failed")
             error_count = sum(1 for r in results if r.status in ("timeout", "error"))
             self.console.print(
-                f"[red]❌[/red] {strategy.name.title()} hooks failed: {failed_count} failed, {error_count} errors "
+                f"[red]❌[/ red] {strategy.name.title()} hooks failed: {failed_count} failed, {error_count} errors "
                 f"(async, {performance_gain: .1f} % faster)",
             )
