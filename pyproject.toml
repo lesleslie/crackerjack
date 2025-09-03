@@ -1,86 +1,92 @@
 [build-system]
+build-backend = "hatchling.build"
 requires = [
     "hatchling",
 ]
-build-backend = "hatchling.build"
 
 [project]
-name = "crackerjack"
-version = "0.31.10"
-description = "Opinionated Python project management tool"
+name = "session-mgmt-mcp"
+version = "0.1.3"
+description = "MCP server for Claude session management and conversation memory"
 readme = "README.md"
+keywords = [
+    "ai-tools",
+    "anthropic",
+    "claude",
+    "conversation-memory",
+    "mcp",
+    "reflection",
+    "session-management",
+]
 authors = [
-    { name = "Les Leslie", email = "les@lesleslie.com" },
+    { name = "Les Leslie", email = "les@wedgwoodwebworks.com" },
 ]
 requires-python = ">=3.13"
 classifiers = [
-    "Operating System :: POSIX",
-    "Programming Language :: Python",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Software Development :: Quality Assurance",
-    "Topic :: Software Development :: Testing",
+    "Topic :: System :: System Shells",
     "Topic :: Utilities",
-    "Typing :: Typed",
 ]
 dependencies = [
-    "aiofiles>=24.1",
-    "aiohttp>=3.12.14",
-    "bandit>=1.8.6",
-    "codespell>=2.4.1",
-    "complexipy>=3.3",
-    "creosote>=4.0.3",
-    "fastapi>=0.116.1",
-    "fastmcp>=2.10.6",
-    "hatchling>=1.25",
-    "jinja2>=3.1",
-    "keyring>=25.6",
-    "mcp>=1.12.2",
-    "pre-commit>=4.2",
-    "pydantic>=2.11.7",
-    "pyleak>=0.1.14",
-    "pyright>=1.1.403",
+    "crackerjack",
+    "duckdb>=0.9",
+    "fastmcp>=2",
+    "numpy>=1.24",
+    "structlog>=25.4",
+    "tiktoken>=0.5",
+    "tomli>=2.2.1",
+]
+
+[project.license]
+file = "LICENSE"
+
+[project.optional-dependencies]
+dev = [
+    "coverage>=7",
+    "hypothesis>=6.70",
+    "psutil>=5.9",
+    "pytest>=7",
+    "pytest-asyncio>=0.21",
+    "pytest-benchmark>=4",
+    "pytest-cov>=4",
+    "pytest-mock>=3.10",
+    "pytest-timeout>=2.1",
+    "pytest-xdist>=3",
+]
+embeddings = [
+    "numpy>=1.24",
+    "onnxruntime>=1.15",
+    "transformers>=4.21",
+]
+
+[project.urls]
+Homepage = "https://github.com/lesleslie/session-mgmt-mcp"
+Issues = "https://github.com/lesleslie/session-mgmt-mcp/issues"
+Repository = "https://github.com/lesleslie/session-mgmt-mcp"
+
+[project.scripts]
+session-mgmt-mcp = "session_mgmt_mcp.server:main"
+
+[dependency-groups]
+dev = [
+    "coverage>=7.10.5",
+    "factory-boy>=3.3.3",
+    "hypothesis>=6.138.7",
+    "psutil>=7",
     "pytest>=8.4.1",
-    "pytest-asyncio>=1",
+    "pytest-asyncio>=1.1",
     "pytest-benchmark>=5.1",
     "pytest-cov>=6.2.1",
     "pytest-mock>=3.14.1",
     "pytest-timeout>=2.4",
     "pytest-xdist>=3.8",
-    "hypothesis>=6.100",
-    "psutil>=6.1.0",
-    "pyyaml>=6.0.2",
-    "refurb>=2.1",
-    "rich>=14.1",
-    "ruff>=0.12.9",
-    "structlog>=24.4",
-    "textual>=0.89",
-    "tomli-w>=1.2",
-    "typer>=0.16",
-    "uv>=0.7.20",
-    "uvicorn>=0.32.1",
-    "vulture>=2.14",
-    "watchdog>=6",
-    "websockets>=15.0.1",
-    "tomli>=2.2.1",
-]
-
-[project.license]
-text = "BSD-3-CLAUSE"
-
-[project.scripts]
-crackerjack = "crackerjack.__main__:cli"
-
-[project.urls]
-documentation = "https://github.com/lesleslie/crackerjack"
-homepage = "https://github.com/lesleslie/crackerjack"
-repository = "https://github.com/lesleslie/crackerjack"
-
-[tool.hatch.build.targets.wheel]
-include = [
-    "crackerjack/**/*.py",
-    "crackerjack/**/*.md",
+    "crackerjack",
+    "excalidraw-mcp>=0.1.2",
 ]
 
 [tool.ruff]
@@ -95,6 +101,9 @@ output-format = "full"
 docstring-code-format = true
 
 [tool.ruff.lint]
+select = [
+    "ALL",
+]
 extend-select = [
     "C901",
     "F",
@@ -102,11 +111,120 @@ extend-select = [
     "UP",
 ]
 ignore = [
+    "ANN001",
+    "ANN002",
+    "ANN003",
+    "ANN201",
+    "ANN202",
+    "ANN204",
+    "ANN205",
+    "ANN401",
+    "ARG001",
+    "ARG002",
+    "ARG004",
+    "ARG005",
+    "ASYNC109",
+    "ASYNC221",
+    "ASYNC230",
+    "B007",
+    "B008",
+    "B023",
+    "B904",
+    "BLE001",
+    "C901",
+    "COM812",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D205",
+    "D401",
+    "DTZ001",
+    "DTZ003",
+    "DTZ005",
+    "DTZ006",
     "E402",
+    "E501",
+    "ERA001",
+    "EXE001",
     "F821",
+    "FBT001",
+    "FBT002",
+    "FIX002",
+    "G004",
+    "PERF401",
+    "PLC0415",
+    "PLE1205",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR2004",
+    "PLW0603",
+    "PLW2901",
+    "PT017",
+    "PTH109",
+    "PTH110",
+    "PTH111",
+    "PTH123",
+    "RUF001",
+    "RUF006",
+    "S101",
+    "S104",
+    "S105",
+    "S108",
+    "S110",
+    "S112",
+    "S301",
+    "S306",
+    "S311",
+    "S314",
+    "S324",
+    "S603",
+    "S607",
+    "S608",
+    "SIM102",
+    "SIM105",
+    "SIM115",
+    "SIM117",
+    "SLF001",
+    "T201",
+    "T203",
+    "TD002",
+    "TD003",
+    "TRY002",
+    "TRY300",
+    "TRY301",
+    "TRY401",
+    "UP007",
 ]
 fixable = [
     "ALL",
+]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "ANN001",
+    "ANN201",
+    "D103",
+    "FBT003",
+    "PLR2004",
+    "S101",
+]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+multiline-quotes = "double"
+
+[tool.ruff.lint.isort]
+no-lines-before = [
+    "first-party",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -118,42 +236,53 @@ quiet-level = 3
 ignore-words-list = "crate,uptodate,nd,nin"
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
-timeout = 300
-addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --strict-markers --strict-config -ra --tb=short"
+minversion = "7.0"
+addopts = "--cov=session_mgmt_mcp --cov-report=term"
 testpaths = [
     "tests",
+    "session_mgmt_mcp",
 ]
-norecursedirs = [
-    "~",
-    ".git",
-    "*.egg",
-    "build",
-    "dist",
-    ".venv",
-    "__pycache__",
-    "node_modules",
+python_files = [
+    "test_*.py",
 ]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]
+asyncio_default_fixture_loop_scope = "function"
+asyncio_mode = "auto"
 markers = [
-    "unit: marks test as a unit test",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "performance: marks tests as performance tests",
+    "security: marks tests as security tests",
+    "mcp: marks tests as MCP server tests",
+    "property: marks tests as property-based tests",
     "benchmark: mark test as a benchmark",
-    "integration: marks test as an integration test",
     "e2e: marks test as end-to-end test",
-    "security: marks test as security test",
-    "performance: marks test as performance test",
-    "slow: marks test as slow running test",
     "smoke: marks test as smoke test",
     "regression: marks test as regression test",
     "api: marks test as API test",
     "database: marks test as database test",
     "external: marks test requiring external services",
     "no_leaks: detect asyncio task leaks",
-    "property: marks test as property-based test",
     "mutation: marks test as mutation testing",
     "chaos: marks test as chaos engineering test",
     "ai_generated: marks test as AI-generated test",
     "breakthrough: marks test as breakthrough frontier test",
 ]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning:pkg_resources.*",
+    "ignore::PendingDeprecationWarning",
+    "ignore::pytest.PytestUnknownMarkWarning:pytest_benchmark.*",
+]
+timeout = 300
+timeout_method = "thread"
 
 [tool.pytest.benchmark]
 disable_gc = true
@@ -163,25 +292,38 @@ min_rounds = 1
 max_time = 5.0
 
 [tool.coverage.run]
-branch = false
 source = [
-    "crackerjack",
+    "session_mgmt_mcp",
 ]
+omit = [
+    "session_mgmt_mcp/__main__.py",
+    "tests/*",
+    ".venv/*",
+    "build/*",
+    "dist/*",
+]
+branch = true
 data_file = ".coverage"
 parallel = false
-omit = [
-    "*/tests/*",
-    "*/site-packages/*",
-    "*/__pycache__/*",
-    "*/__init__.py",
-    "*/_version.py",
-    "*/conftest.py",
-    "*/test_*.py",
-    "*/_test.py",
-    "crackerjack/__main__.py",
-]
 
 [tool.coverage.report]
+fail_under = 0
+show_missing = true
+skip_covered = false
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "TYPE_CHECKING",
+]
 exclude_also = [
     "pragma: no cover",
     "def __repr__",
@@ -195,115 +337,57 @@ exclude_also = [
 ]
 ignore_errors = false
 
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
 [tool.pyright]
-verboseOutput = true
 include = [
-    "crackerjack",
+    "tests",
+    "session_mgmt_mcp",
 ]
 exclude = [
     "scratch",
-    ".venv",
+    "**/__pycache__",
     "build",
+    ".venv",
+    ".git",
     "dist",
-    "tests/*",
-    "examples/*",
-    "crackerjack/mcp/*",
-    "crackerjack/plugins/*",
+    "**/node_modules",
 ]
+ignore = [
+    "**/tests",
+]
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportGeneralTypeIssues = true
+reportOptionalMemberAccess = true
+reportOptionalCall = true
+reportOptionalIterable = true
+reportOptionalContextManager = true
+reportUntypedFunctionDecorator = false
+reportUnknownArgumentType = false
+reportUnknownLambdaType = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+pythonVersion = "3.13"
+pythonPlatform = "All"
+verboseOutput = true
 extraPaths = [
     ".venv/lib/python3.13/site-packages/",
 ]
 typeCheckingMode = "strict"
-reportMissingTypeStubs = false
-reportOptionalMemberAccess = false
-reportOptionalCall = "warning"
-reportUnknownMemberType = false
-reportUnknownVariableType = false
-reportUnknownArgumentType = false
 reportInvalidTypeForm = "warning"
-reportUnknownLambdaType = false
-reportUnknownParameterType = false
-reportPrivateUsage = false
+reportPrivateUsage = "warning"
 reportUnnecessaryTypeIgnoreComment = "warning"
 reportUnnecessaryComparison = "warning"
 reportConstantRedefinition = "warning"
-pythonVersion = "3.13"
 
-[tool.uv]
-keyring-provider = "subprocess"
-publish-url = "https://upload.pypi.org/legacy/"
-check-url = "https://pypi.org/simple/"
-
-[tool.vulture]
-min_confidence = 86
-paths = [
-    "crackerjack",
-]
-ignore_names = [
-    "cls",
-]
-
-[tool.creosote]
-paths = [
-    "crackerjack",
-]
-deps-file = "pyproject.toml"
-exclude-deps = [
-    "hatchling",
-    "pre-commit",
-    "pytest",
-    "pytest-asyncio",
-    "pytest-cov",
-    "pytest-mock",
-    "pytest-xdist",
-    "pytest-benchmark",
-    "pyfiglet",
-    "pyyaml",
-    "uv",
-    "tomli-w",
-    "google-crc32c",
-    "pytest-timeout",
-    "keyring",
-    "inflection",
-    "pydantic-settings",
-    "pyleak",
-    "bandit",
-    "vulture",
-    "pyright",
-    "creosote",
-    "refurb",
-    "complexipy",
-    "codespell",
-    "fastapi",
-    "fastmcp",
-    "uvicorn",
-    "websockets",
-    "watchdog",
-    "ruff",
-    "hypothesis",
-    "psutil",
-]
-
-[tool.refurb]
-enable_all = true
-quiet = true
-python_version = "3.13"
-
-[tool.bandit]
-target = [
-    "crackerjack",
-]
-skips = [
-    "B101",
-    "B110",
-    "B112",
-    "B404",
-    "B603",
-    "B607",
-]
-exclude_dirs = [
-    "tests/data",
-]
+[tool.pyright.defineConstant]
+DEBUG = true
 
 [tool.complexipy]
 default_pattern = "**/*.py"
@@ -313,8 +397,96 @@ exclude_patterns = [
 ]
 max_complexity = 15
 
-[dependency-groups]
-dev = [
-    "excalidraw-mcp>=0.1.2",
-    "session-mgmt-mcp>=0.1.3",
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    ".venv",
+    "build",
+    "dist",
 ]
+skips = [
+    "B101",
+    "B603",
+    "B607",
+]
+target = [
+    "tests",
+    "session_mgmt_mcp",
+]
+
+[tool.vulture]
+exclude = [
+    "tests/",
+    ".venv/",
+    "build/",
+    "dist/",
+]
+ignore_names = [
+    "_*",
+    "test_*",
+]
+make_whitelist = true
+min_confidence = 80
+paths = [
+    "session_mgmt_mcp",
+]
+sort_by_size = true
+
+[tool.refurb]
+ignore = [
+    "FURB101",
+    "FURB103",
+    "FURB105",
+    "FURB106",
+    "FURB113",
+    "FURB118",
+    "FURB140",
+]
+enable_all = true
+quiet = true
+python_version = "3.13"
+
+[tool.creosote]
+sections = [
+    "dependencies",
+]
+paths = [
+    "session_mgmt_mcp",
+]
+deps-file = "pyproject.toml"
+exclude-deps = [
+    "pytest",
+    "pytest-asyncio",
+    "autotyping",
+    "keyring",
+    "pre-commit",
+    "pydantic-settings",
+    "pyleak",
+    "hatchling",
+    "inflection",
+    "uv",
+    "pytest-mock",
+    "tomli-w",
+    "pytest-benchmark",
+    "pyyaml",
+    "pytest-timeout",
+    "pyfiglet",
+    "google-crc32c",
+    "pytest-xdist",
+    "pytest-cov",
+    "crackerjack",
+    "duckdb",
+]
+
+[tool.uv]
+keyring-provider = "subprocess"
+publish-url = "https://upload.pypi.org/legacy/"
+check-url = "https://pypi.org/simple/"
+
+[tool.autotyping]
+exclude = [
+    "tests/data/*",
+    "*/conftest.py",
+]
+safe = true
+aggressive = true
