@@ -342,35 +342,6 @@ def _create_checkpoint_message(
     return commit_message
 
 
-def _handle_staging_and_commit(
-    directory: Path,
-    modified_files: list[str],
-    project: str,
-    quality_score: int,
-    worktree_info: WorktreeInfo | None,
-    output: list[str],
-) -> tuple[bool, str]:
-    """Handle staging and committing of modified files."""
-    if not stage_files(directory, modified_files):
-        output.append("⚠️ Failed to stage files")
-        return False, "Failed to stage files"
-
-    staged_files = get_staged_files(directory)
-    if not staged_files:
-        output.append("ℹ️ No staged changes to commit")
-        return False, "No staged changes"
-
-    commit_message = _create_checkpoint_message(project, quality_score, worktree_info)
-    success, result = create_commit(directory, commit_message)
-
-    if success:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        output.append(f"✅ Checkpoint commit created: {result}")
-        output.append(f"   Message: checkpoint: Session checkpoint - {timestamp}")
-        output.append("   💡 Use 'git reset HEAD~1' to undo if needed")
-        return True, result
-    output.append(f"⚠️ Commit failed: {result}")
-    return False, result
 
 
 def create_checkpoint_commit(
@@ -411,15 +382,39 @@ def create_checkpoint_commit(
 
         # Stage and commit modified files
         if modified_files:
-            success, result = _handle_staging_and_commit(
-                directory,
-                modified_files,
-                project,
-                quality_score,
-                worktree_info,
-                output,
+            # Create checkpoint commit message
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            commit_message = f"checkpoint: {project} (quality: {quality_score}/100) - {timestamp}"
+            
+            # Stage all changes
+            stage_result = subprocess.run(
+                ["git", "add", "-A"],
+                cwd=directory,
+                capture_output=True,
+                text=True,
+                check=False,
             )
-            return success, result, output
+            
+            if stage_result.returncode != 0:
+                output.append(f"⚠️ Failed to stage changes: {stage_result.stderr.strip()}")
+                return False, "staging failed", output
+            
+            # Create commit
+            commit_result = subprocess.run(
+                ["git", "commit", "-m", commit_message],
+                cwd=directory,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            
+            if commit_result.returncode == 0:
+                output.append(f"✅ Checkpoint commit created successfully")
+                output.append(f"   Message: {commit_message}")
+                return True, "checkpoint committed", output
+            else:
+                output.append(f"⚠️ Commit failed: {commit_result.stderr.strip()}")
+                return False, "commit failed", output
         if untracked_files:
             output.append("ℹ️ No staged changes to commit")
             output.append(
