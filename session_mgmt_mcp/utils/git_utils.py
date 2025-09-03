@@ -81,8 +81,8 @@ def _stage_and_commit_files(
                 output.append(f"⚠️ Failed to stage changes: {result.stderr.strip()}")
                 return False, output
 
-        # Create commit (skip pre-commit hooks for checkpoint commits)
-        commit_cmd = ["git", "commit", "-m", commit_message, "--no-verify"]
+        # Create commit
+        commit_cmd = ["git", "commit", "-m", commit_message]
         result = subprocess.run(
             commit_cmd,
             cwd=current_dir,

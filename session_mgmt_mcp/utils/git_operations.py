@@ -227,15 +227,18 @@ def stage_files(directory: Path, files: list[str]) -> bool:
         return False
 
     try:
-        for file in files:
-            subprocess.run(
-                ["git", "add", file],
-                cwd=directory,
-                capture_output=True,
-                check=True,
-            )
+        # Stage all changes (handles modified, deleted, and new files)
+        result = subprocess.run(
+            ["git", "add", "-A"],
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        # Debug: Print the actual error
+        print(f"DEBUG: Git add -A failed: {e.stderr}")
         return False
 
 
@@ -408,25 +411,15 @@ def create_checkpoint_commit(
 
         # Stage and commit modified files
         if modified_files:
-            # Create checkpoint commit message
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            commit_message = (
-                f"checkpoint: {project} (quality: {quality_score}/100) - {timestamp}"
-            )
-
-            # Use the staging and commit function from git_utils
-            from .git_utils import _stage_and_commit_files
-
-            success, commit_output = _stage_and_commit_files(
+            success, result = _handle_staging_and_commit(
                 directory,
-                commit_message,
-                None,  # Stage all modified files
+                modified_files,
+                project,
+                quality_score,
+                worktree_info,
+                output,
             )
-            output.extend(commit_output)
-
-            if success:
-                return True, "checkpoint committed", output
-            return False, "commit failed", output
+            return success, result, output
         if untracked_files:
             output.append("ℹ️ No staged changes to commit")
             output.append(
