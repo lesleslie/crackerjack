@@ -8,7 +8,6 @@ and managing session context following crackerjack architecture patterns.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +28,7 @@ async def _get_app_monitor():
     if _app_monitor is None:
         try:
             from session_mgmt_mcp.app_monitor import ApplicationMonitor
+
             _app_monitor = ApplicationMonitor()
             _app_monitor_available = True
         except ImportError as e:
@@ -40,7 +40,7 @@ async def _get_app_monitor():
 
 
 async def _get_interruption_manager():
-    """Get interruption manager instance with lazy loading.""" 
+    """Get interruption manager instance with lazy loading."""
     global _interruption_manager, _interruption_available
 
     if _interruption_available is False:
@@ -49,6 +49,7 @@ async def _get_interruption_manager():
     if _interruption_manager is None:
         try:
             from session_mgmt_mcp.interruption_manager import InterruptionManager
+
             _interruption_manager = InterruptionManager()
             _interruption_available = True
         except ImportError as e:
@@ -62,38 +63,41 @@ async def _get_interruption_manager():
 def _check_app_monitor_available() -> bool:
     """Check if application monitoring is available."""
     global _app_monitor_available
-    
+
     if _app_monitor_available is None:
         try:
             import importlib.util
+
             spec = importlib.util.find_spec("session_mgmt_mcp.app_monitor")
             _app_monitor_available = spec is not None
         except ImportError:
             _app_monitor_available = False
-    
+
     return _app_monitor_available
 
 
 def _check_interruption_available() -> bool:
     """Check if interruption management is available."""
     global _interruption_available
-    
+
     if _interruption_available is None:
         try:
             import importlib.util
+
             spec = importlib.util.find_spec("session_mgmt_mcp.interruption_manager")
             _interruption_available = spec is not None
         except ImportError:
             _interruption_available = False
-    
+
     return _interruption_available
 
 
 def register_monitoring_tools(mcp) -> None:
     """Register all monitoring and activity tracking MCP tools.
-    
+
     Args:
         mcp: FastMCP server instance
+
     """
 
     @mcp.tool()
@@ -102,6 +106,7 @@ def register_monitoring_tools(mcp) -> None:
 
         Args:
             project_paths: Optional list of project directories to monitor
+
         """
         if not _check_app_monitor_available():
             return "❌ Application monitoring not available. Features may be limited."
@@ -114,7 +119,7 @@ def register_monitoring_tools(mcp) -> None:
             await monitor.start_monitoring(project_paths=project_paths)
 
             output = ["🔍 Application Monitoring Started", ""]
-            
+
             if project_paths:
                 output.append("📁 Monitoring project paths:")
                 for path in project_paths:
@@ -125,7 +130,7 @@ def register_monitoring_tools(mcp) -> None:
             output.append("")
             output.append("👁️ Now tracking:")
             output.append("   • IDE file access and editing patterns")
-            output.append("   • Browser documentation and research activity") 
+            output.append("   • Browser documentation and research activity")
             output.append("   • Application focus and context switches")
             output.append("   • File system changes and development flow")
 
@@ -152,11 +157,17 @@ def register_monitoring_tools(mcp) -> None:
             summary = await monitor.stop_monitoring()
 
             output = ["⏹️ Application Monitoring Stopped", ""]
-            output.append(f"📊 Session summary:")
-            output.append(f"   • Duration: {summary.get('duration_minutes', 0):.1f} minutes")
+            output.append("📊 Session summary:")
+            output.append(
+                f"   • Duration: {summary.get('duration_minutes', 0):.1f} minutes"
+            )
             output.append(f"   • Files tracked: {summary.get('files_tracked', 0)}")
-            output.append(f"   • Applications monitored: {summary.get('apps_monitored', 0)}")
-            output.append(f"   • Context switches: {summary.get('context_switches', 0)}")
+            output.append(
+                f"   • Applications monitored: {summary.get('apps_monitored', 0)}"
+            )
+            output.append(
+                f"   • Context switches: {summary.get('context_switches', 0)}"
+            )
 
             output.append("\n✅ All monitoring stopped successfully")
 
@@ -172,6 +183,7 @@ def register_monitoring_tools(mcp) -> None:
 
         Args:
             hours: Number of hours to look back (default: 2)
+
         """
         if not _check_app_monitor_available():
             return "❌ Application monitoring not available"
@@ -185,35 +197,43 @@ def register_monitoring_tools(mcp) -> None:
 
             output = [f"📊 Activity Summary - Last {hours} Hours", ""]
 
-            if not summary.get('has_data'):
+            if not summary.get("has_data"):
                 output.append("🔍 No activity data available")
                 output.append("💡 Start monitoring with `start_app_monitoring`")
                 return "\n".join(output)
 
             # File activity
-            files = summary.get('file_activity', [])
+            files = summary.get("file_activity", [])
             if files:
                 output.append(f"📄 File Activity ({len(files)} files):")
                 for file_info in files[:10]:  # Show top 10
-                    output.append(f"   • {file_info['path']} ({file_info['access_count']} accesses)")
+                    output.append(
+                        f"   • {file_info['path']} ({file_info['access_count']} accesses)"
+                    )
                 if len(files) > 10:
                     output.append(f"   • ... and {len(files) - 10} more files")
 
             # Application focus
-            apps = summary.get('app_activity', [])
+            apps = summary.get("app_activity", [])
             if apps:
-                output.append(f"\n🖥️ Application Focus:")
+                output.append("\n🖥️ Application Focus:")
                 for app_info in apps[:5]:  # Show top 5
-                    duration = app_info['focus_time_minutes']
+                    duration = app_info["focus_time_minutes"]
                     output.append(f"   • {app_info['name']}: {duration:.1f} minutes")
 
             # Productivity metrics
-            metrics = summary.get('productivity_metrics', {})
+            metrics = summary.get("productivity_metrics", {})
             if metrics:
                 output.append("\n📈 Productivity Metrics:")
-                output.append(f"   • Focus time: {metrics.get('focus_time_minutes', 0):.1f} minutes")
-                output.append(f"   • Context switches: {metrics.get('context_switches', 0)}")
-                output.append(f"   • Deep work periods: {metrics.get('deep_work_periods', 0)}")
+                output.append(
+                    f"   • Focus time: {metrics.get('focus_time_minutes', 0):.1f} minutes"
+                )
+                output.append(
+                    f"   • Context switches: {metrics.get('context_switches', 0)}"
+                )
+                output.append(
+                    f"   • Deep work periods: {metrics.get('deep_work_periods', 0)}"
+                )
 
             return "\n".join(output)
 
@@ -227,6 +247,7 @@ def register_monitoring_tools(mcp) -> None:
 
         Args:
             hours: Number of hours to analyze (default: 1)
+
         """
         if not _check_app_monitor_available():
             return "❌ Application monitoring not available"
@@ -240,32 +261,34 @@ def register_monitoring_tools(mcp) -> None:
 
             output = [f"🧠 Context Insights - Last {hours} Hours", ""]
 
-            if not insights.get('has_data'):
+            if not insights.get("has_data"):
                 output.append("🔍 No context data available")
                 return "\n".join(output)
 
             # Current focus area
-            focus = insights.get('current_focus')
+            focus = insights.get("current_focus")
             if focus:
                 output.append(f"🎯 Current Focus: {focus['area']}")
                 output.append(f"   Duration: {focus['duration_minutes']:.1f} minutes")
 
             # Project patterns
-            patterns = insights.get('project_patterns', [])
+            patterns = insights.get("project_patterns", [])
             if patterns:
                 output.append("\n📋 Project Patterns:")
                 for pattern in patterns[:3]:
                     output.append(f"   • {pattern['description']}")
 
             # Technology context
-            tech_context = insights.get('technology_context', [])
+            tech_context = insights.get("technology_context", [])
             if tech_context:
                 output.append("\n⚙️ Technology Context:")
                 for tech in tech_context[:5]:
-                    output.append(f"   • {tech['name']}: {tech['confidence']:.0%} confidence")
+                    output.append(
+                        f"   • {tech['name']}: {tech['confidence']:.0%} confidence"
+                    )
 
             # Recommendations
-            recommendations = insights.get('recommendations', [])
+            recommendations = insights.get("recommendations", [])
             if recommendations:
                 output.append("\n💡 Recommendations:")
                 for rec in recommendations[:3]:
@@ -283,6 +306,7 @@ def register_monitoring_tools(mcp) -> None:
 
         Args:
             minutes: Number of minutes to look back (default: 60)
+
         """
         if not _check_app_monitor_available():
             return "❌ Application monitoring not available"
@@ -305,11 +329,13 @@ def register_monitoring_tools(mcp) -> None:
                 output.append(f"{i}. **{file_info['path']}**")
                 output.append(f"   Last accessed: {file_info['last_access']}")
                 output.append(f"   Access count: {file_info['access_count']}")
-                output.append(f"   Duration: {file_info['total_time_minutes']:.1f} minutes")
-                
-                if file_info.get('project'):
+                output.append(
+                    f"   Duration: {file_info['total_time_minutes']:.1f} minutes"
+                )
+
+                if file_info.get("project"):
                     output.append(f"   Project: {file_info['project']}")
-                
+
                 output.append("")
 
             output.append(f"📊 Total: {len(active_files)} active files")
@@ -343,16 +369,22 @@ def register_monitoring_tools(mcp) -> None:
 
             output = ["🚨 Interruption Monitoring Started", ""]
             output.append(f"📁 Working directory: {working_directory}")
-            output.append(f"👁️ File watching: {'Enabled' if watch_files else 'Disabled'}")
+            output.append(
+                f"👁️ File watching: {'Enabled' if watch_files else 'Disabled'}"
+            )
 
             output.append("\n🔍 Now detecting:")
             output.append("   • Context switches and interruptions")
             output.append("   • File system changes requiring attention")
-            output.append("   • Long idle periods indicating breaks") 
+            output.append("   • Long idle periods indicating breaks")
             output.append("   • Return from interruptions needing context restore")
 
-            output.append("\n💡 Context will be automatically preserved on interruptions")
-            output.append("💡 Use `get_interruption_history` to view detected interruptions")
+            output.append(
+                "\n💡 Context will be automatically preserved on interruptions"
+            )
+            output.append(
+                "💡 Use `get_interruption_history` to view detected interruptions"
+            )
 
             return "\n".join(output)
 
@@ -375,10 +407,16 @@ def register_monitoring_tools(mcp) -> None:
 
             output = ["⏹️ Interruption Monitoring Stopped", ""]
             output.append("📊 Session summary:")
-            output.append(f"   • Duration: {summary.get('duration_minutes', 0):.1f} minutes")
-            output.append(f"   • Interruptions detected: {summary.get('interruptions_detected', 0)}")
+            output.append(
+                f"   • Duration: {summary.get('duration_minutes', 0):.1f} minutes"
+            )
+            output.append(
+                f"   • Interruptions detected: {summary.get('interruptions_detected', 0)}"
+            )
             output.append(f"   • Context saves: {summary.get('context_saves', 0)}")
-            output.append(f"   • Context restores: {summary.get('context_restores', 0)}")
+            output.append(
+                f"   • Context restores: {summary.get('context_restores', 0)}"
+            )
 
             output.append("\n✅ Interruption monitoring stopped successfully")
 
@@ -446,12 +484,14 @@ def register_monitoring_tools(mcp) -> None:
 
             output = ["💾 Context Preserved", ""]
             output.append(f"🆔 Context ID: {context_id}")
-            
+
             if session_id:
                 output.append(f"📋 Session: {session_id}")
 
             output.append("✅ Current context saved successfully")
-            output.append("💡 Use `restore_session_context` to restore this state later")
+            output.append(
+                "💡 Use `restore_session_context` to restore this state later"
+            )
 
             return "\n".join(output)
 
@@ -478,19 +518,20 @@ def register_monitoring_tools(mcp) -> None:
                 output.append("✅ Context state restored successfully")
 
                 # Show restored context details
-                if restored.get('context_data'):
-                    data = restored['context_data']
+                if restored.get("context_data"):
+                    data = restored["context_data"]
                     output.append("\n📊 Restored context:")
-                    if data.get('working_directory'):
-                        output.append(f"   • Working directory: {data['working_directory']}")
-                    if data.get('active_files'):
+                    if data.get("working_directory"):
+                        output.append(
+                            f"   • Working directory: {data['working_directory']}"
+                        )
+                    if data.get("active_files"):
                         output.append(f"   • Active files: {len(data['active_files'])}")
-                    if data.get('timestamp'):
+                    if data.get("timestamp"):
                         output.append(f"   • Saved at: {data['timestamp']}")
 
                 return "\n".join(output)
-            else:
-                return f"❌ Context not found: {session_id}"
+            return f"❌ Context not found: {session_id}"
 
         except Exception as e:
             logger.exception("Error restoring context", error=str(e))
@@ -512,32 +553,44 @@ def register_monitoring_tools(mcp) -> None:
                 hours=hours,
             )
 
-            output = [f"📊 Interruption History - Last {hours} Hours", f"👤 User: {user_id}", ""]
+            output = [
+                f"📊 Interruption History - Last {hours} Hours",
+                f"👤 User: {user_id}",
+                "",
+            ]
 
             if not history:
                 output.append("🔍 No interruptions detected")
-                output.append("💡 Either no interruptions occurred or monitoring wasn't active")
+                output.append(
+                    "💡 Either no interruptions occurred or monitoring wasn't active"
+                )
                 return "\n".join(output)
 
             for i, interruption in enumerate(history, 1):
-                output.append(f"{i}. **{interruption['type']}** - {interruption['timestamp']}")
-                output.append(f"   Duration: {interruption['duration_minutes']:.1f} minutes")
-                
-                if interruption.get('context_saved'):
+                output.append(
+                    f"{i}. **{interruption['type']}** - {interruption['timestamp']}"
+                )
+                output.append(
+                    f"   Duration: {interruption['duration_minutes']:.1f} minutes"
+                )
+
+                if interruption.get("context_saved"):
                     output.append("   💾 Context preserved")
-                
-                if interruption.get('context_restored'):
+
+                if interruption.get("context_restored"):
                     output.append("   🔄 Context restored")
 
-                if interruption.get('trigger'):
+                if interruption.get("trigger"):
                     output.append(f"   🎯 Trigger: {interruption['trigger']}")
 
                 output.append("")
 
             # Summary statistics
             total_interruptions = len(history)
-            avg_duration = sum(i['duration_minutes'] for i in history) / total_interruptions
-            context_saves = sum(1 for i in history if i.get('context_saved'))
+            avg_duration = (
+                sum(i["duration_minutes"] for i in history) / total_interruptions
+            )
+            context_saves = sum(1 for i in history if i.get("context_saved"))
 
             output.append("📈 Summary:")
             output.append(f"   • Total interruptions: {total_interruptions}")

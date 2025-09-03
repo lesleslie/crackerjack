@@ -23,14 +23,13 @@ This command will:
 
 Run this at the start of any coding session for optimal Claude integration.
 """,
-
     "checkpoint": """# Session Checkpoint
 
 Perform mid-session quality checkpoint with workflow analysis and optimization recommendations.
 
 This command will:
 - Analyze current session progress and workflow effectiveness
-- Check for performance bottlenecks and optimization opportunities  
+- Check for performance bottlenecks and optimization opportunities
 - Validate current task completion status
 - Provide recommendations for workflow improvements
 - Create checkpoint for session recovery if needed
@@ -39,7 +38,7 @@ This command will:
   • DuckDB reflection database optimization (VACUUM/ANALYZE)
   • Session log cleanup (retain last 10 files)
   • Temporary file cleanup (cache files, .DS_Store, old coverage files)
-  • Git repository optimization (gc --auto, prune remote branches)  
+  • Git repository optimization (gc --auto, prune remote branches)
   • UV package cache cleanup
 
 **RECOMMENDED WORKFLOW:**
@@ -49,7 +48,6 @@ This command will:
 
 Use this periodically during long coding sessions to maintain optimal productivity and system performance.
 """,
-
     "end": """# Session End
 
 Complete your Claude Code session with comprehensive cleanup, learning capture, and handoff documentation.
@@ -65,7 +63,6 @@ This command will:
 
 Run this at the end of your coding session to ensure proper closure and knowledge transfer.
 """,
-
     "status": """# Session Status
 
 Get comprehensive status of your current Claude Code session including project health, permissions, tool availability, and optimization opportunities.
@@ -81,7 +78,6 @@ This command provides:
 
 Use this to quickly understand your current development environment and identify optimization opportunities.
 """,
-
     "permissions": """# Session Permissions Management
 
 Manage session permissions for trusted operations to avoid repeated prompts during development workflows.
@@ -94,13 +90,12 @@ This command allows you to:
 - Review permission usage history
 
 **Available Actions:**
-- `status` - Show current permissions and trusted operations  
+- `status` - Show current permissions and trusted operations
 - `trust <operation>` - Add an operation to trusted list
 - `revoke_all` - Reset all permissions to default
 
 Use this to streamline repetitive operations while maintaining security control.
 """,
-
     "reflect": """# Store Session Reflection
 
 Store important insights, learnings, or reflections from your current session for future reference and team knowledge sharing.
@@ -120,7 +115,6 @@ This command will:
 
 Reflections become searchable across all your projects and sessions.
 """,
-
     "quick-search": """# Quick Conversation Search
 
 Perform a fast search through your conversation history to find relevant past discussions, solutions, and insights.
@@ -146,7 +140,6 @@ This command provides:
 
 For detailed results, use the full search tools after getting the quick overview.
 """,
-
     "search-summary": """# Search Summary & Insights
 
 Get aggregated insights from your conversation history without individual result details - perfect for understanding patterns and themes.
@@ -172,7 +165,6 @@ This command provides:
 
 Use this for strategic analysis of your development journey and knowledge patterns.
 """,
-
     "reflection-stats": """# Reflection Database Statistics
 
 Get comprehensive statistics about your stored knowledge, conversation history, and learning patterns.
@@ -187,7 +179,7 @@ This command provides:
 
 **Includes:**
 - Total stored conversations and reflections
-- Most frequently searched topics  
+- Most frequently searched topics
 - Database size and performance metrics
 - Search effectiveness and patterns
 - Recent activity and growth trends
@@ -195,7 +187,6 @@ This command provides:
 
 Use this to understand your knowledge base growth and optimize your learning workflow.
 """,
-
     "crackerjack-run": """# Enhanced Crackerjack Execution with Memory Integration
 
 Execute Crackerjack commands with comprehensive analytics, memory integration, and intelligent insights.
@@ -221,7 +212,6 @@ Execute Crackerjack commands with comprehensive analytics, memory integration, a
 
 Results include execution output, trend analysis, and actionable recommendations based on your project's history.
 """,
-
     "crackerjack-history": """# Crackerjack Execution History & Trends
 
 View comprehensive history of Crackerjack executions with trend analysis and pattern recognition.
@@ -249,7 +239,6 @@ View comprehensive history of Crackerjack executions with trend analysis and pat
 
 Use this to optimize your development workflow and identify quality improvement opportunities.
 """,
-
     "crackerjack-metrics": """# Quality Metrics & Trends Analysis
 
 Get comprehensive quality metrics trends from Crackerjack execution history with actionable insights.
@@ -282,7 +271,6 @@ Get comprehensive quality metrics trends from Crackerjack execution history with
 
 Use this for strategic development planning and continuous quality improvement.
 """,
-
     "crackerjack-patterns": """# Test Failure Pattern Analysis
 
 Analyze test failure patterns and trends to identify systematic issues and optimization opportunities.

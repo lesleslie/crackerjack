@@ -260,8 +260,10 @@ class MultiProjectCoordinator:
         direction: str = "both",  # "outbound", "inbound", "both"
     ) -> list[ProjectDependency]:
         """Get dependencies for a project."""
-        if project in self.dependency_cache:
-            return self.dependency_cache[project]
+        # Create a unique cache key that includes the direction
+        cache_key = f"{project}_{direction}"
+        if cache_key in self.dependency_cache:
+            return self.dependency_cache[cache_key]
 
         conditions = []
         params = []
@@ -301,7 +303,8 @@ class MultiProjectCoordinator:
             )
             dependencies.append(dep)
 
-        self.dependency_cache[project] = dependencies
+        # Cache with the direction-specific key
+        self.dependency_cache[cache_key] = dependencies
         return dependencies
 
     async def get_session_links(self, session_id: str) -> list[SessionLink]:
@@ -484,8 +487,12 @@ class MultiProjectCoordinator:
 
     def _clear_dependency_cache(self, project: str) -> None:
         """Clear dependency cache for a project."""
-        if project in self.dependency_cache:
-            del self.dependency_cache[project]
+        # Remove all cache entries for this project (regardless of direction)
+        keys_to_remove = [
+            key for key in self.dependency_cache if key.startswith(f"{project}_")
+        ]
+        for key in keys_to_remove:
+            del self.dependency_cache[key]
 
     def _clear_session_links_cache(self, session_id: str) -> None:
         """Clear session links cache for a session."""
@@ -496,31 +503,29 @@ class MultiProjectCoordinator:
         """Clean up old session links and dependencies."""
         cutoff_date = datetime.now(UTC) - timedelta(days=max_age_days)
 
+        # Count old links before deletion
+        count_before = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: self.reflection_db.conn.execute(
+                "SELECT COUNT(*) FROM session_links WHERE created_at < ?",
+                [cutoff_date],
+            ).fetchone()[0],
+        )
+
         # Clean up old session links
-        deleted_links = await asyncio.get_event_loop().run_in_executor(
+        await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: self.reflection_db.conn.execute(
                 "DELETE FROM session_links WHERE created_at < ?",
                 [cutoff_date],
-            ).rowcount,
+            ),
         )
-
-        # Clean up old dependencies (optional - might want to keep these)
-        # deleted_deps = await asyncio.get_event_loop().run_in_executor(
-        #     None,
-        #     lambda: self.reflection_db.conn.execute(
-        #         "DELETE FROM project_dependencies WHERE created_at < ?",
-        #         [cutoff_date]
-        #     ).rowcount
-        # )
 
         self.reflection_db.conn.commit()
 
         # Clear caches
         self.session_links_cache.clear()
-        # self.dependency_cache.clear()
 
         return {
-            "deleted_session_links": deleted_links,
-            # 'deleted_dependencies': deleted_deps
+            "deleted_session_links": count_before,
         }

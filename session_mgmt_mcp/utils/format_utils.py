@@ -22,27 +22,25 @@ def _format_session_statistics(sessions: dict) -> list[str]:
     """Format session-related statistics."""
     if not sessions:
         return ["📝 No session data available"]
-    
-    lines = [
+
+    return [
         "**Session Activity:**",
         f"• Total sessions: {sessions.get('total', 0)}",
         f"• Average duration: {sessions.get('avg_duration_minutes', 0):.1f} minutes",
         f"• Longest session: {sessions.get('max_duration_minutes', 0):.1f} minutes",
         "",
     ]
-    
-    return lines
 
 
 def _format_interruption_type_details(by_type: list) -> list[str]:
     """Format interruption type breakdown."""
     if not by_type:
         return []
-    
+
     lines = ["**Interruption Types:**"]
     for item in by_type[:5]:  # Show top 5
         lines.append(f"• {item['type']}: {item['count']} occurrences")
-    
+
     lines.append("")
     return lines
 
@@ -51,7 +49,7 @@ def _format_interruption_statistics(interruptions: dict) -> list[str]:
     """Format interruption-related statistics."""
     if not interruptions:
         return ["🚫 No interruption data available"]
-    
+
     lines = [
         "**Interruption Patterns:**",
         f"• Total interruptions: {interruptions.get('total', 0)}",
@@ -59,11 +57,11 @@ def _format_interruption_statistics(interruptions: dict) -> list[str]:
         f"• Most active hour: {interruptions.get('peak_hour', 'Unknown')}",
         "",
     ]
-    
+
     # Add type breakdown if available
-    if 'by_type' in interruptions:
-        lines.extend(_format_interruption_type_details(interruptions['by_type']))
-    
+    if "by_type" in interruptions:
+        lines.extend(_format_interruption_type_details(interruptions["by_type"]))
+
     return lines
 
 
@@ -71,16 +69,14 @@ def _format_snapshot_statistics(snapshots: dict) -> list[str]:
     """Format snapshot-related statistics."""
     if not snapshots:
         return ["💾 No snapshot data available"]
-    
-    lines = [
+
+    return [
         "**Context Snapshots:**",
         f"• Total snapshots: {snapshots.get('total', 0)}",
         f"• Successful restores: {snapshots.get('successful_restores', 0)}",
         f"• Average snapshot size: {snapshots.get('avg_size_kb', 0):.1f} KB",
         "",
     ]
-    
-    return lines
 
 
 def _calculate_efficiency_rates(
@@ -92,16 +88,22 @@ def _calculate_efficiency_rates(
         "recovery_rate": 0.0,
         "productivity_score": 0.0,
     }
-    
-    if sessions.get('total', 0) > 0:
-        efficiency["interruption_rate"] = interruptions.get('total', 0) / sessions['total']
-    
-    if snapshots.get('total', 0) > 0:
-        efficiency["recovery_rate"] = snapshots.get('successful_restores', 0) / snapshots['total']
-    
+
+    if sessions.get("total", 0) > 0:
+        efficiency["interruption_rate"] = (
+            interruptions.get("total", 0) / sessions["total"]
+        )
+
+    if snapshots.get("total", 0) > 0:
+        efficiency["recovery_rate"] = (
+            snapshots.get("successful_restores", 0) / snapshots["total"]
+        )
+
     # Simple productivity score (inverse of interruption rate, scaled)
-    efficiency["productivity_score"] = max(0, 100 - (efficiency["interruption_rate"] * 20))
-    
+    efficiency["productivity_score"] = max(
+        0, 100 - (efficiency["interruption_rate"] * 20)
+    )
+
     return efficiency
 
 
@@ -110,24 +112,22 @@ def _format_efficiency_metrics(
 ) -> list[str]:
     """Format efficiency and productivity metrics."""
     efficiency = _calculate_efficiency_rates(sessions, interruptions, snapshots)
-    
-    lines = [
+
+    return [
         "**Efficiency Metrics:**",
         f"• Interruption rate: {efficiency['interruption_rate']:.2f} per session",
         f"• Context recovery rate: {efficiency['recovery_rate']:.1%}",
         f"• Productivity score: {efficiency['productivity_score']:.1f}/100",
         "",
     ]
-    
-    return lines
 
 
 def _has_statistics_data(sessions: dict, interruptions: dict, snapshots: dict) -> bool:
     """Check if any meaningful statistics data exists."""
     return bool(
-        sessions.get('total', 0) > 0 or
-        interruptions.get('total', 0) > 0 or
-        snapshots.get('total', 0) > 0
+        sessions.get("total", 0) > 0
+        or interruptions.get("total", 0) > 0
+        or snapshots.get("total", 0) > 0
     )
 
 
@@ -152,20 +152,24 @@ def _build_search_header(
 ) -> list[str]:
     """Build formatted header for search results."""
     header = [f"🔍 **Search Results for: '{query}'**", ""]
-    
+
     if chunk_info:
         current = chunk_info.get("current_chunk", 1)
         total = chunk_info.get("total_chunks", 1)
-        header.extend([
-            f"📊 Found {total_found} results (Page {current}/{total})",
-            "",
-        ])
+        header.extend(
+            [
+                f"📊 Found {total_found} results (Page {current}/{total})",
+                "",
+            ]
+        )
     else:
-        header.extend([
-            f"📊 Found {total_found} results",
-            "",
-        ])
-    
+        header.extend(
+            [
+                f"📊 Found {total_found} results",
+                "",
+            ]
+        )
+
     return header
 
 
@@ -173,24 +177,26 @@ def _format_search_results(results: list) -> list[str]:
     """Format search results for display."""
     if not results:
         return ["No results found"]
-    
+
     formatted = []
-    
+
     for i, result in enumerate(results, 1):
         content = result.get("content", "").strip()
         project = result.get("project", "Unknown")
         timestamp = result.get("timestamp", "")
-        
+
         # Truncate content for display
         if len(content) > 300:
             content = content[:297] + "..."
-        
-        formatted.extend([
-            f"**{i}. [{project}]** {timestamp}",
-            f"   {content}",
-            "",
-        ])
-    
+
+        formatted.extend(
+            [
+                f"**{i}. [{project}]** {timestamp}",
+                f"   {content}",
+                "",
+            ]
+        )
+
     return formatted
 
 
@@ -200,19 +206,23 @@ def _format_monitoring_status(quality_data: dict) -> list[str]:
         "📊 **Current Monitoring Status**",
         "",
     ]
-    
+
     if quality_data.get("monitoring_active", False):
-        lines.extend([
-            "✅ Quality monitoring is active",
-            f"• Last check: {quality_data.get('last_check', 'Unknown')}",
-            f"• Checks performed: {quality_data.get('total_checks', 0)}",
-        ])
+        lines.extend(
+            [
+                "✅ Quality monitoring is active",
+                f"• Last check: {quality_data.get('last_check', 'Unknown')}",
+                f"• Checks performed: {quality_data.get('total_checks', 0)}",
+            ]
+        )
     else:
-        lines.extend([
-            "⏸️ Quality monitoring is inactive",
-            "• Use quality_monitor tool to start monitoring",
-        ])
-    
+        lines.extend(
+            [
+                "⏸️ Quality monitoring is inactive",
+                "• Use quality_monitor tool to start monitoring",
+            ]
+        )
+
     lines.append("")
     return lines
 
@@ -222,8 +232,8 @@ def _format_quality_trend(quality_data: dict) -> list[str]:
     trend = quality_data.get("trend", {})
     if not trend:
         return ["📈 No trend data available"]
-    
-    lines = [
+
+    return [
         "📈 **Quality Trend Analysis**",
         "",
         f"• Current quality score: {trend.get('current_score', 0)}/100",
@@ -231,8 +241,6 @@ def _format_quality_trend(quality_data: dict) -> list[str]:
         f"• Change from last check: {trend.get('change', 0):+.1f} points",
         "",
     ]
-    
-    return lines
 
 
 def _format_quality_alerts(quality_data: dict) -> list[str]:
@@ -240,18 +248,18 @@ def _format_quality_alerts(quality_data: dict) -> list[str]:
     alerts = quality_data.get("alerts", [])
     if not alerts:
         return ["✅ No quality alerts"]
-    
+
     lines = [
         "🚨 **Quality Alerts**",
         "",
     ]
-    
+
     for alert in alerts:
         severity = alert.get("severity", "info")
         message = alert.get("message", "")
         icon = {"high": "🔴", "medium": "🟡", "low": "🔵"}.get(severity, "ℹ️")
         lines.append(f"{icon} {message}")
-    
+
     lines.append("")
     return lines
 
@@ -261,15 +269,15 @@ def _format_proactive_recommendations(quality_data: dict) -> list[str]:
     recommendations = quality_data.get("recommendations", [])
     if not recommendations:
         return ["💡 No recommendations at this time"]
-    
+
     lines = [
         "💡 **Proactive Recommendations**",
         "",
     ]
-    
+
     for i, rec in enumerate(recommendations, 1):
         lines.append(f"{i}. {rec}")
-    
+
     lines.append("")
     return lines
 

@@ -8,7 +8,6 @@ following crackerjack architecture patterns.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +26,7 @@ async def _get_llm_manager():
     if _llm_manager is None:
         try:
             from session_mgmt_mcp.llm_providers import LLMManager
+
             _llm_manager = LLMManager()
             _llm_available = True
         except ImportError as e:
@@ -40,23 +40,25 @@ async def _get_llm_manager():
 def _check_llm_available() -> bool:
     """Check if LLM providers are available."""
     global _llm_available
-    
+
     if _llm_available is None:
         try:
             import importlib.util
+
             spec = importlib.util.find_spec("session_mgmt_mcp.llm_providers")
             _llm_available = spec is not None
         except ImportError:
             _llm_available = False
-    
+
     return _llm_available
 
 
 def register_llm_tools(mcp) -> None:
     """Register all LLM provider management MCP tools.
-    
+
     Args:
         mcp: FastMCP server instance
+
     """
 
     @mcp.tool()
@@ -88,10 +90,12 @@ def register_llm_tools(mcp) -> None:
                 output.append("")
 
             config = provider_info["config"]
-            output.extend([
-                f"🎯 Default Provider: {config['default_provider']}",
-                f"🔄 Fallback Providers: {', '.join(config['fallback_providers'])}",
-            ])
+            output.extend(
+                [
+                    f"🎯 Default Provider: {config['default_provider']}",
+                    f"🔄 Fallback Providers: {', '.join(config['fallback_providers'])}",
+                ]
+            )
 
             return "\n".join(output)
 
@@ -119,7 +123,9 @@ def register_llm_tools(mcp) -> None:
                 output.append(f"{status} {provider.title()}")
 
                 if result["success"]:
-                    output.append(f"   ⚡ Response time: {result['response_time_ms']:.0f}ms")
+                    output.append(
+                        f"   ⚡ Response time: {result['response_time_ms']:.0f}ms"
+                    )
                     output.append(f"   🎯 Model: {result['model']}")
                 else:
                     output.append(f"   ❌ Error: {result['error']}")
@@ -127,7 +133,9 @@ def register_llm_tools(mcp) -> None:
 
             working_count = sum(1 for r in test_results.values() if r["success"])
             total_count = len(test_results)
-            output.append(f"📊 Summary: {working_count}/{total_count} providers working")
+            output.append(
+                f"📊 Summary: {working_count}/{total_count} providers working"
+            )
 
             return "\n".join(output)
 
@@ -153,6 +161,7 @@ def register_llm_tools(mcp) -> None:
             temperature: Generation temperature (0.0-1.0)
             max_tokens: Maximum tokens to generate
             use_fallback: Whether to use fallback providers if primary fails
+
         """
         if not _check_llm_available():
             return "❌ LLM providers not available. Install dependencies: pip install openai google-generativeai aiohttp"
@@ -175,16 +184,19 @@ def register_llm_tools(mcp) -> None:
                 output = ["✨ LLM Generation Result", ""]
                 output.append(f"🤖 Provider: {result['metadata']['provider']}")
                 output.append(f"🎯 Model: {result['metadata']['model']}")
-                output.append(f"⚡ Response time: {result['metadata']['response_time_ms']:.0f}ms")
-                output.append(f"📊 Tokens: {result['metadata'].get('tokens_used', 'N/A')}")
+                output.append(
+                    f"⚡ Response time: {result['metadata']['response_time_ms']:.0f}ms"
+                )
+                output.append(
+                    f"📊 Tokens: {result['metadata'].get('tokens_used', 'N/A')}"
+                )
                 output.append("")
                 output.append("💬 Generated text:")
                 output.append("─" * 40)
                 output.append(result["text"])
 
                 return "\n".join(output)
-            else:
-                return f"❌ Generation failed: {result['error']}"
+            return f"❌ Generation failed: {result['error']}"
 
         except Exception as e:
             logger.exception("Error generating with LLM", error=str(e))
@@ -206,6 +218,7 @@ def register_llm_tools(mcp) -> None:
             model: Specific model to use
             temperature: Generation temperature (0.0-1.0)
             max_tokens: Maximum tokens to generate
+
         """
         if not _check_llm_available():
             return "❌ LLM providers not available. Install dependencies: pip install openai google-generativeai aiohttp"
@@ -227,7 +240,9 @@ def register_llm_tools(mcp) -> None:
                 output = ["💬 LLM Chat Result", ""]
                 output.append(f"🤖 Provider: {result['metadata']['provider']}")
                 output.append(f"🎯 Model: {result['metadata']['model']}")
-                output.append(f"⚡ Response time: {result['metadata']['response_time_ms']:.0f}ms")
+                output.append(
+                    f"⚡ Response time: {result['metadata']['response_time_ms']:.0f}ms"
+                )
                 output.append(f"📊 Messages: {len(messages)} → 1")
                 output.append("")
                 output.append("🎭 Assistant response:")
@@ -235,8 +250,7 @@ def register_llm_tools(mcp) -> None:
                 output.append(result["response"])
 
                 return "\n".join(output)
-            else:
-                return f"❌ Chat failed: {result['error']}"
+            return f"❌ Chat failed: {result['error']}"
 
         except Exception as e:
             logger.exception("Error chatting with LLM", error=str(e))
@@ -256,6 +270,7 @@ def register_llm_tools(mcp) -> None:
             api_key: API key for the provider
             base_url: Base URL for the provider API
             default_model: Default model to use
+
         """
         if not _check_llm_available():
             return "❌ LLM providers not available. Install dependencies: pip install openai google-generativeai aiohttp"
@@ -278,15 +293,19 @@ def register_llm_tools(mcp) -> None:
             if result["success"]:
                 output = ["⚙️ Provider Configuration Updated", ""]
                 output.append(f"🤖 Provider: {provider}")
-                
+
                 if api_key:
                     # Don't show the full API key for security
-                    masked_key = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
+                    masked_key = (
+                        api_key[:8] + "..." + api_key[-4:]
+                        if len(api_key) > 12
+                        else "***"
+                    )
                     output.append(f"🔑 API Key: {masked_key}")
-                
+
                 if base_url:
                     output.append(f"🌐 Base URL: {base_url}")
-                
+
                 if default_model:
                     output.append(f"🎯 Default Model: {default_model}")
 
@@ -295,8 +314,7 @@ def register_llm_tools(mcp) -> None:
                 output.append("💡 Use `test_llm_providers` to verify the configuration")
 
                 return "\n".join(output)
-            else:
-                return f"❌ Configuration failed: {result['error']}"
+            return f"❌ Configuration failed: {result['error']}"
 
         except Exception as e:
             logger.exception("Error configuring LLM provider", error=str(e))

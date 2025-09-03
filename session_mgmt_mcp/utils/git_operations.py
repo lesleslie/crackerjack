@@ -408,15 +408,25 @@ def create_checkpoint_commit(
 
         # Stage and commit modified files
         if modified_files:
-            success, result = _handle_staging_and_commit(
-                directory,
-                modified_files,
-                project,
-                quality_score,
-                worktree_info,
-                output,
+            # Create checkpoint commit message
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            commit_message = (
+                f"checkpoint: {project} (quality: {quality_score}/100) - {timestamp}"
             )
-            return success, result, output
+
+            # Use the staging and commit function from git_utils
+            from .git_utils import _stage_and_commit_files
+
+            success, commit_output = _stage_and_commit_files(
+                directory,
+                commit_message,
+                None,  # Stage all modified files
+            )
+            output.extend(commit_output)
+
+            if success:
+                return True, "checkpoint committed", output
+            return False, "commit failed", output
         if untracked_files:
             output.append("ℹ️ No staged changes to commit")
             output.append(

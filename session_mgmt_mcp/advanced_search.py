@@ -5,7 +5,6 @@ Provides enhanced search capabilities with faceted filtering, full-text search,
 and intelligent result ranking.
 """
 
-import asyncio
 import hashlib
 import json
 import re
@@ -96,7 +95,9 @@ class AdvancedSearchEngine:
         search_query = self._build_search_query(query, filters)
 
         # Execute search
-        results = await self._execute_search(search_query, sort_by, limit, offset, filters, content_type, timeframe)
+        results = await self._execute_search(
+            search_query, sort_by, limit, offset, filters, content_type, timeframe
+        )
 
         # Add highlights if requested
         if include_highlights:
@@ -130,10 +131,10 @@ class AdvancedSearchEngine:
             "project": "JSON_EXTRACT_STRING(search_metadata, '$.project')",
             "tags": "JSON_EXTRACT_STRING(search_metadata, '$.tags')",
         }
-        
+
         # Use the mapped field name or the original if not in map
         db_field = field_map.get(field, field)
-        
+
         sql = f"""
             SELECT DISTINCT {db_field}, COUNT(*) as frequency
             FROM search_index
@@ -567,14 +568,14 @@ class AdvancedSearchEngine:
         for filt in filters:
             if filt.field == "timestamp" and filt.operator == "range":
                 start_time, end_time = filt.value
-                condition = (
-                    "last_indexed BETWEEN ? AND ?"
-                )
+                condition = "last_indexed BETWEEN ? AND ?"
                 conditions.append(f"{'NOT ' if filt.negate else ''}{condition}")
                 params.extend([start_time, end_time])
 
             elif filt.operator == "eq":
-                condition = f"JSON_EXTRACT_STRING(search_metadata, '$.{filt.field}') = ?"
+                condition = (
+                    f"JSON_EXTRACT_STRING(search_metadata, '$.{filt.field}') = ?"
+                )
                 conditions.append(f"{'NOT ' if filt.negate else ''}{condition}")
                 params.append(filt.value)
 
@@ -609,7 +610,7 @@ class AdvancedSearchEngine:
             sql += " AND content_type = ?"
             params.append(content_type)
 
-        # Add timeframe filter if specified
+            # Add timeframe filter if specified
             if timeframe:
                 # Parse timeframe (e.g., "1d", "7d", "30d")
                 if timeframe.endswith("d"):
@@ -641,8 +642,12 @@ class AdvancedSearchEngine:
         sql += " LIMIT ? OFFSET ?"
         params.extend([limit, offset])
 
-        results = self.reflection_db.conn.execute(sql, 
-            [param.isoformat() if isinstance(param, datetime) else param for param in params]
+        results = self.reflection_db.conn.execute(
+            sql,
+            [
+                param.isoformat() if isinstance(param, datetime) else param
+                for param in params
+            ],
         ).fetchall()
 
         search_results = []
@@ -667,7 +672,9 @@ class AdvancedSearchEngine:
                     else indexed_content,
                     score=0.8,  # Simple scoring for now
                     project=metadata.get("project"),
-                    timestamp=last_indexed.replace(tzinfo=UTC) if last_indexed.tzinfo is None else last_indexed,
+                    timestamp=last_indexed.replace(tzinfo=UTC)
+                    if last_indexed.tzinfo is None
+                    else last_indexed,
                     metadata=metadata,
                 ),
             )

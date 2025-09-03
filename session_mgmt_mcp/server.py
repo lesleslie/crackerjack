@@ -359,6 +359,7 @@ def _generate_server_guidance(detected_servers: dict[str, bool]) -> list[str]:
 mcp = FastMCP("session-mgmt-mcp")
 
 # Register extracted tool modules following crackerjack architecture patterns
+# Import session command definitions
 from .tools import (
     register_crackerjack_tools,
     register_llm_tools,
@@ -370,32 +371,24 @@ from .tools import (
     register_team_tools,
 )
 
-# Import session command definitions
-from .session_commands import SESSION_COMMANDS
-
 # Import utility functions
 from .utils import (
+    _analyze_quality_trend,
+    _build_search_header,
     _cleanup_session_logs,
     _cleanup_temp_files,
     _cleanup_uv_cache,
-    _optimize_git_repository,
-    _parse_git_status,
-    _stage_and_commit_files,
-    _build_search_header,
+    _extract_quality_scores,
+    _format_efficiency_metrics,
+    _format_no_data_message,
     _format_search_results,
     _format_statistics_header,
-    _format_efficiency_metrics,
-    _format_monitoring_status,
-    _format_quality_alerts,
-    _format_no_data_message,
-    _analyze_quality_trend,
-    _extract_quality_scores,
     _generate_quality_trend_recommendations,
     _get_intelligence_error_result,
     _get_time_based_recommendations,
+    _optimize_git_repository,
     validate_claude_directory,
 )
-
 
 # Register all extracted tool modules
 register_search_tools(mcp)
@@ -1943,19 +1936,19 @@ async def _perform_git_checkpoint(
 
     # Use the proper checkpoint commit function from git_operations
     from session_mgmt_mcp.utils.git_operations import create_checkpoint_commit
-    
+
     success, result, commit_output = create_checkpoint_commit(
         current_dir, project_name, quality_score
     )
-    
+
     # Add the commit output to our output
     output.extend(commit_output)
-    
+
     if success and result != "clean":
         output.append(f"✅ Checkpoint commit created: {result}")
     elif not success:
         output.append(f"⚠️ Failed to stage files: {result}")
-    
+
     return output
 
 
@@ -2356,46 +2349,10 @@ async def reflect_on_past(
         return f"❌ Error searching conversations: {e}"
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Token Optimization Tools
 
 
-
-
-
-
 # Enhanced Search Tools (Phase 1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 async def get_app_monitor() -> ApplicationMonitor | None:

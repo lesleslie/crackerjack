@@ -19,7 +19,7 @@ async def temp_db():
     # Create a temporary directory and let DuckDB create the database file
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = Path(temp_dir) / "test.duckdb"
-        
+
         db = ReflectionDatabase(str(db_path))
         await db.initialize()
 

@@ -7,7 +7,6 @@ conversation search, and embedding-based similarity matching.
 import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
 from session_mgmt_mcp.reflection_tools import ReflectionDatabase
@@ -22,7 +21,7 @@ class TestReflectionDatabase:
         # Create a temporary directory and let DuckDB create the database file
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "test.duckdb"
-            
+
             db = ReflectionDatabase(str(db_path))
             await db.initialize()
 
@@ -265,7 +264,7 @@ class TestReflectionDatabaseWithEmbeddings:
         """Test automatic embedding generation."""
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "test.duckdb"
-            
+
             db = ReflectionDatabase(str(db_path))
             await db.initialize()
 
@@ -282,7 +281,7 @@ class TestReflectionDatabaseWithEmbeddings:
         """Test semantic search with embeddings."""
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "test.duckdb"
-            
+
             db = ReflectionDatabase(str(db_path))
             await db.initialize()
 
@@ -302,7 +301,7 @@ class TestReflectionDatabaseWithEmbeddings:
         """Test fallback to text search when embeddings unavailable."""
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "test.duckdb"
-            
+
             db = ReflectionDatabase(str(db_path))
             await db.initialize()
 
@@ -317,5 +316,5 @@ class TestReflectionDatabaseWithEmbeddings:
                 query="fallback",
                 limit=5,
             )
-            
+
             assert isinstance(results, list)

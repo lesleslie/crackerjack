@@ -6,16 +6,12 @@ full-text search, and intelligent result ranking.
 
 import asyncio
 import tempfile
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from session_mgmt_mcp.advanced_search import (
     AdvancedSearchEngine,
-    SearchFacet,
     SearchFilter,
-    SearchResult,
 )
 from session_mgmt_mcp.reflection_tools import ReflectionDatabase
 
@@ -44,10 +40,9 @@ class TestAdvancedSearchEngine:
     @pytest.fixture
     async def search_engine(self, initialized_db):
         """Create an AdvancedSearchEngine instance."""
-        engine = AdvancedSearchEngine(initialized_db)
+        return AdvancedSearchEngine(initialized_db)
         # Note: We're not calling _rebuild_search_index here as it requires
         # actual data to be present in the database, which we'll add in specific tests
-        return engine
 
     @pytest.fixture
     async def sample_data(self, initialized_db):
@@ -124,7 +119,9 @@ class TestAdvancedSearchEngine:
         ]
 
         for refl in reflections:
-            await initialized_db.store_reflection(content=refl["content"], tags=refl["tags"])
+            await initialized_db.store_reflection(
+                content=refl["content"], tags=refl["tags"]
+            )
 
         return conversations, reflections
 
@@ -142,7 +139,9 @@ class TestAdvancedSearchEngine:
         assert isinstance(results["results"], list)
 
         # Should find authentication-related content
-        auth_results = [r for r in results["results"] if "authentication" in r.content.lower()]
+        auth_results = [
+            r for r in results["results"] if "authentication" in r.content.lower()
+        ]
         assert len(auth_results) >= 1
 
     @pytest.mark.asyncio
@@ -169,7 +168,7 @@ class TestAdvancedSearchEngine:
             if project_results:
                 for result in project_results:
                     assert result.project == "webapp-backend"
-                    
+
         # Verify that we don't get results from other projects
         project_names = [r.project for r in results["results"] if r.project is not None]
         assert "webapp-frontend" not in project_names
@@ -240,7 +239,7 @@ class TestAdvancedSearchEngine:
         filters = [
             SearchFilter(field="project", operator="eq", value="webapp-backend"),
         ]
-        
+
         results = await search_engine.search(
             query="authentication",
             filters=filters,
@@ -340,7 +339,7 @@ class TestAdvancedSearchEngine:
         conv_results = await search_engine.reflection_db.search_conversations(
             query="authentication", limit=1
         )
-        
+
         if conv_results:
             # For this test, we'll just verify the method can be called
             # without error since we have limited data
@@ -391,7 +390,7 @@ class TestAdvancedSearchEngine:
         assert isinstance(metrics, dict)
         assert metrics["metric_type"] == "projects"
 
-        if "data" in metrics and metrics["data"]:
+        if metrics.get("data"):
             # Should have project information
             project_data = metrics["data"][0]
             assert "key" in project_data
@@ -468,7 +467,9 @@ class TestAdvancedSearchEngine:
         assert isinstance(results["results"], list)
 
     @pytest.mark.asyncio
-    async def test_performance_large_result_set_handling(self, search_engine, initialized_db):
+    async def test_performance_large_result_set_handling(
+        self, search_engine, initialized_db
+    ):
         """Test handling of large result sets."""
         # Add many conversations
         for i in range(50):
@@ -511,11 +512,16 @@ class TestAdvancedSearchEngine:
     async def test_search_case_insensitive(self, search_engine, sample_data):
         """Test case-insensitive search."""
         # Search with different cases
-        queries = ["AUTHENTICATION", "Authentication", "authentication", "AuThEnTiCaTiOn"]
-        
+        queries = [
+            "AUTHENTICATION",
+            "Authentication",
+            "authentication",
+            "AuThEnTiCaTiOn",
+        ]
+
         for query in queries:
             results = await search_engine.search(query=query, limit=10)
-            
+
             assert isinstance(results, dict)
             assert "results" in results
             assert isinstance(results["results"], list)

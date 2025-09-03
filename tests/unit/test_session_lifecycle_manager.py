@@ -7,7 +7,7 @@ checkpoints, and cleanup functionality.
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from session_mgmt_mcp.core.session_manager import SessionLifecycleManager
@@ -112,7 +112,10 @@ class TestSessionLifecycleManager:
                 "recommendations": ["Install UV for better dependency management"],
             }
 
-            quality_score, quality_data = await session_manager.perform_quality_assessment()
+            (
+                quality_score,
+                quality_data,
+            ) = await session_manager.perform_quality_assessment()
 
             assert isinstance(quality_score, int)
             assert isinstance(quality_data, dict)
@@ -167,15 +170,14 @@ class TestSessionLifecycleManager:
         # Mock the Path.cwd() to avoid FileNotFoundError
         with patch("pathlib.Path.cwd") as mock_cwd:
             mock_cwd.return_value = Path("/tmp/test")
-            
+
             with patch.object(
                 session_manager, "perform_quality_assessment", new_callable=AsyncMock
             ) as mock_assessment:
-                mock_assessment.return_value = (85, {
-                    "total_score": 85,
-                    "breakdown": {},
-                    "recommendations": []
-                })
+                mock_assessment.return_value = (
+                    85,
+                    {"total_score": 85, "breakdown": {}, "recommendations": []},
+                )
 
                 with patch.object(
                     session_manager, "perform_git_checkpoint", new_callable=AsyncMock
@@ -188,7 +190,7 @@ class TestSessionLifecycleManager:
                         mock_format.return_value = ["Quality: Excellent (85/100)"]
 
                         # Mock the logger to avoid AttributeError
-                        with patch.object(session_manager, "logger") as mock_logger:
+                        with patch.object(session_manager, "logger"):
                             result = await session_manager.checkpoint_session()
 
                             assert isinstance(result, dict)
@@ -203,18 +205,17 @@ class TestSessionLifecycleManager:
         # Mock the Path.cwd() to avoid FileNotFoundError
         with patch("pathlib.Path.cwd") as mock_cwd:
             mock_cwd.return_value = Path("/tmp/test")
-            
+
             with patch.object(
                 session_manager, "perform_quality_assessment", new_callable=AsyncMock
             ) as mock_assessment:
-                mock_assessment.return_value = (85, {
-                    "total_score": 85,
-                    "breakdown": {},
-                    "recommendations": []
-                })
+                mock_assessment.return_value = (
+                    85,
+                    {"total_score": 85, "breakdown": {}, "recommendations": []},
+                )
 
                 # Mock the logger to avoid AttributeError
-                with patch.object(session_manager, "logger") as mock_logger:
+                with patch.object(session_manager, "logger"):
                     result = await session_manager.end_session()
 
                     assert isinstance(result, dict)
@@ -234,9 +235,11 @@ class TestSessionLifecycleManager:
                 # Mock the Path.cwd() to avoid FileNotFoundError
                 with patch("pathlib.Path.cwd") as mock_cwd:
                     mock_cwd.return_value = working_dir
-                    
+
                     with patch.object(
-                        session_manager, "analyze_project_context", new_callable=AsyncMock
+                        session_manager,
+                        "analyze_project_context",
+                        new_callable=AsyncMock,
                     ) as mock_analyze:
                         mock_analyze.return_value = {
                             "has_pyproject_toml": False,
@@ -244,20 +247,30 @@ class TestSessionLifecycleManager:
                             "has_tests": False,
                             "has_docs": False,
                         }
-                        
+
                         with patch.object(
-                            session_manager, "perform_quality_assessment", new_callable=AsyncMock
+                            session_manager,
+                            "perform_quality_assessment",
+                            new_callable=AsyncMock,
                         ) as mock_assessment:
-                            mock_assessment.return_value = (50, {
-                                "total_score": 50,
-                                "breakdown": {},
-                                "recommendations": []
-                            })
+                            mock_assessment.return_value = (
+                                50,
+                                {
+                                    "total_score": 50,
+                                    "breakdown": {},
+                                    "recommendations": [],
+                                },
+                            )
 
                             # Mock the logger and git operations
-                            with patch.object(session_manager, "logger") as mock_logger:
-                                with patch("session_mgmt_mcp.core.session_manager.is_git_repository", return_value=False):
-                                    result = await session_manager.get_session_status(str(working_dir))
+                            with patch.object(session_manager, "logger"):
+                                with patch(
+                                    "session_mgmt_mcp.core.session_manager.is_git_repository",
+                                    return_value=False,
+                                ):
+                                    result = await session_manager.get_session_status(
+                                        str(working_dir)
+                                    )
 
                                     assert isinstance(result, dict)
                                     assert "success" in result

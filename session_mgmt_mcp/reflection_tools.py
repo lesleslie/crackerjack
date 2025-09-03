@@ -496,7 +496,7 @@ class ReflectionDatabase:
             content_lower = row[1].lower()
             tags_lower = " ".join(row[2] if row[2] else []).lower()
             combined_text = f"{content_lower} {tags_lower}"
-            
+
             # Calculate match score
             if search_terms:
                 score = sum(1 for term in search_terms if term in combined_text) / len(

@@ -8,21 +8,23 @@ architecture patterns with single responsibility principle.
 from __future__ import annotations
 
 import subprocess
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _parse_git_status(status_lines: list[str]) -> tuple[list[str], list[str]]:
     """Parse git status output into staged and untracked files."""
     staged_files = []
     untracked_files = []
-    
+
     for line in status_lines:
-        if line.startswith("A ") or line.startswith("M ") or line.startswith("D "):
+        if line.startswith(("A ", "M ", "D ")):
             staged_files.append(line[3:])  # Remove status prefix
         elif line.startswith("?? "):
             untracked_files.append(line[3:])  # Remove ?? prefix
-    
+
     return staged_files, untracked_files
 
 
@@ -30,14 +32,14 @@ def _format_untracked_files(untracked_files: list[str]) -> list[str]:
     """Format untracked files for display."""
     if not untracked_files:
         return ["✅ No untracked files"]
-    
+
     formatted = ["📁 Untracked Files:"]
     for file in untracked_files[:10]:  # Limit display
         formatted.append(f"   • {file}")
-    
+
     if len(untracked_files) > 10:
         formatted.append(f"   ... and {len(untracked_files) - 10} more files")
-    
+
     return formatted
 
 
@@ -48,7 +50,7 @@ def _stage_and_commit_files(
 ) -> tuple[bool, list[str]]:
     """Stage files and create commit with given message."""
     output = []
-    
+
     try:
         # Stage files
         if files_to_stage:
@@ -62,7 +64,9 @@ def _stage_and_commit_files(
                     check=False,
                 )
                 if result.returncode != 0:
-                    output.append(f"⚠️ Failed to stage {file_path}: {result.stderr.strip()}")
+                    output.append(
+                        f"⚠️ Failed to stage {file_path}: {result.stderr.strip()}"
+                    )
         else:
             # Stage all changes
             stage_cmd = ["git", "add", "-A"]
@@ -76,9 +80,9 @@ def _stage_and_commit_files(
             if result.returncode != 0:
                 output.append(f"⚠️ Failed to stage changes: {result.stderr.strip()}")
                 return False, output
-        
-        # Create commit
-        commit_cmd = ["git", "commit", "-m", commit_message]
+
+        # Create commit (skip pre-commit hooks for checkpoint commits)
+        commit_cmd = ["git", "commit", "-m", commit_message, "--no-verify"]
         result = subprocess.run(
             commit_cmd,
             cwd=current_dir,
@@ -86,14 +90,13 @@ def _stage_and_commit_files(
             text=True,
             check=False,
         )
-        
+
         if result.returncode == 0:
             output.append(f"✅ Committed changes: {commit_message}")
             return True, output
-        else:
-            output.append(f"⚠️ Commit failed: {result.stderr.strip()}")
-            return False, output
-            
+        output.append(f"⚠️ Commit failed: {result.stderr.strip()}")
+        return False, output
+
     except Exception as e:
         output.append(f"❌ Git operation error: {e}")
         return False, output
@@ -102,7 +105,7 @@ def _stage_and_commit_files(
 def _optimize_git_repository(current_dir: Path) -> list[str]:
     """Optimize Git repository with garbage collection and pruning."""
     optimization_results = []
-    
+
     try:
         # Git garbage collection
         gc_cmd = ["git", "gc", "--auto"]
@@ -113,12 +116,12 @@ def _optimize_git_repository(current_dir: Path) -> list[str]:
             text=True,
             check=False,
         )
-        
+
         if result.returncode == 0:
             optimization_results.append("🗑️ Git garbage collection completed")
         else:
             optimization_results.append(f"⚠️ Git gc failed: {result.stderr.strip()}")
-        
+
         # Prune remote tracking branches
         prune_cmd = ["git", "remote", "prune", "origin"]
         result = subprocess.run(
@@ -128,14 +131,16 @@ def _optimize_git_repository(current_dir: Path) -> list[str]:
             text=True,
             check=False,
         )
-        
+
         if result.returncode == 0:
             optimization_results.append("🌿 Pruned remote tracking branches")
         else:
             # Remote prune failure is non-critical
-            optimization_results.append("ℹ️ Remote pruning skipped (no remote or access issues)")
-            
+            optimization_results.append(
+                "ℹ️ Remote pruning skipped (no remote or access issues)"
+            )
+
     except Exception as e:
         optimization_results.append(f"⚠️ Git optimization error: {e}")
-    
+
     return optimization_results

@@ -17,11 +17,12 @@ logger = logging.getLogger(__name__)
 
 def register_search_tools(mcp) -> None:
     """Register all search-related MCP tools.
-    
+
     Args:
         mcp: FastMCP server instance
+
     """
-    
+
     @mcp.tool()
     async def _optimize_search_results(
         results: list,
@@ -32,14 +33,14 @@ def register_search_tools(mcp) -> None:
         """Apply token optimization to search results if available."""
         try:
             # Import token optimizer if available
-            from ..token_optimizer import TokenOptimizer
-            
+            from session_mgmt_mcp.token_optimizer import TokenOptimizer
+
             if optimize_tokens and results:
                 optimizer = TokenOptimizer()
                 return await optimizer.optimize_search_results(
                     results, max_tokens, query
                 )
-            
+
             return {
                 "results": results,
                 "optimized": False,
@@ -53,7 +54,7 @@ def register_search_tools(mcp) -> None:
                 "token_count": 0,
             }
         except Exception as e:
-            logger.error(f"Search optimization failed: {e}")
+            logger.exception(f"Search optimization failed: {e}")
             return {
                 "results": results,
                 "optimized": False,
@@ -74,8 +75,8 @@ def register_search_tools(mcp) -> None:
                 return f"✅ Reflection stored successfully with ID: {reflection_id}{tag_text}"
 
         except Exception as e:
-            logger.error(f"Failed to store reflection: {e}")
-            return f"❌ Error storing reflection: {str(e)}"
+            logger.exception(f"Failed to store reflection: {e}")
+            return f"❌ Error storing reflection: {e!s}"
 
     @mcp.tool()
     async def quick_search(
@@ -97,26 +98,28 @@ def register_search_tools(mcp) -> None:
                     min_score=min_score,
                     limit=100,  # Get more for accurate count
                 )
-                
+
                 if not total_results:
                     return f"🔍 No results found for '{query}'"
 
                 # Get top result
                 top_result = total_results[0]
-                
+
                 # Format response
                 result = f"🔍 **{len(total_results)} results** for '{query}'\n\n"
-                result += f"**Top Result** (score: {top_result.get('similarity', 'N/A')}):\n"
+                result += (
+                    f"**Top Result** (score: {top_result.get('similarity', 'N/A')}):\n"
+                )
                 result += f"{top_result.get('content', '')[:200]}..."
-                
+
                 if len(total_results) > 1:
                     result += f"\n\n💡 Use get_more_results to see additional {len(total_results) - 1} results"
 
                 return result
 
         except Exception as e:
-            logger.error(f"Quick search failed: {e}")
-            return f"❌ Search error: {str(e)}"
+            logger.exception(f"Quick search failed: {e}")
+            return f"❌ Search error: {e!s}"
 
     @mcp.tool()
     async def search_summary(
@@ -137,38 +140,44 @@ def register_search_tools(mcp) -> None:
                     min_score=min_score,
                     limit=20,
                 )
-                
+
                 if not results:
                     return f"🔍 No results found for '{query}'"
 
                 # Generate summary
                 summary = f"🔍 **Search Summary for '{query}'**\n\n"
                 summary += f"**Found**: {len(results)} relevant conversations\n"
-                
+
                 # Analyze time distribution
                 if results:
-                    dates = [r.get('timestamp', '') for r in results if r.get('timestamp')]
+                    dates = [
+                        r.get("timestamp", "") for r in results if r.get("timestamp")
+                    ]
                     if dates:
                         summary += f"**Time Range**: {min(dates)} to {max(dates)}\n"
 
                 # Key themes (basic)
-                all_content = ' '.join([r.get('content', '')[:100] for r in results])
+                all_content = " ".join([r.get("content", "")[:100] for r in results])
                 word_freq = {}
                 for word in all_content.split():
                     if len(word) > 4:  # Skip short words
                         word_freq[word.lower()] = word_freq.get(word.lower(), 0) + 1
-                
-                if word_freq:
-                    top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:5]
-                    summary += f"**Key Terms**: {', '.join([w[0] for w in top_words])}\n"
 
-                summary += f"\n💡 Use search with same query to see individual results"
+                if word_freq:
+                    top_words = sorted(
+                        word_freq.items(), key=lambda x: x[1], reverse=True
+                    )[:5]
+                    summary += (
+                        f"**Key Terms**: {', '.join([w[0] for w in top_words])}\n"
+                    )
+
+                summary += "\n💡 Use search with same query to see individual results"
 
                 return summary
 
         except Exception as e:
-            logger.error(f"Search summary failed: {e}")
-            return f"❌ Search summary error: {str(e)}"
+            logger.exception(f"Search summary failed: {e}")
+            return f"❌ Search summary error: {e!s}"
 
     @mcp.tool()
     async def get_more_results(
@@ -189,19 +198,19 @@ def register_search_tools(mcp) -> None:
                     project=project,
                     limit=limit + offset,  # Get enough to skip offset
                 )
-                
+
                 # Apply offset
-                paginated_results = results[offset:offset + limit]
-                
+                paginated_results = results[offset : offset + limit]
+
                 if not paginated_results:
                     return f"🔍 No more results for '{query}' (offset: {offset})"
 
                 # Format results
                 output = f"🔍 **Results {offset + 1}-{offset + len(paginated_results)}** for '{query}'\n\n"
-                
+
                 for i, result in enumerate(paginated_results, offset + 1):
                     output += f"**{i}.** "
-                    if result.get('timestamp'):
+                    if result.get("timestamp"):
                         output += f"({result['timestamp']}) "
                     output += f"{result.get('content', '')[:150]}...\n\n"
 
@@ -213,8 +222,8 @@ def register_search_tools(mcp) -> None:
                 return output
 
         except Exception as e:
-            logger.error(f"Get more results failed: {e}")
-            return f"❌ Pagination error: {str(e)}"
+            logger.exception(f"Get more results failed: {e}")
+            return f"❌ Pagination error: {e!s}"
 
     @mcp.tool()
     async def search_by_file(
@@ -230,39 +239,40 @@ def register_search_tools(mcp) -> None:
 
             async with db:
                 # Search for the file path in conversations
-                query = f"file:{file_path}"
                 results = await db.search_conversations(
                     query=file_path,  # Simple text search for file path
                     project=project,
                     limit=limit,
                 )
-                
+
                 if not results:
                     return f"🔍 No conversations found about file: {file_path}"
 
                 output = f"🔍 **{len(results)} conversations** about `{file_path}`\n\n"
-                
+
                 for i, result in enumerate(results, 1):
                     output += f"**{i}.** "
-                    if result.get('timestamp'):
+                    if result.get("timestamp"):
                         output += f"({result['timestamp']}) "
-                    
-                    content = result.get('content', '')
+
+                    content = result.get("content", "")
                     # Try to find context around the file path
                     if file_path in content:
                         start = max(0, content.find(file_path) - 50)
-                        end = min(len(content), content.find(file_path) + len(file_path) + 100)
+                        end = min(
+                            len(content), content.find(file_path) + len(file_path) + 100
+                        )
                         excerpt = content[start:end]
                     else:
                         excerpt = content[:150]
-                    
+
                     output += f"{excerpt}...\n\n"
 
                 return output
 
         except Exception as e:
-            logger.error(f"File search failed: {e}")
-            return f"❌ File search error: {str(e)}"
+            logger.exception(f"File search failed: {e}")
+            return f"❌ File search error: {e!s}"
 
     @mcp.tool()
     async def search_by_concept(
@@ -284,20 +294,20 @@ def register_search_tools(mcp) -> None:
                     limit=limit,
                     min_score=0.6,  # Lower threshold for concept searches
                 )
-                
+
                 if not results:
                     return f"🔍 No conversations found about concept: {concept}"
 
                 output = f"🔍 **{len(results)} conversations** about `{concept}`\n\n"
-                
+
                 for i, result in enumerate(results, 1):
                     output += f"**{i}.** "
-                    if result.get('timestamp'):
+                    if result.get("timestamp"):
                         output += f"({result['timestamp']}) "
-                    if result.get('similarity'):
+                    if result.get("similarity"):
                         output += f"(relevance: {result['similarity']:.2f}) "
-                    
-                    content = result.get('content', '')
+
+                    content = result.get("content", "")
                     # Find best excerpt mentioning the concept
                     if concept.lower() in content.lower():
                         start = max(0, content.lower().find(concept.lower()) - 75)
@@ -305,14 +315,17 @@ def register_search_tools(mcp) -> None:
                         excerpt = content[start:end]
                     else:
                         excerpt = content[:150]
-                    
+
                     output += f"{excerpt}...\n\n"
 
                 if include_files and results:
                     # Extract mentioned files
-                    all_content = ' '.join([r.get('content', '') for r in results])
+                    all_content = " ".join([r.get("content", "") for r in results])
                     import re
-                    files = re.findall(r'[\w-]+\.(py|js|ts|md|json|yaml|yml|toml)', all_content)
+
+                    files = re.findall(
+                        r"[\w-]+\.(py|js|ts|md|json|yaml|yml|toml)", all_content
+                    )
                     if files:
                         unique_files = list(set(files))[:10]
                         output += f"📁 **Related Files**: {', '.join(unique_files)}"
@@ -320,8 +333,8 @@ def register_search_tools(mcp) -> None:
                 return output
 
         except Exception as e:
-            logger.error(f"Concept search failed: {e}")
-            return f"❌ Concept search error: {str(e)}"
+            logger.exception(f"Concept search failed: {e}")
+            return f"❌ Concept search error: {e!s}"
 
     @mcp.tool()
     async def reset_reflection_database() -> str:
@@ -336,8 +349,8 @@ def register_search_tools(mcp) -> None:
                 return "✅ Reflection database connection reset successfully"
 
         except Exception as e:
-            logger.error(f"Database reset failed: {e}")
-            return f"❌ Database reset error: {str(e)}"
+            logger.exception(f"Database reset failed: {e}")
+            return f"❌ Database reset error: {e!s}"
 
     @mcp.tool()
     async def reflection_stats() -> str:
@@ -349,17 +362,17 @@ def register_search_tools(mcp) -> None:
 
             async with db:
                 stats = await db.get_stats()
-                
+
                 output = "📊 **Reflection Database Statistics**\n\n"
-                
+
                 for key, value in stats.items():
                     output += f"**{key.replace('_', ' ').title()}**: {value}\n"
 
                 return output
 
         except Exception as e:
-            logger.error(f"Stats collection failed: {e}")
-            return f"❌ Stats error: {str(e)}"
+            logger.exception(f"Stats collection failed: {e}")
+            return f"❌ Stats error: {e!s}"
 
     # Advanced search tools
     @mcp.tool()
@@ -387,7 +400,7 @@ def register_search_tools(mcp) -> None:
                     limit=limit,
                     min_score=0.5,
                 )
-                
+
                 if not results:
                     return f"🔍 No code patterns found for: {query}"
 
@@ -395,17 +408,20 @@ def register_search_tools(mcp) -> None:
                 if pattern_type:
                     output += f" (type: {pattern_type})"
                 output += "\n\n"
-                
+
                 for i, result in enumerate(results, 1):
                     output += f"**{i}.** "
-                    if result.get('timestamp'):
+                    if result.get("timestamp"):
                         output += f"({result['timestamp']}) "
-                    
-                    content = result.get('content', '')
+
+                    content = result.get("content", "")
                     # Look for code blocks
                     import re
-                    code_blocks = re.findall(r'```[\w]*\n(.*?)\n```', content, re.DOTALL)
-                    
+
+                    code_blocks = re.findall(
+                        r"```[\w]*\n(.*?)\n```", content, re.DOTALL
+                    )
+
                     if code_blocks:
                         # Show first code block
                         code = code_blocks[0][:200]
@@ -423,8 +439,8 @@ def register_search_tools(mcp) -> None:
                 return output
 
         except Exception as e:
-            logger.error(f"Code search failed: {e}")
-            return f"❌ Code search error: {str(e)}"
+            logger.exception(f"Code search failed: {e}")
+            return f"❌ Code search error: {e!s}"
 
     @mcp.tool()
     async def search_errors(
@@ -451,7 +467,7 @@ def register_search_tools(mcp) -> None:
                     limit=limit,
                     min_score=0.4,  # Lower threshold for error searches
                 )
-                
+
                 if not results:
                     return f"🔍 No error patterns found for: {query}"
 
@@ -459,19 +475,25 @@ def register_search_tools(mcp) -> None:
                 if error_type:
                     output += f" (type: {error_type})"
                 output += "\n\n"
-                
+
                 for i, result in enumerate(results, 1):
                     output += f"**{i}.** "
-                    if result.get('timestamp'):
+                    if result.get("timestamp"):
                         output += f"({result['timestamp']}) "
-                    
-                    content = result.get('content', '')
-                    
+
+                    content = result.get("content", "")
+
                     # Look for error patterns
-                    error_keywords = ['error', 'exception', 'traceback', 'failed', 'fix']
+                    error_keywords = [
+                        "error",
+                        "exception",
+                        "traceback",
+                        "failed",
+                        "fix",
+                    ]
                     best_excerpt = ""
                     best_score = 0
-                    
+
                     for keyword in error_keywords:
                         if keyword in content.lower():
                             start = max(0, content.lower().find(keyword) - 75)
@@ -481,17 +503,17 @@ def register_search_tools(mcp) -> None:
                             if score > best_score:
                                 best_score = score
                                 best_excerpt = excerpt
-                    
+
                     if not best_excerpt:
                         best_excerpt = content[:150]
-                    
+
                     output += f"{best_excerpt}...\n\n"
 
                 return output
 
         except Exception as e:
-            logger.error(f"Error search failed: {e}")
-            return f"❌ Error search failed: {str(e)}"
+            logger.exception(f"Error search failed: {e}")
+            return f"❌ Error search failed: {e!s}"
 
     @mcp.tool()
     async def search_temporal(
@@ -508,10 +530,10 @@ def register_search_tools(mcp) -> None:
 
             # Parse time expression (basic implementation)
             from datetime import datetime, timedelta
-            
+
             now = datetime.now()
             start_time = None
-            
+
             if "yesterday" in time_expression.lower():
                 start_time = now - timedelta(days=1)
             elif "last week" in time_expression.lower():
@@ -520,7 +542,7 @@ def register_search_tools(mcp) -> None:
                 start_time = now - timedelta(days=30)
             elif "today" in time_expression.lower():
                 start_time = now - timedelta(hours=24)
-            
+
             # For now, use regular search and filter by basic time logic
             async with db:
                 search_query = query or ""
@@ -529,7 +551,7 @@ def register_search_tools(mcp) -> None:
                     project=project,
                     limit=limit * 2,  # Get more to filter
                 )
-                
+
                 # Basic time filtering (would need more sophisticated parsing)
                 if start_time:
                     filtered_results = []
@@ -537,34 +559,37 @@ def register_search_tools(mcp) -> None:
                         # This is a simplified filter - would need proper timestamp parsing
                         filtered_results.append(result)
                     results = filtered_results[:limit]
-                
+
                 if not results:
-                    return f"🔍 No conversations found for time period: {time_expression}"
+                    return (
+                        f"🔍 No conversations found for time period: {time_expression}"
+                    )
 
                 output = f"🔍 **{len(results)} conversations** from `{time_expression}`"
                 if query:
                     output += f" matching `{query}`"
                 output += "\n\n"
-                
+
                 for i, result in enumerate(results, 1):
                     output += f"**{i}.** "
-                    if result.get('timestamp'):
+                    if result.get("timestamp"):
                         output += f"({result['timestamp']}) "
-                    
-                    content = result.get('content', '')
+
+                    content = result.get("content", "")
                     output += f"{content[:150]}...\n\n"
 
                 return output
 
         except Exception as e:
-            logger.error(f"Temporal search failed: {e}")
-            return f"❌ Temporal search error: {str(e)}"
+            logger.exception(f"Temporal search failed: {e}")
+            return f"❌ Temporal search error: {e!s}"
 
 
 async def get_reflection_database():
     """Get reflection database instance with lazy loading."""
     try:
-        from ..reflection_tools import ReflectionDatabase
+        from session_mgmt_mcp.reflection_tools import ReflectionDatabase
+
         return ReflectionDatabase()
     except ImportError:
         return None

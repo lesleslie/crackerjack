@@ -7,14 +7,15 @@ architecture patterns with single responsibility principle.
 
 from __future__ import annotations
 
-from ..session_commands import SESSION_COMMANDS
+from session_mgmt_mcp.session_commands import SESSION_COMMANDS
 
 
 def register_prompt_tools(mcp) -> None:
     """Register all MCP prompt definitions.
-    
+
     Args:
         mcp: FastMCP server instance
+
     """
 
     @mcp.prompt("init")

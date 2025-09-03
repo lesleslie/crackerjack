@@ -5,14 +5,12 @@ full-text search, and intelligent result ranking.
 """
 
 import asyncio
-import json
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from session_mgmt_mcp.advanced_search import (
     AdvancedSearchEngine,
-    SearchFacet,
     SearchFilter,
     SearchResult,
 )
@@ -27,8 +25,7 @@ class TestAdvancedSearchEngine:
         with patch("session_mgmt_mcp.advanced_search.ReflectionDatabase") as mock_db:
             mock_db_instance = AsyncMock()
             mock_db.return_value = mock_db_instance
-            engine = AdvancedSearchEngine(mock_db_instance)
-            return engine
+            return AdvancedSearchEngine(mock_db_instance)
 
     @pytest.mark.asyncio
     async def test_search_with_text_query(self, search_engine):
@@ -133,7 +130,9 @@ class TestAdvancedSearchEngine:
             }
 
             with patch.object(
-                search_engine.reflection_db, "search_conversations", new_callable=AsyncMock
+                search_engine.reflection_db,
+                "search_conversations",
+                new_callable=AsyncMock,
             ) as mock_search:
                 mock_search.return_value = mock_results
 
@@ -168,7 +167,9 @@ class TestAdvancedSearchEngine:
             }
 
             with patch.object(
-                search_engine.reflection_db, "search_conversations", new_callable=AsyncMock
+                search_engine.reflection_db,
+                "search_conversations",
+                new_callable=AsyncMock,
             ) as mock_search:
                 mock_search.return_value = mock_results
 
@@ -204,7 +205,9 @@ class TestAdvancedSearchEngine:
             }
 
             with patch.object(
-                search_engine.reflection_db, "search_conversations", new_callable=AsyncMock
+                search_engine.reflection_db,
+                "search_conversations",
+                new_callable=AsyncMock,
             ) as mock_search:
                 mock_search.return_value = mock_results
 
@@ -240,7 +243,9 @@ class TestAdvancedSearchEngine:
             }
 
             with patch.object(
-                search_engine.reflection_db, "search_conversations", new_callable=AsyncMock
+                search_engine.reflection_db,
+                "search_conversations",
+                new_callable=AsyncMock,
             ) as mock_search:
                 mock_search.return_value = mock_results
 
@@ -263,15 +268,17 @@ class TestAdvancedSearchEngine:
             # Create enough mock results to test limiting
             mock_results_list = []
             for i in range(min(limit + 5, 50)):  # Don't create too many
-                mock_results_list.append({
-                    "content_id": str(i),
-                    "content_type": "conversation",
-                    "title": f"Conversation {i}",
-                    "content": f"Content for conversation {i}",
-                    "score": 0.9 - (i * 0.01),  # Decreasing scores
-                    "project": "test-project",
-                    "timestamp": datetime.now(UTC),
-                })
+                mock_results_list.append(
+                    {
+                        "content_id": str(i),
+                        "content_type": "conversation",
+                        "title": f"Conversation {i}",
+                        "content": f"Content for conversation {i}",
+                        "score": 0.9 - (i * 0.01),  # Decreasing scores
+                        "project": "test-project",
+                        "timestamp": datetime.now(UTC),
+                    }
+                )
 
             mock_results = {
                 "results": mock_results_list,
@@ -279,7 +286,9 @@ class TestAdvancedSearchEngine:
             }
 
             with patch.object(
-                search_engine.reflection_db, "search_conversations", new_callable=AsyncMock
+                search_engine.reflection_db,
+                "search_conversations",
+                new_callable=AsyncMock,
             ) as mock_search:
                 mock_search.return_value = mock_results
 
@@ -511,7 +520,9 @@ class TestAdvancedSearchEngine:
             }
 
             with patch.object(
-                search_engine.reflection_db, "search_conversations", new_callable=AsyncMock
+                search_engine.reflection_db,
+                "search_conversations",
+                new_callable=AsyncMock,
             ) as mock_search:
                 mock_search.return_value = mock_results
 
@@ -600,10 +611,7 @@ class TestAdvancedSearchEngine:
             mock_search.return_value = mock_results
 
             # Create multiple concurrent search tasks
-            tasks = [
-                search_engine.search(query=f"test {i}", limit=3)
-                for i in range(5)
-            ]
+            tasks = [search_engine.search(query=f"test {i}", limit=3) for i in range(5)]
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 

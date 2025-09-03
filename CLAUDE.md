@@ -707,18 +707,21 @@ print('✅ Python version compatible')
 ### Coding Standards & Best Practices
 
 #### Core Philosophy (from RULES.md)
+
 - **EVERY LINE OF CODE IS A LIABILITY**: The best code is no code
 - **DRY (Don't Repeat Yourself)**: If you write it twice, you're doing it wrong
 - **YAGNI (You Ain't Gonna Need It)**: Build only what's needed NOW
 - **KISS (Keep It Simple, Stupid)**: Complexity is the enemy of maintainability
 
 #### Type Safety Requirements
+
 - **Always use comprehensive type hints** with modern Python 3.13+ syntax
 - **Import typing as `import typing as t`** and prefix all typing references
 - **Use built-in collection types**: `list[str]` instead of `t.List[str]`
 - **Use pipe operator for unions**: `str | None` instead of `Optional[str]`
 
 #### Development Practices
+
 1. **Always use async/await** for database and file operations
 1. **Test with both embedding and fallback modes** during development
 1. **Include comprehensive error handling** with graceful degradation

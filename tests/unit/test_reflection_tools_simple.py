@@ -6,7 +6,6 @@ conversation search, and embedding-based similarity matching.
 
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
 from session_mgmt_mcp.reflection_tools import ReflectionDatabase
@@ -18,10 +17,11 @@ class TestReflectionDatabase:
     def test_database_initialization_without_duckdb(self):
         """Test database initialization when DuckDB is not available."""
         # Patch DUCKDB_AVAILABLE at the module level before importing
-        import session_mgmt_mcp.reflection_tools as reflection_tools
+        from session_mgmt_mcp import reflection_tools
+
         original_value = reflection_tools.DUCKDB_AVAILABLE
         reflection_tools.DUCKDB_AVAILABLE = False
-        
+
         try:
             db = ReflectionDatabase()
             with pytest.raises(ImportError, match="DuckDB not available"):
@@ -34,7 +34,7 @@ class TestReflectionDatabase:
         """Test successful database initialization."""
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_file:
             temp_file.close()
-            
+
             try:
                 db = ReflectionDatabase(temp_file.name)
                 # This should not raise an exception if DuckDB is available
@@ -81,10 +81,12 @@ class TestReflectionDatabase:
 def test_get_reflection_database_function_exists():
     """Test that get_reflection_database function exists."""
     from session_mgmt_mcp.reflection_tools import get_reflection_database
+
     assert callable(get_reflection_database)
 
 
 def test_cleanup_reflection_database_function_exists():
     """Test that cleanup_reflection_database function exists."""
     from session_mgmt_mcp.reflection_tools import cleanup_reflection_database
+
     assert callable(cleanup_reflection_database)
