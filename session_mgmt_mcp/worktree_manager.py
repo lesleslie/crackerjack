@@ -14,15 +14,16 @@ from .utils.git_operations import (
     is_git_repository,
     list_worktrees,
 )
+from .utils.logging import SessionLogger
 
 
 class WorktreeManager:
     """Manages git worktrees with session coordination."""
 
-    def __init__(self, session_logger=None) -> None:
+    def __init__(self, session_logger: SessionLogger | None = None) -> None:
         self.session_logger = session_logger
 
-    def _log(self, message: str, level: str = "info", **context) -> None:
+    def _log(self, message: str, level: str = "info", **context: Any) -> None:
         """Log messages if logger available."""
         if self.session_logger:
             getattr(self.session_logger, level)(message, **context)
@@ -47,9 +48,7 @@ class WorktreeManager:
                     "is_bare": wt.is_bare,
                     "locked": wt.locked,
                     "prunable": wt.prunable,
-                    "exists": wt.path.exists()
-                    if isinstance(wt.path, Path)
-                    else Path(wt.path).exists(),
+                    "exists": wt.path.exists(),
                 }
 
                 # Add session info if available
@@ -259,9 +258,7 @@ class WorktreeManager:
                         "branch": wt.branch,
                         "is_main": wt.is_main_worktree,
                         "is_current": wt.path == current_worktree.path,
-                        "exists": wt.path.exists()
-                        if isinstance(wt.path, Path)
-                        else Path(wt.path).exists(),
+                        "exists": wt.path.exists(),
                         "has_session": self._check_session_exists(wt.path),
                         "prunable": wt.prunable,
                     }

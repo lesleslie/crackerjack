@@ -554,10 +554,8 @@ def register_search_tools(mcp) -> None:
 
                 # Basic time filtering (would need more sophisticated parsing)
                 if start_time:
-                    filtered_results = []
-                    for result in results:
-                        # This is a simplified filter - would need proper timestamp parsing
-                        filtered_results.append(result)
+                    # This is a simplified filter - would need proper timestamp parsing
+                    filtered_results = list(results)
                     results = filtered_results[:limit]
 
                 if not results:

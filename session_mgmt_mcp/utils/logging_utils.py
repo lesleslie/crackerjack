@@ -11,7 +11,7 @@ import json
 import logging
 import sys
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -51,19 +51,19 @@ class SessionLogger:
             self.logger.addHandler(file_handler)
             self.logger.addHandler(console_handler)
 
-    def info(self, message: str, **context) -> None:
+    def info(self, message: str, **context: Any) -> None:
         """Log info with optional context."""
         if context:
             message = f"{message} | Context: {json.dumps(context)}"
         self.logger.info(message)
 
-    def warning(self, message: str, **context) -> None:
+    def warning(self, message: str, **context: Any) -> None:
         """Log warning with optional context."""
         if context:
             message = f"{message} | Context: {json.dumps(context)}"
         self.logger.warning(message)
 
-    def error(self, message: str, **context) -> None:
+    def error(self, message: str, **context: Any) -> None:
         """Log error with optional context."""
         if context:
             message = f"{message} | Context: {json.dumps(context)}"

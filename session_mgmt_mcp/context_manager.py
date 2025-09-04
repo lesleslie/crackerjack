@@ -89,7 +89,7 @@ class ContextDetector:
             found_indicators = self._find_indicators(working_path, indicators)
 
             if found_indicators:
-                if category in ["python", "javascript", "rust", "go", "java"]:
+                if category in ("python", "javascript", "rust", "go", "java"):
                     context["detected_languages"].append(category)
                 else:
                     context["detected_tools"].append(category)
@@ -158,7 +158,7 @@ class ContextDetector:
     def detect_current_context(self, working_dir: str | None = None) -> dict[str, Any]:
         """Detect current development context."""
         if not working_dir:
-            working_dir = os.environ.get("PWD", os.getcwd())
+            working_dir = os.environ.get("PWD", str(Path.cwd()))
 
         working_path = Path(working_dir)
         context = self._initialize_context(working_path)

@@ -492,7 +492,8 @@ def register_crackerjack_tools(mcp) -> None:
 
         # Check integration components
         try:
-            from session_mgmt_mcp.crackerjack_integration import CrackerjackIntegration
+            # CrackerjackIntegration will be imported when needed
+            import session_mgmt_mcp.crackerjack_integration  # noqa: F401
 
             output += "✅ **Integration Module**: Available\n"
         except ImportError:

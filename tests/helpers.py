@@ -2,20 +2,19 @@
 """Shared test utilities and helpers for session-mgmt-mcp tests."""
 
 import asyncio
-import json
 import os
 import tempfile
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import duckdb
 import numpy as np
 import pytest
-
 from session_mgmt_mcp.reflection_tools import ReflectionDatabase
 
 
@@ -31,6 +30,7 @@ class TestDataFactory:
     ) -> dict[str, Any]:
         """Generate test conversation data."""
         import uuid
+
         return {
             "id": conversation_id or str(uuid.uuid4()),
             "content": content or f"Test conversation at {datetime.now()}",
@@ -46,6 +46,7 @@ class TestDataFactory:
     ) -> dict[str, Any]:
         """Generate test reflection data."""
         import uuid
+
         return {
             "id": reflection_id or str(uuid.uuid4()),
             "content": content or f"Test reflection at {datetime.now()}",
@@ -93,7 +94,11 @@ class AsyncTestHelper:
         """Wait for a condition to become true with timeout."""
         end_time = time.time() + timeout
         while time.time() < end_time:
-            if await condition_func() if asyncio.iscoroutinefunction(condition_func) else condition_func():
+            if (
+                await condition_func()
+                if asyncio.iscoroutinefunction(condition_func)
+                else condition_func()
+            ):
                 return True
             await asyncio.sleep(interval)
         return False
@@ -121,16 +126,13 @@ class DatabaseTestHelper:
 
     @staticmethod
     @asynccontextmanager
-    async def temp_reflection_db() -> AsyncGenerator[ReflectionDatabase, None]:
+    async def temp_reflection_db() -> AsyncGenerator[ReflectionDatabase]:
         """Create temporary ReflectionDatabase for testing."""
-        import tempfile
-        import os
-        
         # Use a temporary directory and create a proper path
         with tempfile.TemporaryDirectory() as temp_dir:
-            db_path = os.path.join(temp_dir, "test.duckdb")
-            
-            db = ReflectionDatabase(db_path=db_path)
+            db_path = Path(temp_dir) / "test.duckdb"
+
+            db = ReflectionDatabase(db_path=str(db_path))
             try:
                 await db.initialize()
                 yield db
@@ -177,7 +179,9 @@ class DatabaseTestHelper:
         }
 
     @staticmethod
-    def verify_table_structure(conn: duckdb.DuckDBPyConnection, table_name: str) -> dict[str, str]:
+    def verify_table_structure(
+        conn: duckdb.DuckDBPyConnection, table_name: str
+    ) -> dict[str, str]:
         """Verify table structure and return column info."""
         result = conn.execute(f"DESCRIBE {table_name}").fetchall()
         return {row[0]: row[1] for row in result}  # column_name: column_type
@@ -193,7 +197,7 @@ class DatabaseTestHelper:
         start_time = time.perf_counter()
         result = await query_func(*args, **kwargs)
         end_time = time.perf_counter()
-        
+
         return {
             "execution_time": end_time - start_time,
             "result_count": len(result) if isinstance(result, list) else 1,
@@ -207,12 +211,13 @@ class MockingHelper:
     def mock_embedding_system():
         """Create comprehensive mock for embedding system."""
         mocks = {}
-        
+
         # Mock ONNX session
         mock_onnx = Mock()
-        mock_onnx.run.return_value = [np.random.rand(1, 384).astype(np.float32)]
+        rng = np.random.default_rng(42)
+        mock_onnx.run.return_value = [rng.random((1, 384)).astype(np.float32)]
         mocks["onnx_session"] = mock_onnx
-        
+
         # Mock tokenizer
         mock_tokenizer = Mock()
         mock_tokenizer.return_value = {
@@ -220,7 +225,7 @@ class MockingHelper:
             "attention_mask": [[1, 1, 1, 1, 1]],
         }
         mocks["tokenizer"] = mock_tokenizer
-        
+
         return mocks
 
     @staticmethod
@@ -228,13 +233,13 @@ class MockingHelper:
     async def mock_mcp_server():
         """Create mock MCP server context manager."""
         from fastmcp import FastMCP
-        
+
         server = Mock(spec=FastMCP)
         server.tool = Mock()
         server.prompt = Mock()
         server.__aenter__ = AsyncMock(return_value=server)
         server.__aexit__ = AsyncMock(return_value=None)
-        
+
         yield server
 
     @staticmethod
@@ -260,23 +265,28 @@ class AssertionHelper:
     def assert_valid_uuid(value: str) -> None:
         """Assert that value is a valid UUID."""
         import uuid
+
         try:
             uuid.UUID(value)
         except ValueError as e:
-            raise AssertionError(f"Expected valid UUID, got: {value} - {e}")
+            msg = f"Expected valid UUID, got: {value} - {e}"
+            raise AssertionError(msg)
 
     @staticmethod
     def assert_valid_timestamp(value: str) -> None:
         """Assert that value is a valid ISO timestamp."""
         try:
-            datetime.fromisoformat(value.replace("Z", "+00:00"))
+            datetime.fromisoformat(value)
         except ValueError as e:
-            raise AssertionError(f"Expected valid timestamp, got: {value} - {e}")
+            msg = f"Expected valid timestamp, got: {value} - {e}"
+            raise AssertionError(msg)
 
     @staticmethod
     def assert_embedding_shape(embedding: np.ndarray, expected_dim: int = 384) -> None:
         """Assert embedding has correct shape."""
-        assert embedding.shape == (expected_dim,), f"Expected shape ({expected_dim},), got {embedding.shape}"
+        assert embedding.shape == (expected_dim,), (
+            f"Expected shape ({expected_dim},), got {embedding.shape}"
+        )
         assert embedding.dtype == np.float32, f"Expected float32, got {embedding.dtype}"
 
     @staticmethod
@@ -285,7 +295,9 @@ class AssertionHelper:
         assert 0.0 <= score <= 1.0, f"Similarity score should be in [0,1], got {score}"
 
     @staticmethod
-    def assert_database_record(record: dict[str, Any], expected_fields: list[str]) -> None:
+    def assert_database_record(
+        record: dict[str, Any], expected_fields: list[str]
+    ) -> None:
         """Assert database record has expected fields."""
         for field in expected_fields:
             assert field in record, f"Record missing field: {field}"
@@ -301,14 +313,16 @@ class PerformanceHelper:
         """Context manager to measure execution time."""
         start_time = time.perf_counter()
         measurements = {"start_time": start_time}
-        
+
         yield measurements
-        
+
         end_time = time.perf_counter()
-        measurements.update({
-            "end_time": end_time,
-            "duration": end_time - start_time,
-        })
+        measurements.update(
+            {
+                "end_time": end_time,
+                "duration": end_time - start_time,
+            }
+        )
 
     @staticmethod
     def assert_performance_threshold(
@@ -318,8 +332,7 @@ class PerformanceHelper:
     ) -> None:
         """Assert operation completed within time threshold."""
         assert actual_time <= threshold, (
-            f"{operation_name} took {actual_time:.3f}s, "
-            f"expected <= {threshold:.3f}s"
+            f"{operation_name} took {actual_time:.3f}s, expected <= {threshold:.3f}s"
         )
 
     @staticmethod
@@ -331,13 +344,13 @@ class PerformanceHelper:
     ) -> dict[str, float]:
         """Benchmark async operation multiple times."""
         times = []
-        
+
         for _ in range(iterations):
             start = time.perf_counter()
             await operation(*args, **kwargs)
             end = time.perf_counter()
             times.append(end - start)
-        
+
         return {
             "mean": sum(times) / len(times),
             "min": min(times),
@@ -394,15 +407,19 @@ def requires_embeddings(test_func):
 
 def async_timeout(seconds: float = 30.0):
     """Decorator to add timeout to async test."""
+
     def decorator(test_func):
         return pytest.mark.timeout(seconds)(test_func)
+
     return decorator
 
 
 def performance_test(baseline_key: str):
     """Decorator to mark performance test with baseline."""
+
     def decorator(test_func):
         return pytest.mark.performance(
             pytest.mark.parametrize("baseline_key", [baseline_key])
         )(test_func)
+
     return decorator

@@ -137,7 +137,8 @@ except ImportError as e:
 
 # Import enhanced search tools
 try:
-    from session_mgmt_mcp.search_enhanced import EnhancedSearchEngine
+    # EnhancedSearchEngine will be imported when needed
+    import session_mgmt_mcp.search_enhanced  # noqa: vulture
 
     ENHANCED_SEARCH_AVAILABLE = True
 except ImportError as e:
@@ -173,7 +174,8 @@ except ImportError as e:
 
 # Import auto-context loading tools
 try:
-    from session_mgmt_mcp.context_manager import AutoContextLoader
+    # AutoContextLoader will be imported when needed
+    import session_mgmt_mcp.context_manager  # noqa: vulture
 
     AUTO_CONTEXT_AVAILABLE = True
 except ImportError as e:
@@ -182,7 +184,8 @@ except ImportError as e:
 
 # Import memory optimization tools
 try:
-    from session_mgmt_mcp.memory_optimizer import MemoryOptimizer
+    # MemoryOptimizer will be imported when needed
+    import session_mgmt_mcp.memory_optimizer  # noqa: vulture
 
     MEMORY_OPTIMIZER_AVAILABLE = True
 except ImportError as e:
@@ -200,7 +203,7 @@ except ImportError as e:
 
 # Import LLM providers
 try:
-    from session_mgmt_mcp.llm_providers import LLMManager, LLMMessage
+    from session_mgmt_mcp.llm_providers import LLMManager
 
     LLM_PROVIDERS_AVAILABLE = True
 except ImportError as e:
@@ -221,7 +224,8 @@ except ImportError as e:
 
 # Import Crackerjack integration tools
 try:
-    from session_mgmt_mcp.crackerjack_integration import CrackerjackIntegration
+    # CrackerjackIntegration will be imported when needed
+    import session_mgmt_mcp.crackerjack_integration  # noqa: vulture
 
     CRACKERJACK_INTEGRATION_AVAILABLE = True
 except ImportError as e:
@@ -258,7 +262,7 @@ class SessionPermissionsManager:
 
     def _generate_session_id(self) -> str:
         """Generate unique session ID based on current time and working directory."""
-        session_data = f"{datetime.now().isoformat()}_{os.getcwd()}"
+        session_data = f"{datetime.now().isoformat()}_{Path.cwd()}"
         return hashlib.md5(session_data.encode()).hexdigest()[:12]
 
     def _load_permissions(self) -> None:
@@ -768,9 +772,12 @@ def _generate_quality_recommendations(
     return recommendations
 
 
-def should_suggest_compact() -> tuple[bool, str]:
+def should_suggest_compact() -> tuple[bool, str]:  # noqa: complexipy
     """Determine if compacting would be beneficial and provide reasoning.
     Returns (should_compact, reason).
+
+    Note: High complexity is necessary for comprehensive heuristic analysis
+    of project state, git activity, and development patterns.
     """
     # Heuristics for when compaction might be needed:
     # 1. Large projects with many files
@@ -2231,11 +2238,8 @@ def _add_crackerjack_integration_info(output: list[str]) -> None:
 
 # Token optimization imports
 try:
-    from .token_optimizer import (
-        get_token_optimizer,
-        optimize_search_response,
-        track_token_usage,
-    )
+    # get_token_optimizer will be imported when needed
+    import session_mgmt_mcp.token_optimizer  # noqa: F401
 
     TOKEN_OPTIMIZER_AVAILABLE = True
 except ImportError:

@@ -144,6 +144,9 @@ class AdvancedSearchEngine:
             LIMIT ?
         """
 
+        if not self.reflection_db.conn:
+            return []
+
         results = self.reflection_db.conn.execute(
             sql,
             [f"%{query}%", limit],
@@ -168,6 +171,9 @@ class AdvancedSearchEngine:
             FROM search_index
             WHERE content_id = ? AND content_type = ?
         """
+
+        if not self.reflection_db.conn:
+            return []
 
         result = self.reflection_db.conn.execute(
             sql,
@@ -262,13 +268,19 @@ class AdvancedSearchEngine:
         """Calculate aggregate metrics from search data."""
         start_time, end_time = self._parse_timeframe(timeframe)
         base_conditions = ["last_indexed BETWEEN ? AND ?"]
-        params = [start_time, end_time]
+        params: list[datetime | str | int] = [start_time, end_time]
 
         # Add filter conditions
         if filters:
             filter_conditions, filter_params = self._build_filter_conditions(filters)
             base_conditions.extend(filter_conditions)
-            params.extend(filter_params)
+            # Convert filter params to appropriate types
+            for param in filter_params:
+                if isinstance(param, datetime):
+                    params.append(param)
+                else:
+                    # param is str | int, both need to be added as-is
+                    params.append(param)
 
         where_clause = " WHERE " + " AND ".join(base_conditions)
 
@@ -316,6 +328,11 @@ class AdvancedSearchEngine:
         else:
             return {"error": f"Unknown metric type: {metric_type}"}
 
+        if not self.reflection_db.conn:
+            return {
+                "error": f"Database connection not available for metric type: {metric_type}"
+            }
+
         results = self.reflection_db.conn.execute(sql, params).fetchall()
 
         return {
@@ -338,6 +355,9 @@ class AdvancedSearchEngine:
     async def _get_last_index_update(self) -> datetime | None:
         """Get timestamp of last index update."""
         sql = "SELECT MAX(last_indexed) FROM search_index"
+
+        if not self.reflection_db.conn:
+            return None
 
         result = self.reflection_db.conn.execute(sql).fetchone()
 
@@ -362,6 +382,9 @@ class AdvancedSearchEngine:
 
     async def _index_conversations(self) -> None:
         """Index all conversations for search."""
+        if not self.reflection_db.conn:
+            return
+
         sql = "SELECT id, content, project, timestamp, metadata FROM conversations"
         results = self.reflection_db.conn.execute(sql).fetchall()
 
@@ -391,32 +414,37 @@ class AdvancedSearchEngine:
             }
 
             # Insert or update search index
-            self.reflection_db.conn.execute(
-                """
-                INSERT INTO search_index
-                (id, content_type, content_id, indexed_content, search_metadata, last_indexed)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT (id) DO UPDATE SET
-                content_type = EXCLUDED.content_type,
-                content_id = EXCLUDED.content_id,
-                indexed_content = EXCLUDED.indexed_content,
-                search_metadata = EXCLUDED.search_metadata,
-                last_indexed = EXCLUDED.last_indexed
-                """,
-                [
-                    f"conv_{conv_id}",
-                    "conversation",
-                    conv_id,
-                    indexed_content,
-                    json.dumps(search_metadata),
-                    datetime.now(UTC),
-                ],
-            )
+            if self.reflection_db.conn:
+                self.reflection_db.conn.execute(
+                    """
+                    INSERT INTO search_index
+                    (id, content_type, content_id, indexed_content, search_metadata, last_indexed)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (id) DO UPDATE SET
+                    content_type = EXCLUDED.content_type,
+                    content_id = EXCLUDED.content_id,
+                    indexed_content = EXCLUDED.indexed_content,
+                    search_metadata = EXCLUDED.search_metadata,
+                    last_indexed = EXCLUDED.last_indexed
+                    """,
+                    [
+                        f"conv_{conv_id}",
+                        "conversation",
+                        conv_id,
+                        indexed_content,
+                        json.dumps(search_metadata),
+                        datetime.now(UTC),
+                    ],
+                )
 
-        self.reflection_db.conn.commit()
+        if self.reflection_db.conn:
+            self.reflection_db.conn.commit()
 
     async def _index_reflections(self) -> None:
         """Index all reflections for search."""
+        if not self.reflection_db.conn:
+            return
+
         sql = "SELECT id, content, tags, timestamp, metadata FROM reflections"
         results = self.reflection_db.conn.execute(sql).fetchall()
 
@@ -440,32 +468,37 @@ class AdvancedSearchEngine:
             }
 
             # Insert or update search index
-            self.reflection_db.conn.execute(
-                """
-                INSERT INTO search_index
-                (id, content_type, content_id, indexed_content, search_metadata, last_indexed)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT (id) DO UPDATE SET
-                content_type = EXCLUDED.content_type,
-                content_id = EXCLUDED.content_id,
-                indexed_content = EXCLUDED.indexed_content,
-                search_metadata = EXCLUDED.search_metadata,
-                last_indexed = EXCLUDED.last_indexed
-                """,
-                [
-                    f"refl_{refl_id}",
-                    "reflection",
-                    refl_id,
-                    indexed_content,
-                    json.dumps(search_metadata),
-                    datetime.now(UTC),
-                ],
-            )
+            if self.reflection_db.conn:
+                self.reflection_db.conn.execute(
+                    """
+                    INSERT INTO search_index
+                    (id, content_type, content_id, indexed_content, search_metadata, last_indexed)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (id) DO UPDATE SET
+                    content_type = EXCLUDED.content_type,
+                    content_id = EXCLUDED.content_id,
+                    indexed_content = EXCLUDED.indexed_content,
+                    search_metadata = EXCLUDED.search_metadata,
+                    last_indexed = EXCLUDED.last_indexed
+                    """,
+                    [
+                        f"refl_{refl_id}",
+                        "reflection",
+                        refl_id,
+                        indexed_content,
+                        json.dumps(search_metadata),
+                        datetime.now(UTC),
+                    ],
+                )
 
-        self.reflection_db.conn.commit()
+        if self.reflection_db.conn:
+            self.reflection_db.conn.commit()
 
     async def _update_search_facets(self) -> None:
         """Update search facets based on indexed content."""
+        if not self.reflection_db.conn:
+            return
+
         # Clear existing facets
         self.reflection_db.conn.execute("DELETE FROM search_facets")
 
@@ -486,6 +519,9 @@ class AdvancedSearchEngine:
                 ORDER BY count DESC
             """
 
+            if not self.reflection_db.conn:
+                continue
+
             results = self.reflection_db.conn.execute(sql).fetchall()
 
             for facet_value, _count in results:
@@ -494,29 +530,31 @@ class AdvancedSearchEngine:
                         f"{facet_name}_{facet_value}".encode(),
                     ).hexdigest()
 
-                    self.reflection_db.conn.execute(
-                        """
-                        INSERT INTO search_facets
-                        (id, content_type, content_id, facet_name, facet_value, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        ON CONFLICT (id) DO UPDATE SET
-                        content_type = EXCLUDED.content_type,
-                        content_id = EXCLUDED.content_id,
-                        facet_name = EXCLUDED.facet_name,
-                        facet_value = EXCLUDED.facet_value,
-                        created_at = EXCLUDED.created_at
-                        """,
-                        [
-                            facet_id,
-                            "search_facet",
-                            f"{facet_name}_{facet_value}",
-                            facet_name,
-                            facet_value,
-                            datetime.now(UTC).isoformat(),
-                        ],
-                    )
+                    if self.reflection_db.conn:
+                        self.reflection_db.conn.execute(
+                            """
+                            INSERT INTO search_facets
+                            (id, content_type, content_id, facet_name, facet_value, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                            ON CONFLICT (id) DO UPDATE SET
+                            content_type = EXCLUDED.content_type,
+                            content_id = EXCLUDED.content_id,
+                            facet_name = EXCLUDED.facet_name,
+                            facet_value = EXCLUDED.facet_value,
+                            created_at = EXCLUDED.created_at
+                            """,
+                            [
+                                facet_id,
+                                "search_facet",
+                                f"{facet_name}_{facet_value}",
+                                facet_name,
+                                facet_value,
+                                datetime.now(UTC).isoformat(),
+                            ],
+                        )
 
-        self.reflection_db.conn.commit()
+        if self.reflection_db.conn:
+            self.reflection_db.conn.commit()
 
     def _extract_technical_terms(self, content: str) -> list[str]:
         """Extract technical terms and patterns from content."""
@@ -560,7 +598,7 @@ class AdvancedSearchEngine:
     def _build_filter_conditions(
         self,
         filters: list[SearchFilter],
-    ) -> tuple[list[str], list[Any]]:
+    ) -> tuple[list[str], list[str | int | datetime]]:
         """Build SQL conditions from filters."""
         conditions = []
         params = []
@@ -603,7 +641,7 @@ class AdvancedSearchEngine:
             FROM search_index
             WHERE indexed_content LIKE ?
         """
-        params = [f"%{query}%"]
+        params: list[str] = [f"%{query}%"]
 
         # Add content type filter if specified
         if content_type:
@@ -617,19 +655,24 @@ class AdvancedSearchEngine:
                     days = int(timeframe[:-1])
                     cutoff_date = datetime.now(UTC) - timedelta(days=days)
                     sql += " AND last_indexed >= ?"
-                    params.append(cutoff_date)
+                    params.append(cutoff_date.isoformat())
                 elif timeframe.endswith("h"):
                     hours = int(timeframe[:-1])
                     cutoff_date = datetime.now(UTC) - timedelta(hours=hours)
                     sql += " AND last_indexed >= ?"
-                    params.append(cutoff_date)
+                    params.append(cutoff_date.isoformat())
 
         # Add filter conditions if provided
         if filters:
             filter_conditions, filter_params = self._build_filter_conditions(filters)
             if filter_conditions:
                 sql += " AND " + " AND ".join(filter_conditions)
-                params.extend(filter_params)
+                # Convert filter params to strings for SQL execution
+                for param in filter_params:
+                    if isinstance(param, datetime):
+                        params.append(param.isoformat())
+                    else:
+                        params.append(str(param))
 
         # Add sorting
         if sort_by == "date":
@@ -640,7 +683,11 @@ class AdvancedSearchEngine:
             sql += " ORDER BY LENGTH(indexed_content) DESC"  # Longer content = more relevant
 
         sql += " LIMIT ? OFFSET ?"
-        params.extend([limit, offset])
+        params.append(str(limit))
+        params.append(str(offset))
+
+        if not self.reflection_db.conn:
+            return []
 
         results = self.reflection_db.conn.execute(
             sql,
@@ -665,8 +712,8 @@ class AdvancedSearchEngine:
             search_results.append(
                 SearchResult(
                     content_id=content_id,
-                    content_type=content_type,
-                    title=f"{content_type.title()} from {metadata.get('project', 'Unknown')}",
+                    content_type=content_type or "unknown",
+                    title=f"{(content_type or 'unknown').title()} from {metadata.get('project', 'Unknown')}",
                     content=indexed_content[:500] + "..."
                     if len(indexed_content) > 500
                     else indexed_content,
@@ -731,6 +778,9 @@ class AdvancedSearchEngine:
                     LIMIT ?
                 """
 
+                if not self.reflection_db.conn:
+                    continue
+
                 results = self.reflection_db.conn.execute(
                     sql,
                     [facet_name, f"%{query}%", facet_config["size"]],
@@ -738,8 +788,11 @@ class AdvancedSearchEngine:
 
                 facets[facet_name] = SearchFacet(
                     name=facet_name,
-                    values=[(row[0], row[1]) for row in results],
-                    facet_type=facet_config["type"],
+                    values=[
+                        (str(row[0]) if row[0] is not None else "", row[1])
+                        for row in results
+                    ],
+                    facet_type=str(facet_config["type"]),
                 )
 
         return facets

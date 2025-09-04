@@ -287,7 +287,9 @@ class BrowserDocumentationMonitor:
         """Extract context from documentation URLs."""
         context = {"domain": "", "technology": "", "topic": "", "relevance": 0.0}
 
-        try:
+        from contextlib import suppress
+
+        with suppress(Exception):
             from urllib.parse import urlparse
 
             parsed = urlparse(url)
@@ -303,7 +305,7 @@ class BrowserDocumentationMonitor:
             elif (
                 "javascript" in path
                 or "js" in path
-                or domain in ["developer.mozilla.org", "nodejs.org"]
+                or domain in ("developer.mozilla.org", "nodejs.org")
             ):
                 context["technology"] = "javascript"
                 context["relevance"] = 0.8
@@ -311,13 +313,13 @@ class BrowserDocumentationMonitor:
                 context["technology"] = "rust"
                 context["relevance"] = 0.8
             elif any(
-                framework in domain for framework in ["django", "flask", "fastapi"]
+                framework in domain for framework in ("django", "flask", "fastapi")
             ):
                 context["technology"] = "python-web"
                 context["relevance"] = 0.9
             elif any(
                 framework in domain
-                for framework in ["react", "vue", "angular", "svelte"]
+                for framework in ("react", "vue", "angular", "svelte")
             ):
                 context["technology"] = "frontend"
                 context["relevance"] = 0.8
@@ -332,9 +334,6 @@ class BrowserDocumentationMonitor:
                     if len(path_parts) > 1
                     else ""
                 )
-
-        except Exception:
-            pass
 
         return context
 

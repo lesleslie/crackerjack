@@ -110,23 +110,23 @@ class SessionLifecycleManager:
             "has_requirements_txt": (project_dir / "requirements.txt").exists(),
             "has_readme": any(
                 (project_dir / name).exists()
-                for name in ["README.md", "README.rst", "README.txt", "readme.md"]
+                for name in ("README.md", "README.rst", "README.txt", "readme.md")
             ),
             "has_git_repo": is_git_repository(project_dir),
             "has_venv": any(
                 (project_dir / name).exists()
-                for name in [".venv", "venv", ".env", "env"]
+                for name in (".venv", "venv", ".env", "env")
             ),
             "has_tests": any(
-                (project_dir / name).exists() for name in ["tests", "test", "testing"]
+                (project_dir / name).exists() for name in ("tests", "test", "testing")
             ),
             "has_src_structure": (project_dir / "src").exists(),
             "has_docs": any(
-                (project_dir / name).exists() for name in ["docs", "documentation"]
+                (project_dir / name).exists() for name in ("docs", "documentation")
             ),
             "has_ci_cd": any(
                 (project_dir / name).exists()
-                for name in [".github", ".gitlab-ci.yml", ".travis.yml", "Jenkinsfile"]
+                for name in (".github", ".gitlab-ci.yml", ".travis.yml", "Jenkinsfile")
             ),
         }
 

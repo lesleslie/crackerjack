@@ -51,8 +51,9 @@ async def temp_db_path() -> AsyncGenerator[str]:
 
     # Cleanup
     try:
-        if os.path.exists(db_path):
-            os.unlink(db_path)
+        db_path_obj = Path(db_path)
+        if db_path_obj.exists():
+            db_path_obj.unlink()
     except (OSError, PermissionError):
         # On Windows, file might still be locked
         pass
@@ -141,7 +142,8 @@ def mock_onnx_session() -> Mock:
     """Provide mock ONNX session for embedding tests."""
     mock_session = Mock()
     # Mock returns a 384-dimensional vector
-    mock_session.run.return_value = [np.random.rand(1, 384).astype(np.float32)]
+    rng = np.random.default_rng(42)
+    mock_session.run.return_value = [rng.random((1, 384)).astype(np.float32)]
     return mock_session
 
 
@@ -216,8 +218,8 @@ async def async_client() -> AsyncGenerator[Mock]:
 def sample_embedding() -> np.ndarray:
     """Provide sample embedding vector for testing."""
     # Create a consistent sample embedding
-    np.random.seed(42)
-    return np.random.rand(384).astype(np.float32)
+    rng = np.random.default_rng(42)
+    return rng.random((384,)).astype(np.float32)
 
 
 @pytest.fixture

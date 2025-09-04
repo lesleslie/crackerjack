@@ -30,7 +30,7 @@ class DatabaseConnectionPool:
     def __init__(self, db_path: str, max_connections: int = 5) -> None:
         self.db_path = db_path
         self.max_connections = max_connections
-        self._pool: list = []
+        self._pool: list[Any] = []
         self._pool_lock = threading.Lock()
         self._active_connections: dict[int, Any] = {}
         self._executor = None
@@ -49,7 +49,7 @@ class DatabaseConnectionPool:
             raise ImportError(msg)
 
         try:
-            conn = duckdb.connect(self.db_path)
+            conn = duckdb.connect(self.db_path) if duckdb else None  # type: ignore[attr-defined]
             # Set optimal pragmas for performance
             conn.execute("PRAGMA threads=4")
             conn.execute("PRAGMA memory_limit='1GB'")

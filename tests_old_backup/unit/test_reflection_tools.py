@@ -7,7 +7,7 @@ conversation search, and embedding-based similarity matching.
 import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from session_mgmt_mcp.reflection_tools import ReflectionDatabase
@@ -141,7 +141,9 @@ class TestReflectionDatabase:
         assert isinstance(results_alpha, list)
         # Should find reflections tagged with project-alpha
         alpha_results = [r for r in results_alpha if "alpha" in str(r.get("tags", []))]
-        assert len(alpha_results) >= 0  # May be empty depending on search implementation
+        assert (
+            len(alpha_results) >= 0
+        )  # May be empty depending on search implementation
 
     @pytest.mark.asyncio
     async def test_search_reflections_limit(self, temp_db):
@@ -391,15 +393,19 @@ class TestReflectionDatabaseWithEmbeddings:
         temp_file.close()
 
         # Mock embedding model availability
-        with patch(
-            "session_mgmt_mcp.reflection_tools.ONNX_AVAILABLE",
-            True,
-        ), patch(
-            "session_mgmt_mcp.reflection_tools.DUCKDB_AVAILABLE",
-            True,
-        ), patch(
-            "session_mgmt_mcp.reflection_tools.ReflectionDatabase.get_embedding",
-        ) as mock_get_embedding:
+        with (
+            patch(
+                "session_mgmt_mcp.reflection_tools.ONNX_AVAILABLE",
+                True,
+            ),
+            patch(
+                "session_mgmt_mcp.reflection_tools.DUCKDB_AVAILABLE",
+                True,
+            ),
+            patch(
+                "session_mgmt_mcp.reflection_tools.ReflectionDatabase.get_embedding",
+            ) as mock_get_embedding,
+        ):
             mock_get_embedding.return_value = [0.1, -0.2, 0.3] * 128  # 384-dim
 
             db = ReflectionDatabase(temp_file.name)

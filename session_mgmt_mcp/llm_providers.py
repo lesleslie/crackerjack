@@ -562,18 +562,14 @@ class OllamaProvider(LLMProvider):
 
     def get_models(self) -> list[str]:
         """Get available Ollama models."""
-        return (
-            self._available_models
-            if self._available_models
-            else [
-                "llama2",
-                "llama2:13b",
-                "llama2:70b",
-                "codellama",
-                "mistral",
-                "mixtral",
-            ]
-        )
+        return self._available_models or [
+            "llama2",
+            "llama2:13b",
+            "llama2:70b",
+            "codellama",
+            "mistral",
+            "mixtral",
+        ]
 
 
 class LLMManager:

@@ -199,7 +199,7 @@ class ConfigLoader:
             if (parent / "pyproject.toml").exists():
                 # Check if this is the session-mgmt-mcp project
                 try:
-                    with open(parent / "pyproject.toml", "rb") as f:
+                    with (parent / "pyproject.toml").open("rb") as f:
                         if tomllib:
                             toml_data = tomllib.load(f)
                             if (
@@ -224,7 +224,7 @@ class ConfigLoader:
         pyproject_path = self.project_root / "pyproject.toml"
         if pyproject_path.exists() and tomllib:
             try:
-                with open(pyproject_path, "rb") as f:
+                with pyproject_path.open("rb") as f:
                     toml_data = tomllib.load(f)
                     self._apply_toml_config(config, toml_data)
             except Exception as e:

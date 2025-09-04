@@ -7,17 +7,22 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from session_mgmt_mcp.server import reflect_on_past
 
+
 # Mock the token optimization functions since they're not directly available
 async def get_cached_chunk(cache_key: str, chunk_index: int):
-    """Mock function for testing"""
-    return None
+    """Mock function for testing."""
+    return
+
 
 async def get_token_usage_stats(hours: int = 24):
-    """Mock function for testing"""
+    """Mock function for testing."""
     return {"status": "no_data"}
 
-async def optimize_memory_usage(strategy: str = "auto", max_age_days: int = 30, dry_run: bool = True):
-    """Mock function for testing"""
+
+async def optimize_memory_usage(
+    strategy: str = "auto", max_age_days: int = 30, dry_run: bool = True
+):
+    """Mock function for testing."""
     return "❌ Memory optimization requires both token optimizer and reflection tools"
 
 

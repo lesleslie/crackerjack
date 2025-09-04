@@ -26,8 +26,8 @@ sys.path.insert(0, str(project_root))
 
 # Import fixtures from fixtures directory
 try:
-    from tests.fixtures.mcp_fixtures import *
     from tests.fixtures.data_factories import *
+    from tests.fixtures.mcp_fixtures import *
 except ImportError:
     print("Warning: Test fixtures not available, using minimal mocks")
     # Already handled by existing fallback code below
@@ -228,7 +228,7 @@ def session_permissions():
     # Create temporary claude directory for testing
     import tempfile
     from pathlib import Path
-    
+
     temp_dir = Path(tempfile.mkdtemp(prefix="test_claude_"))
     manager = SessionPermissionsManager(temp_dir)
 
@@ -243,6 +243,7 @@ def session_permissions():
     manager.trusted_operations.clear()
     # Clean up temp directory
     import shutil
+
     shutil.rmtree(temp_dir, ignore_errors=True)
 
 

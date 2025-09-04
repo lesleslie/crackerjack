@@ -10,21 +10,24 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from session_mgmt_mcp.tools.session_tools import register_session_tools
-from session_mgmt_mcp.tools.search_tools import register_search_tools
 from session_mgmt_mcp.tools.memory_tools import register_memory_tools
+from session_mgmt_mcp.tools.search_tools import register_search_tools
+from session_mgmt_mcp.tools.session_tools import register_session_tools
 from tests.fixtures.mcp_fixtures import AsyncTestCase
+
 
 # Mock MCP server for testing
 class MockMCP:
     def __init__(self):
         self.tools = {}
-    
+
     def tool(self, *args, **kwargs):
         def decorator(func):
             self.tools[func.__name__] = func
             return func
+
         return decorator
+
 
 # Register tools with mock MCP server
 mock_mcp = MockMCP()
@@ -33,13 +36,13 @@ register_memory_tools(mock_mcp)
 register_search_tools(mock_mcp)
 
 # Access the registered tools
-init = mock_mcp.tools.get('init')
-checkpoint = mock_mcp.tools.get('checkpoint')
-end = mock_mcp.tools.get('end')
-status = mock_mcp.tools.get('status')
-permissions = mock_mcp.tools.get('permissions')
-quick_search = mock_mcp.tools.get('quick_search')
-store_reflection = mock_mcp.tools.get('store_reflection')
+init = mock_mcp.tools.get("init")
+checkpoint = mock_mcp.tools.get("checkpoint")
+end = mock_mcp.tools.get("end")
+status = mock_mcp.tools.get("status")
+permissions = mock_mcp.tools.get("permissions")
+quick_search = mock_mcp.tools.get("quick_search")
+store_reflection = mock_mcp.tools.get("store_reflection")
 
 
 @pytest.mark.integration
@@ -64,7 +67,7 @@ class TestSessionLifecycleIntegration(AsyncTestCase):
         assert "MCP Server" in init_result
 
         # Verify initialization side effects
-        assert hasattr(session_permissions, 'trusted_operations')
+        assert hasattr(session_permissions, "trusted_operations")
 
         # Phase 2: Status Check
         status_result = await status(working_directory=working_dir)
@@ -278,7 +281,14 @@ class TestMCPToolRegistration:
         ]
 
         # Check that the tools are available in our mock setup
-        global init, checkpoint, end, status, permissions, quick_search, store_reflection
+        global \
+            init, \
+            checkpoint, \
+            end, \
+            status, \
+            permissions, \
+            quick_search, \
+            store_reflection
         tool_vars = {
             "init": init,
             "checkpoint": checkpoint,
@@ -311,7 +321,9 @@ class TestMCPToolRegistration:
         # Test required parameters - we can't easily test this without proper setup
         # For now, we'll test that the function can be called with valid parameters
         if store_reflection is not None:
-            result = await store_reflection(content="Valid content", tags=["valid", "tags"])
+            result = await store_reflection(
+                content="Valid content", tags=["valid", "tags"]
+            )
             assert isinstance(result, str)
 
     @pytest.mark.asyncio

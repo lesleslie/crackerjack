@@ -48,7 +48,7 @@ class ReflectionDatabase:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):  # noqa: vulture
         """Context manager exit with cleanup."""
         self.close()
 

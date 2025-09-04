@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def _extract_quality_scores(reflections: list) -> list[float]:
+def _extract_quality_scores(reflections: list[dict[str, Any]]) -> list[float]:
     """Extract quality scores from reflection data."""
     scores = []
 
@@ -110,7 +110,9 @@ def _analyze_quality_trend(quality_scores: list[float]) -> tuple[str, list[str],
     return trend, insights, improving
 
 
-def _extract_quality_scores_from_reflections(reflections: list) -> list[float]:
+def _extract_quality_scores_from_reflections(
+    reflections: list[dict[str, Any]],
+) -> list[float]:
     """Enhanced quality score extraction with multiple parsing strategies."""
     scores = []
 

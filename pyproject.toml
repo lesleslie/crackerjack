@@ -96,6 +96,9 @@ fix = true
 unsafe-fixes = true
 show-fixes = true
 output-format = "full"
+exclude = [
+    "tests_old_backup/",
+]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -257,6 +260,7 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "functional: marks tests as functional tests",
     "performance: marks tests as performance tests",
     "security: marks tests as security tests",
     "mcp: marks tests as MCP server tests",

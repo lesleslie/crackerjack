@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +26,7 @@ def _cleanup_session_logs() -> str:
         return "📝 No session log files found"
 
     # Keep logs from last 10 days
-    cutoff_date = datetime.now() - timedelta(days=10)
+    cutoff_date = datetime.now(UTC) - timedelta(days=10)
     cleaned_count = 0
 
     for log_file in log_files:
@@ -34,7 +34,7 @@ def _cleanup_session_logs() -> str:
             # Extract date from filename: session_management_YYYYMMDD.log
             date_str = log_file.stem.split("_")[-1]  # Gets the YYYYMMDD part
             if len(date_str) == 8 and date_str.isdigit():
-                log_date = datetime.strptime(date_str, "%Y%m%d")
+                log_date = datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=UTC)
                 if log_date < cutoff_date:
                     log_file.unlink()
                     cleaned_count += 1
