@@ -81,7 +81,8 @@ async def _store_reflection_impl(content: str, tags: list[str] | None = None) ->
         return "❌ Failed to store reflection"
 
     except Exception as e:
-        logger.exception("Error storing reflection", error=str(e))
+        # Use regular logging instead of exception logging which isn't available
+        logger.error(f"Error storing reflection: {e}")
         return f"❌ Error storing reflection: {e}"
 
 
@@ -125,7 +126,8 @@ async def _quick_search_impl(
         return "\n".join(output)
 
     except Exception as e:
-        logger.exception("Error in quick search", error=str(e), query=query)
+        # Use regular logging instead of exception logging which isn't available
+        logger.error(f"Error in quick search: {e}")
         return f"❌ Search error: {e}"
 
 
@@ -206,7 +208,8 @@ async def _search_summary_impl(
         return "\n".join(output)
 
     except Exception as e:
-        logger.exception("Error generating search summary", error=str(e), query=query)
+        # Use regular logging instead of exception logging which isn't available
+        logger.error(f"Error generating search summary: {e}")
         return f"❌ Search summary error: {e}"
 
 

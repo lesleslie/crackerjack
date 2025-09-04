@@ -13,7 +13,26 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from session_mgmt_mcp.reflection_tools import ReflectionDatabase
-from session_mgmt_mcp.server import quick_search, store_reflection
+
+# Mock MCP server for testing
+class MockMCP:
+    def __init__(self):
+        self.tools = {}
+    
+    def tool(self):
+        def decorator(func):
+            self.tools[func.__name__] = func
+            return func
+        return decorator
+
+# Import and register search tools
+from session_mgmt_mcp.tools.search_tools import register_search_tools
+mock_mcp = MockMCP()
+register_search_tools(mock_mcp)
+
+# Access the registered tools
+quick_search = mock_mcp.tools.get('quick_search')
+store_reflection = mock_mcp.tools.get('store_reflection')
 
 # Hypothesis strategies for generating test data
 valid_content_strategy = st.text(min_size=1, max_size=10000).filter(

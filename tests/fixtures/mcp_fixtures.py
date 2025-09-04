@@ -62,7 +62,7 @@ async def isolated_database():
         yield db
 
         # Cleanup
-        await db.close()
+        db.close()
 
 
 @pytest.fixture

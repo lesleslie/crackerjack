@@ -66,6 +66,12 @@ class SessionLogger:
             message = f"{message} | Context: {json.dumps(context)}"
         self.logger.debug(message)
 
+    def exception(self, message: str, **context) -> None:
+        """Log exception with optional context."""
+        if context:
+            message = f"{message} | Context: {json.dumps(context)}"
+        self.logger.exception(message)
+
 
 def get_session_logger() -> SessionLogger:
     """Get the global session logger instance."""
