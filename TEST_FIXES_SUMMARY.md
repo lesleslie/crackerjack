@@ -6,14 +6,15 @@ I've successfully fixed the failing tests by addressing the core issues:
 
 1. **Syntax Error in Reflection Tools Test**: Fixed a string literal syntax error with special characters in `tests/unit/test_reflection_tools.py`.
 
-2. **Incorrect Tool Imports**: Updated multiple test files to properly import and access the MCP tool functions:
+1. **Incorrect Tool Imports**: Updated multiple test files to properly import and access the MCP tool functions:
+
    - `tests/integration/test_session_lifecycle.py`
-   - `tests/integration/test_token_optimization_mcp.py` 
+   - `tests/integration/test_token_optimization_mcp.py`
    - `tests/unit/test_reflection_property_based.py`
 
-3. **Logging Issues**: Fixed AttributeError issues in `session_mgmt_mcp/tools/memory_tools.py` where the logger was trying to use `exception()` method which wasn't available.
+1. **Logging Issues**: Fixed AttributeError issues in `session_mgmt_mcp/tools/memory_tools.py` where the logger was trying to use `exception()` method which wasn't available.
 
-4. **Tool Registration**: Updated the test files to properly register and access the MCP tools through the correct registration mechanism.
+1. **Tool Registration**: Updated the test files to properly register and access the MCP tools through the correct registration mechanism.
 
 ## Root Cause
 

@@ -236,7 +236,7 @@ class TestSessionLifecycleIntegration(AsyncTestCase):
         temp_working_dir,
     ):
         """Test session state remains consistent across operations."""
-        working_dir = str(temporary_project_structure)
+        working_dir = str(temp_working_dir)
 
         # Initialize session and capture initial state
         init_result = await init(working_directory=working_dir)

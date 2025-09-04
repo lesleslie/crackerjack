@@ -1,531 +1,357 @@
-"""Global pytest configuration and fixtures for session-mgmt-mcp testing.
-
-This module provides comprehensive test fixtures for:
-- MCP server testing
-- Database operations
-- Session management
-- Authentication and permissions
-- Performance benchmarking
-"""
+#!/usr/bin/env python3
+"""Global test configuration and fixtures for session-mgmt-mcp tests."""
 
 import asyncio
 import os
-import shutil
-import sys
 import tempfile
-from datetime import datetime, timedelta
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import duckdb
+import numpy as np
 import pytest
-
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import fixtures from fixtures directory
-try:
-    from tests.fixtures.mcp_fixtures import *
-    from tests.fixtures.data_factories import *
-except ImportError:
-    print("Warning: Test fixtures not available, using minimal mocks")
-    # Already handled by existing fallback code below
-
+from fastmcp import FastMCP
 from session_mgmt_mcp.reflection_tools import ReflectionDatabase
-
-# Import with fallback for testing environments
-try:
-    from session_mgmt_mcp.server import SessionPermissionsManager, mcp
-except ImportError:
-    print("Warning: FastMCP not available in test environment, using mocks")
-
-    # Create mock SessionPermissionsManager for testing
-    class SessionPermissionsManager:
-        def __init__(self, session_id="test") -> None:
-            self.session_id = session_id
-            self.trusted_operations = set()
-
-        def is_operation_trusted(self, operation):
-            return operation in self.trusted_operations
-
-        def add_trusted_operation(self, operation):
-            self.trusted_operations.add(operation)
-
-    # Create mock mcp object
-    class MockMCP:
-        def tool(self, *args, **kwargs):
-            def decorator(func):
-                return func
-
-            return decorator
-
-        def prompt(self, *args, **kwargs):
-            def decorator(func):
-                return func
-
-            return decorator
-
-    mcp = MockMCP()
-# Import test fixtures with error handling
-try:
-    from tests.fixtures.data_factories import (
-        ProjectDataFactory,
-        ReflectionDataFactory,
-        SessionDataFactory,
-        UserDataFactory,
-    )
-except ImportError:
-    # Create minimal mocks for testing when fixtures aren't available
-    print("Warning: Test fixtures not available, using minimal mocks")
-
-    class ProjectDataFactory:
-        @staticmethod
-        def build(**kwargs):
-            return {"name": "test-project", "path": "/tmp/test"}
-
-    class ReflectionDataFactory:
-        @staticmethod
-        def build(**kwargs):
-            return {"content": "test reflection", "tags": ["test"]}
-
-    class SessionDataFactory:
-        @staticmethod
-        def build(**kwargs):
-            return {"session_id": "test-123", "active": True}
-
-    class UserDataFactory:
-        @staticmethod
-        def build(**kwargs):
-            return {"user_id": "test-user", "name": "Test User"}
-
-
-# Pytest configuration
-def pytest_configure(config):
-    """Configure pytest with custom settings and markers."""
-    config.addinivalue_line(
-        "markers",
-        "vcr: mark test to use VCR cassettes for HTTP recording",
-    )
-    config.addinivalue_line(
-        "markers",
-        "freeze_time: mark test to freeze time for deterministic testing",
-    )
-    config.addinivalue_line(
-        "markers",
-        "temp_dir: mark test that requires temporary directory",
-    )
 
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Create event loop for the test session."""
+def event_loop() -> Generator[asyncio.AbstractEventLoop]:
+    """Create session-scoped event loop for async tests."""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     yield loop
+
+    # Clean up pending tasks
     if not loop.is_closed():
+        # Cancel all pending tasks
+        pending = asyncio.all_tasks(loop)
+        for task in pending:
+            task.cancel()
+
+        # Wait for tasks to be cancelled
+        if pending:
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
         loop.close()
 
 
-# Environment and Configuration Fixtures
-@pytest.fixture(scope="session")
-def test_env_vars():
-    """Set test environment variables."""
-    original_env = os.environ.copy()
-
-    # Set test environment
-    test_vars = {
-        "TESTING": "true",
-        "CLAUDE_SESSION_TEST_MODE": "true",
-        "PWD": str(Path("/tmp/test-session-mgmt")),
-        "PYTHONPATH": str(project_root),
-    }
-
-    for key, value in test_vars.items():
-        os.environ[key] = value
-
-    yield test_vars
-
-    # Restore original environment
-    os.environ.clear()
-    os.environ.update(original_env)
-
-
 @pytest.fixture
-def temp_working_dir():
-    """Create temporary working directory for tests."""
-    temp_path = Path(tempfile.mkdtemp(prefix="session_mgmt_test_"))
-    original_cwd = Path.cwd()
+async def temp_db_path() -> AsyncGenerator[str]:
+    """Provide temporary database path that's cleaned up after test."""
+    with tempfile.NamedTemporaryFile(suffix=".duckdb", delete=False) as tmp:
+        db_path = tmp.name
 
-    try:
-        os.chdir(temp_path)
-        yield temp_path
-    finally:
-        os.chdir(original_cwd)
-        shutil.rmtree(temp_path, ignore_errors=True)
-
-
-@pytest.fixture
-def temp_home_dir():
-    """Create temporary home directory structure."""
-    temp_home = Path(tempfile.mkdtemp(prefix="test_home_"))
-
-    # Create necessary subdirectories
-    (temp_home / ".claude").mkdir()
-    (temp_home / ".claude" / "data").mkdir()
-    (temp_home / "Projects").mkdir()
-    (temp_home / "Projects" / "claude").mkdir()
-    (temp_home / "Projects" / "claude" / "logs").mkdir()
-
-    with patch.dict(os.environ, {"HOME": str(temp_home)}):
-        yield temp_home
-
-    shutil.rmtree(temp_home, ignore_errors=True)
-
-
-# Database Fixtures
-@pytest.fixture
-def temp_database():
-    """Create temporary DuckDB database for testing."""
-    db_path = Path(tempfile.mkdtemp()) / "test.db"
-    db_connection = duckdb.connect(str(db_path))
-
-    yield db_connection
-
-    db_connection.close()
-    if db_path.exists():
-        db_path.unlink()
-        db_path.parent.rmdir()
-
-
-@pytest.fixture
-async def reflection_database(temp_home_dir):
-    """Create ReflectionDatabase instance for testing."""
-    db_path = temp_home_dir / ".claude" / "data" / "test_reflections.db"
-    db = ReflectionDatabase(str(db_path))
-
-    # Initialize database schema
-    await db._ensure_tables()
-
-    yield db
+    yield db_path
 
     # Cleanup
     try:
-        if db.conn:
-            db.conn.close()
-        if db_path.exists():
-            db_path.unlink()
-    except Exception:
+        if os.path.exists(db_path):
+            os.unlink(db_path)
+    except (OSError, PermissionError):
+        # On Windows, file might still be locked
         pass
 
 
-# Session Management Fixtures
 @pytest.fixture
-def session_permissions():
-    """Create SessionPermissionsManager instance."""
-    # Create temporary claude directory for testing
-    import tempfile
-    from pathlib import Path
-    
-    temp_dir = Path(tempfile.mkdtemp(prefix="test_claude_"))
-    manager = SessionPermissionsManager(temp_dir)
+async def temp_claude_dir() -> AsyncGenerator[Path]:
+    """Provide temporary ~/.claude directory structure."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        claude_dir = Path(temp_dir) / ".claude"
+        claude_dir.mkdir()
 
-    # Reset to clean state
-    manager.trusted_operations.clear()
-    manager.auto_checkpoint = False
-    manager.checkpoint_frequency = 300
+        # Create expected subdirectories
+        (claude_dir / "data").mkdir()
+        (claude_dir / "logs").mkdir()
 
-    yield manager
-
-    # Cleanup
-    manager.trusted_operations.clear()
-    # Clean up temp directory
-    import shutil
-    shutil.rmtree(temp_dir, ignore_errors=True)
+        # Patch the home directory
+        with patch.dict(os.environ, {"HOME": str(Path(temp_dir))}):
+            with patch(
+                "os.path.expanduser",
+                lambda path: path.replace("~", str(Path(temp_dir))),
+            ):
+                yield claude_dir
 
 
 @pytest.fixture
-def mock_mcp_server():
-    """Mock MCP server for testing tools."""
-    mock_server = Mock()
-    mock_server.list_tools = Mock(return_value=[])
-    mock_server.call_tool = AsyncMock()
+async def reflection_db(temp_db_path: str) -> AsyncGenerator[ReflectionDatabase]:
+    """Provide initialized ReflectionDatabase instance."""
+    db = ReflectionDatabase(db_path=temp_db_path)
+
+    try:
+        await db.initialize()
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture
+async def reflection_db_with_data(
+    reflection_db: ReflectionDatabase,
+) -> AsyncGenerator[ReflectionDatabase]:
+    """Provide ReflectionDatabase with test data."""
+    # Add some test conversations
+    test_conversations = [
+        "How do I implement async/await patterns in Python?",
+        "Setting up pytest fixtures for database testing",
+        "Best practices for MCP server development",
+        "DuckDB vector operations and similarity search",
+        "FastMCP tool registration and async handlers",
+    ]
+
+    conversation_ids = []
+    for content in test_conversations:
+        conv_id = await reflection_db.store_conversation(
+            content, {"project": "test-project"}
+        )
+        conversation_ids.append(conv_id)
+
+    # Add some test reflections
+    test_reflections = [
+        (
+            "Always use context managers for database connections",
+            ["database", "patterns"],
+        ),
+        (
+            "Async fixtures require careful setup in pytest",
+            ["testing", "async", "pytest"],
+        ),
+        ("MCP tools should handle errors gracefully", ["mcp", "error-handling"]),
+    ]
+
+    reflection_ids = []
+    for content, tags in test_reflections:
+        refl_id = await reflection_db.store_reflection(content, tags)
+        reflection_ids.append(refl_id)
+
+    # Store IDs for test reference
+    reflection_db._test_conversation_ids = conversation_ids
+    reflection_db._test_reflection_ids = reflection_ids
+
+    return reflection_db
+
+
+@pytest.fixture
+def mock_onnx_session() -> Mock:
+    """Provide mock ONNX session for embedding tests."""
+    mock_session = Mock()
+    # Mock returns a 384-dimensional vector
+    mock_session.run.return_value = [np.random.rand(1, 384).astype(np.float32)]
+    return mock_session
+
+
+@pytest.fixture
+def mock_tokenizer() -> Mock:
+    """Provide mock tokenizer for embedding tests."""
+    mock_tokenizer = Mock()
+    mock_tokenizer.return_value = {
+        "input_ids": [[1, 2, 3, 4, 5]],
+        "attention_mask": [[1, 1, 1, 1, 1]],
+    }
+    return mock_tokenizer
+
+
+@pytest.fixture
+async def mock_mcp_server() -> AsyncGenerator[Mock]:
+    """Provide mock MCP server for testing."""
+    mock_server = Mock(spec=FastMCP)
+    mock_server.tool = Mock()
+    mock_server.prompt = Mock()
+
+    # Mock async context manager behavior
+    mock_server.__aenter__ = AsyncMock(return_value=mock_server)
+    mock_server.__aexit__ = AsyncMock(return_value=None)
 
     return mock_server
 
 
 @pytest.fixture
-async def mcp_test_client():
-    """Create test client for MCP server."""
-    # Import the actual MCP instance
-    return mcp
+def clean_environment() -> Generator[dict[str, Any]]:
+    """Provide clean environment with common patches."""
+    original_env = os.environ.copy()
 
-    # Setup any necessary test configuration
+    # Set up test environment
+    test_env = {
+        "TESTING": "1",
+        "LOG_LEVEL": "DEBUG",
+    }
 
+    # Remove potentially problematic env vars
+    env_to_remove = ["PWD", "OLDPWD", "VIRTUAL_ENV"]
 
-# Data Factory Fixtures
-@pytest.fixture
-def session_data():
-    """Generate test session data."""
-    return SessionDataFactory()
+    try:
+        # Update environment
+        os.environ.update(test_env)
+        for key in env_to_remove:
+            os.environ.pop(key, None)
 
+        yield test_env
 
-@pytest.fixture
-def reflection_data():
-    """Generate test reflection data."""
-    return ReflectionDataFactory()
-
-
-@pytest.fixture
-def user_data():
-    """Generate test user data."""
-    return UserDataFactory()
-
-
-@pytest.fixture
-def project_data():
-    """Generate test project data."""
-    return ProjectDataFactory()
+    finally:
+        # Restore original environment
+        os.environ.clear()
+        os.environ.update(original_env)
 
 
 @pytest.fixture
-def sample_reflections():
-    """Sample reflection data for testing."""
-    return [
-        {
-            "content": "Implemented user authentication system with JWT tokens",
-            "tags": ["authentication", "jwt", "security"],
-            "project": "test-project",
-            "timestamp": datetime.now(),
-        },
-        {
-            "content": "Fixed database connection pooling issue causing timeouts",
-            "tags": ["database", "performance", "bug-fix"],
-            "project": "test-project",
-            "timestamp": datetime.now() - timedelta(hours=1),
-        },
-        {
-            "content": "Refactored API endpoints to use async/await pattern",
-            "tags": ["api", "async", "refactoring"],
-            "project": "another-project",
-            "timestamp": datetime.now() - timedelta(days=1),
-        },
-    ]
+async def async_client() -> AsyncGenerator[Mock]:
+    """Provide async client for MCP communication testing."""
+    client = Mock()
+
+    # Mock async methods
+    client.connect = AsyncMock()
+    client.disconnect = AsyncMock()
+    client.call_tool = AsyncMock()
+    client.list_tools = AsyncMock(return_value=[])
+
+    return client
 
 
-# Mock Fixtures
 @pytest.fixture
-def mock_subprocess():
-    """Mock subprocess operations."""
-    with patch("subprocess.run") as mock_run, patch("subprocess.Popen") as mock_popen:
-        # Configure common successful responses
-        mock_run.return_value.returncode = 0
-        mock_run.return_value.stdout = "success"
-        mock_run.return_value.stderr = ""
+def sample_embedding() -> np.ndarray:
+    """Provide sample embedding vector for testing."""
+    # Create a consistent sample embedding
+    np.random.seed(42)
+    return np.random.rand(384).astype(np.float32)
 
-        mock_process = Mock()
-        mock_process.returncode = 0
-        mock_process.stdout = "success"
-        mock_process.stderr = ""
-        mock_popen.return_value = mock_process
 
-        yield {"run": mock_run, "popen": mock_popen}
+@pytest.fixture
+def mock_embeddings_disabled():
+    """Fixture to disable embeddings for testing fallback behavior."""
+    with patch("session_mgmt_mcp.reflection_tools.ONNX_AVAILABLE", False):
+        yield
+
+
+@pytest.fixture
+async def duckdb_connection() -> AsyncGenerator[duckdb.DuckDBPyConnection]:
+    """Provide in-memory DuckDB connection for testing."""
+    conn = duckdb.connect(":memory:")
+
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 @pytest.fixture
 def mock_file_operations():
-    """Mock file system operations."""
+    """Mock file system operations for testing."""
+    mocks = {}
+
     with (
+        patch("pathlib.Path.mkdir") as mock_mkdir,
         patch("pathlib.Path.exists") as mock_exists,
-        patch("pathlib.Path.is_file") as mock_is_file,
-        patch("pathlib.Path.is_dir") as mock_is_dir,
-        patch("builtins.open", create=True) as mock_open,
+        patch("pathlib.Path.unlink") as mock_unlink,
+        patch("os.path.exists") as mock_os_exists,
     ):
         mock_exists.return_value = True
-        mock_is_file.return_value = True
-        mock_is_dir.return_value = False
+        mock_os_exists.return_value = True
 
-        yield {
-            "exists": mock_exists,
-            "is_file": mock_is_file,
-            "is_dir": mock_is_dir,
-            "open": mock_open,
-        }
+        mocks["mkdir"] = mock_mkdir
+        mocks["exists"] = mock_exists
+        mocks["unlink"] = mock_unlink
+        mocks["os_exists"] = mock_os_exists
 
-
-@pytest.fixture
-def mock_git_operations():
-    """Mock git operations."""
-    with patch("subprocess.run") as mock_run:
-
-        def git_side_effect(*args, **kwargs):
-            cmd = args[0] if args else []
-
-            if "git status --porcelain" in " ".join(cmd):
-                mock_run.return_value.stdout = "M file.py\n?? new_file.py"
-                mock_run.return_value.returncode = 0
-            elif "git commit" in " ".join(cmd):
-                mock_run.return_value.stdout = "[main abc1234] Test commit"
-                mock_run.return_value.returncode = 0
-            elif "git log" in " ".join(cmd):
-                mock_run.return_value.stdout = "abc1234 Test commit message"
-                mock_run.return_value.returncode = 0
-            else:
-                mock_run.return_value.stdout = "success"
-                mock_run.return_value.returncode = 0
-
-            return mock_run.return_value
-
-        mock_run.side_effect = git_side_effect
-        yield mock_run
+        yield mocks
 
 
-# Performance Testing Fixtures
-@pytest.fixture
-def performance_monitor():
-    """Monitor for performance testing."""
-    import time
-
-    import psutil
-
-    class PerformanceMonitor:
-        def __init__(self) -> None:
-            self.process = psutil.Process()
-            self.start_time = None
-            self.start_memory = None
-
-        def start_monitoring(self) -> None:
-            self.start_time = time.time()
-            self.start_memory = self.process.memory_info().rss / 1024 / 1024  # MB
-
-        def stop_monitoring(self):
-            end_time = time.time()
-            end_memory = self.process.memory_info().rss / 1024 / 1024  # MB
-
-            return {
-                "duration": end_time - self.start_time,
-                "memory_delta": end_memory - self.start_memory,
-                "peak_memory": end_memory,
-            }
-
-    return PerformanceMonitor()
-
-
-# Time-based Testing Fixtures
-@pytest.fixture
-def freeze_time():
-    """Freeze time for consistent testing."""
-    from freezegun import freeze_time as _freeze_time
-
-    with _freeze_time("2024-01-15 12:00:00") as frozen_time:
-        yield frozen_time
-
-
-@pytest.fixture
-def current_timestamp():
-    """Provide consistent timestamp for testing."""
-    return datetime(2024, 1, 15, 12, 0, 0)
-
-
-# Cleanup Fixtures
+# Async test markers and utilities
 @pytest.fixture(autouse=True)
-def cleanup_after_test():
-    """Automatic cleanup after each test."""
+def detect_asyncio_leaks():
+    """Automatically detect asyncio task leaks in tests."""
+    # Only check for leaks if there's a running event loop
+    try:
+        initial_tasks = len(asyncio.all_tasks())
+    except RuntimeError:
+        # No event loop running, skip leak detection
+        yield
+        return
+
     yield
 
-    # Clean up any temporary files or state
-    temp_dirs = Path("/tmp").glob("session_mgmt_test_*")
-    for temp_dir in temp_dirs:
-        if temp_dir.is_dir():
-            shutil.rmtree(temp_dir, ignore_errors=True)
+    # Check for task leaks after test
+    try:
+        final_tasks = asyncio.all_tasks()
+        if len(final_tasks) > initial_tasks:
+            # Allow a small buffer for cleanup tasks
+            if len(final_tasks) > initial_tasks + 2:
+                task_names = [task.get_name() for task in final_tasks]
+                pytest.fail(f"Potential task leak detected. Active tasks: {task_names}")
+    except RuntimeError:
+        # Event loop closed, no need to check
+        pass
 
 
-# Integration Test Fixtures
 @pytest.fixture
-def integration_test_env(temp_working_dir, temp_home_dir, test_env_vars):
-    """Complete integration test environment."""
-    # Create realistic project structure
-    project_dir = temp_working_dir / "test-project"
-    project_dir.mkdir()
-
-    # Create basic files
-    (project_dir / "README.md").write_text("# Test Project")
-    (project_dir / "src").mkdir()
-    (project_dir / "src" / "main.py").write_text("print('Hello, World!')")
-    (project_dir / "tests").mkdir()
-    (project_dir / "pyproject.toml").write_text("""
-[project]
-name = "test-project"
-version = "0.1.0"
-""")
-
-    # Initialize git repository
-    os.chdir(project_dir)
-
+def performance_baseline() -> dict[str, float]:
+    """Provide performance baselines for benchmark tests."""
     return {
-        "project_dir": project_dir,
-        "home_dir": temp_home_dir,
-        "working_dir": temp_working_dir,
+        "db_insert_time": 0.1,  # 100ms per insert
+        "embedding_generation": 0.5,  # 500ms per embedding
+        "search_query": 0.2,  # 200ms per search
+        "bulk_operation": 1.0,  # 1s for bulk operations
     }
 
 
-# Concurrency Testing Fixtures
-@pytest.fixture
-def concurrent_executor():
-    """Executor for concurrent testing."""
-    from concurrent.futures import ThreadPoolExecutor
-
-    executor = ThreadPoolExecutor(max_workers=10)
-    yield executor
-    executor.shutdown(wait=True)
-
-
-# Error Injection Fixtures
-@pytest.fixture
-def error_injector():
-    """Inject controlled errors for testing error handling."""
-
-    class ErrorInjector:
-        def __init__(self) -> None:
-            self.should_fail = False
-            self.error_type = Exception
-            self.error_message = "Injected test error"
-
-        def maybe_raise(self) -> None:
-            if self.should_fail:
-                raise self.error_type(self.error_message)
-
-        def configure(
-            self,
-            should_fail=True,
-            error_type=Exception,
-            message="Test error",
-        ) -> None:
-            self.should_fail = should_fail
-            self.error_type = error_type
-            self.error_message = message
-
-    return ErrorInjector()
+# Helper functions for test data generation
+def generate_test_conversation(
+    content: str = "Test conversation content",
+    project: str = "test-project",
+    timestamp: str | None = None,
+) -> dict[str, Any]:
+    """Generate test conversation data."""
+    return {
+        "content": content,
+        "project": project,
+        "timestamp": timestamp or "2024-01-01T12:00:00Z",
+    }
 
 
-# Async Testing Utilities
-@pytest.fixture
-def async_mock():
-    """Create async mock for testing async functions."""
-    return AsyncMock()
+def generate_test_reflection(
+    content: str = "Test reflection content",
+    tags: list[str] | None = None,
+) -> dict[str, Any]:
+    """Generate test reflection data."""
+    return {
+        "content": content,
+        "tags": tags or ["test"],
+    }
 
 
-@pytest.fixture
-async def async_context_manager():
-    """Async context manager for testing."""
+# Pytest configuration hooks
+def pytest_configure(config):
+    """Configure pytest with custom settings."""
+    # Register custom markers
+    config.addinivalue_line(
+        "markers", "async_test: mark test as requiring async event loop"
+    )
+    config.addinivalue_line("markers", "db_test: mark test as requiring database")
+    config.addinivalue_line(
+        "markers", "embedding_test: mark test as requiring embeddings"
+    )
+    config.addinivalue_line("markers", "mcp_test: mark test as MCP server test")
 
-    class AsyncContextManager:
-        async def __aenter__(self):
-            return self
 
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            pass
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection based on markers and environment."""
+    # Add async marker to all async tests
+    for item in items:
+        if asyncio.iscoroutinefunction(item.function):
+            item.add_marker(pytest.mark.async_test)
 
-    return AsyncContextManager()
+        # Add markers based on test file location
+        if "integration" in str(item.fspath):
+            item.add_marker("integration")
+        elif "unit" in str(item.fspath):
+            item.add_marker("unit")
+        elif "functional" in str(item.fspath):
+            item.add_marker("functional")
+
+
+# Async test timeout configuration
+pytestmark = pytest.mark.asyncio(scope="function")

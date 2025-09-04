@@ -228,7 +228,7 @@ def stage_files(directory: Path, files: list[str]) -> bool:
 
     try:
         # Stage all changes (handles modified, deleted, and new files)
-        result = subprocess.run(
+        subprocess.run(
             ["git", "add", "-A"],
             cwd=directory,
             capture_output=True,
@@ -342,8 +342,6 @@ def _create_checkpoint_message(
     return commit_message
 
 
-
-
 def create_checkpoint_commit(
     directory: Path,
     project: str,
@@ -384,8 +382,10 @@ def create_checkpoint_commit(
         if modified_files:
             # Create checkpoint commit message
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            commit_message = f"checkpoint: {project} (quality: {quality_score}/100) - {timestamp}"
-            
+            commit_message = (
+                f"checkpoint: {project} (quality: {quality_score}/100) - {timestamp}"
+            )
+
             # Stage all changes
             stage_result = subprocess.run(
                 ["git", "add", "-A"],
@@ -394,11 +394,13 @@ def create_checkpoint_commit(
                 text=True,
                 check=False,
             )
-            
+
             if stage_result.returncode != 0:
-                output.append(f"⚠️ Failed to stage changes: {stage_result.stderr.strip()}")
+                output.append(
+                    f"⚠️ Failed to stage changes: {stage_result.stderr.strip()}"
+                )
                 return False, "staging failed", output
-            
+
             # Create commit
             commit_result = subprocess.run(
                 ["git", "commit", "-m", commit_message],
@@ -407,14 +409,13 @@ def create_checkpoint_commit(
                 text=True,
                 check=False,
             )
-            
+
             if commit_result.returncode == 0:
-                output.append(f"✅ Checkpoint commit created successfully")
+                output.append("✅ Checkpoint commit created successfully")
                 output.append(f"   Message: {commit_message}")
                 return True, "checkpoint committed", output
-            else:
-                output.append(f"⚠️ Commit failed: {commit_result.stderr.strip()}")
-                return False, "commit failed", output
+            output.append(f"⚠️ Commit failed: {commit_result.stderr.strip()}")
+            return False, "commit failed", output
         if untracked_files:
             output.append("ℹ️ No staged changes to commit")
             output.append(
