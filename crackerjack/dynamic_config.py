@@ -33,6 +33,23 @@ class ConfigMode(t.TypedDict):
 HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
     "structure": [
         {
+            "id": "validate-regex-patterns",
+            "name": "validate-regex-patterns",
+            "repo": "local",
+            "rev": "",
+            "tier": 1,
+            "time_estimate": 0.3,
+            "stages": None,
+            "args": None,
+            "files": r"\.py$",
+            "exclude": r"^\.venv/",
+            "additional_dependencies": None,
+            "types_or": None,
+            "language": "python",
+            "entry": "python -m crackerjack.tools.validate_regex_patterns",
+            "experimental": False,
+        },
+        {
             "id": "trailing-whitespace",
             "name": "trailing-whitespace",
             "repo": "https://github.com/pre-commit/pre-commit-hooks",

@@ -65,6 +65,9 @@ async def _initialize_execution(
         context,
     )
 
+    # Ensure WebSocket server is running for progress tracking
+    await _ensure_websocket_server_running(job_id, context)
+
     working_dir = kwargs.get("working_directory", ".")
     from pathlib import Path
 
@@ -508,3 +511,34 @@ def _create_failure_result(
         "timestamp": time.time(),
         "success": False,
     }
+
+
+async def _ensure_websocket_server_running(job_id: str, context: t.Any) -> None:
+    """Ensure WebSocket server is running for progress tracking during crackerjack:run."""
+    try:
+        from crackerjack.mcp.progress_components import ServiceManager
+
+        # Initialize and start services if needed
+        service_manager = ServiceManager()
+        await service_manager.ensure_services_running()
+        
+        _update_progress(
+            job_id,
+            {
+                "type": "service_check",
+                "status": "websocket_ready",
+                "message": "WebSocket server ensured running for progress tracking",
+            },
+            context,
+        )
+    except Exception as e:
+        # Don't fail the whole workflow if WebSocket server fails to start
+        _update_progress(
+            job_id,
+            {
+                "type": "service_check", 
+                "status": "websocket_warning",
+                "message": f"WebSocket server auto-start failed: {e}. Progress tracking may be limited.",
+            },
+            context,
+        )

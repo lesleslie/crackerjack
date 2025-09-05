@@ -54,16 +54,4 @@ class ProactiveAgent(SubAgent):
     def get_cached_patterns(self) -> dict[str, t.Any]:
         return self._pattern_cache.copy()
 
-    def clear_pattern_cache(self) -> None:
-        self._pattern_cache.clear()
-        self.log("Cleared pattern cache")
-
-    def get_planning_confidence(self, issue: Issue) -> float:
-        issue_patterns = [
-            key for key in self._pattern_cache if key.startswith(issue.type.value)
-        ]
-
-        if issue_patterns:
-            return min(0.9, 0.6 + (len(issue_patterns) * 0.1))
-
-        return 0.5
+    # Removed unused methods: clear_pattern_cache, get_planning_confidence

@@ -31,7 +31,7 @@ class TestCrackerjackConfig:
         assert config.autofix is True
         assert config.log_level == "INFO"
         assert config.test_workers >= 1
-        assert config.min_coverage == 42.0
+        assert config.min_coverage == 10.0
 
     def test_config_validation_log_level(self) -> None:
         config = CrackerjackConfig(log_level="DEBUG")

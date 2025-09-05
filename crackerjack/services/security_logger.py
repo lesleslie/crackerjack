@@ -87,6 +87,9 @@ class SecurityEventLevel(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
 
 
 class SecurityEvent(BaseModel):
@@ -270,67 +273,6 @@ class SecurityLogger:
             **kwargs,
         )
 
-    def log_command_injection_attempt(
-        self, command: str, detected_chars: list[str], **kwargs: t.Any
-    ) -> None:
-        self.log_security_event(
-            SecurityEventType.COMMAND_INJECTION_ATTEMPT,
-            SecurityEventLevel.CRITICAL,
-            f"Command injection attempt detected: {detected_chars} in {command[:100]}",
-            detected_chars=detected_chars,
-            command_preview=command[:100],
-            **kwargs,
-        )
-
-    def log_sql_injection_attempt(
-        self, input_value: str, detected_pattern: str, **kwargs: t.Any
-    ) -> None:
-        self.log_security_event(
-            SecurityEventType.SQL_INJECTION_ATTEMPT,
-            SecurityEventLevel.CRITICAL,
-            f"SQL injection pattern detected: {detected_pattern}",
-            input_preview=input_value[:100],
-            detected_pattern=detected_pattern,
-            **kwargs,
-        )
-
-    def log_code_injection_attempt(
-        self, input_value: str, detected_pattern: str, **kwargs: t.Any
-    ) -> None:
-        self.log_security_event(
-            SecurityEventType.CODE_INJECTION_ATTEMPT,
-            SecurityEventLevel.CRITICAL,
-            f"Code injection pattern detected: {detected_pattern}",
-            input_preview=input_value[:100],
-            detected_pattern=detected_pattern,
-            **kwargs,
-        )
-
-    def log_input_size_exceeded(
-        self, input_type: str, actual_size: int, max_size: int, **kwargs: t.Any
-    ) -> None:
-        self.log_security_event(
-            SecurityEventType.INPUT_SIZE_EXCEEDED,
-            SecurityEventLevel.HIGH,
-            f"Input size limit exceeded for {input_type}: {actual_size} > {max_size}",
-            input_type=input_type,
-            actual_size=actual_size,
-            max_size=max_size,
-            **kwargs,
-        )
-
-    def log_invalid_json_payload(
-        self, error_message: str, payload_preview: str, **kwargs: t.Any
-    ) -> None:
-        self.log_security_event(
-            SecurityEventType.INVALID_JSON_PAYLOAD,
-            SecurityEventLevel.MEDIUM,
-            f"Invalid JSON payload: {error_message}",
-            error_message=error_message,
-            payload_preview=payload_preview,
-            **kwargs,
-        )
-
     def log_rate_limit_exceeded(
         self, limit_type: str, current_count: int, max_allowed: int, **kwargs: t.Any
     ) -> None:
@@ -384,7 +326,7 @@ class SecurityLogger:
         self,
         command: list[str],
         validation_result: bool,
-        issues: list[str] = None,
+        issues: list[str] | None = None,
         **kwargs: t.Any,
     ) -> None:
         """Log subprocess command validation results."""
@@ -397,7 +339,7 @@ class SecurityLogger:
             f"Command validation {status}: {' '.join(command[:2])}{'...' if len(command) > 2 else ''}",
             command_preview=command[:5],
             validation_result=validation_result,
-            issues=issues or [],
+            issues=issues,
             **kwargs,
         )
 
@@ -455,7 +397,7 @@ class SecurityLogger:
         self,
         variable_name: str,
         reason: str,
-        value_preview: str = None,
+        value_preview: str | None = None,
         **kwargs: t.Any,
     ) -> None:
         """Log filtering of environment variables."""

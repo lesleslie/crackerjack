@@ -42,6 +42,22 @@ class _DummyPerformanceMonitor:
     def record_circuit_breaker_event(self, operation: str, opened: bool) -> None:
         pass
 
+    def get_summary_stats(self) -> dict[str, t.Any]:
+        """Dummy implementation."""
+        return {}
+
+    def get_all_metrics(self) -> dict[str, t.Any]:
+        """Dummy implementation."""
+        return {}
+
+    def get_performance_alerts(self) -> list[str]:
+        """Dummy implementation."""
+        return []
+
+    def get_recent_timeout_events(self, limit: int) -> list[t.Any]:
+        """Dummy implementation."""
+        return []
+
 
 class TimeoutStrategy(Enum):
     """Timeout handling strategies."""
@@ -93,8 +109,8 @@ class TimeoutConfig:
 
 
 @dataclass
-class CircuitBreakerState:
-    """State of a circuit breaker."""
+class CircuitBreakerStateData:
+    """State data for a circuit breaker."""
 
     state: CircuitBreakerState = CircuitBreakerState.CLOSED
     failure_count: int = 0
@@ -120,7 +136,7 @@ class AsyncTimeoutManager:
 
     def __init__(self, config: TimeoutConfig | None = None) -> None:
         self.config = config or TimeoutConfig()
-        self.circuit_breakers: dict[str, CircuitBreakerState] = {}
+        self.circuit_breakers: dict[str, CircuitBreakerStateData] = {}
         self.operation_stats: dict[str, list[float]] = {}
 
         # Initialize performance monitor lazily to avoid circular imports
@@ -188,7 +204,7 @@ class AsyncTimeoutManager:
             elapsed = time.time() - start_time
             self._record_success(operation, elapsed)
 
-        except (asyncio.TimeoutError, asyncio.CancelledError) as e:
+        except (TimeoutError, asyncio.CancelledError) as e:
             elapsed = time.time() - start_time
             self.performance_monitor.record_operation_timeout(
                 operation, start_time, timeout_value, str(e)
@@ -305,12 +321,14 @@ class AsyncTimeoutManager:
                     delay * self.config.backoff_multiplier, self.config.max_retry_delay
                 )
 
-        raise last_exception
+        if last_exception is not None:
+            raise last_exception
+        raise RuntimeError(f"No attempts made for operation: {operation}")
 
     def _check_circuit_breaker(self, operation: str) -> bool:
         """Check if circuit breaker allows operation."""
         if operation not in self.circuit_breakers:
-            self.circuit_breakers[operation] = CircuitBreakerState()
+            self.circuit_breakers[operation] = CircuitBreakerStateData()
             return True
 
         breaker = self.circuit_breakers[operation]
@@ -333,7 +351,7 @@ class AsyncTimeoutManager:
     def _update_circuit_breaker(self, operation: str, success: bool) -> None:
         """Update circuit breaker state based on operation result."""
         if operation not in self.circuit_breakers:
-            self.circuit_breakers[operation] = CircuitBreakerState()
+            self.circuit_breakers[operation] = CircuitBreakerStateData()
 
         breaker = self.circuit_breakers[operation]
         previous_state = breaker.state
@@ -400,7 +418,7 @@ class AsyncTimeoutManager:
             / (
                 len(stats)
                 + self.circuit_breakers.get(
-                    operation, CircuitBreakerState()
+                    operation, CircuitBreakerStateData()
                 ).failure_count
             ),
         }
@@ -419,7 +437,7 @@ def timeout_async(
         func: t.Callable[..., t.Awaitable[t.Any]],
     ) -> t.Callable[..., t.Awaitable[t.Any]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> t.Any:
+        async def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
             manager = AsyncTimeoutManager()
             return await manager.with_timeout(
                 operation, func(*args, **kwargs), timeout, strategy

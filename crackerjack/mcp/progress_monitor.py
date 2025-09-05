@@ -545,15 +545,13 @@ class CrackerjackDashboard(App):
 
                 # Ensure services running less frequently to avoid overhead
                 if self._refresh_counter % 20 == 0:  # Every 10 seconds instead of 5
-                    try:
+                    with suppress(Exception):
                         await self.timeout_manager.with_timeout(
                             "network_operations",
                             self._ensure_services_running(),
                             timeout=5.0,
                             strategy=TimeoutStrategy.FAIL_FAST,
                         )
-                    except Exception:
-                        pass  # Fail silently for service checks
 
                 # Collect data with individual timeouts
                 jobs_data = await self.timeout_manager.with_timeout(

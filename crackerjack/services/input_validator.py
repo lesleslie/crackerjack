@@ -140,7 +140,7 @@ class InputSanitizer:
     @classmethod
     def sanitize_string(
         cls,
-        value: str,
+        value: t.Any,
         max_length: int = 10000,
         allow_shell_chars: bool = False,
         strict_alphanumeric: bool = False,
@@ -267,8 +267,7 @@ class InputSanitizer:
                         if obj
                         else current_depth
                     )
-                else:
-                    return current_depth
+                return current_depth
 
             actual_depth = check_depth(parsed)
             if actual_depth > max_depth:
@@ -409,7 +408,7 @@ class SecureInputValidator:
 
         return result
 
-    def validate_command_args(self, args: str | list) -> ValidationResult:
+    def validate_command_args(self, args: t.Any) -> ValidationResult:
         """Validate command arguments to prevent injection."""
 
         if isinstance(args, str):
@@ -559,38 +558,50 @@ def validation_required(
 ):
     """Decorator to add automatic input validation to functions."""
 
-    def decorator(func):
+    def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
             validator = SecureInputValidator(config)
 
-            # Validate string arguments
             if validate_args:
-                for i, arg in enumerate(args):
-                    if isinstance(arg, str):
-                        result = validator.sanitizer.sanitize_string(arg)
-                        if not result.valid:
-                            raise ExecutionError(
-                                message=f"Validation failed for argument {i}: {result.error_message}",
-                                error_code=ErrorCode.VALIDATION_ERROR,
-                            )
+                _validate_function_args(validator, args)
 
-            # Validate keyword arguments
             if validate_kwargs:
-                for key, value in kwargs.items():
-                    if isinstance(value, str):
-                        result = validator.sanitizer.sanitize_string(value)
-                        if not result.valid:
-                            raise ExecutionError(
-                                message=f"Validation failed for parameter {key}: {result.error_message}",
-                                error_code=ErrorCode.VALIDATION_ERROR,
-                            )
+                _validate_function_kwargs(validator, kwargs)
 
             return func(*args, **kwargs)
 
         return wrapper
 
     return decorator
+
+
+def _validate_function_args(
+    validator: SecureInputValidator, args: tuple[t.Any, ...]
+) -> None:
+    """Validate string arguments in function args."""
+    for i, arg in enumerate(args):
+        if isinstance(arg, str):
+            result = validator.sanitizer.sanitize_string(arg)
+            if not result.valid:
+                raise ExecutionError(
+                    message=f"Validation failed for argument {i}: {result.error_message}",
+                    error_code=ErrorCode.VALIDATION_ERROR,
+                )
+
+
+def _validate_function_kwargs(
+    validator: SecureInputValidator, kwargs: dict[str, t.Any]
+) -> None:
+    """Validate string values in function kwargs."""
+    for key, value in kwargs.items():
+        if isinstance(value, str):
+            result = validator.sanitizer.sanitize_string(value)
+            if not result.valid:
+                raise ExecutionError(
+                    message=f"Validation failed for parameter {key}: {result.error_message}",
+                    error_code=ErrorCode.VALIDATION_ERROR,
+                )
 
 
 def get_input_validator(
@@ -601,7 +612,7 @@ def get_input_validator(
 
 
 # Convenience validation functions
-def validate_and_sanitize_string(value: str, **kwargs) -> str:
+def validate_and_sanitize_string(value: str, **kwargs: t.Any) -> str:
     """Validate and return sanitized string, raising on failure."""
     validator = SecureInputValidator()
     result = validator.sanitizer.sanitize_string(value, **kwargs)
@@ -615,10 +626,11 @@ def validate_and_sanitize_string(value: str, **kwargs) -> str:
     return result.sanitized_value
 
 
-def validate_and_sanitize_path(value: str | Path, **kwargs) -> Path:
+def validate_and_sanitize_path(value: str | Path, **kwargs: t.Any) -> Path:
     """Validate and return sanitized path, raising on failure."""
     validator = SecureInputValidator()
-    result = validator.sanitize_path(value, **kwargs)
+    result = validator.sanitizer.sanitize_string(str(value), **kwargs)
+    # Convert back to Path if validation passes
 
     if not result.valid:
         raise ExecutionError(
@@ -626,10 +638,10 @@ def validate_and_sanitize_path(value: str | Path, **kwargs) -> Path:
             error_code=ErrorCode.VALIDATION_ERROR,
         )
 
-    return result.sanitized_value
+    return Path(result.sanitized_value)
 
 
-def validate_and_parse_json(value: str, **kwargs) -> t.Any:
+def validate_and_parse_json(value: str, **kwargs: t.Any) -> t.Any:
     """Validate and return parsed JSON, raising on failure."""
     validator = SecureInputValidator()
     result = validator.sanitizer.sanitize_json(value, **kwargs)

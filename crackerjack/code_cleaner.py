@@ -2,7 +2,6 @@ import ast
 import re
 import typing as t
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 from typing import Protocol
 
@@ -66,12 +65,6 @@ class CompiledPatterns:
 _compiled_patterns = CompiledPatterns()
 
 
-class CleaningStepResult(Enum):
-    SUCCESS = "success"
-    FAILED = "failed"
-    SKIPPED = "skipped"
-
-
 @dataclass
 class CleaningResult:
     file_path: Path
@@ -95,27 +88,11 @@ class PackageCleaningResult:
     overall_success: bool = False
 
 
-class FileProcessorProtocol(Protocol):
-    def read_file_safely(self, file_path: Path) -> str: ...
-    def write_file_safely(self, file_path: Path, content: str) -> None: ...
-    def backup_file(self, file_path: Path) -> Path: ...
-
-
 class CleaningStepProtocol(Protocol):
     def __call__(self, code: str, file_path: Path) -> str: ...
 
     @property
     def name(self) -> str: ...
-
-
-class ErrorHandlerProtocol(Protocol):
-    def handle_file_error(
-        self,
-        file_path: Path,
-        error: Exception,
-        step: str,
-    ) -> None: ...
-    def log_cleaning_result(self, result: CleaningResult) -> None: ...
 
 
 class FileProcessor(BaseModel):
@@ -489,7 +466,7 @@ class CodeCleaner(BaseModel):
         if pkg_dir is None:
             pkg_dir = Path.cwd()
 
-        python_files = list(pkg_dir.rglob("*.py"))
+        python_files = self._discover_package_files(pkg_dir)
 
         files_to_process = [
             file_path
@@ -566,12 +543,150 @@ class CodeCleaner(BaseModel):
         return backup_metadata
 
     def _find_files_to_process(self, validated_pkg_dir: Path) -> list[Path]:
-        python_files = list(validated_pkg_dir.rglob("*.py"))
+        python_files = self._discover_package_files(validated_pkg_dir)
         return [
             file_path
             for file_path in python_files
             if self.should_process_file(file_path)
         ]
+
+    def _discover_package_files(self, root_dir: Path) -> list[Path]:
+        """Discover Python files in the main package directory using crackerjack naming convention.
+
+        Crackerjack convention:
+        - Project name with dashes → package name with underscores
+        - Single word → same name lowercase
+        - Package directory determined from pyproject.toml [project.name]
+
+        Args:
+            root_dir: Project root directory
+
+        Returns:
+            List of Python files found only in the main package directory
+        """
+        package_dir = self._find_package_directory(root_dir)
+
+        if not package_dir or not package_dir.exists():
+            # Fallback: look for any directory with __init__.py (excluding common non-package dirs)
+            self.console.print(
+                "[yellow]⚠️ Could not determine package directory, searching for Python packages...[/yellow]"
+            )
+            return self._fallback_discover_packages(root_dir)
+
+        self.logger.debug(f"Using package directory: {package_dir}")
+
+        # Get all Python files from the package directory only
+        package_files = list(package_dir.rglob("*.py"))
+
+        # Filter out any problematic subdirectories that might exist within the package
+        exclude_dirs = {
+            "__pycache__",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".venv",
+            "venv",
+        }
+        filtered_files = [
+            f
+            for f in package_files
+            if not any(excl in f.parts for excl in exclude_dirs)
+        ]
+
+        return filtered_files
+
+    def _find_package_directory(self, root_dir: Path) -> Path | None:
+        """Find the main package directory using crackerjack naming convention.
+
+        Args:
+            root_dir: Project root directory
+
+        Returns:
+            Path to package directory or None if not found
+        """
+        # First, try to get project name from pyproject.toml
+        pyproject_path = root_dir / "pyproject.toml"
+        if pyproject_path.exists():
+            try:
+                import tomllib
+
+                with pyproject_path.open("rb") as f:
+                    config = tomllib.load(f)
+
+                project_name = config.get("project", {}).get("name")
+                if project_name:
+                    # Apply crackerjack naming convention
+                    package_name = project_name.replace("-", "_").lower()
+                    package_dir = root_dir / package_name
+
+                    if package_dir.exists() and (package_dir / "__init__.py").exists():
+                        return package_dir
+
+            except Exception as e:
+                self.logger.debug(f"Could not parse pyproject.toml: {e}")
+
+        # Fallback: infer from directory name
+        package_name = root_dir.name.replace("-", "_").lower()
+        package_dir = root_dir / package_name
+
+        if package_dir.exists() and (package_dir / "__init__.py").exists():
+            return package_dir
+
+        return None
+
+    def _fallback_discover_packages(self, root_dir: Path) -> list[Path]:
+        """Fallback method to discover package files when convention-based detection fails."""
+        python_files = []
+        exclude_dirs = {
+            "__pycache__",
+            ".git",
+            ".venv",
+            "venv",
+            "site-packages",
+            ".pytest_cache",
+            "build",
+            "dist",
+            ".tox",
+            "node_modules",
+            "tests",
+            "test",
+            "examples",
+            "example",
+            "docs",
+            "doc",
+            ".mypy_cache",
+            ".ruff_cache",
+            "htmlcov",
+            ".coverage",
+        }
+
+        for item in root_dir.iterdir():
+            if (
+                not item.is_dir()
+                or item.name.startswith(".")
+                or item.name in exclude_dirs
+            ):
+                continue
+
+            if (item / "__init__.py").exists():
+                package_files = [
+                    f
+                    for f in item.rglob("*.py")
+                    if self._should_include_file_path(f, exclude_dirs)
+                ]
+                python_files.extend(package_files)
+
+        return python_files
+
+    def _should_include_file_path(
+        self, file_path: Path, exclude_dirs: set[str]
+    ) -> bool:
+        """Check if a file path should be included (not in excluded directories)."""
+        # Convert path parts to set for efficient lookup
+        path_parts = set(file_path.parts)
+
+        # If any part of the path is in exclude_dirs, exclude it
+        return not bool(path_parts.intersection(exclude_dirs))
 
     def _handle_no_files_to_process(
         self, backup_metadata: BackupMetadata

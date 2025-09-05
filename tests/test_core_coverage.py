@@ -181,6 +181,7 @@ class TestPhaseCoordinator:
         hook_manager = Mock()
         test_manager = Mock()
         publish_manager = Mock()
+        config_merge_service = Mock()
 
         return {
             "session": session,
@@ -189,6 +190,7 @@ class TestPhaseCoordinator:
             "hook_manager": hook_manager,
             "test_manager": test_manager,
             "publish_manager": publish_manager,
+            "config_merge_service": config_merge_service,
         }
 
     @pytest.fixture

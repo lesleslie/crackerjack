@@ -10,7 +10,7 @@ from typing import Any
 import aiohttp
 from rich.console import Console
 
-from crackerjack.core.timeout_manager import TimeoutStrategy, get_timeout_manager
+from crackerjack.core.timeout_manager import get_timeout_manager
 
 
 class JobDataCollector:
@@ -152,11 +152,10 @@ class JobDataCollector:
 
         timeout_manager = get_timeout_manager()
 
-        try:
+        with suppress(Exception):
             async with timeout_manager.timeout_context(
                 "network_operations",
                 timeout=5.0,  # Short timeout for websocket discovery
-                strategy=TimeoutStrategy.FAIL_FAST,
             ):
                 websocket_base = self.websocket_url.replace("ws://", "http://").replace(
                     "wss://",
@@ -208,10 +207,6 @@ class JobDataCollector:
                             jobs_data["errors_fixed"] += job.get("errors_fixed", 0)
                             jobs_data["errors_failed"] += job.get("errors_failed", 0)
 
-        except Exception:
-            # Return empty data on timeout or error - fail gracefully
-            pass
-
         return jobs_data
 
 
@@ -245,7 +240,6 @@ class ServiceHealthChecker:
             async with timeout_manager.timeout_context(
                 "network_operations",
                 timeout=3.0,  # Quick health check timeout
-                strategy=TimeoutStrategy.FAIL_FAST,
             ):
                 async with (
                     aiohttp.ClientSession(
@@ -449,19 +443,16 @@ class ServiceManager:
     async def _check_websocket_server(self) -> bool:
         timeout_manager = get_timeout_manager()
 
-        try:
+        with suppress(Exception):
             async with timeout_manager.timeout_context(
                 "network_operations",
                 timeout=3.0,  # Quick check timeout
-                strategy=TimeoutStrategy.FAIL_FAST,
             ):
                 async with aiohttp.ClientSession(
                     timeout=aiohttp.ClientTimeout(total=2),
                 ) as session:
                     async with session.get("http://localhost:8675/") as response:
                         return response.status == 200
-        except Exception:
-            pass
         return False
 
     def _check_mcp_server(self) -> bool:

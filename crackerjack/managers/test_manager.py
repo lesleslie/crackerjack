@@ -216,7 +216,7 @@ class TestManager:
                 previous = ratchet_result.get("previous_coverage", 0)
                 self.console.print(
                     f"[red]📉[/ red] Coverage regression: "
-                    f"{current: .2f}% < {previous: .2f}%"
+                    f"{current:.2f}% < {previous:.2f}%"
                 )
             return False
 

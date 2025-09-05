@@ -38,29 +38,23 @@ class ValidationRateLimiter:
     """
 
     def __init__(self):
-        self._failure_windows: dict[str, deque] = defaultdict(deque)
+        self._failure_windows: dict[str, deque[float]] = defaultdict(deque)
         self._blocked_until: dict[str, float] = {}
         self._lock = Lock()
         self._logger = get_security_logger()
 
         # Default rate limits by validation type
         self._limits = {
-            "default": ValidationRateLimit(max_failures=10, window_seconds=60),
+            "default": ValidationRateLimit(),
             "command_injection": ValidationRateLimit(
-                max_failures=3, window_seconds=60, block_duration=600
+                max_failures=3, block_duration=600
             ),
-            "path_traversal": ValidationRateLimit(
-                max_failures=3, window_seconds=60, block_duration=600
-            ),
-            "sql_injection": ValidationRateLimit(
-                max_failures=2, window_seconds=60, block_duration=900
-            ),
-            "code_injection": ValidationRateLimit(
-                max_failures=2, window_seconds=60, block_duration=900
-            ),
-            "json_payload": ValidationRateLimit(max_failures=20, window_seconds=60),
-            "job_id": ValidationRateLimit(max_failures=15, window_seconds=60),
-            "project_name": ValidationRateLimit(max_failures=15, window_seconds=60),
+            "path_traversal": ValidationRateLimit(max_failures=3, block_duration=600),
+            "sql_injection": ValidationRateLimit(max_failures=2, block_duration=900),
+            "code_injection": ValidationRateLimit(max_failures=2, block_duration=900),
+            "json_payload": ValidationRateLimit(max_failures=20),
+            "job_id": ValidationRateLimit(max_failures=15),
+            "project_name": ValidationRateLimit(max_failures=15),
         }
 
     def is_blocked(self, client_id: str) -> bool:
@@ -217,7 +211,7 @@ class ValidationRateLimiter:
         with self._lock:
             current_time = time.time()
 
-            stats = {
+            stats: dict[str, t.Any] = {
                 "total_clients_tracked": len(self._failure_windows),
                 "currently_blocked": len(self._blocked_until),
                 "rate_limits": {
@@ -273,74 +267,3 @@ def get_validation_rate_limiter() -> ValidationRateLimiter:
     if _rate_limiter is None:
         _rate_limiter = ValidationRateLimiter()
     return _rate_limiter
-
-
-def reset_validation_rate_limiter() -> None:
-    """Reset the global rate limiter (mainly for testing)."""
-    global _rate_limiter
-    _rate_limiter = ValidationRateLimiter()
-
-
-def cleanup_rate_limiter_data() -> int:
-    """Clean up expired rate limiter data."""
-    limiter = get_validation_rate_limiter()
-    return limiter.cleanup_expired_data()
-
-
-class RateLimitedValidator:
-    """Wrapper for input validation with rate limiting."""
-
-    def __init__(self, base_validator, client_id_func: t.Callable[[], str] = None):
-        self.base_validator = base_validator
-        self.rate_limiter = get_validation_rate_limiter()
-        self.client_id_func = client_id_func or (lambda: "default")
-
-    def validate_with_rate_limit(
-        self, validation_func: t.Callable, validation_type: str, *args, **kwargs
-    ):
-        """Execute validation with rate limiting."""
-        client_id = self.client_id_func()
-
-        # Check if client is blocked
-        if self.rate_limiter.is_blocked(client_id):
-            remaining_time = self.rate_limiter.get_block_time_remaining(client_id)
-            from ..errors import ErrorCode, ExecutionError
-
-            raise ExecutionError(
-                message=f"Rate limit exceeded. Try again in {remaining_time} seconds.",
-                error_code=ErrorCode.RATE_LIMIT_EXCEEDED,
-            )
-
-        # Perform validation
-        result = validation_func(*args, **kwargs)
-
-        # If validation failed, record the failure
-        if hasattr(result, "valid") and not result.valid:
-            # Map security levels to rate limiting severity
-            severity_mapping = {
-                "shell_injection": SecurityEventLevel.CRITICAL,
-                "command_injection": SecurityEventLevel.CRITICAL,
-                "sql_injection": SecurityEventLevel.CRITICAL,
-                "code_injection": SecurityEventLevel.CRITICAL,
-                "path_traversal": SecurityEventLevel.CRITICAL,
-                "directory_escape": SecurityEventLevel.CRITICAL,
-            }
-
-            severity = severity_mapping.get(
-                result.validation_type, SecurityEventLevel.MEDIUM
-            )
-
-            # Record failure and check if client should be blocked
-            should_block = self.rate_limiter.record_failure(
-                client_id, validation_type, severity
-            )
-
-            if should_block:
-                from ..errors import ErrorCode, ExecutionError
-
-                raise ExecutionError(
-                    message="Too many validation failures. Client blocked.",
-                    error_code=ErrorCode.RATE_LIMIT_EXCEEDED,
-                )
-
-        return result

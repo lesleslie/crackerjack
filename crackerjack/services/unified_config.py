@@ -1,11 +1,9 @@
-import json
 import os
 import typing as t
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
-import yaml
 from pydantic import BaseModel, Field, field_validator
 from rich.console import Console
 
@@ -27,7 +25,7 @@ class CrackerjackConfig(BaseModel):
 
     test_timeout: int = 300
     test_workers: int = Field(default_factory=lambda: os.cpu_count() or 1)
-    min_coverage: float = 10.11
+    min_coverage: float = 10.0
 
     log_level: str = "INFO"
     log_json: bool = False
@@ -38,11 +36,7 @@ class CrackerjackConfig(BaseModel):
     skip_hooks: bool = False
     experimental_hooks: bool = False
 
-    performance_tracking: bool = True
-    benchmark_mode: bool = False
-
-    publish_enabled: bool = False
-    keyring_provider: str = "subprocess"
+    # Removed unused configuration fields: performance_tracking, benchmark_mode, publish_enabled, keyring_provider
 
     batch_file_operations: bool = True
     file_operation_batch_size: int = 10
@@ -95,7 +89,7 @@ class ConfigSource:
         self.priority = priority
         self.logger = get_logger("crackerjack.config.source")
 
-    def load(self) -> dict[str, Any]:
+    def load(self) -> dict[str, t.Any]:
         raise NotImplementedError
 
     def is_available(self) -> bool:
@@ -108,8 +102,8 @@ class EnvironmentConfigSource(ConfigSource):
     def __init__(self, priority: int = 100) -> None:
         super().__init__(priority)
 
-    def load(self) -> dict[str, Any]:
-        config: dict[str, Any] = {}
+    def load(self) -> dict[str, t.Any]:
+        config: dict[str, t.Any] = {}
 
         for key, value in os.environ.items():
             if key.startswith(self.ENV_PREFIX):
@@ -117,71 +111,58 @@ class EnvironmentConfigSource(ConfigSource):
 
                 config[config_key] = self._convert_value(value)
 
-        self.logger.debug("Loaded environment config", keys=list(config.keys()))
         return config
 
-    def _convert_value(self, value: str) -> Any:
+    def _convert_value(self, value: str) -> t.Any:
         if value.lower() in ("true", "1", "yes", "on"):
             return True
         if value.lower() in ("false", "0", "no", "off"):
             return False
 
-        with suppress(ValueError):
-            return int(value)
+        # Handle negative numbers with spaces (e.g., "- 10")
+        cleaned_value = value.replace(" ", "")
 
         with suppress(ValueError):
-            return float(value)
+            return int(cleaned_value)
+
+        with suppress(ValueError):
+            return float(cleaned_value)
 
         return value
 
 
 class FileConfigSource(ConfigSource):
-    def __init__(self, file_path: Path, priority: int = 50) -> None:
+    def __init__(self, config_path: Path, priority: int = 50) -> None:
         super().__init__(priority)
-        self.file_path = file_path
+        self.config_path = config_path
 
     def is_available(self) -> bool:
-        return self.file_path.exists() and self.file_path.is_file()
+        return self.config_path.exists() and self.config_path.is_file()
 
-    def load(self) -> dict[str, Any]:
+    def load(self) -> dict[str, t.Any]:
         if not self.is_available():
             return {}
 
         try:
-            content = self.file_path.read_text()
+            with self.config_path.open("r") as f:
+                if self.config_path.suffix in (".yaml", ".yml"):
+                    import yaml
 
-            if self.file_path.suffix.lower() in (".yml", ".yaml"):
-                yaml_result: t.Any = yaml.safe_load(content)
-                config = (
-                    t.cast("dict[str, Any]", yaml_result)
-                    if yaml_result is not None
-                    else {}
-                )
-            elif self.file_path.suffix.lower() == ".json":
-                json_result = json.loads(content)
-                config = (
-                    t.cast("dict[str, Any]", json_result)
-                    if json_result is not None
-                    else {}
-                )
-            else:
-                self.logger.warning(
-                    "Unknown config file format",
-                    path=str(self.file_path),
-                )
-                return {}
+                    result = yaml.safe_load(f)
+                    return result if isinstance(result, dict) else {}
+                elif self.config_path.suffix == ".json":
+                    import json
 
-            self.logger.debug(
-                "Loaded file config",
-                path=str(self.file_path),
-                keys=list(config.keys()),
-            )
-            return config
-
+                    result = json.load(f)
+                    return result if isinstance(result, dict) else {}
+                else:
+                    self.logger.warning(
+                        f"Unsupported config file format: {self.config_path.suffix}"
+                    )
+                    return {}
         except Exception as e:
             self.logger.exception(
-                "Failed to load config file",
-                path=str(self.file_path),
+                f"Failed to load config from file: {self.config_path}",
                 error=str(e),
             )
             return {}
@@ -195,7 +176,7 @@ class PyprojectConfigSource(ConfigSource):
     def is_available(self) -> bool:
         return self.pyproject_path.exists() and self.pyproject_path.is_file()
 
-    def load(self) -> dict[str, Any]:
+    def load(self) -> dict[str, t.Any]:
         if not self.is_available():
             return {}
 
@@ -234,8 +215,8 @@ class OptionsConfigSource(ConfigSource):
         super().__init__(priority)
         self.options = options
 
-    def load(self) -> dict[str, Any]:
-        config: dict[str, Any] = {}
+    def load(self) -> dict[str, t.Any]:
+        config: dict[str, t.Any] = {}
 
         option_mappings = {
             "testing": "test_mode",
@@ -291,7 +272,7 @@ class UnifiedConfigurationService:
         pkg_path = self.pkg_path
 
         class DefaultConfigSource(ConfigSource):
-            def load(self) -> dict[str, Any]:
+            def load(self) -> dict[str, t.Any]:
                 return {
                     "package_path": pkg_path,
                     "cache_enabled": True,

@@ -36,8 +36,7 @@ class JobManager:
             return True
 
         # Use secure input validator for additional validation
-        validator = get_input_validator()
-        result = validator.validate_job_id(job_id)
+        result = get_input_validator().validate_job_id(job_id)
         return result.valid
 
     def add_connection(self, job_id: str, websocket: Any) -> None:
@@ -58,7 +57,17 @@ class JobManager:
         timeout_manager = get_timeout_manager()
         connections = self.active_connections[job_id].copy()
 
-        # Create tasks for all websocket sends with timeout
+        # Create websocket send tasks
+        send_tasks = self._create_broadcast_tasks(connections, timeout_manager, data)
+
+        # Execute broadcast with timeout handling
+        if send_tasks:
+            await self._execute_broadcast_tasks(job_id, send_tasks)
+
+    def _create_broadcast_tasks(
+        self, connections: set, timeout_manager, data: dict
+    ) -> list:
+        """Create tasks for all websocket sends with timeout."""
         send_tasks = []
         for websocket in connections:
             task = asyncio.create_task(
@@ -66,43 +75,53 @@ class JobManager:
                     "websocket_broadcast",
                     websocket.send_json(data),
                     timeout=2.0,  # Quick broadcast timeout
-                    strategy=TimeoutStrategy.FAIL_FAST,
                 )
             )
             send_tasks.append((websocket, task))
+        return send_tasks
 
-        # Wait for all sends with timeout
-        if send_tasks:
-            try:
-                # Use asyncio.wait with timeout for batch sending
-                done, pending = await asyncio.wait(
-                    [task for _, task in send_tasks],
-                    timeout=5.0,  # Overall timeout for all broadcasts
-                    return_when=asyncio.ALL_COMPLETED,
-                )
+    async def _execute_broadcast_tasks(self, job_id: str, send_tasks: list) -> None:
+        """Execute broadcast tasks with timeout and error handling."""
+        try:
+            # Use asyncio.wait with timeout for batch sending
+            done, pending = await asyncio.wait(
+                [task for _, task in send_tasks],
+                timeout=5.0,  # Overall timeout for all broadcasts
+                return_when=asyncio.ALL_COMPLETED,
+            )
 
-                # Cancel any pending tasks and remove failed connections
-                for websocket, task in send_tasks:
-                    if task in pending:
-                        task.cancel()
-                        self.remove_connection(job_id, websocket)
-                    elif task in done:
-                        try:
-                            await task
-                        except Exception:
-                            self.remove_connection(job_id, websocket)
+            # Handle completed and pending tasks
+            await self._handle_broadcast_results(job_id, send_tasks, done, pending)
 
-                # Wait for cancelled tasks to complete
-                if pending:
-                    await asyncio.gather(*pending, return_exceptions=True)
+        except Exception as e:
+            console.print(f"[red]Broadcast error: {e}[/red]")
+            await self._cleanup_failed_broadcast(job_id, send_tasks)
 
-            except Exception as e:
-                console.print(f"[red]Broadcast error: {e}[/red]")
-                # Remove all connections on serious broadcast failure
-                for websocket, task in send_tasks:
-                    if not task.done():
-                        task.cancel()
+    async def _handle_broadcast_results(
+        self, job_id: str, send_tasks: list, done: set, pending: set
+    ) -> None:
+        """Handle results of broadcast tasks."""
+        # Cancel any pending tasks and remove failed connections
+        for websocket, task in send_tasks:
+            if task in pending:
+                task.cancel()
+                self.remove_connection(job_id, websocket)
+            elif task in done:
+                try:
+                    await task
+                except Exception:
                     self.remove_connection(job_id, websocket)
+
+        # Wait for cancelled tasks to complete
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+
+    async def _cleanup_failed_broadcast(self, job_id: str, send_tasks: list) -> None:
+        """Clean up connections after broadcast failure."""
+        for websocket, task in send_tasks:
+            if not task.done():
+                task.cancel()
+            self.remove_connection(job_id, websocket)
 
     def get_latest_job_id(self) -> str | None:
         if not self.progress_dir.exists():
@@ -180,7 +199,6 @@ class JobManager:
                                     "file_operations",
                                     self._process_progress_file(progress_file),
                                     timeout=5.0,  # Per-file timeout
-                                    strategy=TimeoutStrategy.FAIL_FAST,
                                 )
                             except Exception as e:
                                 console.print(
@@ -232,7 +250,6 @@ class JobManager:
                                     "websocket_broadcast",
                                     self.broadcast_to_job(job_id, progress_data),
                                     timeout=5.0,
-                                    strategy=TimeoutStrategy.FAIL_FAST,
                                 )
                             except Exception as e:
                                 console.print(

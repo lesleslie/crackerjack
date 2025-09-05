@@ -154,7 +154,7 @@ class SecurePathValidator:
 
         # Validate each part for malicious patterns
         for part in parts:
-            cls._check_malicious_patterns(str(part))
+            cls._check_malicious_patterns(part)
             # Don't allow absolute paths or parent directory references
             if Path(part).is_absolute():
                 raise ExecutionError(
@@ -270,7 +270,7 @@ class SecurePathValidator:
             decoded = path_str
 
         # Check both original and decoded versions
-        for check_str in [path_str, decoded]:
+        for check_str in (path_str, decoded):
             # Check for null bytes
             for pattern in cls.NULL_BYTE_PATTERNS:
                 if re.search(pattern, check_str, re.IGNORECASE):
@@ -312,9 +312,12 @@ class SecurePathValidator:
                 error_code=ErrorCode.VALIDATION_ERROR,
             )
 
-        # Check for suspicious patterns
+        # Check for suspicious patterns - using tempfile.gettempdir() instead of hardcoded /tmp (B108)
+        import tempfile
+
+        temp_dir = tempfile.gettempdir()
         suspicious_patterns = [
-            r"/tmp/.*\.\./",  # Traversal in temp directories
+            rf"{re.escape(temp_dir)}/.*\.\./",  # Traversal in temp directories
             r"/var/.*\.\./",  # Traversal in var directories
             r"/etc/.*\.\./",  # Traversal near system files
         ]

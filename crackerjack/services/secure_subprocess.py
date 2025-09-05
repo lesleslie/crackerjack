@@ -177,83 +177,166 @@ class SecureSubprocessExecutor:
         start_time = time.time()
 
         try:
-            # Validate and sanitize all inputs
-            validated_command = self._validate_command(command)
-            validated_cwd = self._validate_cwd(cwd)
-            sanitized_env = self._sanitize_environment(env)
-            validated_timeout = self._validate_timeout(timeout)
-
-            # Log the execution attempt
-            if self.config.enable_command_logging:
-                self.security_logger.log_subprocess_execution(
-                    command=validated_command,
-                    cwd=str(validated_cwd) if validated_cwd else None,
-                    env_vars_count=len(sanitized_env),
-                    timeout=validated_timeout,
-                )
-
-            # Execute the subprocess
-            result = subprocess.run(
-                validated_command,
-                cwd=validated_cwd,
-                env=sanitized_env,
-                timeout=validated_timeout,
-                input=input_data,
-                capture_output=capture_output,
-                text=text,
-                check=check,
-                **kwargs,
+            return self._execute_with_validation(
+                command,
+                cwd,
+                env,
+                timeout,
+                input_data,
+                capture_output,
+                text,
+                check,
+                kwargs,
+                start_time,
             )
-
-            # Log success
-            execution_time = time.time() - start_time
-            if self.config.enable_command_logging:
-                self.security_logger.log_security_event(
-                    SecurityEventType.SUBPROCESS_EXECUTION,
-                    SecurityEventLevel.LOW,
-                    f"Subprocess completed successfully in {execution_time:.2f}s",
-                    command_preview=validated_command[:3],
-                    execution_time=execution_time,
-                    exit_code=result.returncode,
-                )
-
-            return result
 
         except subprocess.TimeoutExpired:
-            execution_time = time.time() - start_time
-            self.security_logger.log_subprocess_timeout(
-                command=command,
-                timeout_seconds=validated_timeout or self.config.max_timeout,
-                actual_duration=execution_time,
-            )
+            self._handle_timeout_error(command, timeout, start_time)
             raise
 
         except subprocess.CalledProcessError as e:
-            self.security_logger.log_subprocess_failure(
-                command=command,
-                exit_code=e.returncode,
-                error_output=str(e.stderr)[:200] if e.stderr else "",
-            )
+            self._handle_process_error(command, e)
             raise
 
         except Exception as e:
-            self.security_logger.log_security_event(
-                SecurityEventType.SUBPROCESS_FAILURE,
-                SecurityEventLevel.HIGH,
-                f"Unexpected subprocess error: {str(e)[:200]}",
-                command_preview=command[:3] if command else [],
-                error_type=type(e).__name__,
-                error_message=str(e)[:200],
-            )
+            self._handle_unexpected_error(command, e)
             raise
+
+    def _execute_with_validation(
+        self,
+        command: list[str],
+        cwd: Path | str | None,
+        env: dict[str, str] | None,
+        timeout: float | None,
+        input_data: str | bytes | None,
+        capture_output: bool,
+        text: bool,
+        check: bool,
+        kwargs: dict[str, t.Any],
+        start_time: float,
+    ) -> subprocess.CompletedProcess[str]:
+        """Execute subprocess with validation and logging."""
+        # Validate and sanitize all inputs
+        execution_params = self._prepare_execution_params(command, cwd, env, timeout)
+
+        # Log and execute subprocess
+        result = self._execute_subprocess(
+            execution_params, input_data, capture_output, text, check, kwargs
+        )
+
+        # Log success
+        self._log_successful_execution(execution_params, result, start_time)
+        return result
+
+    def _prepare_execution_params(
+        self,
+        command: list[str],
+        cwd: Path | str | None,
+        env: dict[str, str] | None,
+        timeout: float | None,
+    ) -> dict[str, t.Any]:
+        """Prepare and validate all execution parameters."""
+        return {
+            "command": self._validate_command(command),
+            "cwd": self._validate_cwd(cwd),
+            "env": self._sanitize_environment(env),
+            "timeout": self._validate_timeout(timeout),
+        }
+
+    def _execute_subprocess(
+        self,
+        params: dict[str, t.Any],
+        input_data: str | bytes | None,
+        capture_output: bool,
+        text: bool,
+        check: bool,
+        kwargs: dict[str, t.Any],
+    ) -> subprocess.CompletedProcess[str]:
+        """Execute subprocess with validated parameters."""
+        if self.config.enable_command_logging:
+            self.security_logger.log_subprocess_execution(
+                command=params["command"],
+                cwd=str(params["cwd"]) if params["cwd"] else None,
+                env_vars_count=len(params["env"]),
+                timeout=params["timeout"],
+            )
+
+        return subprocess.run(
+            params["command"],
+            cwd=params["cwd"],
+            env=params["env"],
+            timeout=params["timeout"],
+            input=input_data,
+            capture_output=capture_output,
+            text=text,
+            check=check,
+            **kwargs,
+        )
+
+    def _log_successful_execution(
+        self,
+        params: dict[str, t.Any],
+        result: subprocess.CompletedProcess[str],
+        start_time: float,
+    ) -> None:
+        """Log successful subprocess execution."""
+        execution_time = time.time() - start_time
+        if self.config.enable_command_logging:
+            self.security_logger.log_security_event(
+                SecurityEventType.SUBPROCESS_EXECUTION,
+                SecurityEventLevel.LOW,
+                f"Subprocess completed successfully in {execution_time:.2f}s",
+                command_preview=params["command"][:3],
+                execution_time=execution_time,
+                exit_code=result.returncode,
+            )
+
+    def _handle_timeout_error(
+        self, command: list[str], timeout: float | None, start_time: float
+    ) -> None:
+        """Handle subprocess timeout errors."""
+        execution_time = time.time() - start_time
+        self.security_logger.log_subprocess_timeout(
+            command=command,
+            timeout_seconds=timeout or self.config.max_timeout,
+            actual_duration=execution_time,
+        )
+
+    def _handle_process_error(
+        self, command: list[str], error: subprocess.CalledProcessError
+    ) -> None:
+        """Handle subprocess called process errors."""
+        self.security_logger.log_subprocess_failure(
+            command=command,
+            exit_code=error.returncode,
+            error_output=str(error.stderr)[:200] if error.stderr else "",
+        )
+
+    def _handle_unexpected_error(self, command: list[str], error: Exception) -> None:
+        """Handle unexpected subprocess errors."""
+        self.security_logger.log_security_event(
+            SecurityEventType.SUBPROCESS_FAILURE,
+            SecurityEventLevel.HIGH,
+            f"Unexpected subprocess error: {str(error)[:200]}",
+            command_preview=command[:3] if command else [],
+            error_type=type(error).__name__,
+            error_message=str(error)[:200],
+        )
 
     def _validate_command(self, command: list[str]) -> list[str]:
         """Validate command arguments for security issues."""
+        self._validate_command_structure(command)
+
+        validated_command, issues = self._validate_command_arguments(command)
+        self._validate_executable_permissions(validated_command, issues)
+
+        self._handle_validation_results(command, issues)
+        return validated_command
+
+    def _validate_command_structure(self, command: list[str]) -> None:
+        """Validate basic command structure."""
         if not command:
             raise CommandValidationError("Command cannot be empty")
-
-        if not isinstance(command, list):
-            raise CommandValidationError("Command must be a list of strings")
 
         # Check overall command length
         total_length = sum(len(arg) for arg in command)
@@ -262,15 +345,14 @@ class SecureSubprocessExecutor:
                 f"Command too long: {total_length} > {self.config.max_command_length}"
             )
 
+    def _validate_command_arguments(
+        self, command: list[str]
+    ) -> tuple[list[str], list[str]]:
+        """Validate individual command arguments."""
         validated_command = []
         issues = []
 
         for i, arg in enumerate(command):
-            if not isinstance(arg, str):
-                raise CommandValidationError(
-                    f"Command argument {i} must be string, got {type(arg)}"
-                )
-
             # Check argument length
             if len(arg) > self.config.max_arg_length:
                 issues.append(
@@ -279,29 +361,43 @@ class SecureSubprocessExecutor:
                 continue
 
             # Check for injection patterns
-            for pattern in self.dangerous_patterns:
-                if re.search(pattern, arg):
-                    issues.append(
-                        f"Dangerous pattern '{pattern}' in argument {i}: {arg[:50]}"
-                    )
-                    continue
+            if self._has_dangerous_patterns(arg, i, issues):
+                continue
 
             validated_command.append(arg)
 
-        # Check executable allowlist/blocklist
-        if validated_command:
-            executable = Path(validated_command[0]).name
+        return validated_command, issues
 
-            if (
-                self.config.allowed_executables
-                and executable not in self.config.allowed_executables
-            ):
-                issues.append(f"Executable '{executable}' not in allowlist")
+    def _has_dangerous_patterns(self, arg: str, index: int, issues: list[str]) -> bool:
+        """Check if argument has dangerous patterns."""
+        for pattern in self.dangerous_patterns:
+            if re.search(pattern, arg):
+                issues.append(
+                    f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}"
+                )
+                return True
+        return False
 
-            if executable in self.config.blocked_executables:
-                issues.append(f"Executable '{executable}' is blocked")
+    def _validate_executable_permissions(
+        self, validated_command: list[str], issues: list[str]
+    ) -> None:
+        """Validate executable allowlist/blocklist."""
+        if not validated_command:
+            return
 
-        # Log validation results
+        executable = Path(validated_command[0]).name
+
+        if (
+            self.config.allowed_executables
+            and executable not in self.config.allowed_executables
+        ):
+            issues.append(f"Executable '{executable}' not in allowlist")
+
+        if executable in self.config.blocked_executables:
+            issues.append(f"Executable '{executable}' is blocked")
+
+    def _handle_validation_results(self, command: list[str], issues: list[str]) -> None:
+        """Handle validation results and logging."""
         validation_passed = len(issues) == 0
         if self.config.enable_command_logging:
             self.security_logger.log_subprocess_command_validation(
@@ -320,8 +416,6 @@ class SecureSubprocessExecutor:
             raise CommandValidationError(
                 f"Command validation failed: {'; '.join(issues)}"
             )
-
-        return validated_command
 
     def _validate_cwd(self, cwd: Path | str | None) -> Path | None:
         """Validate working directory for path traversal."""
@@ -358,11 +452,18 @@ class SecureSubprocessExecutor:
         if env is None:
             env = os.environ.copy()
 
-        original_count = len(env)
-        filtered_vars = []
-        sanitized_env = {}
+        self._validate_environment_size(env)
 
-        # Check total environment size
+        filtered_vars = []
+        sanitized_env = self._filter_environment_variables(env, filtered_vars)
+
+        self._add_safe_environment_variables(sanitized_env)
+        self._log_environment_sanitization(len(env), len(sanitized_env), filtered_vars)
+
+        return sanitized_env
+
+    def _validate_environment_size(self, env: dict[str, str]) -> None:
+        """Validate environment variable count limits."""
         if len(env) > self.config.max_env_vars:
             self.security_logger.log_security_event(
                 SecurityEventType.INPUT_SIZE_EXCEEDED,
@@ -375,58 +476,85 @@ class SecureSubprocessExecutor:
                 f"Too many environment variables: {len(env)} > {self.config.max_env_vars}"
             )
 
+    def _filter_environment_variables(
+        self, env: dict[str, str], filtered_vars: list[str]
+    ) -> dict[str, str]:
+        """Filter environment variables for security."""
+        sanitized_env = {}
+
         for key, value in env.items():
-            # Check key safety
-            if key in self.dangerous_env_vars:
+            if self._is_dangerous_environment_key(key, value, filtered_vars):
+                continue
+
+            if self._is_environment_value_too_long(key, value, filtered_vars):
+                continue
+
+            if self._has_environment_injection(key, value, filtered_vars):
+                continue
+
+            sanitized_env[key] = value
+
+        return sanitized_env
+
+    def _is_dangerous_environment_key(
+        self, key: str, value: str, filtered_vars: list[str]
+    ) -> bool:
+        """Check if environment key is dangerous."""
+        if key in self.dangerous_env_vars:
+            filtered_vars.append(key)
+            self.security_logger.log_environment_variable_filtered(
+                variable_name=key,
+                reason="dangerous environment variable",
+                value_preview=value[:50] if value else "",
+            )
+            return True
+        return False
+
+    def _is_environment_value_too_long(
+        self, key: str, value: str, filtered_vars: list[str]
+    ) -> bool:
+        """Check if environment value exceeds length limits."""
+        if len(value) > self.config.max_env_var_length:
+            filtered_vars.append(key)
+            self.security_logger.log_environment_variable_filtered(
+                variable_name=key,
+                reason=f"value too long: {len(value)} > {self.config.max_env_var_length}",
+                value_preview=value[:50],
+            )
+            return True
+        return False
+
+    def _has_environment_injection(
+        self, key: str, value: str, filtered_vars: list[str]
+    ) -> bool:
+        """Check if environment value has injection patterns."""
+        for pattern in self.dangerous_patterns[:3]:  # Check first 3 most dangerous
+            if re.search(pattern, value):
                 filtered_vars.append(key)
                 self.security_logger.log_environment_variable_filtered(
                     variable_name=key,
-                    reason="dangerous environment variable",
-                    value_preview=str(value)[:50] if value else None,
+                    reason=f"dangerous pattern '{pattern}' in value",
+                    value_preview=value[:50],
                 )
-                continue
+                return True
+        return False
 
-            # Check value length
-            if len(str(value)) > self.config.max_env_var_length:
-                filtered_vars.append(key)
-                self.security_logger.log_environment_variable_filtered(
-                    variable_name=key,
-                    reason=f"value too long: {len(str(value))} > {self.config.max_env_var_length}",
-                    value_preview=str(value)[:50],
-                )
-                continue
-
-            # Check for injection in values
-            value_str = str(value)
-            has_injection = False
-            for pattern in self.dangerous_patterns[:3]:  # Check first 3 most dangerous
-                if re.search(pattern, value_str):
-                    filtered_vars.append(key)
-                    self.security_logger.log_environment_variable_filtered(
-                        variable_name=key,
-                        reason=f"dangerous pattern '{pattern}' in value",
-                        value_preview=value_str[:50],
-                    )
-                    has_injection = True
-                    break
-
-            if not has_injection:
-                sanitized_env[key] = value_str
-
-        # Ensure essential environment variables are present
+    def _add_safe_environment_variables(self, sanitized_env: dict[str, str]) -> None:
+        """Add essential safe environment variables."""
         for safe_var in self.safe_env_vars:
             if safe_var not in sanitized_env and safe_var in os.environ:
                 sanitized_env[safe_var] = os.environ[safe_var]
 
-        # Log sanitization results
+    def _log_environment_sanitization(
+        self, original_count: int, sanitized_count: int, filtered_vars: list[str]
+    ) -> None:
+        """Log environment sanitization results."""
         if self.config.enable_command_logging:
             self.security_logger.log_subprocess_environment_sanitized(
                 original_count=original_count,
-                sanitized_count=len(sanitized_env),
+                sanitized_count=sanitized_count,
                 filtered_vars=filtered_vars,
             )
-
-        return sanitized_env
 
     def _validate_timeout(self, timeout: float | None) -> float | None:
         """Validate timeout value."""
@@ -474,5 +602,4 @@ def execute_secure_subprocess(
 
     This is the recommended way to execute subprocesses in Crackerjack.
     """
-    executor = get_secure_executor()
-    return executor.execute_secure(command, **kwargs)
+    return get_secure_executor().execute_secure(command, **kwargs)

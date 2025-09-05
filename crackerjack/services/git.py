@@ -7,12 +7,24 @@ from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
 
 
+class FailedGitResult:
+    """A Git result object compatible with subprocess.CompletedProcess."""
+
+    def __init__(self, command: list[str], error: str) -> None:
+        self.args = command
+        self.returncode = -1
+        self.stdout = ""
+        self.stderr = f"Git security validation failed: {error}"
+
+
 class GitService:
     def __init__(self, console: Console, pkg_path: Path | None = None) -> None:
         self.console = console
         self.pkg_path = pkg_path or Path.cwd()
 
-    def _run_git_command(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+    def _run_git_command(
+        self, args: list[str]
+    ) -> subprocess.CompletedProcess[str] | FailedGitResult:
         """Execute Git commands with secure subprocess validation."""
         cmd = ["git", *args]
 
@@ -35,13 +47,6 @@ class GitService:
             )
 
             # Create compatible result for Git operations
-            class FailedGitResult:
-                def __init__(self, command: list[str], error: str):
-                    self.args = command
-                    self.returncode = -1
-                    self.stdout = ""
-                    self.stderr = f"Git security validation failed: {error}"
-
             return FailedGitResult(cmd, str(e))
 
     def is_git_repo(self) -> bool:
@@ -121,7 +126,7 @@ class GitService:
             return False
 
     def _handle_commit_failure(
-        self, result: subprocess.CompletedProcess[str], message: str
+        self, result: subprocess.CompletedProcess[str] | FailedGitResult, message: str
     ) -> bool:
         if "files were modified by this hook" in result.stderr:
             return self._retry_commit_after_restage(message)
@@ -152,7 +157,9 @@ class GitService:
         )
         return False
 
-    def _handle_hook_error(self, result: subprocess.CompletedProcess[str]) -> bool:
+    def _handle_hook_error(
+        self, result: subprocess.CompletedProcess[str] | FailedGitResult
+    ) -> bool:
         if "pre-commit" in result.stderr or "hook" in result.stderr.lower():
             self.console.print("[red]❌[/ red] Commit blocked by pre-commit hooks")
             if result.stderr.strip():

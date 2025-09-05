@@ -595,7 +595,7 @@ class AIAgentDebugger:
             return Path("debug_not_enabled.json")
 
         if output_path is None:
-            output_path = Path(f"crackerjack - debug-export -{self.session_id}.json")
+            output_path = Path(f"crackerjack-debug-export-{self.session_id}.json")
 
         debug_data = {
             "session_id": self.session_id,

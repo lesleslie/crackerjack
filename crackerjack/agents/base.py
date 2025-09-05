@@ -40,10 +40,6 @@ class Issue:
     details: list[str] = field(default_factory=list)
     stage: str = "unknown"
 
-    @property
-    def context_key(self) -> str:
-        return f"{self.type.value}: {self.file_path}: {self.line_number}"
-
 
 @dataclass
 class FixResult:
@@ -160,9 +156,6 @@ class AgentRegistry:
 
     def create_all(self, context: AgentContext) -> list[SubAgent]:
         return [agent_cls(context) for agent_cls in self._agents.values()]
-
-    def get_by_name(self, name: str) -> type[SubAgent] | None:
-        return self._agents.get(name)
 
 
 agent_registry = AgentRegistry()

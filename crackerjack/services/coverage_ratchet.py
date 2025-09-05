@@ -167,12 +167,9 @@ class CoverageRatchetService:
         try:
             content = self.pyproject_file.read_text()
 
-            import re
+            from crackerjack.services.regex_patterns import update_coverage_requirement
 
-            pattern = r"(- - cov - fail-under =)\d +\.?\d *"
-            replacement = f"\\g < 1 >{new_coverage: .0f}"
-
-            updated_content = re.sub(pattern, replacement, content)
+            updated_content = update_coverage_requirement(content, new_coverage)
 
             if updated_content != content:
                 from crackerjack.services.filesystem import FileSystemService

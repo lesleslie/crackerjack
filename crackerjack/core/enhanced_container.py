@@ -10,6 +10,7 @@ from typing import Any, TypeVar
 from rich.console import Console
 
 from crackerjack.models.protocols import (
+    ConfigMergeServiceProtocol,
     FileSystemInterface,
     GitInterface,
     HookManager,
@@ -109,12 +110,21 @@ class DependencyResolver:
                     dependency = self.container.get(param.annotation)
                     kwargs[param_name] = dependency
                 except Exception as e:
-                    self.logger.warning(
-                        "Could not inject dependency",
-                        parameter=param_name,
-                        type=param.annotation,
-                        error=str(e),
-                    )
+                    # Only log as warning for required parameters, debug for optional ones with defaults
+                    if param.default == inspect.Parameter.empty:
+                        self.logger.warning(
+                            "Could not inject dependency",
+                            parameter=param_name,
+                            type=param.annotation,
+                            error=str(e),
+                        )
+                    else:
+                        self.logger.debug(
+                            "Could not inject optional dependency, using default",
+                            parameter=param_name,
+                            type=param.annotation,
+                            default=param.default,
+                        )
 
         return factory(**kwargs)
 
@@ -426,11 +436,11 @@ class ServiceCollectionBuilder:
             factory=lambda: GitService(console=console, pkg_path=pkg_path),
         )
 
-        from crackerjack.managers.async_hook_manager import AsyncHookManager
+        from crackerjack.managers.hook_manager import HookManagerImpl
 
-        self.container.register_scoped(
+        self.container.register_transient(
             HookManager,
-            factory=lambda: AsyncHookManager(console=console, pkg_path=pkg_path),
+            factory=lambda: HookManagerImpl(console=console, pkg_path=pkg_path),
         )
 
         from crackerjack.managers.test_manager import TestManagementImpl
@@ -462,6 +472,23 @@ class ServiceCollectionBuilder:
         self.container.register_singleton(
             UnifiedConfigurationService,
             factory=lambda: UnifiedConfigurationService(console, pkg_path),
+        )
+
+        # Register ConfigMergeService for smart configuration merging
+        from crackerjack.services.config_merge import ConfigMergeService
+
+        def create_config_merge_service() -> ConfigMergeService:
+            filesystem = self.container.get(FileSystemInterface)
+            git_service = self.container.get(GitInterface)
+            return ConfigMergeService(
+                console=console,
+                filesystem=filesystem,
+                git_service=git_service,
+            )
+
+        self.container.register_transient(
+            ConfigMergeServiceProtocol,
+            factory=create_config_merge_service,
         )
 
         return self

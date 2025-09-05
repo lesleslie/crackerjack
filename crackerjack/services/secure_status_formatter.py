@@ -7,6 +7,7 @@ configuration details, and other sensitive data.
 """
 
 import re
+import tempfile
 import typing as t
 from enum import Enum
 from pathlib import Path
@@ -35,7 +36,7 @@ class SecureStatusFormatter:
         # Absolute system paths (replace with relative paths)
         "absolute_paths": [
             r"(/[^/\s]*){2,}",  # Paths like /Users/username/...
-            r"/tmp/[^\s]*",  # Temp directory paths
+            rf"{tempfile.gettempdir()}/[^\s]*",  # Temp directory paths - using tempfile.gettempdir() (B108)
             r"/var/[^\s]*",  # Var directory paths
             r"/home/[^\s]*",  # Home directory paths
         ],
@@ -195,8 +196,7 @@ class SecureStatusFormatter:
         elif isinstance(obj, str):
             return self._sanitize_string(obj, verbosity)
 
-        else:
-            return obj
+        return obj
 
     def _sanitize_string(self, text: str, verbosity: StatusVerbosity) -> str:
         """Sanitize string content based on verbosity level."""
@@ -279,7 +279,7 @@ class SecureStatusFormatter:
             for match in matches:
                 if len(match) > 16:  # Only mask long strings
                     # Don't mask if it looks like a URL or path component
-                    if not any(x in match for x in ["://", "/", "\\", "."]):
+                    if not any(x in match for x in ("://", "/", "\\", ".")):
                         masked = match[:4] + "*" * (len(match) - 8) + match[-4:]
                         text = text.replace(match, masked)
 
@@ -292,8 +292,7 @@ class SecureStatusFormatter:
             return "***"
         elif len(value) <= 8:
             return value[0] + "*" * (len(value) - 1)
-        else:
-            return value[:2] + "*" * (len(value) - 4) + value[-2:]
+        return value[:2] + "*" * (len(value) - 4) + value[-2:]
 
     def _deep_copy_dict(self, obj: t.Any) -> t.Any:
         """Deep copy a dictionary-like object safely."""
@@ -302,8 +301,7 @@ class SecureStatusFormatter:
             return {key: self._deep_copy_dict(value) for key, value in obj.items()}
         elif isinstance(obj, list):
             return [self._deep_copy_dict(item) for item in obj]
-        else:
-            return obj
+        return obj
 
     def _get_timestamp(self) -> float:
         """Get current timestamp."""
@@ -351,7 +349,7 @@ class SecureStatusFormatter:
         # For higher verbosity levels, include sanitized original message
         sanitized_message = self._sanitize_string(error_message, verbosity)
 
-        response = {
+        response: dict[str, t.Any] = {
             "success": False,
             "error": sanitized_message,
             "error_type": error_type,
@@ -363,7 +361,7 @@ class SecureStatusFormatter:
             StatusVerbosity.FULL,
         ):
             response["details"] = {
-                "verbosity": verbosity.value,
+                "verbosity": str(verbosity.value),
                 "sanitized": verbosity != StatusVerbosity.FULL,
             }
 
@@ -422,5 +420,6 @@ def format_secure_status(
         Sanitized status data
     """
 
-    formatter = get_secure_status_formatter(project_root)
-    return formatter.format_status(status_data, verbosity, user_context)
+    return get_secure_status_formatter(project_root).format_status(
+        status_data, verbosity, user_context
+    )

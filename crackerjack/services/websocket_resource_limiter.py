@@ -83,19 +83,34 @@ class WebSocketResourceLimiter:
         self.limits = limits or ResourceLimits()
         self.security_logger = get_security_logger()
 
-        # Thread-safe connection tracking
+        self._setup_limiter_components()
+
+    def _setup_limiter_components(self) -> None:
+        """Set up all limiter components in initialization."""
+        self._initialize_connection_tracking()
+        self._initialize_metrics_tracking()
+        self._initialize_cleanup_system()
+
+    def _initialize_connection_tracking(self) -> None:
+        """Initialize thread-safe connection tracking structures."""
         self._lock = RLock()
         self._connections: dict[str, ConnectionMetrics] = {}
         self._ip_connections: dict[str, set[str]] = defaultdict(set)
-        self._message_history: dict[str, deque] = defaultdict(lambda: deque(maxlen=100))
+        self._message_history: dict[str, deque[t.Any]] = defaultdict(
+            lambda: deque(maxlen=100)
+        )
+        self._blocked_ips: dict[str, float] = {}
 
-        # Resource usage tracking
-        self._memory_usage = 0
-        self._active_operations = 0
-        self._blocked_ips: dict[str, float] = {}  # IP -> block_until_time
+    def _initialize_metrics_tracking(self) -> None:
+        """Initialize metrics tracking with proper typing."""
+        self._connection_metrics: dict[str, ConnectionMetrics] = {}
+        self._message_queues: dict[str, deque[bytes]] = defaultdict(deque)
+        self._resource_usage: dict[str, dict[str, t.Any]] = {}
+        self._memory_usage: int = 0
 
-        # Cleanup task
-        self._cleanup_task: asyncio.Task | None = None
+    def _initialize_cleanup_system(self) -> None:
+        """Initialize the background cleanup system."""
+        self._cleanup_task: asyncio.Task[t.Any] | None = None
         self._shutdown_event = asyncio.Event()
 
     async def start(self) -> None:
@@ -156,47 +171,54 @@ class WebSocketResourceLimiter:
         with self._lock:
             current_time = time.time()
 
-            # Check if IP is blocked
-            if client_ip in self._blocked_ips:
-                if current_time < self._blocked_ips[client_ip]:
-                    raise ResourceExhaustedError(
-                        f"IP {client_ip} is temporarily blocked"
-                    )
-                else:
-                    del self._blocked_ips[client_ip]
+            self._check_ip_blocking_status(client_ip, current_time)
+            self._check_total_connection_limit(client_id, client_ip)
+            self._check_per_ip_connection_limit(client_id, client_ip, current_time)
 
-            # Check total connection limit
-            if len(self._connections) >= self.limits.max_connections:
-                self.security_logger.log_security_event(
-                    event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
-                    level=SecurityEventLevel.WARNING,
-                    message=f"Max connections exceeded: {len(self._connections)}",
-                    client_id=client_id,
-                    operation="connection_validation",
-                    additional_data={"client_ip": client_ip},
-                )
-                raise ResourceExhaustedError(
-                    f"Maximum connections exceeded: {len(self._connections)}"
-                )
+    def _check_ip_blocking_status(self, client_ip: str, current_time: float) -> None:
+        """Check if IP is currently blocked."""
+        if client_ip in self._blocked_ips:
+            if current_time < self._blocked_ips[client_ip]:
+                raise ResourceExhaustedError(f"IP {client_ip} is temporarily blocked")
+            else:
+                del self._blocked_ips[client_ip]
 
-            # Check per-IP connection limit
-            ip_connection_count = len(self._ip_connections[client_ip])
-            if ip_connection_count >= self.limits.max_connections_per_ip:
-                self.security_logger.log_security_event(
-                    event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
-                    level=SecurityEventLevel.HIGH,
-                    message=f"Max connections per IP exceeded: {ip_connection_count}",
-                    client_id=client_id,
-                    operation="connection_validation",
-                    additional_data={"client_ip": client_ip},
-                )
+    def _check_total_connection_limit(self, client_id: str, client_ip: str) -> None:
+        """Check if total connection limit is exceeded."""
+        if len(self._connections) >= self.limits.max_connections:
+            self.security_logger.log_security_event(
+                event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
+                level=SecurityEventLevel.WARNING,
+                message=f"Max connections exceeded: {len(self._connections)}",
+                client_id=client_id,
+                operation="connection_validation",
+                additional_data={"client_ip": client_ip},
+            )
+            raise ResourceExhaustedError(
+                f"Maximum connections exceeded: {len(self._connections)}"
+            )
 
-                # Block IP temporarily for repeated violations
-                self._blocked_ips[client_ip] = current_time + 300.0  # 5 minute block
+    def _check_per_ip_connection_limit(
+        self, client_id: str, client_ip: str, current_time: float
+    ) -> None:
+        """Check if per-IP connection limit is exceeded."""
+        ip_connection_count = len(self._ip_connections[client_ip])
+        if ip_connection_count >= self.limits.max_connections_per_ip:
+            self.security_logger.log_security_event(
+                event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
+                level=SecurityEventLevel.HIGH,
+                message=f"Max connections per IP exceeded: {ip_connection_count}",
+                client_id=client_id,
+                operation="connection_validation",
+                additional_data={"client_ip": client_ip},
+            )
 
-                raise ResourceExhaustedError(
-                    f"Maximum connections per IP exceeded: {ip_connection_count}"
-                )
+            # Block IP temporarily for repeated violations
+            self._blocked_ips[client_ip] = current_time + 300.0  # 5 minute block
+
+            raise ResourceExhaustedError(
+                f"Maximum connections per IP exceeded: {ip_connection_count}"
+            )
 
     def register_connection(self, client_id: str, client_ip: str) -> None:
         """
@@ -273,55 +295,63 @@ class WebSocketResourceLimiter:
         """
 
         with self._lock:
-            # Check message size limit
-            if message_size > self.limits.max_message_size:
-                self.security_logger.log_security_event(
-                    event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
-                    level=SecurityEventLevel.HIGH,
-                    message=f"Message size limit exceeded: {message_size} bytes",
-                    client_id=client_id,
-                    operation="message_validation",
-                )
-                raise ResourceExhaustedError(f"Message too large: {message_size} bytes")
+            self._check_message_size(client_id, message_size)
+            metrics = self._get_connection_metrics(client_id)
+            self._check_message_count(client_id, metrics)
+            self._check_message_rate(client_id)
 
-            # Check if connection exists
-            if client_id not in self._connections:
-                raise ResourceExhaustedError(f"Connection not registered: {client_id}")
+    def _check_message_size(self, client_id: str, message_size: int) -> None:
+        """Check if message size exceeds limits."""
+        if message_size > self.limits.max_message_size:
+            self.security_logger.log_security_event(
+                event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
+                level=SecurityEventLevel.HIGH,
+                message=f"Message size limit exceeded: {message_size} bytes",
+                client_id=client_id,
+                operation="message_validation",
+            )
+            raise ResourceExhaustedError(f"Message too large: {message_size} bytes")
 
-            metrics = self._connections[client_id]
+    def _get_connection_metrics(self, client_id: str) -> ConnectionMetrics:
+        """Get connection metrics, raising error if connection doesn't exist."""
+        if client_id not in self._connections:
+            raise ResourceExhaustedError(f"Connection not registered: {client_id}")
+        return self._connections[client_id]
 
-            # Check total message count per connection
-            if metrics.message_count >= self.limits.max_messages_per_connection:
-                self.security_logger.log_security_event(
-                    event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
-                    level=SecurityEventLevel.WARNING,
-                    message=f"Message count limit exceeded: {metrics.message_count}",
-                    client_id=client_id,
-                    operation="message_validation",
-                )
-                raise ResourceExhaustedError(
-                    f"Message count limit exceeded: {metrics.message_count}"
-                )
+    def _check_message_count(self, client_id: str, metrics: ConnectionMetrics) -> None:
+        """Check if total message count per connection exceeds limits."""
+        if metrics.message_count >= self.limits.max_messages_per_connection:
+            self.security_logger.log_security_event(
+                event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
+                level=SecurityEventLevel.WARNING,
+                message=f"Message count limit exceeded: {metrics.message_count}",
+                client_id=client_id,
+                operation="message_validation",
+            )
+            raise ResourceExhaustedError(
+                f"Message count limit exceeded: {metrics.message_count}"
+            )
 
-            # Check message rate limit
-            current_time = time.time()
-            message_times = self._message_history[client_id]
+    def _check_message_rate(self, client_id: str) -> None:
+        """Check if message rate exceeds per-minute limits."""
+        current_time = time.time()
+        message_times = self._message_history[client_id]
 
-            # Remove old messages (older than 1 minute)
-            while message_times and current_time - message_times[0] > 60.0:
-                message_times.popleft()
+        # Remove old messages (older than 1 minute)
+        while message_times and current_time - message_times[0] > 60.0:
+            message_times.popleft()
 
-            if len(message_times) >= self.limits.max_messages_per_minute:
-                self.security_logger.log_security_event(
-                    event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
-                    level=SecurityEventLevel.WARNING,
-                    message=f"Message rate limit exceeded: {len(message_times)} messages/min",
-                    client_id=client_id,
-                    operation="message_validation",
-                )
-                raise ResourceExhaustedError(
-                    f"Message rate limit exceeded: {len(message_times)} messages/min"
-                )
+        if len(message_times) >= self.limits.max_messages_per_minute:
+            self.security_logger.log_security_event(
+                event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
+                level=SecurityEventLevel.WARNING,
+                message=f"Message rate limit exceeded: {len(message_times)} messages/min",
+                client_id=client_id,
+                operation="message_validation",
+            )
+            raise ResourceExhaustedError(
+                f"Message rate limit exceeded: {len(message_times)} messages/min"
+            )
 
     def track_message(
         self, client_id: str, message_size: int, is_sent: bool = True
@@ -419,51 +449,73 @@ class WebSocketResourceLimiter:
 
     async def _perform_cleanup(self) -> None:
         """Perform resource cleanup."""
-
         current_time = time.time()
-        cleanup_count = 0
 
         with self._lock:
-            # Find expired connections
-            expired_connections = []
+            cleanup_count = self._cleanup_expired_connections(current_time)
+            self._cleanup_empty_ip_entries()
+            self._cleanup_expired_ip_blocks(current_time)
 
-            for client_id, metrics in self._connections.items():
-                if (
-                    metrics.connection_duration > self.limits.max_connection_duration
-                    or metrics.idle_time > self.limits.max_idle_time
-                ):
-                    expired_connections.append(client_id)
+        self._log_cleanup_results(cleanup_count)
 
-            # Remove expired connections
-            for client_id in expired_connections:
-                if client_id in self._connections:
-                    metrics = self._connections[client_id]
-                    del self._connections[client_id]
-                    cleanup_count += 1
+    def _cleanup_expired_connections(self, current_time: float) -> int:
+        """Clean up expired connections and return count of cleaned connections."""
+        expired_connections = self._find_expired_connections()
+        cleanup_count = 0
 
-                    # Clean up IP tracking and message history
-                    for ip, client_set in self._ip_connections.items():
-                        client_set.discard(client_id)
+        for client_id in expired_connections:
+            if self._remove_expired_connection(client_id):
+                cleanup_count += 1
 
-                    if client_id in self._message_history:
-                        del self._message_history[client_id]
+        return cleanup_count
 
-            # Clean up empty IP entries
-            empty_ips = [
-                ip for ip, clients in self._ip_connections.items() if not clients
-            ]
-            for ip in empty_ips:
-                del self._ip_connections[ip]
+    def _find_expired_connections(self) -> list[str]:
+        """Find connections that have exceeded duration or idle time limits."""
+        return [
+            client_id
+            for client_id, metrics in self._connections.items()
+            if (
+                metrics.connection_duration > self.limits.max_connection_duration
+                or metrics.idle_time > self.limits.max_idle_time
+            )
+        ]
 
-            # Clean up expired IP blocks
-            expired_blocks = [
-                ip
-                for ip, block_until in self._blocked_ips.items()
-                if current_time >= block_until
-            ]
-            for ip in expired_blocks:
-                del self._blocked_ips[ip]
+    def _remove_expired_connection(self, client_id: str) -> bool:
+        """Remove a specific expired connection and its associated data."""
+        if client_id not in self._connections:
+            return False
 
+        # Remove connection metrics
+        del self._connections[client_id]
+
+        # Clean up IP tracking
+        for client_set in self._ip_connections.values():
+            client_set.discard(client_id)
+
+        # Clean up message history
+        if client_id in self._message_history:
+            del self._message_history[client_id]
+
+        return True
+
+    def _cleanup_empty_ip_entries(self) -> None:
+        """Remove IP entries that no longer have any connections."""
+        empty_ips = [ip for ip, clients in self._ip_connections.items() if not clients]
+        for ip in empty_ips:
+            del self._ip_connections[ip]
+
+    def _cleanup_expired_ip_blocks(self, current_time: float) -> None:
+        """Remove IP blocks that have expired."""
+        expired_blocks = [
+            ip
+            for ip, block_until in self._blocked_ips.items()
+            if current_time >= block_until
+        ]
+        for ip in expired_blocks:
+            del self._blocked_ips[ip]
+
+    def _log_cleanup_results(self, cleanup_count: int) -> None:
+        """Log cleanup results if any connections were cleaned up."""
         if cleanup_count > 0:
             self.security_logger.log_security_event(
                 event_type=SecurityEventType.RESOURCE_CLEANUP,

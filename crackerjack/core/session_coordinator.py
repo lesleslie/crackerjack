@@ -195,7 +195,7 @@ class SessionCoordinator:
                 max_age_days=7,
             )
 
-            legacy_pattern = "crackerjack - debug-*.log"
+            legacy_pattern = "crackerjack-debug-*.log"
             legacy_files = sorted(
                 self.pkg_path.glob(legacy_pattern),
                 key=lambda p: p.stat().st_mtime,
@@ -249,8 +249,8 @@ class SessionCoordinator:
     def _setup_websocket_progress_file(self) -> None:
         import tempfile
 
-        self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack - mcp-progress"
-        self.progress_file = self.progress_dir / f"job -{self.web_job_id}.json"
+        self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
+        self.progress_file = self.progress_dir / f"job-{self.web_job_id}.json"
 
         if self.progress_file.exists():
             self._update_websocket_progress("running", "Crackerjack process started")

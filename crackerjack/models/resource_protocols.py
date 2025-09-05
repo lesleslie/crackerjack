@@ -122,7 +122,7 @@ class TaskResourceProtocol(t.Protocol):
     """Protocol for asyncio task resources."""
 
     @property
-    def task(self) -> "asyncio.Task":
+    def task(self) -> "asyncio.Task[t.Any]":
         """Get the asyncio task."""
         ...
 
@@ -284,12 +284,12 @@ class AbstractProcessResource(AbstractManagedResource):
 class AbstractTaskResource(AbstractManagedResource):
     """Abstract base class for asyncio task resources."""
 
-    def __init__(self, task: "asyncio.Task") -> None:
+    def __init__(self, task: "asyncio.Task[t.Any]") -> None:
         super().__init__()
         self._task = task
 
     @property
-    def task(self) -> "asyncio.Task":
+    def task(self) -> "asyncio.Task[t.Any]":
         """Get the asyncio task."""
         return self._task
 
@@ -335,7 +335,7 @@ def with_resource_cleanup(resource_attr: str):
     """Decorator to ensure resource cleanup on method exit."""
 
     def decorator(func: t.Callable[..., t.Awaitable[t.Any]]):
-        async def wrapper(self, *args, **kwargs):
+        async def wrapper(self: t.Any, *args: t.Any, **kwargs: t.Any) -> t.Any:
             resource = getattr(self, resource_attr, None)
             try:
                 return await func(self, *args, **kwargs)
@@ -352,7 +352,7 @@ def ensure_initialized(resource_attr: str):
     """Decorator to ensure resource is initialized before method execution."""
 
     def decorator(func: t.Callable[..., t.Awaitable[t.Any]]):
-        async def wrapper(self, *args, **kwargs):
+        async def wrapper(self: t.Any, *args: t.Any, **kwargs: t.Any) -> t.Any:
             resource = getattr(self, resource_attr, None)
             if resource and hasattr(resource, "initialize"):
                 await resource.initialize()
@@ -396,7 +396,7 @@ class MonitorableResourceProtocol(t.Protocol):
 class ResourceFactoryProtocol(t.Protocol):
     """Protocol for resource factories."""
 
-    async def create_resource(self, **kwargs) -> AsyncCleanupProtocol:
+    async def create_resource(self, **kwargs: t.Any) -> AsyncCleanupProtocol:
         """Create a new resource instance."""
         ...
 

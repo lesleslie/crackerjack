@@ -32,7 +32,7 @@ class OperationMetrics:
     total_time: float = 0.0
     min_time: float = float("inf")
     max_time: float = 0.0
-    recent_times: deque = field(default_factory=lambda: deque(maxlen=100))
+    recent_times: deque[float] = field(default_factory=lambda: deque(maxlen=100))
 
     @property
     def success_rate(self) -> float:
@@ -140,7 +140,7 @@ class AsyncPerformanceMonitor:
 
     def record_operation_failure(self, operation: str, start_time: float) -> None:
         """Record failed completion of an operation."""
-        time.time() - start_time
+        duration = time.time() - start_time
 
         with self._lock:
             if operation not in self.metrics:
@@ -149,6 +149,10 @@ class AsyncPerformanceMonitor:
             metrics = self.metrics[operation]
             metrics.total_calls += 1
             metrics.failed_calls += 1
+            metrics.total_time += duration
+            metrics.min_time = min(metrics.min_time, duration)
+            metrics.max_time = max(metrics.max_time, duration)
+            metrics.recent_times.append(duration)
 
     def record_operation_timeout(
         self,

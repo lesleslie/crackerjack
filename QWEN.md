@@ -7,10 +7,10 @@
 ### Key Features
 
 1. **AI-Powered Code Quality**: 10+ specialized AI agents that prevent issues before they occur
-2. **Autonomous Quality Enforcement**: Intelligent auto-fixing with architectural planning
-3. **Zero-Compromise Standards**: 100% test coverage, complexity ≤15, security-first patterns
-4. **Unified Toolchain**: Replaces 6+ separate tools with a single command interface
-5. **MCP Integration**: Model Context Protocol server for AI agent integration
+1. **Autonomous Quality Enforcement**: Intelligent auto-fixing with architectural planning
+1. **Zero-Compromise Standards**: 100% test coverage, complexity ≤15, security-first patterns
+1. **Unified Toolchain**: Replaces 6+ separate tools with a single command interface
+1. **MCP Integration**: Model Context Protocol server for AI agent integration
 
 ### Core Philosophy
 
@@ -162,11 +162,13 @@ python -m crackerjack --dashboard
 ### Quality Enforcement
 
 1. **Fast Hooks** (~5 seconds):
+
    - Ruff formatting and linting
    - Trailing whitespace cleanup
    - UV lock file updates
 
-2. **Comprehensive Hooks** (~30 seconds):
+1. **Comprehensive Hooks** (~30 seconds):
+
    - Pyright type checking
    - Bandit security analysis
    - Dead code detection (vulture)
@@ -212,10 +214,10 @@ The project uses a comprehensive pyproject.toml configuration that includes:
 ### Adding a New Feature
 
 1. Create feature branch
-2. Implement functionality following code standards
-3. Add comprehensive tests
-4. Run `python -m crackerjack -t` to ensure quality
-5. Create pull request
+1. Implement functionality following code standards
+1. Add comprehensive tests
+1. Run `python -m crackerjack -t` to ensure quality
+1. Create pull request
 
 ### Running Tests
 
@@ -248,9 +250,9 @@ ls ~/.cache/crackerjack/logs/debug/
 ### Common Issues
 
 1. **Installation Problems**: Ensure Python 3.13+ and UV are installed
-2. **Authentication Errors**: Check PyPI token storage and permissions
-3. **Hook Failures**: Run with `--skip-hooks` temporarily to isolate issues
-4. **MCP Server Issues**: Check if server is running on localhost:8675
+1. **Authentication Errors**: Check PyPI token storage and permissions
+1. **Hook Failures**: Run with `--skip-hooks` temporarily to isolate issues
+1. **MCP Server Issues**: Check if server is running on localhost:8675
 
 ### Performance Issues
 
@@ -261,8 +263,8 @@ ls ~/.cache/crackerjack/logs/debug/
 ## Contributing Guidelines
 
 1. Fork and clone the repository
-2. Run `uv sync --all-groups` to install dependencies
-3. Ensure `python -m crackerjack` passes all checks
-4. Submit pull request
+1. Run `uv sync --all-groups` to install dependencies
+1. Ensure `python -m crackerjack` passes all checks
+1. Submit pull request
 
 Requirements: Python 3.13+, UV package manager, all quality checks must pass

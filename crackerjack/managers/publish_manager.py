@@ -59,11 +59,9 @@ class PublishManagerImpl:
         pyproject_path = self.pkg_path / "pyproject.toml"
         try:
             content = self.filesystem.read_file(pyproject_path)
-            import re
+            from crackerjack.services.regex_patterns import update_pyproject_version
 
-            pattern = r'^(version\s * =\s *["\'])([^"\']+)(["\'])$'
-            replacement = f"\\g < 1 >{new_version}\\g < 3 >"
-            new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+            new_content = update_pyproject_version(content, new_version)
             if content != new_content:
                 if not self.dry_run:
                     self.filesystem.write_file(pyproject_path, new_content)
@@ -182,7 +180,7 @@ class PublishManagerImpl:
                 [
                     "keyring",
                     "get",
-                    "https: / / upload.pypi.org / legacy /",
+                    "https://upload.pypi.org/legacy/",
                     "__token__",
                 ],
             )
@@ -210,13 +208,13 @@ class PublishManagerImpl:
         self.console.print("[red]❌[/ red] No valid PyPI authentication found")
         self.console.print("\n[yellow]💡[/ yellow] Setup options: ")
         self.console.print(
-            " 1. Set environment variable: export UV_PUBLISH_TOKEN=< your - pypi-token >",
+            " 1. Set environment variable: export UV_PUBLISH_TOKEN=<your-pypi-token>",
         )
         self.console.print(
-            " 2. Use keyring: keyring set https: / / upload.pypi.org / legacy / __token__",
+            " 2. Use keyring: keyring set https://upload.pypi.org/legacy/ __token__",
         )
         self.console.print(
-            " 3. Ensure token starts with 'pypi -' and is properly formatted",
+            " 3. Ensure token starts with 'pypi-' and is properly formatted",
         )
 
     def build_package(self) -> bool:
@@ -280,8 +278,8 @@ class PublishManagerImpl:
 
     def _format_file_size(self, size: int) -> str:
         if size < 1024 * 1024:
-            return f"{size / 1024: .1f}KB"
-        return f"{size / (1024 * 1024): .1f}MB"
+            return f"{size / 1024:.1f}KB"
+        return f"{size / (1024 * 1024):.1f}MB"
 
     def publish_package(self) -> bool:
         if not self._validate_prerequisites():
@@ -332,7 +330,7 @@ class PublishManagerImpl:
         package_name = self._get_package_name()
 
         if package_name and current_version:
-            url = f"https: / / pypi.org / project /{package_name}/{current_version}/"
+            url = f"https://pypi.org/project/{package_name}/{current_version}/"
             self.console.print(f"[cyan]🔗[/ cyan] Package URL: {url}")
 
     def _get_package_name(self) -> str | None:

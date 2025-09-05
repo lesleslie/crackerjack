@@ -462,7 +462,9 @@ def console() -> Console:
             content = "\n".join(lines)
             fixes.append(f"Added pytest import to {file_path}")
 
-        content = re.sub(r"assert (.+) == (.+)", r"assert \1 == \2", content)
+        from crackerjack.services.regex_patterns import apply_test_fixes
+
+        content = apply_test_fixes(content)
 
         if content != original_content:
             if self.context.write_file_content(path, content):

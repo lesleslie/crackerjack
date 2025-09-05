@@ -360,7 +360,8 @@ class HealthMetricsService:
                 msg = f"Invalid PyPI API path: {parsed.path}"
                 raise ValueError(msg)
 
-            with urllib.request.urlopen(url, timeout=10) as response:
+            # B310: Safe urllib.urlopen with scheme validation above
+            with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
                 return json.load(response)
         except Exception:
             return None

@@ -145,7 +145,7 @@ class LockedFileResource(AbstractFileResource):
         super().__init__(path)
         self.mode = mode
         self.timeout = timeout
-        self._file_handle: t.IO | None = None
+        self._file_handle: t.IO[str] | None = None
         self.logger = logging.getLogger(__name__)
 
         if manager:
@@ -186,7 +186,7 @@ class LockedFileResource(AbstractFileResource):
                 self._file_handle.close()
 
     @property
-    def file_handle(self) -> t.IO:
+    def file_handle(self) -> t.IO[str]:
         """Get the file handle."""
         if not self._file_handle:
             raise RuntimeError("LockedFileResource not initialized")

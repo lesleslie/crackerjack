@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
 from ...services.secure_status_formatter import (
-    StatusVerbosity,
     format_secure_status,
     get_secure_status_formatter,
 )
@@ -655,7 +654,6 @@ def register_endpoints(
             # Apply secure formatting
             secure_status = format_secure_status(
                 raw_status,
-                verbosity=StatusVerbosity.STANDARD,
                 project_root=progress_dir.parent,
                 user_context="websocket_client",
             )
@@ -666,7 +664,6 @@ def register_endpoints(
             formatter = get_secure_status_formatter()
             error_response = formatter.format_error_response(
                 str(e),
-                verbosity=StatusVerbosity.STANDARD,
             )
             return error_response
 
@@ -696,7 +693,6 @@ def register_endpoints(
             # Apply secure formatting
             secure_response = format_secure_status(
                 raw_response,
-                verbosity=StatusVerbosity.STANDARD,
                 project_root=progress_dir.parent,
                 user_context="websocket_client",
             )
@@ -708,7 +704,6 @@ def register_endpoints(
             formatter = get_secure_status_formatter()
             error_response = formatter.format_error_response(
                 f"Failed to get latest job: {e}",
-                verbosity=StatusVerbosity.STANDARD,
             )
             return error_response
 

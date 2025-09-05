@@ -110,10 +110,10 @@ class PerformanceBenchmarkService:
                         "uv",
                         "run",
                         "pytest",
-                        "- - benchmark-only",
-                        "- - benchmark-json =.benchmarks / test_benchmark.json",
+                        "--benchmark-only",
+                        "--benchmark-json=.benchmarks/test_benchmark.json",
                         "--tb=no",
-                        "- q",
+                        "-q",
                     ],
                     check=False,
                     capture_output=True,
@@ -176,7 +176,7 @@ class PerformanceBenchmarkService:
                             "pre-commit",
                             "run",
                             hook_name,
-                            "- - all-files",
+                            "--all-files",
                         ],
                         check=False,
                         capture_output=True,
@@ -340,7 +340,7 @@ class PerformanceBenchmarkService:
     ) -> None:
         if report.total_duration > 300:
             recommendations.append(
-                "Overall workflow execution is slow. Consider enabling - - skip-hooks "
+                "Overall workflow execution is slow. Consider enabling --skip-hooks "
                 "during development iterations.",
             )
 

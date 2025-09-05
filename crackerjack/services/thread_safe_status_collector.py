@@ -422,7 +422,7 @@ class ThreadSafeStatusCollector:
 
         return jobs
 
-    def _build_server_stats_safe(self, context) -> dict[str, t.Any]:
+    def _build_server_stats_safe(self, context: t.Any) -> dict[str, t.Any]:
         """Build server stats with thread safety."""
 
         try:
@@ -481,7 +481,7 @@ class ThreadSafeStatusCollector:
         """Set cached data with timestamp."""
 
         with self._data_lock:
-            self._cache[key] = data.copy() if isinstance(data, dict) else data
+            self._cache[key] = data.copy() if hasattr(data, "copy") else data
             self._cache_timestamps[key] = time.time()
 
     def clear_cache(self) -> None:
@@ -514,7 +514,7 @@ def get_thread_safe_status_collector() -> ThreadSafeStatusCollector:
 
     global _status_collector
     if _status_collector is None:
-        _status_collector = ThreadSafeStatusCollector(timeout=30.0)
+        _status_collector = ThreadSafeStatusCollector()
     return _status_collector
 
 

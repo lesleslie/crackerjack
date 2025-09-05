@@ -68,6 +68,7 @@ class Options(BaseModel):
     coverage_status: bool = False
     coverage_goal: float | None = None
     no_coverage_ratchet: bool = False
+    skip_config_merge: bool = False
 
     @classmethod
     @field_validator("publish", "bump", mode="before")

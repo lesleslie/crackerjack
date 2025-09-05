@@ -359,7 +359,7 @@ class RequestLock:
     async def __aenter__(self) -> "RequestLock":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: t.Any, exc_val: t.Any, exc_tb: t.Any) -> None:
         self.security_manager._release_request_lock(
             self.request_id,
             self.client_id,
@@ -377,19 +377,20 @@ def get_status_security_manager() -> StatusSecurityManager:
     global _security_manager
     if _security_manager is None:
         # Initialize with project-specific paths
+        import tempfile
         from pathlib import Path
 
         project_root = Path.cwd()
+        temp_dir = Path(tempfile.gettempdir())
         allowed_paths = {
             str(project_root),
             str(project_root / "temp"),
-            "/tmp/crackerjack-mcp-progress",
+            str(
+                temp_dir / "crackerjack-mcp-progress"
+            ),  # B108: Use tempfile.gettempdir()
         }
 
         _security_manager = StatusSecurityManager(
-            max_concurrent_requests=5,
-            rate_limit_per_minute=60,
-            max_resource_usage_mb=100,
             allowed_paths=allowed_paths,
         )
 

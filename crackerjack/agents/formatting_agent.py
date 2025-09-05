@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 from .base import (
@@ -14,11 +13,6 @@ from .base import (
 class FormattingAgent(SubAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.supported_tools = [
-            "ruff",
-            "trailing-whitespace",
-            "end-of-file-fixer",
-        ]
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.FORMATTING, IssueType.IMPORT_ERROR}
@@ -220,12 +214,12 @@ class FormattingAgent(SubAgent):
         return content or None
 
     def _apply_content_formatting(self, content: str) -> str:
-        content = re.sub(r"[ \t]+$", "", content, flags=re.MULTILINE)
+        from crackerjack.services.regex_patterns import apply_formatting_fixes
+
+        content = apply_formatting_fixes(content)
 
         if content and not content.endswith("\n"):
             content += "\n"
-
-        content = re.sub(r"\n{3,}", "\n\n", content)
 
         return self._convert_tabs_to_spaces(content)
 

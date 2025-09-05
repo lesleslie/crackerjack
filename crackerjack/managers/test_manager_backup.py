@@ -726,7 +726,7 @@ class TestManagementImpl:
         import os
 
         cpu_count = os.cpu_count() or 1
-        test_files = list(self.pkg_path.glob("tests / test_ *.py"))
+        test_files = list(self.pkg_path.glob("tests/test_*.py"))
         if len(test_files) < 5:
             return min(2, cpu_count)
 
@@ -735,7 +735,7 @@ class TestManagementImpl:
     def _get_test_timeout(self, options: OptionsProtocol) -> int:
         if options.test_timeout > 0:
             return options.test_timeout
-        test_files = list(self.pkg_path.glob("tests / test_ *.py"))
+        test_files = list(self.pkg_path.glob("tests/test_*.py"))
         base_timeout = 300
 
         import math
@@ -823,7 +823,7 @@ class TestManagementImpl:
 
     def _add_coverage_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         if not options.benchmark:
-            cmd.extend(["--cov=crackerjack", "- - cov - report=term-missing"])
+            cmd.extend(["--cov=crackerjack", "--cov-report=term-missing"])
 
     def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         if not options.benchmark:
@@ -837,7 +837,7 @@ class TestManagementImpl:
             self.console.print(
                 "[cyan]📊[/ cyan] Running in benchmark mode (no parallelization)",
             )
-            cmd.append("- - benchmark-only")
+            cmd.append("--benchmark-only")
 
     def _add_timeout_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         timeout = self._get_test_timeout(options)
@@ -1068,5 +1068,5 @@ class TestManagementImpl:
             return None
 
     def has_tests(self) -> bool:
-        test_files = list(self.pkg_path.glob("tests / test_ *.py"))
+        test_files = list(self.pkg_path.glob("tests/test_*.py"))
         return len(test_files) > 0

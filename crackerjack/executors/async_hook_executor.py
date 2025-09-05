@@ -211,7 +211,11 @@ class AsyncHookExecutor:
             )
 
             # Pre-commit must run from repository root, not package directory
-            repo_root = self.pkg_path.parent if self.pkg_path.name == "crackerjack" else self.pkg_path
+            repo_root = (
+                self.pkg_path.parent
+                if self.pkg_path.name == "crackerjack"
+                else self.pkg_path
+            )
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 cwd=repo_root,
@@ -422,12 +426,5 @@ class AsyncHookExecutor:
         if success:
             self.console.print(
                 f"[green]✅[/ green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
-                f"(async, {performance_gain: .1f} % faster)",
-            )
-        else:
-            failed_count = sum(1 for r in results if r.status == "failed")
-            error_count = sum(1 for r in results if r.status in ("timeout", "error"))
-            self.console.print(
-                f"[red]❌[/ red] {strategy.name.title()} hooks failed: {failed_count} failed, {error_count} errors "
                 f"(async, {performance_gain: .1f} % faster)",
             )

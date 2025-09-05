@@ -66,7 +66,7 @@ async def create_task_with_subagent(
     except Exception as e:
         return {
             "success": False,
-            "error": f"Task creation failed: {str(e)}",
+            "error": f"Task creation failed: {e}",
             "description": description,
             "subagent_type": subagent_type,
         }
@@ -117,9 +117,7 @@ def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
         return stage, extra_kwargs
 
     except Exception as e:
-        return (
-            f'{{"error": "Stage argument parsing failed: {str(e)}", "success": false}}'
-        )
+        return f'{{"error": "Stage argument parsing failed: {e}", "success": false}}'
 
 
 def _configure_stage_options(stage: str) -> "WorkflowOptions":

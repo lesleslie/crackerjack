@@ -116,7 +116,9 @@ class TestProgressMonitorComponents:
                 patch("crackerjack.mcp.progress_monitor.ErrorCollector"),
                 patch("crackerjack.mcp.progress_monitor.ServiceHealthChecker"),
                 patch("crackerjack.mcp.progress_monitor.TerminalRestorer"),
+                patch.object(CrackerjackDashboard, "run") as mock_run,
             ):
+                mock_run.return_value = None
                 app = CrackerjackDashboard()
                 assert app is not None
 

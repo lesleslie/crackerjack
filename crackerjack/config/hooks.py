@@ -61,6 +61,12 @@ class HookStrategy:
 
 FAST_HOOKS = [
     HookDefinition(
+        name="validate-regex-patterns",
+        command=[],  # Dynamically built by get_command()
+        timeout=30,
+        retry_on_failure=False,  # Regex validation should be strict, no retries
+    ),
+    HookDefinition(
         name="trailing-whitespace",
         command=[],  # Dynamically built by get_command()
         is_formatting=True,
@@ -185,6 +191,4 @@ class HookConfigLoader:
         msg = f"Unknown hook strategy: {name}"
         raise ValueError(msg)
 
-    @staticmethod
-    def get_all_strategies() -> dict[str, HookStrategy]:
-        return {"fast": FAST_STRATEGY, "comprehensive": COMPREHENSIVE_STRATEGY}
+    # Removed unused method: get_all_strategies

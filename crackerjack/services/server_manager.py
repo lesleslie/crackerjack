@@ -215,8 +215,6 @@ def restart_mcp_server(
         security_logger = get_security_logger()
         security_logger.log_subprocess_execution(
             command=cmd,
-            cwd=None,
-            env_vars_count=0,
             purpose="mcp_server_restart",
         )
 

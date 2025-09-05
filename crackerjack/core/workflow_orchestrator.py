@@ -164,11 +164,8 @@ class WorkflowPipeline:
         success = True
         self.phases.run_configuration_phase(options)
 
-        if not self.phases.run_cleaning_phase(options):
-            success = False
-            self.session.fail_task("workflow", "Cleaning phase failed")
-            return False
-
+        # Code cleaning is now integrated into the quality phase
+        # to run after fast hooks but before comprehensive hooks
         if not await self._execute_quality_phase(options):
             success = False
             return False
@@ -195,6 +192,15 @@ class WorkflowPipeline:
 
         if not self._run_initial_fast_hooks(options, iteration):
             return False
+
+        # Run code cleaning after fast hooks but before comprehensive hooks
+        if options.clean:
+            if not self._run_code_cleaning_phase(options):
+                return False
+            # Run fast hooks again after cleaning for sanity check
+            if not self._run_post_cleaning_fast_hooks(options):
+                return False
+            self._mark_code_cleaning_complete()
 
         testing_passed, comprehensive_passed = self._run_main_quality_phases(options)
 
@@ -311,7 +317,41 @@ class WorkflowPipeline:
         if hasattr(self, "_mcp_state_manager") and self._mcp_state_manager:
             self._mcp_state_manager.update_stage_status(stage, status)
 
-        self.session.update_stage(stage, status)
+    def _run_code_cleaning_phase(self, options: OptionsProtocol) -> bool:
+        """Run code cleaning phase after fast hooks but before comprehensive hooks."""
+        self.console.print("\n[bold blue]🧹 Running Code Cleaning Phase...[/bold blue]")
+
+        success = self.phases.run_cleaning_phase(options)
+        if success:
+            self.console.print("[green]✅ Code cleaning completed successfully[/green]")
+        else:
+            self.console.print("[red]❌ Code cleaning failed[/red]")
+            self.session.fail_task("workflow", "Code cleaning phase failed")
+
+        return success
+
+    def _run_post_cleaning_fast_hooks(self, options: OptionsProtocol) -> bool:
+        """Run fast hooks again after code cleaning for sanity check."""
+        self.console.print(
+            "\n[bold cyan]🔍 Running Post-Cleaning Fast Hooks Sanity Check...[/bold cyan]"
+        )
+
+        success = self._run_fast_hooks_phase(options)
+        if success:
+            self.console.print("[green]✅ Post-cleaning sanity check passed[/green]")
+        else:
+            self.console.print("[red]❌ Post-cleaning sanity check failed[/red]")
+            self.session.fail_task("workflow", "Post-cleaning fast hooks failed")
+
+        return success
+
+    def _has_code_cleaning_run(self) -> bool:
+        """Check if code cleaning has already run in this workflow."""
+        return getattr(self, "_code_cleaning_complete", False)
+
+    def _mark_code_cleaning_complete(self) -> None:
+        """Mark code cleaning as complete for this workflow."""
+        self._code_cleaning_complete = True
 
     def _handle_test_failures(self) -> None:
         if not (hasattr(self, "_mcp_state_manager") and self._mcp_state_manager):
@@ -343,7 +383,27 @@ class WorkflowPipeline:
     def _execute_standard_hooks_workflow(self, options: OptionsProtocol) -> bool:
         self._update_hooks_status_running()
 
-        hooks_success = self.phases.run_hooks_phase(options)
+        # Run fast hooks first
+        fast_hooks_success = self._run_fast_hooks_phase(options)
+        if not fast_hooks_success:
+            self._handle_hooks_completion(False)
+            return False
+
+        # Run code cleaning after fast hooks but before comprehensive hooks
+        if options.clean:
+            if not self._run_code_cleaning_phase(options):
+                self._handle_hooks_completion(False)
+                return False
+            # Run fast hooks again after cleaning for sanity check
+            if not self._run_post_cleaning_fast_hooks(options):
+                self._handle_hooks_completion(False)
+                return False
+            self._mark_code_cleaning_complete()
+
+        # Run comprehensive hooks
+        comprehensive_success = self._run_comprehensive_hooks_phase(options)
+
+        hooks_success = fast_hooks_success and comprehensive_success
         self._handle_hooks_completion(hooks_success)
 
         return hooks_success
@@ -379,6 +439,17 @@ class WorkflowPipeline:
         self._log_debug_phase_start()
 
         try:
+            # If code cleaning is enabled and hasn't run yet, run it first
+            # to provide cleaner, more standardized code for the AI agents
+            if options.clean and not self._has_code_cleaning_run():
+                self.console.print(
+                    "\n[bold yellow]🤖 AI agents recommend running code cleaning first for better results...[/bold yellow]"
+                )
+                if self._run_code_cleaning_phase(options):
+                    # Run fast hooks sanity check after cleaning
+                    self._run_post_cleaning_fast_hooks(options)
+                    self._mark_code_cleaning_complete()
+
             agent_coordinator = self._setup_agent_coordinator()
             issues = await self._collect_issues_from_failures()
 
@@ -624,7 +695,7 @@ class WorkflowPipeline:
     def _determine_hook_issue_type(self, hook_name: str) -> IssueType:
         formatting_hooks = {
             "trailing-whitespace",
-            "end - of - file-fixer",
+            "end-of-file-fixer",
             "ruff-format",
             "ruff-check",
         }
@@ -823,6 +894,7 @@ class WorkflowOrchestrator:
         self.verbose = verbose
 
         from crackerjack.models.protocols import (
+            ConfigMergeServiceProtocol,
             FileSystemInterface,
             GitInterface,
             HookManager,
@@ -830,13 +902,17 @@ class WorkflowOrchestrator:
             TestManagerProtocol,
         )
 
-        from .container import create_container
+        # Initialize logging first so container creation respects log levels
+        self._initialize_logging()
 
-        self.container = create_container(
+        self.logger = get_logger("crackerjack.orchestrator")
+
+        from .enhanced_container import create_enhanced_container
+
+        self.container = create_enhanced_container(
             console=self.console,
             pkg_path=self.pkg_path,
             dry_run=self.dry_run,
-            verbose=self.verbose,
         )
 
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
@@ -849,6 +925,7 @@ class WorkflowOrchestrator:
             hook_manager=self.container.get(HookManager),
             test_manager=self.container.get(TestManagerProtocol),
             publish_manager=self.container.get(PublishManager),
+            config_merge_service=self.container.get(ConfigMergeServiceProtocol),
         )
 
         self.pipeline = WorkflowPipeline(
@@ -858,10 +935,6 @@ class WorkflowOrchestrator:
             phases=self.phases,
         )
 
-        self.logger = get_logger("crackerjack.orchestrator")
-
-        self._initialize_logging()
-
     def _initialize_logging(self) -> None:
         from crackerjack.services.log_manager import get_log_manager
 
@@ -869,9 +942,15 @@ class WorkflowOrchestrator:
         session_id = getattr(self, "web_job_id", None) or str(int(time.time()))[:8]
         debug_log_file = log_manager.create_debug_log_file(session_id)
 
-        setup_structured_logging(log_file=debug_log_file)
+        # Set log level based on verbosity - DEBUG only in verbose mode
+        log_level = "DEBUG" if self.verbose else "INFO"
+        setup_structured_logging(
+            level=log_level, json_output=False, log_file=debug_log_file
+        )
 
-        self.logger.info(
+        # Use a temporary logger for the initialization message
+        temp_logger = get_logger("crackerjack.orchestrator.init")
+        temp_logger.debug(
             "Structured logging initialized",
             log_file=str(debug_log_file),
             log_directory=str(log_manager.log_dir),

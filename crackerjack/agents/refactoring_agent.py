@@ -553,7 +553,6 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
         self, func_content: str, func_info: dict[str, t.Any]
     ) -> list[dict[str, str]]:
         sections = []
-
         lines = func_content.split("\n")
         current_section = []
         section_type = None
@@ -561,41 +560,60 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
         for line in lines:
             stripped = line.strip()
 
-            if stripped.startswith("if ") and len(stripped) > 50:
+            if self._should_start_new_section(stripped, section_type):
                 if current_section:
                     sections.append(
-                        {
-                            "type": section_type or "conditional",
-                            "content": "\n".join(current_section),
-                            "name": f"_handle_{section_type or 'condition'}_{len(sections) + 1}",
-                        }
+                        self._create_section(
+                            current_section, section_type, len(sections)
+                        )
                     )
-                current_section = [line]
-                section_type = "conditional"
-            elif stripped.startswith(("for ", "while ")):
-                if current_section and section_type != "loop":
-                    sections.append(
-                        {
-                            "type": section_type or "loop",
-                            "content": "\n".join(current_section),
-                            "name": f"_process_{section_type or 'loop'}_{len(sections) + 1}",
-                        }
-                    )
-                current_section = [line]
-                section_type = "loop"
+
+                current_section, section_type = self._initialize_new_section(
+                    line, stripped
+                )
             else:
                 current_section.append(line)
 
+        # Handle final section
         if current_section:
             sections.append(
-                {
-                    "type": section_type or "general",
-                    "content": "\n".join(current_section),
-                    "name": f"_handle_{section_type or 'general'}_{len(sections) + 1}",
-                }
+                self._create_section(current_section, section_type, len(sections))
             )
 
         return [s for s in sections if len(s["content"].split("\n")) >= 5]
+
+    def _should_start_new_section(
+        self, stripped: str, current_section_type: str | None
+    ) -> bool:
+        """Determine if a line should start a new logical section."""
+        if stripped.startswith("if ") and len(stripped) > 50:
+            return True
+        return (
+            stripped.startswith(("for ", "while ")) and current_section_type != "loop"
+        )
+
+    def _initialize_new_section(
+        self, line: str, stripped: str
+    ) -> tuple[list[str], str]:
+        """Initialize a new section based on the line type."""
+        if stripped.startswith("if ") and len(stripped) > 50:
+            return [line], "conditional"
+        elif stripped.startswith(("for ", "while ")):
+            return [line], "loop"
+        return [line], "general"
+
+    def _create_section(
+        self, current_section: list[str], section_type: str | None, section_count: int
+    ) -> dict[str, str]:
+        """Create a section dictionary from the current section data."""
+        effective_type = section_type or "general"
+        name_prefix = "handle" if effective_type == "conditional" else "process"
+
+        return {
+            "type": effective_type,
+            "content": "\n".join(current_section),
+            "name": f"_{name_prefix}_{effective_type}_{section_count + 1}",
+        }
 
     def _extract_function_content(
         self, lines: list[str], func_info: dict[str, t.Any]

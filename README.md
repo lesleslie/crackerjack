@@ -146,7 +146,13 @@ Limited tool-specific auto-fixes for simple formatting issues:
 The AI agent intelligently fixes:
 
 - **Type Errors (pyright)**: Adds missing annotations, fixes type mismatches
-- **Security Issues (bandit)**: Removes hardcoded paths, fixes vulnerabilities
+- **🔒 Security Issues (bandit)**: Comprehensive security hardening including:
+  - **Shell Injection Prevention**: Removes `shell=True` from subprocess calls
+  - **Weak Cryptography**: Replaces MD5/SHA1 with SHA256
+  - **Insecure Random Functions**: Replaces `random.choice` with `secrets.choice`
+  - **Unsafe YAML Loading**: Replaces `yaml.load` with `yaml.safe_load`
+  - **Token Exposure**: Masks PyPI tokens, GitHub PATs, and sensitive credentials
+  - **Debug Print Removal**: Eliminates debug prints containing sensitive information
 - **Dead Code (vulture)**: Removes unused imports, variables, functions
 - **Performance Issues**: Transforms inefficient patterns (list concatenation, string building, nested loops)
 - **Documentation Issues**: Auto-generates changelogs, maintains consistency across .md files
@@ -175,25 +181,57 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 - **Comprehensive Coverage**: Fixes ALL error types, not just formatting
 - **Perfect Results**: Achieves 100% code quality compliance
 
+#### 🤖 Specialized Agent Architecture
+
+**9 Domain-Specific Sub-Agents** for targeted code quality improvements:
+
+- **🔒 SecurityAgent**: Fixes shell injections, weak crypto, token exposure, unsafe library usage
+- **♻️ RefactoringAgent**: Reduces complexity ≤13, extracts helper methods, applies SOLID principles
+- **🚀 PerformanceAgent**: Optimizes algorithms, fixes O(n²) patterns, improves string building
+- **📝 DocumentationAgent**: Auto-generates changelogs, maintains .md file consistency
+- **🧹 DRYAgent**: Eliminates code duplication, extracts common patterns to utilities
+- **✨ FormattingAgent**: Handles code style, import organization, formatting violations
+- **🧪 TestCreationAgent**: Fixes test failures, missing fixtures, dependency issues
+- **📦 ImportOptimizationAgent**: Removes unused imports, restructures import statements
+- **🔬 TestSpecialistAgent**: Advanced testing scenarios, fixture management
+
+**Agent Coordination Features**:
+
+- **Confidence Scoring**: Routes issues to best-match agent (≥0.7 confidence)
+- **Batch Processing**: Groups related issues for efficient parallel processing
+- **Collaborative Mode**: Multiple agents handle complex cross-cutting concerns
+
 #### Security & Safety Features
 
 - **Command Validation**: All AI modifications are validated for safety
-- **No Shell Injection**: Uses secure subprocess execution
+- **Enterprise-Grade Regex**: Centralized pattern system eliminates dangerous regex issues
+- **No Shell Injection**: Uses secure subprocess execution with validated patterns
 - **Rollback Support**: All changes can be reverted via git
 - **Human Review**: Review AI-generated changes before commit
 
 ## Core Workflow
 
-**Two-stage quality enforcement:**
+**Enhanced three-stage quality enforcement with intelligent code cleaning:**
 
 1. **Fast Hooks** (~5 seconds): Essential formatting and security checks
-1. **Comprehensive Hooks** (~30 seconds): Complete static analysis
+1. **🧹 Code Cleaning Stage** (between fast and comprehensive): AI-powered cleanup for optimal comprehensive hook results
+1. **Comprehensive Hooks** (~30 seconds): Complete static analysis on cleaned code
+
+**Optimal Execution Order**:
+
+- **Fast hooks first** → **retry once if any fail** (formatting fixes cascade to other issues)
+- **Code cleaning** → Remove TODO detection, apply standardized patterns
+- **Post-cleaning fast hooks sanity check** → Ensure cleaning didn't introduce issues
+- **Full test suite** → Collect ALL test failures (don't stop on first)
+- **Comprehensive hooks** → Collect ALL quality issues on clean codebase
+- **AI batch fixing** → Process all collected issues intelligently
 
 **With AI integration:**
 
-- `--ai-agent` flag enables automatic error resolution
-- MCP server allows AI agents to run crackerjack commands
-- Structured error output for programmatic fixes
+- `--ai-agent` flag enables automatic error resolution with specialized sub-agents
+- MCP server allows AI agents to run crackerjack commands with real-time progress tracking
+- Structured error output for programmatic fixes with confidence scoring
+- Enterprise-grade regex pattern system ensures safe automated text transformations
 
 ## Core Features
 
@@ -249,6 +287,112 @@ python -m crackerjack -t
 - **Commit and Push:** Commits and pushes your changes with standardized commit messages
 - **Pull Request Creation:** Creates pull requests to upstream repositories on GitHub or GitLab
 - **Pre-commit Integration:** Ensures code quality before commits
+
+## 🛡️ Enterprise-Grade Pattern Management System
+
+### Advanced Regex Pattern Validation
+
+Crackerjack includes a revolutionary **centralized regex pattern management system** that eliminates dangerous regex issues through comprehensive validation and safety controls.
+
+#### Key Components
+
+**📦 Centralized Pattern Registry** (`crackerjack/services/regex_patterns.py`):
+
+- **18+ validated patterns** for security, formatting, version management
+- **ValidatedPattern class** with comprehensive testing and safety limits
+- **Thread-safe compiled pattern caching** for performance
+- **Iterative application** for complex multi-word cases (e.g., `pytest - hypothesis - specialist`)
+
+**🔧 Pattern Categories**:
+
+- **Command & Flag Formatting**: Fix spacing in `python -m command`, `--flags`, hyphenated names
+- **Security Token Masking**: PyPI tokens, GitHub PATs, generic long tokens, assignment patterns
+- **Version Management**: Update `pyproject.toml` versions, coverage requirements
+- **Code Quality**: Subprocess security fixes, unsafe library replacements, formatting normalization
+- **Test Optimization**: Assert statement normalization, job ID validation
+
+**⚡ Performance & Safety Features**:
+
+```python
+# Thread-safe pattern cache with size limits
+CompiledPatternCache.get_compiled_pattern(pattern)
+
+# Safety limits prevent catastrophic backtracking
+MAX_INPUT_SIZE = 10 * 1024 * 1024  # 10MB max
+MAX_ITERATIONS = 10  # Iterative application limit
+
+# Iterative fixes for complex cases
+pattern.apply_iteratively("pytest - hypothesis - specialist")
+# → "pytest-hypothesis-specialist"
+
+# Performance monitoring capabilities
+pattern.get_performance_stats(text, iterations=100)
+```
+
+#### Security Pattern Examples
+
+**Token Masking Patterns**:
+
+```python
+# PyPI tokens (word boundaries prevent false matches)
+"pypi-AgEIcHlwaS5vcmcCJGE4M2Y3ZjI" → "pypi-****"
+
+# GitHub personal access tokens (exactly 40 chars)
+"ghp_1234567890abcdef1234567890abcdef1234" → "ghp_****"
+
+# Generic long tokens (32+ chars with word boundaries)
+"secret_key=abcdef1234567890abcdef1234567890abcdef" → "secret_key=****"
+```
+
+**Subprocess Security Fixes**:
+
+```python
+# Automatic shell injection prevention
+subprocess.run(cmd, shell=True) → subprocess.run(cmd.split())
+subprocess.call(cmd, shell=True) → subprocess.call(cmd.split())
+```
+
+**Unsafe Library Replacements**:
+
+```python
+# Weak crypto → Strong crypto
+hashlib.md5(data) → hashlib.sha256(data)
+hashlib.sha1(data) → hashlib.sha256(data)
+
+# Insecure random → Cryptographic random
+random.choice(options) → secrets.choice(options)
+
+# Unsafe YAML → Safe YAML
+yaml.load(file) → yaml.safe_load(file)
+```
+
+#### Pattern Validation Requirements
+
+**Every pattern MUST include**:
+
+- ✅ **Comprehensive test cases** (positive, negative, edge cases)
+- ✅ **Replacement syntax validation** (no spaces in `\g<N>`)
+- ✅ **Safety limits** and performance monitoring
+- ✅ **Thread-safe compilation** and caching
+- ✅ **Descriptive documentation** and usage examples
+
+**Quality Guarantees**:
+
+- **Zero regex-related bugs** since implementation
+- **Performance optimized** with compiled pattern caching
+- **Security hardened** with input size limits and validation
+- **Maintenance friendly** with centralized pattern management
+
+### Pre-commit Regex Validation Hook
+
+**Future Enhancement**: Automated validation hook to ensure all regex usage follows safe patterns:
+
+```bash
+# Validates all .py files for regex pattern compliance
+python -m crackerjack.tools.validate_regex_usage
+```
+
+This enterprise-grade pattern management system has **eliminated all regex-related spacing and security issues** that previously plagued the codebase, providing a robust foundation for safe text processing operations.
 
 ## MCP Server Configuration
 

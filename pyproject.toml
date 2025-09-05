@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.31.10"
+version = "0.31.11"
 description = "Opinionated Python project management tool"
 readme = "README.md"
 authors = [
@@ -203,6 +203,8 @@ include = [
 exclude = [
     "scratch",
     ".venv",
+    "*/.venv",
+    "**/.venv",
     "build",
     "dist",
     "tests/*",

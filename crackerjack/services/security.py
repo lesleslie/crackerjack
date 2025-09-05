@@ -1,19 +1,20 @@
 import os
-import re
 import tempfile
 from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.errors import FileError, SecurityError
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
 class SecurityService:
-    TOKEN_PATTERNS = [
-        (r"pypi -[a - zA - Z0-9_ -]{12, }", "pypi-** **"),
-        (r"ghp_[a - zA - Z0-9]{20, }", "ghp_ * ** *"),
-        (r"[a - zA - Z0-9_ -]{20, }", "* ** *"),
-        (r"(token[=: ]\s *)['\"][^'\"]+['\"]", r"\1'* ** *'"),
-        (r"(password[=: ]\s *)['\"][^'\"]+['\"]", r"\1'* ** *'"),
+    # Security token masking patterns - now using validated patterns from regex_patterns.py
+    TOKEN_PATTERN_NAMES = [
+        "mask_pypi_token",
+        "mask_github_token",
+        "mask_generic_long_token",
+        "mask_token_assignment",
+        "mask_password_assignment",
     ]
 
     SENSITIVE_ENV_VARS = {
@@ -27,16 +28,36 @@ class SecurityService:
     }
 
     def mask_tokens(self, text: str) -> str:
+        """
+        Mask sensitive tokens in text using validated regex patterns.
+
+        This method applies security token masking patterns to hide:
+        - PyPI authentication tokens (pypi-*)
+        - GitHub personal access tokens (ghp_*)
+        - Generic long tokens (32+ characters)
+        - Token assignments (token="value")
+        - Password assignments (password="value")
+        - Environment variable values
+
+        Returns masked text with sensitive data replaced by "**** or similar.
+        """
         if not text:
             return text
+
         masked_text = text
-        for pattern, replacement in self.TOKEN_PATTERNS:
-            masked_text = re.sub(pattern, replacement, masked_text, flags=re.IGNORECASE)
+
+        # Apply validated token masking patterns
+        for pattern_name in self.TOKEN_PATTERN_NAMES:
+            if pattern_name in SAFE_PATTERNS:
+                pattern = SAFE_PATTERNS[pattern_name]
+                masked_text = pattern.apply(masked_text)
+
+        # Also mask sensitive environment variable values
         for env_var in self.SENSITIVE_ENV_VARS:
             value = os.getenv(env_var)
             if value and len(value) > 8:
                 masked_value = (
-                    f"{value[:4]}...{value[-4:]}" if len(value) > 12 else "* ** *"
+                    f"{value[:4]}...{value[-4:]}" if len(value) > 12 else "****"
                 )
                 masked_text = masked_text.replace(value, masked_value)
 
@@ -126,14 +147,30 @@ class SecurityService:
         return env_summary
 
     def validate_token_format(self, token: str, token_type: str | None = None) -> bool:
+        """
+        Validate token format for known token types.
+
+        Args:
+            token: The token string to validate
+            token_type: Optional token type ("pypi", "github", or None)
+
+        Returns:
+            True if the token appears to be valid for the specified type
+        """
         if not token:
             return False
         if len(token) < 8:
             return False
+
         if token_type and token_type.lower() == "pypi":
-            return token.startswith("pypi -") and len(token) >= 16
+            # PyPI tokens start with "pypi-" (not "pypi -" which was a typo)
+            return token.startswith("pypi-") and len(token) >= 16
+
         if token_type and token_type.lower() == "github":
+            # GitHub personal access tokens: ghp_ + 36 chars = 40 total
             return token.startswith("ghp_") and len(token) == 40
+
+        # Generic validation for unknown token types
         return len(token) >= 16 and not token.isspace()
 
     def create_secure_command_env(

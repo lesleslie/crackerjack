@@ -23,8 +23,7 @@ class ManagedWebSocketConnection(ManagedResource):
 
     def __init__(
         self,
-        websocket: websockets.WebSocketServerProtocol
-        | websockets.WebSocketClientProtocol,
+        websocket: t.Any,  # websockets protocols have import issues
         manager: ResourceManager | None = None,
     ) -> None:
         super().__init__(manager)
@@ -95,14 +94,14 @@ class ManagedWebSocketServer(ManagedResource):
         super().__init__(manager)
         self.port = port
         self.host = host
-        self.server: websockets.WebSocketServer | None = None
+        self.server: t.Any | None = None  # websockets server type has import issues
         self.connections: set[ManagedWebSocketConnection] = set()
         self.logger = logging.getLogger(__name__)
-        self._server_task: asyncio.Task | None = None
+        self._server_task: asyncio.Task[t.Any] | None = None
 
     async def start(
         self,
-        handler: t.Callable[[websockets.WebSocketServerProtocol], t.Awaitable[None]],
+        handler: t.Callable[[t.Any], t.Awaitable[None]],
     ) -> None:
         """Start the WebSocket server."""
         if self.server:
@@ -110,7 +109,7 @@ class ManagedWebSocketServer(ManagedResource):
 
         # Wrap handler to manage connections
         async def managed_handler(
-            websocket: websockets.WebSocketServerProtocol,
+            websocket: t.Any,  # websocket protocol type
         ) -> None:
             managed_conn = ManagedWebSocketConnection(websocket, self.manager)
             self.connections.add(managed_conn)
@@ -143,9 +142,9 @@ class ManagedWebSocketServer(ManagedResource):
 
         # Close all active connections
         if self.connections:
-            close_tasks = []
-            for conn in list(self.connections):
-                close_tasks.append(asyncio.create_task(conn.cleanup()))
+            close_tasks = [
+                asyncio.create_task(conn.cleanup()) for conn in list(self.connections)
+            ]
 
             if close_tasks:
                 await asyncio.gather(*close_tasks, return_exceptions=True)
@@ -173,7 +172,7 @@ class ManagedSubprocess(ManagedResource):
 
     def __init__(
         self,
-        process: subprocess.Popen,
+        process: subprocess.Popen[bytes],
         timeout: float = 30.0,
         manager: ResourceManager | None = None,
     ) -> None:
@@ -181,7 +180,7 @@ class ManagedSubprocess(ManagedResource):
         self.process = process
         self.timeout = timeout
         self.logger = logging.getLogger(__name__)
-        self._monitor_task: asyncio.Task | None = None
+        self._monitor_task: asyncio.Task[t.Any] | None = None
 
     async def start_monitoring(self) -> None:
         """Start monitoring the process for unexpected termination."""
@@ -275,7 +274,7 @@ class NetworkResourceManager:
     async def create_http_client(
         self,
         timeout: aiohttp.ClientTimeout | None = None,
-        **kwargs,
+        **kwargs: t.Any,
     ) -> ManagedHTTPClient:
         """Create a managed HTTP client session."""
         timeout = timeout or aiohttp.ClientTimeout(total=30.0)
@@ -284,7 +283,7 @@ class NetworkResourceManager:
 
     def create_subprocess(
         self,
-        process: subprocess.Popen,
+        process: subprocess.Popen[bytes],
         timeout: float = 30.0,
     ) -> ManagedSubprocess:
         """Create a managed subprocess."""
@@ -311,14 +310,12 @@ class NetworkResourceManager:
         start_time = time.time()
 
         while time.time() - start_time < timeout:
-            try:
+            with contextlib.suppress(Exception):
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                     sock.settimeout(1.0)
                     result = sock.connect_ex((host, port))
                     if result == 0:  # Connection successful
                         return True
-            except Exception:
-                pass
 
             await asyncio.sleep(poll_interval)
 
@@ -344,7 +341,7 @@ class NetworkResourceManager:
 @contextlib.asynccontextmanager
 async def with_websocket_server(
     port: int,
-    handler: t.Callable[[websockets.WebSocketServerProtocol], t.Awaitable[None]],
+    handler: t.Callable[[t.Any], t.Awaitable[None]],
     host: str = "127.0.0.1",
 ):
     """Context manager for a WebSocket server with automatic cleanup."""
@@ -358,7 +355,7 @@ async def with_websocket_server(
 
 
 @contextlib.asynccontextmanager
-async def with_http_client(**kwargs):
+async def with_http_client(**kwargs: t.Any):
     """Context manager for an HTTP client with automatic cleanup."""
     async with NetworkResourceManager() as manager:
         client = await manager.create_http_client(**kwargs)
@@ -372,11 +369,12 @@ async def with_http_client(**kwargs):
 async def with_managed_subprocess(
     command: list[str],
     timeout: float = 30.0,
-    **popen_kwargs,
+    **popen_kwargs: t.Any,
 ):
     """Context manager for a subprocess with automatic cleanup."""
     async with NetworkResourceManager() as manager:
-        process = subprocess.Popen(command, **popen_kwargs)
+        # Ensure we get bytes output for consistent type handling
+        process = subprocess.Popen[bytes](command, text=False, **popen_kwargs)
         managed_proc = manager.create_subprocess(process, timeout)
         try:
             await managed_proc.start_monitoring()
@@ -392,7 +390,7 @@ class WebSocketHealthMonitor:
         self.check_interval = check_interval
         self.monitored_servers: list[ManagedWebSocketServer] = []
         self.logger = logging.getLogger(__name__)
-        self._monitor_task: asyncio.Task | None = None
+        self._monitor_task: asyncio.Task[t.Any] | None = None
 
     def add_server(self, server: ManagedWebSocketServer) -> None:
         """Add a server to health monitoring."""
@@ -423,7 +421,7 @@ class WebSocketHealthMonitor:
         """Main monitoring loop."""
         try:
             while True:
-                for server in list(self.monitored_servers):
+                for server in self.monitored_servers.copy():
                     try:
                         await self._check_server_health(server)
                     except Exception as e:
@@ -466,9 +464,10 @@ def register_network_manager(manager: NetworkResourceManager) -> None:
 
 async def cleanup_all_network_resources() -> None:
     """Clean up all globally registered network resource managers."""
-    cleanup_tasks = []
-    for manager in _global_network_managers:
-        cleanup_tasks.append(asyncio.create_task(manager.cleanup_all()))
+    cleanup_tasks = [
+        asyncio.create_task(manager.cleanup_all())
+        for manager in _global_network_managers
+    ]
 
     if cleanup_tasks:
         await asyncio.gather(*cleanup_tasks, return_exceptions=True)

@@ -5,304 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-09-03
-
-### Added
-- feat: add new feature
-
-### Fixed
-- fix: resolve bug in parser
-
-
-## [Unreleased] - 2025-09-02
+## [0.31.9] - 2025-01-09
 
 ### Added
 
-- feat: add new feature
+- Enterprise-grade regex pattern management system with centralized ValidatedPattern class
+- Thread-safe CompiledPatternCache for performance optimization
+- 18+ validated regex patterns for security, formatting, and version management
+- Pre-commit hook validation to prevent bad regex patterns in codebase
+- Enhanced SecurityAgent with 1.0 confidence scoring for critical security issues
+- Improved RefactoringAgent with 0.9 confidence scoring for code transformations
+- Better DocumentationAgent coordination with 0.8 confidence scoring
+- Agent batch processing for comprehensive issue fixing
+- Quick Reference section in CLAUDE.md for common commands
+- Enhanced Agent Selection Guide with confidence scoring and decision tree
+- Improved Common Issues & Solutions troubleshooting documentation
+
+### Changed
+
+- Updated GitLab MCP server: 2.0.3 → 2.0.4 for improved integration capabilities
+- Updated MotherDuck MCP server: 0.3.1 → 0.6.3 for enhanced database operations
+- Optimized CLAUDE.md documentation from 57KB to 18KB (68% reduction)
+- Enhanced MCP server integration with better error handling and performance
 
 ### Fixed
 
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-02
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
-
-## [Unreleased] - 2025-09-01
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
+- Critical security vulnerabilities in character class spacing for token masking patterns
+- PyPI and GitHub token masking vulnerabilities in security.py
+- Migrated all TOKEN_PATTERNS to ValidatedPattern system for consistency
+- Added word boundary protection against false positives in token detection
+- Fixed regex replacement patterns that caused spacing issues and security risks
+- Improved specialized agent architecture for better issue classification and resolution
+
+### Security
+
+- Fixed token masking patterns to prevent false positives and information disclosure
+- Enhanced validation of regex replacement patterns to prevent injection vulnerabilities
+- Added comprehensive testing for all security-related regex patterns
+- Improved protection against token exposure in logs and error messages
 
 ## [0.31.8] - 2025-09-01
 
@@ -485,7 +225,8 @@ When updating this changelog:
 
 ## Version Links
 
-- \[0.31.8\]: Latest release with AI agent workflow fixes
+- \[0.31.9\]: Latest release with enterprise-grade regex pattern management and security fixes
+- \[0.31.8\]: AI agent workflow fixes and error collection improvements
 - \[0.31.0\]: Major architectural refactoring to modular design
 - \[0.30.3\]: Coverage ratchet system introduction
 - \[0.30.2\]: AI agent and MCP server integration

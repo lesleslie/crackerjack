@@ -104,7 +104,7 @@ class BoundedStatusOperations:
         # Thread-safe operation tracking
         self._lock = RLock()
         self._active_operations: dict[str, OperationMetrics] = {}
-        self._client_operations: dict[str, deque] = defaultdict(
+        self._client_operations: dict[str, deque[float]] = defaultdict(
             lambda: deque(maxlen=100)
         )
         self._operation_history: list[OperationMetrics] = []
@@ -135,8 +135,8 @@ class BoundedStatusOperations:
         operation_type: str,
         client_id: str,
         operation_func: t.Callable[..., t.Awaitable[t.Any]],
-        *args,
-        **kwargs,
+        *args: t.Any,
+        **kwargs: t.Any,
     ) -> t.Any:
         """
         Execute a bounded status operation with comprehensive limits.
@@ -190,7 +190,7 @@ class BoundedStatusOperations:
             # Log successful operation
             self.security_logger.log_security_event(
                 event_type=SecurityEventType.OPERATION_SUCCESS,
-                level=SecurityEventLevel.INFO,
+                level=SecurityEventLevel.LOW,
                 message=f"Operation completed: {operation_type}",
                 client_id=client_id,
                 operation=operation_type,
@@ -217,7 +217,7 @@ class BoundedStatusOperations:
             # Log failed operation
             self.security_logger.log_security_event(
                 event_type=SecurityEventType.OPERATION_FAILURE,
-                level=SecurityEventLevel.ERROR,
+                level=SecurityEventLevel.HIGH,
                 message=f"Operation failed: {operation_type} - {e}",
                 client_id=client_id,
                 operation=operation_type,
@@ -251,7 +251,7 @@ class BoundedStatusOperations:
                     self._circuit_states[operation_type] = OperationState.HALF_OPEN
                     self.security_logger.log_security_event(
                         event_type=SecurityEventType.CIRCUIT_BREAKER_HALF_OPEN,
-                        level=SecurityEventLevel.INFO,
+                        level=SecurityEventLevel.LOW,
                         message=f"Circuit breaker half-open: {operation_type}",
                         operation=operation_type,
                     )
@@ -259,7 +259,7 @@ class BoundedStatusOperations:
                     # Circuit breaker still open
                     self.security_logger.log_security_event(
                         event_type=SecurityEventType.CIRCUIT_BREAKER_OPEN,
-                        level=SecurityEventLevel.WARNING,
+                        level=SecurityEventLevel.MEDIUM,
                         message=f"Circuit breaker open: {operation_type}",
                         operation=operation_type,
                         additional_data={
@@ -285,7 +285,7 @@ class BoundedStatusOperations:
             if len(self._active_operations) >= self.limits.max_concurrent_operations:
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
-                    level=SecurityEventLevel.WARNING,
+                    level=SecurityEventLevel.MEDIUM,
                     message=f"Max concurrent operations exceeded: {len(self._active_operations)}",
                     client_id=client_id,
                     operation=operation_type,
@@ -304,7 +304,7 @@ class BoundedStatusOperations:
             if len(client_ops) >= self.limits.max_operations_per_minute:
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
-                    level=SecurityEventLevel.WARNING,
+                    level=SecurityEventLevel.MEDIUM,
                     message=f"Client operation rate limit exceeded: {len(client_ops)}",
                     client_id=client_id,
                     operation=operation_type,
@@ -320,7 +320,7 @@ class BoundedStatusOperations:
             ):
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.RESOURCE_EXHAUSTED,
-                    level=SecurityEventLevel.ERROR,
+                    level=SecurityEventLevel.HIGH,
                     message=f"Memory limit exceeded: {self._total_memory_usage / 1024 / 1024:.1f}MB",
                     client_id=client_id,
                     operation=operation_type,
@@ -338,8 +338,8 @@ class BoundedStatusOperations:
         self,
         operation_func: t.Callable[..., t.Awaitable[t.Any]],
         metrics: OperationMetrics,
-        *args,
-        **kwargs,
+        *args: t.Any,
+        **kwargs: t.Any,
     ) -> t.Any:
         """Execute operation with resource monitoring and timeout."""
 
@@ -358,7 +358,7 @@ class BoundedStatusOperations:
         except TimeoutError:
             self.security_logger.log_security_event(
                 event_type=SecurityEventType.OPERATION_TIMEOUT,
-                level=SecurityEventLevel.ERROR,
+                level=SecurityEventLevel.HIGH,
                 message=f"Operation timeout: {metrics.operation_type}",
                 client_id=metrics.client_id,
                 operation=metrics.operation_type,
@@ -405,7 +405,7 @@ class BoundedStatusOperations:
                     if metrics.cpu_time > self.limits.max_cpu_time_seconds:
                         self.security_logger.log_security_event(
                             event_type=SecurityEventType.RESOURCE_LIMIT_EXCEEDED,
-                            level=SecurityEventLevel.WARNING,
+                            level=SecurityEventLevel.MEDIUM,
                             message=f"CPU time limit exceeded: {metrics.cpu_time:.2f}s",
                             client_id=metrics.client_id,
                             operation=metrics.operation_type,
@@ -416,7 +416,7 @@ class BoundedStatusOperations:
                     if metrics.duration > self.limits.max_operation_duration:
                         self.security_logger.log_security_event(
                             event_type=SecurityEventType.OPERATION_DURATION_EXCEEDED,
-                            level=SecurityEventLevel.WARNING,
+                            level=SecurityEventLevel.MEDIUM,
                             message=f"Operation duration limit exceeded: {metrics.duration:.2f}s",
                             client_id=metrics.client_id,
                             operation=metrics.operation_type,
@@ -433,7 +433,7 @@ class BoundedStatusOperations:
             # Monitoring failure shouldn't stop the operation
             self.security_logger.log_security_event(
                 event_type=SecurityEventType.MONITORING_ERROR,
-                level=SecurityEventLevel.WARNING,
+                level=SecurityEventLevel.MEDIUM,
                 message=f"Operation monitoring failed: {e}",
                 client_id=metrics.client_id,
                 operation=metrics.operation_type,
@@ -452,7 +452,7 @@ class BoundedStatusOperations:
 
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.CIRCUIT_BREAKER_CLOSED,
-                    level=SecurityEventLevel.INFO,
+                    level=SecurityEventLevel.LOW,
                     message=f"Circuit breaker closed: {operation_type}",
                     operation=operation_type,
                 )
@@ -479,7 +479,7 @@ class BoundedStatusOperations:
 
                     self.security_logger.log_security_event(
                         event_type=SecurityEventType.CIRCUIT_BREAKER_OPEN,
-                        level=SecurityEventLevel.ERROR,
+                        level=SecurityEventLevel.HIGH,
                         message=f"Circuit breaker opened: {operation_type}",
                         operation=operation_type,
                         additional_data={
@@ -575,7 +575,7 @@ class BoundedStatusOperations:
 
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.CIRCUIT_BREAKER_RESET,
-                    level=SecurityEventLevel.INFO,
+                    level=SecurityEventLevel.LOW,
                     message=f"Circuit breaker manually reset: {operation_type}",
                     operation=operation_type,
                 )
@@ -604,8 +604,8 @@ async def execute_bounded_status_operation(
     operation_type: str,
     client_id: str,
     operation_func: t.Callable[..., t.Awaitable[t.Any]],
-    *args,
-    **kwargs,
+    *args: t.Any,
+    **kwargs: t.Any,
 ) -> t.Any:
     """
     Convenience function for bounded operation execution.

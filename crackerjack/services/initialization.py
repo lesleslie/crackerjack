@@ -4,10 +4,12 @@ import typing as t
 from pathlib import Path
 
 import tomli
-import tomli_w
 import yaml
 from rich.console import Console
 
+from crackerjack.models.protocols import ConfigMergeServiceProtocol
+
+from .config_merge import ConfigMergeService
 from .filesystem import FileSystemService
 from .git import GitService
 from .input_validator import get_input_validator, validate_and_sanitize_path
@@ -20,11 +22,16 @@ class InitializationService:
         filesystem: FileSystemService,
         git_service: GitService,
         pkg_path: Path,
+        config_merge_service: ConfigMergeServiceProtocol | None = None,
     ) -> None:
         self.console = console
         self.filesystem = filesystem
         self.git_service = git_service
         self.pkg_path = pkg_path
+        # Use dependency injection with default implementation
+        self.config_merge_service = config_merge_service or ConfigMergeService(
+            console, filesystem, git_service
+        )
 
     def initialize_project(
         self,
@@ -95,6 +102,7 @@ class InitializationService:
         return {
             ".pre-commit-config.yaml": "smart_merge",
             "pyproject.toml": "smart_merge",
+            ".gitignore": "smart_merge_gitignore",
             "CLAUDE.md": "smart_append",
             "RULES.md": "replace_if_missing",
             "example.mcp.json": "special",
@@ -126,6 +134,13 @@ class InitializationService:
                     source_file,
                     target_file,
                     file_name,
+                    project_name,
+                    force,
+                    results,
+                )
+            elif merge_strategy == "smart_merge_gitignore":
+                self._smart_merge_gitignore(
+                    target_file,
                     project_name,
                     force,
                     results,
@@ -385,77 +400,77 @@ This project uses crackerjack for Python project management and quality assuranc
 For optimal development experience with this crackerjack - enabled project, use these specialized agents:
 
 
-- * *🏗️ crackerjack - architect * *: Expert in crackerjack's modular architecture and Python project management patterns. **Use PROACTIVELY **for all feature development, architectural decisions, and ensuring code follows crackerjack standards from the start.
+- **🏗️ crackerjack-architect**: Expert in crackerjack's modular architecture and Python project management patterns. **Use PROACTIVELY** for all feature development, architectural decisions, and ensuring code follows crackerjack standards from the start.
 
-- * *🐍 python - pro * *: Modern Python development with type hints, async / await patterns, and clean architecture
+- **🐍 python-pro**: Modern Python development with type hints, async/await patterns, and clean architecture
 
-- * *🧪 pytest - hypothesis - specialist * *: Advanced testing patterns, property - based testing, and test optimization
+- **🧪 pytest-hypothesis-specialist**: Advanced testing patterns, property-based testing, and test optimization
 
 
-- * *🧪 crackerjack - test - specialist * *: Advanced testing specialist for complex testing scenarios and coverage optimization
-- * *🏗️ backend - architect * *: System design, API architecture, and service integration patterns
-- * *🔒 security-auditor * *: Security analysis, vulnerability detection, and secure coding practices
+- **🧪 crackerjack-test-specialist**: Advanced testing specialist for complex testing scenarios and coverage optimization
+- **🏗️ backend-architect**: System design, API architecture, and service integration patterns
+- **🔒 security-auditor**: Security analysis, vulnerability detection, and secure coding practices
 
 
 ```bash
 
-Task tool with subagent_type ="crackerjack - architect" for feature planning
+Task tool with subagent_type ="crackerjack-architect" for feature planning
 
 
 Task tool with subagent_type ="python-pro" for code implementation
 
 
-Task tool with subagent_type ="pytest - hypothesis-specialist" for test development
+Task tool with subagent_type ="pytest-hypothesis-specialist" for test development
 
 
 Task tool with subagent_type ="security-auditor" for security analysis
 ```
 
-* *💡 Pro Tip * *: The crackerjack - architect agent automatically ensures code follows crackerjack patterns from the start, eliminating the need for retrofitting and quality fixes.
+**💡 Pro Tip**: The crackerjack-architect agent automatically ensures code follows crackerjack patterns from the start, eliminating the need for retrofitting and quality fixes.
 
 
 This project follows crackerjack's clean code philosophy:
 
 
-- **EVERY LINE OF CODE IS A LIABILITY * *: The best code is no code
-- **DRY (Don't Repeat Yourself)* *: If you write it twice, you're doing it wrong
-- **YAGNI (You Ain't Gonna Need It)* *: Build only what's needed NOW
-- **KISS (Keep It Simple, Stupid)* *: Complexity is the enemy of maintainability
+- **EVERY LINE OF CODE IS A LIABILITY**: The best code is no code
+- **DRY (Don't Repeat Yourself)**: If you write it twice, you're doing it wrong
+- **YAGNI (You Ain't Gonna Need It)**: Build only what's needed NOW
+- **KISS (Keep It Simple, Stupid)**: Complexity is the enemy of maintainability
 
 
 - **Cognitive complexity ≤15 **per function (automatically enforced)
-- **Coverage ratchet system * *: Never decrease coverage, always improve toward 100 %
-- **Type annotations required * *: All functions must have return type hints
-- **Security patterns * *: No hardcoded paths, proper temp file handling
-- **Python 3.13 + modern patterns * *: Use `|` unions, pathlib over os.path
+- **Coverage ratchet system**: Never decrease coverage, always improve toward 100%
+- **Type annotations required**: All functions must have return type hints
+- **Security patterns**: No hardcoded paths, proper temp file handling
+- **Python 3.13+ modern patterns**: Use `|` unions, pathlib over os.path
 
 
 ```bash
 
-python - m crackerjack
+python -m crackerjack
 
 
-python - m crackerjack - t
+python -m crackerjack - t
 
 
-python - m crackerjack - - ai - agent - t
+python -m crackerjack - - ai - agent - t
 
 
-python - m crackerjack - a patch
+python -m crackerjack - a patch
 ```
 
 
-1. **Plan with crackerjack - architect * *: Ensure proper architecture from the start
-2. **Implement with python - pro * *: Follow modern Python patterns
-3. **Test comprehensively * *: Use pytest - hypothesis - specialist for robust testing
-4. **Run quality checks * *: `python - m crackerjack - t` before committing
-5. **Security review * *: Use security - auditor for final validation
+1. **Plan with crackerjack-architect**: Ensure proper architecture from the start
+2. **Implement with python-pro**: Follow modern Python patterns
+3. **Test comprehensively**: Use pytest-hypothesis-specialist for robust testing
+4. **Run quality checks**: `python -m crackerjack -t` before committing
+5. **Security review**: Use security-auditor for final validation
 
 
-- **Use crackerjack - architect agent proactively **for all significant code changes
-- **Never reduce test coverage **- the ratchet system only allows improvements
-- **Follow crackerjack patterns **- the tools will enforce quality automatically
-- **Leverage AI agent auto - fixing **- `python - m crackerjack - - ai - agent - t` for autonomous quality fixes
+- **Use crackerjack-architect agent proactively** for all significant code changes
+- **Never reduce test coverage** - the ratchet system only allows improvements
+- **Follow crackerjack patterns** - the tools will enforce quality automatically
+- **Leverage AI agent auto-fixing** - `python -m crackerjack --ai-agent -t` for autonomous quality fixes
 
 - --
 * This project is enhanced by crackerjack's intelligent Python project management.*"""
@@ -469,53 +484,110 @@ python - m crackerjack - a patch
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        if file_name == "CLAUDE.md" and project_name != "crackerjack":
-            source_content = self._generate_project_claude_content(project_name)
-        else:
-            source_content = self._read_and_process_content(
-                source_file, True, project_name
+        try:
+            # Generate appropriate source content
+            if file_name == "CLAUDE.md" and project_name != "crackerjack":
+                source_content = self._generate_project_claude_content(project_name)
+            else:
+                source_content = self._read_and_process_content(
+                    source_file, True, project_name
+                )
+
+            # Define markers for this file type
+            crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
+            crackerjack_end_marker = "<!-- CRACKERJACK INTEGRATION END -->"
+
+            # Delegate to ConfigMergeService for smart append logic
+            merged_content = self.config_merge_service.smart_append_file(
+                source_content,
+                target_file,
+                crackerjack_start_marker,
+                crackerjack_end_marker,
+                force,
             )
 
-        if not target_file.exists():
-            self._write_file_and_track(target_file, source_content, file_name, results)
-            return
+            # Check if content was actually changed
+            if target_file.exists():
+                existing_content = target_file.read_text()
+                if crackerjack_start_marker in existing_content and not force:
+                    self._skip_existing_file(
+                        f"{file_name} (crackerjack section)", results
+                    )
+                    return
 
-        existing_content = target_file.read_text()
+            # Write the merged content
+            target_file.write_text(merged_content)
+            t.cast("list[str]", results["files_copied"]).append(
+                f"{file_name} (appended)"
+            )
 
-        crackerjack_start_marker = "< !- - CRACKERJACK INTEGRATION START-->"
-        crackerjack_end_marker = "< !- - CRACKERJACK INTEGRATION END-->"
+            try:
+                self.git_service.add_files([str(target_file)])
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}"
+                )
 
-        if crackerjack_start_marker in existing_content:
-            if force:
-                start_idx = existing_content.find(crackerjack_start_marker)
-                end_idx = existing_content.find(crackerjack_end_marker)
-                if end_idx != -1:
-                    end_idx += len(crackerjack_end_marker)
+            self.console.print(f"[green]✅[/ green] Appended to {file_name}")
 
-                    existing_content = (
-                        existing_content[:start_idx] + existing_content[end_idx:]
-                    ).strip()
-            else:
-                self._skip_existing_file(f"{file_name} (crackerjack section)", results)
-                return
+        except Exception as e:
+            self._handle_file_processing_error(file_name, e, results)
 
-        merged_content = (
-            existing_content.strip() + "\n\n" + crackerjack_start_marker + "\n"
-        )
-        merged_content += source_content.strip() + "\n"
-        merged_content += crackerjack_end_marker + "\n"
-
-        target_file.write_text(merged_content)
-        t.cast("list[str]", results["files_copied"]).append(f"{file_name} (appended)")
+    def _smart_merge_gitignore(
+        self,
+        target_file: Path,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        """Smart merge .gitignore patterns using ConfigMergeService."""
+        # Define crackerjack .gitignore patterns
+        gitignore_patterns = [
+            "# Build/Distribution",
+            "/build/",
+            "/dist/",
+            "*.egg-info/",
+            "",
+            "# Caches",
+            "__pycache__/",
+            ".mypy_cache/",
+            ".ruff_cache/",
+            ".pytest_cache/",
+            "",
+            "# Coverage",
+            ".coverage*",
+            "htmlcov/",
+            "",
+            "# Development",
+            ".venv/",
+            ".DS_STORE",
+            "*.pyc",
+            "",
+            "# Crackerjack specific",
+            "crackerjack-debug-*.log",
+            "crackerjack-ai-debug-*.log",
+            ".crackerjack-*",
+        ]
 
         try:
-            self.git_service.add_files([str(target_file)])
-        except Exception as e:
-            self.console.print(
-                f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}"
+            merged_content = self.config_merge_service.smart_merge_gitignore(
+                gitignore_patterns, target_file
             )
 
-        self.console.print(f"[green]✅[/ green] Appended to {file_name}")
+            target_file.write_text(merged_content)
+            t.cast("list[str]", results["files_copied"]).append(".gitignore (merged)")
+
+            try:
+                self.git_service.add_files([str(target_file)])
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]⚠️[/ yellow] Could not git add .gitignore: {e}"
+                )
+
+            self.console.print("[green]✅[/ green] Smart merged .gitignore")
+
+        except Exception as e:
+            self._handle_file_processing_error(".gitignore", e, results)
 
     def _smart_merge_config(
         self,
@@ -542,7 +614,6 @@ python - m crackerjack - a patch
                 force,
                 results,
             )
-
         elif not target_file.exists() or force:
             content = self._read_and_process_content(
                 source_file,
@@ -561,198 +632,33 @@ python - m crackerjack - a patch
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        with source_file.open("rb") as f:
-            source_config = tomli.load(f)
-
-        if not target_file.exists():
-            content = self._read_and_process_content(source_file, True, project_name)
-            self._write_file_and_track(target_file, content, "pyproject.toml", results)
-            return
-
-        with target_file.open("rb") as f:
-            target_config = tomli.load(f)
-
-        self._ensure_crackerjack_dev_dependency(target_config, source_config)
-
-        self._merge_tool_configurations(target_config, source_config, project_name)
-
-        self._remove_fixed_coverage_requirements(target_config)
-
-        import io
-
-        buffer = io.BytesIO()
-        tomli_w.dump(target_config, buffer)
-        content = buffer.getvalue().decode("utf-8")
-
-        from crackerjack.services.filesystem import FileSystemService
-
-        content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
-
-        with target_file.open("w", encoding="utf-8") as f:
-            f.write(content)
-
-        t.cast("list[str]", results["files_copied"]).append("pyproject.toml (merged)")
-
         try:
-            self.git_service.add_files([str(target_file)])
-        except Exception as e:
-            self.console.print(
-                f"[yellow]⚠️[/ yellow] Could not git add pyproject.toml: {e}",
+            with source_file.open("rb") as f:
+                source_config = tomli.load(f)
+
+            # Delegate to ConfigMergeService for smart merge logic
+            merged_config = self.config_merge_service.smart_merge_pyproject(
+                source_config, target_file, project_name
             )
 
-        self.console.print("[green]✅[/ green] Smart merged pyproject.toml")
+            # Write the merged configuration
+            self.config_merge_service.write_pyproject_config(merged_config, target_file)
 
-    def _ensure_crackerjack_dev_dependency(
-        self,
-        target_config: dict[str, t.Any],
-        source_config: dict[str, t.Any],
-    ) -> None:
-        if "dependency-groups" not in target_config:
-            target_config["dependency-groups"] = {}
-
-        if "dev" not in target_config["dependency-groups"]:
-            target_config["dependency-groups"]["dev"] = []
-
-        dev_deps = target_config["dependency-groups"]["dev"]
-        if "crackerjack" not in str(dev_deps):
-            dev_deps.append("crackerjack")
-
-    def _merge_tool_configurations(
-        self,
-        target_config: dict[str, t.Any],
-        source_config: dict[str, t.Any],
-        project_name: str,
-    ) -> None:
-        source_tools = source_config.get("tool", {})
-
-        if "tool" not in target_config:
-            target_config["tool"] = {}
-
-        target_tools = target_config["tool"]
-
-        tools_to_merge = [
-            "ruff",
-            "pyright",
-            "bandit",
-            "vulture",
-            "refurb",
-            "complexipy",
-            "codespell",
-            "creosote",
-        ]
-
-        for tool_name in tools_to_merge:
-            if tool_name in source_tools:
-                if tool_name not in target_tools:
-                    target_tools[tool_name] = self._replace_project_name_in_tool_config(
-                        source_tools[tool_name], project_name
-                    )
-                    self.console.print(
-                        f"[green]➕[/ green] Added [tool.{tool_name}] configuration",
-                    )
-                else:
-                    self._merge_tool_settings(
-                        target_tools[tool_name],
-                        source_tools[tool_name],
-                        tool_name,
-                        project_name,
-                    )
-
-        self._merge_pytest_markers(target_tools, source_tools)
-
-    def _merge_tool_settings(
-        self,
-        target_tool: dict[str, t.Any],
-        source_tool: dict[str, t.Any],
-        tool_name: str,
-        project_name: str,
-    ) -> None:
-        updated_keys = []
-
-        for key, value in source_tool.items():
-            if key not in target_tool:
-                target_tool[key] = self._replace_project_name_in_config_value(
-                    value, project_name
-                )
-                updated_keys.append(key)
-
-        if updated_keys:
-            self.console.print(
-                f"[yellow]🔄[/ yellow] Updated [tool.{tool_name}] with: {', '.join(updated_keys)}",
+            t.cast("list[str]", results["files_copied"]).append(
+                "pyproject.toml (merged)"
             )
 
-    def _merge_pytest_markers(
-        self,
-        target_tools: dict[str, t.Any],
-        source_tools: dict[str, t.Any],
-    ) -> None:
-        if "pytest" not in source_tools or "pytest" not in target_tools:
-            return
-
-        source_pytest = source_tools["pytest"]
-        target_pytest = target_tools["pytest"]
-
-        if "ini_options" not in source_pytest or "ini_options" not in target_pytest:
-            return
-
-        source_markers = source_pytest["ini_options"].get("markers", [])
-        target_markers = target_pytest["ini_options"].get("markers", [])
-
-        existing_marker_names = {marker.split(": ")[0] for marker in target_markers}
-        new_markers = [
-            marker
-            for marker in source_markers
-            if marker.split(": ")[0] not in existing_marker_names
-        ]
-
-        if new_markers:
-            target_markers.extend(new_markers)
-            self.console.print(
-                f"[green]➕[/ green] Added pytest markers: {len(new_markers)}",
-            )
-
-    def _remove_fixed_coverage_requirements(
-        self,
-        target_config: dict[str, t.Any],
-    ) -> None:
-        import re
-
-        target_coverage = (
-            target_config.get("tool", {}).get("pytest", {}).get("ini_options", {})
-        )
-
-        addopts = target_coverage.get("addopts", "")
-        if isinstance(addopts, str):
-            original_addopts = addopts
-
-            addopts = re.sub(
-                r"- - cov - fail-under =\d +\.?\d *\s *", "", addopts
-            ).strip()
-
-            addopts = " ".join(addopts.split())
-
-            if original_addopts != addopts:
-                target_coverage["addopts"] = addopts
+            try:
+                self.git_service.add_files([str(target_file)])
+            except Exception as e:
                 self.console.print(
-                    "[green]🔄[/ green] Removed fixed coverage requirement (using ratchet system)",
+                    f"[yellow]⚠️[/ yellow] Could not git add pyproject.toml: {e}",
                 )
 
-        coverage_report = (
-            target_config.get("tool", {}).get("coverage", {}).get("report", {})
-        )
-        if "fail_under" in coverage_report:
-            original_fail_under = coverage_report["fail_under"]
-            coverage_report["fail_under"] = 0
-            self.console.print(
-                f"[green]🔄[/ green] Reset coverage.report.fail_under from {original_fail_under} to 0 (ratchet system)",
-            )
+            self.console.print("[green]✅[/ green] Smart merged pyproject.toml")
 
-    def _extract_coverage_requirement(self, addopts: str | list[str]) -> int | None:
-        import re
-
-        addopts_str = " ".join(addopts) if isinstance(addopts, list) else addopts
-        match = re.search(r"- - cov - fail-under =(\d +)", addopts_str)
-        return int(match.group(1)) if match else None
+        except Exception as e:
+            self._handle_file_processing_error("pyproject.toml", e, results)
 
     def _smart_merge_pre_commit_config(
         self,
@@ -762,117 +668,61 @@ python - m crackerjack - a patch
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        with source_file.open() as f:
-            source_config = yaml.safe_load(f)
+        try:
+            with source_file.open() as f:
+                source_config = yaml.safe_load(f) or {}
 
-        if not target_file.exists():
-            content = self._read_and_process_content(
-                source_file,
-                True,
-                project_name,
+            # Ensure source_config is a dict
+            if not isinstance(source_config, dict):
+                self.console.print(
+                    "[yellow]⚠️[/yellow] Source .pre-commit-config.yaml is not a dictionary, skipping merge"
+                )
+                return
+
+            # Delegate to ConfigMergeService for smart merge logic
+            merged_config = self.config_merge_service.smart_merge_pre_commit_config(
+                source_config, target_file, project_name
             )
 
-            from crackerjack.services.filesystem import FileSystemService
+            # Check if there were actually changes (new repos added)
+            if target_file.exists():
+                with target_file.open() as f:
+                    old_config = yaml.safe_load(f) or {}
 
-            content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
-            self._write_file_and_track(
-                target_file,
-                content,
-                ".pre-commit-config.yaml",
-                results,
+                # Ensure old_config is a dict
+                if not isinstance(old_config, dict):
+                    old_config = {}
+
+                old_repo_count = len(old_config.get("repos", []))
+                new_repo_count = len(merged_config.get("repos", []))
+
+                if new_repo_count == old_repo_count:
+                    self._skip_existing_file(
+                        ".pre-commit-config.yaml (no new repos)", results
+                    )
+                    return
+
+            # Write the merged configuration
+            self.config_merge_service.write_pre_commit_config(
+                merged_config, target_file
             )
-            return
-
-        with target_file.open() as f:
-            target_config = yaml.safe_load(f)
-
-        if not isinstance(source_config, dict):
-            source_config = {}
-        if not isinstance(target_config, dict):
-            target_config = {}
-
-        source_repos = source_config.get("repos", [])
-        target_repos = target_config.get("repos", [])
-
-        existing_repo_urls = {repo.get("repo", "") for repo in target_repos}
-
-        new_repos = [
-            repo
-            for repo in source_repos
-            if repo.get("repo", "") not in existing_repo_urls
-        ]
-
-        if new_repos:
-            target_repos.extend(new_repos)
-            target_config["repos"] = target_repos
-
-            yaml_content = yaml.dump(
-                target_config,
-                default_flow_style=False,
-                sort_keys=False,
-                width=float("inf"),
-            )
-            content = (
-                yaml_content.decode()
-                if isinstance(yaml_content, bytes)
-                else yaml_content
-            )
-
-            if content is None:
-                content = ""
-
-            from crackerjack.services.filesystem import FileSystemService
-
-            content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
-
-            with target_file.open("w") as f:
-                f.write(content)
 
             t.cast("list[str]", results["files_copied"]).append(
-                ".pre-commit-config.yaml (merged)",
+                ".pre-commit-config.yaml (merged)"
             )
 
             try:
                 self.git_service.add_files([str(target_file)])
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️[/ yellow] Could not git add .pre-commit-config.yaml: {e}",
+                    f"[yellow]⚠️[/ yellow] Could not git add .pre-commit-config.yaml: {e}"
                 )
 
+            # Calculate number of new repos for display
+            source_repo_count = len(source_config.get("repos", []))
             self.console.print(
-                f"[green]✅[/ green] Merged .pre-commit-config.yaml ({len(new_repos)} new repos)",
+                f"[green]✅[/ green] Merged .pre-commit-config.yaml ({source_repo_count} repos processed)"
             )
-        else:
-            self._skip_existing_file(".pre-commit-config.yaml (no new repos)", results)
 
-    def _replace_project_name_in_tool_config(
-        self, tool_config: dict[str, t.Any], project_name: str
-    ) -> dict[str, t.Any]:
-        if project_name == "crackerjack":
-            return tool_config
-
-        import copy
-
-        result = copy.deepcopy(tool_config)
-
-        return self._replace_project_name_in_config_value(result, project_name)
-
-    def _replace_project_name_in_config_value(
-        self, value: t.Any, project_name: str
-    ) -> t.Any:
-        if project_name == "crackerjack":
-            return value
-
-        if isinstance(value, str):
-            return value.replace("crackerjack", project_name)
-        elif isinstance(value, list):
-            return [
-                self._replace_project_name_in_config_value(item, project_name)
-                for item in value
-            ]
-        elif isinstance(value, dict):
-            return {
-                key: self._replace_project_name_in_config_value(val, project_name)
-                for key, val in value.items()
-            }
-        return value
+        except Exception as e:
+            self._handle_file_processing_error(".pre-commit-config.yaml", e, results)

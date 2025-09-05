@@ -149,7 +149,7 @@ class AgentRegistry:
                 "statusline-setup",
                 "Configure the user's Claude Code status line setting",
             ),
-            ("output - style-setup", "Create a Claude Code output style"),
+            ("output-style-setup", "Create a Claude Code output style"),
         ]
 
         for agent_name, description in system_agents:

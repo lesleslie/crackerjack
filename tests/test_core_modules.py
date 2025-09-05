@@ -36,6 +36,7 @@ def phase_coordinator(console, pkg_path, session):
     hook_manager_mock = Mock()
     test_manager_mock = Mock()
     publish_manager_mock = Mock()
+    config_merge_service_mock = Mock()
 
     return PhaseCoordinator(
         console=console,
@@ -46,6 +47,7 @@ def phase_coordinator(console, pkg_path, session):
         hook_manager=hook_manager_mock,
         test_manager=test_manager_mock,
         publish_manager=publish_manager_mock,
+        config_merge_service=config_merge_service_mock,
     )
 
 

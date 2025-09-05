@@ -45,7 +45,7 @@ class OptionsProtocol(t.Protocol):
     comp: bool = False
     enterprise_batch: str | None = None
     monitor_dashboard: str | None = None
-    coverage: bool = False
+    skip_config_merge: bool = False
 
 
 @t.runtime_checkable
@@ -98,11 +98,11 @@ class HookManager(t.Protocol):
 class TestManagerProtocol(t.Protocol):
     def run_tests(self, options: OptionsProtocol) -> bool: ...
 
-    def get_coverage(self) -> dict[str, t.Any]: ...
+    def get_test_failures(self) -> list[str]: ...
 
     def validate_test_environment(self) -> bool: ...
 
-    def get_test_failures(self) -> list[str]: ...
+    def get_coverage(self) -> dict[str, t.Any]: ...
 
 
 @t.runtime_checkable
@@ -116,3 +116,49 @@ class PublishManager(t.Protocol):
     def create_git_tag(self, version: str) -> bool: ...
 
     def cleanup_old_releases(self, keep_releases: int) -> None: ...
+
+
+@t.runtime_checkable
+class ConfigMergeServiceProtocol(t.Protocol):
+    """Protocol for smart configuration file merging."""
+
+    def smart_merge_pyproject(
+        self,
+        source_content: dict[str, t.Any],
+        target_path: str | t.Any,
+        project_name: str,
+    ) -> dict[str, t.Any]: ...
+
+    def smart_merge_pre_commit_config(
+        self,
+        source_content: dict[str, t.Any],
+        target_path: str | t.Any,
+        project_name: str,
+    ) -> dict[str, t.Any]: ...
+
+    def smart_append_file(
+        self,
+        source_content: str,
+        target_path: str | t.Any,
+        start_marker: str,
+        end_marker: str,
+        force: bool = False,
+    ) -> str: ...
+
+    def smart_merge_gitignore(
+        self,
+        patterns: list[str],
+        target_path: str | t.Any,
+    ) -> str: ...
+
+    def write_pyproject_config(
+        self,
+        config: dict[str, t.Any],
+        target_path: str | t.Any,
+    ) -> None: ...
+
+    def write_pre_commit_config(
+        self,
+        config: dict[str, t.Any],
+        target_path: str | t.Any,
+    ) -> None: ...

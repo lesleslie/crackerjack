@@ -65,9 +65,9 @@ def _validate_job_id(job_id: str) -> bool:
     if len(job_id) > 50:
         return False
 
-    import re
+    from crackerjack.services.regex_patterns import is_valid_job_id
 
-    return bool(re.match(r"^[a - zA - Z0-9_ -]+$", job_id))
+    return is_valid_job_id(job_id)
 
 
 async def _start_websocket_server() -> bool:

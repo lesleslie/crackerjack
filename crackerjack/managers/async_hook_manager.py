@@ -25,11 +25,20 @@ class AsyncHookManager:
             quiet=True,
         )
         self.config_loader = HookConfigLoader()
+        self._config_path: Path | None = None
+
+    def set_config_path(self, config_path: Path) -> None:
+        """Set the path to the pre-commit configuration file."""
+        self._config_path = config_path
 
     async def run_fast_hooks_async(self) -> list[HookResult]:
         strategy = self.config_loader.load_strategy("fast")
 
         strategy.parallel = False
+
+        if self._config_path:
+            for hook in strategy.hooks:
+                hook.config_path = self._config_path
 
         execution_result = await self.async_executor.execute_strategy(strategy)
         return execution_result.results
@@ -39,6 +48,10 @@ class AsyncHookManager:
 
         strategy.parallel = True
         strategy.max_workers = 3
+
+        if self._config_path:
+            for hook in strategy.hooks:
+                hook.config_path = self._config_path
 
         execution_result = await self.async_executor.execute_strategy(strategy)
         return execution_result.results

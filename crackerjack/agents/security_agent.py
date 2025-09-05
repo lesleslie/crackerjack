@@ -283,23 +283,9 @@ class SecurityAgent(SubAgent):
 
         original_content = content
 
-        patterns = [
-            (
-                r"subprocess\.run\(([^,]+),\s*shell=True\)",
-                r"subprocess.run(\1.split())",
-            ),
-            (
-                r"subprocess\.call\(([^,]+),\s*shell=True\)",
-                r"subprocess.call(\1.split())",
-            ),
-            (
-                r"subprocess\.Popen\(([^,]+),\s*shell=True\)",
-                r"subprocess.Popen(\1.split())",
-            ),
-        ]
+        from crackerjack.services.regex_patterns import apply_security_fixes
 
-        for pattern, replacement in patterns:
-            content = re.sub(pattern, replacement, content)
+        content = apply_security_fixes(content)
 
         if content != original_content:
             if self.context.write_file_content(file_path, content):
@@ -396,7 +382,9 @@ class SecurityAgent(SubAgent):
 
         original_content = content
 
-        content = re.sub(r"\byaml\.load\(", "yaml.safe_load(", content)
+        from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
+        content = SAFE_PATTERNS["fix_unsafe_yaml_load"].apply(content)
 
         if content != original_content:
             if self.context.write_file_content(file_path, content):
@@ -430,13 +418,10 @@ class SecurityAgent(SubAgent):
 
         original_content = content
 
-        replacements = [
-            (r"\bhashlib\.md5\(", "hashlib.sha256("),
-            (r"\bhashlib\.sha1\(", "hashlib.sha256("),
-        ]
+        from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
-        for pattern, replacement in replacements:
-            content = re.sub(pattern, replacement, content)
+        content = SAFE_PATTERNS["fix_weak_md5_hash"].apply(content)
+        content = SAFE_PATTERNS["fix_weak_sha1_hash"].apply(content)
 
         if content != original_content:
             if self.context.write_file_content(file_path, content):
@@ -504,7 +489,9 @@ class SecurityAgent(SubAgent):
 
         content = self._add_secrets_import_if_needed(content)
 
-        return re.sub(r"random\.choice\(([^)]+)\)", r"secrets.choice(\1)", content)
+        from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
+        return SAFE_PATTERNS["fix_insecure_random_choice"].apply(content)
 
     def _add_secrets_import_if_needed(self, content: str) -> str:
         if "import secrets" in content:
@@ -518,12 +505,9 @@ class SecurityAgent(SubAgent):
         return "\n".join(lines)
 
     def _remove_debug_prints_with_secrets(self, content: str) -> str:
-        return re.sub(
-            r"print\s*\([^)]*(?:password|secret|key|token)[^)]*\)",
-            "",
-            content,
-            flags=re.IGNORECASE,
-        )
+        from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
+        return SAFE_PATTERNS["remove_debug_prints_with_secrets"].apply(content)
 
 
 agent_registry.register(SecurityAgent)

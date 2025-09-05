@@ -266,20 +266,39 @@ class DRYAgent(SubAgent):
         modified = False
 
         for violation in violations:
-            if violation["type"] == "error_response_pattern":
-                lines, changed = self._fix_error_response_pattern(lines, violation)
-                modified = modified or changed
-            elif violation["type"] == "path_conversion_pattern":
-                lines, changed = self._fix_path_conversion_pattern(lines, violation)
-                modified = modified or changed
+            lines, changed = self._apply_violation_fix(lines, violation)
+            modified = modified or changed
 
         return "\n".join(lines) if modified else content
+
+    def _apply_violation_fix(
+        self, lines: list[str], violation: dict[str, t.Any]
+    ) -> tuple[list[str], bool]:
+        """Apply fix for a specific violation type."""
+        violation_type = violation["type"]
+
+        if violation_type == "error_response_pattern":
+            return self._fix_error_response_pattern(lines, violation)
+        elif violation_type == "path_conversion_pattern":
+            return self._fix_path_conversion_pattern(lines, violation)
+
+        return lines, False
 
     def _fix_error_response_pattern(
         self,
         lines: list[str],
         violation: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
+        # Add utility functions to the file
+        utility_lines = self._add_error_response_utilities(lines)
+
+        # Apply pattern replacements to affected lines
+        self._apply_error_pattern_replacements(lines, violation, len(utility_lines))
+
+        return lines, True
+
+    def _add_error_response_utilities(self, lines: list[str]) -> list[str]:
+        """Add utility functions for error responses and path conversion."""
         utility_function = """
 def _create_error_response(message: str, success: bool = False) -> str:
 
@@ -291,31 +310,108 @@ def _ensure_path(path: str | Path) -> Path:
     return Path(path) if isinstance(path, str) else path
 """
 
+        insert_pos = self._find_utility_insert_position(lines)
+        utility_lines = utility_function.strip().split("\n")
+
+        for i, util_line in enumerate(utility_lines):
+            lines.insert(insert_pos + i, util_line)
+
+        return [line for line in utility_lines]
+
+    def _find_utility_insert_position(self, lines: list[str]) -> int:
+        """Find the best position to insert utility functions."""
         insert_pos = 0
         for i, line in enumerate(lines):
             if line.strip().startswith(("import ", "from ")):
                 insert_pos = i + 1
             elif line.strip() and not line.strip().startswith("#"):
                 break
+        return insert_pos
 
-        utility_lines = utility_function.strip().split("\n")
-        for i, util_line in enumerate(utility_lines):
-            lines.insert(insert_pos + i, util_line)
-
+    def _apply_error_pattern_replacements(
+        self, lines: list[str], violation: dict[str, t.Any], utility_lines_count: int
+    ) -> None:
+        """Apply pattern replacements to lines with error response patterns."""
         path_pattern = re.compile(
             r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+([^)]+)",
         )
 
         for instance in violation["instances"]:
             line_number: int = int(instance["line_number"])
-            line_idx = line_number - 1 + len(utility_lines)
+            line_idx = line_number - 1 + utility_lines_count
+
             if line_idx < len(lines):
                 original_line: str = lines[line_idx]
-
                 new_line: str = path_pattern.sub(r"_ensure_path(\1)", original_line)
                 lines[line_idx] = new_line
 
-        return lines, True
+    def _fix_path_conversion_pattern(
+        self,
+        lines: list[str],
+        violation: dict[str, t.Any],
+    ) -> tuple[list[str], bool]:
+        """Fix path conversion patterns by adding utility function."""
+        utility_function_added = self._check_ensure_path_exists(lines)
+        adjustment = 0
+
+        if not utility_function_added:
+            adjustment = self._add_ensure_path_utility(lines)
+
+        modified = self._apply_path_pattern_replacements(
+            lines, violation, adjustment, utility_function_added
+        )
+
+        return lines, modified
+
+    def _check_ensure_path_exists(self, lines: list[str]) -> bool:
+        """Check if _ensure_path utility function already exists."""
+        return any(
+            "_ensure_path" in line and "def _ensure_path" in line for line in lines
+        )
+
+    def _add_ensure_path_utility(self, lines: list[str]) -> int:
+        """Add the _ensure_path utility function and return adjustment count."""
+        insert_pos = self._find_utility_insert_position(lines)
+
+        utility_lines = [
+            "",
+            "def _ensure_path(path: str | Path) -> Path:",
+            '    """Convert string path to Path object if needed."""',
+            "    return Path(path) if isinstance(path, str) else path",
+            "",
+        ]
+
+        for i, util_line in enumerate(utility_lines):
+            lines.insert(insert_pos + i, util_line)
+
+        return len(utility_lines)
+
+    def _apply_path_pattern_replacements(
+        self,
+        lines: list[str],
+        violation: dict[str, t.Any],
+        adjustment: int,
+        utility_function_added: bool,
+    ) -> bool:
+        """Replace path conversion patterns with utility function calls."""
+        path_pattern = re.compile(
+            r"Path\(([^)]+)\)\s+if\s+isinstance\(\1,\s*str\)\s+else\s+\1",
+        )
+
+        modified = False
+        for instance in violation["instances"]:
+            line_number: int = int(instance["line_number"])
+            line_idx = line_number - 1 + (0 if utility_function_added else adjustment)
+
+            if line_idx < len(lines):
+                original_line: str = lines[line_idx]
+                new_line = path_pattern.sub(r"_ensure_path(\1)", original_line)
+
+                if new_line != original_line:
+                    lines[line_idx] = new_line
+                    modified = True
+
+        return modified
 
 
 agent_registry.register(DRYAgent)

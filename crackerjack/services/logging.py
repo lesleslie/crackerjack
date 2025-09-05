@@ -9,6 +9,7 @@ from types import TracebackType
 from typing import Any
 
 import structlog
+from structlog.types import EventDict, Processor
 
 correlation_id: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 
@@ -25,15 +26,13 @@ def get_correlation_id() -> str:
     return cid
 
 
-def add_correlation_id(_: Any, __: Any, event_dict: dict[str, Any]) -> dict[str, Any]:
+def add_correlation_id(_: Any, __: Any, event_dict: EventDict) -> EventDict:
     event_dict["correlation_id"] = get_correlation_id()
     return event_dict
 
 
-def add_timestamp(_: Any, __: Any, event_dict: dict[str, Any]) -> dict[str, Any]:
-    event_dict["timestamp"] = (
-        time.strftime("% Y - % m-% dT % H: % M: % S.% f")[:-3] + "Z"
-    )
+def add_timestamp(_: Any, __: Any, event_dict: EventDict) -> EventDict:
+    event_dict["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     return event_dict
 
 
@@ -42,7 +41,7 @@ def setup_structured_logging(
     json_output: bool = True,
     log_file: Path | None = None,
 ) -> None:
-    processors = [
+    processors: list[Processor] = [
         structlog.stdlib.filter_by_level,
         add_timestamp,
         add_correlation_id,

@@ -52,7 +52,9 @@ class ResourceManager:
         with self._lock:
             if self._closed:
                 # If already closed, immediately call the callback
-                asyncio.create_task(callback())
+                coro = callback()
+                if asyncio.iscoroutine(coro):
+                    asyncio.ensure_future(coro)
                 return
             self._cleanup_callbacks.append(callback)
 
@@ -63,8 +65,8 @@ class ResourceManager:
                 return
             self._closed = True
 
-            resources = list(self._resources)
-            callbacks = list(self._cleanup_callbacks)
+            resources = self._resources.copy()
+            callbacks = self._cleanup_callbacks.copy()
 
         # Clean up resources
         for resource in resources:
@@ -121,13 +123,10 @@ class ManagedResource(ABC):
         """Ensure cleanup is called even if explicitly forgotten."""
         if not self._closed:
             # Create cleanup task if event loop is available
-            try:
+            with contextlib.suppress(RuntimeError):
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
                     asyncio.create_task(self.cleanup())
-            except RuntimeError:
-                # No event loop available, can't clean up async resources
-                pass
 
 
 class ManagedTemporaryFile(ManagedResource):
@@ -254,7 +253,7 @@ class ManagedTask(ManagedResource):
 
     def __init__(
         self,
-        task: asyncio.Task,
+        task: asyncio.Task[t.Any],
         timeout: float = 30.0,
         manager: ResourceManager | None = None,
     ) -> None:
@@ -283,7 +282,7 @@ class ManagedFileHandle(ManagedResource):
 
     def __init__(
         self,
-        file_handle: t.IO,
+        file_handle: t.IO[t.Any],
         manager: ResourceManager | None = None,
     ) -> None:
         super().__init__(manager)
@@ -332,7 +331,7 @@ class ResourceContext:
 
     def managed_task(
         self,
-        task: asyncio.Task,
+        task: asyncio.Task[t.Any],
         timeout: float = 30.0,
     ) -> ManagedTask:
         """Create a managed task."""
@@ -340,7 +339,7 @@ class ResourceContext:
 
     def managed_file(
         self,
-        file_handle: t.IO,
+        file_handle: t.IO[t.Any],
     ) -> ManagedFileHandle:
         """Create a managed file handle."""
         return ManagedFileHandle(file_handle, self.resource_manager)
@@ -371,9 +370,7 @@ async def cleanup_all_global_resources() -> None:
     """Clean up all globally registered resource managers."""
     managers = list(_global_managers)
 
-    cleanup_tasks = []
-    for manager in managers:
-        cleanup_tasks.append(asyncio.create_task(manager.cleanup_all()))
+    cleanup_tasks = [asyncio.create_task(manager.cleanup_all()) for manager in managers]
 
     if cleanup_tasks:
         await asyncio.gather(*cleanup_tasks, return_exceptions=True)
@@ -430,7 +427,7 @@ class ResourceLeakDetector:
     def __init__(self) -> None:
         self.open_files: set[str] = set()
         self.active_processes: set[int] = set()
-        self.active_tasks: set[asyncio.Task] = set()
+        self.active_tasks: set[asyncio.Task[t.Any]] = set()
         self._start_time = time.time()
 
     def track_file(self, file_path: str) -> None:
@@ -449,11 +446,11 @@ class ResourceLeakDetector:
         """Untrack a terminated process."""
         self.active_processes.discard(pid)
 
-    def track_task(self, task: asyncio.Task) -> None:
+    def track_task(self, task: asyncio.Task[t.Any]) -> None:
         """Track an active task."""
         self.active_tasks.add(task)
 
-    def untrack_task(self, task: asyncio.Task) -> None:
+    def untrack_task(self, task: asyncio.Task[t.Any]) -> None:
         """Untrack a completed task."""
         self.active_tasks.discard(task)
 

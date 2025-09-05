@@ -140,7 +140,7 @@ class LogManager:
         if not source_dir.exists():
             return {"moved": 0, "failed": 0, "found": 0}
 
-        debug_pattern = "crackerjack - debug-*.log"
+        debug_pattern = "crackerjack-debug-*.log"
         legacy_files = list(source_dir.glob(debug_pattern))
 
         results = {"found": len(legacy_files), "moved": 0, "failed": 0}

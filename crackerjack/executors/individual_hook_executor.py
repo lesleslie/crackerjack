@@ -467,7 +467,11 @@ class IndividualHookExecutor:
 
     async def _create_subprocess(self, cmd: list[str]) -> asyncio.subprocess.Process:
         # Pre-commit must run from repository root, not package directory
-        repo_root = self.pkg_path.parent if self.pkg_path.name == "crackerjack" else self.pkg_path
+        repo_root = (
+            self.pkg_path.parent
+            if self.pkg_path.name == "crackerjack"
+            else self.pkg_path
+        )
         return await asyncio.create_subprocess_exec(
             *cmd,
             cwd=repo_root,

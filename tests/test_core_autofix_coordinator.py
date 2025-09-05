@@ -294,7 +294,7 @@ class TestAutofixCoordinator:
             is True
         )
 
-        cmd = ["uv", "run", "trailing - whitespace"]
+        cmd = ["uv", "run", "trailing-whitespace"]
         assert (
             coordinator._check_tool_success_patterns(cmd, "Fixing whitespace") is True
         )

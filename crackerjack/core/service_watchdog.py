@@ -6,6 +6,7 @@ with automatic restart capabilities and hanging prevention.
 """
 
 import asyncio
+import contextlib
 import logging
 import signal
 import subprocess
@@ -55,7 +56,7 @@ class ServiceStatus:
 
     config: ServiceConfig
     state: ServiceState = ServiceState.STOPPED
-    process: subprocess.Popen | None = None
+    process: subprocess.Popen[bytes] | None = None
     last_start_time: float = 0.0
     last_health_check: float = 0.0
     restart_count: int = 0
@@ -75,7 +76,7 @@ class ServiceStatus:
         """Check if service is healthy."""
         return (
             self.state == ServiceState.RUNNING
-            and self.process
+            and self.process is not None
             and self.process.poll() is None
             and self.health_check_failures < 3
         )
@@ -89,7 +90,7 @@ class ServiceWatchdog:
         self.timeout_manager = get_timeout_manager()
         self.services: dict[str, ServiceStatus] = {}
         self.is_running = False
-        self.monitor_task: asyncio.Task | None = None
+        self.monitor_task: asyncio.Task[None] | None = None
 
         # Default service configurations
         self.default_configs = {
@@ -168,78 +169,117 @@ class ServiceWatchdog:
 
     async def start_service(self, service_id: str) -> bool:
         """Start a specific service with timeout protection."""
-        if service_id not in self.services:
+        if not self._validate_service_start_request(service_id):
             return False
 
         service = self.services[service_id]
 
-        if service.state in (ServiceState.RUNNING, ServiceState.STARTING):
+        try:
+            return await self._execute_service_startup(service_id, service)
+        except Exception as e:
+            return self._handle_service_start_failure(service, service_id, e)
+
+    def _validate_service_start_request(self, service_id: str) -> bool:
+        """Validate if service can be started."""
+        if service_id not in self.services:
+            return False
+
+        service = self.services[service_id]
+        return service.state not in (ServiceState.RUNNING, ServiceState.STARTING)
+
+    async def _execute_service_startup(
+        self, service_id: str, service: ServiceStatus
+    ) -> bool:
+        """Execute the service startup process with timeout protection."""
+        async with self.timeout_manager.timeout_context(
+            f"start_service_{service_id}",
+            timeout=service.config.startup_timeout,
+            strategy=TimeoutStrategy.FAIL_FAST,
+        ):
+            self._prepare_service_startup(service)
+
+            if not await self._start_service_process(service):
+                return False
+
+            if not await self._verify_service_health(service):
+                return False
+
+            self._finalize_successful_startup(service, service_id)
             return True
 
-        try:
-            async with self.timeout_manager.timeout_context(
-                f"start_service_{service_id}",
-                timeout=service.config.startup_timeout,
-                strategy=TimeoutStrategy.FAIL_FAST,
-            ):
-                service.state = ServiceState.STARTING
-                service.last_start_time = time.time()
+    def _prepare_service_startup(self, service: ServiceStatus) -> None:
+        """Prepare service for startup."""
+        service.state = ServiceState.STARTING
+        service.last_start_time = time.time()
 
-                # Start the service process with security logging
-                security_logger = get_security_logger()
-                security_logger.log_subprocess_execution(
-                    command=service.config.command,
-                    cwd=None,
-                    env_vars_count=0,
-                    purpose="service_watchdog_start",
-                )
+    async def _start_service_process(self, service: ServiceStatus) -> bool:
+        """Start the service process and verify it's running."""
+        # Start the service process with security logging
+        security_logger = get_security_logger()
+        security_logger.log_subprocess_execution(
+            command=service.config.command,
+            purpose="service_watchdog_start",
+        )
 
-                service.process = subprocess.Popen(
-                    service.config.command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    start_new_session=True,
-                )
+        service.process = subprocess.Popen(
+            service.config.command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True,
+        )
 
-                # Wait for process to stabilize
-                await asyncio.sleep(2)
+        # Wait for process to stabilize
+        await asyncio.sleep(2)
 
-                # Check if process is still running
-                if service.process.poll() is not None:
-                    service.state = ServiceState.FAILED
-                    service.last_error = "Process exited immediately"
-                    return False
-
-                # Perform health check if configured
-                if service.config.health_check_url:
-                    health_ok = await self._perform_health_check(service)
-                    if not health_ok:
-                        await self._terminate_process(service)
-                        service.state = ServiceState.FAILED
-                        service.last_error = "Health check failed"
-                        return False
-
-                service.state = ServiceState.RUNNING
-                service.consecutive_failures = 0
-                service.health_check_failures = 0
-
-                self.console.print(f"[green]✅ Started {service.config.name}[/green]")
-                logger.info(f"Started service {service_id}")
-                return True
-
-        except Exception as e:
+        # Check if process is still running
+        if service.process.poll() is not None:
             service.state = ServiceState.FAILED
-            service.last_error = str(e)
-            service.consecutive_failures += 1
-
-            if service.process:
-                await self._terminate_process(service)
-
-            self.console.print(
-                f"[red]❌ Failed to start {service.config.name}: {e}[/red]"
-            )
-            logger.error(f"Failed to start service {service_id}: {e}")
+            service.last_error = "Process exited immediately"
             return False
+
+        return True
+
+    async def _verify_service_health(self, service: ServiceStatus) -> bool:
+        """Verify service health if health check is configured."""
+        if not service.config.health_check_url:
+            return True
+
+        health_ok = await self._perform_health_check(service)
+        if not health_ok:
+            await self._terminate_process(service)
+            service.state = ServiceState.FAILED
+            service.last_error = "Health check failed"
+            return False
+
+        return True
+
+    def _finalize_successful_startup(
+        self, service: ServiceStatus, service_id: str
+    ) -> None:
+        """Finalize successful service startup."""
+        service.state = ServiceState.RUNNING
+        service.consecutive_failures = 0
+        service.health_check_failures = 0
+
+        self.console.print(f"[green]✅ Started {service.config.name}[/green]")
+        logger.info(f"Started service {service_id}")
+
+    def _handle_service_start_failure(
+        self, service: ServiceStatus, service_id: str, error: Exception
+    ) -> bool:
+        """Handle service startup failure."""
+        service.state = ServiceState.FAILED
+        service.last_error = str(error)
+        service.consecutive_failures += 1
+
+        if service.process:
+            asyncio.create_task(self._terminate_process(service))
+
+        self.console.print(
+            f"[red]❌ Failed to start {service.config.name}: {error}[/red]"
+        )
+        logger.error(f"Failed to start service {service_id}: {error}")
+        return False
 
     async def stop_service(self, service_id: str) -> bool:
         """Stop a specific service with timeout protection."""
@@ -365,12 +405,10 @@ class ServiceWatchdog:
         except Exception as e:
             logger.warning(f"Error terminating process: {e}")
             # Last resort: force kill
-            try:
+            with contextlib.suppress(Exception):
                 service.process.kill()
-            except Exception:
-                pass
 
-    async def _wait_for_process_exit(self, process: subprocess.Popen) -> None:
+    async def _wait_for_process_exit(self, process: subprocess.Popen[bytes]) -> None:
         """Wait for process to exit."""
         while process.poll() is None:
             await asyncio.sleep(0.1)
@@ -378,7 +416,9 @@ class ServiceWatchdog:
     def _setup_signal_handlers(self) -> None:
         """Setup signal handlers for graceful shutdown."""
 
-        def signal_handler(signum, frame):
+        def signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
+            """Handle termination signals."""
+            _ = frame  # Signal handler frame - required by signal API
             logger.info(f"Received signal {signum}, stopping watchdog...")
             asyncio.create_task(self.stop_watchdog())
 
@@ -407,7 +447,7 @@ class ServiceWatchdog:
         table.add_column("Status")
         table.add_column("Uptime")
 
-        for service_id, service in self.services.items():
+        for service in self.services.values():
             # Status emoji and color
             if service.state == ServiceState.RUNNING and service.is_healthy:
                 status = "[green]🟢 Running[/green]"

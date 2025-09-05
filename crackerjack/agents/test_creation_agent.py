@@ -15,7 +15,6 @@ from .base import (
 class TestCreationAgent(SubAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.test_frameworks = ["pytest", "unittest"]
 
     def get_supported_types(self) -> set[IssueType]:
         return {
@@ -564,34 +563,12 @@ from {module_name} import *
 
 
 class Test{module_file.stem.title()}:
+    """Test class for {module_name}."""
 
     def test_module_imports(self):
-
+        """Test that the module can be imported."""
         import {module_name}
         assert {module_name} is not None
-
-    def test_{func["name"]}_basic(self):
-
-        try:
-            result = {func["name"]}()
-            assert result is not None or result is None
-        except TypeError:
-
-            pytest.skip("Function requires specific arguments - manual implementation needed")
-        except Exception as e:
-            pytest.fail(f"Unexpected error in {func["name"]}: {{e}}")
-
-    def test_{cls["name"].lower()}_creation(self):
-
-        try:
-            instance = {cls["name"]}()
-            assert instance is not None
-            assert isinstance(instance, {cls["name"]})
-        except TypeError:
-
-            pytest.skip("Class requires specific constructor arguments - manual implementation needed")
-        except Exception as e:
-            pytest.fail(f"Unexpected error creating {cls["name"]}: {{e}}")
 '''
 
     async def _generate_minimal_test_file(self, func_info: dict[str, Any]) -> str:
@@ -615,6 +592,119 @@ from {module_name} import {func_info["name"]}
             return ".".join(parts)
         except ValueError:
             return file_path.stem
+
+    async def _generate_function_test(self, func_info: dict[str, Any]) -> str:
+        """Generate a test for a specific function."""
+        func_name = func_info["name"]
+        args = func_info.get("args", [])
+
+        # Generate basic test template
+        test_template = f'''def test_{func_name}_basic(self):
+    """Test basic functionality of {func_name}."""
+    try:
+        # Basic test - may need manual implementation for specific arguments
+        result = {func_name}({self._generate_default_args(args)})
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip("Function requires specific arguments - manual implementation needed")
+    except Exception as e:
+        pytest.fail(f"Unexpected error in {func_name}: {{e}}")'''
+
+        return test_template
+
+    def _generate_function_tests(self, functions: list[dict[str, Any]]) -> str:
+        """Generate test methods for multiple functions."""
+        if not functions:
+            return ""
+
+        test_methods = []
+        for func in functions:
+            func_name = func["name"]
+            args = func.get("args", [])
+
+            test_method = f'''
+    def test_{func_name}_basic(self):
+        """Test basic functionality of {func_name}."""
+        try:
+            result = {func_name}({self._generate_default_args(args)})
+            assert result is not None or result is None
+        except TypeError:
+            pytest.skip("Function requires specific arguments - manual implementation needed")
+        except Exception as e:
+            pytest.fail(f"Unexpected error in {func_name}: {{e}}")'''
+
+            test_methods.append(test_method)
+
+        return "\n".join(test_methods)
+
+    def _generate_class_tests(self, classes: list[dict[str, Any]]) -> str:
+        """Generate test methods for multiple classes."""
+        if not classes:
+            return ""
+
+        test_methods = []
+        for cls in classes:
+            class_name = cls["name"]
+            methods = cls.get("methods", [])
+
+            # Basic class instantiation test
+            test_method = f'''
+    def test_{class_name.lower()}_creation(self):
+        """Test creation of {class_name} instance."""
+        try:
+            instance = {class_name}()
+            assert instance is not None
+            assert isinstance(instance, {class_name})
+        except TypeError:
+            pytest.skip("Class requires specific constructor arguments - manual implementation needed")
+        except Exception as e:
+            pytest.fail(f"Unexpected error creating {class_name}: {{e}}")'''
+
+            test_methods.append(test_method)
+
+            # Add tests for public methods
+            for method in methods[:3]:  # Limit to first 3 methods
+                method_test = f'''
+    def test_{class_name.lower()}_{method}_basic(self):
+        """Test basic functionality of {class_name}.{method}."""
+        try:
+            instance = {class_name}()
+            result = getattr(instance, "{method}", None)
+            assert result is not None
+        except (TypeError, AttributeError):
+            pytest.skip("Method requires specific implementation - manual test needed")
+        except Exception as e:
+            pytest.fail(f"Unexpected error in {class_name}.{method}: {{e}}")'''
+
+                test_methods.append(method_test)
+
+        return "\n".join(test_methods)
+
+    def _generate_default_args(self, args: list[str]) -> str:
+        """Generate default arguments for function calls."""
+        if not args or args == ["self"]:
+            return ""
+
+        # Filter out 'self' parameter
+        filtered_args = [arg for arg in args if arg != "self"]
+        if not filtered_args:
+            return ""
+
+        # Generate placeholder arguments
+        placeholders = []
+        for arg in filtered_args:
+            if "path" in arg.lower():
+                placeholders.append('Path("test")')
+            elif "str" in arg.lower() or "name" in arg.lower():
+                placeholders.append('"test"')
+            elif "int" in arg.lower() or "count" in arg.lower():
+                placeholders.append("1")
+            elif "bool" in arg.lower():
+                placeholders.append("True")
+            else:
+                placeholders.append("None")
+
+        return ", ".join(placeholders)
 
 
 agent_registry.register(TestCreationAgent)

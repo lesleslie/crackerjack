@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import signal
 import subprocess
 import tempfile
@@ -46,11 +47,9 @@ class WebSocketServer:
 
         # Clean up job manager connections
         if self.job_manager:
-            try:
+            with contextlib.suppress(Exception):
                 # Give existing connections 5 seconds to close
                 asyncio.create_task(self._graceful_shutdown())
-            except Exception:
-                pass
 
     async def _graceful_shutdown(self) -> None:
         """Gracefully shutdown WebSocket connections."""

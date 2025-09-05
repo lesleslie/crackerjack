@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import operator
 import typing as t
 from collections import defaultdict
 
@@ -11,7 +10,6 @@ from .base import (
     FixResult,
     Issue,
     IssueType,
-    Priority,
     SubAgent,
     agent_registry,
 )
@@ -62,40 +60,7 @@ class AgentCoordinator:
 
         return overall_result
 
-    async def handle_single_issue(self, issue: Issue) -> FixResult:
-        if not self.agents:
-            self.initialize_agents()
-
-        cache_key = issue.context_key
-        if cache_key in self._issue_cache:
-            cached_result = self._issue_cache[cache_key]
-            self.logger.info(f"Using cached result for {cache_key}")
-            self.tracker.track_cache_hit()
-            return cached_result
-
-        self.tracker.track_cache_miss()
-
-        agent_scores = await self._evaluate_agents_for_issue(issue)
-
-        if not agent_scores:
-            self.logger.warning(f"No agents can handle issue: {issue.message}")
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"No agent available for: {issue.message}"],
-                recommendations=["Manual intervention required"],
-            )
-
-        best_agent, best_score = agent_scores[0]
-
-        if best_score >= self._collaboration_threshold:
-            result = await self._handle_with_single_agent(best_agent, issue)
-        else:
-            result = await self._handle_with_collaboration(agent_scores[:3], issue)
-
-        self._issue_cache[cache_key] = result
-
-        return result
+    # Removed unused method: handle_single_issue
 
     async def _handle_issues_by_type(
         self,
@@ -138,23 +103,6 @@ class AgentCoordinator:
                 combined_result.remaining_issues.append(f"Agent failed: {result}")
 
         return combined_result
-
-    async def _evaluate_agents_for_issue(
-        self,
-        issue: Issue,
-    ) -> list[tuple[SubAgent, float]]:
-        evaluations: list[tuple[SubAgent, float]] = []
-
-        for agent in self.agents:
-            try:
-                confidence = await agent.can_handle(issue)
-                if confidence > 0.0:
-                    evaluations.append((agent, confidence))
-            except Exception as e:
-                self.logger.exception(f"Error evaluating {agent.name} for issue: {e}")
-
-        evaluations.sort(key=operator.itemgetter(1), reverse=True)
-        return evaluations
 
     async def _find_best_specialist(
         self,
@@ -226,45 +174,6 @@ class AgentCoordinator:
             self.tracker.track_agent_complete(agent.name, error_result)
             return error_result
 
-    async def _handle_with_collaboration(
-        self,
-        agent_scores: list[tuple[SubAgent, float]],
-        issue: Issue,
-    ) -> FixResult:
-        self.logger.info(
-            f"Using collaborative approach for issue: {issue.message[:100]}",
-        )
-
-        results: list[FixResult] = []
-
-        for agent, _ in agent_scores:
-            try:
-                result = await agent.analyze_and_fix(issue)
-                results.append(result)
-
-                if result.success and result.confidence >= 0.8:
-                    self.logger.info(f"{agent.name} solved issue with high confidence")
-                    break
-
-            except Exception as e:
-                self.logger.exception(f"Collaborative agent {agent.name} failed: {e}")
-                results.append(
-                    FixResult(
-                        success=False,
-                        confidence=0.0,
-                        remaining_issues=[f"{agent.name} failed: {e}"],
-                    ),
-                )
-
-        if not results:
-            return FixResult(success=False, confidence=0.0)
-
-        combined_result = results[0]
-        for result in results[1:]:
-            combined_result = combined_result.merge_with(result)
-
-        return combined_result
-
     def _group_issues_by_type(
         self,
         issues: list[Issue],
@@ -285,32 +194,6 @@ class AgentCoordinator:
                 "class": agent.__class__.__name__,
             }
         return capabilities
-
-    def clear_cache(self) -> None:
-        self._issue_cache.clear()
-        self.logger.info("Cleared issue cache")
-
-    async def test_agent_connectivity(self) -> dict[str, bool]:
-        if not self.agents:
-            self.initialize_agents()
-
-        test_issue = Issue(
-            id="test",
-            type=IssueType.FORMATTING,
-            severity=Priority.LOW,
-            message="Test connectivity",
-        )
-
-        connectivity = {}
-        for agent in self.agents:
-            try:
-                confidence = await agent.can_handle(test_issue)
-                connectivity[agent.name] = confidence >= 0.0
-            except Exception as e:
-                self.logger.exception(f"Connectivity test failed for {agent.name}: {e}")
-                connectivity[agent.name] = False
-
-        return connectivity
 
     async def handle_issues_proactively(self, issues: list[Issue]) -> FixResult:
         if not self.proactive_mode:

@@ -5,11 +5,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
-from crackerjack.agents.coordinator import AgentCoordinator
 from rich.console import Console
 from rich.live import Live
 from rich.table import Table
+
+from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
+from crackerjack.agents.coordinator import AgentCoordinator
 
 
 @dataclass

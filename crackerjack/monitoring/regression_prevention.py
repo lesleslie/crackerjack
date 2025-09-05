@@ -6,10 +6,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from crackerjack.agents.base import FixResult, Issue, IssueType
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from crackerjack.agents.base import FixResult, Issue, IssueType
 
 
 @dataclass

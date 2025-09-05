@@ -593,5 +593,6 @@ def authenticate_status_request(
         AuthenticationError: If authentication fails
     """
 
-    authenticator = get_status_authenticator()
-    return authenticator.authenticate_request(auth_header, client_ip, operation)
+    return get_status_authenticator().authenticate_request(
+        auth_header, client_ip, operation
+    )

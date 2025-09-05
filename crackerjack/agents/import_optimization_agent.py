@@ -25,7 +25,6 @@ class ImportOptimizationAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.preferred_style = "from_import"
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.IMPORT_ERROR, IssueType.DEAD_CODE}
@@ -250,32 +249,7 @@ class ImportOptimizationAgent(SubAgent):
 
         return lines
 
-    async def get_diagnostics(self) -> dict[str, t.Any]:
-        diagnostics = {
-            "files_analyzed": 0,
-            "mixed_import_files": 0,
-            "total_mixed_modules": 0,
-            "redundant_imports": 0,
-            "optimization_opportunities": 0,
-        }
-
-        for py_file in self.context.project_path.rglob("*.py"):
-            if py_file.name.startswith("."):
-                continue
-
-            analysis = await self.analyze_file(py_file)
-            diagnostics["files_analyzed"] += 1
-
-            if analysis.mixed_imports:
-                diagnostics["mixed_import_files"] += 1
-                diagnostics["total_mixed_modules"] += len(analysis.mixed_imports)
-
-            diagnostics["redundant_imports"] += len(analysis.redundant_imports)
-            diagnostics["optimization_opportunities"] += len(
-                analysis.optimization_opportunities,
-            )
-
-        return diagnostics
+    # Removed unused method: get_diagnostics
 
 
 agent_registry.register(ImportOptimizationAgent)

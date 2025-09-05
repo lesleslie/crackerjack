@@ -289,9 +289,9 @@ class MCPServerContext:
             uuid.UUID(job_id)
             return True
 
-        import re
+        from crackerjack.services.regex_patterns import is_valid_job_id
 
-        if not re.match(r"^[a - zA - Z0-9_ -]+$", job_id):
+        if not is_valid_job_id(job_id):
             return False
 
         if ".." in job_id or "/" in job_id or "\\" in job_id:

@@ -11,8 +11,7 @@ def _create_progress_file(job_id: str) -> Path:
     import tempfile
 
     # Use secure input validation
-    validator = get_input_validator()
-    job_id_result = validator.validate_job_id(job_id)
+    job_id_result = get_input_validator().validate_job_id(job_id)
 
     if not job_id_result.valid:
         msg = f"Invalid job_id: {job_id_result.error_message}"
