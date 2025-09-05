@@ -7,6 +7,7 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
+from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.logging import LoggingContext, get_logger
 
@@ -58,6 +59,7 @@ class AsyncHookExecutor:
         max_concurrent: int = 4,
         timeout: int = 300,
         quiet: bool = False,
+        hook_lock_manager: HookLockManagerProtocol | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -67,6 +69,17 @@ class AsyncHookExecutor:
         self.logger = get_logger("crackerjack.async_hook_executor")
 
         self._semaphore = asyncio.Semaphore(max_concurrent)
+
+        # Use dependency injection for hook lock manager
+        if hook_lock_manager is None:
+            # Import here to avoid circular imports
+            from crackerjack.executors.hook_lock_manager import (
+                hook_lock_manager as default_manager,
+            )
+
+            self.hook_lock_manager = default_manager
+        else:
+            self.hook_lock_manager = hook_lock_manager
 
     async def execute_strategy(
         self,
@@ -128,6 +141,21 @@ class AsyncHookExecutor:
                 success=success,
                 performance_gain=performance_gain,
             )
+
+    def get_lock_statistics(self) -> dict[str, t.Any]:
+        """Get comprehensive lock usage statistics for monitoring."""
+        return self.hook_lock_manager.get_lock_stats()
+
+    def get_comprehensive_status(self) -> dict[str, t.Any]:
+        """Get comprehensive status including lock manager status."""
+        return {
+            "executor_config": {
+                "max_concurrent": self.max_concurrent,
+                "timeout": self.timeout,
+                "quiet": self.quiet,
+            },
+            "lock_manager_status": self.hook_lock_manager.get_comprehensive_status(),
+        }
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
         self.console.print("\n" + "-" * 80)
@@ -194,7 +222,19 @@ class AsyncHookExecutor:
 
     async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
         async with self._semaphore:
-            return await self._run_hook_subprocess(hook)
+            # Check if hook requires sequential execution
+            if self.hook_lock_manager.requires_lock(hook.name):
+                self.logger.debug(
+                    f"Hook {hook.name} requires sequential execution lock"
+                )
+                if not self.quiet:
+                    self.console.print(
+                        f"[dim]🔒 {hook.name} (sequential execution)[/dim]"
+                    )
+
+            # Acquire hook-specific lock if required (e.g., for complexipy)
+            async with self.hook_lock_manager.acquire_hook_lock(hook.name):
+                return await self._run_hook_subprocess(hook)
 
     async def _run_hook_subprocess(self, hook: HookDefinition) -> HookResult:
         start_time = time.time()

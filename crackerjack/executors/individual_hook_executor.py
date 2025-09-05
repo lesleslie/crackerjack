@@ -8,6 +8,7 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy
+from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
@@ -312,13 +313,29 @@ class HookOutputParser:
 
 
 class IndividualHookExecutor:
-    def __init__(self, console: Console, pkg_path: Path) -> None:
+    def __init__(
+        self,
+        console: Console,
+        pkg_path: Path,
+        hook_lock_manager: HookLockManagerProtocol | None = None,
+    ) -> None:
         self.console = console
         self.pkg_path = pkg_path
         self.parser = HookOutputParser()
         self.progress_callback: t.Callable[[HookProgress], None] | None = None
         self.suppress_realtime_output = False
         self.progress_callback_interval = 1
+
+        # Use dependency injection for hook lock manager
+        if hook_lock_manager is None:
+            # Import here to avoid circular imports
+            from crackerjack.executors.hook_lock_manager import (
+                hook_lock_manager as default_manager,
+            )
+
+            self.hook_lock_manager = default_manager
+        else:
+            self.hook_lock_manager = hook_lock_manager
 
     def set_progress_callback(self, callback: t.Callable[[HookProgress], None]) -> None:
         self.progress_callback = callback
@@ -409,33 +426,45 @@ class IndividualHookExecutor:
         if self.progress_callback:
             self.progress_callback(progress)
 
-        self.console.print(f"\n[bold cyan]🔍 Running {hook.name}[/ bold cyan]")
+        # Check if this hook requires a lock for sequential execution
+        if self.hook_lock_manager.requires_lock(hook.name):
+            self.console.print(
+                f"\n[bold cyan]🔍 Running {hook.name} (with lock)[/ bold cyan]"
+            )
+        else:
+            self.console.print(f"\n[bold cyan]🔍 Running {hook.name}[/ bold cyan]")
 
         cmd = hook.get_command()
 
         try:
-            result = await self._run_command_with_streaming(cmd, hook.timeout, progress)
+            # Acquire lock if the hook requires it
+            async with self.hook_lock_manager.acquire_hook_lock(hook.name):
+                result = await self._run_command_with_streaming(
+                    cmd, hook.timeout, progress
+                )
 
-            parsed_output = self.parser.parse_hook_output(
-                hook.name,
-                progress.output_lines or [],
-            )
-            progress.errors_found = len(parsed_output["errors"])
-            progress.warnings_found = len(parsed_output["warnings"])
-            progress.files_processed = parsed_output["files_processed"]
-            progress.lines_processed = parsed_output["total_lines"]
-            progress.error_details = parsed_output["errors"] + parsed_output["warnings"]
+                parsed_output = self.parser.parse_hook_output(
+                    hook.name,
+                    progress.output_lines or [],
+                )
+                progress.errors_found = len(parsed_output["errors"])
+                progress.warnings_found = len(parsed_output["warnings"])
+                progress.files_processed = parsed_output["files_processed"]
+                progress.lines_processed = parsed_output["total_lines"]
+                progress.error_details = (
+                    parsed_output["errors"] + parsed_output["warnings"]
+                )
 
-            hook_result = HookResult(
-                id=hook.name,
-                name=hook.name,
-                status="passed" if result.returncode == 0 else "failed",
-                duration=progress.duration or 0,
-            )
+                hook_result = HookResult(
+                    id=hook.name,
+                    name=hook.name,
+                    status="passed" if result.returncode == 0 else "failed",
+                    duration=progress.duration or 0,
+                )
 
-            self._print_hook_summary(hook.name, hook_result, progress)
+                self._print_hook_summary(hook.name, hook_result, progress)
 
-            return hook_result
+                return hook_result
 
         except TimeoutError:
             progress.status = "failed"
@@ -447,6 +476,17 @@ class IndividualHookExecutor:
                 name=hook.name,
                 status="failed",
                 duration=hook.timeout,
+            )
+        except Exception as e:
+            progress.status = "failed"
+            error_msg = f"Hook {hook.name} failed with error: {str(e)}"
+            self.console.print(f"[red]❌ {error_msg}[/ red]")
+
+            return HookResult(
+                id=hook.name,
+                name=hook.name,
+                status="failed",
+                duration=progress.duration or 0,
             )
 
     async def _run_command_with_streaming(

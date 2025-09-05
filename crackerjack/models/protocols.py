@@ -1,5 +1,6 @@
 import subprocess
 import typing as t
+from pathlib import Path
 
 
 @t.runtime_checkable
@@ -46,6 +47,10 @@ class OptionsProtocol(t.Protocol):
     enterprise_batch: str | None = None
     monitor_dashboard: str | None = None
     skip_config_merge: bool = False
+    disable_global_locks: bool = False
+    global_lock_timeout: int = 600
+    global_lock_cleanup: bool = True
+    global_lock_dir: str | None = None
 
 
 @t.runtime_checkable
@@ -162,3 +167,111 @@ class ConfigMergeServiceProtocol(t.Protocol):
         config: dict[str, t.Any],
         target_path: str | t.Any,
     ) -> None: ...
+
+
+@t.runtime_checkable
+class HookLockManagerProtocol(t.Protocol):
+    """Protocol for managing hook-specific locks to prevent concurrent execution."""
+
+    def requires_lock(self, hook_name: str) -> bool:
+        """Check if a hook requires sequential execution.
+
+        Args:
+            hook_name: Name of the hook to check
+
+        Returns:
+            True if the hook requires a lock for sequential execution
+        """
+        ...
+
+    async def acquire_hook_lock(self, hook_name: str) -> t.AsyncContextManager[None]:
+        """Acquire a lock for the specified hook if it requires one.
+
+        Args:
+            hook_name: Name of the hook to lock
+
+        Returns:
+            Async context manager for lock acquisition
+        """
+        ...
+
+    def get_lock_stats(self) -> dict[str, t.Any]:
+        """Get statistics about lock usage for monitoring.
+
+        Returns:
+            Dict containing lock statistics per hook
+        """
+        ...
+
+    def add_hook_to_lock_list(self, hook_name: str) -> None:
+        """Add a hook to the list requiring sequential execution.
+
+        Args:
+            hook_name: Name of the hook to add
+        """
+        ...
+
+    def remove_hook_from_lock_list(self, hook_name: str) -> None:
+        """Remove a hook from the list requiring sequential execution.
+
+        Args:
+            hook_name: Name of the hook to remove
+        """
+        ...
+
+    def is_hook_currently_locked(self, hook_name: str) -> bool:
+        """Check if a hook is currently locked.
+
+        Args:
+            hook_name: Name of the hook to check
+
+        Returns:
+            True if the hook is currently locked
+        """
+        ...
+
+    def enable_global_lock(self, enabled: bool = True) -> None:
+        """Enable or disable global lock functionality.
+
+        Args:
+            enabled: Whether to enable global locking
+        """
+        ...
+
+    def is_global_lock_enabled(self) -> bool:
+        """Check if global lock functionality is enabled.
+
+        Returns:
+            True if global locking is enabled
+        """
+        ...
+
+    def get_global_lock_path(self, hook_name: str) -> Path:
+        """Get the filesystem path for a hook's global lock file.
+
+        Args:
+            hook_name: Name of the hook
+
+        Returns:
+            Path to the lock file for the hook
+        """
+        ...
+
+    def cleanup_stale_locks(self, max_age_hours: float = 2.0) -> int:
+        """Clean up stale lock files older than max_age_hours.
+
+        Args:
+            max_age_hours: Maximum age in hours before a lock is considered stale
+
+        Returns:
+            Number of stale locks cleaned up
+        """
+        ...
+
+    def get_global_lock_stats(self) -> dict[str, t.Any]:
+        """Get comprehensive statistics about global lock usage.
+
+        Returns:
+            Dictionary containing global lock statistics and metrics
+        """
+        ...

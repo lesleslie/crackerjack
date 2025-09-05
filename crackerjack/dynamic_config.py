@@ -301,7 +301,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "repo": "https://github.com/rohaquinlop/complexipy-pre-commit",
             "rev": "v3.3.0",
             "tier": 3,
-            "time_estimate": 2.0,
+            "time_estimate": 1.0,
             "stages": ["pre-push", "manual"],
             "args": ["-d", "low"],
             "files": r"^crackerjack/.*\.py$",

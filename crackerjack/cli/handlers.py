@@ -160,6 +160,11 @@ def handle_standard_mode(
 
     console = Console()
 
+    # Configure global lock manager from CLI options
+    from crackerjack.executors.hook_lock_manager import hook_lock_manager
+
+    hook_lock_manager.configure_from_options(options)
+
     if orchestrated:
         handle_orchestrated_mode(options, job_id)
     else:
@@ -198,6 +203,11 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
 
     console = Console()
     console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
+
+    # Configure global lock manager from CLI options
+    from crackerjack.executors.hook_lock_manager import hook_lock_manager
+
+    hook_lock_manager.configure_from_options(options)
 
     try:
         from crackerjack.core.session_coordinator import SessionCoordinator

@@ -168,6 +168,10 @@ def main(
     coverage_goal: float | None = CLI_OPTIONS["coverage_goal"],
     no_coverage_ratchet: bool = CLI_OPTIONS["no_coverage_ratchet"],
     boost_coverage: bool = CLI_OPTIONS["boost_coverage"],
+    disable_global_locks: bool = CLI_OPTIONS["disable_global_locks"],
+    global_lock_timeout: int = CLI_OPTIONS["global_lock_timeout"],
+    global_lock_cleanup: bool = CLI_OPTIONS["global_lock_cleanup"],
+    global_lock_dir: str | None = CLI_OPTIONS["global_lock_dir"],
 ) -> None:
     options = create_options(
         commit,
@@ -205,6 +209,10 @@ def main(
         coverage_goal,
         no_coverage_ratchet,
         boost_coverage,
+        disable_global_locks,
+        global_lock_timeout,
+        global_lock_cleanup,
+        global_lock_dir,
     )
 
     if ai_debug:

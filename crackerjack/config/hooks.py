@@ -159,7 +159,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="complexipy",
         command=[],  # Dynamically built by get_command()
-        timeout=120,
+        timeout=60,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
     ),

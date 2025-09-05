@@ -6,7 +6,6 @@ leaking sensitive system information such as absolute paths, internal URLs,
 configuration details, and other sensitive data.
 """
 
-import re
 import tempfile
 import typing as t
 from enum import Enum
@@ -224,8 +223,8 @@ class SecureStatusFormatter:
 
         # Use validated patterns for path detection
         unix_path_pattern = SAFE_PATTERNS.get("detect_absolute_unix_paths")
-        windows_path_pattern = SAFE_PATTERNS.get("detect_absolute_windows_paths")
-        
+        SAFE_PATTERNS.get("detect_absolute_windows_paths")
+
         # If patterns don't exist, create safe ones manually
         if not unix_path_pattern:
             # Create temporary patterns for path detection using safe regex utilities
@@ -238,9 +237,10 @@ class SecureStatusFormatter:
                 # Use SAFE_PATTERNS framework for compilation safety
                 try:
                     from .regex_patterns import CompiledPatternCache
+
                     compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
                     matches = compiled.findall(text)
-                    
+
                     for match in matches:
                         if len(match) > 3:  # Only process paths longer than 3 chars
                             try:
@@ -248,7 +248,9 @@ class SecureStatusFormatter:
                                 if abs_path.is_absolute():
                                     # Try to make relative to project root
                                     try:
-                                        rel_path = abs_path.relative_to(self.project_root)
+                                        rel_path = abs_path.relative_to(
+                                            self.project_root
+                                        )
                                         text = text.replace(match, f"./{rel_path}")
                                     except (ValueError, OSError):
                                         # If not within project, mask it
@@ -279,21 +281,22 @@ class SecureStatusFormatter:
         # Use validated patterns for secret detection
         long_alphanumeric = SAFE_PATTERNS.get("detect_long_alphanumeric_tokens")
         base64_like = SAFE_PATTERNS.get("detect_base64_like_strings")
-        
+
         patterns_to_check = []
         if long_alphanumeric:
             patterns_to_check.append(long_alphanumeric)
         if base64_like:
             patterns_to_check.append(base64_like)
-            
+
         # Fall back to safe manual patterns if registry patterns don't exist
         if not patterns_to_check:
             for pattern_str in self.SENSITIVE_PATTERNS["secrets"]:
                 try:
                     from .regex_patterns import CompiledPatternCache
+
                     compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
                     matches = compiled.findall(text)
-                    
+
                     for match in matches:
                         if len(match) > 16:  # Only mask long strings
                             # Don't mask if it looks like a URL or path component

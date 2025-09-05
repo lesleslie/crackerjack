@@ -69,6 +69,10 @@ class Options(BaseModel):
     coverage_goal: float | None = None
     no_coverage_ratchet: bool = False
     skip_config_merge: bool = False
+    disable_global_locks: bool = False
+    global_lock_timeout: int = 600
+    global_lock_cleanup: bool = True
+    global_lock_dir: str | None = None
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -331,6 +335,26 @@ CLI_OPTIONS = {
         "--boost-coverage/--no-boost-coverage",
         help="Automatically improve test coverage after successful workflow execution (default: True).",
     ),
+    "disable_global_locks": typer.Option(
+        False,
+        "--disable-global-locks",
+        help="Disable global locking (allow concurrent hook execution across sessions).",
+    ),
+    "global_lock_timeout": typer.Option(
+        600,
+        "--global-lock-timeout",
+        help="Global lock timeout in seconds (default: 600).",
+    ),
+    "global_lock_cleanup": typer.Option(
+        True,
+        "--cleanup-stale-locks/--no-cleanup-stale-locks",
+        help="Clean up stale global lock files before execution (default: True).",
+    ),
+    "global_lock_dir": typer.Option(
+        None,
+        "--global-lock-dir",
+        help="Custom directory for global lock files (default: ~/.crackerjack/locks).",
+    ),
 }
 
 
@@ -370,6 +394,10 @@ def create_options(
     coverage_goal: float | None,
     no_coverage_ratchet: bool,
     boost_coverage: bool,
+    disable_global_locks: bool,
+    global_lock_timeout: int,
+    global_lock_cleanup: bool,
+    global_lock_dir: str | None,
 ) -> Options:
     return Options(
         commit=commit,
@@ -407,4 +435,8 @@ def create_options(
         coverage_goal=coverage_goal,
         no_coverage_ratchet=no_coverage_ratchet,
         boost_coverage=boost_coverage,
+        disable_global_locks=disable_global_locks,
+        global_lock_timeout=global_lock_timeout,
+        global_lock_cleanup=global_lock_cleanup,
+        global_lock_dir=global_lock_dir,
     )
