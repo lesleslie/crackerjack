@@ -45,6 +45,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - fix: resolve bug in parser
 
+## [Unreleased] - 2025-09-05
+
+### Added
+
+- feat: add new feature
+
+### Fixed
+
+- fix: resolve bug in parser
+
 ## [Unreleased] - 2025-09-04
 
 ### Added

@@ -2170,6 +2170,170 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         ],
         description="Replace string concatenation with list append for performance optimization",
     ),
+    # Enhanced performance patterns for PerformanceAgent optimization
+    "nested_loop_detection_pattern": ValidatedPattern(
+        name="nested_loop_detection_pattern",
+        pattern=r"(\s*)(for\s+\w+\s+in\s+.*:)",
+        replacement=r"\1# Performance: Potential nested loop - check complexity\n\1\2",
+        test_cases=[
+            (
+                "    for j in other:",
+                "    # Performance: Potential nested loop - check complexity\n    for j in other:",
+            ),
+            (
+                "for i in items:",
+                "# Performance: Potential nested loop - check complexity\nfor i in items:",
+            ),
+        ],
+        description="Detect loop patterns that might be nested creating O(n²) complexity",
+        flags=re.MULTILINE,
+    ),
+    "list_extend_optimization_pattern": ValidatedPattern(
+        name="list_extend_optimization_pattern",
+        pattern=r"(\s*)(\w+)\s*\+=\s*\[([^]]+(?:,\s*[^]]+)*)\]",
+        replacement=r"\1\2.extend([\3])",
+        test_cases=[
+            ("    items += [a, b, c]", "    items.extend([a, b, c])"),
+            ("results += [x, y]", "results.extend([x, y])"),
+            ("  data += [single_item]", "  data.extend([single_item])"),
+        ],
+        description="Replace list concatenation with extend for better performance with multiple items",
+    ),
+    "inefficient_string_join_pattern": ValidatedPattern(
+        name="inefficient_string_join_pattern",
+        pattern=r"(\s*)(\w+)\s*=\s*([\"'])([\"'])\s*\.\s*join\(\s*\[\s*\]\s*\)",
+        replacement=r"\1\2 = \3\4  # Performance: Use empty string directly instead of join",
+        test_cases=[
+            (
+                '    text = "".join([])',
+                '    text = ""  # Performance: Use empty string directly instead of join',
+            ),
+            (
+                "result = ''.join([])",
+                "result = ''  # Performance: Use empty string directly instead of join",
+            ),
+        ],
+        description="Replace inefficient empty list join with direct empty string assignment",
+    ),
+    "repeated_len_in_loop_pattern": ValidatedPattern(
+        name="repeated_len_in_loop_pattern",
+        pattern=r"(\s*)(len\(\s*(\w+)\s*\))",
+        replacement=r"\1# Performance: Consider caching len(\3) if used repeatedly\n\1\2",
+        test_cases=[
+            (
+                "    len(items)",
+                "    # Performance: Consider caching len(items) if used repeatedly\n    len(items)",
+            ),
+            (
+                "len(data)",
+                "# Performance: Consider caching len(data) if used repeatedly\nlen(data)",
+            ),
+        ],
+        description="Suggest caching len() calls that might be repeated",
+    ),
+    "list_comprehension_optimization_pattern": ValidatedPattern(
+        name="list_comprehension_optimization_pattern",
+        pattern=r"(\s*)(\w+)\.append\(([^)]+)\)",
+        replacement=r"\1# Performance: Consider list comprehension if this is in a simple loop\n\1\2.append(\3)",
+        test_cases=[
+            (
+                "    results.append(item * 2)",
+                "    # Performance: Consider list comprehension if this is in a simple loop\n    results.append(item * 2)",
+            ),
+            (
+                "data.append(value)",
+                "# Performance: Consider list comprehension if this is in a simple loop\ndata.append(value)",
+            ),
+        ],
+        description="Suggest list comprehensions for simple append patterns",
+    ),
+    # Enhanced security patterns for improved SecurityAgent capabilities
+    "detect_crypto_weak_algorithms": ValidatedPattern(
+        name="detect_crypto_weak_algorithms",
+        pattern=r"\b(?:md4|md5|sha1|des|3des|rc4)\b",
+        replacement="[WEAK_CRYPTO_ALGORITHM]",
+        description="Detect weak cryptographic algorithms",
+        flags=re.IGNORECASE,
+        global_replace=True,
+        test_cases=[
+            ("hashlib.md5()", "hashlib.[WEAK_CRYPTO_ALGORITHM]()"),
+            ("using DES encryption", "using [WEAK_CRYPTO_ALGORITHM] encryption"),
+            ("SHA256 is good", "SHA256 is good"),  # No change
+            ("MD4 hashing", "[WEAK_CRYPTO_ALGORITHM] hashing"),
+        ],
+    ),
+    "detect_hardcoded_credentials_advanced": ValidatedPattern(
+        name="detect_hardcoded_credentials_advanced",
+        pattern=r'(?i)\b(?:password|passwd|pwd|secret|key|token|api_key|apikey)\s*[:=]\s*["\'][^"\']{3,}["\']',
+        replacement="[HARDCODED_CREDENTIAL_DETECTED]",
+        description="Detect hardcoded credentials in various formats (case insensitive)",
+        flags=re.IGNORECASE,
+        global_replace=True,
+        test_cases=[
+            ('password="secret123"', "[HARDCODED_CREDENTIAL_DETECTED]"),
+            ("API_KEY = 'abc-123-def'", "[HARDCODED_CREDENTIAL_DETECTED]"),
+            ('token: "my-secret-token"', "[HARDCODED_CREDENTIAL_DETECTED]"),
+            (
+                'username = "user"',
+                'username = "user"',
+            ),  # No match - not a credential field
+        ],
+    ),
+    "detect_subprocess_shell_injection": ValidatedPattern(
+        name="detect_subprocess_shell_injection",
+        pattern=r"\bsubprocess\.\w+\([^)]*shell\s*=\s*True[^)]*\)",
+        replacement="[SHELL_INJECTION_RISK]",
+        description="Detect subprocess calls with shell=True",
+        global_replace=True,
+        test_cases=[
+            ("subprocess.run(cmd, shell=True)", "[SHELL_INJECTION_RISK]"),
+            ("subprocess.call(command, shell=True)", "[SHELL_INJECTION_RISK]"),
+            (
+                "subprocess.run(cmd, shell=False)",
+                "subprocess.run(cmd, shell=False)",
+            ),  # No change
+        ],
+    ),
+    "detect_regex_redos_vulnerable": ValidatedPattern(
+        name="detect_regex_redos_vulnerable",
+        pattern=r"\([^)]+\)[\*\+]",
+        replacement="[REDOS_VULNERABLE_PATTERN]",
+        description="Detect regex patterns vulnerable to ReDoS attacks (simplified detection)",
+        global_replace=True,
+        test_cases=[
+            ("(a+)*", "[REDOS_VULNERABLE_PATTERN]"),
+            ("(a*)+", "[REDOS_VULNERABLE_PATTERN]"),
+            ("(abc)+", "[REDOS_VULNERABLE_PATTERN]"),
+            ("simple+", "simple+"),  # No change - not vulnerable
+        ],
+    ),
+    "fix_hardcoded_jwt_secret": ValidatedPattern(
+        name="fix_hardcoded_jwt_secret",
+        pattern=r'(JWT_SECRET|jwt_secret)\s*=\s*["\'][^"\']+["\']',
+        replacement=r'\1 = os.getenv("JWT_SECRET", "")',
+        description="Replace hardcoded JWT secrets with environment variables",
+        global_replace=True,
+        test_cases=[
+            (
+                'JWT_SECRET = "hardcoded-secret"',
+                'JWT_SECRET = os.getenv("JWT_SECRET", "")',
+            ),
+            ('jwt_secret = "my-secret"', 'jwt_secret = os.getenv("JWT_SECRET", "")'),
+            ('other_var = "value"', 'other_var = "value"'),  # No change
+        ],
+    ),
+    "detect_unsafe_pickle_usage": ValidatedPattern(
+        name="detect_unsafe_pickle_usage",
+        pattern=r"\bpickle\.(loads?)\s*\(",
+        replacement=r"[UNSAFE_PICKLE_USAGE].\1(",
+        description="Detect potentially unsafe pickle usage",
+        global_replace=True,
+        test_cases=[
+            ("pickle.load(file)", "[UNSAFE_PICKLE_USAGE].load(file)"),
+            ("pickle.loads(data)", "[UNSAFE_PICKLE_USAGE].loads(data)"),
+            ("my_pickle.load(file)", "my_pickle.load(file)"),  # No change
+        ],
+    ),
 }
 
 

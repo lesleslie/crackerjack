@@ -1,4 +1,6 @@
 import ast
+import re
+import subprocess
 import typing as t
 from collections import defaultdict
 from pathlib import Path
@@ -17,7 +19,9 @@ class ImportAnalysis(t.NamedTuple):
     file_path: Path
     mixed_imports: list[str]
     redundant_imports: list[str]
+    unused_imports: list[str]
     optimization_opportunities: list[str]
+    import_violations: list[str]
 
 
 class ImportOptimizationAgent(SubAgent):
@@ -26,12 +30,17 @@ class ImportOptimizationAgent(SubAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
 
+    def log(self, message: str, level: str = "INFO") -> None:
+        """Simple logging method for the agent."""
+        print(f"[{level}] ImportOptimizationAgent: {message}")
+
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.IMPORT_ERROR, IssueType.DEAD_CODE}
 
     async def can_handle(self, issue: Issue) -> float:
+        """Determine confidence level for handling import-related issues."""
         if issue.type in self.get_supported_types():
-            return 0.9
+            return 0.85
 
         description_lower = issue.message.lower()
         import_keywords = [
@@ -39,9 +48,27 @@ class ImportOptimizationAgent(SubAgent):
             "unused import",
             "redundant import",
             "import style",
+            "mixed import",
+            "import organization",
+            "from import",
+            "star import",
+            "unused variable",
+            "defined but never used",
         ]
         if any(keyword in description_lower for keyword in import_keywords):
-            return 0.7
+            return 0.8
+
+        # Check for ruff/pyflakes import error codes
+        error_patterns = [
+            r"F401",  # unused import
+            r"F811",  # redefined unused name
+            r"F403",  # star import
+            r"F405",  # name from star import
+            r"I001",  # import sorting
+            r"I002",  # missing required import
+        ]
+        if any(re.search(pattern, issue.message) for pattern in error_patterns):
+            return 0.85
 
         return 0.0
 
@@ -49,19 +76,61 @@ class ImportOptimizationAgent(SubAgent):
         return await self.fix_issue(issue)
 
     async def analyze_file(self, file_path: Path) -> ImportAnalysis:
+        """Comprehensive import analysis including vulture dead code detection."""
         if not file_path.exists() or file_path.suffix != ".py":
-            return ImportAnalysis(file_path, [], [], [])
+            return ImportAnalysis(file_path, [], [], [], [], [])
 
         try:
             with file_path.open(encoding="utf-8") as f:
-                tree = ast.parse(f.read())
+                content = f.read()
+                tree = ast.parse(content)
         except (SyntaxError, OSError) as e:
             self.log(f"Could not parse {file_path}: {e}", level="WARNING")
-            return ImportAnalysis(file_path, [], [], [])
+            return ImportAnalysis(file_path, [], [], [], [], [])
 
-        return self._analyze_imports(file_path, tree)
+        # Get unused imports from vulture
+        unused_imports = await self._detect_unused_imports(file_path)
 
-    def _analyze_imports(self, file_path: Path, tree: ast.AST) -> ImportAnalysis:
+        # Analyze import structure
+        return self._analyze_imports(file_path, tree, content, unused_imports)
+
+    async def _detect_unused_imports(self, file_path: Path) -> list[str]:
+        """Use vulture to detect unused imports with intelligent filtering."""
+        try:
+            # Run vulture on single file to detect unused imports
+            result = subprocess.run(
+                ["uv", "run", "vulture", "--min-confidence", "80", str(file_path)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=self.context.project_path,
+            )
+
+            unused_imports = []
+            if result.returncode == 0 and result.stdout:
+                for line in result.stdout.strip().split("\n"):
+                    if line and "unused import" in line.lower():
+                        # Extract import name from vulture output
+                        # Format: "file.py:line: unused import 'name' (confidence: XX%)"
+                        import_match = re.search(
+                            r"unused import ['\"]([^'\"]+)['\"]", line
+                        )
+                        if import_match:
+                            unused_imports.append(import_match.group(1))
+
+            return unused_imports
+
+        except (
+            subprocess.TimeoutExpired,
+            subprocess.SubprocessError,
+            FileNotFoundError,
+        ):
+            # Fallback to basic AST analysis if vulture fails
+            return []
+
+    def _analyze_imports(
+        self, file_path: Path, tree: ast.AST, content: str, unused_imports: list[str]
+    ) -> ImportAnalysis:
         module_imports: dict[str, list[dict[str, t.Any]]] = defaultdict(list)
         all_imports: list[dict[str, t.Any]] = []
 
@@ -94,14 +163,17 @@ class ImportOptimizationAgent(SubAgent):
         mixed_imports = self._find_mixed_imports(module_imports)
         redundant_imports = self._find_redundant_imports(all_imports)
         optimization_opportunities = self._find_optimization_opportunities(
-            module_imports,
+            module_imports
         )
+        import_violations = self._find_import_violations(content, all_imports)
 
         return ImportAnalysis(
             file_path=file_path,
             mixed_imports=mixed_imports,
             redundant_imports=redundant_imports,
+            unused_imports=unused_imports,
             optimization_opportunities=optimization_opportunities,
+            import_violations=import_violations,
         )
 
     def _find_mixed_imports(
@@ -131,17 +203,125 @@ class ImportOptimizationAgent(SubAgent):
         self,
         module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> list[str]:
+        """Find import consolidation and optimization opportunities."""
         opportunities: list[str] = []
 
         for module, imports in module_imports.items():
             standard_imports = [imp for imp in imports if imp["type"] == "standard"]
+            from_imports = [imp for imp in imports if imp["type"] == "from"]
+
+            # Recommend consolidating multiple standard imports to from-imports
             if len(standard_imports) >= 2:
                 opportunities.append(
-                    f"Consider consolidating {len(standard_imports)} standard imports "
-                    f"from {module} to from-imports",
+                    f"Consolidate {len(standard_imports)} standard imports "
+                    f"from '{module}' into from-import style",
+                )
+
+            # Recommend combining from-imports from same module
+            if len(from_imports) >= 3:
+                opportunities.append(
+                    f"Consider combining {len(from_imports)} from-imports "
+                    f"from '{module}' into fewer lines",
                 )
 
         return opportunities
+
+    def _find_import_violations(
+        self, content: str, all_imports: list[dict[str, t.Any]]
+    ) -> list[str]:
+        """Find PEP 8 import organization violations."""
+        violations: list[str] = []
+        lines = content.splitlines()
+
+        # Check for import organization (stdlib, third-party, local)
+        self._categorize_imports(all_imports)
+
+        # Find imports that are not in PEP 8 order
+        prev_category = 0
+        for imp in all_imports:
+            module = imp.get("module", "")
+            category = self._get_import_category(module)
+
+            if category < prev_category:
+                violations.append(
+                    f"Import '{module}' should come before previous imports (PEP 8 ordering)"
+                )
+            prev_category = max(prev_category, category)
+
+        # Check for star imports
+        for line_num, line in enumerate(lines, 1):
+            if re.search(r"from\s+\w+\s+import\s+\*", line.strip()):
+                violations.append(f"Line {line_num}: Avoid star imports")
+
+        return violations
+
+    def _categorize_imports(
+        self, all_imports: list[dict[str, t.Any]]
+    ) -> dict[int, list[dict[str, t.Any]]]:
+        """Categorize imports by PEP 8 standards: 1=stdlib, 2=third-party, 3=local."""
+        categories: dict[int, list[dict[str, t.Any]]] = defaultdict(list)
+
+        for imp in all_imports:
+            module = imp.get("module", "")
+            category = self._get_import_category(module)
+            categories[category].append(imp)
+
+        return categories
+
+    def _get_import_category(self, module: str) -> int:
+        """Determine import category: 1=stdlib, 2=third-party, 3=local."""
+        if not module:
+            return 3
+
+        # Standard library modules (common ones)
+        stdlib_modules = {
+            "os",
+            "sys",
+            "json",
+            "ast",
+            "re",
+            "pathlib",
+            "subprocess",
+            "typing",
+            "collections",
+            "functools",
+            "itertools",
+            "tempfile",
+            "contextlib",
+            "dataclasses",
+            "enum",
+            "abc",
+            "asyncio",
+            "concurrent",
+            "urllib",
+            "http",
+            "socket",
+            "ssl",
+            "time",
+            "datetime",
+            "calendar",
+            "math",
+            "random",
+            "hashlib",
+            "hmac",
+            "base64",
+            "uuid",
+            "logging",
+            "warnings",
+        }
+
+        base_module = module.split(".")[0]
+
+        # Check if it's a standard library module
+        if base_module in stdlib_modules:
+            return 1
+
+        # Check if it's a local import (starts with '.' or project name)
+        if module.startswith(".") or base_module == "crackerjack":
+            return 3
+
+        # Otherwise assume third-party
+        return 2
 
     async def fix_issue(self, issue: Issue) -> FixResult:
         if issue.file_path is None:
@@ -158,7 +338,9 @@ class ImportOptimizationAgent(SubAgent):
             [
                 analysis.mixed_imports,
                 analysis.redundant_imports,
+                analysis.unused_imports,
                 analysis.optimization_opportunities,
+                analysis.import_violations,
             ],
         ):
             return FixResult(
@@ -180,6 +362,8 @@ class ImportOptimizationAgent(SubAgent):
                 f.write(optimized_content)
 
             changes: list[str] = []
+            remaining_issues: list[str] = []
+
             if analysis.mixed_imports:
                 changes.append(
                     f"Standardized mixed imports for modules: {', '.join(analysis.mixed_imports)}",
@@ -188,17 +372,34 @@ class ImportOptimizationAgent(SubAgent):
                 changes.append(
                     f"Removed {len(analysis.redundant_imports)} redundant imports",
                 )
+            if analysis.unused_imports:
+                changes.append(
+                    f"Removed {len(analysis.unused_imports)} unused imports: {', '.join(analysis.unused_imports[:3])}"
+                    + ("..." if len(analysis.unused_imports) > 3 else ""),
+                )
             if analysis.optimization_opportunities:
                 changes.append(
-                    f"Applied {len(analysis.optimization_opportunities)} optimizations",
+                    f"Applied {len(analysis.optimization_opportunities)} import consolidations",
+                )
+
+            # Report violations that couldn't be auto-fixed
+            if analysis.import_violations:
+                remaining_issues.extend(
+                    analysis.import_violations[:3]
+                )  # Limit to top 3
+
+            recommendations = [f"Optimized import statements in {file_path.name}"]
+            if remaining_issues:
+                recommendations.append(
+                    "Consider manual review for remaining PEP 8 violations"
                 )
 
             return FixResult(
                 success=True,
-                confidence=0.9,
+                confidence=0.85,
                 fixes_applied=changes,
-                remaining_issues=[],
-                recommendations=[f"Optimized import statements in {file_path.name}"],
+                remaining_issues=remaining_issues,
+                recommendations=recommendations,
                 files_modified=[str(file_path)],
             )
 
@@ -213,52 +414,239 @@ class ImportOptimizationAgent(SubAgent):
             )
 
     async def _optimize_imports(self, content: str, analysis: ImportAnalysis) -> str:
+        """Apply comprehensive import optimizations."""
         lines = content.splitlines()
 
-        for module in analysis.mixed_imports:
-            if module == "typing":
-                lines = self._consolidate_typing_imports(lines)
+        # Remove unused imports first
+        lines = self._remove_unused_imports(lines, analysis.unused_imports)
+
+        # Consolidate mixed imports to from-import style
+        lines = self._consolidate_mixed_imports(lines, analysis.mixed_imports)
+
+        # Remove redundant imports
+        lines = self._remove_redundant_imports(lines, analysis.redundant_imports)
+
+        # Apply PEP 8 import organization
+        lines = self._organize_imports_pep8(lines)
 
         return "\n".join(lines)
 
-    def _consolidate_typing_imports(self, lines: list[str]) -> list[str]:
-        typing_imports: set[str] = set()
-        lines_to_remove: list[int] = []
-        insert_position = None
+    def _remove_unused_imports(
+        self, lines: list[str], unused_imports: list[str]
+    ) -> list[str]:
+        """Remove unused imports identified by vulture."""
+        if not unused_imports:
+            return lines
 
+        # Create patterns for unused imports
+        unused_patterns = []
+        for unused in unused_imports:
+            # Pattern for 'import unused_name'
+            unused_patterns.append(re.compile(rf"^\s*import\s+{re.escape(unused)}\s*$"))
+            # Pattern for 'from module import unused_name'
+            unused_patterns.append(
+                re.compile(rf"^\s*from\s+\w+\s+import\s+.*\b{re.escape(unused)}\b")
+            )
+
+        filtered_lines = []
+        for line in lines:
+            should_remove = False
+            for pattern in unused_patterns:
+                if pattern.search(line):
+                    # Check if it's a multi-import line (from x import a, b, c)
+                    if "import" in line and "," in line:
+                        # Only remove the specific unused import, not the whole line
+                        line = self._remove_from_import_list(line, unused_imports)
+                    else:
+                        should_remove = True
+                    break
+
+            if not should_remove and line.strip():  # Keep non-empty lines
+                filtered_lines.append(line)
+
+        return filtered_lines
+
+    def _remove_from_import_list(self, line: str, unused_imports: list[str]) -> str:
+        """Remove specific imports from a multi-import line."""
+        for unused in unused_imports:
+            # Remove 'unused_name,' or ', unused_name'
+            line = re.sub(rf",?\s*{re.escape(unused)}\s*,?", ", ", line)
+            # Clean up double commas and trailing commas
+            line = re.sub(r",\s*,", ",", line)
+            line = re.sub(r",\s*$", "", line)
+            line = re.sub(r"import\s*,", "import", line)
+        return line
+
+    def _consolidate_mixed_imports(
+        self, lines: list[str], mixed_modules: list[str]
+    ) -> list[str]:
+        """Consolidate mixed import styles to prefer from-import format."""
+        if not mixed_modules:
+            return lines
+
+        module_imports: dict[str, set[str]] = defaultdict(set)
+        lines_to_remove: set[int] = set()
+        insert_positions: dict[str, int] = {}
+
+        # Collect all imports for mixed modules
         for i, line in enumerate(lines):
-            stripped = line.strip()
-            if stripped == "import typing":
-                lines_to_remove.append(i)
-                if insert_position is None:
-                    insert_position = i
-            elif stripped.startswith("from typing import "):
-                import_part = stripped[len("from typing import ") :].strip()
-                items = [item.strip() for item in import_part.split(",")]
-                typing_imports.update(items)
-                lines_to_remove.append(i)
-                if insert_position is None:
-                    insert_position = i
+            line.strip()
 
-        for i in reversed(lines_to_remove):
+            for module in mixed_modules:
+                # Match 'import module' or 'import module.submodule'
+                if re.match(rf"^\s*import\s+{re.escape(module)}(?:\.\w+)*\s*$", line):
+                    # Extract the imported name
+                    match = re.search(
+                        rf"import\s+({re.escape(module)}(?:\.\w+)*)", line
+                    )
+                    if match:
+                        import_name = match.group(1)
+                        if "." in import_name:
+                            # For submodules, import the submodule name
+                            submodule = import_name.split(".")[-1]
+                            module_imports[module].add(submodule)
+                        else:
+                            module_imports[module].add(module)
+                        lines_to_remove.add(i)
+                        if module not in insert_positions:
+                            insert_positions[module] = i
+
+                # Match 'from module import names'
+                elif re.match(rf"^\s*from\s+{re.escape(module)}\s+import\s+", line):
+                    import_part = re.sub(
+                        rf"^\s*from\s+{re.escape(module)}\s+import\s+", "", line
+                    )
+                    imports = [name.strip() for name in import_part.split(",")]
+                    module_imports[module].update(imports)
+                    lines_to_remove.add(i)
+                    if module not in insert_positions:
+                        insert_positions[module] = i
+
+        # Remove old import lines (in reverse order to preserve indices)
+        for i in sorted(lines_to_remove, reverse=True):
             del lines[i]
 
-        if typing_imports and insert_position is not None:
-            consolidated = f"from typing import {', '.join(sorted(typing_imports))}"
-            lines.insert(insert_position, consolidated)
+        # Insert consolidated from-imports
+        offset = 0
+        for module in mixed_modules:
+            if module in module_imports and module in insert_positions:
+                imports_list = sorted(module_imports[module])
+                consolidated = f"from {module} import {', '.join(imports_list)}"
+                insert_pos = insert_positions[module] - offset
+                lines.insert(insert_pos, consolidated)
+                offset += (
+                    len([i for i in lines_to_remove if i <= insert_positions[module]])
+                    - 1
+                )
 
         return lines
 
+    def _remove_redundant_imports(
+        self, lines: list[str], redundant_imports: list[str]
+    ) -> list[str]:
+        """Remove redundant/duplicate import statements."""
+        if not redundant_imports:
+            return lines
+
+        seen_imports: set[str] = set()
+        filtered_lines = []
+
+        for line in lines:
+            # Normalize the import line for comparison
+            normalized = re.sub(r"\s+", " ", line.strip())
+
+            if normalized.startswith(("import ", "from ")):
+                if normalized not in seen_imports:
+                    seen_imports.add(normalized)
+                    filtered_lines.append(line)
+                # Skip redundant imports
+            else:
+                filtered_lines.append(line)
+
+        return filtered_lines
+
+    def _organize_imports_pep8(self, lines: list[str]) -> list[str]:
+        """Organize imports according to PEP 8 standards."""
+        import_lines: list[tuple[int, str, str]] = []  # (category, line, original)
+        other_lines = []
+        import_start = -1
+        import_end = -1
+
+        # Separate import lines from other code
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith(("import ", "from ")) and not stripped.startswith(
+                "#"
+            ):
+                if import_start == -1:
+                    import_start = i
+                import_end = i
+
+                # Determine module and category
+                if stripped.startswith("import "):
+                    module = stripped.split()[1].split(".")[0]
+                else:  # from import
+                    module = stripped.split()[1]
+
+                category = self._get_import_category(module)
+                import_lines.append((category, line, stripped))
+            else:
+                if import_start != -1 and import_end != -1 and i > import_end:
+                    # We've passed the import section
+                    other_lines.append((i, line))
+                elif import_start == -1:
+                    # We haven't reached imports yet
+                    other_lines.append((i, line))
+                elif stripped == "" and import_start <= i <= import_end:
+                    # Empty line within import section - we'll reorganize these
+                    continue
+                else:
+                    other_lines.append((i, line))
+
+        if not import_lines:
+            return lines
+
+        # Sort imports by category and then alphabetically
+        import_lines.sort(key=lambda x: (x[0], x[2].lower()))
+
+        # Rebuild lines with organized imports
+        result_lines = []
+
+        # Add lines before imports
+        for i, line in other_lines:
+            if i < import_start:
+                result_lines.append(line)
+
+        # Add organized imports with proper spacing
+        current_category = 0
+        for category, line, _ in import_lines:
+            if category > current_category and current_category > 0:
+                result_lines.append("")  # Add blank line between categories
+            result_lines.append(line)
+            current_category = category
+
+        # Add lines after imports
+        if import_end < len(lines) - 1:
+            result_lines.append("")  # Blank line after imports
+            for i, line in other_lines:
+                if i > import_end:
+                    result_lines.append(line)
+
+        return result_lines
+
     async def get_diagnostics(self) -> dict[str, t.Any]:
-        """Provide diagnostics about import analysis across the project."""
+        """Provide comprehensive diagnostics about import analysis across the project."""
         try:
             # Count Python files in the project
             python_files = list(self.context.project_path.rglob("*.py"))
             files_analyzed = len(python_files)
 
-            # Analyze a sample of files for mixed imports
+            # Analyze a sample of files for comprehensive import metrics
             mixed_import_files = 0
             total_mixed_modules = 0
+            unused_import_files = 0
+            total_unused_imports = 0
+            pep8_violations = 0
 
             # Analyze first 10 files as a sample
             for file_path in python_files[:10]:
@@ -267,6 +655,11 @@ class ImportOptimizationAgent(SubAgent):
                     if analysis.mixed_imports:
                         mixed_import_files += 1
                         total_mixed_modules += len(analysis.mixed_imports)
+                    if analysis.unused_imports:
+                        unused_import_files += 1
+                        total_unused_imports += len(analysis.unused_imports)
+                    if analysis.import_violations:
+                        pep8_violations += len(analysis.import_violations)
                 except Exception:
                     continue  # Skip files that can't be analyzed
 
@@ -274,13 +667,26 @@ class ImportOptimizationAgent(SubAgent):
                 "files_analyzed": files_analyzed,
                 "mixed_import_files": mixed_import_files,
                 "total_mixed_modules": total_mixed_modules,
+                "unused_import_files": unused_import_files,
+                "total_unused_imports": total_unused_imports,
+                "pep8_violations": pep8_violations,
                 "agent": "ImportOptimizationAgent",
+                "capabilities": [
+                    "Mixed import style consolidation",
+                    "Unused import detection with vulture",
+                    "PEP 8 import organization",
+                    "Redundant import removal",
+                    "Intelligent context-aware analysis",
+                ],
             }
         except Exception as e:
             return {
                 "files_analyzed": 0,
                 "mixed_import_files": 0,
                 "total_mixed_modules": 0,
+                "unused_import_files": 0,
+                "total_unused_imports": 0,
+                "pep8_violations": 0,
                 "agent": "ImportOptimizationAgent",
                 "error": str(e),
             }

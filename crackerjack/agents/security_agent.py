@@ -24,11 +24,11 @@ class SecurityAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-        # High confidence for regex validation issues
+        # High confidence (0.95) for regex validation issues
         if issue.type == IssueType.REGEX_VALIDATION:
-            return 1.0
+            return 0.95
 
-        # High confidence for regex validation keywords
+        # High confidence (0.95) for regex validation keywords
         if any(
             keyword in message_lower
             for keyword in (
@@ -39,11 +39,12 @@ class SecurityAgent(SubAgent):
                 "replacement",
                 "unsafe regex",
                 "regex vulnerability",
+                "redos",
             )
         ):
-            return 1.0
+            return 0.95
 
-        # High confidence for known security issues
+        # High confidence (0.9) for critical security issues
         if any(
             keyword in message_lower
             for keyword in (
@@ -58,20 +59,36 @@ class SecurityAgent(SubAgent):
                 "b506",
                 "unsafe",
                 "injection",
+                "pickle",
+                "yaml.load",
+                "md5",
+                "sha1",
+                "jwt_secret",
             )
         ):
-            return 1.0
-
-        # Check if any security keywords are present
-        if SAFE_PATTERNS["detect_security_keywords"].test(issue.message):
             return 0.9
 
+        # Enhanced detection using new security patterns
+        enhanced_patterns = [
+            "detect_security_keywords",
+            "detect_crypto_weak_algorithms",
+            "detect_hardcoded_credentials_advanced",
+            "detect_subprocess_shell_injection",
+            "detect_unsafe_pickle_usage",
+        ]
+
+        for pattern_name in enhanced_patterns:
+            if SAFE_PATTERNS[pattern_name].test(issue.message):
+                return 0.9
+
+        # Medium confidence for security-related files
         if issue.file_path and any(
             keyword in issue.file_path.lower()
-            for keyword in ("security", "auth", "crypto", "password")
+            for keyword in ("security", "auth", "crypto", "password", "token", "jwt")
         ):
             return 0.7
 
+        # Base confidence for security type
         if issue.type == IssueType.SECURITY:
             return 0.6
 
@@ -102,7 +119,7 @@ class SecurityAgent(SubAgent):
             )
 
             success = len(fixes_applied) > 0
-            confidence = 0.85 if success else 0.4
+            confidence = 0.95 if success else 0.4
 
             if not success:
                 recommendations = self._get_security_recommendations()
@@ -134,6 +151,9 @@ class SecurityAgent(SubAgent):
             "unsafe_yaml": self._fix_unsafe_yaml,
             "eval_usage": self._fix_eval_usage,
             "weak_crypto": self._fix_weak_crypto,
+            "jwt_secrets": self._fix_jwt_secrets,
+            "pickle_usage": self._fix_pickle_usage,
+            "insecure_random": self._fix_insecure_random,
         }
 
         if fix_method := vulnerability_fix_map.get(vulnerability_type):
@@ -163,14 +183,21 @@ class SecurityAgent(SubAgent):
 
     def _get_security_recommendations(self) -> list[str]:
         return [
-            "Use centralized SAFE_PATTERNS for regex operations",
-            "Avoid raw regex patterns with vulnerable replacement syntax",
-            "Use tempfile module for temporary file creation",
-            "Avoid shell=True in subprocess calls",
-            "Use environment variables for secrets",
-            "Implement proper input validation",
-            "Use safe_load() instead of load() for YAML",
-            "Consider using cryptographically secure random module",
+            "Use centralized SAFE_PATTERNS for regex operations to prevent ReDoS attacks",
+            "Avoid raw regex patterns with vulnerable replacement syntax like \\g < 1 >",
+            "Use tempfile module for temporary file creation instead of hardcoded paths",
+            "Avoid shell=True in subprocess calls to prevent command injection",
+            "Store secrets in environment variables using os.getenv(), never hardcode them",
+            "Replace weak cryptographic algorithms (MD5, SHA1, DES, RC4) with stronger alternatives",
+            "Use secrets module instead of random for cryptographically secure operations",
+            "Replace unsafe yaml.load() with yaml.safe_load() to prevent code execution",
+            "Avoid pickle.load() with untrusted data as it can execute arbitrary code",
+            "Use JWT secrets from environment variables, never hardcode them",
+            "Implement proper input validation and sanitization for all user inputs",
+            "Add security comments to document potential risks in legacy code",
+            "Run bandit security scanner regularly to identify new vulnerabilities",
+            "Review all subprocess calls for potential injection vulnerabilities",
+            "Ensure all cryptographic operations use secure algorithms and proper key management",
         ]
 
     def _create_error_fix_result(self, error: Exception) -> FixResult:
@@ -189,17 +216,65 @@ class SecurityAgent(SubAgent):
         message = issue.message
 
         # Regex validation issues
-        if issue.type == IssueType.REGEX_VALIDATION or any(
-            keyword in message.lower()
+        if self._is_regex_validation_issue(issue):
+            return "regex_validation"
+
+        # Enhanced pattern-based detection
+        pattern_checks = self._check_enhanced_patterns(message)
+        if pattern_checks:
+            return pattern_checks
+
+        # Bandit code-based detection
+        bandit_checks = self._check_bandit_patterns(message)
+        if bandit_checks:
+            return bandit_checks
+
+        # Legacy pattern-based detection
+        legacy_checks = self._check_legacy_patterns(message)
+        if legacy_checks:
+            return legacy_checks
+
+        # JWT and other specific patterns
+        if self._is_jwt_secret_issue(message):
+            return "jwt_secrets"
+
+        return "unknown"
+
+    def _is_regex_validation_issue(self, issue: Issue) -> bool:
+        """Check if issue is related to regex validation."""
+        if issue.type == IssueType.REGEX_VALIDATION:
+            return True
+
+        message_lower = issue.message.lower()
+        return any(
+            keyword in message_lower
             for keyword in (
                 "validate-regex-patterns",
                 "raw regex",
                 "unsafe regex",
                 r"\g<",
+                "redos",
             )
-        ):
-            return "regex_validation"
+        )
 
+    def _check_enhanced_patterns(self, message: str) -> str | None:
+        """Check enhanced security patterns."""
+        pattern_map = {
+            "detect_crypto_weak_algorithms": "weak_crypto",
+            "detect_hardcoded_credentials_advanced": "hardcoded_secrets",
+            "detect_subprocess_shell_injection": "shell_injection",
+            "detect_unsafe_pickle_usage": "pickle_usage",
+            "detect_regex_redos_vulnerable": "regex_validation",
+        }
+
+        for pattern_name, vulnerability_type in pattern_map.items():
+            if SAFE_PATTERNS[pattern_name].test(message):
+                return vulnerability_type
+
+        return None
+
+    def _check_bandit_patterns(self, message: str) -> str | None:
+        """Check Bandit-specific patterns."""
         if "B108" in message:
             return "hardcoded_temp_paths"
         if "B602" in message or "shell=True" in message:
@@ -208,16 +283,31 @@ class SecurityAgent(SubAgent):
             return "pickle_usage"
         if "B506" in message or "yaml.load" in message:
             return "unsafe_yaml"
+        if any(crypto in message.lower() for crypto in ["md5", "sha1", "des", "rc4"]):
+            return "weak_crypto"
 
-        # Check for specific security patterns
-        if SAFE_PATTERNS["detect_hardcoded_temp_paths_basic"].test(message):
-            return "hardcoded_temp_paths"
-        if SAFE_PATTERNS["detect_hardcoded_secrets"].test(message):
-            return "hardcoded_secrets"
-        if SAFE_PATTERNS["detect_insecure_random_usage"].test(message):
-            return "insecure_random"
+        return None
 
-        return "unknown"
+    def _check_legacy_patterns(self, message: str) -> str | None:
+        """Check legacy security patterns."""
+        pattern_map = {
+            "detect_hardcoded_temp_paths_basic": "hardcoded_temp_paths",
+            "detect_hardcoded_secrets": "hardcoded_secrets",
+            "detect_insecure_random_usage": "insecure_random",
+        }
+
+        for pattern_name, vulnerability_type in pattern_map.items():
+            if SAFE_PATTERNS[pattern_name].test(message):
+                return vulnerability_type
+
+        return None
+
+    def _is_jwt_secret_issue(self, message: str) -> bool:
+        """Check if message indicates JWT secret issue."""
+        message_lower = message.lower()
+        return "jwt" in message_lower and (
+            "secret" in message_lower or "hardcoded" in message_lower
+        )
 
     async def _fix_regex_validation_issues(self, issue: Issue) -> dict[str, list[str]]:
         """Fix unsafe regex patterns by converting them to use centralized SAFE_PATTERNS."""
@@ -522,6 +612,117 @@ class SecurityAgent(SubAgent):
                 fixes.append(f"Upgraded weak cryptographic hashes in {issue.file_path}")
                 files.append(str(file_path))
                 self.log(f"Fixed weak crypto in {issue.file_path}")
+
+        return {"fixes": fixes, "files": files}
+
+    async def _fix_jwt_secrets(self, issue: Issue) -> dict[str, list[str]]:
+        """Fix hardcoded JWT secrets by replacing with environment variables."""
+        fixes: list[str] = []
+        files: list[str] = []
+
+        if not issue.file_path:
+            return {"fixes": fixes, "files": files}
+
+        file_path = Path(issue.file_path)
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return {"fixes": fixes, "files": files}
+
+        original_content = content
+
+        # Apply JWT secret fix pattern
+        content = SAFE_PATTERNS["fix_hardcoded_jwt_secret"].apply(content)
+
+        # Ensure os import is present
+        if "os.getenv" in content and "import os" not in content:
+            lines = content.split("\n")
+            import_index = 0
+            for i, line in enumerate(lines):
+                if line.strip().startswith(("import ", "from ")):
+                    import_index = i + 1
+            lines.insert(import_index, "import os")
+            content = "\n".join(lines)
+
+        if content != original_content:
+            if self.context.write_file_content(file_path, content):
+                fixes.append(f"Fixed hardcoded JWT secrets in {issue.file_path}")
+                files.append(str(file_path))
+                self.log(f"Fixed JWT secrets in {issue.file_path}")
+
+        return {"fixes": fixes, "files": files}
+
+    async def _fix_pickle_usage(self, issue: Issue) -> dict[str, list[str]]:
+        """Fix unsafe pickle usage by documenting the security risk."""
+        fixes: list[str] = []
+        files: list[str] = []
+
+        if not issue.file_path:
+            return {"fixes": fixes, "files": files}
+
+        file_path = Path(issue.file_path)
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return {"fixes": fixes, "files": files}
+
+        # For pickle usage, we document the risk rather than auto-fixing
+        # as pickle is sometimes necessary and the fix depends on context
+        fixes.append(
+            f"Documented unsafe pickle usage in {issue.file_path} - manual review required"
+        )
+
+        # Add a security comment if pickle.load/loads is found
+        if "pickle.load" in content:
+            lines = content.split("\n")
+            for i, line in enumerate(lines):
+                if "pickle.load" in line and "# SECURITY:" not in line:
+                    lines[i] = (
+                        line + "  # SECURITY: pickle.load is unsafe with untrusted data"
+                    )
+                    if self.context.write_file_content(file_path, "\n".join(lines)):
+                        fixes.append(
+                            f"Added security warning for pickle usage in {issue.file_path}"
+                        )
+                        files.append(str(file_path))
+                        self.log(
+                            f"Added security warning for pickle in {issue.file_path}"
+                        )
+                    break
+
+        return {"fixes": fixes, "files": files}
+
+    async def _fix_insecure_random(self, issue: Issue) -> dict[str, list[str]]:
+        """Fix insecure random usage by replacing with secrets module."""
+        fixes: list[str] = []
+        files: list[str] = []
+
+        if not issue.file_path:
+            return {"fixes": fixes, "files": files}
+
+        file_path = Path(issue.file_path)
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return {"fixes": fixes, "files": files}
+
+        original_content = content
+
+        # Apply insecure random fix
+        content = SAFE_PATTERNS["fix_insecure_random_choice"].apply(content)
+
+        # Ensure secrets import
+        if "secrets.choice" in content and "import secrets" not in content:
+            lines = content.split("\n")
+            import_index = 0
+            for i, line in enumerate(lines):
+                if line.strip().startswith(("import ", "from ")):
+                    import_index = i + 1
+            lines.insert(import_index, "import secrets")
+            content = "\n".join(lines)
+
+        if content != original_content:
+            if self.context.write_file_content(file_path, content):
+                fixes.append(f"Fixed insecure random usage in {issue.file_path}")
+                files.append(str(file_path))
+                self.log(f"Fixed insecure random usage in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
 
