@@ -192,8 +192,8 @@ class EnhancedFileSystemService(FileSystemInterface):
             return content
 
     def write_file(self, path: str | Path, content: str) -> None:
-        if not content:
-            raise TypeError("Content must be a non-empty string")
+        if not isinstance(content, str):
+            raise TypeError("Content must be a string")
 
         path_obj = Path(path) if isinstance(path, str) else path
 

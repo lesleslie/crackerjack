@@ -303,11 +303,8 @@ class InputSanitizer:
         try:
             path = Path(value)
 
-            # Resolve to absolute path to eliminate .. components
-            resolved = path.resolve()
-
-            # Check for dangerous components
-            for part in resolved.parts:
+            # Check for dangerous components in the original path before resolving
+            for part in path.parts:
                 if part.upper() in cls.DANGEROUS_PATH_COMPONENTS:
                     return ValidationResult(
                         valid=False,
@@ -316,18 +313,46 @@ class InputSanitizer:
                         validation_type="path_traversal",
                     )
 
-            # Check base directory constraint
+            # Check base directory constraint before resolving
             if base_directory:
                 base_resolved = base_directory.resolve()
-                try:
-                    resolved.relative_to(base_resolved)
-                except ValueError:
+
+                # If the path is absolute and doesn't start with base directory, it's invalid
+                if path.is_absolute() and not str(path).startswith(str(base_resolved)):
                     return ValidationResult(
                         valid=False,
-                        error_message=f"Path outside base directory: {resolved}",
+                        error_message=f"Path outside base directory: {path}",
                         security_level=SecurityEventLevel.CRITICAL,
                         validation_type="directory_escape",
                     )
+
+                # If the path is relative, resolve it relative to base directory
+                if not path.is_absolute():
+                    resolved = (base_resolved / path).resolve()
+                    try:
+                        resolved.relative_to(base_resolved)
+                    except ValueError:
+                        return ValidationResult(
+                            valid=False,
+                            error_message=f"Path outside base directory: {path}",
+                            security_level=SecurityEventLevel.CRITICAL,
+                            validation_type="directory_escape",
+                        )
+                else:
+                    # For absolute paths that start with base directory, resolve normally
+                    resolved = path.resolve()
+                    try:
+                        resolved.relative_to(base_resolved)
+                    except ValueError:
+                        return ValidationResult(
+                            valid=False,
+                            error_message=f"Path outside base directory: {path}",
+                            security_level=SecurityEventLevel.CRITICAL,
+                            validation_type="directory_escape",
+                        )
+            else:
+                # Resolve to absolute path to eliminate .. components if no base directory
+                resolved = path.resolve()
 
             # Check absolute path restrictions
             if not allow_absolute and resolved.is_absolute() and base_directory:

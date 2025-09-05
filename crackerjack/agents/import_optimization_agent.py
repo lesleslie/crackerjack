@@ -249,7 +249,41 @@ class ImportOptimizationAgent(SubAgent):
 
         return lines
 
-    # Removed unused method: get_diagnostics
+    async def get_diagnostics(self) -> dict[str, t.Any]:
+        """Provide diagnostics about import analysis across the project."""
+        try:
+            # Count Python files in the project
+            python_files = list(self.context.project_path.rglob("*.py"))
+            files_analyzed = len(python_files)
+
+            # Analyze a sample of files for mixed imports
+            mixed_import_files = 0
+            total_mixed_modules = 0
+
+            # Analyze first 10 files as a sample
+            for file_path in python_files[:10]:
+                try:
+                    analysis = await self.analyze_file(file_path)
+                    if analysis.mixed_imports:
+                        mixed_import_files += 1
+                        total_mixed_modules += len(analysis.mixed_imports)
+                except Exception:
+                    continue  # Skip files that can't be analyzed
+
+            return {
+                "files_analyzed": files_analyzed,
+                "mixed_import_files": mixed_import_files,
+                "total_mixed_modules": total_mixed_modules,
+                "agent": "ImportOptimizationAgent",
+            }
+        except Exception as e:
+            return {
+                "files_analyzed": 0,
+                "mixed_import_files": 0,
+                "total_mixed_modules": 0,
+                "agent": "ImportOptimizationAgent",
+                "error": str(e),
+            }
 
 
 agent_registry.register(ImportOptimizationAgent)

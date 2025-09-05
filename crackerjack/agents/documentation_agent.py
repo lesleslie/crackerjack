@@ -230,9 +230,9 @@ class DocumentationAgent(SubAgent):
                 parts = line.split("|")
                 if len(parts) >= 2:
                     change_info: dict[str, str] = {
-                        "message": parts[0],
-                        "hash": parts[1],
-                        "author": parts[2] if len(parts) > 2 else "Unknown",
+                        "message": parts[0].strip(),
+                        "hash": parts[1].strip(),
+                        "author": parts[2].strip() if len(parts) > 2 else "Unknown",
                     }
                     changes.append(change_info)
 
