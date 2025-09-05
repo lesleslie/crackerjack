@@ -1255,6 +1255,121 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("# regular comment", "# regular comment"),  # No change - no match
         ],
     ),
+    # Security agent patterns - NEW PATTERNS FOR SECURITY_AGENT.PY
+    "detect_security_keywords": ValidatedPattern(
+        name="detect_security_keywords",
+        pattern=r"(?i)(bandit|security|vulnerability|hardcoded|shell=true|b108|b602|b301|b506|unsafe|injection)",
+        replacement=r"MATCH",  # Dummy replacement for detection patterns
+        description="Detect security-related keywords in issue messages (case insensitive)",
+        flags=re.IGNORECASE,
+        test_cases=[
+            ("Bandit security issue found", "MATCH security issue found"),
+            ("VULNERABILITY detected", "MATCH detected"),
+            ("hardcoded path found", "MATCH path found"),
+            ("shell=True usage", "MATCH usage"),
+            ("B108 violation", "MATCH violation"),
+            ("normal message", "normal message"),  # No match
+        ],
+    ),
+    "detect_hardcoded_temp_paths_basic": ValidatedPattern(
+        name="detect_hardcoded_temp_paths_basic",
+        pattern=r"(?:/tmp/|/temp/|C:\\temp\\|C:\\tmp\\)",
+        replacement="[TEMP_PATH]/",
+        description="Detect hardcoded temporary directory paths",
+        global_replace=True,
+        test_cases=[
+            ("/tmp/myfile.txt", "[TEMP_PATH]/myfile.txt"),
+            (r"C:\tmp\data.log", "[TEMP_PATH]/data.log"),
+            ("/temp/cache", "[TEMP_PATH]/cache"),
+            (r"C:\temp\work", "[TEMP_PATH]/work"),
+            ("/regular/path", "/regular/path"),  # No change
+        ],
+    ),
+    "replace_hardcoded_temp_paths": ValidatedPattern(
+        name="replace_hardcoded_temp_paths",
+        pattern=r'Path\("/tmp/([^"]+)"\)',
+        replacement=r'Path(tempfile.gettempdir()) / "\1"',
+        description="Replace hardcoded /tmp paths with tempfile.gettempdir()",
+        global_replace=True,
+        test_cases=[
+            ('Path("/tmp/myfile.txt")', 'Path(tempfile.gettempdir()) / "myfile.txt"'),
+            ('Path("/tmp/data.log")', 'Path(tempfile.gettempdir()) / "data.log"'),
+            ('Path("/regular/path")', 'Path("/regular/path")'),  # No change
+        ],
+    ),
+    "replace_hardcoded_temp_strings": ValidatedPattern(
+        name="replace_hardcoded_temp_strings",
+        pattern=r'"/tmp/([^"]+)"',
+        replacement=r'str(Path(tempfile.gettempdir()) / "\1")',
+        description="Replace hardcoded /tmp string paths with tempfile equivalent",
+        global_replace=True,
+        test_cases=[
+            ('"/tmp/myfile.txt"', 'str(Path(tempfile.gettempdir()) / "myfile.txt")'),
+            ('"/tmp/data.log"', 'str(Path(tempfile.gettempdir()) / "data.log")'),
+            ('"/regular/path"', '"/regular/path"'),  # No change
+        ],
+    ),
+    "replace_hardcoded_temp_single_quotes": ValidatedPattern(
+        name="replace_hardcoded_temp_single_quotes",
+        pattern=r"'/tmp/([^']+)'",
+        replacement=r"str(Path(tempfile.gettempdir()) / '\1')",
+        description="Replace hardcoded /tmp paths (single quotes) with tempfile equivalent",
+        global_replace=True,
+        test_cases=[
+            ("'/tmp/myfile.txt'", "str(Path(tempfile.gettempdir()) / 'myfile.txt')"),
+            ("'/tmp/data.log'", "str(Path(tempfile.gettempdir()) / 'data.log')"),
+            ("'/regular/path'", "'/regular/path'"),  # No change
+        ],
+    ),
+    "replace_test_path_patterns": ValidatedPattern(
+        name="replace_test_path_patterns",
+        pattern=r'Path\("/test/path"\)',
+        replacement=r"Path(tempfile.gettempdir()) / 'test-path'",
+        description="Replace hardcoded /test/path patterns with tempfile equivalent",
+        test_cases=[
+            ('Path("/test/path")', "Path(tempfile.gettempdir()) / 'test-path'"),
+            ('Path("/other/path")', 'Path("/other/path")'),  # No change
+        ],
+    ),
+    "detect_hardcoded_secrets": ValidatedPattern(
+        name="detect_hardcoded_secrets",
+        pattern=r'\b\w*(password|secret|key|token)\w*\s*=\s*[\'"][^\'"]+[\'"]',
+        replacement="[SECRET_DETECTED]",
+        description="Detect hardcoded secrets in assignments (case insensitive)",
+        flags=re.IGNORECASE,
+        global_replace=True,
+        test_cases=[
+            ('password = "secret123"', "[SECRET_DETECTED]"),
+            ("api_key = 'abc123def'", "[SECRET_DETECTED]"),
+            ('TOKEN = "my-token-here"', "[SECRET_DETECTED]"),
+            ("username = 'user123'", "username = 'user123'"),  # No match
+        ],
+    ),
+    "extract_variable_name_from_assignment": ValidatedPattern(
+        name="extract_variable_name_from_assignment",
+        pattern=r"\s*(\w+)\s*=.*",
+        replacement=r"\1",
+        description="Extract variable name from assignment statement",
+        test_cases=[
+            ("password = 'secret'", "password"),
+            ("api_key = 'value'", "api_key"),
+            ("   token   =", "token"),  # Matches just the word part
+            ("complex_variable_name = value", "complex_variable_name"),
+        ],
+    ),
+    "detect_insecure_random_usage": ValidatedPattern(
+        name="detect_insecure_random_usage",
+        pattern=r"\brandom\.(?:random|choice)\([^)]*\)",
+        replacement="[INSECURE_RANDOM]()",
+        description="Detect insecure random module usage",
+        global_replace=True,
+        test_cases=[
+            ("random.random()", "[INSECURE_RANDOM]()"),
+            ("random.choice(options)", "[INSECURE_RANDOM]()"),
+            ("secrets.choice(options)", "secrets.choice(options)"),  # No change
+            ("my_random.choice()", "my_random.choice()"),  # No change
+        ],
+    ),
 }
 
 

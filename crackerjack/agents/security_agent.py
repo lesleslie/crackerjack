@@ -1,6 +1,6 @@
-import re
 from pathlib import Path
 
+from ..services.regex_patterns import SAFE_PATTERNS
 from .base import (
     AgentContext,
     FixResult,
@@ -14,22 +14,9 @@ from .base import (
 class SecurityAgent(SubAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.security_patterns = {
-            "hardcoded_temp_paths": r"(?:/tmp/|/temp/|C:\\temp\\|C:\\tmp\\)",
-            "shell_injection": r"shell=True|os\.system\(|subprocess\.call\([^)]*shell=True",
-            "path_traversal": r"\.\./|\.\.\\",
-            "hardcoded_secrets": r"(?:password|secret|key|token)\s*=\s*['\"][^'\"]+['\"]",
-            "unsafe_yaml": r"yaml\.load\([^)]*\)",
-            "eval_usage": r"\beval\s*\(",
-            "exec_usage": r"\bexec\s*\(",
-            "pickle_usage": r"\bpickle\.loads?\s*\(",
-            "sql_injection": r"(?:execute|query)\s*\([^)]*%[sd]",
-            "weak_crypto": r"(?:md5|sha1)\s*\(",
-            "insecure_random": r"random\.random\(\)|random\.choice\(",
-        }
 
     def get_supported_types(self) -> set[IssueType]:
-        return {IssueType.SECURITY}
+        return {IssueType.SECURITY, IssueType.REGEX_VALIDATION}
 
     async def can_handle(self, issue: Issue) -> float:
         if issue.type not in self.get_supported_types():
@@ -37,6 +24,26 @@ class SecurityAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
+        # High confidence for regex validation issues
+        if issue.type == IssueType.REGEX_VALIDATION:
+            return 1.0
+
+        # High confidence for regex validation keywords
+        if any(
+            keyword in message_lower
+            for keyword in (
+                "validate-regex-patterns",
+                "raw regex",
+                "regex pattern",
+                r"\g<",
+                "replacement",
+                "unsafe regex",
+                "regex vulnerability",
+            )
+        ):
+            return 1.0
+
+        # High confidence for known security issues
         if any(
             keyword in message_lower
             for keyword in (
@@ -55,9 +62,9 @@ class SecurityAgent(SubAgent):
         ):
             return 1.0
 
-        for pattern in self.security_patterns.values():
-            if re.search(pattern, issue.message, re.IGNORECASE):
-                return 0.9
+        # Check if any security keywords are present
+        if SAFE_PATTERNS["detect_security_keywords"].test(issue.message):
+            return 0.9
 
         if issue.file_path and any(
             keyword in issue.file_path.lower()
@@ -120,6 +127,7 @@ class SecurityAgent(SubAgent):
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         vulnerability_fix_map = {
+            "regex_validation": self._fix_regex_validation_issues,
             "hardcoded_temp_paths": self._fix_hardcoded_temp_paths,
             "shell_injection": self._fix_shell_injection,
             "hardcoded_secrets": self._fix_hardcoded_secrets,
@@ -155,6 +163,8 @@ class SecurityAgent(SubAgent):
 
     def _get_security_recommendations(self) -> list[str]:
         return [
+            "Use centralized SAFE_PATTERNS for regex operations",
+            "Avoid raw regex patterns with vulnerable replacement syntax",
             "Use tempfile module for temporary file creation",
             "Avoid shell=True in subprocess calls",
             "Use environment variables for secrets",
@@ -178,6 +188,18 @@ class SecurityAgent(SubAgent):
     def _identify_vulnerability_type(self, issue: Issue) -> str:
         message = issue.message
 
+        # Regex validation issues
+        if issue.type == IssueType.REGEX_VALIDATION or any(
+            keyword in message.lower()
+            for keyword in (
+                "validate-regex-patterns",
+                "raw regex",
+                "unsafe regex",
+                r"\g<",
+            )
+        ):
+            return "regex_validation"
+
         if "B108" in message:
             return "hardcoded_temp_paths"
         if "B602" in message or "shell=True" in message:
@@ -187,11 +209,89 @@ class SecurityAgent(SubAgent):
         if "B506" in message or "yaml.load" in message:
             return "unsafe_yaml"
 
-        for pattern_name, pattern in self.security_patterns.items():
-            if re.search(pattern, message, re.IGNORECASE):
-                return pattern_name
+        # Check for specific security patterns
+        if SAFE_PATTERNS["detect_hardcoded_temp_paths_basic"].test(message):
+            return "hardcoded_temp_paths"
+        if SAFE_PATTERNS["detect_hardcoded_secrets"].test(message):
+            return "hardcoded_secrets"
+        if SAFE_PATTERNS["detect_insecure_random_usage"].test(message):
+            return "insecure_random"
 
         return "unknown"
+
+    async def _fix_regex_validation_issues(self, issue: Issue) -> dict[str, list[str]]:
+        """Fix unsafe regex patterns by converting them to use centralized SAFE_PATTERNS."""
+        fixes: list[str] = []
+        files: list[str] = []
+
+        if not issue.file_path:
+            # If no specific file path, scan all Python files in the project
+            await self._fix_regex_patterns_project_wide(fixes, files)
+            return {"fixes": fixes, "files": files}
+
+        file_path = Path(issue.file_path)
+        if not file_path.exists():
+            return {"fixes": fixes, "files": files}
+
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return {"fixes": fixes, "files": files}
+
+        original_content = content
+        content = await self._apply_regex_pattern_fixes(content)
+
+        if content != original_content:
+            if self.context.write_file_content(file_path, content):
+                fixes.append(f"Fixed unsafe regex patterns in {issue.file_path}")
+                files.append(str(file_path))
+                self.log(f"Fixed regex patterns in {issue.file_path}")
+
+        return {"fixes": fixes, "files": files}
+
+    async def _fix_regex_patterns_project_wide(
+        self, fixes: list[str], files: list[str]
+    ) -> None:
+        """Fix regex patterns across the entire project."""
+        try:
+            # Find all Python files in the project
+            python_files = list(self.context.project_path.rglob("*.py"))
+
+            for file_path in python_files:
+                # Skip test files and virtual env
+                if any(
+                    part in str(file_path) for part in [".venv", "__pycache__", ".git"]
+                ):
+                    continue
+
+                content = self.context.get_file_content(file_path)
+                if not content:
+                    continue
+
+                original_content = content
+                content = await self._apply_regex_pattern_fixes(content)
+
+                if content != original_content:
+                    if self.context.write_file_content(file_path, content):
+                        fixes.append(f"Fixed unsafe regex patterns in {file_path}")
+                        files.append(str(file_path))
+                        self.log(f"Fixed regex patterns in {file_path}")
+        except Exception as e:
+            self.log(f"Error during project-wide regex fixes: {e}", "ERROR")
+
+    async def _apply_regex_pattern_fixes(self, content: str) -> str:
+        """Apply all regex pattern fixes using SAFE_PATTERNS."""
+        # Import regex fix utilities
+        from crackerjack.services.regex_utils import (
+            replace_unsafe_regex_with_safe_patterns,
+        )
+
+        try:
+            # Apply centralized regex fixes
+            fixed_content = replace_unsafe_regex_with_safe_patterns(content)
+            return fixed_content
+        except Exception as e:
+            self.log(f"Error applying regex fixes: {e}", "ERROR")
+            return content
 
     async def _fix_hardcoded_temp_paths(self, issue: Issue) -> dict[str, list[str]]:
         fixes: list[str] = []
@@ -248,26 +348,26 @@ class SecurityAgent(SubAgent):
         return lines, True
 
     def _replace_hardcoded_temp_paths(self, lines: list[str]) -> tuple[list[str], bool]:
-        replacements = [
-            (r'Path\("/tmp/([^"]+)"\)', r'Path(tempfile.gettempdir()) / "\1"'),
-            (r'"/tmp/([^"]+)"', r'str(Path(tempfile.gettempdir()) / "\1")'),
-            (r"'/tmp/([^']+)'", r"str(Path(tempfile.gettempdir()) / '\1')"),
-            (
-                r'Path\("/test/path"\)',
-                r"Path(tempfile.gettempdir()) / 'test-path'",
-            ),
-            (r'"/test/path"', r'str(Path(tempfile.gettempdir()) / "test-path")'),
-            (r"'/test/path'", r"str(Path(tempfile.gettempdir()) / 'test-path')"),
-        ]
+        # Apply temp path replacements using SAFE_PATTERNS
+        new_content = "\n".join(lines)
 
-        modified = False
-        for pattern, replacement in replacements:
-            new_content = "\n".join(lines)
-            if re.search(pattern, new_content):
-                lines = re.sub(pattern, replacement, new_content).split("\n")
-                modified = True
+        # Check if any temp paths need replacement
+        if SAFE_PATTERNS["detect_hardcoded_temp_paths_basic"].test(new_content):
+            # Apply multiple replacement patterns
+            new_content = SAFE_PATTERNS["replace_hardcoded_temp_paths"].apply(
+                new_content
+            )
+            new_content = SAFE_PATTERNS["replace_hardcoded_temp_strings"].apply(
+                new_content
+            )
+            new_content = SAFE_PATTERNS["replace_hardcoded_temp_single_quotes"].apply(
+                new_content
+            )
+            new_content = SAFE_PATTERNS["replace_test_path_patterns"].apply(new_content)
+            lines = new_content.split("\n")
+            return lines, True
 
-        return lines, modified
+        return lines, False
 
     async def _fix_shell_injection(self, issue: Issue) -> dict[str, list[str]]:
         fixes: list[str] = []
@@ -352,18 +452,12 @@ class SecurityAgent(SubAgent):
         return lines, False
 
     def _line_contains_hardcoded_secret(self, line: str) -> bool:
-        return bool(
-            re.search(
-                r'(password|secret|key|token)\s*=\s*[\'"][^\'"]+[\'"]',
-                line,
-                re.IGNORECASE,
-            ),
-        )
+        return SAFE_PATTERNS["detect_hardcoded_secrets"].test(line)
 
     def _replace_hardcoded_secret_with_env_var(self, line: str) -> str:
-        match = re.search(r"(\w+)\s*=", line)
-        if match:
-            var_name = match.group(1)
+        # Extract variable name using safe patterns
+        var_name = SAFE_PATTERNS["extract_variable_name_from_assignment"].apply(line)
+        if var_name != line:  # If pattern matched and extracted something
             env_var_name = var_name.upper()
             return f"{var_name} = os.getenv('{env_var_name}', '')"
         return line
@@ -484,12 +578,10 @@ class SecurityAgent(SubAgent):
         return self._remove_debug_prints_with_secrets(content)
 
     async def _fix_insecure_random_usage(self, content: str) -> str:
-        if not re.search(r"random\.(?:random|choice)\(", content):
+        if not SAFE_PATTERNS["detect_insecure_random_usage"].test(content):
             return content
 
         content = self._add_secrets_import_if_needed(content)
-
-        from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
         return SAFE_PATTERNS["fix_insecure_random_choice"].apply(content)
 

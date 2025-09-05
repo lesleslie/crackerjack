@@ -27,6 +27,7 @@ class IssueType(Enum):
     DOCUMENTATION = "documentation"
     TEST_ORGANIZATION = "test_organization"
     COVERAGE_IMPROVEMENT = "coverage_improvement"
+    REGEX_VALIDATION = "regex_validation"
 
 
 @dataclass

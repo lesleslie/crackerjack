@@ -699,6 +699,10 @@ class WorkflowPipeline:
             "ruff-format",
             "ruff-check",
         }
+
+        if hook_name == "validate-regex-patterns":
+            return IssueType.REGEX_VALIDATION
+
         return (
             IssueType.FORMATTING
             if hook_name in formatting_hooks
@@ -804,6 +808,20 @@ class WorkflowPipeline:
                     )
                 )
 
+            if "validate-regex-patterns" in error_msg.lower() or any(
+                keyword in error_msg.lower()
+                for keyword in ("raw regex", "regex pattern", r"\g<", "replacement")
+            ):
+                issues.append(
+                    Issue(
+                        id="regex_validation_failure",
+                        type=IssueType.REGEX_VALIDATION,
+                        severity=Priority.HIGH,
+                        message="Unsafe regex patterns detected by validate-regex-patterns",
+                        stage="fast",
+                    )
+                )
+
         elif task_id == "fast_hooks":
             issues.append(
                 Issue(
@@ -858,6 +876,18 @@ class WorkflowPipeline:
             ):
                 issue_type = IssueType.IMPORT_ERROR
                 priority = Priority.MEDIUM
+            elif any(
+                keyword in issue_str.lower()
+                for keyword in (
+                    "regex",
+                    "pattern",
+                    "validate-regex-patterns",
+                    r"\g<",
+                    "replacement",
+                )
+            ):
+                issue_type = IssueType.REGEX_VALIDATION
+                priority = Priority.HIGH
 
             issue = Issue(
                 id=f"parsed_issue_{i}",
