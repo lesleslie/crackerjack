@@ -6,6 +6,7 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.code_cleaner import CodeCleaner, PackageCleaningResult
+from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
     FileSystemInterface,
@@ -44,8 +45,20 @@ class PhaseCoordinator:
         self.publish_manager = publish_manager
         self.config_merge_service = config_merge_service
 
-        self.code_cleaner = CodeCleaner(console=console, base_directory=pkg_path)
+        self.code_cleaner = CodeCleaner(
+            console=console,
+            base_directory=pkg_path,
+            file_processor=None,
+            error_handler=None,
+            pipeline=None,
+            logger=None,
+            security_logger=None,
+            backup_service=None,
+        )
         self.config_service = ConfigurationService(console=console, pkg_path=pkg_path)
+        self.autofix_coordinator = AutofixCoordinator(
+            console=console, pkg_path=pkg_path
+        )
 
         self.logger = logging.getLogger("crackerjack.phases")
 
@@ -608,6 +621,16 @@ class PhaseCoordinator:
                 return True
         return False
 
+    def _attempt_autofix_for_fast_hooks(self, results: list[t.Any]) -> bool:
+        """Attempt to autofix fast hook failures."""
+        try:
+            self.logger.info("Attempting autofix for fast hook failures")
+            # Apply autofixes for fast hooks
+            return self.autofix_coordinator.apply_fast_stage_fixes()
+        except Exception as e:
+            self.logger.warning(f"Autofix attempt failed: {e}")
+            return False
+
     def _handle_hook_failures(
         self,
         hook_type: str,
@@ -625,6 +648,18 @@ class PhaseCoordinator:
             f"[red]❌[/ red] {hook_type.title()} hooks failed: {summary['failed']} failed, {summary['errors']} errors",
         )
 
+        # Try autofix for fast hooks before giving up
+        if hook_type == "fast" and attempt < max_retries - 1:
+            if self._attempt_autofix_for_fast_hooks(results):
+                self.console.print(
+                    "[yellow]🔧[/ yellow] Applied autofixes for fast hooks, retrying...",
+                )
+                return True  # Return True to continue the retry loop
+
+        # Display detailed hook errors in verbose mode
+        if getattr(options, "verbose", False):
+            self._display_verbose_hook_errors(results, hook_type)
+
         detailed_error_msg = self._build_detailed_hook_error_message(results, summary)
 
         self.session.fail_task(
@@ -632,6 +667,35 @@ class PhaseCoordinator:
             detailed_error_msg,
         )
         return False
+
+    def _display_verbose_hook_errors(
+        self, results: list[t.Any], hook_type: str
+    ) -> None:
+        """Display detailed hook error output in verbose mode."""
+        self.console.print(
+            f"\n[bold yellow]📋 Detailed {hook_type} hook errors:[/bold yellow]"
+        )
+
+        for result in results:
+            # Check if this hook failed
+            status = getattr(result, "status", "")
+            if status not in ("failed", "error", "timeout"):
+                continue
+
+            hook_name = getattr(result, "name", "unknown")
+            issues = getattr(result, "issues_found", [])
+
+            self.console.print(f"\n[red]❌ {hook_name}[/red]")
+
+            if issues:
+                for issue in issues:
+                    if isinstance(issue, str) and issue.strip():
+                        # Clean up the issue text and display with proper indentation
+                        cleaned_issue = issue.strip()
+                        self.console.print(f"   {cleaned_issue}")
+            else:
+                # If no specific issues, show generic failure message
+                self.console.print(f"   Hook failed with exit code (status: {status})")
 
     def _build_detailed_hook_error_message(
         self, results: list[t.Any], summary: dict[str, t.Any]

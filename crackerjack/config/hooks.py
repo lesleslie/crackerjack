@@ -63,8 +63,9 @@ FAST_HOOKS = [
     HookDefinition(
         name="validate-regex-patterns",
         command=[],  # Dynamically built by get_command()
+        is_formatting=True,  # Treat as formatting for autofix purposes
         timeout=30,
-        retry_on_failure=False,  # Regex validation should be strict, no retries
+        retry_on_failure=True,  # Enable retries for autofix
     ),
     HookDefinition(
         name="trailing-whitespace",
@@ -105,6 +106,8 @@ FAST_HOOKS = [
     HookDefinition(
         name="ruff-check",
         command=[],  # Dynamically built by get_command()
+        is_formatting=True,  # Treat as formatting for autofix purposes
+        retry_on_failure=True,  # Enable retries for autofix
     ),
     HookDefinition(
         name="ruff-format",

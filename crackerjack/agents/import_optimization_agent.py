@@ -1,5 +1,4 @@
 import ast
-import re
 import subprocess
 import typing as t
 from collections import defaultdict
@@ -412,6 +411,14 @@ class ImportOptimizationAgent(SubAgent):
         """Apply comprehensive import optimizations."""
         lines = content.splitlines()
 
+        lines = self._apply_import_optimizations(lines, analysis)
+
+        return "\n".join(lines)
+
+    def _apply_import_optimizations(
+        self, lines: list[str], analysis: ImportAnalysis
+    ) -> list[str]:
+        """Apply all import optimization steps in sequence."""
         # Remove unused imports first
         lines = self._remove_unused_imports(lines, analysis.unused_imports)
 
@@ -424,7 +431,7 @@ class ImportOptimizationAgent(SubAgent):
         # Apply PEP 8 import organization
         lines = self._organize_imports_pep8(lines)
 
-        return "\n".join(lines)
+        return lines
 
     def _remove_unused_imports(
         self, lines: list[str], unused_imports: list[str]
@@ -433,26 +440,43 @@ class ImportOptimizationAgent(SubAgent):
         if not unused_imports:
             return lines
 
-        # Create patterns for unused imports using safe pattern approach
+        unused_patterns = self._create_unused_import_patterns(unused_imports)
+        return self._filter_unused_import_lines(lines, unused_patterns, unused_imports)
+
+    def _create_unused_import_patterns(
+        self, unused_imports: list[str]
+    ) -> list[t.Pattern[str]]:
+        """Create regex patterns for unused import detection."""
+        import re  # Import needed for pattern compilation
+
         unused_patterns = []
         for unused in unused_imports:
             # Use dynamic pattern creation with escaping
-            import re  # REGEX OK: temporary for escaping in dynamic patterns
-
             escaped_unused = re.escape(unused)
-            # Create dynamic patterns based on safe patterns
-            unused_patterns.append((unused, f"^\\s*import\\s+{escaped_unused}\\s*$"))
-            unused_patterns.append(
-                (unused, f"^\\s*from\\s+\\w+\\s+import\\s+.*\\b{escaped_unused}\\b")
+            # Create compiled regex patterns
+            unused_patterns.extend(
+                (
+                    re.compile(f"^\\s*import\\s+{escaped_unused}\\s*$"),
+                    re.compile(
+                        f"^\\s*from\\s+\\w+\\s+import\\s+.*\\b{escaped_unused}\\b"
+                    ),
+                )
             )
+        return unused_patterns
 
+    def _filter_unused_import_lines(
+        self,
+        lines: list[str],
+        unused_patterns: list[t.Pattern[str]],
+        unused_imports: list[str],
+    ) -> list[str]:
+        """Filter out lines containing unused imports."""
         filtered_lines = []
         for line in lines:
             should_remove = False
             for pattern in unused_patterns:
                 if pattern.search(line):
-                    # Check if it's a multi-import line (from x import a, b, c)
-                    if "import" in line and "," in line:
+                    if self._is_multi_import_line(line):
                         # Only remove the specific unused import, not the whole line
                         line = self._remove_from_import_list(line, unused_imports)
                     else:
@@ -463,6 +487,10 @@ class ImportOptimizationAgent(SubAgent):
                 filtered_lines.append(line)
 
         return filtered_lines
+
+    def _is_multi_import_line(self, line: str) -> bool:
+        """Check if line contains multiple imports."""
+        return "import" in line and "," in line
 
     def _remove_from_import_list(self, line: str, unused_imports: list[str]) -> str:
         """Remove specific imports from a multi-import line."""
@@ -488,59 +516,135 @@ class ImportOptimizationAgent(SubAgent):
         if not mixed_modules:
             return lines
 
+        import_data = self._collect_mixed_module_imports(lines, mixed_modules)
+        lines = self._remove_old_mixed_imports(lines, import_data["lines_to_remove"])
+        lines = self._insert_consolidated_imports(lines, import_data)
+
+        return lines
+
+    def _collect_mixed_module_imports(
+        self, lines: list[str], mixed_modules: list[str]
+    ) -> dict[str, t.Any]:
+        """Collect import information for mixed modules."""
         module_imports: dict[str, set[str]] = defaultdict(set)
         lines_to_remove: set[int] = set()
         insert_positions: dict[str, int] = {}
 
-        # Collect all imports for mixed modules
         for i, line in enumerate(lines):
             line.strip()
-
             for module in mixed_modules:
-                # Match 'import module' or 'import module.submodule'
-                if re.match(
-                    rf"^\s*import\s+{re.escape(module)}(?:\.\w+)*\s*$", line
-                ):  # REGEX OK: dynamic module matching with escaping
-                    # Extract the imported name
-                    match = re.search(  # REGEX OK: dynamic import name extraction with escaping
-                        rf"import\s+({re.escape(module)}(?:\.\w+)*)", line
-                    )
-                    if match:
-                        import_name = match.group(1)
-                        if "." in import_name:
-                            # For submodules, import the submodule name
-                            submodule = import_name.split(".")[-1]
-                            module_imports[module].add(submodule)
-                        else:
-                            module_imports[module].add(module)
-                        lines_to_remove.add(i)
-                        if module not in insert_positions:
-                            insert_positions[module] = i
+                self._process_mixed_module_line(
+                    line, module, i, module_imports, lines_to_remove, insert_positions
+                )
 
-                # Match 'from module import names'
-                elif re.match(
-                    rf"^\s*from\s+{re.escape(module)}\s+import\s+", line
-                ):  # REGEX OK: dynamic from import matching with escaping
-                    import_part = (
-                        re.sub(  # REGEX OK: dynamic import extraction with escaping
-                            rf"^\s*from\s+{re.escape(module)}\s+import\s+", "", line
-                        )
-                    )
-                    imports = [name.strip() for name in import_part.split(",")]
-                    module_imports[module].update(imports)
-                    lines_to_remove.add(i)
-                    if module not in insert_positions:
-                        insert_positions[module] = i
+        return {
+            "module_imports": module_imports,
+            "lines_to_remove": lines_to_remove,
+            "insert_positions": insert_positions,
+        }
 
-        # Remove old import lines (in reverse order to preserve indices)
+    def _process_mixed_module_line(
+        self,
+        line: str,
+        module: str,
+        line_index: int,
+        module_imports: dict[str, set[str]],
+        lines_to_remove: set[int],
+        insert_positions: dict[str, int],
+    ) -> None:
+        """Process a single line for mixed module imports."""
+        import re  # REGEX OK: localized for pattern matching
+
+        # Match 'import module' or 'import module.submodule'
+        if re.match(
+            rf"^\s*import\s+{re.escape(module)}(?:\.\w+)*\s*$", line
+        ):  # REGEX OK: dynamic module matching with escaping
+            self._handle_standard_import(
+                line,
+                module,
+                line_index,
+                module_imports,
+                lines_to_remove,
+                insert_positions,
+            )
+
+        # Match 'from module import names'
+        elif re.match(
+            rf"^\s*from\s+{re.escape(module)}\s+import\s+", line
+        ):  # REGEX OK: dynamic from import matching with escaping
+            self._handle_from_import(
+                line,
+                module,
+                line_index,
+                module_imports,
+                lines_to_remove,
+                insert_positions,
+            )
+
+    def _handle_standard_import(
+        self,
+        line: str,
+        module: str,
+        line_index: int,
+        module_imports: dict[str, set[str]],
+        lines_to_remove: set[int],
+        insert_positions: dict[str, int],
+    ) -> None:
+        """Handle standard import statement."""
+        import re  # REGEX OK: localized for pattern matching
+
+        match = re.search(rf"import\s+({re.escape(module)}(?:\.\w+)*)", line)
+        if match:
+            import_name = match.group(1)
+            if "." in import_name:
+                # For submodules, import the submodule name
+                submodule = import_name.split(".")[-1]
+                module_imports[module].add(submodule)
+            else:
+                module_imports[module].add(module)
+            lines_to_remove.add(line_index)
+            if module not in insert_positions:
+                insert_positions[module] = line_index
+
+    def _handle_from_import(
+        self,
+        line: str,
+        module: str,
+        line_index: int,
+        module_imports: dict[str, set[str]],
+        lines_to_remove: set[int],
+        insert_positions: dict[str, int],
+    ) -> None:
+        """Handle from-import statement."""
+        import re  # REGEX OK: localized for pattern matching
+
+        import_part = re.sub(rf"^\s*from\s+{re.escape(module)}\s+import\s+", "", line)
+        imports = [name.strip() for name in import_part.split(",")]
+        module_imports[module].update(imports)
+        lines_to_remove.add(line_index)
+        if module not in insert_positions:
+            insert_positions[module] = line_index
+
+    def _remove_old_mixed_imports(
+        self, lines: list[str], lines_to_remove: set[int]
+    ) -> list[str]:
+        """Remove old import lines in reverse order to preserve indices."""
         for i in sorted(lines_to_remove, reverse=True):
             del lines[i]
+        return lines
 
-        # Insert consolidated from-imports
+    def _insert_consolidated_imports(
+        self, lines: list[str], import_data: dict[str, t.Any]
+    ) -> list[str]:
+        """Insert consolidated from-imports."""
+        module_imports = import_data["module_imports"]
+        insert_positions = import_data["insert_positions"]
+        lines_to_remove = import_data["lines_to_remove"]
+
         offset = 0
-        for module in mixed_modules:
-            if module in module_imports and module in insert_positions:
-                imports_list = sorted(module_imports[module])
+        for module, imports in module_imports.items():
+            if module in insert_positions:
+                imports_list = sorted(imports)
                 consolidated = f"from {module} import {', '.join(imports_list)}"
                 insert_pos = insert_positions[module] - offset
                 lines.insert(insert_pos, consolidated)
@@ -548,7 +652,6 @@ class ImportOptimizationAgent(SubAgent):
                     len([i for i in lines_to_remove if i <= insert_positions[module]])
                     - 1
                 )
-
         return lines
 
     def _remove_redundant_imports(
@@ -577,72 +680,134 @@ class ImportOptimizationAgent(SubAgent):
 
     def _organize_imports_pep8(self, lines: list[str]) -> list[str]:
         """Organize imports according to PEP 8 standards."""
+        import_data, other_lines, import_bounds = self._parse_import_lines(lines)
+
+        if not import_data:
+            return lines
+
+        # Sort imports by category and then alphabetically
+        import_data.sort(key=lambda x: (x[0], x[2].lower()))
+
+        return self._rebuild_with_organized_imports(
+            import_data, other_lines, import_bounds
+        )
+
+    def _parse_import_lines(
+        self, lines: list[str]
+    ) -> tuple[list[tuple[int, str, str]], list[tuple[int, str]], tuple[int, int]]:
+        """Parse lines to separate imports from other code."""
         import_lines: list[tuple[int, str, str]] = []  # (category, line, original)
         other_lines = []
         import_start = -1
         import_end = -1
 
-        # Separate import lines from other code
         for i, line in enumerate(lines):
             stripped = line.strip()
-            if stripped.startswith(("import ", "from ")) and not stripped.startswith(
-                "#"
-            ):
+            if self._is_import_line(stripped):
                 if import_start == -1:
                     import_start = i
                 import_end = i
 
-                # Determine module and category
-                if stripped.startswith("import "):
-                    module = stripped.split()[1].split(".")[0]
-                else:  # from import
-                    module = stripped.split()[1]
-
+                module = self._extract_module_name(stripped)
                 category = self._get_import_category(module)
                 import_lines.append((category, line, stripped))
             else:
-                if import_start != -1 and import_end != -1 and i > import_end:
-                    # We've passed the import section
-                    other_lines.append((i, line))
-                elif import_start == -1:
-                    # We haven't reached imports yet
-                    other_lines.append((i, line))
-                elif stripped == "" and import_start <= i <= import_end:
-                    # Empty line within import section - we'll reorganize these
-                    continue
-                else:
-                    other_lines.append((i, line))
+                self._categorize_non_import_line(
+                    i, line, stripped, import_start, import_end, other_lines
+                )
 
-        if not import_lines:
-            return lines
+        return import_lines, other_lines, (import_start, import_end)
 
-        # Sort imports by category and then alphabetically
-        import_lines.sort(key=lambda x: (x[0], x[2].lower()))
+    def _is_import_line(self, stripped: str) -> bool:
+        """Check if line is an import statement."""
+        return stripped.startswith(("import ", "from ")) and not stripped.startswith(
+            "#"
+        )
 
-        # Rebuild lines with organized imports
+    def _extract_module_name(self, stripped: str) -> str:
+        """Extract module name from import statement."""
+        if stripped.startswith("import "):
+            return stripped.split()[1].split(".")[0]
+        # from import
+        return stripped.split()[1]
+
+    def _categorize_non_import_line(
+        self,
+        i: int,
+        line: str,
+        stripped: str,
+        import_start: int,
+        import_end: int,
+        other_lines: list[tuple[int, str]],
+    ) -> None:
+        """Categorize non-import lines for later reconstruction."""
+        if import_start != -1 and import_end != -1 and i > import_end:
+            # We've passed the import section
+            other_lines.append((i, line))
+        elif import_start == -1:
+            # We haven't reached imports yet
+            other_lines.append((i, line))
+        elif stripped == "" and import_start <= i <= import_end:
+            # Empty line within import section - we'll reorganize these
+            return
+        else:
+            other_lines.append((i, line))
+
+    def _rebuild_with_organized_imports(
+        self,
+        import_data: list[tuple[int, str, str]],
+        other_lines: list[tuple[int, str]],
+        import_bounds: tuple[int, int],
+    ) -> list[str]:
+        """Rebuild file with organized imports and proper spacing."""
         result_lines = []
+        import_start, import_end = import_bounds
 
         # Add lines before imports
+        self._add_lines_before_imports(result_lines, other_lines, import_start)
+
+        # Add organized imports with proper spacing
+        self._add_organized_imports(result_lines, import_data)
+
+        # Add lines after imports
+        self._add_lines_after_imports(result_lines, other_lines, import_end)
+
+        return result_lines
+
+    def _add_lines_before_imports(
+        self,
+        result_lines: list[str],
+        other_lines: list[tuple[int, str]],
+        import_start: int,
+    ) -> None:
+        """Add lines that appear before import section."""
         for i, line in other_lines:
             if i < import_start:
                 result_lines.append(line)
 
-        # Add organized imports with proper spacing
+    def _add_organized_imports(
+        self, result_lines: list[str], import_data: list[tuple[int, str, str]]
+    ) -> None:
+        """Add imports with proper category spacing."""
         current_category = 0
-        for category, line, _ in import_lines:
+        for category, line, _ in import_data:
             if category > current_category and current_category > 0:
                 result_lines.append("")  # Add blank line between categories
             result_lines.append(line)
             current_category = category
 
-        # Add lines after imports
-        if import_end < len(lines) - 1:
+    def _add_lines_after_imports(
+        self,
+        result_lines: list[str],
+        other_lines: list[tuple[int, str]],
+        import_end: int,
+    ) -> None:
+        """Add lines that appear after import section."""
+        if any(i > import_end for i, _ in other_lines):
             result_lines.append("")  # Blank line after imports
             for i, line in other_lines:
                 if i > import_end:
                     result_lines.append(line)
-
-        return result_lines
 
     async def get_diagnostics(self) -> dict[str, t.Any]:
         """Provide comprehensive diagnostics about import analysis across the project."""
@@ -670,7 +835,8 @@ class ImportOptimizationAgent(SubAgent):
                         total_unused_imports += len(analysis.unused_imports)
                     if analysis.import_violations:
                         pep8_violations += len(analysis.import_violations)
-                except Exception:
+                except Exception as e:
+                    self.log(f"Could not analyze {file_path}: {e}")
                     continue  # Skip files that can't be analyzed
 
             return {

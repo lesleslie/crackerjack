@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 import typing as t
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -314,23 +315,15 @@ class ErrorCache:
                 self.fix_results = []
 
     def _save_patterns(self) -> None:
-        try:
+        with suppress(OSError, json.JSONEncodeError):
             patterns_data = {
                 pid: pattern.to_dict() for pid, pattern in self.patterns.items()
             }
             with self.patterns_file.open("w") as f:
                 json.dump(patterns_data, f, indent=2)
-        except (OSError, json.JSONEncodeError):
-            pass
-        except Exception:
-            pass
 
     def _save_fixes(self) -> None:
-        try:
+        with suppress(OSError, json.JSONEncodeError):
             fixes_data = [result.to_dict() for result in self.fix_results]
             with self.fixes_file.open("w") as f:
                 json.dump(fixes_data, f, indent=2)
-        except (OSError, json.JSONEncodeError):
-            pass
-        except Exception:
-            pass

@@ -218,6 +218,8 @@ def main(
     if ai_debug:
         ai_agent = True
         verbose = True
+        # Update the options object to reflect the verbose setting
+        options.verbose = True
 
     setup_ai_agent_env(ai_agent, verbose or ai_debug)
 

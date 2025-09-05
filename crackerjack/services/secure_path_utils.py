@@ -309,7 +309,7 @@ class SecurePathValidator:
             pattern
             for pattern in validation_results["suspicious_patterns"]
             if pattern
-            in ["detect_suspicious_temp_traversal", "detect_suspicious_var_traversal"]
+            in ("detect_suspicious_temp_traversal", "detect_suspicious_var_traversal")
         ]
 
         if suspicious_detected:

@@ -127,22 +127,21 @@ class RegexVisitor(ast.NodeVisitor):
 
     def _is_exempted_line(self, line_no: int) -> bool:
         """Check if line has exemption comment."""
-        try:
-            with open(self.file_path, encoding="utf-8") as f:
+        from contextlib import suppress
+
+        with suppress(OSError, UnicodeDecodeError):
+            with self.file_path.open(encoding="utf-8") as f:
                 lines = f.readlines()
                 if line_no <= len(lines):
                     line = lines[line_no - 1]
                     return "# REGEX OK:" in line or "# regex ok:" in line.lower()
-        except (OSError, UnicodeDecodeError):
-            pass
         return False
 
 
 def validate_file(file_path: Path) -> list[tuple[int, str]]:
     """Validate a single Python file for regex pattern usage."""
     try:
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
+        content = file_path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as e:
         return [(1, f"Error reading file: {e}")]
 

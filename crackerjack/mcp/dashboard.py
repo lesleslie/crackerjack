@@ -488,7 +488,8 @@ class CrackerjackDashboard(App):
                             "log_file": str(debug_file),
                             "timestamp": debug_file.stat().st_mtime,
                         }
-                except Exception:
+                except Exception as e:
+                    self.log(f"Could not process debug file {debug_file}: {e}")
                     continue
 
             return jobs

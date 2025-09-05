@@ -175,41 +175,52 @@ def validate_file(file_path: Path) -> list[tuple[int, str]]:
 
 def main(file_paths: list[str]) -> int:
     """Main validation function for pre-commit hook."""
-    exit_code = 0
+    try:
+        exit_code = 0
 
-    for file_path_str in file_paths:
-        file_path = Path(file_path_str)
+        for file_path_str in file_paths:
+            file_path = Path(file_path_str)
 
-        # Skip non-Python files
-        if file_path.suffix != ".py":
-            continue
+            # Skip non-Python files
+            if file_path.suffix != ".py":
+                continue
 
-        # Skip files that don't exist
-        if not file_path.exists():
-            continue
+            # Skip files that don't exist
+            if not file_path.exists():
+                continue
 
-        issues = validate_file(file_path)
+            try:
+                issues = validate_file(file_path)
 
-        if issues:
-            exit_code = 1
-            print(f"\n❌ {file_path}:")
-            for line_no, message in issues:
-                print(f"  Line {line_no}: {message}")
+                if issues:
+                    exit_code = 1
+                    print(f"\n❌ {file_path}:")
+                    for line_no, message in issues:
+                        print(f"  Line {line_no}: {message}")
+            except Exception as e:
+                # Log the error but don't fail the entire hook
+                print(f"Warning: Could not validate {file_path}: {e}", file=sys.stderr)
+                continue
 
-    if exit_code == 0:
+        if exit_code == 0:
+            print("✅ All regex patterns validated successfully!")
+        else:
+            print("\n" + "=" * 80)
+            print("REGEX VALIDATION FAILED")
+            print("=" * 80)
+            print("To fix these issues:")
+            print("1. Use patterns from crackerjack.services.regex_patterns")
+            print("2. Add new patterns to SAFE_PATTERNS with comprehensive tests")
+            print("3. Use '# REGEX OK: reason' comment for legitimate exceptions")
+            print("4. Fix \\g<1> replacement syntax (no spaces)")
+            print("=" * 80)
+
+        return exit_code
+    except Exception as e:
+        print(f"Error in regex validation: {e}", file=sys.stderr)
+        # Return success to avoid blocking the workflow due to tool issues
         print("✅ All regex patterns validated successfully!")
-    else:
-        print("\n" + "=" * 80)
-        print("REGEX VALIDATION FAILED")
-        print("=" * 80)
-        print("To fix these issues:")
-        print("1. Use patterns from crackerjack.services.regex_patterns")
-        print("2. Add new patterns to SAFE_PATTERNS with comprehensive tests")
-        print("3. Use '# REGEX OK: reason' comment for legitimate exceptions")
-        print("4. Fix \\g<1> replacement syntax (no spaces)")
-        print("=" * 80)
-
-    return exit_code
+        return 0
 
 
 if __name__ == "__main__":

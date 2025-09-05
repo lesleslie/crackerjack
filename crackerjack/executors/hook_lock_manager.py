@@ -174,7 +174,7 @@ class HookLockManager:
         except Exception as e:
             self._lock_failures[hook_name] += 1
             self.logger.error(
-                f"Hook-specific lock acquisition failed for {hook_name}: {str(e)} "
+                f"Hook-specific lock acquisition failed for {hook_name}: {e} "
                 f"(total failures: {self._lock_failures[hook_name]})"
             )
             raise
@@ -218,9 +218,7 @@ class HookLockManager:
 
         except Exception as e:
             self._global_lock_failures[hook_name] += 1
-            self.logger.error(
-                f"Global lock acquisition failed for {hook_name}: {str(e)}"
-            )
+            self.logger.error(f"Global lock acquisition failed for {hook_name}: {e}")
             raise
 
     def _track_lock_usage(self, hook_name: str, acquisition_time: float) -> None:
@@ -291,7 +289,7 @@ class HookLockManager:
 
         try:
             # Use exclusive creation for atomic operation
-            with open(temp_path, "x", encoding="utf-8") as f:
+            with temp_path.open("x", encoding="utf-8") as f:
                 json.dump(lock_data, f, indent=2)
 
             # Set restrictive permissions (owner only)
@@ -363,7 +361,7 @@ class HookLockManager:
 
         try:
             # Read existing lock data
-            with open(lock_path, encoding="utf-8") as f:
+            with lock_path.open(encoding="utf-8") as f:
                 lock_data = json.load(f)
 
             # Verify we still own this lock
@@ -378,7 +376,7 @@ class HookLockManager:
             lock_data["last_heartbeat"] = time.time()
 
             # Write updated data atomically
-            with open(temp_path, "w", encoding="utf-8") as f:
+            with temp_path.open("w", encoding="utf-8") as f:
                 json.dump(lock_data, f, indent=2)
 
             temp_path.chmod(0o600)
@@ -412,7 +410,7 @@ class HookLockManager:
             if lock_path.exists():
                 # Verify we still own the lock before deleting
                 try:
-                    with open(lock_path, encoding="utf-8") as f:
+                    with lock_path.open(encoding="utf-8") as f:
                         lock_data = json.load(f)
 
                     if lock_data.get("session_id") == self._global_config.session_id:
@@ -437,7 +435,7 @@ class HookLockManager:
 
         try:
             # Check if lock is stale
-            with open(lock_path, encoding="utf-8") as f:
+            with lock_path.open(encoding="utf-8") as f:
                 lock_data = json.load(f)
 
             last_heartbeat = lock_data.get(
@@ -648,7 +646,7 @@ class HookLockManager:
                     if file_age_hours > max_age_hours:
                         # Also check heartbeat timestamp if available
                         try:
-                            with open(lock_file, encoding="utf-8") as f:
+                            with lock_file.open(encoding="utf-8") as f:
                                 lock_data = json.load(f)
 
                             last_heartbeat = lock_data.get(
@@ -798,7 +796,7 @@ class HookLockManager:
         status = {
             "hooks_requiring_locks": list(self._hooks_requiring_locks),
             "default_timeout": self._default_lock_timeout,
-            "custom_timeouts": dict(self._lock_timeouts),
+            "custom_timeouts": self._lock_timeouts.copy(),
             "max_history": self._max_history,
             "lock_statistics": self.get_lock_stats(),
             "currently_locked_hooks": [

@@ -405,6 +405,7 @@ class ServiceCollectionBuilder:
         self.console: Console | None = None
         self.pkg_path: Path | None = None
         self.dry_run: bool = False
+        self.verbose: bool = False
 
     def with_console(self, console: Console) -> "ServiceCollectionBuilder":
         self.console = console
@@ -416,6 +417,10 @@ class ServiceCollectionBuilder:
 
     def with_dry_run(self, dry_run: bool) -> "ServiceCollectionBuilder":
         self.dry_run = dry_run
+        return self
+
+    def with_verbose(self, verbose: bool) -> "ServiceCollectionBuilder":
+        self.verbose = verbose
         return self
 
     def add_core_services(self) -> "ServiceCollectionBuilder":
@@ -440,7 +445,9 @@ class ServiceCollectionBuilder:
 
         self.container.register_transient(
             HookManager,
-            factory=lambda: HookManagerImpl(console=console, pkg_path=pkg_path),
+            factory=lambda: HookManagerImpl(
+                console=console, pkg_path=pkg_path, verbose=self.verbose, quiet=False
+            ),
         )
 
         from crackerjack.managers.test_manager import TestManagementImpl
@@ -501,6 +508,7 @@ def create_enhanced_container(
     console: Console | None = None,
     pkg_path: Path | None = None,
     dry_run: bool = False,
+    verbose: bool = False,
     name: str = "crackerjack",
 ) -> EnhancedDependencyContainer:
     container = EnhancedDependencyContainer(name)
@@ -509,6 +517,7 @@ def create_enhanced_container(
     builder.with_console(console or Console(force_terminal=True))
     builder.with_package_path(pkg_path or Path.cwd())
     builder.with_dry_run(dry_run)
+    builder.with_verbose(verbose)
 
     builder.add_core_services()
     builder.add_configuration_services()

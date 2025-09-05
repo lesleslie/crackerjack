@@ -5,6 +5,30 @@ from pathlib import Path
 import jinja2
 
 
+def _get_project_root() -> Path:
+    """Get the absolute path to the crackerjack project root."""
+    # Start from this file and go up to find the real project root
+    current_path = Path(__file__).resolve()
+    for parent in current_path.parents:
+        if (parent / "pyproject.toml").exists() and (parent / "tools").exists():
+            # Verify it's the crackerjack project by checking for unique markers and tools dir
+            try:
+                pyproject_content = (parent / "pyproject.toml").read_text()
+                if (
+                    'name = "crackerjack"' in pyproject_content
+                    and (
+                        parent / "tools" / "validate_regex_patterns_standalone.py"
+                    ).exists()
+                ):
+                    return parent
+            except Exception:
+                # If we can't read the file, continue searching
+                continue
+
+    # Fallback to the parent of the crackerjack package directory
+    return Path(__file__).resolve().parent.parent
+
+
 class HookMetadata(t.TypedDict):
     id: str
     name: str | None
@@ -46,7 +70,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "additional_dependencies": None,
             "types_or": None,
             "language": "system",
-            "entry": "python tools/validate_regex_patterns_standalone.py",
+            "entry": f"uv run python {_get_project_root() / 'tools' / 'validate_regex_patterns_standalone.py'}",
             "experimental": False,
         },
         {

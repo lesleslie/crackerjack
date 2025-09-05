@@ -1,5 +1,6 @@
 import ast
 import json
+import operator
 from pathlib import Path
 from typing import Any
 
@@ -37,13 +38,13 @@ class TestCreationAgent(SubAgent):
             # Check for specific coverage improvement scenarios
             if any(
                 term in message_lower
-                for term in [
+                for term in (
                     "coverage below",
                     "missing tests",
                     "untested functions",
                     "no tests found",
                     "coverage requirement",
-                ]
+                )
             ):
                 return 0.95  # Enhanced confidence for coverage issues
             return 0.9
@@ -129,7 +130,7 @@ class TestCreationAgent(SubAgent):
             # Higher confidence for core modules
             if any(
                 core_path in file_path
-                for core_path in ["/managers/", "/services/", "/core/", "/agents/"]
+                for core_path in ("/managers/", "/services/", "/core/", "/agents/")
             ):
                 return 0.8
             return 0.7
@@ -139,14 +140,14 @@ class TestCreationAgent(SubAgent):
         """Check if message indicates untested functions."""
         return any(
             indicator in message_lower
-            for indicator in [
+            for indicator in (
                 "function not tested",
                 "untested method",
                 "no test for function",
                 "function coverage",
                 "method coverage",
                 "untested code path",
-            ]
+            )
         )
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
@@ -435,7 +436,7 @@ class TestCreationAgent(SubAgent):
         self, uncovered_modules: int, untested_functions: int
     ) -> dict[str, Any]:
         """Calculate potential coverage improvement from test generation."""
-        if uncovered_modules == 0 and untested_functions == 0:
+        if uncovered_modules == untested_functions == 0:
             return {"percentage_points": 0, "priority": "low"}
 
         # Estimate improvement potential
@@ -485,7 +486,7 @@ class TestCreationAgent(SubAgent):
                 uncovered.append(module_info)
 
         # Sort by priority (highest first)
-        uncovered.sort(key=lambda x: x["priority_score"], reverse=True)
+        uncovered.sort(key=operator.itemgetter("priority_score"), reverse=True)
         return uncovered[:15]
 
     async def _analyze_module_priority(self, py_file: Path) -> dict[str, Any]:
@@ -582,7 +583,7 @@ class TestCreationAgent(SubAgent):
             untested.extend(file_untested)
 
         # Sort by testing priority
-        untested.sort(key=lambda x: x["testing_priority"], reverse=True)
+        untested.sort(key=operator.itemgetter("testing_priority"), reverse=True)
         return untested[:20]
 
     async def _find_untested_functions_in_file_enhanced(

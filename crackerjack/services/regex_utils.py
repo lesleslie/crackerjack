@@ -454,10 +454,10 @@ def _process_re_sub_patterns(
 def _identify_safe_pattern(pattern: str, replacement: str) -> str | None:
     """Identify which safe pattern matches the given regex pattern."""
     # Common patterns we can automatically replace
-    if pattern == r"(\w+)\s*-\s*(\w+)" and replacement in [
+    if pattern == r"(\w+)\s*-\s*(\w+)" and replacement in (
         r"\1-\2",
         r"\g<1>-\g<2>",
-    ]:
+    ):
         return "fix_hyphenated_names"
     elif "token" in pattern.lower() and "*" in replacement:
         return "mask_tokens"
@@ -481,8 +481,7 @@ def _replace_with_safe_pattern(
         return _handle_assignment_pattern(
             line, assign_match, before_re_sub, after_re_sub, safe_pattern_name
         )
-    else:
-        return _handle_direct_replacement(line, re_sub_match, safe_pattern_name)
+    return _handle_direct_replacement(line, re_sub_match, safe_pattern_name)
 
 
 def _handle_assignment_pattern(

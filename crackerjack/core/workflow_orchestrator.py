@@ -944,6 +944,7 @@ class WorkflowOrchestrator:
             console=self.console,
             pkg_path=self.pkg_path,
             dry_run=self.dry_run,
+            verbose=self.verbose,
         )
 
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)

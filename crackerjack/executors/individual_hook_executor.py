@@ -479,7 +479,7 @@ class IndividualHookExecutor:
             )
         except Exception as e:
             progress.status = "failed"
-            error_msg = f"Hook {hook.name} failed with error: {str(e)}"
+            error_msg = f"Hook {hook.name} failed with error: {e}"
             self.console.print(f"[red]❌ {error_msg}[/ red]")
 
             return HookResult(

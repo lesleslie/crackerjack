@@ -6,19 +6,22 @@ from contextlib import suppress
 from pathlib import Path
 
 from ..services.regex_patterns import SAFE_PATTERNS
+from . import performance_helpers
 from .base import (
+    AgentContext,
     FixResult,
     Issue,
     IssueType,
     SubAgent,
     agent_registry,
 )
+from .performance_helpers import OptimizationResult
 
 
 class PerformanceAgent(SubAgent):
     """Enhanced PerformanceAgent with automated O(n²) detection and measurable optimizations."""
 
-    def __init__(self, context) -> None:
+    def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self.performance_metrics: dict[str, t.Any] = {}
         self.optimization_stats: dict[str, int] = {
@@ -44,14 +47,14 @@ class PerformanceAgent(SubAgent):
         # Boost confidence for known optimization patterns
         if any(
             pattern in message_lower
-            for pattern in [
+            for pattern in (
                 "nested loop",
                 "o(n²)",
                 "string concatenation",
                 "list concatenation",
                 "inefficient",
                 "complexity",
-            ]
+            )
         ):
             confidence = 0.9
 
@@ -82,16 +85,14 @@ class PerformanceAgent(SubAgent):
             analysis_time = time.time() - start_time
             self.performance_metrics[str(file_path)] = {
                 "analysis_duration": analysis_time,
-                "optimizations_applied": result.fixes_applied or [],
+                "optimizations_applied": result.fixes_applied,
                 "timestamp": time.time(),
             }
 
             # Add performance statistics to result
             if result.success and result.fixes_applied:
                 stats_summary = self._generate_optimization_summary()
-                result.recommendations = (result.recommendations or []) + [
-                    stats_summary
-                ]
+                result.recommendations = result.recommendations + [stats_summary]
 
             return result
         except Exception as e:
@@ -228,130 +229,41 @@ class PerformanceAgent(SubAgent):
 
     def _detect_nested_loops_enhanced(self, tree: ast.AST) -> list[dict[str, t.Any]]:
         """Enhanced nested loop detection with complexity analysis and optimization suggestions."""
-        issues: list[dict[str, t.Any]] = []
-
-        class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
-            def __init__(self) -> None:
-                self.loop_stack: list[
-                    tuple[str, ast.AST, int]
-                ] = []  # (type, node, depth)
-                self.nested_loops: list[dict[str, t.Any]] = []
-                self.complexity_hotspots: list[dict[str, t.Any]] = []
-
-            def visit_For(self, node: ast.For) -> None:
-                current_depth = len(self.loop_stack) + 1
-                self.loop_stack.append(("for", node, current_depth))
-
-                if current_depth > 1:
-                    complexity_factor = self._calculate_complexity_factor(current_depth)
-                    optimization_priority = self._get_optimization_priority(
-                        current_depth
-                    )
-
-                    loop_info = {
-                        "line_number": node.lineno,
-                        "type": "nested_for_loop",
-                        "depth": current_depth,
-                        "complexity": f"O(n^{current_depth})",
-                        "complexity_factor": complexity_factor,
-                        "priority": optimization_priority,
-                        "node": node,
-                        "iterable": self._extract_iterable_info(node),
-                    }
-
-                    self.nested_loops.append(loop_info)
-
-                    if current_depth >= 3:  # O(n³) or higher
-                        self.complexity_hotspots.append(
-                            {
-                                **loop_info,
-                                "severity": "high",
-                                "suggestion": "Critical: Consider algorithmic improvements (memoization, caching, different data structures)",
-                            }
-                        )
-
-                self.generic_visit(node)
-                self.loop_stack.pop()
-
-            def visit_While(self, node: ast.While) -> None:
-                current_depth = len(self.loop_stack) + 1
-                self.loop_stack.append(("while", node, current_depth))
-
-                if current_depth > 1:
-                    loop_info = {
-                        "line_number": node.lineno,
-                        "type": "nested_while_loop",
-                        "depth": current_depth,
-                        "complexity": f"O(n^{current_depth})",
-                        "complexity_factor": self._calculate_complexity_factor(
-                            current_depth
-                        ),
-                        "priority": self._get_optimization_priority(current_depth),
-                        "node": node,
-                    }
-                    self.nested_loops.append(loop_info)
-
-                self.generic_visit(node)
-                self.loop_stack.pop()
-
-            def _calculate_complexity_factor(self, depth: int) -> int:
-                """Calculate relative complexity factor for optimization prioritization."""
-                return depth**2  # Exponential growth factor
-
-            def _get_optimization_priority(self, depth: int) -> str:
-                """Determine optimization priority based on nesting depth."""
-                if depth >= 4:
-                    return "critical"
-                elif depth == 3:
-                    return "high"
-                elif depth == 2:
-                    return "medium"
-                else:
-                    return "low"
-
-            def _extract_iterable_info(self, node: ast.For) -> dict[str, t.Any]:
-                """Extract information about the iterable for optimization hints."""
-                iterable_info = {"type": "unknown", "name": None}
-
-                if isinstance(node.iter, ast.Name):
-                    iterable_info = {"type": "variable", "name": node.iter.id}
-                elif isinstance(node.iter, ast.Call):
-                    if isinstance(node.iter.func, ast.Name):
-                        iterable_info = {
-                            "type": "function_call",
-                            "name": node.iter.func.id,
-                        }
-                        if node.iter.func.id == "range":
-                            iterable_info["optimization_hint"] = (
-                                "Consider list comprehension or vectorization"
-                            )
-
-                return iterable_info
-
-        analyzer = EnhancedNestedLoopAnalyzer()
+        analyzer = self._create_nested_loop_analyzer()
         analyzer.visit(tree)
+        return self._build_nested_loop_issues(analyzer)
 
-        if analyzer.nested_loops:
-            issues.append(
-                {
-                    "type": "nested_loops_enhanced",
-                    "instances": analyzer.nested_loops,
-                    "hotspots": analyzer.complexity_hotspots,
-                    "total_count": len(analyzer.nested_loops),
-                    "high_priority_count": len(
-                        [
-                            n
-                            for n in analyzer.nested_loops
-                            if n["priority"] in ("high", "critical")
-                        ]
-                    ),
-                    "suggestion": self._generate_nested_loop_suggestions(
-                        analyzer.nested_loops
-                    ),
-                }
-            )
+    def _create_nested_loop_analyzer(
+        self,
+    ) -> performance_helpers.EnhancedNestedLoopAnalyzer:
+        """Create and configure the nested loop analyzer."""
+        return performance_helpers.EnhancedNestedLoopAnalyzer()
 
-        return issues
+    def _build_nested_loop_issues(
+        self, analyzer: performance_helpers.EnhancedNestedLoopAnalyzer
+    ) -> list[dict[str, t.Any]]:
+        """Build the final nested loop issues from analyzer results."""
+        if not analyzer.nested_loops:
+            return []
+
+        return [
+            {
+                "type": "nested_loops_enhanced",
+                "instances": analyzer.nested_loops,
+                "hotspots": analyzer.complexity_hotspots,
+                "total_count": len(analyzer.nested_loops),
+                "high_priority_count": self._count_high_priority_loops(
+                    analyzer.nested_loops
+                ),
+                "suggestion": self._generate_nested_loop_suggestions(
+                    analyzer.nested_loops
+                ),
+            }
+        ]
+
+    def _count_high_priority_loops(self, nested_loops: list[dict[str, t.Any]]) -> int:
+        """Count loops with high or critical priority."""
+        return len([n for n in nested_loops if n["priority"] in ("high", "critical")])
 
     def _generate_nested_loop_suggestions(
         self, nested_loops: list[dict[str, t.Any]]
@@ -388,130 +300,32 @@ class PerformanceAgent(SubAgent):
         tree: ast.AST,
     ) -> list[dict[str, t.Any]]:
         """Enhanced list operations detection with performance impact assessment."""
-        issues: list[dict[str, t.Any]] = []
-
-        class EnhancedListOpAnalyzer(ast.NodeVisitor):
-            def __init__(self) -> None:
-                self.in_loop = False
-                self.loop_depth = 0
-                self.list_ops: list[dict[str, t.Any]] = []
-                self.current_loop_node = None
-
-            def visit_For(self, node: ast.For) -> None:
-                old_in_loop = self.in_loop
-                old_depth = self.loop_depth
-                old_loop_node = self.current_loop_node
-
-                self.in_loop = True
-                self.loop_depth += 1
-                self.current_loop_node = node
-
-                self.generic_visit(node)
-
-                self.in_loop = old_in_loop
-                self.loop_depth = old_depth
-                self.current_loop_node = old_loop_node
-
-            def visit_While(self, node: ast.While) -> None:
-                old_in_loop = self.in_loop
-                old_depth = self.loop_depth
-                old_loop_node = self.current_loop_node
-
-                self.in_loop = True
-                self.loop_depth += 1
-                self.current_loop_node = node
-
-                self.generic_visit(node)
-
-                self.in_loop = old_in_loop
-                self.loop_depth = old_depth
-                self.current_loop_node = old_loop_node
-
-            def visit_AugAssign(self, node: ast.AugAssign) -> None:
-                if self.in_loop and isinstance(node.op, ast.Add):
-                    impact_factor = self._calculate_performance_impact(node)
-
-                    if isinstance(node.value, ast.List):
-                        list_size = (
-                            len(node.value.elts) if hasattr(node.value, "elts") else 1
-                        )
-
-                        self.list_ops.append(
-                            {
-                                "line_number": node.lineno,
-                                "type": "list_concat_in_loop",
-                                "pattern": f"list += [{list_size} items]",
-                                "loop_depth": self.loop_depth,
-                                "impact_factor": impact_factor,
-                                "optimization": "append"
-                                if list_size == 1
-                                else "extend",
-                                "performance_gain": f"{impact_factor * 2}x"
-                                if list_size > 1
-                                else "2-3x",
-                            }
-                        )
-                    elif isinstance(node.value, ast.Name):
-                        # Handle list += other_list scenarios
-                        self.list_ops.append(
-                            {
-                                "line_number": node.lineno,
-                                "type": "list_concat_variable",
-                                "pattern": f"list += {node.value.id}",
-                                "loop_depth": self.loop_depth,
-                                "impact_factor": impact_factor,
-                                "optimization": "extend",
-                                "performance_gain": f"{impact_factor * 3}x",
-                            }
-                        )
-
-                self.generic_visit(node)
-
-            def _calculate_performance_impact(self, node: ast.AugAssign) -> int:
-                """Calculate expected performance impact based on context."""
-                base_impact = 2  # Baseline improvement factor
-
-                # Higher impact in nested loops
-                if self.loop_depth > 1:
-                    base_impact *= self.loop_depth**2
-
-                # Check if it's in a hot loop (range with large numbers)
-                if (
-                    self.current_loop_node
-                    and isinstance(self.current_loop_node.iter, ast.Call)
-                    and isinstance(self.current_loop_node.iter.func, ast.Name)
-                    and self.current_loop_node.iter.func.id == "range"
-                ):
-                    args = self.current_loop_node.iter.args
-                    if (
-                        args
-                        and isinstance(args[0], ast.Constant)
-                        and args[0].value > 100
-                    ):
-                        base_impact *= 5  # Significant impact for large ranges
-
-                return min(base_impact, 50)  # Cap at 50x impact
-
-        analyzer = EnhancedListOpAnalyzer()
+        analyzer = self._create_enhanced_list_op_analyzer()
         analyzer.visit(tree)
 
-        if analyzer.list_ops:
-            total_impact = sum(op["impact_factor"] for op in analyzer.list_ops)
-            high_impact_ops = [
-                op for op in analyzer.list_ops if op["impact_factor"] >= 10
-            ]
+        if not analyzer.list_ops:
+            return []
 
-            issues.append(
-                {
-                    "type": "inefficient_list_operations_enhanced",
-                    "instances": analyzer.list_ops,
-                    "total_impact": total_impact,
-                    "high_impact_count": len(high_impact_ops),
-                    "suggestion": self._generate_list_op_suggestions(analyzer.list_ops),
-                }
-            )
+        return self._build_list_ops_issues(analyzer)
 
-        return issues
+    def _create_enhanced_list_op_analyzer(self) -> t.Any:
+        """Create the enhanced list operations analyzer."""
+        return performance_helpers.EnhancedListOpAnalyzer()
+
+    def _build_list_ops_issues(self, analyzer: t.Any) -> list[dict[str, t.Any]]:
+        """Build the final list operations issues from analyzer results."""
+        total_impact = sum(op["impact_factor"] for op in analyzer.list_ops)
+        high_impact_ops = [op for op in analyzer.list_ops if op["impact_factor"] >= 10]
+
+        return [
+            {
+                "type": "inefficient_list_operations_enhanced",
+                "instances": analyzer.list_ops,
+                "total_impact": total_impact,
+                "high_impact_count": len(high_impact_ops),
+                "suggestion": self._generate_list_op_suggestions(analyzer.list_ops),
+            }
+        ]
 
     def _generate_list_op_suggestions(self, list_ops: list[dict[str, t.Any]]) -> str:
         """Generate specific optimization suggestions for list operations."""
@@ -691,7 +505,7 @@ class PerformanceAgent(SubAgent):
                 )
 
             # Detect repeated string formatting in loops
-            if any(pattern in stripped for pattern in ['f"', ".format(", "% "]):
+            if any(pattern in stripped for pattern in ('f"', ".format(", "% ")):
                 if self._is_in_loop_context_enhanced(lines, i):
                     repeated_format_calls.append(
                         {
@@ -727,47 +541,94 @@ class PerformanceAgent(SubAgent):
         self, lines: list[str], line_idx: int
     ) -> dict[str, t.Any]:
         """Analyze the context around a string operation for impact assessment."""
-        context = {
+        context = self._create_default_string_context()
+        loop_context = self._find_loop_context_in_lines(lines, line_idx)
+
+        if loop_context:
+            context.update(loop_context)
+
+        return context
+
+    def _create_default_string_context(self) -> dict[str, t.Any]:
+        """Create default context for string operations."""
+        return {
             "loop_type": "unknown",
             "loop_depth": 1,
             "impact_factor": 1,
         }
 
-        # Look back for loop context
+    def _find_loop_context_in_lines(
+        self, lines: list[str], line_idx: int
+    ) -> dict[str, t.Any] | None:
+        """Find loop context by looking back through lines."""
         for i in range(max(0, line_idx - 10), line_idx):
             line = lines[i].strip()
-            if "for " in line and " in " in line:
-                context["loop_type"] = "for"
-                # Try to estimate loop size
-                if "range(" in line:
-                    try:
-                        # Simple heuristic for range size using safe patterns
-                        pattern_obj = SAFE_PATTERNS["extract_range_size"]
-                        if pattern_obj.test(line):
-                            range_str = pattern_obj.apply(line)
-                            # Extract the number from the first range() found
-                            import re  # REGEX OK: temporary for extracting number from safe pattern
+            loop_context = self._analyze_single_line_for_loop_context(line)
+            if loop_context:
+                return loop_context
+        return None
 
-                            number_match = re.search(
-                                r"\d+", range_str
-                            )  # REGEX OK: extracting digits from validated pattern
-                            if number_match:
-                                range_size = int(number_match.group())
-                                if range_size > 1000:
-                                    context["impact_factor"] = 10
-                                elif range_size > 100:
-                                    context["impact_factor"] = 5
-                                else:
-                                    context["impact_factor"] = 2
-                    except (ValueError, AttributeError):
-                        context["impact_factor"] = 2
-                break
-            elif "while " in line:
-                context["loop_type"] = "while"
-                context["impact_factor"] = 3  # Generally higher impact for while loops
-                break
+    def _analyze_single_line_for_loop_context(
+        self, line: str
+    ) -> dict[str, t.Any] | None:
+        """Analyze a single line for loop context information."""
+        if "for " in line and " in " in line:
+            return self._analyze_for_loop_context(line)
+        elif "while " in line:
+            return self._analyze_while_loop_context()
+        return None
+
+    def _analyze_for_loop_context(self, line: str) -> dict[str, t.Any]:
+        """Analyze for loop context and estimate impact."""
+        context = {"loop_type": "for"}
+
+        if "range(" in line:
+            impact_factor = self._estimate_range_impact_factor(line)
+            context["impact_factor"] = impact_factor
+        else:
+            context["impact_factor"] = 2  # Default for for loops
 
         return context
+
+    def _analyze_while_loop_context(self) -> dict[str, t.Any]:
+        """Analyze while loop context."""
+        return {
+            "loop_type": "while",
+            "impact_factor": 3,  # Generally higher impact for while loops
+        }
+
+    def _estimate_range_impact_factor(self, line: str) -> int:
+        """Estimate impact factor based on range size."""
+        try:
+            pattern_obj = SAFE_PATTERNS["extract_range_size"]
+            if not pattern_obj.test(line):
+                return 2
+
+            range_str = pattern_obj.apply(line)
+            range_size = self._extract_range_size_from_string(range_str)
+
+            return self._calculate_impact_from_range_size(range_size)
+        except (ValueError, AttributeError):
+            return 2
+
+    def _extract_range_size_from_string(self, range_str: str) -> int:
+        """Extract numeric range size from string using safe regex."""
+        import re  # REGEX OK: temporary for extracting number from safe pattern
+
+        number_match = re.search(
+            r"\d+", range_str
+        )  # REGEX OK: extracting digits from validated pattern
+        if number_match:
+            return int(number_match.group())
+        return 0
+
+    def _calculate_impact_from_range_size(self, range_size: int) -> int:
+        """Calculate impact factor based on range size."""
+        if range_size > 1000:
+            return 10
+        elif range_size > 100:
+            return 5
+        return 2
 
     def _is_in_loop_context_enhanced(self, lines: list[str], line_index: int) -> bool:
         """Enhanced loop context detection with better accuracy."""
@@ -784,8 +645,8 @@ class PerformanceAgent(SubAgent):
 
         return False
 
+    @staticmethod
     def _generate_string_suggestions(
-        self,
         concat_patterns: list[dict[str, t.Any]],
         inefficient_joins: list[dict[str, t.Any]],
         repeated_formatting: list[dict[str, t.Any]],
@@ -830,9 +691,12 @@ class PerformanceAgent(SubAgent):
                 if (
                     len(node.body) == 1
                     and isinstance(node.body[0], ast.Expr)
-                    and isinstance(node.body[0].value, ast.Call)
-                    and isinstance(node.body[0].value.func, ast.Attribute)
-                    and node.body[0].value.func.attr == "append"
+                    and isinstance(node.body[0].value, ast.Call)  # type: ignore
+                    and isinstance(
+                        node.body[0].value.func,  # type: ignore
+                        ast.Attribute,
+                    )
+                    and node.body[0].value.func.attr == "append"  # type: ignore
                 ):
                     self.opportunities.append(
                         {
@@ -889,7 +753,7 @@ class PerformanceAgent(SubAgent):
                     func_name = node.func.id
 
                     # Detect expensive operations in loops
-                    if func_name in ["len", "sum", "max", "min", "sorted"]:
+                    if func_name in ("len", "sum", "max", "min", "sorted"):
                         # Check if called on the same variable repeatedly
                         if node.args and isinstance(node.args[0], ast.Name):
                             self.inefficient_calls.append(
@@ -925,10 +789,11 @@ class PerformanceAgent(SubAgent):
         if total_optimizations == 0:
             return "No optimizations applied in this session"
 
-        summary_parts = []
-        for opt_type, count in self.optimization_stats.items():
-            if count > 0:
-                summary_parts.append(f"{opt_type}: {count}")
+        summary_parts = [
+            f"{opt_type}: {count}"
+            for opt_type, count in self.optimization_stats.items()
+            if count > 0
+        ]
 
         return f"Optimization Summary - {', '.join(summary_parts)} (Total: {total_optimizations})"
 
@@ -943,84 +808,138 @@ class PerformanceAgent(SubAgent):
         optimizations_applied = []
 
         for issue in issues:
-            issue_type = issue["type"]
-
-            # Handle enhanced list operations
-            if issue_type in [
-                "inefficient_list_operations",
-                "inefficient_list_operations_enhanced",
-            ]:
-                lines, changed = self._fix_list_operations_enhanced(lines, issue)
-                if changed:
-                    self.optimization_stats["list_ops_optimized"] += len(
-                        issue.get("instances", [])
-                    )
-                    optimizations_applied.append(
-                        f"List operations: {len(issue.get('instances', []))}"
-                    )
-                modified = modified or changed
-
-            # Handle enhanced string operations
-            elif issue_type in [
-                "string_concatenation_in_loop",
-                "string_inefficiencies_enhanced",
-            ]:
-                lines, changed = self._fix_string_operations_enhanced(lines, issue)
-                if changed:
-                    total_string_fixes = (
-                        len(issue.get("string_concat_patterns", []))
-                        + len(issue.get("inefficient_joins", []))
-                        + len(issue.get("repeated_formatting", []))
-                    )
-                    self.optimization_stats["string_concat_optimized"] += (
-                        total_string_fixes
-                    )
-                    optimizations_applied.append(
-                        f"String operations: {total_string_fixes}"
-                    )
-                modified = modified or changed
-
-            # Handle repeated operations
-            elif issue_type == "repeated_expensive_operations":
-                lines, changed = self._fix_repeated_operations(lines, issue)
-                if changed:
-                    self.optimization_stats["repeated_ops_cached"] += len(
-                        issue.get("instances", [])
-                    )
-                modified = modified or changed
-
-            # Handle nested loops (add comments and suggestions)
-            elif issue_type in ["nested_loops", "nested_loops_enhanced"]:
-                lines, changed = self._add_nested_loop_comments(lines, issue)
-                if changed:
-                    self.optimization_stats["nested_loops_optimized"] += len(
-                        issue.get("instances", [])
-                    )
-                modified = modified or changed
-
-            # Handle list comprehension opportunities
-            elif issue_type == "list_comprehension_opportunities":
-                lines, changed = self._apply_list_comprehension_optimizations(
-                    lines, issue
-                )
-                if changed:
-                    self.optimization_stats["comprehensions_applied"] += len(
-                        issue.get("instances", [])
-                    )
-                modified = modified or changed
-
-            # Handle inefficient builtin usage
-            elif issue_type == "inefficient_builtin_usage":
-                lines, changed = self._add_builtin_caching_comments(lines, issue)
-                modified = modified or changed
+            result = self._process_single_issue(lines, issue)
+            if result.modified:
+                lines = result.lines
+                modified = True
+                if result.optimization_description:
+                    optimizations_applied.append(result.optimization_description)
 
         if optimizations_applied:
             self.log(f"Applied optimizations: {', '.join(optimizations_applied)}")
 
         return "\n".join(lines) if modified else content
 
+    def _process_single_issue(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> OptimizationResult:
+        """Process a single optimization issue and return the result."""
+        issue_type = issue["type"]
+
+        if issue_type in (
+            "inefficient_list_operations",
+            "inefficient_list_operations_enhanced",
+        ):
+            return self._handle_list_operations_issue(lines, issue)
+        elif issue_type in (
+            "string_concatenation_in_loop",
+            "string_inefficiencies_enhanced",
+        ):
+            return self._handle_string_operations_issue(lines, issue)
+        elif issue_type == "repeated_expensive_operations":
+            return self._handle_repeated_operations_issue(lines, issue)
+        elif issue_type in ("nested_loops", "nested_loops_enhanced"):
+            return self._handle_nested_loops_issue(lines, issue)
+        elif issue_type == "list_comprehension_opportunities":
+            return self._handle_comprehension_opportunities_issue(lines, issue)
+        elif issue_type == "inefficient_builtin_usage":
+            return self._handle_builtin_usage_issue(lines, issue)
+        return self._create_no_change_result(lines)
+
+    def _handle_list_operations_issue(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> OptimizationResult:
+        """Handle list operations optimization issue."""
+        new_lines, changed = self._fix_list_operations_enhanced(lines, issue)
+        description = None
+
+        if changed:
+            instance_count = len(issue.get("instances", []))
+            self.optimization_stats["list_ops_optimized"] += instance_count
+            description = f"List operations: {instance_count}"
+
+        return self._create_optimization_result(new_lines, changed, description)
+
+    def _handle_string_operations_issue(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> OptimizationResult:
+        """Handle string operations optimization issue."""
+        new_lines, changed = self._fix_string_operations_enhanced(lines, issue)
+        description = None
+
+        if changed:
+            total_string_fixes = (
+                len(issue.get("string_concat_patterns", []))
+                + len(issue.get("inefficient_joins", []))
+                + len(issue.get("repeated_formatting", []))
+            )
+            self.optimization_stats["string_concat_optimized"] += total_string_fixes
+            description = f"String operations: {total_string_fixes}"
+
+        return self._create_optimization_result(new_lines, changed, description)
+
+    def _handle_repeated_operations_issue(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> OptimizationResult:
+        """Handle repeated operations optimization issue."""
+        new_lines, changed = self._fix_repeated_operations(lines, issue)
+
+        if changed:
+            self.optimization_stats["repeated_ops_cached"] += len(
+                issue.get("instances", [])
+            )
+
+        return self._create_optimization_result(new_lines, changed)
+
+    def _handle_nested_loops_issue(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> OptimizationResult:
+        """Handle nested loops optimization issue."""
+        new_lines, changed = self._add_nested_loop_comments(lines, issue)
+
+        if changed:
+            self.optimization_stats["nested_loops_optimized"] += len(
+                issue.get("instances", [])
+            )
+
+        return self._create_optimization_result(new_lines, changed)
+
+    def _handle_comprehension_opportunities_issue(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> OptimizationResult:
+        """Handle list comprehension opportunities issue."""
+        new_lines, changed = self._apply_list_comprehension_optimizations(lines, issue)
+
+        if changed:
+            self.optimization_stats["comprehensions_applied"] += len(
+                issue.get("instances", [])
+            )
+
+        return self._create_optimization_result(new_lines, changed)
+
+    def _handle_builtin_usage_issue(
+        self, lines: list[str], issue: dict[str, t.Any]
+    ) -> OptimizationResult:
+        """Handle inefficient builtin usage issue."""
+        new_lines, changed = self._add_builtin_caching_comments(lines, issue)
+        return self._create_optimization_result(new_lines, changed)
+
+    def _create_optimization_result(
+        self, lines: list[str], modified: bool, description: str | None = None
+    ) -> OptimizationResult:
+        """Create an optimization result object."""
+        return OptimizationResult(
+            lines=lines, modified=modified, optimization_description=description
+        )
+
+    def _create_no_change_result(self, lines: list[str]) -> OptimizationResult:
+        """Create a result indicating no changes were made."""
+        return OptimizationResult(
+            lines=lines, modified=False, optimization_description=None
+        )
+
+    @staticmethod
     def _fix_list_operations_enhanced(
-        self,
         lines: list[str],
         issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
@@ -1069,7 +988,7 @@ class PerformanceAgent(SubAgent):
                         indent = original_line[
                             : len(original_line) - len(original_line.lstrip())
                         ]
-                        performance_gain = instance.get("performance_gain", "3x")
+                        performance_gain = instance.get("performance_gain", "x")
                         impact_factor = instance.get("impact_factor", 1)
                         comment = f"{indent}# Performance: {performance_gain} improvement, impact factor: {impact_factor}"
                         lines.insert(line_idx, comment)
@@ -1127,7 +1046,9 @@ class PerformanceAgent(SubAgent):
         modified = False
 
         instances = issue.get("instances", [])
-        for instance in sorted(instances, key=lambda x: x["line_number"], reverse=True):
+        for instance in sorted(
+            instances, key=operator.itemgetter("line_number"), reverse=True
+        ):
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = lines[line_idx]
@@ -1143,7 +1064,7 @@ class PerformanceAgent(SubAgent):
                 ]
 
                 # Add specific suggestions for high priority loops
-                if priority in ["high", "critical"]:
+                if priority in ("high", "critical"):
                     if priority == "critical":
                         comment_lines.append(
                             f"{indent}# CRITICAL: Consider algorithmic redesign or data structure changes"
@@ -1170,7 +1091,9 @@ class PerformanceAgent(SubAgent):
         modified = False
 
         instances = issue.get("instances", [])
-        for instance in sorted(instances, key=lambda x: x["line_number"], reverse=True):
+        for instance in sorted(
+            instances, key=operator.itemgetter("line_number"), reverse=True
+        ):
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = lines[line_idx]
@@ -1194,7 +1117,9 @@ class PerformanceAgent(SubAgent):
         modified = False
 
         instances = issue.get("instances", [])
-        for instance in sorted(instances, key=lambda x: x["line_number"], reverse=True):
+        for instance in sorted(
+            instances, key=operator.itemgetter("line_number"), reverse=True
+        ):
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = lines[line_idx]

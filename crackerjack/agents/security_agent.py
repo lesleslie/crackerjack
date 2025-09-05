@@ -283,7 +283,7 @@ class SecurityAgent(SubAgent):
             return "pickle_usage"
         if "B506" in message or "yaml.load" in message:
             return "unsafe_yaml"
-        if any(crypto in message.lower() for crypto in ["md5", "sha1", "des", "rc4"]):
+        if any(crypto in message.lower() for crypto in ("md5", "sha1", "des", "rc4")):
             return "weak_crypto"
 
         return None
@@ -343,30 +343,56 @@ class SecurityAgent(SubAgent):
     ) -> None:
         """Fix regex patterns across the entire project."""
         try:
-            # Find all Python files in the project
-            python_files = list(self.context.project_path.rglob("*.py"))
-
-            for file_path in python_files:
-                # Skip test files and virtual env
-                if any(
-                    part in str(file_path) for part in [".venv", "__pycache__", ".git"]
-                ):
-                    continue
-
-                content = self.context.get_file_content(file_path)
-                if not content:
-                    continue
-
-                original_content = content
-                content = await self._apply_regex_pattern_fixes(content)
-
-                if content != original_content:
-                    if self.context.write_file_content(file_path, content):
-                        fixes.append(f"Fixed unsafe regex patterns in {file_path}")
-                        files.append(str(file_path))
-                        self.log(f"Fixed regex patterns in {file_path}")
+            python_files = self._get_python_files_for_security_scan()
+            await self._process_python_files_for_regex_fixes(python_files, fixes, files)
         except Exception as e:
             self.log(f"Error during project-wide regex fixes: {e}", "ERROR")
+
+    def _get_python_files_for_security_scan(self) -> list[Path]:
+        """Get list of Python files that should be scanned for security issues."""
+        python_files = list(self.context.project_path.rglob("*.py"))
+        return [
+            f for f in python_files if not self._should_skip_file_for_security_scan(f)
+        ]
+
+    def _should_skip_file_for_security_scan(self, file_path: Path) -> bool:
+        """Check if a file should be skipped during security scanning."""
+        skip_patterns = [".venv", "__pycache__", ".git"]
+        return any(part in str(file_path) for part in skip_patterns)
+
+    async def _process_python_files_for_regex_fixes(
+        self, python_files: list[Path], fixes: list[str], files: list[str]
+    ) -> None:
+        """Process each Python file for regex fixes."""
+        for file_path in python_files:
+            await self._process_single_file_for_regex_fixes(file_path, fixes, files)
+
+    async def _process_single_file_for_regex_fixes(
+        self, file_path: Path, fixes: list[str], files: list[str]
+    ) -> None:
+        """Process a single file for regex pattern fixes."""
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return
+
+        original_content = content
+        content = await self._apply_regex_pattern_fixes(content)
+
+        if self._should_save_regex_fixes(content, original_content):
+            await self._save_regex_fixes_to_file(file_path, content, fixes, files)
+
+    def _should_save_regex_fixes(self, content: str, original_content: str) -> bool:
+        """Check if regex fixes should be saved."""
+        return content != original_content
+
+    async def _save_regex_fixes_to_file(
+        self, file_path: Path, content: str, fixes: list[str], files: list[str]
+    ) -> None:
+        """Save regex fixes to file and update tracking lists."""
+        if self.context.write_file_content(file_path, content):
+            fixes.append(f"Fixed unsafe regex patterns in {file_path}")
+            files.append(str(file_path))
+            self.log(f"Fixed regex patterns in {file_path}")
 
     async def _apply_regex_pattern_fixes(self, content: str) -> str:
         """Apply all regex pattern fixes using SAFE_PATTERNS."""

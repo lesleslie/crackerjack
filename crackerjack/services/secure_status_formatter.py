@@ -109,7 +109,18 @@ class SecureStatusFormatter:
         Returns:
             Sanitized status data appropriate for the verbosity level
         """
-        # Log status access attempt
+        self._log_status_access(status_data, verbosity, user_context)
+        sanitized = self._prepare_data_for_sanitization(status_data)
+        sanitized = self._apply_all_sanitization_steps(sanitized, verbosity)
+        return self._add_security_metadata(sanitized, verbosity)
+
+    def _log_status_access(
+        self,
+        status_data: dict[str, t.Any],
+        verbosity: StatusVerbosity,
+        user_context: str | None,
+    ) -> None:
+        """Log status access attempt for security monitoring."""
         self.security_logger.log_status_access_attempt(
             endpoint="status_data",
             verbosity_level=verbosity.value,
@@ -117,23 +128,29 @@ class SecureStatusFormatter:
             data_keys=list(status_data.keys()),
         )
 
-        # Deep copy to avoid modifying original
-        sanitized = self._deep_copy_dict(status_data)
+    def _prepare_data_for_sanitization(
+        self, status_data: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
+        """Create a deep copy of status data to avoid modifying original."""
+        return self._deep_copy_dict(status_data)
 
-        # Apply verbosity-based filtering
-        sanitized = self._apply_verbosity_filter(sanitized, verbosity)
+    def _apply_all_sanitization_steps(
+        self, data: dict[str, t.Any], verbosity: StatusVerbosity
+    ) -> dict[str, t.Any]:
+        """Apply all sanitization steps in proper order."""
+        data = self._apply_verbosity_filter(data, verbosity)
+        return self._sanitize_sensitive_data(data, verbosity)
 
-        # Sanitize sensitive information
-        sanitized = self._sanitize_sensitive_data(sanitized, verbosity)
-
-        # Add security metadata
-        sanitized["_security"] = {
+    def _add_security_metadata(
+        self, data: dict[str, t.Any], verbosity: StatusVerbosity
+    ) -> dict[str, t.Any]:
+        """Add security metadata to sanitized response."""
+        data["_security"] = {
             "sanitized": True,
             "verbosity": verbosity.value,
             "timestamp": self._get_timestamp(),
         }
-
-        return sanitized
+        return data
 
     def _apply_verbosity_filter(
         self, data: dict[str, t.Any], verbosity: StatusVerbosity
@@ -199,23 +216,26 @@ class SecureStatusFormatter:
 
     def _sanitize_string(self, text: str, verbosity: StatusVerbosity) -> str:
         """Sanitize string content based on verbosity level."""
-
         if verbosity == StatusVerbosity.FULL:
             return text  # No sanitization for full verbosity
 
-        sanitized = text
+        return self._apply_string_sanitization_pipeline(text, verbosity)
 
-        # Sanitize internal URLs FIRST (before other processing)
-        sanitized = self._sanitize_internal_urls(sanitized)
-
-        # Sanitize absolute paths (convert to relative)
+    def _apply_string_sanitization_pipeline(
+        self, text: str, verbosity: StatusVerbosity
+    ) -> str:
+        """Apply string sanitization steps in correct order."""
+        sanitized = self._sanitize_internal_urls(text)
         sanitized = self._sanitize_paths(sanitized)
+        return self._apply_secret_masking_if_needed(sanitized, verbosity)
 
-        # Mask potential secrets (after URLs are already replaced)
+    def _apply_secret_masking_if_needed(
+        self, text: str, verbosity: StatusVerbosity
+    ) -> str:
+        """Apply secret masking for minimal verbosity only."""
         if verbosity == StatusVerbosity.MINIMAL:
-            sanitized = self._mask_potential_secrets(sanitized)
-
-        return sanitized
+            return self._mask_potential_secrets(text)
+        return text
 
     def _sanitize_paths(self, text: str) -> str:
         """Convert absolute paths to relative paths where possible."""
@@ -223,46 +243,62 @@ class SecureStatusFormatter:
 
         # Use validated patterns for path detection
         unix_path_pattern = SAFE_PATTERNS.get("detect_absolute_unix_paths")
-        SAFE_PATTERNS.get("detect_absolute_windows_paths")
 
-        # If patterns don't exist, create safe ones manually
         if not unix_path_pattern:
-            # Create temporary patterns for path detection using safe regex utilities
-            path_patterns = [
-                r"/[a-zA-Z0-9_\-\.\/]+",  # Unix-style absolute paths
-                r"[A-Z]:[\\\/][a-zA-Z0-9_\-\.\\\/]+",  # Windows-style absolute paths
-            ]
-
-            for pattern_str in path_patterns:
-                # Use SAFE_PATTERNS framework for compilation safety
-                try:
-                    from .regex_patterns import CompiledPatternCache
-
-                    compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
-                    matches = compiled.findall(text)
-
-                    for match in matches:
-                        if len(match) > 3:  # Only process paths longer than 3 chars
-                            try:
-                                abs_path = Path(match)
-                                if abs_path.is_absolute():
-                                    # Try to make relative to project root
-                                    try:
-                                        rel_path = abs_path.relative_to(
-                                            self.project_root
-                                        )
-                                        text = text.replace(match, f"./{rel_path}")
-                                    except (ValueError, OSError):
-                                        # If not within project, mask it
-                                        text = text.replace(match, "[REDACTED_PATH]")
-                            except (ValueError, OSError):
-                                # If path operations fail, mask it
-                                text = text.replace(match, "[REDACTED_PATH]")
-                except Exception:
-                    # If pattern compilation fails, skip this pattern
-                    continue
+            return self._sanitize_paths_fallback(text)
 
         return text
+
+    def _sanitize_paths_fallback(self, text: str) -> str:
+        """Fallback path sanitization when patterns don't exist."""
+        path_patterns = [
+            r"/[a-zA-Z0-9_\-\.\/]+",  # Unix-style absolute paths
+            r"[A-Z]:[\\\/][a-zA-Z0-9_\-\.\\\/]+",  # Windows-style absolute paths
+        ]
+
+        for pattern_str in path_patterns:
+            text = self._process_path_pattern(text, pattern_str)
+
+        return text
+
+    def _process_path_pattern(self, text: str, pattern_str: str) -> str:
+        """Process a single path pattern safely."""
+        from contextlib import suppress
+
+        from .regex_patterns import CompiledPatternCache
+
+        with suppress(Exception):
+            compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
+            matches = compiled.findall(text)
+
+            for match in matches:
+                if len(match) > 3:  # Only process paths longer than 3 chars
+                    text = self._replace_path_match(text, match)
+
+        return text
+
+    def _replace_path_match(self, text: str, match: str) -> str:
+        """Replace a single path match with relative or redacted version."""
+        try:
+            abs_path = Path(match)
+            if abs_path.is_absolute():
+                return self._convert_to_relative_or_redact(text, match, abs_path)
+        except (ValueError, OSError):
+            # If path operations fail, mask it
+            text = text.replace(match, "[REDACTED_PATH]")
+
+        return text
+
+    def _convert_to_relative_or_redact(
+        self, text: str, match: str, abs_path: Path
+    ) -> str:
+        """Convert absolute path to relative or redact if outside project."""
+        try:
+            rel_path = abs_path.relative_to(self.project_root)
+            return text.replace(match, f"./{rel_path}")
+        except (ValueError, OSError):
+            # If not within project, mask it
+            return text.replace(match, "[REDACTED_PATH]")
 
     def _sanitize_internal_urls(self, text: str) -> str:
         """Replace internal URLs with generic placeholders."""
@@ -272,54 +308,73 @@ class SecureStatusFormatter:
 
     def _mask_potential_secrets(self, text: str) -> str:
         """Mask strings that might be secrets."""
-        from .regex_patterns import SAFE_PATTERNS
-
-        # Don't mask if it contains already sanitized content
-        if "[INTERNAL_URL]" in text or "[REDACTED_PATH]" in text:
+        if self._should_skip_secret_masking(text):
             return text
 
-        # Use validated patterns for secret detection
+        patterns_to_check = self._get_validated_secret_patterns()
+
+        if patterns_to_check:
+            return self._apply_validated_secret_patterns(text, patterns_to_check)
+        return self._apply_fallback_secret_patterns(text)
+
+    def _should_skip_secret_masking(self, text: str) -> bool:
+        """Check if secret masking should be skipped for already sanitized content."""
+        return "[INTERNAL_URL]" in text or "[REDACTED_PATH]" in text
+
+    def _get_validated_secret_patterns(self) -> list[t.Any]:
+        """Get validated patterns from the safe patterns registry."""
+        from .regex_patterns import SAFE_PATTERNS
+
+        patterns = []
         long_alphanumeric = SAFE_PATTERNS.get("detect_long_alphanumeric_tokens")
         base64_like = SAFE_PATTERNS.get("detect_base64_like_strings")
 
-        patterns_to_check = []
         if long_alphanumeric:
-            patterns_to_check.append(long_alphanumeric)
+            patterns.append(long_alphanumeric)
         if base64_like:
-            patterns_to_check.append(base64_like)
+            patterns.append(base64_like)
 
-        # Fall back to safe manual patterns if registry patterns don't exist
-        if not patterns_to_check:
-            for pattern_str in self.SENSITIVE_PATTERNS["secrets"]:
-                try:
-                    from .regex_patterns import CompiledPatternCache
+        return patterns
 
-                    compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
-                    matches = compiled.findall(text)
-
-                    for match in matches:
-                        if len(match) > 16:  # Only mask long strings
-                            # Don't mask if it looks like a URL or path component
-                            if not any(x in match for x in ("://", "/", "\\", ".")):
-                                masked = match[:4] + "*" * (len(match) - 8) + match[-4:]
-                                text = text.replace(match, masked)
-                except Exception:
-                    continue  # Skip failed pattern compilation
-        else:
-            # Use validated patterns
-            for pattern in patterns_to_check:
-                try:
-                    matches = pattern.findall(text)
-                    for match in matches:
-                        if len(match) > 16:  # Only mask long strings
-                            # Don't mask if it looks like a URL or path component
-                            if not any(x in match for x in ("://", "/", "\\", ".")):
-                                masked = match[:4] + "*" * (len(match) - 8) + match[-4:]
-                                text = text.replace(match, masked)
-                except Exception:
-                    continue  # Skip failed pattern matching
-
+    def _apply_validated_secret_patterns(self, text: str, patterns: list[t.Any]) -> str:
+        """Apply validated patterns for secret detection."""
+        for pattern in patterns:
+            try:
+                text = self._mask_pattern_matches(text, pattern.findall(text))
+            except Exception:
+                continue  # Skip failed pattern matching
         return text
+
+    def _apply_fallback_secret_patterns(self, text: str) -> str:
+        """Apply fallback patterns when validated patterns don't exist."""
+        for pattern_str in self.SENSITIVE_PATTERNS["secrets"]:
+            try:
+                from .regex_patterns import CompiledPatternCache
+
+                compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
+                text = self._mask_pattern_matches(text, compiled.findall(text))
+            except Exception:
+                continue  # Skip failed pattern compilation
+        return text
+
+    def _mask_pattern_matches(self, text: str, matches: list[str]) -> str:
+        """Mask matches from pattern matching."""
+        for match in matches:
+            if self._should_mask_match(match):
+                masked = self._create_masked_string(match)
+                text = text.replace(match, masked)
+        return text
+
+    def _should_mask_match(self, match: str) -> bool:
+        """Determine if a match should be masked."""
+        if len(match) <= 16:
+            return False
+        # Don't mask if it looks like a URL or path component
+        return not any(x in match for x in ("://", "/", "\\", "."))
+
+    def _create_masked_string(self, text: str) -> str:
+        """Create a masked version of the text."""
+        return text[:4] + "*" * (len(text) - 8) + text[-4:]
 
     def _mask_sensitive_value(self, value: str) -> str:
         """Mask a known sensitive value."""
@@ -362,8 +417,17 @@ class SecureStatusFormatter:
         Returns:
             Sanitized error response
         """
+        error_type = self._classify_error(error_message)
 
-        # Generic error messages for production use
+        if verbosity == StatusVerbosity.MINIMAL:
+            return self._create_minimal_error_response(error_type)
+
+        return self._create_detailed_error_response(
+            error_message, error_type, verbosity, include_details
+        )
+
+    def _create_minimal_error_response(self, error_type: str) -> dict[str, t.Any]:
+        """Create minimal error response for production use."""
         generic_messages = {
             "connection": "Service temporarily unavailable. Please try again later.",
             "validation": "Invalid request parameters.",
@@ -372,17 +436,20 @@ class SecureStatusFormatter:
             "internal": "An internal error occurred. Please contact support.",
         }
 
-        # Determine error type and use appropriate generic message
-        error_type = self._classify_error(error_message)
+        return {
+            "success": False,
+            "error": generic_messages.get(error_type, generic_messages["internal"]),
+            "timestamp": self._get_timestamp(),
+        }
 
-        if verbosity == StatusVerbosity.MINIMAL:
-            return {
-                "success": False,
-                "error": generic_messages.get(error_type, generic_messages["internal"]),
-                "timestamp": self._get_timestamp(),
-            }
-
-        # For higher verbosity levels, include sanitized original message
+    def _create_detailed_error_response(
+        self,
+        error_message: str,
+        error_type: str,
+        verbosity: StatusVerbosity,
+        include_details: bool,
+    ) -> dict[str, t.Any]:
+        """Create detailed error response with sanitized message."""
         sanitized_message = self._sanitize_string(error_message, verbosity)
 
         response: dict[str, t.Any] = {
@@ -392,16 +459,22 @@ class SecureStatusFormatter:
             "timestamp": self._get_timestamp(),
         }
 
-        if include_details and verbosity in (
-            StatusVerbosity.DETAILED,
-            StatusVerbosity.FULL,
-        ):
+        if self._should_include_error_details(include_details, verbosity):
             response["details"] = {
                 "verbosity": str(verbosity.value),
                 "sanitized": verbosity != StatusVerbosity.FULL,
             }
 
         return response
+
+    def _should_include_error_details(
+        self, include_details: bool, verbosity: StatusVerbosity
+    ) -> bool:
+        """Determine if error details should be included."""
+        return include_details and verbosity in (
+            StatusVerbosity.DETAILED,
+            StatusVerbosity.FULL,
+        )
 
     def _classify_error(self, error_message: str) -> str:
         """Classify error message type for appropriate handling."""

@@ -109,7 +109,8 @@ class ProactiveWorkflowPipeline:
     ) -> dict[str, t.Any]:
         self.logger.info("Creating comprehensive architectural plan...")
 
-        assert self._architect_agent_coordinator is not None
+        if self._architect_agent_coordinator is None:
+            raise RuntimeError("ArchitectAgentCoordinator is not initialized")
 
         architect = self._architect_agent_coordinator._get_architect_agent()
 

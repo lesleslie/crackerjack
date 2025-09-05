@@ -11,6 +11,13 @@ from .base import (
     agent_registry,
 )
 
+if t.TYPE_CHECKING:
+    from .refactoring_helpers import (
+        ComplexityCalculator,
+        EnhancedUsageAnalyzer,
+        UsageDataCollector,
+    )
+
 
 class RefactoringAgent(SubAgent):
     def get_supported_types(self) -> set[IssueType]:
@@ -401,92 +408,15 @@ class RefactoringAgent(SubAgent):
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> int:
         """Enhanced cognitive complexity calculator with more accurate scoring."""
-
-        class ComplexityCalculator(ast.NodeVisitor):
-            def __init__(self) -> None:
-                self.complexity = 0
-                self.nesting_level = 0
-                self.binary_sequences = 0
-
-            def visit_If(self, node: ast.If) -> None:
-                # Base complexity + nesting penalty
-                self.complexity += 1 + self.nesting_level
-
-                # Penalty for complex conditions
-                if self._has_complex_condition(node.test):
-                    self.complexity += 1
-
-                self.nesting_level += 1
-                self.generic_visit(node)
-                self.nesting_level -= 1
-
-            def visit_For(self, node: ast.For) -> None:
-                self.complexity += 1 + self.nesting_level
-                self.nesting_level += 1
-                self.generic_visit(node)
-                self.nesting_level -= 1
-
-            def visit_While(self, node: ast.While) -> None:
-                self.complexity += 1 + self.nesting_level
-                self.nesting_level += 1
-                self.generic_visit(node)
-                self.nesting_level -= 1
-
-            def visit_Try(self, node: ast.Try) -> None:
-                # Base complexity for try + number of except handlers
-                self.complexity += 1 + self.nesting_level + len(node.handlers)
-                self.nesting_level += 1
-                self.generic_visit(node)
-                self.nesting_level -= 1
-
-            def visit_With(self, node: ast.With) -> None:
-                self.complexity += 1 + self.nesting_level
-                self.nesting_level += 1
-                self.generic_visit(node)
-                self.nesting_level -= 1
-
-            def visit_BoolOp(self, node: ast.BoolOp) -> None:
-                # Complex boolean expressions add more penalty
-                penalty = len(node.values) - 1
-                if penalty > 2:  # Long chains are more complex
-                    penalty += 1
-                self.complexity += penalty
-                self.generic_visit(node)
-
-            def visit_ListComp(self, node: ast.ListComp) -> None:
-                # List comprehensions with conditions add complexity
-                self.complexity += 1
-                if node.ifs:
-                    self.complexity += len(node.ifs)
-                self.generic_visit(node)
-
-            def visit_DictComp(self, node: ast.DictComp) -> None:
-                self.complexity += 1
-                if node.ifs:
-                    self.complexity += len(node.ifs)
-                self.generic_visit(node)
-
-            def visit_SetComp(self, node: ast.SetComp) -> None:
-                self.complexity += 1
-                if node.ifs:
-                    self.complexity += len(node.ifs)
-                self.generic_visit(node)
-
-            def visit_GeneratorExp(self, node: ast.GeneratorExp) -> None:
-                self.complexity += 1
-                if node.ifs:
-                    self.complexity += len(node.ifs)
-                self.generic_visit(node)
-
-            def _has_complex_condition(self, node: ast.expr) -> bool:
-                """Check if condition involves complex expressions."""
-                return (
-                    isinstance(node, ast.BoolOp) and len(node.values) > 2
-                ) or isinstance(node, ast.Compare | ast.Call)
-
-        calculator = ComplexityCalculator()
+        calculator = self._create_complexity_calculator()
         calculator.visit(node)
         return calculator.complexity
+
+    def _create_complexity_calculator(self) -> "ComplexityCalculator":
+        """Create and configure the complexity calculator."""
+        from . import refactoring_helpers
+
+        return refactoring_helpers.ComplexityCalculator()
 
     def _apply_complexity_reduction(
         self,
@@ -586,25 +516,18 @@ class RefactoringAgent(SubAgent):
     def _extract_validation_patterns(self, content: str) -> str:
         """Extract common validation patterns to separate methods."""
         # Look for repeated validation patterns
-        validation_patterns = [
-            r"if\s+not\s+\w+\s*:",  # if not var:
-            r"if\s+\w+\s+is\s+None\s*:",  # if var is None:
-            r"if\s+len\(\w+\)\s*[<>=]",  # if len(var) >
-        ]
-
-        for pattern in validation_patterns:
-            if "validation_extract" in SAFE_PATTERNS:
-                content = SAFE_PATTERNS["validation_extract"].apply(content)
-            else:
-                # Use safe pattern matching instead of raw regex
-                pattern_obj = SAFE_PATTERNS["match_validation_patterns"]
-                if pattern_obj.test(content):
-                    matches = len(
-                        [line for line in content.split("\n") if pattern_obj.test(line)]
-                    )
-                    if matches > 2:  # Found repeated pattern
-                        # Could extract to helper method
-                        pass
+        if "validation_extract" in SAFE_PATTERNS:
+            content = SAFE_PATTERNS["validation_extract"].apply(content)
+        else:
+            # Use safe pattern matching instead of raw regex
+            pattern_obj = SAFE_PATTERNS["match_validation_patterns"]
+            if pattern_obj.test(content):
+                matches = len(
+                    [line for line in content.split("\n") if pattern_obj.test(line)]
+                )
+                if matches > 2:  # Found repeated pattern
+                    # Could extract to helper method
+                    pass
 
         return content
 
@@ -625,8 +548,8 @@ class RefactoringAgent(SubAgent):
                 and len(stripped) > 80
             ):
                 # Consider extracting to separate method
-                " " * (len(line) - len(line.lstrip()))
                 # Could add logic to extract comprehension
+                pass
 
             # Check for large dictionary literals
             elif stripped.count(":") > 5 and stripped.count(",") > 5:
@@ -728,7 +651,7 @@ class RefactoringAgent(SubAgent):
 
     def _create_section(
         self, current_section: list[str], section_type: str | None, section_count: int
-    ) -> dict[str, str]:
+    ) -> dict[str, str | None]:
         """Create a section dictionary from the current section data."""
         effective_type = section_type or "general"
         name_prefix = "handle" if effective_type == "conditional" else "process"
@@ -761,133 +684,24 @@ class RefactoringAgent(SubAgent):
 
     def _collect_usage_data(self, tree: ast.AST) -> dict[str, t.Any]:
         """Enhanced collection of usage data from AST."""
-        defined_names: set[str] = set()
-        used_names: set[str] = set()
-        import_lines: list[tuple[int, str, str]] = []
-        unused_functions: list[dict[str, t.Any]] = []
-        unused_classes: list[dict[str, t.Any]] = []
-        unused_variables: list[dict[str, t.Any]] = []
-
-        class EnhancedUsageAnalyzer(ast.NodeVisitor):
-            def __init__(self):
-                self.scope_stack = [set()]  # Track variable scopes
-                self.class_methods = {}  # Track class method usage
-                self.function_calls = set()  # Track function calls
-
-            def visit_Import(self, node: ast.Import) -> None:
-                for alias in node.names:
-                    name = alias.asname or alias.name
-                    defined_names.add(name)
-                    import_lines.append((node.lineno, name, "import"))
-
-            def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-                for alias in node.names:
-                    name = alias.asname or alias.name
-                    defined_names.add(name)
-                    import_lines.append((node.lineno, name, "from_import"))
-
-            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-                defined_names.add(node.name)
-                if not node.name.startswith("_") and node.name != "__init__":
-                    unused_functions.append(
-                        {
-                            "name": node.name,
-                            "line": node.lineno,
-                            "is_method": len(self.scope_stack) > 1,
-                            "args": [arg.arg for arg in node.args.args],
-                        }
-                    )
-
-                # Enter function scope
-                self.scope_stack.append(set())
-                self.generic_visit(node)
-                self.scope_stack.pop()
-
-            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-                defined_names.add(node.name)
-                if not node.name.startswith("_"):
-                    unused_functions.append(
-                        {
-                            "name": node.name,
-                            "line": node.lineno,
-                            "is_method": len(self.scope_stack) > 1,
-                            "args": [arg.arg for arg in node.args.args],
-                        }
-                    )
-
-                self.scope_stack.append(set())
-                self.generic_visit(node)
-                self.scope_stack.pop()
-
-            def visit_ClassDef(self, node: ast.ClassDef) -> None:
-                defined_names.add(node.name)
-                # Track class usage
-                unused_classes.append(
-                    {"name": node.name, "line": node.lineno, "methods": []}
-                )
-
-                self.scope_stack.append(set())
-                self.generic_visit(node)
-                self.scope_stack.pop()
-
-            def visit_Assign(self, node: ast.Assign) -> None:
-                # Track variable assignments
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        defined_names.add(target.id)
-                        if len(self.scope_stack) > 1:  # In function/class scope
-                            unused_variables.append(
-                                {
-                                    "name": target.id,
-                                    "line": node.lineno,
-                                    "scope_level": len(self.scope_stack),
-                                }
-                            )
-                self.generic_visit(node)
-
-            def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
-                # Handle annotated assignments
-                if isinstance(node.target, ast.Name):
-                    defined_names.add(node.target.id)
-                self.generic_visit(node)
-
-            def visit_Name(self, node: ast.Name) -> None:
-                if isinstance(node.ctx, ast.Load):
-                    used_names.add(node.id)
-                    # Track usage in current scope
-                    if self.scope_stack:
-                        self.scope_stack[-1].add(node.id)
-
-            def visit_Call(self, node: ast.Call) -> None:
-                # Track function/method calls
-                if isinstance(node.func, ast.Name):
-                    self.function_calls.add(node.func.id)
-                    used_names.add(node.func.id)
-                elif isinstance(node.func, ast.Attribute):
-                    if isinstance(node.func.value, ast.Name):
-                        used_names.add(node.func.value.id)
-                    self.function_calls.add(node.func.attr)
-
-                self.generic_visit(node)
-
-            def visit_Attribute(self, node: ast.Attribute) -> None:
-                # Track attribute access
-                if isinstance(node.value, ast.Name):
-                    used_names.add(node.value.id)
-                self.generic_visit(node)
-
-        analyzer = EnhancedUsageAnalyzer()
+        collector = self._create_usage_data_collector()
+        analyzer = self._create_enhanced_usage_analyzer(collector)
         analyzer.visit(tree)
+        return collector.get_results(analyzer)
 
-        return {
-            "defined_names": defined_names,
-            "used_names": used_names,
-            "import_lines": import_lines,
-            "unused_functions": unused_functions,
-            "unused_classes": unused_classes,
-            "unused_variables": unused_variables,
-            "function_calls": analyzer.function_calls,
-        }
+    def _create_usage_data_collector(self) -> "UsageDataCollector":
+        """Create data collector for usage analysis."""
+        from . import refactoring_helpers
+
+        return refactoring_helpers.UsageDataCollector()
+
+    def _create_enhanced_usage_analyzer(
+        self, collector: "UsageDataCollector"
+    ) -> "EnhancedUsageAnalyzer":
+        """Create the enhanced usage analyzer."""
+        from . import refactoring_helpers
+
+        return refactoring_helpers.EnhancedUsageAnalyzer(collector)
 
     def _process_unused_imports(
         self,
@@ -959,7 +773,9 @@ class RefactoringAgent(SubAgent):
                 self._check_unreachable_in_function(node)
                 self.generic_visit(node)
 
-            def _check_unreachable_in_function(self, node):
+            def _check_unreachable_in_function(
+                self, node: ast.FunctionDef | ast.AsyncFunctionDef
+            ) -> None:
                 """Check for unreachable code after return/raise statements."""
                 for i, stmt in enumerate(node.body):
                     if isinstance(stmt, ast.Return | ast.Raise):
@@ -1187,95 +1003,6 @@ class RefactoringAgent(SubAgent):
                 return i
 
         return len(lines)
-
-
-def _add_urgent_agents_for_errors(recommendations: dict, error_context: str) -> None:
-    if not error_context:
-        return
-
-    error_lower = error_context.lower()
-
-    if any(term in error_lower for term in ["import", "module", "not found"]):
-        recommendations["urgent_agents"].append(
-            {
-                "agent": "import-optimization-agent",
-                "reason": "Import/module errors detected",
-                "priority": "urgent",
-            }
-        )
-
-    if any(term in error_lower for term in ["test", "pytest", "assertion", "fixture"]):
-        recommendations["urgent_agents"].append(
-            {
-                "agent": "test-specialist-agent",
-                "reason": "Test-related errors detected",
-                "priority": "urgent",
-            }
-        )
-
-
-def _add_python_project_suggestions(recommendations: dict, file_patterns: str) -> None:
-    if not file_patterns:
-        return
-
-    patterns_lower = file_patterns.lower()
-
-    if ".py" in patterns_lower:
-        recommendations["suggested_agents"].extend(
-            [
-                {
-                    "agent": "python-pro",
-                    "reason": "Python files detected",
-                    "priority": "high",
-                },
-                {
-                    "agent": "testing-frameworks",
-                    "reason": "Python testing needs",
-                    "priority": "medium",
-                },
-            ]
-        )
-
-
-def _set_workflow_recommendations(recommendations: dict) -> None:
-    recommendations["workflow_recommendations"] = [
-        "Run crackerjack quality checks first",
-        "Use AI agent auto-fixing for complex issues",
-        "Consider using crackerjack-architect for new features",
-    ]
-
-
-def _generate_detection_reasoning(recommendations: dict) -> None:
-    """Generate reasoning text for agent detection results."""
-    agent_count = len(recommendations["urgent_agents"]) + len(
-        recommendations["suggested_agents"]
-    )
-
-    if agent_count == 0:
-        recommendations["detection_reasoning"] = (
-            "No specific agent recommendations based on current context"
-        )
-    else:
-        recommendations["detection_reasoning"] = _build_agent_reasoning(
-            recommendations, agent_count
-        )
-
-
-def _build_agent_reasoning(recommendations: dict, agent_count: int) -> str:
-    """Build reasoning text for detected agents."""
-    urgent_count = len(recommendations["urgent_agents"])
-    suggested_count = len(recommendations["suggested_agents"])
-
-    reasoning = f"Detected {agent_count} relevant agents: "
-    if urgent_count > 0:
-        reasoning += f"{urgent_count} urgent priority"
-    if suggested_count > 0:
-        if urgent_count > 0:
-            reasoning += f", {suggested_count} suggested priority"
-        else:
-            reasoning += f"{suggested_count} suggested priority"
-
-    return reasoning
 
 
 agent_registry.register(RefactoringAgent)

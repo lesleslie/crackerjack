@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: validate-regex-patterns
         name: validate-regex-patterns
-        entry: python tools/validate_regex_patterns_standalone.py
+        entry: uv run python /Users/les/Projects/crackerjack/tools/validate_regex_patterns_standalone.py
         language: system
         files: \.py$
         exclude: ^\.venv/

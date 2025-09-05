@@ -1,4 +1,5 @@
 import subprocess
+import typing as t
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
@@ -362,32 +363,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             if not content:
                 return None
 
-            # Map pattern strings to SAFE_PATTERNS for safe usage
-            pattern_map = {
-                SAFE_PATTERNS["agent_count_pattern"].pattern: "agent_count_pattern",
-                SAFE_PATTERNS[
-                    "specialized_agent_count_pattern"
-                ].pattern: "specialized_agent_count_pattern",
-                SAFE_PATTERNS[
-                    "total_agents_config_pattern"
-                ].pattern: "total_agents_config_pattern",
-                SAFE_PATTERNS[
-                    "sub_agent_count_pattern"
-                ].pattern: "sub_agent_count_pattern",
-            }
-
-            for pattern in patterns:
-                if pattern in pattern_map:
-                    safe_pattern = SAFE_PATTERNS[pattern_map[pattern]]
-                    if safe_pattern.test(content):
-                        # Use safe pattern to find matches (replaces raw re.findall)
-                        matches = safe_pattern.findall(content)
-                        for match in matches:
-                            count = int(match)
-                            if count != expected_count and count > 4:
-                                return (file_path, count, expected_count)
+            return self._analyze_file_content_for_agent_count(
+                file_path, content, patterns, expected_count
+            )
 
         return None
+
+    def _analyze_file_content_for_agent_count(
+        self,
+        file_path: Path,
+        content: str,
+        patterns: list[str],
+        expected_count: int,
+    ) -> tuple[Path, int, int] | None:
+        """Analyze file content for agent count inconsistencies."""
+        pattern_map = self._get_safe_pattern_map()
+
+        for pattern in patterns:
+            result = self._check_pattern_for_count_mismatch(
+                pattern, pattern_map, content, file_path, expected_count
+            )
+            if result:
+                return result
+
+        return None
+
+    def _get_safe_pattern_map(self) -> dict[str, str]:
+        """Get mapping of pattern strings to SAFE_PATTERNS keys."""
+        return {
+            SAFE_PATTERNS["agent_count_pattern"].pattern: "agent_count_pattern",
+            SAFE_PATTERNS[
+                "specialized_agent_count_pattern"
+            ].pattern: "specialized_agent_count_pattern",
+            SAFE_PATTERNS[
+                "total_agents_config_pattern"
+            ].pattern: "total_agents_config_pattern",
+            SAFE_PATTERNS["sub_agent_count_pattern"].pattern: "sub_agent_count_pattern",
+        }
+
+    def _check_pattern_for_count_mismatch(
+        self,
+        pattern: str,
+        pattern_map: dict[str, str],
+        content: str,
+        file_path: Path,
+        expected_count: int,
+    ) -> tuple[Path, int, int] | None:
+        """Check a specific pattern for count mismatches."""
+        if pattern not in pattern_map:
+            return None
+
+        safe_pattern = SAFE_PATTERNS[pattern_map[pattern]]
+        if not safe_pattern.test(content):
+            return None
+
+        return self._find_count_mismatch_in_matches(
+            safe_pattern, content, file_path, expected_count
+        )
+
+    def _find_count_mismatch_in_matches(
+        self,
+        safe_pattern: t.Any,
+        content: str,
+        file_path: Path,
+        expected_count: int,
+    ) -> tuple[Path, int, int] | None:
+        """Find count mismatches in pattern matches."""
+        matches = safe_pattern.findall(content)
+
+        for match in matches:
+            count = int(match)
+            if self._is_count_mismatch(count, expected_count):
+                return (file_path, count, expected_count)
+
+        return None
+
+    def _is_count_mismatch(self, count: int, expected_count: int) -> bool:
+        """Check if count represents a mismatch worth reporting."""
+        return count != expected_count and count > 4
 
     def _fix_agent_count_references(
         self,
