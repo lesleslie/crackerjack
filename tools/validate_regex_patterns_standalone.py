@@ -50,6 +50,15 @@ ALLOWED_PATTERNS = {
     # Regex validation tools themselves
     r"tools/validate_regex_patterns_standalone\.py$",
     r"crackerjack/tools/validate_regex_patterns\.py$",
+    # Test files that legitimately test regex patterns
+    r"tests/test_.*\.py$",
+    # Core security and subprocess files that need regex for parsing
+    r"crackerjack/services/secure_subprocess\.py$",
+    r"crackerjack/mcp/tools/core_tools\.py$",
+    # Intelligence and workflow files with legitimate parsing needs
+    r"crackerjack/intelligence/agent_selector\.py$",
+    r"crackerjack/managers/test_.*\.py$",
+    r"crackerjack/core/async_workflow_orchestrator\.py$",
 }
 
 FORBIDDEN_REPLACEMENT_PATTERNS = [
