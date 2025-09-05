@@ -45,8 +45,8 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "exclude": r"^\.venv/",
             "additional_dependencies": None,
             "types_or": None,
-            "language": "python",
-            "entry": "python -m crackerjack.tools.validate_regex_patterns",
+            "language": "system",
+            "entry": "python tools/validate_regex_patterns_standalone.py",
             "experimental": False,
         },
         {

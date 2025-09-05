@@ -11,7 +11,6 @@ This module provides defense-in-depth input validation to prevent:
 """
 
 import json
-import re
 import typing as t
 from functools import wraps
 from pathlib import Path
@@ -19,6 +18,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from ..errors import ErrorCode, ExecutionError
+from .regex_patterns import SAFE_PATTERNS
 from .security_logger import (
     SecurityEventLevel,
     get_security_logger,
@@ -121,21 +121,8 @@ class InputSanitizer:
         "LPT9",
     }
 
-    # SQL injection patterns
-    SQL_INJECTION_PATTERNS = [
-        r"(\b(union|select|insert|update|delete|drop|create|alter|exec|execute)\b)",
-        r"(-{2,}|\/\*|\*\/)",  # SQL comments
-        r"(\bor\b.*=.*|\band\b.*=.*)",  # Boolean-based injection
-        r"(\bxp_cmdshell\b|\bsp_executesql\b)",  # SQL Server specific
-    ]
-
-    # Code injection patterns
-    CODE_INJECTION_PATTERNS = [
-        r"(eval\s*\(|exec\s*\(|execfile\s*\()",  # Python code execution
-        r"(__import__|getattr|setattr|delattr)",  # Dynamic attribute access
-        r"(subprocess|os\.system|os\.popen|commands\.)",  # System commands
-        r"(compile\s*\(|code\.compile)",  # Code compilation
-    ]
+    # NOTE: SQL and Code injection patterns now use centralized SAFE_PATTERNS
+    # from regex_patterns.py for security consistency and testing
 
     @classmethod
     def sanitize_string(
@@ -205,9 +192,16 @@ class InputSanitizer:
                 validation_type="alphanumeric_only",
             )
 
-        # SQL injection pattern check
-        for pattern in cls.SQL_INJECTION_PATTERNS:
-            if re.search(pattern, value, re.IGNORECASE):
+        # SQL injection pattern check using SAFE_PATTERNS
+        sql_patterns = [
+            "validate_sql_injection_patterns",
+            "validate_sql_comment_patterns",
+            "validate_sql_boolean_injection",
+            "validate_sql_server_specific",
+        ]
+        for pattern_name in sql_patterns:
+            pattern = SAFE_PATTERNS[pattern_name]
+            if pattern.test(value):
                 return ValidationResult(
                     valid=False,
                     error_message="SQL injection pattern detected",
@@ -215,9 +209,16 @@ class InputSanitizer:
                     validation_type="sql_injection",
                 )
 
-        # Code injection pattern check
-        for pattern in cls.CODE_INJECTION_PATTERNS:
-            if re.search(pattern, value, re.IGNORECASE):
+        # Code injection pattern check using SAFE_PATTERNS
+        code_patterns = [
+            "validate_code_eval_injection",
+            "validate_code_dynamic_access",
+            "validate_code_system_commands",
+            "validate_code_compilation",
+        ]
+        for pattern_name in code_patterns:
+            pattern = SAFE_PATTERNS[pattern_name]
+            if pattern.test(value):
                 return ValidationResult(
                     valid=False,
                     error_message="Code injection pattern detected",
@@ -381,8 +382,9 @@ class SecureInputValidator:
     def validate_job_id(self, job_id: str) -> ValidationResult:
         """Validate job ID with strict alphanumeric constraints."""
 
-        # Job IDs must be alphanumeric with hyphens only
-        if not re.match(r"^[a-zA-Z0-9\-_]+$", job_id):
+        # Job IDs must be alphanumeric with hyphens only using SAFE_PATTERNS
+        job_id_pattern = SAFE_PATTERNS["validate_job_id_format"]
+        if not job_id_pattern.test(job_id):
             result = ValidationResult(
                 valid=False,
                 error_message="Job ID must be alphanumeric with hyphens/underscores only",
@@ -501,8 +503,9 @@ class SecureInputValidator:
     def validate_environment_var(self, name: str, value: str) -> ValidationResult:
         """Validate environment variable name and value."""
 
-        # Environment variable names must be valid identifiers
-        if not re.match(r"^[A-Z_][A-Z0-9_]*$", name):
+        # Environment variable names must be valid identifiers using SAFE_PATTERNS
+        env_var_pattern = SAFE_PATTERNS["validate_env_var_name_format"]
+        if not env_var_pattern.test(name):
             result = ValidationResult(
                 valid=False,
                 error_message="Invalid environment variable name format",

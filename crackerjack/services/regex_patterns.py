@@ -230,6 +230,24 @@ class ValidatedPattern:
         compiled = self._get_compiled_pattern()
         return bool(compiled.search(text))
 
+    def search(self, text: str) -> re.Match[str] | None:
+        """Search for the first match and return a Match object or None."""
+        if len(text) > MAX_INPUT_SIZE:
+            raise ValueError(
+                f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
+            )
+        compiled = self._get_compiled_pattern()
+        return compiled.search(text)
+
+    def findall(self, text: str) -> list[str]:
+        """Find all matches of the pattern in text safely."""
+        if len(text) > MAX_INPUT_SIZE:
+            raise ValueError(
+                f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
+            )
+        compiled = self._get_compiled_pattern()
+        return compiled.findall(text)
+
     def get_performance_stats(
         self, text: str, iterations: int = 100
     ) -> dict[str, float]:
@@ -1137,6 +1155,97 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ),
         ],
     ),
+    # Test output parsing patterns for test_progress_streamer.py
+    # These patterns are used for matching/extraction, not replacement
+    "pytest_test_start": ValidatedPattern(
+        name="pytest_test_start",
+        pattern=r"^(.+?):: ?(.+?):: ?(.+?) (PASSED|FAILED|SKIPPED|ERROR)$",
+        replacement=r"\1::\2::\3",  # Extract file::class::method
+        description="Parse pytest test start line with file, class, and method (3-part format)",
+        test_cases=[
+            (
+                "test_file.py::TestClass::test_method PASSED",
+                "test_file.py::TestClass::test_method",
+            ),
+            (
+                "tests/test_core.py::TestCore::test_function FAILED",
+                "tests/test_core.py::TestCore::test_function",
+            ),
+            (
+                "src/test.py::MyTest::test_case SKIPPED",
+                "src/test.py::MyTest::test_case",
+            ),
+        ],
+    ),
+    "pytest_test_result": ValidatedPattern(
+        name="pytest_test_result",
+        pattern=r"^(.+?) (PASSED|FAILED|SKIPPED|ERROR)(?: \[.*?\])?\s*$",
+        replacement=r"\1",  # Extract just the test identifier
+        description="Parse pytest test result line with test identifier",
+        test_cases=[
+            ("test_file.py::test_method PASSED", "test_file.py::test_method"),
+            (
+                "tests/test_core.py::test_func FAILED [100%]",
+                "tests/test_core.py::test_func",
+            ),
+            ("src/test.py::test_case SKIPPED ", "src/test.py::test_case"),
+        ],
+    ),
+    "pytest_collection_count": ValidatedPattern(
+        name="pytest_collection_count",
+        pattern=r"collected (\d+) items?",
+        replacement=r"\1",  # Extract just the count
+        description="Parse pytest test collection count",
+        test_cases=[
+            ("collected 5 items", "5"),
+            ("collected 1 item", "1"),
+            (
+                "collected 42 items for execution",
+                "42 for execution",
+            ),  # Only the match is replaced
+        ],
+    ),
+    "pytest_session_start": ValidatedPattern(
+        name="pytest_session_start",
+        pattern=r"test session starts",
+        replacement=r"test session starts",  # Identity replacement
+        description="Match pytest session start indicator",
+        test_cases=[
+            ("test session starts", "test session starts"),
+            ("pytest test session starts", "pytest test session starts"),
+        ],
+    ),
+    "pytest_coverage_total": ValidatedPattern(
+        name="pytest_coverage_total",
+        pattern=r"TOTAL\s+\d+\s+\d+\s+(\d+)%",
+        replacement=r"\1",  # Extract just the percentage
+        description="Parse pytest coverage total percentage",
+        test_cases=[
+            ("TOTAL      123    45    85%", "85"),
+            ("TOTAL  1000  250  75%", "75"),
+            ("TOTAL      50     0   100%", "100"),
+        ],
+    ),
+    "pytest_detailed_test": ValidatedPattern(
+        name="pytest_detailed_test",
+        pattern=r"^(.+\.py)::(.+) (PASSED|FAILED|SKIPPED|ERROR)",
+        replacement=r"\1::\2",  # Extract file and test name
+        description="Parse detailed pytest test output with file, test name, and status",
+        test_cases=[
+            (
+                "test_file.py::test_method PASSED [50%]",
+                "test_file.py::test_method [50%]",  # Only the matched part is replaced
+            ),
+            (
+                "tests/core.py::TestClass::test_func FAILED [75%] [0.1s]",
+                "tests/core.py::TestClass::test_func [75%] [0.1s]",
+            ),
+            (
+                "src/test.py::test_case SKIPPED",
+                "src/test.py::test_case",
+            ),
+        ],
+    ),
     # Code cleaning patterns (from code_cleaner.py)
     "docstring_triple_double": ValidatedPattern(
         name="docstring_triple_double",
@@ -1255,6 +1364,89 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("# regular comment", "# regular comment"),  # No change - no match
         ],
     ),
+    # DRY agent patterns - for code duplication detection
+    "detect_error_response_patterns": ValidatedPattern(
+        name="detect_error_response_patterns",
+        pattern=r'return\s+.*[\'\"]\{.*[\'\""]error[\'\""].*\}.*[\'\""]',
+        replacement=r"MATCH",  # Dummy replacement for detection patterns
+        description="Detect error response patterns in Python code for DRY violations",
+        test_cases=[
+            ('return \'{"error": "msg"}\'', "MATCH"),
+            ('return f\'{"error": "msg"}\'', "MATCH"),
+            ('return {"success": True}', 'return {"success": True}'),  # No match
+            ('return \'{"error": "test message", "code": 500}\'', "MATCH"),
+        ],
+    ),
+    "detect_path_conversion_patterns": ValidatedPattern(
+        name="detect_path_conversion_patterns",
+        pattern=r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+[^)]+",
+        replacement=r"MATCH",  # Dummy replacement for detection patterns
+        description="Detect path conversion patterns in Python code for DRY violations",
+        test_cases=[
+            ("Path(value) if isinstance(value, str) else value", "MATCH"),
+            ("Path(path) if isinstance(path, str) else path", "MATCH"),
+            ("Path('/tmp/file')", "Path('/tmp/file')"),  # No match
+            (
+                "Path(input_path) if isinstance(input_path, str) else input_path",
+                "MATCH",
+            ),
+        ],
+    ),
+    "detect_file_existence_patterns": ValidatedPattern(
+        name="detect_file_existence_patterns",
+        pattern=r"if\s+not\s+\w+\.exists\(\):",
+        replacement=r"MATCH",  # Dummy replacement for detection patterns
+        description="Detect file existence check patterns in Python code for DRY violations",
+        test_cases=[
+            ("if not file.exists():", "MATCH"),
+            ("if not path.exists():", "MATCH"),
+            ("if not file_path.exists():", "MATCH"),
+            ("if file.exists():", "if file.exists():"),  # No match
+        ],
+    ),
+    "detect_exception_patterns": ValidatedPattern(
+        name="detect_exception_patterns",
+        pattern=r"except\s+\w*Exception\s+as\s+\w+:",
+        replacement=r"MATCH",  # Dummy replacement for detection patterns
+        description="Detect exception handling patterns for base Exception class in Python code for DRY violations",
+        test_cases=[
+            ("except Exception as e:", "MATCH"),
+            ("except BaseException as error:", "MATCH"),
+            (
+                "except ValueError as error:",
+                "except ValueError as error:",
+            ),  # No match - doesn't match pattern
+            ("try:", "try:"),  # No match
+        ],
+    ),
+    "fix_path_conversion_with_ensure_path": ValidatedPattern(
+        name="fix_path_conversion_with_ensure_path",
+        pattern=r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+([^)]+)",
+        replacement=r"_ensure_path(\1)",
+        description="Replace path conversion patterns with _ensure_path utility function",
+        test_cases=[
+            ("Path(value) if isinstance(value, str) else value", "_ensure_path(value)"),
+            ("Path(path) if isinstance(path, str) else path", "_ensure_path(path)"),
+            (
+                "Path(input_path) if isinstance(input_path, str) else input_path",
+                "_ensure_path(input_path)",
+            ),
+        ],
+    ),
+    "fix_path_conversion_simple": ValidatedPattern(
+        name="fix_path_conversion_simple",
+        pattern=r"Path\(([^)]+)\)\s+if\s+isinstance\(\1,\s*str\)\s+else\s+\1",
+        replacement=r"_ensure_path(\1)",
+        description="Replace simple path conversion patterns with _ensure_path utility function",
+        test_cases=[
+            ("Path(value) if isinstance(value, str) else value", "_ensure_path(value)"),
+            ("Path(path) if isinstance(path, str) else path", "_ensure_path(path)"),
+            (
+                "Path(file_path) if isinstance(file_path, str) else file_path",
+                "_ensure_path(file_path)",
+            ),
+        ],
+    ),
     # Security agent patterns - NEW PATTERNS FOR SECURITY_AGENT.PY
     "detect_security_keywords": ValidatedPattern(
         name="detect_security_keywords",
@@ -1369,6 +1561,614 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("secrets.choice(options)", "secrets.choice(options)"),  # No change
             ("my_random.choice()", "my_random.choice()"),  # No change
         ],
+    ),
+    # Input validation patterns for security-critical validation
+    "validate_sql_injection_patterns": ValidatedPattern(
+        name="validate_sql_injection_patterns",
+        pattern=r"\b(union|select|insert|update|delete|drop|create|alter|exec|execute)\b",
+        replacement="[SQL_INJECTION]",
+        flags=re.IGNORECASE,
+        description="Detect SQL injection patterns in input validation (case insensitive)",
+        global_replace=True,
+        test_cases=[
+            ("UNION SELECT", "[SQL_INJECTION] [SQL_INJECTION]"),
+            ("drop table", "[SQL_INJECTION] table"),
+            ("normal text", "normal text"),  # No change
+            ("exec command", "[SQL_INJECTION] command"),
+            ("execute procedure", "[SQL_INJECTION] procedure"),
+        ],
+    ),
+    "validate_sql_comment_patterns": ValidatedPattern(
+        name="validate_sql_comment_patterns",
+        pattern=r"(-{2,}|\/\*|\*\/)",
+        replacement="[SQL_COMMENT]",
+        description="Detect SQL comment patterns in input validation",
+        global_replace=True,
+        test_cases=[
+            ("--comment", "[SQL_COMMENT]comment"),
+            ("/* comment */", "[SQL_COMMENT] comment [SQL_COMMENT]"),
+            ("normal-text", "normal-text"),  # No change (single hyphen)
+            ("---triple", "[SQL_COMMENT]triple"),
+        ],
+    ),
+    "validate_sql_boolean_injection": ValidatedPattern(
+        name="validate_sql_boolean_injection",
+        pattern=r"\b(or|and)\b.*=",
+        replacement="[BOOLEAN_INJECTION]",
+        flags=re.IGNORECASE,
+        description="Detect boolean-based SQL injection patterns (case insensitive)",
+        global_replace=True,
+        test_cases=[
+            ("or 1=1", "[BOOLEAN_INJECTION]1"),
+            ("AND password=", "[BOOLEAN_INJECTION]"),
+            ("normal or text", "normal or text"),  # No change (no equals)
+            ("value=test", "value=test"),  # No change (no boolean operator)
+        ],
+    ),
+    "validate_sql_server_specific": ValidatedPattern(
+        name="validate_sql_server_specific",
+        pattern=r"\b(xp_cmdshell|sp_executesql)\b",
+        replacement="[SQLSERVER_EXPLOIT]",
+        flags=re.IGNORECASE,
+        description="Detect SQL Server specific attack patterns (case insensitive)",
+        global_replace=True,
+        test_cases=[
+            ("xp_cmdshell", "[SQLSERVER_EXPLOIT]"),
+            ("SP_EXECUTESQL", "[SQLSERVER_EXPLOIT]"),
+            ("normal text", "normal text"),  # No change
+        ],
+    ),
+    "validate_code_eval_injection": ValidatedPattern(
+        name="validate_code_eval_injection",
+        pattern=r"\b(eval|exec|execfile)\s*\(",
+        replacement="[CODE_EVAL](",
+        description="Detect Python code evaluation injection patterns",
+        global_replace=True,
+        test_cases=[
+            ("eval(code)", "[CODE_EVAL](code)"),
+            ("exec(command)", "[CODE_EVAL](command)"),
+            ("execfile(script)", "[CODE_EVAL](script)"),
+            ("evaluate()", "evaluate()"),  # No change (not exact match)
+        ],
+    ),
+    "validate_code_dynamic_access": ValidatedPattern(
+        name="validate_code_dynamic_access",
+        pattern=r"\b(__import__|getattr|setattr|delattr)\b",
+        replacement="[DYNAMIC_ACCESS]",
+        description="Detect dynamic attribute access patterns for code injection",
+        global_replace=True,
+        test_cases=[
+            ("__import__", "[DYNAMIC_ACCESS]"),
+            ("getattr(obj, name)", "[DYNAMIC_ACCESS](obj, name)"),
+            ("setattr(obj, name)", "[DYNAMIC_ACCESS](obj, name)"),
+            ("delattr(obj, name)", "[DYNAMIC_ACCESS](obj, name)"),
+            ("mygetattr", "mygetattr"),  # No change (not exact match)
+        ],
+    ),
+    "validate_code_system_commands": ValidatedPattern(
+        name="validate_code_system_commands",
+        pattern=r"\b(subprocess|os\.system|os\.popen|commands\.)",
+        replacement="[SYSTEM_COMMAND]",
+        description="Detect system command execution patterns for code injection",
+        global_replace=True,
+        test_cases=[
+            ("subprocess.run", "[SYSTEM_COMMAND].run"),
+            ("os.system(cmd)", "[SYSTEM_COMMAND](cmd)"),
+            ("os.popen(cmd)", "[SYSTEM_COMMAND](cmd)"),
+            ("commands.getoutput", "[SYSTEM_COMMAND]getoutput"),
+            ("mysubprocess", "mysubprocess"),  # No change (not exact match)
+        ],
+    ),
+    "validate_code_compilation": ValidatedPattern(
+        name="validate_code_compilation",
+        pattern=r"\bcompile\s*\(|code\.compile",
+        replacement="[CODE_COMPILE]",
+        description="Detect code compilation patterns for injection",
+        global_replace=True,
+        test_cases=[
+            ("compile(source)", "[CODE_COMPILE]source)"),
+            ("code.compile(source)", "[CODE_COMPILE](source)"),
+            ("compiled", "compiled"),  # No change (not exact match)
+        ],
+    ),
+    "validate_job_id_format": ValidatedPattern(
+        name="validate_job_id_format",
+        pattern=r"^[a-zA-Z0-9\-_]+$",
+        replacement="VALID_JOB_ID",
+        description="Validate job ID format - alphanumeric with hyphens and underscores only",
+        test_cases=[
+            ("valid_job-123", "VALID_JOB_ID"),
+            ("another-valid_job_456", "VALID_JOB_ID"),
+            ("job_123", "VALID_JOB_ID"),
+            ("UPPERCASE_JOB-ID", "VALID_JOB_ID"),
+            ("hyphen-underscore_combo", "VALID_JOB_ID"),
+        ],
+    ),
+    "validate_env_var_name_format": ValidatedPattern(
+        name="validate_env_var_name_format",
+        pattern=r"^[A-Z_][A-Z0-9_]*$",
+        replacement="VALID_ENV_VAR_NAME",
+        description="Validate environment variable name format - uppercase letters, numbers, underscores only, must start with letter or underscore",
+        test_cases=[
+            ("VALID_VAR", "VALID_ENV_VAR_NAME"),
+            ("_VALID_VAR", "VALID_ENV_VAR_NAME"),
+            ("API_KEY_123", "VALID_ENV_VAR_NAME"),
+            ("DATABASE_URL", "VALID_ENV_VAR_NAME"),
+            ("_PRIVATE_VAR", "VALID_ENV_VAR_NAME"),
+        ],
+    ),
+    # Config file update patterns
+    "update_repo_revision": ValidatedPattern(
+        name="update_repo_revision",
+        pattern=r'("repo": "[^"]+?".*?"rev": )"([^"]+)"',
+        replacement=r'\1"NEW_REVISION"',
+        description="Update repository revision in config files (NEW_REVISION placeholder replaced dynamically)",
+        flags=re.DOTALL,
+        test_cases=[
+            (
+                '"repo": "https://github.com/user/repo".*"rev": "old_rev"',
+                '"repo": "https://github.com/user/repo".*"rev": "NEW_REVISION"',
+            ),
+            (
+                '"repo": "git@github.com:user/repo.git", "branch": "main", "rev": "abc123"',
+                '"repo": "git@github.com:user/repo.git", "branch": "main", "rev": "NEW_REVISION"',
+            ),
+            (
+                '{"repo": "https://example.com/repo", "description": "test", "rev": "456def"}',
+                '{"repo": "https://example.com/repo", "description": "test", "rev": "NEW_REVISION"}',
+            ),
+        ],
+    ),
+    # URL sanitization patterns for security
+    "sanitize_localhost_urls": ValidatedPattern(
+        name="sanitize_localhost_urls",
+        pattern=r"https?://localhost:\d+[^\s]*",
+        replacement="[INTERNAL_URL]",
+        description="Sanitize localhost URLs with ports for security",
+        global_replace=True,
+        test_cases=[
+            ("http://localhost:8000/api/test", "[INTERNAL_URL]"),
+            ("https://localhost:3000/dashboard", "[INTERNAL_URL]"),
+            (
+                "Visit http://localhost:8080/admin for details",
+                "Visit [INTERNAL_URL] for details",
+            ),
+            ("https://example.com/test", "https://example.com/test"),  # No change
+        ],
+    ),
+    "sanitize_127_urls": ValidatedPattern(
+        name="sanitize_127_urls",
+        pattern=r"https?://127\.0\.0\.1:\d+[^\s]*",
+        replacement="[INTERNAL_URL]",
+        description="Sanitize 127.0.0.1 URLs with ports for security",
+        global_replace=True,
+        test_cases=[
+            ("http://127.0.0.1:8000/api", "[INTERNAL_URL]"),
+            ("https://127.0.0.1:3000/test", "[INTERNAL_URL]"),
+            ("Connect to http://127.0.0.1:5000/status", "Connect to [INTERNAL_URL]"),
+            (
+                "https://192.168.1.1:8080/test",
+                "https://192.168.1.1:8080/test",
+            ),  # No change
+        ],
+    ),
+    "sanitize_any_localhost_urls": ValidatedPattern(
+        name="sanitize_any_localhost_urls",
+        pattern=r"https?://0\.0\.0\.0:\d+[^\s]*",
+        replacement="[INTERNAL_URL]",
+        description="Sanitize 0.0.0.0 URLs with ports for security",
+        global_replace=True,
+        test_cases=[
+            ("http://0.0.0.0:8000/api", "[INTERNAL_URL]"),
+            ("https://0.0.0.0:3000/test", "[INTERNAL_URL]"),
+            ("https://1.1.1.1:8080/test", "https://1.1.1.1:8080/test"),  # No change
+        ],
+    ),
+    "sanitize_ws_localhost_urls": ValidatedPattern(
+        name="sanitize_ws_localhost_urls",
+        pattern=r"ws://localhost:\d+[^\s]*",
+        replacement="[INTERNAL_URL]",
+        description="Sanitize WebSocket localhost URLs with ports for security",
+        global_replace=True,
+        test_cases=[
+            ("ws://localhost:8675/websocket", "[INTERNAL_URL]"),
+            ("ws://localhost:3000/socket", "[INTERNAL_URL]"),
+            ("Connect to ws://localhost:8000/ws", "Connect to [INTERNAL_URL]"),
+            (
+                "wss://example.com:443/socket",
+                "wss://example.com:443/socket",
+            ),  # No change
+        ],
+    ),
+    "sanitize_ws_127_urls": ValidatedPattern(
+        name="sanitize_ws_127_urls",
+        pattern=r"ws://127\.0\.0\.1:\d+[^\s]*",
+        replacement="[INTERNAL_URL]",
+        description="Sanitize WebSocket 127.0.0.1 URLs with ports for security",
+        global_replace=True,
+        test_cases=[
+            ("ws://127.0.0.1:8675/websocket", "[INTERNAL_URL]"),
+            ("ws://127.0.0.1:3000/socket", "[INTERNAL_URL]"),
+            (
+                "ws://192.168.1.1:8080/socket",
+                "ws://192.168.1.1:8080/socket",
+            ),  # No change
+        ],
+    ),
+    "sanitize_simple_localhost_urls": ValidatedPattern(
+        name="sanitize_simple_localhost_urls",
+        pattern=r"http://localhost[^\s]*",
+        replacement="[INTERNAL_URL]",
+        description="Sanitize simple localhost URLs without explicit ports for security",
+        global_replace=True,
+        test_cases=[
+            ("http://localhost/api/test", "[INTERNAL_URL]"),
+            ("http://localhost/dashboard", "[INTERNAL_URL]"),
+            ("Visit http://localhost/admin", "Visit [INTERNAL_URL]"),
+            (
+                "https://localhost:443/test",
+                "https://localhost:443/test",
+            ),  # No change (different pattern)
+        ],
+    ),
+    "sanitize_simple_ws_localhost_urls": ValidatedPattern(
+        name="sanitize_simple_ws_localhost_urls",
+        pattern=r"ws://localhost[^\s]*",
+        replacement="[INTERNAL_URL]",
+        description="Sanitize simple WebSocket localhost URLs without explicit ports for security",
+        global_replace=True,
+        test_cases=[
+            ("ws://localhost/websocket", "[INTERNAL_URL]"),
+            ("ws://localhost/socket", "[INTERNAL_URL]"),
+            ("Connect to ws://localhost/ws", "Connect to [INTERNAL_URL]"),
+            (
+                "wss://localhost:443/socket",
+                "wss://localhost:443/socket",
+            ),  # No change (different pattern)
+        ],
+    ),
+    # Integration script patterns for resource management
+    "detect_tempfile_usage": ValidatedPattern(
+        name="detect_tempfile_usage",
+        pattern=r"tempfile\.(?:mkdtemp|NamedTemporaryFile|TemporaryDirectory)",
+        replacement="MATCH",  # Dummy replacement for detection patterns
+        test_cases=[
+            ("tempfile.mkdtemp()", "MATCH()"),
+            ("tempfile.NamedTemporaryFile()", "MATCH()"),
+            ("tempfile.TemporaryDirectory()", "MATCH()"),
+            (
+                "not_tempfile.other()",
+                "not_tempfile.other()",
+            ),  # No match leaves original
+        ],
+        description="Detect tempfile module usage for resource management integration",
+    ),
+    "detect_subprocess_usage": ValidatedPattern(
+        name="detect_subprocess_usage",
+        pattern=r"subprocess\.(?:Popen|run)",
+        replacement="MATCH",  # Dummy replacement for detection patterns
+        test_cases=[
+            ("subprocess.Popen(cmd)", "MATCH(cmd)"),
+            ("subprocess.run(['cmd'])", "MATCH(['cmd'])"),
+            ("not_subprocess.other()", "not_subprocess.other()"),
+        ],
+        description="Detect subprocess module usage for resource management integration",
+    ),
+    "detect_asyncio_create_task": ValidatedPattern(
+        name="detect_asyncio_create_task",
+        pattern=r"asyncio\.create_task",
+        replacement="MATCH",  # Dummy replacement for detection patterns
+        test_cases=[
+            ("asyncio.create_task(coro)", "MATCH(coro)"),
+            ("not_asyncio.other()", "not_asyncio.other()"),
+        ],
+        description="Detect asyncio.create_task usage for resource management integration",
+    ),
+    "detect_file_open_operations": ValidatedPattern(
+        name="detect_file_open_operations",
+        pattern=r"(\.open\(|with open\()",
+        replacement=r"MATCH",  # Dummy replacement for detection patterns
+        test_cases=[
+            ("file.open()", "fileMATCH)"),
+            ("with open('file.txt'):", "MATCH'file.txt'):"),
+            ("other_method()", "other_method()"),  # No change
+        ],
+        description="Detect file open operations for resource management integration",
+    ),
+    "match_async_function_definition": ValidatedPattern(
+        name="match_async_function_definition",
+        pattern=r"(async def \w+\([^)]*\)[^:]*:)",
+        replacement=r"\1",
+        test_cases=[
+            ("async def foo():", "async def foo():"),
+            ("async def bar(a, b) -> None:", "async def bar(a, b) -> None:"),
+            ("def sync_func():", "def sync_func():"),
+        ],
+        description="Match async function definitions for resource management integration",
+    ),
+    "match_class_definition": ValidatedPattern(
+        name="match_class_definition",
+        pattern=r"class (\w+).*:",
+        replacement=r"\1",
+        test_cases=[
+            ("class MyClass:", "MyClass"),
+            ("class MyClass(BaseClass):", "MyClass"),
+            ("class MyClass(Base, Mixin):", "MyClass"),
+            ("def not_class():", "def not_class():"),
+        ],
+        description="Match class definitions for resource management integration",
+    ),
+    "replace_subprocess_popen_basic": ValidatedPattern(
+        name="replace_subprocess_popen_basic",
+        pattern=r"subprocess\.Popen\(",
+        replacement="managed_proc = resource_ctx.managed_process(subprocess.Popen(",
+        test_cases=[
+            (
+                "subprocess.Popen(cmd)",
+                "managed_proc = resource_ctx.managed_process(subprocess.Popen(cmd)",
+            ),
+            (
+                "result = subprocess.Popen(['ls'])",
+                "result = managed_proc = resource_ctx.managed_process(subprocess.Popen(['ls'])",
+            ),
+        ],
+        description="Replace subprocess.Popen with managed version",
+    ),
+    "replace_subprocess_popen_assignment": ValidatedPattern(
+        name="replace_subprocess_popen_assignment",
+        pattern=r"(\w+)\s*=\s*subprocess\.Popen\(",
+        replacement=r"process = subprocess.Popen(",
+        test_cases=[
+            ("proc = subprocess.Popen(cmd)", "process = subprocess.Popen(cmd)"),
+            (
+                "my_process = subprocess.Popen(['ls'])",
+                "process = subprocess.Popen(['ls'])",
+            ),
+        ],
+        description="Replace subprocess.Popen assignment with standard variable name",
+    ),
+    "replace_path_open_write": ValidatedPattern(
+        name="replace_path_open_write",
+        pattern=r'(\w+)\.open\(["\']wb?["\'][^)]*\)',
+        replacement=r"atomic_file_write(\1)",
+        test_cases=[
+            ("path.open('w')", "atomic_file_write(path)"),
+            ("file.open('wb')", "atomic_file_write(file)"),
+        ],
+        description="Replace file.open() with atomic_file_write",
+    ),
+    "replace_path_write_text": ValidatedPattern(
+        name="replace_path_write_text",
+        pattern=r"(\w+)\.write_text\(([^)]+)\)",
+        replacement=r"await SafeFileOperations.safe_write_text(\1, \2, atomic=True)",
+        test_cases=[
+            (
+                "path.write_text(content)",
+                "await SafeFileOperations.safe_write_text(path, content, atomic=True)",
+            ),
+            (
+                "file.write_text(data, encoding='utf-8')",
+                "await SafeFileOperations.safe_write_text(file, data, encoding='utf-8', atomic=True)",
+            ),
+        ],
+        description="Replace path.write_text with SafeFileOperations.safe_write_text",
+    ),
+    # Agent-specific patterns - DocumentationAgent
+    "agent_count_pattern": ValidatedPattern(
+        name="agent_count_pattern",
+        pattern=r"(\d+)\s+agents",
+        replacement=r"\1 agents",
+        test_cases=[
+            ("9 agents", "9 agents"),
+            ("12  agents", "12 agents"),
+            ("5   agents", "5 agents"),
+        ],
+        description="Match agent count patterns for documentation consistency",
+        flags=re.IGNORECASE,
+    ),
+    "specialized_agent_count_pattern": ValidatedPattern(
+        name="specialized_agent_count_pattern",
+        pattern=r"(\d+)\s+specialized\s+agents",
+        replacement=r"\1 specialized agents",
+        test_cases=[
+            ("9 specialized agents", "9 specialized agents"),
+            ("12  specialized  agents", "12 specialized agents"),
+            ("5   specialized    agents", "5 specialized agents"),
+        ],
+        description="Match specialized agent count patterns for documentation consistency",
+        flags=re.IGNORECASE,
+    ),
+    "total_agents_config_pattern": ValidatedPattern(
+        name="total_agents_config_pattern",
+        pattern=r'total_agents["\'][\s]*:\s*(\d+)',
+        replacement=r'total_agents": \1',
+        test_cases=[
+            ('total_agents": 9', 'total_agents": 9'),
+            ("total_agents': 12", 'total_agents": 12'),
+            ('total_agents" : 5', 'total_agents": 5'),
+        ],
+        description="Match total agents configuration patterns",
+        flags=re.IGNORECASE,
+    ),
+    "sub_agent_count_pattern": ValidatedPattern(
+        name="sub_agent_count_pattern",
+        pattern=r"(\d+)\s+sub-agents",
+        replacement=r"\1 sub-agents",
+        test_cases=[
+            ("9 sub-agents", "9 sub-agents"),
+            ("12  sub-agents", "12 sub-agents"),
+            ("5   sub-agents", "5 sub-agents"),
+        ],
+        description="Match sub-agent count patterns for documentation consistency",
+        flags=re.IGNORECASE,
+    ),
+    "update_agent_count": ValidatedPattern(
+        name="update_agent_count",
+        pattern=r"\b(\d+)\s+agents\b",
+        replacement=r"NEW_COUNT agents",
+        test_cases=[
+            ("9 agents working", "NEW_COUNT agents working"),
+            ("We have 12 agents ready", "We have NEW_COUNT agents ready"),
+            ("All 5 agents are active", "All NEW_COUNT agents are active"),
+        ],
+        description="Update agent count references (NEW_COUNT replaced dynamically)",
+    ),
+    "update_specialized_agent_count": ValidatedPattern(
+        name="update_specialized_agent_count",
+        pattern=r"\b(\d+)\s+specialized\s+agents\b",
+        replacement=r"NEW_COUNT specialized agents",
+        test_cases=[
+            (
+                "9 specialized agents available",
+                "NEW_COUNT specialized agents available",
+            ),
+            ("We have 12 specialized agents", "We have NEW_COUNT specialized agents"),
+            ("All 5 specialized agents work", "All NEW_COUNT specialized agents work"),
+        ],
+        description="Update specialized agent count references (NEW_COUNT replaced dynamically)",
+    ),
+    "update_total_agents_config": ValidatedPattern(
+        name="update_total_agents_config",
+        pattern=r'total_agents["\'][\s]*:\s*\d+',
+        replacement=r'total_agents": NEW_COUNT',
+        test_cases=[
+            ('total_agents": 9', 'total_agents": NEW_COUNT'),
+            ("total_agents': 12", 'total_agents": NEW_COUNT'),
+            ('total_agents" : 5', 'total_agents": NEW_COUNT'),
+        ],
+        description="Update total agents configuration (NEW_COUNT replaced dynamically)",
+    ),
+    "update_sub_agent_count": ValidatedPattern(
+        name="update_sub_agent_count",
+        pattern=r"\b(\d+)\s+sub-agents\b",
+        replacement=r"NEW_COUNT sub-agents",
+        test_cases=[
+            ("9 sub-agents working", "NEW_COUNT sub-agents working"),
+            ("We have 12 sub-agents ready", "We have NEW_COUNT sub-agents ready"),
+            ("All 5 sub-agents are active", "All NEW_COUNT sub-agents are active"),
+        ],
+        description="Update sub-agent count references (NEW_COUNT replaced dynamically)",
+    ),
+    # Agent-specific patterns - TestSpecialistAgent
+    "fixture_not_found_pattern": ValidatedPattern(
+        name="fixture_not_found_pattern",
+        pattern=r"fixture '(\w+)' not found",
+        replacement=r"fixture '\1' not found",
+        test_cases=[
+            ("fixture 'temp_pkg_path' not found", "fixture 'temp_pkg_path' not found"),
+            ("fixture 'console' not found", "fixture 'console' not found"),
+            ("fixture 'tmp_path' not found", "fixture 'tmp_path' not found"),
+        ],
+        description="Match pytest fixture not found error patterns",
+    ),
+    "import_error_pattern": ValidatedPattern(
+        name="import_error_pattern",
+        pattern=r"ImportError|ModuleNotFoundError",
+        replacement=r"ImportError",
+        test_cases=[
+            ("ImportError: No module named", "ImportError: No module named"),
+            ("ModuleNotFoundError: No module", "ImportError: No module"),
+            ("Other error types", "Other error types"),  # No change
+        ],
+        description="Match import error patterns in test failures",
+    ),
+    "assertion_error_pattern": ValidatedPattern(
+        name="assertion_error_pattern",
+        pattern=r"assert .+ ==",
+        replacement=r"AssertionError",
+        test_cases=[
+            (
+                "AssertionError: Values differ",
+                "AssertionError: Values differ",
+            ),  # No change
+            ("assert result == expected", "AssertionError expected"),
+            ("Normal code", "Normal code"),  # No change
+        ],
+        description="Match assertion error patterns in test failures",
+    ),
+    "attribute_error_pattern": ValidatedPattern(
+        name="attribute_error_pattern",
+        pattern=r"AttributeError: .+ has no attribute",
+        replacement=r"AttributeError: has no attribute",
+        test_cases=[
+            (
+                "AttributeError: 'Mock' has no attribute 'test'",
+                "AttributeError: has no attribute 'test'",
+            ),
+            (
+                "AttributeError: 'NoneType' has no attribute 'value'",
+                "AttributeError: has no attribute 'value'",
+            ),
+            ("Normal error", "Normal error"),  # No change
+        ],
+        description="Match attribute error patterns in test failures",
+    ),
+    "mock_spec_error_pattern": ValidatedPattern(
+        name="mock_spec_error_pattern",
+        pattern=r"MockSpec|spec.*Mock",
+        replacement=r"MockSpec",
+        test_cases=[
+            ("MockSpec error occurred", "MockSpec error occurred"),
+            ("spec for Mock failed", "MockSpec failed"),
+            ("Normal mock usage", "Normal mock usage"),  # No change
+        ],
+        description="Match mock specification error patterns in test failures",
+    ),
+    "hardcoded_path_pattern": ValidatedPattern(
+        name="hardcoded_path_pattern",
+        pattern=r"'/test/path'|/test/path",
+        replacement=r"str(tmp_path)",
+        test_cases=[
+            ("'/test/path'", "str(tmp_path)"),
+            ("/test/path", "str(tmp_path)"),
+            ("'/other/path'", "'/other/path'"),  # No change
+        ],
+        description="Match hardcoded test path patterns that should use tmp_path",
+    ),
+    "missing_name_pattern": ValidatedPattern(
+        name="missing_name_pattern",
+        pattern=r"name '(\w+)' is not defined",
+        replacement=r"name '\1' is not defined",
+        test_cases=[
+            ("name 'pytest' is not defined", "name 'pytest' is not defined"),
+            ("name 'Mock' is not defined", "name 'Mock' is not defined"),
+            ("name 'Path' is not defined", "name 'Path' is not defined"),
+        ],
+        description="Match undefined name patterns in test failures",
+    ),
+    "pydantic_validation_pattern": ValidatedPattern(
+        name="pydantic_validation_pattern",
+        pattern=r"ValidationError|validation error",
+        replacement=r"ValidationError",
+        test_cases=[
+            ("ValidationError: field required", "ValidationError: field required"),
+            ("validation error in field", "ValidationError in field"),
+            ("Normal validation", "Normal validation"),  # No change
+        ],
+        description="Match Pydantic validation error patterns in test failures",
+    ),
+    # Agent-specific patterns - PerformanceAgent
+    "list_append_inefficiency_pattern": ValidatedPattern(
+        name="list_append_inefficiency_pattern",
+        pattern=r"(\s*)(\w+)\s*\+=\s*\[([^]]+)\]",
+        replacement=r"\1\2.append(\3)",
+        test_cases=[
+            ("    items += [new_item]", "    items.append(new_item)"),
+            ("results += [result]", "results.append(result)"),
+            ("  data += [value, other]", "  data.append(value, other)"),
+        ],
+        description="Replace inefficient list concatenation with append for performance",
+    ),
+    "string_concatenation_pattern": ValidatedPattern(
+        name="string_concatenation_pattern",
+        pattern=r"(\s*)(\w+)\s*\+=\s*(.+)",
+        replacement=r"\1\2_parts.append(\3)",
+        test_cases=[
+            ("    text += new_text", "    text_parts.append(new_text)"),
+            ("result += line", "result_parts.append(line)"),
+            ("  output += data", "  output_parts.append(data)"),
+        ],
+        description="Replace string concatenation with list append for performance optimization",
     ),
 }
 
@@ -1519,6 +2319,58 @@ def update_coverage_requirement(content: str, new_coverage: float) -> str:
 
     compiled = re.compile(pattern_obj.pattern)
     return compiled.sub(temp_pattern.replacement, content)
+
+
+def update_repo_revision(content: str, repo_url: str, new_revision: str) -> str:
+    """
+    Update repository revision in config content with safe regex.
+
+    Args:
+        content: The config file content (JSON-like format)
+        repo_url: The repository URL to find and update
+        new_revision: The new revision to set
+
+    Returns:
+        Updated content with new revision
+    """
+    import re
+
+    # Create a pattern specific to the repo URL (escaped for safety)
+    escaped_url = re.escape(repo_url)
+    pattern = rf'("repo": "{escaped_url}".*?"rev": )"([^"]+)"'
+    replacement = rf'\1"{new_revision}"'
+
+    # Use DOTALL flag for multiline matching
+    compiled = re.compile(pattern, re.DOTALL)
+    return compiled.sub(replacement, content)
+
+
+def sanitize_internal_urls(text: str) -> str:
+    """
+    Sanitize internal URLs using safe patterns for security.
+
+    Args:
+        text: Text that may contain internal URLs
+
+    Returns:
+        Text with internal URLs replaced with [INTERNAL_URL]
+    """
+    # Apply all URL sanitization patterns
+    url_patterns = [
+        "sanitize_localhost_urls",
+        "sanitize_127_urls",
+        "sanitize_any_localhost_urls",
+        "sanitize_ws_localhost_urls",
+        "sanitize_ws_127_urls",
+        "sanitize_simple_localhost_urls",
+        "sanitize_simple_ws_localhost_urls",
+    ]
+
+    result = text
+    for pattern_name in url_patterns:
+        result = SAFE_PATTERNS[pattern_name].apply(result)
+
+    return result
 
 
 def apply_pattern_iteratively(

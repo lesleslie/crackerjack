@@ -35,6 +35,7 @@ class TestPhaseCoordinatorBasics:
             "hook_manager": Mock(),
             "test_manager": Mock(),
             "publish_manager": Mock(),
+            "config_merge_service": Mock(),
         }
 
     @pytest.fixture
@@ -221,6 +222,7 @@ class TestPhaseCoordinatorHooks:
             "hook_manager": Mock(),
             "test_manager": Mock(),
             "publish_manager": Mock(),
+            "config_merge_service": Mock(),
         }
 
     @pytest.fixture
@@ -319,6 +321,7 @@ class TestPhaseCoordinatorPublishing:
             "hook_manager": Mock(),
             "test_manager": Mock(),
             "publish_manager": Mock(),
+            "config_merge_service": Mock(),
         }
 
     @pytest.fixture
@@ -451,6 +454,7 @@ class TestPhaseCoordinatorCommitMessages:
             "hook_manager": Mock(),
             "test_manager": Mock(),
             "publish_manager": Mock(),
+            "config_merge_service": Mock(),
         }
 
     @pytest.fixture
@@ -547,6 +551,7 @@ class TestPhaseCoordinatorInternalMethods:
             "hook_manager": Mock(),
             "test_manager": Mock(),
             "publish_manager": Mock(),
+            "config_merge_service": Mock(),
         }
 
     @pytest.fixture

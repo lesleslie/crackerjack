@@ -1,9 +1,9 @@
-import re
 import subprocess
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
+from ..services.regex_patterns import SAFE_PATTERNS
 from .base import (
     FixResult,
     Issue,
@@ -345,10 +345,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     def _get_agent_count_patterns(self) -> list[str]:
         return [
-            r"(\d+)\s+agents",
-            r"(\d+)\s+specialized\s+agents",
-            r'total_agents["\']:\s*(\d+)',
-            r"(\d+)\s+sub-agents",
+            SAFE_PATTERNS["agent_count_pattern"].pattern,
+            SAFE_PATTERNS["specialized_agent_count_pattern"].pattern,
+            SAFE_PATTERNS["total_agents_config_pattern"].pattern,
+            SAFE_PATTERNS["sub_agent_count_pattern"].pattern,
         ]
 
     def _check_file_agent_count(
@@ -362,12 +362,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             if not content:
                 return None
 
+            # Map pattern strings to SAFE_PATTERNS for safe usage
+            pattern_map = {
+                SAFE_PATTERNS["agent_count_pattern"].pattern: "agent_count_pattern",
+                SAFE_PATTERNS[
+                    "specialized_agent_count_pattern"
+                ].pattern: "specialized_agent_count_pattern",
+                SAFE_PATTERNS[
+                    "total_agents_config_pattern"
+                ].pattern: "total_agents_config_pattern",
+                SAFE_PATTERNS[
+                    "sub_agent_count_pattern"
+                ].pattern: "sub_agent_count_pattern",
+            }
+
             for pattern in patterns:
-                matches = re.findall(pattern, content, re.IGNORECASE)
-                for match in matches:
-                    count = int(match)
-                    if count != expected_count and count > 4:
-                        return (file_path, count, expected_count)
+                if pattern in pattern_map:
+                    safe_pattern = SAFE_PATTERNS[pattern_map[pattern]]
+                    if safe_pattern.test(content):
+                        # Use safe pattern to find matches (replaces raw re.findall)
+                        matches = safe_pattern.findall(content)
+                        for match in matches:
+                            count = int(match)
+                            if count != expected_count and count > 4:
+                                return (file_path, count, expected_count)
 
         return None
 
@@ -377,27 +395,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         current_count: int,
         expected_count: int,
     ) -> str:
-        patterns_replacements = [
-            (rf"\b{current_count}\s+agents\b", f"{expected_count} agents"),
-            (
-                rf"\b{current_count}\s+specialized\s+agents\b",
-                f"{expected_count} specialized agents",
-            ),
-            (
-                rf'total_agents["\']:\s*{current_count}',
-                f'total_agents": {expected_count}',
-            ),
-            (rf"\b{current_count}\s+sub-agents\b", f"{expected_count} sub-agents"),
-        ]
-
+        # Use SAFE_PATTERNS with dynamic replacement
         updated_content = content
-        for pattern, replacement in patterns_replacements:
-            updated_content = re.sub(
-                pattern,
-                replacement,
-                updated_content,
-                flags=re.IGNORECASE,
-            )
+
+        # Replace agent count references using safe patterns
+        agent_pattern = SAFE_PATTERNS["update_agent_count"]
+        specialized_pattern = SAFE_PATTERNS["update_specialized_agent_count"]
+        config_pattern = SAFE_PATTERNS["update_total_agents_config"]
+        sub_agent_pattern = SAFE_PATTERNS["update_sub_agent_count"]
+
+        # Apply patterns with dynamic replacement (NEW_COUNT -> expected_count)
+        updated_content = agent_pattern.apply(updated_content).replace(
+            "NEW_COUNT", str(expected_count)
+        )
+        updated_content = specialized_pattern.apply(updated_content).replace(
+            "NEW_COUNT", str(expected_count)
+        )
+        updated_content = config_pattern.apply(updated_content).replace(
+            "NEW_COUNT", str(expected_count)
+        )
+        updated_content = sub_agent_pattern.apply(updated_content).replace(
+            "NEW_COUNT", str(expected_count)
+        )
 
         return updated_content
 

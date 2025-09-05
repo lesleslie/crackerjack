@@ -5,10 +5,9 @@ Provides quick functions for testing regex patterns before adding them
 to the centralized registry, and utilities for migrating existing re.sub() calls.
 """
 
-import re
 from pathlib import Path
 
-from crackerjack.services.regex_patterns import SAFE_PATTERNS
+from crackerjack.services.regex_patterns import SAFE_PATTERNS, CompiledPatternCache
 
 
 def test_pattern_immediately(
@@ -32,25 +31,26 @@ def test_pattern_immediately(
         "errors": [],
     }
 
-    # Check for forbidden replacement syntax first
-    forbidden_patterns = [
-        r"\\g\s*<\s*\d+\s*>",  # \g < 1 > with spaces
-        r"\\g<\s+\d+>",  # \g< 1> with space after <
-        r"\\g<\d+\s+>",  # \g<1 > with space before >
+    # Check for forbidden replacement syntax first using safe patterns
+    forbidden_checks = [
+        (r"\\g\s*<\s*\d+\s*>", "\\g < 1 > with spaces"),
+        (r"\\g<\s+\d+>", "\\g< 1> with space after <"),
+        (r"\\g<\d+\s+>", "\\g<1 > with space before >"),
     ]
 
-    for forbidden in forbidden_patterns:
-        if re.search(forbidden, replacement):
+    for forbidden_pattern, description in forbidden_checks:
+        compiled = CompiledPatternCache.get_compiled_pattern(forbidden_pattern)
+        if compiled.search(replacement):
             results["errors"].append(
                 f"CRITICAL: Bad replacement syntax detected: '{replacement}'. Use \\g<1> not \\g < 1 >"
             )
             results["all_passed"] = False
             return results
 
-    # Validate pattern compilation
+    # Validate pattern compilation using safe cache
     try:
-        compiled = re.compile(pattern)
-    except re.error as e:
+        compiled = CompiledPatternCache.get_compiled_pattern(pattern)
+    except ValueError as e:
         results["errors"].append(f"Invalid regex pattern: {e}")
         results["all_passed"] = False
         return results
@@ -182,15 +182,16 @@ def suggest_migration_for_re_sub(
         "test_cases_needed": [],
     }
 
-    # Check for safety issues first
-    forbidden_patterns = [
-        r"\\g\s*<\s*\d+\s*>",  # \g < 1 > with spaces
-        r"\\g<\s+\d+>",  # \g< 1> with space after <
-        r"\\g<\d+\s+>",  # \g<1 > with space before >
+    # Check for safety issues first using safe patterns
+    forbidden_checks = [
+        (r"\\g\s*<\s*\d+\s*>", "\\g < 1 > with spaces"),
+        (r"\\g<\s+\d+>", "\\g< 1> with space after <"),
+        (r"\\g<\d+\s+>", "\\g<1 > with space before >"),
     ]
 
-    for forbidden in forbidden_patterns:
-        if re.search(forbidden, original_replacement):
+    for forbidden_pattern, description in forbidden_checks:
+        compiled = CompiledPatternCache.get_compiled_pattern(forbidden_pattern)
+        if compiled.search(original_replacement):
             suggestion["safety_issues"].append(
                 "CRITICAL: Bad replacement syntax - spaces in \\g<1>"
             )
@@ -212,8 +213,9 @@ def suggest_migration_for_re_sub(
     elif "password" in original_pattern.lower():
         suggestion["suggested_name"] = "fix_password_pattern"
     else:
-        # Generate name from pattern keywords
-        keywords = re.findall(r"[a-zA-Z]+", original_pattern)
+        # Generate name from pattern keywords using safe pattern
+        keyword_pattern = CompiledPatternCache.get_compiled_pattern(r"[a-zA-Z]+")
+        keywords = keyword_pattern.findall(original_pattern)
         if keywords:
             suggestion["suggested_name"] = (
                 f"fix_{'_'.join(keywords[:3])}_pattern".lower()
@@ -307,11 +309,11 @@ def audit_file_for_re_sub(file_path: Path) -> list[dict[str, any]]:
         lines = content.split("\n")
 
         for i, line in enumerate(lines, 1):
-            # Look for re.sub() calls
-            re_sub_match = re.search(
-                r're\.sub\s*\(\s*[r]?["\']([^"\']+)["\'],\s*[r]?["\']([^"\']*)["\']',
-                line,
+            # Look for re.sub() calls using safe pattern
+            re_sub_pattern = CompiledPatternCache.get_compiled_pattern(
+                r're\.sub\s*\(\s*[r]?["\']([^"\']+)["\'],\s*[r]?["\']([^"\']*)["\']'
             )
+            re_sub_match = re_sub_pattern.search(line)
             if re_sub_match:
                 pattern = re_sub_match.group(1)
                 replacement = re_sub_match.group(2)
@@ -364,111 +366,171 @@ def audit_codebase_re_sub() -> dict[str, list[dict[str, any]]]:
 def replace_unsafe_regex_with_safe_patterns(content: str) -> str:
     """
     Replace unsafe regex patterns in content with safe alternatives.
-    
+
     This function looks for common regex patterns and replaces them with
     calls to SAFE_PATTERNS where possible.
-    
+
     Args:
         content: The source code content to fix
-        
+
     Returns:
         Fixed content with safe patterns applied
     """
     lines = content.split("\n")
     modified = False
-    
-    # Add import if needed
-    has_safe_patterns_import = any(
-        "from crackerjack.services.regex_patterns import SAFE_PATTERNS" in line or
-        "SAFE_PATTERNS" in line
-        for line in lines
-    )
-    
+
+    has_safe_patterns_import = _check_for_safe_patterns_import(lines)
+
     for i, line in enumerate(lines):
         original_line = line
-        
+
         # Fix critical replacement syntax issues first
-        if r"\g < " in line or r"\g< " in line or r"\g <" in line:
-            # Fix spacing in replacement groups
-            line = re.sub(r"\\g\s*<\s*(\d+)\s*>", r"\\g<\1>", line)
-            
-        # Look for simple re.sub patterns we can replace
-        re_sub_match = re.search(
-            r're\.sub\s*\(\s*r?["\']([^"\']+)["\']\s*,\s*r?["\']([^"\']*)["\']',
-            line
+        line = _fix_replacement_syntax_issues(line)
+
+        # Process re.sub patterns
+        line, pattern_modified, needs_import = _process_re_sub_patterns(
+            line, has_safe_patterns_import
         )
-        
-        if re_sub_match:
-            pattern = re_sub_match.group(1)
-            replacement = re_sub_match.group(2)
-            
-            # Look for matching safe patterns
-            safe_pattern_name = None
-            
-            # Common patterns we can automatically replace
-            if pattern == r"(\w+)\s*-\s*(\w+)" and replacement in [r"\1-\2", r"\g<1>-\g<2>"]:
-                safe_pattern_name = "fix_hyphenated_names"
-            elif "token" in pattern.lower() and "*" in replacement:
-                safe_pattern_name = "mask_tokens"
-            elif r"python\s*-\s*m" in pattern:
-                safe_pattern_name = "fix_python_command_spacing"
-            
-            # If we found a safe pattern, replace the line
-            if safe_pattern_name:
-                # Extract the text variable being operated on
-                text_var = "text"  # Default
-                
-                # Try to find the actual variable being used
-                before_re_sub = line[:re_sub_match.start()]
-                after_re_sub = line[re_sub_match.end():]
-                
-                # Look for assignment pattern: var = re.sub(...)
-                assign_match = re.search(r"(\w+)\s*=\s*$", before_re_sub)
-                if assign_match:
-                    var_name = assign_match.group(1)
-                    # Look for the source variable in the third argument
-                    full_match = re.search(
-                        r're\.sub\s*\([^,]+,\s*[^,]+,\s*(\w+)', line
-                    )
-                    if full_match:
-                        text_var = full_match.group(1)
-                    new_line = f"{var_name} = SAFE_PATTERNS['{safe_pattern_name}'].apply({text_var})"
-                    line = before_re_sub + new_line + after_re_sub
-                else:
-                    # Direct replacement
-                    full_match = re.search(
-                        r're\.sub\s*\([^,]+,\s*[^,]+,\s*(\w+)', line
-                    )
-                    if full_match:
-                        text_var = full_match.group(1)
-                    line = line.replace(re_sub_match.group(0), 
-                                      f"SAFE_PATTERNS['{safe_pattern_name}'].apply({text_var})")
-                
-                # Ensure we have the import
-                if not has_safe_patterns_import:
-                    # Find the right place to add import
-                    import_line = "from crackerjack.services.regex_patterns import SAFE_PATTERNS"
-                    
-                    # Look for existing imports
-                    import_index = 0
-                    for j, check_line in enumerate(lines):
-                        if check_line.strip().startswith(("import ", "from ")):
-                            import_index = j + 1
-                        elif check_line.strip() == "":
-                            continue
-                        else:
-                            break
-                    
-                    lines.insert(import_index, import_line)
-                    has_safe_patterns_import = True
-                    i += 1  # Adjust index for inserted line
-        
+
+        if needs_import and not has_safe_patterns_import:
+            import_index = _find_import_insertion_point(lines)
+            lines.insert(
+                import_index,
+                "from crackerjack.services.regex_patterns import SAFE_PATTERNS",
+            )
+            has_safe_patterns_import = True
+            i += 1  # Adjust index for inserted line
+
         # Update the line if it changed
         if line != original_line:
             lines[i] = line
             modified = True
-    
+
     return "\n".join(lines) if modified else content
+
+
+def _check_for_safe_patterns_import(lines: list[str]) -> bool:
+    """Check if SAFE_PATTERNS import is already present."""
+    return any(
+        "from crackerjack.services.regex_patterns import SAFE_PATTERNS" in line
+        or "SAFE_PATTERNS" in line
+        for line in lines
+    )
+
+
+def _fix_replacement_syntax_issues(line: str) -> str:
+    """Fix critical replacement syntax issues in regex patterns."""
+    if r"\g < " in line or r"\g< " in line or r"\g <" in line:
+        # Fix spacing in replacement groups using safe pattern
+        spacing_fix_pattern = CompiledPatternCache.get_compiled_pattern(
+            r"\\g\s*<\s*(\d+)\s*>"
+        )
+        line = spacing_fix_pattern.sub(r"\\g<\1>", line)
+    return line
+
+
+def _process_re_sub_patterns(
+    line: str, has_safe_patterns_import: bool
+) -> tuple[str, bool, bool]:
+    """Process re.sub patterns and replace with safe alternatives."""
+    re_sub_pattern = CompiledPatternCache.get_compiled_pattern(
+        r're\.sub\s*\(\s*r?["\']([^"\']+)["\']\s*,\s*r?["\']([^"\']*)["\']'
+    )
+    re_sub_match = re_sub_pattern.search(line)
+
+    if not re_sub_match:
+        return line, False, False
+
+    pattern = re_sub_match.group(1)
+    replacement = re_sub_match.group(2)
+
+    safe_pattern_name = _identify_safe_pattern(pattern, replacement)
+    if not safe_pattern_name:
+        return line, False, False
+
+    return _replace_with_safe_pattern(line, re_sub_match, safe_pattern_name)
+
+
+def _identify_safe_pattern(pattern: str, replacement: str) -> str | None:
+    """Identify which safe pattern matches the given regex pattern."""
+    # Common patterns we can automatically replace
+    if pattern == r"(\w+)\s*-\s*(\w+)" and replacement in [
+        r"\1-\2",
+        r"\g<1>-\g<2>",
+    ]:
+        return "fix_hyphenated_names"
+    elif "token" in pattern.lower() and "*" in replacement:
+        return "mask_tokens"
+    elif r"python\s*-\s*m" in pattern:
+        return "fix_python_command_spacing"
+    return None
+
+
+def _replace_with_safe_pattern(
+    line: str, re_sub_match, safe_pattern_name: str
+) -> tuple[str, bool, bool]:
+    """Replace re.sub call with safe pattern call."""
+    before_re_sub = line[: re_sub_match.start()]
+    after_re_sub = line[re_sub_match.end() :]
+
+    # Look for assignment pattern: var = re.sub(...)
+    assign_pattern = CompiledPatternCache.get_compiled_pattern(r"(\w+)\s*=\s*$")
+    assign_match = assign_pattern.search(before_re_sub)
+
+    if assign_match:
+        return _handle_assignment_pattern(
+            line, assign_match, before_re_sub, after_re_sub, safe_pattern_name
+        )
+    else:
+        return _handle_direct_replacement(line, re_sub_match, safe_pattern_name)
+
+
+def _handle_assignment_pattern(
+    line: str,
+    assign_match,
+    before_re_sub: str,
+    after_re_sub: str,
+    safe_pattern_name: str,
+) -> tuple[str, bool, bool]:
+    """Handle assignment pattern replacement."""
+    var_name = assign_match.group(1)
+    text_var = _extract_source_variable(line)
+    new_line = f"{var_name} = SAFE_PATTERNS['{safe_pattern_name}'].apply({text_var})"
+    return before_re_sub + new_line + after_re_sub, True, True
+
+
+def _handle_direct_replacement(
+    line: str, re_sub_match, safe_pattern_name: str
+) -> tuple[str, bool, bool]:
+    """Handle direct replacement of re.sub call."""
+    text_var = _extract_source_variable(line)
+    new_line = line.replace(
+        re_sub_match.group(0),
+        f"SAFE_PATTERNS['{safe_pattern_name}'].apply({text_var})",
+    )
+    return new_line, True, True
+
+
+def _extract_source_variable(line: str) -> str:
+    """Extract the source variable from re.sub call."""
+    var_pattern = CompiledPatternCache.get_compiled_pattern(
+        r"re\.sub\s*\([^,]+,\s*[^,]+,\s*(\w+)"
+    )
+    full_match = var_pattern.search(line)
+    return full_match.group(1) if full_match else "text"
+
+
+def _find_import_insertion_point(lines: list[str]) -> int:
+    """Find the right place to insert the import statement."""
+    import_index = 0
+    for j, check_line in enumerate(lines):
+        if check_line.strip().startswith(("import ", "from ")):
+            import_index = j + 1
+        elif check_line.strip() == "":
+            continue
+        else:
+            break
+    return import_index
 
 
 if __name__ == "__main__":

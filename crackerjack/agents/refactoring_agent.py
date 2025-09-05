@@ -458,100 +458,19 @@ class RefactoringAgent(SubAgent):
     _set_workflow_recommendations(recommendations)
     _generate_detection_reasoning(recommendations)
 
-    return json.dumps(recommendations, indent=2)
-
-
-def _add_urgent_agents_for_errors(recommendations: dict, error_context: str) -> None:
-
-    if not error_context:
-        return
-
-    error_lower = error_context.lower()
-
-    if any(term in error_lower for term in ["import", "module", "not found"]):
-        recommendations["urgent_agents"].append({
-            "agent": "import-optimization-agent",
-            "reason": "Import/module errors detected",
-            "priority": "urgent"
-        })
-
-    if any(term in error_lower for term in ["test", "pytest", "assertion", "fixture"]):
-        recommendations["urgent_agents"].append({
-            "agent": "test-specialist-agent",
-            "reason": "Test-related errors detected",
-            "priority": "urgent"
-        })
-
-
-def _add_python_project_suggestions(recommendations: dict, file_patterns: str) -> None:
-
-    if not file_patterns:
-        return
-
-    patterns_lower = file_patterns.lower()
-
-    if ".py" in patterns_lower:
-        recommendations["suggested_agents"].extend([
-            {
-                "agent": "python-pro",
-                "reason": "Python files detected",
-                "priority": "high"
-            },
-            {
-                "agent": "testing-frameworks",
-                "reason": "Python testing needs",
-                "priority": "medium"
-            }
-        ])
-
-
-def _set_workflow_recommendations(recommendations: dict) -> None:
-
-    recommendations["workflow_recommendations"] = [
-        "Run crackerjack quality checks first",
-        "Use AI agent auto-fixing for complex issues",
-        "Consider using crackerjack-architect for new features"
-    ]
-
-
-def _generate_detection_reasoning(recommendations: dict) -> None:
-
-    agent_count = len(recommendations["urgent_agents"]) + len(recommendations["suggested_agents"])
-
-    if agent_count == 0:
-        recommendations["detection_reasoning"] = "No specific agent recommendations based on current context"
-    else:
-        urgent_count = len(recommendations["urgent_agents"])
-        suggested_count = len(recommendations["suggested_agents"])
-
-        reasoning = f"Detected {agent_count} relevant agents: "
-        if urgent_count > 0:
-            reasoning += f"{urgent_count} urgent priority"
-        if suggested_count > 0:
-            if urgent_count > 0:
-                reasoning += f", {suggested_count} suggested priority"
-            else:
-                reasoning += f"{suggested_count} suggested priority"
-
-        recommendations["detection_reasoning"] = reasoning
-
-
-    if error_context:"""
+    return json.dumps(recommendations, indent=2)"""
 
         if original_pattern in content:
             modified_content = content.replace(original_pattern, replacement_pattern)
-
-            import re
-
-            pattern = r"if error_context:.*?(?=return json\.dumps)"
-            modified_content = re.sub(pattern, "", modified_content, flags=re.DOTALL)
-            return modified_content
+            if modified_content != content:
+                return modified_content
 
         return content
 
     def _extract_logical_sections(
         self, func_content: str, func_info: dict[str, t.Any]
     ) -> list[dict[str, str]]:
+        """Extract logical sections from function content for refactoring."""
         sections = []
         lines = func_content.split("\n")
         current_section = []
@@ -615,27 +534,8 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
             "name": f"_{name_prefix}_{effective_type}_{section_count + 1}",
         }
 
-    def _extract_function_content(
-        self, lines: list[str], func_info: dict[str, t.Any]
-    ) -> str:
-        start_line = func_info.get("line_start", 0)
-        end_line = func_info.get("line_end", len(lines))
-
-        if start_line <= 0 or end_line <= start_line:
-            return ""
-
-        func_lines = lines[start_line - 1 : end_line]
-        return "\n".join(func_lines)
-
-    def _apply_function_extraction(
-        self, content: str, func_info: dict[str, t.Any], helpers: list[dict[str, str]]
-    ) -> str:
-        if not helpers:
-            return content
-
-        return content
-
     def _analyze_dead_code(self, tree: ast.AST, content: str) -> dict[str, t.Any]:
+        """Analyze code for dead/unused elements."""
         analysis: dict[str, list[t.Any]] = {
             "unused_imports": [],
             "unused_variables": [],
@@ -650,6 +550,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
         return analysis
 
     def _collect_usage_data(self, tree: ast.AST) -> dict[str, t.Any]:
+        """Collect data about defined and used names in the AST."""
         defined_names: set[str] = set()
         used_names: set[str] = set()
         import_lines: list[tuple[int, str, str]] = []
@@ -693,6 +594,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
         analysis: dict[str, t.Any],
         analyzer_result: dict[str, t.Any],
     ) -> None:
+        """Process unused imports and add to analysis."""
         import_lines: list[tuple[int, str, str]] = analyzer_result["import_lines"]
         for line_no, name, import_type in import_lines:
             if name not in analyzer_result["used_names"]:
@@ -710,6 +612,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
         analysis: dict[str, t.Any],
         analyzer_result: dict[str, t.Any],
     ) -> None:
+        """Process unused functions and add to analysis."""
         all_unused_functions: list[dict[str, t.Any]] = analyzer_result[
             "unused_functions"
         ]
@@ -725,6 +628,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
     def _should_remove_import_line(
         self, line: str, unused_import: dict[str, str]
     ) -> bool:
+        """Check if an import line should be removed."""
         if unused_import["type"] == "import":
             return f"import {unused_import['name']}" in line
         elif unused_import["type"] == "from_import":
@@ -738,6 +642,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
     def _find_lines_to_remove(
         self, lines: list[str], analysis: dict[str, t.Any]
     ) -> set[int]:
+        """Find line indices that should be removed."""
         lines_to_remove: set[int] = set()
 
         for unused_import in analysis["unused_imports"]:
@@ -750,6 +655,7 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
         return lines_to_remove
 
     def _remove_dead_code_items(self, content: str, analysis: dict[str, t.Any]) -> str:
+        """Remove dead code items from content."""
         lines = content.split("\n")
         lines_to_remove = self._find_lines_to_remove(lines, analysis)
 
@@ -758,6 +664,95 @@ def _generate_detection_reasoning(recommendations: dict) -> None:
         ]
 
         return "\n".join(filtered_lines)
+
+
+def _add_urgent_agents_for_errors(recommendations: dict, error_context: str) -> None:
+    if not error_context:
+        return
+
+    error_lower = error_context.lower()
+
+    if any(term in error_lower for term in ["import", "module", "not found"]):
+        recommendations["urgent_agents"].append(
+            {
+                "agent": "import-optimization-agent",
+                "reason": "Import/module errors detected",
+                "priority": "urgent",
+            }
+        )
+
+    if any(term in error_lower for term in ["test", "pytest", "assertion", "fixture"]):
+        recommendations["urgent_agents"].append(
+            {
+                "agent": "test-specialist-agent",
+                "reason": "Test-related errors detected",
+                "priority": "urgent",
+            }
+        )
+
+
+def _add_python_project_suggestions(recommendations: dict, file_patterns: str) -> None:
+    if not file_patterns:
+        return
+
+    patterns_lower = file_patterns.lower()
+
+    if ".py" in patterns_lower:
+        recommendations["suggested_agents"].extend(
+            [
+                {
+                    "agent": "python-pro",
+                    "reason": "Python files detected",
+                    "priority": "high",
+                },
+                {
+                    "agent": "testing-frameworks",
+                    "reason": "Python testing needs",
+                    "priority": "medium",
+                },
+            ]
+        )
+
+
+def _set_workflow_recommendations(recommendations: dict) -> None:
+    recommendations["workflow_recommendations"] = [
+        "Run crackerjack quality checks first",
+        "Use AI agent auto-fixing for complex issues",
+        "Consider using crackerjack-architect for new features",
+    ]
+
+
+def _generate_detection_reasoning(recommendations: dict) -> None:
+    """Generate reasoning text for agent detection results."""
+    agent_count = len(recommendations["urgent_agents"]) + len(
+        recommendations["suggested_agents"]
+    )
+
+    if agent_count == 0:
+        recommendations["detection_reasoning"] = (
+            "No specific agent recommendations based on current context"
+        )
+    else:
+        recommendations["detection_reasoning"] = _build_agent_reasoning(
+            recommendations, agent_count
+        )
+
+
+def _build_agent_reasoning(recommendations: dict, agent_count: int) -> str:
+    """Build reasoning text for detected agents."""
+    urgent_count = len(recommendations["urgent_agents"])
+    suggested_count = len(recommendations["suggested_agents"])
+
+    reasoning = f"Detected {agent_count} relevant agents: "
+    if urgent_count > 0:
+        reasoning += f"{urgent_count} urgent priority"
+    if suggested_count > 0:
+        if urgent_count > 0:
+            reasoning += f", {suggested_count} suggested priority"
+        else:
+            reasoning += f"{suggested_count} suggested priority"
+
+    return reasoning
 
 
 agent_registry.register(RefactoringAgent)

@@ -1,5 +1,4 @@
 import asyncio
-import re
 import subprocess
 import time
 import typing as t
@@ -9,6 +8,7 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.models.protocols import OptionsProtocol
+from crackerjack.services.regex_patterns import SAFE_PATTERNS, CompiledPatternCache
 
 
 @dataclass
@@ -104,24 +104,30 @@ class TestSuiteProgress:
 
 
 class PytestOutputParser:
-    TEST_START_PATTERN = re.compile(
-        r"^(.+?):: (.*):: (.*)(?: PASSED | FAILED | SKIPPED | ERROR)",
-    )
-    TEST_RESULT_PATTERN = re.compile(
-        r"^(.+?)(?: PASSED | FAILED | SKIPPED | ERROR)(?: \s +\[.*?\])?\s *$",
-    )
-    TEST_COLLECTION_PATTERN = re.compile(r"collected (\d +) items?")
-    TEST_SESSION_START = re.compile(r"test session starts")
-    COVERAGE_PATTERN = re.compile(r"TOTAL\s +\d +\s +\d +\s +(\d +)%")
-
-    DETAILED_TEST_PATTERN = re.compile(
-        r"^(.+?\.py):: (.*)(?: PASSED | FAILED | SKIPPED | ERROR)(?: \s +\[(\d +)%\])?\s *(?: \[(.*?)\])?\s *$",
-    )
-
     def __init__(self) -> None:
         self.current_test: str | None = None
         self.test_traceback_buffer: list[str] = []
         self.in_traceback = False
+
+        # Cache compiled patterns for optimal performance during test parsing
+        self._test_start_pattern = CompiledPatternCache.get_compiled_pattern(
+            SAFE_PATTERNS["pytest_test_start"].pattern
+        )
+        self._test_result_pattern = CompiledPatternCache.get_compiled_pattern(
+            SAFE_PATTERNS["pytest_test_result"].pattern
+        )
+        self._test_collection_pattern = CompiledPatternCache.get_compiled_pattern(
+            SAFE_PATTERNS["pytest_collection_count"].pattern
+        )
+        self._session_start_pattern = CompiledPatternCache.get_compiled_pattern(
+            SAFE_PATTERNS["pytest_session_start"].pattern
+        )
+        self._coverage_pattern = CompiledPatternCache.get_compiled_pattern(
+            SAFE_PATTERNS["pytest_coverage_total"].pattern
+        )
+        self._detailed_test_pattern = CompiledPatternCache.get_compiled_pattern(
+            SAFE_PATTERNS["pytest_detailed_test"].pattern
+        )
 
     def parse_pytest_output(self, output_lines: list[str]) -> dict[str, t.Any]:
         tests: dict[str, TestProgress] = {}
@@ -148,7 +154,7 @@ class PytestOutputParser:
         line: str,
         suite_info: TestSuiteProgress,
     ) -> None:
-        if match := self.TEST_COLLECTION_PATTERN.search(line):
+        if match := self._test_collection_pattern.search(line):
             suite_info.total_tests = int(match.group(1))
 
     def _process_test_result_line(
@@ -157,8 +163,8 @@ class PytestOutputParser:
         tests: dict[str, TestProgress],
         suite_info: TestSuiteProgress,
     ) -> None:
-        if match := self.DETAILED_TEST_PATTERN.match(line):
-            file_path, test_name, status, _progress, _timing = match.groups()
+        if match := self._detailed_test_pattern.match(line):
+            file_path, test_name, status = match.groups()
             test_id = f"{file_path}:: {test_name}"
 
             if test_id not in tests:
@@ -205,7 +211,7 @@ class PytestOutputParser:
             suite_info.error_tests += 1
 
     def _process_coverage_line(self, line: str, suite_info: TestSuiteProgress) -> None:
-        if match := self.COVERAGE_PATTERN.search(line):
+        if match := self._coverage_pattern.search(line):
             suite_info.coverage_percentage = float(match.group(1))
 
     def _process_current_test_line(
@@ -524,7 +530,7 @@ class TestProgressStreamer:
             if parts:
                 suite_progress.current_test = parts[0]
 
-        if match := self.parser.TEST_COLLECTION_PATTERN.search(line):
+        if match := self.parser._test_collection_pattern.search(line):
             suite_progress.total_tests = int(match.group(1))
 
         if "PASSED" in line:

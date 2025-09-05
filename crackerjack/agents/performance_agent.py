@@ -4,6 +4,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
+from ..services.regex_patterns import SAFE_PATTERNS
 from .base import (
     FixResult,
     Issue,
@@ -403,22 +404,24 @@ class PerformanceAgent(SubAgent):
             reverse=True,
         )
 
+        list_pattern = SAFE_PATTERNS["list_append_inefficiency_pattern"]
+
         for instance in instances:
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = t.cast(str, lines[line_idx])
 
-                import re
-
-                pattern = r"(\s*)(\w+)\s*\+=\s*\[([^]]+)\]"
-                match = re.match(pattern, original_line)
-
-                if match:
-                    indent, var_name, item_expr = match.groups()
-                    optimized_line = f"{indent}{var_name}.append({item_expr})"
+                # Use safe pattern to test and transform
+                if list_pattern.test(original_line):
+                    # Apply the performance optimization using safe pattern
+                    optimized_line = list_pattern.apply(original_line)
                     lines[line_idx] = optimized_line
                     modified = True
 
+                    # Extract indent from the original line for comment
+                    indent = original_line[
+                        : len(original_line) - len(original_line.lstrip())
+                    ]
                     comment = (
                         f"{indent}# Performance: Changed += [item] to .append(item)"
                     )
@@ -462,20 +465,21 @@ class PerformanceAgent(SubAgent):
 
         original_line = t.cast(str, lines[line_idx])
 
-        import re
-
-        pattern = r"(\s*)(\w+)\s*\+=\s*(.+)"
-        match = re.match(pattern, original_line)
-
-        if match:
-            indent, var_name, expr = match.groups()
-            return {
-                "line_idx": line_idx,
-                "indent": indent,
-                "var_name": var_name,
-                "expr": expr.strip(),
-                "original_line": original_line,
-            }
+        # Use safe pattern for string concatenation parsing
+        concat_pattern = SAFE_PATTERNS["string_concatenation_pattern"]
+        if concat_pattern.test(original_line):
+            # Extract parts using the safe pattern's compiled pattern
+            compiled = concat_pattern._get_compiled_pattern()
+            match = compiled.match(original_line)
+            if match:
+                indent, var_name, expr = match.groups()
+                return {
+                    "line_idx": line_idx,
+                    "indent": indent,
+                    "var_name": var_name,
+                    "expr": expr.strip(),
+                    "original_line": original_line,
+                }
         return None
 
     def _apply_concatenation_optimizations(

@@ -6,9 +6,10 @@ for better error handling and resource leak prevention.
 """
 
 import logging
-import re
 import sys
 from pathlib import Path
+
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -33,27 +34,25 @@ def update_import_statements(file_path: Path) -> bool:
         patterns_to_add = []
 
         # For files using temporary files/directories
-        if re.search(
-            r"tempfile\.(mkdtemp|NamedTemporaryFile|TemporaryDirectory)", content
-        ):
+        if SAFE_PATTERNS["detect_tempfile_usage"].test(content):
             patterns_to_add.append(
                 "from crackerjack.core.resource_manager import ResourceContext, with_temp_file, with_temp_dir"
             )
 
         # For files using subprocess
-        if re.search(r"subprocess\.(Popen|run)", content):
+        if SAFE_PATTERNS["detect_subprocess_usage"].test(content):
             patterns_to_add.append(
                 "from crackerjack.core.websocket_lifecycle import NetworkResourceManager, with_managed_subprocess"
             )
 
         # For files using asyncio tasks
-        if re.search(r"asyncio\.create_task", content):
+        if SAFE_PATTERNS["detect_asyncio_create_task"].test(content):
             patterns_to_add.append(
                 "from crackerjack.core.resource_manager import ResourceContext"
             )
 
         # For files doing file operations
-        if re.search(r"\.open\(|with open\(", content):
+        if SAFE_PATTERNS["detect_file_open_operations"].test(content):
             patterns_to_add.append(
                 "from crackerjack.core.file_lifecycle import SafeFileOperations, atomic_file_write"
             )
@@ -107,9 +106,6 @@ def add_resource_context_to_async_functions(file_path: Path) -> bool:
         content = file_path.read_text(encoding="utf-8")
         original_content = content
 
-        # Pattern for async functions that might benefit from resource context
-        async_func_pattern = r"(async def \w+\([^)]*\)[^:]*:)"
-
         # Look for functions that create subprocess or temporary files
         functions_to_update = []
         lines = content.split("\n")
@@ -119,9 +115,11 @@ def add_resource_context_to_async_functions(file_path: Path) -> bool:
 
         for i, line in enumerate(lines):
             # Check if this is an async function definition
-            match = re.match(async_func_pattern, line.strip())
-            if match:
-                current_function = match.group(1)
+            if SAFE_PATTERNS["match_async_function_definition"].test(line.strip()):
+                # Extract the function definition for tracking
+                current_function = SAFE_PATTERNS[
+                    "match_async_function_definition"
+                ].apply(line.strip())
                 function_start = i
             elif current_function and (
                 "subprocess.Popen" in line
@@ -196,22 +194,21 @@ def update_subprocess_calls(file_path: Path) -> bool:
         content = file_path.read_text(encoding="utf-8")
 
         # Replace subprocess.Popen with managed version
-        patterns = [
-            # Basic Popen calls
-            (
-                r"subprocess\.Popen\(",
-                "managed_proc = resource_ctx.managed_process(subprocess.Popen(",
-            ),
-            # Popen with variable assignment
-            (r"(\w+)\s*=\s*subprocess\.Popen\(", r"process = subprocess.Popen("),
-        ]
-
         updated = False
-        for pattern, replacement in patterns:
-            new_content = re.sub(pattern, replacement, content)
-            if new_content != content:
-                content = new_content
-                updated = True
+
+        # First handle basic Popen calls
+        new_content = SAFE_PATTERNS["replace_subprocess_popen_basic"].apply(content)
+        if new_content != content:
+            content = new_content
+            updated = True
+
+        # Then handle Popen with variable assignment
+        new_content = SAFE_PATTERNS["replace_subprocess_popen_assignment"].apply(
+            content
+        )
+        if new_content != content:
+            content = new_content
+            updated = True
 
         if updated:
             file_path.write_text(content, encoding="utf-8")
@@ -230,22 +227,19 @@ def update_file_operations(file_path: Path) -> bool:
         content = file_path.read_text(encoding="utf-8")
 
         # Replace risky file operations
-        patterns = [
-            # Replace simple open() with context manager
-            (r'(\w+)\.open\(["\']w["\'][^)]*\)', r"atomic_file_write(\1)"),
-            # Replace path.write_text with safe version
-            (
-                r"(\w+)\.write_text\(([^)]+)\)",
-                r"await SafeFileOperations.safe_write_text(\1, \2, atomic=True)",
-            ),
-        ]
-
         updated = False
-        for pattern, replacement in patterns:
-            new_content = re.sub(pattern, replacement, content)
-            if new_content != content:
-                content = new_content
-                updated = True
+
+        # Replace simple open() with context manager
+        new_content = SAFE_PATTERNS["replace_path_open_write"].apply(content)
+        if new_content != content:
+            content = new_content
+            updated = True
+
+        # Replace path.write_text with safe version
+        new_content = SAFE_PATTERNS["replace_path_write_text"].apply(content)
+        if new_content != content:
+            content = new_content
+            updated = True
 
         if updated:
             file_path.write_text(content, encoding="utf-8")
@@ -265,16 +259,14 @@ def add_cleanup_handlers(file_path: Path) -> bool:
         original_content = content
 
         # Look for classes that might need cleanup
-        class_pattern = r"class (\w+).*:"
-
         lines = content.split("\n")
         new_lines = lines[:]
         offset = 0
 
         for i, line in enumerate(lines):
-            match = re.match(class_pattern, line.strip())
-            if match:
-                class_name = match.group(1)
+            if SAFE_PATTERNS["match_class_definition"].test(line.strip()):
+                # Extract class name using the pattern
+                class_name = SAFE_PATTERNS["match_class_definition"].apply(line.strip())
 
                 # Skip if already has cleanup methods
                 class_body_start = i + 1

@@ -1,6 +1,6 @@
-import re
 from pathlib import Path
 
+from ..services.regex_patterns import SAFE_PATTERNS
 from .base import (
     AgentContext,
     FixResult,
@@ -15,14 +15,14 @@ class TestSpecialistAgent(SubAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self.common_test_patterns = {
-            "fixture_not_found": r"fixture '(\w+)' not found",
-            "import_error": r"ImportError|ModuleNotFoundError",
-            "assertion_error": r"AssertionError|assert .+ ==",
-            "attribute_error": r"AttributeError: .+ has no attribute",
-            "mock_spec_error": r"MockSpec|spec.*Mock",
-            "hardcoded_path": r"'/test/path'|/test/path",
-            "missing_import": r"name '(\w+)' is not defined",
-            "pydantic_validation": r"ValidationError|validation error",
+            "fixture_not_found": SAFE_PATTERNS["fixture_not_found_pattern"].pattern,
+            "import_error": SAFE_PATTERNS["import_error_pattern"].pattern,
+            "assertion_error": SAFE_PATTERNS["assertion_error_pattern"].pattern,
+            "attribute_error": SAFE_PATTERNS["attribute_error_pattern"].pattern,
+            "mock_spec_error": SAFE_PATTERNS["mock_spec_error_pattern"].pattern,
+            "hardcoded_path": SAFE_PATTERNS["hardcoded_path_pattern"].pattern,
+            "missing_import": SAFE_PATTERNS["missing_name_pattern"].pattern,
+            "pydantic_validation": SAFE_PATTERNS["pydantic_validation_pattern"].pattern,
         }
 
     def get_supported_types(self) -> set[IssueType]:
@@ -63,9 +63,27 @@ class TestSpecialistAgent(SubAgent):
         )
 
     def _check_test_patterns(self, message: str) -> float:
+        # Map pattern strings back to SAFE_PATTERNS for safe usage
+        pattern_map = {
+            SAFE_PATTERNS[
+                "fixture_not_found_pattern"
+            ].pattern: "fixture_not_found_pattern",
+            SAFE_PATTERNS["import_error_pattern"].pattern: "import_error_pattern",
+            SAFE_PATTERNS["assertion_error_pattern"].pattern: "assertion_error_pattern",
+            SAFE_PATTERNS["attribute_error_pattern"].pattern: "attribute_error_pattern",
+            SAFE_PATTERNS["mock_spec_error_pattern"].pattern: "mock_spec_error_pattern",
+            SAFE_PATTERNS["hardcoded_path_pattern"].pattern: "hardcoded_path_pattern",
+            SAFE_PATTERNS["missing_name_pattern"].pattern: "missing_name_pattern",
+            SAFE_PATTERNS[
+                "pydantic_validation_pattern"
+            ].pattern: "pydantic_validation_pattern",
+        }
+
         for pattern in self.common_test_patterns.values():
-            if re.search(pattern, message, re.IGNORECASE):
-                return 0.9
+            if pattern in pattern_map:
+                safe_pattern = SAFE_PATTERNS[pattern_map[pattern]]
+                if safe_pattern.test(message):
+                    return 0.9
         return 0.0
 
     def _check_test_file_path(self, file_path: str | None) -> float:
@@ -173,16 +191,40 @@ class TestSpecialistAgent(SubAgent):
     def _identify_failure_type(self, issue: Issue) -> str:
         message = issue.message
 
+        # Map pattern strings back to SAFE_PATTERNS for safe usage
+        pattern_map = {
+            SAFE_PATTERNS[
+                "fixture_not_found_pattern"
+            ].pattern: "fixture_not_found_pattern",
+            SAFE_PATTERNS["import_error_pattern"].pattern: "import_error_pattern",
+            SAFE_PATTERNS["assertion_error_pattern"].pattern: "assertion_error_pattern",
+            SAFE_PATTERNS["attribute_error_pattern"].pattern: "attribute_error_pattern",
+            SAFE_PATTERNS["mock_spec_error_pattern"].pattern: "mock_spec_error_pattern",
+            SAFE_PATTERNS["hardcoded_path_pattern"].pattern: "hardcoded_path_pattern",
+            SAFE_PATTERNS["missing_name_pattern"].pattern: "missing_name_pattern",
+            SAFE_PATTERNS[
+                "pydantic_validation_pattern"
+            ].pattern: "pydantic_validation_pattern",
+        }
+
         for pattern_name, pattern in self.common_test_patterns.items():
-            if re.search(pattern, message, re.IGNORECASE):
-                return pattern_name
+            if pattern in pattern_map:
+                safe_pattern = SAFE_PATTERNS[pattern_map[pattern]]
+                if safe_pattern.test(message):
+                    return pattern_name
 
         return "unknown"
 
     async def _fix_missing_fixtures(self, issue: Issue) -> list[str]:
         fixes: list[str] = []
 
-        match = re.search(r"fixture '(\w+)' not found", issue.message)
+        # Use safe pattern to test and extract fixture name
+        fixture_pattern = SAFE_PATTERNS["fixture_not_found_pattern"]
+        if not fixture_pattern.test(issue.message):
+            return fixes
+
+        # Extract fixture name using the safe pattern's search method
+        match = fixture_pattern.search(issue.message)
         if not match:
             return fixes
 

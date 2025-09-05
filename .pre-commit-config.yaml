@@ -3,8 +3,8 @@ repos:
     hooks:
       - id: validate-regex-patterns
         name: validate-regex-patterns
-        entry: python -m crackerjack.tools.validate_regex_patterns
-        language: python
+        entry: python tools/validate_regex_patterns_standalone.py
+        language: system
         files: \.py$
         exclude: ^\.venv/
   - repo: https://github.com/pre-commit/pre-commit-hooks

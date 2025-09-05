@@ -1,7 +1,7 @@
-import re
 import typing as t
 from pathlib import Path
 
+from ..services.regex_patterns import SAFE_PATTERNS
 from .base import (
     FixResult,
     Issue,
@@ -147,21 +147,23 @@ class DRYAgent(SubAgent):
         violations: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
-        error_pattern = re.compile(
-            r'return\s+f?[\'\"]\{[\'\""]error[\'\""]:\s*[\'\""]([^\'\"]*)[\'\""].*\}[\'\""]',
-        )
+        error_pattern = SAFE_PATTERNS["detect_error_response_patterns"]
 
         error_responses: list[dict[str, t.Any]] = []
         for i, line in enumerate(lines):
-            match = error_pattern.search(line.strip())
-            if match:
-                error_responses.append(
-                    {
-                        "line_number": i + 1,
-                        "content": line.strip(),
-                        "error_message": match.group(1),
-                    },
-                )
+            if error_pattern.test(line.strip()):
+                # Extract error message using the pattern's compiled regex access
+                # Access the compiled pattern from SAFE_PATTERNS to get groups
+                compiled_pattern = error_pattern._get_compiled_pattern()
+                match = compiled_pattern.search(line.strip())
+                if match:
+                    error_responses.append(
+                        {
+                            "line_number": i + 1,
+                            "content": line.strip(),
+                            "error_message": match.group(1),
+                        },
+                    )
 
         if len(error_responses) >= 3:
             violations.append(
@@ -178,9 +180,7 @@ class DRYAgent(SubAgent):
         violations: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
-        path_pattern = re.compile(
-            r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+[^)]+",
-        )
+        path_pattern = SAFE_PATTERNS["detect_path_conversion_patterns"]
 
         path_conversions: list[dict[str, t.Any]] = [
             {
@@ -188,7 +188,7 @@ class DRYAgent(SubAgent):
                 "content": line.strip(),
             }
             for i, line in enumerate(lines)
-            if path_pattern.search(line)
+            if path_pattern.test(line)
         ]
 
         if len(path_conversions) >= 2:
@@ -206,7 +206,7 @@ class DRYAgent(SubAgent):
         violations: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
-        existence_pattern = re.compile(r"if\s+not\s+\w+\.exists\(\):")
+        existence_pattern = SAFE_PATTERNS["detect_file_existence_patterns"]
 
         existence_checks: list[dict[str, t.Any]] = [
             {
@@ -214,7 +214,7 @@ class DRYAgent(SubAgent):
                 "content": line.strip(),
             }
             for i, line in enumerate(lines)
-            if existence_pattern.search(line.strip())
+            if existence_pattern.test(line.strip())
         ]
 
         if len(existence_checks) >= 3:
@@ -232,11 +232,11 @@ class DRYAgent(SubAgent):
         violations: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
-        exception_pattern = re.compile(r"except\s+\w*Exception\s+as\s+\w+:")
+        exception_pattern = SAFE_PATTERNS["detect_exception_patterns"]
 
         exception_handlers: list[dict[str, t.Any]] = []
         for i, line in enumerate(lines):
-            if exception_pattern.search(line.strip()):
+            if exception_pattern.test(line.strip()):
                 if (
                     i + 1 < len(lines)
                     and "error" in lines[i + 1]
@@ -332,9 +332,7 @@ def _ensure_path(path: str | Path) -> Path:
         self, lines: list[str], violation: dict[str, t.Any], utility_lines_count: int
     ) -> None:
         """Apply pattern replacements to lines with error response patterns."""
-        path_pattern = re.compile(
-            r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+([^)]+)",
-        )
+        path_pattern = SAFE_PATTERNS["fix_path_conversion_with_ensure_path"]
 
         for instance in violation["instances"]:
             line_number: int = int(instance["line_number"])
@@ -342,7 +340,7 @@ def _ensure_path(path: str | Path) -> Path:
 
             if line_idx < len(lines):
                 original_line: str = lines[line_idx]
-                new_line: str = path_pattern.sub(r"_ensure_path(\1)", original_line)
+                new_line: str = path_pattern.apply(original_line)
                 lines[line_idx] = new_line
 
     def _fix_path_conversion_pattern(
@@ -394,9 +392,7 @@ def _ensure_path(path: str | Path) -> Path:
         utility_function_added: bool,
     ) -> bool:
         """Replace path conversion patterns with utility function calls."""
-        path_pattern = re.compile(
-            r"Path\(([^)]+)\)\s+if\s+isinstance\(\1,\s*str\)\s+else\s+\1",
-        )
+        path_pattern = SAFE_PATTERNS["fix_path_conversion_simple"]
 
         modified = False
         for instance in violation["instances"]:
@@ -405,7 +401,7 @@ def _ensure_path(path: str | Path) -> Path:
 
             if line_idx < len(lines):
                 original_line: str = lines[line_idx]
-                new_line = path_pattern.sub(r"_ensure_path(\1)", original_line)
+                new_line = path_pattern.apply(original_line)
 
                 if new_line != original_line:
                     lines[line_idx] = new_line

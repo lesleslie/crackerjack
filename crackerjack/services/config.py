@@ -323,12 +323,9 @@ class ConfigurationService:
             updated = False
 
             for repo_url, new_rev in version_updates.items():
-                import re
+                from .regex_patterns import update_repo_revision
 
-                pattern = rf'("repo": "{re.escape(repo_url)}".*?"rev": )"([^"]+)"'
-                replacement = rf'\1"{new_rev}"'
-
-                new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+                new_content = update_repo_revision(content, repo_url, new_rev)
                 if new_content != content:
                     content = new_content
                     updated = True

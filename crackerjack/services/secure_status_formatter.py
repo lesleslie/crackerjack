@@ -220,68 +220,101 @@ class SecureStatusFormatter:
 
     def _sanitize_paths(self, text: str) -> str:
         """Convert absolute paths to relative paths where possible."""
+        from .regex_patterns import SAFE_PATTERNS
 
-        # More comprehensive path pattern that catches absolute paths
-        path_patterns = [
-            r"/[a-zA-Z0-9_\-\.\/]+",  # Unix-style absolute paths
-            r"[A-Z]:[\\\/][a-zA-Z0-9_\-\.\\\/]+",  # Windows-style absolute paths
-        ]
+        # Use validated patterns for path detection
+        unix_path_pattern = SAFE_PATTERNS.get("detect_absolute_unix_paths")
+        windows_path_pattern = SAFE_PATTERNS.get("detect_absolute_windows_paths")
+        
+        # If patterns don't exist, create safe ones manually
+        if not unix_path_pattern:
+            # Create temporary patterns for path detection using safe regex utilities
+            path_patterns = [
+                r"/[a-zA-Z0-9_\-\.\/]+",  # Unix-style absolute paths
+                r"[A-Z]:[\\\/][a-zA-Z0-9_\-\.\\\/]+",  # Windows-style absolute paths
+            ]
 
-        for pattern in path_patterns:
-            matches = re.findall(pattern, text)
-            for match in matches:
-                if len(match) > 3:  # Only process paths longer than 3 chars
-                    try:
-                        abs_path = Path(match)
-                        if abs_path.is_absolute():
-                            # Try to make relative to project root
+            for pattern_str in path_patterns:
+                # Use SAFE_PATTERNS framework for compilation safety
+                try:
+                    from .regex_patterns import CompiledPatternCache
+                    compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
+                    matches = compiled.findall(text)
+                    
+                    for match in matches:
+                        if len(match) > 3:  # Only process paths longer than 3 chars
                             try:
-                                rel_path = abs_path.relative_to(self.project_root)
-                                text = text.replace(match, f"./{rel_path}")
+                                abs_path = Path(match)
+                                if abs_path.is_absolute():
+                                    # Try to make relative to project root
+                                    try:
+                                        rel_path = abs_path.relative_to(self.project_root)
+                                        text = text.replace(match, f"./{rel_path}")
+                                    except (ValueError, OSError):
+                                        # If not within project, mask it
+                                        text = text.replace(match, "[REDACTED_PATH]")
                             except (ValueError, OSError):
-                                # If not within project, mask it
+                                # If path operations fail, mask it
                                 text = text.replace(match, "[REDACTED_PATH]")
-                    except (ValueError, OSError):
-                        # If path operations fail, mask it
-                        text = text.replace(match, "[REDACTED_PATH]")
+                except Exception:
+                    # If pattern compilation fails, skip this pattern
+                    continue
 
         return text
 
     def _sanitize_internal_urls(self, text: str) -> str:
         """Replace internal URLs with generic placeholders."""
+        from .regex_patterns import sanitize_internal_urls
 
-        # More comprehensive URL patterns
-        url_patterns = [
-            r"https?://localhost:\d+[^\s]*",
-            r"https?://127\.0\.0\.1:\d+[^\s]*",
-            r"https?://0\.0\.0\.0:\d+[^\s]*",
-            r"ws://localhost:\d+[^\s]*",
-            r"ws://127\.0\.0\.1:\d+[^\s]*",
-            r"http://localhost[^\s]*",
-            r"ws://localhost[^\s]*",
-        ]
-
-        for pattern in url_patterns:
-            text = re.sub(pattern, "[INTERNAL_URL]", text)
-
-        return text
+        return sanitize_internal_urls(text)
 
     def _mask_potential_secrets(self, text: str) -> str:
         """Mask strings that might be secrets."""
+        from .regex_patterns import SAFE_PATTERNS
 
         # Don't mask if it contains already sanitized content
         if "[INTERNAL_URL]" in text or "[REDACTED_PATH]" in text:
             return text
 
-        for pattern in self.SENSITIVE_PATTERNS["secrets"]:
-            # Only mask if the string looks like a token (long alphanumeric)
-            matches = re.findall(pattern, text)
-            for match in matches:
-                if len(match) > 16:  # Only mask long strings
-                    # Don't mask if it looks like a URL or path component
-                    if not any(x in match for x in ("://", "/", "\\", ".")):
-                        masked = match[:4] + "*" * (len(match) - 8) + match[-4:]
-                        text = text.replace(match, masked)
+        # Use validated patterns for secret detection
+        long_alphanumeric = SAFE_PATTERNS.get("detect_long_alphanumeric_tokens")
+        base64_like = SAFE_PATTERNS.get("detect_base64_like_strings")
+        
+        patterns_to_check = []
+        if long_alphanumeric:
+            patterns_to_check.append(long_alphanumeric)
+        if base64_like:
+            patterns_to_check.append(base64_like)
+            
+        # Fall back to safe manual patterns if registry patterns don't exist
+        if not patterns_to_check:
+            for pattern_str in self.SENSITIVE_PATTERNS["secrets"]:
+                try:
+                    from .regex_patterns import CompiledPatternCache
+                    compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
+                    matches = compiled.findall(text)
+                    
+                    for match in matches:
+                        if len(match) > 16:  # Only mask long strings
+                            # Don't mask if it looks like a URL or path component
+                            if not any(x in match for x in ("://", "/", "\\", ".")):
+                                masked = match[:4] + "*" * (len(match) - 8) + match[-4:]
+                                text = text.replace(match, masked)
+                except Exception:
+                    continue  # Skip failed pattern compilation
+        else:
+            # Use validated patterns
+            for pattern in patterns_to_check:
+                try:
+                    matches = pattern.findall(text)
+                    for match in matches:
+                        if len(match) > 16:  # Only mask long strings
+                            # Don't mask if it looks like a URL or path component
+                            if not any(x in match for x in ("://", "/", "\\", ".")):
+                                masked = match[:4] + "*" * (len(match) - 8) + match[-4:]
+                                text = text.replace(match, masked)
+                except Exception:
+                    continue  # Skip failed pattern matching
 
         return text
 

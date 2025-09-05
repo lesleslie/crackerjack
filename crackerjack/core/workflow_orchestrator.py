@@ -753,13 +753,13 @@ class WorkflowPipeline:
         issues: list[Issue] = []
 
         if task_id == "comprehensive_hooks":
-            if "complexipy" in error_msg.lower():
+            if "complexipy" in error_msg.lower() or "c901" in error_msg.lower():
                 issues.append(
                     Issue(
-                        id="complexipy_violation",
+                        id="complexity_violation",
                         type=IssueType.COMPLEXITY,
                         severity=Priority.HIGH,
-                        message="Code complexity violation detected by complexipy",
+                        message="Code complexity violation detected",
                         stage="comprehensive",
                     )
                 )
@@ -855,7 +855,8 @@ class WorkflowPipeline:
                 issue_type = IssueType.SECURITY
                 priority = Priority.HIGH
             elif any(
-                keyword in issue_str.lower() for keyword in ("complexity", "complexipy")
+                keyword in issue_str.lower()
+                for keyword in ("complexity", "complexipy", "c901", "too complex")
             ):
                 issue_type = IssueType.COMPLEXITY
                 priority = Priority.HIGH
