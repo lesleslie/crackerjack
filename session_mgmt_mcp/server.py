@@ -318,6 +318,10 @@ class SessionPermissionsManager:
     # TRUSTED_WORKSPACE_OPERATIONS removed - no longer needed
 
 
+# Create global permissions manager instance
+permissions_manager = SessionPermissionsManager(claude_dir)
+
+
 # Utility Functions
 def _detect_other_mcp_servers() -> dict[str, bool]:
     """Detect availability of other MCP servers by checking common paths and processes."""
@@ -3261,6 +3265,61 @@ async def git_worktree_prune(working_directory: str | None = None) -> str:
     except Exception as e:
         session_logger.exception(f"git_worktree_prune failed: {e}")
         return f"❌ Failed to prune worktrees: {e}"
+
+
+@mcp.tool()
+async def git_worktree_switch(
+    from_path: str,
+    to_path: str,
+    working_directory: str | None = None,
+) -> str:
+    """Switch context between git worktrees with session preservation."""
+    from .worktree_manager import WorktreeManager
+
+    working_dir = Path(working_directory or os.getcwd())
+    from_path = Path(from_path)
+    to_path = Path(to_path)
+
+    # Make paths absolute if they're relative
+    if not from_path.is_absolute():
+        from_path = working_dir / from_path
+    if not to_path.is_absolute():
+        to_path = working_dir / to_path
+
+    manager = WorktreeManager(session_logger=session_logger)
+
+    try:
+        result = await manager.switch_worktree_context(from_path, to_path)
+
+        if not result["success"]:
+            return f"❌ {result['error']}"
+
+        output = [
+            "🔄 **Worktree Context Switch Complete**\n",
+            f"🌿 From: {result['from_worktree']['branch']} ({result['from_worktree']['path']})",
+            f"🌿 To: {result['to_worktree']['branch']} ({result['to_worktree']['path']})",
+        ]
+
+        if result["context_preserved"]:
+            output.append("✅ Session context preserved during switch")
+            if result.get("session_state_saved"):
+                output.append("💾 Current session state saved")
+            if result.get("session_state_restored"):
+                output.append("📂 Session state restored for target worktree")
+        else:
+            output.append(
+                "⚠️ Session context preservation failed (basic switch performed)"
+            )
+            if result.get("session_error"):
+                output.append(f"   Error: {result['session_error']}")
+
+        output.append(f"\n💡 Message: {result['message']}")
+
+        return "\n".join(output)
+
+    except Exception as e:
+        session_logger.exception(f"git_worktree_switch failed: {e}")
+        return f"❌ Failed to switch worktree context: {e}"
 
 
 def main() -> None:

@@ -36,8 +36,24 @@ class SessionLifecycleManager:
             / len(project_context)
         ) * 40
 
-        # Permissions health (20% of score) - placeholder for now
-        permissions_score = 10  # Basic score until permissions system is integrated
+        # Permissions health (20% of score)
+        # Check if we have a permissions manager and if operations are trusted
+        try:
+            from session_mgmt_mcp.server import permissions_manager
+
+            if hasattr(permissions_manager, "trusted_operations"):
+                trusted_count = len(permissions_manager.trusted_operations)
+                # Score based on number of trusted operations (max 20 points)
+                permissions_score = min(
+                    trusted_count * 4, 20
+                )  # 4 points per trusted operation, max 20
+            else:
+                permissions_score = (
+                    10  # Basic score if we can't access trusted operations
+                )
+        except (ImportError, AttributeError):
+            # If we can't import permissions manager or access trusted operations, use a basic score
+            permissions_score = 10
 
         # Session management availability (20% of score)
         session_score = 20  # Always available in this refactored version
@@ -351,10 +367,24 @@ class SessionLifecycleManager:
                 "recommendations": quality_data.get("recommendations", []),
             }
 
+            # Generate handoff documentation
+            handoff_content = self._generate_handoff_documentation(
+                summary, quality_data
+            )
+
+            # Save handoff documentation
+            handoff_path = self._save_handoff_documentation(
+                handoff_content, current_dir
+            )
+
             self.logger.info(
                 "Session ended",
                 project=self.current_project,
                 final_quality_score=quality_score,
+            )
+
+            summary["handoff_documentation"] = (
+                str(handoff_path) if handoff_path else None
             )
 
             return {"success": True, "summary": summary}
@@ -362,6 +392,80 @@ class SessionLifecycleManager:
         except Exception as e:
             self.logger.exception("Session end failed", error=str(e))
             return {"success": False, "error": str(e)}
+
+    def _generate_handoff_documentation(self, summary: dict, quality_data: dict) -> str:
+        """Generate comprehensive handoff documentation in markdown format."""
+        # Create markdown documentation
+        lines = []
+
+        # Header
+        lines.append(f"# Session Handoff Report - {summary['project']}")
+        lines.append("")
+        lines.append(f"**Session ended:** {summary['session_end_time']}")
+        lines.append(f"**Final quality score:** {summary['final_quality_score']}/100")
+        lines.append(f"**Working directory:** {summary['working_directory']}")
+        lines.append("")
+
+        # Quality assessment
+        lines.append("## Quality Assessment")
+        lines.append("")
+        breakdown = quality_data.get("breakdown", {})
+        lines.append(
+            f"- **Project health:** {breakdown.get('project_health', 0):.1f}/40"
+        )
+        lines.append(f"- **Permissions:** {breakdown.get('permissions', 0):.1f}/20")
+        lines.append(
+            f"- **Session tools:** {breakdown.get('session_management', 0):.1f}/20"
+        )
+        lines.append(f"- **Tool availability:** {breakdown.get('tools', 0):.1f}/20")
+        lines.append("")
+
+        # Recommendations
+        recommendations = summary.get("recommendations", [])
+        if recommendations:
+            lines.append("## Recommendations for Next Session")
+            lines.append("")
+            for i, rec in enumerate(recommendations, 1):
+                lines.append(f"{i}. {rec}")
+            lines.append("")
+
+        # Key achievements (placeholder for future enhancement)
+        lines.append("## Key Achievements")
+        lines.append("")
+        lines.append("- Session successfully completed")
+        lines.append("- Quality metrics captured")
+        lines.append("- Temporary files cleaned up")
+        lines.append("")
+
+        # Next steps
+        lines.append("## Next Steps")
+        lines.append("")
+        lines.append("1. Review the recommendations above")
+        lines.append("2. Check the working directory for any uncommitted changes")
+        lines.append("3. Ensure all necessary files are committed to version control")
+        lines.append("4. Address any outstanding issues before starting next session")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def _save_handoff_documentation(
+        self, content: str, working_dir: Path
+    ) -> Path | None:
+        """Save handoff documentation to file."""
+        try:
+            # Create handoff filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"session_handoff_{timestamp}.md"
+            handoff_path = working_dir / filename
+
+            # Write content to file
+            with open(handoff_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            return handoff_path
+        except Exception as e:
+            self.logger.exception("Failed to save handoff documentation", error=str(e))
+            return None
 
     async def get_session_status(
         self,

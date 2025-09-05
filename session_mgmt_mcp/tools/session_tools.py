@@ -125,6 +125,11 @@ async def _end_impl() -> str:
             output.append("   • Session data has been logged for future reference")
             output.append("   • All temporary resources have been cleaned up")
 
+            # Add handoff documentation info
+            handoff_doc = summary.get("handoff_documentation")
+            if handoff_doc:
+                output.append(f"   • Handoff documentation: {handoff_doc}")
+
             output.append("\n✅ Session ended successfully!")
             output.append(
                 "💡 Use the session data to improve future development workflows.",

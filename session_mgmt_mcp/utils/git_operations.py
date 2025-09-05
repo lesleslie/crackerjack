@@ -411,9 +411,25 @@ def create_checkpoint_commit(
             )
 
             if commit_result.returncode == 0:
-                output.append("✅ Checkpoint commit created successfully")
+                # Get the commit hash
+                hash_result = subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    cwd=directory,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+
+                commit_hash = (
+                    hash_result.stdout.strip()[:8]
+                    if hash_result.returncode == 0
+                    else "unknown"
+                )
+                output.append(
+                    f"✅ Checkpoint commit created successfully ({commit_hash})"
+                )
                 output.append(f"   Message: {commit_message}")
-                return True, "checkpoint committed", output
+                return True, commit_hash, output
             output.append(f"⚠️ Commit failed: {commit_result.stderr.strip()}")
             return False, "commit failed", output
         if untracked_files:

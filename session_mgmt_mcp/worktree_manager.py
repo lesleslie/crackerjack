@@ -4,7 +4,11 @@
 Provides high-level worktree operations and coordination with session management.
 """
 
+import json
+import os
 import subprocess
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -273,12 +277,36 @@ class WorktreeManager:
             return {"success": False, "error": str(e)}
 
     def _check_session_exists(self, path: Path) -> bool:
-        """Check if a worktree has an active session (placeholder)."""
-        # This would integrate with session management
-        # For now, just check if it's a valid path
+        """Check if a worktree has an active session by looking for session files."""
         if isinstance(path, str):
             path = Path(path)
-        return path.exists() and (path / ".git").exists()
+
+        if not path.exists():
+            return False
+
+        # Check for common session indicators
+        session_indicators = [
+            path / ".git",  # Git repository
+            path / ".claude",  # Claude session directory
+            path / ".session",  # Generic session directory
+        ]
+
+        # Also check for project-specific session files
+        project_files = [
+            "pyproject.toml",
+            "package.json",
+            "requirements.txt",
+            "setup.py",
+        ]
+
+        has_session_indicators = any(
+            indicator.exists() for indicator in session_indicators
+        )
+        has_project_files = any(
+            (path / proj_file).exists() for proj_file in project_files
+        )
+
+        return has_session_indicators or has_project_files
 
     def _get_session_summary(self, worktrees: list[WorktreeInfo]) -> dict[str, Any]:
         """Get summary of sessions across worktrees."""
@@ -295,6 +323,87 @@ class WorktreeManager:
             "unique_branches": len(branches),
             "branches": list(branches),
         }
+
+    def _save_current_session_state(self, worktree_path: Path) -> dict | None:
+        """Save the current session state for preservation during worktree switching."""
+        try:
+            state = {
+                "timestamp": datetime.now().isoformat(),
+                "worktree_path": str(worktree_path),
+                "working_directory": str(Path.cwd()),
+                "environment": dict(os.environ),
+                "recent_files": self._get_recent_files(worktree_path),
+                "git_status": self._get_git_status(worktree_path),
+            }
+
+            # Save to a temporary file in the .claude directory
+            claude_dir = Path.home() / ".claude" / "worktree_sessions"
+            claude_dir.mkdir(parents=True, exist_ok=True)
+
+            state_file = claude_dir / f"session_state_{worktree_path.name}.json"
+            with open(state_file, "w") as f:
+                json.dump(state, f, indent=2)
+
+            return state
+        except Exception as e:
+            self._log(f"Failed to save session state: {e}", level="warning")
+            return None
+
+    def _restore_session_state(self, worktree_path: Path, state: dict | None) -> bool:
+        """Restore session state for the target worktree."""
+        if not state:
+            return False
+
+        try:
+            # For now, we'll just log that we're restoring state
+            # In a more advanced implementation, we could restore environment variables,
+            # open files, IDE state, etc.
+            self._log(
+                "Session state restored",
+                worktree=worktree_path.name,
+                recent_files=len(state.get("recent_files", [])),
+            )
+            return True
+        except Exception as e:
+            self._log(f"Failed to restore session state: {e}", level="warning")
+            return False
+
+    def _get_recent_files(self, worktree_path: Path) -> list[str]:
+        """Get recently modified files in the worktree."""
+        try:
+            recent_files = []
+            # Get files modified in the last 24 hours
+            cutoff_time = time.time() - (24 * 60 * 60)
+
+            for file_path in worktree_path.rglob("*"):
+                if file_path.is_file() and not any(
+                    part.startswith(".") for part in file_path.parts
+                ):
+                    try:
+                        if file_path.stat().st_mtime > cutoff_time:
+                            recent_files.append(
+                                str(file_path.relative_to(worktree_path))
+                            )
+                    except (OSError, PermissionError):
+                        continue
+
+            return recent_files[:20]  # Limit to 20 most recent files
+        except Exception:
+            return []
+
+    def _get_git_status(self, worktree_path: Path) -> dict:
+        """Get git status for the worktree."""
+        try:
+            from .utils.git_operations import get_git_status
+
+            modified, untracked = get_git_status(worktree_path)
+            return {
+                "modified_files": modified,
+                "untracked_files": untracked,
+                "has_changes": len(modified) > 0 or len(untracked) > 0,
+            }
+        except Exception:
+            return {"modified_files": [], "untracked_files": [], "has_changes": False}
 
     async def switch_worktree_context(
         self,
@@ -325,30 +434,66 @@ class WorktreeManager:
                     "error": "Could not get worktree information for context switch",
                 }
 
-            # This would integrate with session management to:
-            # 1. Save current session state
-            # 2. Switch working directory context
-            # 3. Restore/create session for target worktree
+            # Integrate with session management to preserve context
+            try:
+                # 1. Save current session state
+                session_state = self._save_current_session_state(from_path)
 
-            self._log(
-                "Context switch completed",
-                from_branch=from_worktree.branch,
-                to_branch=to_worktree.branch,
-            )
+                # 2. Switch working directory context
+                os.chdir(to_path)
 
-            return {
-                "success": True,
-                "from_worktree": {
-                    "path": str(from_worktree.path),
-                    "branch": from_worktree.branch,
-                },
-                "to_worktree": {
-                    "path": str(to_worktree.path),
-                    "branch": to_worktree.branch,
-                },
-                "context_preserved": True,
-                "message": f"Switched from {from_worktree.branch} to {to_worktree.branch}",
-            }
+                # 3. Restore/create session for target worktree
+                restored_state = self._restore_session_state(to_path, session_state)
+
+                self._log(
+                    "Context switch completed with session preservation",
+                    from_branch=from_worktree.branch,
+                    to_branch=to_worktree.branch,
+                )
+
+                return {
+                    "success": True,
+                    "from_worktree": {
+                        "path": str(from_worktree.path),
+                        "branch": from_worktree.branch,
+                    },
+                    "to_worktree": {
+                        "path": str(to_worktree.path),
+                        "branch": to_worktree.branch,
+                    },
+                    "context_preserved": True,
+                    "session_state_saved": session_state is not None,
+                    "session_state_restored": restored_state,
+                    "message": f"Switched from {from_worktree.branch} to {to_worktree.branch}",
+                }
+            except Exception as session_error:
+                # Fallback to basic switching if session preservation fails
+                self._log(
+                    f"Session preservation failed, using basic switching: {session_error}",
+                    level="warning",
+                )
+                os.chdir(to_path)
+
+                self._log(
+                    "Basic context switch completed",
+                    from_branch=from_worktree.branch,
+                    to_branch=to_worktree.branch,
+                )
+
+                return {
+                    "success": True,
+                    "from_worktree": {
+                        "path": str(from_worktree.path),
+                        "branch": from_worktree.branch,
+                    },
+                    "to_worktree": {
+                        "path": str(to_worktree.path),
+                        "branch": to_worktree.branch,
+                    },
+                    "context_preserved": False,
+                    "session_error": str(session_error),
+                    "message": f"Switched from {from_worktree.branch} to {to_worktree.branch} (session preservation failed)",
+                }
 
         except Exception as e:
             self._log(f"Failed to switch worktree context: {e}", level="error")

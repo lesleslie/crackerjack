@@ -61,6 +61,13 @@ This command will:
 - Create final commit with session summary (if requested)
 - Provide next session preparation recommendations
 
+The handoff documentation includes:
+- Quality assessment summary with detailed metrics
+- Actionable recommendations for next session
+- Key achievements during the session
+- Next steps for continuing work
+- Session context and environment information
+
 Run this at the end of your coding session to ensure proper closure and knowledge transfer.
 """,
     "status": """# Session Status
