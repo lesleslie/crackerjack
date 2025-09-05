@@ -1,5 +1,4 @@
 import ast
-import re
 import typing as t
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +9,7 @@ from rich.console import Console
 
 from .errors import ErrorCode, ExecutionError
 from .services.backup_service import BackupMetadata, PackageBackupService
+from .services.regex_patterns import SAFE_PATTERNS
 from .services.secure_path_utils import (
     AtomicFileOperations,
     SecurePathValidator,
@@ -21,48 +21,36 @@ from .services.security_logger import (
 )
 
 
-class CompiledPatterns:
-    def __init__(self) -> None:
-        self.docstring_patterns = [
-            re.compile(r'^\s*""".*?"""\s*$', re.MULTILINE | re.DOTALL),
-            re.compile(r"^\s*'''.*?'''\s*$", re.MULTILINE | re.DOTALL),
-        ]
-
-        self.operator_patterns: list[tuple[re.Pattern[str], str]] = []
-
-        self.spacing_patterns = [
-            (re.compile(r", ([^ \n])"), r", \1"),
-            (re.compile(r": ([^ \n: ])"), r": \1"),
-            (re.compile(r" {2,}"), " "),
-        ]
-
-        self.preserved_comment_pattern = re.compile(
-            r"#.*?(?: coding: | encoding: | type: | noqa | pragma)"
-        )
+class SafePatternApplicator:
+    """Safe pattern applicator using centralized SAFE_PATTERNS."""
 
     def apply_docstring_patterns(self, code: str) -> str:
+        """Apply docstring removal patterns safely."""
         result = code
-        for pattern in self.docstring_patterns:
-            result = pattern.sub("", result)
+        result = SAFE_PATTERNS["docstring_triple_double"].apply(result)
+        result = SAFE_PATTERNS["docstring_triple_single"].apply(result)
         return result
 
     def apply_formatting_patterns(self, content: str) -> str:
-        for pattern, replacement in self.operator_patterns:
-            content = pattern.sub(replacement, content)
-
-        for pattern, replacement in self.spacing_patterns:
-            content = pattern.sub(replacement, content)
-
+        """Apply formatting patterns safely."""
+        # Apply spacing patterns
+        content = SAFE_PATTERNS["spacing_after_comma"].apply(content)
+        content = SAFE_PATTERNS["spacing_after_colon"].apply(content)
+        content = SAFE_PATTERNS["multiple_spaces"].apply(content)
         return content
 
     def has_preserved_comment(self, line: str) -> bool:
-        return (
-            line.strip().startswith("#! /")
-            or self.preserved_comment_pattern.search(line) is not None
-        )
+        """Check if a line contains preserved comments."""
+        if line.strip().startswith("#! /"):
+            return True
+
+        # Check for preserved comment keywords
+        line_lower = line.lower()
+        preserved_keywords = ["coding:", "encoding:", "type:", "noqa", "pragma"]
+        return any(keyword in line_lower for keyword in preserved_keywords)
 
 
-_compiled_patterns = CompiledPatterns()
+_safe_applicator = SafePatternApplicator()
 
 
 @dataclass
@@ -1158,7 +1146,7 @@ class CodeCleaner(BaseModel):
             return self._regex_fallback_removal(result)
 
         def _regex_fallback_removal(self, code: str) -> str:
-            return _compiled_patterns.apply_docstring_patterns(code)
+            return _safe_applicator.apply_docstring_patterns(code)
 
     class _LineCommentStep:
         name = "remove_line_comments"
@@ -1181,7 +1169,7 @@ class CodeCleaner(BaseModel):
             return self._has_preserved_pattern(stripped)
 
         def _has_preserved_pattern(self, stripped_line: str) -> bool:
-            return _compiled_patterns.has_preserved_comment(stripped_line)
+            return _safe_applicator.has_preserved_comment(stripped_line)
 
         def _remove_comment_from_line(self, line: str) -> str:
             if '"' not in line and "'" not in line and "#" not in line:
@@ -1251,8 +1239,6 @@ class CodeCleaner(BaseModel):
         class WhitespaceStep:
             name = "remove_extra_whitespace"
 
-            _whitespace_pattern = re.compile(r" {2,}")
-
             def __call__(self, code: str, file_path: Path) -> str:
                 lines = code.split("\n")
                 cleaned_lines: list[str] = []
@@ -1272,7 +1258,8 @@ class CodeCleaner(BaseModel):
                         )
                         content = cleaned_line.lstrip()
 
-                        content = self._whitespace_pattern.sub(" ", content)
+                        # Use SAFE_PATTERNS for multiple spaces replacement
+                        content = SAFE_PATTERNS["multiple_spaces"].apply(content)
 
                         cleaned_line = cleaned_line[:leading_whitespace] + content
                         cleaned_lines.append(cleaned_line)
@@ -1296,7 +1283,7 @@ class CodeCleaner(BaseModel):
                 stripped = line.strip()
                 if not stripped.startswith("#"):
                     return False
-                return _compiled_patterns.has_preserved_comment(line)
+                return _safe_applicator.has_preserved_comment(line)
 
             def __call__(self, code: str, file_path: Path) -> str:
                 lines = code.split("\n")
@@ -1311,7 +1298,7 @@ class CodeCleaner(BaseModel):
                         leading_whitespace = len(line) - len(line.lstrip())
                         content = line.lstrip()
 
-                        content = _compiled_patterns.apply_formatting_patterns(content)
+                        content = _safe_applicator.apply_formatting_patterns(content)
 
                         formatted_line = line[:leading_whitespace] + content
                         formatted_lines.append(formatted_line)

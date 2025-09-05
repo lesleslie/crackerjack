@@ -33,13 +33,20 @@ class CompiledPatternCache:
     @classmethod
     def get_compiled_pattern(cls, pattern: str) -> Pattern[str]:
         """Get compiled pattern from cache, compiling if necessary."""
+        return cls.get_compiled_pattern_with_flags(pattern, pattern, 0)
+
+    @classmethod
+    def get_compiled_pattern_with_flags(
+        cls, cache_key: str, pattern: str, flags: int
+    ) -> Pattern[str]:
+        """Get compiled pattern with flags from cache, compiling if necessary."""
         with cls._lock:
-            if pattern in cls._cache:
-                return cls._cache[pattern]
+            if cache_key in cls._cache:
+                return cls._cache[cache_key]
 
             # Compile new pattern
             try:
-                compiled = re.compile(pattern)
+                compiled = re.compile(pattern, flags)
             except re.error as e:
                 # Maintain backward compatibility with existing error message format
                 raise ValueError(f"Invalid regex pattern '{pattern}': {e}")
@@ -50,7 +57,7 @@ class CompiledPatternCache:
                 oldest_key = next(iter(cls._cache))
                 del cls._cache[oldest_key]
 
-            cls._cache[pattern] = compiled
+            cls._cache[cache_key] = compiled
             return compiled
 
     @classmethod
@@ -103,6 +110,7 @@ class ValidatedPattern:
     test_cases: list[tuple[str, str]]  # (input, expected_output)
     description: str = ""
     global_replace: bool = False  # If True, replace all matches
+    flags: int = 0  # Regex flags (re.IGNORECASE, re.MULTILINE, etc.)
     _compiled_pattern: Pattern[str] | None = field(default=None, init=False)
 
     def __post_init__(self):
@@ -149,8 +157,12 @@ class ValidatedPattern:
                 raise ValueError(f"Pattern '{self.name}' failed on '{input_text}': {e}")
 
     def _get_compiled_pattern(self) -> Pattern[str]:
-        """Get cached compiled pattern."""
-        return CompiledPatternCache.get_compiled_pattern(self.pattern)
+        """Get cached compiled pattern with flags."""
+        # Create cache key that includes flags
+        cache_key = f"{self.pattern}|flags:{self.flags}"
+        return CompiledPatternCache.get_compiled_pattern_with_flags(
+            cache_key, self.pattern, self.flags
+        )
 
     def _apply_internal(self, text: str, count: int = 1) -> str:
         """Internal method for applying pattern with compiled regex."""
@@ -691,6 +703,558 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("--verbose", "--verbose"),  # No change
         ],
     ),
+    # Path security validation patterns - designed for testing existence, not replacement
+    "detect_directory_traversal_basic": ValidatedPattern(
+        name="detect_directory_traversal_basic",
+        pattern=r"\.\./",
+        replacement="[TRAVERSAL]",
+        description="Detect basic directory traversal patterns (../)",
+        global_replace=True,
+        test_cases=[
+            ("../config.txt", "[TRAVERSAL]config.txt"),
+            ("normal/path", "normal/path"),  # No change
+            ("../../etc/passwd", "[TRAVERSAL][TRAVERSAL]etc/passwd"),
+        ],
+    ),
+    "detect_directory_traversal_backslash": ValidatedPattern(
+        name="detect_directory_traversal_backslash",
+        pattern=r"\.\.[/\\]",
+        replacement="[TRAVERSAL]",
+        description="Detect directory traversal with forward/back slashes",
+        global_replace=True,
+        test_cases=[
+            ("..\\config.txt", "[TRAVERSAL]config.txt"),
+            ("../config.txt", "[TRAVERSAL]config.txt"),
+            ("normal/path", "normal/path"),  # No change
+        ],
+    ),
+    "detect_url_encoded_traversal": ValidatedPattern(
+        name="detect_url_encoded_traversal",
+        pattern=r"%2e%2e%2f",
+        replacement="[TRAVERSAL]",
+        description="Detect URL encoded directory traversal (%2e%2e%2f = ../)",
+        global_replace=True,
+        test_cases=[
+            ("path/%2e%2e%2f/config", "path/[TRAVERSAL]/config"),
+            ("normal/path", "normal/path"),  # No change
+            ("%2e%2e%2fpasswd", "[TRAVERSAL]passwd"),
+        ],
+    ),
+    "detect_double_url_encoded_traversal": ValidatedPattern(
+        name="detect_double_url_encoded_traversal",
+        pattern=r"%252e%252e%252f",
+        replacement="[TRAVERSAL]",
+        description="Detect double URL encoded directory traversal",
+        global_replace=True,
+        test_cases=[
+            ("path/%252e%252e%252f/config", "path/[TRAVERSAL]/config"),
+            ("normal/path", "normal/path"),  # No change
+        ],
+    ),
+    "detect_null_bytes_url": ValidatedPattern(
+        name="detect_null_bytes_url",
+        pattern=r"%00",
+        replacement="[NULL]",
+        description="Detect URL encoded null bytes",
+        global_replace=True,
+        test_cases=[
+            ("file.txt%00.jpg", "file.txt[NULL].jpg"),
+            ("normal.txt", "normal.txt"),  # No change
+        ],
+    ),
+    "detect_null_bytes_literal": ValidatedPattern(
+        name="detect_null_bytes_literal",
+        pattern=r"\\x00",
+        replacement="[NULL]",
+        description="Detect literal null byte patterns",
+        global_replace=True,
+        test_cases=[
+            ("file.txt\\x00", "file.txt[NULL]"),
+            ("normal.txt", "normal.txt"),  # No change
+        ],
+    ),
+    "detect_utf8_overlong_null": ValidatedPattern(
+        name="detect_utf8_overlong_null",
+        pattern=r"%c0%80",
+        replacement="[NULL]",
+        description="Detect UTF-8 overlong null byte encoding",
+        global_replace=True,
+        test_cases=[
+            ("file.txt%c0%80", "file.txt[NULL]"),
+            ("normal.txt", "normal.txt"),  # No change
+        ],
+    ),
+    "detect_sys_directory_pattern": ValidatedPattern(
+        name="detect_sys_directory_pattern",
+        pattern=r"^/sys/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /sys directory",
+        test_cases=[
+            ("/sys/", "[DANGER]"),
+            ("/sys/devices", "[DANGER]"),
+            ("/usr/sys", "/usr/sys"),  # No change
+        ],
+    ),
+    "detect_proc_directory_pattern": ValidatedPattern(
+        name="detect_proc_directory_pattern",
+        pattern=r"^/proc/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /proc directory",
+        test_cases=[
+            ("/proc/", "[DANGER]"),
+            ("/proc/self", "[DANGER]"),
+            ("/usr/proc", "/usr/proc"),  # No change
+        ],
+    ),
+    "detect_etc_directory_pattern": ValidatedPattern(
+        name="detect_etc_directory_pattern",
+        pattern=r"^/etc/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /etc directory",
+        test_cases=[
+            ("/etc/", "[DANGER]"),
+            ("/etc/passwd", "[DANGER]"),
+            ("/usr/etc", "/usr/etc"),  # No change
+        ],
+    ),
+    "detect_boot_directory_pattern": ValidatedPattern(
+        name="detect_boot_directory_pattern",
+        pattern=r"^/boot/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /boot directory",
+        test_cases=[
+            ("/boot/", "[DANGER]"),
+            ("/boot/grub", "[DANGER]"),
+            ("/usr/boot", "/usr/boot"),  # No change
+        ],
+    ),
+    "detect_dev_directory_pattern": ValidatedPattern(
+        name="detect_dev_directory_pattern",
+        pattern=r"^/dev/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /dev directory",
+        test_cases=[
+            ("/dev/", "[DANGER]"),
+            ("/dev/null", "[DANGER]"),
+            ("/usr/dev", "/usr/dev"),  # No change
+        ],
+    ),
+    "detect_root_directory_pattern": ValidatedPattern(
+        name="detect_root_directory_pattern",
+        pattern=r"^/root/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /root directory",
+        test_cases=[
+            ("/root/", "[DANGER]"),
+            ("/root/.ssh", "[DANGER]"),
+            ("/usr/root", "/usr/root"),  # No change
+        ],
+    ),
+    "detect_var_log_directory_pattern": ValidatedPattern(
+        name="detect_var_log_directory_pattern",
+        pattern=r"^/var/log/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /var/log directory",
+        test_cases=[
+            ("/var/log/", "[DANGER]"),
+            ("/var/log/messages", "[DANGER]"),
+            ("/usr/var/log", "/usr/var/log"),  # No change
+        ],
+    ),
+    "detect_bin_directory_pattern": ValidatedPattern(
+        name="detect_bin_directory_pattern",
+        pattern=r"^/(usr/)?bin/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /bin or /usr/bin directories",
+        test_cases=[
+            ("/bin/", "[DANGER]"),
+            ("/usr/bin/", "[DANGER]"),
+            ("/usr/local/bin", "/usr/local/bin"),  # No change
+        ],
+    ),
+    "detect_sbin_directory_pattern": ValidatedPattern(
+        name="detect_sbin_directory_pattern",
+        pattern=r"^/(usr/)?sbin/?.*",
+        replacement="[DANGER]",
+        description="Detect access to /sbin or /usr/sbin directories",
+        test_cases=[
+            ("/sbin/", "[DANGER]"),
+            ("/usr/sbin/", "[DANGER]"),
+            ("/usr/local/sbin", "/usr/local/sbin"),  # No change
+        ],
+    ),
+    "detect_parent_directory_in_path": ValidatedPattern(
+        name="detect_parent_directory_in_path",
+        pattern=r"\.\.",
+        replacement="[PARENT]",
+        description="Detect parent directory references anywhere in path",
+        global_replace=True,
+        test_cases=[
+            ("../config", "[PARENT]/config"),
+            ("safe/path", "safe/path"),  # No change
+            ("path/../other", "path/[PARENT]/other"),
+        ],
+    ),
+    "detect_suspicious_temp_traversal": ValidatedPattern(
+        name="detect_suspicious_temp_traversal",
+        pattern=r"/tmp/.*\.\./",
+        replacement="[SUSPICIOUS]",
+        description="Detect traversal attempts in temp directories",
+        test_cases=[
+            ("/tmp/safe/../etc/passwd", "[SUSPICIOUS]etc/passwd"),
+            ("/tmp/normal/file.txt", "/tmp/normal/file.txt"),  # No change
+        ],
+    ),
+    "detect_suspicious_var_traversal": ValidatedPattern(
+        name="detect_suspicious_var_traversal",
+        pattern=r"/var/.*\.\./",
+        replacement="[SUSPICIOUS]",
+        description="Detect traversal attempts in var directories",
+        test_cases=[
+            ("/var/lib/../etc/passwd", "[SUSPICIOUS]etc/passwd"),
+            ("/var/lib/normal.txt", "/var/lib/normal.txt"),  # No change
+        ],
+    ),
+    # Tool output parsing patterns - for development tool output processing
+    "ruff_check_error": ValidatedPattern(
+        name="ruff_check_error",
+        pattern=r"^(.+?): (\d+): (\d+): ([A-Z]\d+) (.+)$",
+        replacement=r"File: \1, Line: \2, Col: \3, Code: \4, Message: \5",
+        description="Parse ruff-check error output: file:line:col:code message",
+        test_cases=[
+            (
+                "crackerjack/core.py: 123: 45: E501 line too long",
+                "File: crackerjack/core.py, Line: 123, Col: 45, Code: E501, Message: line too long",
+            ),
+            (
+                "./test.py: 1: 1: F401 unused import",
+                "File: ./test.py, Line: 1, Col: 1, Code: F401, Message: unused import",
+            ),
+            (
+                "src/main.py: 999: 80: W291 trailing whitespace",
+                "File: src/main.py, Line: 999, Col: 80, Code: W291, Message: trailing whitespace",
+            ),
+        ],
+    ),
+    "ruff_check_summary": ValidatedPattern(
+        name="ruff_check_summary",
+        pattern=r"Found (\d+) error",
+        replacement=r"Found \1 error(s)",
+        description="Parse ruff-check summary line for error count",
+        test_cases=[
+            ("Found 5 error", "Found 5 error(s)"),
+            ("Found 1 error in 3 files", "Found 1 error(s) in 3 files"),
+            ("Found 42 error detected", "Found 42 error(s) detected"),
+        ],
+    ),
+    "pyright_error": ValidatedPattern(
+        name="pyright_error",
+        pattern=r"^(.+?): (\d+): (\d+) - error: (.+)$",
+        replacement=r"File: \1, Line: \2, Col: \3, Error: \4",
+        description="Parse pyright error output: file:line:col - error: message",
+        test_cases=[
+            (
+                "src/app.py: 45: 12 - error: Undefined variable",
+                "File: src/app.py, Line: 45, Col: 12, Error: Undefined variable",
+            ),
+            (
+                "test.py: 1: 1 - error: Type mismatch",
+                "File: test.py, Line: 1, Col: 1, Error: Type mismatch",
+            ),
+            (
+                "./main.py: 999: 50 - error: Missing return statement",
+                "File: ./main.py, Line: 999, Col: 50, Error: Missing return statement",
+            ),
+        ],
+    ),
+    "pyright_warning": ValidatedPattern(
+        name="pyright_warning",
+        pattern=r"^(.+?): (\d+): (\d+) - warning: (.+)$",
+        replacement=r"File: \1, Line: \2, Col: \3, Warning: \4",
+        description="Parse pyright warning output: file:line:col - warning: message",
+        test_cases=[
+            (
+                "src/app.py: 45: 12 - warning: Unused variable",
+                "File: src/app.py, Line: 45, Col: 12, Warning: Unused variable",
+            ),
+            (
+                "test.py: 1: 1 - warning: Deprecated API",
+                "File: test.py, Line: 1, Col: 1, Warning: Deprecated API",
+            ),
+            (
+                "./main.py: 999: 50 - warning: Type could be more specific",
+                "File: ./main.py, Line: 999, Col: 50, Warning: Type could be more specific",
+            ),
+        ],
+    ),
+    "pyright_summary": ValidatedPattern(
+        name="pyright_summary",
+        pattern=r"(\d+) error[s]?, (\d+) warning[s]?",
+        replacement=r"\1 errors, \2 warnings",
+        description="Parse pyright summary with error and warning counts",
+        test_cases=[
+            ("5 errors, 3 warnings", "5 errors, 3 warnings"),
+            ("1 error, 1 warning", "1 errors, 1 warnings"),
+            ("0 errors, 10 warnings found", "0 errors, 10 warnings found"),
+        ],
+    ),
+    "bandit_issue": ValidatedPattern(
+        name="bandit_issue",
+        pattern=r">> Issue: \[([A-Z]\d+): \w+\] (.+)",
+        replacement=r"Security Issue [\1]: \2",
+        description="Parse bandit security issue output with code and message",
+        test_cases=[
+            (
+                ">> Issue: [B602: subprocess_popen_with_shell_equals_true] Use of shell=True",
+                "Security Issue [B602]: Use of shell=True",
+            ),
+            (
+                ">> Issue: [B101: assert_used] Use of assert detected",
+                "Security Issue [B101]: Use of assert detected",
+            ),
+            (
+                ">> Issue: [B301: pickle] Pickle library detected",
+                "Security Issue [B301]: Pickle library detected",
+            ),
+        ],
+    ),
+    "bandit_location": ValidatedPattern(
+        name="bandit_location",
+        pattern=r"Location: (.+?): (\d+): (\d+)",
+        replacement=r"Location: File \1, Line \2, Column \3",
+        description="Parse bandit location information for security issues",
+        test_cases=[
+            (
+                "Location: src/security.py: 123: 45",
+                "Location: File src/security.py, Line 123, Column 45",
+            ),
+            ("Location: ./test.py: 1: 1", "Location: File ./test.py, Line 1, Column 1"),
+            (
+                "Location: crackerjack/core.py: 999: 80",
+                "Location: File crackerjack/core.py, Line 999, Column 80",
+            ),
+        ],
+    ),
+    "bandit_confidence": ValidatedPattern(
+        name="bandit_confidence",
+        pattern=r"Confidence: (\w+)",
+        replacement=r"Confidence Level: \1",
+        description="Parse bandit confidence level for security issues",
+        test_cases=[
+            ("Confidence: HIGH", "Confidence Level: HIGH"),
+            ("Confidence: MEDIUM", "Confidence Level: MEDIUM"),
+            ("Confidence: LOW", "Confidence Level: LOW"),
+        ],
+    ),
+    "bandit_severity": ValidatedPattern(
+        name="bandit_severity",
+        pattern=r"Severity: (\w+)",
+        replacement=r"Severity Level: \1",
+        description="Parse bandit severity level for security issues",
+        test_cases=[
+            ("Severity: HIGH", "Severity Level: HIGH"),
+            ("Severity: MEDIUM", "Severity Level: MEDIUM"),
+            ("Severity: LOW", "Severity Level: LOW"),
+        ],
+    ),
+    "mypy_error": ValidatedPattern(
+        name="mypy_error",
+        pattern=r"^(.+?): (\d+): error: (.+)$",
+        replacement=r"File: \1, Line: \2, Error: \3",
+        description="Parse mypy error output: file:line: error: message",
+        test_cases=[
+            (
+                "src/app.py: 45: error: Name 'undefined_var' is not defined",
+                "File: src/app.py, Line: 45, Error: Name 'undefined_var' is not defined",
+            ),
+            (
+                "test.py: 1: error: Incompatible return value type",
+                "File: test.py, Line: 1, Error: Incompatible return value type",
+            ),
+            (
+                "./main.py: 999: error: Argument has incompatible type",
+                "File: ./main.py, Line: 999, Error: Argument has incompatible type",
+            ),
+        ],
+    ),
+    "mypy_note": ValidatedPattern(
+        name="mypy_note",
+        pattern=r"^(.+?): (\d+): note: (.+)$",
+        replacement=r"File: \1, Line: \2, Note: \3",
+        description="Parse mypy note output: file:line: note: message",
+        test_cases=[
+            (
+                "src/app.py: 45: note: Expected type Union[int, str]",
+                "File: src/app.py, Line: 45, Note: Expected type Union[int, str]",
+            ),
+            (
+                "test.py: 1: note: See https://mypy.readthedocs.io/",
+                "File: test.py, Line: 1, Note: See https://mypy.readthedocs.io/",
+            ),
+            (
+                "./main.py: 999: note: Consider using Optional[...]",
+                "File: ./main.py, Line: 999, Note: Consider using Optional[...]",
+            ),
+        ],
+    ),
+    "vulture_unused": ValidatedPattern(
+        name="vulture_unused",
+        pattern=r"^(.+?): (\d+): unused (.+) '(.+)'",
+        replacement=r"File: \1, Line: \2, Unused \3: '\4'",
+        description="Parse vulture unused code detection: file:line: unused type 'name'",
+        test_cases=[
+            (
+                "src/app.py: 45: unused variable 'temp_var'",
+                "File: src/app.py, Line: 45, Unused variable: 'temp_var'",
+            ),
+            (
+                "test.py: 1: unused function 'helper'",
+                "File: test.py, Line: 1, Unused function: 'helper'",
+            ),
+            (
+                "./main.py: 999: unused import 'os'",
+                "File: ./main.py, Line: 999, Unused import: 'os'",
+            ),
+        ],
+    ),
+    "complexipy_complex": ValidatedPattern(
+        name="complexipy_complex",
+        pattern=r"^(.+?): (\d+): (\d+) - (.+) is too complex \((\d+)\)",
+        replacement=r"File: \1, Line: \2, Col: \3, Function: \4, Complexity: \5",
+        description="Parse complexipy complexity detection: file:line:col - function is too complex (score)",
+        test_cases=[
+            (
+                "src/app.py: 45: 1 - complex_function is too complex (15)",
+                "File: src/app.py, Line: 45, Col: 1, Function: complex_function, Complexity: 15",
+            ),
+            (
+                "test.py: 1: 1 - nested_loops is too complex (20)",
+                "File: test.py, Line: 1, Col: 1, Function: nested_loops, Complexity: 20",
+            ),
+            (
+                "./main.py: 999: 5 - process_data is too complex (18)",
+                "File: ./main.py, Line: 999, Col: 5, Function: process_data, Complexity: 18",
+            ),
+        ],
+    ),
+    # Code cleaning patterns (from code_cleaner.py)
+    "docstring_triple_double": ValidatedPattern(
+        name="docstring_triple_double",
+        pattern=r'^\s*""".*?"""\s*$',
+        replacement=r"",
+        flags=re.MULTILINE | re.DOTALL,
+        description="Remove triple-quoted docstrings with double quotes",
+        test_cases=[
+            ('    """This is a docstring"""    ', ""),
+            ('"""Module docstring"""', ""),
+            ('    """\n    Multi-line\n    docstring\n    """', ""),
+            (
+                'regular_code = "not a docstring"',
+                'regular_code = "not a docstring"',
+            ),  # No change
+        ],
+    ),
+    "docstring_triple_single": ValidatedPattern(
+        name="docstring_triple_single",
+        pattern=r"^\s*'''.*?'''\s*$",
+        replacement=r"",
+        flags=re.MULTILINE | re.DOTALL,
+        description="Remove triple-quoted docstrings with single quotes",
+        test_cases=[
+            ("    '''This is a docstring'''    ", ""),
+            ("'''Module docstring'''", ""),
+            ("    '''\n    Multi-line\n    docstring\n    '''", ""),
+            (
+                "regular_code = 'not a docstring'",
+                "regular_code = 'not a docstring'",
+            ),  # No change
+        ],
+    ),
+    "spacing_after_comma": ValidatedPattern(
+        name="spacing_after_comma",
+        pattern=r",([^ \n])",
+        replacement=r", \1",
+        global_replace=True,
+        description="Add space after comma if missing",
+        test_cases=[
+            ("def func(a,b,c):", "def func(a, b, c):"),
+            ("items = [1,2,3,4]", "items = [1, 2, 3, 4]"),
+            ("already, spaced, properly", "already, spaced, properly"),  # No change
+            ("mixed,spacing, here", "mixed, spacing, here"),
+        ],
+    ),
+    "spacing_after_colon": ValidatedPattern(
+        name="spacing_after_colon",
+        pattern=r"(?<!:):([^ \n:])",
+        replacement=r": \1",
+        global_replace=True,
+        description="Add space after colon if missing (avoid double colons)",
+        test_cases=[
+            ("def func(x:int, y:str):", "def func(x: int, y: str):"),
+            ("dict_item = {'key':'value'}", "dict_item = {'key': 'value'}"),
+            ("already: spaced: properly", "already: spaced: properly"),  # No change
+            ("class::method", "class::method"),  # No change (double colon)
+        ],
+    ),
+    "multiple_spaces": ValidatedPattern(
+        name="multiple_spaces",
+        pattern=r" {2,}",
+        replacement=r" ",
+        description="Replace multiple spaces with single space",
+        global_replace=True,
+        test_cases=[
+            ("def   func(  x,   y ):", "def func( x, y ):"),
+            ("single space only", "single space only"),  # No change
+            ("lots    of     spaces", "lots of spaces"),
+            ("\tkeep\ttabs\tbut   fix   spaces", "\tkeep\ttabs\tbut fix spaces"),
+        ],
+    ),
+    "preserved_comments": ValidatedPattern(
+        name="preserved_comments",
+        pattern=r"(#.*?(?: coding: | encoding: | type: | noqa | pragma).*)",
+        replacement=r"\1",  # Identity replacement - used for matching only
+        description="Match preserved code comments (encoding, type hints, etc.)",
+        test_cases=[
+            ("# coding: utf-8", "# coding: utf-8"),  # No change - identity replacement
+            (
+                "# encoding: latin-1",
+                "# encoding: latin-1",
+            ),  # No change - identity replacement
+            ("# type: ignore", "# type: ignore"),  # No change - identity replacement
+            ("# noqa: E501", "# noqa: E501"),  # No change - identity replacement
+            (
+                "# pragma: no cover",
+                "# pragma: no cover",
+            ),  # No change - identity replacement
+            ("# regular comment", "# regular comment"),  # No change - no match
+        ],
+    ),
+    "todo_pattern": ValidatedPattern(
+        name="todo_pattern",
+        pattern=r"(#.*?TODO.*)",
+        replacement=r"\1",  # Identity replacement - used for matching only
+        flags=re.IGNORECASE,
+        description="Match TODO comments for validation",
+        test_cases=[
+            (
+                "# TODO: Fix this bug",
+                "# TODO: Fix this bug",
+            ),  # No change - identity replacement
+            (
+                "# todo: implement later",
+                "# todo: implement later",
+            ),  # No change - identity replacement
+            (
+                "# TODO refactor this method",
+                "# TODO refactor this method",
+            ),  # No change - identity replacement
+            (
+                "# FIXME: another issue",
+                "# FIXME: another issue",
+            ),  # No change - no match
+            ("# regular comment", "# regular comment"),  # No change - no match
+        ],
+    ),
 }
 
 
@@ -876,6 +1440,112 @@ def clear_all_caches() -> None:
 def get_cache_info() -> dict[str, int | list[str]]:
     """Get information about pattern cache usage."""
     return CompiledPatternCache.get_cache_stats()
+
+
+# Security validation functions
+def detect_path_traversal_patterns(path_str: str) -> list[str]:
+    """
+    Detect directory traversal patterns in a path string.
+
+    Returns list of detected pattern names.
+    """
+    detected = []
+    traversal_patterns = [
+        "detect_directory_traversal_basic",
+        "detect_directory_traversal_backslash",
+        "detect_url_encoded_traversal",
+        "detect_double_url_encoded_traversal",
+    ]
+
+    for pattern_name in traversal_patterns:
+        pattern = SAFE_PATTERNS[pattern_name]
+        if pattern.test(path_str):
+            detected.append(pattern_name)
+
+    return detected
+
+
+def detect_null_byte_patterns(path_str: str) -> list[str]:
+    """
+    Detect null byte patterns in a path string.
+
+    Returns list of detected pattern names.
+    """
+    detected = []
+    null_patterns = [
+        "detect_null_bytes_url",
+        "detect_null_bytes_literal",
+        "detect_utf8_overlong_null",
+    ]
+
+    for pattern_name in null_patterns:
+        pattern = SAFE_PATTERNS[pattern_name]
+        if pattern.test(path_str):
+            detected.append(pattern_name)
+
+    return detected
+
+
+def detect_dangerous_directory_patterns(path_str: str) -> list[str]:
+    """
+    Detect dangerous directory access patterns.
+
+    Returns list of detected pattern names.
+    """
+    detected = []
+    dangerous_patterns = [
+        "detect_sys_directory_pattern",
+        "detect_proc_directory_pattern",
+        "detect_etc_directory_pattern",
+        "detect_boot_directory_pattern",
+        "detect_dev_directory_pattern",
+        "detect_root_directory_pattern",
+        "detect_var_log_directory_pattern",
+        "detect_bin_directory_pattern",
+        "detect_sbin_directory_pattern",
+    ]
+
+    for pattern_name in dangerous_patterns:
+        pattern = SAFE_PATTERNS[pattern_name]
+        if pattern.test(path_str):
+            detected.append(pattern_name)
+
+    return detected
+
+
+def detect_suspicious_path_patterns(path_str: str) -> list[str]:
+    """
+    Detect suspicious path patterns that might indicate attacks.
+
+    Returns list of detected pattern names.
+    """
+    detected = []
+    suspicious_patterns = [
+        "detect_parent_directory_in_path",
+        "detect_suspicious_temp_traversal",
+        "detect_suspicious_var_traversal",
+    ]
+
+    for pattern_name in suspicious_patterns:
+        pattern = SAFE_PATTERNS[pattern_name]
+        if pattern.test(path_str):
+            detected.append(pattern_name)
+
+    return detected
+
+
+def validate_path_security(path_str: str) -> dict[str, list[str]]:
+    """
+    Comprehensive path security validation using safe patterns.
+
+    Returns dict with categories of detected issues.
+    """
+    return {
+        "traversal_patterns": detect_path_traversal_patterns(path_str),
+        "null_bytes": detect_null_byte_patterns(path_str),
+        "dangerous_directories": detect_dangerous_directory_patterns(path_str),
+        "suspicious_patterns": detect_suspicious_path_patterns(path_str),
+    }
 
 
 # Validation on module import

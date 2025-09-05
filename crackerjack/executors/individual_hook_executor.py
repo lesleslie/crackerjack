@@ -1,5 +1,4 @@
 import asyncio
-import re
 import subprocess
 import time
 import typing as t
@@ -10,6 +9,7 @@ from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.models.task import HookResult
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
 @dataclass
@@ -73,33 +73,32 @@ class IndividualExecutionResult:
 
 
 class HookOutputParser:
-    HOOK_PATTERNS: dict[str, dict[str, re.Pattern[str]]] = {
+    # Pattern mapping: tool -> pattern_type -> safe_pattern_name
+    HOOK_PATTERNS: dict[str, dict[str, str]] = {
         "ruff-check": {
-            "error": re.compile(r"^(.+?): (\d +): (\d +): ([A-Z]\d +) (.+)$"),
-            "summary": re.compile(r"Found (\d +) error"),
+            "error": "ruff_check_error",
+            "summary": "ruff_check_summary",
         },
         "pyright": {
-            "error": re.compile(r"^(.+?): (\d +): (\d +)-error: (.+)$"),
-            "warning": re.compile(r"^(.+?): (\d +): (\d +)-warning: (.+)$"),
-            "summary": re.compile(r"(\d +) error[s]?, (\d +) warning[s]?"),
+            "error": "pyright_error",
+            "warning": "pyright_warning",
+            "summary": "pyright_summary",
         },
         "bandit": {
-            "issue": re.compile(r" > > Issue: \[([A-Z]\d +): \w +\] (.+)"),
-            "location": re.compile(r" Location: (.+?): (\d +): (\d +)"),
-            "confidence": re.compile(r" Confidence: (\w +)"),
-            "severity": re.compile(r" Severity: (\w +)"),
+            "issue": "bandit_issue",
+            "location": "bandit_location",
+            "confidence": "bandit_confidence",
+            "severity": "bandit_severity",
         },
         "mypy": {
-            "error": re.compile(r"^(.+?): (\d +): error: (.+)$"),
-            "note": re.compile(r"^(.+?): (\d +): note: (.+)$"),
+            "error": "mypy_error",
+            "note": "mypy_note",
         },
         "vulture": {
-            "unused": re.compile(r"^(.+?): (\d +): unused (.+) '(.+)'"),
+            "unused": "vulture_unused",
         },
         "complexipy": {
-            "complex": re.compile(
-                r"^(.+?): (\d +): (\d +)-(.+) is too complex \((\d +)\)",
-            ),
+            "complex": "complexipy_complex",
         },
     }
 
@@ -136,14 +135,16 @@ class HookOutputParser:
     def _parse_ruff_check(
         self,
         output_lines: list[str],
-        patterns: dict[str, re.Pattern[str]],
+        patterns: dict[str, str],
         result: dict[str, t.Any],
     ) -> None:
+        error_pattern = SAFE_PATTERNS[patterns["error"]]._get_compiled_pattern()
+
         for line in output_lines:
             line = line.strip()
             if not line:
                 continue
-            if match := patterns["error"].match(line):
+            if match := error_pattern.match(line):
                 file_path, line_num, col_num, code, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -160,14 +161,17 @@ class HookOutputParser:
     def _parse_pyright(
         self,
         output_lines: list[str],
-        patterns: dict[str, re.Pattern[str]],
+        patterns: dict[str, str],
         result: dict[str, t.Any],
     ) -> None:
+        error_pattern = SAFE_PATTERNS[patterns["error"]]._get_compiled_pattern()
+        warning_pattern = SAFE_PATTERNS[patterns["warning"]]._get_compiled_pattern()
+
         for line in output_lines:
             line = line.strip()
             if not line:
                 continue
-            if match := patterns["error"].match(line):
+            if match := error_pattern.match(line):
                 file_path, line_num, col_num, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -179,7 +183,7 @@ class HookOutputParser:
                         "type": "error",
                     },
                 )
-            elif match := patterns["warning"].match(line):
+            elif match := warning_pattern.match(line):
                 file_path, line_num, col_num, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["warnings"].append(
@@ -195,14 +199,16 @@ class HookOutputParser:
     def _parse_bandit(
         self,
         output_lines: list[str],
-        patterns: dict[str, re.Pattern[str]],
+        patterns: dict[str, str],
         result: dict[str, t.Any],
     ) -> None:
+        issue_pattern = SAFE_PATTERNS[patterns["issue"]]._get_compiled_pattern()
+
         for line in output_lines:
             line = line.strip()
             if not line:
                 continue
-            if match := patterns["issue"].match(line):
+            if match := issue_pattern.match(line):
                 code, message = match.groups()
                 result["errors"].append(
                     {"code": code, "message": message, "type": "security"},
@@ -211,14 +217,16 @@ class HookOutputParser:
     def _parse_vulture(
         self,
         output_lines: list[str],
-        patterns: dict[str, re.Pattern[str]],
+        patterns: dict[str, str],
         result: dict[str, t.Any],
     ) -> None:
+        unused_pattern = SAFE_PATTERNS[patterns["unused"]]._get_compiled_pattern()
+
         for line in output_lines:
             line = line.strip()
             if not line:
                 continue
-            if match := patterns["unused"].match(line):
+            if match := unused_pattern.match(line):
                 file_path, line_num, item_type, item_name = match.groups()
                 result["files_processed"].add(file_path)
                 result["warnings"].append(
@@ -233,14 +241,16 @@ class HookOutputParser:
     def _parse_complexipy(
         self,
         output_lines: list[str],
-        patterns: dict[str, re.Pattern[str]],
+        patterns: dict[str, str],
         result: dict[str, t.Any],
     ) -> None:
+        complex_pattern = SAFE_PATTERNS[patterns["complex"]]._get_compiled_pattern()
+
         for line in output_lines:
             line = line.strip()
             if not line:
                 continue
-            if match := patterns["complex"].match(line):
+            if match := complex_pattern.match(line):
                 file_path, line_num, col_num, function_name, complexity = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -256,7 +266,7 @@ class HookOutputParser:
     def _parse_default_hook(
         self,
         output_lines: list[str],
-        patterns: dict[str, re.Pattern[str]],
+        patterns: dict[str, str],
         result: dict[str, t.Any],
     ) -> None:
         for line in output_lines:

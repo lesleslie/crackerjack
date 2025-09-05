@@ -521,7 +521,7 @@ async def _ensure_websocket_server_running(job_id: str, context: t.Any) -> None:
         # Initialize and start services if needed
         service_manager = ServiceManager()
         await service_manager.ensure_services_running()
-        
+
         _update_progress(
             job_id,
             {
@@ -536,7 +536,7 @@ async def _ensure_websocket_server_running(job_id: str, context: t.Any) -> None:
         _update_progress(
             job_id,
             {
-                "type": "service_check", 
+                "type": "service_check",
                 "status": "websocket_warning",
                 "message": f"WebSocket server auto-start failed: {e}. Progress tracking may be limited.",
             },

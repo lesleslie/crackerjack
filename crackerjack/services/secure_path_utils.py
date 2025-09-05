@@ -1,11 +1,11 @@
 import os
-import re
 import tempfile
 import typing as t
 import urllib.parse
 from pathlib import Path
 
 from ..errors import ErrorCode, ExecutionError
+from .regex_patterns import validate_path_security
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
 
 
@@ -51,28 +51,7 @@ class SecurePathValidator:
         "LPT9",
     }
 
-    # Directory traversal patterns (including encoded variations)
-    TRAVERSAL_PATTERNS = [
-        r"\.\./",  # ../
-        r"\.\.\/",  # ..\/
-        r"\.\.\\",  # ..\
-        r"%2e%2e%2f",  # URL encoded ../
-        r"%2e%2e%5c",  # URL encoded ..\
-        r"%2e%2e/",  # Mixed encoding
-        r"%252e%252e%252f",  # Double URL encoded
-        r"\.\.%2f",  # Mixed encoding
-        r"\.\.%5c",  # Mixed encoding
-        r"%c0%2e%c0%2e%c0%2f",  # UTF-8 overlong encoding
-        r"..%c0%af",  # UTF-8 overlong encoding
-        r"..%c1%9c",  # UTF-8 overlong encoding
-    ]
-
-    # Null byte variations
-    NULL_BYTE_PATTERNS = [
-        r"%00",  # URL encoded null
-        r"\x00",  # Literal null
-        r"%c0%80",  # UTF-8 overlong null
-    ]
+    # Pattern constants removed - now using centralized SAFE_PATTERNS for security validation
 
     @classmethod
     def validate_safe_path(
@@ -259,7 +238,7 @@ class SecurePathValidator:
 
     @classmethod
     def _check_malicious_patterns(cls, path_str: str) -> None:
-        """Check for directory traversal and null byte patterns."""
+        """Check for directory traversal and null byte patterns using safe patterns."""
         security_logger = get_security_logger()
 
         # URL decode the path to catch encoded attacks
@@ -269,65 +248,75 @@ class SecurePathValidator:
             # If decoding fails, use original string but still check patterns
             decoded = path_str
 
-        # Check both original and decoded versions
+        # Check both original and decoded versions using safe patterns
         for check_str in (path_str, decoded):
-            # Check for null bytes
-            for pattern in cls.NULL_BYTE_PATTERNS:
-                if re.search(pattern, check_str, re.IGNORECASE):
-                    security_logger.log_security_event(
-                        SecurityEventType.PATH_TRAVERSAL_ATTEMPT,
-                        SecurityEventLevel.CRITICAL,
-                        f"Null byte pattern detected in path: {path_str}",
-                        file_path=path_str,
-                        pattern_type="null_byte",
-                        detected_pattern=pattern,
-                    )
-                    raise ExecutionError(
-                        message=f"Null byte pattern detected in path: {path_str}",
-                        error_code=ErrorCode.VALIDATION_ERROR,
-                    )
+            validation_results = validate_path_security(check_str)
+
+            # Check for null byte patterns
+            if validation_results["null_bytes"]:
+                detected_pattern = validation_results["null_bytes"][
+                    0
+                ]  # First detected pattern
+                security_logger.log_security_event(
+                    SecurityEventType.PATH_TRAVERSAL_ATTEMPT,
+                    SecurityEventLevel.CRITICAL,
+                    f"Null byte pattern detected in path: {path_str}",
+                    file_path=path_str,
+                    pattern_type="null_byte",
+                    detected_pattern=detected_pattern,
+                )
+                raise ExecutionError(
+                    message=f"Null byte pattern detected in path: {path_str}",
+                    error_code=ErrorCode.VALIDATION_ERROR,
+                )
 
             # Check for directory traversal patterns
-            for pattern in cls.TRAVERSAL_PATTERNS:
-                if re.search(pattern, check_str, re.IGNORECASE):
-                    security_logger.log_path_traversal_attempt(
-                        attempted_path=path_str,
-                        pattern_type="directory_traversal",
-                        detected_pattern=pattern,
-                    )
-                    raise ExecutionError(
-                        message=f"Directory traversal pattern detected in path: {path_str}",
-                        error_code=ErrorCode.VALIDATION_ERROR,
-                    )
+            if validation_results["traversal_patterns"]:
+                detected_pattern = validation_results["traversal_patterns"][
+                    0
+                ]  # First detected pattern
+                security_logger.log_path_traversal_attempt(
+                    attempted_path=path_str,
+                    pattern_type="directory_traversal",
+                    detected_pattern=detected_pattern,
+                )
+                raise ExecutionError(
+                    message=f"Directory traversal pattern detected in path: {path_str}",
+                    error_code=ErrorCode.VALIDATION_ERROR,
+                )
 
     @classmethod
     def _validate_resolved_path(cls, path: Path) -> None:
-        """Additional validation for resolved paths."""
+        """Additional validation for resolved paths using safe patterns."""
         path_str = str(path)
 
-        # Check for dangerous patterns that might appear after resolution
-        if ".." in path_str or path_str.startswith("/.."):
-            raise ExecutionError(
-                message=f"Parent directory reference in resolved path: {path}",
-                error_code=ErrorCode.VALIDATION_ERROR,
-            )
+        # Check for dangerous patterns that might appear after resolution using safe patterns
+        validation_results = validate_path_security(path_str)
 
-        # Check for suspicious patterns - using tempfile.gettempdir() instead of hardcoded /tmp (B108)
-        import tempfile
-
-        temp_dir = tempfile.gettempdir()
-        suspicious_patterns = [
-            rf"{re.escape(temp_dir)}/.*\.\./",  # Traversal in temp directories
-            r"/var/.*\.\./",  # Traversal in var directories
-            r"/etc/.*\.\./",  # Traversal near system files
-        ]
-
-        for pattern in suspicious_patterns:
-            if re.search(pattern, path_str):
+        # Check for parent directory references
+        if validation_results["suspicious_patterns"]:
+            if (
+                "detect_parent_directory_in_path"
+                in validation_results["suspicious_patterns"]
+            ):
                 raise ExecutionError(
-                    message=f"Suspicious path pattern detected: {path}",
+                    message=f"Parent directory reference in resolved path: {path}",
                     error_code=ErrorCode.VALIDATION_ERROR,
                 )
+
+        # Check for suspicious traversal patterns in system directories
+        suspicious_detected = [
+            pattern
+            for pattern in validation_results["suspicious_patterns"]
+            if pattern
+            in ["detect_suspicious_temp_traversal", "detect_suspicious_var_traversal"]
+        ]
+
+        if suspicious_detected:
+            raise ExecutionError(
+                message=f"Suspicious path pattern detected: {path}",
+                error_code=ErrorCode.VALIDATION_ERROR,
+            )
 
     @classmethod
     def _check_dangerous_components(cls, path: Path) -> None:
@@ -574,19 +563,7 @@ class SubprocessPathValidator:
         "/var/spool/cron",
     }
 
-    # Directory patterns that are dangerous for subprocess operations
-    DANGEROUS_DIRECTORY_PATTERNS = [
-        r"^/etc/?",  # System configuration
-        r"^/boot/?",  # Boot files
-        r"^/sys/?",  # System files
-        r"^/proc/?",  # Process files
-        r"^/dev/?",  # Device files
-        r"^/root/?",  # Root home
-        r"^/var/log/?",  # System logs
-        r"^/usr/bin/?",  # System binaries
-        r"^/bin/?",  # Core binaries
-        r"^/sbin/?",  # System binaries
-    ]
+    # Directory patterns removed - now using centralized SAFE_PATTERNS for security validation
 
     @classmethod
     def validate_subprocess_cwd(cls, cwd: Path | str | None) -> Path | None:
@@ -624,19 +601,23 @@ class SubprocessPathValidator:
                 error_code=ErrorCode.VALIDATION_ERROR,
             )
 
-        # Check against dangerous directory patterns
-        for pattern in cls.DANGEROUS_DIRECTORY_PATTERNS:
-            if re.match(pattern, cwd_str):
-                security_logger = get_security_logger()
-                security_logger.log_dangerous_path_detected(
-                    path=cwd_str,
-                    dangerous_component=f"pattern:{pattern}",
-                    context="subprocess_cwd_validation",
-                )
-                raise ExecutionError(
-                    message=f"Dangerous subprocess working directory pattern: {cwd_str}",
-                    error_code=ErrorCode.VALIDATION_ERROR,
-                )
+        # Check against dangerous directory patterns using safe patterns
+        validation_results = validate_path_security(cwd_str)
+
+        if validation_results["dangerous_directories"]:
+            detected_pattern = validation_results["dangerous_directories"][
+                0
+            ]  # First detected pattern
+            security_logger = get_security_logger()
+            security_logger.log_dangerous_path_detected(
+                path=cwd_str,
+                dangerous_component=f"pattern:{detected_pattern}",
+                context="subprocess_cwd_validation",
+            )
+            raise ExecutionError(
+                message=f"Dangerous subprocess working directory pattern: {cwd_str}",
+                error_code=ErrorCode.VALIDATION_ERROR,
+            )
 
         return validated_cwd
 

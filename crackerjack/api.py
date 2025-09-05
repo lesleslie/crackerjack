@@ -11,6 +11,7 @@ from .errors import CrackerjackError, ErrorCode
 from .interactive import InteractiveCLI
 from .interactive import WorkflowOptions as InteractiveWorkflowOptions
 from .models.config import WorkflowOptions
+from .services.regex_patterns import SAFE_PATTERNS
 
 
 @dataclass
@@ -513,9 +514,8 @@ class CrackerjackAPI:
             return "unknown"
 
     def _check_for_todos(self, target_dir: Path) -> list[tuple[Path, int, str]]:
-        import re
-
-        task_pattern = re.compile(r"#.*?TODO.*", re.IGNORECASE)
+        # Use SAFE_PATTERNS for TODO detection
+        task_pattern = SAFE_PATTERNS["todo_pattern"]
         python_files = self._get_python_files_for_todo_check(target_dir)
         return self._scan_files_for_todos(python_files, task_pattern)
 
@@ -574,7 +574,13 @@ class CrackerjackAPI:
         with suppress(UnicodeDecodeError, PermissionError):
             with file_path.open() as f:
                 for line_no, line in enumerate(f, 1):
-                    if todo_pattern.search(line):
+                    # For ValidatedPattern, check if applying it changes the line
+                    # If it doesn't change, then it didn't match (identity replacement for match-only patterns)
+                    original = line.strip()
+                    processed = todo_pattern.apply(original)
+                    # For TODO pattern with identity replacement, a match means no change
+                    # But we need to check if it actually contains TODO
+                    if "todo" in original.lower() and original == processed:
                         todos.append((file_path, line_no, line))
 
         return todos

@@ -187,6 +187,29 @@ class TestSafePatternsValidation:
             "fix_debug_log_pattern",
             "fix_job_file_pattern",
             "fix_markdown_bold",
+            # Security patterns
+            "mask_pypi_token",
+            "mask_github_token",
+            "mask_generic_long_token",
+            "mask_token_assignment",
+            "detect_hardcoded_paths",
+            "detect_potential_secrets",
+            "detect_suspicious_tmp_traversal",
+            "detect_suspicious_var_traversal",
+            # Tool output parsing patterns
+            "ruff_check_error",
+            "ruff_check_summary",
+            "pyright_error",
+            "pyright_warning",
+            "pyright_summary",
+            "bandit_issue",
+            "bandit_location",
+            "bandit_confidence",
+            "bandit_severity",
+            "mypy_error",
+            "mypy_note",
+            "vulture_unused",
+            "complexipy_complex",
         }
 
         actual_patterns = set(SAFE_PATTERNS.keys())
@@ -529,3 +552,196 @@ class TestRegexPatternCompliance:
                 assert compiled is not None
             except re.error as e:
                 pytest.fail(f"Pattern {pattern_name} failed to compile: {e}")
+
+
+class TestToolOutputPatterns:
+    """Test development tool output parsing patterns."""
+
+    def test_tool_output_patterns_exist(self) -> None:
+        """Test that all tool output parsing patterns exist."""
+        tool_patterns = [
+            "ruff_check_error",
+            "ruff_check_summary",
+            "pyright_error",
+            "pyright_warning",
+            "pyright_summary",
+            "bandit_issue",
+            "bandit_location",
+            "bandit_confidence",
+            "bandit_severity",
+            "mypy_error",
+            "mypy_note",
+            "vulture_unused",
+            "complexipy_complex",
+        ]
+
+        for pattern_name in tool_patterns:
+            assert pattern_name in SAFE_PATTERNS, (
+                f"Missing tool pattern: {pattern_name}"
+            )
+
+    def test_ruff_patterns(self) -> None:
+        """Test ruff-check patterns."""
+
+        # Test ruff error pattern
+        ruff_error = SAFE_PATTERNS["ruff_check_error"]
+        assert ruff_error.test("crackerjack/core.py: 123: 45: E501 line too long")
+        assert not ruff_error.test("Not a ruff error line")
+
+        # Test parsing groups
+        pattern = ruff_error._get_compiled_pattern()
+        match = pattern.match("crackerjack/core.py: 123: 45: E501 line too long")
+        assert match is not None
+        file_path, line_num, col_num, code, message = match.groups()
+        assert file_path == "crackerjack/core.py"
+        assert line_num == "123"
+        assert col_num == "45"
+        assert code == "E501"
+        assert message == "line too long"
+
+        # Test ruff summary pattern
+        ruff_summary = SAFE_PATTERNS["ruff_check_summary"]
+        assert ruff_summary.test("Found 5 error in file")
+        assert not ruff_summary.test("No errors found")
+
+    def test_pyright_patterns(self) -> None:
+        """Test pyright patterns."""
+
+        # Test error pattern
+        pyright_error = SAFE_PATTERNS["pyright_error"]
+        assert pyright_error.test("src/app.py: 45: 12 - error: Undefined variable")
+        assert not pyright_error.test("src/app.py: 45: 12 - warning: Something")
+
+        # Test warning pattern
+        pyright_warning = SAFE_PATTERNS["pyright_warning"]
+        assert pyright_warning.test("src/app.py: 45: 12 - warning: Unused variable")
+        assert not pyright_warning.test("src/app.py: 45: 12 - error: Type error")
+
+        # Test summary pattern
+        pyright_summary = SAFE_PATTERNS["pyright_summary"]
+        assert pyright_summary.test("5 errors, 3 warnings")
+        assert pyright_summary.test("1 error, 1 warning")
+        assert not pyright_summary.test("No issues found")
+
+        # Test parsing groups
+        error_pattern = pyright_error._get_compiled_pattern()
+        match = error_pattern.match("src/app.py: 45: 12 - error: Undefined variable")
+        assert match is not None
+        file_path, line_num, col_num, message = match.groups()
+        assert file_path == "src/app.py"
+        assert line_num == "45"
+        assert col_num == "12"
+        assert message == "Undefined variable"
+
+    def test_bandit_patterns(self) -> None:
+        """Test bandit security patterns."""
+
+        # Test issue pattern
+        bandit_issue = SAFE_PATTERNS["bandit_issue"]
+        assert bandit_issue.test(
+            ">> Issue: [B602: subprocess_popen_with_shell_equals_true] Use of shell=True"
+        )
+        assert not bandit_issue.test("Some other security message")
+
+        # Test parsing groups
+        pattern = bandit_issue._get_compiled_pattern()
+        match = pattern.match(
+            ">> Issue: [B602: subprocess_popen_with_shell_equals_true] Use of shell=True"
+        )
+        assert match is not None
+        code, message = match.groups()
+        assert code == "B602"
+        assert message == "Use of shell=True"
+
+        # Test location pattern
+        bandit_location = SAFE_PATTERNS["bandit_location"]
+        assert bandit_location.test("Location: src/security.py: 123: 45")
+        assert not bandit_location.test("File: src/security.py line 123")
+
+        # Test confidence pattern
+        bandit_confidence = SAFE_PATTERNS["bandit_confidence"]
+        assert bandit_confidence.test("Confidence: HIGH")
+        assert not bandit_confidence.test("Trust level: HIGH")
+
+        # Test severity pattern
+        bandit_severity = SAFE_PATTERNS["bandit_severity"]
+        assert bandit_severity.test("Severity: MEDIUM")
+        assert not bandit_severity.test("Risk level: MEDIUM")
+
+    def test_mypy_patterns(self) -> None:
+        """Test mypy patterns."""
+
+        # Test error pattern
+        mypy_error = SAFE_PATTERNS["mypy_error"]
+        assert mypy_error.test(
+            "src/app.py: 45: error: Name 'undefined_var' is not defined"
+        )
+        assert not mypy_error.test("src/app.py: 45: note: Something")
+
+        # Test note pattern
+        mypy_note = SAFE_PATTERNS["mypy_note"]
+        assert mypy_note.test("src/app.py: 45: note: Expected type Union[int, str]")
+        assert not mypy_note.test("src/app.py: 45: error: Type error")
+
+        # Test parsing groups
+        error_pattern = mypy_error._get_compiled_pattern()
+        match = error_pattern.match(
+            "src/app.py: 45: error: Name 'undefined_var' is not defined"
+        )
+        assert match is not None
+        file_path, line_num, message = match.groups()
+        assert file_path == "src/app.py"
+        assert line_num == "45"
+        assert message == "Name 'undefined_var' is not defined"
+
+    def test_vulture_patterns(self) -> None:
+        """Test vulture unused code detection patterns."""
+
+        vulture_unused = SAFE_PATTERNS["vulture_unused"]
+        assert vulture_unused.test("src/app.py: 45: unused variable 'temp_var'")
+        assert vulture_unused.test("test.py: 1: unused function 'helper'")
+        assert not vulture_unused.test("src/app.py: 45: used variable 'active_var'")
+
+        # Test parsing groups
+        pattern = vulture_unused._get_compiled_pattern()
+        match = pattern.match("src/app.py: 45: unused variable 'temp_var'")
+        assert match is not None
+        file_path, line_num, item_type, item_name = match.groups()
+        assert file_path == "src/app.py"
+        assert line_num == "45"
+        assert item_type == "variable"
+        assert item_name == "temp_var"
+
+    def test_complexipy_patterns(self) -> None:
+        """Test complexipy complexity detection patterns."""
+
+        complexipy_complex = SAFE_PATTERNS["complexipy_complex"]
+        assert complexipy_complex.test(
+            "src/app.py: 45: 1 - complex_function is too complex (15)"
+        )
+        assert not complexipy_complex.test(
+            "src/app.py: 45: 1 - simple_function is fine (5)"
+        )
+
+        # Test parsing groups
+        pattern = complexipy_complex._get_compiled_pattern()
+        match = pattern.match(
+            "src/app.py: 45: 1 - complex_function is too complex (15)"
+        )
+        assert match is not None
+        file_path, line_num, col_num, function_name, complexity = match.groups()
+        assert file_path == "src/app.py"
+        assert line_num == "45"
+        assert col_num == "1"
+        assert function_name == "complex_function"
+        assert complexity == "15"
+
+    def test_all_patterns_validate(self) -> None:
+        """Test that all patterns in SAFE_PATTERNS validate correctly."""
+        results = validate_all_patterns()
+
+        failed = [name for name, valid in results.items() if not valid]
+        if failed:
+            print(f"Failed patterns: {failed}")
+
+        assert all(results.values()), f"Some patterns failed validation: {failed}"
