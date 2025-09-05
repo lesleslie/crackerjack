@@ -247,7 +247,7 @@ def complex_function(x, y, z):
 
         assert len(complex_funcs) == 1
         assert complex_funcs[0]["name"] == "complex_function"
-        assert complex_funcs[0]["complexity"] > 13
+        assert complex_funcs[0]["complexity"] > 15
 
     def test_calculate_cognitive_complexity(
         self,

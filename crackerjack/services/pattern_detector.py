@@ -141,7 +141,7 @@ class PatternDetector:
                         severity=Priority.HIGH if complexity >= 12 else Priority.MEDIUM,
                         file_path=str(file_path),
                         line_number=line_no,
-                        description=f"Function '{func_name}' has complexity {complexity} (approaching limit of 13)",
+                        description=f"Function '{func_name}' has complexity {complexity} (approaching limit of 15)",
                         suggestion=f"Break down '{func_name}' into smaller helper methods",
                         prevention_strategy="extract_method",
                     )

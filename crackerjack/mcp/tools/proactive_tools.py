@@ -68,7 +68,7 @@ def _create_validation_results(file_path: str) -> dict:
         {
             "check": "complexity_compliance",
             "status": "requires_analysis",
-            "message": "Cognitive complexity should be ≤13 per function",
+            "message": "Cognitive complexity should be ≤15 per function",
             "tool": "complexipy",
         },
         {

@@ -327,7 +327,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "tier": 3,
             "time_estimate": 1.0,
             "stages": ["pre-push", "manual"],
-            "args": ["-d", "low"],
+            "args": ["-d", "low", "--max-complexity-allowed", "15"],
             "files": r"^crackerjack/.*\.py$",
             "exclude": r"^(\.venv/|tests/)",
             "additional_dependencies": None,
