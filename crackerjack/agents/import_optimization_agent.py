@@ -5,6 +5,7 @@ import typing as t
 from collections import defaultdict
 from pathlib import Path
 
+from ..services.regex_patterns import SAFE_PATTERNS
 from .base import (
     AgentContext,
     FixResult,
@@ -59,15 +60,9 @@ class ImportOptimizationAgent(SubAgent):
             return 0.8
 
         # Check for ruff/pyflakes import error codes
-        error_patterns = [
-            r"F401",  # unused import
-            r"F811",  # redefined unused name
-            r"F403",  # star import
-            r"F405",  # name from star import
-            r"I001",  # import sorting
-            r"I002",  # missing required import
-        ]
-        if any(re.search(pattern, issue.message) for pattern in error_patterns):
+        # Use safe pattern matching for error code detection
+        pattern_obj = SAFE_PATTERNS["match_error_code_patterns"]
+        if pattern_obj.test(issue.message):
             return 0.85
 
         return 0.0
@@ -110,13 +105,12 @@ class ImportOptimizationAgent(SubAgent):
             if result.returncode == 0 and result.stdout:
                 for line in result.stdout.strip().split("\n"):
                     if line and "unused import" in line.lower():
-                        # Extract import name from vulture output
+                        # Extract import name from vulture output using safe patterns
                         # Format: "file.py:line: unused import 'name' (confidence: XX%)"
-                        import_match = re.search(
-                            r"unused import ['\"]([^'\"]+)['\"]", line
-                        )
-                        if import_match:
-                            unused_imports.append(import_match.group(1))
+                        pattern_obj = SAFE_PATTERNS["extract_unused_import_name"]
+                        if pattern_obj.test(line):
+                            import_name = pattern_obj.apply(line)
+                            unused_imports.append(import_name)
 
             return unused_imports
 
@@ -250,7 +244,8 @@ class ImportOptimizationAgent(SubAgent):
 
         # Check for star imports
         for line_num, line in enumerate(lines, 1):
-            if re.search(r"from\s+\w+\s+import\s+\*", line.strip()):
+            # Use safe pattern matching for star import detection
+            if SAFE_PATTERNS["match_star_import"].test(line.strip()):
                 violations.append(f"Line {line_num}: Avoid star imports")
 
         return violations
@@ -438,14 +433,17 @@ class ImportOptimizationAgent(SubAgent):
         if not unused_imports:
             return lines
 
-        # Create patterns for unused imports
+        # Create patterns for unused imports using safe pattern approach
         unused_patterns = []
         for unused in unused_imports:
-            # Pattern for 'import unused_name'
-            unused_patterns.append(re.compile(rf"^\s*import\s+{re.escape(unused)}\s*$"))
-            # Pattern for 'from module import unused_name'
+            # Use dynamic pattern creation with escaping
+            import re  # REGEX OK: temporary for escaping in dynamic patterns
+
+            escaped_unused = re.escape(unused)
+            # Create dynamic patterns based on safe patterns
+            unused_patterns.append((unused, f"^\\s*import\\s+{escaped_unused}\\s*$"))
             unused_patterns.append(
-                re.compile(rf"^\s*from\s+\w+\s+import\s+.*\b{re.escape(unused)}\b")
+                (unused, f"^\\s*from\\s+\\w+\\s+import\\s+.*\\b{escaped_unused}\\b")
             )
 
         filtered_lines = []
@@ -469,12 +467,18 @@ class ImportOptimizationAgent(SubAgent):
     def _remove_from_import_list(self, line: str, unused_imports: list[str]) -> str:
         """Remove specific imports from a multi-import line."""
         for unused in unused_imports:
-            # Remove 'unused_name,' or ', unused_name'
-            line = re.sub(rf",?\s*{re.escape(unused)}\s*,?", ", ", line)
-            # Clean up double commas and trailing commas
-            line = re.sub(r",\s*,", ",", line)
-            line = re.sub(r",\s*$", "", line)
-            line = re.sub(r"import\s*,", "import", line)
+            # Remove 'unused_name,' or ', unused_name' using safe pattern approach
+            import re  # REGEX OK: temporary for escaping in dynamic removal
+
+            escaped_unused = re.escape(unused)
+            line = re.sub(
+                rf",?\s*{escaped_unused}\s*,?", ", ", line
+            )  # REGEX OK: dynamic removal with escaping
+
+            # Clean up using safe patterns
+            line = SAFE_PATTERNS["clean_import_commas"].apply(line)
+            line = SAFE_PATTERNS["clean_trailing_import_comma"].apply(line)
+            line = SAFE_PATTERNS["clean_import_prefix"].apply(line)
         return line
 
     def _consolidate_mixed_imports(
@@ -494,9 +498,11 @@ class ImportOptimizationAgent(SubAgent):
 
             for module in mixed_modules:
                 # Match 'import module' or 'import module.submodule'
-                if re.match(rf"^\s*import\s+{re.escape(module)}(?:\.\w+)*\s*$", line):
+                if re.match(
+                    rf"^\s*import\s+{re.escape(module)}(?:\.\w+)*\s*$", line
+                ):  # REGEX OK: dynamic module matching with escaping
                     # Extract the imported name
-                    match = re.search(
+                    match = re.search(  # REGEX OK: dynamic import name extraction with escaping
                         rf"import\s+({re.escape(module)}(?:\.\w+)*)", line
                     )
                     if match:
@@ -512,9 +518,13 @@ class ImportOptimizationAgent(SubAgent):
                             insert_positions[module] = i
 
                 # Match 'from module import names'
-                elif re.match(rf"^\s*from\s+{re.escape(module)}\s+import\s+", line):
-                    import_part = re.sub(
-                        rf"^\s*from\s+{re.escape(module)}\s+import\s+", "", line
+                elif re.match(
+                    rf"^\s*from\s+{re.escape(module)}\s+import\s+", line
+                ):  # REGEX OK: dynamic from import matching with escaping
+                    import_part = (
+                        re.sub(  # REGEX OK: dynamic import extraction with escaping
+                            rf"^\s*from\s+{re.escape(module)}\s+import\s+", "", line
+                        )
                     )
                     imports = [name.strip() for name in import_part.split(",")]
                     module_imports[module].update(imports)
@@ -552,8 +562,8 @@ class ImportOptimizationAgent(SubAgent):
         filtered_lines = []
 
         for line in lines:
-            # Normalize the import line for comparison
-            normalized = re.sub(r"\s+", " ", line.strip())
+            # Normalize the import line for comparison using safe patterns
+            normalized = SAFE_PATTERNS["normalize_whitespace"].apply(line.strip())
 
             if normalized.startswith(("import ", "from ")):
                 if normalized not in seen_imports:

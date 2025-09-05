@@ -58,7 +58,9 @@ class TestWebSocketEndpoints:
         ]
 
         for pattern in malformed_patterns:
-            matches = re.findall(pattern, html_content)
+            matches = re.findall(
+                pattern, html_content
+            )  # REGEX OK: testing HTML validation patterns
             assert not matches, f"Found malformed HTML tags: {matches}"
 
     def test_test_endpoint_contains_expected_elements(self, client):

@@ -548,7 +548,9 @@ class TestRegexPatternCompliance:
         """Test that all regex patterns compile without errors."""
         for pattern_name, pattern in SAFE_PATTERNS.items():
             try:
-                compiled = re.compile(pattern.pattern)
+                compiled = re.compile(
+                    pattern.pattern
+                )  # REGEX OK: testing pattern compilation
                 assert compiled is not None
             except re.error as e:
                 pytest.fail(f"Pattern {pattern_name} failed to compile: {e}")

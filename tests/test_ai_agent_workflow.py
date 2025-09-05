@@ -269,7 +269,9 @@ class AIAgentWorkflowTester:
         try:
             import re
 
-            match = re.search(r"(\d +)\s + fixes?\s + applied", line.lower())
+            match = re.search(
+                r"(\d +)\s + fixes?\s + applied", line.lower()
+            )  # REGEX OK: parsing test output format
             if match:
                 current_iteration["errors_fixed"] += int(match.group(1))
         except (ValueError, AttributeError, ImportError):

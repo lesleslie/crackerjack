@@ -2334,6 +2334,148 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("my_pickle.load(file)", "my_pickle.load(file)"),  # No change
         ],
     ),
+    # Agent-specific patterns for validation and analysis
+    "extract_range_size": ValidatedPattern(
+        name="extract_range_size",
+        pattern=r"range\((\d+)\)",
+        replacement=r"\1",
+        description="Extract numeric size from range() calls",
+        test_cases=[
+            ("range(1000)", "1000"),
+            ("range(50)", "50"),
+            ("for i in range(100):", "for i in 100:"),
+            ("other_func(10)", "other_func(10)"),  # No change
+        ],
+    ),
+    "match_error_code_patterns": ValidatedPattern(
+        name="match_error_code_patterns",
+        pattern=r"F\d{3}|I\d{3}|E\d{3}|W\d{3}",
+        replacement=r"\g<0>",
+        description="Match standard error codes like F403, I001, etc.",
+        test_cases=[
+            ("F403", "F403"),
+            ("I001", "I001"),
+            ("E302", "E302"),
+            ("W291", "W291"),
+            ("ABC123", "ABC123"),  # No change
+        ],
+    ),
+    "match_validation_patterns": ValidatedPattern(
+        name="match_validation_patterns",
+        pattern=r"if\s+not\s+\w+\s*:|if\s+\w+\s+is\s+None\s*:|if\s+len\(\w+\)\s*[<>=]",
+        replacement=r"\g<0>",
+        description="Match common validation patterns for extraction",
+        test_cases=[
+            ("if not var:", "if not var:"),
+            ("if item is None:", "if item is None:"),
+            ("if len(items) >", "if len(items) >"),
+            ("other code", "other code"),  # No change
+        ],
+    ),
+    "match_loop_patterns": ValidatedPattern(
+        name="match_loop_patterns",
+        pattern=r"\s*for\s+.*:\s*$|\s*while\s+.*:\s*$",
+        replacement=r"\g<0>",
+        description="Match for/while loop patterns",
+        test_cases=[
+            ("    for i in items:", "    for i in items:"),
+            ("  while condition:", "  while condition:"),
+            ("regular line", "regular line"),  # No change
+        ],
+    ),
+    "match_star_import": ValidatedPattern(
+        name="match_star_import",
+        pattern=r"from\s+\w+\s+import\s+\*",
+        replacement=r"\g<0>",
+        description="Match star import statements",
+        test_cases=[
+            ("from module import *", "from module import *"),
+            ("from my_pkg import *", "from my_pkg import *"),
+            ("from module import specific", "from module import specific"),  # No change
+        ],
+    ),
+    "clean_unused_import": ValidatedPattern(
+        name="clean_unused_import",
+        pattern=r"^\s*import\s+unused_module\s*$",
+        replacement=r"",
+        description="Remove unused import statements (example with unused_module)",
+        test_cases=[
+            ("    import unused_module", ""),
+            (
+                "import other_module",
+                "import other_module",
+            ),  # No change for different module
+        ],
+    ),
+    "clean_unused_from_import": ValidatedPattern(
+        name="clean_unused_from_import",
+        pattern=r"^\s*from\s+\w+\s+import\s+.*\bunused_item\b",
+        replacement=r"\g<0>",
+        description="Match from import statements with unused items (example with unused_item)",
+        test_cases=[
+            (
+                "from module import used, unused_item",
+                "from module import used, unused_item",
+            ),
+            ("from other import needed", "from other import needed"),  # No change
+        ],
+    ),
+    "clean_import_commas": ValidatedPattern(
+        name="clean_import_commas",
+        pattern=r",\s*,",
+        replacement=r",",
+        description="Clean double commas in import statements",
+        test_cases=[
+            ("from module import a, , b", "from module import a, b"),
+            ("items = [a, , b]", "items = [a, b]"),
+            ("normal, list", "normal, list"),  # No change
+        ],
+    ),
+    "clean_trailing_import_comma": ValidatedPattern(
+        name="clean_trailing_import_comma",
+        pattern=r",\s*$",
+        replacement=r"",
+        description="Remove trailing commas from lines",
+        test_cases=[
+            ("from module import a, b,", "from module import a, b"),
+            ("import item,", "import item"),
+            ("normal line", "normal line"),  # No change
+        ],
+    ),
+    "clean_import_prefix": ValidatedPattern(
+        name="clean_import_prefix",
+        pattern=r"import\s*,\s*",
+        replacement=r"import ",
+        description="Clean malformed import statements with leading comma",
+        test_cases=[
+            ("import ,module", "import module"),
+            ("from pkg import ,item", "from pkg import item"),
+            ("import normal", "import normal"),  # No change
+        ],
+    ),
+    "extract_unused_import_name": ValidatedPattern(
+        name="extract_unused_import_name",
+        pattern=r"unused import ['\"]([^'\"]+)['\"]",
+        replacement=r"\1",
+        description="Extract import name from vulture unused import messages",
+        test_cases=[
+            ("unused import 'module_name'", "module_name"),
+            ('unused import "other_module"', "other_module"),
+            ("some other text", "some other text"),  # No change
+        ],
+    ),
+    "normalize_whitespace": ValidatedPattern(
+        name="normalize_whitespace",
+        pattern=r"\s+",
+        replacement=r" ",
+        description="Normalize multiple whitespace to single space",
+        global_replace=True,
+        test_cases=[
+            ("import    module", "import module"),
+            ("from  pkg   import  item", "from pkg import item"),
+            ("normal text", "normal text"),  # No change with single spaces
+        ],
+    ),
 }
 
 

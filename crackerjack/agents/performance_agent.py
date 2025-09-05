@@ -1,6 +1,5 @@
 import ast
 import operator
-import re
 import time
 import typing as t
 from contextlib import suppress
@@ -742,16 +741,24 @@ class PerformanceAgent(SubAgent):
                 # Try to estimate loop size
                 if "range(" in line:
                     try:
-                        # Simple heuristic for range size
-                        range_match = re.search(r"range\((\d+)\)", line)
-                        if range_match:
-                            range_size = int(range_match.group(1))
-                            if range_size > 1000:
-                                context["impact_factor"] = 10
-                            elif range_size > 100:
-                                context["impact_factor"] = 5
-                            else:
-                                context["impact_factor"] = 2
+                        # Simple heuristic for range size using safe patterns
+                        pattern_obj = SAFE_PATTERNS["extract_range_size"]
+                        if pattern_obj.test(line):
+                            range_str = pattern_obj.apply(line)
+                            # Extract the number from the first range() found
+                            import re  # REGEX OK: temporary for extracting number from safe pattern
+
+                            number_match = re.search(
+                                r"\d+", range_str
+                            )  # REGEX OK: extracting digits from validated pattern
+                            if number_match:
+                                range_size = int(number_match.group())
+                                if range_size > 1000:
+                                    context["impact_factor"] = 10
+                                elif range_size > 100:
+                                    context["impact_factor"] = 5
+                                else:
+                                    context["impact_factor"] = 2
                     except (ValueError, AttributeError):
                         context["impact_factor"] = 2
                 break
@@ -768,15 +775,11 @@ class PerformanceAgent(SubAgent):
         context_lines = lines[context_start : line_index + 1]
 
         # Check for various loop patterns
-        loop_patterns = [
-            r"\s*for\s+\w+\s+in\s+",
-            r"\s*while\s+",
-            r"\s*for\s+.*:\s*$",
-            r"\s*while\s+.*:\s*$",
-        ]
 
         for ctx_line in context_lines:
-            if any(re.match(pattern, ctx_line) for pattern in loop_patterns):
+            # Use safe pattern matching for loop detection
+            pattern_obj = SAFE_PATTERNS["match_loop_patterns"]
+            if pattern_obj.test(ctx_line):
                 return True
 
         return False

@@ -482,7 +482,9 @@ class TestManagementImpl:
         self._handle_running_test(line, progress)
 
     def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
-        if match := re.search(r"collected (\d +) items?", line):
+        if match := re.search(
+            r"collected (\d +) items?", line
+        ):  # REGEX OK: parsing pytest collection output
             progress.update(
                 total_tests=int(match.group(1)),
                 is_collecting=False,

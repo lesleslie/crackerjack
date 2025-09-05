@@ -1,5 +1,4 @@
 import ast
-import re
 import typing as t
 from pathlib import Path
 
@@ -597,11 +596,15 @@ class RefactoringAgent(SubAgent):
             if "validation_extract" in SAFE_PATTERNS:
                 content = SAFE_PATTERNS["validation_extract"].apply(content)
             else:
-                # Manual extraction logic
-                matches = re.findall(pattern, content)
-                if len(matches) > 2:  # Found repeated pattern
-                    # Could extract to helper method
-                    pass
+                # Use safe pattern matching instead of raw regex
+                pattern_obj = SAFE_PATTERNS["match_validation_patterns"]
+                if pattern_obj.test(content):
+                    matches = len(
+                        [line for line in content.split("\n") if pattern_obj.test(line)]
+                    )
+                    if matches > 2:  # Found repeated pattern
+                        # Could extract to helper method
+                        pass
 
         return content
 

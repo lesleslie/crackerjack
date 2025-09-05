@@ -419,7 +419,7 @@ class AsyncWorkflowPipeline:
 
         from crackerjack.agents.base import Issue, IssueType, Priority
 
-        match = re.search(
+        match = re.search(  # REGEX OK: parsing structured refurb tool output
             r"refurb: \s *(.+?): (\d +): (\d +)\s +\[(\w +)\]: \s *(.+)", issue
         )
         if match:

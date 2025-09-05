@@ -143,7 +143,9 @@ class AgentSelector:
 
         capabilities = set()
         for pattern, caps in self._task_patterns.items():
-            if re.search(pattern, text, re.IGNORECASE):
+            if re.search(
+                pattern, text, re.IGNORECASE
+            ):  # REGEX OK: dynamic pattern matching from config
                 capabilities.update(caps)
 
         return capabilities
