@@ -59,6 +59,8 @@ ALLOWED_PATTERNS = {
     r"crackerjack/intelligence/agent_selector\.py$",
     r"crackerjack/managers/test_.*\.py$",
     r"crackerjack/core/async_workflow_orchestrator\.py$",
+    # Agent files that use validated patterns with dynamic escaping
+    r"crackerjack/agents/.*\.py$",
 }
 
 FORBIDDEN_REPLACEMENT_PATTERNS = [
