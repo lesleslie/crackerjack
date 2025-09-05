@@ -468,7 +468,7 @@ async def create_default_watchdog(
                 python_path,
                 "-m",
                 "crackerjack",
-                " - - start - mcp-server",
+                "--start-mcp-server",
             ],
         ),
         ServiceConfig(

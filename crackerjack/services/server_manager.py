@@ -29,15 +29,26 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
         str(Path.cwd())
 
         for line in result.stdout.splitlines():
-            if "crackerjack" in line and "- - start - mcp-server" in line:
+            if (
+                "crackerjack" in line
+                and "--start-mcp-server" in line
+                and "python" in line.lower()
+            ):
                 parts = line.split()
                 if len(parts) >= 11:
                     try:
                         pid = int(parts[1])
+                        # Find where the command actually starts (usually after the time field)
+                        command_start_index = 10
+                        for i, part in enumerate(parts):
+                            if part.endswith("python") or "Python" in part:
+                                command_start_index = i
+                                break
+
                         processes.append(
                             {
                                 "pid": pid,
-                                "command": " ".join(parts[10:]),
+                                "command": " ".join(parts[command_start_index:]),
                                 "user": parts[0],
                                 "cpu": parts[2],
                                 "mem": parts[3],

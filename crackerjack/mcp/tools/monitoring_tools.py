@@ -228,8 +228,8 @@ async def _get_comprehensive_status_secure(
             "status_collection",
             client_id,
             _collect_comprehensive_status_internal,
-            client_id=client_id,
-            verbosity=verbosity,
+            client_id,
+            verbosity,
         )
     except Exception as e:
         return {"error": f"Resource limit exceeded: {e}"}

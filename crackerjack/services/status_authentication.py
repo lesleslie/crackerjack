@@ -464,9 +464,7 @@ class StatusAuthenticator:
 
         return user_level_num >= required_level_num
 
-    def is_operation_allowed(
-        self, operation: str, access_level: AccessLevel
-    ) -> bool:
+    def is_operation_allowed(self, operation: str, access_level: AccessLevel) -> bool:
         """Check if an operation is allowed for the given access level."""
         required_level = self._operation_requirements.get(operation, AccessLevel.PUBLIC)
         return self._has_sufficient_access_level(access_level, required_level)

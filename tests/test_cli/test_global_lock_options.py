@@ -59,7 +59,10 @@ class TestGlobalLockCLIOptions:
         assert option.default is True
         # The param_decls contains the combined flag format
         param_decl = option.param_decls[0]
-        assert "--cleanup-stale-locks" in param_decl and "--no-cleanup-stale-locks" in param_decl
+        assert (
+            "--cleanup-stale-locks" in param_decl
+            and "--no-cleanup-stale-locks" in param_decl
+        )
         assert "Clean up stale global lock files" in option.help
 
     def test_global_lock_dir_option_definition(self):

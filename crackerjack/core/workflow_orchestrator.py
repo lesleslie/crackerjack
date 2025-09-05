@@ -58,7 +58,7 @@ class WorkflowPipeline:
     async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
         with LoggingContext(
             "workflow_execution",
-            testing=getattr(options, "testing", False),
+            testing=getattr(options, "test", False),
             skip_hooks=getattr(options, "skip_hooks", False),
         ):
             start_time = time.time()
@@ -93,7 +93,7 @@ class WorkflowPipeline:
             "workflow_execution",
             "started",
             details={
-                "testing": getattr(options, "testing", False),
+                "testing": getattr(options, "test", False),
                 "skip_hooks": getattr(options, "skip_hooks", False),
                 "ai_agent": getattr(options, "ai_agent", False),
             },
@@ -106,7 +106,7 @@ class WorkflowPipeline:
     def _log_workflow_startup_info(self, options: OptionsProtocol) -> None:
         self.logger.info(
             "Starting complete workflow execution",
-            testing=getattr(options, "testing", False),
+            testing=getattr(options, "test", False),
             skip_hooks=getattr(options, "skip_hooks", False),
             package_path=str(self.pkg_path),
         )
@@ -183,7 +183,7 @@ class WorkflowPipeline:
             return self._run_fast_hooks_phase(options)
         if hasattr(options, "comp") and options.comp:
             return self._run_comprehensive_hooks_phase(options)
-        if options.testing.test:
+        if getattr(options, "test", False):
             return await self._execute_test_workflow(options)
         return self._execute_standard_hooks_workflow(options)
 
@@ -194,7 +194,7 @@ class WorkflowPipeline:
             return False
 
         # Run code cleaning after fast hooks but before comprehensive hooks
-        if options.cleaning.clean:
+        if getattr(options, "clean", False):
             if not self._run_code_cleaning_phase(options):
                 return False
             # Run fast hooks again after cleaning for sanity check
@@ -390,7 +390,7 @@ class WorkflowPipeline:
             return False
 
         # Run code cleaning after fast hooks but before comprehensive hooks
-        if options.cleaning.clean:
+        if getattr(options, "clean", False):
             if not self._run_code_cleaning_phase(options):
                 self._handle_hooks_completion(False)
                 return False
@@ -441,7 +441,7 @@ class WorkflowPipeline:
         try:
             # If code cleaning is enabled and hasn't run yet, run it first
             # to provide cleaner, more standardized code for the AI agents
-            if options.cleaning.clean and not self._has_code_cleaning_run():
+            if getattr(options, "clean", False) and not self._has_code_cleaning_run():
                 self.console.print(
                     "\n[bold yellow]🤖 AI agents recommend running code cleaning first for better results...[/bold yellow]"
                 )

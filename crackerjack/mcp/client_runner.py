@@ -31,7 +31,7 @@ async def ensure_mcp_server_running() -> subprocess.Popen | None:
 
     console.print("[yellow]🚀 Starting MCP server...[/ yellow]")
     server_process = subprocess.Popen(
-        [sys.executable, "- m", "crackerjack", "- - start - mcp-server"],
+        [sys.executable, "-m", "crackerjack", "--start-mcp-server"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         start_new_session=True,
@@ -60,7 +60,7 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
             stdio_client(
                 sys.executable,
                 str(server_script),
-                "- - start - mcp-server",
+                "--start-mcp-server",
             ) as (read_stream, write_stream),
             read_stream.session(
                 read_stream=read_stream,
