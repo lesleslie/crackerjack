@@ -31,14 +31,17 @@ class GlobalLockConfig:
         """
         # Import here to avoid circular import
 
-        config = cls()
-
-        # Configure based on CLI options
-        config.enabled = not options.disable_global_locks
-        config.timeout_seconds = float(options.global_lock_timeout)
-
+        # Create config with custom values from options
+        config_kwargs = {
+            "enabled": not options.disable_global_locks,
+            "timeout_seconds": float(options.global_lock_timeout),
+        }
+        
         if options.global_lock_dir:
-            config.lock_directory = Path(options.global_lock_dir)
+            config_kwargs["lock_directory"] = Path(options.global_lock_dir)
+        
+        # Create instance with all parameters so __post_init__ is called
+        config = cls(**config_kwargs)
 
         return config
 

@@ -39,7 +39,7 @@ class TestGlobalLockCLIOptions:
 
         # Should be a boolean option with default False
         assert option.default is False
-        assert "--disable-global-locks" in str(option)
+        assert "--disable-global-locks" in option.param_decls
         assert "Disable global locking" in option.help
 
     def test_global_lock_timeout_option_definition(self):
@@ -48,7 +48,7 @@ class TestGlobalLockCLIOptions:
 
         # Should have default of 600 seconds (10 minutes)
         assert option.default == 600
-        assert "--global-lock-timeout" in str(option)
+        assert "--global-lock-timeout" in option.param_decls
         assert "timeout in seconds" in option.help
 
     def test_global_lock_cleanup_option_definition(self):
@@ -57,9 +57,9 @@ class TestGlobalLockCLIOptions:
 
         # Should be boolean option with default True
         assert option.default is True
-        assert "--cleanup-stale-locks" in str(
-            option
-        ) or "--no-cleanup-stale-locks" in str(option)
+        # The param_decls contains the combined flag format
+        param_decl = option.param_decls[0]
+        assert "--cleanup-stale-locks" in param_decl and "--no-cleanup-stale-locks" in param_decl
         assert "Clean up stale global lock files" in option.help
 
     def test_global_lock_dir_option_definition(self):
@@ -68,7 +68,7 @@ class TestGlobalLockCLIOptions:
 
         # Should be optional string with default None
         assert option.default is None
-        assert "--global-lock-dir" in str(option)
+        assert "--global-lock-dir" in option.param_decls
         assert "Custom directory for global lock files" in option.help
 
 

@@ -165,6 +165,9 @@ class SecurityLogger:
             SecurityEventLevel.MEDIUM: logging.INFO,
             SecurityEventLevel.HIGH: logging.WARNING,
             SecurityEventLevel.CRITICAL: logging.CRITICAL,
+            SecurityEventLevel.INFO: logging.INFO,
+            SecurityEventLevel.WARNING: logging.WARNING,
+            SecurityEventLevel.ERROR: logging.ERROR,
         }
         return level_mapping[level]
 

@@ -464,6 +464,13 @@ class StatusAuthenticator:
 
         return user_level_num >= required_level_num
 
+    def is_operation_allowed(
+        self, operation: str, access_level: AccessLevel
+    ) -> bool:
+        """Check if an operation is allowed for the given access level."""
+        required_level = self._operation_requirements.get(operation, AccessLevel.PUBLIC)
+        return self._has_sufficient_access_level(access_level, required_level)
+
     def add_api_key(
         self,
         client_id: str,
@@ -573,7 +580,7 @@ def get_status_authenticator() -> StatusAuthenticator:
     return _authenticator
 
 
-def authenticate_status_request(
+async def authenticate_status_request(
     auth_header: str | None = None,
     client_ip: str | None = None,
     operation: str = "unknown",
