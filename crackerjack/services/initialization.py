@@ -687,7 +687,7 @@ python -m crackerjack - a patch
         except Exception as e:
             self._handle_file_processing_error(".pre-commit-config.yaml", e, results)
 
-    def _load_source_config(self, source_file: Path) -> dict | None:
+    def _load_source_config(self, source_file: Path) -> dict[str, t.Any] | None:
         """Load and validate source configuration file."""
         with source_file.open() as f:
             source_config = yaml.safe_load(f) or {}
@@ -702,15 +702,18 @@ python -m crackerjack - a patch
         return source_config
 
     def _perform_config_merge(
-        self, source_config: dict, target_file: Path, project_name: str
-    ) -> dict:
+        self, source_config: dict[str, t.Any], target_file: Path, project_name: str
+    ) -> dict[str, t.Any]:
         """Perform the configuration merge using ConfigMergeService."""
         return self.config_merge_service.smart_merge_pre_commit_config(
             source_config, target_file, project_name
         )
 
     def _should_skip_merge(
-        self, target_file: Path, merged_config: dict, results: dict[str, t.Any]
+        self,
+        target_file: Path,
+        merged_config: dict[str, t.Any],
+        results: dict[str, t.Any],
     ) -> bool:
         """Check if merge should be skipped due to no changes."""
         if not target_file.exists():
@@ -734,9 +737,9 @@ python -m crackerjack - a patch
 
     def _write_and_finalize_config(
         self,
-        merged_config: dict,
+        merged_config: dict[str, t.Any],
         target_file: Path,
-        source_config: dict,
+        source_config: dict[str, t.Any],
         results: dict[str, t.Any],
     ) -> None:
         """Write merged config and finalize the process."""
@@ -759,7 +762,7 @@ python -m crackerjack - a patch
                 f"[yellow]⚠️[/ yellow] Could not git add .pre-commit-config.yaml: {e}"
             )
 
-    def _display_merge_success(self, source_config: dict) -> None:
+    def _display_merge_success(self, source_config: dict[str, t.Any]) -> None:
         """Display success message with repo count."""
         source_repo_count = len(source_config.get("repos", []))
         self.console.print(

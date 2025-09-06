@@ -446,7 +446,7 @@ class ServiceCollectionBuilder:
         self.container.register_transient(
             HookManager,
             factory=lambda: HookManagerImpl(
-                console=console, pkg_path=pkg_path, verbose=self.verbose, quiet=False
+                console=console, pkg_path=pkg_path, verbose=self.verbose
             ),
         )
 

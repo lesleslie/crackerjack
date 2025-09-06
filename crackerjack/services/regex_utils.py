@@ -418,10 +418,9 @@ def _process_re_sub_patterns(
     line: str, has_safe_patterns_import: bool
 ) -> tuple[str, bool, bool]:
     """Process re.sub patterns and replace with safe alternatives."""
-    re_sub_pattern = CompiledPatternCache.get_compiled_pattern(
+    re_sub_match = CompiledPatternCache.get_compiled_pattern(
         r're\.sub\s*\(\s*r?["\']([^"\']+)["\']\s*,\s*r?["\']([^"\']*)["\']'
-    )
-    re_sub_match = re_sub_pattern.search(line)
+    ).search(line)
 
     if not re_sub_match:
         return line, False, False
@@ -459,8 +458,9 @@ def _replace_with_safe_pattern(
     after_re_sub = line[re_sub_match.end() :]
 
     # Look for assignment pattern: var = re.sub(...)
-    assign_pattern = CompiledPatternCache.get_compiled_pattern(r"(\w+)\s*=\s*$")
-    assign_match = assign_pattern.search(before_re_sub)
+    assign_match = CompiledPatternCache.get_compiled_pattern(r"(\w+)\s*=\s*$").search(
+        before_re_sub
+    )
 
     if assign_match:
         return _handle_assignment_pattern(
@@ -497,10 +497,9 @@ def _handle_direct_replacement(
 
 def _extract_source_variable(line: str) -> str:
     """Extract the source variable from re.sub call."""
-    var_pattern = CompiledPatternCache.get_compiled_pattern(
+    full_match = CompiledPatternCache.get_compiled_pattern(
         r"re\.sub\s*\([^,]+,\s*[^,]+,\s*(\w+)"
-    )
-    full_match = var_pattern.search(line)
+    ).search(line)
     return full_match.group(1) if full_match else "text"
 
 

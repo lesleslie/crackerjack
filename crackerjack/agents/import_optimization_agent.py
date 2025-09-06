@@ -119,7 +119,9 @@ class ImportOptimizationAgent(SubAgent):
             # Fallback to basic AST analysis if vulture fails
             return []
 
-    def _run_vulture_analysis(self, file_path: Path) -> subprocess.CompletedProcess:
+    def _run_vulture_analysis(
+        self, file_path: Path
+    ) -> subprocess.CompletedProcess[str]:
         """Run vulture analysis on a single file."""
         return subprocess.run(
             ["uv", "run", "vulture", "--min-confidence", "80", str(file_path)],
@@ -130,7 +132,7 @@ class ImportOptimizationAgent(SubAgent):
         )
 
     def _extract_unused_imports_from_result(
-        self, result: subprocess.CompletedProcess
+        self, result: subprocess.CompletedProcess[str]
     ) -> list[str]:
         """Extract unused import names from vulture result."""
         unused_imports = []
@@ -144,9 +146,11 @@ class ImportOptimizationAgent(SubAgent):
 
         return unused_imports
 
-    def _is_valid_vulture_result(self, result: subprocess.CompletedProcess) -> bool:
+    def _is_valid_vulture_result(
+        self, result: subprocess.CompletedProcess[str]
+    ) -> bool:
         """Check if vulture result is valid and contains output."""
-        return result.returncode == 0 and result.stdout
+        return result.returncode == 0 and bool(result.stdout)
 
     def _extract_import_name_from_line(self, line: str) -> str | None:
         """Extract import name from a single vulture output line."""

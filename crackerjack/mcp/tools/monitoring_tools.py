@@ -662,5 +662,4 @@ def _apply_secure_formatting(raw_status: dict, context: t.Any) -> str:
 def _format_status_error(error_message: str) -> str:
     """Format status error response consistently."""
     formatter = get_secure_status_formatter()
-    error_response = formatter.format_error_response(error_message)
-    return json.dumps(error_response, indent=2)
+    return json.dumps(formatter.format_error_response(error_message), indent=2)

@@ -968,51 +968,66 @@ class RefactoringAgent(SubAgent):
     ) -> str:
         """Apply function extraction by replacing original with calls to helpers."""
         lines = content.split("\n")
-        validation_result = self._validate_extraction_params(lines, func_info, extracted_helpers)
+        validation_result = self._validate_extraction_params(
+            lines, func_info, extracted_helpers
+        )
         if validation_result:
             return validation_result
-        
-        new_lines = self._replace_function_with_calls(lines, func_info, extracted_helpers)
+
+        new_lines = self._replace_function_with_calls(
+            lines, func_info, extracted_helpers
+        )
         return self._add_helper_definitions(new_lines, func_info, extracted_helpers)
-    
+
     def _validate_extraction_params(
-        self, lines: list[str], func_info: dict[str, t.Any], extracted_helpers: list[dict[str, str]]
+        self,
+        lines: list[str],
+        func_info: dict[str, t.Any],
+        extracted_helpers: list[dict[str, str]],
     ) -> str | None:
         """Validate parameters for function extraction."""
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
-        
+
         if not extracted_helpers or start_line < 0 or end_line >= len(lines):
             return "\n".join(lines)
         return None
-    
+
     def _replace_function_with_calls(
-        self, lines: list[str], func_info: dict[str, t.Any], extracted_helpers: list[dict[str, str]]
+        self,
+        lines: list[str],
+        func_info: dict[str, t.Any],
+        extracted_helpers: list[dict[str, str]],
     ) -> list[str]:
         """Replace the original function with calls to helper methods."""
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
         func_indent = len(lines[start_line]) - len(lines[start_line].lstrip())
         indent = " " * (func_indent + 4)
-        
+
         new_func_lines = [lines[start_line]]  # Function definition
         for helper in extracted_helpers:
             new_func_lines.append(f"{indent}self.{helper['name']}()")
-        
+
         return lines[:start_line] + new_func_lines + lines[end_line + 1 :]
-    
+
     def _add_helper_definitions(
-        self, new_lines: list[str], func_info: dict[str, t.Any], extracted_helpers: list[dict[str, str]]
+        self,
+        new_lines: list[str],
+        func_info: dict[str, t.Any],
+        extracted_helpers: list[dict[str, str]],
     ) -> str:
         """Add helper method definitions at the end of the class."""
         start_line = func_info["line_start"] - 1
         class_end = self._find_class_end(new_lines, start_line)
-        
+
         for helper in extracted_helpers:
             helper_lines = helper["content"].split("\n")
-            new_lines = new_lines[:class_end] + [""] + helper_lines + new_lines[class_end:]
+            new_lines = (
+                new_lines[:class_end] + [""] + helper_lines + new_lines[class_end:]
+            )
             class_end += len(helper_lines) + 1
-        
+
         return "\n".join(new_lines)
 
     def _find_class_end(self, lines: list[str], func_start: int) -> int:
@@ -1021,15 +1036,17 @@ class RefactoringAgent(SubAgent):
         if class_indent is None:
             return len(lines)
         return self._find_class_end_line(lines, func_start, class_indent)
-    
+
     def _find_class_indent(self, lines: list[str], func_start: int) -> int | None:
         """Find the indentation level of the class containing the function."""
         for i in range(func_start, -1, -1):
             if lines[i].strip().startswith("class "):
                 return len(lines[i]) - len(lines[i].lstrip())
         return None
-    
-    def _find_class_end_line(self, lines: list[str], func_start: int, class_indent: int) -> int:
+
+    def _find_class_end_line(
+        self, lines: list[str], func_start: int, class_indent: int
+    ) -> int:
         """Find the line where the class ends based on indentation."""
         for i in range(func_start + 1, len(lines)):
             line = lines[i]

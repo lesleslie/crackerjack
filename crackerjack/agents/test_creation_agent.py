@@ -1603,14 +1603,11 @@ from {module_name} import {func_info["name"]}
         self, module_category: str
     ) -> Callable[[str, list[str]], str]:
         """Get the appropriate test template generator for the module category."""
-        template_generators = {
+        return {
             "agent": self._generate_agent_test_template,
             "service": self._generate_async_test_template,
             "manager": self._generate_async_test_template,
-        }
-        return template_generators.get(
-            module_category, self._generate_default_test_template
-        )
+        }.get(module_category, self._generate_default_test_template)
 
     def _generate_agent_test_template(self, func_name: str, args: list[str]) -> str:
         """Generate test template for agent functions."""
@@ -1812,8 +1809,7 @@ from {module_name} import {func_info["name"]}
             return '["test1", "test2"]'
         elif self._is_dict_arg(arg_lower):
             return '{"key": "value"}'
-        else:
-            return '"test"'
+        return '"test"'
 
     def _is_path_arg(self, arg_lower: str) -> bool:
         """Check if argument is path-related."""
@@ -1881,8 +1877,8 @@ from {module_name} import {func_info["name"]}
             return self._generate_empty_case_placeholders(filtered_args)
         elif case_type == "boundary":
             return self._generate_boundary_case_placeholders(filtered_args)
-        else:  # extreme
-            return self._generate_extreme_case_placeholders(filtered_args)
+        # extreme
+        return self._generate_extreme_case_placeholders(filtered_args)
 
     def _generate_empty_case_placeholders(self, filtered_args: list[str]) -> list[str]:
         """Generate placeholders for empty case."""

@@ -172,8 +172,7 @@ class ValidatedPattern:
                 f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
             )
 
-        compiled = self._get_compiled_pattern()
-        return compiled.sub(self.replacement, text, count=count)
+        return self._get_compiled_pattern().sub(self.replacement, text, count=count)
 
     def apply(self, text: str) -> str:
         """Apply the validated pattern safely."""
@@ -237,8 +236,7 @@ class ValidatedPattern:
             raise ValueError(
                 f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
             )
-        compiled = self._get_compiled_pattern()
-        return compiled.search(text)
+        return self._get_compiled_pattern().search(text)
 
     def findall(self, text: str) -> list[str]:
         """Find all matches of the pattern in text safely."""
@@ -246,8 +244,7 @@ class ValidatedPattern:
             raise ValueError(
                 f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
             )
-        compiled = self._get_compiled_pattern()
-        return compiled.findall(text)
+        return self._get_compiled_pattern().findall(text)
 
     def get_performance_stats(
         self, text: str, iterations: int = 100
@@ -2584,8 +2581,7 @@ def fix_multi_word_hyphenation(text: str) -> str:
 
     Uses iterative application of the spaced_hyphens pattern to handle multiple words.
     """
-    pattern = SAFE_PATTERNS["fix_spaced_hyphens"]
-    return pattern.apply_iteratively(text)
+    return SAFE_PATTERNS["fix_spaced_hyphens"].apply_iteratively(text)
 
 
 def update_pyproject_version(content: str, new_version: str) -> str:
@@ -2614,8 +2610,9 @@ def update_pyproject_version(content: str, new_version: str) -> str:
     )
 
     # Apply with MULTILINE flag for line-by-line matching
-    compiled = re.compile(pattern_obj.pattern, re.MULTILINE)
-    return compiled.sub(temp_pattern.replacement, content)
+    return re.compile(pattern_obj.pattern, re.MULTILINE).sub(
+        temp_pattern.replacement, content
+    )
 
 
 def apply_formatting_fixes(content: str) -> str:
@@ -2624,8 +2621,9 @@ def apply_formatting_fixes(content: str) -> str:
     import re
 
     pattern = SAFE_PATTERNS["remove_trailing_whitespace"]
-    compiled = re.compile(pattern.pattern, re.MULTILINE)
-    content = compiled.sub(pattern.replacement, content)
+    content = re.compile(pattern.pattern, re.MULTILINE).sub(
+        pattern.replacement, content
+    )
 
     # Normalize multiple newlines
     content = SAFE_PATTERNS["normalize_multiple_newlines"].apply(content)
@@ -2659,8 +2657,7 @@ def apply_test_fixes(content: str) -> str:
 
 def is_valid_job_id(job_id: str) -> bool:
     """Validate job ID using safe regex patterns."""
-    pattern = SAFE_PATTERNS["validate_job_id_alphanumeric"]
-    return pattern.test(job_id)
+    return SAFE_PATTERNS["validate_job_id_alphanumeric"].test(job_id)
 
 
 def remove_coverage_fail_under(addopts: str) -> str:
@@ -2684,8 +2681,7 @@ def update_coverage_requirement(content: str, new_coverage: float) -> str:
         ],
     )
 
-    compiled = re.compile(pattern_obj.pattern)
-    return compiled.sub(temp_pattern.replacement, content)
+    return re.compile(pattern_obj.pattern).sub(temp_pattern.replacement, content)
 
 
 def update_repo_revision(content: str, repo_url: str, new_revision: str) -> str:
@@ -2708,8 +2704,7 @@ def update_repo_revision(content: str, repo_url: str, new_revision: str) -> str:
     replacement = rf'\1"{new_revision}"'
 
     # Use DOTALL flag for multiline matching
-    compiled = re.compile(pattern, re.DOTALL)
-    return compiled.sub(replacement, content)
+    return re.compile(pattern, re.DOTALL).sub(replacement, content)
 
 
 def sanitize_internal_urls(text: str) -> str:
@@ -2747,8 +2742,7 @@ def apply_pattern_iteratively(
     if pattern_name not in SAFE_PATTERNS:
         raise ValueError(f"Unknown pattern: {pattern_name}")
 
-    pattern = SAFE_PATTERNS[pattern_name]
-    return pattern.apply_iteratively(text, max_iterations)
+    return SAFE_PATTERNS[pattern_name].apply_iteratively(text, max_iterations)
 
 
 def get_all_pattern_stats() -> dict[str, dict[str, int | float]]:
