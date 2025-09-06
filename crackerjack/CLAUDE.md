@@ -13,11 +13,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Code is Read 10x More Than Written**: Optimize for readability
 - **Self-Documenting Code**: Variable names must be clear and descriptive, even in inline functions
 
+## Design Philosophy
+
+- **Auto-Discovery**: Prefer intelligent auto-discovery of configurations and settings over manual configuration whenever possible, reducing setup friction and configuration errors
+
 ## Project Overview
 
 Crackerjack is an opinionated Python project management tool unifying UV, Ruff, pytest, and pre-commit into a single workflow. Enforces consistent code quality with AI agent integration via MCP.
 
 **Key Dependencies**: Python 3.13+, UV, pre-commit, pytest
+
+## AI-Optimized Documentation
+
+**For AI assistants, refer to these structured documentation files:**
+
+- **[AI-REFERENCE.md](AI-REFERENCE.md)** - Complete AI command reference with decision trees and lookup tables
+- **[AGENT-CAPABILITIES.json](AGENT-CAPABILITIES.json)** - Structured agent data for automated selection
+- **[ERROR-PATTERNS.yaml](ERROR-PATTERNS.yaml)** - Pattern matching rules for automated issue resolution
+
+These files provide parseable formats, decision trees, and structured data optimized for AI understanding and autonomous operation.
 
 ## Quick Reference
 
@@ -54,6 +68,8 @@ python -m crackerjack -a patch              # Full release with publishing
 | `-x` | Code cleaning mode | When ready to resolve all TODOs |
 | `-i` | Interactive mode | For step-by-step workflow control |
 | `--skip-hooks` | Skip pre-commit hooks | During rapid development iterations |
+| `--quick` | Quick mode (3 iterations) | CI/CD pipelines or rapid testing |
+| `--thorough` | Thorough mode (8 iterations) | Complex refactoring or difficult issues |
 | `--verbose` | Extra output | When diagnosing issues |
 
 ### Agent Selection Guide
@@ -63,7 +79,7 @@ python -m crackerjack -a patch              # Full release with publishing
 | Issue Type | Best Agent | Confidence | Use Case |
 |------------|------------|------------|----------|
 | **Documentation inconsistencies** | DocumentationAgent | 0.8 | Changelog updates, .md file consistency |
-| **Cognitive complexity >13** | RefactoringAgent | 0.9 | Breaking down complex functions |
+| **Cognitive complexity >15** | RefactoringAgent | 0.9 | Breaking down complex functions |
 | **Unused imports/dead code** | RefactoringAgent | 0.8 | AST-based cleanup |
 | **Performance bottlenecks** | PerformanceAgent | 0.85 | O(n²) loops, string concatenation |
 | **Code duplication** | DRYAgent | 0.8 | Extract common patterns |
@@ -109,6 +125,12 @@ python -m crackerjack --ai-agent -t
 
 # AI Agent mode with full debugging and verbose output
 python -m crackerjack --ai-debug -t
+
+# Quick mode (3 iterations) - ideal for CI/CD
+python -m crackerjack --quick --ai-agent -t
+
+# Thorough mode (8 iterations) - for complex refactoring
+python -m crackerjack --thorough --ai-agent -t
 
 # Start MCP server for AI agent integration
 python -m crackerjack --start-mcp-server
@@ -180,7 +202,7 @@ python -m crackerjack --ai-agent -t
 # 2. Full Test Suite → Collect ALL failures
 # 3. Comprehensive Hooks → Collect ALL issues
 # 4. AI Batch Fixing → Fix ALL collected issues
-# 5. Repeat until perfect (up to 10 iterations)
+# 5. Repeat until perfect (up to 5 iterations)
 ```
 
 **AI Auto-Fixes**: Type errors, security issues, dead code, test failures, complexity, dependencies, hooks
@@ -192,7 +214,7 @@ python -m crackerjack --ai-agent -t
 **9 specialized agents handle domain-specific issues:**
 
 - **DocumentationAgent** (0.8): Changelog generation, .md consistency, README updates
-- **RefactoringAgent** (0.9): Complexity reduction ≤13, dead code removal, AST analysis
+- **RefactoringAgent** (0.9): Complexity reduction ≤15, dead code removal, AST analysis
 - **PerformanceAgent** (0.85): O(n²) detection, string optimization, real code transformation
 - **DRYAgent** (0.8): Code duplication detection, pattern extraction, utility creation
 - **FormattingAgent** (0.8): Style violations, import formatting, consistency
@@ -473,7 +495,7 @@ python -m crackerjack.mcp.progress_monitor <job_id>
 ## Configuration
 
 - **Coverage**: Ratchet system targeting 100%
-- **Complexity**: ≤13 per function
+- **Complexity**: ≤15 per function
 - **Python**: 3.13+ required
 - **Test timeout**: 300s
 - **Type checking**: Strict Pyright
@@ -562,3 +584,5 @@ from ..managers.test_manager import TestManager
 # ✅ Import protocols
 from ..models.protocols import TestManagerProtocol
 ```
+
+- make as few edits as possible by batching related changes together in a single operation.

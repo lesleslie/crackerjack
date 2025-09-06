@@ -11,7 +11,7 @@
       "confidence_level": 0.8,
       "specializations": [
         "changelog_generation",
-        "readme_updates", 
+        "readme_updates",
         "markdown_consistency",
         "version_documentation",
         "link_validation"
@@ -35,7 +35,7 @@
           "confidence": 0.9
         },
         {
-          "issue": "Broken documentation links", 
+          "issue": "Broken documentation links",
           "action": "Validate and fix internal/external links",
           "confidence": 0.8
         },
@@ -102,7 +102,7 @@
       "confidence_level": 0.85,
       "specializations": [
         "o_n_squared_detection",
-        "string_optimization", 
+        "string_optimization",
         "memory_efficiency",
         "loop_optimization",
         "data_structure_choice"
@@ -171,7 +171,7 @@
           "confidence": 0.85
         },
         {
-          "issue": "Repeated validation logic", 
+          "issue": "Repeated validation logic",
           "action": "Create reusable validator functions",
           "confidence": 0.8
         }
@@ -239,7 +239,7 @@
       },
       "typical_fixes": [
         {
-          "issue": "B108: hardcoded_tmp_directory", 
+          "issue": "B108: hardcoded_tmp_directory",
           "action": "Replace with tempfile.NamedTemporaryFile()",
           "confidence": 0.9,
           "security_improvement": "Eliminates path traversal risks"
@@ -289,7 +289,7 @@
         }
       ],
       "file_types": [".py"],
-      "estimated_fix_time": "2-5 minutes", 
+      "estimated_fix_time": "2-5 minutes",
       "success_rate": 0.9
     },
     "TestCreationAgent": {
@@ -403,13 +403,13 @@
   "integration_points": {
     "crackerjack_phases": [
       "fast_hooks",
-      "test_execution", 
+      "test_execution",
       "comprehensive_hooks",
       "ai_batch_fixing"
     ],
     "mcp_tools": [
       "execute_crackerjack",
-      "get_job_progress", 
+      "get_job_progress",
       "analyze_errors",
       "session_management"
     ],

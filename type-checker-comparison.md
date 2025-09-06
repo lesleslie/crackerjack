@@ -6,7 +6,7 @@
 
 ## Type Checker Comparison Matrix
 
-| Feature | Pyright | Zuban | ty (Astral) | Pyrefly (Meta) | 
+| Feature | Pyright | Zuban | ty (Astral) | Pyrefly (Meta) |
 |---------|---------|--------|-------------|----------------|
 | **Language** | TypeScript | Rust | Rust | Rust |
 | **Speed** | Baseline (1x) | 20-200x faster than mypy | 100x faster than mypy | 35x faster than Pyre |
@@ -20,7 +20,9 @@
 ## Detailed Analysis
 
 ### Zuban - Immediate Replacement Candidate
+
 **Pros:**
+
 - **Drop-in replacement** for pyright with `zuban check` command
 - **Dual modes**: Pyright-like (default) and Mypy-compatible (`zmypy`)
 - **Best performance**: 20-200x faster than mypy, uses less memory than competitors
@@ -29,11 +31,13 @@
 - **14 years experience**: Built by Jedi's creator
 
 **Cons:**
+
 - AGPL v3 license (commercial available)
 - Alpha status (but most mature of new tools)
 - Some false positives expected
 
 **Implementation:**
+
 ```bash
 # Simple replacement
 pip install zuban
@@ -42,24 +46,30 @@ zuban server # LSP server
 ```
 
 ### ty (Astral) - Experimental Hook
+
 **Pros:**
+
 - **Astral ecosystem**: Integrates with ruff and uv
 - **MIT license**: Consistent with other Astral tools
 - **Future potential**: Type-aware lints for ruff planned
 - **Performance**: 2-3x faster than pyrefly in benchmarks
 
 **Cons:**
+
 - **Not drop-in**: Requires configuration changes
 - **Low maturity**: Only 15% test pass rate
 - **Late 2025 production**: Not ready until end of year
 
 ### Pyrefly (Meta) - Experimental Hook
+
 **Pros:**
+
 - **Instagram scale**: Proven on massive codebases
 - **Fast**: 1.8M lines/second
 - **WebAssembly support**: Browser playground
 
 **Cons:**
+
 - **Not drop-in**: Different from pyright/mypy
 - **Medium maturity**: 58% test pass rate
 - **Meta-focused**: May prioritize internal needs
@@ -96,7 +106,7 @@ zuban server # LSP server
 }
 
 "ty": {
-    "id": "ty", 
+    "id": "ty",
     "experimental": True,
     "entry": "python -m ty",
     "args": ["--check"],
@@ -116,41 +126,45 @@ zuban server # LSP server
 ## Migration Plan
 
 ### Immediate Actions (Zuban)
+
 1. **Remove pyright** from pyproject.toml
-2. **Add zuban** dependency
-3. **Update dynamic_config.py** with zuban entry
-4. **Update hooks.py** to use zuban instead of pyright
-5. **Test with**: `zuban check crackerjack/`
-6. **Verify LSP**: `zuban server` for IDE integration
+1. **Add zuban** dependency
+1. **Update dynamic_config.py** with zuban entry
+1. **Update hooks.py** to use zuban instead of pyright
+1. **Test with**: `zuban check crackerjack/`
+1. **Verify LSP**: `zuban server` for IDE integration
 
 ### Experimental Hooks (ty & pyrefly)
+
 1. **Keep existing** experimental hook definitions
-2. **Enable with**: `python -m crackerjack --experimental-hooks`
-3. **Monitor maturity** through 2025
-4. **Re-evaluate** when production-ready
+1. **Enable with**: `python -m crackerjack --experimental-hooks`
+1. **Monitor maturity** through 2025
+1. **Re-evaluate** when production-ready
 
 ## Advantages of This Approach
 
 1. **Immediate Performance Gains**: Zuban provides 20-200x speedup now
-2. **Zero Migration Cost**: Drop-in replacement for pyright
-3. **Future Flexibility**: ty/pyrefly remain available as they mature
-4. **Risk Mitigation**: Can revert to pyright if needed
-5. **Best of Both Worlds**: Production-ready replacement + experimental options
+1. **Zero Migration Cost**: Drop-in replacement for pyright
+1. **Future Flexibility**: ty/pyrefly remain available as they mature
+1. **Risk Mitigation**: Can revert to pyright if needed
+1. **Best of Both Worlds**: Production-ready replacement + experimental options
 
 ## Disadvantages & Risks
 
 1. **License Consideration**: AGPL v3 (but commercial available)
-2. **Alpha Software**: May have false positives
-3. **Limited Community**: Smaller than pyright/mypy
-4. **Multiple Tools**: Managing 3 type checkers adds complexity
+1. **Alpha Software**: May have false positives
+1. **Limited Community**: Smaller than pyright/mypy
+1. **Multiple Tools**: Managing 3 type checkers adds complexity
 
 ## Complementary vs Overlapping
 
 ### Overlapping (Choose One)
+
 - **Zuban vs Pyright**: Direct replacement, same functionality
 - **ty vs Pyrefly**: Both experimental Rust-based checkers
 
 ### Complementary (Can Use Together)
+
 - **Zuban + Experimental Hooks**: Production + preview features
 - **Type Checking + Dead Code (Skylos)**: Different purposes
 - **Zuban LSP + IDE**: Enhanced development experience
@@ -158,29 +172,34 @@ zuban server # LSP server
 ## Sub-Agent Selection for Implementation
 
 ### For Zuban Implementation
+
 1. **python-pro**: Dependency updates and configuration
-2. **crackerjack-architect**: Ensure proper integration patterns
-3. **test-specialist**: Validate type checking accuracy
-4. **critical-audit-specialist**: Review for false positives
+1. **crackerjack-architect**: Ensure proper integration patterns
+1. **test-specialist**: Validate type checking accuracy
+1. **critical-audit-specialist**: Review for false positives
 
 ### For Experimental Hooks
+
 1. **refactoring-specialist**: Keep code clean for future migration
-2. **monitoring-specialist**: Track performance metrics
-3. **test-creation-agent**: Build compatibility tests
+1. **monitoring-specialist**: Track performance metrics
+1. **test-creation-agent**: Build compatibility tests
 
 ## Execution Timeline
 
 ### Week 1: Zuban Integration
+
 - Day 1-2: Remove pyright, add zuban
 - Day 3-4: Update configurations
 - Day 5: Test and validate
 
 ### Week 2: Experimental Setup
+
 - Day 1: Verify ty/pyrefly hooks work
 - Day 2-3: Create performance benchmarks
 - Day 4-5: Document usage patterns
 
 ### Week 3: Production Validation
+
 - Full test suite with zuban
 - Performance comparisons
 - Team training on new tools
@@ -207,15 +226,17 @@ zuban mypy --config mypy.ini  # Use mypy config
 ## Decision: Recommended Approach
 
 **Implement Zuban immediately** as pyright replacement because:
+
 1. It's the most mature of new tools (69% test pass)
-2. True drop-in replacement (no code changes)
-3. Best performance/memory characteristics
-4. Production LSP support
+1. True drop-in replacement (no code changes)
+1. Best performance/memory characteristics
+1. Production LSP support
 
 **Keep ty & pyrefly experimental** because:
+
 1. Not production-ready (15% and 58% test pass)
-2. Not drop-in replacements
-3. Can evaluate as they mature through 2025
-4. No cost to keeping as experimental options
+1. Not drop-in replacements
+1. Can evaluate as they mature through 2025
+1. No cost to keeping as experimental options
 
 This gives us immediate performance benefits while maintaining flexibility for the future.

@@ -164,6 +164,30 @@ class ImportOptimizationAgent(SubAgent):
         content: str,
     ) -> dict[str, list[str]]:
         """Perform comprehensive analysis of import patterns."""
+        # Analyze different aspects of imports
+        analysis_results = self._analyze_import_patterns(
+            module_imports, all_imports, content
+        )
+
+        return analysis_results
+
+    def _analyze_import_patterns(
+        self,
+        module_imports: dict[str, list[dict[str, t.Any]]],
+        all_imports: list[dict[str, t.Any]],
+        content: str,
+    ) -> dict[str, list[str]]:
+        """Analyze various import patterns."""
+        # Analyze different aspects of imports
+        return self._analyze_import_aspects(module_imports, all_imports, content)
+
+    def _analyze_import_aspects(
+        self,
+        module_imports: dict[str, list[dict[str, t.Any]]],
+        all_imports: list[dict[str, t.Any]],
+        content: str,
+    ) -> dict[str, list[str]]:
+        """Analyze different aspects of imports."""
         mixed_imports = self._find_mixed_imports(module_imports)
         redundant_imports = self._find_redundant_imports(all_imports)
         optimization_opportunities = self._find_optimization_opportunities(
@@ -204,11 +228,40 @@ class ImportOptimizationAgent(SubAgent):
         module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> None:
         """Process all import statements in the AST tree."""
+        # Process all nodes in the tree
+        self._process_all_nodes(tree, all_imports, module_imports)
+
+    def _process_all_nodes(
+        self,
+        tree: ast.AST,
+        all_imports: list[dict[str, t.Any]],
+        module_imports: dict[str, list[dict[str, t.Any]]],
+    ) -> None:
+        """Process all nodes in the AST tree."""
+        # Process all import statements in the tree
+        self._process_import_statements_in_tree(tree, all_imports, module_imports)
+
+    def _process_import_statements_in_tree(
+        self,
+        tree: ast.AST,
+        all_imports: list[dict[str, t.Any]],
+        module_imports: dict[str, list[dict[str, t.Any]]],
+    ) -> None:
+        """Process all import statements in the AST tree."""
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                self._process_standard_import(node, all_imports, module_imports)
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                self._process_from_import(node, all_imports, module_imports)
+            self._process_node_if_import(node, all_imports, module_imports)
+
+    def _process_node_if_import(
+        self,
+        node: ast.AST,
+        all_imports: list[dict[str, t.Any]],
+        module_imports: dict[str, list[dict[str, t.Any]]],
+    ) -> None:
+        """Process a node if it's an import statement."""
+        if isinstance(node, ast.Import):
+            self._process_standard_import(node, all_imports, module_imports)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            self._process_from_import(node, all_imports, module_imports)
 
     def _process_standard_import(
         self,
@@ -217,6 +270,16 @@ class ImportOptimizationAgent(SubAgent):
         module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> None:
         """Process standard import statements."""
+        # Process all aliases in the import
+        self._process_standard_import_aliases(node, all_imports, module_imports)
+
+    def _process_standard_import_aliases(
+        self,
+        node: ast.Import,
+        all_imports: list[dict[str, t.Any]],
+        module_imports: dict[str, list[dict[str, t.Any]]],
+    ) -> None:
+        """Process all aliases in a standard import statement."""
         for alias in node.names:
             import_info = {
                 "type": "standard",
@@ -235,6 +298,16 @@ class ImportOptimizationAgent(SubAgent):
         module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> None:
         """Process from import statements."""
+        # Process all aliases in the from import
+        self._process_from_import_aliases(node, all_imports, module_imports)
+
+    def _process_from_import_aliases(
+        self,
+        node: ast.ImportFrom,
+        all_imports: list[dict[str, t.Any]],
+        module_imports: dict[str, list[dict[str, t.Any]]],
+    ) -> None:
+        """Process all aliases in a from import statement."""
         for alias in node.names:
             import_info = {
                 "type": "from",
@@ -252,6 +325,16 @@ class ImportOptimizationAgent(SubAgent):
         module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> list[str]:
         mixed: list[str] = []
+        # Check each module for mixed import types
+        mixed.extend(self._check_mixed_imports_per_module(module_imports))
+        return mixed
+
+    def _check_mixed_imports_per_module(
+        self,
+        module_imports: dict[str, list[dict[str, t.Any]]],
+    ) -> list[str]:
+        """Check each module for mixed import types."""
+        mixed: list[str] = []
         for module, imports in module_imports.items():
             types = {imp["type"] for imp in imports}
             if len(types) > 1:
@@ -260,6 +343,17 @@ class ImportOptimizationAgent(SubAgent):
 
     def _find_redundant_imports(self, all_imports: list[dict[str, t.Any]]) -> list[str]:
         seen_modules: set[str] = set()
+        redundant: list[str] = []
+
+        # Check each import for redundancy
+        redundant.extend(self._check_redundant_imports(all_imports, seen_modules))
+
+        return redundant
+
+    def _check_redundant_imports(
+        self, all_imports: list[dict[str, t.Any]], seen_modules: set[str]
+    ) -> list[str]:
+        """Check each import for redundancy."""
         redundant: list[str] = []
 
         for imp in all_imports:
@@ -275,6 +369,14 @@ class ImportOptimizationAgent(SubAgent):
         module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> list[str]:
         """Find import consolidation and optimization opportunities."""
+        # Find different types of optimization opportunities
+        return self._find_consolidation_opportunities(module_imports)
+
+    def _find_consolidation_opportunities(
+        self,
+        module_imports: dict[str, list[dict[str, t.Any]]],
+    ) -> list[str]:
+        """Find opportunities to consolidate imports."""
         opportunities: list[str] = []
 
         for module, imports in module_imports.items():
@@ -301,14 +403,33 @@ class ImportOptimizationAgent(SubAgent):
         self, content: str, all_imports: list[dict[str, t.Any]]
     ) -> list[str]:
         """Find PEP 8 import organization violations."""
+        # Categorize imports and check ordering
+        violations = self._check_import_ordering(all_imports)
+
+        # Check for star imports
+        violations.extend(self._check_star_imports(content))
+
+        return violations
+
+    def _check_import_ordering(self, all_imports: list[dict[str, t.Any]]) -> list[str]:
+        """Check if imports are in proper PEP 8 order."""
         violations: list[str] = []
-        lines = content.splitlines()
 
         # Check for import organization (stdlib, third-party, local)
         self._categorize_imports(all_imports)
 
         # Find imports that are not in PEP 8 order
+        violations.extend(self._find_pep8_order_violations(all_imports))
+
+        return violations
+
+    def _find_pep8_order_violations(
+        self, all_imports: list[dict[str, t.Any]]
+    ) -> list[str]:
+        """Find imports that are not in PEP 8 order."""
+        violations: list[str] = []
         prev_category = 0
+
         for imp in all_imports:
             module = imp.get("module", "")
             category = self._get_import_category(module)
@@ -318,6 +439,13 @@ class ImportOptimizationAgent(SubAgent):
                     f"Import '{module}' should come before previous imports (PEP 8 ordering)"
                 )
             prev_category = max(prev_category, category)
+
+        return violations
+
+    def _check_star_imports(self, content: str) -> list[str]:
+        """Check for star imports which should be avoided."""
+        violations: list[str] = []
+        lines = content.splitlines()
 
         # Check for star imports
         for line_num, line in enumerate(lines, 1):
@@ -345,8 +473,33 @@ class ImportOptimizationAgent(SubAgent):
         if not module:
             return 3
 
-        # Standard library modules (common ones)
-        stdlib_modules = {
+        # Determine category based on module type
+        return self._determine_module_category(module)
+
+    def _determine_module_category(self, module: str) -> int:
+        """Determine the category of a module."""
+        base_module = module.split(".")[0]
+
+        # Check if it's a standard library module
+        if self._is_stdlib_module(base_module):
+            return 1
+
+        # Check if it's a local import
+        if self._is_local_import(module, base_module):
+            return 3
+
+        # Otherwise assume third-party
+        return 2
+
+    def _is_stdlib_module(self, base_module: str) -> bool:
+        """Check if a module is a standard library module."""
+        # Get the set of standard library modules
+        stdlib_modules = self._get_stdlib_modules()
+        return base_module in stdlib_modules
+
+    def _get_stdlib_modules(self) -> set[str]:
+        """Get the set of standard library modules."""
+        return {
             "os",
             "sys",
             "json",
@@ -382,31 +535,54 @@ class ImportOptimizationAgent(SubAgent):
             "warnings",
         }
 
-        base_module = module.split(".")[0]
-
-        # Check if it's a standard library module
-        if base_module in stdlib_modules:
-            return 1
-
-        # Check if it's a local import (starts with '.' or project name)
-        if module.startswith(".") or base_module == "crackerjack":
-            return 3
-
-        # Otherwise assume third-party
-        return 2
+    def _is_local_import(self, module: str, base_module: str) -> bool:
+        """Check if a module is a local import."""
+        return module.startswith(".") or base_module == "crackerjack"
 
     async def fix_issue(self, issue: Issue) -> FixResult:
+        # Validate input
+        validation_result = self._validate_issue(issue)
+        if validation_result:
+            return validation_result
+
+        # Process the issue
+        return await self._process_import_optimization_issue(issue)
+
+    async def _process_import_optimization_issue(self, issue: Issue) -> FixResult:
+        # At this point, issue.file_path is guaranteed to be a string, not None
+        file_path = Path(issue.file_path)  # type: ignore
+
+        # Analyze the file
+        analysis = await self.analyze_file(file_path)
+
+        # Check if optimizations are needed
+        if not self._are_optimizations_needed(analysis):
+            return self._create_no_optimization_needed_result()
+
+        # Apply optimizations and prepare results
+        return await self._apply_optimizations_and_prepare_results(file_path, analysis)
+
+    def _create_no_optimization_needed_result(self) -> FixResult:
+        return FixResult(
+            success=True,
+            confidence=1.0,
+            fixes_applied=["No import optimizations needed"],
+            remaining_issues=[],
+            recommendations=["Import patterns are already optimal"],
+            files_modified=[],
+        )
+
+    def _validate_issue(self, issue: Issue) -> FixResult | None:
         if issue.file_path is None:
             return FixResult(
                 success=False,
                 confidence=0.0,
                 remaining_issues=["No file path provided for import optimization"],
             )
-        file_path = Path(issue.file_path)
+        return None
 
-        analysis = await self.analyze_file(file_path)
-
-        if not any(
+    def _are_optimizations_needed(self, analysis: ImportAnalysis) -> bool:
+        return any(
             [
                 analysis.mixed_imports,
                 analysis.redundant_imports,
@@ -414,57 +590,20 @@ class ImportOptimizationAgent(SubAgent):
                 analysis.optimization_opportunities,
                 analysis.import_violations,
             ],
-        ):
-            return FixResult(
-                success=True,
-                confidence=1.0,
-                fixes_applied=["No import optimizations needed"],
-                remaining_issues=[],
-                recommendations=["Import patterns are already optimal"],
-                files_modified=[],
-            )
+        )
 
+    async def _apply_optimizations_and_prepare_results(
+        self, file_path: Path, analysis: ImportAnalysis
+    ) -> FixResult:
         try:
-            with file_path.open(encoding="utf-8") as f:
-                original_content = f.read()
+            optimized_content = await self._read_and_optimize_file(file_path, analysis)
+            await self._write_optimized_content(file_path, optimized_content)
 
-            optimized_content = await self._optimize_imports(original_content, analysis)
-
-            with file_path.open("w", encoding="utf-8") as f:
-                f.write(optimized_content)
-
-            changes: list[str] = []
-            remaining_issues: list[str] = []
-
-            if analysis.mixed_imports:
-                changes.append(
-                    f"Standardized mixed imports for modules: {', '.join(analysis.mixed_imports)}",
-                )
-            if analysis.redundant_imports:
-                changes.append(
-                    f"Removed {len(analysis.redundant_imports)} redundant imports",
-                )
-            if analysis.unused_imports:
-                changes.append(
-                    f"Removed {len(analysis.unused_imports)} unused imports: {', '.join(analysis.unused_imports[:3])}"
-                    + ("..." if len(analysis.unused_imports) > 3 else ""),
-                )
-            if analysis.optimization_opportunities:
-                changes.append(
-                    f"Applied {len(analysis.optimization_opportunities)} import consolidations",
-                )
-
-            # Report violations that couldn't be auto-fixed
-            if analysis.import_violations:
-                remaining_issues.extend(
-                    analysis.import_violations[:3]
-                )  # Limit to top 3
-
-            recommendations = [f"Optimized import statements in {file_path.name}"]
-            if remaining_issues:
-                recommendations.append(
-                    "Consider manual review for remaining PEP 8 violations"
-                )
+            # Prepare results
+            changes, remaining_issues = self._prepare_fix_results(analysis)
+            recommendations = self._prepare_recommendations(
+                file_path.name, remaining_issues
+            )
 
             return FixResult(
                 success=True,
@@ -476,14 +615,104 @@ class ImportOptimizationAgent(SubAgent):
             )
 
         except Exception as e:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                fixes_applied=[],
-                remaining_issues=[f"Failed to optimize imports: {e}"],
-                recommendations=["Manual import review needed"],
-                files_modified=[],
+            return self._handle_optimization_error(e)
+
+    async def _read_and_optimize_file(
+        self, file_path: Path, analysis: ImportAnalysis
+    ) -> str:
+        with file_path.open(encoding="utf-8") as f:
+            original_content = f.read()
+        return await self._optimize_imports(original_content, analysis)
+
+    async def _write_optimized_content(
+        self, file_path: Path, optimized_content: str
+    ) -> None:
+        with file_path.open("w", encoding="utf-8") as f:
+            f.write(optimized_content)
+
+    def _handle_optimization_error(self, e: Exception) -> FixResult:
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            fixes_applied=[],
+            remaining_issues=[f"Failed to optimize imports: {e}"],
+            recommendations=["Manual import review needed"],
+            files_modified=[],
+        )
+
+    def _prepare_fix_results(
+        self, analysis: ImportAnalysis
+    ) -> tuple[list[str], list[str]]:
+        changes: list[str] = []
+        remaining_issues: list[str] = []
+
+        # Add changes for different types of optimizations
+        changes.extend(self._get_mixed_import_changes(analysis.mixed_imports))
+        changes.extend(self._get_redundant_import_changes(analysis.redundant_imports))
+        changes.extend(self._get_unused_import_changes(analysis.unused_imports))
+        changes.extend(
+            self._get_optimization_opportunity_changes(
+                analysis.optimization_opportunities
             )
+        )
+
+        # Report violations that couldn't be auto-fixed
+        remaining_issues.extend(
+            self._get_remaining_violations(analysis.import_violations)
+        )
+
+        return changes, remaining_issues
+
+    def _get_mixed_import_changes(self, mixed_imports: list[str]) -> list[str]:
+        changes: list[str] = []
+        if mixed_imports:
+            changes.append(
+                f"Standardized mixed imports for modules: {', '.join(mixed_imports)}",
+            )
+        return changes
+
+    def _get_redundant_import_changes(self, redundant_imports: list[str]) -> list[str]:
+        changes: list[str] = []
+        if redundant_imports:
+            changes.append(
+                f"Removed {len(redundant_imports)} redundant imports",
+            )
+        return changes
+
+    def _get_unused_import_changes(self, unused_imports: list[str]) -> list[str]:
+        changes: list[str] = []
+        if unused_imports:
+            changes.append(
+                f"Removed {len(unused_imports)} unused imports: {', '.join(unused_imports[:3])}"
+                + ("..." if len(unused_imports) > 3 else ""),
+            )
+        return changes
+
+    def _get_optimization_opportunity_changes(
+        self, optimization_opportunities: list[str]
+    ) -> list[str]:
+        changes: list[str] = []
+        if optimization_opportunities:
+            changes.append(
+                f"Applied {len(optimization_opportunities)} import consolidations",
+            )
+        return changes
+
+    def _get_remaining_violations(self, import_violations: list[str]) -> list[str]:
+        remaining_issues: list[str] = []
+        if import_violations:
+            remaining_issues.extend(import_violations[:3])  # Limit to top 3
+        return remaining_issues
+
+    def _prepare_recommendations(
+        self, file_name: str, remaining_issues: list[str]
+    ) -> list[str]:
+        recommendations = [f"Optimized import statements in {file_name}"]
+        if remaining_issues:
+            recommendations.append(
+                "Consider manual review for remaining PEP 8 violations"
+            )
+        return recommendations
 
     async def _optimize_imports(self, content: str, analysis: ImportAnalysis) -> str:
         """Apply comprehensive import optimizations."""
@@ -497,6 +726,13 @@ class ImportOptimizationAgent(SubAgent):
         self, lines: list[str], analysis: ImportAnalysis
     ) -> list[str]:
         """Apply all import optimization steps in sequence."""
+        # Apply all optimization steps
+        lines = self._apply_all_optimization_steps(lines, analysis)
+        return lines
+
+    def _apply_all_optimization_steps(
+        self, lines: list[str], analysis: ImportAnalysis
+    ) -> list[str]:
         # Remove unused imports first
         lines = self._remove_unused_imports(lines, analysis.unused_imports)
 
@@ -605,7 +841,7 @@ class ImportOptimizationAgent(SubAgent):
     ) -> dict[str, t.Any]:
         """Collect import information for mixed modules."""
         import_collector = self._create_import_collector()
-        
+
         for i, line in enumerate(lines):
             stripped_line = line.strip()
             for module in mixed_modules:
@@ -614,7 +850,7 @@ class ImportOptimizationAgent(SubAgent):
                 )
 
         return self._finalize_import_collection(import_collector)
-    
+
     def _create_import_collector(self) -> dict[str, t.Any]:
         """Create containers for collecting import information."""
         return {
@@ -622,8 +858,10 @@ class ImportOptimizationAgent(SubAgent):
             "lines_to_remove": set(),
             "insert_positions": {},
         }
-    
-    def _finalize_import_collection(self, collector: dict[str, t.Any]) -> dict[str, t.Any]:
+
+    def _finalize_import_collection(
+        self, collector: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
         """Finalize the collected import information."""
         return {
             "module_imports": collector["module_imports"],
@@ -643,20 +881,22 @@ class ImportOptimizationAgent(SubAgent):
             self._handle_standard_import(line, module, line_index, import_collector)
         elif self._is_from_import_line(line, module):
             self._handle_from_import(line, module, line_index, import_collector)
-    
+
     def _is_standard_import_line(self, line: str, module: str) -> bool:
         """Check if line is a standard import for the module."""
         import re  # REGEX OK: localized for pattern matching
-        return bool(re.match(
-            rf"^\s*import\s+{re.escape(module)}(?:\.\w+)*\s*$", line
-        ))  # REGEX OK: dynamic module matching with escaping
-    
+
+        return bool(
+            re.match(rf"^\s*import\s+{re.escape(module)}(?:\.\w+)*\s*$", line)
+        )  # REGEX OK: dynamic module matching with escaping
+
     def _is_from_import_line(self, line: str, module: str) -> bool:
         """Check if line is a from-import for the module."""
         import re  # REGEX OK: localized for pattern matching
-        return bool(re.match(
-            rf"^\s*from\s+{re.escape(module)}\s+import\s+", line
-        ))  # REGEX OK: dynamic from import matching with escaping
+
+        return bool(
+            re.match(rf"^\s*from\s+{re.escape(module)}\s+import\s+", line)
+        )  # REGEX OK: dynamic from import matching with escaping
 
     def _handle_standard_import(
         self,
@@ -672,20 +912,21 @@ class ImportOptimizationAgent(SubAgent):
             self._add_import_to_collector(
                 module, import_to_add, line_index, import_collector
             )
-    
+
     def _extract_import_name_from_standard(self, line: str, module: str) -> str | None:
         """Extract the import name from a standard import line."""
         import re  # REGEX OK: localized for pattern matching
+
         match = re.search(rf"import\s+({re.escape(module)}(?:\.\w+)*)", line)
         return match.group(1) if match else None
-    
+
     def _determine_import_name(self, import_name: str, module: str) -> str:
         """Determine what name to import based on the import statement."""
         if "." in import_name:
             # For submodules, import the submodule name
             return import_name.split(".")[-1]
         return module
-    
+
     def _add_import_to_collector(
         self,
         module: str,
@@ -712,10 +953,13 @@ class ImportOptimizationAgent(SubAgent):
         import_collector["lines_to_remove"].add(line_index)
         if module not in import_collector["insert_positions"]:
             import_collector["insert_positions"][module] = line_index
-    
-    def _extract_import_names_from_from_import(self, line: str, module: str) -> list[str]:
+
+    def _extract_import_names_from_from_import(
+        self, line: str, module: str
+    ) -> list[str]:
         """Extract import names from a from-import line."""
         import re  # REGEX OK: localized for pattern matching
+
         import_part = re.sub(rf"^\s*from\s+{re.escape(module)}\s+import\s+", "", line)
         return [name.strip() for name in import_part.split(",")]
 
@@ -784,7 +1028,7 @@ class ImportOptimizationAgent(SubAgent):
         return self._rebuild_with_organized_imports(
             sorted_imports, other_lines, import_bounds
         )
-    
+
     def _sort_imports_by_pep8_standards(
         self, import_data: list[tuple[int, str, str]]
     ) -> list[tuple[int, str, str]]:
@@ -796,7 +1040,7 @@ class ImportOptimizationAgent(SubAgent):
     ) -> tuple[list[tuple[int, str, str]], list[tuple[int, str]], tuple[int, int]]:
         """Parse lines to separate imports from other code."""
         parser_state = self._initialize_parser_state()
-        
+
         for i, line in enumerate(lines):
             stripped = line.strip()
             if self._is_import_line(stripped):
@@ -806,10 +1050,10 @@ class ImportOptimizationAgent(SubAgent):
 
         return (
             parser_state["import_lines"],
-            parser_state["other_lines"], 
-            (parser_state["import_start"], parser_state["import_end"])
+            parser_state["other_lines"],
+            (parser_state["import_start"], parser_state["import_end"]),
         )
-    
+
     def _initialize_parser_state(self) -> dict[str, t.Any]:
         """Initialize parser state for import line processing."""
         return {
@@ -818,7 +1062,7 @@ class ImportOptimizationAgent(SubAgent):
             "import_start": -1,
             "import_end": -1,
         }
-    
+
     def _process_import_line(
         self, i: int, line: str, stripped: str, parser_state: dict[str, t.Any]
     ) -> None:
@@ -830,16 +1074,18 @@ class ImportOptimizationAgent(SubAgent):
         module = self._extract_module_name(stripped)
         category = self._get_import_category(module)
         parser_state["import_lines"].append((category, line, stripped))
-    
+
     def _process_non_import_line(
         self, i: int, line: str, stripped: str, parser_state: dict[str, t.Any]
     ) -> None:
         """Process a line that is not an import statement."""
         self._categorize_non_import_line(
-            i, line, stripped, 
-            parser_state["import_start"], 
-            parser_state["import_end"], 
-            parser_state["other_lines"]
+            i,
+            line,
+            stripped,
+            parser_state["import_start"],
+            parser_state["import_end"],
+            parser_state["other_lines"],
         )
 
     def _is_import_line(self, stripped: str) -> bool:

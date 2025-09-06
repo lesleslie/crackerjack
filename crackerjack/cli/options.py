@@ -82,10 +82,9 @@ class Options(BaseModel):
         """Get the effective max iterations based on quick/thorough flags."""
         if self.quick:
             return 3  # Quick mode: 3 iterations for CI/CD
-        elif self.thorough:
+        if self.thorough:
             return 8  # Thorough mode: 8 iterations for complex refactoring
-        else:
-            return self.max_iterations  # Default: 5 iterations
+        return self.max_iterations  # Default: 5 iterations
 
     @classmethod
     @field_validator("publish", "bump", mode="before")

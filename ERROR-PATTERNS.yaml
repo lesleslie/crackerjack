@@ -28,7 +28,7 @@ type_errors:
 
   missing_parameter_annotation:
     pattern: "Missing type annotation for.*parameter"
-    severity: "medium" 
+    severity: "medium"
     agent: "RefactoringAgent"
     confidence: 0.85
     fix_template: "def {function_name}({param}: {type}, ...):"
@@ -39,7 +39,7 @@ type_errors:
   incompatible_types:
     pattern: "Argument.*has incompatible type"
     severity: "high"
-    agent: "RefactoringAgent" 
+    agent: "RefactoringAgent"
     confidence: 0.8
     fix_approach: "type_cast_or_conversion"
     examples:
@@ -65,7 +65,7 @@ security_issues:
   subprocess_shell_true:
     pattern: "B602.*subprocess_popen_with_shell_equals_true"
     severity: "critical"
-    agent: "SecurityAgent" 
+    agent: "SecurityAgent"
     confidence: 0.95
     fix_template: "subprocess.run([{cmd_list}], check=True)"
     examples:
@@ -123,7 +123,7 @@ performance_issues:
     confidence: 0.8
     fix_template: "{var}_set = set({var})"
 
-# Code Quality and Complexity  
+# Code Quality and Complexity
 complexity_issues:
   cognitive_complexity_exceeded:
     pattern: "Cognitive complexity of .* \\((\\d+)\\) exceeds maximum allowed complexity \\(15\\)"
@@ -148,7 +148,7 @@ complexity_issues:
   function_too_long:
     pattern: "Function.*too long.*\\((\\d+) lines\\)"
     severity: "medium"
-    agent: "RefactoringAgent" 
+    agent: "RefactoringAgent"
     confidence: 0.8
     extract_groups: ["line_count"]
     fix_approach: "extract_logical_sections"
@@ -174,7 +174,7 @@ import_issues:
 
   circular_import:
     pattern: "Circular import detected"
-    severity: "high" 
+    severity: "high"
     agent: "ImportOptimizationAgent"
     confidence: 0.7
     fix_approaches:
@@ -207,7 +207,7 @@ test_issues:
   async_test_timeout:
     pattern: "asyncio.*test.*timeout"
     severity: "medium"
-    agent: "TestCreationAgent" 
+    agent: "TestCreationAgent"
     confidence: 0.75
     fix_approach: "convert_to_synchronous"
     note: "Async tests avoided due to hanging issues in this codebase"
@@ -249,10 +249,10 @@ documentation_issues:
     fix_template: |
       """
       {description}
-      
+
       Args:
           {args}
-          
+
       Returns:
           {returns}
       """
@@ -268,7 +268,7 @@ documentation_issues:
 duplication_issues:
   duplicate_code_block:
     pattern: "Duplicate code.*detected.*\\((\\d+)%.*similarity\\)"
-    severity: "medium" 
+    severity: "medium"
     agent: "DRYAgent"
     confidence: 0.8
     extract_groups: ["similarity_percentage"]
@@ -330,7 +330,7 @@ resolution_strategies:
 coordination_rules:
   agent_selection_priority:
     1: "exact_pattern_match"
-    2: "highest_confidence_agent" 
+    2: "highest_confidence_agent"
     3: "most_specialized_agent"
     4: "collaborative_approach"
 
@@ -338,7 +338,7 @@ coordination_rules:
     high: ">= 0.9"
     medium: "0.7 - 0.89"
     low: "< 0.7"
-    
+
   batch_processing_triggers:
     - "more_than_3_errors"
     - "multiple_error_types"

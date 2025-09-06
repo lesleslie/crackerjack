@@ -729,13 +729,15 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 For enhanced AI-assisted development with conversation memory and context persistence, consider using the [session-mgmt-mcp](https://github.com/lesleslie/session-mgmt-mcp) server alongside Crackerjack:
 
 **Benefits of Combined Usage:**
+
 - **🧠 Persistent Learning**: Session-mgmt remembers your error patterns and successful fixes
-- **📝 Context Preservation**: Maintains conversation context across Claude sessions  
+- **📝 Context Preservation**: Maintains conversation context across Claude sessions
 - **📊 Quality Tracking**: Monitors your project's quality score evolution over time
 - **🔄 Workflow Optimization**: Learns from your development patterns to suggest improvements
 - **🎯 Intelligent Coordination**: The two servers share insights for smarter assistance
 
 **Quick Setup:**
+
 ```json
 {
   "mcpServers": {
@@ -744,7 +746,7 @@ For enhanced AI-assisted development with conversation memory and context persis
       "args": ["-m", "crackerjack", "--start-mcp-server"]
     },
     "session-mgmt": {
-      "command": "python", 
+      "command": "python",
       "args": ["-m", "session_mgmt_mcp.server"]
     }
   }
@@ -752,6 +754,7 @@ For enhanced AI-assisted development with conversation memory and context persis
 ```
 
 **How They Work Together:**
+
 - **Crackerjack** handles code quality enforcement, testing, and release management
 - **Session-mgmt** maintains AI conversation context and learns from your patterns
 - **Combined**: Creates an intelligent development environment that remembers what works and gets smarter over time

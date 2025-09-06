@@ -36,14 +36,14 @@ graph TD
     B -->|Complexity >15| F[Use RefactoringAgent]
     B -->|Documentation| G[Use DocumentationAgent]
     B -->|Performance| H[Use PerformanceAgent]
-    
+
     C --> I[python -m crackerjack --ai-agent -t]
     D --> I
     E --> I
     F --> J[Single agent with 0.9 confidence]
     G --> K[Single agent with 0.8 confidence]
     H --> L[Single agent with 0.85 confidence]
-    
+
     I --> M{Success?}
     M -->|Yes| N[Complete]
     M -->|No| O[Use --ai-debug for analysis]
@@ -57,15 +57,15 @@ graph TD
     B -->|Auto-Fix Issues| E[python -m crackerjack --ai-agent -t]
     B -->|Clean Code| F[python -m crackerjack -x]
     B -->|Release| G[python -m crackerjack -a patch]
-    
+
     C --> H{Issues Found?}
     H -->|Yes| I[Switch to AI Agent Mode]
     H -->|No| J[Continue Development]
-    
+
     D --> K{Tests/Hooks Fail?}
     K -->|Yes| E
     K -->|No| L[Code Complete]
-    
+
     E --> M[5 Iteration Auto-Fix]
     M --> N{All Fixed?}
     N -->|Yes| L
@@ -114,10 +114,12 @@ graph TD
 ## Error Pattern Library
 
 ### Type Errors
+
 ```python
 # BEFORE: Type annotation missing
 def process_data(data):
     return data.get("result")
+
 
 # AFTER: Proper typing
 def process_data(data: dict[str, t.Any]) -> t.Any:
@@ -125,6 +127,7 @@ def process_data(data: dict[str, t.Any]) -> t.Any:
 ```
 
 ### Security Issues
+
 ```python
 # BEFORE: Hardcoded path vulnerability
 temp_file = "/tmp/crackerjack_temp.yaml"
@@ -135,6 +138,7 @@ with tempfile.NamedTemporaryFile(suffix=".yaml") as f:
 ```
 
 ### Complexity Reduction
+
 ```python
 # BEFORE: Complexity 34 (too high)
 def complex_method(self, data: dict) -> bool:
@@ -143,7 +147,7 @@ def complex_method(self, data: dict) -> bool:
         if condition2:
             if condition3:
                 # deep nesting
-                
+
 # AFTER: Complexity 3 (good)
 def complex_method(self, data: dict) -> bool:
     if not self._validate_input(data):
@@ -155,6 +159,7 @@ def complex_method(self, data: dict) -> bool:
 ## Command Success Indicators
 
 ### Quality Check Success
+
 ```
 ✅ All hooks passed
 ✅ No type errors
@@ -163,6 +168,7 @@ def complex_method(self, data: dict) -> bool:
 ```
 
 ### Test Success Pattern
+
 ```
 ✅ All tests passed
 ✅ Coverage maintained (≥10.11%)
@@ -171,9 +177,10 @@ def complex_method(self, data: dict) -> bool:
 ```
 
 ### AI Agent Success Pattern
+
 ```
 ✅ Issues detected: X
-✅ Issues resolved: X  
+✅ Issues resolved: X
 ✅ Iterations used: Y/5
 ✅ Confidence: High
 ✅ All hooks passing
@@ -182,27 +189,31 @@ def complex_method(self, data: dict) -> bool:
 ## Workflow Sequences
 
 ### Standard Development Cycle
+
 1. `python -m crackerjack` - Quick quality check
-2. `python -m crackerjack -t` - Full validation
-3. If issues found → `python -m crackerjack --ai-agent -t`
-4. Commit changes
-5. Repeat
+1. `python -m crackerjack -t` - Full validation
+1. If issues found → `python -m crackerjack --ai-agent -t`
+1. Commit changes
+1. Repeat
 
 ### Release Cycle
+
 1. `python -m crackerjack --ai-agent -t` - Ensure quality
-2. `python -m crackerjack --bump patch` - Version bump
-3. `python -m crackerjack -a patch` - Publish release
-4. Verify deployment
+1. `python -m crackerjack --bump patch` - Version bump
+1. `python -m crackerjack -a patch` - Publish release
+1. Verify deployment
 
 ### Troubleshooting Sequence
+
 1. `python -m crackerjack --ai-debug -t` - Verbose analysis
-2. Check MCP server: `--restart-mcp-server`
-3. Monitor progress: `--start-websocket-server`
-4. Use watchdog: `--watchdog`
+1. Check MCP server: `--restart-mcp-server`
+1. Monitor progress: `--start-websocket-server`
+1. Use watchdog: `--watchdog`
 
 ## File Structure Context
 
 ### Critical Files for AI Understanding
+
 ```
 crackerjack/
 ├── CLAUDE.md              # AI instructions (THIS FILE)
@@ -219,6 +230,7 @@ crackerjack/
 ```
 
 ### Import Pattern (CRITICAL)
+
 ```python
 # ❌ WRONG: Import concrete classes
 from ..managers.test_manager import TestManager
@@ -230,12 +242,14 @@ from ..models.protocols import TestManagerProtocol
 ## Configuration Context
 
 ### Quality Thresholds
+
 - **Complexity**: ≤15 per function
 - **Coverage**: ≥10.11% (ratchet system)
 - **Test Timeout**: 300s
 - **Iterations**: 5 max for AI agent
 
 ### Python Requirements
+
 - **Version**: 3.13+ required
 - **Type System**: `|` unions, protocols
 - **Imports**: `import typing as t`
@@ -244,17 +258,19 @@ from ..models.protocols import TestManagerProtocol
 ## AI Agent Architecture
 
 ### 9 Specialized Sub-Agents
+
 1. **DocumentationAgent** (0.8) - Changelog, README, .md files
-2. **RefactoringAgent** (0.9) - Complexity, dead code, AST
-3. **PerformanceAgent** (0.85) - O(n²), string optimization
-4. **DRYAgent** (0.8) - Code duplication, patterns
-5. **FormattingAgent** (0.8) - Style, imports, consistency
-6. **SecurityAgent** (0.8) - Vulnerabilities, best practices
-7. **ImportOptimizationAgent** - Import cleanup, organization
-8. **TestCreationAgent** (0.8) - Test failures, fixtures
-9. **TestSpecialistAgent** (0.8) - Advanced testing, frameworks
+1. **RefactoringAgent** (0.9) - Complexity, dead code, AST
+1. **PerformanceAgent** (0.85) - O(n²), string optimization
+1. **DRYAgent** (0.8) - Code duplication, patterns
+1. **FormattingAgent** (0.8) - Style, imports, consistency
+1. **SecurityAgent** (0.8) - Vulnerabilities, best practices
+1. **ImportOptimizationAgent** - Import cleanup, organization
+1. **TestCreationAgent** (0.8) - Test failures, fixtures
+1. **TestSpecialistAgent** (0.8) - Advanced testing, frameworks
 
 ### Coordination Logic
+
 ```python
 if confidence >= 0.7:
     use_single_agent(best_match)
@@ -265,6 +281,7 @@ else:
 ## Terminal Recovery Commands
 
 ### If Terminal Breaks After Monitor
+
 ```bash
 # Option 1: Use recovery script
 ./fix_terminal.sh
@@ -279,17 +296,20 @@ reset
 ## MCP Server Integration
 
 ### Available Tools
+
 - `execute_crackerjack` - Auto-fixing workflow
 - `get_job_progress` - Progress tracking
 - `get_comprehensive_status` - System status
 - `analyze_errors` - Error pattern analysis
 
 ### WebSocket Progress Server
+
 - **URL**: http://localhost:8675/
 - **Real-time**: Live progress updates
 - **Rich formatting**: Color-coded status
 
 ### Slash Commands
+
 - `/crackerjack:run` - Full auto-fixing
 - `/crackerjack:status` - System status
 - `/crackerjack:init` - Project initialization
@@ -297,6 +317,7 @@ reset
 ## Common Failure Patterns to Avoid
 
 ### Import Errors
+
 ```python
 # ❌ This will cause import errors
 from crackerjack.managers.test_manager import TestManager
@@ -306,11 +327,13 @@ from crackerjack.models.protocols import TestManagerProtocol
 ```
 
 ### Async Test Issues
+
 ```python
 # ❌ Async tests that can hang
 @pytest.mark.asyncio
 async def test_batch_processing():
     await complex_operation()  # Can hang
+
 
 # ✅ Simple synchronous tests
 def test_batch_configuration():
@@ -318,24 +341,28 @@ def test_batch_configuration():
 ```
 
 ### Regex Security Issues
+
 ```python
 # ❌ DANGEROUS: Raw regex with spacing
 text = re.sub(r"(\w+) - (\w+)", r"\g < 1 >-\g < 2 >", text)
 
 # ✅ SAFE: Use centralized patterns
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
 text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
 ```
 
 ## Success Metrics
 
 ### AI Efficiency Indicators
-- **Clarification Questions**: <10% of interactions
+
+- **Clarification Questions**: \<10% of interactions
 - **First-Try Success**: >80% for standard commands
 - **Error Resolution**: >90% with AI agent mode
-- **Documentation Access**: <5s lookup time
+- **Documentation Access**: \<5s lookup time
 
 ### Quality Indicators
+
 - **Hook Pass Rate**: 100% after AI fixing
 - **Test Success**: >95% first run
 - **Coverage Maintenance**: Never decrease from 10.11%

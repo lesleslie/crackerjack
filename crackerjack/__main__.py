@@ -173,6 +173,8 @@ def main(
     global_lock_timeout: int = CLI_OPTIONS["global_lock_timeout"],
     global_lock_cleanup: bool = CLI_OPTIONS["global_lock_cleanup"],
     global_lock_dir: str | None = CLI_OPTIONS["global_lock_dir"],
+    quick: bool = CLI_OPTIONS["quick"],
+    thorough: bool = CLI_OPTIONS["thorough"],
 ) -> None:
     options = create_options(
         commit,
@@ -215,6 +217,8 @@ def main(
         global_lock_timeout,
         global_lock_cleanup,
         global_lock_dir,
+        quick,
+        thorough,
     )
 
     if ai_debug:

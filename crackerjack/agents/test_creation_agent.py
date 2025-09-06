@@ -1,6 +1,7 @@
 import ast
 import json
 import operator
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -151,8 +152,16 @@ class TestCreationAgent(SubAgent):
         )
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
+        # Log the analysis
+        self._log_analysis(issue)
+
+        # Apply fixes and create result
+        return await self._apply_fixes_and_create_result(issue)
+
+    def _log_analysis(self, issue: Issue) -> None:
         self.log(f"Analyzing test creation need: {issue.message}")
 
+    async def _apply_fixes_and_create_result(self, issue: Issue) -> FixResult:
         try:
             fixes_applied, files_modified = await self._apply_test_creation_fixes(issue)
             return self._create_test_creation_result(fixes_applied, files_modified)
@@ -165,23 +174,164 @@ class TestCreationAgent(SubAgent):
         self,
         issue: Issue,
     ) -> tuple[list[str], list[str]]:
+        # Apply all test creation fixes
+        return await self._apply_all_test_creation_fixes(issue)
+
+    async def _apply_all_test_creation_fixes(
+        self,
+        issue: Issue,
+    ) -> tuple[list[str], list[str]]:
         fixes_applied: list[str] = []
         files_modified: list[str] = []
 
+        # Apply different types of fixes
+        fixes_applied, files_modified = await self._apply_all_fix_types(
+            issue, fixes_applied, files_modified
+        )
+
+        return fixes_applied, files_modified
+
+    async def _apply_all_fix_types(
+        self,
+        issue: Issue,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        # Apply all fix types sequentially
+        return await self._apply_sequential_fixes(issue, fixes_applied, files_modified)
+
+    async def _apply_sequential_fixes(
+        self,
+        issue: Issue,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        # Apply all fix types sequentially
+        return await self._apply_all_fix_types_sequentially(
+            issue, fixes_applied, files_modified
+        )
+
+    async def _apply_all_fix_types_sequentially(
+        self,
+        issue: Issue,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        # Apply all fix types sequentially
+        return await self._apply_all_fix_types_in_sequence(
+            issue, fixes_applied, files_modified
+        )
+
+    async def _apply_all_fix_types_in_sequence(
+        self,
+        issue: Issue,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        # Apply all fix types in sequence
+        return await self._apply_fix_types_in_defined_order(
+            issue, fixes_applied, files_modified
+        )
+
+    async def _apply_fix_types_in_defined_order(
+        self,
+        issue: Issue,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        # Apply coverage based fixes
+        (
+            fixes_applied,
+            files_modified,
+        ) = await self._apply_coverage_based_fixes_sequentially(
+            fixes_applied, files_modified
+        )
+
+        # Apply file specific fixes
+        (
+            fixes_applied,
+            files_modified,
+        ) = await self._apply_file_specific_fixes_sequentially(
+            issue, fixes_applied, files_modified
+        )
+
+        # Apply function specific fixes
+        (
+            fixes_applied,
+            files_modified,
+        ) = await self._apply_function_specific_fixes_sequentially(
+            fixes_applied, files_modified
+        )
+
+        return fixes_applied, files_modified
+
+    async def _apply_coverage_based_fixes_sequentially(
+        self,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Apply coverage based fixes sequentially."""
         coverage_fixes, coverage_files = await self._apply_coverage_based_fixes()
         fixes_applied.extend(coverage_fixes)
         files_modified.extend(coverage_files)
+        return fixes_applied, files_modified
 
+    async def _apply_file_specific_fixes_sequentially(
+        self,
+        issue: Issue,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Apply file specific fixes sequentially."""
         file_fixes, file_modified = await self._apply_file_specific_fixes(
             issue.file_path,
         )
         fixes_applied.extend(file_fixes)
         files_modified.extend(file_modified)
+        return fixes_applied, files_modified
 
+    async def _apply_function_specific_fixes_sequentially(
+        self,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Apply function specific fixes sequentially."""
         function_fixes, function_files = await self._apply_function_specific_fixes()
         fixes_applied.extend(function_fixes)
         files_modified.extend(function_files)
+        return fixes_applied, files_modified
 
+    async def _apply_coverage_fixes(
+        self,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        coverage_fixes, coverage_files = await self._apply_coverage_based_fixes()
+        fixes_applied.extend(coverage_fixes)
+        files_modified.extend(coverage_files)
+        return fixes_applied, files_modified
+
+    async def _apply_file_fixes(
+        self,
+        issue: Issue,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        file_fixes, file_modified = await self._apply_file_specific_fixes(
+            issue.file_path,
+        )
+        fixes_applied.extend(file_fixes)
+        files_modified.extend(file_modified)
+        return fixes_applied, files_modified
+
+    async def _apply_function_fixes(
+        self,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        function_fixes, function_files = await self._apply_function_specific_fixes()
+        fixes_applied.extend(function_fixes)
+        files_modified.extend(function_files)
         return fixes_applied, files_modified
 
     async def _apply_coverage_based_fixes(self) -> tuple[list[str], list[str]]:
@@ -191,16 +341,90 @@ class TestCreationAgent(SubAgent):
         coverage_analysis = await self._analyze_coverage()
 
         if coverage_analysis["below_threshold"]:
-            self.log(
-                f"Coverage below threshold: "
-                f"{coverage_analysis['current_coverage']:.1%}",
+            fixes_applied, files_modified = await self._handle_low_coverage(
+                coverage_analysis, fixes_applied, files_modified
             )
 
-            for module_path in coverage_analysis["uncovered_modules"]:
-                test_fixes = await self._create_tests_for_module(module_path)
-                fixes_applied.extend(test_fixes["fixes"])
-                files_modified.extend(test_fixes["files"])
+        return fixes_applied, files_modified
 
+    async def _handle_low_coverage(
+        self,
+        coverage_analysis: dict[str, Any],
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Handle low coverage by creating tests for uncovered modules."""
+        self.log(
+            f"Coverage below threshold: {coverage_analysis['current_coverage']:.1%}",
+        )
+
+        # Process uncovered modules
+        return await self._process_uncovered_modules_for_low_coverage(
+            coverage_analysis["uncovered_modules"], fixes_applied, files_modified
+        )
+
+    async def _process_uncovered_modules_for_low_coverage(
+        self,
+        uncovered_modules: list[str],
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Process uncovered modules for low coverage scenario."""
+        for module_path in uncovered_modules:
+            test_fixes = await self._create_tests_for_module(module_path)
+            fixes_applied.extend(test_fixes["fixes"])
+            files_modified.extend(test_fixes["files"])
+
+        return fixes_applied, files_modified
+
+    async def _process_uncovered_modules(
+        self,
+        uncovered_modules: list[str],
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Process uncovered modules to create tests."""
+        # Process each uncovered module
+        return await self._process_each_uncovered_module(
+            uncovered_modules, fixes_applied, files_modified
+        )
+
+    async def _process_each_uncovered_module(
+        self,
+        uncovered_modules: list[str],
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Process each uncovered module individually."""
+        # Process all uncovered modules
+        return await self._process_all_uncovered_modules(
+            uncovered_modules, fixes_applied, files_modified
+        )
+
+    async def _process_all_uncovered_modules(
+        self,
+        uncovered_modules: list[str],
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Process all uncovered modules."""
+        for module_path in uncovered_modules:
+            fixes_applied, files_modified = await self._process_single_uncovered_module(
+                module_path, fixes_applied, files_modified
+            )
+
+        return fixes_applied, files_modified
+
+    async def _process_single_uncovered_module(
+        self,
+        module_path: str,
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Process a single uncovered module."""
+        test_fixes = await self._create_tests_for_module(module_path)
+        fixes_applied.extend(test_fixes["fixes"])
+        files_modified.extend(test_fixes["files"])
         return fixes_applied, files_modified
 
     async def _apply_file_specific_fixes(
@@ -218,6 +442,19 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str] = []
 
         untested_functions = await self._find_untested_functions()
+        fixes_applied, files_modified = await self._process_untested_functions(
+            untested_functions, fixes_applied, files_modified
+        )
+
+        return fixes_applied, files_modified
+
+    async def _process_untested_functions(
+        self,
+        untested_functions: list[dict[str, Any]],
+        fixes_applied: list[str],
+        files_modified: list[str],
+    ) -> tuple[list[str], list[str]]:
+        """Process untested functions to create tests."""
         for func_info in untested_functions[:5]:
             func_fixes = await self._create_test_for_function(func_info)
             fixes_applied.extend(func_fixes["fixes"])
@@ -233,41 +470,60 @@ class TestCreationAgent(SubAgent):
         """Enhanced result creation with detailed confidence scoring."""
         success = len(fixes_applied) > 0
 
-        # Enhanced confidence calculation based on types of fixes applied
-        confidence = 0.5  # Base confidence
-
-        if success:
-            # Higher confidence based on quality of fixes
-            test_file_fixes = [f for f in fixes_applied if "test file" in f.lower()]
-            function_fixes = [f for f in fixes_applied if "function" in f.lower()]
-            coverage_fixes = [f for f in fixes_applied if "coverage" in f.lower()]
-
-            # Boost confidence for comprehensive test creation
-            if test_file_fixes:
-                confidence += 0.25  # Test file creation
-            if function_fixes:
-                confidence += 0.15  # Function-specific tests
-            if coverage_fixes:
-                confidence += 0.1  # Coverage improvements
-
-            # Additional boost for multiple file creation (broader impact)
-            if len(files_modified) > 2:
-                confidence += 0.1
-
-            # Cap at 0.95 to maintain some uncertainty
-            confidence = min(confidence, 0.95)
-
-        recommendations = (
-            [] if success else self._get_enhanced_test_creation_recommendations()
-        )
+        # Calculate confidence based on the fixes applied
+        confidence = self._calculate_confidence(success, fixes_applied, files_modified)
 
         return FixResult(
             success=success,
             confidence=confidence,
             fixes_applied=fixes_applied,
+            remaining_issues=[],
+            recommendations=self._generate_recommendations(success),
             files_modified=files_modified,
-            recommendations=recommendations,
         )
+
+    def _calculate_confidence(
+        self, success: bool, fixes_applied: list[str], files_modified: list[str]
+    ) -> float:
+        """Calculate confidence based on types of fixes applied."""
+        if not success:
+            return 0.0
+
+        # Enhanced confidence calculation based on types of fixes applied
+        confidence = 0.5  # Base confidence
+
+        # Higher confidence based on quality of fixes
+        test_file_fixes = [f for f in fixes_applied if "test file" in f.lower()]
+        function_fixes = [f for f in fixes_applied if "function" in f.lower()]
+        coverage_fixes = [f for f in fixes_applied if "coverage" in f.lower()]
+
+        # Boost confidence for comprehensive test creation
+        if test_file_fixes:
+            confidence += 0.25  # Test file creation
+        if function_fixes:
+            confidence += 0.15  # Function-specific tests
+        if coverage_fixes:
+            confidence += 0.1  # Coverage improvements
+
+        # Additional boost for multiple file creation (broader impact)
+        if len(files_modified) > 1:
+            confidence += 0.1
+
+        # Cap confidence at 0.95 for realistic assessment
+        return min(confidence, 0.95)
+
+    def _generate_recommendations(self, success: bool) -> list[str]:
+        """Generate recommendations based on the success of the operation."""
+        if success:
+            return [
+                "Generated comprehensive test suite",
+                "Consider running pytest to validate new tests",
+                "Review generated tests for edge cases",
+            ]
+        return [
+            "No test creation opportunities identified",
+            "Consider manual test creation for complex scenarios",
+        ]
 
     def _get_enhanced_test_creation_recommendations(self) -> list[str]:
         """Enhanced recommendations based on audit requirements."""
@@ -770,36 +1026,64 @@ class TestCreationAgent(SubAgent):
         return False
 
     async def _create_tests_for_module(self, module_path: str) -> dict[str, list[str]]:
+        """Create tests for a module."""
         fixes: list[str] = []
         files: list[str] = []
 
         try:
-            module_file = Path(module_path)
-            if not module_file.exists():
-                return {"fixes": fixes, "files": files}
-
-            functions = await self._extract_functions_from_file(module_file)
-            classes = await self._extract_classes_from_file(module_file)
-
-            if not functions and not classes:
-                return {"fixes": fixes, "files": files}
-
-            test_file_path = await self._generate_test_file_path(module_file)
-            test_content = await self._generate_test_content(
-                module_file,
-                functions,
-                classes,
-            )
-
-            if self.context.write_file_content(test_file_path, test_content):
-                fixes.append(f"Created test file for {module_path}")
-                files.append(str(test_file_path))
-                self.log(f"Created test file: {test_file_path}")
+            test_results = await self._generate_module_tests(module_path)
+            fixes.extend(test_results["fixes"])
+            files.extend(test_results["files"])
 
         except Exception as e:
-            self.log(f"Error creating tests for module {module_path}: {e}", "ERROR")
+            self._handle_test_creation_error(module_path, e)
 
         return {"fixes": fixes, "files": files}
+
+    async def _generate_module_tests(self, module_path: str) -> dict[str, list[str]]:
+        """Generate tests for a module."""
+        module_file = Path(module_path)
+        if not await self._is_module_valid(module_file):
+            return {"fixes": [], "files": []}
+
+        functions = await self._extract_functions_from_file(module_file)
+        classes = await self._extract_classes_from_file(module_file)
+
+        if not functions and not classes:
+            return {"fixes": [], "files": []}
+
+        return await self._create_test_artifacts(module_file, functions, classes)
+
+    async def _is_module_valid(self, module_file: Path) -> bool:
+        """Check if the module file is valid."""
+        return module_file.exists()
+
+    async def _create_test_artifacts(
+        self,
+        module_file: Path,
+        functions: list[dict[str, Any]],
+        classes: list[dict[str, Any]],
+    ) -> dict[str, list[str]]:
+        """Create test artifacts for the module."""
+        test_file_path = await self._generate_test_file_path(module_file)
+        test_content = await self._generate_test_content(
+            module_file,
+            functions,
+            classes,
+        )
+
+        if self.context.write_file_content(test_file_path, test_content):
+            self.log(f"Created test file: {test_file_path}")
+            return {
+                "fixes": [f"Created test file for {module_file}"],
+                "files": [str(test_file_path)],
+            }
+
+        return {"fixes": [], "files": []}
+
+    def _handle_test_creation_error(self, module_path: str, e: Exception) -> None:
+        """Handle errors during test creation."""
+        self.log(f"Error creating tests for module {module_path}: {e}", "ERROR")
 
     async def _create_tests_for_file(self, file_path: str) -> dict[str, list[str]]:
         if self._has_corresponding_test(file_path):
@@ -1241,29 +1525,31 @@ from {module_name} import {func_info["name"]}
 
         test_methods = []
         for func in functions:
-            func_tests = await self._generate_all_tests_for_function(func, module_category)
+            func_tests = await self._generate_all_tests_for_function(
+                func, module_category
+            )
             test_methods.extend(func_tests)
 
         return "\n".join(test_methods)
-    
+
     async def _generate_all_tests_for_function(
         self, func: dict[str, Any], module_category: str
     ) -> list[str]:
         """Generate all test types for a single function."""
         func_tests = []
-        
+
         # Always generate basic test
         basic_test = await self._generate_basic_function_test(func, module_category)
         func_tests.append(basic_test)
-        
+
         # Generate additional tests based on function characteristics
         additional_tests = await self._generate_conditional_tests_for_function(
             func, module_category
         )
         func_tests.extend(additional_tests)
-        
+
         return func_tests
-    
+
     async def _generate_conditional_tests_for_function(
         self, func: dict[str, Any], module_category: str
     ) -> list[str]:
@@ -1271,27 +1557,29 @@ from {module_name} import {func_info["name"]}
         tests = []
         args = func.get("args", [])
         func_name = func["name"]
-        
+
         # Generate parametrized test if function has multiple args
         if self._should_generate_parametrized_test(args):
-            parametrized_test = await self._generate_parametrized_test(func, module_category)
+            parametrized_test = await self._generate_parametrized_test(
+                func, module_category
+            )
             tests.append(parametrized_test)
-        
+
         # Always generate error handling test
         error_test = await self._generate_error_handling_test(func, module_category)
         tests.append(error_test)
-        
+
         # Generate edge case tests for complex functions
         if self._should_generate_edge_case_test(args, func_name):
             edge_test = await self._generate_edge_case_test(func, module_category)
             tests.append(edge_test)
-        
+
         return tests
-    
+
     def _should_generate_parametrized_test(self, args: list[str]) -> bool:
         """Determine if parametrized test should be generated."""
         return len(args) > 1
-    
+
     def _should_generate_edge_case_test(self, args: list[str], func_name: str) -> bool:
         """Determine if edge case test should be generated."""
         has_multiple_args = len(args) > 2
@@ -1307,19 +1595,23 @@ from {module_name} import {func_info["name"]}
         """Generate basic functionality test for a function."""
         func_name = func["name"]
         args = func.get("args", [])
-        
+
         template_generator = self._get_test_template_generator(module_category)
         return template_generator(func_name, args)
-    
-    def _get_test_template_generator(self, module_category: str) -> callable:
+
+    def _get_test_template_generator(
+        self, module_category: str
+    ) -> Callable[[str, list[str]], str]:
         """Get the appropriate test template generator for the module category."""
         template_generators = {
             "agent": self._generate_agent_test_template,
             "service": self._generate_async_test_template,
             "manager": self._generate_async_test_template,
         }
-        return template_generators.get(module_category, self._generate_default_test_template)
-    
+        return template_generators.get(
+            module_category, self._generate_default_test_template
+        )
+
     def _generate_agent_test_template(self, func_name: str, args: list[str]) -> str:
         """Generate test template for agent functions."""
         return f'''
@@ -1334,7 +1626,7 @@ from {module_name} import {func_info["name"]}
             pytest.skip(f"Function {func_name} requires manual implementation: {{e}}")
         except Exception as e:
             pytest.fail(f"Unexpected error in {func_name}: {{e}}")'''
-    
+
     def _generate_async_test_template(self, func_name: str, args: list[str]) -> str:
         """Generate test template for async service/manager functions."""
         return f'''\n    @pytest.mark.asyncio\n    async def test_{func_name}_basic_functionality(self):
@@ -1351,7 +1643,7 @@ from {module_name} import {func_info["name"]}
             pytest.skip(f"Function {func_name} requires manual implementation: {{e}}")
         except Exception as e:
             pytest.fail(f"Unexpected error in {func_name}: {{e}}")'''
-    
+
     def _generate_default_test_template(self, func_name: str, args: list[str]) -> str:
         """Generate default test template for regular functions."""
         return f'''
@@ -1566,27 +1858,29 @@ from {module_name} import {func_info["name"]}
         if not classes:
             return ""
 
-        test_components = await self._generate_all_class_test_components(classes, module_category)
+        test_components = await self._generate_all_class_test_components(
+            classes, module_category
+        )
         return self._combine_class_test_elements(
             test_components["fixtures"], test_components["test_methods"]
         )
-    
+
     async def _generate_all_class_test_components(
         self, classes: list[dict[str, Any]], module_category: str
     ) -> dict[str, list[str]]:
         """Generate all test components for classes."""
         fixtures = []
         test_methods = []
-        
+
         for cls in classes:
             class_components = await self._generate_single_class_test_components(
                 cls, module_category
             )
             fixtures.extend(class_components["fixtures"])
             test_methods.extend(class_components["test_methods"])
-        
+
         return {"fixtures": fixtures, "test_methods": test_methods}
-    
+
     async def _generate_single_class_test_components(
         self, cls: dict[str, Any], module_category: str
     ) -> dict[str, list[str]]:
@@ -1594,41 +1888,45 @@ from {module_name} import {func_info["name"]}
         fixtures = []
         test_methods = []
         methods = cls.get("methods", [])
-        
+
         # Generate fixture for class instantiation
         fixture = await self._generate_class_fixture(cls, module_category)
         if fixture:
             fixtures.append(fixture)
-        
+
         # Generate core tests for the class
-        core_tests = await self._generate_core_class_tests(cls, methods, module_category)
+        core_tests = await self._generate_core_class_tests(
+            cls, methods, module_category
+        )
         test_methods.extend(core_tests)
-        
+
         return {"fixtures": fixtures, "test_methods": test_methods}
-    
+
     async def _generate_core_class_tests(
         self, cls: dict[str, Any], methods: list[str], module_category: str
     ) -> list[str]:
         """Generate core tests for a class."""
         test_methods = []
-        
+
         # Basic class instantiation test
         instantiation_test = await self._generate_class_instantiation_test(
             cls, module_category
         )
         test_methods.append(instantiation_test)
-        
+
         # Generate tests for public methods (limit for performance)
-        method_tests = await self._generate_method_tests(cls, methods[:5], module_category)
+        method_tests = await self._generate_method_tests(
+            cls, methods[:5], module_category
+        )
         test_methods.extend(method_tests)
-        
+
         # Generate property tests if applicable
         property_test = await self._generate_class_property_test(cls, module_category)
         if property_test:
             test_methods.append(property_test)
-        
+
         return test_methods
-    
+
     async def _generate_method_tests(
         self, cls: dict[str, Any], methods: list[str], module_category: str
     ) -> list[str]:
@@ -1724,21 +2022,20 @@ from {module_name} import {func_info["name"]}
     ) -> str:
         """Generate test for a class method."""
         class_name = cls["name"]
-        
+
         if self._is_special_agent_method(module_category, method_name):
             return self._generate_agent_method_test(class_name, method_name)
-        elif module_category in ("service", "manager"):
+        if module_category in ("service", "manager"):
             return self._generate_async_method_test(class_name, method_name)
-        else:
-            return self._generate_default_method_test(class_name, method_name)
-    
+        return self._generate_default_method_test(class_name, method_name)
+
     def _is_special_agent_method(self, module_category: str, method_name: str) -> bool:
         """Check if this is a special agent method requiring custom test logic."""
-        return (
-            module_category == "agent" 
-            and method_name in ("can_handle", "analyze_and_fix")
+        return module_category == "agent" and method_name in (
+            "can_handle",
+            "analyze_and_fix",
         )
-    
+
     def _generate_agent_method_test(self, class_name: str, method_name: str) -> str:
         """Generate test for special agent methods."""
         if method_name == "can_handle":
@@ -1746,7 +2043,7 @@ from {module_name} import {func_info["name"]}
         elif method_name == "analyze_and_fix":
             return self._generate_analyze_and_fix_test(class_name)
         return self._generate_generic_agent_method_test(class_name, method_name)
-    
+
     def _generate_can_handle_test(self, class_name: str) -> str:
         """Generate test for can_handle method."""
         return f'''
@@ -1762,7 +2059,7 @@ from {module_name} import {func_info["name"]}
         result = await {class_name.lower()}_instance.can_handle(mock_issue)
         assert isinstance(result, (int, float))
         assert 0.0 <= result <= 1.0'''
-    
+
     def _generate_analyze_and_fix_test(self, class_name: str) -> str:
         """Generate test for analyze_and_fix method."""
         return f'''
@@ -1779,8 +2076,10 @@ from {module_name} import {func_info["name"]}
         assert isinstance(result, FixResult)
         assert hasattr(result, 'success')
         assert hasattr(result, 'confidence')'''
-    
-    def _generate_generic_agent_method_test(self, class_name: str, method_name: str) -> str:
+
+    def _generate_generic_agent_method_test(
+        self, class_name: str, method_name: str
+    ) -> str:
         """Generate test for generic agent methods."""
         return f'''
     @pytest.mark.asyncio
@@ -1789,19 +2088,19 @@ from {module_name} import {func_info["name"]}
         try:
             method = getattr({class_name.lower()}_instance, "{method_name}", None)
             assert method is not None, f"Method {method_name} should exist"
-            
+
             # Generic test for agent methods
             if asyncio.iscoroutinefunction(method):
                 result = await method()
             else:
                 result = method()
-            
+
             assert result is not None or result is None
         except (TypeError, NotImplementedError):
             pytest.skip(f"Method {method_name} requires specific arguments")
         except Exception as e:
             pytest.fail(f"Unexpected error in {method_name}: {{e}}")'''
-    
+
     def _generate_async_method_test(self, class_name: str, method_name: str) -> str:
         """Generate test for async service/manager methods."""
         return f'''
@@ -1825,7 +2124,7 @@ from {module_name} import {func_info["name"]}
             pytest.skip(f"Method {method_name} requires specific arguments or implementation")
         except Exception as e:
             pytest.fail(f"Unexpected error in {method_name}: {{e}}")'''
-    
+
     def _generate_default_method_test(self, class_name: str, method_name: str) -> str:
         """Generate test for default methods."""
         return f'''

@@ -132,7 +132,6 @@ def _has_recent_activity(self) -> bool:
 - Activity-aware updates
 - Flexible timing options
 
-
 ### 5. Dependency Update Detection
 
 Monitor for security updates and major dependency changes.
