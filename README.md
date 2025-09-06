@@ -72,6 +72,55 @@ A dedicated MCP server that provides comprehensive session management functional
   - Trust specific operations (UV sync, Git operations, file management)
   - Reset all permissions when needed
 
+## 🚀 Integration with Crackerjack
+
+Session-mgmt includes deep integration with [Crackerjack](https://github.com/lesleslie/crackerjack), the AI-driven Python development platform:
+
+**Integrated Features:**
+- **📊 Quality Metrics Tracking**: Automatically captures and tracks Crackerjack quality scores over time
+- **🧪 Test Result Monitoring**: Learns from test patterns, failures, and successful fixes  
+- **🔍 Error Pattern Recognition**: Remembers how specific errors were resolved and suggests solutions
+- **📝 Command History Analysis**: Tracks which Crackerjack commands are most effective for different scenarios
+- **🎯 Progress Intelligence**: Predicts completion times based on historical data
+
+**Why Use Both Together:**
+- **Crackerjack**: Enforces code quality, runs tests, manages releases, and provides AI auto-fixing
+- **Session-mgmt**: Remembers what worked, tracks progress evolution, and maintains context
+- **Synergy**: Creates an intelligent development environment that learns from every interaction
+
+**Example Integrated Workflow:**
+1. 🚀 **Session-mgmt `init`** - Sets up your session with accumulated context from previous work
+2. 🔧 **Crackerjack runs** quality checks and applies AI agent fixes to resolve issues
+3. 💾 **Session-mgmt captures** successful patterns, quality improvements, and error resolutions  
+4. 🧠 **Next session starts** with all accumulated knowledge and learned patterns
+5. 📈 **Continuous improvement** as both systems get smarter with each interaction
+
+**Technical Integration:**
+The `crackerjack_integration.py` module (50KB+) provides:
+- Real-time progress tracking during Crackerjack operations
+- Quality metric extraction and trend analysis
+- Test result pattern detection and storage
+- Error resolution pattern matching for faster fixes
+- Command effectiveness scoring for workflow optimization
+
+**Configuration Example:**
+```json
+{
+  "mcpServers": {
+    "crackerjack": {
+      "command": "python",
+      "args": ["-m", "crackerjack", "--start-mcp-server"]
+    },
+    "session-mgmt": {
+      "command": "python",
+      "args": ["-m", "session_mgmt_mcp.server"]
+    }
+  }
+}
+```
+
+The integration is automatic once both servers are configured - they coordinate through the MCP protocol without requiring additional setup.
+
 ## Installation
 
 ### From Source

@@ -11,40 +11,82 @@ import hashlib
 import json
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, Field, field_validator
 
-@dataclass
-class SessionState:
+
+class SessionState(BaseModel):
     """Represents complete session state for serialization."""
 
-    session_id: str
-    user_id: str
-    project_id: str
-    created_at: str
-    last_activity: str
-    permissions: list[str]
-    conversation_history: list[dict[str, Any]]
-    reflection_data: dict[str, Any]
-    app_monitoring_state: dict[str, Any]
-    llm_provider_configs: dict[str, Any]
-    metadata: dict[str, Any]
+    session_id: str = Field(
+        min_length=1,
+        description="Unique identifier for the session"
+    )
+    user_id: str = Field(
+        min_length=1,
+        description="Identifier for the user"
+    )
+    project_id: str = Field(
+        min_length=1,
+        description="Identifier for the project"
+    )
+    created_at: str = Field(
+        description="ISO timestamp when session was created"
+    )
+    last_activity: str = Field(
+        description="ISO timestamp of last activity"
+    )
+    permissions: list[str] = Field(
+        default_factory=list,
+        description="List of permissions granted to the session"
+    )
+    conversation_history: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="History of conversation entries"
+    )
+    reflection_data: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Stored reflection and memory data"
+    )
+    app_monitoring_state: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Application monitoring state"
+    )
+    llm_provider_configs: dict[str, Any] = Field(
+        default_factory=dict,
+        description="LLM provider configurations"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional session metadata"
+    )
+
+    @field_validator("created_at", "last_activity")
+    @classmethod
+    def validate_iso_timestamp(cls, v: str) -> str:
+        """Validate that timestamps are in ISO format."""
+        try:
+            datetime.fromisoformat(v)
+            return v
+        except ValueError as e:
+            msg = f"Invalid ISO timestamp format: {v}"
+            raise ValueError(msg) from e
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
-        return asdict(self)
+        return self.model_dump()
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SessionState":
         """Create from dictionary."""
-        return cls(**data)
+        return cls.model_validate(data)
 
     def get_compressed_size(self) -> int:
         """Get compressed size of session state."""
-        serialized = json.dumps(self.to_dict())
+        serialized = self.model_dump_json()
         compressed = gzip.compress(serialized.encode("utf-8"))
         return len(compressed)
 

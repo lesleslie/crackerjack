@@ -8,49 +8,141 @@ import asyncio
 import hashlib
 import json
 import time
-from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from .reflection_tools import ReflectionDatabase
 
 
-@dataclass
-class ProjectGroup:
+class ProjectGroup(BaseModel):
     """Represents a group of related projects."""
 
-    id: str
-    name: str
-    description: str
-    projects: list[str]
-    metadata: dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    id: str = Field(description="Unique identifier for the project group")
+    name: str = Field(min_length=1, max_length=200, description="Name of the project group")
+    description: str = Field(default="", max_length=1000, description="Description of the project group")
+    projects: list[str] = Field(
+        min_length=1,
+        description="List of project identifiers in this group"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for the project group"
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="When the project group was created"
+    )
+
+    @field_validator("projects")
+    @classmethod
+    def validate_projects(cls, v: list[str]) -> list[str]:
+        """Ensure all project names are non-empty."""
+        if not v:
+            msg = "Project group must contain at least one project"
+            raise ValueError(msg)
+        for project in v:
+            if not project.strip():
+                msg = "Project names cannot be empty"
+                raise ValueError(msg)
+        return [p.strip() for p in v]
 
 
-@dataclass
-class ProjectDependency:
+class ProjectDependency(BaseModel):
     """Represents a dependency between two projects."""
 
-    id: str
-    source_project: str
-    target_project: str
-    dependency_type: str  # 'uses', 'extends', 'references', 'shares_code'
-    description: str
-    metadata: dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    id: str = Field(description="Unique identifier for the project dependency")
+    source_project: str = Field(
+        min_length=1,
+        description="The project that depends on another"
+    )
+    target_project: str = Field(
+        min_length=1,
+        description="The project that is depended upon"
+    )
+    dependency_type: Literal["uses", "extends", "references", "shares_code"] = Field(
+        description="Type of dependency relationship"
+    )
+    description: str = Field(
+        default="",
+        max_length=1000,
+        description="Description of the dependency relationship"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for the dependency"
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="When the dependency was created"
+    )
+
+    @field_validator("source_project", "target_project")
+    @classmethod
+    def validate_project_names(cls, v: str) -> str:
+        """Ensure project names are non-empty."""
+        if not v.strip():
+            msg = "Project names cannot be empty"
+            raise ValueError(msg)
+        return v.strip()
+
+    @field_validator("target_project")
+    @classmethod
+    def validate_not_self_dependency(cls, v: str, info: ValidationInfo) -> str:
+        """Ensure projects don't depend on themselves."""
+        if hasattr(info, "data") and info.data and v == info.data.get("source_project"):
+            msg = "Project cannot depend on itself"
+            raise ValueError(msg)
+        return v
 
 
-@dataclass
-class SessionLink:
+class SessionLink(BaseModel):
     """Represents a link between sessions across projects."""
 
-    id: str
-    source_session_id: str
-    target_session_id: str
-    link_type: str  # 'related', 'continuation', 'reference', 'dependency'
-    context: str
-    metadata: dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    id: str = Field(description="Unique identifier for the session link")
+    source_session_id: str = Field(
+        min_length=1,
+        description="The session that links to another"
+    )
+    target_session_id: str = Field(
+        min_length=1,
+        description="The session that is linked to"
+    )
+    link_type: Literal["related", "continuation", "reference", "dependency"] = Field(
+        description="Type of relationship between sessions"
+    )
+    context: str = Field(
+        default="",
+        max_length=2000,
+        description="Context or reason for the session link"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata for the session link"
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="When the session link was created"
+    )
+
+    @field_validator("source_session_id", "target_session_id")
+    @classmethod
+    def validate_session_ids(cls, v: str) -> str:
+        """Ensure session IDs are non-empty."""
+        if not v.strip():
+            msg = "Session IDs cannot be empty"
+            raise ValueError(msg)
+        return v.strip()
+
+    @field_validator("target_session_id")
+    @classmethod
+    def validate_not_self_link(cls, v: str, info: ValidationInfo) -> str:
+        """Ensure sessions don't link to themselves."""
+        if hasattr(info, "data") and info.data and v == info.data.get("source_session_id"):
+            msg = "Session cannot link to itself"
+            raise ValueError(msg)
+        return v
 
 
 class MultiProjectCoordinator:

@@ -5,9 +5,11 @@ Loads configuration from pyproject.toml and environment variables with sensible 
 """
 
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 try:
     import tomllib  # Python 3.11+
@@ -18,169 +20,462 @@ except ImportError:
         tomllib = None
 
 
-@dataclass
-class DatabaseConfig:
+class DatabaseConfig(BaseModel):
     """Database configuration."""
 
-    path: str = "~/.claude/data/reflection.duckdb"
-    connection_timeout: int = 30
-    query_timeout: int = 120
-    max_connections: int = 10
+    path: str = Field(
+        default="~/.claude/data/reflection.duckdb",
+        description="Path to the DuckDB database file",
+    )
+    connection_timeout: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        description="Database connection timeout in seconds",
+    )
+    query_timeout: int = Field(
+        default=120,
+        ge=1,
+        le=3600,
+        description="Database query timeout in seconds",
+    )
+    max_connections: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of database connections",
+    )
 
     # Multi-project settings
-    enable_multi_project: bool = True
-    auto_detect_projects: bool = True
-    project_groups_enabled: bool = True
+    enable_multi_project: bool = Field(
+        default=True,
+        description="Enable multi-project coordination features",
+    )
+    auto_detect_projects: bool = Field(
+        default=True,
+        description="Auto-detect project relationships",
+    )
+    project_groups_enabled: bool = Field(
+        default=True,
+        description="Enable project grouping functionality",
+    )
 
     # Search settings
-    enable_full_text_search: bool = True
-    search_index_update_interval: int = 3600  # seconds
-    max_search_results: int = 100
+    enable_full_text_search: bool = Field(
+        default=True,
+        description="Enable full-text search capabilities",
+    )
+    search_index_update_interval: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        description="Search index update interval in seconds",
+    )
+    max_search_results: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        description="Maximum number of search results to return",
+    )
+
+    @field_validator("path")
+    @classmethod
+    def expand_path(cls, v: str) -> str:
+        """Expand user paths in database path."""
+        return os.path.expanduser(v)
 
 
-@dataclass
-class SearchConfig:
+class SearchConfig(BaseModel):
     """Search and indexing configuration."""
 
-    enable_semantic_search: bool = True
-    embedding_model: str = "all-MiniLM-L6-v2"
-    embedding_cache_size: int = 1000
+    enable_semantic_search: bool = Field(
+        default=True,
+        description="Enable semantic search using embeddings",
+    )
+    embedding_model: str = Field(
+        default="all-MiniLM-L6-v2",
+        description="Embedding model for semantic search",
+    )
+    embedding_cache_size: int = Field(
+        default=1000,
+        ge=10,
+        le=100000,
+        description="Number of embeddings to cache in memory",
+    )
 
     # Advanced search settings
-    enable_faceted_search: bool = True
-    max_facet_values: int = 50
-    enable_search_suggestions: bool = True
-    suggestion_limit: int = 10
+    enable_faceted_search: bool = Field(
+        default=True,
+        description="Enable faceted search capabilities",
+    )
+    max_facet_values: int = Field(
+        default=50,
+        ge=1,
+        le=1000,
+        description="Maximum number of facet values to return",
+    )
+    enable_search_suggestions: bool = Field(
+        default=True,
+        description="Enable search suggestions and autocomplete",
+    )
+    suggestion_limit: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of search suggestions",
+    )
 
     # Full-text search
-    enable_stemming: bool = True
-    enable_fuzzy_matching: bool = True
-    fuzzy_threshold: float = 0.8
+    enable_stemming: bool = Field(
+        default=True,
+        description="Enable word stemming in search",
+    )
+    enable_fuzzy_matching: bool = Field(
+        default=True,
+        description="Enable fuzzy matching for typos",
+    )
+    fuzzy_threshold: float = Field(
+        default=0.8,
+        ge=0.1,
+        le=1.0,
+        description="Fuzzy matching similarity threshold",
+    )
 
 
-@dataclass
-class TokenOptimizationConfig:
+class TokenOptimizationConfig(BaseModel):
     """Token optimization settings."""
 
-    enable_optimization: bool = True
-    default_max_tokens: int = 4000
-    default_chunk_size: int = 2000
+    enable_optimization: bool = Field(
+        default=True,
+        description="Enable token optimization features",
+    )
+    default_max_tokens: int = Field(
+        default=4000,
+        ge=100,
+        le=200000,
+        description="Default maximum tokens for responses",
+    )
+    default_chunk_size: int = Field(
+        default=2000,
+        ge=50,
+        le=100000,
+        description="Default chunk size for response splitting",
+    )
 
     # Optimization strategies
-    preferred_strategy: str = "auto"  # auto, truncate_old, summarize_content, etc.
-    enable_response_chunking: bool = True
-    enable_duplicate_filtering: bool = True
+    preferred_strategy: Literal[
+        "auto", "truncate_old", "summarize_content", "compress"
+    ] = Field(
+        default="auto",
+        description="Preferred optimization strategy",
+    )
+    enable_response_chunking: bool = Field(
+        default=True,
+        description="Enable automatic response chunking for large outputs",
+    )
+    enable_duplicate_filtering: bool = Field(
+        default=True,
+        description="Filter out duplicate content in responses",
+    )
 
     # Usage tracking
-    track_usage: bool = True
-    usage_retention_days: int = 90
+    track_usage: bool = Field(
+        default=True,
+        description="Track token usage statistics",
+    )
+    usage_retention_days: int = Field(
+        default=90,
+        ge=1,
+        le=3650,
+        description="Number of days to retain usage statistics",
+    )
+
+    @model_validator(mode="after")
+    def validate_chunk_size(self) -> "TokenOptimizationConfig":
+        """Ensure chunk size is not larger than max tokens."""
+        if self.default_chunk_size >= self.default_max_tokens:
+            self.default_chunk_size = max(50, self.default_max_tokens // 2)
+        return self
 
 
-@dataclass
-class SessionConfig:
+class SessionConfig(BaseModel):
     """Session management configuration."""
 
-    auto_checkpoint_interval: int = 1800  # seconds (30 minutes)
-    enable_auto_commit: bool = True
-    commit_message_template: str = "checkpoint: Session checkpoint - {timestamp}"
+    auto_checkpoint_interval: int = Field(
+        default=1800,
+        ge=60,
+        le=86400,
+        description="Auto-checkpoint interval in seconds (default: 30 minutes)",
+    )
+    enable_auto_commit: bool = Field(
+        default=True,
+        description="Enable automatic git commits during checkpoints",
+    )
+    commit_message_template: str = Field(
+        default="checkpoint: Session checkpoint - {timestamp}",
+        min_length=10,
+        description="Template for automatic commit messages",
+    )
 
     # Session permissions
-    enable_permission_system: bool = True
-    default_trusted_operations: list[str] = field(
-        default_factory=lambda: ["git_commit", "uv_sync", "file_operations"],
+    enable_permission_system: bool = Field(
+        default=True,
+        description="Enable the permission system for trusted operations",
+    )
+    default_trusted_operations: list[str] = Field(
+        default=["git_commit", "uv_sync", "file_operations"],
+        description="List of operations that are trusted by default",
     )
 
     # Session cleanup
-    auto_cleanup_old_sessions: bool = True
-    session_retention_days: int = 365
+    auto_cleanup_old_sessions: bool = Field(
+        default=True,
+        description="Automatically clean up old session data",
+    )
+    session_retention_days: int = Field(
+        default=365,
+        ge=1,
+        le=3650,
+        description="Number of days to retain session data",
+    )
+
+    @field_validator("commit_message_template")
+    @classmethod
+    def validate_commit_template(cls, v: str) -> str:
+        """Ensure commit message template contains timestamp placeholder."""
+        if "{timestamp}" not in v:
+            msg = "Commit message template must contain {timestamp} placeholder"
+            raise ValueError(msg)
+        return v
 
 
-@dataclass
-class IntegrationConfig:
+class IntegrationConfig(BaseModel):
     """External integrations configuration."""
 
     # Crackerjack integration
-    enable_crackerjack: bool = True
-    crackerjack_command: str = "crackerjack"
+    enable_crackerjack: bool = Field(
+        default=True,
+        description="Enable Crackerjack code quality integration",
+    )
+    crackerjack_command: str = Field(
+        default="crackerjack",
+        min_length=1,
+        description="Command to run Crackerjack",
+    )
 
     # Git integration
-    enable_git_integration: bool = True
-    git_auto_stage: bool = False
+    enable_git_integration: bool = Field(
+        default=True,
+        description="Enable Git integration features",
+    )
+    git_auto_stage: bool = Field(
+        default=False,
+        description="Automatically stage changes before commits",
+    )
 
     # Global workspace
-    global_workspace_path: str = "~/Projects/claude"
-    enable_global_toolkits: bool = True
+    global_workspace_path: str = Field(
+        default="~/Projects/claude",
+        description="Path to global workspace directory",
+    )
+    enable_global_toolkits: bool = Field(
+        default=True,
+        description="Enable global toolkit discovery and usage",
+    )
+
+    @field_validator("global_workspace_path")
+    @classmethod
+    def expand_workspace_path(cls, v: str) -> str:
+        """Expand user paths in global workspace path."""
+        return os.path.expanduser(v)
 
 
-@dataclass
-class LoggingConfig:
+class LoggingConfig(BaseModel):
     """Logging configuration."""
 
-    level: str = "INFO"
-    format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
+        default="INFO",
+        description="Logging level",
+    )
+    format: str = Field(
+        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        min_length=10,
+        description="Log message format string",
+    )
 
     # File logging
-    enable_file_logging: bool = True
-    log_file_path: str = "~/.claude/logs/session-mgmt.log"
-    log_file_max_size: int = 10 * 1024 * 1024  # 10MB
-    log_file_backup_count: int = 5
+    enable_file_logging: bool = Field(
+        default=True,
+        description="Enable logging to file",
+    )
+    log_file_path: str = Field(
+        default="~/.claude/logs/session-mgmt.log",
+        description="Path to log file",
+    )
+    log_file_max_size: int = Field(
+        default=10 * 1024 * 1024,
+        ge=1024,
+        le=1024 * 1024 * 1024,
+        description="Maximum log file size in bytes (default: 10MB)",
+    )
+    log_file_backup_count: int = Field(
+        default=5,
+        ge=0,
+        le=100,
+        description="Number of backup log files to keep",
+    )
 
     # Performance logging
-    enable_performance_logging: bool = False
-    log_slow_queries: bool = True
-    slow_query_threshold: float = 1.0  # seconds
+    enable_performance_logging: bool = Field(
+        default=False,
+        description="Enable detailed performance logging",
+    )
+    log_slow_queries: bool = Field(
+        default=True,
+        description="Log slow database queries",
+    )
+    slow_query_threshold: float = Field(
+        default=1.0,
+        ge=0.1,
+        le=60.0,
+        description="Threshold for slow query logging in seconds",
+    )
+
+    @field_validator("log_file_path")
+    @classmethod
+    def expand_log_path(cls, v: str) -> str:
+        """Expand user paths and create parent directories."""
+        expanded = os.path.expanduser(v)
+        Path(expanded).parent.mkdir(parents=True, exist_ok=True)
+        return expanded
 
 
-@dataclass
-class SecurityConfig:
+class SecurityConfig(BaseModel):
     """Security and privacy settings."""
 
     # Data privacy
-    anonymize_paths: bool = False
-    exclude_sensitive_patterns: list[str] = field(
-        default_factory=lambda: [
+    anonymize_paths: bool = Field(
+        default=False,
+        description="Anonymize file paths in logs and data",
+    )
+    exclude_sensitive_patterns: list[str] = Field(
+        default=[
             r"password\s*=\s*['\"][^'\"]+['\"]",
             r"api[_-]?key\s*=\s*['\"][^'\"]+['\"]",
             r"secret\s*=\s*['\"][^'\"]+['\"]",
             r"token\s*=\s*['\"][^'\"]+['\"]",
         ],
+        description="Regex patterns for sensitive data to exclude from storage",
     )
 
     # Access control
-    enable_rate_limiting: bool = True
-    max_requests_per_minute: int = 100
+    enable_rate_limiting: bool = Field(
+        default=True,
+        description="Enable rate limiting for API requests",
+    )
+    max_requests_per_minute: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        description="Maximum requests per minute per client",
+    )
 
     # Input validation
-    max_query_length: int = 10000
-    max_content_length: int = 1000000  # 1MB
-
-
-@dataclass
-class SessionMgmtConfig:
-    """Main configuration container."""
-
-    database: DatabaseConfig = field(default_factory=DatabaseConfig)
-    search: SearchConfig = field(default_factory=SearchConfig)
-    token_optimization: TokenOptimizationConfig = field(
-        default_factory=TokenOptimizationConfig,
+    max_query_length: int = Field(
+        default=10000,
+        ge=100,
+        le=1000000,
+        description="Maximum length for search queries",
     )
-    session: SessionConfig = field(default_factory=SessionConfig)
-    integration: IntegrationConfig = field(default_factory=IntegrationConfig)
-    logging: LoggingConfig = field(default_factory=LoggingConfig)
-    security: SecurityConfig = field(default_factory=SecurityConfig)
+    max_content_length: int = Field(
+        default=1000000,
+        ge=1000,
+        le=100000000,
+        description="Maximum content length in bytes (default: 1MB)",
+    )
+
+    @field_validator("exclude_sensitive_patterns")
+    @classmethod
+    def validate_patterns(cls, v: list[str]) -> list[str]:
+        """Validate regex patterns."""
+        import re
+        for pattern in v:
+            try:
+                re.compile(pattern)
+            except re.error as e:
+                msg = f"Invalid regex pattern '{pattern}': {e}"
+                raise ValueError(msg) from e
+        return v
+
+
+class SessionMgmtConfig(BaseSettings):
+    """Main configuration container with environment variable support."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="SESSION_MGMT_",
+        env_nested_delimiter="__",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    database: DatabaseConfig = Field(
+        default_factory=DatabaseConfig,
+        description="Database configuration settings",
+    )
+    search: SearchConfig = Field(
+        default_factory=SearchConfig,
+        description="Search and indexing configuration",
+    )
+    token_optimization: TokenOptimizationConfig = Field(
+        default_factory=TokenOptimizationConfig,
+        description="Token optimization settings",
+    )
+    session: SessionConfig = Field(
+        default_factory=SessionConfig,
+        description="Session management configuration",
+    )
+    integration: IntegrationConfig = Field(
+        default_factory=IntegrationConfig,
+        description="External integrations configuration",
+    )
+    logging: LoggingConfig = Field(
+        default_factory=LoggingConfig,
+        description="Logging configuration",
+    )
+    security: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Security and privacy settings",
+    )
 
     # MCP Server settings
-    server_host: str = "localhost"
-    server_port: int = 3000
-    enable_websockets: bool = True
+    server_host: str = Field(
+        default="localhost",
+        description="MCP server host address",
+    )
+    server_port: int = Field(
+        default=3000,
+        ge=1024,
+        le=65535,
+        description="MCP server port number",
+    )
+    enable_websockets: bool = Field(
+        default=True,
+        description="Enable WebSocket support for MCP server",
+    )
 
     # Development settings
-    debug: bool = False
-    enable_hot_reload: bool = False
+    debug: bool = Field(
+        default=False,
+        description="Enable debug mode",
+    )
+    enable_hot_reload: bool = Field(
+        default=False,
+        description="Enable hot reloading during development",
+    )
 
 
 class ConfigLoader:
-    """Loads configuration from pyproject.toml and environment variables."""
+    """Simplified configuration loader for Pydantic models."""
 
     def __init__(self, project_root: Path | None = None) -> None:
         self.project_root = project_root or self._find_project_root()
@@ -214,35 +509,29 @@ class ConfigLoader:
         return current
 
     def load_config(self, reload: bool = False) -> SessionMgmtConfig:
-        """Load configuration from pyproject.toml and environment variables."""
+        """Load configuration using Pydantic's built-in settings management."""
         if self._config_cache and not reload:
             return self._config_cache
 
-        config = SessionMgmtConfig()
-
-        # Load from pyproject.toml
+        # Load TOML config first if available
+        toml_config = {}
         pyproject_path = self.project_root / "pyproject.toml"
         if pyproject_path.exists() and tomllib:
             try:
                 with pyproject_path.open("rb") as f:
                     toml_data = tomllib.load(f)
-                    self._apply_toml_config(config, toml_data)
+                    toml_config = self._extract_tool_config(toml_data)
             except Exception as e:
                 print(f"Warning: Failed to load pyproject.toml: {e}")
 
-        # Override with environment variables
-        self._apply_env_config(config)
-
-        # Expand user paths
-        self._expand_paths(config)
-
-        # Validate configuration
-        self._validate_config(config)
+        # Create config with Pydantic's settings management
+        # This automatically handles environment variables with SESSION_MGMT_ prefix
+        config = SessionMgmtConfig(**toml_config)
 
         self._config_cache = config
         return config
 
-    def _get_tool_config(self, toml_data: dict[str, Any]) -> dict[str, Any]:
+    def _extract_tool_config(self, toml_data: dict[str, Any]) -> dict[str, Any]:
         """Extract tool configuration from TOML data."""
         tool_config = toml_data.get("tool", {}).get("session-mgmt-mcp", {})
         if not tool_config:
@@ -250,194 +539,6 @@ class ConfigLoader:
             tool_config = toml_data.get("tool", {}).get("session_mgmt_mcp", {})
         return tool_config
 
-    def _apply_section_config(
-        self,
-        config: SessionMgmtConfig,
-        section_name: str,
-        section_config: dict[str, Any],
-    ) -> None:
-        """Apply configuration for a specific section."""
-        if not hasattr(config, section_name):
-            return
-
-        section_obj = getattr(config, section_name)
-        for key, value in section_config.items():
-            if hasattr(section_obj, key):
-                setattr(section_obj, key, value)
-
-    def _apply_server_config(
-        self,
-        config: SessionMgmtConfig,
-        tool_config: dict[str, Any],
-    ) -> None:
-        """Apply server-level configuration."""
-        server_keys = [
-            "server_host",
-            "server_port",
-            "enable_websockets",
-            "debug",
-            "enable_hot_reload",
-        ]
-
-        for key in server_keys:
-            if key in tool_config and hasattr(config, key):
-                setattr(config, key, tool_config[key])
-
-    def _apply_toml_config(
-        self, config: SessionMgmtConfig, toml_data: dict[str, Any]
-    ) -> None:
-        """Apply configuration from pyproject.toml."""
-        tool_config = self._get_tool_config(toml_data)
-        if not tool_config:
-            return
-
-        # Define config sections that map to config object attributes
-        config_sections = [
-            "database",
-            "search",
-            "token_optimization",
-            "session",
-            "integration",
-            "logging",
-            "security",
-        ]
-
-        # Apply section configs
-        for section_name in config_sections:
-            if section_name in tool_config:
-                self._apply_section_config(
-                    config,
-                    section_name,
-                    tool_config[section_name],
-                )
-
-        # Apply server-level config
-        self._apply_server_config(config, tool_config)
-
-    def _apply_env_config(self, config: SessionMgmtConfig) -> None:
-        """Apply configuration from environment variables."""
-        env_mappings = {
-            # Database
-            "SESSION_MGMT_DB_PATH": ("database", "path"),
-            "SESSION_MGMT_DB_TIMEOUT": ("database", "connection_timeout", int),
-            "SESSION_MGMT_ENABLE_MULTI_PROJECT": (
-                "database",
-                "enable_multi_project",
-                bool,
-            ),
-            # Search
-            "SESSION_MGMT_ENABLE_SEMANTIC_SEARCH": (
-                "search",
-                "enable_semantic_search",
-                bool,
-            ),
-            "SESSION_MGMT_EMBEDDING_MODEL": ("search", "embedding_model"),
-            # Token optimization
-            "SESSION_MGMT_ENABLE_OPTIMIZATION": (
-                "token_optimization",
-                "enable_optimization",
-                bool,
-            ),
-            "SESSION_MGMT_MAX_TOKENS": (
-                "token_optimization",
-                "default_max_tokens",
-                int,
-            ),
-            # Session
-            "SESSION_MGMT_AUTO_CHECKPOINT": (
-                "session",
-                "auto_checkpoint_interval",
-                int,
-            ),
-            "SESSION_MGMT_ENABLE_AUTO_COMMIT": ("session", "enable_auto_commit", bool),
-            # Logging
-            "SESSION_MGMT_LOG_LEVEL": ("logging", "level"),
-            "SESSION_MGMT_ENABLE_FILE_LOGGING": (
-                "logging",
-                "enable_file_logging",
-                bool,
-            ),
-            # Server
-            "SESSION_MGMT_HOST": ("server_host",),
-            "SESSION_MGMT_PORT": ("server_port", int),
-            "SESSION_MGMT_DEBUG": ("debug", bool),
-        }
-
-        for env_var, mapping in env_mappings.items():
-            value = os.getenv(env_var)
-            if value is not None:
-                try:
-                    # Parse value if type converter provided
-                    if len(mapping) > 2:
-                        converter = mapping[2]
-                        if converter is bool:
-                            value = value.lower() in ("true", "1", "yes", "on")
-                        elif converter is int:
-                            value = int(value)
-                    elif len(mapping) == 2 and not isinstance(mapping[1], str):
-                        # This is a top-level attribute with type (e.g., ("server_port", int))
-                        converter = mapping[1]
-                        if converter is bool:
-                            value = value.lower() in ("true", "1", "yes", "on")
-                        elif converter is int:
-                            value = int(value)
-
-                    # Set value on config object
-                    if len(mapping) == 3 or (
-                        len(mapping) == 2 and isinstance(mapping[1], str)
-                    ):
-                        # Nested attribute (e.g., database.path) with optional type
-                        section_name, attr_name = mapping[0], mapping[1]
-                        section = getattr(config, section_name)
-                        setattr(section, attr_name, value)
-                    elif len(mapping) >= 1:
-                        # Top-level attribute - mapping[0] should be string
-                        attr_name = mapping[0]
-                        if isinstance(attr_name, str):
-                            setattr(config, attr_name, value)
-
-                except (ValueError, AttributeError) as e:
-                    print(
-                        f"Warning: Invalid environment variable {env_var}={value}: {e}",
-                    )
-
-    def _expand_paths(self, config: SessionMgmtConfig) -> None:
-        """Expand user paths in configuration."""
-        # Database path
-        config.database.path = os.path.expanduser(config.database.path)
-
-        # Log file path
-        config.logging.log_file_path = os.path.expanduser(config.logging.log_file_path)
-
-        # Global workspace path
-        config.integration.global_workspace_path = os.path.expanduser(
-            config.integration.global_workspace_path,
-        )
-
-    def _validate_config(self, config: SessionMgmtConfig) -> None:
-        """Validate configuration values."""
-        # Validate port range
-        if not (1024 <= config.server_port <= 65535):
-            print(
-                f"Warning: Invalid server port {config.server_port}, using default 3000",
-            )
-            config.server_port = 3000
-
-        # Validate token limits
-        if config.token_optimization.default_max_tokens < 100:
-            print("Warning: max_tokens too low, setting to 100")
-            config.token_optimization.default_max_tokens = 100
-
-        # Validate log level
-        valid_log_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
-        if config.logging.level.upper() not in valid_log_levels:
-            print(f"Warning: Invalid log level {config.logging.level}, using INFO")
-            config.logging.level = "INFO"
-
-        # Create log directory if needed
-        if config.logging.enable_file_logging:
-            log_path = Path(config.logging.log_file_path)
-            log_path.parent.mkdir(parents=True, exist_ok=True)
 
     def get_example_config(self) -> str:
         """Get example pyproject.toml configuration."""
