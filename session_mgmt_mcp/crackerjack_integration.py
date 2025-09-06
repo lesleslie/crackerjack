@@ -600,6 +600,47 @@ class CrackerjackIntegration:
         self._lock = threading.Lock()
         self._init_database()
 
+    def execute_command(
+        self,
+        cmd: list[str],
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Execute command synchronously (for CommandRunner protocol compatibility).
+
+        This is a synchronous wrapper around execute_crackerjack_command for
+        compatibility with crackerjack's CommandRunner protocol.
+        """
+        import subprocess
+
+        try:
+            # Execute the command directly using subprocess
+            result = subprocess.run(
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=kwargs.get("timeout", 300),
+                cwd=kwargs.get("cwd", "."),
+                **{k: v for k, v in kwargs.items() if k not in ["timeout", "cwd"]},
+            )
+
+            return {
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode,
+                "success": result.returncode == 0,
+            }
+
+        except subprocess.TimeoutExpired as e:
+            return {
+                "stdout": e.stdout.decode() if e.stdout else "",
+                "stderr": e.stderr.decode() if e.stderr else "Command timed out",
+                "returncode": -1,
+                "success": False,
+            }
+        except Exception as e:
+            return {"stdout": "", "stderr": str(e), "returncode": -2, "success": False}
+
     def _init_database(self) -> None:
         """Initialize SQLite database for Crackerjack integration."""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -692,11 +733,33 @@ class CrackerjackIntegration:
         """Execute Crackerjack command and capture results."""
         args = args or []
 
+        # Map common commands to crackerjack flags
+        command_mappings = {
+            "lint": ["--fast"],  # Run fast hooks (formatting and basic checks)
+            "check": [
+                "--comp"
+            ],  # Run comprehensive hooks (type checking, security, etc.)
+            "test": ["--test"],  # Run tests
+            "format": ["--fast"],  # Run formatting
+            "typecheck": ["--comp"],  # Type checking is part of comprehensive hooks
+            "security": ["--comp"],  # Security is part of comprehensive hooks
+            "complexity": ["--comp"],  # Complexity analysis
+            "analyze": ["--comp"],  # Full analysis
+            "build": [],  # Default run
+            "clean": ["--clean"],  # Clean code
+            "all": ["--all"],  # Run all operations
+            "run": [],  # Default behavior
+        }
+
+        # Get the appropriate flags for the command
+        command_flags = command_mappings.get(command.lower(), [])
+
         # Add AI agent mode support
         if ai_agent_mode:
-            args.append("--ai-agent")
+            command_flags.append("--ai-agent")
 
-        full_command = ["crackerjack", command, *args]
+        # Build the full command
+        full_command = ["crackerjack", *command_flags, *args]
 
         start_time = time.time()
         result_id = f"cj_{int(start_time * 1000)}"

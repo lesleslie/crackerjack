@@ -43,31 +43,44 @@ def register_crackerjack_tools(mcp) -> None:
                 full_command.append("--ai-agent")
 
             integration = CrackerjackIntegration()
-            result = await integration.execute_command(
-                full_command,
-                cwd=working_directory,
-                timeout=timeout,
+            result = await integration.execute_crackerjack_command(
+                command,
+                args.split() if args else None,
+                working_directory,
+                timeout,
+                ai_agent_mode,
             )
 
             # Format response
             output = f"🔧 **Crackerjack {command}** executed\n\n"
 
-            if result.get("success"):
+            if result.exit_code == 0:
                 output += "✅ **Status**: Success\n"
             else:
-                output += "❌ **Status**: Failed\n"
+                output += f"❌ **Status**: Failed (exit code: {result.exit_code})\n"
 
-            if result.get("stdout"):
-                output += f"\n**Output**:\n```\n{result['stdout']}\n```\n"
+            if result.stdout.strip():
+                output += f"\n**Output**:\n```\n{result.stdout}\n```\n"
 
-            if result.get("stderr"):
-                output += f"\n**Errors**:\n```\n{result['stderr']}\n```\n"
+            if result.stderr.strip():
+                output += f"\n**Errors**:\n```\n{result.stderr}\n```\n"
 
-            if result.get("metrics"):
-                metrics = result["metrics"]
-                output += "\n📊 **Metrics**:\n"
-                output += f"- Execution time: {metrics.get('execution_time', 'N/A')}\n"
-                output += f"- Return code: {metrics.get('return_code', 'N/A')}\n"
+            # Add execution metrics
+            output += "\n📊 **Metrics**:\n"
+            output += f"- Execution time: {result.execution_time:.2f}s\n"
+            output += f"- Exit code: {result.exit_code}\n"
+
+            # Add quality metrics if available
+            if result.quality_metrics:
+                output += "\n📈 **Quality Metrics**:\n"
+                for metric, value in result.quality_metrics.items():
+                    output += f"- {metric.replace('_', ' ').title()}: {value:.1f}\n"
+
+            # Add memory insights if available
+            if result.memory_insights:
+                output += "\n🧠 **Insights**:\n"
+                for insight in result.memory_insights[:5]:  # Limit to top 5
+                    output += f"- {insight}\n"
 
             return output
 
@@ -90,17 +103,36 @@ def register_crackerjack_tools(mcp) -> None:
     ) -> str:
         """Run crackerjack with enhanced analytics (replaces /crackerjack:run)."""
         try:
+            from session_mgmt_mcp.crackerjack_integration import CrackerjackIntegration
+
             # Use the enhanced execution method
-            result = await execute_crackerjack_command(
-                command=command,
-                args=args,
-                working_directory=working_directory,
-                timeout=timeout,
-                ai_agent_mode=ai_agent_mode,
+            integration = CrackerjackIntegration()
+            result = await integration.execute_crackerjack_command(
+                command,
+                args.split() if args else None,
+                working_directory,
+                timeout,
+                ai_agent_mode,
             )
 
+            # Format response similar to execute_crackerjack_command
+            formatted_result = f"🔧 **Crackerjack {command}** executed\n\n"
+
+            if result.exit_code == 0:
+                formatted_result += "✅ **Status**: Success\n"
+            else:
+                formatted_result += (
+                    f"❌ **Status**: Failed (exit code: {result.exit_code})\n"
+                )
+
+            if result.stdout.strip():
+                formatted_result += f"\n**Output**:\n```\n{result.stdout}\n```\n"
+
+            if result.stderr.strip():
+                formatted_result += f"\n**Errors**:\n```\n{result.stderr}\n```\n"
+
             # Add session management integration
-            output = f"🔧 **Enhanced Crackerjack Run**\n\n{result}\n"
+            output = f"🔧 **Enhanced Crackerjack Run**\n\n{formatted_result}\n"
 
             # Store execution in history
             try:
@@ -110,7 +142,7 @@ def register_crackerjack_tools(mcp) -> None:
                 db = ReflectionDatabase()
                 async with db:
                     await db.store_conversation(
-                        content=f"Crackerjack {command} execution: {result[:500]}...",
+                        content=f"Crackerjack {command} execution: {formatted_result[:500]}...",
                         project=Path(working_directory).name,
                     )
 
