@@ -181,42 +181,55 @@ class AutofixCoordinator:
 
         # Handle CompletedProcess objects or Mock objects with returncode attribute
         if hasattr(result, "returncode"):
-            if getattr(result, "returncode", 1) == 0:
-                return True
-            # Check stdout and stderr for success patterns if they exist
-            stdout = getattr(result, "stdout", "") or ""
-            stderr = getattr(result, "stderr", "") or ""
-            # If they're not strings, convert to string
-            if not isinstance(stdout, str):
-                stdout = str(stdout)
-            if not isinstance(stderr, str):
-                stderr = str(stderr)
-            output = stdout + stderr
-            if output:
-                success_patterns = [
-                    "fixed",
-                    "formatted",
-                    "reformatted",
-                    "would reformat",
-                    "fixing",
-                ]
-                result_lower = output.lower()
-                return any(pattern in result_lower for pattern in success_patterns)
-            return False
+            return self._check_process_result_success(result)
 
         # Check for string patterns in result
         if isinstance(result, str):
-            success_patterns = [
-                "fixed",
-                "formatted",
-                "reformatted",
-                "would reformat",
-                "fixing",
-            ]
-            result_lower = result.lower()
-            return any(pattern in result_lower for pattern in success_patterns)
+            return self._check_string_result_success(result)
 
         return False
+
+    def _check_process_result_success(self, result: object) -> bool:
+        """Check if a process result indicates success."""
+        if getattr(result, "returncode", 1) == 0:
+            return True
+
+        # Check output for success patterns if return code is non-zero
+        output = self._extract_process_output(result)
+        return self._has_success_patterns(output)
+
+    def _extract_process_output(self, result: object) -> str:
+        """Extract and normalize stdout and stderr from process result."""
+        stdout = getattr(result, "stdout", "") or ""
+        stderr = getattr(result, "stderr", "") or ""
+
+        # Convert to strings if they're not already
+        if not isinstance(stdout, str):
+            stdout = str(stdout)
+        if not isinstance(stderr, str):
+            stderr = str(stderr)
+
+        return stdout + stderr
+
+    def _check_string_result_success(self, result: str) -> bool:
+        """Check if a string result indicates success."""
+        return self._has_success_patterns(result)
+
+    def _has_success_patterns(self, output: str) -> bool:
+        """Check if output contains success patterns."""
+        if not output:
+            return False
+
+        success_patterns = [
+            "fixed",
+            "formatted",
+            "reformatted",
+            "would reformat",
+            "fixing",
+        ]
+
+        output_lower = output.lower()
+        return any(pattern in output_lower for pattern in success_patterns)
 
     def _validate_fix_command(self, cmd: list[str]) -> bool:
         if not cmd or len(cmd) < 2:

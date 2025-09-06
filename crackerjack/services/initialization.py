@@ -669,60 +669,99 @@ python -m crackerjack - a patch
         results: dict[str, t.Any],
     ) -> None:
         try:
-            with source_file.open() as f:
-                source_config = yaml.safe_load(f) or {}
-
-            # Ensure source_config is a dict
-            if not isinstance(source_config, dict):
-                self.console.print(
-                    "[yellow]⚠️[/yellow] Source .pre-commit-config.yaml is not a dictionary, skipping merge"
-                )
+            source_config = self._load_source_config(source_file)
+            if source_config is None:
                 return
 
-            # Delegate to ConfigMergeService for smart merge logic
-            merged_config = self.config_merge_service.smart_merge_pre_commit_config(
+            merged_config = self._perform_config_merge(
                 source_config, target_file, project_name
             )
 
-            # Check if there were actually changes (new repos added)
-            if target_file.exists():
-                with target_file.open() as f:
-                    old_config = yaml.safe_load(f) or {}
+            if self._should_skip_merge(target_file, merged_config, results):
+                return
 
-                # Ensure old_config is a dict
-                if not isinstance(old_config, dict):
-                    old_config = {}
-
-                old_repo_count = len(old_config.get("repos", []))
-                new_repo_count = len(merged_config.get("repos", []))
-
-                if new_repo_count == old_repo_count:
-                    self._skip_existing_file(
-                        ".pre-commit-config.yaml (no new repos)", results
-                    )
-                    return
-
-            # Write the merged configuration
-            self.config_merge_service.write_pre_commit_config(
-                merged_config, target_file
-            )
-
-            t.cast("list[str]", results["files_copied"]).append(
-                ".pre-commit-config.yaml (merged)"
-            )
-
-            try:
-                self.git_service.add_files([str(target_file)])
-            except Exception as e:
-                self.console.print(
-                    f"[yellow]⚠️[/ yellow] Could not git add .pre-commit-config.yaml: {e}"
-                )
-
-            # Calculate number of new repos for display
-            source_repo_count = len(source_config.get("repos", []))
-            self.console.print(
-                f"[green]✅[/ green] Merged .pre-commit-config.yaml ({source_repo_count} repos processed)"
+            self._write_and_finalize_config(
+                merged_config, target_file, source_config, results
             )
 
         except Exception as e:
             self._handle_file_processing_error(".pre-commit-config.yaml", e, results)
+
+    def _load_source_config(self, source_file: Path) -> dict | None:
+        """Load and validate source configuration file."""
+        with source_file.open() as f:
+            source_config = yaml.safe_load(f) or {}
+
+        # Ensure source_config is a dict
+        if not isinstance(source_config, dict):
+            self.console.print(
+                "[yellow]⚠️[/yellow] Source .pre-commit-config.yaml is not a dictionary, skipping merge"
+            )
+            return None
+
+        return source_config
+
+    def _perform_config_merge(
+        self, source_config: dict, target_file: Path, project_name: str
+    ) -> dict:
+        """Perform the configuration merge using ConfigMergeService."""
+        return self.config_merge_service.smart_merge_pre_commit_config(
+            source_config, target_file, project_name
+        )
+
+    def _should_skip_merge(
+        self, target_file: Path, merged_config: dict, results: dict[str, t.Any]
+    ) -> bool:
+        """Check if merge should be skipped due to no changes."""
+        if not target_file.exists():
+            return False
+
+        with target_file.open() as f:
+            old_config = yaml.safe_load(f) or {}
+
+        # Ensure old_config is a dict
+        if not isinstance(old_config, dict):
+            old_config = {}
+
+        old_repo_count = len(old_config.get("repos", []))
+        new_repo_count = len(merged_config.get("repos", []))
+
+        if new_repo_count == old_repo_count:
+            self._skip_existing_file(".pre-commit-config.yaml (no new repos)", results)
+            return True
+
+        return False
+
+    def _write_and_finalize_config(
+        self,
+        merged_config: dict,
+        target_file: Path,
+        source_config: dict,
+        results: dict[str, t.Any],
+    ) -> None:
+        """Write merged config and finalize the process."""
+        # Write the merged configuration
+        self.config_merge_service.write_pre_commit_config(merged_config, target_file)
+
+        t.cast("list[str]", results["files_copied"]).append(
+            ".pre-commit-config.yaml (merged)"
+        )
+
+        self._git_add_config_file(target_file)
+        self._display_merge_success(source_config)
+
+    def _git_add_config_file(self, target_file: Path) -> None:
+        """Add config file to git with error handling."""
+        try:
+            self.git_service.add_files([str(target_file)])
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️[/ yellow] Could not git add .pre-commit-config.yaml: {e}"
+            )
+
+    def _display_merge_success(self, source_config: dict) -> None:
+        """Display success message with repo count."""
+        source_repo_count = len(source_config.get("repos", []))
+        self.console.print(
+            f"[green]✅[/ green] Merged .pre-commit-config.yaml ({source_repo_count} repos processed)"
+        )

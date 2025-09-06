@@ -152,33 +152,54 @@ class PhaseCoordinator:
             return True
         self.session.track_task("configuration", "Configuration updates")
         try:
-            success = True
-
-            # FIRST STEP: Smart config merge before all other operations
-            if not self._perform_smart_config_merge(options):
-                self.console.print(
-                    "[yellow]⚠️[/yellow] Smart config merge encountered issues (continuing)"
-                )
-                # Don't fail the entire configuration phase, just log the warning
-
-            if self._is_crackerjack_project():
-                if not self._copy_config_files_to_package():
-                    success = False
-
-            if not self.config_service.update_precommit_config(options):
-                success = False
-            if not self.config_service.update_pyproject_config(options):
-                success = False
-            self.session.complete_task(
-                "configuration",
-                "Configuration updated successfully"
-                if success
-                else "Some configuration updates failed",
-            )
+            success = self._execute_configuration_steps(options)
+            self._complete_configuration_task(success)
             return success
         except Exception as e:
             self.session.fail_task("configuration", str(e))
             return False
+
+    def _execute_configuration_steps(self, options: OptionsProtocol) -> bool:
+        """Execute all configuration steps and return overall success."""
+        success = True
+
+        # FIRST STEP: Smart config merge before all other operations
+        self._handle_smart_config_merge(options)
+
+        # Handle crackerjack project specific configuration
+        if self._is_crackerjack_project() and not self._copy_config_files_to_package():
+            success = False
+
+        # Update configuration files
+        success &= self._update_configuration_files(options)
+
+        return success
+
+    def _handle_smart_config_merge(self, options: OptionsProtocol) -> None:
+        """Handle smart config merge with warning on failure."""
+        if not self._perform_smart_config_merge(options):
+            self.console.print(
+                "[yellow]⚠️[/yellow] Smart config merge encountered issues (continuing)"
+            )
+            # Don't fail the entire configuration phase, just log the warning
+
+    def _update_configuration_files(self, options: OptionsProtocol) -> bool:
+        """Update precommit and pyproject configuration files."""
+        success = True
+        if not self.config_service.update_precommit_config(options):
+            success = False
+        if not self.config_service.update_pyproject_config(options):
+            success = False
+        return success
+
+    def _complete_configuration_task(self, success: bool) -> None:
+        """Complete the configuration task with appropriate message."""
+        message = (
+            "Configuration updated successfully"
+            if success
+            else "Some configuration updates failed"
+        )
+        self.session.complete_task("configuration", message)
 
     def _perform_smart_config_merge(self, options: OptionsProtocol) -> bool:
         """Perform smart config merge before git operations."""

@@ -318,5 +318,6 @@ max_complexity = 15
 [dependency-groups]
 dev = [
     "excalidraw-mcp>=0.1.2",
+    "radon>=6.0.1",
     "session-mgmt-mcp>=0.1.3",
 ]

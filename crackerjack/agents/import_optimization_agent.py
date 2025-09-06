@@ -71,16 +71,29 @@ class ImportOptimizationAgent(SubAgent):
 
     async def analyze_file(self, file_path: Path) -> ImportAnalysis:
         """Comprehensive import analysis including vulture dead code detection."""
-        if not file_path.exists() or file_path.suffix != ".py":
-            return ImportAnalysis(file_path, [], [], [], [], [])
+        # Validate file
+        if not self._is_valid_python_file(file_path):
+            return self._create_empty_import_analysis(file_path)
 
+        # Parse file content
+        return await self._parse_and_analyze_file(file_path)
+
+    def _is_valid_python_file(self, file_path: Path) -> bool:
+        """Check if the file is a valid Python file."""
+        return file_path.exists() and file_path.suffix == ".py"
+
+    def _create_empty_import_analysis(self, file_path: Path) -> ImportAnalysis:
+        """Create an empty import analysis for invalid files."""
+        return ImportAnalysis(file_path, [], [], [], [], [])
+
+    async def _parse_and_analyze_file(self, file_path: Path) -> ImportAnalysis:
+        """Parse and analyze a Python file."""
         try:
             with file_path.open(encoding="utf-8") as f:
                 content = f.read()
                 tree = ast.parse(content)
         except (SyntaxError, OSError) as e:
-            self.log(f"Could not parse {file_path}: {e}", level="WARNING")
-            return ImportAnalysis(file_path, [], [], [], [], [])
+            return self._handle_parse_error(file_path, e)
 
         # Get unused imports from vulture
         unused_imports = await self._detect_unused_imports(file_path)
@@ -88,31 +101,16 @@ class ImportOptimizationAgent(SubAgent):
         # Analyze import structure
         return self._analyze_imports(file_path, tree, content, unused_imports)
 
+    def _handle_parse_error(self, file_path: Path, e: Exception) -> ImportAnalysis:
+        """Handle errors when parsing a file."""
+        self.log(f"Could not parse {file_path}: {e}", level="WARNING")
+        return ImportAnalysis(file_path, [], [], [], [], [])
+
     async def _detect_unused_imports(self, file_path: Path) -> list[str]:
         """Use vulture to detect unused imports with intelligent filtering."""
         try:
-            # Run vulture on single file to detect unused imports
-            result = subprocess.run(
-                ["uv", "run", "vulture", "--min-confidence", "80", str(file_path)],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=self.context.project_path,
-            )
-
-            unused_imports = []
-            if result.returncode == 0 and result.stdout:
-                for line in result.stdout.strip().split("\n"):
-                    if line and "unused import" in line.lower():
-                        # Extract import name from vulture output using safe patterns
-                        # Format: "file.py:line: unused import 'name' (confidence: XX%)"
-                        pattern_obj = SAFE_PATTERNS["extract_unused_import_name"]
-                        if pattern_obj.test(line):
-                            import_name = pattern_obj.apply(line)
-                            unused_imports.append(import_name)
-
-            return unused_imports
-
+            result = self._run_vulture_analysis(file_path)
+            return self._extract_unused_imports_from_result(result)
         except (
             subprocess.TimeoutExpired,
             subprocess.SubprocessError,
@@ -120,6 +118,47 @@ class ImportOptimizationAgent(SubAgent):
         ):
             # Fallback to basic AST analysis if vulture fails
             return []
+
+    def _run_vulture_analysis(self, file_path: Path) -> subprocess.CompletedProcess:
+        """Run vulture analysis on a single file."""
+        return subprocess.run(
+            ["uv", "run", "vulture", "--min-confidence", "80", str(file_path)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=self.context.project_path,
+        )
+
+    def _extract_unused_imports_from_result(
+        self, result: subprocess.CompletedProcess
+    ) -> list[str]:
+        """Extract unused import names from vulture result."""
+        unused_imports = []
+        if not self._is_valid_vulture_result(result):
+            return unused_imports
+
+        for line in result.stdout.strip().split("\n"):
+            import_name = self._extract_import_name_from_line(line)
+            if import_name:
+                unused_imports.append(import_name)
+
+        return unused_imports
+
+    def _is_valid_vulture_result(self, result: subprocess.CompletedProcess) -> bool:
+        """Check if vulture result is valid and contains output."""
+        return result.returncode == 0 and result.stdout
+
+    def _extract_import_name_from_line(self, line: str) -> str | None:
+        """Extract import name from a single vulture output line."""
+        if not line or "unused import" not in line.lower():
+            return None
+
+        # Extract import name from vulture output using safe patterns
+        # Format: "file.py:line: unused import 'name' (confidence: XX%)"
+        pattern_obj = SAFE_PATTERNS["extract_unused_import_name"]
+        if pattern_obj.test(line):
+            return pattern_obj.apply(line)
+        return None
 
     def _analyze_imports(
         self, file_path: Path, tree: ast.AST, content: str, unused_imports: list[str]
@@ -188,6 +227,16 @@ class ImportOptimizationAgent(SubAgent):
         content: str,
     ) -> dict[str, list[str]]:
         """Analyze different aspects of imports."""
+        # Analyze each aspect of imports separately
+        return self._analyze_each_import_aspect(module_imports, all_imports, content)
+
+    def _analyze_each_import_aspect(
+        self,
+        module_imports: dict[str, list[dict[str, t.Any]]],
+        all_imports: list[dict[str, t.Any]],
+        content: str,
+    ) -> dict[str, list[str]]:
+        """Analyze each import aspect individually."""
         mixed_imports = self._find_mixed_imports(module_imports)
         redundant_imports = self._find_redundant_imports(all_imports)
         optimization_opportunities = self._find_optimization_opportunities(
@@ -1182,60 +1231,91 @@ class ImportOptimizationAgent(SubAgent):
     async def get_diagnostics(self) -> dict[str, t.Any]:
         """Provide comprehensive diagnostics about import analysis across the project."""
         try:
-            # Count Python files in the project
-            python_files = list(self.context.project_path.rglob("*.py"))
-            files_analyzed = len(python_files)
-
-            # Analyze a sample of files for comprehensive import metrics
-            mixed_import_files = 0
-            total_mixed_modules = 0
-            unused_import_files = 0
-            total_unused_imports = 0
-            pep8_violations = 0
-
-            # Analyze first 10 files as a sample
-            for file_path in python_files[:10]:
-                try:
-                    analysis = await self.analyze_file(file_path)
-                    if analysis.mixed_imports:
-                        mixed_import_files += 1
-                        total_mixed_modules += len(analysis.mixed_imports)
-                    if analysis.unused_imports:
-                        unused_import_files += 1
-                        total_unused_imports += len(analysis.unused_imports)
-                    if analysis.import_violations:
-                        pep8_violations += len(analysis.import_violations)
-                except Exception as e:
-                    self.log(f"Could not analyze {file_path}: {e}")
-                    continue  # Skip files that can't be analyzed
-
-            return {
-                "files_analyzed": files_analyzed,
-                "mixed_import_files": mixed_import_files,
-                "total_mixed_modules": total_mixed_modules,
-                "unused_import_files": unused_import_files,
-                "total_unused_imports": total_unused_imports,
-                "pep8_violations": pep8_violations,
-                "agent": "ImportOptimizationAgent",
-                "capabilities": [
-                    "Mixed import style consolidation",
-                    "Unused import detection with vulture",
-                    "PEP 8 import organization",
-                    "Redundant import removal",
-                    "Intelligent context-aware analysis",
-                ],
-            }
+            python_files = self._get_python_files()
+            metrics = await self._analyze_file_sample(python_files[:10])
+            return self._build_success_diagnostics(len(python_files), metrics)
         except Exception as e:
-            return {
-                "files_analyzed": 0,
-                "mixed_import_files": 0,
-                "total_mixed_modules": 0,
-                "unused_import_files": 0,
-                "total_unused_imports": 0,
-                "pep8_violations": 0,
-                "agent": "ImportOptimizationAgent",
-                "error": str(e),
-            }
+            return self._build_error_diagnostics(str(e))
+
+    def _get_python_files(self) -> list[Path]:
+        """Get all Python files in the project."""
+        return list(self.context.project_path.rglob("*.py"))
+
+    async def _analyze_file_sample(self, python_files: list[Path]) -> dict[str, int]:
+        """Analyze a sample of files for comprehensive import metrics."""
+        metrics = {
+            "mixed_import_files": 0,
+            "total_mixed_modules": 0,
+            "unused_import_files": 0,
+            "total_unused_imports": 0,
+            "pep8_violations": 0,
+        }
+
+        for file_path in python_files:
+            file_metrics = await self._analyze_single_file_metrics(file_path)
+            if file_metrics:
+                self._update_metrics(metrics, file_metrics)
+
+        return metrics
+
+    async def _analyze_single_file_metrics(
+        self, file_path: Path
+    ) -> dict[str, int] | None:
+        """Analyze a single file and return its metrics, or None if analysis fails."""
+        try:
+            analysis = await self.analyze_file(file_path)
+            return self._extract_file_metrics(analysis)
+        except Exception as e:
+            self.log(f"Could not analyze {file_path}: {e}")
+            return None
+
+    def _extract_file_metrics(self, analysis: ImportAnalysis) -> dict[str, int]:
+        """Extract metrics from a single file analysis."""
+        metrics = {
+            "mixed_import_files": 1 if analysis.mixed_imports else 0,
+            "total_mixed_modules": len(analysis.mixed_imports),
+            "unused_import_files": 1 if analysis.unused_imports else 0,
+            "total_unused_imports": len(analysis.unused_imports),
+            "pep8_violations": len(analysis.import_violations),
+        }
+        return metrics
+
+    def _update_metrics(
+        self, metrics: dict[str, int], file_metrics: dict[str, int]
+    ) -> None:
+        """Update overall metrics with single file metrics."""
+        for key, value in file_metrics.items():
+            metrics[key] += value
+
+    def _build_success_diagnostics(
+        self, files_analyzed: int, metrics: dict[str, int]
+    ) -> dict[str, t.Any]:
+        """Build successful diagnostics response."""
+        return {
+            "files_analyzed": files_analyzed,
+            **metrics,
+            "agent": "ImportOptimizationAgent",
+            "capabilities": [
+                "Mixed import style consolidation",
+                "Unused import detection with vulture",
+                "PEP 8 import organization",
+                "Redundant import removal",
+                "Intelligent context-aware analysis",
+            ],
+        }
+
+    def _build_error_diagnostics(self, error: str) -> dict[str, t.Any]:
+        """Build error diagnostics response."""
+        return {
+            "files_analyzed": 0,
+            "mixed_import_files": 0,
+            "total_mixed_modules": 0,
+            "unused_import_files": 0,
+            "total_unused_imports": 0,
+            "pep8_violations": 0,
+            "agent": "ImportOptimizationAgent",
+            "error": error,
+        }
 
 
 agent_registry.register(ImportOptimizationAgent)

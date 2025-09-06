@@ -571,35 +571,58 @@ class WorkflowPipeline:
 
         verification_success = True
 
-        if any("test" in fix.lower() for fix in fix_result.fixes_applied):
-            self.logger.info("Re-running tests to verify test fixes")
-            test_success = self.phases.run_testing_phase(options)
-            if not test_success:
-                self.logger.warning("Test verification failed-test fixes did not work")
+        # Verify test fixes
+        if self._should_verify_test_fixes(fix_result.fixes_applied):
+            if not await self._verify_test_fixes(options):
                 verification_success = False
 
+        # Verify hook fixes
+        if self._should_verify_hook_fixes(fix_result.fixes_applied):
+            if not await self._verify_hook_fixes(options):
+                verification_success = False
+
+        self._log_verification_result(verification_success)
+        return verification_success
+
+    def _should_verify_test_fixes(self, fixes_applied: list[str]) -> bool:
+        """Check if test fixes need verification."""
+        return any("test" in fix.lower() for fix in fixes_applied)
+
+    async def _verify_test_fixes(self, options: OptionsProtocol) -> bool:
+        """Verify test fixes by re-running tests."""
+        self.logger.info("Re-running tests to verify test fixes")
+        test_success = self.phases.run_testing_phase(options)
+        if not test_success:
+            self.logger.warning("Test verification failed-test fixes did not work")
+        return test_success
+
+    def _should_verify_hook_fixes(self, fixes_applied: list[str]) -> bool:
+        """Check if hook fixes need verification."""
         hook_fixes = [
             f
-            for f in fix_result.fixes_applied
+            for f in fixes_applied
             if "hook" not in f.lower()
             or "complexity" in f.lower()
             or "type" in f.lower()
         ]
-        if hook_fixes:
-            self.logger.info("Re-running comprehensive hooks to verify hook fixes")
-            hook_success = self.phases.run_comprehensive_hooks_only(options)
-            if not hook_success:
-                self.logger.warning("Hook verification failed-hook fixes did not work")
-                verification_success = False
+        return bool(hook_fixes)
 
+    async def _verify_hook_fixes(self, options: OptionsProtocol) -> bool:
+        """Verify hook fixes by re-running comprehensive hooks."""
+        self.logger.info("Re-running comprehensive hooks to verify hook fixes")
+        hook_success = self.phases.run_comprehensive_hooks_only(options)
+        if not hook_success:
+            self.logger.warning("Hook verification failed-hook fixes did not work")
+        return hook_success
+
+    def _log_verification_result(self, verification_success: bool) -> None:
+        """Log the final verification result."""
         if verification_success:
             self.logger.info("All AI agent fixes verified successfully")
         else:
             self.logger.error(
                 "Verification failed-some fixes did not resolve the issues"
             )
-
-        return verification_success
 
     async def _collect_issues_from_failures(self) -> list[Issue]:
         issues: list[Issue] = []
@@ -750,145 +773,138 @@ class WorkflowPipeline:
         )
 
     def _parse_hook_error_details(self, task_id: str, error_msg: str) -> list[Issue]:
+        """Parse hook error details and create specific issues."""
         issues: list[Issue] = []
 
         if task_id == "comprehensive_hooks":
-            if "complexipy" in error_msg.lower() or "c901" in error_msg.lower():
-                issues.append(
-                    Issue(
-                        id="complexity_violation",
-                        type=IssueType.COMPLEXITY,
-                        severity=Priority.HIGH,
-                        message="Code complexity violation detected",
-                        stage="comprehensive",
-                    )
-                )
-
-            if "pyright" in error_msg.lower():
-                issues.append(
-                    Issue(
-                        id="pyright_type_error",
-                        type=IssueType.TYPE_ERROR,
-                        severity=Priority.HIGH,
-                        message="Type checking errors detected by pyright",
-                        stage="comprehensive",
-                    )
-                )
-
-            if "bandit" in error_msg.lower():
-                issues.append(
-                    Issue(
-                        id="bandit_security_issue",
-                        type=IssueType.SECURITY,
-                        severity=Priority.HIGH,
-                        message="Security vulnerabilities detected by bandit",
-                        stage="comprehensive",
-                    )
-                )
-
-            if "refurb" in error_msg.lower():
-                issues.append(
-                    Issue(
-                        id="refurb_quality_issue",
-                        type=IssueType.PERFORMANCE,
-                        severity=Priority.MEDIUM,
-                        message="Code quality issues detected by refurb",
-                        stage="comprehensive",
-                    )
-                )
-
-            if "vulture" in error_msg.lower():
-                issues.append(
-                    Issue(
-                        id="vulture_dead_code",
-                        type=IssueType.DEAD_CODE,
-                        severity=Priority.MEDIUM,
-                        message="Dead code detected by vulture",
-                        stage="comprehensive",
-                    )
-                )
-
-            if "validate-regex-patterns" in error_msg.lower() or any(
-                keyword in error_msg.lower()
-                for keyword in ("raw regex", "regex pattern", r"\g<", "replacement")
-            ):
-                issues.append(
-                    Issue(
-                        id="regex_validation_failure",
-                        type=IssueType.REGEX_VALIDATION,
-                        severity=Priority.HIGH,
-                        message="Unsafe regex patterns detected by validate-regex-patterns",
-                        stage="fast",
-                    )
-                )
-
+            issues.extend(self._parse_comprehensive_hook_errors(error_msg))
         elif task_id == "fast_hooks":
-            issues.append(
-                Issue(
-                    id="fast_hooks_formatting",
-                    type=IssueType.FORMATTING,
-                    severity=Priority.LOW,
-                    message="Code formatting issues detected",
-                    stage="fast",
-                )
-            )
+            issues.append(self._create_fast_hook_issue())
 
         return issues
+
+    def _parse_comprehensive_hook_errors(self, error_msg: str) -> list[Issue]:
+        """Parse comprehensive hook error messages and create specific issues."""
+        issues: list[Issue] = []
+        error_lower = error_msg.lower()
+
+        # Check each error type
+        complexity_issue = self._check_complexity_error(error_lower)
+        if complexity_issue:
+            issues.append(complexity_issue)
+
+        type_error_issue = self._check_type_error(error_lower)
+        if type_error_issue:
+            issues.append(type_error_issue)
+
+        security_issue = self._check_security_error(error_lower)
+        if security_issue:
+            issues.append(security_issue)
+
+        performance_issue = self._check_performance_error(error_lower)
+        if performance_issue:
+            issues.append(performance_issue)
+
+        dead_code_issue = self._check_dead_code_error(error_lower)
+        if dead_code_issue:
+            issues.append(dead_code_issue)
+
+        regex_issue = self._check_regex_validation_error(error_lower)
+        if regex_issue:
+            issues.append(regex_issue)
+
+        return issues
+
+    def _check_complexity_error(self, error_lower: str) -> Issue | None:
+        """Check for complexity errors and create issue if found."""
+        if "complexipy" in error_lower or "c901" in error_lower:
+            return Issue(
+                id="complexity_violation",
+                type=IssueType.COMPLEXITY,
+                severity=Priority.HIGH,
+                message="Code complexity violation detected",
+                stage="comprehensive",
+            )
+        return None
+
+    def _check_type_error(self, error_lower: str) -> Issue | None:
+        """Check for type errors and create issue if found."""
+        if "pyright" in error_lower:
+            return Issue(
+                id="pyright_type_error",
+                type=IssueType.TYPE_ERROR,
+                severity=Priority.HIGH,
+                message="Type checking errors detected by pyright",
+                stage="comprehensive",
+            )
+        return None
+
+    def _check_security_error(self, error_lower: str) -> Issue | None:
+        """Check for security errors and create issue if found."""
+        if "bandit" in error_lower:
+            return Issue(
+                id="bandit_security_issue",
+                type=IssueType.SECURITY,
+                severity=Priority.HIGH,
+                message="Security vulnerabilities detected by bandit",
+                stage="comprehensive",
+            )
+        return None
+
+    def _check_performance_error(self, error_lower: str) -> Issue | None:
+        """Check for performance errors and create issue if found."""
+        if "refurb" in error_lower:
+            return Issue(
+                id="refurb_quality_issue",
+                type=IssueType.PERFORMANCE,
+                severity=Priority.MEDIUM,
+                message="Code quality issues detected by refurb",
+                stage="comprehensive",
+            )
+        return None
+
+    def _check_dead_code_error(self, error_lower: str) -> Issue | None:
+        """Check for dead code errors and create issue if found."""
+        if "vulture" in error_lower:
+            return Issue(
+                id="vulture_dead_code",
+                type=IssueType.DEAD_CODE,
+                severity=Priority.MEDIUM,
+                message="Dead code detected by vulture",
+                stage="comprehensive",
+            )
+        return None
+
+    def _check_regex_validation_error(self, error_lower: str) -> Issue | None:
+        """Check for regex validation errors and create issue if found."""
+        regex_keywords = ("raw regex", "regex pattern", r"\g<", "replacement")
+        if "validate-regex-patterns" in error_lower or any(
+            keyword in error_lower for keyword in regex_keywords
+        ):
+            return Issue(
+                id="regex_validation_failure",
+                type=IssueType.REGEX_VALIDATION,
+                severity=Priority.HIGH,
+                message="Unsafe regex patterns detected by validate-regex-patterns",
+                stage="fast",
+            )
+        return None
+
+    def _create_fast_hook_issue(self) -> Issue:
+        """Create an issue for fast hook errors."""
+        return Issue(
+            id="fast_hooks_formatting",
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message="Code formatting issues detected",
+            stage="fast",
+        )
 
     def _parse_issues_for_agents(self, issue_strings: list[str]) -> list[Issue]:
         issues: list[Issue] = []
 
         for i, issue_str in enumerate(issue_strings):
-            issue_type = IssueType.FORMATTING
-            priority = Priority.MEDIUM
-
-            if any(
-                keyword in issue_str.lower()
-                for keyword in ("type", "annotation", "pyright")
-            ):
-                issue_type = IssueType.TYPE_ERROR
-                priority = Priority.HIGH
-            elif any(
-                keyword in issue_str.lower()
-                for keyword in ("security", "bandit", "hardcoded")
-            ):
-                issue_type = IssueType.SECURITY
-                priority = Priority.HIGH
-            elif any(
-                keyword in issue_str.lower()
-                for keyword in ("complexity", "complexipy", "c901", "too complex")
-            ):
-                issue_type = IssueType.COMPLEXITY
-                priority = Priority.HIGH
-            elif any(
-                keyword in issue_str.lower()
-                for keyword in ("unused", "dead", "vulture")
-            ):
-                issue_type = IssueType.DEAD_CODE
-                priority = Priority.MEDIUM
-            elif any(
-                keyword in issue_str.lower()
-                for keyword in ("performance", "refurb", "furb")
-            ):
-                issue_type = IssueType.PERFORMANCE
-                priority = Priority.MEDIUM
-            elif any(
-                keyword in issue_str.lower() for keyword in ("import", "creosote")
-            ):
-                issue_type = IssueType.IMPORT_ERROR
-                priority = Priority.MEDIUM
-            elif any(
-                keyword in issue_str.lower()
-                for keyword in (
-                    "regex",
-                    "pattern",
-                    "validate-regex-patterns",
-                    r"\g<",
-                    "replacement",
-                )
-            ):
-                issue_type = IssueType.REGEX_VALIDATION
-                priority = Priority.HIGH
+            issue_type, priority = self._classify_issue(issue_str)
 
             issue = Issue(
                 id=f"parsed_issue_{i}",
@@ -900,6 +916,77 @@ class WorkflowPipeline:
             issues.append(issue)
 
         return issues
+
+    def _classify_issue(self, issue_str: str) -> tuple[IssueType, Priority]:
+        """Classify an issue string to determine its type and priority."""
+        issue_lower = issue_str.lower()
+
+        # Check high-priority issues first
+        if self._is_type_error(issue_lower):
+            return IssueType.TYPE_ERROR, Priority.HIGH
+        if self._is_security_issue(issue_lower):
+            return IssueType.SECURITY, Priority.HIGH
+        if self._is_complexity_issue(issue_lower):
+            return IssueType.COMPLEXITY, Priority.HIGH
+        if self._is_regex_validation_issue(issue_lower):
+            return IssueType.REGEX_VALIDATION, Priority.HIGH
+
+        # Check medium-priority issues
+        if self._is_dead_code_issue(issue_lower):
+            return IssueType.DEAD_CODE, Priority.MEDIUM
+        if self._is_performance_issue(issue_lower):
+            return IssueType.PERFORMANCE, Priority.MEDIUM
+        if self._is_import_error(issue_lower):
+            return IssueType.IMPORT_ERROR, Priority.MEDIUM
+
+        # Default to formatting issue
+        return IssueType.FORMATTING, Priority.MEDIUM
+
+    def _is_type_error(self, issue_lower: str) -> bool:
+        """Check if issue is related to type errors."""
+        return any(
+            keyword in issue_lower for keyword in ("type", "annotation", "pyright")
+        )
+
+    def _is_security_issue(self, issue_lower: str) -> bool:
+        """Check if issue is related to security."""
+        return any(
+            keyword in issue_lower for keyword in ("security", "bandit", "hardcoded")
+        )
+
+    def _is_complexity_issue(self, issue_lower: str) -> bool:
+        """Check if issue is related to code complexity."""
+        return any(
+            keyword in issue_lower
+            for keyword in ("complexity", "complexipy", "c901", "too complex")
+        )
+
+    def _is_regex_validation_issue(self, issue_lower: str) -> bool:
+        """Check if issue is related to regex validation."""
+        return any(
+            keyword in issue_lower
+            for keyword in (
+                "regex",
+                "pattern",
+                "validate-regex-patterns",
+                r"\g<",
+                "replacement",
+            )
+        )
+
+    def _is_dead_code_issue(self, issue_lower: str) -> bool:
+        """Check if issue is related to dead code."""
+        return any(keyword in issue_lower for keyword in ("unused", "dead", "vulture"))
+
+    def _is_performance_issue(self, issue_lower: str) -> bool:
+        """Check if issue is related to performance."""
+        return any(
+            keyword in issue_lower for keyword in ("performance", "refurb", "furb")
+        )
+
+    def _is_import_error(self, issue_lower: str) -> bool:
+        """Check if issue is related to import errors."""
+        return any(keyword in issue_lower for keyword in ("import", "creosote"))
 
     def _log_failure_counts_if_debugging(
         self, test_count: int, hook_count: int

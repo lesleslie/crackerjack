@@ -167,24 +167,68 @@ def clean_python_code(code: str) -> str:
     lines = code.splitlines()
     cleaned_lines: list[str] = []
     for line in lines:
-        match line.strip():
-            case "":
-                if not cleaned_lines or cleaned_lines[-1].strip():
-                    cleaned_lines.append("")
-            case s if s.startswith(("import ", "from ")):
-                cleaned_lines.append(line)
-            case s if s.startswith("#"):
-                continue
-            case s if "#" in s and (
-                not any(
-                    skip in s for skip in ("# noqa", "# type: ", "# pragma", "# skip")
-                )
-            ):
-                code_part = line.split("#", 1)[0].rstrip()
-                if code_part:
-                    cleaned_lines.append(code_part)
-            case s if s.startswith(('"""', "'''")):
-                continue
-            case _:
-                cleaned_lines.append(line)
+        processed_line = _process_line_for_cleaning(line, cleaned_lines)
+        if processed_line is not None:
+            cleaned_lines.append(processed_line)
     return "\n".join(cleaned_lines)
+
+
+def _process_line_for_cleaning(line: str, cleaned_lines: list[str]) -> str | None:
+    """Process a single line for Python code cleaning.
+    
+    Returns:
+        The processed line to add, or None if the line should be skipped.
+    """
+    stripped = line.strip()
+    
+    if _should_handle_empty_line(stripped, cleaned_lines):
+        return ""
+    
+    if _is_import_line(stripped):
+        return line
+        
+    if _is_comment_to_skip(stripped):
+        return None
+        
+    if _has_inline_comment_to_process(stripped):
+        return _extract_code_part(line)
+        
+    if _is_docstring_line(stripped):
+        return None
+        
+    return line
+
+
+def _should_handle_empty_line(stripped: str, cleaned_lines: list[str]) -> bool:
+    """Check if empty line should be preserved."""
+    return stripped == "" and (not cleaned_lines or cleaned_lines[-1].strip())
+
+
+def _is_import_line(stripped: str) -> bool:
+    """Check if line is an import statement."""
+    return stripped.startswith(("import ", "from "))
+
+
+def _is_comment_to_skip(stripped: str) -> bool:
+    """Check if line is a comment that should be skipped."""
+    return stripped.startswith("#")
+
+
+def _has_inline_comment_to_process(stripped: str) -> bool:
+    """Check if line has inline comment that should be processed."""
+    if "#" not in stripped:
+        return False
+    
+    skip_markers = ("# noqa", "# type: ", "# pragma", "# skip")
+    return not any(skip in stripped for skip in skip_markers)
+
+
+def _extract_code_part(line: str) -> str | None:
+    """Extract code part from line with inline comment."""
+    code_part = line.split("#", 1)[0].rstrip()
+    return code_part if code_part else None
+
+
+def _is_docstring_line(stripped: str) -> bool:
+    """Check if line starts a docstring."""
+    return stripped.startswith(('"""', "'''"))

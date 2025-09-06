@@ -85,39 +85,60 @@ async def _validate_stage_request(context, rate_limiter) -> str | None:
 
 def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
     try:
-        # Input validation
         validator = get_input_validator()
 
         # Validate stage argument
-        stage_result = validator.sanitizer.sanitize_string(
-            args.strip(), max_length=50, strict_alphanumeric=True
-        )
-        if not stage_result.valid:
-            return f'{{"error": "Invalid stage argument: {stage_result.error_message}", "success": false}}'
+        stage_validation = _validate_stage_argument(validator, args)
+        if isinstance(stage_validation, str):
+            return stage_validation
+        stage = stage_validation
 
-        stage = stage_result.sanitized_value.lower()
-        valid_stages = {"fast", "comprehensive", "tests", "cleaning", "init"}
-
-        if stage not in valid_stages:
-            return f'{{"error": "Invalid stage: {stage}. Valid stages: {valid_stages}", "success": false}}'
-
-        # Validate and parse JSON kwargs if provided
-        extra_kwargs = {}
-        if kwargs.strip():
-            kwargs_result = validator.validate_json_payload(kwargs.strip())
-            if not kwargs_result.valid:
-                return f'{{"error": "Invalid JSON in kwargs: {kwargs_result.error_message}", "success": false}}'
-
-            extra_kwargs = kwargs_result.sanitized_value
-
-            # Additional validation on JSON structure
-            if not isinstance(extra_kwargs, dict):
-                return f'{{"error": "kwargs must be a JSON object, got {type(extra_kwargs).__name__}", "success": false}}'
+        # Validate and parse kwargs
+        kwargs_validation = _validate_kwargs_argument(validator, kwargs)
+        if isinstance(kwargs_validation, str):
+            return kwargs_validation
+        extra_kwargs = kwargs_validation
 
         return stage, extra_kwargs
 
     except Exception as e:
         return f'{{"error": "Stage argument parsing failed: {e}", "success": false}}'
+
+
+def _validate_stage_argument(validator, args: str) -> str:
+    """Validate and sanitize the stage argument."""
+    stage_result = validator.sanitizer.sanitize_string(
+        args.strip(), max_length=50, strict_alphanumeric=True
+    )
+    if not stage_result.valid:
+        return f'{{"error": "Invalid stage argument: {stage_result.error_message}", "success": false}}'
+
+    stage = stage_result.sanitized_value.lower()
+    valid_stages = {"fast", "comprehensive", "tests", "cleaning", "init"}
+
+    if stage not in valid_stages:
+        return f'{{"error": "Invalid stage: {stage}. Valid stages: {valid_stages}", "success": false}}'
+
+    return stage
+
+
+def _validate_kwargs_argument(validator, kwargs: str) -> dict | str:
+    """Validate and parse the kwargs argument."""
+    extra_kwargs = {}
+    if not kwargs.strip():
+        return extra_kwargs
+
+    kwargs_result = validator.validate_json_payload(kwargs.strip())
+    if not kwargs_result.valid:
+        return f'{{"error": "Invalid JSON in kwargs: {kwargs_result.error_message}", "success": false}}'
+
+    extra_kwargs = kwargs_result.sanitized_value
+
+    # Additional validation on JSON structure
+    if not isinstance(extra_kwargs, dict):
+        return f'{{"error": "kwargs must be a JSON object, got {type(extra_kwargs).__name__}", "success": false}}'
+
+    return extra_kwargs
 
 
 def _configure_stage_options(stage: str) -> "WorkflowOptions":

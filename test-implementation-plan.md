@@ -7,21 +7,21 @@ This document outlines a comprehensive test implementation plan for the new feat
 The testing strategy will follow the implementation phases outlined in the feature plan, with a focus on:
 
 1. **Pydantic/SQLModel Validation Testing** - Ensuring all new models properly validate inputs and handle edge cases
-2. **Integration Testing** - Verifying components work together correctly
-3. **Performance Testing** - Validating performance improvements and benchmarks
-4. **Security Testing** - Ensuring all security validations are properly implemented
-5. **AI/Human Dual Output Testing** - Verifying both output formats work correctly
-6. **Backward Compatibility Testing** - Ensuring existing functionality is not broken
+1. **Integration Testing** - Verifying components work together correctly
+1. **Performance Testing** - Validating performance improvements and benchmarks
+1. **Security Testing** - Ensuring all security validations are properly implemented
+1. **AI/Human Dual Output Testing** - Verifying both output formats work correctly
+1. **Backward Compatibility Testing** - Ensuring existing functionality is not broken
 
 ## Test Architecture
 
 ### Core Testing Principles
 
 1. **Unit Testing** - Individual Pydantic validators and SQLModel operations
-2. **Integration Testing** - Complete data flow from input → validation → storage → output
-3. **Performance Testing** - Serialization and database operation benchmarks
-4. **Security Testing** - Path traversal, injection prevention, input sanitization
-5. **Migration Testing** - Backward compatibility with existing data formats
+1. **Integration Testing** - Complete data flow from input → validation → storage → output
+1. **Performance Testing** - Serialization and database operation benchmarks
+1. **Security Testing** - Path traversal, injection prevention, input sanitization
+1. **Migration Testing** - Backward compatibility with existing data formats
 
 ### Test Framework Structure
 
@@ -29,29 +29,29 @@ The testing strategy will follow the implementation phases outlined in the featu
 # Base test structure for all components
 class BaseCrackerjackTest:
     """Base test class with common utilities and fixtures."""
-    
+
     @pytest.fixture
     def valid_config(self):
         """Provide valid configuration for testing."""
         pass
-    
+
     @pytest.fixture
     def mock_dependencies(self):
         """Mock external dependencies for isolated testing."""
         pass
-    
+
     def test_validation_success(self):
         """Test successful validation with valid inputs."""
         pass
-    
+
     def test_validation_failures(self):
         """Test validation error cases with proper error messages."""
         pass
-    
+
     def test_dual_output_formats(self):
         """Test both AI and human output formats."""
         pass
-    
+
     def test_security_validations(self):
         """Test security validator functions."""
         pass
@@ -64,24 +64,28 @@ class BaseCrackerjackTest:
 #### Test Categories
 
 1. **Rope Integration Tests**
+
    - Function extraction with guidance
    - Variable inlining operations
    - Symbol renaming across project
    - Error handling for invalid operations
 
-2. **Refactoring Analyzer Tests**
+1. **Refactoring Analyzer Tests**
+
    - Long function detection
    - Complex condition analysis
    - Duplicate pattern identification
    - Nested loop detection
 
-3. **Guidance Generator Tests**
+1. **Guidance Generator Tests**
+
    - TDD guidance generation
    - Step-by-step refactoring instructions
    - Code example generation
    - Learning point identification
 
-4. **CLI Command Tests**
+1. **CLI Command Tests**
+
    - `refactor analyze` command with various options
    - `refactor extract` command functionality
    - `refactor opportunities` output formatting
@@ -106,10 +110,11 @@ def complex_condition(x, y, z):
     return False
 '''
 
+
 @pytest.fixture
 def rope_service():
     """Mock Rope refactoring service."""
-    with patch('crackerjack.services.rope_refactoring.RopeRefactoringService') as mock:
+    with patch("crackerjack.services.rope_refactoring.RopeRefactoringService") as mock:
         yield mock
 ```
 
@@ -118,22 +123,26 @@ def rope_service():
 #### Test Categories
 
 1. **Pydantic Model Validation Tests**
+
    - DocumentationMetadata validation
    - PromptTemplate variable validation
    - ValidationResult consistency checking
 
-2. **Documentation Generation Tests**
+1. **Documentation Generation Tests**
+
    - AI-REFERENCE.md structure validation
    - AGENT-CAPABILITIES.json format validation
    - ERROR-PATTERNS.yaml parsing
    - README.md enhancement validation
 
-3. **Visual Documentation Tests**
+1. **Visual Documentation Tests**
+
    - Mermaid diagram generation
    - Excalidraw integration
    - Architecture diagram accuracy
 
-4. **API Documentation Tests**
+1. **API Documentation Tests**
+
    - Structured example validation
    - Parameter documentation accuracy
    - Usage pattern library completeness
@@ -151,6 +160,7 @@ def sample_ai_reference_content():
 | Fix all issues | python -m crackerjack | -t --ai-agent | Quality score ≥85% |
 """
 
+
 @pytest.fixture
 def sample_agent_capabilities():
     """Sample AGENT-CAPABILITIES.json for testing."""
@@ -159,7 +169,7 @@ def sample_agent_capabilities():
             "LintingAgent": {
                 "confidence_level": 0.95,
                 "specializations": ["style", "conventions", "pep8"],
-                "typical_fixes": ["import sorting", "line length", "whitespace"]
+                "typical_fixes": ["import sorting", "line length", "whitespace"],
             }
         }
     }
@@ -170,24 +180,28 @@ def sample_agent_capabilities():
 #### Test Categories
 
 1. **SQLModel Database Tests**
+
    - MetricRecord CRUD operations
    - JobExecution relationship validation
    - DashboardWidget positioning
    - AlertRule evaluation
 
-2. **WebSocket Integration Tests**
+1. **WebSocket Integration Tests**
+
    - Real-time data streaming
    - Client connection handling
    - Message broadcasting
    - Error scenario handling
 
-3. **Dashboard Component Tests**
+1. **Dashboard Component Tests**
+
    - TUI rendering with Rich
    - Web dashboard functionality
    - Embedded dashboard integration
    - Responsive layout testing
 
-4. **Monitoring Integration Tests**
+1. **Monitoring Integration Tests**
+
    - End-to-end metric flow
    - Alert system functionality
    - Performance monitoring
@@ -203,6 +217,7 @@ def test_database():
     SQLModel.metadata.create_all(engine)
     return engine
 
+
 @pytest.fixture
 def sample_metrics_data():
     """Sample metric data for testing."""
@@ -211,14 +226,14 @@ def sample_metrics_data():
             project_name="test_project",
             metric_type=MetricType.QUALITY_SCORE,
             metric_value=85.5,
-            session_id="test_session_001"
+            session_id="test_session_001",
         ),
         MetricData(
             project_name="test_project",
             metric_type=MetricType.TEST_COVERAGE,
             metric_value=92.3,
-            session_id="test_session_001"
-        )
+            session_id="test_session_001",
+        ),
     ]
 ```
 
@@ -227,24 +242,28 @@ def sample_metrics_data():
 #### Test Categories
 
 1. **Virtual Docstring Tests**
+
    - AST parsing accuracy
    - Docstring generation quality
    - Context extraction validation
    - Virtual file management
 
-2. **MkDocs Integration Tests**
+1. **MkDocs Integration Tests**
+
    - Configuration generation
    - Theme customization
    - Plugin integration
    - Navigation structure
 
-3. **Validation System Tests**
+1. **Validation System Tests**
+
    - Consistency checking
    - Conflict detection
    - Automated resolution
    - Error reporting
 
-4. **Deployment Tests**
+1. **Deployment Tests**
+
    - GitHub Pages deployment
    - Local build serving
    - Custom deployment commands
@@ -256,48 +275,51 @@ def sample_metrics_data():
 @pytest.fixture
 def mock_ai_docstring_service():
     """Mock AI service for docstring generation."""
+
     class MockAIService:
         def __init__(self):
             self.responses = {
                 "simple_function": '''def example_function(param1: str, param2: int) -> bool:
                     """Example function docstring.
-                    
+
                     Args:
                         param1: Description of param1
                         param2: Description of param2
-                        
+
                     Returns:
                         bool: Description of return value
                     """''',
                 "class_method": '''class ExampleClass:
                     def method(self, arg: str) -> None:
-                        """Example method docstring."""'''
+                        """Example method docstring."""''',
             }
-        
+
         async def generate_docstring(self, prompt: str, context: dict) -> str:
             # Return appropriate mock response
             pass
-    
+
     return MockAIService()
+
 
 @pytest.fixture
 def mock_mkdocs_build():
     """Mock MkDocs build process."""
+
     class MockMkDocsBuild:
         def __init__(self):
             self.build_called = False
             self.serve_called = False
             self.config_file = None
-        
+
         def build(self, config_file: str, strict: bool = True):
             self.build_called = True
             self.config_file = config_file
             return {"success": True, "warnings": []}
-        
+
         def serve(self, config_file: str, dev_addr: str = "127.0.0.1:8000"):
             self.serve_called = True
             return {"url": f"http://{dev_addr}", "pid": 12345}
-    
+
     return MockMkDocsBuild()
 ```
 
@@ -306,24 +328,28 @@ def mock_mkdocs_build():
 #### Test Categories
 
 1. **Configuration Model Tests**
+
    - Path validation
    - Range constraint enforcement
    - Default value handling
    - Environment variable integration
 
-2. **State Management Tests**
+1. **State Management Tests**
+
    - Session initialization
    - Stage tracking
    - Issue management
    - Persistence validation
 
-3. **Database Model Tests**
+1. **Database Model Tests**
+
    - Relationship integrity
    - Index optimization
    - Query performance
    - Transaction handling
 
-4. **Migration Tests**
+1. **Migration Tests**
+
    - Dataclass to Pydantic conversion
    - Legacy JSON compatibility
    - Schema evolution
@@ -340,8 +366,9 @@ def valid_build_config():
         site_description="AI-driven Python development platform",
         mkdocs_theme="material",
         ai_model="claude-3-sonnet",
-        deploy_target="github-pages"
+        deploy_target="github-pages",
     )
+
 
 @pytest.fixture
 def sample_prompt_templates():
@@ -354,7 +381,7 @@ def sample_prompt_templates():
             required_variables=["function_name", "parameters"],
             optional_variables=["context"],
             expected_output_format="python_code",
-            token_estimate=150
+            token_estimate=150,
         )
     ]
 ```
@@ -364,18 +391,21 @@ def sample_prompt_templates():
 ### Shared Component Testing
 
 1. **Pydantic Base Models**
+
    - Dual output format validation
    - Security validator testing
    - Serialization performance
    - Error handling consistency
 
-2. **AI Integration Layer**
+1. **AI Integration Layer**
+
    - Client pool management
    - Prompt template validation
    - Response processing
    - Error recovery
 
-3. **WebSocket Infrastructure**
+1. **WebSocket Infrastructure**
+
    - Channel management
    - Broadcast performance
    - Connection handling
@@ -384,16 +414,19 @@ def sample_prompt_templates():
 ### Integration Test Scenarios
 
 1. **Documentation → Monitoring Flow**
+
    - Documentation generation metrics tracking
    - Build performance monitoring
    - Validation error reporting
 
-2. **Refactoring → Documentation Integration**
+1. **Refactoring → Documentation Integration**
+
    - Refactoring guidance documentation
    - Code example generation
    - Best practice documentation
 
-3. **Monitoring → All Features**
+1. **Monitoring → All Features**
+
    - Performance metrics collection
    - Error rate tracking
    - Usage analytics
@@ -403,33 +436,39 @@ def sample_prompt_templates():
 ### Benchmark Targets
 
 1. **Serialization Performance**
-   - Pydantic model validation: <10ms per model
-   - SQLModel database operations: <100ms per operation
-   - Dual format serialization: <50ms per object
 
-2. **Database Operations**
-   - MetricRecord bulk insert: <500ms for 10,000 metrics
-   - Query performance: <50ms for typical queries
+   - Pydantic model validation: \<10ms per model
+   - SQLModel database operations: \<100ms per operation
+   - Dual format serialization: \<50ms per object
+
+1. **Database Operations**
+
+   - MetricRecord bulk insert: \<500ms for 10,000 metrics
+   - Query performance: \<50ms for typical queries
    - Connection pooling: Support 50+ concurrent connections
 
-3. **AI Processing**
-   - AI client requests: <2000ms per request
-   - Batch processing: Process 100 items in <30 seconds
-   - Response validation: <100ms per response
+1. **AI Processing**
+
+   - AI client requests: \<2000ms per request
+   - Batch processing: Process 100 items in \<30 seconds
+   - Response validation: \<100ms per response
 
 ### Load Testing Scenarios
 
 1. **Concurrent Users**
+
    - 100+ concurrent dashboard users
    - Simultaneous documentation generation
    - Parallel refactoring operations
 
-2. **Large Codebases**
+1. **Large Codebases**
+
    - Projects with 10,000+ files
    - Documentation sets with 1,000+ pages
    - Metrics databases with 1,000,000+ records
 
-3. **Long-Running Operations**
+1. **Long-Running Operations**
+
    - 24+ hour continuous monitoring
    - Extended documentation builds
    - Prolonged refactoring sessions
@@ -439,18 +478,21 @@ def sample_prompt_templates():
 ### Test Categories
 
 1. **Input Validation**
+
    - Path traversal prevention
    - SQL injection protection
    - Command injection prevention
    - XSS attack prevention
 
-2. **Authentication & Authorization**
+1. **Authentication & Authorization**
+
    - WebSocket authentication
    - Dashboard access control
    - Configuration protection
    - Data privacy
 
-3. **Data Protection**
+1. **Data Protection**
+
    - Sensitive information handling
    - Encryption at rest
    - Secure communication
@@ -459,6 +501,7 @@ def sample_prompt_templates():
 ### Security Test Cases
 
 1. **Path Traversal Attacks**
+
    ```python
    def test_path_traversal_prevention():
        """Test prevention of path traversal attacks."""
@@ -466,15 +509,16 @@ def sample_prompt_templates():
            "../../../etc/passwd",
            "/etc/passwd",
            "..\\..\\..\\windows\\system32\\cmd.exe",
-           "C:\\windows\\system32\\cmd.exe"
+           "C:\\windows\\system32\\cmd.exe",
        ]
-       
+
        for path in malicious_paths:
            with pytest.raises(ValidationError):
                SecurityValidators.validate_safe_path(path)
    ```
 
-2. **SQL Injection Prevention**
+1. **SQL Injection Prevention**
+
    ```python
    def test_sql_injection_prevention():
        """Test prevention of SQL injection attacks."""
@@ -482,9 +526,9 @@ def sample_prompt_templates():
            "'; DROP TABLE users; --",
            "1; SELECT * FROM secrets",
            "admin'--",
-           "'; EXEC xp_cmdshell 'dir'; --"
+           "'; EXEC xp_cmdshell 'dir'; --",
        ]
-       
+
        for input_data in malicious_inputs:
            # Should be handled safely by SQLModel ORM
            pass
@@ -505,64 +549,69 @@ def sample_prompt_templates():
 ### Test Execution Strategy
 
 1. **Unit Tests**: Run continuously during development
-2. **Integration Tests**: Run on every commit
-3. **Performance Tests**: Run nightly
-4. **Security Tests**: Run weekly + on security-related changes
-5. **Regression Tests**: Run before releases
+1. **Integration Tests**: Run on every commit
+1. **Performance Tests**: Run nightly
+1. **Security Tests**: Run weekly + on security-related changes
+1. **Regression Tests**: Run before releases
 
 ## Quality Gates
 
 ### Pre-Commit Requirements
 
 1. All unit tests must pass
-2. Code coverage must be ≥95% for modified components
-3. No critical security vulnerabilities
-4. Performance benchmarks must be met
-5. Documentation must be updated
+1. Code coverage must be ≥95% for modified components
+1. No critical security vulnerabilities
+1. Performance benchmarks must be met
+1. Documentation must be updated
 
 ### Pre-Release Requirements
 
 1. All integration tests must pass
-2. Cross-feature compatibility verified
-3. Performance regression testing completed
-4. Security audit passed
-5. User acceptance testing completed
+1. Cross-feature compatibility verified
+1. Performance regression testing completed
+1. Security audit passed
+1. User acceptance testing completed
 
 ### Release Requirements
 
 1. Full end-to-end workflow validation
-2. Backward compatibility confirmed
-3. Production deployment testing
-4. Monitoring dashboard verification
-5. Documentation accuracy confirmed
+1. Backward compatibility confirmed
+1. Production deployment testing
+1. Monitoring dashboard verification
+1. Documentation accuracy confirmed
 
 ## Implementation Timeline
 
 ### Week 1: Foundation Testing
+
 - Set up test infrastructure
 - Implement base test classes
 - Create shared fixtures
 - Establish CI/CD integration
 
 ### Week 2: Phase 15-16 Testing
+
 - Refactoring integration tests
 - Documentation system validation
 - Visual documentation testing
 - API documentation verification
 
 ### Week 3: Phase 17 Testing
+
 - Database model validation
 - WebSocket integration testing
 - Dashboard component testing
 - Monitoring integration validation
 
 ### Week 4: Phase 18-19 Testing
+
 - Virtual docstring testing
 - MkDocs integration validation
 - Configuration model testing
 - Migration compatibility testing
 
 ### Week 5: Integration & Performance
+
 - Cross-feature integration testing
 - Performance benchmark validation
 - Security testing completion
@@ -571,18 +620,21 @@ def sample_prompt_templates():
 ## Success Metrics
 
 ### Test Quality Metrics
+
 - Code coverage: ≥95% for all new components
-- Test execution time: <30 minutes for full suite
-- Flaky test rate: <1%
+- Test execution time: \<30 minutes for full suite
+- Flaky test rate: \<1%
 - Test reliability: ≥99%
 
 ### Performance Metrics
+
 - Test suite execution time improvement: ≥20%
 - Debugging time reduction: ≥30%
 - Regression detection rate: ≥95%
-- False positive rate: <2%
+- False positive rate: \<2%
 
 ### Business Impact Metrics
+
 - Development velocity improvement: ≥25%
 - Bug detection rate increase: ≥40%
 - Documentation quality improvement: ≥50%

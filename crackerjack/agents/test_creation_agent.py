@@ -1775,37 +1775,85 @@ from {module_name} import {func_info["name"]}
         if not args or args == ["self"]:
             return ""
 
-        filtered_args = [arg for arg in args if arg != "self"]
+        filtered_args = self._filter_args(args)
         if not filtered_args:
             return ""
 
-        placeholders = []
-        for arg in filtered_args:
-            arg_lower = arg.lower()
-            if any(term in arg_lower for term in ("path", "file")):
-                placeholders.append('Path("test_file.txt")')
-            elif any(term in arg_lower for term in ("url", "uri")):
-                placeholders.append('"https://example.com"')
-            elif any(term in arg_lower for term in ("email", "mail")):
-                placeholders.append('"test@example.com"')
-            elif any(term in arg_lower for term in ("id", "uuid")):
-                placeholders.append('"test-id-123"')
-            elif any(term in arg_lower for term in ("name", "title")):
-                placeholders.append('"test_name"')
-            elif any(term in arg_lower for term in ("count", "size", "number", "num")):
-                placeholders.append("10")
-            elif any(term in arg_lower for term in ("enable", "flag", "is_", "has_")):
-                placeholders.append("True")
-            elif any(term in arg_lower for term in ("data", "content", "text")):
-                placeholders.append('"test data"')
-            elif any(term in arg_lower for term in ("list", "items")):
-                placeholders.append('["test1", "test2"]')
-            elif any(term in arg_lower for term in ("dict", "config", "options")):
-                placeholders.append('{"key": "value"}')
-            else:
-                placeholders.append('"test"')
-
+        placeholders = [
+            self._generate_placeholder_for_arg(arg) for arg in filtered_args
+        ]
         return ", ".join(placeholders)
+
+    def _filter_args(self, args: list[str]) -> list[str]:
+        """Filter out 'self' parameter from arguments."""
+        return [arg for arg in args if arg != "self"]
+
+    def _generate_placeholder_for_arg(self, arg: str) -> str:
+        """Generate a placeholder value for a single argument based on its name."""
+        arg_lower = arg.lower()
+
+        if self._is_path_arg(arg_lower):
+            return 'Path("test_file.txt")'
+        elif self._is_url_arg(arg_lower):
+            return '"https://example.com"'
+        elif self._is_email_arg(arg_lower):
+            return '"test@example.com"'
+        elif self._is_id_arg(arg_lower):
+            return '"test-id-123"'
+        elif self._is_name_arg(arg_lower):
+            return '"test_name"'
+        elif self._is_numeric_arg(arg_lower):
+            return "10"
+        elif self._is_boolean_arg(arg_lower):
+            return "True"
+        elif self._is_text_arg(arg_lower):
+            return '"test data"'
+        elif self._is_list_arg(arg_lower):
+            return '["test1", "test2"]'
+        elif self._is_dict_arg(arg_lower):
+            return '{"key": "value"}'
+        else:
+            return '"test"'
+
+    def _is_path_arg(self, arg_lower: str) -> bool:
+        """Check if argument is path-related."""
+        return any(term in arg_lower for term in ("path", "file"))
+
+    def _is_url_arg(self, arg_lower: str) -> bool:
+        """Check if argument is URL-related."""
+        return any(term in arg_lower for term in ("url", "uri"))
+
+    def _is_email_arg(self, arg_lower: str) -> bool:
+        """Check if argument is email-related."""
+        return any(term in arg_lower for term in ("email", "mail"))
+
+    def _is_id_arg(self, arg_lower: str) -> bool:
+        """Check if argument is ID-related."""
+        return any(term in arg_lower for term in ("id", "uuid"))
+
+    def _is_name_arg(self, arg_lower: str) -> bool:
+        """Check if argument is name-related."""
+        return any(term in arg_lower for term in ("name", "title"))
+
+    def _is_numeric_arg(self, arg_lower: str) -> bool:
+        """Check if argument is numeric-related."""
+        return any(term in arg_lower for term in ("count", "size", "number", "num"))
+
+    def _is_boolean_arg(self, arg_lower: str) -> bool:
+        """Check if argument is boolean-related."""
+        return any(term in arg_lower for term in ("enable", "flag", "is_", "has_"))
+
+    def _is_text_arg(self, arg_lower: str) -> bool:
+        """Check if argument is text-related."""
+        return any(term in arg_lower for term in ("data", "content", "text"))
+
+    def _is_list_arg(self, arg_lower: str) -> bool:
+        """Check if argument is list-related."""
+        return any(term in arg_lower for term in ("list", "items"))
+
+    def _is_dict_arg(self, arg_lower: str) -> bool:
+        """Check if argument is dict-related."""
+        return any(term in arg_lower for term in ("dict", "config", "options"))
 
     def _generate_invalid_args(self, args: list[str]) -> str:
         """Generate invalid arguments for error testing."""
@@ -1816,39 +1864,68 @@ from {module_name} import {func_info["name"]}
 
     def _generate_edge_case_args(self, args: list[str], case_type: str) -> str:
         """Generate edge case arguments."""
-        filtered_args = [arg for arg in args if arg != "self"]
+        filtered_args = self._filter_args(args)
         if not filtered_args:
             return ""
 
-        if case_type == "empty":
-            placeholders = []
-            for arg in filtered_args:
-                if any(term in arg.lower() for term in ("str", "name", "text")):
-                    placeholders.append('""')
-                elif any(term in arg.lower() for term in ("list", "items")):
-                    placeholders.append("[]")
-                elif any(term in arg.lower() for term in ("dict", "config")):
-                    placeholders.append("{}")
-                else:
-                    placeholders.append("None")
-        elif case_type == "boundary":
-            placeholders = []
-            for arg in filtered_args:
-                if any(term in arg.lower() for term in ("count", "size", "number")):
-                    placeholders.append("0")
-                elif any(term in arg.lower() for term in ("str", "name")):
-                    placeholders.append('"x" * 1000')  # Very long string
-                else:
-                    placeholders.append("None")
-        else:  # extreme
-            placeholders = []
-            for arg in filtered_args:
-                if any(term in arg.lower() for term in ("count", "size", "number")):
-                    placeholders.append("-1")
-                else:
-                    placeholders.append("None")
-
+        placeholders = self._generate_placeholders_by_case_type(
+            filtered_args, case_type
+        )
         return ", ".join(placeholders)
+
+    def _generate_placeholders_by_case_type(
+        self, filtered_args: list[str], case_type: str
+    ) -> list[str]:
+        """Generate placeholders based on case type."""
+        if case_type == "empty":
+            return self._generate_empty_case_placeholders(filtered_args)
+        elif case_type == "boundary":
+            return self._generate_boundary_case_placeholders(filtered_args)
+        else:  # extreme
+            return self._generate_extreme_case_placeholders(filtered_args)
+
+    def _generate_empty_case_placeholders(self, filtered_args: list[str]) -> list[str]:
+        """Generate placeholders for empty case."""
+        placeholders = []
+        for arg in filtered_args:
+            arg_lower = arg.lower()
+            if any(term in arg_lower for term in ("str", "name", "text")):
+                placeholders.append('""')
+            elif any(term in arg_lower for term in ("list", "items")):
+                placeholders.append("[]")
+            elif any(term in arg_lower for term in ("dict", "config")):
+                placeholders.append("{}")
+            else:
+                placeholders.append("None")
+        return placeholders
+
+    def _generate_boundary_case_placeholders(
+        self, filtered_args: list[str]
+    ) -> list[str]:
+        """Generate placeholders for boundary case."""
+        placeholders = []
+        for arg in filtered_args:
+            arg_lower = arg.lower()
+            if any(term in arg_lower for term in ("count", "size", "number")):
+                placeholders.append("0")
+            elif any(term in arg_lower for term in ("str", "name")):
+                placeholders.append('"x" * 1000')  # Very long string
+            else:
+                placeholders.append("None")
+        return placeholders
+
+    def _generate_extreme_case_placeholders(
+        self, filtered_args: list[str]
+    ) -> list[str]:
+        """Generate placeholders for extreme case."""
+        placeholders = []
+        for arg in filtered_args:
+            arg_lower = arg.lower()
+            if any(term in arg_lower for term in ("count", "size", "number")):
+                placeholders.append("-1")
+            else:
+                placeholders.append("None")
+        return placeholders
 
     async def _generate_enhanced_class_tests(
         self, classes: list[dict[str, Any]], module_category: str
