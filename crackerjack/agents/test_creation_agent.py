@@ -192,7 +192,8 @@ class TestCreationAgent(SubAgent):
 
         if coverage_analysis["below_threshold"]:
             self.log(
-                f"Coverage below threshold: {coverage_analysis['current_coverage']:.1%}",
+                f"Coverage below threshold: "
+                f"{coverage_analysis['current_coverage']:.1%}",
             )
 
             for module_path in coverage_analysis["uncovered_modules"]:
@@ -272,8 +273,10 @@ class TestCreationAgent(SubAgent):
         """Enhanced recommendations based on audit requirements."""
         return [
             "Run 'python -m crackerjack -t' to execute comprehensive coverage analysis",
-            "Focus on testing high-priority functions in managers/ services/ and core/ modules",
-            "Implement parametrized tests (@pytest.mark.parametrize) for functions with multiple arguments",
+            "Focus on testing high-priority functions in managers/ services/ and core/ "
+            "modules",
+            "Implement parametrized tests (@pytest.mark.parametrize) for functions with "
+            "multiple arguments",
             "Add edge case testing for boundary conditions and error scenarios",
             "Use fixtures for complex object instantiation and dependency injection",
             "Consider integration tests for modules with multiple classes/functions",
@@ -303,7 +306,7 @@ class TestCreationAgent(SubAgent):
                 return coverage_data
 
             # Run coverage analysis if no existing data
-            returncode, stdout, stderr = await self._run_coverage_command()
+            returncode, _, stderr = await self._run_coverage_command()
 
             if returncode != 0:
                 return self._handle_coverage_command_failure(stderr)
@@ -335,7 +338,7 @@ class TestCreationAgent(SubAgent):
 
         return None
 
-    def _parse_coverage_json(self, coverage_json: dict) -> dict[str, Any]:
+    def _parse_coverage_json(self, coverage_json: dict[str, Any]) -> dict[str, Any]:
         """Parse coverage JSON data into our format."""
         try:
             totals = coverage_json.get("totals", {})
@@ -505,7 +508,7 @@ class TestCreationAgent(SubAgent):
             rel_path = str(py_file.relative_to(self.context.project_path))
             if any(
                 core_path in rel_path
-                for core_path in ["managers/", "services/", "core/", "agents/"]
+                for core_path in ("managers/", "services/", "core/", "agents/")
             ):
                 priority_score += 10
 
@@ -562,8 +565,7 @@ class TestCreationAgent(SubAgent):
             return "model"
         elif "executors/" in relative_path:
             return "executor"
-        else:
-            return "utility"
+        return "utility"
 
     async def _find_untested_functions_enhanced(self) -> list[dict[str, Any]]:
         """Enhanced untested function detection with detailed analysis."""
@@ -642,8 +644,8 @@ class TestCreationAgent(SubAgent):
 
             # Core module functions get higher priority
             if any(
-                core_path in func_info["relative_file"]
-                for core_path in ["managers/", "services/", "core/"]
+                core_path in str(func_info["relative_file"])
+                for core_path in ("managers/", "services/", "core/")
             ):
                 priority += 8
 
@@ -989,7 +991,7 @@ class TestCreationAgent(SubAgent):
     ) -> str:
         """Enhanced return annotation extraction with async support."""
         if node.returns:
-            return ast.unparse(node.returns) if hasattr(ast, "unparse") else "Any"
+            return ast.unparse(node.returns) if (hasattr(ast, "unparse")) else "Any"
         return "Any"
 
     async def _function_has_test(
@@ -1032,37 +1034,89 @@ class TestCreationAgent(SubAgent):
         classes: list[dict[str, Any]],
     ) -> str:
         """Generate comprehensive test content with enhanced patterns."""
+        test_params = self._prepare_test_generation_params(module_file)
+        return await self._generate_all_test_types(test_params, functions, classes)
+
+    async def _generate_comprehensive_test_content(
+        self,
+        test_params: dict[str, Any],
+        functions: list[dict[str, Any]],
+        classes: list[dict[str, Any]],
+    ) -> str:
+        """Generate comprehensive test content from prepared parameters."""
+        return await self._generate_all_test_types(test_params, functions, classes)
+
+    def _prepare_test_generation_params(self, module_file: Path) -> dict[str, Any]:
+        """Prepare parameters for test generation."""
         module_name = self._get_module_import_path(module_file)
         module_category = self._categorize_module(
             str(module_file.relative_to(self.context.project_path))
         )
+        return {
+            "module_name": module_name,
+            "module_file": module_file,
+            "module_category": module_category,
+        }
 
-        # Generate enhanced header with appropriate imports
+    async def _generate_all_test_types(
+        self,
+        test_params: dict[str, Any],
+        functions: list[dict[str, Any]],
+        classes: list[dict[str, Any]],
+    ) -> str:
+        """Generate all types of tests."""
+        # Generate header
         base_content = self._generate_enhanced_test_file_header(
-            module_name, module_file, module_category
+            test_params["module_name"],
+            test_params["module_file"],
+            test_params["module_category"],
         )
 
-        # Generate function tests with parametrization
-        function_tests = await self._generate_enhanced_function_tests(
-            functions, module_category
+        # Generate different test sections
+        function_tests = await self._generate_function_tests_content(
+            functions, test_params["module_category"]
         )
-
-        # Generate class tests with fixtures
-        class_tests = await self._generate_enhanced_class_tests(
-            classes, module_category
+        class_tests = await self._generate_class_tests_content(
+            classes, test_params["module_category"]
         )
-
-        # Add integration tests for certain module types
-        integration_tests = await self._generate_integration_tests(
-            module_file, functions, classes, module_category
+        integration_tests = await self._generate_integration_tests_content(
+            test_params["module_file"],
+            functions,
+            classes,
+            test_params["module_category"],
         )
 
         return base_content + function_tests + class_tests + integration_tests
 
+    async def _generate_function_tests_content(
+        self, functions: list[dict[str, Any]], module_category: str
+    ) -> str:
+        """Generate function tests content."""
+        return await self._generate_enhanced_function_tests(functions, module_category)
+
+    async def _generate_class_tests_content(
+        self, classes: list[dict[str, Any]], module_category: str
+    ) -> str:
+        """Generate class tests content."""
+        return await self._generate_enhanced_class_tests(classes, module_category)
+
+    async def _generate_integration_tests_content(
+        self,
+        module_file: Path,
+        functions: list[dict[str, Any]],
+        classes: list[dict[str, Any]],
+        module_category: str,
+    ) -> str:
+        """Generate integration tests content."""
+        return await self._generate_integration_tests(
+            module_file, functions, classes, module_category
+        )
+
     def _generate_enhanced_test_file_header(
         self, module_name: str, module_file: Path, module_category: str
     ) -> str:
-        """Generate enhanced test file header with appropriate imports based on module type."""
+        """Generate enhanced test file header with appropriate imports based on
+        module type."""
         # Determine imports based on module category
         imports = [
             "import pytest",
@@ -1070,13 +1124,14 @@ class TestCreationAgent(SubAgent):
             "from unittest.mock import Mock, patch, AsyncMock",
         ]
 
-        if module_category in ["service", "manager", "core"]:
+        if module_category in ("service", "manager", "core"):
             imports.append("import asyncio")
 
         if module_category == "agent":
             imports.extend(
                 [
-                    "from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType",
+                    "from crackerjack.agents.base import AgentContext, FixResult, "
+                    "Issue, IssueType",
                 ]
             )
 
@@ -1169,7 +1224,8 @@ from {module_name} import {func_info["name"]}
         result = {func_name}({self._generate_default_args(args)})
         assert result is not None or result is None
     except TypeError:
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip("Function requires specific arguments - manual implementation
+        needed")
     except Exception as e:
         pytest.fail(f"Unexpected error in {func_name}: {{e}}")'''
 
@@ -1178,40 +1234,72 @@ from {module_name} import {func_info["name"]}
     async def _generate_enhanced_function_tests(
         self, functions: list[dict[str, Any]], module_category: str
     ) -> str:
-        """Generate enhanced test methods for functions with parametrization and edge cases."""
+        """Generate enhanced test methods for functions with parametrization and
+        edge cases."""
         if not functions:
             return ""
 
         test_methods = []
         for func in functions:
-            func_name = func["name"]
-            args = func.get("args", [])
-            func.get("returns", "Any")
-
-            # Generate basic test
-            basic_test = await self._generate_basic_function_test(func, module_category)
-            test_methods.append(basic_test)
-
-            # Generate parametrized test if function has multiple args
-            if len(args) > 1:
-                parametrized_test = await self._generate_parametrized_test(
-                    func, module_category
-                )
-                test_methods.append(parametrized_test)
-
-            # Generate error handling test
-            error_test = await self._generate_error_handling_test(func, module_category)
-            test_methods.append(error_test)
-
-            # Generate edge case tests for complex functions
-            if len(args) > 2 or any(
-                hint in func_name.lower()
-                for hint in ["process", "validate", "parse", "convert"]
-            ):
-                edge_test = await self._generate_edge_case_test(func, module_category)
-                test_methods.append(edge_test)
+            func_tests = await self._generate_all_tests_for_function(func, module_category)
+            test_methods.extend(func_tests)
 
         return "\n".join(test_methods)
+    
+    async def _generate_all_tests_for_function(
+        self, func: dict[str, Any], module_category: str
+    ) -> list[str]:
+        """Generate all test types for a single function."""
+        func_tests = []
+        
+        # Always generate basic test
+        basic_test = await self._generate_basic_function_test(func, module_category)
+        func_tests.append(basic_test)
+        
+        # Generate additional tests based on function characteristics
+        additional_tests = await self._generate_conditional_tests_for_function(
+            func, module_category
+        )
+        func_tests.extend(additional_tests)
+        
+        return func_tests
+    
+    async def _generate_conditional_tests_for_function(
+        self, func: dict[str, Any], module_category: str
+    ) -> list[str]:
+        """Generate conditional tests based on function characteristics."""
+        tests = []
+        args = func.get("args", [])
+        func_name = func["name"]
+        
+        # Generate parametrized test if function has multiple args
+        if self._should_generate_parametrized_test(args):
+            parametrized_test = await self._generate_parametrized_test(func, module_category)
+            tests.append(parametrized_test)
+        
+        # Always generate error handling test
+        error_test = await self._generate_error_handling_test(func, module_category)
+        tests.append(error_test)
+        
+        # Generate edge case tests for complex functions
+        if self._should_generate_edge_case_test(args, func_name):
+            edge_test = await self._generate_edge_case_test(func, module_category)
+            tests.append(edge_test)
+        
+        return tests
+    
+    def _should_generate_parametrized_test(self, args: list[str]) -> bool:
+        """Determine if parametrized test should be generated."""
+        return len(args) > 1
+    
+    def _should_generate_edge_case_test(self, args: list[str], func_name: str) -> bool:
+        """Determine if edge case test should be generated."""
+        has_multiple_args = len(args) > 2
+        is_complex_function = any(
+            hint in func_name.lower()
+            for hint in ("process", "validate", "parse", "convert")
+        )
+        return has_multiple_args or is_complex_function
 
     async def _generate_basic_function_test(
         self, func: dict[str, Any], module_category: str
@@ -1219,10 +1307,22 @@ from {module_name} import {func_info["name"]}
         """Generate basic functionality test for a function."""
         func_name = func["name"]
         args = func.get("args", [])
-
-        # Generate test based on module category
-        if module_category == "agent":
-            test_template = f'''
+        
+        template_generator = self._get_test_template_generator(module_category)
+        return template_generator(func_name, args)
+    
+    def _get_test_template_generator(self, module_category: str) -> callable:
+        """Get the appropriate test template generator for the module category."""
+        template_generators = {
+            "agent": self._generate_agent_test_template,
+            "service": self._generate_async_test_template,
+            "manager": self._generate_async_test_template,
+        }
+        return template_generators.get(module_category, self._generate_default_test_template)
+    
+    def _generate_agent_test_template(self, func_name: str, args: list[str]) -> str:
+        """Generate test template for agent functions."""
+        return f'''
     def test_{func_name}_basic_functionality(self):
         """Test basic functionality of {func_name}."""
         # TODO: Implement specific test logic for {func_name}
@@ -1234,11 +1334,10 @@ from {module_name} import {func_info["name"]}
             pytest.skip(f"Function {func_name} requires manual implementation: {{e}}")
         except Exception as e:
             pytest.fail(f"Unexpected error in {func_name}: {{e}}")'''
-
-        elif module_category in ["service", "manager"]:
-            test_template = f'''
-    @pytest.mark.asyncio
-    async def test_{func_name}_basic_functionality(self):
+    
+    def _generate_async_test_template(self, func_name: str, args: list[str]) -> str:
+        """Generate test template for async service/manager functions."""
+        return f'''\n    @pytest.mark.asyncio\n    async def test_{func_name}_basic_functionality(self):
         """Test basic functionality of {func_name}."""
         # TODO: Implement specific test logic for {func_name}
         # Consider mocking external dependencies
@@ -1252,9 +1351,10 @@ from {module_name} import {func_info["name"]}
             pytest.skip(f"Function {func_name} requires manual implementation: {{e}}")
         except Exception as e:
             pytest.fail(f"Unexpected error in {func_name}: {{e}}")'''
-
-        else:
-            test_template = f'''
+    
+    def _generate_default_test_template(self, func_name: str, args: list[str]) -> str:
+        """Generate default test template for regular functions."""
+        return f'''
     def test_{func_name}_basic_functionality(self):
         """Test basic functionality of {func_name}."""
         try:
@@ -1264,8 +1364,6 @@ from {module_name} import {func_info["name"]}
             pytest.skip(f"Function {func_name} requires manual implementation: {{e}}")
         except Exception as e:
             pytest.fail(f"Unexpected error in {func_name}: {{e}}")'''
-
-        return test_template
 
     async def _generate_parametrized_test(
         self, func: dict[str, Any], module_category: str
@@ -1284,7 +1382,9 @@ from {module_name} import {func_info["name"]}
 
         test_template = f'''
     {parametrize_decorator}
-    def test_{func_name}_with_parameters(self, {", ".join(args) if len(args) <= 5 else "test_input"}):
+    def test_{func_name}_with_parameters(self, {
+            ", ".join(args) if len(args) <= 5 else "test_input"
+        }):
         """Test {func_name} with various parameter combinations."""
         try:
             if len({args}) <= 5:
@@ -1390,25 +1490,25 @@ from {module_name} import {func_info["name"]}
         placeholders = []
         for arg in filtered_args:
             arg_lower = arg.lower()
-            if any(term in arg_lower for term in ["path", "file"]):
+            if any(term in arg_lower for term in ("path", "file")):
                 placeholders.append('Path("test_file.txt")')
-            elif any(term in arg_lower for term in ["url", "uri"]):
+            elif any(term in arg_lower for term in ("url", "uri")):
                 placeholders.append('"https://example.com"')
-            elif any(term in arg_lower for term in ["email", "mail"]):
+            elif any(term in arg_lower for term in ("email", "mail")):
                 placeholders.append('"test@example.com"')
-            elif any(term in arg_lower for term in ["id", "uuid"]):
+            elif any(term in arg_lower for term in ("id", "uuid")):
                 placeholders.append('"test-id-123"')
-            elif any(term in arg_lower for term in ["name", "title"]):
+            elif any(term in arg_lower for term in ("name", "title")):
                 placeholders.append('"test_name"')
-            elif any(term in arg_lower for term in ["count", "size", "number", "num"]):
+            elif any(term in arg_lower for term in ("count", "size", "number", "num")):
                 placeholders.append("10")
-            elif any(term in arg_lower for term in ["enable", "flag", "is_", "has_"]):
+            elif any(term in arg_lower for term in ("enable", "flag", "is_", "has_")):
                 placeholders.append("True")
-            elif any(term in arg_lower for term in ["data", "content", "text"]):
+            elif any(term in arg_lower for term in ("data", "content", "text")):
                 placeholders.append('"test data"')
-            elif any(term in arg_lower for term in ["list", "items"]):
+            elif any(term in arg_lower for term in ("list", "items")):
                 placeholders.append('["test1", "test2"]')
-            elif any(term in arg_lower for term in ["dict", "config", "options"]):
+            elif any(term in arg_lower for term in ("dict", "config", "options")):
                 placeholders.append('{"key": "value"}')
             else:
                 placeholders.append('"test"')
@@ -1431,27 +1531,27 @@ from {module_name} import {func_info["name"]}
         if case_type == "empty":
             placeholders = []
             for arg in filtered_args:
-                if any(term in arg.lower() for term in ["str", "name", "text"]):
+                if any(term in arg.lower() for term in ("str", "name", "text")):
                     placeholders.append('""')
-                elif any(term in arg.lower() for term in ["list", "items"]):
+                elif any(term in arg.lower() for term in ("list", "items")):
                     placeholders.append("[]")
-                elif any(term in arg.lower() for term in ["dict", "config"]):
+                elif any(term in arg.lower() for term in ("dict", "config")):
                     placeholders.append("{}")
                 else:
                     placeholders.append("None")
         elif case_type == "boundary":
             placeholders = []
             for arg in filtered_args:
-                if any(term in arg.lower() for term in ["count", "size", "number"]):
+                if any(term in arg.lower() for term in ("count", "size", "number")):
                     placeholders.append("0")
-                elif any(term in arg.lower() for term in ["str", "name"]):
+                elif any(term in arg.lower() for term in ("str", "name")):
                     placeholders.append('"x" * 1000')  # Very long string
                 else:
                     placeholders.append("None")
         else:  # extreme
             placeholders = []
             for arg in filtered_args:
-                if any(term in arg.lower() for term in ["count", "size", "number"]):
+                if any(term in arg.lower() for term in ("count", "size", "number")):
                     placeholders.append("-1")
                 else:
                     placeholders.append("None")
@@ -1461,46 +1561,92 @@ from {module_name} import {func_info["name"]}
     async def _generate_enhanced_class_tests(
         self, classes: list[dict[str, Any]], module_category: str
     ) -> str:
-        """Generate enhanced test methods for classes with fixtures and comprehensive coverage."""
+        """Generate enhanced test methods for classes with fixtures and comprehensive
+        coverage."""
         if not classes:
             return ""
 
-        test_methods = []
+        test_components = await self._generate_all_class_test_components(classes, module_category)
+        return self._combine_class_test_elements(
+            test_components["fixtures"], test_components["test_methods"]
+        )
+    
+    async def _generate_all_class_test_components(
+        self, classes: list[dict[str, Any]], module_category: str
+    ) -> dict[str, list[str]]:
+        """Generate all test components for classes."""
         fixtures = []
-
+        test_methods = []
+        
         for cls in classes:
-            cls["name"]
-            methods = cls.get("methods", [])
-
-            # Generate fixture for class instantiation
-            fixture = await self._generate_class_fixture(cls, module_category)
-            if fixture:
-                fixtures.append(fixture)
-
-            # Basic class instantiation test
-            instantiation_test = await self._generate_class_instantiation_test(
+            class_components = await self._generate_single_class_test_components(
                 cls, module_category
             )
-            test_methods.append(instantiation_test)
-
-            # Generate tests for public methods
-            for method in methods[:5]:  # Increased limit for better coverage
-                method_test = await self._generate_class_method_test(
-                    cls, method, module_category
-                )
-                test_methods.append(method_test)
-
-            # Generate property tests if applicable
-            property_test = await self._generate_class_property_test(
-                cls, module_category
+            fixtures.extend(class_components["fixtures"])
+            test_methods.extend(class_components["test_methods"])
+        
+        return {"fixtures": fixtures, "test_methods": test_methods}
+    
+    async def _generate_single_class_test_components(
+        self, cls: dict[str, Any], module_category: str
+    ) -> dict[str, list[str]]:
+        """Generate test components for a single class."""
+        fixtures = []
+        test_methods = []
+        methods = cls.get("methods", [])
+        
+        # Generate fixture for class instantiation
+        fixture = await self._generate_class_fixture(cls, module_category)
+        if fixture:
+            fixtures.append(fixture)
+        
+        # Generate core tests for the class
+        core_tests = await self._generate_core_class_tests(cls, methods, module_category)
+        test_methods.extend(core_tests)
+        
+        return {"fixtures": fixtures, "test_methods": test_methods}
+    
+    async def _generate_core_class_tests(
+        self, cls: dict[str, Any], methods: list[str], module_category: str
+    ) -> list[str]:
+        """Generate core tests for a class."""
+        test_methods = []
+        
+        # Basic class instantiation test
+        instantiation_test = await self._generate_class_instantiation_test(
+            cls, module_category
+        )
+        test_methods.append(instantiation_test)
+        
+        # Generate tests for public methods (limit for performance)
+        method_tests = await self._generate_method_tests(cls, methods[:5], module_category)
+        test_methods.extend(method_tests)
+        
+        # Generate property tests if applicable
+        property_test = await self._generate_class_property_test(cls, module_category)
+        if property_test:
+            test_methods.append(property_test)
+        
+        return test_methods
+    
+    async def _generate_method_tests(
+        self, cls: dict[str, Any], methods: list[str], module_category: str
+    ) -> list[str]:
+        """Generate tests for class methods."""
+        method_tests = []
+        for method in methods:
+            method_test = await self._generate_class_method_test(
+                cls, method, module_category
             )
-            if property_test:
-                test_methods.append(property_test)
+            method_tests.append(method_test)
+        return method_tests
 
-        # Combine fixtures and tests
+    def _combine_class_test_elements(
+        self, fixtures: list[str], test_methods: list[str]
+    ) -> str:
+        """Combine fixtures and test methods into a single string."""
         fixture_section = "\n".join(fixtures) if fixtures else ""
         test_section = "\n".join(test_methods)
-
         return fixture_section + test_section
 
     async def _generate_class_fixture(
@@ -1509,7 +1655,7 @@ from {module_name} import {func_info["name"]}
         """Generate pytest fixture for class instantiation."""
         class_name = cls["name"]
 
-        if module_category in ["service", "manager", "core"]:
+        if module_category in ("service", "manager", "core"):
             # These often require dependency injection
             fixture_template = f'''
     @pytest.fixture
@@ -1554,11 +1700,12 @@ from {module_name} import {func_info["name"]}
 
         return fixture_template
 
+    @staticmethod
     async def _generate_class_instantiation_test(
-        self, cls: dict[str, Any], module_category: str
+        class_info: dict[str, Any], module_category: str
     ) -> str:
         """Generate class instantiation test."""
-        class_name = cls["name"]
+        class_name = class_info["name"]
 
         test_template = f'''
     def test_{class_name.lower()}_instantiation(self, {class_name.lower()}_instance):
@@ -1577,41 +1724,87 @@ from {module_name} import {func_info["name"]}
     ) -> str:
         """Generate test for a class method."""
         class_name = cls["name"]
+        
+        if self._is_special_agent_method(module_category, method_name):
+            return self._generate_agent_method_test(class_name, method_name)
+        elif module_category in ("service", "manager"):
+            return self._generate_async_method_test(class_name, method_name)
+        else:
+            return self._generate_default_method_test(class_name, method_name)
+    
+    def _is_special_agent_method(self, module_category: str, method_name: str) -> bool:
+        """Check if this is a special agent method requiring custom test logic."""
+        return (
+            module_category == "agent" 
+            and method_name in ("can_handle", "analyze_and_fix")
+        )
+    
+    def _generate_agent_method_test(self, class_name: str, method_name: str) -> str:
+        """Generate test for special agent methods."""
+        if method_name == "can_handle":
+            return self._generate_can_handle_test(class_name)
+        elif method_name == "analyze_and_fix":
+            return self._generate_analyze_and_fix_test(class_name)
+        return self._generate_generic_agent_method_test(class_name, method_name)
+    
+    def _generate_can_handle_test(self, class_name: str) -> str:
+        """Generate test for can_handle method."""
+        return f'''
+    @pytest.mark.asyncio
+    async def test_{class_name.lower()}_can_handle(self, {class_name.lower()}_instance):
+        """Test {class_name}.can_handle method."""
+        # Test with mock issue
+        mock_issue = Mock(spec=Issue)
+        mock_issue.type = IssueType.COVERAGE_IMPROVEMENT
+        mock_issue.message = "test coverage issue"
+        mock_issue.file_path = "/test/path.py"
 
-        if module_category == "agent" and method_name in [
-            "can_handle",
-            "analyze_and_fix",
-        ]:
-            # Special handling for agent methods
-            test_template = f'''
+        result = await {class_name.lower()}_instance.can_handle(mock_issue)
+        assert isinstance(result, (int, float))
+        assert 0.0 <= result <= 1.0'''
+    
+    def _generate_analyze_and_fix_test(self, class_name: str) -> str:
+        """Generate test for analyze_and_fix method."""
+        return f'''
+    @pytest.mark.asyncio
+    async def test_{class_name.lower()}_analyze_and_fix(self, {class_name.lower()}_instance):
+        """Test {class_name}.analyze_and_fix method."""
+        # Test with mock issue
+        mock_issue = Mock(spec=Issue)
+        mock_issue.type = IssueType.COVERAGE_IMPROVEMENT
+        mock_issue.message = "test coverage issue"
+        mock_issue.file_path = "/test/path.py"
+
+        result = await {class_name.lower()}_instance.analyze_and_fix(mock_issue)
+        assert isinstance(result, FixResult)
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'confidence')'''
+    
+    def _generate_generic_agent_method_test(self, class_name: str, method_name: str) -> str:
+        """Generate test for generic agent methods."""
+        return f'''
     @pytest.mark.asyncio
     async def test_{class_name.lower()}_{method_name}(self, {class_name.lower()}_instance):
         """Test {class_name}.{method_name} method."""
-        if "{method_name}" == "can_handle":
-            # Test with mock issue
-            mock_issue = Mock(spec=Issue)
-            mock_issue.type = IssueType.COVERAGE_IMPROVEMENT
-            mock_issue.message = "test coverage issue"
-            mock_issue.file_path = "/test/path.py"
-
-            result = await {class_name.lower()}_instance.{method_name}(mock_issue)
-            assert isinstance(result, (int, float))
-            assert 0.0 <= result <= 1.0
-
-        elif "{method_name}" == "analyze_and_fix":
-            # Test with mock issue
-            mock_issue = Mock(spec=Issue)
-            mock_issue.type = IssueType.COVERAGE_IMPROVEMENT
-            mock_issue.message = "test coverage issue"
-            mock_issue.file_path = "/test/path.py"
-
-            result = await {class_name.lower()}_instance.{method_name}(mock_issue)
-            assert isinstance(result, FixResult)
-            assert hasattr(result, 'success')
-            assert hasattr(result, 'confidence')'''
-
-        elif module_category in ["service", "manager"]:
-            test_template = f'''
+        try:
+            method = getattr({class_name.lower()}_instance, "{method_name}", None)
+            assert method is not None, f"Method {method_name} should exist"
+            
+            # Generic test for agent methods
+            if asyncio.iscoroutinefunction(method):
+                result = await method()
+            else:
+                result = method()
+            
+            assert result is not None or result is None
+        except (TypeError, NotImplementedError):
+            pytest.skip(f"Method {method_name} requires specific arguments")
+        except Exception as e:
+            pytest.fail(f"Unexpected error in {method_name}: {{e}}")'''
+    
+    def _generate_async_method_test(self, class_name: str, method_name: str) -> str:
+        """Generate test for async service/manager methods."""
+        return f'''
     @pytest.mark.asyncio
     async def test_{class_name.lower()}_{method_name}(self, {class_name.lower()}_instance):
         """Test {class_name}.{method_name} method."""
@@ -1632,9 +1825,10 @@ from {module_name} import {func_info["name"]}
             pytest.skip(f"Method {method_name} requires specific arguments or implementation")
         except Exception as e:
             pytest.fail(f"Unexpected error in {method_name}: {{e}}")'''
-
-        else:
-            test_template = f'''
+    
+    def _generate_default_method_test(self, class_name: str, method_name: str) -> str:
+        """Generate test for default methods."""
+        return f'''
     def test_{class_name.lower()}_{method_name}(self, {class_name.lower()}_instance):
         """Test {class_name}.{method_name} method."""
         try:
@@ -1650,8 +1844,6 @@ from {module_name} import {func_info["name"]}
         except Exception as e:
             pytest.fail(f"Unexpected error in {method_name}: {{e}}")'''
 
-        return test_template
-
     async def _generate_class_property_test(
         self, cls: dict[str, Any], module_category: str
     ) -> str:
@@ -1659,19 +1851,21 @@ from {module_name} import {func_info["name"]}
         class_name = cls["name"]
 
         # Only generate property tests for certain module categories
-        if module_category not in ["service", "manager", "agent"]:
+        if module_category not in ("service", "manager", "agent"):
             return ""
 
         test_template = f'''
     def test_{class_name.lower()}_properties(self, {class_name.lower()}_instance):
         """Test {class_name} properties and attributes."""
         # Test that instance has expected structure
-        assert hasattr({class_name.lower()}_instance, '__dict__') or hasattr({class_name.lower()}_instance, '__slots__')
+        assert hasattr({class_name.lower()}_instance, '__dict__') or
+         hasattr({class_name.lower()}_instance, '__slots__')
 
         # Test string representation
         str_repr = str({class_name.lower()}_instance)
         assert len(str_repr) > 0
-        assert "{class_name}" in str_repr or "{class_name.lower()}" in str_repr.lower()'''
+        assert "{class_name}" in str_repr or "{class_name.lower()}" in
+         str_repr.lower()'''
 
         return test_template
 
@@ -1683,7 +1877,7 @@ from {module_name} import {func_info["name"]}
         module_category: str,
     ) -> str:
         """Generate integration tests for certain module types."""
-        if module_category not in ["service", "manager", "core"]:
+        if module_category not in ("service", "manager", "core"):
             return ""
 
         # Only generate integration tests for modules with sufficient complexity

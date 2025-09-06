@@ -438,7 +438,7 @@ class IndividualHookExecutor:
 
         try:
             # Acquire lock if the hook requires it
-            async with self.hook_lock_manager.acquire_hook_lock(hook.name):
+            async with self.hook_lock_manager.acquire_hook_lock(hook.name):  # type: ignore
                 result = await self._run_command_with_streaming(
                     cmd, hook.timeout, progress
                 )

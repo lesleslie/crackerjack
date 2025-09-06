@@ -156,7 +156,9 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
 
     def _handle_list_concat(self, node: ast.AugAssign, impact_factor: int) -> None:
         """Handle list concatenation with literal list."""
-        list_size = len(node.value.elts) if hasattr(node.value, "elts") else 1
+        # Type narrowing to help pyright understand that node.value is an ast.List
+        assert isinstance(node.value, ast.List)
+        list_size = len(node.value.elts)
 
         self.list_ops.append(
             {

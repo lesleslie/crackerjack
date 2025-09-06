@@ -140,7 +140,8 @@ class HookLockManager:
             try:
                 acquisition_time = time.time() - start_time
                 self.logger.info(
-                    f"Hook-specific lock acquired for {hook_name} after {acquisition_time:.2f}s"
+                    f"Hook-specific lock acquired for {hook_name} after"
+                    f" {acquisition_time:.2f}s"
                 )
 
                 # Track lock usage for monitoring
@@ -155,7 +156,8 @@ class HookLockManager:
 
                     self._track_lock_execution(hook_name, execution_time, total_time)
                     self.logger.debug(
-                        f"Hook-specific lock released for {hook_name} after {total_time:.2f}s total"
+                        f"Hook-specific lock released for {hook_name} after"
+                        f" {total_time:.2f}s total"
                     )
 
             finally:
@@ -166,8 +168,10 @@ class HookLockManager:
             self._timeout_failures[hook_name] += 1
             wait_time = time.time() - start_time
             self.logger.error(
-                f"Hook-specific lock acquisition timeout for {hook_name} after {wait_time:.2f}s "
-                f"(timeout: {timeout}s, total failures: {self._timeout_failures[hook_name]})"
+                f"Hook-specific lock acquisition timeout for {hook_name} after"
+                f" {wait_time:.2f}s "
+                f"(timeout: {timeout}s, total failures: "
+                f"{self._timeout_failures[hook_name]})"
             )
             raise
 
@@ -265,12 +269,14 @@ class HookLockManager:
                     wait_time = delay + (jitter * (0.5 - os.urandom(1)[0] / 255))
 
                     self.logger.debug(
-                        f"Global lock exists for {hook_name}, retrying in {wait_time:.2f}s"
+                        f"Global lock exists for {hook_name}, retrying in "
+                        f"{wait_time:.2f}s"
                     )
                     await asyncio.sleep(wait_time)
                 else:
                     raise TimeoutError(
-                        f"Failed to acquire global lock for {hook_name} after {self._global_config.max_retry_attempts} attempts"
+                        f"Failed to acquire global lock for {hook_name} after"
+                        f" {self._global_config.max_retry_attempts} attempts"
                     )
 
     async def _attempt_lock_acquisition(self, hook_name: str, lock_path: Path) -> None:
@@ -342,7 +348,8 @@ class HookLockManager:
                 # If too many heartbeat failures, consider the lock compromised
                 if self._heartbeat_failures[hook_name] > 3:
                     self.logger.error(
-                        f"Too many heartbeat failures for {hook_name}, stopping heartbeat"
+                        f"Too many heartbeat failures for {hook_name},"
+                        f" stopping heartbeat"
                     )
                     break
 
@@ -388,7 +395,7 @@ class HookLockManager:
             raise RuntimeError(f"Failed to update heartbeat for {hook_name}: {e}")
 
     async def _cleanup_global_lock(
-        self, hook_name: str, heartbeat_task: asyncio.Task[None]
+        self, hook_name: str, heartbeat_task: asyncio.Task[None] | None = None
     ) -> None:
         """Clean up global lock resources and remove lock file."""
         self.logger.debug(f"Cleaning up global lock for {hook_name}")
@@ -397,12 +404,16 @@ class HookLockManager:
         self._active_global_locks.discard(hook_name)
 
         # Cancel heartbeat task
-        heartbeat_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await heartbeat_task
+        if heartbeat_task is None:
+            heartbeat_task = self._heartbeat_tasks.pop(hook_name, None)
+        else:
+            # Remove from task tracking
+            self._heartbeat_tasks.pop(hook_name, None)
 
-        # Remove from task tracking
-        self._heartbeat_tasks.pop(hook_name, None)
+        if heartbeat_task:
+            heartbeat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat_task
 
         # Remove lock file
         lock_path = self._global_config.get_lock_path(hook_name)
@@ -639,40 +650,9 @@ class HookLockManager:
 
         try:
             for lock_file in locks_dir.glob("*.lock"):
-                try:
-                    # Check file age
-                    file_age_hours = (current_time - lock_file.stat().st_mtime) / 3600
-
-                    if file_age_hours > max_age_hours:
-                        # Also check heartbeat timestamp if available
-                        try:
-                            with lock_file.open(encoding="utf-8") as f:
-                                lock_data = json.load(f)
-
-                            last_heartbeat = lock_data.get(
-                                "last_heartbeat", lock_data.get("acquired_at", 0)
-                            )
-                            heartbeat_age_hours = (current_time - last_heartbeat) / 3600
-
-                            if heartbeat_age_hours > max_age_hours:
-                                lock_file.unlink()
-                                cleaned_count += 1
-                                hook_name = lock_file.stem
-                                self._stale_locks_cleaned[hook_name] += 1
-                                self.logger.info(
-                                    f"Cleaned stale lock: {lock_file} (age: {heartbeat_age_hours:.2f}h)"
-                                )
-
-                        except (json.JSONDecodeError, KeyError):
-                            # Corrupted lock file, remove it
-                            lock_file.unlink()
-                            cleaned_count += 1
-                            self.logger.warning(
-                                f"Cleaned corrupted lock file: {lock_file}"
-                            )
-
-                except OSError as e:
-                    self.logger.warning(f"Could not process lock file {lock_file}: {e}")
+                cleaned_count += self._process_lock_file(
+                    lock_file, max_age_hours, current_time
+                )
 
         except OSError as e:
             self.logger.error(f"Could not access locks directory {locks_dir}: {e}")
@@ -682,13 +662,61 @@ class HookLockManager:
 
         return cleaned_count
 
+    def _process_lock_file(
+        self, lock_file: Path, max_age_hours: float, current_time: float
+    ) -> int:
+        """Process a single lock file and return number of files cleaned."""
+        try:
+            # Check file age
+            file_age_hours = (current_time - lock_file.stat().st_mtime) / 3600
+
+            if file_age_hours > max_age_hours:
+                return self._cleanup_stale_lock_file(
+                    lock_file, max_age_hours, current_time
+                )
+            return 0
+
+        except OSError as e:
+            self.logger.warning(f"Could not process lock file {lock_file}: {e}")
+            return 0
+
+    def _cleanup_stale_lock_file(
+        self, lock_file: Path, max_age_hours: float, current_time: float
+    ) -> int:
+        """Clean up a stale lock file and return 1 if successful."""
+        try:
+            with lock_file.open(encoding="utf-8") as f:
+                lock_data = json.load(f)
+
+            last_heartbeat = lock_data.get(
+                "last_heartbeat", lock_data.get("acquired_at", 0)
+            )
+            heartbeat_age_hours = (current_time - last_heartbeat) / 3600
+
+            if heartbeat_age_hours > max_age_hours:
+                lock_file.unlink()
+                hook_name = lock_file.stem
+                self._stale_locks_cleaned[hook_name] += 1
+                self.logger.info(
+                    f"Cleaned stale lock: {lock_file} (age: {heartbeat_age_hours:.2f}h)"
+                )
+                return 1
+
+        except (json.JSONDecodeError, KeyError):
+            # Corrupted lock file, remove it
+            lock_file.unlink()
+            self.logger.warning(f"Cleaned corrupted lock file: {lock_file}")
+            return 1
+
+        return 0
+
     def get_global_lock_stats(self) -> dict[str, t.Any]:
         """Get comprehensive statistics about global lock usage.
 
         Returns:
             Dictionary containing global lock statistics and metrics
         """
-        stats = {
+        stats: dict[str, t.Any] = {
             "global_lock_enabled": self._global_lock_enabled,
             "lock_directory": str(self._global_config.lock_directory),
             "session_id": self._global_config.session_id,
@@ -767,7 +795,11 @@ class HookLockManager:
             self.cleanup_stale_locks()
 
         self.logger.info(
-            f"Configured lock manager: global_locks={'enabled' if self._global_lock_enabled else 'disabled'}, timeout={self._global_config.timeout_seconds}s, lock_dir={self._global_config.lock_directory}"
+            f"Configured lock manager: global_locks={
+                'enabled' if self._global_lock_enabled else 'disabled'
+            },"
+            f" timeout={self._global_config.timeout_seconds}s, "
+            f"lock_dir={self._global_config.lock_directory}"
         )
 
     def reset_hook_stats(self, hook_name: str | None = None) -> None:

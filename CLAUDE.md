@@ -63,7 +63,7 @@ python -m crackerjack -a patch              # Full release with publishing
 | Issue Type | Best Agent | Confidence | Use Case |
 |------------|------------|------------|----------|
 | **Documentation inconsistencies** | DocumentationAgent | 0.8 | Changelog updates, .md file consistency |
-| **Cognitive complexity >13** | RefactoringAgent | 0.9 | Breaking down complex functions |
+| **Cognitive complexity >15** | RefactoringAgent | 0.9 | Breaking down complex functions |
 | **Unused imports/dead code** | RefactoringAgent | 0.8 | AST-based cleanup |
 | **Performance bottlenecks** | PerformanceAgent | 0.85 | O(n²) loops, string concatenation |
 | **Code duplication** | DRYAgent | 0.8 | Extract common patterns |
@@ -192,7 +192,7 @@ python -m crackerjack --ai-agent -t
 **9 specialized agents handle domain-specific issues:**
 
 - **DocumentationAgent** (0.8): Changelog generation, .md consistency, README updates
-- **RefactoringAgent** (0.9): Complexity reduction ≤13, dead code removal, AST analysis
+- **RefactoringAgent** (0.9): Complexity reduction ≤15, dead code removal, AST analysis
 - **PerformanceAgent** (0.85): O(n²) detection, string optimization, real code transformation
 - **DRYAgent** (0.8): Code duplication detection, pattern extraction, utility creation
 - **FormattingAgent** (0.8): Style violations, import formatting, consistency
@@ -473,7 +473,7 @@ python -m crackerjack.mcp.progress_monitor <job_id>
 ## Configuration
 
 - **Coverage**: Ratchet system targeting 100%
-- **Complexity**: ≤13 per function
+- **Complexity**: ≤15 per function
 - **Python**: 3.13+ required
 - **Test timeout**: 300s
 - **Type checking**: Strict Pyright

@@ -134,6 +134,45 @@ class InputSanitizer:
     ) -> ValidationResult:
         """Sanitize string input with configurable restrictions."""
 
+        # Type validation
+        type_result = cls._validate_string_type(value)
+        if not type_result.valid:
+            return type_result
+
+        # Length validation
+        length_result = cls._validate_string_length(value, max_length)
+        if not length_result.valid:
+            return length_result
+
+        # Security validations
+        security_result = cls._validate_string_security(value, allow_shell_chars)
+        if not security_result.valid:
+            return security_result
+
+        # Pattern validations
+        pattern_result = cls._validate_string_patterns(value)
+        if not pattern_result.valid:
+            return pattern_result
+
+        # Strict alphanumeric mode
+        if strict_alphanumeric and not cls._is_strictly_alphanumeric(value):
+            return ValidationResult(
+                valid=False,
+                error_message="Only alphanumeric characters, hyphens, and underscores allowed",
+                security_level=SecurityEventLevel.MEDIUM,
+                validation_type="alphanumeric_only",
+            )
+
+        # Basic sanitization (remove leading/trailing whitespace)
+        sanitized = value.strip()
+
+        return ValidationResult(
+            valid=True, sanitized_value=sanitized, validation_type="string_sanitization"
+        )
+
+    @classmethod
+    def _validate_string_type(cls, value: t.Any) -> ValidationResult:
+        """Validate that the input is a string."""
         if not isinstance(value, str):
             return ValidationResult(
                 valid=False,
@@ -141,8 +180,11 @@ class InputSanitizer:
                 security_level=SecurityEventLevel.MEDIUM,
                 validation_type="type_check",
             )
+        return ValidationResult(valid=True, validation_type="type_check")
 
-        # Length validation
+    @classmethod
+    def _validate_string_length(cls, value: str, max_length: int) -> ValidationResult:
+        """Validate string length."""
         if len(value) > max_length:
             return ValidationResult(
                 valid=False,
@@ -150,7 +192,13 @@ class InputSanitizer:
                 security_level=SecurityEventLevel.HIGH,
                 validation_type="length_check",
             )
+        return ValidationResult(valid=True, validation_type="length_check")
 
+    @classmethod
+    def _validate_string_security(
+        cls, value: str, allow_shell_chars: bool
+    ) -> ValidationResult:
+        """Validate string security constraints."""
         # Null byte injection check
         if "\x00" in value:
             return ValidationResult(
@@ -180,18 +228,11 @@ class InputSanitizer:
                     validation_type="shell_injection",
                 )
 
-        # Strict alphanumeric mode
-        if (
-            strict_alphanumeric
-            and not value.replace("-", "").replace("_", "").isalnum()
-        ):
-            return ValidationResult(
-                valid=False,
-                error_message="Only alphanumeric characters, hyphens, and underscores allowed",
-                security_level=SecurityEventLevel.MEDIUM,
-                validation_type="alphanumeric_only",
-            )
+        return ValidationResult(valid=True, validation_type="security_check")
 
+    @classmethod
+    def _validate_string_patterns(cls, value: str) -> ValidationResult:
+        """Validate string against security patterns."""
         # SQL injection pattern check using SAFE_PATTERNS
         sql_patterns = [
             "validate_sql_injection_patterns",
@@ -226,12 +267,12 @@ class InputSanitizer:
                     validation_type="code_injection",
                 )
 
-        # Basic sanitization (remove leading/trailing whitespace)
-        sanitized = value.strip()
+        return ValidationResult(valid=True, validation_type="pattern_check")
 
-        return ValidationResult(
-            valid=True, sanitized_value=sanitized, validation_type="string_sanitization"
-        )
+    @classmethod
+    def _is_strictly_alphanumeric(cls, value: str) -> bool:
+        """Check if string is strictly alphanumeric with allowed characters."""
+        return value.replace("-", "").replace("_", "").isalnum()
 
     @classmethod
     def sanitize_json(
@@ -304,64 +345,28 @@ class InputSanitizer:
             path = Path(value)
 
             # Check for dangerous components in the original path before resolving
-            for part in path.parts:
-                if part.upper() in cls.DANGEROUS_PATH_COMPONENTS:
-                    return ValidationResult(
-                        valid=False,
-                        error_message=f"Dangerous path component: {part}",
-                        security_level=SecurityEventLevel.CRITICAL,
-                        validation_type="path_traversal",
-                    )
+            danger_result = cls._check_dangerous_components(path)
+            if not danger_result.valid:
+                return danger_result
 
-            # Check base directory constraint before resolving
+            # Handle base directory constraints
             if base_directory:
-                base_resolved = base_directory.resolve()
-
-                # If the path is absolute and doesn't start with base directory, it's invalid
-                if path.is_absolute() and not str(path).startswith(str(base_resolved)):
-                    return ValidationResult(
-                        valid=False,
-                        error_message=f"Path outside base directory: {path}",
-                        security_level=SecurityEventLevel.CRITICAL,
-                        validation_type="directory_escape",
-                    )
-
-                # If the path is relative, resolve it relative to base directory
-                if not path.is_absolute():
-                    resolved = (base_resolved / path).resolve()
-                    try:
-                        resolved.relative_to(base_resolved)
-                    except ValueError:
-                        return ValidationResult(
-                            valid=False,
-                            error_message=f"Path outside base directory: {path}",
-                            security_level=SecurityEventLevel.CRITICAL,
-                            validation_type="directory_escape",
-                        )
-                else:
-                    # For absolute paths that start with base directory, resolve normally
-                    resolved = path.resolve()
-                    try:
-                        resolved.relative_to(base_resolved)
-                    except ValueError:
-                        return ValidationResult(
-                            valid=False,
-                            error_message=f"Path outside base directory: {path}",
-                            security_level=SecurityEventLevel.CRITICAL,
-                            validation_type="directory_escape",
-                        )
+                base_result = cls._validate_base_directory(
+                    path, base_directory, allow_absolute
+                )
+                if not base_result.valid:
+                    return base_result
+                resolved = base_result.sanitized_value
             else:
                 # Resolve to absolute path to eliminate .. components if no base directory
                 resolved = path.resolve()
 
             # Check absolute path restrictions
-            if not allow_absolute and resolved.is_absolute() and base_directory:
-                return ValidationResult(
-                    valid=False,
-                    error_message="Absolute paths not allowed",
-                    security_level=SecurityEventLevel.HIGH,
-                    validation_type="absolute_path",
-                )
+            absolute_result = cls._validate_absolute_path(
+                resolved, allow_absolute, base_directory
+            )
+            if not absolute_result.valid:
+                return absolute_result
 
             return ValidationResult(
                 valid=True,
@@ -376,6 +381,78 @@ class InputSanitizer:
                 security_level=SecurityEventLevel.HIGH,
                 validation_type="path_syntax",
             )
+
+    @classmethod
+    def _check_dangerous_components(cls, path: Path) -> ValidationResult:
+        """Check for dangerous components in the path."""
+        for part in path.parts:
+            if part.upper() in cls.DANGEROUS_PATH_COMPONENTS:
+                return ValidationResult(
+                    valid=False,
+                    error_message=f"Dangerous path component: {part}",
+                    security_level=SecurityEventLevel.CRITICAL,
+                    validation_type="path_traversal",
+                )
+        return ValidationResult(valid=True, validation_type="path_components")
+
+    @classmethod
+    def _validate_base_directory(
+        cls, path: Path, base_directory: Path, allow_absolute: bool
+    ) -> ValidationResult:
+        """Validate path against base directory constraints."""
+        base_resolved = base_directory.resolve()
+
+        # If the path is absolute and doesn't start with base directory, it's invalid
+        if path.is_absolute() and not str(path).startswith(str(base_resolved)):
+            return ValidationResult(
+                valid=False,
+                error_message=f"Path outside base directory: {path}",
+                security_level=SecurityEventLevel.CRITICAL,
+                validation_type="directory_escape",
+            )
+
+        # If the path is relative, resolve it relative to base directory
+        if not path.is_absolute():
+            resolved = (base_resolved / path).resolve()
+            try:
+                resolved.relative_to(base_resolved)
+            except ValueError:
+                return ValidationResult(
+                    valid=False,
+                    error_message=f"Path outside base directory: {path}",
+                    security_level=SecurityEventLevel.CRITICAL,
+                    validation_type="directory_escape",
+                )
+        else:
+            # For absolute paths that start with base directory, resolve normally
+            resolved = path.resolve()
+            try:
+                resolved.relative_to(base_resolved)
+            except ValueError:
+                return ValidationResult(
+                    valid=False,
+                    error_message=f"Path outside base directory: {path}",
+                    security_level=SecurityEventLevel.CRITICAL,
+                    validation_type="directory_escape",
+                )
+
+        return ValidationResult(
+            valid=True, sanitized_value=resolved, validation_type="base_directory"
+        )
+
+    @classmethod
+    def _validate_absolute_path(
+        cls, resolved: Path, allow_absolute: bool, base_directory: Path | None
+    ) -> ValidationResult:
+        """Validate absolute path restrictions."""
+        if not allow_absolute and resolved.is_absolute() and base_directory:
+            return ValidationResult(
+                valid=False,
+                error_message="Absolute paths not allowed",
+                security_level=SecurityEventLevel.HIGH,
+                validation_type="absolute_path",
+            )
+        return ValidationResult(valid=True, validation_type="absolute_path")
 
 
 class SecureInputValidator:

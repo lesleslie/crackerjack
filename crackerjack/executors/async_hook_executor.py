@@ -154,7 +154,7 @@ class AsyncHookExecutor:
                 "timeout": self.timeout,
                 "quiet": self.quiet,
             },
-            "lock_manager_status": self.hook_lock_manager.get_comprehensive_status(),
+            "lock_manager_status": self.hook_lock_manager.get_lock_stats(),
         }
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
@@ -233,7 +233,18 @@ class AsyncHookExecutor:
                     )
 
             # Acquire hook-specific lock if required (e.g., for complexipy)
-            async with self.hook_lock_manager.acquire_hook_lock(hook.name):
+            if self.hook_lock_manager.requires_lock(hook.name):
+                self.logger.debug(
+                    f"Hook {hook.name} requires sequential execution lock"
+                )
+                if not self.quiet:
+                    self.console.print(
+                        f"[dim]🔒 {hook.name} (sequential execution)[/dim]"
+                    )
+
+                async with self.hook_lock_manager.acquire_hook_lock(hook.name):  # type: ignore
+                    return await self._run_hook_subprocess(hook)
+            else:
                 return await self._run_hook_subprocess(hook)
 
     async def _run_hook_subprocess(self, hook: HookDefinition) -> HookResult:

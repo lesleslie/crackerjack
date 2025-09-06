@@ -917,12 +917,14 @@ class WorkflowOrchestrator:
         dry_run: bool = False,
         web_job_id: str | None = None,
         verbose: bool = False,
+        debug: bool = False,
     ) -> None:
         self.console = console or Console(force_terminal=True)
         self.pkg_path = pkg_path or Path.cwd()
         self.dry_run = dry_run
         self.web_job_id = web_job_id
         self.verbose = verbose
+        self.debug = debug
 
         from crackerjack.models.protocols import (
             ConfigMergeServiceProtocol,
@@ -974,8 +976,8 @@ class WorkflowOrchestrator:
         session_id = getattr(self, "web_job_id", None) or str(int(time.time()))[:8]
         debug_log_file = log_manager.create_debug_log_file(session_id)
 
-        # Set log level based on verbosity - DEBUG only in verbose mode
-        log_level = "DEBUG" if self.verbose else "INFO"
+        # Set log level based on verbosity - DEBUG only in verbose or debug mode
+        log_level = "DEBUG" if (self.verbose or self.debug) else "INFO"
         setup_structured_logging(
             level=log_level, json_output=False, log_file=debug_log_file
         )

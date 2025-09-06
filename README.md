@@ -186,7 +186,7 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 **9 Domain-Specific Sub-Agents** for targeted code quality improvements:
 
 - **🔒 SecurityAgent**: Fixes shell injections, weak crypto, token exposure, unsafe library usage
-- **♻️ RefactoringAgent**: Reduces complexity ≤13, extracts helper methods, applies SOLID principles
+- **♻️ RefactoringAgent**: Reduces complexity ≤15, extracts helper methods, applies SOLID principles
 - **🚀 PerformanceAgent**: Optimizes algorithms, fixes O(n²) patterns, improves string building
 - **📝 DocumentationAgent**: Auto-generates changelogs, maintains .md file consistency
 - **🧹 DRYAgent**: Eliminates code duplication, extracts common patterns to utilities

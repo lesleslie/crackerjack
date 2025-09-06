@@ -98,7 +98,8 @@ class PerformanceAgent(SubAgent):
         except Exception as e:
             return self._create_performance_error_result(e)
 
-    def _validate_performance_issue(self, issue: Issue) -> FixResult | None:
+    @staticmethod
+    def _validate_performance_issue(issue: Issue) -> FixResult | None:
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -170,7 +171,8 @@ class PerformanceAgent(SubAgent):
             recommendations=["Test performance improvements with benchmarks"],
         )
 
-    def _create_no_optimization_result(self) -> FixResult:
+    @staticmethod
+    def _create_no_optimization_result() -> FixResult:
         return FixResult(
             success=False,
             confidence=0.6,
@@ -183,7 +185,8 @@ class PerformanceAgent(SubAgent):
             ],
         )
 
-    def _create_performance_error_result(self, error: Exception) -> FixResult:
+    @staticmethod
+    def _create_performance_error_result(error: Exception) -> FixResult:
         return FixResult(
             success=False,
             confidence=0.0,
@@ -233,9 +236,10 @@ class PerformanceAgent(SubAgent):
         analyzer.visit(tree)
         return self._build_nested_loop_issues(analyzer)
 
-    def _create_nested_loop_analyzer(
-        self,
-    ) -> performance_helpers.EnhancedNestedLoopAnalyzer:
+    @staticmethod
+    def _create_nested_loop_analyzer() -> (
+        performance_helpers.EnhancedNestedLoopAnalyzer
+    ):
         """Create and configure the nested loop analyzer."""
         return performance_helpers.EnhancedNestedLoopAnalyzer()
 
@@ -261,13 +265,13 @@ class PerformanceAgent(SubAgent):
             }
         ]
 
-    def _count_high_priority_loops(self, nested_loops: list[dict[str, t.Any]]) -> int:
+    @staticmethod
+    def _count_high_priority_loops(nested_loops: list[dict[str, t.Any]]) -> int:
         """Count loops with high or critical priority."""
         return len([n for n in nested_loops if n["priority"] in ("high", "critical")])
 
-    def _generate_nested_loop_suggestions(
-        self, nested_loops: list[dict[str, t.Any]]
-    ) -> str:
+    @staticmethod
+    def _generate_nested_loop_suggestions(nested_loops: list[dict[str, t.Any]]) -> str:
         """Generate specific optimization suggestions based on nested loop analysis."""
         suggestions = []
 
@@ -308,14 +312,17 @@ class PerformanceAgent(SubAgent):
 
         return self._build_list_ops_issues(analyzer)
 
-    def _create_enhanced_list_op_analyzer(self) -> t.Any:
+    @staticmethod
+    def _create_enhanced_list_op_analyzer() -> t.Any:
         """Create the enhanced list operations analyzer."""
         return performance_helpers.EnhancedListOpAnalyzer()
 
     def _build_list_ops_issues(self, analyzer: t.Any) -> list[dict[str, t.Any]]:
         """Build the final list operations issues from analyzer results."""
-        total_impact = sum(op["impact_factor"] for op in analyzer.list_ops)
-        high_impact_ops = [op for op in analyzer.list_ops if op["impact_factor"] >= 10]
+        total_impact = sum(int(op["impact_factor"]) for op in analyzer.list_ops)
+        high_impact_ops = [
+            op for op in analyzer.list_ops if int(op["impact_factor"]) >= 10
+        ]
 
         return [
             {
@@ -327,11 +334,14 @@ class PerformanceAgent(SubAgent):
             }
         ]
 
-    def _generate_list_op_suggestions(self, list_ops: list[dict[str, t.Any]]) -> str:
+    @staticmethod
+    def _generate_list_op_suggestions(list_ops: list[dict[str, t.Any]]) -> str:
         """Generate specific optimization suggestions for list operations."""
         suggestions = []
 
-        high_impact_count = len([op for op in list_ops if op["impact_factor"] >= 10])
+        high_impact_count = len(
+            [op for op in list_ops if int(op["impact_factor"]) >= 10]
+        )
         if high_impact_count > 0:
             suggestions.append(
                 f"HIGH IMPACT: {high_impact_count} list operations in hot loops"
@@ -378,7 +388,8 @@ class PerformanceAgent(SubAgent):
 
         return repeated_calls
 
-    def _get_expensive_operation_patterns(self) -> tuple[str, ...]:
+    @staticmethod
+    def _get_expensive_operation_patterns() -> tuple[str, ...]:
         return (
             ".exists()",
             ".read_text()",
@@ -389,14 +400,15 @@ class PerformanceAgent(SubAgent):
             ".get(",
         )
 
+    @staticmethod
     def _contains_expensive_operation(
-        self,
         line: str,
         patterns: tuple[str, ...],
     ) -> bool:
         return any(pattern in line for pattern in patterns)
 
-    def _is_in_loop_context(self, lines: list[str], line_index: int) -> bool:
+    @staticmethod
+    def _is_in_loop_context(lines: list[str], line_index: int) -> bool:
         context_start = max(0, line_index - 5)
         context_lines = lines[context_start : line_index + 1]
 
@@ -406,8 +418,8 @@ class PerformanceAgent(SubAgent):
             for ctx_line in context_lines
         )
 
+    @staticmethod
     def _create_operation_record(
-        self,
         line_index: int,
         content: str,
     ) -> dict[str, t.Any]:
@@ -417,8 +429,8 @@ class PerformanceAgent(SubAgent):
             "type": "expensive_operation_in_loop",
         }
 
+    @staticmethod
     def _create_repeated_operations_issues(
-        self,
         repeated_calls: list[dict[str, t.Any]],
     ) -> list[dict[str, t.Any]]:
         if len(repeated_calls) >= 2:
@@ -431,7 +443,8 @@ class PerformanceAgent(SubAgent):
             ]
         return []
 
-    def _detect_string_inefficiencies(self, content: str) -> list[dict[str, t.Any]]:
+    @staticmethod
+    def _detect_string_inefficiencies(content: str) -> list[dict[str, t.Any]]:
         issues: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
@@ -489,7 +502,9 @@ class PerformanceAgent(SubAgent):
                             "line_number": i + 1,
                             "content": stripped,
                             "context": context_info,
-                            "estimated_impact": context_info.get("impact_factor", 1),
+                            "estimated_impact": int(
+                                context_info.get("impact_factor", "1")
+                            ),
                         }
                     )
 
@@ -549,12 +564,13 @@ class PerformanceAgent(SubAgent):
 
         return context
 
-    def _create_default_string_context(self) -> dict[str, t.Any]:
+    @staticmethod
+    def _create_default_string_context() -> dict[str, t.Any]:
         """Create default context for string operations."""
         return {
             "loop_type": "unknown",
             "loop_depth": 1,
-            "impact_factor": 1,
+            "impact_factor": "1",
         }
 
     def _find_loop_context_in_lines(
@@ -584,17 +600,18 @@ class PerformanceAgent(SubAgent):
 
         if "range(" in line:
             impact_factor = self._estimate_range_impact_factor(line)
-            context["impact_factor"] = impact_factor
+            context["impact_factor"] = str(impact_factor)
         else:
-            context["impact_factor"] = 2  # Default for for loops
+            context["impact_factor"] = "2"  # Default for for loops
 
         return context
 
-    def _analyze_while_loop_context(self) -> dict[str, t.Any]:
+    @staticmethod
+    def _analyze_while_loop_context() -> dict[str, t.Any]:
         """Analyze while loop context."""
         return {
             "loop_type": "while",
-            "impact_factor": 3,  # Generally higher impact for while loops
+            "impact_factor": "3",  # Generally higher impact for while loops
         }
 
     def _estimate_range_impact_factor(self, line: str) -> int:
@@ -611,7 +628,8 @@ class PerformanceAgent(SubAgent):
         except (ValueError, AttributeError):
             return 2
 
-    def _extract_range_size_from_string(self, range_str: str) -> int:
+    @staticmethod
+    def _extract_range_size_from_string(range_str: str) -> int:
         """Extract numeric range size from string using safe regex."""
         import re  # REGEX OK: temporary for extracting number from safe pattern
 
@@ -622,7 +640,8 @@ class PerformanceAgent(SubAgent):
             return int(number_match.group())
         return 0
 
-    def _calculate_impact_from_range_size(self, range_size: int) -> int:
+    @staticmethod
+    def _calculate_impact_from_range_size(range_size: int) -> int:
         """Calculate impact factor based on range size."""
         if range_size > 1000:
             return 10
@@ -630,7 +649,8 @@ class PerformanceAgent(SubAgent):
             return 5
         return 2
 
-    def _is_in_loop_context_enhanced(self, lines: list[str], line_index: int) -> bool:
+    @staticmethod
+    def _is_in_loop_context_enhanced(lines: list[str], line_index: int) -> bool:
         """Enhanced loop context detection with better accuracy."""
         context_start = max(0, line_index - 8)
         context_lines = lines[context_start : line_index + 1]
@@ -691,12 +711,15 @@ class PerformanceAgent(SubAgent):
                 if (
                     len(node.body) == 1
                     and isinstance(node.body[0], ast.Expr)
-                    and isinstance(node.body[0].value, ast.Call)  # type: ignore
                     and isinstance(
-                        node.body[0].value.func,  # type: ignore
+                        node.body[0].value,
+                        ast.Call,
+                    )
+                    and isinstance(
+                        node.body[0].value.func,
                         ast.Attribute,
                     )
-                    and node.body[0].value.func.attr == "append"  # type: ignore
+                    and node.body[0].value.func.attr == "append"
                 ):
                     self.opportunities.append(
                         {
@@ -719,7 +742,9 @@ class PerformanceAgent(SubAgent):
                     "type": "list_comprehension_opportunities",
                     "instances": analyzer.opportunities,
                     "total_count": len(analyzer.opportunities),
-                    "suggestion": f"Convert {len(analyzer.opportunities)} append loops to list comprehensions for better performance and readability",
+                    "suggestion": f"Convert {len(analyzer.opportunities)} append loops"
+                    f" to list comprehensions for better performance "
+                    f"and readability",
                 }
             )
 
@@ -761,7 +786,8 @@ class PerformanceAgent(SubAgent):
                                     "line_number": node.lineno,
                                     "function": func_name,
                                     "type": "repeated_builtin_in_loop",
-                                    "optimization": f"Cache {func_name}() result outside loop",
+                                    "optimization": f"Cache {func_name}() "
+                                    f"result outside loop",
                                     "performance_gain": "2-10x depending on data size",
                                 }
                             )
@@ -777,7 +803,8 @@ class PerformanceAgent(SubAgent):
                     "type": "inefficient_builtin_usage",
                     "instances": analyzer.inefficient_calls,
                     "total_count": len(analyzer.inefficient_calls),
-                    "suggestion": f"Cache {len(analyzer.inefficient_calls)} repeated builtin calls outside loops",
+                    "suggestion": f"Cache {len(analyzer.inefficient_calls)} "
+                    f"repeated builtin calls outside loops",
                 }
             )
 
@@ -795,7 +822,10 @@ class PerformanceAgent(SubAgent):
             if count > 0
         ]
 
-        return f"Optimization Summary - {', '.join(summary_parts)} (Total: {total_optimizations})"
+        return (
+            f"Optimization Summary - {', '.join(summary_parts)} "
+            f"(Total: {total_optimizations})"
+        )
 
     def _apply_performance_optimizations(
         self,
@@ -924,15 +954,17 @@ class PerformanceAgent(SubAgent):
         new_lines, changed = self._add_builtin_caching_comments(lines, issue)
         return self._create_optimization_result(new_lines, changed)
 
+    @staticmethod
     def _create_optimization_result(
-        self, lines: list[str], modified: bool, description: str | None = None
+        lines: list[str], modified: bool, description: str | None = None
     ) -> OptimizationResult:
         """Create an optimization result object."""
         return OptimizationResult(
             lines=lines, modified=modified, optimization_description=description
         )
 
-    def _create_no_change_result(self, lines: list[str]) -> OptimizationResult:
+    @staticmethod
+    def _create_no_change_result(lines: list[str]) -> OptimizationResult:
         """Create a result indicating no changes were made."""
         return OptimizationResult(
             lines=lines, modified=False, optimization_description=None
@@ -958,7 +990,10 @@ class PerformanceAgent(SubAgent):
                 original_line = t.cast(str, lines[line_idx])
 
                 # Apply optimization based on instance type
-                optimization_type = instance.get("optimization", "append")
+                optimization_type = instance.get(
+                    "optimization",
+                    "append",
+                )
 
                 if optimization_type == "append":
                     # Use existing safe pattern for single item append
@@ -973,7 +1008,10 @@ class PerformanceAgent(SubAgent):
                             : len(original_line) - len(original_line.lstrip())
                         ]
                         performance_gain = instance.get("performance_gain", "2x")
-                        comment = f"{indent}# Performance: {performance_gain} improvement (append vs +=)"
+                        comment = (
+                            f"{indent}# Performance: {performance_gain}"
+                            f" improvement (append vs +=)"
+                        )
                         lines.insert(line_idx, comment)
 
                 elif optimization_type == "extend":
@@ -989,8 +1027,11 @@ class PerformanceAgent(SubAgent):
                             : len(original_line) - len(original_line.lstrip())
                         ]
                         performance_gain = instance.get("performance_gain", "x")
-                        impact_factor = instance.get("impact_factor", 1)
-                        comment = f"{indent}# Performance: {performance_gain} improvement, impact factor: {impact_factor}"
+                        impact_factor = int(instance.get("impact_factor", "1"))
+                        comment = (
+                            f"{indent}# Performance: {performance_gain} "
+                            f"improvement, impact factor: {impact_factor}"
+                        )
                         lines.insert(line_idx, comment)
 
         return lines, modified
@@ -1031,14 +1072,17 @@ class PerformanceAgent(SubAgent):
                 indent = original_line[
                     : len(original_line) - len(original_line.lstrip())
                 ]
-                comment = f"{indent}# Performance: Consider caching format string outside loop"
+                comment = (
+                    f"{indent}# Performance: Consider caching format string "
+                    f"outside loop"
+                )
                 lines.insert(line_idx, comment)
                 modified = True
 
         return lines, modified
 
+    @staticmethod
     def _add_nested_loop_comments(
-        self,
         lines: list[str],
         issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
@@ -1060,18 +1104,21 @@ class PerformanceAgent(SubAgent):
                 priority = instance.get("priority", "medium")
 
                 comment_lines = [
-                    f"{indent}# Performance: {complexity} nested loop detected - {priority} priority",
+                    f"{indent}# Performance: {complexity} nested loop detected -"
+                    f" {priority} priority",
                 ]
 
                 # Add specific suggestions for high priority loops
                 if priority in ("high", "critical"):
                     if priority == "critical":
                         comment_lines.append(
-                            f"{indent}# CRITICAL: Consider algorithmic redesign or data structure changes"
+                            f"{indent}# CRITICAL: Consider algorithmic redesign or"
+                            f" data structure changes"
                         )
                     else:
                         comment_lines.append(
-                            f"{indent}# Suggestion: Consider memoization, caching, or hash tables"
+                            f"{indent}# Suggestion: Consider memoization, caching,"
+                            f" or hash tables"
                         )
 
                 # Insert comments before the loop
@@ -1082,8 +1129,8 @@ class PerformanceAgent(SubAgent):
 
         return lines, modified
 
+    @staticmethod
     def _apply_list_comprehension_optimizations(
-        self,
         lines: list[str],
         issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
@@ -1102,14 +1149,17 @@ class PerformanceAgent(SubAgent):
                 ]
 
                 # Add suggestion comment for now - actual transformation would need more AST analysis
-                comment = f"{indent}# Performance: Consider list comprehension for 20-30% improvement"
+                comment = (
+                    f"{indent}# Performance: Consider list comprehension for "
+                    f"20-30% improvement"
+                )
                 lines.insert(line_idx, comment)
                 modified = True
 
         return lines, modified
 
+    @staticmethod
     def _add_builtin_caching_comments(
-        self,
         lines: list[str],
         issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
@@ -1128,16 +1178,22 @@ class PerformanceAgent(SubAgent):
                 ]
 
                 func_name = instance.get("function", "builtin")
-                performance_gain = instance.get("performance_gain", "2-10x")
+                performance_gain = instance.get(
+                    "performance_gain",
+                    "2-10x",
+                )
 
-                comment = f"{indent}# Performance: Cache {func_name}() result outside loop for {performance_gain} improvement"
+                comment = (
+                    f"{indent}# Performance: Cache {func_name}() result outside"
+                    f" loop for {performance_gain} improvement"
+                )
                 lines.insert(line_idx, comment)
                 modified = True
 
         return lines, modified
 
+    @staticmethod
     def _fix_list_operations(
-        self,
         lines: list[str],
         issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
@@ -1199,8 +1255,8 @@ class PerformanceAgent(SubAgent):
 
         return var_groups
 
+    @staticmethod
     def _parse_concatenation_line(
-        self,
         lines: list[str],
         instance: dict[str, t.Any],
     ) -> dict[str, t.Any] | None:
@@ -1247,7 +1303,8 @@ class PerformanceAgent(SubAgent):
 
         return lines, modified
 
-    def _find_loop_start(self, lines: list[str], start_idx: int) -> int | None:
+    @staticmethod
+    def _find_loop_start(lines: list[str], start_idx: int) -> int | None:
         for i in range(start_idx, -1, -1):
             line = lines[i].strip()
             if line.startswith(("for ", "while ")):
@@ -1283,8 +1340,8 @@ class PerformanceAgent(SubAgent):
 
         return False
 
+    @staticmethod
     def _find_variable_initialization(
-        self,
         lines: list[str],
         var_name: str,
         loop_start: int,
@@ -1297,8 +1354,8 @@ class PerformanceAgent(SubAgent):
                 return i
         return None
 
+    @staticmethod
     def _transform_string_initialization(
-        self,
         lines: list[str],
         init_line_idx: int,
         var_name: str,
@@ -1308,8 +1365,8 @@ class PerformanceAgent(SubAgent):
             f"{indent}{var_name}_parts = [] # Performance: Use list for string building"
         )
 
+    @staticmethod
     def _replace_concatenations_with_appends(
-        self,
         lines: list[str],
         instances: list[dict[str, t.Any]],
         var_name: str,
@@ -1329,10 +1386,14 @@ class PerformanceAgent(SubAgent):
     ) -> None:
         loop_end = self._find_loop_end(lines, loop_start)
         if loop_end is not None:
-            join_line = f"{indent}{var_name} = ''.join({var_name}_parts) # Performance: Join string parts"
+            join_line = (
+                f"{indent}{var_name} = ''.join({var_name}_parts) # Performance:"
+                f" Join string parts"
+            )
             lines.insert(loop_end + 1, join_line)
 
-    def _find_loop_end(self, lines: list[str], loop_start: int) -> int | None:
+    @staticmethod
+    def _find_loop_end(lines: list[str], loop_start: int) -> int | None:
         if loop_start >= len(lines):
             return None
 
@@ -1349,8 +1410,8 @@ class PerformanceAgent(SubAgent):
 
         return len(lines) - 1
 
+    @staticmethod
     def _fix_repeated_operations(
-        self,
         lines: list[str],
         issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
@@ -1363,7 +1424,10 @@ class PerformanceAgent(SubAgent):
                 indent_level = len(original_line) - len(original_line.lstrip())
                 indent_str = " " * indent_level
 
-                comment = f"{indent_str}# Performance: Consider caching this expensive operation outside the loop"
+                comment = (
+                    f"{indent_str}# Performance: Consider caching this expensive"
+                    f" operation outside the loop"
+                )
                 lines.insert(line_idx, comment)
                 modified = True
 

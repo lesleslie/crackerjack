@@ -14,6 +14,7 @@ Optimized for performance, safety, and maintainability with:
 import re
 import threading
 import time
+import typing as t
 from dataclasses import dataclass, field
 from re import Pattern
 
@@ -190,7 +191,7 @@ class ValidatedPattern:
             raise ValueError("max_iterations must be positive")
 
         result = text
-        for iteration in range(max_iterations):
+        for _ in range(max_iterations):
             new_result = self.apply(result)
             if new_result == result:
                 # No more changes, done
@@ -207,7 +208,7 @@ class ValidatedPattern:
         """Apply pattern with timeout protection."""
         import signal
 
-        def timeout_handler(signum, frame):
+        def timeout_handler(signum: int, frame: t.Any) -> None:
             raise TimeoutError(
                 f"Pattern '{self.name}' timed out after {timeout_seconds}s"
             )
@@ -393,7 +394,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="mask_pypi_token",
         pattern=r"\bpypi-[a-zA-Z0-9_-]{12,}\b",
         replacement="pypi-****",
-        description="Mask PyPI authentication tokens (word boundaries to prevent false matches)",
+        description="Mask PyPI authentication tokens (word boundaries to prevent"
+        " false matches)",
         global_replace=True,
         test_cases=[
             ("pypi-AgEIcHlwaS5vcmcCJGE4M2Y3ZjI", "pypi-****"),
@@ -416,7 +418,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="mask_github_token",
         pattern=r"\bghp_[a-zA-Z0-9]{36}\b",
         replacement="ghp_****",
-        description="Mask GitHub personal access tokens (exactly 40 chars total with word boundaries)",
+        description="Mask GitHub personal access tokens (exactly 40 chars total"
+        " with word boundaries)",
         global_replace=True,
         test_cases=[
             ("ghp_1234567890abcdef1234567890abcdef1234", "ghp_****"),
@@ -430,7 +433,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
                 "ghp_1234567890abcdef1234567890abcdef12345",
             ),  # Too long, no match due to word boundary
             (
-                "Multiple ghp_1234567890abcdef1234567890abcdef1234 and ghp_abcdef1234567890abcdef12345678901234",
+                "Multiple ghp_1234567890abcdef1234567890abcdef1234 and"
+                " ghp_abcdef1234567890abcdef12345678901234",
                 "Multiple ghp_**** and ghp_****",
             ),
         ],
@@ -439,7 +443,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="mask_generic_long_token",
         pattern=r"\b[a-zA-Z0-9_-]{32,}\b",
         replacement="****",
-        description="Mask generic long tokens (32+ chars, word boundaries to avoid false positives)",
+        description="Mask generic long tokens (32+ chars, word boundaries to avoid"
+        " false positives)",
         global_replace=True,
         test_cases=[
             ("secret_key=abcdef1234567890abcdef1234567890abcdef", "secret_key=****"),
@@ -448,8 +453,10 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
                 "Short token abc123def456",
             ),  # Too short, no change
             (
-                "File path /very/long/path/that/should/not/be/masked/even/though/its/long",
-                "File path /very/long/path/that/should/not/be/masked/even/though/its/long",
+                "File path "
+                "/very/long/path/that/should/not/be/masked/even/though/its/long",
+                "File path "
+                "/very/long/path/that/should/not/be/masked/even/though/its/long",
             ),  # Contains slashes
             ("API_KEY=verylongapikeyhere1234567890123456", "API_KEY=****"),
             (
@@ -501,7 +508,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="update_pyproject_version",
         pattern=r'^(version\s*=\s*["\'])([^"\']+)(["\'])$',
         replacement=r"\g<1>NEW_VERSION\g<3>",
-        description="Update version in pyproject.toml files (NEW_VERSION placeholder replaced dynamically)",
+        description="Update version in pyproject.toml files (NEW_VERSION placeholder"
+        " replaced dynamically)",
         test_cases=[
             ('version = "1.2.3"', 'version = "NEW_VERSION"'),
             ("version='0.1.0'", "version='NEW_VERSION'"),
@@ -688,7 +696,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="validate_job_id_alphanumeric",
         pattern=r"^[a-zA-Z0-9_-]+$",
         replacement="VALID",  # Dummy replacement for validation patterns
-        description="Validate job ID contains only alphanumeric characters, underscores, and hyphens",
+        description="Validate job ID contains only alphanumeric characters, "
+        "underscores, and hyphens",
         test_cases=[
             # For validation patterns, we test against strings that SHOULD match
             ("valid_job-123", "VALID"),  # Valid ID
@@ -714,14 +723,16 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="update_coverage_requirement",
         pattern=r"(--cov-fail-under=)\d+\.?\d*",
         replacement=r"\1NEW_COVERAGE",
-        description="Update coverage fail-under requirement (NEW_COVERAGE placeholder replaced dynamically)",
+        description="Update coverage fail-under requirement (NEW_COVERAGE placeholder"
+        " replaced dynamically)",
         test_cases=[
             ("--cov-fail-under=85", "--cov-fail-under=NEW_COVERAGE"),
             ("--cov-fail-under=90.5", "--cov-fail-under=NEW_COVERAGE"),
             ("--verbose", "--verbose"),  # No change
         ],
     ),
-    # Path security validation patterns - designed for testing existence, not replacement
+    # Path security validation patterns - designed for testing existence, not
+    # replacement
     "detect_directory_traversal_basic": ValidatedPattern(
         name="detect_directory_traversal_basic",
         pattern=r"\.\./",
@@ -942,7 +953,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             (
                 "crackerjack/core.py: 123: 45: E501 line too long",
-                "File: crackerjack/core.py, Line: 123, Col: 45, Code: E501, Message: line too long",
+                "File: crackerjack/core.py, Line: 123, Col: 45, Code: E501, Message: "
+                "line too long",
             ),
             (
                 "./test.py: 1: 1: F401 unused import",
@@ -950,7 +962,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ),
             (
                 "src/main.py: 999: 80: W291 trailing whitespace",
-                "File: src/main.py, Line: 999, Col: 80, Code: W291, Message: trailing whitespace",
+                "File: src/main.py, Line: 999, Col: 80, Code: W291, Message: trailing "
+                "whitespace",
             ),
         ],
     ),
@@ -1001,7 +1014,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ),
             (
                 "./main.py: 999: 50 - warning: Type could be more specific",
-                "File: ./main.py, Line: 999, Col: 50, Warning: Type could be more specific",
+                "File: ./main.py, Line: 999, Col: 50, Warning: Type could be more"
+                " specific",
             ),
         ],
     ),
@@ -1023,7 +1037,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         description="Parse bandit security issue output with code and message",
         test_cases=[
             (
-                ">> Issue: [B602: subprocess_popen_with_shell_equals_true] Use of shell=True",
+                ">> Issue: [B602: subprocess_popen_with_shell_equals_true] Use of "
+                "shell=True",
                 "Security Issue [B602]: Use of shell=True",
             ),
             (
@@ -1083,7 +1098,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             (
                 "src/app.py: 45: error: Name 'undefined_var' is not defined",
-                "File: src/app.py, Line: 45, Error: Name 'undefined_var' is not defined",
+                "File: src/app.py, Line: 45, Error: Name 'undefined_var' is not "
+                "defined",
             ),
             (
                 "test.py: 1: error: Incompatible return value type",
@@ -1119,7 +1135,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="vulture_unused",
         pattern=r"^(.+?): (\d+): unused (.+) '(.+)'",
         replacement=r"File: \1, Line: \2, Unused \3: '\4'",
-        description="Parse vulture unused code detection: file:line: unused type 'name'",
+        description="Parse vulture unused code detection: file:line: unused type"
+        " 'name'",
         test_cases=[
             (
                 "src/app.py: 45: unused variable 'temp_var'",
@@ -1139,19 +1156,23 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="complexipy_complex",
         pattern=r"^(.+?): (\d+): (\d+) - (.+) is too complex \((\d+)\)",
         replacement=r"File: \1, Line: \2, Col: \3, Function: \4, Complexity: \5",
-        description="Parse complexipy complexity detection: file:line:col - function is too complex (score)",
+        description="Parse complexipy complexity detection: file:line:col - function "
+        "is too complex (score)",
         test_cases=[
             (
                 "src/app.py: 45: 1 - complex_function is too complex (15)",
-                "File: src/app.py, Line: 45, Col: 1, Function: complex_function, Complexity: 15",
+                "File: src/app.py, Line: 45, Col: 1, Function: complex_function,"
+                " Complexity: 15",
             ),
             (
                 "test.py: 1: 1 - nested_loops is too complex (20)",
-                "File: test.py, Line: 1, Col: 1, Function: nested_loops, Complexity: 20",
+                "File: test.py, Line: 1, Col: 1, Function: nested_loops, "
+                "Complexity: 20",
             ),
             (
                 "./main.py: 999: 5 - process_data is too complex (18)",
-                "File: ./main.py, Line: 999, Col: 5, Function: process_data, Complexity: 18",
+                "File: ./main.py, Line: 999, Col: 5, Function: process_data, "
+                "Complexity: 18",
             ),
         ],
     ),
@@ -1161,7 +1182,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="pytest_test_start",
         pattern=r"^(.+?):: ?(.+?):: ?(.+?) (PASSED|FAILED|SKIPPED|ERROR)$",
         replacement=r"\1::\2::\3",  # Extract file::class::method
-        description="Parse pytest test start line with file, class, and method (3-part format)",
+        description="Parse pytest test start line with file, class, and method "
+        "(3-part format)",
         test_cases=[
             (
                 "test_file.py::TestClass::test_method PASSED",
@@ -1230,7 +1252,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="pytest_detailed_test",
         pattern=r"^(.+\.py)::(.+) (PASSED|FAILED|SKIPPED|ERROR)",
         replacement=r"\1::\2",  # Extract file and test name
-        description="Parse detailed pytest test output with file, test name, and status",
+        description="Parse detailed pytest test output with file, test name, and "
+        "status",
         test_cases=[
             (
                 "test_file.py::test_method PASSED [50%]",
@@ -1396,7 +1419,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="detect_file_existence_patterns",
         pattern=r"if\s+not\s+\w+\.exists\(\):",
         replacement=r"MATCH",  # Dummy replacement for detection patterns
-        description="Detect file existence check patterns in Python code for DRY violations",
+        description="Detect file existence check patterns in Python code for DRY"
+        " violations",
         test_cases=[
             ("if not file.exists():", "MATCH"),
             ("if not path.exists():", "MATCH"),
@@ -1423,7 +1447,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="fix_path_conversion_with_ensure_path",
         pattern=r"Path\([^)]+\)\s+if\s+isinstance\([^)]+,\s*str\)\s+else\s+([^)]+)",
         replacement=r"_ensure_path(\1)",
-        description="Replace path conversion patterns with _ensure_path utility function",
+        description="Replace path conversion patterns with _ensure_path utility "
+        "function",
         test_cases=[
             ("Path(value) if isinstance(value, str) else value", "_ensure_path(value)"),
             ("Path(path) if isinstance(path, str) else path", "_ensure_path(path)"),
@@ -1437,7 +1462,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="fix_path_conversion_simple",
         pattern=r"Path\(([^)]+)\)\s+if\s+isinstance\(\1,\s*str\)\s+else\s+\1",
         replacement=r"_ensure_path(\1)",
-        description="Replace simple path conversion patterns with _ensure_path utility function",
+        description="Replace simple path conversion patterns with _ensure_path utility "
+        "function",
         test_cases=[
             ("Path(value) if isinstance(value, str) else value", "_ensure_path(value)"),
             ("Path(path) if isinstance(path, str) else path", "_ensure_path(path)"),
@@ -1450,9 +1476,11 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     # Security agent patterns - NEW PATTERNS FOR SECURITY_AGENT.PY
     "detect_security_keywords": ValidatedPattern(
         name="detect_security_keywords",
-        pattern=r"(?i)(bandit|security|vulnerability|hardcoded|shell=true|b108|b602|b301|b506|unsafe|injection)",
+        pattern=r"(?i)(bandit|security|vulnerability|hardcoded|"
+        r"shell=true|b108|b602|b301|b506|unsafe|injection)",
         replacement=r"MATCH",  # Dummy replacement for detection patterns
-        description="Detect security-related keywords in issue messages (case insensitive)",
+        description="Detect security-related keywords in issue messages "
+        "(case insensitive)",
         flags=re.IGNORECASE,
         test_cases=[
             ("Bandit security issue found", "MATCH security issue found"),
@@ -1505,7 +1533,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="replace_hardcoded_temp_single_quotes",
         pattern=r"'/tmp/([^']+)'",
         replacement=r"str(Path(tempfile.gettempdir()) / '\1')",
-        description="Replace hardcoded /tmp paths (single quotes) with tempfile equivalent",
+        description="Replace hardcoded /tmp paths (single quotes) with tempfile"
+        " equivalent",
         global_replace=True,
         test_cases=[
             ("'/tmp/myfile.txt'", "str(Path(tempfile.gettempdir()) / 'myfile.txt')"),
@@ -1565,10 +1594,12 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     # Input validation patterns for security-critical validation
     "validate_sql_injection_patterns": ValidatedPattern(
         name="validate_sql_injection_patterns",
-        pattern=r"\b(union|select|insert|update|delete|drop|create|alter|exec|execute)\b",
+        pattern=r"\b(union|select|insert|update|delete|drop|create|alter|"
+        r"exec|execute)\b",
         replacement="[SQL_INJECTION]",
         flags=re.IGNORECASE,
-        description="Detect SQL injection patterns in input validation (case insensitive)",
+        description="Detect SQL injection patterns in input validation "
+        "(case insensitive)",
         global_replace=True,
         test_cases=[
             ("UNION SELECT", "[SQL_INJECTION] [SQL_INJECTION]"),
@@ -1675,7 +1706,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="validate_job_id_format",
         pattern=r"^[a-zA-Z0-9\-_]+$",
         replacement="VALID_JOB_ID",
-        description="Validate job ID format - alphanumeric with hyphens and underscores only",
+        description="Validate job ID format - alphanumeric with hyphens and"
+        " underscores only",
         test_cases=[
             ("valid_job-123", "VALID_JOB_ID"),
             ("another-valid_job_456", "VALID_JOB_ID"),
@@ -1688,7 +1720,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="validate_env_var_name_format",
         pattern=r"^[A-Z_][A-Z0-9_]*$",
         replacement="VALID_ENV_VAR_NAME",
-        description="Validate environment variable name format - uppercase letters, numbers, underscores only, must start with letter or underscore",
+        description="Validate environment variable name format - uppercase letters,"
+        " numbers, underscores only, must start with letter or underscore",
         test_cases=[
             ("VALID_VAR", "VALID_ENV_VAR_NAME"),
             ("_VALID_VAR", "VALID_ENV_VAR_NAME"),
@@ -1702,7 +1735,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="update_repo_revision",
         pattern=r'("repo": "[^"]+?".*?"rev": )"([^"]+)"',
         replacement=r'\1"NEW_REVISION"',
-        description="Update repository revision in config files (NEW_REVISION placeholder replaced dynamically)",
+        description="Update repository revision in config files (NEW_REVISION"
+        " placeholder replaced dynamically)",
         flags=re.DOTALL,
         test_cases=[
             (
@@ -1710,12 +1744,16 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
                 '"repo": "https://github.com/user/repo".*"rev": "NEW_REVISION"',
             ),
             (
-                '"repo": "git@github.com:user/repo.git", "branch": "main", "rev": "abc123"',
-                '"repo": "git@github.com:user/repo.git", "branch": "main", "rev": "NEW_REVISION"',
+                '"repo": "git@github.com:user/repo.git", "branch": "main", "rev": '
+                '"abc123"',
+                '"repo": "git@github.com:user/repo.git", "branch": "main", "rev":'
+                ' "NEW_REVISION"',
             ),
             (
-                '{"repo": "https://example.com/repo", "description": "test", "rev": "456def"}',
-                '{"repo": "https://example.com/repo", "description": "test", "rev": "NEW_REVISION"}',
+                '{"repo": "https://example.com/repo", "description": "test", "rev": '
+                '"456def"}',
+                '{"repo": "https://example.com/repo", "description": "test", "rev":'
+                ' "NEW_REVISION"}',
             ),
         ],
     ),
@@ -1815,7 +1853,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="sanitize_simple_ws_localhost_urls",
         pattern=r"ws://localhost[^\s]*",
         replacement="[INTERNAL_URL]",
-        description="Sanitize simple WebSocket localhost URLs without explicit ports for security",
+        description="Sanitize simple WebSocket localhost URLs without explicit ports"
+        " for security",
         global_replace=True,
         test_cases=[
             ("ws://localhost/websocket", "[INTERNAL_URL]"),
@@ -1862,7 +1901,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("asyncio.create_task(coro)", "MATCH(coro)"),
             ("not_asyncio.other()", "not_asyncio.other()"),
         ],
-        description="Detect asyncio.create_task usage for resource management integration",
+        description="Detect asyncio.create_task usage for resource management"
+        " integration",
     ),
     "detect_file_open_operations": ValidatedPattern(
         name="detect_file_open_operations",
@@ -1884,7 +1924,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("async def bar(a, b) -> None:", "async def bar(a, b) -> None:"),
             ("def sync_func():", "def sync_func():"),
         ],
-        description="Match async function definitions for resource management integration",
+        description="Match async function definitions for resource management"
+        " integration",
     ),
     "match_class_definition": ValidatedPattern(
         name="match_class_definition",
@@ -1909,7 +1950,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ),
             (
                 "result = subprocess.Popen(['ls'])",
-                "result = managed_proc = resource_ctx.managed_process(subprocess.Popen(['ls'])",
+                "result = managed_proc = resource_ctx.managed_process("
+                "subprocess.Popen(['ls'])",
             ),
         ],
         description="Replace subprocess.Popen with managed version",
@@ -1948,7 +1990,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ),
             (
                 "file.write_text(data, encoding='utf-8')",
-                "await SafeFileOperations.safe_write_text(file, data, encoding='utf-8', atomic=True)",
+                "await SafeFileOperations.safe_write_text(file, data, encoding='utf-8',"
+                " atomic=True)",
             ),
         ],
         description="Replace path.write_text with SafeFileOperations.safe_write_text",
@@ -1975,7 +2018,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("12  specialized  agents", "12 specialized agents"),
             ("5   specialized    agents", "5 specialized agents"),
         ],
-        description="Match specialized agent count patterns for documentation consistency",
+        description="Match specialized agent count patterns for documentation "
+        "consistency",
         flags=re.IGNORECASE,
     ),
     "total_agents_config_pattern": ValidatedPattern(
@@ -2025,7 +2069,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("We have 12 specialized agents", "We have NEW_COUNT specialized agents"),
             ("All 5 specialized agents work", "All NEW_COUNT specialized agents work"),
         ],
-        description="Update specialized agent count references (NEW_COUNT replaced dynamically)",
+        description="Update specialized agent count references (NEW_COUNT replaced"
+        " dynamically)",
     ),
     "update_total_agents_config": ValidatedPattern(
         name="update_total_agents_config",
@@ -2036,7 +2081,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("total_agents': 12", 'total_agents": NEW_COUNT'),
             ('total_agents" : 5', 'total_agents": NEW_COUNT'),
         ],
-        description="Update total agents configuration (NEW_COUNT replaced dynamically)",
+        description="Update total agents configuration (NEW_COUNT replaced"
+        " dynamically)",
     ),
     "update_sub_agent_count": ValidatedPattern(
         name="update_sub_agent_count",
@@ -2047,7 +2093,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("We have 12 sub-agents ready", "We have NEW_COUNT sub-agents ready"),
             ("All 5 sub-agents are active", "All NEW_COUNT sub-agents are active"),
         ],
-        description="Update sub-agent count references (NEW_COUNT replaced dynamically)",
+        description="Update sub-agent count references (NEW_COUNT replaced"
+        " dynamically)",
     ),
     # Agent-specific patterns - TestSpecialistAgent
     "fixture_not_found_pattern": ValidatedPattern(
@@ -2157,7 +2204,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("results += [result]", "results.append(result)"),
             ("  data += [value, other]", "  data.append(value, other)"),
         ],
-        description="Replace inefficient list concatenation with append for performance",
+        description="Replace inefficient list concatenation with append for"
+        " performance",
     ),
     "string_concatenation_pattern": ValidatedPattern(
         name="string_concatenation_pattern",
@@ -2168,7 +2216,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("result += line", "result_parts.append(line)"),
             ("  output += data", "  output_parts.append(data)"),
         ],
-        description="Replace string concatenation with list append for performance optimization",
+        description="Replace string concatenation with list append for performance "
+        "optimization",
     ),
     # Enhanced performance patterns for PerformanceAgent optimization
     "nested_loop_detection_pattern": ValidatedPattern(
@@ -2178,14 +2227,17 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             (
                 "    for j in other:",
-                "    # Performance: Potential nested loop - check complexity\n    for j in other:",
+                "    # Performance: Potential nested loop - check complexity\n "
+                "   for j in other:",
             ),
             (
                 "for i in items:",
-                "# Performance: Potential nested loop - check complexity\nfor i in items:",
+                "# Performance: Potential nested loop - check complexity\nfor i"
+                " in items:",
             ),
         ],
-        description="Detect loop patterns that might be nested creating O(n²) complexity",
+        description="Detect loop patterns that might be nested creating O(n²)"
+        " complexity",
         flags=re.MULTILINE,
     ),
     "list_extend_optimization_pattern": ValidatedPattern(
@@ -2202,31 +2254,37 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     "inefficient_string_join_pattern": ValidatedPattern(
         name="inefficient_string_join_pattern",
         pattern=r"(\s*)(\w+)\s*=\s*([\"'])([\"'])\s*\.\s*join\(\s*\[\s*\]\s*\)",
-        replacement=r"\1\2 = \3\4  # Performance: Use empty string directly instead of join",
+        replacement=r"\1\2 = \3\4  # Performance: Use empty string directly instead"
+        r" of join",
         test_cases=[
             (
                 '    text = "".join([])',
-                '    text = ""  # Performance: Use empty string directly instead of join',
+                '    text = ""  # Performance: Use empty string directly instead of'
+                " join",
             ),
             (
                 "result = ''.join([])",
                 "result = ''  # Performance: Use empty string directly instead of join",
             ),
         ],
-        description="Replace inefficient empty list join with direct empty string assignment",
+        description="Replace inefficient empty list join with direct empty string"
+        " assignment",
     ),
     "repeated_len_in_loop_pattern": ValidatedPattern(
         name="repeated_len_in_loop_pattern",
         pattern=r"(\s*)(len\(\s*(\w+)\s*\))",
-        replacement=r"\1# Performance: Consider caching len(\3) if used repeatedly\n\1\2",
+        replacement=r"\1# Performance: Consider caching len(\3) if used "
+        r"repeatedly\n\1\2",
         test_cases=[
             (
                 "    len(items)",
-                "    # Performance: Consider caching len(items) if used repeatedly\n    len(items)",
+                "    # Performance: Consider caching len(items) if used repeatedly\n"
+                "    len(items)",
             ),
             (
                 "len(data)",
-                "# Performance: Consider caching len(data) if used repeatedly\nlen(data)",
+                "# Performance: Consider caching len(data) if used "
+                "repeatedly\nlen(data)",
             ),
         ],
         description="Suggest caching len() calls that might be repeated",
@@ -2234,15 +2292,18 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     "list_comprehension_optimization_pattern": ValidatedPattern(
         name="list_comprehension_optimization_pattern",
         pattern=r"(\s*)(\w+)\.append\(([^)]+)\)",
-        replacement=r"\1# Performance: Consider list comprehension if this is in a simple loop\n\1\2.append(\3)",
+        replacement=r"\1# Performance: Consider list comprehension if this is in a "
+        r"simple loop\n\1\2.append(\3)",
         test_cases=[
             (
                 "    results.append(item * 2)",
-                "    # Performance: Consider list comprehension if this is in a simple loop\n    results.append(item * 2)",
+                "    # Performance: Consider list comprehension if this is in a "
+                "simple loop\n    results.append(item * 2)",
             ),
             (
                 "data.append(value)",
-                "# Performance: Consider list comprehension if this is in a simple loop\ndata.append(value)",
+                "# Performance: Consider list comprehension if this is in a simple"
+                " loop\ndata.append(value)",
             ),
         ],
         description="Suggest list comprehensions for simple append patterns",
@@ -2264,9 +2325,11 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "detect_hardcoded_credentials_advanced": ValidatedPattern(
         name="detect_hardcoded_credentials_advanced",
-        pattern=r'(?i)\b(?:password|passwd|pwd|secret|key|token|api_key|apikey)\s*[:=]\s*["\'][^"\']{3,}["\']',
+        pattern=r"(?i)\b(?:password|passwd|pwd|secret|key|token|api_key|"
+        r'apikey)\s*[:=]\s*["\'][^"\']{3,}["\']',
         replacement="[HARDCODED_CREDENTIAL_DETECTED]",
-        description="Detect hardcoded credentials in various formats (case insensitive)",
+        description="Detect hardcoded credentials in various formats "
+        "(case insensitive)",
         flags=re.IGNORECASE,
         global_replace=True,
         test_cases=[
@@ -2298,7 +2361,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="detect_regex_redos_vulnerable",
         pattern=r"\([^)]+\)[\*\+]",
         replacement="[REDOS_VULNERABLE_PATTERN]",
-        description="Detect regex patterns vulnerable to ReDoS attacks (simplified detection)",
+        description="Detect regex patterns vulnerable to ReDoS attacks (simplified"
+        " detection)",
         global_replace=True,
         test_cases=[
             ("(a+)*", "[REDOS_VULNERABLE_PATTERN]"),
@@ -2411,7 +2475,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         name="clean_unused_from_import",
         pattern=r"^\s*from\s+\w+\s+import\s+.*\bunused_item\b",
         replacement=r"\g<0>",
-        description="Match from import statements with unused items (example with unused_item)",
+        description="Match from import statements with unused items (example with "
+        "unused_item)",
         test_cases=[
             (
                 "from module import used, unused_item",
@@ -2481,7 +2546,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
 
 def validate_all_patterns() -> dict[str, bool]:
     """Validate all patterns and return results."""
-    results = {}
+    validate_results = {}
     for name, pattern in SAFE_PATTERNS.items():
         try:
             pattern._validate()
@@ -2489,7 +2554,7 @@ def validate_all_patterns() -> dict[str, bool]:
         except ValueError as e:
             results[name] = False
             print(f"Pattern '{name}' failed validation: {e}")
-    return results
+    return validate_results
 
 
 def find_pattern_for_text(text: str) -> list[str]:

@@ -423,6 +423,20 @@ class RefactoringAgent(SubAgent):
         content: str,
         complex_functions: list[dict[str, t.Any]],
     ) -> str:
+        # First try specific function refactoring
+        refactored_content = self._refactor_complex_functions(
+            content, complex_functions
+        )
+        if refactored_content != content:
+            return refactored_content
+
+        # Apply enhanced complexity reduction strategies
+        return self._apply_enhanced_strategies(content)
+
+    def _refactor_complex_functions(
+        self, content: str, complex_functions: list[dict[str, t.Any]]
+    ) -> str:
+        """Refactor complex functions by applying specific patterns."""
         lines = content.split("\n")
 
         for func_info in complex_functions:
@@ -445,12 +459,12 @@ class RefactoringAgent(SubAgent):
                     if modified_content != content:
                         return modified_content
 
-        # Apply enhanced complexity reduction strategies
-        enhanced_content = self._apply_enhanced_complexity_patterns(content)
-        if enhanced_content != content:
-            return enhanced_content
-
         return content
+
+    def _apply_enhanced_strategies(self, content: str) -> str:
+        """Apply enhanced complexity reduction strategies."""
+        enhanced_content = self._apply_enhanced_complexity_patterns(content)
+        return enhanced_content
 
     def _apply_enhanced_complexity_patterns(self, content: str) -> str:
         """Apply enhanced complexity reduction patterns using SAFE_PATTERNS."""

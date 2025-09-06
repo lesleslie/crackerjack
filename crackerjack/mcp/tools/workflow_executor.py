@@ -151,6 +151,8 @@ async def _create_advanced_orchestrator(
 
     orchestrator = AsyncWorkflowOrchestrator(
         pkg_path=Path(working_dir),
+        verbose=kwargs.get("verbose", False),
+        debug=kwargs.get("debug", False),
     )
 
     return orchestrator

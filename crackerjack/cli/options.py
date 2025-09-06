@@ -23,6 +23,7 @@ class Options(BaseModel):
     publish: BumpOption | None = None
     bump: BumpOption | None = None
     verbose: bool = False
+    debug: bool = False
     clean: bool = False
     test: bool = False
     benchmark: bool = False
@@ -117,6 +118,7 @@ CLI_OPTIONS = {
         help="Update pre-commit hooks configuration.",
     ),
     "verbose": typer.Option(False, "-v", "--verbose", help="Enable verbose output."),
+    "debug": typer.Option(False, "--debug", help="Enable debug output."),
     "publish": typer.Option(
         None,
         "-p",
@@ -364,6 +366,7 @@ def create_options(
     no_config_updates: bool,
     update_precommit: bool,
     verbose: bool,
+    debug: bool,
     publish: BumpOption | None,
     all: BumpOption | None,
     bump: BumpOption | None,
@@ -405,6 +408,7 @@ def create_options(
         no_config_updates=no_config_updates,
         update_precommit=update_precommit,
         verbose=verbose,
+        debug=debug,
         publish=publish,
         bump=bump,
         clean=clean,

@@ -9,6 +9,10 @@ from .options import Options
 
 
 def setup_ai_agent_env(ai_agent: bool, verbose: bool = False) -> None:
+    # Set debug environment variable if verbose is enabled
+    if verbose:
+        os.environ["CRACKERJACK_DEBUG"] = "1"
+
     if ai_agent:
         os.environ["AI_AGENT"] = "1"
         os.environ["AI_AGENT_DEBUG"] = "1"
@@ -182,6 +186,7 @@ def handle_standard_mode(
                 dry_run=getattr(options, "dry_run", False),
                 web_job_id=job_id,
                 verbose=options.verbose,
+                debug=getattr(options, "debug", False),
             )
             success = asyncio.run(orchestrator.run_complete_workflow_async(options))
         else:
@@ -191,6 +196,7 @@ def handle_standard_mode(
                 dry_run=getattr(options, "dry_run", False),
                 web_job_id=job_id,
                 verbose=options.verbose,
+                debug=getattr(options, "debug", False),
             )
             success = asyncio.run(orchestrator.run_complete_workflow(options))
 

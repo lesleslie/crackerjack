@@ -82,8 +82,10 @@ class ComplexityCalculator(ast.NodeVisitor):
     ) -> None:
         """Process comprehensions with condition penalty."""
         self.complexity += 1
-        if hasattr(node, "ifs") and node.ifs:
-            self.complexity += len(node.ifs)
+        # Check each generator for ifs conditions
+        for generator in node.generators:
+            if hasattr(generator, "ifs") and generator.ifs:
+                self.complexity += len(generator.ifs)
         self.generic_visit(node)
 
     def _visit_with_nesting(self, node: ast.AST) -> None:

@@ -25,39 +25,7 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
             timeout=10.0,  # 10 second timeout for process listing
         )
 
-        processes: list[dict[str, t.Any]] = []
-        str(Path.cwd())
-
-        for line in result.stdout.splitlines():
-            if (
-                "crackerjack" in line
-                and "--start-mcp-server" in line
-                and "python" in line.lower()
-            ):
-                parts = line.split()
-                if len(parts) >= 11:
-                    try:
-                        pid = int(parts[1])
-                        # Find where the command actually starts (usually after the time field)
-                        command_start_index = 10
-                        for i, part in enumerate(parts):
-                            if part.endswith("python") or "Python" in part:
-                                command_start_index = i
-                                break
-
-                        processes.append(
-                            {
-                                "pid": pid,
-                                "command": " ".join(parts[command_start_index:]),
-                                "user": parts[0],
-                                "cpu": parts[2],
-                                "mem": parts[3],
-                            },
-                        )
-                    except (ValueError, IndexError):
-                        continue
-
-        return processes
+        return _parse_mcp_processes(result.stdout)
 
     except Exception as e:
         security_logger.log_subprocess_failure(
@@ -66,6 +34,61 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
             error_output=str(e),
         )
         return []
+
+
+def _parse_mcp_processes(stdout: str) -> list[dict[str, t.Any]]:
+    """Parse MCP server processes from ps command output."""
+    processes: list[dict[str, t.Any]] = []
+    str(Path.cwd())
+
+    for line in stdout.splitlines():
+        if _is_mcp_server_process(line):
+            process_info = _extract_process_info(line)
+            if process_info:
+                processes.append(process_info)
+
+    return processes
+
+
+def _is_mcp_server_process(line: str) -> bool:
+    """Check if a line represents an MCP server process."""
+    return (
+        "crackerjack" in line
+        and "--start-mcp-server" in line
+        and "python" in line.lower()
+    )
+
+
+def _extract_process_info(line: str) -> dict[str, t.Any] | None:
+    """Extract process information from a ps output line."""
+    parts = line.split()
+    if len(parts) < 11:
+        return None
+
+    try:
+        pid = int(parts[1])
+        # Find where the command actually starts (usually after the time field)
+        command_start_index = _find_command_start_index(parts)
+
+        return {
+            "pid": pid,
+            "command": " ".join(parts[command_start_index:]),
+            "user": parts[0],
+            "cpu": parts[2],
+            "mem": parts[3],
+        }
+    except (ValueError, IndexError):
+        return None
+
+
+def _find_command_start_index(parts: list[str]) -> int:
+    """Find the index where the command starts in ps output."""
+    command_start_index = 10
+    for i, part in enumerate(parts):
+        if part.endswith("python") or "Python" in part:
+            command_start_index = i
+            break
+    return command_start_index
 
 
 def find_websocket_server_processes() -> list[dict[str, t.Any]]:

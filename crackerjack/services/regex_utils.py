@@ -5,6 +5,8 @@ Provides quick functions for testing regex patterns before adding them
 to the centralized registry, and utilities for migrating existing re.sub() calls.
 """
 
+import re
+import typing as t
 from pathlib import Path
 
 from crackerjack.services.regex_patterns import SAFE_PATTERNS, CompiledPatternCache
@@ -15,13 +17,13 @@ def test_pattern_immediately(
     replacement: str,
     test_cases: list[tuple[str, str]],
     description: str = "",
-) -> dict[str, any]:
+) -> dict[str, t.Any]:
     """
     Test a regex pattern immediately without adding to registry.
 
     Returns a report of test results for quick validation.
     """
-    results = {
+    results: dict[str, t.Any] = {
         "pattern": pattern,
         "replacement": replacement,
         "description": description,
@@ -31,21 +33,7 @@ def test_pattern_immediately(
         "errors": [],
     }
 
-    # Check for forbidden replacement syntax first using safe patterns
-    forbidden_checks = [
-        (r"\\g\s*<\s*\d+\s*>", "\\g < 1 > with spaces"),
-        (r"\\g<\s+\d+>", "\\g< 1> with space after <"),
-        (r"\\g<\d+\s+>", "\\g<1 > with space before >"),
-    ]
-
-    for forbidden_pattern, description in forbidden_checks:
-        compiled = CompiledPatternCache.get_compiled_pattern(forbidden_pattern)
-        if compiled.search(replacement):
-            results["errors"].append(
-                f"CRITICAL: Bad replacement syntax detected: '{replacement}'. Use \\g<1> not \\g < 1 >"
-            )
-            results["all_passed"] = False
-            return results
+    # Check for forbidden replacement syntax first using safe patterns\n    forbidden_checks = [\n        (r\"\\\\g\\\\s*<\\\\s*\\\\d+\\\\s*>\", \"\\\\g < 1 > with spaces\"),\n        (r\"\\\\g<\\\\s+\\\\d+>\", \"\\\\g< 1> with space after <\"),\n        (r\"\\\\g<\\\\d+\\\\s+>\", \"\\\\g<1 > with space before >\"),\n    ]
 
     # Validate pattern compilation using safe cache
     try:
@@ -96,7 +84,7 @@ def test_pattern_immediately(
     return results
 
 
-def print_pattern_test_report(results: dict[str, any]) -> None:
+def print_pattern_test_report(results: dict[str, t.Any]) -> None:
     """Print a formatted report of pattern test results."""
     print("\n🔍 REGEX PATTERN TEST REPORT")
     print("=" * 50)
@@ -160,7 +148,7 @@ def find_safe_pattern_for_text(text: str) -> list[str]:
 
 def suggest_migration_for_re_sub(
     original_pattern: str, original_replacement: str, sample_text: str = ""
-) -> dict[str, any]:
+) -> dict[str, t.Any]:
     """
     Suggest how to migrate a raw re.sub() call to use safe patterns.
 
@@ -172,7 +160,7 @@ def suggest_migration_for_re_sub(
     Returns:
         Dictionary with migration suggestions
     """
-    suggestion = {
+    suggestion: dict[str, t.Any] = {
         "original_pattern": original_pattern,
         "original_replacement": original_replacement,
         "existing_matches": [],
@@ -186,10 +174,9 @@ def suggest_migration_for_re_sub(
     forbidden_checks = [
         (r"\\g\s*<\s*\d+\s*>", "\\g < 1 > with spaces"),
         (r"\\g<\s+\d+>", "\\g< 1> with space after <"),
-        (r"\\g<\d+\s+>", "\\g<1 > with space before >"),
+        (r"\\\\g<\\d+\\s+>", "\\\\g<1 > with space before >"),
     ]
-
-    for forbidden_pattern, description in forbidden_checks:
+    for forbidden_pattern, _ in forbidden_checks:
         compiled = CompiledPatternCache.get_compiled_pattern(forbidden_pattern)
         if compiled.search(original_replacement):
             suggestion["safety_issues"].append(
@@ -240,7 +227,7 @@ def suggest_migration_for_re_sub(
     return suggestion
 
 
-def print_migration_suggestion(suggestion: dict[str, any]) -> None:
+def print_migration_suggestion(suggestion: dict[str, t.Any]) -> None:
     """Print a formatted migration suggestion report."""
     print("\n🔄 REGEX MIGRATION SUGGESTION")
     print("=" * 50)
@@ -296,7 +283,7 @@ def print_migration_suggestion(suggestion: dict[str, any]) -> None:
     print("=" * 50)
 
 
-def audit_file_for_re_sub(file_path: Path) -> list[dict[str, any]]:
+def audit_file_for_re_sub(file_path: Path) -> list[dict[str, t.Any]]:
     """
     Audit a file for re.sub() calls and return migration suggestions.
 
@@ -340,7 +327,7 @@ def audit_file_for_re_sub(file_path: Path) -> list[dict[str, any]]:
     return findings
 
 
-def audit_codebase_re_sub() -> dict[str, list[dict[str, any]]]:
+def audit_codebase_re_sub() -> dict[str, list[dict[str, t.Any]]]:
     """
     Audit entire crackerjack codebase for re.sub() usage.
 
@@ -388,9 +375,7 @@ def replace_unsafe_regex_with_safe_patterns(content: str) -> str:
         line = _fix_replacement_syntax_issues(line)
 
         # Process re.sub patterns
-        line, pattern_modified, needs_import = _process_re_sub_patterns(
-            line, has_safe_patterns_import
-        )
+        line, _, needs_import = _process_re_sub_patterns(line, has_safe_patterns_import)
 
         if needs_import and not has_safe_patterns_import:
             import_index = _find_import_insertion_point(lines)
@@ -467,7 +452,7 @@ def _identify_safe_pattern(pattern: str, replacement: str) -> str | None:
 
 
 def _replace_with_safe_pattern(
-    line: str, re_sub_match, safe_pattern_name: str
+    line: str, re_sub_match: re.Match[str], safe_pattern_name: str
 ) -> tuple[str, bool, bool]:
     """Replace re.sub call with safe pattern call."""
     before_re_sub = line[: re_sub_match.start()]
@@ -486,7 +471,7 @@ def _replace_with_safe_pattern(
 
 def _handle_assignment_pattern(
     line: str,
-    assign_match,
+    assign_match: re.Match[str],
     before_re_sub: str,
     after_re_sub: str,
     safe_pattern_name: str,
@@ -499,7 +484,7 @@ def _handle_assignment_pattern(
 
 
 def _handle_direct_replacement(
-    line: str, re_sub_match, safe_pattern_name: str
+    line: str, re_sub_match: re.Match[str], safe_pattern_name: str
 ) -> tuple[str, bool, bool]:
     """Handle direct replacement of re.sub call."""
     text_var = _extract_source_variable(line)

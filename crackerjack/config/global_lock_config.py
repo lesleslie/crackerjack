@@ -3,6 +3,8 @@ import socket
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..models.protocols import OptionsProtocol
+
 
 @dataclass
 class GlobalLockConfig:
@@ -32,16 +34,22 @@ class GlobalLockConfig:
         # Import here to avoid circular import
 
         # Create config with custom values from options
-        config_kwargs = {
-            "enabled": not options.disable_global_locks,
-            "timeout_seconds": float(options.global_lock_timeout),
-        }
-
-        if options.global_lock_dir:
-            config_kwargs["lock_directory"] = Path(options.global_lock_dir)
+        enabled = not options.disable_global_locks
+        timeout_seconds = float(options.global_lock_timeout)
+        # Get default lock directory from field definition
+        default_lock_dir = Path.home() / ".crackerjack" / "locks"
+        lock_directory = (
+            Path(options.global_lock_dir)
+            if options.global_lock_dir
+            else default_lock_dir
+        )
 
         # Create instance with all parameters so __post_init__ is called
-        config = cls(**config_kwargs)
+        config = cls(
+            enabled=enabled,
+            timeout_seconds=timeout_seconds,
+            lock_directory=lock_directory,
+        )
 
         return config
 

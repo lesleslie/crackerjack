@@ -136,7 +136,8 @@ class BatchFileOperations:
 
             await asyncio.gather(*tasks, return_exceptions=True)
 
-    async def _read_single_async(self, path: Path, future: asyncio.Future[str]) -> None:
+    @staticmethod
+    async def _read_single_async(path: Path, future: asyncio.Future[str]) -> None:
         try:
             async with aiofiles.open(path, encoding="utf-8") as f:
                 content = await f.read()
@@ -144,8 +145,8 @@ class BatchFileOperations:
         except Exception as e:
             future.set_exception(e)
 
+    @staticmethod
     async def _write_single_async(
-        self,
         path: Path,
         content: str,
         future: asyncio.Future[None],
@@ -192,9 +193,6 @@ class EnhancedFileSystemService(FileSystemInterface):
             return content
 
     def write_file(self, path: str | Path, content: str) -> None:
-        if not isinstance(content, str):
-            raise TypeError("Content must be a string")
-
         path_obj = Path(path) if isinstance(path, str) else path
 
         with LoggingContext("write_file", path=str(path_obj), size=len(content)):
@@ -286,7 +284,8 @@ class EnhancedFileSystemService(FileSystemInterface):
 
             await asyncio.gather(*tasks, return_exceptions=True)
 
-    def _get_cache_key(self, path: Path) -> str:
+    @staticmethod
+    def _get_cache_key(path: Path) -> str:
         path_str = str(path.resolve())
         return hashlib.md5(path_str.encode(), usedforsecurity=False).hexdigest()
 
@@ -306,7 +305,8 @@ class EnhancedFileSystemService(FileSystemInterface):
 
         return self.cache.get(cache_key)
 
-    def _read_file_direct(self, path: Path) -> str:
+    @staticmethod
+    def _read_file_direct(path: Path) -> str:
         try:
             if not path.exists():
                 raise FileError(
@@ -334,7 +334,8 @@ class EnhancedFileSystemService(FileSystemInterface):
                 recovery="Check disk space and file system integrity",
             ) from e
 
-    def _write_file_direct(self, path: Path, content: str) -> None:
+    @staticmethod
+    def _write_file_direct(path: Path, content: str) -> None:
         try:
             try:
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -360,7 +361,8 @@ class EnhancedFileSystemService(FileSystemInterface):
                 recovery="Check disk space and file system integrity",
             ) from e
 
-    def file_exists(self, path: str | Path) -> bool:
+    @staticmethod
+    def file_exists(path: str | Path) -> bool:
         return (Path(path) if isinstance(path, str) else path).exists()
 
     def create_directory(self, path: str | Path) -> None:
@@ -394,7 +396,8 @@ class EnhancedFileSystemService(FileSystemInterface):
                 recovery="Check file permissions",
             ) from e
 
-    def list_files(self, path: str | Path, pattern: str = "*") -> Iterator[Path]:
+    @staticmethod
+    def list_files(path: str | Path, pattern: str = "*") -> Iterator[Path]:
         path_obj = Path(path) if isinstance(path, str) else path
 
         if not path_obj.is_dir():

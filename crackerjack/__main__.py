@@ -126,6 +126,7 @@ def main(
     no_config_updates: bool = CLI_OPTIONS["no_config_updates"],
     update_precommit: bool = CLI_OPTIONS["update_precommit"],
     verbose: bool = CLI_OPTIONS["verbose"],
+    debug: bool = CLI_OPTIONS["debug"],
     publish: BumpOption | None = CLI_OPTIONS["publish"],
     all: BumpOption | None = CLI_OPTIONS["all"],
     bump: BumpOption | None = CLI_OPTIONS["bump"],
@@ -179,6 +180,7 @@ def main(
         no_config_updates,
         update_precommit,
         verbose,
+        debug,
         publish,
         all,
         bump,
@@ -221,7 +223,12 @@ def main(
         # Update the options object to reflect the verbose setting
         options.verbose = True
 
-    setup_ai_agent_env(ai_agent, verbose or ai_debug)
+    # If debug flag is set, enable verbose mode as well
+    if debug:
+        verbose = True
+        options.verbose = True
+
+    setup_ai_agent_env(ai_agent, verbose or ai_debug or debug)
 
     if _handle_server_commands(
         monitor,
