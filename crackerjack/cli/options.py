@@ -63,7 +63,7 @@ class Options(BaseModel):
     websocket_port: int | None = None
     dev: bool = False
     dashboard: bool = False
-    max_iterations: int = 10
+    max_iterations: int = 5
     enterprise_batch: str | None = None
     monitor_dashboard: str | None = None
     coverage_status: bool = False
@@ -74,6 +74,18 @@ class Options(BaseModel):
     global_lock_timeout: int = 600
     global_lock_cleanup: bool = True
     global_lock_dir: str | None = None
+    quick: bool = False
+    thorough: bool = False
+
+    @property
+    def effective_max_iterations(self) -> int:
+        """Get the effective max iterations based on quick/thorough flags."""
+        if self.quick:
+            return 3  # Quick mode: 3 iterations for CI/CD
+        elif self.thorough:
+            return 8  # Thorough mode: 8 iterations for complex refactoring
+        else:
+            return self.max_iterations  # Default: 5 iterations
 
     @classmethod
     @field_validator("publish", "bump", mode="before")
@@ -282,9 +294,9 @@ CLI_OPTIONS = {
         help="Start the comprehensive dashboard with system metrics, job tracking, and performance monitoring.",
     ),
     "max_iterations": typer.Option(
-        10,
+        5,
         "--max-iterations",
-        help="Maximum number of iterations for AI agent auto-fixing workflows (default: 10).",
+        help="Maximum number of iterations for AI agent auto-fixing workflows (default: 5).",
     ),
     "ai_debug": typer.Option(
         False,
@@ -357,6 +369,16 @@ CLI_OPTIONS = {
         "--global-lock-dir",
         help="Custom directory for global lock files (default: ~/.crackerjack/locks).",
     ),
+    "quick": typer.Option(
+        False,
+        "--quick",
+        help="Quick mode: Run with maximum 3 iterations (ideal for CI/CD).",
+    ),
+    "thorough": typer.Option(
+        False,
+        "--thorough",
+        help="Thorough mode: Run with maximum 8 iterations (for complex refactoring).",
+    ),
 }
 
 
@@ -401,6 +423,8 @@ def create_options(
     global_lock_timeout: int,
     global_lock_cleanup: bool,
     global_lock_dir: str | None,
+    quick: bool,
+    thorough: bool,
 ) -> Options:
     return Options(
         commit=commit,
@@ -443,4 +467,6 @@ def create_options(
         global_lock_timeout=global_lock_timeout,
         global_lock_cleanup=global_lock_cleanup,
         global_lock_dir=global_lock_dir,
+        quick=quick,
+        thorough=thorough,
     )

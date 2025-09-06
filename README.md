@@ -63,6 +63,7 @@ Crackerjack is built on the following core principles:
 - **Consistency:** Code style, formatting, and project structure should be consistent across projects
 - **Reliability:** Tests are essential, and code should be checked rigorously
 - **Tool Integration:** Leverage powerful existing tools instead of reinventing the wheel
+- **Auto-Discovery:** Prefer intelligent auto-discovery of configurations and settings over manual configuration whenever possible, reducing setup friction and configuration errors
 - **Static Typing:** Static typing is essential for all development
 
 ## Table of Contents
