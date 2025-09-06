@@ -441,6 +441,58 @@ class TestPhaseCoordinatorPublishing:
         result = phase_coordinator._handle_version_bump_only("patch")
         assert result is False
 
+    def test_execute_publishing_workflow_stages_files(
+        self, phase_coordinator, options
+    ) -> None:
+        """Test that git add -A . is called after version bumping in publishing workflow."""
+        options.publish = "patch"
+        options.no_git_tags = False
+
+        # Mock the dependencies
+        phase_coordinator.publish_manager.bump_version.return_value = "1.2.4"
+        phase_coordinator.git_service.add_all_files.return_value = True
+        phase_coordinator.publish_manager.create_git_tag.return_value = True
+        phase_coordinator.publish_manager.publish_package.return_value = True
+
+        # Set up session mocks
+        phase_coordinator.session.track_task.return_value = None
+        phase_coordinator.session.complete_task.return_value = None
+
+        result = phase_coordinator._execute_publishing_workflow(options, "patch")
+
+        # Verify call order and parameters
+        assert result is True
+        phase_coordinator.publish_manager.bump_version.assert_called_once_with("patch")
+        phase_coordinator.git_service.add_all_files.assert_called_once()
+        phase_coordinator.publish_manager.create_git_tag.assert_called_with("1.2.4")
+        phase_coordinator.publish_manager.publish_package.assert_called_once()
+
+    def test_execute_publishing_workflow_staging_fails_continues(
+        self, phase_coordinator, options
+    ) -> None:
+        """Test that publishing continues even if git staging fails."""
+        options.publish = "patch"
+        options.no_git_tags = False
+
+        # Mock staging failure but successful publishing
+        phase_coordinator.publish_manager.bump_version.return_value = "1.2.4"
+        phase_coordinator.git_service.add_all_files.return_value = (
+            False  # Staging fails
+        )
+        phase_coordinator.publish_manager.create_git_tag.return_value = True
+        phase_coordinator.publish_manager.publish_package.return_value = True
+
+        # Set up session mocks
+        phase_coordinator.session.track_task.return_value = None
+        phase_coordinator.session.complete_task.return_value = None
+
+        result = phase_coordinator._execute_publishing_workflow(options, "patch")
+
+        # Should still succeed despite staging failure
+        assert result is True
+        phase_coordinator.git_service.add_all_files.assert_called_once()
+        phase_coordinator.publish_manager.publish_package.assert_called_once()
+
 
 class TestPhaseCoordinatorCommitMessages:
     @pytest.fixture

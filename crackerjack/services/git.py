@@ -113,6 +113,21 @@ class GitService:
             self.console.print(f"[red]❌[/ red] Error adding files: {e}")
             return False
 
+    def add_all_files(self) -> bool:
+        """Stage all changes including new, modified, and deleted files."""
+        try:
+            result = self._run_git_command(["add", "-A", "."])
+            if result.returncode == 0:
+                self.console.print("[green]✅[/ green] Staged all changes")
+                return True
+            self.console.print(
+                f"[red]❌[/ red] Failed to stage changes: {result.stderr}"
+            )
+            return False
+        except Exception as e:
+            self.console.print(f"[red]❌[/ red] Error staging files: {e}")
+            return False
+
     def commit(self, message: str) -> bool:
         try:
             result = self._run_git_command(["commit", "- m", message])
@@ -172,15 +187,66 @@ class GitService:
 
     def push(self) -> bool:
         try:
-            result = self._run_git_command(["push"])
+            # Get detailed push information
+            result = self._run_git_command(["push", "--porcelain"])
             if result.returncode == 0:
-                self.console.print("[green]✅[/ green] Pushed to remote")
+                self._display_push_success(result.stdout)
                 return True
             self.console.print(f"[red]❌[/ red] Push failed: {result.stderr}")
             return False
         except Exception as e:
             self.console.print(f"[red]❌[/ red] Error pushing: {e}")
             return False
+
+    def _display_push_success(self, push_output: str) -> None:
+        """Display detailed push success information."""
+        lines = push_output.strip().split("\n") if push_output.strip() else []
+
+        if not lines:
+            # Fallback for when porcelain doesn't give output (e.g., nothing to push)
+            self.console.print("[green]✅[/ green] Pushed to remote (no new commits)")
+            return
+
+        pushed_refs = []
+        for line in lines:
+            if line.startswith("*") or line.startswith("+") or line.startswith("="):
+                # Parse porcelain output: flag:from:to summary
+                parts = line.split("\t")
+                if len(parts) >= 2:
+                    parts[0]
+                    summary = parts[1] if len(parts) > 1 else ""
+                    pushed_refs.append(summary)
+
+        if pushed_refs:
+            self.console.print(
+                f"[green]✅[/ green] Successfully pushed {len(pushed_refs)} ref(s) to remote:"
+            )
+            for ref in pushed_refs:
+                self.console.print(f"  [dim]→ {ref}[/ dim]")
+        else:
+            # Get commit count as fallback
+            self._display_commit_count_push()
+
+    def _display_commit_count_push(self) -> None:
+        """Fallback method to show commit count information."""
+        try:
+            # Get commits ahead of remote
+            result = self._run_git_command(["rev-list", "--count", "@{u}..HEAD"])
+            if result.returncode == 0 and result.stdout.strip().isdigit():
+                commit_count = int(result.stdout.strip())
+                if commit_count > 0:
+                    self.console.print(
+                        f"[green]✅[/ green] Pushed {commit_count} commit(s) to remote"
+                    )
+                else:
+                    self.console.print(
+                        "[green]✅[/ green] Pushed to remote (up to date)"
+                    )
+            else:
+                # Even more basic fallback
+                self.console.print("[green]✅[/ green] Successfully pushed to remote")
+        except (ValueError, Exception):
+            self.console.print("[green]✅[/ green] Successfully pushed to remote")
 
     def get_current_branch(self) -> str | None:
         try:

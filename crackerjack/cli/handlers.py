@@ -8,19 +8,19 @@ from rich.console import Console
 from .options import Options
 
 
-def setup_ai_agent_env(ai_agent: bool, verbose: bool = False) -> None:
-    # Set debug environment variable if verbose is enabled
-    if verbose:
+def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
+    # Only set debug environment variable if debug mode is explicitly enabled
+    if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
     if ai_agent:
         os.environ["AI_AGENT"] = "1"
-        os.environ["AI_AGENT_DEBUG"] = "1"
-
-        if verbose:
+        # Only enable AI agent debug if debug mode is explicitly requested
+        if debug_mode:
+            os.environ["AI_AGENT_DEBUG"] = "1"
             os.environ["AI_AGENT_VERBOSE"] = "1"
 
-        if verbose:
+            # Show debug configuration when debug mode is enabled
             console = Console()
             console.print(
                 "[bold cyan]🐛 AI Agent Debug Mode Configuration: [/ bold cyan]",

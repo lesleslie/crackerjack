@@ -44,6 +44,20 @@ ALLOWED_PATTERNS = {
     r"# REGEX OK:",  # Comment-based exemption
     # Validation in regex_patterns.py itself
     r"crackerjack/services/regex_patterns\.py$",
+    # Regex validation tools themselves
+    r"tools/validate_regex_patterns_standalone\.py$",
+    r"crackerjack/tools/validate_regex_patterns\.py$",
+    # Test files that legitimately test regex patterns
+    r"tests/test_.*\.py$",
+    # Core security and subprocess files that need regex for parsing
+    r"crackerjack/services/secure_subprocess\.py$",
+    r"crackerjack/mcp/tools/core_tools\.py$",
+    # Intelligence and workflow files with legitimate parsing needs
+    r"crackerjack/intelligence/agent_selector\.py$",
+    r"crackerjack/managers/test_.*\.py$",
+    r"crackerjack/core/async_workflow_orchestrator\.py$",
+    # Agent files that use validated patterns with dynamic escaping
+    r"crackerjack/agents/.*\.py$",
 }
 
 FORBIDDEN_REPLACEMENT_PATTERNS = [

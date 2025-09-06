@@ -1063,8 +1063,8 @@ class WorkflowOrchestrator:
         session_id = getattr(self, "web_job_id", None) or str(int(time.time()))[:8]
         debug_log_file = log_manager.create_debug_log_file(session_id)
 
-        # Set log level based on verbosity - DEBUG only in verbose or debug mode
-        log_level = "DEBUG" if (self.verbose or self.debug) else "INFO"
+        # Set log level based on debug flag only - verbose should not enable DEBUG logs
+        log_level = "DEBUG" if self.debug else "INFO"
         setup_structured_logging(
             level=log_level, json_output=False, log_file=debug_log_file
         )

@@ -13,8 +13,24 @@ async def execute_crackerjack_workflow(
 ) -> dict[str, t.Any]:
     job_id = str(uuid.uuid4())[:8]
 
+    # Configure extended timeout for long-running test operations
+    execution_timeout = kwargs.get("execution_timeout", 900)  # 15 minutes default
+    if kwargs.get("test", False) or kwargs.get("testing", False):
+        execution_timeout = max(execution_timeout, 1200)  # 20 minutes for test runs
+    
     try:
-        return await _execute_crackerjack_sync(job_id, args, kwargs, get_context())
+        # Add overall execution timeout with keep-alive
+        return await asyncio.wait_for(
+            _execute_crackerjack_sync(job_id, args, kwargs, get_context()),
+            timeout=execution_timeout
+        )
+    except asyncio.TimeoutError:
+        return {
+            "job_id": job_id,
+            "status": "timeout",
+            "error": f"Execution timed out after {execution_timeout} seconds",
+            "timestamp": time.time(),
+        }
     except Exception as e:
         import traceback
 
@@ -218,40 +234,81 @@ async def _run_workflow_iterations(
     options = _create_workflow_options(kwargs)
     max_iterations = kwargs.get("max_iterations", 10)
 
-    for iteration in range(max_iterations):
+    # Start keep-alive task to prevent TCP timeouts
+    keep_alive_task = asyncio.create_task(_keep_alive_heartbeat(job_id, context))
+    
+    try:
+        for iteration in range(max_iterations):
+            _update_progress(
+                job_id,
+                {
+                    "type": "iteration",
+                    "iteration": iteration + 1,
+                    "max_iterations": max_iterations,
+                    "status": "running",
+                },
+                context,
+            )
+
+            try:
+                success = await _execute_single_iteration(
+                    job_id, orchestrator, options, iteration, context
+                )
+
+                if success:
+                    coverage_result = None
+                    if kwargs.get("boost_coverage", False):
+                        coverage_result = await _attempt_coverage_improvement(
+                            job_id, orchestrator, context
+                        )
+                    return _create_success_result(
+                        job_id, iteration + 1, context, coverage_result
+                    )
+
+                if iteration < max_iterations - 1:
+                    await _handle_iteration_retry(job_id, iteration, context)
+
+            except Exception as e:
+                return await _handle_iteration_error(job_id, iteration, e, context)
+
+        return _create_failure_result(job_id, max_iterations, context)
+    finally:
+        # Cancel keep-alive task
+        if not keep_alive_task.cancelled():
+            keep_alive_task.cancel()
+            try:
+                await keep_alive_task
+            except asyncio.CancelledError:
+                pass
+
+
+async def _keep_alive_heartbeat(job_id: str, context: t.Any) -> None:
+    """Send periodic keep-alive messages to prevent TCP timeouts."""
+    try:
+        while True:
+            # Send heartbeat every 60 seconds (well under 2-minute TCP timeout)
+            await asyncio.sleep(60)
+            _update_progress(
+                job_id,
+                {
+                    "type": "keep_alive",
+                    "status": "heartbeat",
+                    "timestamp": time.time(),
+                    "message": "Keep-alive heartbeat to prevent connection timeout",
+                },
+                context,
+            )
+    except asyncio.CancelledError:
+        # Task was cancelled, cleanup
         _update_progress(
             job_id,
             {
-                "type": "iteration",
-                "iteration": iteration + 1,
-                "max_iterations": max_iterations,
-                "status": "running",
+                "type": "keep_alive",
+                "status": "cancelled",
+                "timestamp": time.time(),
             },
             context,
         )
-
-        try:
-            success = await _execute_single_iteration(
-                job_id, orchestrator, options, iteration, context
-            )
-
-            if success:
-                coverage_result = None
-                if kwargs.get("boost_coverage", False):
-                    coverage_result = await _attempt_coverage_improvement(
-                        job_id, orchestrator, context
-                    )
-                return _create_success_result(
-                    job_id, iteration + 1, context, coverage_result
-                )
-
-            if iteration < max_iterations - 1:
-                await _handle_iteration_retry(job_id, iteration, context)
-
-        except Exception as e:
-            return await _handle_iteration_error(job_id, iteration, e, context)
-
-    return _create_failure_result(job_id, max_iterations, context)
 
 
 def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:

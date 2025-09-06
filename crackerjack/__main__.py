@@ -232,7 +232,7 @@ def main(
         verbose = True
         options.verbose = True
 
-    setup_ai_agent_env(ai_agent, verbose or ai_debug or debug)
+    setup_ai_agent_env(ai_agent, ai_debug or debug)
 
     if _handle_server_commands(
         monitor,

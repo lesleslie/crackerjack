@@ -445,6 +445,13 @@ class PhaseCoordinator:
     ) -> bool:
         new_version = self.publish_manager.bump_version(version_type)
 
+        # Stage all changes after version bumping and code cleaning (if enabled)
+        self.console.print("[blue]📂[/ blue] Staging all changes for publishing...")
+        if not self.git_service.add_all_files():
+            self.console.print(
+                "[yellow]⚠️[/ yellow] Failed to stage files, continuing with publish..."
+            )
+
         if not options.no_git_tags:
             self.publish_manager.create_git_tag(new_version)
 
@@ -483,6 +490,31 @@ class PhaseCoordinator:
 
     def _handle_no_changes_to_commit(self) -> bool:
         self.console.print("[yellow]ℹ️[/ yellow] No changes to commit")
+
+        # Check if there are unpushed commits
+        try:
+            result = self.git_service._run_git_command(
+                ["rev-list", "--count", "@{u}..HEAD"]
+            )
+            if result.returncode == 0 and result.stdout.strip().isdigit():
+                commit_count = int(result.stdout.strip())
+                if commit_count > 0:
+                    self.console.print(
+                        f"[blue]📤[/ blue] Found {commit_count} unpushed commit(s), attempting push..."
+                    )
+                    if self.git_service.push():
+                        self.session.complete_task(
+                            "commit",
+                            f"No new changes, pushed {commit_count} existing commit(s)",
+                        )
+                        return True
+                    else:
+                        self.console.print(
+                            "[yellow]⚠️[/ yellow] Push failed for existing commits"
+                        )
+        except (ValueError, Exception):
+            pass
+
         self.session.complete_task("commit", "No changes to commit")
         return True
 

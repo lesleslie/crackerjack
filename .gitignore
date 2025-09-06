@@ -89,11 +89,14 @@ __pycache__/
 /dist/
 /error-context.json
 /examples/
+/feature-implementation-*.md
 /hooks-analysis.json
 /htmlcov/
 /project-structure.json
 /quality-metrics.json
 /scratch/
+/session_handoff_*.md
+/test-implementation-*.md
 /test-results.xml
 /tests/.benchmarks/
 /tests/htmlcov/
