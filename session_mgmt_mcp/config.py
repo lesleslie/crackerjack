@@ -399,6 +399,7 @@ class SecurityConfig(BaseModel):
     def validate_patterns(cls, v: list[str]) -> list[str]:
         """Validate regex patterns."""
         import re
+
         for pattern in v:
             try:
                 re.compile(pattern)
@@ -538,7 +539,6 @@ class ConfigLoader:
             # Also check tool.session_mgmt_mcp (underscore variant)
             tool_config = toml_data.get("tool", {}).get("session_mgmt_mcp", {})
         return tool_config
-
 
     def get_example_config(self) -> str:
         """Get example pyproject.toml configuration."""

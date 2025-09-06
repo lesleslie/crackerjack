@@ -20,19 +20,21 @@ class ProjectGroup(BaseModel):
     """Represents a group of related projects."""
 
     id: str = Field(description="Unique identifier for the project group")
-    name: str = Field(min_length=1, max_length=200, description="Name of the project group")
-    description: str = Field(default="", max_length=1000, description="Description of the project group")
+    name: str = Field(
+        min_length=1, max_length=200, description="Name of the project group"
+    )
+    description: str = Field(
+        default="", max_length=1000, description="Description of the project group"
+    )
     projects: list[str] = Field(
-        min_length=1,
-        description="List of project identifiers in this group"
+        min_length=1, description="List of project identifiers in this group"
     )
     metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional metadata for the project group"
+        default_factory=dict, description="Additional metadata for the project group"
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
-        description="When the project group was created"
+        description="When the project group was created",
     )
 
     @field_validator("projects")
@@ -54,12 +56,10 @@ class ProjectDependency(BaseModel):
 
     id: str = Field(description="Unique identifier for the project dependency")
     source_project: str = Field(
-        min_length=1,
-        description="The project that depends on another"
+        min_length=1, description="The project that depends on another"
     )
     target_project: str = Field(
-        min_length=1,
-        description="The project that is depended upon"
+        min_length=1, description="The project that is depended upon"
     )
     dependency_type: Literal["uses", "extends", "references", "shares_code"] = Field(
         description="Type of dependency relationship"
@@ -67,15 +67,14 @@ class ProjectDependency(BaseModel):
     description: str = Field(
         default="",
         max_length=1000,
-        description="Description of the dependency relationship"
+        description="Description of the dependency relationship",
     )
     metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional metadata for the dependency"
+        default_factory=dict, description="Additional metadata for the dependency"
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
-        description="When the dependency was created"
+        description="When the dependency was created",
     )
 
     @field_validator("source_project", "target_project")
@@ -102,12 +101,10 @@ class SessionLink(BaseModel):
 
     id: str = Field(description="Unique identifier for the session link")
     source_session_id: str = Field(
-        min_length=1,
-        description="The session that links to another"
+        min_length=1, description="The session that links to another"
     )
     target_session_id: str = Field(
-        min_length=1,
-        description="The session that is linked to"
+        min_length=1, description="The session that is linked to"
     )
     link_type: Literal["related", "continuation", "reference", "dependency"] = Field(
         description="Type of relationship between sessions"
@@ -115,15 +112,14 @@ class SessionLink(BaseModel):
     context: str = Field(
         default="",
         max_length=2000,
-        description="Context or reason for the session link"
+        description="Context or reason for the session link",
     )
     metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional metadata for the session link"
+        default_factory=dict, description="Additional metadata for the session link"
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
-        description="When the session link was created"
+        description="When the session link was created",
     )
 
     @field_validator("source_session_id", "target_session_id")
@@ -139,7 +135,11 @@ class SessionLink(BaseModel):
     @classmethod
     def validate_not_self_link(cls, v: str, info: ValidationInfo) -> str:
         """Ensure sessions don't link to themselves."""
-        if hasattr(info, "data") and info.data and v == info.data.get("source_session_id"):
+        if (
+            hasattr(info, "data")
+            and info.data
+            and v == info.data.get("source_session_id")
+        ):
             msg = "Session cannot link to itself"
             raise ValueError(msg)
         return v

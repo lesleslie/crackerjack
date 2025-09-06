@@ -15,13 +15,15 @@ The Session Management MCP server integrates directly with Claude Code through t
 #### Setup
 
 1. **Install the MCP server**:
+
    ```bash
    git clone https://github.com/lesleslie/session-mgmt-mcp.git
    cd session-mgmt-mcp
    uv sync --extra embeddings
    ```
 
-2. **Configure Claude Code** (`.mcp.json`):
+1. **Configure Claude Code** (`.mcp.json`):
+
    ```json
    {
      "mcpServers": {
@@ -37,7 +39,7 @@ The Session Management MCP server integrates directly with Claude Code through t
    }
    ```
 
-3. **Restart Claude Code** to load the MCP server
+1. **Restart Claude Code** to load the MCP server
 
 #### Available Slash Commands
 
@@ -46,7 +48,7 @@ Once configured, these slash commands become available in Claude Code:
 ```bash
 # Session Management
 /session-mgmt:init              # Initialize session with project analysis
-/session-mgmt:checkpoint        # Mid-session quality assessment  
+/session-mgmt:checkpoint        # Mid-session quality assessment
 /session-mgmt:end              # Complete session cleanup
 /session-mgmt:status           # Current session status
 
@@ -83,6 +85,7 @@ Quality Metrics:
 #### Git Hooks Integration
 
 Create `.git/hooks/pre-commit`:
+
 ```bash
 #!/bin/bash
 # Pre-commit hook with session management
@@ -110,9 +113,12 @@ async def sync_dependencies():
     """Sync UV dependencies during session init."""
     try:
         result = await asyncio.create_subprocess_exec(
-            "uv", "sync", "--extra", "embeddings",
+            "uv",
+            "sync",
+            "--extra",
+            "embeddings",
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
         return await result.communicate()
     except FileNotFoundError:
@@ -123,7 +129,7 @@ async def sync_dependencies():
 
 ```python
 async def sync_node_dependencies(project_path: Path):
-    """Sync Node.js dependencies.""" 
+    """Sync Node.js dependencies."""
     package_json = project_path / "package.json"
     if package_json.exists():
         if (project_path / "yarn.lock").exists():
@@ -141,21 +147,22 @@ Deep integration with the Crackerjack Python project management tool.
 ```python
 from session_mgmt_mcp.crackerjack_integration import CrackerjackIntegration
 
+
 class QualityMonitor:
     def __init__(self):
         self.crackerjack = CrackerjackIntegration()
-    
+
     async def assess_project_quality(self) -> QualityMetrics:
         """Get comprehensive quality metrics."""
         try:
             # Run crackerjack analysis
             report = await self.crackerjack.run_quality_check()
-            
+
             return QualityMetrics(
                 overall_score=report.overall_score,
                 complexity_score=report.complexity_score,
                 coverage_score=report.coverage_score,
-                security_score=report.security_score
+                security_score=report.security_score,
             )
         except Exception as e:
             logger.warning(f"Crackerjack integration failed: {e}")
@@ -198,21 +205,21 @@ import { MCPClient } from './mcp-client';
 
 export function activate(context: vscode.ExtensionContext) {
     const mcpClient = new MCPClient();
-    
+
     // Register commands
     const initCommand = vscode.commands.registerCommand(
-        'sessionMgmt.init', 
+        'sessionMgmt.init',
         async () => {
             const result = await mcpClient.callTool('init', {
                 working_directory: vscode.workspace.rootPath
             });
-            
+
             vscode.window.showInformationMessage(
                 `Session initialized with quality score: ${result.project_context.health_score}/100`
             );
         }
     );
-    
+
     context.subscriptions.push(initCommand);
 }
 ```
@@ -237,7 +244,7 @@ export function activate(context: vscode.ExtensionContext) {
 // SessionMgmtPlugin.kt
 class SessionMgmtPlugin : BaseComponent, ProjectComponent {
     private val mcpClient = MCPClient()
-    
+
     override fun projectOpened(project: Project) {
         // Auto-initialize session on project open
         if (SessionMgmtSettings.getInstance().autoInit) {
@@ -246,7 +253,7 @@ class SessionMgmtPlugin : BaseComponent, ProjectComponent {
             ))
         }
     }
-    
+
     override fun projectClosed(project: Project) {
         // Auto-cleanup on project close
         mcpClient.callTool("end")
@@ -275,47 +282,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.13'
-    
+
     - name: Install Session Management MCP
       run: |
         git clone https://github.com/lesleslie/session-mgmt-mcp.git /tmp/session-mgmt-mcp
         cd /tmp/session-mgmt-mcp
         pip install -e ".[embeddings]"
-    
+
     - name: Initialize Session
       run: |
         python -c "
         import asyncio
         from session_mgmt_mcp.tools.session_tools import init
-        
+
         async def run():
             result = await init(working_directory='.')
             print(f'Quality Score: {result[\"project_context\"][\"health_score\"]}/100')
-            
+
             if result['project_context']['health_score'] < 80:
                 exit(1)
-        
+
         asyncio.run(run())
         "
-    
-    - name: Store Build Insights  
+
+    - name: Store Build Insights
       if: always()
       run: |
         python -c "
         import asyncio
         from session_mgmt_mcp.tools.memory_tools import store_reflection
-        
+
         async def store():
             await store_reflection(
                 content='CI/CD build completed with quality analysis',
                 tags=['ci', 'quality', 'build']
             )
-        
+
         asyncio.run(store())
         "
 ```
@@ -326,7 +333,7 @@ jobs:
 // Jenkinsfile
 pipeline {
     agent any
-    
+
     stages {
         stage('Session Init') {
             steps {
@@ -335,18 +342,18 @@ pipeline {
                     python -c "
                     import asyncio
                     from session_mgmt_mcp.tools.session_tools import init
-                    
+
                     async def jenkins_init():
                         result = await init(working_directory='.')
                         print('Quality Score:', result['project_context']['health_score'])
-                    
+
                     asyncio.run(jenkins_init())
                     "
                     '''
                 }
             }
         }
-        
+
         stage('Quality Gate') {
             steps {
                 script {
@@ -354,7 +361,7 @@ pipeline {
                         script: 'python -c "from session_mgmt_mcp import get_quality_score; print(get_quality_score())"',
                         returnStdout: true
                     ).trim().toFloat()
-                    
+
                     if (qualityScore < 80) {
                         error("Quality gate failed: ${qualityScore}/100")
                     }
@@ -362,7 +369,7 @@ pipeline {
             }
         }
     }
-    
+
     post {
         always {
             sh '''
@@ -389,24 +396,23 @@ Extend the memory system to support external databases:
 import asyncpg
 from typing import Optional
 
+
 class PostgreSQLMemoryBackend:
     def __init__(self, connection_url: str):
         self.connection_url = connection_url
         self.pool: Optional[asyncpg.Pool] = None
-    
+
     async def initialize(self):
         """Initialize PostgreSQL connection pool."""
         self.pool = await asyncpg.create_pool(
-            self.connection_url,
-            min_size=5,
-            max_size=20
+            self.connection_url, min_size=5, max_size=20
         )
-        
+
         # Create tables with vector extension
         async with self.pool.acquire() as conn:
             await conn.execute("""
             CREATE EXTENSION IF NOT EXISTS vector;
-            
+
             CREATE TABLE IF NOT EXISTS conversations (
                 id TEXT PRIMARY KEY,
                 content TEXT NOT NULL,
@@ -414,38 +420,42 @@ class PostgreSQLMemoryBackend:
                 project TEXT NOT NULL,
                 timestamp TIMESTAMP NOT NULL
             );
-            
-            CREATE INDEX IF NOT EXISTS idx_conversations_embedding 
+
+            CREATE INDEX IF NOT EXISTS idx_conversations_embedding
             ON conversations USING ivfflat (embedding vector_cosine_ops);
             """)
-    
+
     async def store_conversation(
-        self, 
-        content: str, 
-        embedding: list[float],
-        project: str
+        self, content: str, embedding: list[float], project: str
     ) -> str:
         """Store conversation in PostgreSQL."""
         conversation_id = str(uuid.uuid4())
-        
+
         async with self.pool.acquire() as conn:
-            await conn.execute("""
+            await conn.execute(
+                """
             INSERT INTO conversations (id, content, embedding, project, timestamp)
             VALUES ($1, $2, $3, $4, NOW())
-            """, conversation_id, content, embedding, project)
-        
+            """,
+                conversation_id,
+                content,
+                embedding,
+                project,
+            )
+
         return conversation_id
-    
+
     async def semantic_search(
         self,
         query_embedding: list[float],
         limit: int = 10,
-        similarity_threshold: float = 0.7
+        similarity_threshold: float = 0.7,
     ) -> list[dict]:
         """Perform vector similarity search."""
         async with self.pool.acquire() as conn:
-            results = await conn.fetch("""
-            SELECT 
+            results = await conn.fetch(
+                """
+            SELECT
                 content,
                 project,
                 timestamp,
@@ -454,8 +464,12 @@ class PostgreSQLMemoryBackend:
             WHERE 1 - (embedding <=> $1) > $2
             ORDER BY embedding <=> $1
             LIMIT $3
-            """, query_embedding, similarity_threshold, limit)
-            
+            """,
+                query_embedding,
+                similarity_threshold,
+                limit,
+            )
+
             return [dict(row) for row in results]
 ```
 
@@ -466,67 +480,64 @@ import aioredis
 import json
 import numpy as np
 
+
 class RedisMemoryBackend:
     def __init__(self, redis_url: str = "redis://localhost:6379"):
         self.redis_url = redis_url
         self.redis: Optional[aioredis.Redis] = None
-    
+
     async def initialize(self):
         """Initialize Redis connection."""
         self.redis = aioredis.from_url(self.redis_url)
-        
+
         # Create RediSearch index for vector similarity
         try:
-            await self.redis.ft("conversations").create_index([
-                TextField("content"),
-                TagField("project"), 
-                VectorField("embedding", 
-                    "FLAT", {
-                        "TYPE": "FLOAT32",
-                        "DIM": 384,
-                        "DISTANCE_METRIC": "COSINE"
-                    }
-                )
-            ])
+            await self.redis.ft("conversations").create_index(
+                [
+                    TextField("content"),
+                    TagField("project"),
+                    VectorField(
+                        "embedding",
+                        "FLAT",
+                        {"TYPE": "FLOAT32", "DIM": 384, "DISTANCE_METRIC": "COSINE"},
+                    ),
+                ]
+            )
         except Exception:
             pass  # Index might already exist
-    
+
     async def store_conversation(
-        self,
-        content: str,
-        embedding: np.ndarray,
-        project: str
+        self, content: str, embedding: np.ndarray, project: str
     ) -> str:
         """Store conversation in Redis."""
         conversation_id = str(uuid.uuid4())
-        
+
         await self.redis.hset(
             f"conversation:{conversation_id}",
             mapping={
                 "content": content,
                 "project": project,
                 "embedding": embedding.tobytes(),
-                "timestamp": datetime.now().isoformat()
-            }
+                "timestamp": datetime.now().isoformat(),
+            },
         )
-        
+
         return conversation_id
-    
+
     async def semantic_search(
-        self,
-        query_embedding: np.ndarray,
-        limit: int = 10
+        self, query_embedding: np.ndarray, limit: int = 10
     ) -> list[dict]:
         """Perform vector similarity search using RediSearch."""
-        query = Query(f"*=>[KNN {limit} @embedding $query_vec]").return_fields(
-            "content", "project", "timestamp"
-        ).dialect(2)
-        
-        results = await self.redis.ft("conversations").search(
-            query,
-            query_params={"query_vec": query_embedding.tobytes()}
+        query = (
+            Query(f"*=>[KNN {limit} @embedding $query_vec]")
+            .return_fields("content", "project", "timestamp")
+            .dialect(2)
         )
-        
+
+        results = await self.redis.ft("conversations").search(
+            query, query_params={"query_vec": query_embedding.tobytes()}
+        )
+
         return [doc.__dict__ for doc in results.docs]
 ```
 
@@ -543,47 +554,49 @@ import asyncio
 
 app = FastAPI(title="Session Management API")
 
+
 class SearchRequest(BaseModel):
     query: str
     limit: int = 10
     min_score: float = 0.7
     project: str | None = None
 
+
 class ReflectionRequest(BaseModel):
     content: str
     tags: list[str] = []
+
 
 @app.post("/api/v1/search")
 async def search_conversations(request: SearchRequest):
     """Search conversations via REST API."""
     try:
         from session_mgmt_mcp.tools.memory_tools import reflect_on_past
-        
+
         result = await reflect_on_past(
             query=request.query,
             limit=request.limit,
             min_score=request.min_score,
-            project=request.project
+            project=request.project,
         )
-        
+
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/v1/reflect")
 async def store_reflection(request: ReflectionRequest):
     """Store reflection via REST API."""
     try:
         from session_mgmt_mcp.tools.memory_tools import store_reflection
-        
-        result = await store_reflection(
-            content=request.content,
-            tags=request.tags
-        )
-        
+
+        result = await store_reflection(content=request.content, tags=request.tags)
+
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # Health check endpoint
 @app.get("/health")
@@ -597,6 +610,7 @@ async def health_check():
 import strawberry
 from strawberry.asgi import GraphQL
 
+
 @strawberry.type
 class SearchResult:
     content: str
@@ -604,47 +618,39 @@ class SearchResult:
     timestamp: str
     similarity_score: float
 
+
 @strawberry.type
 class Query:
     @strawberry.field
     async def search_conversations(
-        self,
-        query: str,
-        limit: int = 10,
-        min_score: float = 0.7
+        self, query: str, limit: int = 10, min_score: float = 0.7
     ) -> list[SearchResult]:
         """Search conversations via GraphQL."""
         from session_mgmt_mcp.tools.memory_tools import reflect_on_past
-        
-        result = await reflect_on_past(
-            query=query,
-            limit=limit,
-            min_score=min_score
-        )
-        
+
+        result = await reflect_on_past(query=query, limit=limit, min_score=min_score)
+
         return [
             SearchResult(
                 content=item["content"],
-                project=item["project"], 
+                project=item["project"],
                 timestamp=item["timestamp"],
-                similarity_score=item["similarity_score"]
+                similarity_score=item["similarity_score"],
             )
             for item in result.get("results", [])
         ]
 
+
 @strawberry.type
 class Mutation:
     @strawberry.field
-    async def store_reflection(
-        self,
-        content: str,
-        tags: list[str] = []
-    ) -> bool:
+    async def store_reflection(self, content: str, tags: list[str] = []) -> bool:
         """Store reflection via GraphQL."""
         from session_mgmt_mcp.tools.memory_tools import store_reflection
-        
+
         result = await store_reflection(content=content, tags=tags)
         return result.get("success", False)
+
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
 app = GraphQL(schema)
@@ -661,27 +667,31 @@ from prometheus_client import Counter, Histogram, Gauge, start_http_server
 import time
 
 # Metrics
-REQUESTS_TOTAL = Counter('session_mgmt_requests_total', 'Total requests', ['operation'])
-REQUEST_DURATION = Histogram('session_mgmt_request_duration_seconds', 'Request duration')
-ACTIVE_SESSIONS = Gauge('session_mgmt_active_sessions', 'Active sessions')
-MEMORY_USAGE = Gauge('session_mgmt_memory_usage_mb', 'Memory usage in MB')
+REQUESTS_TOTAL = Counter("session_mgmt_requests_total", "Total requests", ["operation"])
+REQUEST_DURATION = Histogram(
+    "session_mgmt_request_duration_seconds", "Request duration"
+)
+ACTIVE_SESSIONS = Gauge("session_mgmt_active_sessions", "Active sessions")
+MEMORY_USAGE = Gauge("session_mgmt_memory_usage_mb", "Memory usage in MB")
+
 
 class MetricsCollector:
     def __init__(self):
         self.start_time = time.time()
-        
+
     def record_request(self, operation: str, duration: float):
         """Record request metrics."""
         REQUESTS_TOTAL.labels(operation=operation).inc()
         REQUEST_DURATION.observe(duration)
-    
+
     def update_active_sessions(self, count: int):
         """Update active session count."""
         ACTIVE_SESSIONS.set(count)
-    
+
     def update_memory_usage(self, mb: float):
         """Update memory usage."""
         MEMORY_USAGE.set(mb)
+
 
 # Start metrics server
 start_http_server(9090)
@@ -707,7 +717,7 @@ metrics = MetricsCollector()
       },
       {
         "title": "Response Time",
-        "type": "graph", 
+        "type": "graph",
         "targets": [
           {
             "expr": "session_mgmt_request_duration_seconds",
@@ -748,11 +758,12 @@ Send session notifications to Slack:
 from slack_sdk.web.async_client import AsyncWebClient
 from slack_sdk.errors import SlackApiError
 
+
 class SlackNotifier:
     def __init__(self, token: str, channel: str):
         self.client = AsyncWebClient(token=token)
         self.channel = channel
-    
+
     async def notify_session_start(self, session_data: dict):
         """Notify about session start."""
         try:
@@ -765,16 +776,16 @@ class SlackNotifier:
                         "text": {
                             "type": "mrkdwn",
                             "text": f"*Session Started*\n"
-                                   f"Project: `{session_data['project_name']}`\n"
-                                   f"Quality Score: {session_data['health_score']}/100\n"
-                                   f"Session ID: `{session_data['session_id']}`"
-                        }
+                            f"Project: `{session_data['project_name']}`\n"
+                            f"Quality Score: {session_data['health_score']}/100\n"
+                            f"Session ID: `{session_data['session_id']}`",
+                        },
                     }
-                ]
+                ],
             )
         except SlackApiError as e:
             logger.error(f"Slack notification failed: {e}")
-    
+
     async def notify_quality_threshold(self, metrics: dict):
         """Notify when quality drops below threshold."""
         if metrics["overall_score"] < 70:
@@ -787,11 +798,11 @@ class SlackNotifier:
                         "text": {
                             "type": "mrkdwn",
                             "text": f"*Quality Alert*\n"
-                                   f"Overall Score: {metrics['overall_score']}/100\n"
-                                   f"Consider running quality improvements"
-                        }
+                            f"Overall Score: {metrics['overall_score']}/100\n"
+                            f"Consider running quality improvements",
+                        },
                     }
-                ]
+                ],
             )
 ```
 
@@ -801,64 +812,62 @@ class SlackNotifier:
 import discord
 from discord.ext import commands
 
+
 class DiscordBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
-        super().__init__(command_prefix='!', intents=intents)
-    
-    @commands.command(name='session')
+        super().__init__(command_prefix="!", intents=intents)
+
+    @commands.command(name="session")
     async def session_status(self, ctx):
         """Get current session status."""
         from session_mgmt_mcp.tools.session_tools import status
-        
+
         result = await status()
-        
+
         embed = discord.Embed(
             title="Session Status",
-            color=discord.Color.green() if result["success"] else discord.Color.red()
+            color=discord.Color.green() if result["success"] else discord.Color.red(),
         )
-        
+
         if result.get("project_context"):
             embed.add_field(
-                name="Project",
-                value=result["project_context"]["name"],
-                inline=True
+                name="Project", value=result["project_context"]["name"], inline=True
             )
             embed.add_field(
-                name="Health Score", 
+                name="Health Score",
                 value=f"{result['project_context']['health_score']}/100",
-                inline=True
+                inline=True,
             )
-        
+
         await ctx.send(embed=embed)
-    
-    @commands.command(name='search')
+
+    @commands.command(name="search")
     async def search_conversations(self, ctx, *, query: str):
         """Search conversation history."""
         from session_mgmt_mcp.tools.memory_tools import quick_search
-        
+
         result = await quick_search(query=query)
-        
+
         if result.get("top_result"):
             embed = discord.Embed(
                 title=f"Search: {query}",
                 description=result["top_result"]["content"][:500] + "...",
-                color=discord.Color.blue()
+                color=discord.Color.blue(),
             )
             embed.add_field(
-                name="Total Results",
-                value=result["total_count"],
-                inline=True
+                name="Total Results", value=result["total_count"], inline=True
             )
         else:
             embed = discord.Embed(
                 title="No Results",
                 description=f"No conversations found for: {query}",
-                color=discord.Color.orange()
+                color=discord.Color.orange(),
             )
-        
+
         await ctx.send(embed=embed)
+
 
 # Bot setup
 bot = DiscordBot()
@@ -875,12 +884,14 @@ import pytest
 import asyncio
 from session_mgmt_mcp.server import mcp
 
+
 @pytest.fixture(scope="session")
 def event_loop():
     """Create an instance of the default event loop for the test session."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
 
 @pytest.fixture
 async def mcp_server():
@@ -890,17 +901,19 @@ async def mcp_server():
     yield test_server
     await test_server.cleanup()
 
+
 @pytest.fixture
 async def test_session(mcp_server):
     """Create test session."""
-    result = await mcp_server.call_tool("init", {
-        "working_directory": "/tmp/test-project"
-    })
-    
+    result = await mcp_server.call_tool(
+        "init", {"working_directory": "/tmp/test-project"}
+    )
+
     yield result["session_id"]
-    
+
     # Cleanup
     await mcp_server.call_tool("end")
+
 
 class TestIntegration:
     @pytest.mark.asyncio
@@ -909,21 +922,24 @@ class TestIntegration:
         # Initialize
         init_result = await mcp_server.call_tool("init")
         assert init_result["success"]
-        
+
         # Store reflection
-        reflection_result = await mcp_server.call_tool("store_reflection", {
-            "content": "Test insight for integration testing",
-            "tags": ["test", "integration"]
-        })
+        reflection_result = await mcp_server.call_tool(
+            "store_reflection",
+            {
+                "content": "Test insight for integration testing",
+                "tags": ["test", "integration"],
+            },
+        )
         assert reflection_result["success"]
-        
+
         # Search
-        search_result = await mcp_server.call_tool("reflect_on_past", {
-            "query": "integration testing"
-        })
+        search_result = await mcp_server.call_tool(
+            "reflect_on_past", {"query": "integration testing"}
+        )
         assert search_result["success"]
         assert len(search_result["results"]) > 0
-        
+
         # End session
         end_result = await mcp_server.call_tool("end")
         assert end_result["success"]
@@ -942,6 +958,7 @@ import jwt
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     """Validate JWT token and return user."""
     try:
@@ -950,19 +967,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         if username is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials"
+                detail="Could not validate credentials",
             )
         return username
     except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials"
+            detail="Could not validate credentials",
         )
+
 
 @app.post("/api/v1/search")
 async def search_conversations(
-    request: SearchRequest,
-    current_user: str = Depends(get_current_user)
+    request: SearchRequest, current_user: str = Depends(get_current_user)
 ):
     """Protected search endpoint."""
     # Implementation with user context
@@ -975,36 +992,38 @@ async def search_conversations(
 ```python
 from enum import Enum
 
+
 class UserRole(Enum):
     ADMIN = "admin"
-    DEVELOPER = "developer" 
+    DEVELOPER = "developer"
     READONLY = "readonly"
+
 
 class PermissionChecker:
     ROLE_PERMISSIONS = {
         UserRole.ADMIN: ["*"],
         UserRole.DEVELOPER: ["search", "store", "checkpoint", "init", "end"],
-        UserRole.READONLY: ["search", "status"]
+        UserRole.READONLY: ["search", "status"],
     }
-    
+
     def check_permission(self, user_role: UserRole, operation: str) -> bool:
         """Check if user role has permission for operation."""
         permissions = self.ROLE_PERMISSIONS.get(user_role, [])
         return "*" in permissions or operation in permissions
 
+
 async def require_permission(
-    operation: str,
-    current_user: str = Depends(get_current_user)
+    operation: str, current_user: str = Depends(get_current_user)
 ):
     """Dependency to check user permissions."""
     user_role = await get_user_role(current_user)
-    
+
     if not PermissionChecker().check_permission(user_role, operation):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Insufficient permissions for operation: {operation}"
+            detail=f"Insufficient permissions for operation: {operation}",
         )
-    
+
     return current_user
 ```
 
@@ -1035,7 +1054,7 @@ services:
       - redis
       - postgres
     restart: unless-stopped
-  
+
   redis:
     image: redis:7-alpine
     ports:
@@ -1043,7 +1062,7 @@ services:
     volumes:
       - redis_data:/data
     restart: unless-stopped
-  
+
   postgres:
     image: postgres:15-alpine
     environment:
@@ -1056,7 +1075,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
-  
+
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -1064,7 +1083,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     restart: unless-stopped
-  
+
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -1164,22 +1183,23 @@ spec:
 ### Performance Considerations
 
 1. **Connection Pooling**: Use connection pools for databases
-2. **Caching**: Implement caching for frequently accessed data
-3. **Async Operations**: Use async/await for I/O operations
-4. **Resource Limits**: Set appropriate resource limits in production
-5. **Load Balancing**: Use load balancers for high availability
+1. **Caching**: Implement caching for frequently accessed data
+1. **Async Operations**: Use async/await for I/O operations
+1. **Resource Limits**: Set appropriate resource limits in production
+1. **Load Balancing**: Use load balancers for high availability
 
 ### Security Considerations
 
 1. **API Security**: Implement proper authentication and authorization
-2. **Input Validation**: Validate all inputs to prevent injection attacks
-3. **Network Security**: Use HTTPS and proper network isolation
-4. **Secret Management**: Use secret management systems for sensitive data
-5. **Audit Logging**: Log all security-relevant events
+1. **Input Validation**: Validate all inputs to prevent injection attacks
+1. **Network Security**: Use HTTPS and proper network isolation
+1. **Secret Management**: Use secret management systems for sensitive data
+1. **Audit Logging**: Log all security-relevant events
 
----
+______________________________________________________________________
 
 **Related Documentation:**
+
 - [QUICK_START.md](QUICK_START.md) - Getting started guide
 - [CONFIGURATION.md](CONFIGURATION.md) - Configuration options
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture details

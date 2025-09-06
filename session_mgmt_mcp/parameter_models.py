@@ -14,6 +14,7 @@ Following crackerjack patterns:
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -37,9 +38,13 @@ def validate_and_expand_path(v: Any, field_name: str) -> str:
         return v
     if field_name.endswith(("_path", "_directory")):
         expanded = os.path.expanduser(v.strip()) if v.strip() else v
-        if field_name.endswith("_directory") and expanded and not os.path.isabs(expanded):
+        if (
+            field_name.endswith("_directory")
+            and expanded
+            and not Path(expanded).is_absolute()
+        ):
             # For directory fields, ensure absolute paths
-            expanded = os.path.abspath(expanded)
+            expanded = str(Path(expanded).resolve())
         return expanded
     return v
 
@@ -51,7 +56,7 @@ class WorkingDirectoryParams(BaseModel):
     working_directory: str | None = Field(
         default=None,
         description="Optional working directory override (defaults to PWD environment variable or current directory)",
-        examples=[".", "/Users/username/project", "~/Projects/my-app"]
+        examples=[".", "/Users/username/project", "~/Projects/my-app"],
     )
 
     @field_validator("working_directory")
@@ -67,7 +72,7 @@ class WorkingDirectoryParams(BaseModel):
             if not os.path.exists(expanded):
                 msg = f"Working directory does not exist: {expanded}"
                 raise ValueError(msg)
-            if not os.path.isdir(expanded):
+            if not Path(expanded).is_dir():
                 msg = f"Working directory is not a directory: {expanded}"
                 raise ValueError(msg)
             return expanded
@@ -82,7 +87,7 @@ class ProjectContextParams(BaseModel):
         description="Optional project identifier for scoped operations",
         min_length=1,
         max_length=200,
-        examples=["my-app", "session-mgmt-mcp", "microservice-auth"]
+        examples=["my-app", "session-mgmt-mcp", "microservice-auth"],
     )
 
     @field_validator("project")
@@ -100,16 +105,11 @@ class SearchLimitParams(BaseModel):
     """Standard search and pagination parameters."""
 
     limit: int = Field(
-        default=10,
-        ge=1,
-        le=1000,
-        description="Maximum number of results to return"
+        default=10, ge=1, le=1000, description="Maximum number of results to return"
     )
 
     offset: int = Field(
-        default=0,
-        ge=0,
-        description="Number of results to skip for pagination"
+        default=0, ge=0, description="Number of results to skip for pagination"
     )
 
 
@@ -120,7 +120,7 @@ class TimeRangeParams(BaseModel):
         default=7,
         ge=1,
         le=3650,  # 10 years max
-        description="Number of days to look back"
+        description="Number of days to look back",
     )
 
 
@@ -131,7 +131,7 @@ class ScoreThresholdParams(BaseModel):
         default=0.7,
         ge=0.0,
         le=1.0,
-        description="Minimum relevance score threshold (0.0-1.0)"
+        description="Minimum relevance score threshold (0.0-1.0)",
     )
 
 
@@ -141,7 +141,7 @@ class TagParams(BaseModel):
     tags: list[str] | None = Field(
         default=None,
         description="Optional list of tags for categorization",
-        examples=[["python", "async"], ["bug", "critical"], ["feature", "ui"]]
+        examples=[["python", "async"], ["bug", "critical"], ["feature", "ui"]],
     )
 
     @field_validator("tags")
@@ -153,13 +153,13 @@ class TagParams(BaseModel):
 
         if not isinstance(v, list):
             msg = "Tags must be a list of strings"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         validated_tags = []
         for tag in v:
             if not isinstance(tag, str):
                 msg = "Each tag must be a string"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
             tag = tag.strip().lower()
             if not tag:
@@ -186,7 +186,7 @@ class IDParams(BaseModel):
         description="Unique identifier",
         min_length=1,
         max_length=100,
-        examples=["abc123", "session_20250106", "reflection-456"]
+        examples=["abc123", "session_20250106", "reflection-456"],
     )
 
     @field_validator("id")
@@ -199,7 +199,9 @@ class IDParams(BaseModel):
             raise ValueError(msg)
         # Allow alphanumeric, hyphens, underscores, and dots
         if not v.replace("-", "").replace("_", "").replace(".", "").isalnum():
-            msg = "ID must contain only letters, numbers, hyphens, underscores, and dots"
+            msg = (
+                "ID must contain only letters, numbers, hyphens, underscores, and dots"
+            )
             raise ValueError(msg)
         return v
 
@@ -210,7 +212,7 @@ class FilePathParams(BaseModel):
     file_path: str = Field(
         description="Path to a file",
         min_length=1,
-        examples=["README.md", "src/main.py", "/absolute/path/file.txt"]
+        examples=["README.md", "src/main.py", "/absolute/path/file.txt"],
     )
 
     @field_validator("file_path")
@@ -237,20 +239,17 @@ class CommandExecutionParams(BaseModel):
         description="Command to execute",
         min_length=1,
         max_length=1000,
-        examples=["lint", "test", "analyze"]
+        examples=["lint", "test", "analyze"],
     )
 
     args: str = Field(
         default="",
         max_length=2000,
-        description="Command arguments as space-separated string"
+        description="Command arguments as space-separated string",
     )
 
     timeout: int = Field(
-        default=300,
-        ge=1,
-        le=3600,
-        description="Command timeout in seconds"
+        default=300, ge=1, le=3600, description="Command timeout in seconds"
     )
 
     @field_validator("command")
@@ -268,18 +267,13 @@ class BooleanFlagParams(BaseModel):
     """Common boolean flag parameters."""
 
     force: bool = Field(
-        default=False,
-        description="Force operation, bypassing safety checks"
+        default=False, description="Force operation, bypassing safety checks"
     )
 
-    verbose: bool = Field(
-        default=False,
-        description="Enable verbose output"
-    )
+    verbose: bool = Field(default=False, description="Enable verbose output")
 
     dry_run: bool = Field(
-        default=False,
-        description="Show what would be done without executing"
+        default=False, description="Show what would be done without executing"
     )
 
 
@@ -303,12 +297,11 @@ class ReflectionStoreParams(BaseModel):
         description="Content to store as reflection",
         min_length=1,
         max_length=50000,
-        examples=["Learned that async/await patterns improve database performance"]
+        examples=["Learned that async/await patterns improve database performance"],
     )
 
     tags: list[str] | None = Field(
-        default=None,
-        description="Optional tags for categorization"
+        default=None, description="Optional tags for categorization"
     )
 
     @field_validator("content")
@@ -335,7 +328,7 @@ class SearchQueryParams(ProjectContextParams, SearchLimitParams, ScoreThresholdP
         description="Search query text",
         min_length=1,
         max_length=1000,
-        examples=["python async patterns", "database migration", "error handling"]
+        examples=["python async patterns", "database migration", "error handling"],
     )
 
     @field_validator("query")
@@ -355,7 +348,7 @@ class FileSearchParams(SearchLimitParams, ProjectContextParams):
     file_path: str = Field(
         description="File path to search for in conversations",
         min_length=1,
-        examples=["src/main.py", "README.md", "config/database.yml"]
+        examples=["src/main.py", "README.md", "config/database.yml"],
     )
 
     @field_validator("file_path")
@@ -376,12 +369,11 @@ class ConceptSearchParams(SearchLimitParams, ProjectContextParams):
         description="Development concept to search for",
         min_length=1,
         max_length=200,
-        examples=["authentication", "caching", "error handling", "async patterns"]
+        examples=["authentication", "caching", "error handling", "async patterns"],
     )
 
     include_files: bool = Field(
-        default=True,
-        description="Include related files in search results"
+        default=True, description="Include related files in search results"
     )
 
     @field_validator("concept")
@@ -399,8 +391,7 @@ class CrackerjackExecutionParams(CommandExecutionParams, WorkingDirectoryParams)
     """Parameters for crackerjack command execution."""
 
     ai_agent_mode: bool = Field(
-        default=False,
-        description="Enable AI agent mode for autonomous fixing"
+        default=False, description="Enable AI agent mode for autonomous fixing"
     )
 
 
@@ -408,9 +399,7 @@ class CrackerjackHistoryParams(TimeRangeParams, WorkingDirectoryParams):
     """Parameters for crackerjack execution history."""
 
     command_filter: str = Field(
-        default="",
-        max_length=100,
-        description="Filter commands by name"
+        default="", max_length=100, description="Filter commands by name"
     )
 
 
@@ -418,26 +407,16 @@ class TeamUserParams(BaseModel):
     """Parameters for team user operations."""
 
     user_id: str = Field(
-        description="Unique user identifier",
-        min_length=1,
-        max_length=100
+        description="Unique user identifier", min_length=1, max_length=100
     )
 
-    username: str = Field(
-        description="Display username",
-        min_length=1,
-        max_length=100
-    )
+    username: str = Field(description="Display username", min_length=1, max_length=100)
 
     role: Literal["owner", "admin", "moderator", "contributor", "viewer"] = Field(
-        default="contributor",
-        description="User role in the team"
+        default="contributor", description="User role in the team"
     )
 
-    email: str | None = Field(
-        default=None,
-        description="Optional email address"
-    )
+    email: str | None = Field(default=None, description="Optional email address")
 
     @field_validator("user_id", "username")
     @classmethod
@@ -494,27 +473,17 @@ class TeamCreationParams(BaseModel):
     """Parameters for team creation."""
 
     team_id: str = Field(
-        description="Unique team identifier",
-        min_length=1,
-        max_length=100
+        description="Unique team identifier", min_length=1, max_length=100
     )
 
-    name: str = Field(
-        description="Team display name",
-        min_length=1,
-        max_length=200
-    )
+    name: str = Field(description="Team display name", min_length=1, max_length=200)
 
     description: str = Field(
-        description="Team description",
-        min_length=1,
-        max_length=1000
+        description="Team description", min_length=1, max_length=1000
     )
 
     owner_id: str = Field(
-        description="User ID of the team owner",
-        min_length=1,
-        max_length=100
+        description="User ID of the team owner", min_length=1, max_length=100
     )
 
     @field_validator("team_id", "name", "description", "owner_id")
@@ -532,28 +501,25 @@ class TeamReflectionParams(ReflectionStoreParams):
     """Parameters for team reflection operations."""
 
     author_id: str = Field(
-        description="ID of the reflection author",
-        min_length=1,
-        max_length=100
+        description="ID of the reflection author", min_length=1, max_length=100
     )
 
     team_id: str | None = Field(
         default=None,
         description="Optional team ID for team-specific reflections",
         min_length=1,
-        max_length=100
+        max_length=100,
     )
 
     project_id: str | None = Field(
         default=None,
         description="Optional project ID for project-specific reflections",
         min_length=1,
-        max_length=100
+        max_length=100,
     )
 
     access_level: Literal["private", "team", "public"] = Field(
-        default="team",
-        description="Access level for the reflection"
+        default="team", description="Access level for the reflection"
     )
 
     @field_validator("author_id")
@@ -581,23 +547,21 @@ class TeamSearchParams(SearchQueryParams):
     """Parameters for team knowledge search."""
 
     user_id: str = Field(
-        description="ID of the user performing the search",
-        min_length=1,
-        max_length=100
+        description="ID of the user performing the search", min_length=1, max_length=100
     )
 
     team_id: str | None = Field(
         default=None,
         description="Optional team ID to scope the search",
         min_length=1,
-        max_length=100
+        max_length=100,
     )
 
     project_id: str | None = Field(
         default=None,
         description="Optional project ID to scope the search",
         min_length=1,
-        max_length=100
+        max_length=100,
     )
 
     @field_validator("user_id")
@@ -680,6 +644,7 @@ def create_mcp_validator(model_class: type[BaseModel]):
             # ... implementation
 
     """
+
     def decorator(func):
         async def wrapper(**params):
             validated_params = validate_mcp_params(model_class, **params)
@@ -691,4 +656,5 @@ def create_mcp_validator(model_class: type[BaseModel]):
         wrapper.__annotations__ = func.__annotations__
 
         return wrapper
+
     return decorator

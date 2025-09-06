@@ -11,7 +11,7 @@ Session-mgmt-mcp includes a comprehensive `crackerjack_integration.py` module (5
 The `session_mgmt_mcp/crackerjack_integration.py` module provides:
 
 - **Command Execution Framework**: Direct Crackerjack command execution with result capture
-- **Progress Monitoring System**: Real-time tracking during Crackerjack operations  
+- **Progress Monitoring System**: Real-time tracking during Crackerjack operations
 - **Quality Metrics Intelligence**: Advanced quality metric extraction and trend analysis
 - **Test Pattern Recognition**: Test result monitoring and pattern detection
 - **Error Resolution Learning**: Building knowledge base of project-specific fix patterns
@@ -22,32 +22,36 @@ The `session_mgmt_mcp/crackerjack_integration.py` module provides:
 The integration supports the full range of Crackerjack operations through the `CrackerjackCommand` enum:
 
 ### Core Quality Commands
+
 ```python
-CrackerjackCommand.ANALYZE     # Comprehensive analysis command
-CrackerjackCommand.CHECK       # Basic quality checks
-CrackerjackCommand.TEST        # Test execution with reporting
-CrackerjackCommand.LINT        # Linting and style checks
-CrackerjackCommand.FORMAT      # Code formatting operations
-CrackerjackCommand.TYPECHECK   # Type checking support
+CrackerjackCommand.ANALYZE  # Comprehensive analysis command
+CrackerjackCommand.CHECK  # Basic quality checks
+CrackerjackCommand.TEST  # Test execution with reporting
+CrackerjackCommand.LINT  # Linting and style checks
+CrackerjackCommand.FORMAT  # Code formatting operations
+CrackerjackCommand.TYPECHECK  # Type checking support
 ```
 
 ### Security and Complexity Analysis
+
 ```python
-CrackerjackCommand.SECURITY    # Security vulnerability scanning
+CrackerjackCommand.SECURITY  # Security vulnerability scanning
 CrackerjackCommand.COMPLEXITY  # Cognitive complexity analysis
-CrackerjackCommand.COVERAGE    # Test coverage reporting
+CrackerjackCommand.COVERAGE  # Test coverage reporting
 ```
 
 ### Build and Maintenance
+
 ```python
-CrackerjackCommand.BUILD       # Build operations
-CrackerjackCommand.CLEAN       # Cleanup operations
-CrackerjackCommand.DOCS        # Documentation generation
+CrackerjackCommand.BUILD  # Build operations
+CrackerjackCommand.CLEAN  # Cleanup operations
+CrackerjackCommand.DOCS  # Documentation generation
 ```
 
 ### Release Management
+
 ```python
-CrackerjackCommand.RELEASE     # Release workflow management
+CrackerjackCommand.RELEASE  # Release workflow management
 ```
 
 ## Quality Metrics Tracked
@@ -55,16 +59,18 @@ CrackerjackCommand.RELEASE     # Release workflow management
 The integration captures and analyzes comprehensive quality metrics:
 
 ### Primary Metrics
+
 ```python
-QualityMetric.CODE_COVERAGE    # Test coverage percentage
-QualityMetric.COMPLEXITY       # Cognitive complexity scores
-QualityMetric.LINT_SCORE       # Code style and quality scores
-QualityMetric.SECURITY_SCORE   # Security assessment scores
-QualityMetric.TEST_PASS_RATE   # Test success rate
-QualityMetric.BUILD_STATUS     # Build success/failure status
+QualityMetric.CODE_COVERAGE  # Test coverage percentage
+QualityMetric.COMPLEXITY  # Cognitive complexity scores
+QualityMetric.LINT_SCORE  # Code style and quality scores
+QualityMetric.SECURITY_SCORE  # Security assessment scores
+QualityMetric.TEST_PASS_RATE  # Test success rate
+QualityMetric.BUILD_STATUS  # Build success/failure status
 ```
 
 ### Derived Intelligence
+
 - **Quality Trends**: Track improvement or degradation over time
 - **Pattern Recognition**: Identify recurring issues and successful fixes
 - **Predictive Analysis**: Estimate completion times based on historical data
@@ -75,26 +81,28 @@ QualityMetric.BUILD_STATUS     # Build success/failure status
 Comprehensive test result tracking with detailed status classification:
 
 ### Test Status Types
+
 ```python
-TestStatus.PASSED    # Test executed successfully
-TestStatus.FAILED    # Test failed with assertion or logic errors
-TestStatus.SKIPPED   # Test was skipped (conditional or marked)
-TestStatus.ERROR     # Test had execution errors (setup, teardown, etc.)
-TestStatus.XFAIL     # Expected failure (known issues)
-TestStatus.XPASS     # Unexpected pass (previously failing test now passes)
+TestStatus.PASSED  # Test executed successfully
+TestStatus.FAILED  # Test failed with assertion or logic errors
+TestStatus.SKIPPED  # Test was skipped (conditional or marked)
+TestStatus.ERROR  # Test had execution errors (setup, teardown, etc.)
+TestStatus.XFAIL  # Expected failure (known issues)
+TestStatus.XPASS  # Unexpected pass (previously failing test now passes)
 ```
 
 ### Test Result Analysis
+
 ```python
 @dataclass
 class TestResult:
-    test_id: str          # Unique test identifier
-    test_name: str        # Human-readable test name
-    status: TestStatus    # Test execution status
-    duration: float       # Test execution time in seconds
-    file_path: str        # Path to test file
-    error_message: str    # Error details (if applicable)
-    stack_trace: str      # Full stack trace (if applicable)
+    test_id: str  # Unique test identifier
+    test_name: str  # Human-readable test name
+    status: TestStatus  # Test execution status
+    duration: float  # Test execution time in seconds
+    file_path: str  # Path to test file
+    error_message: str  # Error details (if applicable)
+    stack_trace: str  # Full stack trace (if applicable)
 ```
 
 ## Command Execution Results
@@ -104,17 +112,17 @@ Each Crackerjack command execution produces comprehensive results:
 ```python
 @dataclass
 class CrackerjackResult:
-    command: str                          # Command that was executed
-    exit_code: int                        # Process exit code
-    stdout: str                           # Standard output
-    stderr: str                           # Standard error
-    execution_time: float                 # Total execution time
-    timestamp: datetime                   # When execution completed
-    working_directory: str                # Directory where command ran
-    parsed_data: dict[str, Any] | None    # Structured data extraction
-    quality_metrics: dict[str, float]     # Quality scores and metrics
-    test_results: list[dict[str, Any]]    # Individual test results
-    memory_insights: list[str]            # Insights for future sessions
+    command: str  # Command that was executed
+    exit_code: int  # Process exit code
+    stdout: str  # Standard output
+    stderr: str  # Standard error
+    execution_time: float  # Total execution time
+    timestamp: datetime  # When execution completed
+    working_directory: str  # Directory where command ran
+    parsed_data: dict[str, Any] | None  # Structured data extraction
+    quality_metrics: dict[str, float]  # Quality scores and metrics
+    test_results: list[dict[str, Any]]  # Individual test results
+    memory_insights: list[str]  # Insights for future sessions
 ```
 
 ## API Reference
@@ -135,11 +143,11 @@ async def execute_crackerjack_command(
     verbose: bool = False,
     working_directory: str | None = None,
     timeout: int = 300,
-    capture_progress: bool = True
+    capture_progress: bool = True,
 ) -> CrackerjackResult:
     """
     Execute Crackerjack command with full result capture.
-    
+
     Args:
         command: Crackerjack command to execute
         test: Include test execution
@@ -149,7 +157,7 @@ async def execute_crackerjack_command(
         working_directory: Directory to execute command in
         timeout: Command timeout in seconds
         capture_progress: Enable real-time progress capture
-        
+
     Returns:
         Comprehensive execution result with metrics
     """
@@ -165,17 +173,17 @@ async def get_crackerjack_quality_metrics(
     days: int = 30,
     working_directory: str | None = None,
     include_trends: bool = True,
-    metric_types: list[QualityMetric] | None = None
+    metric_types: list[QualityMetric] | None = None,
 ) -> dict[str, Any]:
     """
     Retrieve quality metrics with trend analysis.
-    
+
     Args:
         days: Number of days to analyze
         working_directory: Project directory
         include_trends: Include trend calculations
         metric_types: Specific metrics to retrieve
-        
+
     Returns:
         Quality metrics with trends and analysis
     """
@@ -191,17 +199,17 @@ async def analyze_crackerjack_test_patterns(
     days: int = 7,
     working_directory: str | None = None,
     include_failures: bool = True,
-    pattern_types: list[str] | None = None
+    pattern_types: list[str] | None = None,
 ) -> dict[str, Any]:
     """
     Analyze test patterns for workflow optimization.
-    
+
     Args:
         days: Analysis period in days
         working_directory: Project directory
         include_failures: Include failure pattern analysis
         pattern_types: Specific pattern types to analyze
-        
+
     Returns:
         Test patterns and optimization suggestions
     """
@@ -216,10 +224,7 @@ Execute Crackerjack commands with automatic result capture:
 ```python
 # Run comprehensive quality analysis
 result = await execute_crackerjack_command(
-    "analyze",
-    test=True,
-    ai_agent=True,
-    working_directory="/path/to/project"
+    "analyze", test=True, ai_agent=True, working_directory="/path/to/project"
 )
 
 print(f"Quality Score: {result.quality_metrics.get('overall_score', 0)}")
@@ -234,9 +239,7 @@ Track quality metrics over time:
 ```python
 # Get 30-day quality trend
 metrics = await get_crackerjack_quality_metrics(
-    days=30,
-    working_directory="/path/to/project",
-    include_trends=True
+    days=30, working_directory="/path/to/project", include_trends=True
 )
 
 # Analyze trends
@@ -254,9 +257,7 @@ Identify test patterns for optimization:
 ```python
 # Analyze test patterns
 patterns = await analyze_crackerjack_test_patterns(
-    days=7,
-    working_directory="/path/to/project",
-    include_failures=True
+    days=7, working_directory="/path/to/project", include_failures=True
 )
 
 # Show failure patterns
@@ -273,28 +274,24 @@ Complete workflow with session memory integration:
 ```python
 async def integrated_development_session():
     """Example integrated development session."""
-    
+
     # 1. Initialize session with historical context
     await init_session_with_crackerjack_context()
-    
+
     # 2. Run quality analysis
-    result = await execute_crackerjack_command(
-        "analyze",
-        test=True,
-        ai_agent=True
-    )
-    
+    result = await execute_crackerjack_command("analyze", test=True, ai_agent=True)
+
     # 3. Store results for future sessions
     await store_quality_metrics(result.quality_metrics)
     await store_test_results(result.test_results)
-    
+
     # 4. Generate insights for future sessions
     insights = await generate_session_insights(result)
     await store_reflection(
         content=f"Quality session completed with score {result.quality_metrics.get('overall_score')}",
-        tags=["quality", "crackerjack", "analysis"]
+        tags=["quality", "crackerjack", "analysis"],
     )
-    
+
     return result
 ```
 
@@ -307,10 +304,7 @@ The integration uses historical data to provide predictive insights:
 ```python
 # Predict completion time for complex operations
 prediction = await predict_crackerjack_completion_time(
-    command="test",
-    ai_agent=True,
-    project_size_lines=15000,
-    test_count=450
+    command="test", ai_agent=True, project_size_lines=15000, test_count=450
 )
 
 print(f"Estimated completion: {prediction['estimated_minutes']} minutes")
@@ -325,15 +319,14 @@ Learn from successful error resolutions:
 # Record successful fix
 await record_successful_fix(
     error_pattern="F401: imported but unused",
-    fix_method="ai_agent_refactoring", 
+    fix_method="ai_agent_refactoring",
     success_rate=0.95,
-    project_context="/path/to/project"
+    project_context="/path/to/project",
 )
 
 # Query historical fixes
 fixes = await get_historical_fixes(
-    error_pattern="complexity exceeds 15",
-    confidence_threshold=0.8
+    error_pattern="complexity exceeds 15", confidence_threshold=0.8
 )
 ```
 
@@ -344,9 +337,7 @@ Suggest optimal command sequences based on success patterns:
 ```python
 # Get optimized workflow suggestions
 suggestions = await get_workflow_suggestions(
-    current_state="test_failures",
-    project_type="python_package",
-    quality_score=75
+    current_state="test_failures", project_type="python_package", quality_score=75
 )
 
 for suggestion in suggestions["recommended_sequence"]:
@@ -379,8 +370,8 @@ integration_config = {
     "quality_thresholds": {
         "coverage_minimum": 10.0,
         "complexity_maximum": 15,
-        "security_score_minimum": 8.0
-    }
+        "security_score_minimum": 8.0,
+    },
 }
 ```
 
@@ -394,7 +385,7 @@ monitoring_config = {
     "degradation_threshold": 0.1,  # 10% decrease
     "store_detailed_results": True,
     "compress_old_data": True,
-    "retention_days": 90
+    "retention_days": 90,
 }
 ```
 
@@ -405,7 +396,7 @@ monitoring_config = {
 The integration is designed for efficiency:
 
 - **Lazy Loading**: Quality data loaded only when needed
-- **Compression**: Historical data compressed for storage efficiency  
+- **Compression**: Historical data compressed for storage efficiency
 - **Caching**: Frequently accessed patterns cached in memory
 - **Batch Processing**: Multiple operations batched when possible
 
@@ -426,7 +417,7 @@ memory_config = {
     "max_cached_results": 100,
     "compress_stored_data": True,
     "cleanup_interval_hours": 24,
-    "max_memory_mb": 512
+    "max_memory_mb": 512,
 }
 ```
 
@@ -472,14 +463,11 @@ Enable detailed debugging:
 
 ```python
 import logging
+
 logging.getLogger("session_mgmt_mcp.crackerjack_integration").setLevel(logging.DEBUG)
 
 # Execute with debug logging
-result = await execute_crackerjack_command(
-    "test",
-    verbose=True,
-    capture_progress=True
-)
+result = await execute_crackerjack_command("test", verbose=True, capture_progress=True)
 ```
 
 ## Future Enhancements
@@ -487,10 +475,10 @@ result = await execute_crackerjack_command(
 ### Planned Features
 
 1. **Machine Learning**: Use ML models for better prediction accuracy
-2. **Real-time Dashboards**: Live quality metric visualization  
-3. **Team Analytics**: Multi-developer pattern analysis
-4. **Custom Metrics**: User-defined quality measurements
-5. **Integration APIs**: REST APIs for external tool integration
+1. **Real-time Dashboards**: Live quality metric visualization
+1. **Team Analytics**: Multi-developer pattern analysis
+1. **Custom Metrics**: User-defined quality measurements
+1. **Integration APIs**: REST APIs for external tool integration
 
 ### Extensibility
 
@@ -502,8 +490,9 @@ async def custom_metric_extractor(result: CrackerjackResult) -> dict[str, float]
     """Extract custom metrics from Crackerjack results."""
     return {
         "custom_score": calculate_custom_score(result),
-        "project_health": assess_project_health(result)
+        "project_health": assess_project_health(result),
     }
+
 
 # Register custom extractor
 register_metric_extractor("custom", custom_metric_extractor)

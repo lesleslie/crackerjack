@@ -374,7 +374,7 @@ class ValidationExamples:
         # Valid reflection storage
         result1 = await _store_reflection_validated_impl(
             content="Learned that async/await patterns improve database performance significantly",
-            tags=["python", "async", "database", "performance"]
+            tags=["python", "async", "database", "performance"],
         )
 
         # Valid search with all parameters
@@ -382,14 +382,12 @@ class ValidationExamples:
             query="python async patterns",
             min_score=0.8,
             project="session-mgmt-mcp",
-            limit=5
+            limit=5,
         )
 
         # Valid file search
         result3 = await _search_by_file_validated_impl(
-            file_path="src/reflection_tools.py",
-            limit=20,
-            project="session-mgmt-mcp"
+            file_path="src/reflection_tools.py", limit=20, project="session-mgmt-mcp"
         )
 
         return [result1, result2, result3]
@@ -408,7 +406,7 @@ class ValidationExamples:
             await _quick_search_validated_impl(
                 query="test",
                 min_score=1.5,  # Invalid: > 1.0
-                limit=0  # Invalid: < 1
+                limit=0,  # Invalid: < 1
             )
         except ValueError as e:
             print(f"Expected validation error: {e}")
@@ -417,7 +415,7 @@ class ValidationExamples:
         try:
             await _store_reflection_validated_impl(
                 content="Valid content",
-                tags=["valid-tag", "invalid tag with spaces", "another@invalid!tag"]
+                tags=["valid-tag", "invalid tag with spaces", "another@invalid!tag"],
             )
         except ValueError as e:
             print(f"Expected validation error: {e}")

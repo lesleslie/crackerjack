@@ -7,6 +7,7 @@ This document provides the complete MCP tool schema for AI agents integrating wi
 ### 🚀 Session Management Tools
 
 #### `mcp__session-mgmt__init`
+
 **Purpose**: Complete session initialization with workspace verification
 
 ```typescript
@@ -32,9 +33,10 @@ interface InitResponse {
 **When to use**: Always at the start of every session
 **AI Integration**: Automatically sets up optimal working environment
 
----
+______________________________________________________________________
 
 #### `mcp__session-mgmt__checkpoint`
+
 **Purpose**: Mid-session quality monitoring with workflow analysis
 
 ```typescript
@@ -58,9 +60,10 @@ interface CheckpointResponse {
 **When to use**: Every 30-45 minutes during active development
 **AI Integration**: Provides real-time feedback for workflow optimization
 
----
+______________________________________________________________________
 
 #### `mcp__session-mgmt__end`
+
 **Purpose**: Complete session cleanup with learning capture
 
 ```typescript
@@ -84,9 +87,10 @@ interface EndResponse {
 **When to use**: At the end of every development session
 **AI Integration**: Creates continuity for future sessions
 
----
+______________________________________________________________________
 
 #### `mcp__session-mgmt__status`
+
 **Purpose**: Current session status with health checks
 
 ```typescript
@@ -115,6 +119,7 @@ interface StatusResponse {
 ### 🧠 Memory & Search Tools
 
 #### `mcp__session-mgmt__reflect_on_past`
+
 **Purpose**: Semantic search through conversation history
 
 ```typescript
@@ -146,9 +151,10 @@ interface ReflectResponse {
 **When to use**: When you need context from previous conversations
 **AI Integration**: Essential for building on previous work and avoiding repetition
 
----
+______________________________________________________________________
 
 #### `mcp__session-mgmt__store_reflection`
+
 **Purpose**: Store important insights for future reference
 
 ```typescript
@@ -169,9 +175,10 @@ interface StoreReflectionResponse {
 **When to use**: After solving complex problems or gaining important insights
 **AI Integration**: Builds project knowledge base for future sessions
 
----
+______________________________________________________________________
 
 #### `mcp__session-mgmt__quick_search`
+
 **Purpose**: Fast search with count and top result only
 
 ```typescript
@@ -193,9 +200,10 @@ interface QuickSearchResponse {
 **When to use**: When you need a quick overview before diving deeper
 **AI Integration**: Efficient way to check if relevant context exists
 
----
+______________________________________________________________________
 
 #### `mcp__session-mgmt__get_more_results`
+
 **Purpose**: Pagination support after initial searches
 
 ```typescript
@@ -220,6 +228,7 @@ interface GetMoreResultsResponse {
 ### 🔍 Advanced Search Tools
 
 #### `mcp__session-mgmt__search_by_file`
+
 **Purpose**: Find conversations analyzing specific files
 
 ```typescript
@@ -233,9 +242,10 @@ interface SearchByFileParameters {
 **When to use**: When you need to understand previous work on specific files
 **AI Integration**: Perfect for file-specific context and change history
 
----
+______________________________________________________________________
 
 #### `mcp__session-mgmt__search_by_concept`
+
 **Purpose**: Search for conversations about development concepts
 
 ```typescript
@@ -253,6 +263,7 @@ interface SearchByConceptParameters {
 ### 📊 Analytics & Insights Tools
 
 #### `mcp__session-mgmt__reflection_stats`
+
 **Purpose**: Get statistics about stored knowledge
 
 ```typescript
@@ -274,6 +285,7 @@ interface ReflectionStatsResponse {
 ## Response Patterns
 
 ### Success Response
+
 ```typescript
 interface SuccessResponse {
   success: true
@@ -281,7 +293,8 @@ interface SuccessResponse {
 }
 ```
 
-### Error Response  
+### Error Response
+
 ```typescript
 interface ErrorResponse {
   success: false
@@ -292,6 +305,7 @@ interface ErrorResponse {
 ```
 
 ### Chunked Response (Large Results)
+
 ```typescript
 interface ChunkedResponse {
   success: true
@@ -306,6 +320,7 @@ interface ChunkedResponse {
 ## AI Integration Best Practices
 
 ### 1. Session Lifecycle Management
+
 ```typescript
 // Always start sessions with init
 await mcp_tool("mcp__session-mgmt__init", {
@@ -320,6 +335,7 @@ await mcp_tool("mcp__session-mgmt__end", {})
 ```
 
 ### 2. Context-Aware Development
+
 ```typescript
 // Before starting new work, search for related context
 const context = await mcp_tool("mcp__session-mgmt__reflect_on_past", {
@@ -334,6 +350,7 @@ if (context.success && context.results.length > 0) {
 ```
 
 ### 3. Knowledge Building
+
 ```typescript
 // After solving complex problems
 await mcp_tool("mcp__session-mgmt__store_reflection", {
@@ -343,6 +360,7 @@ await mcp_tool("mcp__session-mgmt__store_reflection", {
 ```
 
 ### 4. Progressive Search Strategy
+
 ```typescript
 // Start with quick search
 const quick = await mcp_tool("mcp__session-mgmt__quick_search", {
@@ -361,18 +379,22 @@ if (quick.has_more) {
 ## Error Handling
 
 ### Common Error Codes
+
 - `MEMORY_UNAVAILABLE`: Embedding system not initialized
 - `PROJECT_NOT_FOUND`: Working directory not accessible
 - `SEARCH_FAILED`: Database query failed
 - `PERMISSION_DENIED`: Insufficient access rights
 
 ### Graceful Degradation
+
 The MCP server is designed to degrade gracefully:
+
 - Semantic search falls back to text search when embeddings unavailable
 - Tools continue working even if memory system fails
 - Project analysis works without Git repository
 
 ### Retry Patterns
+
 ```typescript
 async function robustSearch(query: string, retries = 2) {
   for (let i = 0; i <= retries; i++) {
@@ -390,20 +412,23 @@ async function robustSearch(query: string, retries = 2) {
 ## Performance Considerations
 
 ### Token Optimization
+
 - Responses >4000 tokens are automatically chunked
 - Use `quick_search` before full searches to minimize token usage
 - Search results include similarity scores to help filter relevance
 
 ### Database Performance
+
 - Semantic search is optimized with vector indices
 - Text search fallback uses FTS5 full-text search
 - Connection pooling minimizes database overhead
 
 ### Memory Usage
+
 - ONNX models are loaded lazily and cached
 - Embedding generation uses executor threads to prevent blocking
 - Conversation storage includes automatic cleanup of old entries
 
----
+______________________________________________________________________
 
 **Next Steps**: See [AI Integration Patterns](AI_INTEGRATION_PATTERNS.md) for detailed usage examples and workflow patterns.

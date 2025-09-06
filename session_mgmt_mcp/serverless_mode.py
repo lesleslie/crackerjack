@@ -22,46 +22,29 @@ class SessionState(BaseModel):
     """Represents complete session state for serialization."""
 
     session_id: str = Field(
-        min_length=1,
-        description="Unique identifier for the session"
+        min_length=1, description="Unique identifier for the session"
     )
-    user_id: str = Field(
-        min_length=1,
-        description="Identifier for the user"
-    )
-    project_id: str = Field(
-        min_length=1,
-        description="Identifier for the project"
-    )
-    created_at: str = Field(
-        description="ISO timestamp when session was created"
-    )
-    last_activity: str = Field(
-        description="ISO timestamp of last activity"
-    )
+    user_id: str = Field(min_length=1, description="Identifier for the user")
+    project_id: str = Field(min_length=1, description="Identifier for the project")
+    created_at: str = Field(description="ISO timestamp when session was created")
+    last_activity: str = Field(description="ISO timestamp of last activity")
     permissions: list[str] = Field(
-        default_factory=list,
-        description="List of permissions granted to the session"
+        default_factory=list, description="List of permissions granted to the session"
     )
     conversation_history: list[dict[str, Any]] = Field(
-        default_factory=list,
-        description="History of conversation entries"
+        default_factory=list, description="History of conversation entries"
     )
     reflection_data: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Stored reflection and memory data"
+        default_factory=dict, description="Stored reflection and memory data"
     )
     app_monitoring_state: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Application monitoring state"
+        default_factory=dict, description="Application monitoring state"
     )
     llm_provider_configs: dict[str, Any] = Field(
-        default_factory=dict,
-        description="LLM provider configurations"
+        default_factory=dict, description="LLM provider configurations"
     )
     metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional session metadata"
+        default_factory=dict, description="Additional session metadata"
     )
 
     @field_validator("created_at", "last_activity")

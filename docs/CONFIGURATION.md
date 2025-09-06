@@ -126,7 +126,7 @@ export EMBEDDING_MODEL_PATH="/path/to/custom/model.onnx"
 ```json
 {
   "env": {
-    "DISABLE_EMBEDDINGS": "true",  
+    "DISABLE_EMBEDDINGS": "true",
     "FALLBACK_TO_TEXT_SEARCH": "true"
   }
 }
@@ -142,7 +142,7 @@ DATABASE_CONFIG = {
     "memory_limit": "2GB",
     "threads": 8,
     "checkpoint_threshold": "1GB",
-    "wal_autocheckpoint": 1000
+    "wal_autocheckpoint": 1000,
 }
 ```
 
@@ -229,7 +229,7 @@ upstream session_mgmt_backend {
 server {
     listen 80;
     server_name session-mgmt.example.com;
-    
+
     location / {
         proxy_pass http://session_mgmt_backend;
         proxy_set_header Host $host;
@@ -445,30 +445,35 @@ import json
 import os
 from pathlib import Path
 
+
 def validate_config():
     """Validate all configuration settings."""
-    
+
     # Check required paths
     data_dir = Path(os.getenv("SESSION_MGMT_DATA_DIR", "~/.claude/data")).expanduser()
     assert data_dir.exists(), f"Data directory missing: {data_dir}"
-    
+
     # Check MCP configuration
     mcp_config_path = Path(".mcp.json")
     if mcp_config_path.exists():
         with open(mcp_config_path) as f:
             config = json.load(f)
-        
-        assert "session-mgmt" in config.get("mcpServers", {}), "session-mgmt server not configured"
-    
+
+        assert "session-mgmt" in config.get("mcpServers", {}), (
+            "session-mgmt server not configured"
+        )
+
     # Check embedding model availability
     try:
         import onnxruntime
         import transformers
+
         print("✅ Embedding dependencies available")
     except ImportError:
         print("⚠️ Embedding dependencies missing - text search fallback will be used")
-    
+
     print("✅ Configuration validation passed")
+
 
 if __name__ == "__main__":
     validate_config()
@@ -479,27 +484,27 @@ if __name__ == "__main__":
 ### Configuration Management
 
 1. **Use Environment Variables**: Keep sensitive data out of config files
-2. **Version Control**: Track configuration changes in git
-3. **Environment-Specific**: Use different configs for dev/staging/prod
-4. **Documentation**: Document all custom configuration changes
-5. **Validation**: Test configuration changes in staging first
+1. **Version Control**: Track configuration changes in git
+1. **Environment-Specific**: Use different configs for dev/staging/prod
+1. **Documentation**: Document all custom configuration changes
+1. **Validation**: Test configuration changes in staging first
 
 ### Security Best Practices
 
 1. **Encrypt Sensitive Data**: Use tools like sops or Vault
-2. **Rotate Keys**: Regular API key and certificate rotation
-3. **Principle of Least Privilege**: Minimal permissions by default
-4. **Audit Logs**: Enable comprehensive logging for security events
-5. **Network Security**: Use firewalls and VPNs for production
+1. **Rotate Keys**: Regular API key and certificate rotation
+1. **Principle of Least Privilege**: Minimal permissions by default
+1. **Audit Logs**: Enable comprehensive logging for security events
+1. **Network Security**: Use firewalls and VPNs for production
 
 ### Performance Optimization
 
 1. **Resource Limits**: Set appropriate memory and CPU limits
-2. **Connection Pooling**: Configure database connection pooling
-3. **Caching**: Enable embedding caching for better performance
-4. **Monitoring**: Track performance metrics and set alerts
-5. **Scaling**: Plan for horizontal scaling in high-load scenarios
+1. **Connection Pooling**: Configure database connection pooling
+1. **Caching**: Enable embedding caching for better performance
+1. **Monitoring**: Track performance metrics and set alerts
+1. **Scaling**: Plan for horizontal scaling in high-load scenarios
 
----
+______________________________________________________________________
 
 **Next Steps**: See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed system architecture and [DEPLOYMENT.md](DEPLOYMENT.md) for deployment strategies.

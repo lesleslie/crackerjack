@@ -18,27 +18,30 @@ The `session_mgmt_mcp.parameter_models` module provides:
 ```python
 from session_mgmt_mcp.parameter_models import SearchQueryParams, validate_mcp_params
 
+
 @mcp.tool()
 async def search_reflections(
-    query: str,
-    limit: int = 10,
-    project: str | None = None,
-    min_score: float = 0.7
+    query: str, limit: int = 10, project: str | None = None, min_score: float = 0.7
 ) -> str:
     try:
         # Validate all parameters at once
-        validated = validate_mcp_params(SearchQueryParams, 
-            query=query, limit=limit, project=project, min_score=min_score)
-        
+        validated = validate_mcp_params(
+            SearchQueryParams,
+            query=query,
+            limit=limit,
+            project=project,
+            min_score=min_score,
+        )
+
         # Use validated parameters (guaranteed to be valid)
-        query = validated['query']  # Non-empty, 1-1000 chars
-        limit = validated['limit']  # 1-1000 range
-        project = validated.get('project')  # None or valid project name
-        min_score = validated['min_score']  # 0.0-1.0 range
-        
+        query = validated["query"]  # Non-empty, 1-1000 chars
+        limit = validated["limit"]  # 1-1000 range
+        project = validated.get("project")  # None or valid project name
+        min_score = validated["min_score"]  # 0.0-1.0 range
+
         # Implementation with confidence in parameter validity...
         return f"Searching for '{query}' with limit {limit}"
-        
+
     except ValueError as e:
         return f"❌ Parameter validation error: {e}"
 ```
@@ -46,8 +49,9 @@ async def search_reflections(
 ### 2. Available Parameter Models
 
 #### Core Models
+
 - `WorkingDirectoryParams` - Standard working directory validation
-- `ProjectContextParams` - Project identifier validation  
+- `ProjectContextParams` - Project identifier validation
 - `SearchLimitParams` - Pagination and limits
 - `TimeRangeParams` - Time-based filtering
 - `ScoreThresholdParams` - Relevance scoring
@@ -56,6 +60,7 @@ async def search_reflections(
 - `FilePathParams` - File path validation
 
 #### Composite Models
+
 - `SearchQueryParams` - Complete search parameters
 - `ReflectionStoreParams` - Reflection storage parameters
 - `FileSearchParams` - File-based search parameters
@@ -74,10 +79,10 @@ async def store_reflection(content: str, tags: list[str] | None = None) -> str:
     # Manual validation - error-prone and inconsistent
     if not content or not content.strip():
         return "❌ Content cannot be empty"
-    
+
     if len(content) > 50000:
         return "❌ Content too long (max 50,000 characters)"
-    
+
     if tags:
         for tag in tags:
             if not isinstance(tag, str):
@@ -86,7 +91,7 @@ async def store_reflection(content: str, tags: list[str] | None = None) -> str:
                 return "❌ Tag too long"
             if not tag.replace("-", "").replace("_", "").isalnum():
                 return "❌ Invalid tag format"
-    
+
     # Implementation...
 ```
 
@@ -95,19 +100,22 @@ async def store_reflection(content: str, tags: list[str] | None = None) -> str:
 ```python
 from session_mgmt_mcp.parameter_models import ReflectionStoreParams, validate_mcp_params
 
+
 @mcp.tool()
 async def store_reflection(content: str, tags: list[str] | None = None) -> str:
     try:
         # All validation in one line
-        validated = validate_mcp_params(ReflectionStoreParams, content=content, tags=tags)
-        
+        validated = validate_mcp_params(
+            ReflectionStoreParams, content=content, tags=tags
+        )
+
         # Parameters are guaranteed valid
-        content = validated['content']  # Non-empty, 1-50,000 chars
-        tags = validated.get('tags')    # None or valid tag list
-        
+        content = validated["content"]  # Non-empty, 1-50,000 chars
+        tags = validated.get("tags")  # None or valid tag list
+
         # Implementation...
         return f"✅ Stored reflection with {len(tags) if tags else 0} tags"
-        
+
     except ValueError as e:
         return f"❌ {e}"
 ```
@@ -247,21 +255,20 @@ import pytest
 from pydantic import ValidationError
 from session_mgmt_mcp.parameter_models import SearchQueryParams
 
+
 def test_valid_search_params():
     """Test valid parameter validation."""
-    params = SearchQueryParams(
-        query="python async",
-        limit=20,
-        min_score=0.8
-    )
+    params = SearchQueryParams(query="python async", limit=20, min_score=0.8)
     assert params.query == "python async"
     assert params.limit == 20
     assert params.min_score == 0.8
+
 
 def test_invalid_search_params():
     """Test invalid parameter validation."""
     with pytest.raises(ValidationError):
         SearchQueryParams(query="", limit=0)  # Empty query, invalid limit
+
 
 def test_parameter_defaults():
     """Test default parameter values."""
@@ -277,17 +284,14 @@ The parameter models are designed to work seamlessly with FastMCP's `@mcp.tool()
 ```python
 @mcp.tool()
 async def enhanced_search(
-    query: str,
-    limit: int = 10,
-    project: str | None = None,
-    min_score: float = 0.7
+    query: str, limit: int = 10, project: str | None = None, min_score: float = 0.7
 ) -> str:
     """Enhanced search with parameter validation.
-    
+
     Args:
         query: Search query text (1-1,000 chars)
         limit: Maximum results to return (1-1,000)
-        project: Optional project identifier (1-200 chars) 
+        project: Optional project identifier (1-200 chars)
         min_score: Minimum relevance score (0.0-1.0)
     """
     # Validation and implementation...
@@ -301,23 +305,20 @@ Create custom models for specific use cases:
 from pydantic import BaseModel, Field
 from session_mgmt_mcp.parameter_models import NonEmptyStringMixin, PathValidationMixin
 
+
 class CustomToolParams(BaseModel, NonEmptyStringMixin, PathValidationMixin):
     """Custom parameters for specialized tool."""
-    
+
     tool_specific_field: str = Field(
-        min_length=1,
-        max_length=100,
-        description="Tool-specific parameter"
+        min_length=1, max_length=100, description="Tool-specific parameter"
     )
-    
+
     optional_path: str | None = Field(
-        default=None,
-        description="Optional path that will be expanded"
+        default=None, description="Optional path that will be expanded"
     )
-    
+
     complexity_level: Literal["simple", "moderate", "complex"] = Field(
-        default="moderate",
-        description="Complexity level for processing"
+        default="moderate", description="Complexity level for processing"
     )
 ```
 
@@ -333,16 +334,17 @@ class CustomToolParams(BaseModel, NonEmptyStringMixin, PathValidationMixin):
 
 ## Benefits
 
-✅ **Type Safety**: Guaranteed parameter validity  
-✅ **Consistency**: Same validation patterns across tools  
-✅ **User Experience**: Clear, actionable error messages  
-✅ **Developer Experience**: Less boilerplate validation code  
-✅ **Maintainability**: Centralized validation logic  
-✅ **Testing**: Easy to test parameter edge cases  
+✅ **Type Safety**: Guaranteed parameter validity
+✅ **Consistency**: Same validation patterns across tools
+✅ **User Experience**: Clear, actionable error messages
+✅ **Developer Experience**: Less boilerplate validation code
+✅ **Maintainability**: Centralized validation logic
+✅ **Testing**: Easy to test parameter edge cases
 
 ## Examples in Action
 
 See the complete examples in:
+
 - `session_mgmt_mcp/tools/validated_memory_tools.py` - Full integration examples
 - `tests/unit/test_parameter_models.py` - Comprehensive test suite
 - `session_mgmt_mcp/parameter_models.py` - All available models and utilities

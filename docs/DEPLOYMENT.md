@@ -927,7 +927,7 @@ groups:
         annotations:
           summary: "High error rate in Session Management MCP"
           description: "Error rate is {{ $value }} errors per second"
-      
+
       - alert: HighMemoryUsage
         expr: session_mgmt_memory_usage_mb > 1500
         for: 5m
@@ -936,7 +936,7 @@ groups:
         annotations:
           summary: "High memory usage"
           description: "Memory usage is {{ $value }}MB"
-      
+
       - alert: ServiceDown
         expr: up{job="session-mgmt-mcp"} == 0
         for: 1m
@@ -1045,22 +1045,22 @@ groups:
 server {
     listen 443 ssl http2;
     server_name session-mgmt.example.com;
-    
+
     ssl_certificate /etc/ssl/certs/session-mgmt.crt;
     ssl_certificate_key /etc/ssl/private/session-mgmt.key;
-    
+
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers off;
-    
+
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
-    
+
     add_header Strict-Transport-Security "max-age=63072000" always;
     add_header X-Content-Type-Options nosniff;
     add_header X-Frame-Options DENY;
     add_header X-XSS-Protection "1; mode=block";
-    
+
     location / {
         proxy_pass http://session-mgmt-backend;
         proxy_set_header Host $host;
@@ -1174,15 +1174,15 @@ PRAGMA threads=8;
 PRAGMA checkpoint_threshold='1GB';
 
 -- Create optimal indices
-CREATE INDEX idx_conversations_project_timestamp 
+CREATE INDEX idx_conversations_project_timestamp
 ON conversations(project, timestamp DESC);
 
-CREATE INDEX idx_conversations_embedding 
+CREATE INDEX idx_conversations_embedding
 ON conversations USING ivfflat (embedding vector_cosine_ops)
 WITH (lists = 100);
 
 -- Optimize table for vector operations
-ALTER TABLE conversations 
+ALTER TABLE conversations
 SET (embedding_compression = 'pq');
 ```
 
@@ -1215,27 +1215,31 @@ import aiohttp
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+
 async def load_test():
     """Simple load test for the MCP server."""
-    
+
     async def make_request(session, url):
         async with session.get(url) as response:
             return await response.json()
-    
+
     async with aiohttp.ClientSession() as session:
         tasks = []
-        
+
         # Create 100 concurrent requests
         for i in range(100):
             task = make_request(session, "http://localhost:8000/health")
             tasks.append(task)
-        
+
         start_time = time.time()
         results = await asyncio.gather(*tasks)
         end_time = time.time()
-        
+
         print(f"Completed 100 requests in {end_time - start_time:.2f} seconds")
-        print(f"Success rate: {sum(1 for r in results if r.get('status') == 'healthy')}/100")
+        print(
+            f"Success rate: {sum(1 for r in results if r.get('status') == 'healthy')}/100"
+        )
+
 
 if __name__ == "__main__":
     asyncio.run(load_test())
@@ -1330,9 +1334,10 @@ fi
 echo "✅ All health checks passed"
 ```
 
----
+______________________________________________________________________
 
 **Next Steps:**
+
 - Review [CONFIGURATION.md](CONFIGURATION.md) for advanced configuration options
 - See [INTEGRATION.md](INTEGRATION.md) for integrating with existing tools
 - Check [MCP_TOOLS_REFERENCE.md](MCP_TOOLS_REFERENCE.md) for complete tool documentation

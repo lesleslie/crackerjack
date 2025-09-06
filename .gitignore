@@ -9,3 +9,28 @@
 /htmlcov/
 /coverage.xml
 /.coverage
+
+# Crackerjack patterns
+# Crackerjack generated files
+*$py.class
+*.crackerjack.bak
+*.py[cod]
+*/__pycache__/
+.coverage.*
+.crackerjack/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+/.benchmarks/
+/.claude/
+/.coverage
+/.envrc
+/.hypothesis/
+/.mcp.json
+/.venv/
+/coverage.xml
+/dist/
+/htmlcov/
+__pycache__/
+crackerjack-debug-*.log

@@ -9,16 +9,13 @@ Following crackerjack testing patterns:
 
 import pytest
 from pydantic import ValidationError
-
 from session_mgmt_mcp.parameter_models import (
     CommandExecutionParams,
     ConceptSearchParams,
     CrackerjackExecutionParams,
     FileSearchParams,
-    ProjectContextParams,
     ReflectionStoreParams,
     SearchQueryParams,
-    SessionInitParams,
     TagParams,
     TeamCreationParams,
     TeamReflectionParams,
@@ -37,13 +34,14 @@ class TestWorkingDirectoryParams:
         # Current directory
         params = WorkingDirectoryParams(working_directory=".")
         assert params.working_directory == "."
-        
+
         # None value
         params = WorkingDirectoryParams(working_directory=None)
         assert params.working_directory is None
-        
+
         # Existing directory (assuming current dir exists)
         import os
+
         current_dir = os.getcwd()
         params = WorkingDirectoryParams(working_directory=current_dir)
         assert params.working_directory == current_dir
@@ -53,6 +51,7 @@ class TestWorkingDirectoryParams:
         params = WorkingDirectoryParams(working_directory="~/")
         # Should expand tilde to home directory
         import os
+
         expected = os.path.expanduser("~/")
         assert params.working_directory == expected
 
@@ -60,7 +59,7 @@ class TestWorkingDirectoryParams:
         """Test empty string working directory becomes None."""
         params = WorkingDirectoryParams(working_directory="")
         assert params.working_directory is None
-        
+
         params = WorkingDirectoryParams(working_directory="   ")
         assert params.working_directory is None
 
@@ -68,17 +67,18 @@ class TestWorkingDirectoryParams:
         """Test validation error for non-existent directory."""
         with pytest.raises(ValidationError) as exc_info:
             WorkingDirectoryParams(working_directory="/nonexistent/path/12345")
-        
+
         assert "Working directory does not exist" in str(exc_info.value)
 
     def test_file_instead_of_directory_error(self):
         """Test validation error when path is a file, not directory."""
         # Create a temporary file for testing
         import tempfile
+
         with tempfile.NamedTemporaryFile() as tmp_file:
             with pytest.raises(ValidationError) as exc_info:
                 WorkingDirectoryParams(working_directory=tmp_file.name)
-            
+
             assert "Working directory is not a directory" in str(exc_info.value)
 
 
@@ -91,9 +91,9 @@ class TestTagParams:
             ["python", "async"],
             ["bug-fix", "critical"],
             ["feature_request"],
-            ["ui", "frontend", "react"]
+            ["ui", "frontend", "react"],
         ]
-        
+
         for tags in valid_tags:
             params = TagParams(tags=tags)
             assert params.tags == [tag.lower() for tag in tags]
@@ -125,7 +125,7 @@ class TestTagParams:
             ["python", "tag with spaces"],  # spaces
             ["good", "bad!tag"],  # exclamation
         ]
-        
+
         for tags in invalid_tags:
             with pytest.raises(ValidationError):
                 TagParams(tags=tags)
@@ -135,7 +135,7 @@ class TestTagParams:
         long_tag = "a" * 51  # Max is 50 characters
         with pytest.raises(ValidationError) as exc_info:
             TagParams(tags=[long_tag])
-        
+
         assert "Tag too long" in str(exc_info.value)
 
     def test_non_string_tag_error(self):
@@ -151,7 +151,7 @@ class TestReflectionStoreParams:
         """Test valid reflection parameters."""
         params = ReflectionStoreParams(
             content="This is a valid reflection about Python async patterns.",
-            tags=["python", "async"]
+            tags=["python", "async"],
         )
         assert params.content.strip() == params.content
         assert params.tags == ["python", "async"]
@@ -161,12 +161,12 @@ class TestReflectionStoreParams:
         # Test minimum length (should pass)
         params = ReflectionStoreParams(content="x")
         assert params.content == "x"
-        
+
         # Test maximum length (should pass)
         max_content = "x" * 50000
         params = ReflectionStoreParams(content=max_content)
         assert len(params.content) == 50000
-        
+
         # Test over maximum length (should fail)
         over_max_content = "x" * 50001
         with pytest.raises(ValidationError):
@@ -176,7 +176,7 @@ class TestReflectionStoreParams:
         """Test validation error for empty content."""
         with pytest.raises(ValidationError):
             ReflectionStoreParams(content="")
-        
+
         with pytest.raises(ValidationError):
             ReflectionStoreParams(content="   ")  # Whitespace only
 
@@ -192,10 +192,7 @@ class TestSearchQueryParams:
     def test_valid_search_params(self):
         """Test valid search parameters."""
         params = SearchQueryParams(
-            query="python async patterns",
-            limit=20,
-            project="my-project",
-            min_score=0.8
+            query="python async patterns", limit=20, project="my-project", min_score=0.8
         )
         assert params.query == "python async patterns"
         assert params.limit == 20
@@ -217,9 +214,9 @@ class TestSearchQueryParams:
             "simple query",
             "query with numbers 123",
             "special-chars_allowed.here",
-            "x" * 1000  # Max length
+            "x" * 1000,  # Max length
         ]
-        
+
         for query in valid_queries:
             params = SearchQueryParams(query=query)
             assert params.query == query
@@ -227,10 +224,10 @@ class TestSearchQueryParams:
         # Invalid queries
         with pytest.raises(ValidationError):
             SearchQueryParams(query="")  # Empty
-        
+
         with pytest.raises(ValidationError):
             SearchQueryParams(query="   ")  # Whitespace only
-        
+
         with pytest.raises(ValidationError):
             SearchQueryParams(query="x" * 1001)  # Over max length
 
@@ -239,14 +236,14 @@ class TestSearchQueryParams:
         # Valid limits
         params = SearchQueryParams(query="test", limit=1)
         assert params.limit == 1
-        
+
         params = SearchQueryParams(query="test", limit=1000)
         assert params.limit == 1000
-        
+
         # Invalid limits
         with pytest.raises(ValidationError):
             SearchQueryParams(query="test", limit=0)  # Below minimum
-        
+
         with pytest.raises(ValidationError):
             SearchQueryParams(query="test", limit=1001)  # Above maximum
 
@@ -255,14 +252,14 @@ class TestSearchQueryParams:
         # Valid scores
         params = SearchQueryParams(query="test", min_score=0.0)
         assert params.min_score == 0.0
-        
+
         params = SearchQueryParams(query="test", min_score=1.0)
         assert params.min_score == 1.0
-        
+
         # Invalid scores
         with pytest.raises(ValidationError):
             SearchQueryParams(query="test", min_score=-0.1)  # Below minimum
-        
+
         with pytest.raises(ValidationError):
             SearchQueryParams(query="test", min_score=1.1)  # Above maximum
 
@@ -276,7 +273,7 @@ class TestTeamUserParams:
             user_id="user123",
             username="john_doe",
             role="contributor",
-            email="john@example.com"
+            email="john@example.com",
         )
         assert params.user_id == "user123"
         assert params.username == "john_doe"
@@ -291,23 +288,15 @@ class TestTeamUserParams:
     def test_valid_roles(self):
         """Test all valid role values."""
         valid_roles = ["owner", "admin", "moderator", "contributor", "viewer"]
-        
+
         for role in valid_roles:
-            params = TeamUserParams(
-                user_id="user123",
-                username="john",
-                role=role
-            )
+            params = TeamUserParams(user_id="user123", username="john", role=role)
             assert params.role == role
 
     def test_invalid_role(self):
         """Test validation error for invalid role."""
         with pytest.raises(ValidationError):
-            TeamUserParams(
-                user_id="user123",
-                username="john",
-                role="invalid_role"
-            )
+            TeamUserParams(user_id="user123", username="john", role="invalid_role")
 
     def test_email_validation(self):
         """Test email validation."""
@@ -315,15 +304,11 @@ class TestTeamUserParams:
         valid_emails = [
             "user@example.com",
             "test.user+tag@domain.co.uk",
-            "simple@test.io"
+            "simple@test.io",
         ]
-        
+
         for email in valid_emails:
-            params = TeamUserParams(
-                user_id="user123",
-                username="john",
-                email=email
-            )
+            params = TeamUserParams(user_id="user123", username="john", email=email)
             assert params.email == email
 
         # None email (optional)
@@ -340,18 +325,16 @@ class TestTeamUserParams:
             "@example.com",
             "user@",
             "user@.com",
-            "x" * 255 + "@example.com"  # Too long
+            "x" * 255 + "@example.com",  # Too long
         ]
-        
+
         for email in invalid_emails:
             try:
-                params = TeamUserParams(
-                    user_id="user123",
-                    username="john",
-                    email=email
-                )
+                params = TeamUserParams(user_id="user123", username="john", email=email)
                 # If we get here, validation didn't fail as expected
-                pytest.fail(f"Expected validation error for email '{email}' but got: {params.email}")
+                pytest.fail(
+                    f"Expected validation error for email '{email}' but got: {params.email}"
+                )
             except ValidationError:
                 # This is expected
                 pass
@@ -362,14 +345,10 @@ class TestValidateMcpParams:
 
     def test_successful_validation(self):
         """Test successful parameter validation."""
-        params = {
-            "query": "test query",
-            "limit": 5,
-            "min_score": 0.8
-        }
-        
+        params = {"query": "test query", "limit": 5, "min_score": 0.8}
+
         validated = validate_mcp_params(SearchQueryParams, **params)
-        
+
         assert validated["query"] == "test query"
         assert validated["limit"] == 5
         assert validated["min_score"] == 0.8
@@ -378,26 +357,23 @@ class TestValidateMcpParams:
         """Test validation error handling with helpful messages."""
         params = {
             "query": "",  # Invalid: empty
-            "limit": 0,   # Invalid: below minimum
-            "min_score": 1.5  # Invalid: above maximum
+            "limit": 0,  # Invalid: below minimum
+            "min_score": 1.5,  # Invalid: above maximum
         }
-        
-        with pytest.raises(ValueError) as exc_info:
+
+        with pytest.raises(ValueError, match="Parameter validation failed") as exc_info:
             validate_mcp_params(SearchQueryParams, **params)
-        
+
         error_message = str(exc_info.value)
         assert "Parameter validation failed" in error_message
         # Should contain details about multiple validation errors
 
     def test_exclude_none_values(self):
         """Test that None values are excluded from results."""
-        params = {
-            "query": "test",
-            "project": None
-        }
-        
+        params = {"query": "test", "project": None}
+
         validated = validate_mcp_params(SearchQueryParams, **params)
-        
+
         assert "query" in validated
         assert "project" not in validated  # None values excluded
 
@@ -408,9 +384,7 @@ class TestCommandExecutionParams:
     def test_valid_command_params(self):
         """Test valid command execution parameters."""
         params = CommandExecutionParams(
-            command="lint",
-            args="--fix --verbose",
-            timeout=600
+            command="lint", args="--fix --verbose", timeout=600
         )
         assert params.command == "lint"
         assert params.args == "--fix --verbose"
@@ -428,14 +402,14 @@ class TestCommandExecutionParams:
         # Valid timeouts
         params = CommandExecutionParams(command="test", timeout=1)
         assert params.timeout == 1
-        
+
         params = CommandExecutionParams(command="test", timeout=3600)
         assert params.timeout == 3600
-        
+
         # Invalid timeouts
         with pytest.raises(ValidationError):
             CommandExecutionParams(command="test", timeout=0)  # Below minimum
-        
+
         with pytest.raises(ValidationError):
             CommandExecutionParams(command="test", timeout=3601)  # Above maximum
 
@@ -450,17 +424,17 @@ class TestCrackerjackExecutionParams:
             args="--fix",
             timeout=600,
             working_directory=".",
-            ai_agent_mode=True
+            ai_agent_mode=True,
         )
-        
+
         # Command execution fields
         assert params.command == "lint"
         assert params.args == "--fix"
         assert params.timeout == 600
-        
+
         # Working directory field
         assert params.working_directory == "."
-        
+
         # Crackerjack-specific field
         assert params.ai_agent_mode is True
 
@@ -481,17 +455,17 @@ class TestParameterModelIntegration:
             user_id="dev001",
             username="alice_developer",
             role="contributor",
-            email="alice@company.com"
+            email="alice@company.com",
         )
-        
+
         # Create team
         team_params = TeamCreationParams(
             team_id="team_backend",
             name="Backend Development Team",
             description="Team focused on backend services and APIs",
-            owner_id="dev001"
+            owner_id="dev001",
         )
-        
+
         # Add team reflection
         reflection_params = TeamReflectionParams(
             content="Discovered that connection pooling significantly improves database performance under high load",
@@ -499,9 +473,9 @@ class TestParameterModelIntegration:
             team_id="team_backend",
             project_id="user_service",
             tags=["database", "performance", "connection-pooling"],
-            access_level="team"
+            access_level="team",
         )
-        
+
         # Search team knowledge
         search_params = TeamSearchParams(
             query="database performance",
@@ -509,9 +483,9 @@ class TestParameterModelIntegration:
             team_id="team_backend",
             project_id="user_service",
             limit=10,
-            min_score=0.7
+            min_score=0.7,
         )
-        
+
         # All validations should pass
         assert user_params.user_id == "dev001"
         assert team_params.team_id == "team_backend"
@@ -522,26 +496,22 @@ class TestParameterModelIntegration:
         """Test search workflow with different parameter models."""
         # Basic search
         basic_search = SearchQueryParams(
-            query="python async patterns",
-            limit=20,
-            min_score=0.8
+            query="python async patterns", limit=20, min_score=0.8
         )
-        
+
         # File search
         file_search = FileSearchParams(
-            file_path="src/async_utils.py",
-            limit=15,
-            project="backend_service"
+            file_path="src/async_utils.py", limit=15, project="backend_service"
         )
-        
+
         # Concept search
         concept_search = ConceptSearchParams(
             concept="connection pooling",
             include_files=True,
             limit=25,
-            project="backend_service"
+            project="backend_service",
         )
-        
+
         # All should validate successfully
         assert basic_search.query == "python async patterns"
         assert file_search.file_path == "src/async_utils.py"
@@ -553,11 +523,11 @@ class TestParameterModelIntegration:
         search_params = SearchQueryParams(query="test", limit=50)
         file_params = FileSearchParams(file_path="test.py", limit=50)
         concept_params = ConceptSearchParams(concept="testing", limit=50)
-        
+
         assert search_params.limit == 50
         assert file_params.limit == 50
         assert concept_params.limit == 50
-        
+
         # All should fail with same limit validation
         with pytest.raises(ValidationError):
             SearchQueryParams(query="test", limit=0)
