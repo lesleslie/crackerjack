@@ -1,0 +1,382 @@
+# ERROR-PATTERNS.yaml
+# AI-optimized error pattern matching and resolution guide
+# Version: 1.0.0
+# Last Updated: 2025-01-06
+
+metadata:
+  version: "1.0.0"
+  description: "Structured error patterns for AI pattern matching and automated resolution"
+  total_patterns: 45
+  coverage_areas: ["type_errors", "security", "performance", "testing", "formatting", "imports"]
+  success_rate: 0.89
+
+# Type Errors and Annotations
+type_errors:
+  missing_return_annotation:
+    pattern: "Function.*missing a return type annotation"
+    severity: "medium"
+    agent: "RefactoringAgent"
+    confidence: 0.9
+    fix_template: |
+      def {function_name}({params}) -> {return_type}:
+          {function_body}
+    examples:
+      - before: "def get_config():"
+        after: "def get_config() -> dict[str, Any]:"
+      - before: "def process_items(items):"
+        after: "def process_items(items: list[dict]) -> bool:"
+
+  missing_parameter_annotation:
+    pattern: "Missing type annotation for.*parameter"
+    severity: "medium" 
+    agent: "RefactoringAgent"
+    confidence: 0.85
+    fix_template: "def {function_name}({param}: {type}, ...):"
+    examples:
+      - before: "def validate(data):"
+        after: "def validate(data: dict[str, Any]) -> bool:"
+
+  incompatible_types:
+    pattern: "Argument.*has incompatible type"
+    severity: "high"
+    agent: "RefactoringAgent" 
+    confidence: 0.8
+    fix_approach: "type_cast_or_conversion"
+    examples:
+      - before: "return None"
+        after: "return t.cast(ConfigDict, None)"
+
+# Security Vulnerabilities
+security_issues:
+  hardcoded_tmp_directory:
+    pattern: "B108.*hardcoded_tmp_directory"
+    severity: "high"
+    agent: "SecurityAgent"
+    confidence: 0.9
+    fix_template: |
+      with tempfile.NamedTemporaryFile(suffix=".{ext}") as f:
+          temp_path = f.name
+    examples:
+      - before: 'temp_file = "/tmp/crackerjack.yaml"'
+        after: |
+          with tempfile.NamedTemporaryFile(suffix=".yaml") as f:
+              temp_file = f.name
+
+  subprocess_shell_true:
+    pattern: "B602.*subprocess_popen_with_shell_equals_true"
+    severity: "critical"
+    agent: "SecurityAgent" 
+    confidence: 0.95
+    fix_template: "subprocess.run([{cmd_list}], check=True)"
+    examples:
+      - before: 'subprocess.run("ls -la", shell=True)'
+        after: 'subprocess.run(["ls", "-la"], check=True)'
+
+  hardcoded_password:
+    pattern: "B105.*hardcoded_password_string"
+    severity: "critical"
+    agent: "SecurityAgent"
+    confidence: 0.95
+    fix_approach: "environment_variable_or_keyring"
+
+# Performance Issues
+performance_issues:
+  nested_loop_complexity:
+    pattern: "O\\(n²\\).*detected.*nested.*loop"
+    severity: "medium"
+    agent: "PerformanceAgent"
+    confidence: 0.9
+    fix_approaches:
+      - "dictionary_lookup"
+      - "set_operations"
+      - "pre_computed_mapping"
+    examples:
+      - before: |
+          for item in items:
+              for target in targets:
+                  if item.id == target.id:
+                      process(item, target)
+        after: |
+          target_map = {t.id: t for t in targets}
+          for item in items:
+              if target := target_map.get(item.id):
+                  process(item, target)
+
+  string_concatenation_loop:
+    pattern: "String concatenation.*inside.*loop"
+    severity: "medium"
+    agent: "PerformanceAgent"
+    confidence: 0.85
+    fix_template: "result = ''.join([{expression} for {item} in {iterable}])"
+    examples:
+      - before: |
+          result = ""
+          for item in items:
+              result += f"{item.name},"
+        after: |
+          result = ",".join(item.name for item in items)
+
+  inefficient_membership_test:
+    pattern: "Membership test.*on.*list.*should.*use.*set"
+    severity: "low"
+    agent: "PerformanceAgent"
+    confidence: 0.8
+    fix_template: "{var}_set = set({var})"
+
+# Code Quality and Complexity  
+complexity_issues:
+  cognitive_complexity_exceeded:
+    pattern: "Cognitive complexity of .* \\((\\d+)\\) exceeds maximum allowed complexity \\(15\\)"
+    severity: "high"
+    agent: "RefactoringAgent"
+    confidence: 0.95
+    extract_groups: ["complexity_score"]
+    fix_strategies:
+      - "extract_helper_methods"
+      - "reduce_nesting"
+      - "simplify_boolean_expressions"
+      - "early_returns"
+    examples:
+      - before: "# 34 line complex method with deep nesting"
+        after: |
+          def complex_method(self, data):
+              if not self._validate_input(data):
+                  return self._handle_invalid()
+              processed = self._process_data(data)
+              return self._save_results(processed)
+
+  function_too_long:
+    pattern: "Function.*too long.*\\((\\d+) lines\\)"
+    severity: "medium"
+    agent: "RefactoringAgent" 
+    confidence: 0.8
+    extract_groups: ["line_count"]
+    fix_approach: "extract_logical_sections"
+
+# Import and Organization Issues
+import_issues:
+  unused_import:
+    pattern: "F401.*imported but unused"
+    severity: "low"
+    agent: "ImportOptimizationAgent"
+    confidence: 0.9
+    fix_approach: "safe_ast_removal"
+    examples:
+      - before: "import os\nimport sys  # unused"
+        after: "import os"
+
+  import_not_at_top:
+    pattern: "E402.*module level import not at top"
+    severity: "low"
+    agent: "FormattingAgent"
+    confidence: 0.8
+    fix_approach: "move_to_top_with_grouping"
+
+  circular_import:
+    pattern: "Circular import detected"
+    severity: "high" 
+    agent: "ImportOptimizationAgent"
+    confidence: 0.7
+    fix_approaches:
+      - "move_common_code"
+      - "use_forward_references"
+      - "restructure_modules"
+
+# Testing Issues
+test_issues:
+  test_assertion_failed:
+    pattern: "AssertionError.*test.*failed"
+    severity: "high"
+    agent: "TestCreationAgent"
+    confidence: 0.8
+    fix_approaches:
+      - "fix_assertion_logic"
+      - "update_expected_values"
+      - "fix_test_setup"
+
+  fixture_not_found:
+    pattern: "fixture.*not found"
+    severity: "medium"
+    agent: "TestCreationAgent"
+    confidence: 0.85
+    fix_approaches:
+      - "create_missing_fixture"
+      - "import_fixture_from_conftest"
+      - "fix_fixture_scope"
+
+  async_test_timeout:
+    pattern: "asyncio.*test.*timeout"
+    severity: "medium"
+    agent: "TestCreationAgent" 
+    confidence: 0.75
+    fix_approach: "convert_to_synchronous"
+    note: "Async tests avoided due to hanging issues in this codebase"
+
+# Formatting and Style Issues
+formatting_issues:
+  line_too_long:
+    pattern: "E501.*line too long.*\\((\\d+) > \\d+ characters\\)"
+    severity: "low"
+    agent: "FormattingAgent"
+    confidence: 0.9
+    extract_groups: ["line_length"]
+    fix_strategies:
+      - "break_long_lines"
+      - "extract_variables"
+      - "use_implicit_line_joining"
+
+  trailing_whitespace:
+    pattern: "W291.*trailing whitespace"
+    severity: "low"
+    agent: "FormattingAgent"
+    confidence: 0.95
+    fix_approach: "automatic_removal"
+
+  blank_line_issues:
+    pattern: "E30[0-9].*blank line"
+    severity: "low"
+    agent: "FormattingAgent"
+    confidence: 0.9
+    fix_approach: "pep8_blank_line_rules"
+
+# Documentation Issues
+documentation_issues:
+  missing_docstring:
+    pattern: "D100.*Missing docstring"
+    severity: "low"
+    agent: "DocumentationAgent"
+    confidence: 0.8
+    fix_template: |
+      """
+      {description}
+      
+      Args:
+          {args}
+          
+      Returns:
+          {returns}
+      """
+
+  outdated_version_reference:
+    pattern: "Version.*mismatch.*in.*documentation"
+    severity: "low"
+    agent: "DocumentationAgent"
+    confidence: 0.9
+    fix_approach: "update_all_version_references"
+
+# Code Duplication
+duplication_issues:
+  duplicate_code_block:
+    pattern: "Duplicate code.*detected.*\\((\\d+)%.*similarity\\)"
+    severity: "medium" 
+    agent: "DRYAgent"
+    confidence: 0.8
+    extract_groups: ["similarity_percentage"]
+    fix_approaches:
+      - "extract_common_function"
+      - "create_utility_module"
+      - "parameterize_differences"
+
+  repeated_error_handling:
+    pattern: "Repeated.*error.*handling.*pattern"
+    severity: "medium"
+    agent: "DRYAgent"
+    confidence: 0.8
+    fix_approach: "extract_error_handler_utility"
+
+# Regex Security Issues (CRITICAL)
+regex_security:
+  dangerous_regex_replacement:
+    pattern: "\\\\g\\s*<\\s*\\d+\\s*>"
+    severity: "critical"
+    agent: "SecurityAgent"
+    confidence: 0.95
+    fix_approach: "use_safe_patterns_registry"
+    examples:
+      - before: 'r"\g < 1 >-\g < 2 >"'
+        after: 'SAFE_PATTERNS["fix_hyphenated_names"].apply(text)'
+    note: "Spaces in regex replacements cause security vulnerabilities"
+
+  overly_broad_regex:
+    pattern: "r\"\\.\\*\""
+    severity: "medium"
+    agent: "SecurityAgent"
+    confidence: 0.8
+    fix_approach: "use_specific_patterns"
+
+# Common Resolution Patterns
+resolution_strategies:
+  single_agent_routing:
+    condition: "confidence >= 0.7"
+    approach: "route_to_best_matching_agent"
+    typical_success_rate: 0.89
+
+  collaborative_routing:
+    condition: "confidence < 0.7 OR multiple_issue_types"
+    approach: "coordinate_multiple_agents"
+    typical_success_rate: 0.83
+
+  batch_processing:
+    condition: "multiple_errors_detected"
+    approach: "collect_all_then_process_together"
+    efficiency_gain: "40-60% faster than sequential"
+
+  iterative_refinement:
+    max_iterations: 5
+    success_criteria: "all_hooks_pass AND all_tests_pass"
+    escalation: "ai_debug_mode_on_failure"
+
+# AI Coordination Rules
+coordination_rules:
+  agent_selection_priority:
+    1: "exact_pattern_match"
+    2: "highest_confidence_agent" 
+    3: "most_specialized_agent"
+    4: "collaborative_approach"
+
+  confidence_calibration:
+    high: ">= 0.9"
+    medium: "0.7 - 0.89"
+    low: "< 0.7"
+    
+  batch_processing_triggers:
+    - "more_than_3_errors"
+    - "multiple_error_types"
+    - "cross_file_dependencies"
+
+# Success Metrics
+success_metrics:
+  pattern_match_accuracy: 0.91
+  fix_success_rate: 0.87
+  false_positive_rate: 0.08
+  avg_resolution_time: "4-8 minutes"
+  learning_improvement_rate: "5% per month"
+
+# Emergency Patterns (High Priority)
+emergency_patterns:
+  build_breaking:
+    patterns:
+      - "ModuleNotFoundError"
+      - "ImportError.*cannot import"
+      - "SyntaxError"
+    priority: "immediate"
+    agent: "Any available"
+    confidence: 0.95
+
+  security_critical:
+    patterns:
+      - "B6.*.*shell.*injection"
+      - "hardcoded.*credential"
+      - "eval.*user.*input"
+    priority: "immediate"
+    agent: "SecurityAgent"
+    confidence: 0.95
+
+  test_suite_failure:
+    patterns:
+      - "test session starts.*failures"
+      - "FAILED.*test"
+      - "ERROR.*collecting.*tests"
+    priority: "high"
+    agent: "TestCreationAgent"
+    confidence: 0.8

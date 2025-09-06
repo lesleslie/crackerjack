@@ -23,6 +23,16 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 
 **Key Dependencies**: Python 3.13+, UV, pre-commit, pytest
 
+## AI-Optimized Documentation
+
+**For AI assistants, refer to these structured documentation files:**
+
+- **[AI-REFERENCE.md](AI-REFERENCE.md)** - Complete AI command reference with decision trees and lookup tables
+- **[AGENT-CAPABILITIES.json](AGENT-CAPABILITIES.json)** - Structured agent data for automated selection
+- **[ERROR-PATTERNS.yaml](ERROR-PATTERNS.yaml)** - Pattern matching rules for automated issue resolution
+
+These files provide parseable formats, decision trees, and structured data optimized for AI understanding and autonomous operation.
+
 ## Quick Reference
 
 ### Most Used Commands

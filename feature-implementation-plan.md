@@ -2127,3 +2127,1083 @@ python -m crackerjack \
 4. **Phase 4**: Consider defaults for 2.0 release
 
 This integration brings the best of both projects while maintaining crackerjack's core strengths in quality enforcement and AI-powered fixing.
+
+## Phase 15: Educational Refactoring Integration
+
+### Overview
+Direct integration of educational refactoring capabilities from mcp-python-refactoring, porting the best features directly into crackerjack's codebase for full control and seamless integration.
+
+### Key Features to Port
+1. **Educational Mode**: Step-by-step refactoring guidance with explanations
+2. **Rope Integration**: Safe, reliable AST-based refactoring operations
+3. **Quick Analysis**: Fast detection of refactoring opportunities
+4. **Structured Guidance**: Clear, actionable recommendations with learning points
+5. **TDD Integration**: Test-driven refactoring guidance
+
+### Implementation Structure
+
+#### 1. Enhanced RefactoringAgent with Educational Mode
+```python
+# crackerjack/agents/refactoring_agent.py
+class RefactoringAgent(SubAgent):
+    def __init__(self):
+        super().__init__()
+        self.educational_mode = False
+        self.rope_service = None  # Lazy-loaded
+        self.guidance_generator = RefactoringGuidanceGenerator()
+    
+    async def analyze_and_fix(self, issue: Issue) -> FixResult:
+        if self._should_use_educational_mode(issue):
+            return await self._provide_guided_refactoring(issue)
+        return await self._apply_automated_fix(issue)
+    
+    async def _provide_guided_refactoring(self, issue: Issue) -> FixResult:
+        """Generate educational refactoring guidance."""
+        analysis = await self._analyze_refactoring_opportunity(issue)
+        
+        return FixResult(
+            success=True,
+            confidence=0.95,
+            educational_content={
+                "severity": analysis.severity,
+                "explanation": analysis.explanation,
+                "steps": analysis.steps,
+                "code_examples": analysis.examples,
+                "learning_points": analysis.learning_points,
+                "expected_benefits": analysis.benefits,
+                "potential_risks": analysis.risks
+            },
+            recommendations=self._format_as_recommendations(analysis)
+        )
+    
+    def _should_use_educational_mode(self, issue: Issue) -> bool:
+        """Determine if educational mode should be used."""
+        config_mode = self.context.get_config('refactoring.default_mode', 'auto')
+        
+        if config_mode == 'educational':
+            return True
+        if config_mode == 'automated':
+            return False
+        
+        # Auto mode: use educational for complex issues
+        threshold = self.context.get_config('refactoring.educational_threshold', 15)
+        return self._estimate_complexity(issue) >= threshold
+```
+
+#### 2. Rope Refactoring Service
+```python
+# crackerjack/services/rope_refactoring.py
+from rope.base import project, libutils
+from rope.refactor import extract, rename, inline, move
+
+class RopeRefactoringService:
+    """Professional-grade Python refactoring using Rope."""
+    
+    def __init__(self, project_path: Path):
+        self.project = project.Project(str(project_path))
+        self.history = []
+    
+    def extract_function(
+        self, 
+        file_path: Path, 
+        start_offset: int, 
+        end_offset: int,
+        new_name: str,
+        guide_mode: bool = False
+    ) -> RefactoringResult:
+        """Extract function with optional guidance."""
+        resource = libutils.path_to_resource(self.project, file_path)
+        extractor = extract.ExtractMethod(
+            self.project, resource, start_offset, end_offset
+        )
+        
+        if guide_mode:
+            # Generate educational steps
+            steps = self._generate_extraction_steps(extractor, new_name)
+            preview = extractor.get_description()
+            
+            return RefactoringResult(
+                success=True,
+                new_content=None,  # Don't apply yet
+                guidance=RefactoringGuidance(
+                    steps=steps,
+                    preview=preview,
+                    parameters_needed=extractor.get_parameters(),
+                    variables_affected=extractor.get_returned_values(),
+                    complexity_reduction=self._estimate_complexity_reduction()
+                )
+            )
+        else:
+            # Apply the refactoring
+            changes = extractor.get_changes(new_name)
+            return RefactoringResult(
+                success=True,
+                new_content=changes.get_new_contents(),
+                files_changed=[str(f) for f in changes.get_affected_files()]
+            )
+    
+    def inline_variable(self, file_path: Path, var_name: str) -> RefactoringResult:
+        """Inline a variable with safety checks."""
+        resource = libutils.path_to_resource(self.project, file_path)
+        inliner = inline.InlineVariable(self.project, resource, var_name)
+        
+        changes = inliner.get_changes()
+        return RefactoringResult(
+            success=True,
+            new_content=changes.get_new_contents(),
+            description=f"Inlined variable '{var_name}'",
+            files_changed=[str(f) for f in changes.get_affected_files()]
+        )
+    
+    def rename_symbol(self, old_name: str, new_name: str, scope: str = "project") -> RefactoringResult:
+        """Rename across project with occurrence tracking."""
+        renamer = rename.Rename(self.project, old_name)
+        changes = renamer.get_changes(new_name, docs=True)
+        
+        return RefactoringResult(
+            success=True,
+            new_content=changes.get_new_contents(),
+            description=f"Renamed '{old_name}' to '{new_name}'",
+            files_changed=[str(f) for f in changes.get_affected_files()],
+            occurrences_changed=len(changes.get_changed_resources())
+        )
+    
+    def _generate_extraction_steps(self, extractor, new_name: str) -> list[str]:
+        """Generate step-by-step extraction guidance."""
+        return [
+            f"1. Analyzing code block for extraction",
+            f"2. Identifying parameters: {', '.join(extractor.get_parameters()) or 'none'}",
+            f"3. Identifying return values: {', '.join(extractor.get_returned_values()) or 'none'}",
+            f"4. Creating new function '{new_name}'",
+            f"5. Replacing original code with function call",
+            f"6. Verifying no side effects or scope issues"
+        ]
+```
+
+#### 3. Quick Refactoring Analyzer
+```python
+# crackerjack/services/refactoring_analyzer.py
+class QuickRefactoringAnalyzer:
+    """Fast detection of refactoring opportunities."""
+    
+    def analyze(self, content: str, file_path: Path) -> RefactoringAnalysis:
+        tree = ast.parse(content)
+        
+        opportunities = []
+        
+        # Check for long functions
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                line_count = self._count_lines(node)
+                if line_count > 20:
+                    opportunities.append(
+                        RefactoringOpportunity(
+                            type="extract_function",
+                            severity="medium" if line_count < 50 else "high",
+                            location=f"{file_path}:{node.lineno}",
+                            description=f"Function '{node.name}' is {line_count} lines long",
+                            explanation="Long functions are harder to understand and test",
+                            suggested_fix="Extract logical sections into separate functions",
+                            estimated_effort="5-10 minutes",
+                            learning_value="high",
+                            quick_win=line_count < 30,
+                            complexity_before=self._calculate_function_complexity(node),
+                            estimated_complexity_after=self._estimate_post_extraction_complexity(node)
+                        )
+                    )
+        
+        # Check for complex conditions
+        for node in ast.walk(tree):
+            if isinstance(node, ast.If):
+                complexity = self._measure_condition_complexity(node.test)
+                if complexity > 3:
+                    opportunities.append(
+                        RefactoringOpportunity(
+                            type="simplify_condition",
+                            severity="high" if complexity > 5 else "medium",
+                            location=f"{file_path}:{node.lineno}",
+                            description=f"Complex conditional logic (complexity: {complexity})",
+                            explanation="Complex conditions are hard to understand and test",
+                            suggested_fix="Extract to guard clauses or separate methods",
+                            suggested_pattern="Guard clause pattern or extracted boolean methods",
+                            learning_value="medium",
+                            code_example=self._generate_simplification_example(node)
+                        )
+                    )
+        
+        # Check for duplicate patterns
+        duplicates = self._find_duplicate_patterns(tree)
+        for dup in duplicates:
+            opportunities.append(
+                RefactoringOpportunity(
+                    type="extract_common",
+                    severity="low" if len(dup.locations) == 2 else "medium",
+                    location=dup.locations,
+                    description=f"Duplicate pattern found {len(dup.locations)} times",
+                    explanation="Code duplication makes maintenance harder",
+                    suggested_fix="Extract to utility function or base class",
+                    learning_value="high",
+                    dry_violation=True,
+                    estimated_lines_saved=dup.duplicate_line_count * (len(dup.locations) - 1)
+                )
+            )
+        
+        # Check for nested loops (performance opportunity)
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.For, ast.While)):
+                nesting_level = self._calculate_nesting_level(node)
+                if nesting_level > 2:
+                    opportunities.append(
+                        RefactoringOpportunity(
+                            type="reduce_nesting",
+                            severity="medium",
+                            location=f"{file_path}:{node.lineno}",
+                            description=f"Deeply nested loops (level: {nesting_level})",
+                            explanation="Deep nesting suggests algorithmic inefficiency",
+                            suggested_fix="Consider algorithmic improvements or early returns",
+                            performance_impact="potentially significant",
+                            learning_value="high"
+                        )
+                    )
+        
+        return RefactoringAnalysis(
+            opportunities=opportunities,
+            total_issues=len(opportunities),
+            quick_wins=[o for o in opportunities if getattr(o, 'quick_win', False)],
+            high_impact=[o for o in opportunities if o.severity == "high"],
+            educational_value=self._calculate_educational_value(opportunities),
+            estimated_total_time=self._estimate_total_time(opportunities),
+            priority_order=self._prioritize_opportunities(opportunities),
+            complexity_reduction_potential=sum(
+                getattr(o, 'complexity_before', 0) - getattr(o, 'estimated_complexity_after', 0)
+                for o in opportunities
+            )
+        )
+    
+    def _count_lines(self, node: ast.AST) -> int:
+        """Count non-empty lines in AST node."""
+        if hasattr(node, 'end_lineno') and node.end_lineno:
+            return node.end_lineno - node.lineno + 1
+        return 1
+    
+    def _measure_condition_complexity(self, node: ast.expr) -> int:
+        """Measure complexity of conditional expression."""
+        complexity = 0
+        
+        if isinstance(node, ast.BoolOp):
+            complexity += len(node.values) - 1
+            for value in node.values:
+                complexity += self._measure_condition_complexity(value)
+        elif isinstance(node, ast.Compare):
+            complexity += len(node.ops)
+        elif isinstance(node, ast.Call):
+            complexity += 1
+        
+        return max(complexity, 1)
+```
+
+#### 4. Guidance Generator
+```python
+# crackerjack/services/refactoring_guidance.py
+class RefactoringGuidanceGenerator:
+    """Generate educational refactoring guidance."""
+    
+    def generate_tdd_guidance(self, code: str, opportunity: RefactoringOpportunity) -> TDDGuidance:
+        """Generate test-driven refactoring guidance."""
+        test_targets = self._identify_test_targets(code, opportunity)
+        
+        return TDDGuidance(
+            red_phase=[
+                "1. Write a failing test for the current behavior",
+                f"2. Test should cover: {', '.join(test_targets)}",
+                "3. Verify test fails for the right reason (not setup issues)",
+                "4. Keep test focused on one behavior"
+            ],
+            green_phase=[
+                "5. Apply minimal refactoring to make test pass",
+                "6. Don't add new functionality, just restructure",
+                "7. Keep changes small and focused",
+                "8. Run test to verify it passes"
+            ],
+            refactor_phase=[
+                "9. Clean up the refactored code",
+                "10. Eliminate any duplication introduced",
+                "11. Improve naming and structure",
+                "12. Ensure all tests still pass",
+                "13. Run full test suite to catch regressions"
+            ],
+            example_test=self._generate_example_test(code, opportunity),
+            testing_strategy=self._suggest_testing_strategy(opportunity),
+            common_pitfalls=[
+                "Don't change behavior during refactoring",
+                "Test the interface, not implementation details",
+                "Ensure tests are isolated and repeatable"
+            ]
+        )
+    
+    def generate_step_by_step_guide(
+        self, 
+        refactoring_type: str, 
+        context: dict
+    ) -> list[RefactoringStep]:
+        """Generate detailed steps for specific refactoring."""
+        steps = []
+        
+        if refactoring_type == "extract_function":
+            steps = [
+                RefactoringStep(
+                    number=1,
+                    description="Identify the code block to extract",
+                    why="Isolate a single responsibility",
+                    how="Look for logical boundaries and cohesive operations",
+                    warning="Avoid extracting partial logic or breaking control flow",
+                    time_estimate="1-2 minutes"
+                ),
+                RefactoringStep(
+                    number=2,
+                    description="Determine parameters needed",
+                    why="Maintain data flow and dependencies",
+                    how="Identify all variables used but not defined within the block",
+                    code_example=context.get("parameter_example"),
+                    tool_tip="Use IDE's extract function feature for accuracy"
+                ),
+                RefactoringStep(
+                    number=3,
+                    description="Choose a descriptive function name",
+                    why="Clear naming improves code readability",
+                    how="Use verbs that describe what the function does",
+                    examples=context.get("naming_examples", []),
+                    warning="Avoid generic names like 'process' or 'handle'"
+                ),
+                RefactoringStep(
+                    number=4,
+                    description="Extract and test the function",
+                    why="Ensure the refactoring doesn't break functionality",
+                    how="Use automated tools or careful copy-paste",
+                    verification="Run existing tests to verify behavior unchanged"
+                ),
+                RefactoringStep(
+                    number=5,
+                    description="Review and optimize the extracted function",
+                    why="Ensure the new function follows good practices",
+                    how="Check for single responsibility, clear parameters",
+                    follow_up="Consider if further extraction is needed"
+                )
+            ]
+        elif refactoring_type == "simplify_condition":
+            steps = [
+                RefactoringStep(
+                    number=1,
+                    description="Identify the complex condition",
+                    why="Understanding the logic is the first step",
+                    how="Break down each part of the boolean expression"
+                ),
+                RefactoringStep(
+                    number=2,
+                    description="Extract meaningful boolean methods",
+                    why="Named methods are more readable than complex expressions",
+                    how="Create methods that return boolean values",
+                    code_example="def is_valid_user(user): return user and user.is_active"
+                ),
+                RefactoringStep(
+                    number=3,
+                    description="Consider guard clauses",
+                    why="Early returns reduce nesting and complexity",
+                    how="Handle exceptional cases first, then main logic",
+                    pattern="if not condition: return early_result"
+                )
+            ]
+        
+        return steps
+    
+    def _identify_test_targets(self, code: str, opportunity: RefactoringOpportunity) -> list[str]:
+        """Identify what aspects should be tested."""
+        targets = []
+        
+        if opportunity.type == "extract_function":
+            targets.extend([
+                "Input parameter handling",
+                "Return value correctness", 
+                "Side effects (if any)",
+                "Edge cases and error conditions"
+            ])
+        elif opportunity.type == "simplify_condition":
+            targets.extend([
+                "All branches of the condition",
+                "Boundary conditions",
+                "Boolean logic correctness"
+            ])
+        
+        return targets
+    
+    def _generate_example_test(self, code: str, opportunity: RefactoringOpportunity) -> str:
+        """Generate example test code."""
+        if opportunity.type == "extract_function":
+            return '''def test_extracted_function():
+    # Arrange
+    input_data = create_test_data()
+    
+    # Act  
+    result = extracted_function(input_data)
+    
+    # Assert
+    assert result.is_valid()
+    assert result.meets_expectations()'''
+        
+        return "# Test example would be generated based on the specific refactoring"
+```
+
+#### 5. CLI Integration
+```python
+# crackerjack/cli/refactoring_commands.py
+import click
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+console = Console()
+
+@click.group()
+def refactor():
+    """Educational refactoring commands."""
+    pass
+
+@refactor.command()
+@click.option('--educational', is_flag=True, help='Enable educational mode with learning content')
+@click.option('--quick', is_flag=True, help='Quick analysis only (fast scan)')
+@click.option('--tdd', is_flag=True, help='Include TDD guidance')
+@click.option('--format', 'output_format', default='rich', 
+              type=click.Choice(['rich', 'json', 'markdown']), 
+              help='Output format')
+@click.argument('file_path', type=click.Path(exists=True))
+def analyze(educational: bool, quick: bool, tdd: bool, output_format: str, file_path: str):
+    """Analyze file for refactoring opportunities."""
+    from crackerjack.services.refactoring_analyzer import QuickRefactoringAnalyzer
+    from crackerjack.services.refactoring_guidance import RefactoringGuidanceGenerator
+    
+    analyzer = QuickRefactoringAnalyzer()
+    analysis = analyzer.analyze(Path(file_path).read_text(), Path(file_path))
+    
+    if output_format == 'json':
+        import json
+        console.print(json.dumps(analysis.to_dict(), indent=2))
+        return
+    
+    # Rich output (default)
+    console.print(f"\n[bold blue]Refactoring Analysis: {file_path}[/bold blue]")
+    
+    if analysis.total_issues == 0:
+        console.print("[green]✓ No refactoring opportunities found![/green]")
+        return
+    
+    # Summary table
+    table = Table(title="Summary")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="white")
+    
+    table.add_row("Total Opportunities", str(analysis.total_issues))
+    table.add_row("Quick Wins", str(len(analysis.quick_wins)))
+    table.add_row("High Impact", str(len(analysis.high_impact)))
+    table.add_row("Estimated Time", analysis.estimated_total_time)
+    table.add_row("Educational Value", analysis.educational_value)
+    
+    console.print(table)
+    
+    if educational:
+        # Show detailed educational content
+        for i, opportunity in enumerate(analysis.priority_order[:5], 1):
+            console.print(f"\n[bold cyan]Opportunity #{i}: {opportunity.type.replace('_', ' ').title()}[/bold cyan]")
+            
+            content = f"""[yellow]Location:[/yellow] {opportunity.location}
+[yellow]Severity:[/yellow] {opportunity.severity.upper()}
+[yellow]Description:[/yellow] {opportunity.description}
+
+[blue]Why Refactor?[/blue]
+{opportunity.explanation}
+
+[blue]Suggested Fix:[/blue]
+{opportunity.suggested_fix}
+
+[blue]Learning Points:[/blue]
+• {opportunity.learning_value.title()} educational value
+• Estimated effort: {getattr(opportunity, 'estimated_effort', 'varies')}"""
+
+            if hasattr(opportunity, 'code_example') and opportunity.code_example:
+                content += f"\n\n[blue]Code Example:[/blue]\n```python\n{opportunity.code_example}\n```"
+            
+            console.print(Panel(content, border_style="cyan"))
+    
+    if tdd:
+        # Generate TDD guidance
+        generator = RefactoringGuidanceGenerator()
+        console.print("\n[bold green]TDD Refactoring Guidance[/bold green]")
+        
+        for opportunity in analysis.quick_wins[:2]:  # Show TDD for top 2 quick wins
+            guidance = generator.generate_tdd_guidance(
+                Path(file_path).read_text(), 
+                opportunity
+            )
+            
+            console.print(f"\n[cyan]TDD Approach for: {opportunity.description}[/cyan]")
+            
+            console.print("[red]🔴 Red Phase (Write Failing Test):[/red]")
+            for step in guidance.red_phase:
+                console.print(f"  {step}")
+            
+            console.print("\n[green]🟢 Green Phase (Make It Pass):[/green]")
+            for step in guidance.green_phase:
+                console.print(f"  {step}")
+                
+            console.print("\n[blue]🔵 Refactor Phase (Clean Up):[/blue]")
+            for step in guidance.refactor_phase:
+                console.print(f"  {step}")
+            
+            if guidance.example_test:
+                console.print(f"\n[yellow]Example Test:[/yellow]\n```python\n{guidance.example_test}\n```")
+    
+    if quick:
+        # Just show quick wins
+        console.print("\n[green]🚀 Quick Wins (Easy Improvements):[/green]")
+        for win in analysis.quick_wins:
+            console.print(f"  • {win.description}")
+            console.print(f"    [dim]Effort: {getattr(win, 'estimated_effort', 'unknown')}[/dim]")
+
+@refactor.command()
+@click.option('--guide', is_flag=True, help='Show step-by-step guidance')
+@click.option('--preview', is_flag=True, help='Preview changes without applying')
+@click.option('--tdd', is_flag=True, help='Include TDD workflow')
+@click.argument('file_path', type=click.Path(exists=True))
+@click.argument('line_range', help='Start:end line numbers')
+@click.argument('function_name')
+def extract(guide: bool, preview: bool, tdd: bool, file_path: str, line_range: str, function_name: str):
+    """Extract function using Rope."""
+    from crackerjack.services.rope_refactoring import RopeRefactoringService
+    
+    try:
+        start, end = map(int, line_range.split(':'))
+    except ValueError:
+        console.print("[red]Error: Line range must be in format 'start:end'[/red]")
+        return
+    
+    service = RopeRefactoringService(Path.cwd())
+    
+    # Convert line numbers to offsets (approximate)
+    content = Path(file_path).read_text()
+    lines = content.split('\n')
+    start_offset = sum(len(line) + 1 for line in lines[:start-1])
+    end_offset = sum(len(line) + 1 for line in lines[:end])
+    
+    result = service.extract_function(
+        Path(file_path),
+        start_offset,
+        end_offset,
+        function_name,
+        guide_mode=guide or preview
+    )
+    
+    if guide:
+        console.print(f"\n[bold blue]Step-by-step Function Extraction Guide[/bold blue]")
+        console.print(f"[yellow]Target:[/yellow] Extract '{function_name}' from lines {start}-{end}")
+        
+        for step in result.guidance.steps:
+            console.print(f"  {step}")
+        
+        if result.guidance.parameters_needed:
+            console.print(f"\n[cyan]Parameters needed:[/cyan] {', '.join(result.guidance.parameters_needed)}")
+        
+        if result.guidance.variables_affected:
+            console.print(f"[cyan]Variables affected:[/cyan] {', '.join(result.guidance.variables_affected)}")
+        
+        console.print(f"\n[green]Preview of changes:[/green]")
+        console.print(result.guidance.preview)
+        
+        if not click.confirm("Apply this extraction?"):
+            console.print("[yellow]Extraction cancelled[/yellow]")
+            return
+        
+        # Apply the extraction
+        result = service.extract_function(Path(file_path), start_offset, end_offset, function_name, False)
+        
+    elif preview:
+        console.print(f"[yellow]Preview of extracting '{function_name}':[/yellow]")
+        console.print(result.guidance.preview)
+        console.print(f"\n[dim]Use --guide for step-by-step instructions[/dim]")
+        return
+    else:
+        # Apply the refactoring directly
+        pass
+    
+    if result.success:
+        Path(file_path).write_text(result.new_content)
+        console.print(f"[green]✓ Successfully extracted function '{function_name}'[/green]")
+        
+        if result.files_changed:
+            console.print(f"[cyan]Files modified:[/cyan] {', '.join(result.files_changed)}")
+    else:
+        console.print(f"[red]✗ Failed to extract function: {result.error}[/red]")
+
+@refactor.command()
+@click.option('--show-steps', is_flag=True, help='Show step-by-step guidance')
+@click.argument('file_path', type=click.Path(exists=True))
+def opportunities(show_steps: bool, file_path: str):
+    """Show prioritized refactoring opportunities."""
+    from crackerjack.services.refactoring_analyzer import QuickRefactoringAnalyzer
+    from crackerjack.services.refactoring_guidance import RefactoringGuidanceGenerator
+    
+    analyzer = QuickRefactoringAnalyzer()
+    analysis = analyzer.analyze(Path(file_path).read_text(), Path(file_path))
+    
+    if not analysis.opportunities:
+        console.print("[green]✓ No refactoring opportunities found![/green]")
+        return
+    
+    console.print(f"\n[bold blue]Refactoring Opportunities: {file_path}[/bold blue]")
+    
+    for i, opp in enumerate(analysis.priority_order, 1):
+        severity_color = {
+            "high": "red",
+            "medium": "yellow", 
+            "low": "blue"
+        }.get(opp.severity, "white")
+        
+        console.print(f"\n[bold]{i}. [{severity_color}]{opp.severity.upper()}[/{severity_color}] - {opp.type.replace('_', ' ').title()}[/bold]")
+        console.print(f"   [dim]{opp.location}[/dim]")
+        console.print(f"   {opp.description}")
+        
+        if hasattr(opp, 'estimated_effort'):
+            console.print(f"   [green]Effort: {opp.estimated_effort}[/green]")
+        
+        if show_steps and i <= 3:  # Show steps for top 3
+            generator = RefactoringGuidanceGenerator()
+            steps = generator.generate_step_by_step_guide(opp.type, {})
+            
+            console.print("   [cyan]Steps:[/cyan]")
+            for step in steps[:3]:  # Show first 3 steps
+                console.print(f"     {step.number}. {step.description}")
+```
+
+#### 6. Configuration Integration
+```toml
+# pyproject.toml
+[tool.crackerjack.refactoring]
+# Mode selection
+default_mode = "auto"  # "educational", "automated", "auto"
+educational_threshold = 15  # Complexity threshold for auto-switching to educational mode
+always_preview = false  # Show preview before applying any refactoring
+confirm_before_apply = true  # Ask confirmation before applying refactoring
+
+# Educational settings
+show_learning_points = true  # Include educational explanations
+include_code_examples = true  # Show before/after code examples
+tdd_guidance = false  # Include TDD guidance by default
+difficulty_level = "intermediate"  # "beginner", "intermediate", "advanced"
+explain_why = true  # Include explanations of why to refactor
+
+# Rope settings (requires rope package)
+use_rope = true  # Enable Rope for safe refactoring operations
+rope_cache = true  # Enable Rope caching for performance
+rope_python_version = "3.13"  # Python version for Rope analysis
+rope_validate_objectdb = true  # Validate Rope's object database
+
+# Quick analysis settings
+quick_analysis_on_save = false  # Run quick analysis when files are saved
+highlight_quick_wins = true  # Highlight easy-to-fix opportunities
+max_opportunities_shown = 10  # Limit number of opportunities displayed
+min_severity_shown = "low"  # "low", "medium", "high" - minimum severity to show
+
+# Integration with existing agents
+integrate_with_ai_agents = true  # Let AI agents use educational mode when appropriate
+educational_mode_for_complex_issues = true  # Auto-switch to educational for complex refactoring
+log_refactoring_decisions = true  # Log when educational vs automated mode is chosen
+
+# CLI output settings
+use_rich_output = true  # Use Rich formatting for terminal output
+show_progress_bars = true  # Show progress during analysis
+color_code_severity = true  # Use colors to indicate severity levels
+
+# Future integration flags
+vscode_extension_support = false  # Future: Enable VSCode integration
+ide_integration = false  # Future: Enable IDE-specific features
+metrics_collection = false  # Future: Collect refactoring metrics
+```
+
+### CLI Integration Examples
+```bash
+# Quick analysis of current file
+python -m crackerjack refactor analyze src/main.py --quick
+
+# Educational mode with TDD guidance
+python -m crackerjack refactor analyze src/complex.py --educational --tdd
+
+# Extract function with step-by-step guidance
+python -m crackerjack refactor extract src/main.py 45:60 calculate_score --guide
+
+# Preview extraction without applying
+python -m crackerjack refactor extract src/main.py 45:60 calculate_score --preview
+
+# Show prioritized opportunities with guidance
+python -m crackerjack refactor opportunities src/main.py --show-steps
+
+# JSON output for tooling integration
+python -m crackerjack refactor analyze src/main.py --format json
+
+# Integration with main crackerjack workflow
+python -m crackerjack --ai-agent --educational-refactoring -t
+
+# Educational mode for complexity issues only
+python -m crackerjack --educational-threshold 20 -t
+```
+
+### Success Criteria
+1. ✅ Educational mode available in RefactoringAgent with learning content
+2. ✅ Rope integration for safe, reliable refactoring operations
+3. ✅ Quick analysis identifies opportunities in under 1 second per file
+4. ✅ Step-by-step guidance with explanations and learning points
+5. ✅ TDD refactoring guidance with example tests
+6. ✅ Rich CLI commands for interactive refactoring workflow
+7. ✅ Preview mode for all refactoring operations before applying
+8. ✅ Configurable educational threshold and mode selection
+9. ✅ Integration with existing AI agent workflow
+10. ✅ Comprehensive documentation and examples
+
+### Implementation Timeline
+- **Week 1**: Core educational mode, guidance generator, and basic CLI
+- **Week 2**: Rope integration, extraction/inline operations, and safety checks
+- **Week 3**: Quick analyzer, TDD guidance, and advanced CLI features
+- **Week 4**: Configuration integration, testing, documentation, and polish
+
+### Benefits Over External Dependency
+1. **Full Control**: No risk of upstream breaking changes or maintenance issues
+2. **Deep Integration**: Leverages existing ComplexityCalculator, AST utilities, and agent system
+3. **Consistent UX**: Matches crackerjack's CLI patterns, output style, and workflow
+4. **Performance**: No MCP overhead, direct function calls, optimized for crackerjack use cases
+5. **Customization**: Can adapt features to our specific needs, coding standards, and patterns
+6. **Single Codebase**: Easier to maintain, test, debug, and evolve with crackerjack
+7. **Unified Configuration**: Part of pyproject.toml, consistent with other crackerjack settings
+8. **AI Integration**: Educational mode can be triggered by AI agents when complexity thresholds are met
+
+### Migration Notes
+- No breaking changes to existing RefactoringAgent functionality
+- Educational mode is opt-in via configuration flags or CLI parameters
+- Rope is an optional dependency with graceful fallback to AST-based refactoring
+- Fully backward compatible with existing issue handling and agent coordination
+- Can be enabled progressively: first for complex issues, then expanded to all refactoring
+
+### Long-term Vision
+This integration positions crackerjack as the most comprehensive Python development platform available, combining:
+- **Production-Grade Quality**: Existing comprehensive quality enforcement
+- **Educational Excellence**: Step-by-step learning with professional guidance
+- **AI-Powered Automation**: Intelligent agent coordination with educational fallbacks
+- **Developer Growth**: Learn while fixing, becoming better over time
+
+The result is a tool that not only maintains code quality but actively improves developer skills, making every refactoring an opportunity to learn and grow.
+
+---
+
+## Phase 16: AI-Optimized Documentation System
+
+**Status:** In Progress (Week 1 Completed)  
+**Priority:** High  
+**Complexity:** Medium  
+**Estimated Time:** 4 weeks  
+**Lead Responsibility:** Documentation Specialist + AI Integration Team  
+
+### Objectives
+
+Create a comprehensive AI-optimized documentation system that provides structured, machine-readable formats alongside human-readable documentation. This system will reduce AI assistant clarification questions by 90% and improve autonomous task completion.
+
+### Current Status Analysis
+
+**Completed (Week 1):**
+- ✅ **AI-REFERENCE.md** - Complete AI command reference with decision trees and lookup tables
+- ✅ **AGENT-CAPABILITIES.json** - Structured agent data for automated selection  
+- ✅ **ERROR-PATTERNS.yaml** - Pattern matching rules for automated issue resolution
+- ✅ **CLAUDE.md Updates** - Added references to AI-optimized documentation files
+
+**Document Optimization Assessment:**
+
+| Document | AI Score | Human Score | Status | Recommendations |
+|----------|----------|-------------|--------|-----------------|
+| **AI-REFERENCE.md** | 9/10 | 8/10 | ✅ Complete | Reference for other AI docs |
+| **AGENT-CAPABILITIES.json** | 10/10 | 6/10 | ✅ Complete | Perfect machine format |
+| **ERROR-PATTERNS.yaml** | 9/10 | 7/10 | ✅ Complete | Excellent structured patterns |
+| **CLAUDE.md** | 8/10 | 7/10 | ✅ Updated | Excellent AI instructions |
+| **AI-AGENT-RULES.md** | 8/10 | 6/10 | ✅ Good | Excellent workflow sequences |
+| **README.md** | 6/10 | 9/10 | 📋 Needs Enhancement | Add structured sections |
+| **ARCHITECTURE.md** | 6/10 | 8/10 | 📋 Needs Visual Diagrams | Add Mermaid diagrams |
+| **WORKFLOW_KNOWLEDGE_BASE.md** | 7/10 | 8/10 | 📋 Minor Updates | Good foundation |
+| **API_REFERENCE.md** | 5/10 | 6/10 | 📋 Major Restructure | Need structured examples |
+
+### Week 2-4 Deliverables (Remaining Tasks)
+
+#### Week 2: Visual Documentation & Architecture Diagrams
+
+**Primary Tasks:**
+1. **Architecture Diagrams (Mermaid)**
+   - System architecture overview with component relationships
+   - AI Agent coordination flowcharts 
+   - Workflow decision trees
+   - Data flow diagrams through the system
+
+2. **Process Flow Diagrams (Excalidraw/Mermaid)**
+   - Complete development workflow from issue detection to resolution
+   - Agent selection and routing logic
+   - Error handling and escalation paths
+   - Testing and validation pipelines
+
+3. **Enhanced README.md**
+   - Add structured quick-start sections
+   - Include decision matrices for common tasks
+   - Add visual workflow diagrams
+   - Create troubleshooting flowcharts
+
+**Technical Specifications:**
+```yaml
+visual_documentation:
+  mermaid_diagrams:
+    - system_architecture.md
+    - agent_coordination_flow.md
+    - error_handling_flow.md
+    - testing_pipeline.md
+  
+  excalidraw_diagrams:
+    - development_workflow.excalidraw
+    - ai_agent_ecosystem.excalidraw
+    - quality_enforcement_pipeline.excalidraw
+  
+  integration_points:
+    - Embed diagrams in existing documentation
+    - Create interactive diagram viewer
+    - Auto-generate diagram exports
+```
+
+#### Week 3: API Documentation & Code Examples
+
+**Primary Tasks:**
+1. **Structured API Reference**
+   - Convert existing API docs to machine-readable format
+   - Add structured examples with success/failure cases
+   - Include parameter validation rules
+   - Create usage pattern library
+
+2. **Code Example Library**
+   - Before/after transformation examples for each agent
+   - Common workflow patterns with full code examples
+   - Error resolution examples with step-by-step fixes
+   - Integration examples for MCP tools
+
+3. **Configuration Documentation**
+   - Complete pyproject.toml configuration guide
+   - Environment variable reference
+   - CLI flag combination matrices
+   - Performance tuning guidelines
+
+**Format Specifications:**
+```json
+{
+  "api_reference": {
+    "endpoints": [
+      {
+        "name": "execute_crackerjack",
+        "parameters": {...},
+        "examples": [...],
+        "success_patterns": [...],
+        "error_patterns": [...]
+      }
+    ]
+  }
+}
+```
+
+#### Week 4: Auto-Generation & Maintenance Tools
+
+**Primary Tasks:**
+1. **Documentation Auto-Generator**
+   - Python script to generate docs from code annotations
+   - Auto-update agent capabilities from source code
+   - Sync error patterns with actual error handling
+   - Generate CLI reference from argparse definitions
+
+2. **Documentation Validation**
+   - Link checker for all documentation
+   - Schema validation for JSON/YAML files
+   - Example code execution testing
+   - Consistency checker across all docs
+
+3. **Interactive Documentation Tools**
+   - Command-line documentation browser
+   - Interactive configuration wizard
+   - Troubleshooting assistant
+   - Performance optimization guide
+
+**Auto-Generation Pipeline:**
+```python
+# Example: Auto-generate agent capabilities
+def generate_agent_capabilities():
+    """Extract agent info from source code and update JSON."""
+    agents = scan_agent_modules()
+    capabilities = extract_capabilities(agents)
+    update_json_schema(capabilities)
+    validate_against_patterns()
+```
+
+### Implementation Details
+
+#### Week 2: Visual Documentation
+
+**Mermaid Integration:**
+```mermaid
+graph TB
+    A[Issue Detection] --> B{Error Type Analysis}
+    B -->|Type Errors| C[RefactoringAgent]
+    B -->|Security Issues| D[SecurityAgent]
+    B -->|Performance| E[PerformanceAgent]
+    
+    C --> F[Apply Fixes]
+    D --> F
+    E --> F
+    
+    F --> G{All Issues Resolved?}
+    G -->|Yes| H[Success]
+    G -->|No| I[Next Iteration]
+    I --> A
+```
+
+**Architecture Documentation Structure:**
+- **System Overview**: High-level component relationships
+- **Agent Ecosystem**: 9 specialized agents with interaction patterns  
+- **Workflow Pipelines**: From detection to resolution
+- **Data Flow**: Configuration, state, and result propagation
+- **Error Handling**: Exception flow and recovery mechanisms
+
+#### Week 3: API Documentation Enhancement
+
+**Structured Example Format:**
+```yaml
+execute_crackerjack:
+  description: "Run crackerjack with AI agent auto-fixing"
+  parameters:
+    test: {type: boolean, default: false, description: "Include test execution"}
+    ai_agent: {type: boolean, default: false, description: "Enable AI auto-fixing"}
+  examples:
+    basic_usage:
+      input: {test: true, ai_agent: true}
+      expected_output: {success: true, iterations: 2, issues_resolved: 5}
+    error_scenario:
+      input: {test: true, ai_agent: false}  
+      expected_error: "Manual intervention required"
+  success_patterns:
+    - "All hooks passed"
+    - "Tests completed successfully"
+    - "Issues resolved: X"
+```
+
+#### Week 4: Automation & Maintenance
+
+**Documentation Generator Architecture:**
+```python
+class DocumentationGenerator:
+    """Auto-generate documentation from source code."""
+    
+    def extract_agent_info(self) -> dict:
+        """Scan agent modules for capabilities."""
+        pass
+        
+    def generate_api_reference(self) -> str:
+        """Create API docs from MCP tools."""
+        pass
+        
+    def validate_examples(self) -> bool:
+        """Execute all code examples to verify accuracy."""
+        pass
+        
+    def update_error_patterns(self) -> None:
+        """Sync patterns with actual error handling."""
+        pass
+```
+
+### Success Metrics
+
+**Week 2 Targets:**
+- 5 comprehensive Mermaid diagrams integrated
+- README.md AI optimization score: 6→8/10
+- ARCHITECTURE.md visual enhancement: 6→8/10
+- 90% reduction in "how does X work" questions
+
+**Week 3 Targets:**
+- API documentation AI score: 5→9/10
+- 50+ structured code examples across all agents
+- Complete configuration reference guide
+- 95% of common scenarios documented with examples
+
+**Week 4 Targets:**  
+- Automated documentation generation pipeline
+- 100% link validation across all documents
+- Interactive CLI documentation browser
+- Maintenance overhead reduced by 80%
+
+**Overall Success Criteria:**
+1. ✅ **AI Clarification Reduction**: 90% fewer "what command should I run" questions
+2. ✅ **Autonomous Task Completion**: AI can complete 95% of common tasks without clarification
+3. ✅ **Documentation Coverage**: 100% of features documented with structured examples
+4. ✅ **Maintenance Automation**: 80% of documentation updates automated
+5. ✅ **Multi-Audience Optimization**: Both AI (9/10) and human (8/10) accessibility scores
+6. ✅ **Visual Enhancement**: All complex workflows have visual diagrams
+7. ✅ **Search Efficiency**: <5 second lookup time for any information
+8. ✅ **Example Accuracy**: 100% of code examples execute successfully
+
+### Dependencies & Integration Points
+
+**MCP Server Integration:**
+- **Mermaid Server**: Generate diagrams programmatically
+- **Excalidraw Server**: Create interactive workflow diagrams  
+- **Draw.io Server**: Generate professional architecture diagrams
+- **Documentation Server**: Serve interactive documentation
+
+**External Dependencies:**
+- Mermaid CLI for diagram generation
+- Python docstring processors
+- JSON schema validators
+- Link checking utilities
+- Code execution sandbox for example validation
+
+### Risk Mitigation
+
+**Documentation Maintenance Burden:**
+- **Risk**: Manual documentation becomes outdated quickly  
+- **Mitigation**: 80% automated generation from source code
+- **Monitoring**: Weekly validation pipeline checks
+
+**AI Optimization vs Human Readability:**
+- **Risk**: Over-optimizing for AI reduces human usability
+- **Mitigation**: Dual-format approach with cross-references
+- **Testing**: Regular usability testing with both AI and human users
+
+**Visual Documentation Complexity:**
+- **Risk**: Diagrams become outdated as system evolves
+- **Mitigation**: Auto-generation where possible, version control integration
+- **Maintenance**: Quarterly diagram review and updates
+
+### Long-term Vision
+
+This AI-optimized documentation system establishes crackerjack as the most accessible and AI-friendly Python development tool available. The structured, multi-format approach ensures:
+
+**For AI Assistants:**
+- 90% reduction in clarification questions
+- Autonomous task completion for 95% of common scenarios  
+- Structured data formats for precise agent selection
+- Pattern libraries for automated issue resolution
+
+**For Human Developers:**
+- Visual workflow understanding through comprehensive diagrams
+- Step-by-step examples for every use case
+- Interactive documentation tools for self-service learning
+- Consistent experience across all documentation formats
+
+**For Maintenance:**
+- 80% automated documentation generation
+- Continuous validation and accuracy verification
+- Version control integration with automatic updates
+- Minimal manual overhead for keeping docs current
+
+The result is a documentation ecosystem that grows and improves automatically while serving both AI and human users with optimal efficiency.
