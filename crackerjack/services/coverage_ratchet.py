@@ -52,6 +52,29 @@ class CoverageRatchetService:
     def get_baseline(self) -> float:
         return self.get_ratchet_data().get("baseline", 0.0)
 
+    def get_baseline_coverage(self) -> float:
+        """Protocol method: Get baseline coverage."""
+        return self.get_baseline()
+
+    def update_baseline_coverage(self, new_coverage: float) -> bool:
+        """Protocol method: Update baseline coverage."""
+        result = self.update_coverage(new_coverage)
+        return result.get("success", False)
+
+    def is_coverage_regression(self, current_coverage: float) -> bool:
+        """Protocol method: Check if coverage is a regression."""
+        baseline = self.get_baseline()
+        return current_coverage < (baseline - self.TOLERANCE_MARGIN)
+
+    def get_coverage_improvement_needed(self) -> float:
+        """Protocol method: Get coverage improvement needed."""
+        data = self.get_ratchet_data()
+        baseline = data.get("baseline", 0.0)
+        next_milestone = data.get("next_milestone")
+        if next_milestone:
+            return next_milestone - baseline
+        return 100.0 - baseline
+
     def update_coverage(self, new_coverage: float) -> dict[str, t.Any]:
         """Update coverage with 2% tolerance margin to prevent test flakiness.
 

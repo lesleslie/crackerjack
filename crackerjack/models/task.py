@@ -56,10 +56,13 @@ class TaskStatusData:
     details: str | None = None
     error_message: str | None = None
     files_changed: list[str] | None = None
+    hook_results: list[t.Any] | None = None
 
     def __post_init__(self) -> None:
         if self.files_changed is None:
             self.files_changed = []
+        if self.hook_results is None:
+            self.hook_results = []
         if self.start_time is not None and self.end_time is not None:
             self.duration = self.end_time - self.start_time
 

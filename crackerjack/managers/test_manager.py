@@ -13,22 +13,23 @@ from .test_executor import TestExecutor
 
 class TestManager:
     def __init__(
-        self, 
-        console: Console, 
-        pkg_path: Path, 
-        coverage_ratchet: CoverageRatchetProtocol | None = None
+        self,
+        console: Console,
+        pkg_path: Path,
+        coverage_ratchet: CoverageRatchetProtocol | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
 
         self.executor = TestExecutor(console, pkg_path)
         self.command_builder = TestCommandBuilder(pkg_path)
-        
+
         if coverage_ratchet is None:
             # Import here to avoid circular imports
             from crackerjack.services.coverage_ratchet import CoverageRatchetService
+
             coverage_ratchet = CoverageRatchetService(pkg_path, console)
-        
+
         self.coverage_ratchet = coverage_ratchet
 
         self._last_test_failures: list[str] = []

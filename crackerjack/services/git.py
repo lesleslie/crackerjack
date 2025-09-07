@@ -278,8 +278,8 @@ class GitService:
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
             return None
 
-    def get_commit_message_suggestions(self, files: list[str]) -> list[str]:
-        if not files:
+    def get_commit_message_suggestions(self, changed_files: list[str]) -> list[str]:
+        if not changed_files:
             return ["Update project files"]
         file_categories = self._categorize_files(files)
         messages = self._generate_category_messages(file_categories)

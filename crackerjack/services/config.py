@@ -53,8 +53,9 @@ class ConfigurationService:
             )
             return False
 
-    def get_temp_config_path(self) -> Path | None:
-        return getattr(self, "_temp_config_path", None)
+    def get_temp_config_path(self) -> str | None:
+        path = getattr(self, "_temp_config_path", None)
+        return str(path) if path else None
 
     def _determine_config_mode(self, options: OptionsProtocol) -> str:
         if options.experimental_hooks:

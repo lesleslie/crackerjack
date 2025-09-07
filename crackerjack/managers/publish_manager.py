@@ -10,25 +10,27 @@ from crackerjack.models.protocols import FileSystemInterface, SecurityServicePro
 
 class PublishManagerImpl:
     def __init__(
-        self, 
-        console: Console, 
-        pkg_path: Path, 
+        self,
+        console: Console,
+        pkg_path: Path,
         dry_run: bool = False,
         filesystem: FileSystemInterface | None = None,
-        security: SecurityServiceProtocol | None = None
+        security: SecurityServiceProtocol | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
         self.dry_run = dry_run
-        
+
         if filesystem is None:
             from crackerjack.services.filesystem import FileSystemService
+
             filesystem = FileSystemService()
-        
+
         if security is None:
             from crackerjack.services.security import SecurityService
+
             security = SecurityService()
-            
+
         self.filesystem = filesystem
         self.security = security
 

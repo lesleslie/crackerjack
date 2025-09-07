@@ -1,5 +1,6 @@
 import os
 import tempfile
+import typing as t
 from contextlib import suppress
 from pathlib import Path
 
@@ -198,3 +199,65 @@ class SecurityService:
             secure_env.pop(var, None)
 
         return secure_env
+
+    def validate_file_safety(self, path: str | Path) -> bool:
+        """Protocol method: Validate file safety."""
+        try:
+            file_path = Path(path)
+            # Check if path exists and is safe
+            if not file_path.exists():
+                return False
+            # Basic safety checks
+            if file_path.is_symlink():
+                return False
+            return True
+        except Exception:
+            return False
+
+    def check_hardcoded_secrets(self, content: str) -> list[dict[str, t.Any]]:
+        """Protocol method: Check for hardcoded secrets."""
+        secrets = []
+        # Basic patterns for common secrets
+        patterns = {
+            "api_key": r'api[_-]?key["\s]*[:=]["\s]*([a-zA-Z0-9_-]{20,})',
+            "password": r'password["\s]*[:=]["\s]*([^\s"]{8,})',
+            "token": r'token["\s]*[:=]["\s]*([a-zA-Z0-9_-]{20,})',
+        }
+
+        import re
+
+        for secret_type, pattern in patterns.items():
+            matches = re.finditer(pattern, content, re.IGNORECASE)
+            for match in matches:
+                secrets.append(
+                    {
+                        "type": secret_type,
+                        "value": match.group(1)[:10] + "...",  # Truncated for safety
+                        "line": content[: match.start()].count("\n") + 1,
+                    }
+                )
+        return secrets
+
+    def is_safe_subprocess_call(self, cmd: list[str]) -> bool:
+        """Protocol method: Check if subprocess call is safe."""
+        if not cmd:
+            return False
+
+        dangerous_commands = {
+            "rm",
+            "rmdir",
+            "del",
+            "format",
+            "fdisk",
+            "sudo",
+            "su",
+            "chmod",
+            "chown",
+            "curl",
+            "wget",
+            "nc",
+            "netcat",
+        }
+
+        command = cmd[0].split("/")[-1]  # Get base command name
+        return command not in dangerous_commands

@@ -16,7 +16,10 @@ from crackerjack.services.logging import (
 )
 from crackerjack.services.memory_optimizer import get_memory_optimizer, memory_optimized
 from crackerjack.services.performance_cache import get_performance_cache
-from crackerjack.services.performance_monitor import get_performance_monitor, phase_monitor
+from crackerjack.services.performance_monitor import (
+    get_performance_monitor,
+    phase_monitor,
+)
 
 from .phase_coordinator import PhaseCoordinator
 from .session_coordinator import SessionCoordinator
@@ -48,7 +51,7 @@ class WorkflowPipeline:
 
         self.logger = get_logger("crackerjack.pipeline")
         self._debugger = None
-        
+
         # Performance optimization services
         self._performance_monitor = get_performance_monitor()
         self._memory_optimizer = get_memory_optimizer()
@@ -68,13 +71,13 @@ class WorkflowPipeline:
     @memory_optimized
     async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
         workflow_id = f"workflow_{int(time.time())}"
-        
+
         # Start performance monitoring
         self._performance_monitor.start_workflow(workflow_id)
-        
+
         # Start cache service if not already running
         await self._cache.start()
-        
+
         with LoggingContext(
             "workflow_execution",
             testing=getattr(options, "test", False),
@@ -84,15 +87,19 @@ class WorkflowPipeline:
             self._initialize_workflow_session(options)
 
             try:
-                success = await self._execute_workflow_with_timing(options, start_time, workflow_id)
-                
+                success = await self._execute_workflow_with_timing(
+                    options, start_time, workflow_id
+                )
+
                 # Finalize performance monitoring
-                workflow_perf = self._performance_monitor.end_workflow(workflow_id, success)
+                workflow_perf = self._performance_monitor.end_workflow(
+                    workflow_id, success
+                )
                 self.logger.info(
                     f"Workflow performance: {workflow_perf.performance_score:.1f} score, "
                     f"{workflow_perf.total_duration_seconds:.2f}s duration"
                 )
-                
+
                 return success
 
             except KeyboardInterrupt:
@@ -192,10 +199,12 @@ class WorkflowPipeline:
         )
         return False
 
-    async def _execute_workflow_phases(self, options: OptionsProtocol, workflow_id: str) -> bool:
+    async def _execute_workflow_phases(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
         """Execute all workflow phases with proper security gates and performance monitoring."""
         success = True
-        
+
         # Configuration phase with monitoring
         with phase_monitor(workflow_id, "configuration"):
             config_success = self.phases.run_configuration_phase(options)
@@ -224,42 +233,56 @@ class WorkflowPipeline:
         """Check if this is a publishing workflow that requires strict security gates."""
         return bool(options.publish or options.all or options.commit)
 
-    async def _execute_publishing_workflow(self, options: OptionsProtocol, workflow_id: str) -> bool:
+    async def _execute_publishing_workflow(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
         """Execute publishing workflow with proper error handling and monitoring."""
         if not options.publish and not options.all:
             return True
-            
+
         with phase_monitor(workflow_id, "publishing"):
             if not self.phases.run_publishing_phase(options):
                 self.session.fail_task("workflow", "Publishing failed")
                 return False
         return True
 
-    async def _execute_commit_workflow(self, options: OptionsProtocol, workflow_id: str) -> bool:
+    async def _execute_commit_workflow(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
         """Execute commit workflow with proper error handling and monitoring."""
         if not options.commit:
             return True
-            
+
         with phase_monitor(workflow_id, "commit"):
             if not self.phases.run_commit_phase(options):
                 return False
         return True
 
-    async def _execute_quality_phase(self, options: OptionsProtocol, workflow_id: str) -> bool:
+    async def _execute_quality_phase(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
         if hasattr(options, "fast") and options.fast:
             return await self._run_fast_hooks_phase_monitored(options, workflow_id)
         if hasattr(options, "comp") and options.comp:
-            return await self._run_comprehensive_hooks_phase_monitored(options, workflow_id)
+            return await self._run_comprehensive_hooks_phase_monitored(
+                options, workflow_id
+            )
         if getattr(options, "test", False):
             return await self._execute_test_workflow(options, workflow_id)
-        return await self._execute_standard_hooks_workflow_monitored(options, workflow_id)
+        return await self._execute_standard_hooks_workflow_monitored(
+            options, workflow_id
+        )
 
-    async def _execute_test_workflow(self, options: OptionsProtocol, workflow_id: str) -> bool:
+    async def _execute_test_workflow(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
         iteration = self._start_iteration_tracking(options)
 
         # Fast hooks with performance monitoring
         with phase_monitor(workflow_id, "fast_hooks") as monitor:
-            if not await self._run_initial_fast_hooks_async(options, iteration, monitor):
+            if not await self._run_initial_fast_hooks_async(
+                options, iteration, monitor
+            ):
                 return False
 
         # Run code cleaning after fast hooks but before comprehensive hooks
@@ -272,16 +295,17 @@ class WorkflowPipeline:
                     return False
                 self._mark_code_cleaning_complete()
 
-        testing_passed, comprehensive_passed = await self._run_main_quality_phases_async(
-            options, workflow_id
-        )
+        (
+            testing_passed,
+            comprehensive_passed,
+        ) = await self._run_main_quality_phases_async(options, workflow_id)
 
         if options.ai_agent:
             return await self._handle_ai_agent_workflow(
                 options, iteration, testing_passed, comprehensive_passed, workflow_id
             )
 
-        return self._handle_standard_workflow(
+        return await self._handle_standard_workflow(
             options, iteration, testing_passed, comprehensive_passed
         )
 
@@ -309,19 +333,28 @@ class WorkflowPipeline:
         comprehensive_task = asyncio.create_task(
             self._run_comprehensive_hooks_phase_monitored(options, workflow_id)
         )
-        
-        testing_passed, comprehensive_passed = await asyncio.gather(
+
+        results = await asyncio.gather(
             testing_task, comprehensive_task, return_exceptions=True
         )
-        
-        # Handle exceptions
-        if isinstance(testing_passed, Exception):
-            self.logger.error(f"Testing phase failed with exception: {testing_passed}")
+
+        # Handle exceptions and ensure boolean types
+        testing_result, comprehensive_result = results
+
+        if isinstance(testing_result, Exception):
+            self.logger.error(f"Testing phase failed with exception: {testing_result}")
             testing_passed = False
-        if isinstance(comprehensive_passed, Exception):
-            self.logger.error(f"Comprehensive hooks failed with exception: {comprehensive_passed}")
+        else:
+            testing_passed = bool(testing_result)
+
+        if isinstance(comprehensive_result, Exception):
+            self.logger.error(
+                f"Comprehensive hooks failed with exception: {comprehensive_result}"
+            )
             comprehensive_passed = False
-            
+        else:
+            comprehensive_passed = bool(comprehensive_result)
+
         return testing_passed, comprehensive_passed
 
     async def _handle_ai_agent_workflow(
@@ -362,7 +395,6 @@ class WorkflowPipeline:
             testing_passed,
             comprehensive_passed,
             publishing_requested,
-            workflow_type="ai",
         )
 
         # Show security audit warning for partial success in publishing workflows
@@ -377,7 +409,7 @@ class WorkflowPipeline:
             self.debugger.log_iteration_end(iteration, final_success)
         return final_success
 
-    def _handle_standard_workflow(
+    async def _handle_standard_workflow(
         self,
         options: OptionsProtocol,
         iteration: int,
@@ -391,14 +423,15 @@ class WorkflowPipeline:
 
         if publishing_requested and security_blocks:
             # Standard workflow cannot bypass security gates
-            return self._handle_security_gate_failure(options, allow_ai_fixing=False)
+            return await self._handle_security_gate_failure(
+                options, allow_ai_fixing=False
+            )
 
         # Determine success based on publishing requirements
         success = self._determine_workflow_success(
             testing_passed,
             comprehensive_passed,
             publishing_requested,
-            workflow_type="standard",
         )
 
         # Show security audit warning for partial success in publishing workflows
@@ -1230,24 +1263,21 @@ class WorkflowPipeline:
         if publishing_requested:
             # For publish/commit workflows, trigger AI fixing if either fails (since both must pass)
             return not testing_passed or not comprehensive_passed
-        else:
-            # For regular workflows, trigger AI fixing if either fails
-            return not testing_passed or not comprehensive_passed
+        # For regular workflows, trigger AI fixing if either fails
+        return not testing_passed or not comprehensive_passed
 
     def _determine_workflow_success(
         self,
         testing_passed: bool,
         comprehensive_passed: bool,
         publishing_requested: bool,
-        workflow_type: str,
     ) -> bool:
         """Determine workflow success based on test results and workflow type."""
         if publishing_requested:
             # For publishing workflows, ALL quality checks (tests AND comprehensive hooks) must pass
             return testing_passed and comprehensive_passed
-        else:
-            # For regular workflows, both must pass as well
-            return testing_passed and comprehensive_passed
+        # For regular workflows, both must pass as well
+        return testing_passed and comprehensive_passed
 
     def _show_verbose_failure_details(
         self, testing_passed: bool, comprehensive_passed: bool
@@ -1304,7 +1334,8 @@ class WorkflowPipeline:
         if hasattr(self.session, "session_tracker") and self.session.session_tracker:
             for task_id, task_data in self.session.session_tracker.tasks.items():
                 if task_id == "fast_hooks" and hasattr(task_data, "hook_results"):
-                    results.extend(task_data.hook_results)
+                    if task_data.hook_results:
+                        results.extend(task_data.hook_results)
 
         # If no results from session, create mock failed results for critical hooks
         # This ensures we fail securely when we can't determine actual status
@@ -1336,7 +1367,8 @@ class WorkflowPipeline:
                 if task_id == "comprehensive_hooks" and hasattr(
                     task_data, "hook_results"
                 ):
-                    results.extend(task_data.hook_results)
+                    if task_data.hook_results:
+                        results.extend(task_data.hook_results)
 
         # If no results from session, create mock failed results for critical hooks
         if not results:
@@ -1410,7 +1442,7 @@ class WorkflowPipeline:
             self.console.print(
                 "[yellow]⚠️ Some non-critical quality checks failed - consider reviewing before production deployment[/yellow]"
             )
-    
+
     # Performance-optimized async methods
     async def _run_initial_fast_hooks_async(
         self, options: OptionsProtocol, iteration: int, monitor: t.Any
@@ -1423,7 +1455,7 @@ class WorkflowPipeline:
                 self.debugger.log_iteration_end(iteration, False)
             return False
         return True
-    
+
     async def _run_fast_hooks_phase_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
@@ -1431,7 +1463,7 @@ class WorkflowPipeline:
         with phase_monitor(workflow_id, "fast_hooks") as monitor:
             monitor.record_sequential_op()
             return self._run_fast_hooks_phase(options)
-    
+
     async def _run_comprehensive_hooks_phase_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
@@ -1439,7 +1471,7 @@ class WorkflowPipeline:
         with phase_monitor(workflow_id, "comprehensive_hooks") as monitor:
             monitor.record_sequential_op()
             return self._run_comprehensive_hooks_phase(options)
-    
+
     async def _run_testing_phase_async(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
@@ -1447,7 +1479,7 @@ class WorkflowPipeline:
         with phase_monitor(workflow_id, "testing") as monitor:
             monitor.record_sequential_op()
             return self._run_testing_phase(options)
-    
+
     async def _execute_standard_hooks_workflow_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
@@ -1459,7 +1491,7 @@ class WorkflowPipeline:
             fast_hooks_success = self._run_fast_hooks_phase(options)
             if fast_hooks_success:
                 monitor.record_sequential_op()
-            
+
             if not fast_hooks_success:
                 self._handle_hooks_completion(False)
                 return False

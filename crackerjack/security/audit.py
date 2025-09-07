@@ -147,10 +147,9 @@ class SecurityAuditor:
             return SecurityLevel.CRITICAL
         elif hook_name_lower in [name.lower() for name in self.HIGH_SECURITY_HOOKS]:
             return SecurityLevel.HIGH
-        elif hook_name_lower in ["ruff-check", "vulture", "refurb", "complexipy"]:
+        elif hook_name_lower in ("ruff-check", "vulture", "refurb", "complexipy"):
             return SecurityLevel.MEDIUM
-        else:
-            return SecurityLevel.LOW
+        return SecurityLevel.LOW
 
     def _generate_security_warnings(
         self,
@@ -216,7 +215,7 @@ class SecurityAuditor:
                 "🔍 Review HIGH-security findings before production deployment"
             )
 
-        if len(critical) == 0 and len(high) == 0:
+        if not critical and not high:
             recommendations.append("✅ Security posture is acceptable for publishing")
 
         # Add OWASP best practices reference

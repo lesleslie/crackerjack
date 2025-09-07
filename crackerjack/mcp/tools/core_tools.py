@@ -186,7 +186,7 @@ def _execute_init_stage(orchestrator) -> bool:
 
         init_service = InitializationService(console, filesystem, git_service, pkg_path)
 
-        results = init_service.initialize_project(target_path=Path.cwd())
+        results = init_service.initialize_project_full(target_path=Path.cwd())
 
         return results.get("success", False)
 

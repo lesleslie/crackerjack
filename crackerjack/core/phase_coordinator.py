@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import time
 import typing as t
@@ -9,9 +8,6 @@ from rich.console import Console
 from crackerjack.code_cleaner import CodeCleaner, PackageCleaningResult
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.mixins import ErrorHandlingMixin
-from crackerjack.services.memory_optimizer import get_memory_optimizer, create_lazy_service
-from crackerjack.services.parallel_executor import get_parallel_executor, get_async_executor
-from crackerjack.services.performance_cache import get_git_cache, get_filesystem_cache
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
     FileSystemInterface,
@@ -21,7 +17,15 @@ from crackerjack.models.protocols import (
     PublishManager,
     TestManagerProtocol,
 )
-from crackerjack.models.protocols import ConfigurationServiceProtocol
+from crackerjack.services.memory_optimizer import (
+    create_lazy_service,
+    get_memory_optimizer,
+)
+from crackerjack.services.parallel_executor import (
+    get_async_executor,
+    get_parallel_executor,
+)
+from crackerjack.services.performance_cache import get_filesystem_cache, get_git_cache
 
 from .session_coordinator import SessionCoordinator
 
@@ -62,23 +66,24 @@ class PhaseCoordinator(ErrorHandlingMixin):
         )
         # Initialize configuration service - could be injected via DI
         from crackerjack.services.config import ConfigurationService
+
         self.config_service = ConfigurationService(console=console, pkg_path=pkg_path)
         # Lazy-loaded autofix coordinator (now using lazy service)
         # self.autofix_coordinator will be accessed via property
 
         self.logger = logging.getLogger("crackerjack.phases")
-        
+
         # Performance optimization services
         self._memory_optimizer = get_memory_optimizer()
         self._parallel_executor = get_parallel_executor()
         self._async_executor = get_async_executor()
         self._git_cache = get_git_cache()
         self._filesystem_cache = get_filesystem_cache()
-        
+
         # Lazy-loaded heavy services
         self._lazy_autofix = create_lazy_service(
             lambda: AutofixCoordinator(console=console, pkg_path=pkg_path),
-            "autofix_coordinator"
+            "autofix_coordinator",
         )
 
         # Initialize ErrorHandlingMixin
@@ -393,23 +398,17 @@ class PhaseCoordinator(ErrorHandlingMixin):
         if options.skip_hooks:
             return True
 
-        # Use parallel execution for fast hooks where safe
-        return await self._execute_hooks_with_parallel_support(
-            "fast",
-            self.hook_manager.run_fast_hooks,
-            options,
-        )
+        # Use standard execution for now - parallel support can be added later
+        hook_results = self.hook_manager.run_fast_hooks()
+        return all(r.status == "passed" for r in hook_results)
 
     def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             return True
 
-        # Use parallel execution for comprehensive hooks where safe
-        return await self._execute_hooks_with_parallel_support(
-            "comprehensive",
-            self.hook_manager.run_comprehensive_hooks,
-            options,
-        )
+        # Use standard execution for now - parallel support can be added later
+        hook_results = self.hook_manager.run_comprehensive_hooks()
+        return all(r.status == "passed" for r in hook_results)
 
     def run_testing_phase(self, options: OptionsProtocol) -> bool:
         if not options.test:
@@ -824,7 +823,7 @@ class PhaseCoordinator(ErrorHandlingMixin):
         self.console.print(f"[red]❌[/ red] {hook_type.title()} hooks error: {e}")
         self.session.fail_task(f"{hook_type}_hooks", str(e))
         return False
-    
+
     # Performance-optimized hook execution methods
     async def _execute_hooks_with_parallel_support(
         self,
@@ -834,13 +833,13 @@ class PhaseCoordinator(ErrorHandlingMixin):
     ) -> bool:
         """Execute hooks with parallel optimization where safe."""
         self._initialize_hook_execution(hook_type)
-        
+
         try:
             # For now, maintain sequential execution for safety
             # Future enhancement: implement parallel execution for independent hooks
             results = hook_runner()
             summary = self.hook_manager.get_hook_summary(results)
-            
+
             if self._has_hook_failures(summary):
                 # Try autofix for fast hooks before giving up
                 if hook_type == "fast":
@@ -851,20 +850,20 @@ class PhaseCoordinator(ErrorHandlingMixin):
                         # Retry after autofix
                         results = hook_runner()
                         summary = self.hook_manager.get_hook_summary(results)
-                        
+
                         if not self._has_hook_failures(summary):
                             return self._handle_hook_success(hook_type, summary)
-                
+
                 return self._handle_hook_failures(
                     hook_type, options, summary, results, 0, 1
                 )
-            
+
             return self._handle_hook_success(hook_type, summary)
-            
+
         except Exception as e:
             return self._handle_hook_exception(hook_type, e)
-    
-    @property 
+
+    @property
     def autofix_coordinator(self):
         """Lazy property for autofix coordinator."""
         return self._lazy_autofix.get()

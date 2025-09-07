@@ -483,6 +483,7 @@ class ServiceCollectionBuilder:
         # Register CoverageRatchetProtocol
         def create_coverage_ratchet() -> CoverageRatchetProtocol:
             from crackerjack.services.coverage_ratchet import CoverageRatchetService
+
             return CoverageRatchetService(pkg_path, console)
 
         self.container.register_transient(
@@ -490,9 +491,10 @@ class ServiceCollectionBuilder:
             factory=create_coverage_ratchet,
         )
 
-        # Register ConfigurationServiceProtocol  
+        # Register ConfigurationServiceProtocol
         def create_configuration_service() -> ConfigurationServiceProtocol:
             from crackerjack.services.config import ConfigurationService
+
             return ConfigurationService(console=console, pkg_path=pkg_path)
 
         self.container.register_transient(
@@ -503,6 +505,7 @@ class ServiceCollectionBuilder:
         # Register SecurityServiceProtocol
         def create_security_service() -> SecurityServiceProtocol:
             from crackerjack.services.security import SecurityService
+
             return SecurityService()
 
         self.container.register_transient(
@@ -512,8 +515,13 @@ class ServiceCollectionBuilder:
 
         # Register InitializationServiceProtocol
         def create_initialization_service() -> InitializationServiceProtocol:
+            from crackerjack.services.filesystem import FileSystemService
+            from crackerjack.services.git import GitService
             from crackerjack.services.initialization import InitializationService
-            return InitializationService(console, pkg_path)
+
+            filesystem = FileSystemService()
+            git_service = GitService(console, pkg_path)
+            return InitializationService(console, filesystem, git_service, pkg_path)
 
         self.container.register_transient(
             InitializationServiceProtocol,
@@ -534,7 +542,7 @@ class ServiceCollectionBuilder:
             factory=lambda: UnifiedConfigurationService(console, pkg_path),
         )
 
-        # Register protocol interface  
+        # Register protocol interface
         self.container.register_singleton(
             UnifiedConfigurationServiceProtocol,
             factory=lambda: self.container.get(UnifiedConfigurationService),
