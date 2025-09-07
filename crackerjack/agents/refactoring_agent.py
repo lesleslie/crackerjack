@@ -468,19 +468,16 @@ class RefactoringAgent(SubAgent):
 
     def _apply_enhanced_complexity_patterns(self, content: str) -> str:
         """Apply enhanced complexity reduction patterns using SAFE_PATTERNS."""
+        operations = [
+            self._extract_nested_conditions,
+            self._simplify_boolean_expressions,
+            self._extract_validation_patterns,
+            self._simplify_data_structures,
+        ]
+
         modified_content = content
-
-        # Extract nested conditions to helper methods
-        modified_content = self._extract_nested_conditions(modified_content)
-
-        # Replace complex boolean expressions with helper functions
-        modified_content = self._simplify_boolean_expressions(modified_content)
-
-        # Extract validation patterns to separate methods
-        modified_content = self._extract_validation_patterns(modified_content)
-
-        # Break down large dictionary/list operations
-        modified_content = self._simplify_data_structures(modified_content)
+        for operation in operations:
+            modified_content = operation(modified_content)
 
         return modified_content
 
@@ -897,19 +894,29 @@ class RefactoringAgent(SubAgent):
     def _remove_dead_code_items(self, content: str, analysis: dict[str, t.Any]) -> str:
         """Enhanced removal of dead code items from content."""
         lines = content.split("\n")
-        lines_to_remove = self._find_lines_to_remove(lines, analysis)
-
-        # Also remove unreachable code blocks
-        lines_to_remove.update(self._find_unreachable_lines(lines, analysis))
-
-        # Remove redundant code patterns
-        lines_to_remove.update(self._find_redundant_lines(lines, analysis))
+        lines_to_remove = self._collect_all_removable_lines(lines, analysis)
 
         filtered_lines = [
             line for i, line in enumerate(lines) if i not in lines_to_remove
         ]
 
         return "\n".join(filtered_lines)
+
+    def _collect_all_removable_lines(
+        self, lines: list[str], analysis: dict[str, t.Any]
+    ) -> set[int]:
+        """Collect all line indices that should be removed."""
+        removal_functions = [
+            lambda: self._find_lines_to_remove(lines, analysis),
+            lambda: self._find_unreachable_lines(lines, analysis),
+            lambda: self._find_redundant_lines(lines, analysis),
+        ]
+
+        lines_to_remove: set[int] = set()
+        for removal_func in removal_functions:
+            lines_to_remove.update(removal_func())
+
+        return lines_to_remove
 
     def _find_unreachable_lines(
         self, lines: list[str], analysis: dict[str, t.Any]
@@ -933,20 +940,29 @@ class RefactoringAgent(SubAgent):
         lines_to_remove: set[int] = set()
 
         # Look for empty except blocks
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-            if stripped == "except:" or stripped.startswith("except "):
-                # Check if next non-empty line is just 'pass'
-                for j in range(i + 1, min(i + 5, len(lines))):
-                    next_line = lines[j].strip()
-                    if not next_line:
-                        continue
-                    if next_line == "pass":
-                        lines_to_remove.add(j)
-                        break
-                    break
+        for i in range(len(lines)):
+            if self._is_empty_except_block(lines, i):
+                empty_pass_idx = self._find_empty_pass_line(lines, i)
+                if empty_pass_idx is not None:
+                    lines_to_remove.add(empty_pass_idx)
 
         return lines_to_remove
+
+    def _is_empty_except_block(self, lines: list[str], line_idx: int) -> bool:
+        """Check if line is an empty except block."""
+        stripped = lines[line_idx].strip()
+        return stripped == "except:" or stripped.startswith("except ")
+
+    def _find_empty_pass_line(self, lines: list[str], except_idx: int) -> int | None:
+        """Find the pass line in an empty except block."""
+        for j in range(except_idx + 1, min(except_idx + 5, len(lines))):
+            next_line = lines[j].strip()
+            if not next_line:
+                continue
+            if next_line == "pass":
+                return j
+            break
+        return None
 
     def _extract_function_content(
         self, lines: list[str], func_info: dict[str, t.Any]
@@ -968,30 +984,35 @@ class RefactoringAgent(SubAgent):
     ) -> str:
         """Apply function extraction by replacing original with calls to helpers."""
         lines = content.split("\n")
-        validation_result = self._validate_extraction_params(
-            lines, func_info, extracted_helpers
-        )
-        if validation_result:
-            return validation_result
 
-        new_lines = self._replace_function_with_calls(
-            lines, func_info, extracted_helpers
-        )
-        return self._add_helper_definitions(new_lines, func_info, extracted_helpers)
+        if not self._is_extraction_valid(lines, func_info, extracted_helpers):
+            return "\n".join(lines)
 
-    def _validate_extraction_params(
+        return self._perform_extraction(lines, func_info, extracted_helpers)
+
+    def _is_extraction_valid(
         self,
         lines: list[str],
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
-    ) -> str | None:
-        """Validate parameters for function extraction."""
+    ) -> bool:
+        """Check if extraction parameters are valid."""
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
 
-        if not extracted_helpers or start_line < 0 or end_line >= len(lines):
-            return "\n".join(lines)
-        return None
+        return bool(extracted_helpers) and start_line >= 0 and end_line < len(lines)
+
+    def _perform_extraction(
+        self,
+        lines: list[str],
+        func_info: dict[str, t.Any],
+        extracted_helpers: list[dict[str, str]],
+    ) -> str:
+        """Perform the actual function extraction."""
+        new_lines = self._replace_function_with_calls(
+            lines, func_info, extracted_helpers
+        )
+        return self._add_helper_definitions(new_lines, func_info, extracted_helpers)
 
     def _replace_function_with_calls(
         self,

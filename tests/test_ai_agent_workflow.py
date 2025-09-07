@@ -310,7 +310,7 @@ class AIAgentWorkflowTester:
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=300,  # Fixed: Use 300s to match pytest config
             )
 
             return {

@@ -239,7 +239,7 @@ class ConfigFactory:
     def create_ci_config():
         return ConfigFactory.create_basic_config(
             test_workers=4,
-            test_timeout=120,
+            test_timeout=300,  # Fixed: Use 300s to match pytest config
             skip_hooks=False,
         )
 

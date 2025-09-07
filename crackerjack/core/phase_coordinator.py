@@ -7,6 +7,7 @@ from rich.console import Console
 
 from crackerjack.code_cleaner import CodeCleaner, PackageCleaningResult
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
+from crackerjack.mixins import ErrorHandlingMixin
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
     FileSystemInterface,
@@ -21,7 +22,7 @@ from crackerjack.services.config import ConfigurationService
 from .session_coordinator import SessionCoordinator
 
 
-class PhaseCoordinator:
+class PhaseCoordinator(ErrorHandlingMixin):
     def __init__(
         self,
         console: Console,
@@ -62,6 +63,9 @@ class PhaseCoordinator:
 
         self.logger = logging.getLogger("crackerjack.phases")
 
+        # Initialize ErrorHandlingMixin
+        super().__init__()
+
     def run_cleaning_phase(self, options: OptionsProtocol) -> bool:
         if not options.clean:
             return True
@@ -71,7 +75,7 @@ class PhaseCoordinator:
             self._display_cleaning_header()
             return self._execute_cleaning_process()
         except Exception as e:
-            self.console.print(f"[red]❌[/ red] Cleaning failed: {e}")
+            self.handle_subprocess_error(e, [], "Code cleaning", critical=False)
             self.session.fail_task("cleaning", str(e))
             return False
 
@@ -156,6 +160,7 @@ class PhaseCoordinator:
             self._complete_configuration_task(success)
             return success
         except Exception as e:
+            self.handle_subprocess_error(e, [], "Configuration phase", critical=False)
             self.session.fail_task("configuration", str(e))
             return False
 
@@ -492,28 +497,24 @@ class PhaseCoordinator:
         self.console.print("[yellow]ℹ️[/ yellow] No changes to commit")
 
         # Check if there are unpushed commits
-        try:
-            result = self.git_service._run_git_command(
-                ["rev-list", "--count", "@{u}..HEAD"]
-            )
-            if result.returncode == 0 and result.stdout.strip().isdigit():
-                commit_count = int(result.stdout.strip())
-                if commit_count > 0:
-                    self.console.print(
-                        f"[blue]📤[/ blue] Found {commit_count} unpushed commit(s), attempting push..."
+        from contextlib import suppress
+
+        with suppress(ValueError, Exception):
+            commit_count = self.git_service.get_unpushed_commit_count()
+            if commit_count > 0:
+                self.console.print(
+                    f"[blue]📤[/ blue] Found {commit_count} unpushed commit(s), attempting push..."
+                )
+                if self.git_service.push():
+                    self.session.complete_task(
+                        "commit",
+                        f"No new changes, pushed {commit_count} existing commit(s)",
                     )
-                    if self.git_service.push():
-                        self.session.complete_task(
-                            "commit",
-                            f"No new changes, pushed {commit_count} existing commit(s)",
-                        )
-                        return True
-                    else:
-                        self.console.print(
-                            "[yellow]⚠️[/ yellow] Push failed for existing commits"
-                        )
-        except (ValueError, Exception):
-            pass
+                    return True
+                else:
+                    self.console.print(
+                        "[yellow]⚠️[/ yellow] Push failed for existing commits"
+                    )
 
         self.session.complete_task("commit", "No changes to commit")
         return True

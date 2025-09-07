@@ -40,6 +40,7 @@ class WorkflowPipeline:
         self.session = session
         self.phases = phases
         self._mcp_state_manager: t.Any = None
+        self._last_security_audit: t.Any = None  # Store security audit report
 
         self.logger = get_logger("crackerjack.pipeline")
         self._debugger = None
@@ -161,22 +162,45 @@ class WorkflowPipeline:
         return False
 
     async def _execute_workflow_phases(self, options: OptionsProtocol) -> bool:
+        """Execute all workflow phases with proper security gates."""
         success = True
         self.phases.run_configuration_phase(options)
 
-        # Code cleaning is now integrated into the quality phase
-        # to run after fast hooks but before comprehensive hooks
-        if not await self._execute_quality_phase(options):
+        # Execute quality phase (includes testing and comprehensive checks)
+        quality_success = await self._execute_quality_phase(options)
+        if not quality_success:
+            success = False
+            # For publishing workflows, enforce security gates
+            if self._is_publishing_workflow(options):
+                return False  # Exit early - publishing requires ALL quality checks
+
+        # Execute publishing workflow if requested
+        if not await self._execute_publishing_workflow(options):
             success = False
             return False
-        if not self.phases.run_publishing_phase(options):
-            success = False
-            self.session.fail_task("workflow", "Publishing failed")
-            return False
-        if not self.phases.run_commit_phase(options):
+
+        # Execute commit workflow if requested
+        if not await self._execute_commit_workflow(options):
             success = False
 
         return success
+
+    def _is_publishing_workflow(self, options: OptionsProtocol) -> bool:
+        """Check if this is a publishing workflow that requires strict security gates."""
+        return bool(options.publish or options.all or options.commit)
+
+    async def _execute_publishing_workflow(self, options: OptionsProtocol) -> bool:
+        """Execute publishing workflow with proper error handling."""
+        if not self.phases.run_publishing_phase(options):
+            self.session.fail_task("workflow", "Publishing failed")
+            return False
+        return True
+
+    async def _execute_commit_workflow(self, options: OptionsProtocol) -> bool:
+        """Execute commit workflow with proper error handling."""
+        if not self.phases.run_commit_phase(options):
+            return False
+        return True
 
     async def _execute_quality_phase(self, options: OptionsProtocol) -> bool:
         if hasattr(options, "fast") and options.fast:
@@ -239,15 +263,50 @@ class WorkflowPipeline:
         testing_passed: bool,
         comprehensive_passed: bool,
     ) -> bool:
-        if not testing_passed or not comprehensive_passed:
+        # Check security gates for publishing operations
+        publishing_requested, security_blocks = (
+            self._check_security_gates_for_publishing(options)
+        )
+
+        if publishing_requested and security_blocks:
+            # Try AI fixing for security issues, then re-check
+            security_fix_result = await self._handle_security_gate_failure(
+                options, allow_ai_fixing=True
+            )
+            if not security_fix_result:
+                return False
+            # If AI fixing resolved security issues, continue with normal flow
+
+        # Determine if we need AI fixing based on publishing requirements
+        needs_ai_fixing = self._determine_ai_fixing_needed(
+            testing_passed, comprehensive_passed, publishing_requested
+        )
+
+        if needs_ai_fixing:
             success = await self._run_ai_agent_fixing_phase(options)
             if self._should_debug():
                 self.debugger.log_iteration_end(iteration, success)
             return success
 
+        # Determine final success based on publishing requirements
+        final_success = self._determine_workflow_success(
+            testing_passed,
+            comprehensive_passed,
+            publishing_requested,
+            workflow_type="ai",
+        )
+
+        # Show security audit warning for partial success in publishing workflows
+        if (
+            publishing_requested
+            and final_success
+            and not (testing_passed and comprehensive_passed)
+        ):
+            self._show_security_audit_warning()
+
         if self._should_debug():
-            self.debugger.log_iteration_end(iteration, True)
-        return True
+            self.debugger.log_iteration_end(iteration, final_success)
+        return final_success
 
     def _handle_standard_workflow(
         self,
@@ -256,20 +315,38 @@ class WorkflowPipeline:
         testing_passed: bool,
         comprehensive_passed: bool,
     ) -> bool:
-        success = testing_passed and comprehensive_passed
+        # Check security gates for publishing operations
+        publishing_requested, security_blocks = (
+            self._check_security_gates_for_publishing(options)
+        )
 
-        if not success and getattr(options, "verbose", False):
+        if publishing_requested and security_blocks:
+            # Standard workflow cannot bypass security gates
+            return self._handle_security_gate_failure(options, allow_ai_fixing=False)
+
+        # Determine success based on publishing requirements
+        success = self._determine_workflow_success(
+            testing_passed,
+            comprehensive_passed,
+            publishing_requested,
+            workflow_type="standard",
+        )
+
+        # Show security audit warning for partial success in publishing workflows
+        if (
+            publishing_requested
+            and success
+            and not (testing_passed and comprehensive_passed)
+        ):
+            self._show_security_audit_warning()
+        elif publishing_requested and not success:
             self.console.print(
-                f"[yellow]⚠️ Workflow stopped-testing_passed: {testing_passed}, comprehensive_passed: {comprehensive_passed}[/ yellow]"
+                "[red]❌ Quality checks failed - cannot proceed to publishing[/red]"
             )
-            if not testing_passed:
-                self.console.print(
-                    "[yellow] → Tests reported failure despite appearing successful[/ yellow]"
-                )
-            if not comprehensive_passed:
-                self.console.print(
-                    "[yellow] → Comprehensive hooks reported failure despite appearing successful[/ yellow]"
-                )
+
+        # Show verbose failure details if requested
+        if not success and getattr(options, "verbose", False):
+            self._show_verbose_failure_details(testing_passed, comprehensive_passed)
 
         if options.ai_agent and self._should_debug():
             self.debugger.log_iteration_end(iteration, success)
@@ -994,6 +1071,276 @@ class WorkflowPipeline:
         if self._should_debug():
             self.debugger.log_test_failures(test_count)
             self.debugger.log_hook_failures(hook_count)
+
+    def _check_security_gates_for_publishing(
+        self, options: OptionsProtocol
+    ) -> tuple[bool, bool]:
+        """Check if publishing is requested and if security gates block it.
+
+        Returns:
+            tuple[bool, bool]: (publishing_requested, security_blocks_publishing)
+        """
+        publishing_requested = bool(options.publish or options.all or options.commit)
+
+        if not publishing_requested:
+            return False, False
+
+        # Check security gates for publishing operations
+        try:
+            security_blocks_publishing = self._check_security_critical_failures()
+            return publishing_requested, security_blocks_publishing
+        except Exception as e:
+            # Fail securely if security check fails
+            self.logger.warning(f"Security check failed: {e} - blocking publishing")
+            self.console.print(
+                "[red]🔒 SECURITY CHECK FAILED: Unable to verify security status - publishing BLOCKED[/red]"
+            )
+            # Return True for security_blocks to fail securely
+            return publishing_requested, True
+
+    async def _handle_security_gate_failure(
+        self, options: OptionsProtocol, allow_ai_fixing: bool = False
+    ) -> bool:
+        """Handle security gate failures with optional AI fixing.
+
+        Args:
+            options: Workflow options
+            allow_ai_fixing: Whether AI fixing is allowed for security issues
+
+        Returns:
+            bool: True if security issues resolved, False if still blocked
+        """
+        self.console.print(
+            "[red]🔒 SECURITY GATE: Critical security checks failed[/red]"
+        )
+
+        if allow_ai_fixing:
+            self.console.print(
+                "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
+            )
+            self.console.print(
+                "[yellow]🤖 Attempting AI-assisted security issue resolution...[/yellow]"
+            )
+
+            # Try AI fixing for security issues
+            ai_fix_success = await self._run_ai_agent_fixing_phase(options)
+            if ai_fix_success:
+                # Re-check security after AI fixing
+                try:
+                    security_still_blocks = self._check_security_critical_failures()
+                    if not security_still_blocks:
+                        self.console.print(
+                            "[green]✅ AI agents resolved security issues - publishing allowed[/green]"
+                        )
+                        return True
+                    else:
+                        self.console.print(
+                            "[red]🔒 Security issues persist after AI fixing - publishing still BLOCKED[/red]"
+                        )
+                        return False
+                except Exception as e:
+                    self.logger.warning(
+                        f"Security re-check failed: {e} - blocking publishing"
+                    )
+                    return False
+            return False
+        else:
+            # Standard workflow cannot bypass security gates
+            self.console.print(
+                "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
+            )
+            return False
+
+    def _determine_ai_fixing_needed(
+        self,
+        testing_passed: bool,
+        comprehensive_passed: bool,
+        publishing_requested: bool,
+    ) -> bool:
+        """Determine if AI fixing is needed based on test results and publishing requirements."""
+        if publishing_requested:
+            # For publish/commit workflows, trigger AI fixing if either fails (since both must pass)
+            return not testing_passed or not comprehensive_passed
+        else:
+            # For regular workflows, trigger AI fixing if either fails
+            return not testing_passed or not comprehensive_passed
+
+    def _determine_workflow_success(
+        self,
+        testing_passed: bool,
+        comprehensive_passed: bool,
+        publishing_requested: bool,
+        workflow_type: str,
+    ) -> bool:
+        """Determine workflow success based on test results and workflow type."""
+        if publishing_requested:
+            # For publishing workflows, ALL quality checks (tests AND comprehensive hooks) must pass
+            return testing_passed and comprehensive_passed
+        else:
+            # For regular workflows, both must pass as well
+            return testing_passed and comprehensive_passed
+
+    def _show_verbose_failure_details(
+        self, testing_passed: bool, comprehensive_passed: bool
+    ) -> None:
+        """Show detailed failure information in verbose mode."""
+        self.console.print(
+            f"[yellow]⚠️ Quality phase results - testing_passed: {testing_passed}, comprehensive_passed: {comprehensive_passed}[/yellow]"
+        )
+        if not testing_passed:
+            self.console.print("[yellow] → Tests reported failure[/yellow]")
+        if not comprehensive_passed:
+            self.console.print(
+                "[yellow] → Comprehensive hooks reported failure[/yellow]"
+            )
+
+    def _check_security_critical_failures(self) -> bool:
+        """Check if any security-critical hooks have failed.
+
+        Returns:
+            True if security-critical hooks failed and block publishing
+        """
+        try:
+            from crackerjack.security.audit import SecurityAuditor
+
+            auditor = SecurityAuditor()
+
+            # Get hook results - we need to be careful not to re-run hooks
+            # Instead, check the session tracker for recent failures
+            fast_results = self._get_recent_fast_hook_results()
+            comprehensive_results = self._get_recent_comprehensive_hook_results()
+
+            # Generate security audit report
+            audit_report = auditor.audit_hook_results(
+                fast_results, comprehensive_results
+            )
+
+            # Store audit report for later use
+            self._last_security_audit = audit_report
+
+            # Block publishing if critical failures exist
+            return audit_report.has_critical_failures
+
+        except Exception as e:
+            # Fail securely - if we can't determine security status, block publishing
+            self.logger.warning(f"Security audit failed: {e} - failing securely")
+            # Re-raise the exception so it can be caught by the calling method
+            raise
+
+    def _get_recent_fast_hook_results(self) -> list[t.Any]:
+        """Get recent fast hook results from session tracker."""
+        results = []
+
+        # Try to get results from session tracker
+        if hasattr(self.session, "session_tracker") and self.session.session_tracker:
+            for task_id, task_data in self.session.session_tracker.tasks.items():
+                if task_id == "fast_hooks" and hasattr(task_data, "hook_results"):
+                    results.extend(task_data.hook_results)
+
+        # If no results from session, create mock failed results for critical hooks
+        # This ensures we fail securely when we can't determine actual status
+        if not results:
+            critical_fast_hooks = ["gitleaks"]
+            for hook_name in critical_fast_hooks:
+                # Create a mock result that appears to have failed
+                # This will trigger security blocking if we can't determine actual status
+                mock_result = type(
+                    "MockResult",
+                    (),
+                    {
+                        "name": hook_name,
+                        "status": "unknown",  # Unknown status = fail securely
+                        "output": "Unable to determine hook status",
+                    },
+                )()
+                results.append(mock_result)
+
+        return results
+
+    def _get_recent_comprehensive_hook_results(self) -> list[t.Any]:
+        """Get recent comprehensive hook results from session tracker."""
+        results = []
+
+        # Try to get results from session tracker
+        if hasattr(self.session, "session_tracker") and self.session.session_tracker:
+            for task_id, task_data in self.session.session_tracker.tasks.items():
+                if task_id == "comprehensive_hooks" and hasattr(
+                    task_data, "hook_results"
+                ):
+                    results.extend(task_data.hook_results)
+
+        # If no results from session, create mock failed results for critical hooks
+        if not results:
+            critical_comprehensive_hooks = ["bandit", "pyright"]
+            for hook_name in critical_comprehensive_hooks:
+                mock_result = type(
+                    "MockResult",
+                    (),
+                    {
+                        "name": hook_name,
+                        "status": "unknown",  # Unknown status = fail securely
+                        "output": "Unable to determine hook status",
+                    },
+                )()
+                results.append(mock_result)
+
+        return results
+
+    def _is_security_critical_failure(self, result: t.Any) -> bool:
+        """Check if a hook result represents a security-critical failure."""
+
+        # List of security-critical hook names (fail-safe approach)
+        security_critical_hooks = {
+            "bandit",  # Security vulnerability scanning
+            "pyright",  # Type safety prevents security holes
+            "gitleaks",  # Secret detection
+        }
+
+        hook_name = getattr(result, "name", "").lower()
+        is_failed = getattr(result, "status", "unknown") in (
+            "failed",
+            "error",
+            "timeout",
+        )
+
+        return hook_name in security_critical_hooks and is_failed
+
+    def _show_security_audit_warning(self) -> None:
+        """Show security audit warning when proceeding with partial success."""
+        # Use stored audit report if available
+        audit_report = getattr(self, "_last_security_audit", None)
+
+        if audit_report:
+            self.console.print(
+                "[yellow]⚠️ SECURITY AUDIT: Proceeding with partial quality success[/yellow]"
+            )
+
+            # Show security status
+            for warning in audit_report.security_warnings:
+                if "CRITICAL" in warning:
+                    # This shouldn't happen if we're showing warnings, but fail-safe
+                    self.console.print(f"[red]{warning}[/red]")
+                elif "HIGH" in warning:
+                    self.console.print(f"[yellow]{warning}[/yellow]")
+                else:
+                    self.console.print(f"[blue]{warning}[/blue]")
+
+            # Show recommendations
+            if audit_report.recommendations:
+                self.console.print("[bold]Security Recommendations:[/bold]")
+                for rec in audit_report.recommendations[:3]:  # Show top 3
+                    self.console.print(f"[dim]{rec}[/dim]")
+        else:
+            # Fallback if no audit report available
+            self.console.print(
+                "[yellow]⚠️ SECURITY AUDIT: Proceeding with partial quality success[/yellow]"
+            )
+            self.console.print(
+                "[yellow]✅ Security-critical checks (bandit, pyright, gitleaks) have passed[/yellow]"
+            )
+            self.console.print(
+                "[yellow]⚠️ Some non-critical quality checks failed - consider reviewing before production deployment[/yellow]"
+            )
 
 
 class WorkflowOrchestrator:

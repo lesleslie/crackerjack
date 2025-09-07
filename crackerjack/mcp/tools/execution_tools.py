@@ -28,14 +28,14 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
             return json.dumps(kwargs_result)
 
         extra_kwargs = kwargs_result["kwargs"]
-        
+
         # Add extended timeout for long-running operations
         if "execution_timeout" not in extra_kwargs:
             # Default to 15 minutes, extend to 20 minutes for test operations
             if extra_kwargs.get("test", False) or extra_kwargs.get("testing", False):
                 extra_kwargs["execution_timeout"] = 1200  # 20 minutes for tests
             else:
-                extra_kwargs["execution_timeout"] = 900   # 15 minutes default
+                extra_kwargs["execution_timeout"] = 900  # 15 minutes default
 
         try:
             result = await execute_crackerjack_workflow(args, extra_kwargs)

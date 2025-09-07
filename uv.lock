@@ -332,7 +332,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.31.18"
+version = "0.32.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

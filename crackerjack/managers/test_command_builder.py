@@ -23,17 +23,21 @@ class TestCommandBuilder:
         if hasattr(options, "test_workers") and options.test_workers:
             return options.test_workers
 
-        import multiprocessing
+        # Temporarily disable multi-worker execution due to pytest-xdist
+        # hanging issues with async tests. See GitHub issue for details.
+        # TODO: Re-enable after fixing async test timeout issues
+        return 1
 
-        cpu_count = multiprocessing.cpu_count()
-
-        if cpu_count <= 2:
-            return 1
-        elif cpu_count <= 4:
-            return 2
-        elif cpu_count <= 8:
-            return 3
-        return 4
+        # Original multi-worker logic (commented out):
+        # import multiprocessing
+        # cpu_count = multiprocessing.cpu_count()
+        # if cpu_count <= 2:
+        #     return 1
+        # elif cpu_count <= 4:
+        #     return 2
+        # elif cpu_count <= 8:
+        #     return 3
+        # return 4
 
     def get_test_timeout(self, options: OptionsProtocol) -> int:
         if hasattr(options, "test_timeout") and options.test_timeout:

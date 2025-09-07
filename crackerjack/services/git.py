@@ -6,6 +6,22 @@ from rich.console import Console
 from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
 
+# Centralized Git command registry for security validation
+GIT_COMMANDS = {
+    "git_dir": ["rev-parse", "--git-dir"],
+    "staged_files": ["diff", "--cached", "--name-only", "--diff-filter=ACMRT"],
+    "unstaged_files": ["diff", "--name-only", "--diff-filter=ACMRT"],
+    "untracked_files": ["ls-files", "--others", "--exclude-standard"],
+    "staged_files_simple": ["diff", "--cached", "--name-only"],
+    "add_file": ["add"],  # File path will be appended
+    "add_all": ["add", "-A", "."],
+    "commit": ["commit", "-m"],  # Message will be appended
+    "add_updated": ["add", "-u"],
+    "push_porcelain": ["push", "--porcelain"],
+    "current_branch": ["branch", "--show-current"],
+    "commits_ahead": ["rev-list", "--count", "@{u}..HEAD"],
+}
+
 
 class FailedGitResult:
     """A Git result object compatible with subprocess.CompletedProcess."""
@@ -51,34 +67,28 @@ class GitService:
 
     def is_git_repo(self) -> bool:
         try:
-            result = self._run_git_command(["rev-parse", "- - git-dir"])
+            result = self._run_git_command(GIT_COMMANDS["git_dir"])
             return result.returncode == 0
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
             return False
 
     def get_changed_files(self) -> list[str]:
         try:
-            staged_result = self._run_git_command(
-                ["diff", "--cached", "- - name-only", "- - diff-filter=ACMRT"]
-            )
+            staged_result = self._run_git_command(GIT_COMMANDS["staged_files"])
             staged_files = (
                 staged_result.stdout.strip().split("\n")
                 if staged_result.stdout.strip()
                 else []
             )
 
-            unstaged_result = self._run_git_command(
-                ["diff", "- - name-only", "- - diff-filter=ACMRT"]
-            )
+            unstaged_result = self._run_git_command(GIT_COMMANDS["unstaged_files"])
             unstaged_files = (
                 unstaged_result.stdout.strip().split("\n")
                 if unstaged_result.stdout.strip()
                 else []
             )
 
-            untracked_result = self._run_git_command(
-                ["ls-files", "--others", "- - exclude-standard"],
-            )
+            untracked_result = self._run_git_command(GIT_COMMANDS["untracked_files"])
             untracked_files = (
                 untracked_result.stdout.strip().split("\n")
                 if untracked_result.stdout.strip()
@@ -93,7 +103,7 @@ class GitService:
 
     def get_staged_files(self) -> list[str]:
         try:
-            result = self._run_git_command(["diff", "--cached", "- - name-only"])
+            result = self._run_git_command(GIT_COMMANDS["staged_files_simple"])
             return result.stdout.strip().split("\n") if result.stdout.strip() else []
         except Exception as e:
             self.console.print(f"[yellow]⚠️[/ yellow] Error getting staged files: {e}")
@@ -102,7 +112,8 @@ class GitService:
     def add_files(self, files: list[str]) -> bool:
         try:
             for file in files:
-                result = self._run_git_command(["add", file])
+                cmd = GIT_COMMANDS["add_file"] + [file]
+                result = self._run_git_command(cmd)
                 if result.returncode != 0:
                     self.console.print(
                         f"[red]❌[/ red] Failed to add {file}: {result.stderr}",
@@ -116,7 +127,7 @@ class GitService:
     def add_all_files(self) -> bool:
         """Stage all changes including new, modified, and deleted files."""
         try:
-            result = self._run_git_command(["add", "-A", "."])
+            result = self._run_git_command(GIT_COMMANDS["add_all"])
             if result.returncode == 0:
                 self.console.print("[green]✅[/ green] Staged all changes")
                 return True
@@ -130,7 +141,8 @@ class GitService:
 
     def commit(self, message: str) -> bool:
         try:
-            result = self._run_git_command(["commit", "- m", message])
+            cmd = GIT_COMMANDS["commit"] + [message]
+            result = self._run_git_command(cmd)
             if result.returncode == 0:
                 self.console.print(f"[green]✅[/ green] Committed: {message}")
                 return True
@@ -153,14 +165,15 @@ class GitService:
             "[yellow]🔄[/ yellow] Pre - commit hooks modified files - attempting to re-stage and retry commit"
         )
 
-        add_result = self._run_git_command(["add", "- u"])
+        add_result = self._run_git_command(GIT_COMMANDS["add_updated"])
         if add_result.returncode != 0:
             self.console.print(
                 f"[red]❌[/ red] Failed to re-stage files: {add_result.stderr}"
             )
             return False
 
-        retry_result = self._run_git_command(["commit", "- m", message])
+        cmd = GIT_COMMANDS["commit"] + [message]
+        retry_result = self._run_git_command(cmd)
         if retry_result.returncode == 0:
             self.console.print(
                 f"[green]✅[/ green] Committed after re-staging: {message}"
@@ -188,7 +201,7 @@ class GitService:
     def push(self) -> bool:
         try:
             # Get detailed push information
-            result = self._run_git_command(["push", "--porcelain"])
+            result = self._run_git_command(GIT_COMMANDS["push_porcelain"])
             if result.returncode == 0:
                 self._display_push_success(result.stdout)
                 return True
@@ -203,20 +216,30 @@ class GitService:
         lines = push_output.strip().split("\n") if push_output.strip() else []
 
         if not lines:
-            # Fallback for when porcelain doesn't give output (e.g., nothing to push)
-            self.console.print("[green]✅[/ green] Pushed to remote (no new commits)")
+            self._display_no_commits_message()
             return
 
+        pushed_refs = self._parse_pushed_refs(lines)
+        self._display_push_results(pushed_refs)
+
+    def _display_no_commits_message(self) -> None:
+        """Display message for no new commits."""
+        self.console.print("[green]✅[/ green] Pushed to remote (no new commits)")
+
+    def _parse_pushed_refs(self, lines: list[str]) -> list[str]:
+        """Parse pushed references from git output."""
         pushed_refs = []
         for line in lines:
-            if line.startswith("*") or line.startswith("+") or line.startswith("="):
+            if line.startswith(("*", "+", "=")):
                 # Parse porcelain output: flag:from:to summary
                 parts = line.split("\t")
                 if len(parts) >= 2:
-                    parts[0]
                     summary = parts[1] if len(parts) > 1 else ""
                     pushed_refs.append(summary)
+        return pushed_refs
 
+    def _display_push_results(self, pushed_refs: list[str]) -> None:
+        """Display the push results to console."""
         if pushed_refs:
             self.console.print(
                 f"[green]✅[/ green] Successfully pushed {len(pushed_refs)} ref(s) to remote:"
@@ -231,7 +254,7 @@ class GitService:
         """Fallback method to show commit count information."""
         try:
             # Get commits ahead of remote
-            result = self._run_git_command(["rev-list", "--count", "@{u}..HEAD"])
+            result = self._run_git_command(GIT_COMMANDS["commits_ahead"])
             if result.returncode == 0 and result.stdout.strip().isdigit():
                 commit_count = int(result.stdout.strip())
                 if commit_count > 0:
@@ -250,7 +273,7 @@ class GitService:
 
     def get_current_branch(self) -> str | None:
         try:
-            result = self._run_git_command(["branch", "- - show-current"])
+            result = self._run_git_command(GIT_COMMANDS["current_branch"])
             return result.stdout.strip() if result.returncode == 0 else None
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
             return None
@@ -310,3 +333,13 @@ class GitService:
             messages.append("Update README documentation")
 
         return messages
+
+    def get_unpushed_commit_count(self) -> int:
+        """Get the number of unpushed commits."""
+        from contextlib import suppress
+
+        with suppress(ValueError, Exception):
+            result = self._run_git_command(GIT_COMMANDS["commits_ahead"])
+            if result.returncode == 0 and result.stdout.strip().isdigit():
+                return int(result.stdout.strip())
+        return 0

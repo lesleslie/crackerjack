@@ -87,6 +87,8 @@ class GitInterface(t.Protocol):
 
     def get_commit_message_suggestions(self, changed_files: list[str]) -> list[str]: ...
 
+    def get_unpushed_commit_count(self) -> int: ...
+
 
 @t.runtime_checkable
 class HookManager(t.Protocol):
@@ -99,6 +101,47 @@ class HookManager(t.Protocol):
     def set_config_path(self, path: str | t.Any) -> None: ...
 
     def get_hook_summary(self, results: t.Any) -> t.Any: ...
+
+
+@t.runtime_checkable
+class SecurityAwareHookManager(HookManager, t.Protocol):
+    """Security-aware hook manager that tracks security-critical failures."""
+
+    def get_security_critical_failures(self, results: list[t.Any]) -> list[t.Any]:
+        """Extract security-critical failures from hook results.
+
+        Args:
+            results: List of hook results from run_fast_hooks or run_comprehensive_hooks
+
+        Returns:
+            List of results that are security-critical and failed
+        """
+        ...
+
+    def has_security_critical_failures(self, results: list[t.Any]) -> bool:
+        """Check if any security-critical hooks failed.
+
+        Args:
+            results: List of hook results
+
+        Returns:
+            True if any CRITICAL security level hooks failed
+        """
+        ...
+
+    def get_security_audit_report(
+        self, fast_results: list[t.Any], comprehensive_results: list[t.Any]
+    ) -> dict[str, t.Any]:
+        """Generate security audit report for publishing decisions.
+
+        Args:
+            fast_results: Results from fast hooks
+            comprehensive_results: Results from comprehensive hooks
+
+        Returns:
+            Dict containing security status, failed critical checks, and recommendations
+        """
+        ...
 
 
 @t.runtime_checkable

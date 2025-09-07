@@ -17,14 +17,14 @@ async def execute_crackerjack_workflow(
     execution_timeout = kwargs.get("execution_timeout", 900)  # 15 minutes default
     if kwargs.get("test", False) or kwargs.get("testing", False):
         execution_timeout = max(execution_timeout, 1200)  # 20 minutes for test runs
-    
+
     try:
         # Add overall execution timeout with keep-alive
         return await asyncio.wait_for(
             _execute_crackerjack_sync(job_id, args, kwargs, get_context()),
-            timeout=execution_timeout
+            timeout=execution_timeout,
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return {
             "job_id": job_id,
             "status": "timeout",
@@ -159,9 +159,9 @@ async def _create_advanced_orchestrator(
     from pathlib import Path
 
     from crackerjack.core.async_workflow_orchestrator import AsyncWorkflowOrchestrator
-    from crackerjack.core.enhanced_container import EnhancedContainer
+    from crackerjack.core.enhanced_container import EnhancedDependencyContainer
 
-    container = EnhancedContainer()
+    container = EnhancedDependencyContainer()
 
     await _register_core_services(container, Path(working_dir))
 
@@ -187,41 +187,37 @@ def _create_standard_orchestrator(
 async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
     from rich.console import Console
 
-    from crackerjack.core.enhanced_container import ServiceLifetime
     from crackerjack.managers.hook_manager import AsyncHookManager
-    from crackerjack.managers.publish_manager import PublishManager
-    from crackerjack.managers.test_manager import TestManager
+    from crackerjack.managers.publish_manager import PublishManagerImpl
+    from crackerjack.managers.test_manager import TestManagementImpl
     from crackerjack.models.protocols import (
-        HookManagerProtocol,
-        PublishManagerProtocol,
+        FileSystemInterface,
+        HookManager,
+        PublishManager,
         TestManagerProtocol,
     )
     from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
 
     console = Console()
 
-    container.register_service(
-        HookManagerProtocol,
-        AsyncHookManager(console, working_dir),
-        ServiceLifetime.SINGLETON,
+    container.register_singleton(
+        HookManager,
+        factory=lambda: AsyncHookManager(console, working_dir),
     )
 
-    container.register_service(
+    container.register_singleton(
         TestManagerProtocol,
-        TestManager(console, working_dir),
-        ServiceLifetime.SINGLETON,
+        factory=lambda: TestManagementImpl(console, working_dir),
     )
 
-    container.register_service(
-        PublishManagerProtocol,
-        PublishManager(console, working_dir),
-        ServiceLifetime.SINGLETON,
+    container.register_singleton(
+        PublishManager,
+        factory=lambda: PublishManagerImpl(console, working_dir),
     )
 
-    container.register_service(
-        EnhancedFileSystemService,
-        EnhancedFileSystemService(),
-        ServiceLifetime.SINGLETON,
+    container.register_singleton(
+        FileSystemInterface,
+        factory=EnhancedFileSystemService,
     )
 
 
@@ -236,50 +232,87 @@ async def _run_workflow_iterations(
 
     # Start keep-alive task to prevent TCP timeouts
     keep_alive_task = asyncio.create_task(_keep_alive_heartbeat(job_id, context))
-    
+
     try:
-        for iteration in range(max_iterations):
-            _update_progress(
-                job_id,
-                {
-                    "type": "iteration",
-                    "iteration": iteration + 1,
-                    "max_iterations": max_iterations,
-                    "status": "running",
-                },
-                context,
+        result = await _execute_iterations_loop(
+            job_id, orchestrator, options, kwargs, max_iterations, context
+        )
+        return result
+    finally:
+        await _cleanup_keep_alive_task(keep_alive_task)
+
+
+async def _execute_iterations_loop(
+    job_id: str,
+    orchestrator: t.Any,
+    options: t.Any,
+    kwargs: dict[str, t.Any],
+    max_iterations: int,
+    context: t.Any,
+) -> dict[str, t.Any]:
+    """Execute the main iterations loop."""
+    for iteration in range(max_iterations):
+        _update_iteration_progress(job_id, iteration, max_iterations, context)
+
+        try:
+            success = await _execute_single_iteration(
+                job_id, orchestrator, options, iteration, context
             )
 
-            try:
-                success = await _execute_single_iteration(
-                    job_id, orchestrator, options, iteration, context
+            if success:
+                return await _handle_iteration_success(
+                    job_id, iteration, orchestrator, kwargs, context
                 )
 
-                if success:
-                    coverage_result = None
-                    if kwargs.get("boost_coverage", False):
-                        coverage_result = await _attempt_coverage_improvement(
-                            job_id, orchestrator, context
-                        )
-                    return _create_success_result(
-                        job_id, iteration + 1, context, coverage_result
-                    )
+            if iteration < max_iterations - 1:
+                await _handle_iteration_retry(job_id, iteration, context)
 
-                if iteration < max_iterations - 1:
-                    await _handle_iteration_retry(job_id, iteration, context)
+        except Exception as e:
+            return await _handle_iteration_error(job_id, iteration, e, context)
 
-            except Exception as e:
-                return await _handle_iteration_error(job_id, iteration, e, context)
+    return _create_failure_result(job_id, max_iterations, context)
 
-        return _create_failure_result(job_id, max_iterations, context)
-    finally:
-        # Cancel keep-alive task
-        if not keep_alive_task.cancelled():
-            keep_alive_task.cancel()
-            try:
-                await keep_alive_task
-            except asyncio.CancelledError:
-                pass
+
+def _update_iteration_progress(
+    job_id: str, iteration: int, max_iterations: int, context: t.Any
+) -> None:
+    """Update progress for current iteration."""
+    _update_progress(
+        job_id,
+        {
+            "type": "iteration",
+            "iteration": iteration + 1,
+            "max_iterations": max_iterations,
+            "status": "running",
+        },
+        context,
+    )
+
+
+async def _handle_iteration_success(
+    job_id: str,
+    iteration: int,
+    orchestrator: t.Any,
+    kwargs: dict[str, t.Any],
+    context: t.Any,
+) -> dict[str, t.Any]:
+    """Handle successful iteration."""
+    coverage_result = None
+    if kwargs.get("boost_coverage", False):
+        coverage_result = await _attempt_coverage_improvement(
+            job_id, orchestrator, context
+        )
+    return _create_success_result(job_id, iteration + 1, context, coverage_result)
+
+
+async def _cleanup_keep_alive_task(keep_alive_task: asyncio.Task[t.Any]) -> None:
+    """Clean up the keep-alive task."""
+    if not keep_alive_task.cancelled():
+        keep_alive_task.cancel()
+        try:
+            await keep_alive_task
+        except asyncio.CancelledError:
+            pass
 
 
 async def _keep_alive_heartbeat(job_id: str, context: t.Any) -> None:

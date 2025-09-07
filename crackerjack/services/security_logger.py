@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 import typing as t
 from enum import Enum
@@ -125,7 +126,14 @@ class SecurityLogger:
 
         if not self.logger.handlers:
             console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.WARNING)
+
+            # Only show security logs in debug modes
+            debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
+            if debug_enabled:
+                console_handler.setLevel(logging.WARNING)
+            else:
+                # In non-debug mode, suppress detailed security logs
+                console_handler.setLevel(logging.CRITICAL + 1)  # Effectively disable
 
             formatter = logging.Formatter(
                 "%(asctime)s - SECURITY - %(levelname)s-%(message)s"

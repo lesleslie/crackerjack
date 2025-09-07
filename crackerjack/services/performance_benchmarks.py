@@ -181,12 +181,12 @@ class PerformanceBenchmarkService:
                         check=False,
                         capture_output=True,
                         text=True,
-                        timeout=120,
+                        timeout=300,  # Fixed: Use 300s to match pytest config
                     )
                     duration = time.time() - start_time
                     durations.append(duration)
                 except subprocess.TimeoutExpired:
-                    durations.append(120.0)
+                    durations.append(300.0)  # Fixed: Use 300s to match timeout
                 except Exception:
                     durations.append(float("inf"))
 
