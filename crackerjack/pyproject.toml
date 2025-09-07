@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 [project]
 name = "crackerjack"
 version = "0.32.0"
-description = "Opinionated Python project management tool"
+description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
     { name = "Les Leslie", email = "les@lesleslie.com" },
@@ -111,6 +111,13 @@ fixable = [
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15
+
+[tool.crackerjack]
+# MCP Server Configuration
+mcp_http_port = 8676
+mcp_http_host = "127.0.0.1"
+mcp_websocket_port = 8675
+mcp_http_enabled = true
 
 [tool.codespell]
 skip = "*/data/*"

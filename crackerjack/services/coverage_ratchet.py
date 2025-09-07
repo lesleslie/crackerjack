@@ -58,8 +58,7 @@ class CoverageRatchetService:
 
     def update_baseline_coverage(self, new_coverage: float) -> bool:
         """Protocol method: Update baseline coverage."""
-        result = self.update_coverage(new_coverage)
-        return result.get("success", False)
+        return self.update_coverage(new_coverage).get("success", False)
 
     def is_coverage_regression(self, current_coverage: float) -> bool:
         """Protocol method: Check if coverage is a regression."""

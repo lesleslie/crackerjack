@@ -8,7 +8,7 @@ class TestCommandBuilder:
         self.pkg_path = pkg_path
 
     def build_command(self, options: OptionsProtocol) -> list[str]:
-        cmd = ["python", "-m", "pytest"]
+        cmd = ["uv", "run", "python", "-m", "pytest"]
 
         self._add_coverage_options(cmd, options)
         self._add_worker_options(cmd, options)
@@ -99,7 +99,7 @@ class TestCommandBuilder:
         cmd.append(str(self.pkg_path))
 
     def build_specific_test_command(self, test_pattern: str) -> list[str]:
-        cmd = ["python", "-m", "pytest", "-v"]
+        cmd = ["uv", "run", "python", "-m", "pytest", "-v"]
 
         cmd.extend(
             [
@@ -116,6 +116,8 @@ class TestCommandBuilder:
 
     def build_validation_command(self) -> list[str]:
         return [
+            "uv",
+            "run",
             "python",
             "-m",
             "pytest",

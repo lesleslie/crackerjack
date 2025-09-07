@@ -7,7 +7,12 @@ from typing import Final
 from rich.console import Console
 
 try:
-    from mcp.server.fastmcp import FastMCP
+    import tomli
+except ImportError:
+    tomli = None
+
+try:
+    from fastmcp import FastMCP
 
     _mcp_available = True
 except ImportError:
@@ -35,6 +40,42 @@ from .tools import (
 )
 
 console = Console()
+
+
+def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
+    """Load MCP server configuration from pyproject.toml."""
+    pyproject_path = project_path / "pyproject.toml"
+
+    if not pyproject_path.exists() or not tomli:
+        return {
+            "http_port": 8676,
+            "http_host": "127.0.0.1",
+            "websocket_port": 8675,
+            "http_enabled": False,
+        }
+
+    try:
+        with pyproject_path.open("rb") as f:
+            pyproject_data = tomli.load(f)
+
+        crackerjack_config = pyproject_data.get("tool", {}).get("crackerjack", {})
+
+        return {
+            "http_port": crackerjack_config.get("mcp_http_port", 8676),
+            "http_host": crackerjack_config.get("mcp_http_host", "127.0.0.1"),
+            "websocket_port": crackerjack_config.get("mcp_websocket_port", 8675),
+            "http_enabled": crackerjack_config.get("mcp_http_enabled", False),
+        }
+    except Exception as e:
+        console.print(
+            f"[yellow]Warning: Failed to load MCP config from pyproject.toml: {e}[/yellow]"
+        )
+        return {
+            "http_port": 8676,
+            "http_host": "127.0.0.1",
+            "websocket_port": 8675,
+            "http_enabled": False,
+        }
 
 
 class MCPOptions:
@@ -77,11 +118,14 @@ async def _start_websocket_server() -> bool:
     return False
 
 
-def create_mcp_server() -> t.Any | None:
+def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     if not MCP_AVAILABLE or FastMCP is None:
         return None
 
-    mcp_app = FastMCP("crackerjack - mcp-server")
+    if config is None:
+        config = {"http_port": 8676, "http_host": "127.0.0.1"}
+
+    mcp_app = FastMCP("crackerjack-mcp-server", streamable_http_path="/mcp")
 
     from crackerjack.slash_commands import get_slash_command_path
 
@@ -128,6 +172,8 @@ def handle_mcp_server_command(
     stop: bool = False,
     restart: bool = False,
     websocket_port: int | None = None,
+    http_mode: bool = False,
+    http_port: int | None = None,
 ) -> None:
     if stop or restart:
         console.print("[yellow]Stopping MCP servers...[/ yellow]")
@@ -157,7 +203,7 @@ def handle_mcp_server_command(
     if start or restart:
         console.print("[green]Starting MCP server...[/ green]")
         try:
-            main(".", websocket_port)
+            main(".", websocket_port, http_mode, http_port)
         except Exception as e:
             console.print(f"[red]Failed to start MCP server: {e}[/ red]")
 
@@ -177,12 +223,26 @@ def _stop_websocket_server() -> None:
             pass
 
 
-def main(project_path_arg: str = ".", websocket_port: int | None = None) -> None:
+def main(
+    project_path_arg: str = ".",
+    websocket_port: int | None = None,
+    http_mode: bool = False,
+    http_port: int | None = None,
+) -> None:
     if not MCP_AVAILABLE:
         return
 
     try:
         project_path = Path(project_path_arg).resolve()
+
+        # Load MCP configuration from pyproject.toml
+        mcp_config = _load_mcp_config(project_path)
+
+        # Override with command line arguments
+        if http_port:
+            mcp_config["http_port"] = http_port
+        if http_mode:
+            mcp_config["http_enabled"] = True
 
         config = MCPServerConfig(
             project_path=project_path,
@@ -197,19 +257,32 @@ def main(project_path_arg: str = ".", websocket_port: int | None = None) -> None
 
         _initialize_context(context)
 
-        mcp_app = create_mcp_server()
+        mcp_app = create_mcp_server(mcp_config)
         if not mcp_app:
             console.print("[red]Failed to create MCP server[/ red]")
             return
 
         console.print("[green]Starting Crackerjack MCP Server...[/ green]")
         console.print(f"Project path: {project_path}")
+
+        if mcp_config.get("http_enabled", False) or http_mode:
+            console.print(
+                f"[cyan]HTTP Mode: http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp[/ cyan]"
+            )
+        else:
+            console.print("[cyan]STDIO Mode[/ cyan]")
+
         if websocket_port:
             console.print(f"WebSocket port: {websocket_port}")
 
         console.print("[yellow]MCP app created, about to run...[/ yellow]")
         try:
-            mcp_app.run()
+            if mcp_config.get("http_enabled", False) or http_mode:
+                host = mcp_config.get("http_host", "127.0.0.1")
+                port = mcp_config.get("http_port", 8676)
+                mcp_app.run(transport="streamable-http", host=host, port=port)
+            else:
+                mcp_app.run()
         except Exception as e:
             console.print(f"[red]MCP run failed: {e}[/ red]")
             import traceback
@@ -232,7 +305,23 @@ def main(project_path_arg: str = ".", websocket_port: int | None = None) -> None
 if __name__ == "__main__":
     import sys
 
-    project_path = sys.argv[1] if len(sys.argv) > 1 else "."
-    websocket_port = int(sys.argv[2]) if len(sys.argv) > 2 else None
+    # Initialize defaults
+    project_path = "."
+    websocket_port = None
+    http_mode = "--http" in sys.argv
+    http_port = None
 
-    main(project_path, websocket_port)
+    # Parse project path from non-flag arguments
+    non_flag_args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+    if non_flag_args:
+        project_path = non_flag_args[0]
+        if len(non_flag_args) > 1 and non_flag_args[1].isdigit():
+            websocket_port = int(non_flag_args[1])
+
+    # Parse HTTP port flag
+    if "--http-port" in sys.argv:
+        port_idx = sys.argv.index("--http-port")
+        if port_idx + 1 < len(sys.argv):
+            http_port = int(sys.argv[port_idx + 1])
+
+    main(project_path, websocket_port, http_mode, http_port)

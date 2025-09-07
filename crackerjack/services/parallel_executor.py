@@ -426,8 +426,7 @@ class AsyncCommandExecutor:
         """Get cached command result."""
         from crackerjack.services.performance_cache import get_command_cache
 
-        command_cache = get_command_cache()
-        return command_cache.get_command_result(command, cwd)
+        return get_command_cache().get_command_result(command, cwd)
 
     async def _cache_result(
         self,

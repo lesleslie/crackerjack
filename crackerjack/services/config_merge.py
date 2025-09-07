@@ -325,7 +325,9 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         content = buffer.getvalue().decode("utf-8")
 
         # Clean trailing whitespace
-        content = self.filesystem.clean_trailing_whitespace_and_newlines(content)
+        from crackerjack.services.filesystem import FileSystemService
+
+        content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
 
         with target_path.open("w", encoding="utf-8") as f:
             f.write(content)
@@ -352,7 +354,9 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         content = content or ""
 
         # Clean trailing whitespace
-        content = self.filesystem.clean_trailing_whitespace_and_newlines(content)
+        from crackerjack.services.filesystem import FileSystemService
+
+        content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
 
         with target_path.open("w") as f:
             f.write(content)

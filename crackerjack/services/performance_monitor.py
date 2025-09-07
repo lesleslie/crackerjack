@@ -367,54 +367,81 @@ class PerformanceMonitor:
             if not recent_workflows:
                 return {"message": "No completed workflows to analyze"}
 
-            # Calculate aggregate statistics
-            total_duration = sum(w.total_duration_seconds for w in recent_workflows)
-            avg_duration = total_duration / len(recent_workflows)
-            avg_score = sum(w.performance_score for w in recent_workflows) / len(
-                recent_workflows
-            )
-            success_rate = sum(1 for w in recent_workflows if w.overall_success) / len(
+            # Calculate aggregate statistics using helper methods
+            basic_stats = self._calculate_basic_workflow_stats(recent_workflows)
+            cache_stats = self._calculate_cache_statistics(recent_workflows)
+            parallel_stats = self._calculate_parallelization_statistics(
                 recent_workflows
             )
 
-            # Cache statistics
-            total_cache_hits = sum(
-                sum(p.cache_hits for p in w.phases) for w in recent_workflows
-            )
-            total_cache_misses = sum(
-                sum(p.cache_misses for p in w.phases) for w in recent_workflows
-            )
-            cache_hit_ratio = (
-                total_cache_hits / (total_cache_hits + total_cache_misses)
-                if total_cache_hits + total_cache_misses > 0
-                else 0
+            return (
+                {
+                    "workflows_analyzed": len(recent_workflows),
+                }
+                | basic_stats
+                | cache_stats
+                | parallel_stats
+                | {}
             )
 
-            # Parallelization statistics
-            total_parallel = sum(
-                sum(p.parallel_operations for p in w.phases) for w in recent_workflows
-            )
-            total_sequential = sum(
-                sum(p.sequential_operations for p in w.phases) for w in recent_workflows
-            )
-            parallel_ratio = (
-                total_parallel / (total_parallel + total_sequential)
-                if total_parallel + total_sequential > 0
-                else 0
-            )
+    def _calculate_basic_workflow_stats(
+        self, workflows: list[WorkflowPerformance]
+    ) -> dict[str, Any]:
+        """Calculate basic workflow statistics (duration, score, success rate)."""
+        total_duration = sum(w.total_duration_seconds for w in workflows)
+        avg_duration = total_duration / len(workflows)
+        avg_score = sum(w.performance_score for w in workflows) / len(workflows)
+        success_rate = sum(1 for w in workflows if w.overall_success) / len(workflows)
 
-            return {
-                "workflows_analyzed": len(recent_workflows),
-                "avg_duration_seconds": round(avg_duration, 2),
-                "avg_performance_score": round(avg_score, 1),
-                "success_rate": round(success_rate, 2),
-                "cache_hit_ratio": round(cache_hit_ratio, 2),
-                "parallel_operation_ratio": round(parallel_ratio, 2),
-                "total_cache_hits": total_cache_hits,
-                "total_cache_misses": total_cache_misses,
-                "total_parallel_operations": total_parallel,
-                "total_sequential_operations": total_sequential,
-            }
+        return {
+            "avg_duration_seconds": round(avg_duration, 2),
+            "avg_performance_score": round(avg_score, 1),
+            "success_rate": round(success_rate, 2),
+        }
+
+    def _calculate_cache_statistics(
+        self, workflows: list[WorkflowPerformance]
+    ) -> dict[str, Any]:
+        """Calculate cache hit/miss statistics across workflows."""
+        total_cache_hits = sum(sum(p.cache_hits for p in w.phases) for w in workflows)
+        total_cache_misses = sum(
+            sum(p.cache_misses for p in w.phases) for w in workflows
+        )
+
+        cache_hit_ratio = (
+            total_cache_hits / (total_cache_hits + total_cache_misses)
+            if total_cache_hits + total_cache_misses > 0
+            else 0
+        )
+
+        return {
+            "cache_hit_ratio": round(cache_hit_ratio, 2),
+            "total_cache_hits": total_cache_hits,
+            "total_cache_misses": total_cache_misses,
+        }
+
+    def _calculate_parallelization_statistics(
+        self, workflows: list[WorkflowPerformance]
+    ) -> dict[str, Any]:
+        """Calculate parallelization statistics across workflows."""
+        total_parallel = sum(
+            sum(p.parallel_operations for p in w.phases) for w in workflows
+        )
+        total_sequential = sum(
+            sum(p.sequential_operations for p in w.phases) for w in workflows
+        )
+
+        parallel_ratio = (
+            total_parallel / (total_parallel + total_sequential)
+            if total_parallel + total_sequential > 0
+            else 0
+        )
+
+        return {
+            "parallel_operation_ratio": round(parallel_ratio, 2),
+            "total_parallel_operations": total_parallel,
+            "total_sequential_operations": total_sequential,
+        }
 
     def get_benchmark_trends(self) -> dict[str, dict[str, Any]]:
         """Get benchmark trends for all operations."""
@@ -426,35 +453,43 @@ class PerformanceMonitor:
                     continue
 
                 history_list = list(history)
-                avg_duration = sum(history_list) / len(history_list)
-                min_duration = min(history_list)
-                max_duration = max(history_list)
+                basic_stats = self._calculate_benchmark_basic_stats(history_list)
+                trend_percentage = self._calculate_trend_percentage(history_list)
 
-                # Calculate trend (improvement over time)
-                if len(history_list) >= 5:
-                    recent_avg = sum(history_list[-5:]) / 5
-                    older_avg = (
-                        sum(history_list[:-5]) / len(history_list[:-5])
-                        if len(history_list) > 5
-                        else recent_avg
-                    )
-                    trend_percentage = (
-                        ((older_avg - recent_avg) / older_avg * 100)
-                        if older_avg > 0
-                        else 0
-                    )
-                else:
-                    trend_percentage = 0
-
-                trends[operation_name] = {
-                    "avg_duration_seconds": round(avg_duration, 3),
-                    "min_duration_seconds": round(min_duration, 3),
-                    "max_duration_seconds": round(max_duration, 3),
+                trends[operation_name] = basic_stats | {
                     "trend_percentage": round(trend_percentage, 1),
                     "sample_count": len(history_list),
                 }
 
         return trends
+
+    def _calculate_benchmark_basic_stats(
+        self, history_list: list[float]
+    ) -> dict[str, float]:
+        """Calculate basic statistics for benchmark history."""
+        avg_duration = sum(history_list) / len(history_list)
+        min_duration = min(history_list)
+        max_duration = max(history_list)
+
+        return {
+            "avg_duration_seconds": round(avg_duration, 3),
+            "min_duration_seconds": round(min_duration, 3),
+            "max_duration_seconds": round(max_duration, 3),
+        }
+
+    def _calculate_trend_percentage(self, history_list: list[float]) -> float:
+        """Calculate trend percentage for benchmark improvement."""
+        if len(history_list) < 5:
+            return 0.0
+
+        recent_avg = sum(history_list[-5:]) / 5
+        older_avg = (
+            sum(history_list[:-5]) / len(history_list[:-5])
+            if len(history_list) > 5
+            else recent_avg
+        )
+
+        return ((older_avg - recent_avg) / older_avg * 100) if older_avg > 0 else 0.0
 
     def export_performance_data(self, output_path: Path) -> None:
         """Export performance data to JSON file."""
@@ -501,40 +536,52 @@ class PerformanceMonitor:
         """Check for performance warnings and log them only in debug mode."""
         warnings = []
 
-        # Check overall duration
-        if (
-            workflow.total_duration_seconds
-            > self._warning_thresholds["duration_seconds"]
-        ):
-            warnings.append(
-                f"Slow workflow duration: {workflow.total_duration_seconds:.1f}s "
-                f"(threshold: {self._warning_thresholds['duration_seconds']}s)"
-            )
+        # Collect warnings from different checks
+        warnings.extend(self._check_duration_warning(workflow))
+        warnings.extend(self._check_memory_warning(workflow))
+        warnings.extend(self._check_cache_warning(workflow))
 
-        # Check memory usage
-        max_memory = max((p.memory_peak_mb for p in workflow.phases), default=0)
-        if max_memory > self._warning_thresholds["memory_mb"]:
-            warnings.append(
-                f"High memory usage: {max_memory:.1f}MB "
-                f"(threshold: {self._warning_thresholds['memory_mb']}MB)"
-            )
-
-        # Check cache efficiency
-        total_hits = sum(p.cache_hits for p in workflow.phases)
-        total_misses = sum(p.cache_misses for p in workflow.phases)
-        if total_hits + total_misses > 0:
-            hit_ratio = total_hits / (total_hits + total_misses)
-            if hit_ratio < self._warning_thresholds["cache_hit_ratio"]:
-                warnings.append(
-                    f"Low cache hit ratio: {hit_ratio:.2f} "
-                    f"(threshold: {self._warning_thresholds['cache_hit_ratio']})"
-                )
-
-        # Log warnings at debug level to avoid console spam
+        # Log all warnings at debug level to avoid console spam
         for warning in warnings:
             self._logger.debug(
                 f"Performance warning for {workflow.workflow_id}: {warning}"
             )
+
+    def _check_duration_warning(self, workflow: WorkflowPerformance) -> list[str]:
+        """Check for duration-based warnings."""
+        if (
+            workflow.total_duration_seconds
+            > self._warning_thresholds["duration_seconds"]
+        ):
+            return [
+                f"Slow workflow duration: {workflow.total_duration_seconds:.1f}s "
+                f"(threshold: {self._warning_thresholds['duration_seconds']}s)"
+            ]
+        return []
+
+    def _check_memory_warning(self, workflow: WorkflowPerformance) -> list[str]:
+        """Check for memory usage warnings."""
+        max_memory = max((p.memory_peak_mb for p in workflow.phases), default=0)
+        if max_memory > self._warning_thresholds["memory_mb"]:
+            return [
+                f"High memory usage: {max_memory:.1f}MB "
+                f"(threshold: {self._warning_thresholds['memory_mb']}MB)"
+            ]
+        return []
+
+    def _check_cache_warning(self, workflow: WorkflowPerformance) -> list[str]:
+        """Check for cache efficiency warnings."""
+        total_hits = sum(p.cache_hits for p in workflow.phases)
+        total_misses = sum(p.cache_misses for p in workflow.phases)
+
+        if total_hits + total_misses > 0:
+            hit_ratio = total_hits / (total_hits + total_misses)
+            if hit_ratio < self._warning_thresholds["cache_hit_ratio"]:
+                return [
+                    f"Low cache hit ratio: {hit_ratio:.2f} "
+                    f"(threshold: {self._warning_thresholds['cache_hit_ratio']})"
+                ]
+        return []
 
 
 # Global monitor instance

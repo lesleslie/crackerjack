@@ -80,6 +80,14 @@ class EnterpriseConfig:
 
 
 @dataclass
+class MCPServerConfig:
+    http_port: int = 8676
+    http_host: str = "127.0.0.1"
+    websocket_port: int = 8675
+    http_enabled: bool = False
+
+
+@dataclass
 class WorkflowOptions:
     cleaning: CleaningConfig = field(default_factory=CleaningConfig)
     hooks: HookConfig = field(default_factory=HookConfig)
@@ -91,3 +99,4 @@ class WorkflowOptions:
     progress: ProgressConfig = field(default_factory=ProgressConfig)
     cleanup: CleanupConfig = field(default_factory=CleanupConfig)
     enterprise: EnterpriseConfig = field(default_factory=EnterpriseConfig)
+    mcp_server: MCPServerConfig = field(default_factory=MCPServerConfig)

@@ -281,9 +281,9 @@ class GitService:
     def get_commit_message_suggestions(self, changed_files: list[str]) -> list[str]:
         if not changed_files:
             return ["Update project files"]
-        file_categories = self._categorize_files(files)
+        file_categories = self._categorize_files(changed_files)
         messages = self._generate_category_messages(file_categories)
-        messages.extend(self._generate_specific_messages(files))
+        messages.extend(self._generate_specific_messages(changed_files))
 
         return messages[:5]
 

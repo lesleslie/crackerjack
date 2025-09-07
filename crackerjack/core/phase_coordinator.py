@@ -103,11 +103,11 @@ class PhaseCoordinator(ErrorHandlingMixin):
             return False
 
     def _display_cleaning_header(self) -> None:
-        self.console.print("\n" + "-" * 80)
+        self.console.print("\n" + "-" * 40)
         self.console.print(
             "[bold bright_magenta]🛠️ SETUP[/bold bright_magenta] [bold bright_white]Initializing project structure[/bold bright_white]",
         )
-        self.console.print("-" * 80 + "\n")
+        self.console.print("-" * 40 + "\n")
         self.console.print("[yellow]🧹[/yellow] Starting code cleaning...")
 
     def _execute_cleaning_process(self) -> bool:
@@ -415,11 +415,11 @@ class PhaseCoordinator(ErrorHandlingMixin):
             return True
         self.session.track_task("testing", "Test execution")
         try:
-            self.console.print("\n" + "-" * 80)
+            self.console.print("\n" + "-" * 40)
             self.console.print(
                 "[bold bright_blue]🧪 TESTS[/ bold bright_blue] [bold bright_white]Running test suite[/ bold bright_white]",
             )
-            self.console.print("-" * 80 + "\n")
+            self.console.print("-" * 40 + "\n")
             if not self.test_manager.validate_test_environment():
                 self.session.fail_task("testing", "Test environment validation failed")
                 return False
@@ -639,32 +639,59 @@ class PhaseCoordinator(ErrorHandlingMixin):
 
         for attempt in range(max_retries):
             try:
-                results = hook_runner()
-                summary = self.hook_manager.get_hook_summary(results)
+                execution_result = self._execute_single_hook_attempt(hook_runner)
+                if execution_result is None:
+                    return False
 
-                if self._has_hook_failures(summary):
-                    if self._should_retry_hooks(
-                        hook_type,
-                        attempt,
-                        max_retries,
-                        results,
-                    ):
-                        continue
+                results, summary = execution_result
+                should_continue = self._process_hook_results(
+                    hook_type, options, summary, results, attempt, max_retries
+                )
 
-                    return self._handle_hook_failures(
-                        hook_type,
-                        options,
-                        summary,
-                        results,
-                        attempt,
-                        max_retries,
-                    )
-                return self._handle_hook_success(hook_type, summary)
+                if should_continue == "continue":
+                    continue
+                elif should_continue == "success":
+                    return True
+                else:
+                    return False
 
             except Exception as e:
                 return self._handle_hook_exception(hook_type, e)
 
         return False
+
+    def _execute_single_hook_attempt(
+        self, hook_runner: t.Callable[[], list[t.Any]]
+    ) -> tuple[list[t.Any], dict[str, t.Any]] | None:
+        """Execute a single hook attempt and return results and summary."""
+        try:
+            results = hook_runner()
+            summary = self.hook_manager.get_hook_summary(results)
+            return results, summary
+        except Exception:
+            return None
+
+    def _process_hook_results(
+        self,
+        hook_type: str,
+        options: OptionsProtocol,
+        summary: dict[str, t.Any],
+        results: list[t.Any],
+        attempt: int,
+        max_retries: int,
+    ) -> str:
+        """Process hook results and return action: 'continue', 'success', or 'failure'."""
+        if not self._has_hook_failures(summary):
+            self._handle_hook_success(hook_type, summary)
+            return "success"
+
+        if self._should_retry_hooks(hook_type, attempt, max_retries, results):
+            return "continue"
+
+        self._handle_hook_failures(
+            hook_type, options, summary, results, attempt, max_retries
+        )
+        return "failure"
 
     def _initialize_hook_execution(self, hook_type: str) -> None:
         self.logger.info(f"Starting {hook_type} hooks execution")
@@ -835,33 +862,76 @@ class PhaseCoordinator(ErrorHandlingMixin):
         self._initialize_hook_execution(hook_type)
 
         try:
-            # For now, maintain sequential execution for safety
-            # Future enhancement: implement parallel execution for independent hooks
-            results = hook_runner()
-            summary = self.hook_manager.get_hook_summary(results)
-
-            if self._has_hook_failures(summary):
-                # Try autofix for fast hooks before giving up
-                if hook_type == "fast":
-                    if self._attempt_autofix_for_fast_hooks(results):
-                        self.console.print(
-                            "[yellow]🔧[/ yellow] Applied autofixes for fast hooks, retrying...",
-                        )
-                        # Retry after autofix
-                        results = hook_runner()
-                        summary = self.hook_manager.get_hook_summary(results)
-
-                        if not self._has_hook_failures(summary):
-                            return self._handle_hook_success(hook_type, summary)
-
-                return self._handle_hook_failures(
-                    hook_type, options, summary, results, 0, 1
-                )
-
-            return self._handle_hook_success(hook_type, summary)
+            # Execute hooks and handle results
+            return await self._process_parallel_hook_execution(
+                hook_type, hook_runner, options
+            )
 
         except Exception as e:
             return self._handle_hook_exception(hook_type, e)
+
+    async def _process_parallel_hook_execution(
+        self,
+        hook_type: str,
+        hook_runner: t.Callable[[], list[t.Any]],
+        options: OptionsProtocol,
+    ) -> bool:
+        """Process hook execution with autofix retry logic."""
+        # For now, maintain sequential execution for safety
+        # Future enhancement: implement parallel execution for independent hooks
+        results = hook_runner()
+        summary = self.hook_manager.get_hook_summary(results)
+
+        if not self._has_hook_failures(summary):
+            return self._handle_hook_success(hook_type, summary)
+
+        # Handle failures with potential autofix retry
+        return self._handle_parallel_hook_failures(
+            hook_type, hook_runner, options, results, summary
+        )
+
+    def _handle_parallel_hook_failures(
+        self,
+        hook_type: str,
+        hook_runner: t.Callable[[], list[t.Any]],
+        options: OptionsProtocol,
+        results: list[t.Any],
+        summary: dict[str, t.Any],
+    ) -> bool:
+        """Handle hook failures with autofix retry for fast hooks."""
+        if hook_type != "fast":
+            return self._handle_hook_failures(
+                hook_type, options, summary, results, 0, 1
+            )
+
+        # Try autofix for fast hooks
+        if not self._attempt_autofix_for_fast_hooks(results):
+            return self._handle_hook_failures(
+                hook_type, options, summary, results, 0, 1
+            )
+
+        # Retry after successful autofix
+        return self._retry_hooks_after_autofix(hook_type, hook_runner, options)
+
+    def _retry_hooks_after_autofix(
+        self,
+        hook_type: str,
+        hook_runner: t.Callable[[], list[t.Any]],
+        options: OptionsProtocol,
+    ) -> bool:
+        """Retry hooks after autofix was applied."""
+        self.console.print(
+            "[yellow]🔧[/ yellow] Applied autofixes for fast hooks, retrying..."
+        )
+
+        # Retry after autofix
+        results = hook_runner()
+        summary = self.hook_manager.get_hook_summary(results)
+
+        if not self._has_hook_failures(summary):
+            return self._handle_hook_success(hook_type, summary)
+
+        return self._handle_hook_failures(hook_type, options, summary, results, 0, 1)
 
     @property
     def autofix_coordinator(self):

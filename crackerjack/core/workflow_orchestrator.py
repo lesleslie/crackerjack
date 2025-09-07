@@ -278,6 +278,25 @@ class WorkflowPipeline:
     ) -> bool:
         iteration = self._start_iteration_tracking(options)
 
+        # Execute initial phases (fast hooks + optional cleaning)
+        if not await self._execute_initial_phases(options, workflow_id, iteration):
+            return False
+
+        # Run main quality phases
+        (
+            testing_passed,
+            comprehensive_passed,
+        ) = await self._run_main_quality_phases_async(options, workflow_id)
+
+        # Handle workflow completion based on agent mode
+        return await self._handle_workflow_completion(
+            options, iteration, testing_passed, comprehensive_passed, workflow_id
+        )
+
+    async def _execute_initial_phases(
+        self, options: OptionsProtocol, workflow_id: str, iteration: int
+    ) -> bool:
+        """Execute fast hooks and optional code cleaning phases."""
         # Fast hooks with performance monitoring
         with phase_monitor(workflow_id, "fast_hooks") as monitor:
             if not await self._run_initial_fast_hooks_async(
@@ -285,21 +304,33 @@ class WorkflowPipeline:
             ):
                 return False
 
-        # Run code cleaning after fast hooks but before comprehensive hooks
-        if getattr(options, "clean", False):
-            with phase_monitor(workflow_id, "code_cleaning"):
-                if not self._run_code_cleaning_phase(options):
-                    return False
-                # Run fast hooks again after cleaning for sanity check
-                if not self._run_post_cleaning_fast_hooks(options):
-                    return False
-                self._mark_code_cleaning_complete()
+        # Run code cleaning if enabled
+        return self._execute_optional_cleaning_phase(options)
 
-        (
-            testing_passed,
-            comprehensive_passed,
-        ) = await self._run_main_quality_phases_async(options, workflow_id)
+    def _execute_optional_cleaning_phase(self, options: OptionsProtocol) -> bool:
+        """Execute code cleaning phase if enabled."""
+        if not getattr(options, "clean", False):
+            return True
 
+        if not self._run_code_cleaning_phase(options):
+            return False
+
+        # Run fast hooks again after cleaning for sanity check
+        if not self._run_post_cleaning_fast_hooks(options):
+            return False
+
+        self._mark_code_cleaning_complete()
+        return True
+
+    async def _handle_workflow_completion(
+        self,
+        options: OptionsProtocol,
+        iteration: int,
+        testing_passed: bool,
+        comprehensive_passed: bool,
+        workflow_id: str = "unknown",
+    ) -> bool:
+        """Handle workflow completion based on agent mode."""
         if options.ai_agent:
             return await self._handle_ai_agent_workflow(
                 options, iteration, testing_passed, comprehensive_passed, workflow_id
@@ -365,49 +396,86 @@ class WorkflowPipeline:
         comprehensive_passed: bool,
         workflow_id: str = "unknown",
     ) -> bool:
-        # Check security gates for publishing operations
+        # Handle security gates first
+        if not await self._process_security_gates(options):
+            return False
+
+        # Determine if AI fixing is needed
+        needs_ai_fixing = self._determine_ai_fixing_needed(
+            testing_passed, comprehensive_passed, bool(options.publish or options.all)
+        )
+
+        if needs_ai_fixing:
+            return await self._execute_ai_fixing_workflow(options, iteration)
+
+        # Handle success case without AI fixing
+        return self._finalize_ai_workflow_success(
+            options, iteration, testing_passed, comprehensive_passed
+        )
+
+    async def _process_security_gates(self, options: OptionsProtocol) -> bool:
+        """Process security gates for publishing operations."""
         publishing_requested, security_blocks = (
             self._check_security_gates_for_publishing(options)
         )
 
-        if publishing_requested and security_blocks:
-            # Try AI fixing for security issues, then re-check
-            security_fix_result = await self._handle_security_gate_failure(
-                options, allow_ai_fixing=True
-            )
-            if not security_fix_result:
-                return False
-            # If AI fixing resolved security issues, continue with normal flow
+        if not (publishing_requested and security_blocks):
+            return True
 
-        # Determine if we need AI fixing based on publishing requirements
-        needs_ai_fixing = self._determine_ai_fixing_needed(
+        # Try AI fixing for security issues, then re-check
+        security_fix_result = await self._handle_security_gate_failure(
+            options, allow_ai_fixing=True
+        )
+        return security_fix_result
+
+    async def _execute_ai_fixing_workflow(
+        self, options: OptionsProtocol, iteration: int
+    ) -> bool:
+        """Execute AI fixing workflow and handle debugging."""
+        success = await self._run_ai_agent_fixing_phase(options)
+        if self._should_debug():
+            self.debugger.log_iteration_end(iteration, success)
+        return success
+
+    def _finalize_ai_workflow_success(
+        self,
+        options: OptionsProtocol,
+        iteration: int,
+        testing_passed: bool,
+        comprehensive_passed: bool,
+    ) -> bool:
+        """Finalize AI workflow when no fixing is needed."""
+        publishing_requested = bool(options.publish or options.all)
+
+        final_success = self._determine_workflow_success(
             testing_passed, comprehensive_passed, publishing_requested
         )
 
-        if needs_ai_fixing:
-            success = await self._run_ai_agent_fixing_phase(options)
-            if self._should_debug():
-                self.debugger.log_iteration_end(iteration, success)
-            return success
-
-        # Determine final success based on publishing requirements
-        final_success = self._determine_workflow_success(
-            testing_passed,
-            comprehensive_passed,
-            publishing_requested,
+        self._show_partial_success_warning_if_needed(
+            publishing_requested, final_success, testing_passed, comprehensive_passed
         )
-
-        # Show security audit warning for partial success in publishing workflows
-        if (
-            publishing_requested
-            and final_success
-            and not (testing_passed and comprehensive_passed)
-        ):
-            self._show_security_audit_warning()
 
         if self._should_debug():
             self.debugger.log_iteration_end(iteration, final_success)
+
         return final_success
+
+    def _show_partial_success_warning_if_needed(
+        self,
+        publishing_requested: bool,
+        final_success: bool,
+        testing_passed: bool,
+        comprehensive_passed: bool,
+    ) -> None:
+        """Show security audit warning for partial success in publishing workflows."""
+        should_show_warning = (
+            publishing_requested
+            and final_success
+            and not (testing_passed and comprehensive_passed)
+        )
+
+        if should_show_warning:
+            self._show_security_audit_warning()
 
     async def _handle_standard_workflow(
         self,
@@ -423,9 +491,7 @@ class WorkflowPipeline:
 
         if publishing_requested and security_blocks:
             # Standard workflow cannot bypass security gates
-            return await self._handle_security_gate_failure(
-                options, allow_ai_fixing=False
-            )
+            return await self._handle_security_gate_failure(options)
 
         # Determine success based on publishing requirements
         success = self._determine_workflow_success(
@@ -613,35 +679,66 @@ class WorkflowPipeline:
             self._mcp_state_manager.update_stage_status("comprehensive", "completed")
 
     async def _run_ai_agent_fixing_phase(self, options: OptionsProtocol) -> bool:
-        self._update_mcp_status("ai_fixing", "running")
-        self.logger.info("Starting AI agent fixing phase")
-        self._log_debug_phase_start()
+        self._initialize_ai_fixing_phase(options)
 
         try:
-            # If code cleaning is enabled and hasn't run yet, run it first
-            # to provide cleaner, more standardized code for the AI agents
-            if getattr(options, "clean", False) and not self._has_code_cleaning_run():
-                self.console.print(
-                    "\n[bold yellow]🤖 AI agents recommend running code cleaning first for better results...[/bold yellow]"
-                )
-                if self._run_code_cleaning_phase(options):
-                    # Run fast hooks sanity check after cleaning
-                    self._run_post_cleaning_fast_hooks(options)
-                    self._mark_code_cleaning_complete()
+            # Prepare environment for AI agents
+            self._prepare_ai_fixing_environment(options)
 
-            agent_coordinator = self._setup_agent_coordinator()
-            issues = await self._collect_issues_from_failures()
+            # Setup coordinator and collect issues
+            agent_coordinator, issues = await self._setup_ai_fixing_workflow()
 
             if not issues:
                 return self._handle_no_issues_found()
 
-            self.logger.info(f"AI agents will attempt to fix {len(issues)} issues")
-            fix_result = await agent_coordinator.handle_issues(issues)
-
-            return await self._process_fix_results(options, fix_result)
+            # Execute AI fixing
+            return await self._execute_ai_fixes(options, agent_coordinator, issues)
 
         except Exception as e:
             return self._handle_fixing_phase_error(e)
+
+    def _initialize_ai_fixing_phase(self, options: OptionsProtocol) -> None:
+        """Initialize the AI fixing phase with status updates and logging."""
+        self._update_mcp_status("ai_fixing", "running")
+        self.logger.info("Starting AI agent fixing phase")
+        self._log_debug_phase_start()
+
+    def _prepare_ai_fixing_environment(self, options: OptionsProtocol) -> None:
+        """Prepare the environment for AI agents by running optional code cleaning."""
+        should_run_cleaning = (
+            getattr(options, "clean", False) and not self._has_code_cleaning_run()
+        )
+
+        if not should_run_cleaning:
+            return
+
+        self.console.print(
+            "\n[bold yellow]🤖 AI agents recommend running code cleaning first for better results...[/bold yellow]"
+        )
+
+        if self._run_code_cleaning_phase(options):
+            # Run fast hooks sanity check after cleaning
+            self._run_post_cleaning_fast_hooks(options)
+            self._mark_code_cleaning_complete()
+
+    async def _setup_ai_fixing_workflow(
+        self,
+    ) -> tuple[AgentCoordinator, list[t.Any]]:
+        """Setup agent coordinator and collect issues to fix."""
+        agent_coordinator = self._setup_agent_coordinator()
+        issues = await self._collect_issues_from_failures()
+        return agent_coordinator, issues
+
+    async def _execute_ai_fixes(
+        self,
+        options: OptionsProtocol,
+        agent_coordinator: AgentCoordinator,
+        issues: list[t.Any],
+    ) -> bool:
+        """Execute AI fixes and process results."""
+        self.logger.info(f"AI agents will attempt to fix {len(issues)} issues")
+        fix_result = await agent_coordinator.handle_issues(issues)
+        return await self._process_fix_results(options, fix_result)
 
     def _log_debug_phase_start(self) -> None:
         if self._should_debug():
@@ -1328,62 +1425,68 @@ class WorkflowPipeline:
 
     def _get_recent_fast_hook_results(self) -> list[t.Any]:
         """Get recent fast hook results from session tracker."""
-        results = []
-
         # Try to get results from session tracker
-        if hasattr(self.session, "session_tracker") and self.session.session_tracker:
-            for task_id, task_data in self.session.session_tracker.tasks.items():
-                if task_id == "fast_hooks" and hasattr(task_data, "hook_results"):
-                    if task_data.hook_results:
-                        results.extend(task_data.hook_results)
+        results = self._extract_hook_results_from_session("fast_hooks")
 
         # If no results from session, create mock failed results for critical hooks
-        # This ensures we fail securely when we can't determine actual status
         if not results:
-            critical_fast_hooks = ["gitleaks"]
-            for hook_name in critical_fast_hooks:
-                # Create a mock result that appears to have failed
-                # This will trigger security blocking if we can't determine actual status
-                mock_result = type(
-                    "MockResult",
-                    (),
-                    {
-                        "name": hook_name,
-                        "status": "unknown",  # Unknown status = fail securely
-                        "output": "Unable to determine hook status",
-                    },
-                )()
-                results.append(mock_result)
+            results = self._create_mock_hook_results(["gitleaks"])
 
         return results
 
-    def _get_recent_comprehensive_hook_results(self) -> list[t.Any]:
-        """Get recent comprehensive hook results from session tracker."""
+    def _extract_hook_results_from_session(self, hook_type: str) -> list[t.Any]:
+        """Extract hook results from session tracker for given hook type."""
         results = []
 
+        session_tracker = self._get_session_tracker()
+        if not session_tracker:
+            return results
+
+        for task_id, task_data in session_tracker.tasks.items():
+            if task_id == hook_type and hasattr(task_data, "hook_results"):
+                if task_data.hook_results:
+                    results.extend(task_data.hook_results)
+
+        return results
+
+    def _get_session_tracker(self) -> t.Any | None:
+        """Get session tracker if available."""
+        return (
+            getattr(self.session, "session_tracker", None)
+            if hasattr(self.session, "session_tracker")
+            else None
+        )
+
+    def _create_mock_hook_results(self, critical_hooks: list[str]) -> list[t.Any]:
+        """Create mock failed results for critical hooks to fail securely."""
+        results = []
+
+        for hook_name in critical_hooks:
+            mock_result = self._create_mock_hook_result(hook_name)
+            results.append(mock_result)
+
+        return results
+
+    def _create_mock_hook_result(self, hook_name: str) -> t.Any:
+        """Create a mock result that appears to have failed for security purposes."""
+        return type(
+            "MockResult",
+            (),
+            {
+                "name": hook_name,
+                "status": "unknown",  # Unknown status = fail securely
+                "output": "Unable to determine hook status",
+            },
+        )()
+
+    def _get_recent_comprehensive_hook_results(self) -> list[t.Any]:
+        """Get recent comprehensive hook results from session tracker."""
         # Try to get results from session tracker
-        if hasattr(self.session, "session_tracker") and self.session.session_tracker:
-            for task_id, task_data in self.session.session_tracker.tasks.items():
-                if task_id == "comprehensive_hooks" and hasattr(
-                    task_data, "hook_results"
-                ):
-                    if task_data.hook_results:
-                        results.extend(task_data.hook_results)
+        results = self._extract_hook_results_from_session("comprehensive_hooks")
 
         # If no results from session, create mock failed results for critical hooks
         if not results:
-            critical_comprehensive_hooks = ["bandit", "pyright"]
-            for hook_name in critical_comprehensive_hooks:
-                mock_result = type(
-                    "MockResult",
-                    (),
-                    {
-                        "name": hook_name,
-                        "status": "unknown",  # Unknown status = fail securely
-                        "output": "Unable to determine hook status",
-                    },
-                )()
-                results.append(mock_result)
+            results = self._create_mock_hook_results(["bandit", "pyright"])
 
         return results
 
@@ -1487,35 +1590,61 @@ class WorkflowPipeline:
         with phase_monitor(workflow_id, "hooks") as monitor:
             self._update_hooks_status_running()
 
-            # Run fast hooks first
-            fast_hooks_success = self._run_fast_hooks_phase(options)
-            if fast_hooks_success:
-                monitor.record_sequential_op()
-
+            # Execute fast hooks phase
+            fast_hooks_success = self._execute_monitored_fast_hooks_phase(
+                options, monitor
+            )
             if not fast_hooks_success:
                 self._handle_hooks_completion(False)
                 return False
 
-            # Run code cleaning after fast hooks but before comprehensive hooks
-            if getattr(options, "clean", False):
-                if not self._run_code_cleaning_phase(options):
-                    self._handle_hooks_completion(False)
-                    return False
-                # Run fast hooks again after cleaning for sanity check
-                if not self._run_post_cleaning_fast_hooks(options):
-                    self._handle_hooks_completion(False)
-                    return False
-                self._mark_code_cleaning_complete()
+            # Execute optional cleaning phase
+            if not self._execute_monitored_cleaning_phase(options):
+                self._handle_hooks_completion(False)
+                return False
 
-            # Run comprehensive hooks
-            comprehensive_success = self._run_comprehensive_hooks_phase(options)
-            if comprehensive_success:
-                monitor.record_sequential_op()
+            # Execute comprehensive hooks phase
+            comprehensive_success = self._execute_monitored_comprehensive_phase(
+                options, monitor
+            )
 
+            # Complete workflow
             hooks_success = fast_hooks_success and comprehensive_success
             self._handle_hooks_completion(hooks_success)
-
             return hooks_success
+
+    def _execute_monitored_fast_hooks_phase(
+        self, options: OptionsProtocol, monitor: t.Any
+    ) -> bool:
+        """Execute fast hooks phase with monitoring."""
+        fast_hooks_success = self._run_fast_hooks_phase(options)
+        if fast_hooks_success:
+            monitor.record_sequential_op()
+        return fast_hooks_success
+
+    def _execute_monitored_cleaning_phase(self, options: OptionsProtocol) -> bool:
+        """Execute optional code cleaning phase."""
+        if not getattr(options, "clean", False):
+            return True
+
+        if not self._run_code_cleaning_phase(options):
+            return False
+
+        # Run fast hooks again after cleaning for sanity check
+        if not self._run_post_cleaning_fast_hooks(options):
+            return False
+
+        self._mark_code_cleaning_complete()
+        return True
+
+    def _execute_monitored_comprehensive_phase(
+        self, options: OptionsProtocol, monitor: t.Any
+    ) -> bool:
+        """Execute comprehensive hooks phase with monitoring."""
+        comprehensive_success = self._run_comprehensive_hooks_phase(options)
+        if comprehensive_success:
+            monitor.record_sequential_op()
+        return comprehensive_success
 
 
 class WorkflowOrchestrator:

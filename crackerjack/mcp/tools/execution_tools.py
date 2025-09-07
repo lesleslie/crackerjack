@@ -166,8 +166,9 @@ def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]
 
     filesystem = FileSystemService()
     git_service = GitService()
-    init_service = InitializationService(console, filesystem, git_service, target_path)
-    return init_service.initialize_project_full(force=force)
+    return InitializationService(
+        console, filesystem, git_service, target_path
+    ).initialize_project_full(force=force)
 
 
 def _create_init_error_response(message: str) -> str:

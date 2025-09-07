@@ -101,7 +101,7 @@ class LazyLoader:
                 # If the object has a cleanup method, call it
                 if hasattr(self._value, "close"):
                     try:
-                        self._value.close()  # type: ignore
+                        self._value.close()
                     except Exception as e:
                         self._logger.warning(f"Error closing {self._name}: {e}")
 
@@ -130,7 +130,7 @@ class ResourcePool:
         self._max_size = max_size
         self._name = name
         self._pool: list[Any] = []
-        self._in_use: WeakSet = WeakSet()
+        self._in_use: WeakSet[t.Any] = WeakSet()
         self._lock = Lock()
         self._created_count = 0
         self._reused_count = 0
@@ -165,7 +165,7 @@ class ResourcePool:
                     # Pool is full, dispose of resource
                     if hasattr(resource, "close"):
                         try:
-                            resource.close()  # type: ignore
+                            resource.close()
                         except Exception as e:
                             self._logger.warning(f"Error closing resource: {e}")
 
@@ -179,7 +179,7 @@ class ResourcePool:
             for resource in self._pool:
                 if hasattr(resource, "close"):
                     try:
-                        resource.close()  # type: ignore
+                        resource.close()
                     except Exception as e:
                         self._logger.warning(f"Error closing pooled resource: {e}")
 
@@ -356,8 +356,7 @@ class MemoryOptimizer:
 
     def _should_run_gc(self) -> bool:
         """Check if garbage collection should be triggered."""
-        stats = self._profiler.get_summary()
-        current_memory = stats.get("current_memory_mb", 0)
+        current_memory = self._profiler.get_summary().get("current_memory_mb", 0)
         return current_memory > self._gc_threshold
 
     def _run_memory_cleanup(self) -> None:
@@ -464,7 +463,7 @@ def get_memory_optimizer() -> MemoryOptimizer:
 # Factory functions for common patterns
 def create_lazy_service(factory: Callable[[], Any], name: str) -> LazyLoader:
     """Create a lazy-loaded service."""
-    return LazyLoader(factory, name, auto_dispose=True)
+    return LazyLoader(factory, name)
 
 
 def create_resource_pool(
