@@ -37,7 +37,7 @@ class PhasePerformance:
     
     phase_name: str
     start_time: datetime
-    end_time: datetime | None = None
+    end_time: t.Optional[datetime] = None
     duration_seconds: float = 0.0
     memory_start_mb: float = 0.0
     memory_peak_mb: float = 0.0
@@ -49,7 +49,7 @@ class PhasePerformance:
     success: bool = True
     metrics: list[PerformanceMetric] = field(default_factory=list)
     
-    def finalize(self, end_time: datetime | None = None) -> None:
+    def finalize(self, end_time: t.Optional[datetime] = None) -> None:
         """Finalize phase timing."""
         self.end_time = end_time or datetime.now()
         self.duration_seconds = (self.end_time - self.start_time).total_seconds()
@@ -61,7 +61,7 @@ class WorkflowPerformance:
     
     workflow_id: str
     start_time: datetime
-    end_time: datetime | None = None
+    end_time: t.Optional[datetime] = None
     total_duration_seconds: float = 0.0
     phases: list[PhasePerformance] = field(default_factory=list)
     overall_success: bool = True
@@ -259,7 +259,7 @@ class PerformanceMonitor:
         metric_name: str,
         value: float,
         unit: str = "",
-        metadata: dict[str, Any] | None = None,
+        metadata: t.Optional[dict[str, t.Any]] = None,
     ) -> None:
         """Record a performance metric."""
         metric = PerformanceMetric(
@@ -464,7 +464,7 @@ class PerformanceMonitor:
 
 
 # Global monitor instance
-_global_monitor: PerformanceMonitor | None = None
+_global_monitor: t.Optional[PerformanceMonitor] = None
 _monitor_lock = Lock()
 
 

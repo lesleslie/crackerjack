@@ -1,0 +1,63 @@
+{
+  "benchmark_timestamp": "2025-09-06T23:14:12.547345",
+  "summary": {
+    "average_time_improvement_percentage": 76.35761192541418,
+    "average_memory_improvement_percentage": 75.67567567567566,
+    "overall_cache_hit_ratio": 0.84,
+    "total_tests": 4
+  },
+  "detailed_results": [
+    {
+      "test_name": "memory_optimization",
+      "baseline_time_seconds": 0.0007259845733642578,
+      "optimized_time_seconds": 7.081031799316406e-05,
+      "time_improvement_percentage": 90.2463054187192,
+      "memory_baseline_mb": 3.7,
+      "memory_optimized_mb": 0.9000000000000001,
+      "memory_improvement_percentage": 75.67567567567566,
+      "cache_hits": 0,
+      "cache_misses": 0,
+      "parallel_operations": 0,
+      "sequential_operations": 0
+    },
+    {
+      "test_name": "intelligent_caching",
+      "baseline_time_seconds": 0.05889606475830078,
+      "optimized_time_seconds": 0.00948786735534668,
+      "time_improvement_percentage": 83.89049014686594,
+      "memory_baseline_mb": 0.0,
+      "memory_optimized_mb": 0.0,
+      "memory_improvement_percentage": 0.0,
+      "cache_hits": 42,
+      "cache_misses": 8,
+      "parallel_operations": 0,
+      "sequential_operations": 0
+    },
+    {
+      "test_name": "parallel_hook_execution",
+      "baseline_time_seconds": 0.14117980003356934,
+      "optimized_time_seconds": 0.06084895133972168,
+      "time_improvement_percentage": 56.899675927255046,
+      "memory_baseline_mb": 0.0,
+      "memory_optimized_mb": 0.0,
+      "memory_improvement_percentage": 0.0,
+      "cache_hits": 0,
+      "cache_misses": 0,
+      "parallel_operations": 5,
+      "sequential_operations": 5
+    },
+    {
+      "test_name": "async_io_operations",
+      "baseline_time_seconds": 0.18447208404541016,
+      "optimized_time_seconds": 0.047235965728759766,
+      "time_improvement_percentage": 74.3939762088165,
+      "memory_baseline_mb": 0.0,
+      "memory_optimized_mb": 0.0,
+      "memory_improvement_percentage": 0.0,
+      "cache_hits": 0,
+      "cache_misses": 0,
+      "parallel_operations": 12,
+      "sequential_operations": 12
+    }
+  ]
+}

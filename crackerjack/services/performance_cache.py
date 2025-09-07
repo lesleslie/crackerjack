@@ -28,7 +28,7 @@ class CacheEntry:
     access_count: int = 0
     last_accessed: datetime = field(default_factory=datetime.now)
     ttl_seconds: int = 300  # Default 5 minutes
-    invalidation_keys: set[str] = field(default_factory=set)
+    invalidation_keys: t.Set[str] = field(default_factory=set)
     
     def is_expired(self) -> bool:
         """Check if cache entry has expired."""
@@ -72,12 +72,12 @@ class PerformanceCache:
         self.default_ttl_seconds = default_ttl_seconds
         self.cleanup_interval_seconds = cleanup_interval_seconds
         
-        self._cache: dict[str, CacheEntry] = {}
+        self._cache: t.Dict[str, CacheEntry] = {}
         self._lock = Lock()
         self._stats = CacheStats()
         self._logger = get_logger("crackerjack.performance_cache")
-        self._cleanup_task: asyncio.Task | None = None
-        self._invalidation_map: dict[str, set[str]] = {}
+        self._cleanup_task: t.Optional[asyncio.Task] = None
+        self._invalidation_map: t.Dict[str, t.Set[str]] = {}
         
         # Weak reference cache for heavy objects
         self._weak_cache: WeakValueDictionary = WeakValueDictionary()
@@ -132,8 +132,8 @@ class PerformanceCache:
         self,
         key: str,
         value: t.Any,
-        ttl_seconds: int | None = None,
-        invalidation_keys: set[str] | None = None,
+        ttl_seconds: t.Optional[int] = None,
+        invalidation_keys: t.Optional[t.Set[str]] = None,
     ) -> None:
         """Set value in cache."""
         ttl = ttl_seconds if ttl_seconds is not None else self.default_ttl_seconds
@@ -162,8 +162,8 @@ class PerformanceCache:
         self,
         key: str,
         value: t.Any,
-        ttl_seconds: int | None = None,
-        invalidation_keys: set[str] | None = None,
+        ttl_seconds: t.Optional[int] = None,
+        invalidation_keys: t.Optional[t.Set[str]] = None,
     ) -> None:
         """Async version of set for compatibility."""
         self.set(key, value, ttl_seconds, invalidation_keys)

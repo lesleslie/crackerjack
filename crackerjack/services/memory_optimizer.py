@@ -48,7 +48,7 @@ class LazyLoader(Generic[T]):
         self._factory = factory
         self._name = name
         self._auto_dispose = auto_dispose
-        self._value: T | None = None
+        self._value: t.Optional[T] = None
         self._loaded = False
         self._lock = Lock()
         self._access_count = 0
@@ -275,7 +275,7 @@ class MemoryProfiler:
 class MemoryOptimizer:
     """Central memory optimization coordinator."""
     
-    _instance: 'MemoryOptimizer | None' = None
+    _instance: 'MemoryOptimizer= None' = None
     _lock = Lock()
     
     def __init__(self):
@@ -317,7 +317,7 @@ class MemoryOptimizer:
         self._resource_pools[name] = pool
         self._logger.debug(f"Registered resource pool: {name}")
     
-    def get_resource_pool(self, name: str) -> ResourcePool | None:
+    def get_resource_pool(self, name: str) -> t.Optional[ResourcePool]:
         """Get a registered resource pool."""
         return self._resource_pools.get(name)
     

@@ -299,7 +299,7 @@ class AsyncCommandExecutor:
     async def execute_command(
         self,
         command: list[str],
-        cwd: Path | None = None,
+        cwd: t.Optional[Path] = None,
         timeout: int = 60,
         cache_ttl: int = 120,
     ) -> ExecutionResult:
@@ -324,7 +324,7 @@ class AsyncCommandExecutor:
     
     async def execute_commands_batch(
         self,
-        commands: list[tuple[list[str], Path | None]],
+        commands: list[tuple[list[str], t.Optional[Path]]],
         timeout: int = 60,
     ) -> list[ExecutionResult]:
         """Execute multiple commands concurrently."""
@@ -359,8 +359,8 @@ class AsyncCommandExecutor:
     async def _run_command_async(
         self,
         command: list[str],
-        cwd: Path | None,
-        timeout: int,
+        cwd: t.Optional[Path] = None,
+        timeout: int = 60,
     ) -> ExecutionResult:
         """Run command asynchronously in thread pool."""
         loop = asyncio.get_event_loop()
@@ -409,8 +409,8 @@ class AsyncCommandExecutor:
     async def _get_cached_result(
         self,
         command: list[str],
-        cwd: Path | None,
-    ) -> ExecutionResult | None:
+        cwd: t.Optional[Path] = None,
+    ) -> t.Optional[ExecutionResult]:
         """Get cached command result."""
         from crackerjack.services.performance_cache import get_command_cache
         
@@ -420,9 +420,9 @@ class AsyncCommandExecutor:
     async def _cache_result(
         self,
         command: list[str],
-        cwd: Path | None,
         result: ExecutionResult,
         ttl_seconds: int,
+        cwd: t.Optional[Path] = None,
     ) -> None:
         """Cache command result."""
         from crackerjack.services.performance_cache import get_command_cache
@@ -437,8 +437,8 @@ class AsyncCommandExecutor:
 
 
 # Global executor instances
-_parallel_executor: ParallelHookExecutor | None = None
-_async_executor: AsyncCommandExecutor | None = None
+_parallel_executor: t.Optional[ParallelHookExecutor] = None
+_async_executor: t.Optional[AsyncCommandExecutor] = None
 
 
 def get_parallel_executor(
