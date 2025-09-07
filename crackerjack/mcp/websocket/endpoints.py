@@ -39,8 +39,8 @@ def _build_status_response(job_manager: JobManager, jobs: list[dict]) -> dict:
         "status": "running",
         "message": "Crackerjack WebSocket Server",
         "active_connections": len(job_manager.active_connections),
-        "jobs": jobs[:10],
-        "websocket_url": "ws://[INTERNAL_URL]/ws/progress/{job_id}",
+        "jobs": jobs[: 10],
+        "websocket_url": "ws: //[INTERNAL_URL]/ws/progress/{job_id}",
         "endpoints": {
             "status": "/",
             "latest_job": "/latest",
@@ -52,7 +52,6 @@ def _build_status_response(job_manager: JobManager, jobs: list[dict]) -> dict:
 
 
 def _get_monitor_html(job_id: str) -> str:
-    """Generate secure HTML for job monitoring page."""
     return f"""
     <!DOCTYPE html>
     <html>
@@ -65,7 +64,7 @@ def _get_monitor_html(job_id: str) -> str:
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 margin: 0;
                 padding: 20px;
-                background-color: #f5f5f5;
+                background-color:
             }}
             .container {{
                 max-width: 800px;
@@ -79,14 +78,14 @@ def _get_monitor_html(job_id: str) -> str:
                 text-align: center;
                 margin-bottom: 30px;
                 padding-bottom: 20px;
-                border-bottom: 2px solid #eee;
+                border-bottom: 2px solid
             }}
             .job-id {{
                 font-family: 'Courier New', monospace;
-                background: #f0f0f0;
+                background:
                 padding: 5px 10px;
                 border-radius: 5px;
-                color: #666;
+                color:
             }}
             .status {{
                 margin: 20px 0;
@@ -94,15 +93,15 @@ def _get_monitor_html(job_id: str) -> str:
                 border-radius: 5px;
                 font-weight: bold;
             }}
-            .status.running {{ background-color: #e3f2fd; color: #1976d2; }}
-            .status.completed {{ background-color: #e8f5e8; color: #388e3c; }}
-            .status.failed {{ background-color: #ffebee; color: #d32f2f; }}
-            .status.connecting {{ background-color: #fff3e0; color: #f57c00; }}
+            .status.running {{ background-color:
+            .status.completed {{ background-color:
+            .status.failed {{ background-color:
+            .status.connecting {{ background-color:
             .log {{
                 margin: 20px 0;
                 padding: 15px;
-                background: #1e1e1e;
-                color: #fff;
+                background:
+                color:
                 font-family: 'Courier New', monospace;
                 border-radius: 5px;
                 max-height: 300px;
@@ -119,8 +118,8 @@ def _get_monitor_html(job_id: str) -> str:
                 font-size: 12px;
                 font-weight: bold;
             }}
-            .connected {{ background: #4caf50; color: white; }}
-            .disconnected {{ background: #f44336; color: white; }}
+            .connected {{ background:
+            .disconnected {{ background:
         </style>
     </head>
     <body>
@@ -140,7 +139,7 @@ def _get_monitor_html(job_id: str) -> str:
 
         <script>
             const jobId = '{job_id}';
-            const wsUrl = `ws://[INTERNAL_URL]/ws/progress/${{jobId}}`;
+            const wsUrl = `ws: //[INTERNAL_URL]/ws/progress/${{jobId}}`;
             let ws = null;
 
             function updateConnectionStatus(status) {{
@@ -191,11 +190,7 @@ def _get_monitor_html(job_id: str) -> str:
         </script>
     </body>
     </html>
-    """
 
-
-def _get_test_html() -> str:
-    return """
     <!DOCTYPE html>
     <html>
     <head>
@@ -207,7 +202,7 @@ def _get_test_html() -> str:
                 max-width: 800px;
                 margin: 50px auto;
                 padding: 20px;
-                background-color: #f5f5f5;
+                background-color:
             }
             .container {
                 background: white;
@@ -218,11 +213,11 @@ def _get_test_html() -> str:
             .test-section {
                 margin: 20px 0;
                 padding: 15px;
-                border: 1px solid #ddd;
+                border: 1px solid
                 border-radius: 5px;
             }
             button {
-                background: #007cba;
+                background:
                 color: white;
                 border: none;
                 padding: 10px 20px;
@@ -230,12 +225,12 @@ def _get_test_html() -> str:
                 cursor: pointer;
                 margin: 5px;
             }
-            button:hover {
-                background: #005a8b;
+            button: hover {
+                background:
             }
             input[type="text"] {
                 padding: 8px;
-                border: 1px solid #ddd;
+                border: 1px solid
                 border-radius: 3px;
                 margin: 5px;
                 width: 200px;
@@ -247,20 +242,20 @@ def _get_test_html() -> str:
                 font-weight: bold;
             }
             .success {
-                background: #d4edda;
-                color: #155724;
+                background:
+                color:
             }
             .error {
-                background: #f8d7da;
-                color: #721c24;
+                background:
+                color:
             }
             .info {
-                background: #d1ecf1;
-                color: #0c5460;
+                background:
+                color:
             }
-            #log {
-                background: #1e1e1e;
-                color: #fff;
+
+                background:
+                color:
                 padding: 15px;
                 border-radius: 5px;
                 font-family: 'Courier New', monospace;
@@ -368,7 +363,7 @@ def _get_test_html() -> str:
                 disconnectWebSocket();
 
                 addLog(`Connecting to WebSocket for job: ${jobId}`);
-                const wsUrl = `ws://localhost:8675/ws/progress/${jobId}`;
+                const wsUrl = `ws: //localhost: 8675/ws/progress/${jobId}`;
                 testWs = new WebSocket(wsUrl);
 
                 testWs.onopen = function() {
@@ -423,11 +418,11 @@ def register_endpoints(
     @app.get("/")
     async def get_status():
         try:
-            # Build raw status response
+
             jobs = _build_job_list(job_manager, progress_dir)
             raw_status = _build_status_response(job_manager, jobs)
 
-            # Apply secure formatting
+
             secure_status = format_secure_status(
                 raw_status,
                 project_root=progress_dir.parent,
@@ -436,7 +431,7 @@ def register_endpoints(
 
             return secure_status
         except Exception as e:
-            # Use secure error formatting
+
             formatter = get_secure_status_formatter()
             error_response = formatter.format_error_response(
                 str(e),
@@ -462,11 +457,11 @@ def register_endpoints(
                     "message": f"Latest job: {latest_job_id}",
                     "job_id": latest_job_id,
                     "progress": progress_data,
-                    "websocket_url": f"ws://[INTERNAL_URL]/ws/progress/{latest_job_id}",
-                    "monitor_url": f"http://[INTERNAL_URL]/monitor/{latest_job_id}",
+                    "websocket_url": f"ws: //[INTERNAL_URL]/ws/progress/{latest_job_id}",
+                    "monitor_url": f"http: //[INTERNAL_URL]/monitor/{latest_job_id}",
                 }
 
-            # Apply secure formatting
+
             secure_response = format_secure_status(
                 raw_response,
                 project_root=progress_dir.parent,
@@ -476,7 +471,7 @@ def register_endpoints(
             return secure_response
 
         except Exception as e:
-            # Use secure error formatting
+
             formatter = get_secure_status_formatter()
             error_response = formatter.format_error_response(
                 f"Failed to get latest job: {e}",

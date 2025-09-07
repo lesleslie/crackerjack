@@ -1,9 +1,3 @@
-"""Parallel execution coordinator for hooks and other independent operations.
-
-This module provides safe parallel execution of hooks while respecting
-security levels, dependencies, and resource constraints.
-"""
-
 import asyncio
 import time
 import typing as t
@@ -18,19 +12,13 @@ from crackerjack.services.performance_cache import get_performance_cache
 
 
 class ExecutionStrategy(Enum):
-    """Execution strategy for parallel operations."""
-
     SEQUENTIAL = "sequential"
-    PARALLEL_SAFE = (
-        "parallel_safe"  # Only parallel execution of safe, independent hooks
-    )
-    PARALLEL_AGGRESSIVE = "parallel_aggressive"  # More aggressive parallelization
+    PARALLEL_SAFE = "parallel_safe"
+    PARALLEL_AGGRESSIVE = "parallel_aggressive"
 
 
 @dataclass
 class ExecutionGroup:
-    """Group of operations that can be executed together."""
-
     name: str
     operations: list[t.Any]
     max_workers: int = 3
@@ -41,8 +29,6 @@ class ExecutionGroup:
 
 @dataclass
 class ExecutionResult:
-    """Result of executing an operation."""
-
     operation_id: str
     success: bool
     duration_seconds: float
@@ -54,8 +40,6 @@ class ExecutionResult:
 
 @dataclass
 class ParallelExecutionResult:
-    """Result of parallel execution batch."""
-
     group_name: str
     total_operations: int
     successful_operations: int
@@ -65,7 +49,6 @@ class ParallelExecutionResult:
 
     @property
     def success_rate(self) -> float:
-        """Calculate success rate."""
         return (
             self.successful_operations / self.total_operations
             if self.total_operations > 0
@@ -74,13 +57,10 @@ class ParallelExecutionResult:
 
     @property
     def overall_success(self) -> bool:
-        """Check if all operations succeeded."""
         return self.failed_operations == 0
 
 
 class ParallelHookExecutor:
-    """Parallel executor for hook operations with safety constraints."""
-
     def __init__(
         self,
         max_workers: int = 3,
@@ -97,7 +77,6 @@ class ParallelHookExecutor:
         self,
         hooks: list[HookDefinition],
     ) -> dict[str, list[HookDefinition]]:
-        """Analyze hook dependencies and group hooks for parallel execution."""
         groups: dict[str, list[HookDefinition]] = {
             "formatting": [],
             "validation": [],
@@ -115,7 +94,6 @@ class ParallelHookExecutor:
             else:
                 groups["comprehensive"].append(hook)
 
-        # Remove empty groups
         return {k: v for k, v in groups.items() if v}
 
     def can_execute_in_parallel(
@@ -123,25 +101,18 @@ class ParallelHookExecutor:
         hook1: HookDefinition,
         hook2: HookDefinition,
     ) -> bool:
-        """Check if two hooks can be safely executed in parallel."""
-        # Never parallelize different security levels for safety
         if hook1.security_level != hook2.security_level:
             return False
 
-        # Don't parallelize hooks that modify files with hooks that read files
         if hook1.is_formatting and not hook2.is_formatting:
             return False
 
-        # Safe combinations for parallel execution
         safe_parallel_combinations = [
-            # All formatting hooks can run in parallel
             (lambda h: h.is_formatting, lambda h: h.is_formatting),
-            # Validation hooks can run in parallel
             (
                 lambda h: h.name in {"check-yaml", "check-json", "check-toml"},
                 lambda h: h.name in {"check-yaml", "check-json", "check-toml"},
             ),
-            # Same security level non-formatting hooks
             (
                 lambda h: not h.is_formatting
                 and h.security_level == SecurityLevel.MEDIUM,
@@ -161,13 +132,11 @@ class ParallelHookExecutor:
         hooks: list[HookDefinition],
         hook_runner: t.Callable[[HookDefinition], t.Awaitable[ExecutionResult]],
     ) -> ParallelExecutionResult:
-        """Execute hooks in parallel where safe, sequential otherwise."""
         start_time = time.time()
 
         if self.strategy == ExecutionStrategy.SEQUENTIAL:
             return await self._execute_sequential(hooks, hook_runner, start_time)
 
-        # Group hooks for parallel execution
         groups = self.analyze_hook_dependencies(hooks)
         all_results: list[ExecutionResult] = []
 
@@ -177,12 +146,10 @@ class ParallelHookExecutor:
 
         for group_name, group_hooks in groups.items():
             if len(group_hooks) == 1 or not self._can_parallelize_group(group_hooks):
-                # Execute single hook or non-parallelizable group sequentially
                 for hook in group_hooks:
                     result = await hook_runner(hook)
                     all_results.append(result)
             else:
-                # Execute group in parallel
                 group_results = await self._execute_group_parallel(
                     group_hooks,
                     hook_runner,
@@ -209,7 +176,6 @@ class ParallelHookExecutor:
         hook_runner: t.Callable[[HookDefinition], t.Awaitable[ExecutionResult]],
         start_time: float,
     ) -> ParallelExecutionResult:
-        """Execute hooks sequentially (fallback)."""
         results: list[ExecutionResult] = []
 
         for hook in hooks:
@@ -230,11 +196,9 @@ class ParallelHookExecutor:
         )
 
     def _can_parallelize_group(self, hooks: list[HookDefinition]) -> bool:
-        """Check if a group of hooks can be parallelized."""
         if len(hooks) < 2:
             return False
 
-        # Check pairwise compatibility
         for i, hook1 in enumerate(hooks):
             for hook2 in hooks[i + 1 :]:
                 if not self.can_execute_in_parallel(hook1, hook2):
@@ -248,28 +212,22 @@ class ParallelHookExecutor:
         hook_runner: t.Callable[[HookDefinition], t.Awaitable[ExecutionResult]],
         group_name: str,
     ) -> list[ExecutionResult]:
-        """Execute a group of hooks in parallel."""
         self._logger.debug(f"Executing {len(hooks)} {group_name} hooks in parallel")
 
-        # Limit parallelism for safety
         max_workers = min(self.max_workers, len(hooks))
 
-        # Create semaphore to limit concurrent executions
         semaphore = asyncio.Semaphore(max_workers)
 
         async def run_with_semaphore(hook: HookDefinition) -> ExecutionResult:
             async with semaphore:
                 return await hook_runner(hook)
 
-        # Execute all hooks concurrently with limited parallelism
         tasks = [run_with_semaphore(hook) for hook in hooks]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Process results and handle exceptions
         processed_results: list[ExecutionResult] = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                # Create error result for exception
                 error_result = ExecutionResult(
                     operation_id=hooks[i].name,
                     success=False,
@@ -281,8 +239,7 @@ class ParallelHookExecutor:
                     f"Hook {hooks[i].name} failed with exception: {result}"
                 )
             else:
-                # result must be ExecutionResult here due to type narrowing
-                processed_results.append(result)  # type: ignore[arg-type]
+                processed_results.append(result)
 
         successful = sum(1 for r in processed_results if r.success)
         self._logger.info(
@@ -293,8 +250,6 @@ class ParallelHookExecutor:
 
 
 class AsyncCommandExecutor:
-    """Asynchronous command executor with optimization and caching."""
-
     def __init__(
         self,
         max_workers: int = 4,
@@ -313,8 +268,6 @@ class AsyncCommandExecutor:
         timeout: int = 60,
         cache_ttl: int = 120,
     ) -> ExecutionResult:
-        """Execute a command asynchronously with caching."""
-        # Check cache first
         if self.cache_results:
             cached_result = await self._get_cached_result(command, cwd)
             if cached_result:
@@ -323,12 +276,10 @@ class AsyncCommandExecutor:
                 )
                 return cached_result
 
-        # Execute command
         start_time = time.time()
         result = await self._run_command_async(command, cwd, timeout)
         result.duration_seconds = time.time() - start_time
 
-        # Cache successful results
         if self.cache_results and result.success:
             await self._cache_result(command, result, cache_ttl, cwd)
 
@@ -339,14 +290,12 @@ class AsyncCommandExecutor:
         commands: list[tuple[list[str], Path | None]],
         timeout: int = 60,
     ) -> list[ExecutionResult]:
-        """Execute multiple commands concurrently."""
         self._logger.info(f"Executing {len(commands)} commands in batch")
 
         tasks = [self.execute_command(cmd, cwd, timeout) for cmd, cwd in commands]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Process results and handle exceptions
         processed_results: list[ExecutionResult] = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
@@ -358,8 +307,7 @@ class AsyncCommandExecutor:
                 )
                 processed_results.append(error_result)
             else:
-                # result must be ExecutionResult here due to type narrowing
-                processed_results.append(result)  # type: ignore[arg-type]
+                processed_results.append(result)
 
         successful = sum(1 for r in processed_results if r.success)
         self._logger.info(
@@ -374,7 +322,6 @@ class AsyncCommandExecutor:
         cwd: Path | None = None,
         timeout: int = 60,
     ) -> ExecutionResult:
-        """Run command asynchronously in thread pool."""
         loop = asyncio.get_event_loop()
 
         def run_sync_command() -> ExecutionResult:
@@ -393,7 +340,7 @@ class AsyncCommandExecutor:
                 return ExecutionResult(
                     operation_id=" ".join(command),
                     success=result.returncode == 0,
-                    duration_seconds=0.0,  # Set by caller
+                    duration_seconds=0.0,
                     output=result.stdout,
                     error=result.stderr,
                     exit_code=result.returncode,
@@ -423,7 +370,6 @@ class AsyncCommandExecutor:
         command: list[str],
         cwd: Path | None = None,
     ) -> ExecutionResult | None:
-        """Get cached command result."""
         from crackerjack.services.performance_cache import get_command_cache
 
         return get_command_cache().get_command_result(command, cwd)
@@ -435,19 +381,16 @@ class AsyncCommandExecutor:
         ttl_seconds: int,
         cwd: Path | None = None,
     ) -> None:
-        """Cache command result."""
         from crackerjack.services.performance_cache import get_command_cache
 
         command_cache = get_command_cache()
         command_cache.set_command_result(command, result, cwd, ttl_seconds)
 
     def __del__(self):
-        """Clean up thread pool."""
         if hasattr(self, "_thread_pool"):
             self._thread_pool.shutdown(wait=False)
 
 
-# Global executor instances
 _parallel_executor: ParallelHookExecutor | None = None
 _async_executor: AsyncCommandExecutor | None = None
 
@@ -456,7 +399,6 @@ def get_parallel_executor(
     max_workers: int = 3,
     strategy: ExecutionStrategy = ExecutionStrategy.PARALLEL_SAFE,
 ) -> ParallelHookExecutor:
-    """Get global parallel hook executor instance."""
     global _parallel_executor
     if _parallel_executor is None:
         _parallel_executor = ParallelHookExecutor(
@@ -467,7 +409,6 @@ def get_parallel_executor(
 
 
 def get_async_executor(max_workers: int = 4) -> AsyncCommandExecutor:
-    """Get global async command executor instance."""
     global _async_executor
     if _async_executor is None:
         _async_executor = AsyncCommandExecutor(max_workers=max_workers)

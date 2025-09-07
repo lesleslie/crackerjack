@@ -43,7 +43,6 @@ if WATCHDOG_AVAILABLE:
             try:
                 file_path = Path(event.src_path)
 
-                # Validate that the file path is within our allowed progress directory
                 validated_path = SecurePathValidator.validate_safe_path(
                     file_path, self.progress_dir
                 )
@@ -66,11 +65,9 @@ if WATCHDOG_AVAILABLE:
 
                 job_id = validated_path.stem.replace("job-", "")
             except Exception:
-                # If path validation fails, skip processing this file
                 return
 
             try:
-                # Validate file size before reading
                 SecurePathValidator.validate_file_size(validated_path)
 
                 with validated_path.open() as f:
@@ -252,7 +249,6 @@ class PollingProgressMonitor:
 
         for progress_file in self.progress_dir.glob("job-*.json"):
             try:
-                # Validate file path is within our allowed directory
                 validated_file = SecurePathValidator.validate_safe_path(
                     progress_file, self.progress_dir
                 )
@@ -267,7 +263,6 @@ class PollingProgressMonitor:
                     job_id = validated_file.stem.replace("job-", "")
 
                     try:
-                        # Validate file size before reading
                         SecurePathValidator.validate_file_size(validated_file)
                         with validated_file.open() as f:
                             progress_data = json.load(f)

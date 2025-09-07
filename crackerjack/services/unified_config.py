@@ -36,8 +36,6 @@ class CrackerjackConfig(BaseModel):
     skip_hooks: bool = False
     experimental_hooks: bool = False
 
-    # Removed unused configuration fields: performance_tracking, benchmark_mode, publish_enabled, keyring_provider
-
     batch_file_operations: bool = True
     file_operation_batch_size: int = 10
 
@@ -119,7 +117,6 @@ class EnvironmentConfigSource(ConfigSource):
         if value.lower() in ("false", "0", "no", "off"):
             return False
 
-        # Handle negative numbers with spaces (e.g., "- 10")
         cleaned_value = value.replace(" ", "")
 
         with suppress(ValueError):

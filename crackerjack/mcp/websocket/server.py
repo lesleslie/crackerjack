@@ -41,25 +41,18 @@ class WebSocketServer:
         console.print("\n[yellow]Shutting down WebSocket server...[/yellow]")
         self.is_running = False
 
-        # Cancel server task if running
         if self.server_task and not self.server_task.done():
             self.server_task.cancel()
 
-        # Clean up job manager connections
         if self.job_manager:
             with contextlib.suppress(Exception):
-                # Give existing connections 5 seconds to close
                 asyncio.create_task(self._graceful_shutdown())
 
     async def _graceful_shutdown(self) -> None:
-        """Gracefully shutdown WebSocket connections."""
         if self.job_manager:
             try:
-                # Wait briefly for connections to close naturally
                 await asyncio.sleep(2.0)
 
-                # Force close any remaining connections
-                # Note: Implementation depends on JobManager API
                 console.print(
                     "[yellow]Forcing remaining WebSocket connections to close[/yellow]"
                 )
@@ -80,14 +73,12 @@ class WebSocketServer:
                 port=self.port,
                 host="127.0.0.1",
                 log_level="info",
-                # Add timeout configurations
-                timeout_keep_alive=30,  # Keep-alive timeout
-                timeout_graceful_shutdown=30,  # Graceful shutdown timeout
+                timeout_keep_alive=30,
+                timeout_graceful_shutdown=30,
             )
 
             server = uvicorn.Server(config)
 
-            # Use asyncio event loop for better control
             try:
                 asyncio.run(self._run_with_timeout(server))
             except KeyboardInterrupt:
@@ -101,21 +92,12 @@ class WebSocketServer:
             console.print("[green]WebSocket server shutdown complete[/green]")
 
     async def _run_with_timeout(self, server: uvicorn.Server) -> None:
-        """Run the server with timeout protection."""
         try:
-            # Start server as a background task
             self.server_task = asyncio.create_task(server.serve())
 
-            # Monitor server health while running
             while self.is_running and not self.server_task.done():
                 try:
-                    # Check server health periodically
                     await asyncio.sleep(5.0)
-
-                    # Optional: Add health checks here
-                    # if not await self._server_health_check():
-                    #     console.print("[yellow]Server health check failed[/yellow]")
-                    #     break
 
                 except asyncio.CancelledError:
                     console.print("[yellow]Server monitoring cancelled[/yellow]")
@@ -124,7 +106,6 @@ class WebSocketServer:
                     console.print(f"[red]Server monitoring error: {e}[/red]")
                     break
 
-            # Wait for server task to complete
             if self.server_task and not self.server_task.done():
                 try:
                     await asyncio.wait_for(self.server_task, timeout=30.0)
@@ -153,7 +134,7 @@ def handle_websocket_server_command(
 
         try:
             result = subprocess.run(
-                ["pkill", "-f", f"uvicorn.*:{port}"],
+                ["pkill", "-f", f"uvicorn.*: {port}"],
                 check=False,
                 capture_output=True,
                 text=True,

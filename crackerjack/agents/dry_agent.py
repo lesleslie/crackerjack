@@ -152,8 +152,6 @@ class DRYAgent(SubAgent):
         error_responses: list[dict[str, t.Any]] = []
         for i, line in enumerate(lines):
             if error_pattern.test(line.strip()):
-                # Extract error message using the pattern's compiled regex access
-                # Access the compiled pattern from SAFE_PATTERNS to get groups
                 compiled_pattern = error_pattern._get_compiled_pattern()
                 match = compiled_pattern.search(line.strip())
                 if match:
@@ -274,7 +272,6 @@ class DRYAgent(SubAgent):
     def _apply_violation_fix(
         self, lines: list[str], violation: dict[str, t.Any]
     ) -> tuple[list[str], bool]:
-        """Apply fix for a specific violation type."""
         violation_type = violation["type"]
 
         if violation_type == "error_response_pattern":
@@ -289,16 +286,13 @@ class DRYAgent(SubAgent):
         lines: list[str],
         violation: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
-        # Add utility functions to the file
         utility_lines = self._add_error_response_utilities(lines)
 
-        # Apply pattern replacements to affected lines
         self._apply_error_pattern_replacements(lines, violation, len(utility_lines))
 
         return lines, True
 
     def _add_error_response_utilities(self, lines: list[str]) -> list[str]:
-        """Add utility functions for error responses and path conversion."""
         utility_function = """
 def _create_error_response(message: str, success: bool = False) -> str:
 
@@ -319,7 +313,6 @@ def _ensure_path(path: str | Path) -> Path:
         return [line for line in utility_lines]
 
     def _find_utility_insert_position(self, lines: list[str]) -> int:
-        """Find the best position to insert utility functions."""
         insert_pos = 0
         for i, line in enumerate(lines):
             if line.strip().startswith(("import ", "from ")):
@@ -331,7 +324,6 @@ def _ensure_path(path: str | Path) -> Path:
     def _apply_error_pattern_replacements(
         self, lines: list[str], violation: dict[str, t.Any], utility_lines_count: int
     ) -> None:
-        """Apply pattern replacements to lines with error response patterns."""
         path_pattern = SAFE_PATTERNS["fix_path_conversion_with_ensure_path"]
 
         for instance in violation["instances"]:
@@ -348,7 +340,6 @@ def _ensure_path(path: str | Path) -> Path:
         lines: list[str],
         violation: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
-        """Fix path conversion patterns by adding utility function."""
         utility_function_added = self._check_ensure_path_exists(lines)
         adjustment = 0
 
@@ -362,20 +353,18 @@ def _ensure_path(path: str | Path) -> Path:
         return lines, modified
 
     def _check_ensure_path_exists(self, lines: list[str]) -> bool:
-        """Check if _ensure_path utility function already exists."""
         return any(
             "_ensure_path" in line and "def _ensure_path" in line for line in lines
         )
 
     def _add_ensure_path_utility(self, lines: list[str]) -> int:
-        """Add the _ensure_path utility function and return adjustment count."""
         insert_pos = self._find_utility_insert_position(lines)
 
         utility_lines = [
             "",
-            "def _ensure_path(path: str | Path) -> Path:",
-            '    """Convert string path to Path object if needed."""',
-            "    return Path(path) if isinstance(path, str) else path",
+            "def _ensure_path(path: str | Path) -> Path: ",
+            ' """Convert string path to Path object if needed."""',
+            " return Path(path) if isinstance(path, str) else path",
             "",
         ]
 
@@ -391,7 +380,6 @@ def _ensure_path(path: str | Path) -> Path:
         adjustment: int,
         utility_function_added: bool,
     ) -> bool:
-        """Replace path conversion patterns with utility function calls."""
         path_pattern = SAFE_PATTERNS["fix_path_conversion_simple"]
 
         modified = False

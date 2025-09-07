@@ -116,7 +116,7 @@ class AgentActivityWidget(Widget):
             self.query_one(
                 "#confidence-metric",
                 MetricCard,
-            ).value = f"{avg_confidence:.0%}"
+            ).value = f"{avg_confidence: .0%}"
             self.query_one("#cache-hits-metric", MetricCard).value = str(cache_hits)
 
             self._update_coordinator_status(activity)
@@ -147,8 +147,8 @@ class AgentActivityWidget(Widget):
             name = agent.get("agent_type", "Unknown")
             status = agent.get("status", "idle")
             issue_type = agent.get("issue_type", "-")
-            confidence = f"{agent.get('confidence', 0):.0%}"
-            time_elapsed = f"{agent.get('processing_time', 0):.1f}s"
+            confidence = f"{agent.get('confidence', 0): .0%}"
+            time_elapsed = f"{agent.get('processing_time', 0): .1f}s"
 
             status_emoji = {
                 "processing": "🔄",
@@ -247,16 +247,16 @@ class JobProgressPanel(Widget):
         if total_issues > 0:
             success_rate = (fixed / total_issues) * 100
             yield Label(
-                f"Success Rate: {success_rate:.1f}%",
+                f"Success Rate: {success_rate: .1f}%",
                 classes="success-rate",
             )
 
     def _format_time(self, seconds: float) -> str:
         if seconds < 60:
-            return f"{seconds:.0f}s"
+            return f"{seconds: .0f}s"
         if seconds < 3600:
-            return f"{seconds / 60:.0f}m {seconds % 60:.0f}s"
-        return f"{seconds / 3600:.0f}h {(seconds % 3600) / 60:.0f}m"
+            return f"{seconds / 60: .0f}m {seconds % 60: .0f}s"
+        return f"{seconds / 3600: .0f}h {(seconds % 3600) / 60: .0f}m"
 
 
 class ServiceHealthPanel(Widget):
@@ -308,7 +308,7 @@ class ServiceHealthPanel(Widget):
 
             if isinstance(last_check, int | float):
                 last_check_str = datetime.fromtimestamp(last_check).strftime(
-                    "%H:%M:%S",
+                    "%H: %M: %S",
                 )
             else:
                 last_check_str = str(last_check)
@@ -323,12 +323,12 @@ class ServiceHealthPanel(Widget):
 
     def _format_uptime(self, seconds: float) -> str:
         if seconds < 60:
-            return f"{seconds:.0f}s"
+            return f"{seconds: .0f}s"
         if seconds < 3600:
-            return f"{seconds / 60:.0f}m"
+            return f"{seconds / 60: .0f}m"
         if seconds < 86400:
-            return f"{seconds / 3600:.1f}h"
-        return f"{seconds / 86400:.1f}d"
+            return f"{seconds / 3600: .1f}h"
+        return f"{seconds / 86400: .1f}d"
 
 
 class EnhancedCrackerjackDashboard(App):
@@ -336,7 +336,7 @@ class EnhancedCrackerjackDashboard(App):
     CSS_PATH = Path(__file__).parent / "enhanced_progress_monitor.tcss"
 
     def __init__(
-        self, progress_dir: Path, websocket_url: str = "ws://localhost:8675"
+        self, progress_dir: Path, websocket_url: str = "ws: //localhost: 8675"
     ) -> None:
         super().__init__()
         self.progress_dir = progress_dir
@@ -445,7 +445,7 @@ class EnhancedCrackerjackDashboard(App):
 
 async def run_enhanced_progress_monitor(
     progress_dir: Path | None = None,
-    websocket_url: str = "ws://localhost:8675",
+    websocket_url: str = "ws: //localhost: 8675",
     dev_mode: bool = False,
 ) -> None:
     if progress_dir is None:
@@ -474,6 +474,6 @@ if __name__ == "__main__":
     import tempfile
 
     progress_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else None
-    websocket_url = sys.argv[2] if len(sys.argv) > 2 else "ws://localhost:8675"
+    websocket_url = sys.argv[2] if len(sys.argv) > 2 else "ws: //localhost: 8675"
 
     asyncio.run(run_enhanced_progress_monitor(progress_dir, websocket_url))

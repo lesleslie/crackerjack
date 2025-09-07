@@ -9,18 +9,16 @@ from .options import Options
 
 
 def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
-    # Only set debug environment variable if debug mode is explicitly enabled
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
     if ai_agent:
         os.environ["AI_AGENT"] = "1"
-        # Only enable AI agent debug if debug mode is explicitly requested
+
         if debug_mode:
             os.environ["AI_AGENT_DEBUG"] = "1"
             os.environ["AI_AGENT_VERBOSE"] = "1"
 
-            # Show debug configuration when debug mode is enabled
             console = Console()
             console.print(
                 "[bold cyan]🐛 AI Agent Debug Mode Configuration: [/ bold cyan]",
@@ -164,7 +162,6 @@ def handle_standard_mode(
 
     console = Console()
 
-    # Configure global lock manager from CLI options
     from crackerjack.executors.hook_lock_manager import hook_lock_manager
 
     hook_lock_manager.configure_from_options(options)
@@ -210,7 +207,6 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
     console = Console()
     console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
 
-    # Configure global lock manager from CLI options
     from crackerjack.executors.hook_lock_manager import hook_lock_manager
 
     hook_lock_manager.configure_from_options(options)

@@ -450,17 +450,16 @@ class DependencyMonitorService:
         import urllib.request
         from urllib.parse import urlparse
 
-        url = f"https://pypi.org/pypi/{package}/json"
+        url = f"https: //pypi.org/pypi/{package}/json"
         self._validate_pypi_url(url)
 
         parsed = urlparse(url)
-        # Restrict to https scheme only for security (B310)
+
         if parsed.scheme != "https" or parsed.netloc != "pypi.org":
-            msg = f"Invalid URL: only https://pypi.org URLs are allowed, got {url}"
+            msg = f"Invalid URL: only https: //pypi.org URLs are allowed, got {url}"
             raise ValueError(msg)
 
-        # B310: Safe urllib.urlopen with scheme validation
-        with urllib.request.urlopen(url, timeout=10) as response:  # nosec B310
+        with urllib.request.urlopen(url, timeout=10) as response:
             return json.load(response)
 
     def _validate_pypi_url(self, url: str) -> None:

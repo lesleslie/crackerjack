@@ -1,10 +1,3 @@
-"""
-Thread-safe status collection to prevent race conditions.
-
-Provides synchronized status data collection with proper locking,
-atomic operations, and consistency guarantees.
-"""
-
 import asyncio
 import json
 import threading
@@ -18,8 +11,6 @@ from .security_logger import SecurityEventLevel, SecurityEventType, get_security
 
 @dataclass
 class StatusSnapshot:
-    """Thread-safe snapshot of system status."""
-
     services: dict[str, t.Any] = field(default_factory=dict)
     jobs: dict[str, t.Any] = field(default_factory=dict)
     server_stats: dict[str, t.Any] = field(default_factory=dict)
@@ -31,43 +22,22 @@ class StatusSnapshot:
 
 
 class ThreadSafeStatusCollector:
-    """
-    Thread-safe status collector with race condition prevention.
-
-    Features:
-    - Thread-safe data collection and aggregation
-    - Atomic status updates with consistency guarantees
-    - Deadlock prevention with ordered locking
-    - Timeout protection for all operations
-    - Error isolation and recovery
-    """
-
     def __init__(self, timeout: float = 30.0):
-        """
-        Initialize thread-safe status collector.
-
-        Args:
-            timeout: Maximum time for status collection operations
-        """
         self.timeout = timeout
         self.security_logger = get_security_logger()
 
-        # Thread safety primitives with ordered locking to prevent deadlocks
-        self._collection_lock = threading.RLock()  # Main collection lock
-        self._data_lock = threading.RLock()  # Data structure lock
-        self._file_lock = threading.RLock()  # File operation lock
+        self._collection_lock = threading.RLock()
+        self._data_lock = threading.RLock()
+        self._file_lock = threading.RLock()
 
-        # Status collection state
         self._current_snapshot: StatusSnapshot | None = None
         self._collection_in_progress = False
         self._collection_start_time = 0.0
 
-        # Cached data with expiration
         self._cache: dict[str, t.Any] = {}
         self._cache_timestamps: dict[str, float] = {}
-        self._cache_ttl = 5.0  # 5 second cache TTL
+        self._cache_ttl = 5.0
 
-        # Thread-local storage for per-thread state
         self._local = threading.local()
 
     async def collect_comprehensive_status(
@@ -77,32 +47,12 @@ class ThreadSafeStatusCollector:
         include_services: bool = True,
         include_stats: bool = True,
     ) -> StatusSnapshot:
-        """
-        Collect comprehensive system status with thread safety.
-
-        Args:
-            client_id: Client identifier for logging
-            include_jobs: Include job information
-            include_services: Include service information
-            include_stats: Include server statistics
-
-        Returns:
-            StatusSnapshot with collected data
-
-        Raises:
-            TimeoutError: If collection takes too long
-            RuntimeError: If collection fails due to concurrency issues
-        """
-
-        # Use async context manager for proper cleanup
         async with self._collection_context(client_id):
             start_time = time.time()
 
             try:
-                # Create new snapshot
                 snapshot = StatusSnapshot(timestamp=start_time)
 
-                # Collect data components in parallel with timeouts
                 collection_tasks = []
 
                 if include_services:
@@ -120,21 +70,18 @@ class ThreadSafeStatusCollector:
                         self._collect_server_stats(client_id, snapshot)
                     )
 
-                # Wait for all collections to complete with timeout
                 await asyncio.wait_for(
                     asyncio.gather(*collection_tasks, return_exceptions=True),
                     timeout=self.timeout,
                 )
 
-                # Finalize snapshot
                 snapshot.collection_duration = time.time() - start_time
                 snapshot.is_complete = True
 
-                # Log successful collection
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.STATUS_COLLECTED,
                     level=SecurityEventLevel.INFO,
-                    message=f"Status collection completed in {snapshot.collection_duration:.2f}s",
+                    message=f"Status collection completed in {snapshot.collection_duration: .2f}s",
                     client_id=client_id,
                     operation="collect_status",
                     additional_data={
@@ -169,7 +116,6 @@ class ThreadSafeStatusCollector:
                     additional_data={"error": str(e)},
                 )
 
-                # Return partial snapshot with error information
                 snapshot = StatusSnapshot(
                     timestamp=start_time,
                     collection_duration=time.time() - start_time,
@@ -181,15 +127,11 @@ class ThreadSafeStatusCollector:
 
     @asynccontextmanager
     async def _collection_context(self, client_id: str):
-        """Context manager for status collection with proper cleanup."""
-
-        # Acquire collection lock with timeout
         collection_acquired = False
         start_wait = time.time()
 
         try:
-            # Try to acquire collection lock
-            while time.time() - start_wait < 5.0:  # 5 second wait limit
+            while time.time() - start_wait < 5.0:
                 with self._collection_lock:
                     if not self._collection_in_progress:
                         self._collection_in_progress = True
@@ -213,7 +155,6 @@ class ThreadSafeStatusCollector:
             yield
 
         finally:
-            # Always release the collection lock
             if collection_acquired:
                 with self._collection_lock:
                     self._collection_in_progress = False
@@ -232,23 +173,18 @@ class ThreadSafeStatusCollector:
         client_id: str,
         snapshot: StatusSnapshot,
     ) -> None:
-        """Collect services data with thread safety."""
-
         try:
-            # Check cache first
             cached_data = self._get_cached_data("services")
             if cached_data is not None:
                 with self._data_lock:
                     snapshot.services = cached_data
                 return
 
-            # Import here to avoid circular dependencies
             from crackerjack.services.server_manager import (
                 find_mcp_server_processes,
                 find_websocket_server_processes,
             )
 
-            # Collect process data with timeout
             mcp_task = asyncio.create_task(asyncio.to_thread(find_mcp_server_processes))
             websocket_task = asyncio.create_task(
                 asyncio.to_thread(find_websocket_server_processes)
@@ -270,7 +206,6 @@ class ThreadSafeStatusCollector:
                 },
             }
 
-            # Atomically update snapshot and cache
             with self._data_lock:
                 snapshot.services = services_data
                 self._set_cached_data("services", services_data)
@@ -286,17 +221,13 @@ class ThreadSafeStatusCollector:
         client_id: str,
         snapshot: StatusSnapshot,
     ) -> None:
-        """Collect jobs data with thread safety."""
-
         try:
-            # Check cache first
             cached_data = self._get_cached_data("jobs")
             if cached_data is not None:
                 with self._data_lock:
                     snapshot.jobs = cached_data
                 return
 
-            # Get active jobs with file locking
             active_jobs = await self._get_active_jobs_safe()
 
             jobs_data = {
@@ -312,7 +243,6 @@ class ThreadSafeStatusCollector:
                 "details": active_jobs,
             }
 
-            # Atomically update snapshot and cache
             with self._data_lock:
                 snapshot.jobs = jobs_data
                 self._set_cached_data("jobs", jobs_data)
@@ -328,10 +258,7 @@ class ThreadSafeStatusCollector:
         client_id: str,
         snapshot: StatusSnapshot,
     ) -> None:
-        """Collect server statistics with thread safety."""
-
         try:
-            # Get context safely
             from crackerjack.mcp.context import get_context
 
             try:
@@ -344,14 +271,12 @@ class ThreadSafeStatusCollector:
                     snapshot.server_stats = {"error": "Server context not available"}
                 return
 
-            # Build stats with timeout protection
             stats_task = asyncio.create_task(
                 asyncio.to_thread(self._build_server_stats_safe, context)
             )
 
             server_stats = await asyncio.wait_for(stats_task, timeout=5.0)
 
-            # Atomically update snapshot
             with self._data_lock:
                 snapshot.server_stats = server_stats
 
@@ -362,11 +287,8 @@ class ThreadSafeStatusCollector:
                 snapshot.server_stats = {"error": error_msg}
 
     async def _get_active_jobs_safe(self) -> list[dict[str, t.Any]]:
-        """Get active jobs with file system synchronization."""
-
         jobs = []
 
-        # Use file lock to prevent race conditions during file reading
         with self._file_lock:
             try:
                 from crackerjack.mcp.context import get_context
@@ -375,14 +297,11 @@ class ThreadSafeStatusCollector:
                 if not context or not context.progress_dir.exists():
                     return jobs
 
-                # Read job files with error handling
                 for progress_file in context.progress_dir.glob("job-*.json"):
                     try:
-                        # Use atomic read with timeout
                         content = progress_file.read_text(encoding="utf-8")
                         progress_data = json.loads(content)
 
-                        # Validate required fields
                         job_data = {
                             "job_id": progress_data.get("job_id", "unknown"),
                             "status": progress_data.get("status", "unknown"),
@@ -403,7 +322,6 @@ class ThreadSafeStatusCollector:
                         jobs.append(job_data)
 
                     except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
-                        # Log file read error but continue processing other files
                         self.security_logger.log_security_event(
                             event_type=SecurityEventType.FILE_READ_ERROR,
                             level=SecurityEventLevel.WARNING,
@@ -423,8 +341,6 @@ class ThreadSafeStatusCollector:
         return jobs
 
     def _build_server_stats_safe(self, context: t.Any) -> dict[str, t.Any]:
-        """Build server stats with thread safety."""
-
         try:
             stats = {
                 "server_info": {
@@ -450,7 +366,6 @@ class ThreadSafeStatusCollector:
                 "timestamp": time.time(),
             }
 
-            # Add state manager stats if available
             state_manager = getattr(context, "state_manager", None)
             if state_manager:
                 stats["state_manager"] = {
@@ -465,8 +380,6 @@ class ThreadSafeStatusCollector:
             return {"error": f"Failed to build server stats: {e}"}
 
     def _get_cached_data(self, key: str) -> dict[str, t.Any] | None:
-        """Get cached data if still valid."""
-
         current_time = time.time()
 
         with self._data_lock:
@@ -478,22 +391,16 @@ class ThreadSafeStatusCollector:
         return None
 
     def _set_cached_data(self, key: str, data: dict[str, t.Any]) -> None:
-        """Set cached data with timestamp."""
-
         with self._data_lock:
             self._cache[key] = data.copy() if hasattr(data, "copy") else data
             self._cache_timestamps[key] = time.time()
 
     def clear_cache(self) -> None:
-        """Clear all cached data."""
-
         with self._data_lock:
             self._cache.clear()
             self._cache_timestamps.clear()
 
     def get_collection_status(self) -> dict[str, t.Any]:
-        """Get current collection status and metrics."""
-
         with self._collection_lock:
             return {
                 "collection_in_progress": self._collection_in_progress,
@@ -505,13 +412,10 @@ class ThreadSafeStatusCollector:
             }
 
 
-# Global singleton instance
 _status_collector: ThreadSafeStatusCollector | None = None
 
 
 def get_thread_safe_status_collector() -> ThreadSafeStatusCollector:
-    """Get the global thread-safe status collector instance."""
-
     global _status_collector
     if _status_collector is None:
         _status_collector = ThreadSafeStatusCollector()
@@ -524,19 +428,6 @@ async def collect_secure_status(
     include_services: bool = True,
     include_stats: bool = True,
 ) -> StatusSnapshot:
-    """
-    Convenience function for secure status collection.
-
-    Args:
-        client_id: Client identifier for logging
-        include_jobs: Include job information
-        include_services: Include service information
-        include_stats: Include server statistics
-
-    Returns:
-        StatusSnapshot with collected data
-    """
-
     collector = get_thread_safe_status_collector()
     return await collector.collect_comprehensive_status(
         client_id=client_id,

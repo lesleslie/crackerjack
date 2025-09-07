@@ -63,7 +63,6 @@ class TestSpecialistAgent(SubAgent):
         )
 
     def _check_test_patterns(self, message: str) -> float:
-        # Map pattern strings back to SAFE_PATTERNS for safe usage
         pattern_map = {
             SAFE_PATTERNS[
                 "fixture_not_found_pattern"
@@ -191,7 +190,6 @@ class TestSpecialistAgent(SubAgent):
     def _identify_failure_type(self, issue: Issue) -> str:
         message = issue.message
 
-        # Map pattern strings back to SAFE_PATTERNS for safe usage
         pattern_map = {
             SAFE_PATTERNS[
                 "fixture_not_found_pattern"
@@ -218,12 +216,10 @@ class TestSpecialistAgent(SubAgent):
     async def _fix_missing_fixtures(self, issue: Issue) -> list[str]:
         fixes: list[str] = []
 
-        # Use safe pattern to test and extract fixture name
         fixture_pattern = SAFE_PATTERNS["fixture_not_found_pattern"]
         if not fixture_pattern.test(issue.message):
             return fixes
 
-        # Extract fixture name using the safe pattern's search method
         match = fixture_pattern.search(issue.message)
         if not match:
             return fixes

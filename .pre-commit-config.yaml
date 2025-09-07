@@ -25,55 +25,55 @@ repos:
       - id: check-added-large-files
         name: check-added-large-files
         exclude: ^\.venv/
-  - repo: https://github.com/astral-sh/uv-pre-commit
+  - repo: https: //github.com/astral-sh/uv-pre-commit
     rev: 0.8.15
     hooks:
       - id: uv-lock
-        files: ^ pyproject\.toml$
-  - repo: https://github.com/gitleaks/gitleaks
+        files: ^pyproject\.toml$
+  - repo: https: //github.com/gitleaks/gitleaks
     rev: v8.28.0
     hooks:
       - id: gitleaks
         exclude: uv\.lock|pyproject\.toml|tests/.*|docs/.*|.*\.md
-  - repo: https://github.com/PyCQA/bandit
+  - repo: https: //github.com/PyCQA/bandit
     rev: 1.8.6
     hooks:
       - id: bandit
         args: ["-c", "pyproject.toml", "-r", "-ll"]
         files: ^crackerjack/.*\.py$
         stages: ["pre-push", "manual"]
-  - repo: https://github.com/codespell-project/codespell
+  - repo: https: //github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
       - id: codespell
         exclude: ^\.venv/
         additional_dependencies: ["tomli"]
-  - repo: https://github.com/astral-sh/ruff-pre-commit
+  - repo: https: //github.com/astral-sh/ruff-pre-commit
     rev: v0.12.12
     hooks:
       - id: ruff-check
         exclude: ^\.venv/
       - id: ruff-format
         exclude: ^\.venv/
-  - repo: https://github.com/executablebooks/mdformat
+  - repo: https: //github.com/executablebooks/mdformat
     rev: 0.7.22
     hooks:
       - id: mdformat
         exclude: ^\.venv/
         additional_dependencies: ["mdformat-ruff"]
-  - repo: https://github.com/jendrikseipp/vulture
+  - repo: https: //github.com/jendrikseipp/vulture
     rev: v2.14
     hooks:
       - id: vulture
         files: ^crackerjack/.*\.py$
         stages: ["pre-push", "manual"]
-  - repo: https://github.com/fredrikaverpil/creosote
+  - repo: https: //github.com/fredrikaverpil/creosote
     rev: v4.1.0
     hooks:
       - id: creosote
         exclude: ^\.venv/
         stages: ["pre-push", "manual"]
-  - repo: https://github.com/rohaquinlop/complexipy-pre-commit
+  - repo: https: //github.com/rohaquinlop/complexipy-pre-commit
     rev: v3.3.0
     hooks:
       - id: complexipy
@@ -81,7 +81,7 @@ repos:
         files: ^crackerjack/.*\.py$
         exclude: ^(\.venv/|tests/)
         stages: ["pre-push", "manual"]
-  - repo: https://github.com/dosisod/refurb
+  - repo: https: //github.com/dosisod/refurb
     rev: v2.1.0
     hooks:
       - id: refurb
@@ -89,7 +89,7 @@ repos:
         files: ^crackerjack/.*\.py$
         exclude: ^tests/.*\.py$
         stages: ["pre-push", "manual"]
-  - repo: https://github.com/RobertCraigie/pyright-python
+  - repo: https: //github.com/RobertCraigie/pyright-python
     rev: v1.1.405
     hooks:
       - id: pyright

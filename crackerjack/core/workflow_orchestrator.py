@@ -47,12 +47,11 @@ class WorkflowPipeline:
         self.session = session
         self.phases = phases
         self._mcp_state_manager: t.Any = None
-        self._last_security_audit: t.Any = None  # Store security audit report
+        self._last_security_audit: t.Any = None
 
         self.logger = get_logger("crackerjack.pipeline")
         self._debugger = None
 
-        # Performance optimization services
         self._performance_monitor = get_performance_monitor()
         self._memory_optimizer = get_memory_optimizer()
         self._cache = get_performance_cache()
@@ -72,10 +71,8 @@ class WorkflowPipeline:
     async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
         workflow_id = f"workflow_{int(time.time())}"
 
-        # Start performance monitoring
         self._performance_monitor.start_workflow(workflow_id)
 
-        # Start cache service if not already running
         await self._cache.start()
 
         with LoggingContext(
@@ -91,13 +88,12 @@ class WorkflowPipeline:
                     options, start_time, workflow_id
                 )
 
-                # Finalize performance monitoring
                 workflow_perf = self._performance_monitor.end_workflow(
                     workflow_id, success
                 )
                 self.logger.info(
-                    f"Workflow performance: {workflow_perf.performance_score:.1f} score, "
-                    f"{workflow_perf.total_duration_seconds:.2f}s duration"
+                    f"Workflow performance: {workflow_perf.performance_score: .1f} score, "
+                    f"{workflow_perf.total_duration_seconds: .2f}s duration"
                 )
 
                 return success
@@ -112,7 +108,7 @@ class WorkflowPipeline:
 
             finally:
                 self.session.cleanup_resources()
-                # Optimize memory after workflow completion
+
                 self._memory_optimizer.optimize_memory()
                 await self._cache.stop()
 
@@ -202,41 +198,34 @@ class WorkflowPipeline:
     async def _execute_workflow_phases(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
-        """Execute all workflow phases with proper security gates and performance monitoring."""
         success = True
 
-        # Configuration phase with monitoring
         with phase_monitor(workflow_id, "configuration"):
             config_success = self.phases.run_configuration_phase(options)
             success = success and config_success
 
-        # Execute quality phase (includes testing and comprehensive checks)
         quality_success = await self._execute_quality_phase(options, workflow_id)
         if not quality_success:
             success = False
-            # For publishing workflows, enforce security gates
-            if self._is_publishing_workflow(options):
-                return False  # Exit early - publishing requires ALL quality checks
 
-        # Execute publishing workflow if requested
+            if self._is_publishing_workflow(options):
+                return False
+
         if not await self._execute_publishing_workflow(options, workflow_id):
             success = False
             return False
 
-        # Execute commit workflow if requested
         if not await self._execute_commit_workflow(options, workflow_id):
             success = False
 
         return success
 
     def _is_publishing_workflow(self, options: OptionsProtocol) -> bool:
-        """Check if this is a publishing workflow that requires strict security gates."""
         return bool(options.publish or options.all or options.commit)
 
     async def _execute_publishing_workflow(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
-        """Execute publishing workflow with proper error handling and monitoring."""
         if not options.publish and not options.all:
             return True
 
@@ -249,7 +238,6 @@ class WorkflowPipeline:
     async def _execute_commit_workflow(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
-        """Execute commit workflow with proper error handling and monitoring."""
         if not options.commit:
             return True
 
@@ -278,17 +266,14 @@ class WorkflowPipeline:
     ) -> bool:
         iteration = self._start_iteration_tracking(options)
 
-        # Execute initial phases (fast hooks + optional cleaning)
         if not await self._execute_initial_phases(options, workflow_id, iteration):
             return False
 
-        # Run main quality phases
         (
             testing_passed,
             comprehensive_passed,
         ) = await self._run_main_quality_phases_async(options, workflow_id)
 
-        # Handle workflow completion based on agent mode
         return await self._handle_workflow_completion(
             options, iteration, testing_passed, comprehensive_passed, workflow_id
         )
@@ -296,26 +281,21 @@ class WorkflowPipeline:
     async def _execute_initial_phases(
         self, options: OptionsProtocol, workflow_id: str, iteration: int
     ) -> bool:
-        """Execute fast hooks and optional code cleaning phases."""
-        # Fast hooks with performance monitoring
         with phase_monitor(workflow_id, "fast_hooks") as monitor:
             if not await self._run_initial_fast_hooks_async(
                 options, iteration, monitor
             ):
                 return False
 
-        # Run code cleaning if enabled
         return self._execute_optional_cleaning_phase(options)
 
     def _execute_optional_cleaning_phase(self, options: OptionsProtocol) -> bool:
-        """Execute code cleaning phase if enabled."""
         if not getattr(options, "clean", False):
             return True
 
         if not self._run_code_cleaning_phase(options):
             return False
 
-        # Run fast hooks again after cleaning for sanity check
         if not self._run_post_cleaning_fast_hooks(options):
             return False
 
@@ -330,7 +310,6 @@ class WorkflowPipeline:
         comprehensive_passed: bool,
         workflow_id: str = "unknown",
     ) -> bool:
-        """Handle workflow completion based on agent mode."""
         if options.ai_agent:
             return await self._handle_ai_agent_workflow(
                 options, iteration, testing_passed, comprehensive_passed, workflow_id
@@ -357,7 +336,6 @@ class WorkflowPipeline:
     async def _run_main_quality_phases_async(
         self, options: OptionsProtocol, workflow_id: str
     ) -> tuple[bool, bool]:
-        # Run testing and comprehensive phases in parallel where possible
         testing_task = asyncio.create_task(
             self._run_testing_phase_async(options, workflow_id)
         )
@@ -369,7 +347,6 @@ class WorkflowPipeline:
             testing_task, comprehensive_task, return_exceptions=True
         )
 
-        # Handle exceptions and ensure boolean types
         testing_result, comprehensive_result = results
 
         if isinstance(testing_result, Exception):
@@ -396,11 +373,9 @@ class WorkflowPipeline:
         comprehensive_passed: bool,
         workflow_id: str = "unknown",
     ) -> bool:
-        # Handle security gates first
         if not await self._process_security_gates(options):
             return False
 
-        # Determine if AI fixing is needed
         needs_ai_fixing = self._determine_ai_fixing_needed(
             testing_passed, comprehensive_passed, bool(options.publish or options.all)
         )
@@ -408,13 +383,11 @@ class WorkflowPipeline:
         if needs_ai_fixing:
             return await self._execute_ai_fixing_workflow(options, iteration)
 
-        # Handle success case without AI fixing
         return self._finalize_ai_workflow_success(
             options, iteration, testing_passed, comprehensive_passed
         )
 
     async def _process_security_gates(self, options: OptionsProtocol) -> bool:
-        """Process security gates for publishing operations."""
         publishing_requested, security_blocks = (
             self._check_security_gates_for_publishing(options)
         )
@@ -422,7 +395,6 @@ class WorkflowPipeline:
         if not (publishing_requested and security_blocks):
             return True
 
-        # Try AI fixing for security issues, then re-check
         security_fix_result = await self._handle_security_gate_failure(
             options, allow_ai_fixing=True
         )
@@ -431,7 +403,6 @@ class WorkflowPipeline:
     async def _execute_ai_fixing_workflow(
         self, options: OptionsProtocol, iteration: int
     ) -> bool:
-        """Execute AI fixing workflow and handle debugging."""
         success = await self._run_ai_agent_fixing_phase(options)
         if self._should_debug():
             self.debugger.log_iteration_end(iteration, success)
@@ -444,7 +415,6 @@ class WorkflowPipeline:
         testing_passed: bool,
         comprehensive_passed: bool,
     ) -> bool:
-        """Finalize AI workflow when no fixing is needed."""
         publishing_requested = bool(options.publish or options.all)
 
         final_success = self._determine_workflow_success(
@@ -467,7 +437,6 @@ class WorkflowPipeline:
         testing_passed: bool,
         comprehensive_passed: bool,
     ) -> None:
-        """Show security audit warning for partial success in publishing workflows."""
         should_show_warning = (
             publishing_requested
             and final_success
@@ -484,23 +453,19 @@ class WorkflowPipeline:
         testing_passed: bool,
         comprehensive_passed: bool,
     ) -> bool:
-        # Check security gates for publishing operations
         publishing_requested, security_blocks = (
             self._check_security_gates_for_publishing(options)
         )
 
         if publishing_requested and security_blocks:
-            # Standard workflow cannot bypass security gates
             return await self._handle_security_gate_failure(options)
 
-        # Determine success based on publishing requirements
         success = self._determine_workflow_success(
             testing_passed,
             comprehensive_passed,
             publishing_requested,
         )
 
-        # Show security audit warning for partial success in publishing workflows
         if (
             publishing_requested
             and success
@@ -512,7 +477,6 @@ class WorkflowPipeline:
                 "[red]❌ Quality checks failed - cannot proceed to publishing[/red]"
             )
 
-        # Show verbose failure details if requested
         if not success and getattr(options, "verbose", False):
             self._show_verbose_failure_details(testing_passed, comprehensive_passed)
 
@@ -563,7 +527,6 @@ class WorkflowPipeline:
             self._mcp_state_manager.update_stage_status(stage, status)
 
     def _run_code_cleaning_phase(self, options: OptionsProtocol) -> bool:
-        """Run code cleaning phase after fast hooks but before comprehensive hooks."""
         self.console.print("\n[bold blue]🧹 Running Code Cleaning Phase...[/bold blue]")
 
         success = self.phases.run_cleaning_phase(options)
@@ -576,7 +539,6 @@ class WorkflowPipeline:
         return success
 
     def _run_post_cleaning_fast_hooks(self, options: OptionsProtocol) -> bool:
-        """Run fast hooks again after code cleaning for sanity check."""
         self.console.print(
             "\n[bold cyan]🔍 Running Post-Cleaning Fast Hooks Sanity Check...[/bold cyan]"
         )
@@ -591,11 +553,9 @@ class WorkflowPipeline:
         return success
 
     def _has_code_cleaning_run(self) -> bool:
-        """Check if code cleaning has already run in this workflow."""
         return getattr(self, "_code_cleaning_complete", False)
 
     def _mark_code_cleaning_complete(self) -> None:
-        """Mark code cleaning as complete for this workflow."""
         self._code_cleaning_complete = True
 
     def _handle_test_failures(self) -> None:
@@ -628,24 +588,21 @@ class WorkflowPipeline:
     def _execute_standard_hooks_workflow(self, options: OptionsProtocol) -> bool:
         self._update_hooks_status_running()
 
-        # Run fast hooks first
         fast_hooks_success = self._run_fast_hooks_phase(options)
         if not fast_hooks_success:
             self._handle_hooks_completion(False)
             return False
 
-        # Run code cleaning after fast hooks but before comprehensive hooks
         if getattr(options, "clean", False):
             if not self._run_code_cleaning_phase(options):
                 self._handle_hooks_completion(False)
                 return False
-            # Run fast hooks again after cleaning for sanity check
+
             if not self._run_post_cleaning_fast_hooks(options):
                 self._handle_hooks_completion(False)
                 return False
             self._mark_code_cleaning_complete()
 
-        # Run comprehensive hooks
         comprehensive_success = self._run_comprehensive_hooks_phase(options)
 
         hooks_success = fast_hooks_success and comprehensive_success
@@ -682,29 +639,24 @@ class WorkflowPipeline:
         self._initialize_ai_fixing_phase(options)
 
         try:
-            # Prepare environment for AI agents
             self._prepare_ai_fixing_environment(options)
 
-            # Setup coordinator and collect issues
             agent_coordinator, issues = await self._setup_ai_fixing_workflow()
 
             if not issues:
                 return self._handle_no_issues_found()
 
-            # Execute AI fixing
             return await self._execute_ai_fixes(options, agent_coordinator, issues)
 
         except Exception as e:
             return self._handle_fixing_phase_error(e)
 
     def _initialize_ai_fixing_phase(self, options: OptionsProtocol) -> None:
-        """Initialize the AI fixing phase with status updates and logging."""
         self._update_mcp_status("ai_fixing", "running")
         self.logger.info("Starting AI agent fixing phase")
         self._log_debug_phase_start()
 
     def _prepare_ai_fixing_environment(self, options: OptionsProtocol) -> None:
-        """Prepare the environment for AI agents by running optional code cleaning."""
         should_run_cleaning = (
             getattr(options, "clean", False) and not self._has_code_cleaning_run()
         )
@@ -717,14 +669,12 @@ class WorkflowPipeline:
         )
 
         if self._run_code_cleaning_phase(options):
-            # Run fast hooks sanity check after cleaning
             self._run_post_cleaning_fast_hooks(options)
             self._mark_code_cleaning_complete()
 
     async def _setup_ai_fixing_workflow(
         self,
     ) -> tuple[AgentCoordinator, list[t.Any]]:
-        """Setup agent coordinator and collect issues to fix."""
         agent_coordinator = self._setup_agent_coordinator()
         issues = await self._collect_issues_from_failures()
         return agent_coordinator, issues
@@ -735,7 +685,6 @@ class WorkflowPipeline:
         agent_coordinator: AgentCoordinator,
         issues: list[t.Any],
     ) -> bool:
-        """Execute AI fixes and process results."""
         self.logger.info(f"AI agents will attempt to fix {len(issues)} issues")
         fix_result = await agent_coordinator.handle_issues(issues)
         return await self._process_fix_results(options, fix_result)
@@ -847,12 +796,10 @@ class WorkflowPipeline:
 
         verification_success = True
 
-        # Verify test fixes
         if self._should_verify_test_fixes(fix_result.fixes_applied):
             if not await self._verify_test_fixes(options):
                 verification_success = False
 
-        # Verify hook fixes
         if self._should_verify_hook_fixes(fix_result.fixes_applied):
             if not await self._verify_hook_fixes(options):
                 verification_success = False
@@ -861,11 +808,9 @@ class WorkflowPipeline:
         return verification_success
 
     def _should_verify_test_fixes(self, fixes_applied: list[str]) -> bool:
-        """Check if test fixes need verification."""
         return any("test" in fix.lower() for fix in fixes_applied)
 
     async def _verify_test_fixes(self, options: OptionsProtocol) -> bool:
-        """Verify test fixes by re-running tests."""
         self.logger.info("Re-running tests to verify test fixes")
         test_success = self.phases.run_testing_phase(options)
         if not test_success:
@@ -873,7 +818,6 @@ class WorkflowPipeline:
         return test_success
 
     def _should_verify_hook_fixes(self, fixes_applied: list[str]) -> bool:
-        """Check if hook fixes need verification."""
         hook_fixes = [
             f
             for f in fixes_applied
@@ -884,7 +828,6 @@ class WorkflowPipeline:
         return bool(hook_fixes)
 
     async def _verify_hook_fixes(self, options: OptionsProtocol) -> bool:
-        """Verify hook fixes by re-running comprehensive hooks."""
         self.logger.info("Re-running comprehensive hooks to verify hook fixes")
         hook_success = self.phases.run_comprehensive_hooks_only(options)
         if not hook_success:
@@ -892,7 +835,6 @@ class WorkflowPipeline:
         return hook_success
 
     def _log_verification_result(self, verification_success: bool) -> None:
-        """Log the final verification result."""
         if verification_success:
             self.logger.info("All AI agent fixes verified successfully")
         else:
@@ -1049,7 +991,6 @@ class WorkflowPipeline:
         )
 
     def _parse_hook_error_details(self, task_id: str, error_msg: str) -> list[Issue]:
-        """Parse hook error details and create specific issues."""
         issues: list[Issue] = []
 
         if task_id == "comprehensive_hooks":
@@ -1060,11 +1001,9 @@ class WorkflowPipeline:
         return issues
 
     def _parse_comprehensive_hook_errors(self, error_msg: str) -> list[Issue]:
-        """Parse comprehensive hook error messages and create specific issues."""
         issues: list[Issue] = []
         error_lower = error_msg.lower()
 
-        # Check each error type
         complexity_issue = self._check_complexity_error(error_lower)
         if complexity_issue:
             issues.append(complexity_issue)
@@ -1092,7 +1031,6 @@ class WorkflowPipeline:
         return issues
 
     def _check_complexity_error(self, error_lower: str) -> Issue | None:
-        """Check for complexity errors and create issue if found."""
         if "complexipy" in error_lower or "c901" in error_lower:
             return Issue(
                 id="complexity_violation",
@@ -1104,7 +1042,6 @@ class WorkflowPipeline:
         return None
 
     def _check_type_error(self, error_lower: str) -> Issue | None:
-        """Check for type errors and create issue if found."""
         if "pyright" in error_lower:
             return Issue(
                 id="pyright_type_error",
@@ -1116,7 +1053,6 @@ class WorkflowPipeline:
         return None
 
     def _check_security_error(self, error_lower: str) -> Issue | None:
-        """Check for security errors and create issue if found."""
         if "bandit" in error_lower:
             return Issue(
                 id="bandit_security_issue",
@@ -1128,7 +1064,6 @@ class WorkflowPipeline:
         return None
 
     def _check_performance_error(self, error_lower: str) -> Issue | None:
-        """Check for performance errors and create issue if found."""
         if "refurb" in error_lower:
             return Issue(
                 id="refurb_quality_issue",
@@ -1140,7 +1075,6 @@ class WorkflowPipeline:
         return None
 
     def _check_dead_code_error(self, error_lower: str) -> Issue | None:
-        """Check for dead code errors and create issue if found."""
         if "vulture" in error_lower:
             return Issue(
                 id="vulture_dead_code",
@@ -1152,7 +1086,6 @@ class WorkflowPipeline:
         return None
 
     def _check_regex_validation_error(self, error_lower: str) -> Issue | None:
-        """Check for regex validation errors and create issue if found."""
         regex_keywords = ("raw regex", "regex pattern", r"\g<", "replacement")
         if "validate-regex-patterns" in error_lower or any(
             keyword in error_lower for keyword in regex_keywords
@@ -1167,7 +1100,6 @@ class WorkflowPipeline:
         return None
 
     def _create_fast_hook_issue(self) -> Issue:
-        """Create an issue for fast hook errors."""
         return Issue(
             id="fast_hooks_formatting",
             type=IssueType.FORMATTING,
@@ -1194,10 +1126,8 @@ class WorkflowPipeline:
         return issues
 
     def _classify_issue(self, issue_str: str) -> tuple[IssueType, Priority]:
-        """Classify an issue string to determine its type and priority."""
         issue_lower = issue_str.lower()
 
-        # Check high-priority issues first
         if self._is_type_error(issue_lower):
             return IssueType.TYPE_ERROR, Priority.HIGH
         if self._is_security_issue(issue_lower):
@@ -1207,7 +1137,6 @@ class WorkflowPipeline:
         if self._is_regex_validation_issue(issue_lower):
             return IssueType.REGEX_VALIDATION, Priority.HIGH
 
-        # Check medium-priority issues
         if self._is_dead_code_issue(issue_lower):
             return IssueType.DEAD_CODE, Priority.MEDIUM
         if self._is_performance_issue(issue_lower):
@@ -1215,30 +1144,25 @@ class WorkflowPipeline:
         if self._is_import_error(issue_lower):
             return IssueType.IMPORT_ERROR, Priority.MEDIUM
 
-        # Default to formatting issue
         return IssueType.FORMATTING, Priority.MEDIUM
 
     def _is_type_error(self, issue_lower: str) -> bool:
-        """Check if issue is related to type errors."""
         return any(
             keyword in issue_lower for keyword in ("type", "annotation", "pyright")
         )
 
     def _is_security_issue(self, issue_lower: str) -> bool:
-        """Check if issue is related to security."""
         return any(
             keyword in issue_lower for keyword in ("security", "bandit", "hardcoded")
         )
 
     def _is_complexity_issue(self, issue_lower: str) -> bool:
-        """Check if issue is related to code complexity."""
         return any(
             keyword in issue_lower
             for keyword in ("complexity", "complexipy", "c901", "too complex")
         )
 
     def _is_regex_validation_issue(self, issue_lower: str) -> bool:
-        """Check if issue is related to regex validation."""
         return any(
             keyword in issue_lower
             for keyword in (
@@ -1251,17 +1175,14 @@ class WorkflowPipeline:
         )
 
     def _is_dead_code_issue(self, issue_lower: str) -> bool:
-        """Check if issue is related to dead code."""
         return any(keyword in issue_lower for keyword in ("unused", "dead", "vulture"))
 
     def _is_performance_issue(self, issue_lower: str) -> bool:
-        """Check if issue is related to performance."""
         return any(
             keyword in issue_lower for keyword in ("performance", "refurb", "furb")
         )
 
     def _is_import_error(self, issue_lower: str) -> bool:
-        """Check if issue is related to import errors."""
         return any(keyword in issue_lower for keyword in ("import", "creosote"))
 
     def _log_failure_counts_if_debugging(
@@ -1274,41 +1195,25 @@ class WorkflowPipeline:
     def _check_security_gates_for_publishing(
         self, options: OptionsProtocol
     ) -> tuple[bool, bool]:
-        """Check if publishing is requested and if security gates block it.
-
-        Returns:
-            tuple[bool, bool]: (publishing_requested, security_blocks_publishing)
-        """
         publishing_requested = bool(options.publish or options.all or options.commit)
 
         if not publishing_requested:
             return False, False
 
-        # Check security gates for publishing operations
         try:
             security_blocks_publishing = self._check_security_critical_failures()
             return publishing_requested, security_blocks_publishing
         except Exception as e:
-            # Fail securely if security check fails
             self.logger.warning(f"Security check failed: {e} - blocking publishing")
             self.console.print(
                 "[red]🔒 SECURITY CHECK FAILED: Unable to verify security status - publishing BLOCKED[/red]"
             )
-            # Return True for security_blocks to fail securely
+
             return publishing_requested, True
 
     async def _handle_security_gate_failure(
         self, options: OptionsProtocol, allow_ai_fixing: bool = False
     ) -> bool:
-        """Handle security gate failures with optional AI fixing.
-
-        Args:
-            options: Workflow options
-            allow_ai_fixing: Whether AI fixing is allowed for security issues
-
-        Returns:
-            bool: True if security issues resolved, False if still blocked
-        """
         self.console.print(
             "[red]🔒 SECURITY GATE: Critical security checks failed[/red]"
         )
@@ -1321,10 +1226,8 @@ class WorkflowPipeline:
                 "[yellow]🤖 Attempting AI-assisted security issue resolution...[/yellow]"
             )
 
-            # Try AI fixing for security issues
             ai_fix_success = await self._run_ai_agent_fixing_phase(options)
             if ai_fix_success:
-                # Re-check security after AI fixing
                 try:
                     security_still_blocks = self._check_security_critical_failures()
                     if not security_still_blocks:
@@ -1344,7 +1247,6 @@ class WorkflowPipeline:
                     return False
             return False
         else:
-            # Standard workflow cannot bypass security gates
             self.console.print(
                 "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
             )
@@ -1356,11 +1258,9 @@ class WorkflowPipeline:
         comprehensive_passed: bool,
         publishing_requested: bool,
     ) -> bool:
-        """Determine if AI fixing is needed based on test results and publishing requirements."""
         if publishing_requested:
-            # For publish/commit workflows, trigger AI fixing if either fails (since both must pass)
             return not testing_passed or not comprehensive_passed
-        # For regular workflows, trigger AI fixing if either fails
+
         return not testing_passed or not comprehensive_passed
 
     def _determine_workflow_success(
@@ -1369,17 +1269,14 @@ class WorkflowPipeline:
         comprehensive_passed: bool,
         publishing_requested: bool,
     ) -> bool:
-        """Determine workflow success based on test results and workflow type."""
         if publishing_requested:
-            # For publishing workflows, ALL quality checks (tests AND comprehensive hooks) must pass
             return testing_passed and comprehensive_passed
-        # For regular workflows, both must pass as well
+
         return testing_passed and comprehensive_passed
 
     def _show_verbose_failure_details(
         self, testing_passed: bool, comprehensive_passed: bool
     ) -> None:
-        """Show detailed failure information in verbose mode."""
         self.console.print(
             f"[yellow]⚠️ Quality phase results - testing_passed: {testing_passed}, comprehensive_passed: {comprehensive_passed}[/yellow]"
         )
@@ -1391,51 +1288,36 @@ class WorkflowPipeline:
             )
 
     def _check_security_critical_failures(self) -> bool:
-        """Check if any security-critical hooks have failed.
-
-        Returns:
-            True if security-critical hooks failed and block publishing
-        """
         try:
             from crackerjack.security.audit import SecurityAuditor
 
             auditor = SecurityAuditor()
 
-            # Get hook results - we need to be careful not to re-run hooks
-            # Instead, check the session tracker for recent failures
             fast_results = self._get_recent_fast_hook_results()
             comprehensive_results = self._get_recent_comprehensive_hook_results()
 
-            # Generate security audit report
             audit_report = auditor.audit_hook_results(
                 fast_results, comprehensive_results
             )
 
-            # Store audit report for later use
             self._last_security_audit = audit_report
 
-            # Block publishing if critical failures exist
             return audit_report.has_critical_failures
 
         except Exception as e:
-            # Fail securely - if we can't determine security status, block publishing
             self.logger.warning(f"Security audit failed: {e} - failing securely")
-            # Re-raise the exception so it can be caught by the calling method
+
             raise
 
     def _get_recent_fast_hook_results(self) -> list[t.Any]:
-        """Get recent fast hook results from session tracker."""
-        # Try to get results from session tracker
         results = self._extract_hook_results_from_session("fast_hooks")
 
-        # If no results from session, create mock failed results for critical hooks
         if not results:
             results = self._create_mock_hook_results(["gitleaks"])
 
         return results
 
     def _extract_hook_results_from_session(self, hook_type: str) -> list[t.Any]:
-        """Extract hook results from session tracker for given hook type."""
         results = []
 
         session_tracker = self._get_session_tracker()
@@ -1450,7 +1332,6 @@ class WorkflowPipeline:
         return results
 
     def _get_session_tracker(self) -> t.Any | None:
-        """Get session tracker if available."""
         return (
             getattr(self.session, "session_tracker", None)
             if hasattr(self.session, "session_tracker")
@@ -1458,7 +1339,6 @@ class WorkflowPipeline:
         )
 
     def _create_mock_hook_results(self, critical_hooks: list[str]) -> list[t.Any]:
-        """Create mock failed results for critical hooks to fail securely."""
         results = []
 
         for hook_name in critical_hooks:
@@ -1468,36 +1348,29 @@ class WorkflowPipeline:
         return results
 
     def _create_mock_hook_result(self, hook_name: str) -> t.Any:
-        """Create a mock result that appears to have failed for security purposes."""
         return type(
             "MockResult",
             (),
             {
                 "name": hook_name,
-                "status": "unknown",  # Unknown status = fail securely
+                "status": "unknown",
                 "output": "Unable to determine hook status",
             },
         )()
 
     def _get_recent_comprehensive_hook_results(self) -> list[t.Any]:
-        """Get recent comprehensive hook results from session tracker."""
-        # Try to get results from session tracker
         results = self._extract_hook_results_from_session("comprehensive_hooks")
 
-        # If no results from session, create mock failed results for critical hooks
         if not results:
             results = self._create_mock_hook_results(["bandit", "pyright"])
 
         return results
 
     def _is_security_critical_failure(self, result: t.Any) -> bool:
-        """Check if a hook result represents a security-critical failure."""
-
-        # List of security-critical hook names (fail-safe approach)
         security_critical_hooks = {
-            "bandit",  # Security vulnerability scanning
-            "pyright",  # Type safety prevents security holes
-            "gitleaks",  # Secret detection
+            "bandit",
+            "pyright",
+            "gitleaks",
         }
 
         hook_name = getattr(result, "name", "").lower()
@@ -1510,8 +1383,6 @@ class WorkflowPipeline:
         return hook_name in security_critical_hooks and is_failed
 
     def _show_security_audit_warning(self) -> None:
-        """Show security audit warning when proceeding with partial success."""
-        # Use stored audit report if available
         audit_report = getattr(self, "_last_security_audit", None)
 
         if audit_report:
@@ -1519,23 +1390,19 @@ class WorkflowPipeline:
                 "[yellow]⚠️ SECURITY AUDIT: Proceeding with partial quality success[/yellow]"
             )
 
-            # Show security status
             for warning in audit_report.security_warnings:
                 if "CRITICAL" in warning:
-                    # This shouldn't happen if we're showing warnings, but fail-safe
                     self.console.print(f"[red]{warning}[/red]")
                 elif "HIGH" in warning:
                     self.console.print(f"[yellow]{warning}[/yellow]")
                 else:
                     self.console.print(f"[blue]{warning}[/blue]")
 
-            # Show recommendations
             if audit_report.recommendations:
-                self.console.print("[bold]Security Recommendations:[/bold]")
-                for rec in audit_report.recommendations[:3]:  # Show top 3
+                self.console.print("[bold]Security Recommendations: [/bold]")
+                for rec in audit_report.recommendations[:3]:
                     self.console.print(f"[dim]{rec}[/dim]")
         else:
-            # Fallback if no audit report available
             self.console.print(
                 "[yellow]⚠️ SECURITY AUDIT: Proceeding with partial quality success[/yellow]"
             )
@@ -1546,12 +1413,10 @@ class WorkflowPipeline:
                 "[yellow]⚠️ Some non-critical quality checks failed - consider reviewing before production deployment[/yellow]"
             )
 
-    # Performance-optimized async methods
     async def _run_initial_fast_hooks_async(
         self, options: OptionsProtocol, iteration: int, monitor: t.Any
     ) -> bool:
-        """Run initial fast hooks asynchronously with monitoring."""
-        monitor.record_sequential_op()  # Fast hooks run sequentially for safety
+        monitor.record_sequential_op()
         fast_hooks_passed = self._run_fast_hooks_phase(options)
         if not fast_hooks_passed:
             if options.ai_agent and self._should_debug():
@@ -1562,7 +1427,6 @@ class WorkflowPipeline:
     async def _run_fast_hooks_phase_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
-        """Run fast hooks phase with performance monitoring."""
         with phase_monitor(workflow_id, "fast_hooks") as monitor:
             monitor.record_sequential_op()
             return self._run_fast_hooks_phase(options)
@@ -1570,7 +1434,6 @@ class WorkflowPipeline:
     async def _run_comprehensive_hooks_phase_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
-        """Run comprehensive hooks phase with performance monitoring."""
         with phase_monitor(workflow_id, "comprehensive_hooks") as monitor:
             monitor.record_sequential_op()
             return self._run_comprehensive_hooks_phase(options)
@@ -1578,7 +1441,6 @@ class WorkflowPipeline:
     async def _run_testing_phase_async(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
-        """Run testing phase asynchronously with monitoring."""
         with phase_monitor(workflow_id, "testing") as monitor:
             monitor.record_sequential_op()
             return self._run_testing_phase(options)
@@ -1586,11 +1448,9 @@ class WorkflowPipeline:
     async def _execute_standard_hooks_workflow_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
-        """Execute standard hooks workflow with performance monitoring."""
         with phase_monitor(workflow_id, "hooks") as monitor:
             self._update_hooks_status_running()
 
-            # Execute fast hooks phase
             fast_hooks_success = self._execute_monitored_fast_hooks_phase(
                 options, monitor
             )
@@ -1598,17 +1458,14 @@ class WorkflowPipeline:
                 self._handle_hooks_completion(False)
                 return False
 
-            # Execute optional cleaning phase
             if not self._execute_monitored_cleaning_phase(options):
                 self._handle_hooks_completion(False)
                 return False
 
-            # Execute comprehensive hooks phase
             comprehensive_success = self._execute_monitored_comprehensive_phase(
                 options, monitor
             )
 
-            # Complete workflow
             hooks_success = fast_hooks_success and comprehensive_success
             self._handle_hooks_completion(hooks_success)
             return hooks_success
@@ -1616,21 +1473,18 @@ class WorkflowPipeline:
     def _execute_monitored_fast_hooks_phase(
         self, options: OptionsProtocol, monitor: t.Any
     ) -> bool:
-        """Execute fast hooks phase with monitoring."""
         fast_hooks_success = self._run_fast_hooks_phase(options)
         if fast_hooks_success:
             monitor.record_sequential_op()
         return fast_hooks_success
 
     def _execute_monitored_cleaning_phase(self, options: OptionsProtocol) -> bool:
-        """Execute optional code cleaning phase."""
         if not getattr(options, "clean", False):
             return True
 
         if not self._run_code_cleaning_phase(options):
             return False
 
-        # Run fast hooks again after cleaning for sanity check
         if not self._run_post_cleaning_fast_hooks(options):
             return False
 
@@ -1640,7 +1494,6 @@ class WorkflowPipeline:
     def _execute_monitored_comprehensive_phase(
         self, options: OptionsProtocol, monitor: t.Any
     ) -> bool:
-        """Execute comprehensive hooks phase with monitoring."""
         comprehensive_success = self._run_comprehensive_hooks_phase(options)
         if comprehensive_success:
             monitor.record_sequential_op()
@@ -1673,7 +1526,6 @@ class WorkflowOrchestrator:
             TestManagerProtocol,
         )
 
-        # Initialize logging first so container creation respects log levels
         self._initialize_logging()
 
         self.logger = get_logger("crackerjack.orchestrator")
@@ -1714,13 +1566,11 @@ class WorkflowOrchestrator:
         session_id = getattr(self, "web_job_id", None) or str(int(time.time()))[:8]
         debug_log_file = log_manager.create_debug_log_file(session_id)
 
-        # Set log level based on debug flag only - verbose should not enable DEBUG logs
         log_level = "DEBUG" if self.debug else "INFO"
         setup_structured_logging(
             level=log_level, json_output=False, log_file=debug_log_file
         )
 
-        # Use a temporary logger for the initialization message
         temp_logger = get_logger("crackerjack.orchestrator.init")
         temp_logger.debug(
             "Structured logging initialized",

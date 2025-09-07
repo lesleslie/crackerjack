@@ -198,16 +198,12 @@ async def _get_comprehensive_status_secure(
     auth_header: str | None = None,
     verbosity: StatusVerbosity = StatusVerbosity.STANDARD,
 ) -> dict[str, t.Any]:
-    """Get comprehensive status with full security integration."""
-
-    # 1. Authentication
     auth_manager = get_status_authenticator()
     try:
         credentials = await authenticate_status_request(
             auth_header, client_ip, "get_comprehensive_status"
         )
 
-        # Check if operation is allowed for this auth level
         if not auth_manager.is_operation_allowed(
             "get_comprehensive_status", credentials.access_level
         ):
@@ -216,13 +212,11 @@ async def _get_comprehensive_status_secure(
     except Exception as e:
         return {"error": f"Authentication failed: {e}"}
 
-    # 2. Security validation
     try:
         await validate_status_request(client_id, "get_comprehensive_status", {})
     except Exception as e:
         return {"error": f"Security validation failed: {e}"}
 
-    # 3. Resource management with bounded operations
     try:
         return await execute_bounded_status_operation(
             "status_collection",
@@ -239,18 +233,13 @@ async def _collect_comprehensive_status_internal(
     client_id: str = "mcp_client",
     verbosity: StatusVerbosity = StatusVerbosity.STANDARD,
 ) -> dict[str, t.Any]:
-    """Internal comprehensive status collection using thread-safe collector."""
-
-    # Use thread-safe status collector
     collector = get_thread_safe_status_collector()
 
     try:
-        # Collect status with thread safety and proper timeout handling
         snapshot = await collector.collect_comprehensive_status(
             client_id=client_id,
         )
 
-        # Build final status from snapshot
         status = {
             "services": snapshot.services,
             "jobs": snapshot.jobs,
@@ -263,7 +252,6 @@ async def _collect_comprehensive_status_internal(
             },
         }
 
-        # Add agent suggestions if available
         context = None
         with suppress(RuntimeError):
             context = get_context()
@@ -280,7 +268,6 @@ async def _collect_comprehensive_status_internal(
 
 
 async def _get_comprehensive_status() -> dict[str, t.Any]:
-    """Legacy wrapper for backward compatibility."""
     return await _get_comprehensive_status_secure()
 
 
@@ -299,7 +286,6 @@ def _register_stage_status_tool(mcp_app: t.Any) -> None:
         client_id = "mcp_client"
 
         try:
-            # Security validation
             await validate_status_request(client_id, "get_stage_status", {})
 
             context = get_context()
@@ -310,7 +296,6 @@ def _register_stage_status_tool(mcp_app: t.Any) -> None:
             if not state_manager:
                 return _create_error_response("State manager not available")
 
-            # Use bounded operation for resource protection
             result = await execute_bounded_status_operation(
                 "stage_status",
                 client_id,
@@ -325,7 +310,6 @@ def _register_stage_status_tool(mcp_app: t.Any) -> None:
 
 
 def _build_stage_status(state_manager) -> dict[str, t.Any]:
-    """Build stage status with bounded resource usage."""
     return {
         "stages": _get_stage_status_dict(state_manager),
         "session": _get_session_info(state_manager),
@@ -339,7 +323,6 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
         client_id = "mcp_client"
 
         try:
-            # Security validation
             await validate_status_request(client_id, "get_next_action", {})
 
             context = get_context()
@@ -350,7 +333,6 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
             if not state_manager:
                 return '{"recommended_action": "initialize", "reason": "No state manager available"}'
 
-            # Use bounded operation for consistency
             action = await execute_bounded_status_operation(
                 "next_action",
                 client_id,
@@ -370,14 +352,11 @@ def _register_server_stats_tool(mcp_app: t.Any) -> None:
         client_id = "mcp_client"
 
         try:
-            # Security validation
             await validate_status_request(client_id, "get_server_stats", {})
 
-            # Use secure status operation with resource limits
             async with await secure_status_operation(
                 client_id, "get_server_stats", timeout=15.0
             ):
-                # Get context
                 context = get_context()
                 if not context:
                     formatter = get_secure_status_formatter()
@@ -386,7 +365,6 @@ def _register_server_stats_tool(mcp_app: t.Any) -> None:
                     )
                     return json.dumps(error_response, indent=2)
 
-                # Get raw stats with bounded operation
                 raw_stats = await execute_bounded_status_operation(
                     "server_stats",
                     client_id,
@@ -394,7 +372,6 @@ def _register_server_stats_tool(mcp_app: t.Any) -> None:
                     context,
                 )
 
-                # Apply secure formatting
                 secure_stats = format_secure_status(
                     raw_stats,
                     project_root=context.config.project_path,
@@ -404,7 +381,6 @@ def _register_server_stats_tool(mcp_app: t.Any) -> None:
                 return json.dumps(secure_stats, indent=2)
 
         except Exception as e:
-            # Use secure error formatting
             formatter = get_secure_status_formatter()
             error_response = formatter.format_error_response(
                 str(e),
@@ -413,22 +389,15 @@ def _register_server_stats_tool(mcp_app: t.Any) -> None:
 
 
 def _build_server_stats_secure(context) -> dict[str, t.Any]:
-    """Build server stats with security controls."""
-
-    # Build base stats
     stats = _build_server_stats(context)
 
-    # Add state manager stats
     state_manager = getattr(context, "state_manager", None)
     _add_state_manager_stats(stats, state_manager)
 
-    # Add security status
     security_manager = get_status_security_manager()
     stats["security_status"] = security_manager.get_security_status()
 
-    # Add resource limiter status if available
     with suppress(Exception):
-        # Resource limiter may not be initialized
         resource_limiter = get_websocket_resource_limiter()
         stats["websocket_resources"] = resource_limiter.get_resource_status()
 
@@ -442,19 +411,15 @@ def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
         client_ip = "127.0.0.1"
 
         try:
-            # Use secure status operation with request lock
             async with await secure_status_operation(
                 client_id,
                 "get_comprehensive_status",
             ):
-                # Get raw status data with full security integration
                 raw_status = await _get_comprehensive_status_secure(
                     client_id=client_id,
                     client_ip=client_ip,
-                    # Local-only access (auth_header defaults to None)
                 )
 
-                # Apply secure formatting
                 context = get_context()
                 project_root = context.config.project_path if context else None
 
@@ -467,7 +432,6 @@ def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
                 return json.dumps(secure_status, indent=2)
 
         except Exception as e:
-            # Use secure error formatting
             formatter = get_secure_status_formatter()
             error_response = formatter.format_error_response(
                 str(e),
@@ -600,7 +564,6 @@ def _register_filtered_status_tool(mcp_app: t.Any) -> None:
         client_id = "mcp_client"
 
         try:
-            # Security validation with component filter data
             await validate_status_request(
                 client_id, "get_filtered_status", {"components": components}
             )
@@ -612,12 +575,10 @@ def _register_filtered_status_tool(mcp_app: t.Any) -> None:
 
 
 async def _process_filtered_status_request(client_id: str, components: str) -> str:
-    """Process filtered status request with component validation."""
     requested, error = _validate_status_components(components)
     if error:
         return _format_status_error(error)
 
-    # Use secure status operation with timeout
     async with await secure_status_operation(
         client_id, "get_filtered_status", timeout=20.0
     ):
@@ -625,7 +586,6 @@ async def _process_filtered_status_request(client_id: str, components: str) -> s
 
 
 async def _collect_status_data(client_id: str, requested: set[str]) -> str:
-    """Collect status data based on requested components."""
     context = get_context()
 
     if "all" in requested:
@@ -636,7 +596,6 @@ async def _collect_status_data(client_id: str, requested: set[str]) -> str:
         if not context:
             return _format_status_error("Server context not available")
 
-        # Use bounded operation for filtered status
         raw_status = await execute_bounded_status_operation(
             "filtered_status",
             client_id,
@@ -649,7 +608,6 @@ async def _collect_status_data(client_id: str, requested: set[str]) -> str:
 
 
 def _apply_secure_formatting(raw_status: dict, context: t.Any) -> str:
-    """Apply secure formatting to status data."""
     project_root = context.config.project_path if context else None
     secure_status = format_secure_status(
         raw_status,
@@ -660,6 +618,5 @@ def _apply_secure_formatting(raw_status: dict, context: t.Any) -> str:
 
 
 def _format_status_error(error_message: str) -> str:
-    """Format status error response consistently."""
     formatter = get_secure_status_formatter()
     return json.dumps(formatter.format_error_response(error_message), indent=2)

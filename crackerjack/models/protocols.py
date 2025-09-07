@@ -105,49 +105,17 @@ class HookManager(t.Protocol):
 
 @t.runtime_checkable
 class SecurityAwareHookManager(HookManager, t.Protocol):
-    """Security-aware hook manager that tracks security-critical failures."""
+    def get_security_critical_failures(self, results: list[t.Any]) -> list[t.Any]: ...
 
-    def get_security_critical_failures(self, results: list[t.Any]) -> list[t.Any]:
-        """Extract security-critical failures from hook results.
-
-        Args:
-            results: List of hook results from run_fast_hooks or run_comprehensive_hooks
-
-        Returns:
-            List of results that are security-critical and failed
-        """
-        ...
-
-    def has_security_critical_failures(self, results: list[t.Any]) -> bool:
-        """Check if any security-critical hooks failed.
-
-        Args:
-            results: List of hook results
-
-        Returns:
-            True if any CRITICAL security level hooks failed
-        """
-        ...
+    def has_security_critical_failures(self, results: list[t.Any]) -> bool: ...
 
     def get_security_audit_report(
         self, fast_results: list[t.Any], comprehensive_results: list[t.Any]
-    ) -> dict[str, t.Any]:
-        """Generate security audit report for publishing decisions.
-
-        Args:
-            fast_results: Results from fast hooks
-            comprehensive_results: Results from comprehensive hooks
-
-        Returns:
-            Dict containing security status, failed critical checks, and recommendations
-        """
-        ...
+    ) -> dict[str, t.Any]: ...
 
 
 @t.runtime_checkable
 class CoverageRatchetProtocol(t.Protocol):
-    """Protocol for coverage ratchet service."""
-
     def get_baseline_coverage(self) -> float: ...
 
     def update_baseline_coverage(self, new_coverage: float) -> bool: ...
@@ -165,8 +133,6 @@ class CoverageRatchetProtocol(t.Protocol):
 
 @t.runtime_checkable
 class ConfigurationServiceProtocol(t.Protocol):
-    """Protocol for configuration service."""
-
     def update_precommit_config(self, options: OptionsProtocol) -> bool: ...
 
     def update_pyproject_config(self, options: OptionsProtocol) -> bool: ...
@@ -176,8 +142,6 @@ class ConfigurationServiceProtocol(t.Protocol):
 
 @t.runtime_checkable
 class SecurityServiceProtocol(t.Protocol):
-    """Protocol for security service."""
-
     def validate_file_safety(self, path: str | Path) -> bool: ...
 
     def check_hardcoded_secrets(self, content: str) -> list[dict[str, t.Any]]: ...
@@ -193,8 +157,6 @@ class SecurityServiceProtocol(t.Protocol):
 
 @t.runtime_checkable
 class InitializationServiceProtocol(t.Protocol):
-    """Protocol for initialization service."""
-
     def initialize_project(self, project_path: str | Path) -> bool: ...
 
     def validate_project_structure(self) -> bool: ...
@@ -204,8 +166,6 @@ class InitializationServiceProtocol(t.Protocol):
 
 @t.runtime_checkable
 class UnifiedConfigurationServiceProtocol(t.Protocol):
-    """Protocol for unified configuration service."""
-
     def merge_configurations(self) -> dict[str, t.Any]: ...
 
     def validate_configuration(self, config: dict[str, t.Any]) -> bool: ...
@@ -239,8 +199,6 @@ class PublishManager(t.Protocol):
 
 @t.runtime_checkable
 class ConfigMergeServiceProtocol(t.Protocol):
-    """Protocol for smart configuration file merging."""
-
     def smart_merge_pyproject(
         self,
         source_content: dict[str, t.Any],
@@ -285,107 +243,26 @@ class ConfigMergeServiceProtocol(t.Protocol):
 
 @t.runtime_checkable
 class HookLockManagerProtocol(t.Protocol):
-    """Protocol for managing hook-specific locks to prevent concurrent execution."""
+    def requires_lock(self, hook_name: str) -> bool: ...
 
-    def requires_lock(self, hook_name: str) -> bool:
-        """Check if a hook requires sequential execution.
+    async def acquire_hook_lock(
+        self, hook_name: str
+    ) -> t.AsyncContextManager[None]: ...
 
-        Args:
-            hook_name: Name of the hook to check
+    def get_lock_stats(self) -> dict[str, t.Any]: ...
 
-        Returns:
-            True if the hook requires a lock for sequential execution
-        """
-        ...
+    def add_hook_to_lock_list(self, hook_name: str) -> None: ...
 
-    async def acquire_hook_lock(self, hook_name: str) -> t.AsyncContextManager[None]:
-        """Acquire a lock for the specified hook if it requires one.
+    def remove_hook_from_lock_list(self, hook_name: str) -> None: ...
 
-        Args:
-            hook_name: Name of the hook to lock
+    def is_hook_currently_locked(self, hook_name: str) -> bool: ...
 
-        Returns:
-            Async context manager for lock acquisition
-        """
-        ...
+    def enable_global_lock(self, enabled: bool = True) -> None: ...
 
-    def get_lock_stats(self) -> dict[str, t.Any]:
-        """Get statistics about lock usage for monitoring.
+    def is_global_lock_enabled(self) -> bool: ...
 
-        Returns:
-            Dict containing lock statistics per hook
-        """
-        ...
+    def get_global_lock_path(self, hook_name: str) -> Path: ...
 
-    def add_hook_to_lock_list(self, hook_name: str) -> None:
-        """Add a hook to the list requiring sequential execution.
+    def cleanup_stale_locks(self, max_age_hours: float = 2.0) -> int: ...
 
-        Args:
-            hook_name: Name of the hook to add
-        """
-        ...
-
-    def remove_hook_from_lock_list(self, hook_name: str) -> None:
-        """Remove a hook from the list requiring sequential execution.
-
-        Args:
-            hook_name: Name of the hook to remove
-        """
-        ...
-
-    def is_hook_currently_locked(self, hook_name: str) -> bool:
-        """Check if a hook is currently locked.
-
-        Args:
-            hook_name: Name of the hook to check
-
-        Returns:
-            True if the hook is currently locked
-        """
-        ...
-
-    def enable_global_lock(self, enabled: bool = True) -> None:
-        """Enable or disable global lock functionality.
-
-        Args:
-            enabled: Whether to enable global locking
-        """
-        ...
-
-    def is_global_lock_enabled(self) -> bool:
-        """Check if global lock functionality is enabled.
-
-        Returns:
-            True if global locking is enabled
-        """
-        ...
-
-    def get_global_lock_path(self, hook_name: str) -> Path:
-        """Get the filesystem path for a hook's global lock file.
-
-        Args:
-            hook_name: Name of the hook
-
-        Returns:
-            Path to the lock file for the hook
-        """
-        ...
-
-    def cleanup_stale_locks(self, max_age_hours: float = 2.0) -> int:
-        """Clean up stale lock files older than max_age_hours.
-
-        Args:
-            max_age_hours: Maximum age in hours before a lock is considered stale
-
-        Returns:
-            Number of stale locks cleaned up
-        """
-        ...
-
-    def get_global_lock_stats(self) -> dict[str, t.Any]:
-        """Get comprehensive statistics about global lock usage.
-
-        Returns:
-            Dictionary containing global lock statistics and metrics
-        """
-        ...
+    def get_global_lock_stats(self) -> dict[str, t.Any]: ...

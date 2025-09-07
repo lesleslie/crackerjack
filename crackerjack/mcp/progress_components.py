@@ -155,11 +155,13 @@ class JobDataCollector:
         with suppress(Exception):
             async with timeout_manager.timeout_context(
                 "network_operations",
-                timeout=5.0,  # Short timeout for websocket discovery
+                timeout=5.0,
             ):
-                websocket_base = self.websocket_url.replace("ws://", "http://").replace(
-                    "wss://",
-                    "https://",
+                websocket_base = self.websocket_url.replace(
+                    "ws: //", "http: //"
+                ).replace(
+                    "wss: //",
+                    "https: //",
                 )
 
                 async with (
@@ -239,13 +241,13 @@ class ServiceHealthChecker:
         try:
             async with timeout_manager.timeout_context(
                 "network_operations",
-                timeout=3.0,  # Quick health check timeout
+                timeout=3.0,
             ):
                 async with (
                     aiohttp.ClientSession(
                         timeout=aiohttp.ClientTimeout(total=2),
                     ) as session,
-                    session.get("http://localhost:8675/") as response,
+                    session.get("http: //localhost: 8675/") as response,
                 ):
                     if response.status == 200:
                         data = await response.json()
@@ -267,7 +269,7 @@ class ServiceHealthChecker:
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=5.0,  # Add timeout protection
+                timeout=5.0,
             )
             if result.returncode == 0:
                 return ("MCP Server", "🟢 Process Active", "0")
@@ -284,7 +286,7 @@ class ServiceHealthChecker:
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=5.0,  # Add timeout protection
+                timeout=5.0,
             )
             if result.returncode == 0:
                 return ("Service Watchdog", "🟢 Active", "0")
@@ -446,12 +448,12 @@ class ServiceManager:
         with suppress(Exception):
             async with timeout_manager.timeout_context(
                 "network_operations",
-                timeout=3.0,  # Quick check timeout
+                timeout=3.0,
             ):
                 async with aiohttp.ClientSession(
                     timeout=aiohttp.ClientTimeout(total=2),
                 ) as session:
-                    async with session.get("http://localhost:8675/") as response:
+                    async with session.get("http: //localhost: 8675/") as response:
                         return response.status == 200
         return False
 
@@ -462,7 +464,7 @@ class ServiceManager:
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=5.0,  # Add timeout protection
+                timeout=5.0,
             )
             return result.returncode == 0
         return False
@@ -496,7 +498,7 @@ class ServiceManager:
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=5.0,  # Add timeout protection
+                timeout=5.0,
             )
             if result.returncode == 0:
                 return

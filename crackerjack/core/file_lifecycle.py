@@ -1,9 +1,3 @@
-"""File operations with RAII patterns and comprehensive error handling.
-
-Provides robust file handling with automatic cleanup, atomic operations,
-and comprehensive error recovery patterns.
-"""
-
 import asyncio
 import contextlib
 import fcntl
@@ -19,8 +13,6 @@ from .resource_manager import ResourceManager
 
 
 class AtomicFileWriter(AbstractFileResource):
-    """Atomic file writer with automatic cleanup and rollback on errors."""
-
     def __init__(
         self,
         target_path: Path,
@@ -39,32 +31,24 @@ class AtomicFileWriter(AbstractFileResource):
             manager.register_resource(self)
 
     async def _do_initialize(self) -> None:
-        """Initialize atomic file writer."""
-        # Create temporary file in same directory as target
         self.temp_path = self.path.parent / f".{self.path.name}.tmp.{os.getpid()}"
 
-        # Create backup if requested and target exists
         if self.backup and self.path.exists():
             self.backup_path = self.path.with_suffix(f"{self.path.suffix}.bak")
             shutil.copy2(self.path, self.backup_path)
 
-        # Open temporary file for writing
         self._file_handle = self.temp_path.open("w", encoding="utf-8")
 
     async def _do_cleanup(self) -> None:
-        """Clean up temporary files and handles."""
-        # Close file handle
         if self._file_handle and not self._file_handle.closed:
             self._file_handle.close()
 
-        # Remove temporary file if it exists
         if self.temp_path and self.temp_path.exists():
             try:
                 self.temp_path.unlink()
             except OSError as e:
                 self.logger.warning(f"Failed to remove temp file {self.temp_path}: {e}")
 
-        # Remove backup file if cleanup is successful
         if self.backup_path and self.backup_path.exists():
             try:
                 self.backup_path.unlink()
@@ -74,43 +58,35 @@ class AtomicFileWriter(AbstractFileResource):
                 )
 
     def write(self, content: str) -> None:
-        """Write content to the temporary file."""
         if not self._file_handle:
             raise RuntimeError("AtomicFileWriter not initialized")
         self._file_handle.write(content)
 
     def writelines(self, lines: t.Iterable[str]) -> None:
-        """Write multiple lines to the temporary file."""
         if not self._file_handle:
             raise RuntimeError("AtomicFileWriter not initialized")
         self._file_handle.writelines(lines)
 
     def flush(self) -> None:
-        """Flush the temporary file."""
         if not self._file_handle:
             raise RuntimeError("AtomicFileWriter not initialized")
         self._file_handle.flush()
         os.fsync(self._file_handle.fileno())
 
     async def commit(self) -> None:
-        """Atomically commit the changes to the target file."""
         if not self.temp_path:
             raise RuntimeError("AtomicFileWriter not initialized")
 
-        # Ensure all data is written
         self.flush()
 
-        # Close temporary file
         if self._file_handle:
             self._file_handle.close()
             self._file_handle = None
 
-        # Atomic move
         try:
             self.temp_path.replace(self.path)
             self.logger.debug(f"Successfully committed changes to {self.path}")
         except OSError as e:
-            # Restore from backup if available
             if self.backup_path and self.backup_path.exists():
                 try:
                     self.backup_path.replace(self.path)
@@ -122,7 +98,6 @@ class AtomicFileWriter(AbstractFileResource):
             raise RuntimeError(f"Failed to commit changes to {self.path}") from e
 
     async def rollback(self) -> None:
-        """Rollback changes and restore from backup if available."""
         if self.backup_path and self.backup_path.exists():
             try:
                 self.backup_path.replace(self.path)
@@ -133,8 +108,6 @@ class AtomicFileWriter(AbstractFileResource):
 
 
 class LockedFileResource(AbstractFileResource):
-    """File resource with exclusive locking for concurrent access protection."""
-
     def __init__(
         self,
         path: Path,
@@ -152,14 +125,10 @@ class LockedFileResource(AbstractFileResource):
             manager.register_resource(self)
 
     async def _do_initialize(self) -> None:
-        """Initialize locked file resource."""
-        # Ensure parent directory exists
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Open file
         self._file_handle = self.path.open(self.mode)
 
-        # Acquire exclusive lock with timeout
         start_time = time.time()
         while time.time() - start_time < self.timeout:
             try:
@@ -174,10 +143,8 @@ class LockedFileResource(AbstractFileResource):
         )
 
     async def _do_cleanup(self) -> None:
-        """Clean up locked file resource."""
         if self._file_handle and not self._file_handle.closed:
             try:
-                # Release lock
                 fcntl.flock(self._file_handle.fileno(), fcntl.LOCK_UN)
                 self.logger.debug(f"Released lock on {self.path}")
             except OSError as e:
@@ -187,18 +154,15 @@ class LockedFileResource(AbstractFileResource):
 
     @property
     def file_handle(self) -> t.IO[str]:
-        """Get the file handle."""
         if not self._file_handle:
             raise RuntimeError("LockedFileResource not initialized")
         return self._file_handle
 
     def read(self) -> str:
-        """Read content from the locked file."""
         self.file_handle.seek(0)
         return self.file_handle.read()
 
     def write(self, content: str) -> None:
-        """Write content to the locked file."""
         self.file_handle.seek(0)
         self.file_handle.write(content)
         self.file_handle.truncate()
@@ -207,8 +171,6 @@ class LockedFileResource(AbstractFileResource):
 
 
 class SafeDirectoryCreator(AbstractFileResource):
-    """Safe directory creation with cleanup and rollback capabilities."""
-
     def __init__(
         self,
         path: Path,
@@ -224,18 +186,14 @@ class SafeDirectoryCreator(AbstractFileResource):
             manager.register_resource(self)
 
     async def _do_initialize(self) -> None:
-        """Initialize safe directory creator."""
-        # Track which directories we create
         current = self.path
 
         while not current.exists():
             self._created_dirs.append(current)
             current = current.parent
 
-        # Reverse to create from parent to child
         self._created_dirs.reverse()
 
-        # Create directories
         for dir_path in self._created_dirs:
             try:
                 dir_path.mkdir(exist_ok=True)
@@ -247,13 +205,10 @@ class SafeDirectoryCreator(AbstractFileResource):
                 raise
 
     async def _do_cleanup(self) -> None:
-        """Clean up created directories if requested."""
         if self.cleanup_on_error:
             await self._cleanup_created_dirs()
 
     async def _cleanup_created_dirs(self) -> None:
-        """Remove directories that we created."""
-        # Remove in reverse order (child to parent)
         for dir_path in reversed(self._created_dirs):
             try:
                 if dir_path.exists() and not any(dir_path.iterdir()):
@@ -264,8 +219,6 @@ class SafeDirectoryCreator(AbstractFileResource):
 
 
 class BatchFileOperations:
-    """Batch file operations with atomic commit/rollback."""
-
     def __init__(self, manager: ResourceManager | None = None) -> None:
         self.manager = manager or ResourceManager()
         self.operations: list[t.Callable[[], None]] = []
@@ -278,8 +231,6 @@ class BatchFileOperations:
         content: str,
         backup: bool = True,
     ) -> None:
-        """Add a write operation to the batch."""
-
         def write_op():
             writer = AtomicFileWriter(path, backup, self.manager)
             asyncio.create_task(writer.initialize())
@@ -299,8 +250,6 @@ class BatchFileOperations:
         dest: Path,
         backup: bool = True,
     ) -> None:
-        """Add a copy operation to the batch."""
-
         def copy_op():
             if backup and dest.exists():
                 backup_path = dest.with_suffix(f"{dest.suffix}.bak")
@@ -321,8 +270,6 @@ class BatchFileOperations:
         source: Path,
         dest: Path,
     ) -> None:
-        """Add a move operation to the batch."""
-
         def move_op():
             shutil.move(source, dest)
 
@@ -337,7 +284,6 @@ class BatchFileOperations:
         path: Path,
         backup: bool = True,
     ) -> None:
-        """Add a delete operation to the batch."""
         backup_path: Path | None = None
 
         def delete_op():
@@ -356,7 +302,6 @@ class BatchFileOperations:
         self.rollback_operations.append(rollback_op)
 
     async def commit_all(self) -> None:
-        """Execute all operations atomically."""
         executed_ops = 0
 
         try:
@@ -369,7 +314,6 @@ class BatchFileOperations:
         except Exception as e:
             self.logger.error(f"Batch operation failed at step {executed_ops}: {e}")
 
-            # Rollback executed operations in reverse order
             for i in range(executed_ops - 1, -1, -1):
                 try:
                     self.rollback_operations[i]()
@@ -381,13 +325,11 @@ class BatchFileOperations:
             raise RuntimeError("Batch file operations failed and rolled back") from e
 
 
-# Context managers for common file operations
 @contextlib.asynccontextmanager
 async def atomic_file_write(
     path: Path,
     backup: bool = True,
 ):
-    """Context manager for atomic file writing."""
     writer = AtomicFileWriter(path, backup)
     try:
         await writer.initialize()
@@ -406,7 +348,6 @@ async def locked_file_access(
     mode: str = "r+",
     timeout: float = 30.0,
 ):
-    """Context manager for locked file access."""
     file_resource = LockedFileResource(path, mode, timeout)
     try:
         await file_resource.initialize()
@@ -420,7 +361,6 @@ async def safe_directory_creation(
     path: Path,
     cleanup_on_error: bool = True,
 ):
-    """Context manager for safe directory creation."""
     creator = SafeDirectoryCreator(path, cleanup_on_error)
     try:
         await creator.initialize()
@@ -431,27 +371,21 @@ async def safe_directory_creation(
 
 @contextlib.asynccontextmanager
 async def batch_file_operations():
-    """Context manager for batch file operations."""
     batch = BatchFileOperations()
     try:
         yield batch
         await batch.commit_all()
     except Exception:
-        # Rollback is handled in commit_all
         raise
 
 
-# File operation utilities with enhanced error handling
 class SafeFileOperations:
-    """Utility class for safe file operations with comprehensive error handling."""
-
     @staticmethod
     async def safe_read_text(
         path: Path,
         encoding: str = "utf-8",
         fallback_encodings: list[str] | None = None,
     ) -> str:
-        """Safely read text file with encoding fallback."""
         fallback_encodings = fallback_encodings or ["latin-1", "cp1252"]
 
         for enc in [encoding] + fallback_encodings:
@@ -477,12 +411,10 @@ class SafeFileOperations:
         atomic: bool = True,
         backup: bool = True,
     ) -> None:
-        """Safely write text file with atomic operation support."""
         if atomic:
             async with atomic_file_write(path, backup) as writer:
                 writer.write(content)
         else:
-            # Ensure parent directory exists
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding=encoding)
 
@@ -493,17 +425,14 @@ class SafeFileOperations:
         preserve_metadata: bool = True,
         backup: bool = True,
     ) -> None:
-        """Safely copy file with backup support."""
         if not source.exists():
             raise FileNotFoundError(f"Source file not found: {source}")
 
-        # Create backup if requested
         if backup and dest.exists():
             backup_path = dest.with_suffix(f"{dest.suffix}.bak")
             shutil.copy2(dest, backup_path)
 
         try:
-            # Ensure destination directory exists
             dest.parent.mkdir(parents=True, exist_ok=True)
 
             if preserve_metadata:
@@ -512,7 +441,6 @@ class SafeFileOperations:
                 shutil.copy(source, dest)
 
         except Exception as e:
-            # Restore backup if copy failed
             if backup and dest.with_suffix(f"{dest.suffix}.bak").exists():
                 shutil.move(dest.with_suffix(f"{dest.suffix}.bak"), dest)
             raise RuntimeError(f"Failed to copy {source} to {dest}") from e
@@ -523,27 +451,22 @@ class SafeFileOperations:
         dest: Path,
         backup: bool = True,
     ) -> None:
-        """Safely move file with backup support."""
         if not source.exists():
             raise FileNotFoundError(f"Source file not found: {source}")
 
-        # Create backup of destination if it exists
         backup_path = None
         if backup and dest.exists():
             backup_path = dest.with_suffix(f"{dest.suffix}.bak.{os.getpid()}")
             shutil.move(dest, backup_path)
 
         try:
-            # Ensure destination directory exists
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(source, dest)
 
-            # Remove backup on success
             if backup_path and backup_path.exists():
                 backup_path.unlink()
 
         except Exception as e:
-            # Restore backup if move failed
             if backup_path and backup_path.exists():
                 shutil.move(backup_path, dest)
             raise RuntimeError(f"Failed to move {source} to {dest}") from e

@@ -79,12 +79,11 @@ class Options(BaseModel):
 
     @property
     def effective_max_iterations(self) -> int:
-        """Get the effective max iterations based on quick/thorough flags."""
         if self.quick:
-            return 3  # Quick mode: 3 iterations for CI/CD
+            return 3
         if self.thorough:
-            return 8  # Thorough mode: 8 iterations for complex refactoring
-        return self.max_iterations  # Default: 5 iterations
+            return 8
+        return self.max_iterations
 
     @classmethod
     @field_validator("publish", "bump", mode="before")

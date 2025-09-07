@@ -9,7 +9,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 class CoverageRatchetService:
     MILESTONES = [15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95, 100]
-    # 2% tolerance margin for coverage fluctuations to prevent test flakiness
+
     TOLERANCE_MARGIN = 2.0
 
     def __init__(self, pkg_path: Path, console: Console) -> None:
@@ -53,20 +53,16 @@ class CoverageRatchetService:
         return self.get_ratchet_data().get("baseline", 0.0)
 
     def get_baseline_coverage(self) -> float:
-        """Protocol method: Get baseline coverage."""
         return self.get_baseline()
 
     def update_baseline_coverage(self, new_coverage: float) -> bool:
-        """Protocol method: Update baseline coverage."""
         return self.update_coverage(new_coverage).get("success", False)
 
     def is_coverage_regression(self, current_coverage: float) -> bool:
-        """Protocol method: Check if coverage is a regression."""
         baseline = self.get_baseline()
         return current_coverage < (baseline - self.TOLERANCE_MARGIN)
 
     def get_coverage_improvement_needed(self) -> float:
-        """Protocol method: Get coverage improvement needed."""
         data = self.get_ratchet_data()
         baseline = data.get("baseline", 0.0)
         next_milestone = data.get("next_milestone")
@@ -75,16 +71,6 @@ class CoverageRatchetService:
         return 100.0 - baseline
 
     def update_coverage(self, new_coverage: float) -> dict[str, t.Any]:
-        """Update coverage with 2% tolerance margin to prevent test flakiness.
-
-        Behavior:
-        - Coverage below (baseline - 2%): FAIL (regression)
-        - Coverage within ±2% of baseline: PASS (maintained)
-        - Coverage above baseline: PASS (improved, updates baseline)
-
-        This prevents failures due to small coverage fluctuations while
-        still catching significant regressions.
-        """
         if not self.ratchet_file.exists():
             self.initialize_baseline(new_coverage)
             return {
@@ -99,7 +85,6 @@ class CoverageRatchetService:
         data = self.get_ratchet_data()
         current_baseline = data["baseline"]
 
-        # Check if coverage is below the tolerance margin (baseline - 2%)
         tolerance_threshold = current_baseline - self.TOLERANCE_MARGIN
         if new_coverage < tolerance_threshold:
             return {
@@ -130,7 +115,7 @@ class CoverageRatchetService:
                 "allowed": True,
                 "baseline_updated": True,
             }
-        # Coverage is within tolerance margin - treat as maintained
+
         return {
             "status": "maintained",
             "message": f"Coverage maintained at {new_coverage: .2f}% (within {self.TOLERANCE_MARGIN}% tolerance margin)",

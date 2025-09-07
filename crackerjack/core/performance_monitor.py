@@ -1,10 +1,3 @@
-"""
-Performance monitoring and metrics collection for async operations.
-
-This module provides comprehensive monitoring of async operations,
-timeout tracking, and performance analysis capabilities.
-"""
-
 import json
 import logging
 import time
@@ -22,8 +15,6 @@ logger = logging.getLogger("crackerjack.performance_monitor")
 
 @dataclass
 class OperationMetrics:
-    """Metrics for a specific operation."""
-
     operation_name: str
     total_calls: int = 0
     successful_calls: int = 0
@@ -36,21 +27,18 @@ class OperationMetrics:
 
     @property
     def success_rate(self) -> float:
-        """Calculate success rate as percentage."""
         if self.total_calls == 0:
             return 0.0
         return (self.successful_calls / self.total_calls) * 100
 
     @property
     def average_time(self) -> float:
-        """Calculate average execution time."""
         if self.successful_calls == 0:
             return 0.0
         return self.total_time / self.successful_calls
 
     @property
     def recent_average_time(self) -> float:
-        """Calculate recent average execution time."""
         if not self.recent_times:
             return 0.0
         return sum(self.recent_times) / len(self.recent_times)
@@ -58,8 +46,6 @@ class OperationMetrics:
 
 @dataclass
 class TimeoutEvent:
-    """Record of a timeout event."""
-
     operation: str
     expected_timeout: float
     actual_duration: float
@@ -68,18 +54,14 @@ class TimeoutEvent:
 
 
 class AsyncPerformanceMonitor:
-    """Monitor and track performance of async operations."""
-
     def __init__(self, max_timeout_events: int = 1000) -> None:
         self.metrics: dict[str, OperationMetrics] = {}
         self.timeout_events: deque[TimeoutEvent] = deque(maxlen=max_timeout_events)
         self._lock = Lock()
         self.start_time = time.time()
 
-        # Circuit breaker tracking
         self.circuit_breaker_events: dict[str, list[float]] = defaultdict(list)
 
-        # Performance thresholds
         self.performance_thresholds: dict[str, dict[str, float]] = {
             "default": {
                 "warning_time": 30.0,
@@ -119,11 +101,9 @@ class AsyncPerformanceMonitor:
         }
 
     def record_operation_start(self, operation: str) -> float:
-        """Record the start of an operation."""
         return time.time()
 
     def record_operation_success(self, operation: str, start_time: float) -> None:
-        """Record successful completion of an operation."""
         duration = time.time() - start_time
 
         with self._lock:
@@ -139,7 +119,6 @@ class AsyncPerformanceMonitor:
             metrics.recent_times.append(duration)
 
     def record_operation_failure(self, operation: str, start_time: float) -> None:
-        """Record failed completion of an operation."""
         duration = time.time() - start_time
 
         with self._lock:
@@ -161,7 +140,6 @@ class AsyncPerformanceMonitor:
         expected_timeout: float,
         error_message: str = "",
     ) -> None:
-        """Record timeout of an operation."""
         duration = time.time() - start_time
 
         with self._lock:
@@ -172,7 +150,6 @@ class AsyncPerformanceMonitor:
             metrics.total_calls += 1
             metrics.timeout_calls += 1
 
-            # Record timeout event
             timeout_event = TimeoutEvent(
                 operation=operation,
                 expected_timeout=expected_timeout,
@@ -183,28 +160,23 @@ class AsyncPerformanceMonitor:
             self.timeout_events.append(timeout_event)
 
     def record_circuit_breaker_event(self, operation: str, opened: bool) -> None:
-        """Record circuit breaker state change."""
         with self._lock:
             if opened:
                 self.circuit_breaker_events[operation].append(time.time())
 
     def get_operation_metrics(self, operation: str) -> OperationMetrics | None:
-        """Get metrics for a specific operation."""
         with self._lock:
             return self.metrics.get(operation)
 
     def get_all_metrics(self) -> dict[str, OperationMetrics]:
-        """Get all operation metrics."""
         with self._lock:
             return self.metrics.copy()
 
     def get_recent_timeout_events(self, limit: int = 10) -> list[TimeoutEvent]:
-        """Get recent timeout events."""
         with self._lock:
             return list(self.timeout_events)[-limit:]
 
     def get_performance_alerts(self) -> list[dict[str, t.Any]]:
-        """Get current performance alerts."""
         alerts = []
 
         with self._lock:
@@ -213,7 +185,6 @@ class AsyncPerformanceMonitor:
                     operation, self.performance_thresholds["default"]
                 )
 
-                # Check success rate
                 if metrics.success_rate < thresholds["min_success_rate"]:
                     alerts.append(
                         {
@@ -227,7 +198,6 @@ class AsyncPerformanceMonitor:
                         }
                     )
 
-                # Check average response time
                 avg_time = metrics.recent_average_time
                 if avg_time > thresholds["critical_time"]:
                     alerts.append(
@@ -253,7 +223,6 @@ class AsyncPerformanceMonitor:
         return alerts
 
     def get_summary_stats(self) -> dict[str, t.Any]:
-        """Get summary statistics."""
         with self._lock:
             total_calls = sum(m.total_calls for m in self.metrics.values())
             total_successes = sum(m.successful_calls for m in self.metrics.values())
@@ -282,7 +251,6 @@ class AsyncPerformanceMonitor:
             }
 
     def export_metrics_json(self, filepath: Path) -> None:
-        """Export metrics to JSON file."""
         with self._lock:
             data = {
                 "summary": self.get_summary_stats(),
@@ -316,24 +284,21 @@ class AsyncPerformanceMonitor:
         filepath.write_text(json.dumps(data, indent=2))
 
     def print_performance_report(self, console: Console | None = None) -> None:
-        """Print a formatted performance report."""
         if console is None:
             console = Console()
 
         console.print("\n[bold blue]🔍 Async Performance Monitor Report[/bold blue]")
         console.print("=" * 60)
 
-        # Summary stats
         summary = self.get_summary_stats()
-        console.print(f"⏱️ Uptime: {summary['uptime_seconds']:.1f}s")
+        console.print(f"⏱️ Uptime: {summary['uptime_seconds']: .1f}s")
         console.print(f"📊 Total Operations: {summary['total_operations']}")
-        console.print(f"✅ Success Rate: {summary['overall_success_rate']:.1f}%")
-        console.print(f"⏰ Timeout Rate: {summary['timeout_rate']:.1f}%")
-        console.print(f"🚀 Operations/min: {summary['operations_per_minute']:.1f}")
+        console.print(f"✅ Success Rate: {summary['overall_success_rate']: .1f}%")
+        console.print(f"⏰ Timeout Rate: {summary['timeout_rate']: .1f}%")
+        console.print(f"🚀 Operations/min: {summary['operations_per_minute']: .1f}")
 
-        # Operation metrics table
         if self.metrics:
-            console.print("\n[bold]Operation Metrics:[/bold]")
+            console.print("\n[bold]Operation Metrics: [/bold]")
             table = Table()
             table.add_column("Operation")
             table.add_column("Calls")
@@ -347,42 +312,38 @@ class AsyncPerformanceMonitor:
                     table.add_row(
                         name,
                         str(metrics.total_calls),
-                        f"{metrics.success_rate:.1f}%",
-                        f"{metrics.average_time:.2f}s",
-                        f"{metrics.recent_average_time:.2f}s",
+                        f"{metrics.success_rate: .1f}%",
+                        f"{metrics.average_time: .2f}s",
+                        f"{metrics.recent_average_time: .2f}s",
                         str(metrics.timeout_calls),
                     )
 
             console.print(table)
 
-        # Performance alerts
         alerts = self.get_performance_alerts()
         if alerts:
-            console.print("\n[bold red]⚠️ Performance Alerts:[/bold red]")
+            console.print("\n[bold red]⚠️ Performance Alerts: [/bold red]")
             for alert in alerts:
                 severity_emoji = "🔴" if alert["severity"] == "critical" else "🟡"
                 console.print(
                     f"{severity_emoji} {alert['operation']}: {alert['type']} "
-                    f"{alert['current_value']:.1f} (threshold: {alert['threshold']:.1f})"
+                    f"{alert['current_value']: .1f} (threshold: {alert['threshold']: .1f})"
                 )
 
-        # Recent timeouts
         recent_timeouts = self.get_recent_timeout_events(5)
         if recent_timeouts:
-            console.print("\n[bold yellow]⏰ Recent Timeouts:[/bold yellow]")
+            console.print("\n[bold yellow]⏰ Recent Timeouts: [/bold yellow]")
             for timeout in recent_timeouts:
                 console.print(
-                    f"  • {timeout.operation}: {timeout.actual_duration:.1f}s "
-                    f"(expected: {timeout.expected_timeout:.1f}s)"
+                    f" • {timeout.operation}: {timeout.actual_duration: .1f}s "
+                    f"(expected: {timeout.expected_timeout: .1f}s)"
                 )
 
 
-# Global performance monitor instance
 _global_performance_monitor: AsyncPerformanceMonitor | None = None
 
 
 def get_performance_monitor() -> AsyncPerformanceMonitor:
-    """Get the global performance monitor instance."""
     global _global_performance_monitor
     if _global_performance_monitor is None:
         _global_performance_monitor = AsyncPerformanceMonitor()
@@ -390,6 +351,5 @@ def get_performance_monitor() -> AsyncPerformanceMonitor:
 
 
 def reset_performance_monitor() -> None:
-    """Reset the global performance monitor."""
     global _global_performance_monitor
     _global_performance_monitor = AsyncPerformanceMonitor()

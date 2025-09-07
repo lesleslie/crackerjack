@@ -342,7 +342,7 @@ class PackageBackupService(BaseModel):
 
     def _calculate_backup_checksum(self, file_checksums: dict[str, str]) -> str:
         sorted_items = sorted(file_checksums.items())
-        combined = "".join(f"{path}:{checksum}" for path, checksum in sorted_items)
+        combined = "".join(f"{path}: {checksum}" for path, checksum in sorted_items)
         return hashlib.sha256(combined.encode(), usedforsecurity=False).hexdigest()
 
     def _validate_backup(

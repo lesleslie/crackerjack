@@ -17,17 +17,6 @@ from crackerjack.services.logging import get_logger
 
 
 class ConfigMergeService(ConfigMergeServiceProtocol):
-    """Smart configuration file merging service.
-
-    Extracts and centralizes smart merge logic for:
-    - pyproject.toml files (preserves project identity, merges tool configs)
-    - .pre-commit-config.yaml files (adds missing repos, preserves existing hooks)
-    - .gitignore files (merges patterns while avoiding duplicates)
-    - Generic file appending with markers
-
-    Follows crackerjack's DRY, YAGNI, KISS principles.
-    """
-
     def __init__(
         self,
         console: Console,
@@ -45,11 +34,9 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         target_path: str | t.Any,
         project_name: str,
     ) -> dict[str, t.Any]:
-        """Smart merge pyproject.toml preserving project identity and merging tool configs."""
         target_path = Path(target_path)
 
         if not target_path.exists():
-            # No existing file, return source with project name replacement
             return self._replace_project_name_in_config_value(
                 source_content, project_name
             )
@@ -57,13 +44,10 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         with target_path.open("rb") as f:
             target_content = tomli.load(f)
 
-        # Ensure crackerjack dev dependency
         self._ensure_crackerjack_dev_dependency(target_content, source_content)
 
-        # Merge tool configurations
         self._merge_tool_configurations(target_content, source_content, project_name)
 
-        # Remove fixed coverage requirements (use ratchet system)
         self._remove_fixed_coverage_requirements(target_content)
 
         self.logger.info("Smart merged pyproject.toml", project_name=project_name)
@@ -75,17 +59,14 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         target_path: str | t.Any,
         project_name: str,
     ) -> dict[str, t.Any]:
-        """Smart merge .pre-commit-config.yaml adding missing repos."""
         target_path = Path(target_path)
 
         if not target_path.exists():
-            # No existing file, return source
             return source_content
 
         with target_path.open() as f:
             target_content = yaml.safe_load(f) or {}
 
-        # Ensure target_content is a dict
         if not isinstance(target_content, dict):
             self.logger.warning(
                 f"Target config is not a dictionary, using source: {type(target_content)}"
@@ -95,16 +76,13 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         source_repos = source_content.get("repos", [])
         target_repos = target_content.get("repos", [])
 
-        # Ensure target_repos is a list of dicts
         if not isinstance(target_repos, list):
             target_repos = []
 
-        # Get existing repo URLs to avoid duplicates
         existing_repo_urls = {
             repo.get("repo", "") for repo in target_repos if isinstance(repo, dict)
         }
 
-        # Find new repos to add
         new_repos = [
             repo
             for repo in source_repos
@@ -130,19 +108,15 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         end_marker: str,
         force: bool = False,
     ) -> str:
-        """Smart append content to file with markers (for CLAUDE.md, etc)."""
         target_path = Path(target_path)
 
         if not target_path.exists():
-            # No existing file, return source content wrapped in markers
             return f"{start_marker}\n{source_content.strip()}\n{end_marker}\n"
 
         existing_content = target_path.read_text()
 
-        # Check if markers already exist
         if start_marker in existing_content:
             if force:
-                # Replace existing section
                 start_idx = existing_content.find(start_marker)
                 end_idx = existing_content.find(end_marker)
                 if end_idx != -1:
@@ -151,10 +125,8 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
                         existing_content[:start_idx] + existing_content[end_idx:]
                     ).strip()
             else:
-                # Already exists and not forced, return existing
                 return existing_content
 
-        # Append new section with markers
         merged_content = existing_content.strip() + "\n\n" + start_marker + "\n"
         merged_content += source_content.strip() + "\n"
         merged_content += end_marker + "\n"
@@ -167,7 +139,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         patterns: list[str],
         target_path: str | t.Any,
     ) -> str:
-        """Smart merge .gitignore patterns avoiding and cleaning out duplicates."""
         target_path = Path(target_path)
 
         if not target_path.exists():
@@ -175,13 +146,10 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
 
         lines = target_path.read_text().splitlines()
 
-        # Parse existing content and extract patterns
         parsed_content = self._parse_existing_gitignore_content(lines)
 
-        # Build merged content
         merged_content = self._build_merged_gitignore_content(parsed_content, patterns)
 
-        # Write and log results
         target_path.write_text(merged_content)
         new_patterns_count = len(
             [p for p in patterns if p not in parsed_content.existing_patterns]
@@ -196,7 +164,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         return merged_content
 
     def _create_new_gitignore(self, target_path: Path, patterns: list[str]) -> str:
-        """Create a new .gitignore file with patterns."""
         merged_content = "# Crackerjack patterns\n"
         for pattern in patterns:
             merged_content += f"{pattern}\n"
@@ -205,9 +172,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         return merged_content
 
     def _parse_existing_gitignore_content(self, lines: list[str]) -> t.Any:
-        """Parse existing .gitignore content, extracting patterns and non-Crackerjack lines."""
-
-        # Using a simple namespace class to group related data
         class ParsedContent:
             def __init__(self):
                 self.cleaned_lines = []
@@ -222,7 +186,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         return parsed
 
     def _init_parser_state(self) -> dict[str, bool]:
-        """Initialize parser state for gitignore parsing."""
         return {
             "inside_crackerjack_section": False,
             "skip_empty_after_crackerjack": False,
@@ -231,60 +194,49 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
     def _process_gitignore_line(
         self, line: str, parsed: t.Any, state: dict[str, bool]
     ) -> dict[str, bool]:
-        """Process a single line during gitignore parsing."""
         stripped = line.strip()
 
-        # Handle Crackerjack section headers
         if self._is_crackerjack_header(stripped):
             return self._handle_crackerjack_header(state)
 
-        # Handle empty lines after headers
         if self._should_skip_empty_line(stripped, state):
             state["skip_empty_after_crackerjack"] = False
             return state
 
         state["skip_empty_after_crackerjack"] = False
 
-        # Process patterns and lines
         self._collect_pattern_if_present(stripped, parsed, state)
         self._add_line_if_non_crackerjack(line, parsed, state)
 
         return state
 
     def _handle_crackerjack_header(self, state: dict[str, bool]) -> dict[str, bool]:
-        """Handle Crackerjack section header detection."""
         if not state["inside_crackerjack_section"]:
             state["inside_crackerjack_section"] = True
             state["skip_empty_after_crackerjack"] = True
         return state
 
     def _should_skip_empty_line(self, stripped: str, state: dict[str, bool]) -> bool:
-        """Check if empty line should be skipped after Crackerjack header."""
         return state["skip_empty_after_crackerjack"] and not stripped
 
     def _collect_pattern_if_present(
         self, stripped: str, parsed: t.Any, state: dict[str, bool]
     ) -> None:
-        """Collect gitignore pattern if present on this line."""
         if stripped and not stripped.startswith("#"):
             parsed.existing_patterns.add(stripped)
 
     def _add_line_if_non_crackerjack(
         self, line: str, parsed: t.Any, state: dict[str, bool]
     ) -> None:
-        """Add line to cleaned output if not in Crackerjack section."""
         if not state["inside_crackerjack_section"]:
             parsed.cleaned_lines.append(line)
 
     def _is_crackerjack_header(self, line: str) -> bool:
-        """Check if a line is a Crackerjack section header."""
         return line in ("# Crackerjack patterns", "# Crackerjack generated files")
 
     def _build_merged_gitignore_content(
         self, parsed_content: t.Any, new_patterns: list[str]
     ) -> str:
-        """Build the final merged .gitignore content."""
-        # Remove trailing empty line if exists
         if parsed_content.cleaned_lines and not parsed_content.cleaned_lines[-1]:
             parsed_content.cleaned_lines.pop()
 
@@ -292,7 +244,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         if merged_content:
             merged_content += "\n"
 
-        # Add consolidated Crackerjack section
         all_crackerjack_patterns = self._get_consolidated_patterns(
             parsed_content.existing_patterns, new_patterns
         )
@@ -307,7 +258,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
     def _get_consolidated_patterns(
         self, existing_patterns: set[str], new_patterns: list[str]
     ) -> list[str]:
-        """Get consolidated list of all Crackerjack patterns."""
         new_patterns_to_add = [p for p in new_patterns if p not in existing_patterns]
         return list(existing_patterns) + new_patterns_to_add
 
@@ -316,15 +266,12 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         config: dict[str, t.Any],
         target_path: str | t.Any,
     ) -> None:
-        """Write pyproject.toml config with proper formatting."""
         target_path = Path(target_path)
 
-        # Use BytesIO for proper TOML encoding
         buffer = io.BytesIO()
         tomli_w.dump(config, buffer)
         content = buffer.getvalue().decode("utf-8")
 
-        # Clean trailing whitespace
         from crackerjack.services.filesystem import FileSystemService
 
         content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
@@ -339,7 +286,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         config: dict[str, t.Any],
         target_path: str | t.Any,
     ) -> None:
-        """Write .pre-commit-config.yaml with proper formatting."""
         target_path = Path(target_path)
 
         yaml_content = yaml.dump(
@@ -353,7 +299,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         )
         content = content or ""
 
-        # Clean trailing whitespace
         from crackerjack.services.filesystem import FileSystemService
 
         content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
@@ -368,7 +313,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         target_config: dict[str, t.Any],
         source_config: dict[str, t.Any],
     ) -> None:
-        """Ensure crackerjack is in dev dependencies."""
         if "dependency-groups" not in target_config:
             target_config["dependency-groups"] = {}
 
@@ -386,7 +330,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         source_config: dict[str, t.Any],
         project_name: str,
     ) -> None:
-        """Merge tool configurations from source to target."""
         source_tools = source_config.get("tool", {})
 
         if "tool" not in target_config:
@@ -422,7 +365,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
                         project_name,
                     )
 
-        # Merge pytest markers
         self._merge_pytest_markers(target_tools, source_tools)
 
     def _merge_tool_settings(
@@ -432,7 +374,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         tool_name: str,
         project_name: str,
     ) -> None:
-        """Merge individual tool settings."""
         updated_keys = []
 
         for key, value in source_tool.items():
@@ -452,7 +393,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         target_tools: dict[str, t.Any],
         source_tools: dict[str, t.Any],
     ) -> None:
-        """Merge pytest markers avoiding duplicates."""
         if "pytest" not in source_tools or "pytest" not in target_tools:
             return
 
@@ -465,7 +405,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         source_markers = source_pytest["ini_options"].get("markers", [])
         target_markers = target_pytest["ini_options"].get("markers", [])
 
-        # Extract existing marker names
         existing_marker_names = {marker.split(": ")[0] for marker in target_markers}
         new_markers = [
             marker
@@ -483,21 +422,18 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         self,
         target_config: dict[str, t.Any],
     ) -> None:
-        """Remove fixed coverage requirements to use ratchet system."""
         target_coverage = (
             target_config.get("tool", {}).get("pytest", {}).get("ini_options", {})
         )
 
-        # Remove --cov-fail-under from addopts
         addopts = target_coverage.get("addopts", "")
         if isinstance(addopts, str):
             original_addopts = addopts
 
-            # Remove coverage fail-under flags
             from crackerjack.services.regex_patterns import remove_coverage_fail_under
 
             addopts = remove_coverage_fail_under(addopts).strip()
-            addopts = " ".join(addopts.split())  # Normalize whitespace
+            addopts = " ".join(addopts.split())
 
             if original_addopts != addopts:
                 target_coverage["addopts"] = addopts
@@ -505,7 +441,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
                     "[green]🔄[/green] Removed fixed coverage requirement (using ratchet system)"
                 )
 
-        # Reset coverage.report.fail_under to 0
         coverage_report = (
             target_config.get("tool", {}).get("coverage", {}).get("report", {})
         )
@@ -519,7 +454,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
     def _replace_project_name_in_tool_config(
         self, tool_config: dict[str, t.Any], project_name: str
     ) -> dict[str, t.Any]:
-        """Replace project name in tool configuration."""
         if project_name == "crackerjack":
             return tool_config
 
@@ -529,7 +463,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
     def _replace_project_name_in_config_value(
         self, value: t.Any, project_name: str
     ) -> t.Any:
-        """Recursively replace project name in configuration values."""
         if project_name == "crackerjack":
             return value
 

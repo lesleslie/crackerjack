@@ -43,7 +43,6 @@ console = Console()
 
 
 def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
-    """Load MCP server configuration from pyproject.toml."""
     pyproject_path = project_path / "pyproject.toml"
 
     if not pyproject_path.exists() or not tomli:
@@ -228,7 +227,6 @@ def _merge_config_with_args(
     http_port: int | None,
     http_mode: bool,
 ) -> dict[str, t.Any]:
-    """Merge MCP configuration with command line arguments."""
     if http_port:
         mcp_config["http_port"] = http_port
     if http_mode:
@@ -240,7 +238,6 @@ def _setup_server_context(
     project_path: Path,
     websocket_port: int | None,
 ) -> MCPServerContext:
-    """Set up and initialize the MCP server context."""
     config = MCPServerConfig(
         project_path=project_path,
         rate_limit_config=RateLimitConfig(),
@@ -262,13 +259,12 @@ def _print_server_info(
     websocket_port: int | None,
     http_mode: bool,
 ) -> None:
-    """Print server startup information."""
     console.print("[green]Starting Crackerjack MCP Server...[/ green]")
     console.print(f"Project path: {project_path}")
 
     if mcp_config.get("http_enabled", False) or http_mode:
         console.print(
-            f"[cyan]HTTP Mode: http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp[/ cyan]"
+            f"[cyan]HTTP Mode: http: //{mcp_config['http_host']}: {mcp_config['http_port']}/mcp[/ cyan]"
         )
     else:
         console.print("[cyan]STDIO Mode[/ cyan]")
@@ -280,7 +276,6 @@ def _print_server_info(
 def _run_mcp_server(
     mcp_app: t.Any, mcp_config: dict[str, t.Any], http_mode: bool
 ) -> None:
-    """Execute the MCP server with appropriate transport mode."""
     console.print("[yellow]MCP app created, about to run...[/ yellow]")
 
     try:
@@ -310,23 +305,18 @@ def main(
     try:
         project_path = Path(project_path_arg).resolve()
 
-        # Load and merge configuration
         mcp_config = _load_mcp_config(project_path)
         mcp_config = _merge_config_with_args(mcp_config, http_port, http_mode)
 
-        # Set up server context
         _setup_server_context(project_path, websocket_port)
 
-        # Create MCP server
         mcp_app = create_mcp_server(mcp_config)
         if not mcp_app:
             console.print("[red]Failed to create MCP server[/ red]")
             return
 
-        # Print server information
         _print_server_info(project_path, mcp_config, websocket_port, http_mode)
 
-        # Run the server
         _run_mcp_server(mcp_app, mcp_config, http_mode)
 
     except KeyboardInterrupt:
@@ -344,20 +334,17 @@ def main(
 if __name__ == "__main__":
     import sys
 
-    # Initialize defaults
     project_path = "."
     websocket_port = None
     http_mode = "--http" in sys.argv
     http_port = None
 
-    # Parse project path from non-flag arguments
     non_flag_args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
     if non_flag_args:
         project_path = non_flag_args[0]
         if len(non_flag_args) > 1 and non_flag_args[1].isdigit():
             websocket_port = int(non_flag_args[1])
 
-    # Parse HTTP port flag
     if "--http-port" in sys.argv:
         port_idx = sys.argv.index("--http-port")
         if port_idx + 1 < len(sys.argv):

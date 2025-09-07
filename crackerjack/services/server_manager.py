@@ -12,17 +12,15 @@ from .security_logger import get_security_logger
 
 
 def find_mcp_server_processes() -> list[dict[str, t.Any]]:
-    """Find running MCP server processes using secure subprocess execution."""
     security_logger = get_security_logger()
 
     try:
-        # Use secure subprocess execution with validation
         result = execute_secure_subprocess(
             command=["ps", "aux"],
             capture_output=True,
             text=True,
             check=True,
-            timeout=10.0,  # 10 second timeout for process listing
+            timeout=10.0,
         )
 
         return _parse_mcp_processes(result.stdout)
@@ -37,7 +35,6 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
 
 
 def _parse_mcp_processes(stdout: str) -> list[dict[str, t.Any]]:
-    """Parse MCP server processes from ps command output."""
     processes: list[dict[str, t.Any]] = []
     str(Path.cwd())
 
@@ -51,7 +48,6 @@ def _parse_mcp_processes(stdout: str) -> list[dict[str, t.Any]]:
 
 
 def _is_mcp_server_process(line: str) -> bool:
-    """Check if a line represents an MCP server process."""
     return (
         "crackerjack" in line
         and "--start-mcp-server" in line
@@ -60,14 +56,13 @@ def _is_mcp_server_process(line: str) -> bool:
 
 
 def _extract_process_info(line: str) -> dict[str, t.Any] | None:
-    """Extract process information from a ps output line."""
     parts = line.split()
     if len(parts) < 11:
         return None
 
     try:
         pid = int(parts[1])
-        # Find where the command actually starts (usually after the time field)
+
         command_start_index = _find_command_start_index(parts)
 
         return {
@@ -82,7 +77,6 @@ def _extract_process_info(line: str) -> dict[str, t.Any] | None:
 
 
 def _find_command_start_index(parts: list[str]) -> int:
-    """Find the index where the command starts in ps output."""
     command_start_index = 10
     for i, part in enumerate(parts):
         if part.endswith("python") or "Python" in part:
@@ -92,17 +86,15 @@ def _find_command_start_index(parts: list[str]) -> int:
 
 
 def find_websocket_server_processes() -> list[dict[str, t.Any]]:
-    """Find running WebSocket server processes using secure subprocess execution."""
     security_logger = get_security_logger()
 
     try:
-        # Use secure subprocess execution with validation
         result = execute_secure_subprocess(
             command=["ps", "aux"],
             capture_output=True,
             text=True,
             check=True,
-            timeout=10.0,  # 10 second timeout for process listing
+            timeout=10.0,
         )
 
         processes: list[dict[str, t.Any]] = []
@@ -230,12 +222,10 @@ def restart_mcp_server(
 
     console.print("🚀 Starting new MCP server...")
     try:
-        # Build command with proper argument formatting
         cmd = [sys.executable, "-m", "crackerjack", "--start-mcp-server"]
         if websocket_port:
             cmd.extend(["--websocket-port", str(websocket_port)])
 
-        # Use secure subprocess execution for server restart
         import subprocess
 
         subprocess.Popen(
@@ -245,7 +235,6 @@ def restart_mcp_server(
             start_new_session=True,
         )
 
-        # Log the secure server start
         security_logger = get_security_logger()
         security_logger.log_subprocess_execution(
             command=cmd,

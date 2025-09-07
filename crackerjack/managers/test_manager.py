@@ -25,7 +25,6 @@ class TestManager:
         self.command_builder = TestCommandBuilder(pkg_path)
 
         if coverage_ratchet is None:
-            # Import here to avoid circular imports
             from crackerjack.services.coverage_ratchet import CoverageRatchetService
 
             coverage_ratchet = CoverageRatchetService(pkg_path, console)
@@ -227,7 +226,7 @@ class TestManager:
                 previous = ratchet_result.get("previous_coverage", 0)
                 self.console.print(
                     f"[red]📉[/ red] Coverage regression: "
-                    f"{current:.2f}% < {previous:.2f}%"
+                    f"{current: .2f}% < {previous: .2f}%"
                 )
             return False
 

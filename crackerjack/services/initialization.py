@@ -28,13 +28,12 @@ class InitializationService:
         self.filesystem = filesystem
         self.git_service = git_service
         self.pkg_path = pkg_path
-        # Use dependency injection with default implementation
+
         self.config_merge_service = config_merge_service or ConfigMergeService(
             console, filesystem, git_service
         )
 
     def initialize_project(self, project_path: str | Path) -> bool:
-        """Protocol method: Initialize project at given path."""
         try:
             result = self.initialize_project_full(Path(project_path))
             return result.get("success", False)
@@ -42,17 +41,13 @@ class InitializationService:
             return False
 
     def setup_git_hooks(self) -> bool:
-        """Protocol method: Setup git hooks."""
         try:
-            # Basic git hooks setup implementation
             return True
         except Exception:
             return False
 
     def validate_project_structure(self) -> bool:
-        """Protocol method: Validate project structure."""
         try:
-            # Basic project structure validation
             return True
         except Exception:
             return False
@@ -65,7 +60,6 @@ class InitializationService:
         if target_path is None:
             target_path = Path.cwd()
 
-        # Validate target path for security
         try:
             target_path = validate_and_sanitize_path(target_path, allow_absolute=True)
         except Exception as e:
@@ -83,7 +77,6 @@ class InitializationService:
             config_files = self._get_config_files()
             project_name = target_path.name
 
-            # Validate project name
             validator = get_input_validator()
             name_result = validator.validate_project_name(project_name)
             if not name_result.valid:
@@ -93,7 +86,6 @@ class InitializationService:
                 results["success"] = False
                 return results
 
-            # Use sanitized project name
             sanitized_project_name = name_result.sanitized_value
 
             for file_name, merge_strategy in config_files.items():
@@ -501,7 +493,6 @@ python -m crackerjack - a patch
         results: dict[str, t.Any],
     ) -> None:
         try:
-            # Generate appropriate source content
             if file_name == "CLAUDE.md" and project_name != "crackerjack":
                 source_content = self._generate_project_claude_content(project_name)
             else:
@@ -509,11 +500,9 @@ python -m crackerjack - a patch
                     source_file, True, project_name
                 )
 
-            # Define markers for this file type
             crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
             crackerjack_end_marker = "<!-- CRACKERJACK INTEGRATION END -->"
 
-            # Delegate to ConfigMergeService for smart append logic
             merged_content = self.config_merge_service.smart_append_file(
                 source_content,
                 target_file,
@@ -522,7 +511,6 @@ python -m crackerjack - a patch
                 force,
             )
 
-            # Check if content was actually changed
             if target_file.exists():
                 existing_content = target_file.read_text()
                 if crackerjack_start_marker in existing_content and not force:
@@ -531,7 +519,6 @@ python -m crackerjack - a patch
                     )
                     return
 
-            # Write the merged content
             target_file.write_text(merged_content)
             t.cast("list[str]", results["files_copied"]).append(
                 f"{file_name} (appended)"
@@ -556,8 +543,6 @@ python -m crackerjack - a patch
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        """Smart merge .gitignore patterns using ConfigMergeService."""
-        # Define crackerjack .gitignore patterns
         gitignore_patterns = [
             "# Build/Distribution",
             "/build/",
@@ -652,12 +637,10 @@ python -m crackerjack - a patch
             with source_file.open("rb") as f:
                 source_config = tomli.load(f)
 
-            # Delegate to ConfigMergeService for smart merge logic
             merged_config = self.config_merge_service.smart_merge_pyproject(
                 source_config, target_file, project_name
             )
 
-            # Write the merged configuration
             self.config_merge_service.write_pyproject_config(merged_config, target_file)
 
             t.cast("list[str]", results["files_copied"]).append(
@@ -704,11 +687,9 @@ python -m crackerjack - a patch
             self._handle_file_processing_error(".pre-commit-config.yaml", e, results)
 
     def _load_source_config(self, source_file: Path) -> dict[str, t.Any] | None:
-        """Load and validate source configuration file."""
         with source_file.open() as f:
             source_config = yaml.safe_load(f) or {}
 
-        # Ensure source_config is a dict
         if not isinstance(source_config, dict):
             self.console.print(
                 "[yellow]⚠️[/yellow] Source .pre-commit-config.yaml is not a dictionary, skipping merge"
@@ -720,7 +701,6 @@ python -m crackerjack - a patch
     def _perform_config_merge(
         self, source_config: dict[str, t.Any], target_file: Path, project_name: str
     ) -> dict[str, t.Any]:
-        """Perform the configuration merge using ConfigMergeService."""
         return self.config_merge_service.smart_merge_pre_commit_config(
             source_config, target_file, project_name
         )
@@ -731,14 +711,12 @@ python -m crackerjack - a patch
         merged_config: dict[str, t.Any],
         results: dict[str, t.Any],
     ) -> bool:
-        """Check if merge should be skipped due to no changes."""
         if not target_file.exists():
             return False
 
         with target_file.open() as f:
             old_config = yaml.safe_load(f) or {}
 
-        # Ensure old_config is a dict
         if not isinstance(old_config, dict):
             old_config = {}
 
@@ -758,8 +736,6 @@ python -m crackerjack - a patch
         source_config: dict[str, t.Any],
         results: dict[str, t.Any],
     ) -> None:
-        """Write merged config and finalize the process."""
-        # Write the merged configuration
         self.config_merge_service.write_pre_commit_config(merged_config, target_file)
 
         t.cast("list[str]", results["files_copied"]).append(
@@ -770,7 +746,6 @@ python -m crackerjack - a patch
         self._display_merge_success(source_config)
 
     def _git_add_config_file(self, target_file: Path) -> None:
-        """Add config file to git with error handling."""
         try:
             self.git_service.add_files([str(target_file)])
         except Exception as e:
@@ -779,7 +754,6 @@ python -m crackerjack - a patch
             )
 
     def _display_merge_success(self, source_config: dict[str, t.Any]) -> None:
-        """Display success message with repo count."""
         source_repo_count = len(source_config.get("repos", []))
         self.console.print(
             f"[green]✅[/ green] Merged .pre-commit-config.yaml ({source_repo_count} repos processed)"

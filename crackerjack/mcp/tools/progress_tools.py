@@ -10,23 +10,20 @@ from crackerjack.services.input_validator import get_input_validator
 def _create_progress_file(job_id: str) -> Path:
     import tempfile
 
-    # Use secure input validation
     job_id_result = get_input_validator().validate_job_id(job_id)
 
     if not job_id_result.valid:
         msg = f"Invalid job_id: {job_id_result.error_message}"
         raise ValueError(msg)
 
-    # Use sanitized job ID
     sanitized_job_id = job_id_result.sanitized_value
 
     context = get_context()
     if context:
         return context.progress_dir / f"job-{sanitized_job_id}.json"
 
-    # Create secure temporary directory
     progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
-    progress_dir.mkdir(exist_ok=True, mode=0o750)  # Restrictive permissions
+    progress_dir.mkdir(exist_ok=True, mode=0o750)
     return progress_dir / f"job-{sanitized_job_id}.json"
 
 

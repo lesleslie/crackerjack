@@ -1,10 +1,3 @@
-"""
-Comprehensive timeout management system for async operations.
-
-This module provides timeout handling, circuit breaker patterns, and
-graceful degradation for all async operations in crackerjack.
-"""
-
 import asyncio
 import builtins
 import logging
@@ -19,8 +12,6 @@ logger = logging.getLogger("crackerjack.timeout_manager")
 
 
 class _DummyPerformanceMonitor:
-    """Dummy performance monitor to avoid circular import issues."""
-
     def record_operation_start(self, operation: str) -> float:
         return time.time()
 
@@ -43,25 +34,19 @@ class _DummyPerformanceMonitor:
         pass
 
     def get_summary_stats(self) -> dict[str, t.Any]:
-        """Dummy implementation."""
         return {}
 
     def get_all_metrics(self) -> dict[str, t.Any]:
-        """Dummy implementation."""
         return {}
 
     def get_performance_alerts(self) -> list[str]:
-        """Dummy implementation."""
         return []
 
     def get_recent_timeout_events(self, limit: int) -> list[t.Any]:
-        """Dummy implementation."""
         return []
 
 
 class TimeoutStrategy(Enum):
-    """Timeout handling strategies."""
-
     FAIL_FAST = "fail_fast"
     RETRY_WITH_BACKOFF = "retry_with_backoff"
     CIRCUIT_BREAKER = "circuit_breaker"
@@ -69,18 +54,13 @@ class TimeoutStrategy(Enum):
 
 
 class CircuitBreakerState(Enum):
-    """Circuit breaker states."""
-
-    CLOSED = "closed"  # Normal operation
-    OPEN = "open"  # Failing fast
-    HALF_OPEN = "half_open"  # Testing if service recovered
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
 
 
 @dataclass
 class TimeoutConfig:
-    """Configuration for timeout handling."""
-
-    # Basic timeout settings
     default_timeout: float = 30.0
     operation_timeouts: dict[str, float] = field(
         default_factory=lambda: {
@@ -91,18 +71,16 @@ class TimeoutConfig:
             "file_operations": 10.0,
             "network_operations": 15.0,
             "websocket_broadcast": 5.0,
-            "workflow_iteration": 900.0,  # 15 minutes
-            "complete_workflow": 3600.0,  # 1 hour
+            "workflow_iteration": 900.0,
+            "complete_workflow": 3600.0,
         }
     )
 
-    # Retry configuration
     max_retries: int = 3
     base_retry_delay: float = 1.0
     max_retry_delay: float = 60.0
     backoff_multiplier: float = 2.0
 
-    # Circuit breaker configuration
     failure_threshold: int = 5
     recovery_timeout: float = 60.0
     half_open_max_calls: int = 3
@@ -110,8 +88,6 @@ class TimeoutConfig:
 
 @dataclass
 class CircuitBreakerStateData:
-    """State data for a circuit breaker."""
-
     state: CircuitBreakerState = CircuitBreakerState.CLOSED
     failure_count: int = 0
     last_failure_time: float = 0.0
@@ -119,45 +95,37 @@ class CircuitBreakerStateData:
 
 
 class TimeoutError(Exception):
-    """Custom timeout error with context."""
-
     def __init__(self, operation: str, timeout: float, elapsed: float = 0.0) -> None:
         self.operation = operation
         self.timeout = timeout
         self.elapsed = elapsed
         super().__init__(
             f"Operation '{operation}' timed out after {timeout}s "
-            f"(elapsed: {elapsed:.1f}s)"
+            f"(elapsed: {elapsed: .1f}s)"
         )
 
 
 class AsyncTimeoutManager:
-    """Comprehensive async timeout and circuit breaker manager."""
-
     def __init__(self, config: TimeoutConfig | None = None) -> None:
         self.config = config or TimeoutConfig()
         self.circuit_breakers: dict[str, CircuitBreakerStateData] = {}
         self.operation_stats: dict[str, list[float]] = {}
 
-        # Initialize performance monitor lazily to avoid circular imports
         self._performance_monitor = None
 
     def get_timeout(self, operation: str) -> float:
-        """Get timeout for specific operation."""
         return self.config.operation_timeouts.get(
             operation, self.config.default_timeout
         )
 
     @property
     def performance_monitor(self):
-        """Lazy-load performance monitor to avoid circular imports."""
         if self._performance_monitor is None:
             try:
                 from .performance_monitor import get_performance_monitor
 
                 self._performance_monitor = get_performance_monitor()
             except ImportError:
-                # If performance monitor is not available, create a dummy implementation
                 self._performance_monitor = _DummyPerformanceMonitor()
         return self._performance_monitor
 
@@ -168,24 +136,20 @@ class AsyncTimeoutManager:
         timeout: float | None = None,
         strategy: TimeoutStrategy = TimeoutStrategy.FAIL_FAST,
     ) -> t.AsyncIterator[None]:
-        """Context manager for timeout handling with strategy."""
         timeout_value = timeout or self.get_timeout(operation)
         start_time = self.performance_monitor.record_operation_start(operation)
 
-        # Add additional protection against very long operations
-        if timeout_value > 7200.0:  # 2 hours maximum
+        if timeout_value > 7200.0:
             logger.warning(
                 f"Capping excessive timeout for {operation}: {timeout_value}s -> 7200s"
             )
             timeout_value = 7200.0
 
         try:
-            # Use asyncio.timeout for Python 3.11+ or asyncio.wait_for fallback
             try:
                 async with asyncio.timeout(timeout_value):
                     yield
             except AttributeError:
-                # Fallback for older Python versions without asyncio.timeout
                 task = asyncio.current_task()
                 if task:
                     try:
@@ -196,10 +160,8 @@ class AsyncTimeoutManager:
                     except builtins.TimeoutError:
                         raise builtins.TimeoutError(f"Operation {operation} timed out")
                 else:
-                    # Direct yield if no current task context
                     yield
 
-            # Record successful operation
             self.performance_monitor.record_operation_success(operation, start_time)
             elapsed = time.time() - start_time
             self._record_success(operation, elapsed)
@@ -214,12 +176,11 @@ class AsyncTimeoutManager:
             if strategy == TimeoutStrategy.CIRCUIT_BREAKER:
                 self._update_circuit_breaker(operation, False)
 
-            # Handle graceful degradation
             if strategy == TimeoutStrategy.GRACEFUL_DEGRADATION:
                 logger.warning(
-                    f"Operation {operation} timed out ({elapsed:.1f}s), continuing gracefully"
+                    f"Operation {operation} timed out ({elapsed: .1f}s), continuing gracefully"
                 )
-                return  # Exit gracefully without raising
+                return
 
             raise TimeoutError(operation, timeout_value, elapsed) from e
         except Exception:
@@ -239,7 +200,6 @@ class AsyncTimeoutManager:
         timeout: float | None = None,
         strategy: TimeoutStrategy = TimeoutStrategy.FAIL_FAST,
     ) -> t.Any:
-        """Execute coroutine with timeout and strategy."""
         if strategy == TimeoutStrategy.CIRCUIT_BREAKER:
             if not self._check_circuit_breaker(operation):
                 raise TimeoutError(operation, 0.0, 0.0)
@@ -248,10 +208,8 @@ class AsyncTimeoutManager:
         start_time = self.performance_monitor.record_operation_start(operation)
 
         try:
-            # Wrap coroutine execution with timeout protection
             result = await asyncio.wait_for(coro, timeout=timeout_value)
 
-            # Record success
             self.performance_monitor.record_operation_success(operation, start_time)
             elapsed = time.time() - start_time
             self._record_success(operation, elapsed)
@@ -271,10 +229,9 @@ class AsyncTimeoutManager:
             if strategy == TimeoutStrategy.CIRCUIT_BREAKER:
                 self._update_circuit_breaker(operation, False)
 
-            # Handle graceful degradation
             if strategy == TimeoutStrategy.GRACEFUL_DEGRADATION:
                 logger.warning(
-                    f"Operation {operation} timed out ({elapsed:.1f}s), returning None"
+                    f"Operation {operation} timed out ({elapsed: .1f}s), returning None"
                 )
                 return None
 
@@ -296,14 +253,12 @@ class AsyncTimeoutManager:
         coro_factory: t.Callable[[], t.Awaitable[t.Any]],
         timeout: float | None = None,
     ) -> t.Any:
-        """Execute with exponential backoff retry."""
         last_exception = None
         delay = self.config.base_retry_delay
 
         for attempt in range(self.config.max_retries + 1):
             try:
                 async with self.timeout_context(operation, timeout):
-                    # Create a new coroutine for each attempt
                     return await coro_factory()
             except (TimeoutError, Exception) as e:
                 last_exception = e
@@ -326,7 +281,6 @@ class AsyncTimeoutManager:
         raise RuntimeError(f"No attempts made for operation: {operation}")
 
     def _check_circuit_breaker(self, operation: str) -> bool:
-        """Check if circuit breaker allows operation."""
         if operation not in self.circuit_breakers:
             self.circuit_breakers[operation] = CircuitBreakerStateData()
             return True
@@ -342,14 +296,13 @@ class AsyncTimeoutManager:
                 breaker.half_open_calls = 0
                 return True
             return False
-        else:  # HALF_OPEN
+        else:
             if breaker.half_open_calls < self.config.half_open_max_calls:
                 breaker.half_open_calls += 1
                 return True
             return False
 
     def _update_circuit_breaker(self, operation: str, success: bool) -> None:
-        """Update circuit breaker state based on operation result."""
         if operation not in self.circuit_breakers:
             self.circuit_breakers[operation] = CircuitBreakerStateData()
 
@@ -369,21 +322,18 @@ class AsyncTimeoutManager:
             if breaker.failure_count >= self.config.failure_threshold:
                 breaker.state = CircuitBreakerState.OPEN
 
-                # Record circuit breaker event if state changed
                 if previous_state != CircuitBreakerState.OPEN:
                     self.performance_monitor.record_circuit_breaker_event(
                         operation, True
                     )
 
     def _record_success(self, operation: str, elapsed: float) -> None:
-        """Record successful operation timing."""
         if operation not in self.operation_stats:
             self.operation_stats[operation] = []
 
         stats = self.operation_stats[operation]
         stats.append(elapsed)
 
-        # Keep only recent stats (last 100 operations)
         if len(stats) > 100:
             stats.pop(0)
 
@@ -391,14 +341,12 @@ class AsyncTimeoutManager:
             self._update_circuit_breaker(operation, True)
 
     def _record_failure(self, operation: str, elapsed: float) -> None:
-        """Record failed operation timing."""
         logger.warning(
-            f"Operation '{operation}' failed after {elapsed:.1f}s "
+            f"Operation '{operation}' failed after {elapsed: .1f}s "
             f"(timeout: {self.get_timeout(operation)}s)"
         )
 
     def get_stats(self, operation: str) -> dict[str, t.Any]:
-        """Get performance statistics for operation."""
         stats = self.operation_stats.get(operation, [])
         if not stats:
             return {
@@ -431,8 +379,6 @@ def timeout_async(
 ) -> t.Callable[
     [t.Callable[..., t.Awaitable[t.Any]]], t.Callable[..., t.Awaitable[t.Any]]
 ]:
-    """Decorator for async functions with timeout handling."""
-
     def decorator(
         func: t.Callable[..., t.Awaitable[t.Any]],
     ) -> t.Callable[..., t.Awaitable[t.Any]]:
@@ -448,12 +394,10 @@ def timeout_async(
     return decorator
 
 
-# Global timeout manager instance
 _global_timeout_manager: AsyncTimeoutManager | None = None
 
 
 def get_timeout_manager() -> AsyncTimeoutManager:
-    """Get global timeout manager instance."""
     global _global_timeout_manager
     if _global_timeout_manager is None:
         _global_timeout_manager = AsyncTimeoutManager()
@@ -461,13 +405,11 @@ def get_timeout_manager() -> AsyncTimeoutManager:
 
 
 def configure_timeouts(config: TimeoutConfig) -> None:
-    """Configure global timeout manager."""
     global _global_timeout_manager
     _global_timeout_manager = AsyncTimeoutManager(config)
 
 
 def get_performance_report() -> dict[str, t.Any]:
-    """Get comprehensive performance report."""
     timeout_manager = get_timeout_manager()
     monitor = timeout_manager.performance_monitor
 

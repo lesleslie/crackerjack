@@ -224,10 +224,9 @@ def main(
     if ai_debug:
         ai_agent = True
         verbose = True
-        # Update the options object to reflect the verbose setting
+
         options.verbose = True
 
-    # If debug flag is set, enable verbose mode as well
     if debug:
         verbose = True
         options.verbose = True

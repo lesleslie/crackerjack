@@ -135,7 +135,7 @@ class TestProgress:
         if self.current_test:
             test_name = self.current_test
             if len(test_name) > 40:
-                test_name = test_name[:37] + "..."
+                test_name = test_name[: 37] + "..."
             table.add_row("Current", test_name, "")
 
         duration_text = f"{self.elapsed_time: .1f}s"
@@ -482,9 +482,9 @@ class TestManagementImpl:
         self._handle_running_test(line, progress)
 
     def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
-        if match := re.search(
+        if match:=re.search(
             r"collected (\d +) items?", line
-        ):  # REGEX OK: parsing pytest collection output
+        ):
             progress.update(
                 total_tests=int(match.group(1)),
                 is_collecting=False,
@@ -947,7 +947,7 @@ class TestManagementImpl:
         failure_lines = self._extract_failure_lines(output)
         if failure_lines:
             self.console.print("[red]💥[/ red] Failure summary: ")
-            for line in failure_lines[:10]:
+            for line in failure_lines[: 10]:
                 if line.strip():
                     self.console.print(f" [dim]{line}[/ dim]")
 

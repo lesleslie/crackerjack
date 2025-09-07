@@ -25,15 +25,12 @@ class RefactoringAgent(SubAgent):
 
     async def can_handle(self, issue: Issue) -> float:
         if issue.type == IssueType.COMPLEXITY:
-            # Enhanced confidence for complexity reduction
             return 0.9 if self._has_complexity_markers(issue) else 0.85
         if issue.type == IssueType.DEAD_CODE:
-            # Enhanced confidence for dead code detection
             return 0.8 if self._has_dead_code_markers(issue) else 0.75
         return 0.0
 
     def _has_complexity_markers(self, issue: Issue) -> bool:
-        """Check if issue shows signs of high complexity that we can handle."""
         if not issue.message:
             return False
 
@@ -52,7 +49,6 @@ class RefactoringAgent(SubAgent):
         )
 
     def _has_dead_code_markers(self, issue: Issue) -> bool:
-        """Check if issue shows signs of dead code that we can handle."""
         if not issue.message:
             return False
 
@@ -407,13 +403,11 @@ class RefactoringAgent(SubAgent):
         self,
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> int:
-        """Enhanced cognitive complexity calculator with more accurate scoring."""
         calculator = self._create_complexity_calculator()
         calculator.visit(node)
         return calculator.complexity
 
     def _create_complexity_calculator(self) -> "ComplexityCalculator":
-        """Create and configure the complexity calculator."""
         from . import refactoring_helpers
 
         return refactoring_helpers.ComplexityCalculator()
@@ -423,20 +417,17 @@ class RefactoringAgent(SubAgent):
         content: str,
         complex_functions: list[dict[str, t.Any]],
     ) -> str:
-        # First try specific function refactoring
         refactored_content = self._refactor_complex_functions(
             content, complex_functions
         )
         if refactored_content != content:
             return refactored_content
 
-        # Apply enhanced complexity reduction strategies
         return self._apply_enhanced_strategies(content)
 
     def _refactor_complex_functions(
         self, content: str, complex_functions: list[dict[str, t.Any]]
     ) -> str:
-        """Refactor complex functions by applying specific patterns."""
         lines = content.split("\n")
 
         for func_info in complex_functions:
@@ -462,12 +453,10 @@ class RefactoringAgent(SubAgent):
         return content
 
     def _apply_enhanced_strategies(self, content: str) -> str:
-        """Apply enhanced complexity reduction strategies."""
         enhanced_content = self._apply_enhanced_complexity_patterns(content)
         return enhanced_content
 
     def _apply_enhanced_complexity_patterns(self, content: str) -> str:
-        """Apply enhanced complexity reduction patterns using SAFE_PATTERNS."""
         operations = [
             self._extract_nested_conditions,
             self._simplify_boolean_expressions,
@@ -482,23 +471,20 @@ class RefactoringAgent(SubAgent):
         return modified_content
 
     def _extract_nested_conditions(self, content: str) -> str:
-        """Extract deeply nested conditions into helper methods."""
         lines = content.split("\n")
         modified_lines = []
 
         for i, line in enumerate(lines):
             stripped = line.strip()
 
-            # Look for complex conditions that could be extracted
             if (
                 stripped.startswith("if ")
                 and (" and " in stripped or " or " in stripped)
                 and len(stripped) > 80
             ):
-                # This is a candidate for extraction
                 indent = " " * (len(line) - len(line.lstrip()))
                 helper_name = f"_is_complex_condition_{i}"
-                modified_lines.append(f"{indent}if self.{helper_name}():")
+                modified_lines.append(f"{indent}if self.{helper_name}(): ")
                 continue
 
             modified_lines.append(line)
@@ -506,18 +492,15 @@ class RefactoringAgent(SubAgent):
         return "\n".join(modified_lines)
 
     def _simplify_boolean_expressions(self, content: str) -> str:
-        """Simplify complex boolean expressions using SAFE_PATTERNS."""
-        # Look for long boolean chains and suggest extraction
         lines = content.split("\n")
         modified_lines = []
 
         for line in lines:
             if " and " in line and " or " in line and len(line.strip()) > 100:
-                # Mark for potential extraction
                 if line.strip().startswith("if "):
                     indent = " " * (len(line) - len(line.lstrip()))
                     method_name = "_validate_complex_condition"
-                    modified_lines.append(f"{indent}if self.{method_name}():")
+                    modified_lines.append(f"{indent}if self.{method_name}(): ")
                     continue
 
             modified_lines.append(line)
@@ -525,46 +508,35 @@ class RefactoringAgent(SubAgent):
         return "\n".join(modified_lines)
 
     def _extract_validation_patterns(self, content: str) -> str:
-        """Extract common validation patterns to separate methods."""
-        # Look for repeated validation patterns
         if "validation_extract" in SAFE_PATTERNS:
             content = SAFE_PATTERNS["validation_extract"].apply(content)
         else:
-            # Use safe pattern matching instead of raw regex
             pattern_obj = SAFE_PATTERNS["match_validation_patterns"]
             if pattern_obj.test(content):
                 matches = len(
                     [line for line in content.split("\n") if pattern_obj.test(line)]
                 )
-                if matches > 2:  # Found repeated pattern
-                    # Could extract to helper method
+                if matches > 2:
                     pass
 
         return content
 
     def _simplify_data_structures(self, content: str) -> str:
-        """Simplify complex data structure operations."""
-        # Look for complex dictionary/list comprehensions
         lines = content.split("\n")
         modified_lines = []
 
         for line in lines:
             stripped = line.strip()
 
-            # Check for complex list comprehensions
             if (
                 "[" in stripped
                 and "for" in stripped
                 and "if" in stripped
                 and len(stripped) > 80
             ):
-                # Consider extracting to separate method
-                # Could add logic to extract comprehension
                 pass
 
-            # Check for large dictionary literals
-            elif stripped.count(":") > 5 and stripped.count(",") > 5:
-                # Could extract to builder method
+            elif stripped.count(": ") > 5 and stripped.count(", ") > 5:
                 pass
 
             modified_lines.append(line)
@@ -583,7 +555,7 @@ class RefactoringAgent(SubAgent):
         "detection_reasoning": "",
     }
 
-    if error_context:"""
+    if error_context: """
 
         replacement_pattern = """ recommendations = {
         "urgent_agents": [],
@@ -609,7 +581,6 @@ class RefactoringAgent(SubAgent):
     def _extract_logical_sections(
         self, func_content: str, func_info: dict[str, t.Any]
     ) -> list[dict[str, str]]:
-        """Extract logical sections from function content for refactoring."""
         sections = []
         lines = func_content.split("\n")
         current_section = []
@@ -632,7 +603,6 @@ class RefactoringAgent(SubAgent):
             else:
                 current_section.append(line)
 
-        # Handle final section
         if current_section:
             sections.append(
                 self._create_section(current_section, section_type, len(sections))
@@ -643,7 +613,6 @@ class RefactoringAgent(SubAgent):
     def _should_start_new_section(
         self, stripped: str, current_section_type: str | None
     ) -> bool:
-        """Determine if a line should start a new logical section."""
         if stripped.startswith("if ") and len(stripped) > 50:
             return True
         return (
@@ -653,7 +622,6 @@ class RefactoringAgent(SubAgent):
     def _initialize_new_section(
         self, line: str, stripped: str
     ) -> tuple[list[str], str]:
-        """Initialize a new section based on the line type."""
         if stripped.startswith("if ") and len(stripped) > 50:
             return [line], "conditional"
         elif stripped.startswith(("for ", "while ")):
@@ -663,7 +631,6 @@ class RefactoringAgent(SubAgent):
     def _create_section(
         self, current_section: list[str], section_type: str | None, section_count: int
     ) -> dict[str, str | None]:
-        """Create a section dictionary from the current section data."""
         effective_type = section_type or "general"
         name_prefix = "handle" if effective_type == "conditional" else "process"
 
@@ -674,7 +641,6 @@ class RefactoringAgent(SubAgent):
         }
 
     def _analyze_dead_code(self, tree: ast.AST, content: str) -> dict[str, t.Any]:
-        """Enhanced analysis for dead/unused elements."""
         analysis: dict[str, list[t.Any]] = {
             "unused_imports": [],
             "unused_variables": [],
@@ -694,14 +660,12 @@ class RefactoringAgent(SubAgent):
         return analysis
 
     def _collect_usage_data(self, tree: ast.AST) -> dict[str, t.Any]:
-        """Enhanced collection of usage data from AST."""
         collector = self._create_usage_data_collector()
         analyzer = self._create_enhanced_usage_analyzer(collector)
         analyzer.visit(tree)
         return collector.get_results(analyzer)
 
     def _create_usage_data_collector(self) -> "UsageDataCollector":
-        """Create data collector for usage analysis."""
         from . import refactoring_helpers
 
         return refactoring_helpers.UsageDataCollector()
@@ -709,7 +673,6 @@ class RefactoringAgent(SubAgent):
     def _create_enhanced_usage_analyzer(
         self, collector: "UsageDataCollector"
     ) -> "EnhancedUsageAnalyzer":
-        """Create the enhanced usage analyzer."""
         from . import refactoring_helpers
 
         return refactoring_helpers.EnhancedUsageAnalyzer(collector)
@@ -719,7 +682,6 @@ class RefactoringAgent(SubAgent):
         analysis: dict[str, t.Any],
         analyzer_result: dict[str, t.Any],
     ) -> None:
-        """Process unused imports and add to analysis."""
         import_lines: list[tuple[int, str, str]] = analyzer_result["import_lines"]
         for line_no, name, import_type in import_lines:
             if name not in analyzer_result["used_names"]:
@@ -737,7 +699,6 @@ class RefactoringAgent(SubAgent):
         analysis: dict[str, t.Any],
         analyzer_result: dict[str, t.Any],
     ) -> None:
-        """Process unused functions and add to analysis."""
         all_unused_functions: list[dict[str, t.Any]] = analyzer_result[
             "unused_functions"
         ]
@@ -753,7 +714,6 @@ class RefactoringAgent(SubAgent):
     def _process_unused_classes(
         self, analysis: dict[str, t.Any], analyzer_result: dict[str, t.Any]
     ) -> None:
-        """Process unused classes and add to analysis."""
         if "unused_classes" not in analyzer_result:
             return
 
@@ -770,8 +730,6 @@ class RefactoringAgent(SubAgent):
     def _detect_unreachable_code(
         self, analysis: dict[str, t.Any], tree: ast.AST, content: str
     ) -> None:
-        """Detect unreachable code patterns."""
-
         class UnreachableCodeDetector(ast.NodeVisitor):
             def __init__(self):
                 self.unreachable_blocks = []
@@ -787,10 +745,8 @@ class RefactoringAgent(SubAgent):
             def _check_unreachable_in_function(
                 self, node: ast.FunctionDef | ast.AsyncFunctionDef
             ) -> None:
-                """Check for unreachable code after return/raise statements."""
                 for i, stmt in enumerate(node.body):
                     if isinstance(stmt, ast.Return | ast.Raise):
-                        # Check if there are statements after this
                         if i + 1 < len(node.body):
                             next_stmt = node.body[i + 1]
                             self.unreachable_blocks.append(
@@ -813,28 +769,23 @@ class RefactoringAgent(SubAgent):
     def _detect_redundant_code(
         self, analysis: dict[str, t.Any], tree: ast.AST, content: str
     ) -> None:
-        """Detect redundant code patterns."""
         lines = content.split("\n")
 
-        # Look for duplicate code blocks
         line_hashes = {}
         for i, line in enumerate(lines):
             if line.strip() and not line.strip().startswith("#"):
                 line_hash = hash(line.strip())
                 if line_hash in line_hashes:
-                    # Potential duplicate
                     analysis["removable_items"].append(
                         f"potential duplicate code at line {i + 1}"
                     )
                 line_hashes[line_hash] = i
 
-        # Look for empty except blocks
         class RedundantPatternDetector(ast.NodeVisitor):
             def __init__(self):
                 self.redundant_items = []
 
             def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
-                # Check for empty except blocks or just 'pass'
                 if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                     self.redundant_items.append(
                         {"type": "empty_except", "line": node.lineno}
@@ -842,7 +793,6 @@ class RefactoringAgent(SubAgent):
                 self.generic_visit(node)
 
             def visit_If(self, node: ast.If) -> None:
-                # Check for if True: or if False:
                 if isinstance(node.test, ast.Constant):
                     if node.test.value is True:
                         self.redundant_items.append(
@@ -865,7 +815,6 @@ class RefactoringAgent(SubAgent):
     def _should_remove_import_line(
         self, line: str, unused_import: dict[str, str]
     ) -> bool:
-        """Check if an import line should be removed."""
         if unused_import["type"] == "import":
             return f"import {unused_import['name']}" in line
         elif unused_import["type"] == "from_import":
@@ -879,7 +828,6 @@ class RefactoringAgent(SubAgent):
     def _find_lines_to_remove(
         self, lines: list[str], analysis: dict[str, t.Any]
     ) -> set[int]:
-        """Find line indices that should be removed."""
         lines_to_remove: set[int] = set()
 
         for unused_import in analysis["unused_imports"]:
@@ -892,7 +840,6 @@ class RefactoringAgent(SubAgent):
         return lines_to_remove
 
     def _remove_dead_code_items(self, content: str, analysis: dict[str, t.Any]) -> str:
-        """Enhanced removal of dead code items from content."""
         lines = content.split("\n")
         lines_to_remove = self._collect_all_removable_lines(lines, analysis)
 
@@ -905,7 +852,6 @@ class RefactoringAgent(SubAgent):
     def _collect_all_removable_lines(
         self, lines: list[str], analysis: dict[str, t.Any]
     ) -> set[int]:
-        """Collect all line indices that should be removed."""
         removal_functions = [
             lambda: self._find_lines_to_remove(lines, analysis),
             lambda: self._find_unreachable_lines(lines, analysis),
@@ -921,12 +867,10 @@ class RefactoringAgent(SubAgent):
     def _find_unreachable_lines(
         self, lines: list[str], analysis: dict[str, t.Any]
     ) -> set[int]:
-        """Find line indices for unreachable code."""
         lines_to_remove: set[int] = set()
 
         for item in analysis.get("unreachable_code", []):
             if "line" in item:
-                # Remove the unreachable line (convert to 0-based index)
                 line_idx = item["line"] - 1
                 if 0 <= line_idx < len(lines):
                     lines_to_remove.add(line_idx)
@@ -936,10 +880,8 @@ class RefactoringAgent(SubAgent):
     def _find_redundant_lines(
         self, lines: list[str], analysis: dict[str, t.Any]
     ) -> set[int]:
-        """Find line indices for redundant code patterns."""
         lines_to_remove: set[int] = set()
 
-        # Look for empty except blocks
         for i in range(len(lines)):
             if self._is_empty_except_block(lines, i):
                 empty_pass_idx = self._find_empty_pass_line(lines, i)
@@ -949,12 +891,10 @@ class RefactoringAgent(SubAgent):
         return lines_to_remove
 
     def _is_empty_except_block(self, lines: list[str], line_idx: int) -> bool:
-        """Check if line is an empty except block."""
         stripped = lines[line_idx].strip()
-        return stripped == "except:" or stripped.startswith("except ")
+        return stripped == "except: " or stripped.startswith("except ")
 
     def _find_empty_pass_line(self, lines: list[str], except_idx: int) -> int | None:
-        """Find the pass line in an empty except block."""
         for j in range(except_idx + 1, min(except_idx + 5, len(lines))):
             next_line = lines[j].strip()
             if not next_line:
@@ -967,7 +907,6 @@ class RefactoringAgent(SubAgent):
     def _extract_function_content(
         self, lines: list[str], func_info: dict[str, t.Any]
     ) -> str:
-        """Extract the complete content of a function."""
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
 
@@ -982,7 +921,6 @@ class RefactoringAgent(SubAgent):
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> str:
-        """Apply function extraction by replacing original with calls to helpers."""
         lines = content.split("\n")
 
         if not self._is_extraction_valid(lines, func_info, extracted_helpers):
@@ -996,7 +934,6 @@ class RefactoringAgent(SubAgent):
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> bool:
-        """Check if extraction parameters are valid."""
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
 
@@ -1008,7 +945,6 @@ class RefactoringAgent(SubAgent):
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> str:
-        """Perform the actual function extraction."""
         new_lines = self._replace_function_with_calls(
             lines, func_info, extracted_helpers
         )
@@ -1020,13 +956,12 @@ class RefactoringAgent(SubAgent):
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> list[str]:
-        """Replace the original function with calls to helper methods."""
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
         func_indent = len(lines[start_line]) - len(lines[start_line].lstrip())
         indent = " " * (func_indent + 4)
 
-        new_func_lines = [lines[start_line]]  # Function definition
+        new_func_lines = [lines[start_line]]
         for helper in extracted_helpers:
             new_func_lines.append(f"{indent}self.{helper['name']}()")
 
@@ -1038,7 +973,6 @@ class RefactoringAgent(SubAgent):
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> str:
-        """Add helper method definitions at the end of the class."""
         start_line = func_info["line_start"] - 1
         class_end = self._find_class_end(new_lines, start_line)
 
@@ -1052,14 +986,12 @@ class RefactoringAgent(SubAgent):
         return "\n".join(new_lines)
 
     def _find_class_end(self, lines: list[str], func_start: int) -> int:
-        """Find the end of the class containing the function."""
         class_indent = self._find_class_indent(lines, func_start)
         if class_indent is None:
             return len(lines)
         return self._find_class_end_line(lines, func_start, class_indent)
 
     def _find_class_indent(self, lines: list[str], func_start: int) -> int | None:
-        """Find the indentation level of the class containing the function."""
         for i in range(func_start, -1, -1):
             if lines[i].strip().startswith("class "):
                 return len(lines[i]) - len(lines[i].lstrip())
@@ -1068,7 +1000,6 @@ class RefactoringAgent(SubAgent):
     def _find_class_end_line(
         self, lines: list[str], func_start: int, class_indent: int
     ) -> int:
-        """Find the line where the class ends based on indentation."""
         for i in range(func_start + 1, len(lines)):
             line = lines[i]
             if line.strip() and len(line) - len(line.lstrip()) <= class_indent:

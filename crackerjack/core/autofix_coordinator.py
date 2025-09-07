@@ -11,8 +11,7 @@ class AutofixCoordinator:
         self.console = console
         self.pkg_path = pkg_path
         self.logger = get_logger("crackerjack.autofix")
-        # For testing purposes, we need to set a name attribute
-        # We use setattr to avoid type checker issues since BoundLogger doesn't have a name attribute
+
         setattr(self.logger, "name", "crackerjack.autofix")
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
@@ -62,11 +61,9 @@ class AutofixCoordinator:
 
         hook_specific_fixes = self._get_hook_specific_fixes(failed_hooks)
 
-        # Run fast fixes first
         if not self._execute_fast_fixes():
             return False
 
-        # Apply hook-specific fixes
         all_successful = True
         for cmd, description in hook_specific_fixes:
             if not self._run_fix_command(cmd, description):
@@ -156,19 +153,16 @@ class AutofixCoordinator:
             "removed",
         ]
 
-        # Handle case where result might be a Mock object in tests
         if hasattr(result, "stdout") and hasattr(result, "stderr"):
-            # Handle the case where stdout/stderr might be Mock objects
             stdout = getattr(result, "stdout", "") or ""
             stderr = getattr(result, "stderr", "") or ""
-            # If they're Mock objects, convert to string
+
             if not isinstance(stdout, str):
                 stdout = str(stdout)
             if not isinstance(stderr, str):
                 stderr = str(stderr)
             output = stdout + stderr
         else:
-            # For test mocks or other objects
             output = str(result)
 
         output_lower = output.lower()
@@ -179,31 +173,25 @@ class AutofixCoordinator:
         if not cmd:
             return False
 
-        # Handle CompletedProcess objects or Mock objects with returncode attribute
         if hasattr(result, "returncode"):
             return self._check_process_result_success(result)
 
-        # Check for string patterns in result
         if isinstance(result, str):
             return self._check_string_result_success(result)
 
         return False
 
     def _check_process_result_success(self, result: object) -> bool:
-        """Check if a process result indicates success."""
         if getattr(result, "returncode", 1) == 0:
             return True
 
-        # Check output for success patterns if return code is non-zero
         output = self._extract_process_output(result)
         return self._has_success_patterns(output)
 
     def _extract_process_output(self, result: object) -> str:
-        """Extract and normalize stdout and stderr from process result."""
         stdout = getattr(result, "stdout", "") or ""
         stderr = getattr(result, "stderr", "") or ""
 
-        # Convert to strings if they're not already
         if not isinstance(stdout, str):
             stdout = str(stdout)
         if not isinstance(stderr, str):
@@ -212,11 +200,9 @@ class AutofixCoordinator:
         return stdout + stderr
 
     def _check_string_result_success(self, result: str) -> bool:
-        """Check if a string result indicates success."""
         return self._has_success_patterns(result)
 
     def _has_success_patterns(self, output: str) -> bool:
-        """Check if output contains success patterns."""
         if not output:
             return False
 
@@ -273,7 +259,7 @@ class AutofixCoordinator:
             raw_output = getattr(result, "raw_output", None)
             if raw_output:
                 output_lower = raw_output.lower()
-                # Skip autofix for import errors as they typically require manual intervention
+
                 if (
                     "importerror" in output_lower
                     or "modulenotfounderror" in output_lower

@@ -7,16 +7,13 @@ SLASH_COMMANDS_DIR = Path(__file__).parent
 
 
 def get_slash_command_path(command_name: str) -> Path:
-    """Get path to slash command file with validation."""
     try:
-        # Validate command name to prevent directory traversal
         sanitized_name = validate_and_sanitize_string(
             command_name, max_length=50, strict_alphanumeric=True
         )
 
         command_path = SLASH_COMMANDS_DIR / f"{sanitized_name}.md"
 
-        # Ensure the path stays within the slash commands directory
         if not str(command_path.resolve()).startswith(
             str(SLASH_COMMANDS_DIR.resolve())
         ):
@@ -37,19 +34,17 @@ def get_slash_command_path(command_name: str) -> Path:
 
 
 def list_available_commands() -> list[str]:
-    """List available slash commands with validation."""
     try:
         commands = []
         for file_path in SLASH_COMMANDS_DIR.glob("*.md"):
             command_name = file_path.stem
-            # Validate each command name
+
             try:
                 validate_and_sanitize_string(
                     command_name, max_length=50, strict_alphanumeric=True
                 )
                 commands.append(command_name)
             except ExecutionError:
-                # Skip invalid command names
                 continue
 
         return sorted(commands)

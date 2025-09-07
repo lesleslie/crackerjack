@@ -9,7 +9,6 @@ from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
 class SecurityService:
-    # Security token masking patterns - now using validated patterns from regex_patterns.py
     TOKEN_PATTERN_NAMES = [
         "mask_pypi_token",
         "mask_github_token",
@@ -29,31 +28,16 @@ class SecurityService:
     }
 
     def mask_tokens(self, text: str) -> str:
-        """
-        Mask sensitive tokens in text using validated regex patterns.
-
-        This method applies security token masking patterns to hide:
-        - PyPI authentication tokens (pypi-*)
-        - GitHub personal access tokens (ghp_*)
-        - Generic long tokens (32+ characters)
-        - Token assignments (token="value")
-        - Password assignments (password="value")
-        - Environment variable values
-
-        Returns masked text with sensitive data replaced by "**** or similar.
-        """
         if not text:
             return text
 
         masked_text = text
 
-        # Apply validated token masking patterns
         for pattern_name in self.TOKEN_PATTERN_NAMES:
             if pattern_name in SAFE_PATTERNS:
                 pattern = SAFE_PATTERNS[pattern_name]
                 masked_text = pattern.apply(masked_text)
 
-        # Also mask sensitive environment variable values
         for env_var in self.SENSITIVE_ENV_VARS:
             value = os.getenv(env_var)
             if value and len(value) > 8:
@@ -148,30 +132,17 @@ class SecurityService:
         return env_summary
 
     def validate_token_format(self, token: str, token_type: str | None = None) -> bool:
-        """
-        Validate token format for known token types.
-
-        Args:
-            token: The token string to validate
-            token_type: Optional token type ("pypi", "github", or None)
-
-        Returns:
-            True if the token appears to be valid for the specified type
-        """
         if not token:
             return False
         if len(token) < 8:
             return False
 
         if token_type and token_type.lower() == "pypi":
-            # PyPI tokens start with "pypi-" (not "pypi -" which was a typo)
             return token.startswith("pypi-") and len(token) >= 16
 
         if token_type and token_type.lower() == "github":
-            # GitHub personal access tokens: ghp_ + 36 chars = 40 total
             return token.startswith("ghp_") and len(token) == 40
 
-        # Generic validation for unknown token types
         return len(token) >= 16 and not token.isspace()
 
     def create_secure_command_env(
@@ -201,13 +172,12 @@ class SecurityService:
         return secure_env
 
     def validate_file_safety(self, path: str | Path) -> bool:
-        """Protocol method: Validate file safety."""
         try:
             file_path = Path(path)
-            # Check if path exists and is safe
+
             if not file_path.exists():
                 return False
-            # Basic safety checks
+
             if file_path.is_symlink():
                 return False
             return True
@@ -215,13 +185,12 @@ class SecurityService:
             return False
 
     def check_hardcoded_secrets(self, content: str) -> list[dict[str, t.Any]]:
-        """Protocol method: Check for hardcoded secrets."""
         secrets = []
-        # Basic patterns for common secrets
+
         patterns = {
-            "api_key": r'api[_-]?key["\s]*[:=]["\s]*([a-zA-Z0-9_-]{20,})',
-            "password": r'password["\s]*[:=]["\s]*([^\s"]{8,})',
-            "token": r'token["\s]*[:=]["\s]*([a-zA-Z0-9_-]{20,})',
+            "api_key": r'api[_-]?key["\s]*[: =]["\s]*([a-zA-Z0-9_-]{20, })',
+            "password": r'password["\s]*[: =]["\s]*([^\s"]{8, })',
+            "token": r'token["\s]*[: =]["\s]*([a-zA-Z0-9_-]{20, })',
         }
 
         import re
@@ -232,14 +201,13 @@ class SecurityService:
                 secrets.append(
                     {
                         "type": secret_type,
-                        "value": match.group(1)[:10] + "...",  # Truncated for safety
+                        "value": match.group(1)[:10] + "...",
                         "line": content[: match.start()].count("\n") + 1,
                     }
                 )
         return secrets
 
     def is_safe_subprocess_call(self, cmd: list[str]) -> bool:
-        """Protocol method: Check if subprocess call is safe."""
         if not cmd:
             return False
 
@@ -259,5 +227,5 @@ class SecurityService:
             "netcat",
         }
 
-        command = cmd[0].split("/")[-1]  # Get base command name
+        command = cmd[0].split("/")[-1]
         return command not in dangerous_commands

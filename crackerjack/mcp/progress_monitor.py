@@ -418,7 +418,7 @@ class CrackerjackDashboard(App):
     def __init__(self) -> None:
         super().__init__()
         self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack - mcp-progress"
-        self.websocket_url = "ws://localhost:8675"
+        self.websocket_url = "ws: //localhost: 8675"
         self.refresh_timer = None
         self.active_jobs = {}
         self.completed_jobs_stats = {}
@@ -532,10 +532,9 @@ class CrackerjackDashboard(App):
 
     async def _refresh_data(self) -> None:
         try:
-            # Refresh cycle with timeout protection
             async with self.timeout_manager.timeout_context(
                 "network_operations",
-                timeout=10.0,  # Total refresh timeout
+                timeout=10.0,
                 strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             ):
                 if hasattr(self, "_refresh_counter"):
@@ -543,8 +542,7 @@ class CrackerjackDashboard(App):
                 else:
                     self._refresh_counter = 0
 
-                # Ensure services running less frequently to avoid overhead
-                if self._refresh_counter % 20 == 0:  # Every 10 seconds instead of 5
+                if self._refresh_counter % 20 == 0:
                     with suppress(Exception):
                         await self.timeout_manager.with_timeout(
                             "network_operations",
@@ -553,7 +551,6 @@ class CrackerjackDashboard(App):
                             strategy=TimeoutStrategy.FAIL_FAST,
                         )
 
-                # Collect data with individual timeouts
                 jobs_data = await self.timeout_manager.with_timeout(
                     "network_operations",
                     self._discover_jobs(),
@@ -575,7 +572,6 @@ class CrackerjackDashboard(App):
                     strategy=TimeoutStrategy.FAIL_FAST,
                 )
 
-                # Update UI components
                 self.query_one("#services-panel").border_title = "🔧 Services"
 
                 self._update_jobs_table(jobs_data)
@@ -586,7 +582,6 @@ class CrackerjackDashboard(App):
                 self._update_status_bars(jobs_data)
 
         except Exception as e:
-            # Log error but don't crash the dashboard
             with suppress(Exception):
                 console = Console()
                 console.print(f"[red]Dashboard refresh error: {e}[/red]")
@@ -602,7 +597,6 @@ class CrackerjackDashboard(App):
             self.current_polling_method = result["method"]
             return result["data"]
         except Exception:
-            # Return empty data structure on timeout or error
             return {
                 "active": 0,
                 "completed": 0,
@@ -624,7 +618,6 @@ class CrackerjackDashboard(App):
                 strategy=TimeoutStrategy.FAIL_FAST,
             )
         except Exception:
-            # Return minimal service data on timeout
             return [("Services", "🔴 Timeout", "0")]
 
     async def _collect_recent_errors(self) -> list:
@@ -636,7 +629,6 @@ class CrackerjackDashboard(App):
                 strategy=TimeoutStrategy.FAIL_FAST,
             )
         except Exception:
-            # Return empty error list on timeout
             return []
 
     def _update_jobs_table(self, jobs_data: dict) -> None:

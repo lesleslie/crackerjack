@@ -1,10 +1,3 @@
-"""
-Status Security Manager for comprehensive security controls.
-
-Provides authentication, authorization, rate limiting, and resource protection
-for status collection operations to prevent security vulnerabilities.
-"""
-
 import asyncio
 import threading
 import time
@@ -16,41 +9,22 @@ from .security_logger import SecurityEventLevel, SecurityEventType, get_security
 
 
 class StatusSecurityError(Exception):
-    """Base exception for status security violations."""
-
     pass
 
 
 class AccessDeniedError(StatusSecurityError):
-    """Raised when access is denied to status information."""
-
     pass
 
 
 class ResourceLimitExceededError(StatusSecurityError):
-    """Raised when resource limits are exceeded."""
-
     pass
 
 
 class RateLimitExceededError(StatusSecurityError):
-    """Raised when rate limits are exceeded."""
-
     pass
 
 
 class StatusSecurityManager:
-    """
-    Comprehensive security manager for status operations.
-
-    Provides:
-    - Authentication and authorization controls
-    - Rate limiting for status requests
-    - Resource usage monitoring and limits
-    - Concurrent operation tracking
-    - Path traversal protection
-    """
-
     def __init__(
         self,
         max_concurrent_requests: int = 5,
@@ -58,30 +32,18 @@ class StatusSecurityManager:
         max_resource_usage_mb: int = 100,
         allowed_paths: set[str] | None = None,
     ):
-        """
-        Initialize status security manager.
-
-        Args:
-            max_concurrent_requests: Maximum concurrent status requests
-            rate_limit_per_minute: Maximum requests per minute per client
-            max_resource_usage_mb: Maximum memory usage in MB
-            allowed_paths: Set of allowed paths for file operations
-        """
         self.max_concurrent_requests = max_concurrent_requests
         self.rate_limit_per_minute = rate_limit_per_minute
         self.max_resource_usage_mb = max_resource_usage_mb
         self.allowed_paths = allowed_paths or set()
 
-        # Thread-safe tracking
         self._lock = threading.RLock()
         self._concurrent_requests = 0
         self._rate_limit_tracker: dict[str, list[float]] = defaultdict(list)
         self._resource_usage = 0.0
 
-        # Security logging
         self.security_logger = get_security_logger()
 
-        # Active request tracking for resource cleanup
         self._active_requests: set[str] = set()
 
     def validate_request(
@@ -90,21 +52,7 @@ class StatusSecurityManager:
         operation: str,
         request_data: dict[str, t.Any] | None = None,
     ) -> None:
-        """
-        Validate status request for security compliance.
-
-        Args:
-            client_id: Unique client identifier
-            operation: Operation being requested
-            request_data: Additional request data to validate
-
-        Raises:
-            AccessDeniedError: If access is denied
-            RateLimitExceededError: If rate limit exceeded
-            ResourceLimitExceededError: If resource limits exceeded
-        """
         with self._lock:
-            # Check concurrent request limit
             if self._concurrent_requests >= self.max_concurrent_requests:
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
@@ -117,25 +65,19 @@ class StatusSecurityManager:
                     f"Too many concurrent requests: {self._concurrent_requests}"
                 )
 
-            # Check rate limiting
             self._check_rate_limit(client_id, operation)
 
-            # Validate request data if provided
             if request_data:
                 self._validate_request_data(client_id, operation, request_data)
 
     def _check_rate_limit(self, client_id: str, operation: str) -> None:
-        """Check if client has exceeded rate limits."""
-
         current_time = time.time()
         client_requests = self._rate_limit_tracker[client_id]
 
-        # Remove requests older than 1 minute
         client_requests[:] = [
             req_time for req_time in client_requests if current_time - req_time < 60
         ]
 
-        # Check if limit exceeded
         if len(client_requests) >= self.rate_limit_per_minute:
             self.security_logger.log_security_event(
                 event_type=SecurityEventType.RATE_LIMIT_EXCEEDED,
@@ -148,7 +90,6 @@ class StatusSecurityManager:
                 f"Rate limit exceeded: {len(client_requests)} requests in last minute"
             )
 
-        # Record this request
         client_requests.append(current_time)
 
     def _validate_request_data(
@@ -157,9 +98,6 @@ class StatusSecurityManager:
         operation: str,
         request_data: dict[str, t.Any],
     ) -> None:
-        """Validate request data for security issues."""
-
-        # Check for path traversal attempts
         for key, value in request_data.items():
             if isinstance(value, str):
                 if self._contains_path_traversal(value):
@@ -173,16 +111,12 @@ class StatusSecurityManager:
                     )
                     raise AccessDeniedError(f"Invalid path in parameter: {key}")
 
-        # Validate file paths if present
         if "path" in request_data or "file_path" in request_data:
             path_value = request_data.get("path") or request_data.get("file_path")
             if path_value:
                 self._validate_file_path(client_id, operation, str(path_value))
 
     def _contains_path_traversal(self, value: str) -> bool:
-        """Check if value contains path traversal patterns."""
-
-        # Common path traversal patterns
         traversal_patterns = [
             "../",
             "..\\",
@@ -194,7 +128,7 @@ class StatusSecurityManager:
             "....\\\\",
             "..\\/",
             "../\\",
-            "%252e%252e%252f",  # Double URL encoded
+            "%252e%252e%252f",
         ]
 
         value_lower = value.lower()
@@ -203,12 +137,9 @@ class StatusSecurityManager:
     def _validate_file_path(
         self, client_id: str, operation: str, file_path: str
     ) -> None:
-        """Validate file path for security compliance."""
-
         try:
             path = Path(file_path).resolve()
 
-            # Check if path is within allowed paths
             if self.allowed_paths:
                 path_allowed = any(
                     path.is_relative_to(Path(allowed_path).resolve())
@@ -242,24 +173,8 @@ class StatusSecurityManager:
         operation: str,
         timeout: float = 30.0,
     ) -> "RequestLock":
-        """
-        Acquire a request lock for concurrent operation tracking.
+        request_id = f"{client_id}: {operation}: {int(time.time())}"
 
-        Args:
-            client_id: Client identifier
-            operation: Operation being performed
-            timeout: Maximum wait time for lock acquisition
-
-        Returns:
-            RequestLock context manager
-
-        Raises:
-            ResourceLimitExceededError: If unable to acquire lock within timeout
-        """
-
-        request_id = f"{client_id}:{operation}:{int(time.time())}"
-
-        # Try to acquire lock with timeout
         start_time = time.time()
         while time.time() - start_time < timeout:
             with self._lock:
@@ -277,10 +192,8 @@ class StatusSecurityManager:
 
                     return RequestLock(self, request_id, client_id, operation)
 
-            # Wait briefly before retrying
             await asyncio.sleep(0.1)
 
-        # Timeout exceeded
         self.security_logger.log_security_event(
             event_type=SecurityEventType.REQUEST_TIMEOUT,
             level=SecurityEventLevel.ERROR,
@@ -296,8 +209,6 @@ class StatusSecurityManager:
     def _release_request_lock(
         self, request_id: str, client_id: str, operation: str
     ) -> None:
-        """Release a request lock."""
-
         with self._lock:
             if request_id in self._active_requests:
                 self._active_requests.remove(request_id)
@@ -312,12 +223,9 @@ class StatusSecurityManager:
                 )
 
     def get_security_status(self) -> dict[str, t.Any]:
-        """Get current security status and metrics."""
-
         with self._lock:
             current_time = time.time()
 
-            # Calculate recent request rates
             recent_requests = 0
             for client_requests in self._rate_limit_tracker.values():
                 recent_requests += len(
@@ -342,8 +250,6 @@ class StatusSecurityManager:
 
 
 class RequestLock:
-    """Context manager for request lock acquisition and release."""
-
     def __init__(
         self,
         security_manager: StatusSecurityManager,
@@ -367,16 +273,12 @@ class RequestLock:
         )
 
 
-# Global instance for singleton pattern
 _security_manager: StatusSecurityManager | None = None
 
 
 def get_status_security_manager() -> StatusSecurityManager:
-    """Get the global status security manager instance."""
-
     global _security_manager
     if _security_manager is None:
-        # Initialize with project-specific paths
         import tempfile
         from pathlib import Path
 
@@ -385,9 +287,7 @@ def get_status_security_manager() -> StatusSecurityManager:
         allowed_paths = {
             str(project_root),
             str(project_root / "temp"),
-            str(
-                temp_dir / "crackerjack-mcp-progress"
-            ),  # B108: Use tempfile.gettempdir()
+            str(temp_dir / "crackerjack-mcp-progress"),
         }
 
         _security_manager = StatusSecurityManager(
@@ -402,18 +302,6 @@ async def validate_status_request(
     operation: str,
     request_data: dict[str, t.Any] | None = None,
 ) -> None:
-    """
-    Convenience function to validate status requests.
-
-    Args:
-        client_id: Client identifier
-        operation: Operation being requested
-        request_data: Optional request data to validate
-
-    Raises:
-        StatusSecurityError: If security validation fails
-    """
-
     security_manager = get_status_security_manager()
     security_manager.validate_request(client_id, operation, request_data)
 
@@ -423,20 +311,5 @@ async def secure_status_operation(
     operation: str,
     timeout: float = 30.0,
 ) -> RequestLock:
-    """
-    Acquire security lock for status operations.
-
-    Args:
-        client_id: Client identifier
-        operation: Operation being performed
-        timeout: Maximum wait time for lock
-
-    Returns:
-        RequestLock context manager
-
-    Raises:
-        ResourceLimitExceededError: If unable to acquire lock
-    """
-
     security_manager = get_status_security_manager()
     return await security_manager.acquire_request_lock(client_id, operation, timeout)

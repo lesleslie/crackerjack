@@ -22,31 +22,24 @@ from .services.security_logger import (
 
 
 class SafePatternApplicator:
-    """Safe pattern applicator using centralized SAFE_PATTERNS."""
-
     def apply_docstring_patterns(self, code: str) -> str:
-        """Apply docstring removal patterns safely."""
         result = code
         result = SAFE_PATTERNS["docstring_triple_double"].apply(result)
         result = SAFE_PATTERNS["docstring_triple_single"].apply(result)
         return result
 
     def apply_formatting_patterns(self, content: str) -> str:
-        """Apply formatting patterns safely."""
-        # Apply spacing patterns
         content = SAFE_PATTERNS["spacing_after_comma"].apply(content)
         content = SAFE_PATTERNS["spacing_after_colon"].apply(content)
         content = SAFE_PATTERNS["multiple_spaces"].apply(content)
         return content
 
     def has_preserved_comment(self, line: str) -> bool:
-        """Check if a line contains preserved comments."""
         if line.strip().startswith("#! /"):
             return True
 
-        # Check for preserved comment keywords
         line_lower = line.lower()
-        preserved_keywords = ["coding:", "encoding:", "type:", "noqa", "pragma"]
+        preserved_keywords = ["coding: ", "encoding: ", "type: ", "noqa", "pragma"]
         return any(keyword in line_lower for keyword in preserved_keywords)
 
 
@@ -426,17 +419,7 @@ class CodeCleaner(BaseModel):
     def clean_files(
         self, pkg_dir: Path | None = None, use_backup: bool = True
     ) -> list[CleaningResult] | PackageCleaningResult:
-        """Clean package files with optional backup protection.
-
-        Args:
-            pkg_dir: Package directory to clean (defaults to current directory)
-            use_backup: Whether to use backup protection (default: True for safety)
-
-        Returns:
-            PackageCleaningResult with backup protection (default), list[CleaningResult] if use_backup=False (legacy)
-        """
         if use_backup:
-            # Use the comprehensive backup system for maximum safety
             package_result = self.clean_files_with_backup(pkg_dir)
             self.logger.info(
                 f"Package cleaning with backup completed: "
@@ -445,7 +428,6 @@ class CodeCleaner(BaseModel):
             )
             return package_result
 
-        # Legacy non-backup mode (deprecated, kept for compatibility)
         self.console.print(
             "[yellow]⚠️ WARNING: Running without backup protection. "
             "Consider using use_backup=True for safety.[/yellow]"
@@ -539,23 +521,9 @@ class CodeCleaner(BaseModel):
         ]
 
     def _discover_package_files(self, root_dir: Path) -> list[Path]:
-        """Discover Python files in the main package directory using crackerjack naming convention.
-
-        Crackerjack convention:
-        - Project name with dashes → package name with underscores
-        - Single word → same name lowercase
-        - Package directory determined from pyproject.toml [project.name]
-
-        Args:
-            root_dir: Project root directory
-
-        Returns:
-            List of Python files found only in the main package directory
-        """
         package_dir = self._find_package_directory(root_dir)
 
         if not package_dir or not package_dir.exists():
-            # Fallback: look for any directory with __init__.py (excluding common non-package dirs)
             self.console.print(
                 "[yellow]⚠️ Could not determine package directory, searching for Python packages...[/yellow]"
             )
@@ -563,10 +531,8 @@ class CodeCleaner(BaseModel):
 
         self.logger.debug(f"Using package directory: {package_dir}")
 
-        # Get all Python files from the package directory only
         package_files = list(package_dir.rglob("*.py"))
 
-        # Filter out any problematic subdirectories that might exist within the package
         exclude_dirs = {
             "__pycache__",
             ".pytest_cache",
@@ -584,15 +550,6 @@ class CodeCleaner(BaseModel):
         return filtered_files
 
     def _find_package_directory(self, root_dir: Path) -> Path | None:
-        """Find the main package directory using crackerjack naming convention.
-
-        Args:
-            root_dir: Project root directory
-
-        Returns:
-            Path to package directory or None if not found
-        """
-        # First, try to get project name from pyproject.toml
         pyproject_path = root_dir / "pyproject.toml"
         if pyproject_path.exists():
             try:
@@ -603,7 +560,6 @@ class CodeCleaner(BaseModel):
 
                 project_name = config.get("project", {}).get("name")
                 if project_name:
-                    # Apply crackerjack naming convention
                     package_name = project_name.replace("-", "_").lower()
                     package_dir = root_dir / package_name
 
@@ -613,7 +569,6 @@ class CodeCleaner(BaseModel):
             except Exception as e:
                 self.logger.debug(f"Could not parse pyproject.toml: {e}")
 
-        # Fallback: infer from directory name
         package_name = root_dir.name.replace("-", "_").lower()
         package_dir = root_dir / package_name
 
@@ -623,7 +578,6 @@ class CodeCleaner(BaseModel):
         return None
 
     def _fallback_discover_packages(self, root_dir: Path) -> list[Path]:
-        """Fallback method to discover package files when convention-based detection fails."""
         python_files = []
         exclude_dirs = {
             "__pycache__",
@@ -669,11 +623,8 @@ class CodeCleaner(BaseModel):
     def _should_include_file_path(
         self, file_path: Path, exclude_dirs: set[str]
     ) -> bool:
-        """Check if a file path should be included (not in excluded directories)."""
-        # Convert path parts to set for efficient lookup
         path_parts = set(file_path.parts)
 
-        # If any part of the path is in exclude_dirs, exclude it
         return not bool(path_parts.intersection(exclude_dirs))
 
     def _handle_no_files_to_process(
@@ -864,11 +815,6 @@ class CodeCleaner(BaseModel):
             return False
 
     def restore_from_backup_metadata(self, backup_metadata: BackupMetadata) -> None:
-        """Manually restore from backup metadata.
-
-        Args:
-            backup_metadata: Backup metadata containing restoration information
-        """
         self.console.print(
             f"[yellow]🔄 Manually restoring from backup: {backup_metadata.backup_id}[/yellow]"
         )
@@ -881,14 +827,6 @@ class CodeCleaner(BaseModel):
         )
 
     def create_emergency_backup(self, pkg_dir: Path | None = None) -> BackupMetadata:
-        """Create an emergency backup before potentially risky operations.
-
-        Args:
-            pkg_dir: Package directory to backup (defaults to current directory)
-
-        Returns:
-            BackupMetadata for the created backup
-        """
         validated_pkg_dir = self._prepare_package_directory(pkg_dir)
 
         self.console.print(
@@ -904,14 +842,6 @@ class CodeCleaner(BaseModel):
         return backup_metadata
 
     def restore_emergency_backup(self, backup_metadata: BackupMetadata) -> bool:
-        """Restore from an emergency backup with enhanced error handling.
-
-        Args:
-            backup_metadata: Backup metadata for restoration
-
-        Returns:
-            True if restoration succeeded, False otherwise
-        """
         try:
             self.console.print(
                 f"[yellow]🔄 Restoring emergency backup: {backup_metadata.backup_id}[/yellow]"
@@ -938,14 +868,6 @@ class CodeCleaner(BaseModel):
             return False
 
     def verify_backup_integrity(self, backup_metadata: BackupMetadata) -> bool:
-        """Verify the integrity of a backup without restoring it.
-
-        Args:
-            backup_metadata: Backup metadata to verify
-
-        Returns:
-            True if backup is valid and can be restored, False otherwise
-        """
         try:
             validation_result = self.backup_service._validate_backup(backup_metadata)
 
@@ -960,14 +882,12 @@ class CodeCleaner(BaseModel):
                     f"[red]❌ Backup verification failed: {backup_metadata.backup_id}[/red]"
                 )
 
-                for error in validation_result.validation_errors[
-                    :3
-                ]:  # Show first 3 errors
-                    self.console.print(f"[red]  • {error}[/red]")
+                for error in validation_result.validation_errors[:3]:
+                    self.console.print(f"[red] • {error}[/red]")
 
                 if len(validation_result.validation_errors) > 3:
                     remaining = len(validation_result.validation_errors) - 3
-                    self.console.print(f"[red]  ... and {remaining} more errors[/red]")
+                    self.console.print(f"[red] ... and {remaining} more errors[/red]")
 
                 return False
 
@@ -977,11 +897,6 @@ class CodeCleaner(BaseModel):
             return False
 
     def list_available_backups(self) -> list[Path]:
-        """List all available backup directories.
-
-        Returns:
-            List of backup directory paths
-        """
         if (
             not self.backup_service.backup_root
             or not self.backup_service.backup_root.exists()
@@ -998,10 +913,10 @@ class CodeCleaner(BaseModel):
 
             if backup_dirs:
                 self.console.print(
-                    f"[cyan]📦 Found {len(backup_dirs)} available backups:[/cyan]"
+                    f"[cyan]📦 Found {len(backup_dirs)} available backups: [/cyan]"
                 )
                 for backup_dir in sorted(backup_dirs):
-                    self.console.print(f"  • {backup_dir.name}")
+                    self.console.print(f" • {backup_dir.name}")
             else:
                 self.console.print("[yellow]⚠️ No backups found[/yellow]")
 
@@ -1258,7 +1173,6 @@ class CodeCleaner(BaseModel):
                         )
                         content = cleaned_line.lstrip()
 
-                        # Use SAFE_PATTERNS for multiple spaces replacement
                         content = SAFE_PATTERNS["multiple_spaces"].apply(content)
 
                         cleaned_line = cleaned_line[:leading_whitespace] + content

@@ -173,7 +173,7 @@ class FormattingAgent(SubAgent):
                 "check",
                 ".",
                 "--select",
-                "I,F401",
+                "I, F401",
                 "--fix",
             ],
         )

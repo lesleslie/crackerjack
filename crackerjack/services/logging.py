@@ -32,7 +32,7 @@ def add_correlation_id(_: Any, __: Any, event_dict: EventDict) -> EventDict:
 
 
 def add_timestamp(_: Any, __: Any, event_dict: EventDict) -> EventDict:
-    event_dict["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    event_dict["timestamp"] = time.strftime("%Y-%m-%dT%H: %M: %S.%f")[:-3] + "Z"
     return event_dict
 
 

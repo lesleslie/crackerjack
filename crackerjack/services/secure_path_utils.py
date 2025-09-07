@@ -10,12 +10,9 @@ from .security_logger import SecurityEventLevel, SecurityEventType, get_security
 
 
 class SecurePathValidator:
-    """Comprehensive path security validation to prevent directory traversal attacks."""
-
     MAX_FILE_SIZE = 100 * 1024 * 1024
     MAX_PATH_LENGTH = 4096
 
-    # Enhanced dangerous components including encoded variations
     DANGEROUS_COMPONENTS = {
         "..",
         ".",
@@ -51,32 +48,14 @@ class SecurePathValidator:
         "LPT9",
     }
 
-    # Pattern constants removed - now using centralized SAFE_PATTERNS for security validation
-
     @classmethod
     def validate_safe_path(
         cls, path: str | Path, base_directory: Path | None = None
     ) -> Path:
-        """
-        Comprehensive path validation to prevent directory traversal attacks.
-
-        Args:
-            path: Path to validate (string or Path object)
-            base_directory: Optional base directory to constrain path within
-
-        Returns:
-            Validated and normalized Path object
-
-        Raises:
-            ExecutionError: If path contains malicious patterns or is invalid
-        """
-        # Convert to string for pattern checking
         path_str = str(path)
 
-        # Check for null bytes and dangerous patterns
         cls._check_malicious_patterns(path_str)
 
-        # Convert to Path and normalize
         try:
             path_obj = Path(path_str)
             normalized = cls.normalize_path(path_obj)
@@ -86,17 +65,14 @@ class SecurePathValidator:
                 error_code=ErrorCode.VALIDATION_ERROR,
             ) from e
 
-        # Validate path length
         if len(str(normalized)) > cls.MAX_PATH_LENGTH:
             raise ExecutionError(
                 message=f"Path too long: {len(str(normalized))} > {cls.MAX_PATH_LENGTH}",
                 error_code=ErrorCode.VALIDATION_ERROR,
             )
 
-        # Check dangerous components
         cls._check_dangerous_components(normalized)
 
-        # Validate within base directory if specified
         if base_directory:
             if not cls.is_within_directory(normalized, base_directory):
                 raise ExecutionError(
@@ -110,41 +86,23 @@ class SecurePathValidator:
     def validate_file_path(
         cls, file_path: Path, base_directory: Path | None = None
     ) -> Path:
-        """Legacy method - redirects to validate_safe_path for consistency."""
         return cls.validate_safe_path(file_path, base_directory)
 
     @classmethod
     def secure_path_join(cls, base: Path, *parts: str) -> Path:
-        """
-        Safe alternative to Path.joinpath() that prevents directory traversal.
-
-        Args:
-            base: Base directory path
-            *parts: Path components to join
-
-        Returns:
-            Safely joined path
-
-        Raises:
-            ExecutionError: If any part contains malicious patterns
-        """
-        # Validate base path
         validated_base = cls.validate_safe_path(base)
 
-        # Validate each part for malicious patterns
         for part in parts:
             cls._check_malicious_patterns(part)
-            # Don't allow absolute paths or parent directory references
+
             if Path(part).is_absolute():
                 raise ExecutionError(
                     message=f"Absolute path not allowed in join: {part}",
                     error_code=ErrorCode.VALIDATION_ERROR,
                 )
 
-        # Join paths safely
         result = validated_base.joinpath(*parts)
 
-        # Ensure result is still within base directory
         if not cls.is_within_directory(result, validated_base):
             raise ExecutionError(
                 message=f"Joined path escapes base directory: {result} not within {validated_base}",
@@ -155,23 +113,9 @@ class SecurePathValidator:
 
     @classmethod
     def normalize_path(cls, path: Path) -> Path:
-        """
-        Canonical path resolution with security checks.
-
-        Args:
-            path: Path to normalize
-
-        Returns:
-            Normalized path with symlinks resolved
-
-        Raises:
-            ExecutionError: If path resolution fails or contains malicious patterns
-        """
         try:
-            # Resolve symlinks and normalize
             resolved = path.resolve()
 
-            # Additional validation after resolution
             cls._validate_resolved_path(resolved)
 
             return resolved
@@ -184,22 +128,10 @@ class SecurePathValidator:
 
     @classmethod
     def is_within_directory(cls, path: Path, directory: Path) -> bool:
-        """
-        Verify that a path is contained within a directory.
-
-        Args:
-            path: Path to check
-            directory: Directory that should contain the path
-
-        Returns:
-            True if path is within directory, False otherwise
-        """
         try:
-            # Resolve both paths to handle symlinks
             resolved_path = path.resolve()
             resolved_directory = directory.resolve()
 
-            # Check if path is relative to directory
             resolved_path.relative_to(resolved_directory)
             return True
 
@@ -208,26 +140,10 @@ class SecurePathValidator:
 
     @classmethod
     def safe_resolve(cls, path: Path, base_directory: Path | None = None) -> Path:
-        """
-        Secure path resolution preventing symlink attacks.
-
-        Args:
-            path: Path to resolve
-            base_directory: Optional base directory constraint
-
-        Returns:
-            Safely resolved path
-
-        Raises:
-            ExecutionError: If resolution fails or path escapes constraints
-        """
-        # First validate the input path
         validated_path = cls.validate_safe_path(path, base_directory)
 
-        # Resolve with additional symlink attack prevention
         resolved = cls.normalize_path(validated_path)
 
-        # Re-validate after resolution
         if base_directory and not cls.is_within_directory(resolved, base_directory):
             raise ExecutionError(
                 message=f"Resolved path escapes base directory: {resolved} not within {base_directory}",
@@ -238,25 +154,18 @@ class SecurePathValidator:
 
     @classmethod
     def _check_malicious_patterns(cls, path_str: str) -> None:
-        """Check for directory traversal and null byte patterns using safe patterns."""
         security_logger = get_security_logger()
 
-        # URL decode the path to catch encoded attacks
         try:
             decoded = urllib.parse.unquote(path_str, errors="strict")
         except UnicodeDecodeError:
-            # If decoding fails, use original string but still check patterns
             decoded = path_str
 
-        # Check both original and decoded versions using safe patterns
         for check_str in (path_str, decoded):
             validation_results = validate_path_security(check_str)
 
-            # Check for null byte patterns
             if validation_results["null_bytes"]:
-                detected_pattern = validation_results["null_bytes"][
-                    0
-                ]  # First detected pattern
+                detected_pattern = validation_results["null_bytes"][0]
                 security_logger.log_security_event(
                     SecurityEventType.PATH_TRAVERSAL_ATTEMPT,
                     SecurityEventLevel.CRITICAL,
@@ -270,11 +179,8 @@ class SecurePathValidator:
                     error_code=ErrorCode.VALIDATION_ERROR,
                 )
 
-            # Check for directory traversal patterns
             if validation_results["traversal_patterns"]:
-                detected_pattern = validation_results["traversal_patterns"][
-                    0
-                ]  # First detected pattern
+                detected_pattern = validation_results["traversal_patterns"][0]
                 security_logger.log_path_traversal_attempt(
                     attempted_path=path_str,
                     pattern_type="directory_traversal",
@@ -287,13 +193,10 @@ class SecurePathValidator:
 
     @classmethod
     def _validate_resolved_path(cls, path: Path) -> None:
-        """Additional validation for resolved paths using safe patterns."""
         path_str = str(path)
 
-        # Check for dangerous patterns that might appear after resolution using safe patterns
         validation_results = validate_path_security(path_str)
 
-        # Check for parent directory references
         if validation_results["suspicious_patterns"]:
             if (
                 "detect_parent_directory_in_path"
@@ -304,7 +207,6 @@ class SecurePathValidator:
                     error_code=ErrorCode.VALIDATION_ERROR,
                 )
 
-        # Check for suspicious traversal patterns in system directories
         suspicious_detected = [
             pattern
             for pattern in validation_results["suspicious_patterns"]
@@ -380,24 +282,8 @@ class SecurePathValidator:
         directory: Path | None = None,
         purpose: str = "general",
     ) -> t.Any:
-        """
-        Create a secure temporary file with proper permissions.
-
-        Args:
-            suffix: File suffix
-            prefix: File prefix
-            directory: Directory to create temp file in (validated if provided)
-            purpose: Purpose description for security logging
-
-        Returns:
-            Secure temporary file handle
-
-        Raises:
-            ExecutionError: If temp file creation fails
-        """
         security_logger = get_security_logger()
 
-        # Validate directory if provided
         if directory:
             directory = cls.validate_safe_path(directory)
 
@@ -406,10 +292,8 @@ class SecurePathValidator:
                 mode="w+b", suffix=suffix, prefix=prefix, dir=directory, delete=False
             )
 
-            # Set restrictive permissions (owner read/write only)
             os.chmod(temp_file.name, 0o600)
 
-            # Log secure temp file creation
             security_logger.log_temp_file_created(
                 temp_path=temp_file.name,
                 purpose=purpose,
@@ -455,7 +339,6 @@ class AtomicFileOperations:
             temp_path = Path(temp_file.name)
             temp_path.replace(validated_path)
 
-            # Log successful atomic operation
             security_logger.log_atomic_operation(
                 operation="write",
                 file_path=str(validated_path),
@@ -468,7 +351,6 @@ class AtomicFileOperations:
                 if temp_path.exists():
                     temp_path.unlink()
 
-            # Log failed atomic operation
             security_logger.log_atomic_operation(
                 operation="write",
                 file_path=str(validated_path),
@@ -514,7 +396,6 @@ class AtomicFileOperations:
                 validated_path, new_content, base_directory
             )
 
-            # Log successful backup creation
             security_logger.log_backup_created(
                 original_path=str(validated_path),
                 backup_path=str(backup_path),
@@ -526,7 +407,6 @@ class AtomicFileOperations:
             if backup_path.exists():
                 backup_path.unlink()
 
-            # Log failed backup operation
             security_logger.log_atomic_operation(
                 operation="backup_and_write",
                 file_path=str(validated_path),
@@ -541,9 +421,6 @@ class AtomicFileOperations:
 
 
 class SubprocessPathValidator:
-    """Specialized path validation for subprocess execution contexts."""
-
-    # Paths that should never be accessible via subprocess
     FORBIDDEN_SUBPROCESS_PATHS = {
         "/etc/passwd",
         "/etc/shadow",
@@ -563,32 +440,15 @@ class SubprocessPathValidator:
         "/var/spool/cron",
     }
 
-    # Directory patterns removed - now using centralized SAFE_PATTERNS for security validation
-
     @classmethod
     def validate_subprocess_cwd(cls, cwd: Path | str | None) -> Path | None:
-        """
-        Validate working directory for subprocess execution.
-
-        Args:
-            cwd: Working directory path
-
-        Returns:
-            Validated Path object or None
-
-        Raises:
-            ExecutionError: If path is dangerous for subprocess execution
-        """
         if cwd is None:
             return None
 
-        # Use base path validation first
         validated_cwd = SecurePathValidator.validate_safe_path(cwd)
 
-        # Additional subprocess-specific checks
         cwd_str = str(validated_cwd)
 
-        # Check against forbidden paths
         if cwd_str in cls.FORBIDDEN_SUBPROCESS_PATHS:
             security_logger = get_security_logger()
             security_logger.log_dangerous_path_detected(
@@ -601,17 +461,14 @@ class SubprocessPathValidator:
                 error_code=ErrorCode.VALIDATION_ERROR,
             )
 
-        # Check against dangerous directory patterns using safe patterns
         validation_results = validate_path_security(cwd_str)
 
         if validation_results["dangerous_directories"]:
-            detected_pattern = validation_results["dangerous_directories"][
-                0
-            ]  # First detected pattern
+            detected_pattern = validation_results["dangerous_directories"][0]
             security_logger = get_security_logger()
             security_logger.log_dangerous_path_detected(
                 path=cwd_str,
-                dangerous_component=f"pattern:{detected_pattern}",
+                dangerous_component=f"pattern: {detected_pattern}",
                 context="subprocess_cwd_validation",
             )
             raise ExecutionError(
@@ -623,31 +480,15 @@ class SubprocessPathValidator:
 
     @classmethod
     def validate_executable_path(cls, executable: str | Path) -> Path:
-        """
-        Validate executable path for subprocess execution.
-
-        Args:
-            executable: Executable path or name
-
-        Returns:
-            Validated Path object
-
-        Raises:
-            ExecutionError: If executable is dangerous or invalid
-        """
         exec_path = Path(executable)
 
-        # If it's just a command name, don't validate as full path
         if not str(executable).startswith(("/", "./", "../")):
             return exec_path
 
-        # For full paths, apply full validation
         validated_exec = SecurePathValidator.validate_safe_path(exec_path)
 
-        # Additional checks for executable paths
         exec_str = str(validated_exec)
 
-        # Check if trying to execute system-critical files
         dangerous_executables = {
             "/usr/bin/sudo",
             "/bin/sudo",

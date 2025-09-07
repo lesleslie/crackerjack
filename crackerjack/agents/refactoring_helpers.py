@@ -1,12 +1,8 @@
-"""Refactoring analysis helper classes and utilities."""
-
 import ast
 import typing as t
 
 
 class ComplexityCalculator(ast.NodeVisitor):
-    """Calculator for cognitive complexity analysis."""
-
     def __init__(self) -> None:
         self.complexity = 0
         self.nesting_level = 0
@@ -43,36 +39,28 @@ class ComplexityCalculator(ast.NodeVisitor):
         self._process_comprehension(node)
 
     def _process_conditional_node(self, node: ast.If) -> None:
-        """Process if/elif nodes with condition complexity."""
-        # Base complexity + nesting penalty
         self.complexity += 1 + self.nesting_level
 
-        # Penalty for complex conditions
         if self._has_complex_condition(node.test):
             self.complexity += 1
 
         self._visit_with_nesting(node)
 
     def _process_loop_node(self, node: ast.For | ast.While) -> None:
-        """Process for/while loop nodes."""
         self.complexity += 1 + self.nesting_level
         self._visit_with_nesting(node)
 
     def _process_try_node(self, node: ast.Try) -> None:
-        """Process try/except nodes with handler penalty."""
-        # Base complexity for try + number of except handlers
         self.complexity += 1 + self.nesting_level + len(node.handlers)
         self._visit_with_nesting(node)
 
     def _process_context_node(self, node: ast.With) -> None:
-        """Process with/context manager nodes."""
         self.complexity += 1 + self.nesting_level
         self._visit_with_nesting(node)
 
     def _process_boolean_operation(self, node: ast.BoolOp) -> None:
-        """Process boolean operations with chain penalty."""
         penalty = len(node.values) - 1
-        if penalty > 2:  # Long chains are more complex
+        if penalty > 2:
             penalty += 1
         self.complexity += penalty
         self.generic_visit(node)
@@ -80,30 +68,25 @@ class ComplexityCalculator(ast.NodeVisitor):
     def _process_comprehension(
         self, node: ast.ListComp | ast.DictComp | ast.SetComp | ast.GeneratorExp
     ) -> None:
-        """Process comprehensions with condition penalty."""
         self.complexity += 1
-        # Check each generator for ifs conditions
+
         for generator in node.generators:
             if hasattr(generator, "ifs") and generator.ifs:
                 self.complexity += len(generator.ifs)
         self.generic_visit(node)
 
     def _visit_with_nesting(self, node: ast.AST) -> None:
-        """Visit a node with proper nesting level tracking."""
         self.nesting_level += 1
         self.generic_visit(node)
         self.nesting_level -= 1
 
     def _has_complex_condition(self, node: ast.expr) -> bool:
-        """Check if condition involves complex expressions."""
         return (isinstance(node, ast.BoolOp) and len(node.values) > 2) or isinstance(
             node, ast.Compare | ast.Call
         )
 
 
 class UsageDataCollector:
-    """Collector for usage data analysis."""
-
     def __init__(self):
         self.defined_names: set[str] = set()
         self.used_names: set[str] = set()
@@ -113,7 +96,6 @@ class UsageDataCollector:
         self.unused_variables: list[dict[str, t.Any]] = []
 
     def get_results(self, analyzer: "EnhancedUsageAnalyzer") -> dict[str, t.Any]:
-        """Get collected usage data results."""
         return {
             "defined_names": self.defined_names,
             "used_names": self.used_names,
@@ -126,12 +108,10 @@ class UsageDataCollector:
 
 
 class EnhancedUsageAnalyzer(ast.NodeVisitor):
-    """Analyzer for enhanced usage data collection."""
-
     def __init__(self, collector: UsageDataCollector):
-        self.scope_stack = [set()]  # Track variable scopes
-        self.class_methods = {}  # Track class method usage
-        self.function_calls = set()  # Track function calls
+        self.scope_stack = [set()]
+        self.class_methods = {}
+        self.function_calls = set()
         self.collector = collector
 
     def visit_Import(self, node: ast.Import) -> None:
@@ -165,21 +145,18 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         self._process_attribute_access(node)
 
     def _process_import_node(self, node: ast.Import) -> None:
-        """Process import statements."""
         for alias in node.names:
             name = alias.asname or alias.name
             self.collector.defined_names.add(name)
             self.collector.import_lines.append((node.lineno, name, "import"))
 
     def _process_import_from_node(self, node: ast.ImportFrom) -> None:
-        """Process from-import statements."""
         for alias in node.names:
             name = alias.asname or alias.name
             self.collector.defined_names.add(name)
             self.collector.import_lines.append((node.lineno, name, "from_import"))
 
     def _process_function_definition(self, node: ast.FunctionDef) -> None:
-        """Process function definitions."""
         self.collector.defined_names.add(node.name)
         if self._should_track_function(node.name):
             function_info = self._create_function_info(node)
@@ -187,7 +164,6 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         self._visit_with_scope(node)
 
     def _process_async_function_definition(self, node: ast.AsyncFunctionDef) -> None:
-        """Process async function definitions."""
         self.collector.defined_names.add(node.name)
         if not node.name.startswith("_"):
             function_info = self._create_function_info(node)
@@ -195,7 +171,6 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         self._visit_with_scope(node)
 
     def _process_class_definition(self, node: ast.ClassDef) -> None:
-        """Process class definitions."""
         self.collector.defined_names.add(node.name)
         self.collector.unused_classes.append(
             {
@@ -207,7 +182,6 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         self._visit_with_scope(node)
 
     def _process_assignment(self, node: ast.Assign) -> None:
-        """Process variable assignments."""
         for target in node.targets:
             if isinstance(target, ast.Name):
                 self.collector.defined_names.add(target.id)
@@ -217,20 +191,17 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _process_annotated_assignment(self, node: ast.AnnAssign) -> None:
-        """Process annotated assignments."""
         if isinstance(node.target, ast.Name):
             self.collector.defined_names.add(node.target.id)
         self.generic_visit(node)
 
     def _process_name_usage(self, node: ast.Name) -> None:
-        """Process name usage (variable references)."""
         if isinstance(node.ctx, ast.Load):
             self.collector.used_names.add(node.id)
             if self.scope_stack:
                 self.scope_stack[-1].add(node.id)
 
     def _process_function_call(self, node: ast.Call) -> None:
-        """Process function/method calls."""
         if isinstance(node.func, ast.Name):
             self.function_calls.add(node.func.id)
             self.collector.used_names.add(node.func.id)
@@ -241,19 +212,16 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _process_attribute_access(self, node: ast.Attribute) -> None:
-        """Process attribute access."""
         if isinstance(node.value, ast.Name):
             self.collector.used_names.add(node.value.id)
         self.generic_visit(node)
 
     def _should_track_function(self, name: str) -> bool:
-        """Determine if function should be tracked for unused analysis."""
         return not name.startswith("_") and name != "__init__"
 
     def _create_function_info(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> dict[str, t.Any]:
-        """Create function information dictionary."""
         return {
             "name": node.name,
             "line": node.lineno,
@@ -264,7 +232,6 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
     def _create_variable_info(
         self, target: ast.Name, node: ast.Assign
     ) -> dict[str, t.Any]:
-        """Create variable information dictionary."""
         return {
             "name": target.id,
             "line": node.lineno,
@@ -272,11 +239,9 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         }
 
     def _is_in_function_or_class_scope(self) -> bool:
-        """Check if currently in function or class scope."""
         return len(self.scope_stack) > 1
 
     def _visit_with_scope(self, node: ast.AST) -> None:
-        """Visit node with proper scope tracking."""
         self.scope_stack.append(set())
         self.generic_visit(node)
         self.scope_stack.pop()

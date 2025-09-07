@@ -24,10 +24,9 @@ class WebSocketHandler:
             return
 
         try:
-            # Add timeout to the entire connection handling
             async with self.timeout_manager.timeout_context(
                 "websocket_connection",
-                timeout=3600.0,  # 1 hour max connection time
+                timeout=3600.0,
                 strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             ):
                 await self._establish_connection(websocket, job_id)
@@ -44,13 +43,11 @@ class WebSocketHandler:
             await self._cleanup_connection(job_id, websocket)
 
     async def _establish_connection(self, websocket: WebSocket, job_id: str) -> None:
-        """Establish WebSocket connection and add to job manager."""
         await websocket.accept()
         self.job_manager.add_connection(job_id, websocket)
         console.print(f"[green]WebSocket connected for job: {job_id}[/green]")
 
     async def _send_initial_progress(self, websocket: WebSocket, job_id: str) -> None:
-        """Send initial progress data to the connected WebSocket."""
         try:
             async with self.timeout_manager.timeout_context(
                 "websocket_broadcast",
@@ -70,7 +67,6 @@ class WebSocketHandler:
             )
 
     def _create_initial_progress_message(self, job_id: str) -> dict:
-        """Create initial progress message for new jobs."""
         return {
             "job_id": job_id,
             "status": "waiting",
@@ -82,9 +78,8 @@ class WebSocketHandler:
         }
 
     async def _handle_message_loop(self, websocket: WebSocket, job_id: str) -> None:
-        """Handle the main message processing loop."""
         message_count = 0
-        max_messages = 10000  # Prevent infinite message loops
+        max_messages = 10000
 
         while message_count < max_messages:
             try:
@@ -105,25 +100,21 @@ class WebSocketHandler:
     async def _process_single_message(
         self, websocket: WebSocket, job_id: str, message_count: int
     ) -> bool:
-        """Process a single WebSocket message. Returns False to break the loop."""
         try:
-            # Add timeout to individual message operations
             async with self.timeout_manager.timeout_context(
                 "websocket_message",
-                timeout=30.0,  # 30 second timeout per message
+                timeout=30.0,
                 strategy=TimeoutStrategy.FAIL_FAST,
             ):
-                # Use asyncio.wait_for for additional protection
                 data = await asyncio.wait_for(
                     websocket.receive_text(),
-                    timeout=25.0,  # Slightly less than timeout context
+                    timeout=25.0,
                 )
 
                 console.print(
                     f"[blue]Received message {message_count} for {job_id}: {data[:100]}...[/blue]",
                 )
 
-                # Respond with timeout protection
                 await asyncio.wait_for(
                     websocket.send_json(
                         {
@@ -151,7 +142,6 @@ class WebSocketHandler:
             return False
 
     async def _handle_timeout_error(self, websocket: WebSocket, job_id: str) -> None:
-        """Handle timeout errors during connection."""
         console.print(
             f"[yellow]WebSocket connection timeout for job: {job_id}[/yellow]"
         )
@@ -161,13 +151,11 @@ class WebSocketHandler:
     async def _handle_connection_error(
         self, websocket: WebSocket, job_id: str, error: Exception
     ) -> None:
-        """Handle connection errors."""
         console.print(f"[red]WebSocket error for job {job_id}: {error}[/red]")
         with suppress(Exception):
             await websocket.close(code=1011, reason="Internal error")
 
     async def _cleanup_connection(self, job_id: str, websocket: WebSocket) -> None:
-        """Clean up the connection."""
         try:
             self.job_manager.remove_connection(job_id, websocket)
         except Exception as e:

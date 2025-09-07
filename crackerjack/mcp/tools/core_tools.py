@@ -12,10 +12,8 @@ async def create_task_with_subagent(
     subagent_type: str,
 ) -> dict[str, t.Any]:
     try:
-        # Input validation with security checks
         validator = get_input_validator()
 
-        # Validate description
         desc_result = validator.validate_command_args(description)
         if not desc_result.valid:
             return {
@@ -24,7 +22,6 @@ async def create_task_with_subagent(
                 "validation_type": desc_result.validation_type,
             }
 
-        # Validate prompt
         prompt_result = validator.validate_command_args(prompt)
         if not prompt_result.valid:
             return {
@@ -33,7 +30,6 @@ async def create_task_with_subagent(
                 "validation_type": prompt_result.validation_type,
             }
 
-        # Validate subagent_type (should be safe identifier)
         subagent_result = validator.sanitizer.sanitize_string(
             subagent_type, max_length=100, strict_alphanumeric=True
         )
@@ -44,7 +40,6 @@ async def create_task_with_subagent(
                 "validation_type": subagent_result.validation_type,
             }
 
-        # Use sanitized values
         sanitized_description = desc_result.sanitized_value or description
         sanitized_prompt = prompt_result.sanitized_value or prompt
         sanitized_subagent = subagent_result.sanitized_value
@@ -87,13 +82,11 @@ def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
     try:
         validator = get_input_validator()
 
-        # Validate stage argument
         stage_validation = _validate_stage_argument(validator, args)
         if isinstance(stage_validation, str):
             return stage_validation
         stage = stage_validation
 
-        # Validate and parse kwargs
         kwargs_validation = _validate_kwargs_argument(validator, kwargs)
         if isinstance(kwargs_validation, str):
             return kwargs_validation
@@ -106,7 +99,6 @@ def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
 
 
 def _validate_stage_argument(validator, args: str) -> str:
-    """Validate and sanitize the stage argument."""
     stage_result = validator.sanitizer.sanitize_string(
         args.strip(), max_length=50, strict_alphanumeric=True
     )
@@ -123,7 +115,6 @@ def _validate_stage_argument(validator, args: str) -> str:
 
 
 def _validate_kwargs_argument(validator, kwargs: str) -> dict | str:
-    """Validate and parse the kwargs argument."""
     extra_kwargs = {}
     if not kwargs.strip():
         return extra_kwargs
@@ -134,7 +125,6 @@ def _validate_kwargs_argument(validator, kwargs: str) -> dict | str:
 
     extra_kwargs = kwargs_result.sanitized_value
 
-    # Additional validation on JSON structure
     if not isinstance(extra_kwargs, dict):
         return f'{{"error": "kwargs must be a JSON object, got {type(extra_kwargs).__name__}", "success": false}}'
 

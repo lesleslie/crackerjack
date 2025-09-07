@@ -1,15 +1,6 @@
-#!/usr/bin/env python3
-"""
-Test script to validate that all new input validator SAFE_PATTERNS work correctly.
-
-This script validates the security-critical input validation patterns and ensures
-they provide proper protection against injection attacks and malicious input.
-"""
-
 import sys
 from pathlib import Path
 
-# Add the crackerjack package to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from crackerjack.services.input_validator import SecureInputValidator
@@ -17,18 +8,15 @@ from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
 def test_sql_injection_patterns():
-    """Test SQL injection detection patterns."""
     print("Testing SQL injection patterns...")
 
     test_cases = [
-        # Should be detected as malicious
         ("SELECT * FROM users", True, "Basic SELECT"),
         ("UNION SELECT password FROM admin", True, "UNION injection"),
         ("'; DROP TABLE users; --", True, "SQL comment injection"),
         ("' OR 1=1--", True, "Boolean injection"),
         ("xp_cmdshell('dir')", True, "SQL Server specific"),
         ("sp_executesql @sql", True, "SQL Server procedure"),
-        # Should be allowed (legitimate text)
         ("user selected item", False, "Legitimate text with 'select'"),
         ("button execution", False, "Legitimate text with 'execution'"),
         ("team membership", False, "Legitimate text without SQL keywords"),
@@ -51,11 +39,11 @@ def test_sql_injection_patterns():
 
         status = "✅" if detected == should_detect else "❌"
         print(
-            f"  {status} {description}: '{text}' -> {'BLOCKED' if detected else 'ALLOWED'}"
+            f" {status} {description}: '{text}' -> {'BLOCKED' if detected else 'ALLOWED'}"
         )
 
         if detected != should_detect:
-            print(f"    Expected: {'BLOCKED' if should_detect else 'ALLOWED'}")
+            print(f" Expected: {'BLOCKED' if should_detect else 'ALLOWED'}")
             return False
 
     print("✅ All SQL injection pattern tests passed!")
@@ -63,11 +51,9 @@ def test_sql_injection_patterns():
 
 
 def test_code_injection_patterns():
-    """Test code injection detection patterns."""
     print("\nTesting code injection patterns...")
 
     test_cases = [
-        # Should be detected as malicious
         ("eval(user_input)", True, "eval() execution"),
         ("exec(malicious_code)", True, "exec() execution"),
         ("__import__('os')", True, "Dynamic import"),
@@ -75,7 +61,6 @@ def test_code_injection_patterns():
         ("subprocess.run(cmd)", True, "System command"),
         ("os.system('rm -rf')", True, "OS system call"),
         ("compile(code, 'string', 'exec')", True, "Code compilation"),
-        # Should be allowed (legitimate text)
         ("evaluate the results", False, "Legitimate text with 'eval'"),
         ("execute the plan", False, "Legitimate text with 'execute'"),
         ("import statement", False, "Normal import discussion"),
@@ -98,11 +83,11 @@ def test_code_injection_patterns():
 
         status = "✅" if detected == should_detect else "❌"
         print(
-            f"  {status} {description}: '{text}' -> {'BLOCKED' if detected else 'ALLOWED'}"
+            f" {status} {description}: '{text}' -> {'BLOCKED' if detected else 'ALLOWED'}"
         )
 
         if detected != should_detect:
-            print(f"    Expected: {'BLOCKED' if should_detect else 'ALLOWED'}")
+            print(f" Expected: {'BLOCKED' if should_detect else 'ALLOWED'}")
             return False
 
     print("✅ All code injection pattern tests passed!")
@@ -110,18 +95,15 @@ def test_code_injection_patterns():
 
 
 def test_job_id_validation():
-    """Test job ID format validation."""
     print("\nTesting job ID validation...")
 
     test_cases = [
-        # Should be valid
         ("valid_job-123", True, "Standard job ID"),
         ("another-valid_job", True, "Hyphen and underscore"),
         ("JOB123", True, "Uppercase"),
         ("job_456", True, "Underscore only"),
         ("job-789", True, "Hyphen only"),
         ("complex_job-id_123", True, "Complex valid ID"),
-        # Should be invalid
         ("job with spaces", False, "Contains spaces"),
         ("job@invalid", False, "Contains @ symbol"),
         ("job.invalid", False, "Contains dot"),
@@ -137,11 +119,11 @@ def test_job_id_validation():
         is_valid = pattern.test(job_id)
         status = "✅" if is_valid == should_be_valid else "❌"
         print(
-            f"  {status} {description}: '{job_id}' -> {'VALID' if is_valid else 'INVALID'}"
+            f" {status} {description}: '{job_id}' -> {'VALID' if is_valid else 'INVALID'}"
         )
 
         if is_valid != should_be_valid:
-            print(f"    Expected: {'VALID' if should_be_valid else 'INVALID'}")
+            print(f" Expected: {'VALID' if should_be_valid else 'INVALID'}")
             return False
 
     print("✅ All job ID validation tests passed!")
@@ -149,17 +131,14 @@ def test_job_id_validation():
 
 
 def test_env_var_validation():
-    """Test environment variable name validation."""
     print("\nTesting environment variable name validation...")
 
     test_cases = [
-        # Should be valid
         ("VALID_VAR", True, "Standard env var"),
         ("_PRIVATE_VAR", True, "Starting with underscore"),
         ("API_KEY_123", True, "With numbers"),
         ("DATABASE_URL", True, "Typical env var"),
         ("MAX_RETRIES", True, "Another typical var"),
-        # Should be invalid
         ("lowercase_var", False, "Contains lowercase"),
         ("123_INVALID", False, "Starts with number"),
         ("INVALID-VAR", False, "Contains hyphen"),
@@ -175,11 +154,11 @@ def test_env_var_validation():
         is_valid = pattern.test(env_var)
         status = "✅" if is_valid == should_be_valid else "❌"
         print(
-            f"  {status} {description}: '{env_var}' -> {'VALID' if is_valid else 'INVALID'}"
+            f" {status} {description}: '{env_var}' -> {'VALID' if is_valid else 'INVALID'}"
         )
 
         if is_valid != should_be_valid:
-            print(f"    Expected: {'VALID' if should_be_valid else 'INVALID'}")
+            print(f" Expected: {'VALID' if should_be_valid else 'INVALID'}")
             return False
 
     print("✅ All environment variable validation tests passed!")
@@ -187,19 +166,16 @@ def test_env_var_validation():
 
 
 def test_integration_with_validator():
-    """Test integration with SecureInputValidator."""
     print("\nTesting integration with SecureInputValidator...")
 
     validator = SecureInputValidator()
 
-    # Test SQL injection detection
     result = validator.sanitizer.sanitize_string("'; DROP TABLE users; --")
     if result.valid:
         print("❌ SQL injection should have been detected")
         return False
     print("✅ SQL injection properly detected and blocked")
 
-    # Test job ID validation
     result = validator.validate_job_id("valid_job-123")
     if not result.valid:
         print("❌ Valid job ID should have been accepted")
@@ -212,7 +188,6 @@ def test_integration_with_validator():
         return False
     print("✅ Invalid job ID properly rejected")
 
-    # Test environment variable validation
     result = validator.validate_environment_var("VALID_VAR", "some_value")
     if not result.valid:
         print("❌ Valid env var should have been accepted")
@@ -230,7 +205,6 @@ def test_integration_with_validator():
 
 
 def main():
-    """Run all validation tests."""
     print("🔒 Validating Input Validator Security Patterns")
     print("=" * 50)
 

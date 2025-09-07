@@ -131,17 +131,6 @@ class CrackerjackAPI:
         backup: bool = True,
         safe_mode: bool = True,
     ) -> list[CleaningResult] | PackageCleaningResult:
-        """Clean code with comprehensive backup protection.
-
-        Args:
-            target_dir: Directory to clean (defaults to package root)
-            backup: Whether to create backup (deprecated, always True for safety)
-            safe_mode: Use comprehensive backup system (default: True, recommended)
-
-        Returns:
-            PackageCleaningResult with backup metadata if safe_mode=True,
-            otherwise list[CleaningResult] for legacy compatibility
-        """
         target_dir = target_dir or self._get_package_root()
         self.logger.info(f"Cleaning code in {target_dir} (safe_mode={safe_mode})")
 
@@ -153,7 +142,6 @@ class CrackerjackAPI:
             )
             return self._execute_safe_code_cleaning(target_dir)
         else:
-            # Note: Legacy mode still uses backup protection for safety
             self.console.print(
                 "[yellow]⚠️ Legacy mode - backup protection still enabled for safety[/yellow]"
             )
@@ -210,16 +198,13 @@ class CrackerjackAPI:
 
     def _execute_code_cleaning(self, target_dir: Path) -> list[CleaningResult]:
         try:
-            # Use backup protection by default for safety
             results = self.code_cleaner.clean_files(target_dir, use_backup=True)
 
-            # Handle both return types (legacy compatibility)
             if isinstance(results, list):
                 self._report_cleaning_results(results)
             else:
-                # PackageCleaningResult from backup mode
                 self._report_safe_cleaning_results(results)
-                results = results.file_results  # Extract list for compatibility
+                results = results.file_results
 
             return results
         except Exception as e:
@@ -514,7 +499,6 @@ class CrackerjackAPI:
             return "unknown"
 
     def _check_for_todos(self, target_dir: Path) -> list[tuple[Path, int, str]]:
-        # Use SAFE_PATTERNS for TODO detection
         task_pattern = SAFE_PATTERNS["todo_pattern"]
         python_files = self._get_python_files_for_todo_check(target_dir)
         return self._scan_files_for_todos(python_files, task_pattern)
@@ -574,12 +558,9 @@ class CrackerjackAPI:
         with suppress(UnicodeDecodeError, PermissionError):
             with file_path.open() as f:
                 for line_no, line in enumerate(f, 1):
-                    # For ValidatedPattern, check if applying it changes the line
-                    # If it doesn't change, then it didn't match (identity replacement for match-only patterns)
                     original = line.strip()
                     processed = todo_pattern.apply(original)
-                    # For TODO pattern with identity replacement, a match means no change
-                    # But we need to check if it actually contains TODO
+
                     if "todo" in original.lower() and original == processed:
                         todos.append((file_path, line_no, line))
 

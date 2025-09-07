@@ -60,8 +60,6 @@ class AgentCoordinator:
 
         return overall_result
 
-    # Removed unused method: handle_single_issue
-
     async def _handle_issues_by_type(
         self,
         issue_type: IssueType,

@@ -84,18 +84,15 @@ class AsyncWorkflowPipeline:
         return success
 
     async def _cleanup_active_tasks(self) -> None:
-        """Clean up all active tasks."""
         if not self._active_tasks:
             return
 
         self.logger.info(f"Cleaning up {len(self._active_tasks)} active tasks")
 
-        # Cancel all active tasks
         for task in self._active_tasks:
             if not task.done():
                 task.cancel()
 
-        # Wait for tasks to complete with timeout
         if self._active_tasks:
             try:
                 await asyncio.wait_for(
@@ -129,21 +126,17 @@ class AsyncWorkflowPipeline:
     async def _execute_test_workflow_async(self, options: OptionsProtocol) -> bool:
         overall_success = True
 
-        # Fast hooks with timeout
         if not await self._run_fast_hooks_async(options):
             overall_success = False
             self.session.fail_task("workflow", "Fast hooks failed")
             return False
 
-        # Run tests and comprehensive hooks in parallel
         try:
             test_task, hooks_task = self._create_parallel_tasks(options)
             done, pending = await self._execute_parallel_tasks(test_task, hooks_task)
 
-            # Cancel any pending tasks
             await self._cleanup_pending_tasks(pending)
 
-            # Process and validate results
             test_success, hooks_success = await self._process_task_results(
                 done, test_task, hooks_task
             )
@@ -160,7 +153,6 @@ class AsyncWorkflowPipeline:
     def _create_parallel_tasks(
         self, options: OptionsProtocol
     ) -> tuple[asyncio.Task[bool], asyncio.Task[bool]]:
-        """Create test and hooks tasks with timeout handling."""
         test_task = asyncio.create_task(
             self.timeout_manager.with_timeout(
                 "test_execution",
@@ -180,11 +172,10 @@ class AsyncWorkflowPipeline:
     async def _execute_parallel_tasks(
         self, test_task: asyncio.Task[bool], hooks_task: asyncio.Task[bool]
     ) -> tuple[set[asyncio.Task[bool]], set[asyncio.Task[bool]]]:
-        """Execute tasks in parallel with combined timeout."""
         combined_timeout = (
             self.timeout_manager.get_timeout("test_execution")
             + self.timeout_manager.get_timeout("comprehensive_hooks")
-            + 60  # Extra buffer
+            + 60
         )
 
         done, pending = await asyncio.wait(
@@ -196,7 +187,6 @@ class AsyncWorkflowPipeline:
         return done, pending
 
     async def _cleanup_pending_tasks(self, pending: set[asyncio.Task[t.Any]]) -> None:
-        """Clean up any pending tasks."""
         for task in pending:
             task.cancel()
             try:
@@ -210,7 +200,6 @@ class AsyncWorkflowPipeline:
         test_task: asyncio.Task[bool],
         hooks_task: asyncio.Task[bool],
     ) -> tuple[bool, bool]:
-        """Process results from completed tasks."""
         test_success = hooks_success = False
 
         for task in done:
@@ -232,7 +221,6 @@ class AsyncWorkflowPipeline:
     def _validate_workflow_results(
         self, test_success: bool, hooks_success: bool, overall_success: bool
     ) -> bool:
-        """Validate workflow results and handle failures."""
         if not test_success:
             overall_success = False
             self.session.fail_task("workflow", "Testing failed")
@@ -261,7 +249,6 @@ class AsyncWorkflowPipeline:
         timeout: float = 300.0,
         task_name: str = "workflow_task",
     ) -> asyncio.Task[t.Any]:
-        """Create a managed task with automatic cleanup."""
         task = asyncio.create_task(coro, name=task_name)
 
         if self.resource_context:
@@ -326,7 +313,6 @@ class AsyncWorkflowPipeline:
             self.console.print(f"\n🔄 Iteration {iteration}/{max_iterations}")
 
             try:
-                # Each iteration has its own timeout
                 iteration_result = await self.timeout_manager.with_timeout(
                     "workflow_iteration",
                     self._execute_single_iteration(options, iteration),
@@ -342,7 +328,7 @@ class AsyncWorkflowPipeline:
             except Exception as e:
                 self.logger.error(f"Iteration {iteration} failed with error: {e}")
                 self.console.print(f"⚠️ Iteration {iteration} failed: {e}")
-                # Continue to next iteration unless it's a critical error
+
                 if iteration == max_iterations:
                     return False
 
@@ -419,7 +405,7 @@ class AsyncWorkflowPipeline:
 
         from crackerjack.agents.base import Issue, IssueType, Priority
 
-        match = re.search(  # REGEX OK: parsing structured refurb tool output
+        match = re.search(
             r"refurb: \s *(.+?): (\d +): (\d +)\s +\[(\w +)\]: \s *(.+)", issue
         )
         if match:
@@ -569,7 +555,6 @@ class AsyncWorkflowPipeline:
 
         coordinator = self._create_agent_coordinator()
 
-        # Apply timeout to AI coordinator processing
         fix_result = await self.timeout_manager.with_timeout(
             "ai_agent_processing",
             coordinator.handle_issues(structured_issues),
@@ -626,7 +611,6 @@ class AsyncWorkflowOrchestrator:
         self.verbose = verbose
         self.debug = debug
 
-        # Initialize logging first so container creation respects log levels
         self._initialize_logging()
 
         from crackerjack.models.protocols import (
@@ -676,7 +660,6 @@ class AsyncWorkflowOrchestrator:
         session_id = getattr(self, "web_job_id", None) or str(int(time.time()))[:8]
         debug_log_file = log_manager.create_debug_log_file(session_id)
 
-        # Set log level based on debug flag only - verbose should not enable DEBUG logs
         log_level = "DEBUG" if self.debug else "INFO"
         setup_structured_logging(
             level=log_level, json_output=False, log_file=debug_log_file

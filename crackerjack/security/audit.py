@@ -1,5 +1,3 @@
-"""Security audit utilities for secure SDLC practices."""
-
 import typing as t
 from dataclasses import dataclass
 
@@ -8,8 +6,6 @@ from crackerjack.config.hooks import SecurityLevel
 
 @dataclass
 class SecurityCheckResult:
-    """Result of a security check."""
-
     hook_name: str
     security_level: SecurityLevel
     passed: bool
@@ -19,8 +15,6 @@ class SecurityCheckResult:
 
 @dataclass
 class SecurityAuditReport:
-    """Comprehensive security audit report for publishing decisions."""
-
     critical_failures: list[SecurityCheckResult]
     high_failures: list[SecurityCheckResult]
     medium_failures: list[SecurityCheckResult]
@@ -32,12 +26,10 @@ class SecurityAuditReport:
 
     @property
     def has_critical_failures(self) -> bool:
-        """Check if there are any critical security failures."""
         return len(self.critical_failures) > 0
 
     @property
     def total_failures(self) -> int:
-        """Get total number of failed checks."""
         return (
             len(self.critical_failures)
             + len(self.high_failures)
@@ -47,16 +39,12 @@ class SecurityAuditReport:
 
 
 class SecurityAuditor:
-    """Security auditor for hook results following OWASP secure SDLC practices."""
-
-    # Security-critical hooks that CANNOT be bypassed for publishing
     CRITICAL_HOOKS = {
         "bandit": "Security vulnerability detection (OWASP A09)",
         "pyright": "Type safety prevents runtime security holes (OWASP A04)",
         "gitleaks": "Secret/credential detection (OWASP A07)",
     }
 
-    # High-importance security hooks that can be bypassed with warnings
     HIGH_SECURITY_HOOKS = {
         "validate-regex-patterns": "Regex vulnerability detection",
         "creosote": "Dependency vulnerability analysis",
@@ -67,15 +55,6 @@ class SecurityAuditor:
     def audit_hook_results(
         self, fast_results: list[t.Any], comprehensive_results: list[t.Any]
     ) -> SecurityAuditReport:
-        """Audit hook results and generate security report.
-
-        Args:
-            fast_results: Results from fast hooks
-            comprehensive_results: Results from comprehensive hooks
-
-        Returns:
-            SecurityAuditReport with security analysis
-        """
         all_results = fast_results + comprehensive_results
 
         critical_failures = []
@@ -95,7 +74,6 @@ class SecurityAuditor:
                 else:
                     low_failures.append(check_result)
 
-        # Publishing is allowed only if no critical failures exist
         allows_publishing = len(critical_failures) == 0
 
         security_warnings = self._generate_security_warnings(
@@ -117,7 +95,6 @@ class SecurityAuditor:
         )
 
     def _analyze_hook_result(self, result: t.Any) -> SecurityCheckResult:
-        """Analyze a single hook result for security implications."""
         hook_name = getattr(result, "name", "unknown")
         is_failed = getattr(result, "status", "unknown") in (
             "failed",
@@ -128,7 +105,6 @@ class SecurityAuditor:
             result, "error", None
         )
 
-        # Determine security level
         security_level = self._get_hook_security_level(hook_name)
 
         return SecurityCheckResult(
@@ -140,7 +116,6 @@ class SecurityAuditor:
         )
 
     def _get_hook_security_level(self, hook_name: str) -> SecurityLevel:
-        """Get security level for a hook name."""
         hook_name_lower = hook_name.lower()
 
         if hook_name_lower in [name.lower() for name in self.CRITICAL_HOOKS]:
@@ -157,7 +132,6 @@ class SecurityAuditor:
         high: list[SecurityCheckResult],
         medium: list[SecurityCheckResult],
     ) -> list[str]:
-        """Generate security warnings based on failed checks."""
         warnings = []
 
         if critical:
@@ -168,7 +142,7 @@ class SecurityAuditor:
                 reason = self.CRITICAL_HOOKS.get(
                     failure.hook_name.lower(), "Security-critical check"
                 )
-                warnings.append(f"   • {failure.hook_name}: {reason}")
+                warnings.append(f" • {failure.hook_name}: {reason}")
 
         if high:
             warnings.append(
@@ -186,7 +160,6 @@ class SecurityAuditor:
         high: list[SecurityCheckResult],
         medium: list[SecurityCheckResult],
     ) -> list[str]:
-        """Generate security recommendations based on OWASP best practices."""
         recommendations = []
 
         if critical:
@@ -194,20 +167,19 @@ class SecurityAuditor:
                 "🔧 Fix all CRITICAL security issues before publishing"
             )
 
-            # Specific recommendations based on failed checks
             critical_names = [f.hook_name.lower() for f in critical]
 
             if "bandit" in critical_names:
                 recommendations.append(
-                    "   • Review bandit security findings - may indicate vulnerabilities"
+                    " • Review bandit security findings - may indicate vulnerabilities"
                 )
             if "pyright" in critical_names:
                 recommendations.append(
-                    "   • Fix type errors - type safety prevents runtime security holes"
+                    " • Fix type errors - type safety prevents runtime security holes"
                 )
             if "gitleaks" in critical_names:
                 recommendations.append(
-                    "   • Remove secrets/credentials from code - use environment variables"
+                    " • Remove secrets/credentials from code - use environment variables"
                 )
 
         if high:
@@ -218,7 +190,6 @@ class SecurityAuditor:
         if not critical and not high:
             recommendations.append("✅ Security posture is acceptable for publishing")
 
-        # Add OWASP best practices reference
         recommendations.append(
             "📖 Follow OWASP Secure Coding Practices for comprehensive security"
         )

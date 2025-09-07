@@ -37,7 +37,7 @@ class ProactiveAgent(SubAgent):
         return await self.analyze_and_fix(issue)
 
     def _get_planning_cache_key(self, issue: Issue) -> str:
-        return f"{issue.type.value}:{issue.file_path}:{issue.line_number}"
+        return f"{issue.type.value}: {issue.file_path}: {issue.line_number}"
 
     def _cache_successful_pattern(
         self, issue: Issue, plan: dict[str, t.Any], result: FixResult
@@ -53,5 +53,3 @@ class ProactiveAgent(SubAgent):
 
     def get_cached_patterns(self) -> dict[str, t.Any]:
         return self._pattern_cache.copy()
-
-    # Removed unused methods: clear_pattern_cache, get_planning_confidence

@@ -37,7 +37,7 @@ class SecurityEventType(str, Enum):
     STATUS_ACCESS_ATTEMPT = "status_access_attempt"
     SENSITIVE_DATA_SANITIZED = "sensitive_data_sanitized"
     STATUS_INFORMATION_DISCLOSURE = "status_information_disclosure"
-    # Authentication and authorization events
+
     ACCESS_DENIED = "access_denied"
     API_KEY_CREATED = "api_key_created"
     API_KEY_REVOKED = "api_key_revoked"
@@ -46,40 +46,40 @@ class SecurityEventType(str, Enum):
     AUTH_SUCCESS = "auth_success"
     LOCAL_ACCESS_GRANTED = "local_access_granted"
     INSUFFICIENT_PRIVILEGES = "insufficient_privileges"
-    # Circuit breaker and resilience events
+
     CIRCUIT_BREAKER_CLOSED = "circuit_breaker_closed"
     CIRCUIT_BREAKER_HALF_OPEN = "circuit_breaker_half_open"
     CIRCUIT_BREAKER_OPEN = "circuit_breaker_open"
     CIRCUIT_BREAKER_RESET = "circuit_breaker_reset"
-    # Collection and data processing events
+
     COLLECTION_END = "collection_end"
     COLLECTION_ERROR = "collection_error"
     COLLECTION_START = "collection_start"
     STATUS_COLLECTED = "status_collected"
     FILE_READ_ERROR = "file_read_error"
-    # Connection and network events
+
     CONNECTION_CLOSED = "connection_closed"
     CONNECTION_ESTABLISHED = "connection_established"
     CONNECTION_IDLE = "connection_idle"
     CONNECTION_TIMEOUT = "connection_timeout"
-    # Request lifecycle events
+
     REQUEST_END = "request_end"
     REQUEST_START = "request_start"
     REQUEST_TIMEOUT = "request_timeout"
-    # Resource and operation management events
+
     RESOURCE_CLEANUP = "resource_cleanup"
     RESOURCE_EXHAUSTED = "resource_exhausted"
     RESOURCE_LIMIT_EXCEEDED = "resource_limit_exceeded"
     SERVICE_CLEANUP = "service_cleanup"
     SERVICE_START = "service_start"
     SERVICE_STOP = "service_stop"
-    # Operation monitoring events
+
     MONITORING_ERROR = "monitoring_error"
     OPERATION_DURATION_EXCEEDED = "operation_duration_exceeded"
     OPERATION_FAILURE = "operation_failure"
     OPERATION_SUCCESS = "operation_success"
     OPERATION_TIMEOUT = "operation_timeout"
-    # Input validation events
+
     INVALID_INPUT = "invalid_input"
 
 
@@ -127,13 +127,11 @@ class SecurityLogger:
         if not self.logger.handlers:
             console_handler = logging.StreamHandler()
 
-            # Only show security logs in debug modes
             debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
             if debug_enabled:
                 console_handler.setLevel(logging.WARNING)
             else:
-                # In non-debug mode, suppress detailed security logs
-                console_handler.setLevel(logging.CRITICAL + 1)  # Effectively disable
+                console_handler.setLevel(logging.CRITICAL + 1)
 
             formatter = logging.Formatter(
                 "%(asctime)s - SECURITY - %(levelname)s-%(message)s"
@@ -304,12 +302,11 @@ class SecurityLogger:
         env_vars_count: int = 0,
         **kwargs: t.Any,
     ) -> None:
-        """Log secure subprocess execution."""
         self.log_security_event(
             SecurityEventType.SUBPROCESS_EXECUTION,
             SecurityEventLevel.LOW,
             f"Subprocess executed: {' '.join(command[:3])}{'...' if len(command) > 3 else ''}",
-            command=command[:10],  # Log first 10 args only
+            command=command[:10],
             cwd=cwd,
             env_vars_count=env_vars_count,
             **kwargs,
@@ -322,14 +319,13 @@ class SecurityLogger:
         filtered_vars: list[str],
         **kwargs: t.Any,
     ) -> None:
-        """Log environment sanitization for subprocess."""
         self.log_security_event(
             SecurityEventType.SUBPROCESS_ENVIRONMENT_SANITIZED,
             SecurityEventLevel.LOW,
             f"Environment sanitized: {original_count} -> {sanitized_count} vars",
             original_count=original_count,
             sanitized_count=sanitized_count,
-            filtered_vars=filtered_vars[:20],  # Log first 20 filtered vars
+            filtered_vars=filtered_vars[:20],
             **kwargs,
         )
 
@@ -340,7 +336,6 @@ class SecurityLogger:
         issues: list[str] | None = None,
         **kwargs: t.Any,
     ) -> None:
-        """Log subprocess command validation results."""
         level = SecurityEventLevel.LOW if validation_result else SecurityEventLevel.HIGH
         status = "passed" if validation_result else "failed"
 
@@ -361,7 +356,6 @@ class SecurityLogger:
         actual_duration: float,
         **kwargs: t.Any,
     ) -> None:
-        """Log subprocess timeout events."""
         self.log_security_event(
             SecurityEventType.SUBPROCESS_TIMEOUT,
             SecurityEventLevel.MEDIUM,
@@ -375,14 +369,13 @@ class SecurityLogger:
     def log_subprocess_failure(
         self, command: list[str], exit_code: int, error_output: str, **kwargs: t.Any
     ) -> None:
-        """Log subprocess execution failures."""
         self.log_security_event(
             SecurityEventType.SUBPROCESS_FAILURE,
             SecurityEventLevel.MEDIUM,
             f"Subprocess failed (exit code {exit_code}): {' '.join(command[:2])}{'...' if len(command) > 2 else ''}",
             command_preview=command[:3],
             exit_code=exit_code,
-            error_preview=error_output[:200],  # Log first 200 chars of error
+            error_preview=error_output[:200],
             **kwargs,
         )
 
@@ -393,7 +386,6 @@ class SecurityLogger:
         dangerous_patterns: list[str],
         **kwargs: t.Any,
     ) -> None:
-        """Log blocking of dangerous commands."""
         self.log_security_event(
             SecurityEventType.DANGEROUS_COMMAND_BLOCKED,
             SecurityEventLevel.CRITICAL,
@@ -411,7 +403,6 @@ class SecurityLogger:
         value_preview: str | None = None,
         **kwargs: t.Any,
     ) -> None:
-        """Log filtering of environment variables."""
         self.log_security_event(
             SecurityEventType.ENVIRONMENT_VARIABLE_FILTERED,
             SecurityEventLevel.LOW,
@@ -430,7 +421,6 @@ class SecurityLogger:
         data_keys: list[str] | None = None,
         **kwargs: t.Any,
     ) -> None:
-        """Log status endpoint access attempts."""
         self.log_security_event(
             SecurityEventType.STATUS_ACCESS_ATTEMPT,
             SecurityEventLevel.LOW,
@@ -450,7 +440,6 @@ class SecurityLogger:
         patterns_matched: list[str] | None = None,
         **kwargs: t.Any,
     ) -> None:
-        """Log sensitive data sanitization events."""
         self.log_security_event(
             SecurityEventType.SENSITIVE_DATA_SANITIZED,
             SecurityEventLevel.LOW,
@@ -470,7 +459,6 @@ class SecurityLogger:
         severity: str = "medium",
         **kwargs: t.Any,
     ) -> None:
-        """Log potential information disclosure in status responses."""
         level_map = {
             "low": SecurityEventLevel.LOW,
             "medium": SecurityEventLevel.MEDIUM,

@@ -1,9 +1,3 @@
-"""Performance monitoring and profiling service for crackerjack workflows.
-
-This module provides comprehensive performance tracking, benchmarking,
-and analysis capabilities for the workflow execution system.
-"""
-
 import json
 import typing as t
 from collections import defaultdict, deque
@@ -20,8 +14,6 @@ from crackerjack.services.performance_cache import get_performance_cache
 
 @dataclass
 class PerformanceMetric:
-    """Individual performance metric."""
-
     name: str
     value: float
     unit: str
@@ -31,8 +23,6 @@ class PerformanceMetric:
 
 @dataclass
 class PhasePerformance:
-    """Performance data for a workflow phase."""
-
     phase_name: str
     start_time: datetime
     end_time: datetime | None = None
@@ -48,15 +38,12 @@ class PhasePerformance:
     metrics: list[PerformanceMetric] = field(default_factory=list)
 
     def finalize(self, end_time: datetime | None = None) -> None:
-        """Finalize phase timing."""
         self.end_time = end_time or datetime.now()
         self.duration_seconds = (self.end_time - self.start_time).total_seconds()
 
 
 @dataclass
 class WorkflowPerformance:
-    """Complete workflow performance data."""
-
     workflow_id: str
     start_time: datetime
     end_time: datetime | None = None
@@ -66,27 +53,20 @@ class WorkflowPerformance:
     performance_score: float = 0.0
 
     def add_phase(self, phase: PhasePerformance) -> None:
-        """Add phase performance data."""
         self.phases.append(phase)
 
     def finalize(self, success: bool = True) -> None:
-        """Finalize workflow timing and calculate performance score."""
         self.end_time = datetime.now()
         self.total_duration_seconds = (self.end_time - self.start_time).total_seconds()
         self.overall_success = success
         self.performance_score = self._calculate_performance_score()
 
     def _calculate_performance_score(self) -> float:
-        """Calculate overall performance score (0-100)."""
         if not self.phases:
             return 0.0
 
-        # Base score from duration (faster = higher score)
-        duration_score = max(
-            0, 100 - (self.total_duration_seconds / 10)
-        )  # Penalize >10s
+        duration_score = max(0, 100 - (self.total_duration_seconds / 10))
 
-        # Cache efficiency score
         total_hits = sum(p.cache_hits for p in self.phases)
         total_misses = sum(p.cache_misses for p in self.phases)
         cache_ratio = (
@@ -94,9 +74,8 @@ class WorkflowPerformance:
             if total_hits + total_misses > 0
             else 0
         )
-        cache_score = cache_ratio * 20  # Max 20 points for cache efficiency
+        cache_score = cache_ratio * 20
 
-        # Parallelization score
         total_parallel = sum(p.parallel_operations for p in self.phases)
         total_sequential = sum(p.sequential_operations for p in self.phases)
         parallel_ratio = (
@@ -104,13 +83,11 @@ class WorkflowPerformance:
             if total_parallel + total_sequential > 0
             else 0
         )
-        parallel_score = parallel_ratio * 15  # Max 15 points for parallelization
+        parallel_score = parallel_ratio * 15
 
-        # Memory efficiency score (lower memory usage = higher score)
         max_memory = max((p.memory_peak_mb for p in self.phases), default=0)
-        memory_score = max(0, 15 - (max_memory / 50))  # Penalize >50MB usage
+        memory_score = max(0, 15 - (max_memory / 50))
 
-        # Success bonus
         success_score = 10 if self.overall_success else 0
 
         return min(
@@ -125,8 +102,6 @@ class WorkflowPerformance:
 
 @dataclass
 class PerformanceBenchmark:
-    """Performance benchmark data."""
-
     operation_name: str
     baseline_duration_seconds: float
     current_duration_seconds: float
@@ -134,7 +109,6 @@ class PerformanceBenchmark:
     regression: bool = False
 
     def __post_init__(self) -> None:
-        """Calculate improvement metrics."""
         if self.baseline_duration_seconds > 0:
             self.improvement_percentage = (
                 (self.baseline_duration_seconds - self.current_duration_seconds)
@@ -145,8 +119,6 @@ class PerformanceBenchmark:
 
 
 class PerformanceMonitor:
-    """Central performance monitoring service."""
-
     def __init__(
         self,
         data_retention_days: int = 30,
@@ -159,7 +131,6 @@ class PerformanceMonitor:
         self._initialize_thresholds()
 
     def _initialize_data_structures(self, history_size: int) -> None:
-        """Initialize performance data structures."""
         self._active_workflows: dict[str, WorkflowPerformance] = {}
         self._active_phases: dict[str, PhasePerformance] = {}
         self._completed_workflows: deque[WorkflowPerformance] = deque(
@@ -170,14 +141,12 @@ class PerformanceMonitor:
         )
 
     def _initialize_services(self) -> None:
-        """Initialize external services and utilities."""
         self._lock = Lock()
         self._logger = get_logger("crackerjack.performance_monitor")
         self._memory_optimizer = MemoryOptimizer.get_instance()
         self._cache = get_performance_cache()
 
     def _initialize_thresholds(self) -> None:
-        """Initialize performance warning thresholds."""
         self._warning_thresholds = {
             "duration_seconds": 30.0,
             "memory_mb": 100.0,
@@ -185,7 +154,6 @@ class PerformanceMonitor:
         }
 
     def start_workflow(self, workflow_id: str) -> None:
-        """Start monitoring a workflow."""
         with self._lock:
             if workflow_id in self._active_workflows:
                 self._logger.warning(f"Workflow {workflow_id} already being monitored")
@@ -199,13 +167,11 @@ class PerformanceMonitor:
             self._active_workflows[workflow_id] = workflow
             self._logger.debug(f"Started monitoring workflow: {workflow_id}")
 
-            # Start memory profiling
             self._memory_optimizer.start_profiling()
 
     def end_workflow(
         self, workflow_id: str, success: bool = True
     ) -> WorkflowPerformance:
-        """End workflow monitoring and return performance data."""
         with self._lock:
             if workflow_id not in self._active_workflows:
                 self._logger.warning(f"Workflow {workflow_id} not found for ending")
@@ -216,31 +182,27 @@ class PerformanceMonitor:
             workflow = self._active_workflows.pop(workflow_id)
             workflow.finalize(success)
 
-            # Add to completed workflows for analysis
             self._completed_workflows.append(workflow)
 
             self._logger.info(
                 f"Completed workflow {workflow_id}: "
-                f"{workflow.total_duration_seconds:.2f}s, "
-                f"score: {workflow.performance_score:.1f}, "
+                f"{workflow.total_duration_seconds: .2f}s, "
+                f"score: {workflow.performance_score: .1f}, "
                 f"phases: {len(workflow.phases)}"
             )
 
-            # Check for performance warnings
             self._check_performance_warnings(workflow)
 
             return workflow
 
     def start_phase(self, workflow_id: str, phase_name: str) -> None:
-        """Start monitoring a workflow phase."""
-        phase_key = f"{workflow_id}:{phase_name}"
+        phase_key = f"{workflow_id}: {phase_name}"
 
         with self._lock:
             if phase_key in self._active_phases:
                 self._logger.warning(f"Phase {phase_key} already being monitored")
                 return
 
-            # Record memory checkpoint
             memory_mb = self._memory_optimizer.record_checkpoint(f"{phase_name}_start")
 
             phase = PhasePerformance(
@@ -255,8 +217,7 @@ class PerformanceMonitor:
     def end_phase(
         self, workflow_id: str, phase_name: str, success: bool = True
     ) -> PhasePerformance:
-        """End phase monitoring and attach to workflow."""
-        phase_key = f"{workflow_id}:{phase_name}"
+        phase_key = f"{workflow_id}: {phase_name}"
 
         with self._lock:
             if phase_key not in self._active_phases:
@@ -268,24 +229,21 @@ class PerformanceMonitor:
             phase = self._active_phases.pop(phase_key)
             phase.success = success
 
-            # Record final memory usage
             phase.memory_end_mb = self._memory_optimizer.record_checkpoint(
                 f"{phase_name}_end"
             )
 
-            # Get cache statistics
             cache_stats = self._cache.get_stats()
             phase.cache_hits = cache_stats.hits
             phase.cache_misses = cache_stats.misses
 
             phase.finalize()
 
-            # Add to workflow if it exists
             if workflow_id in self._active_workflows:
                 self._active_workflows[workflow_id].add_phase(phase)
 
             self._logger.debug(
-                f"Completed phase {phase_key}: {phase.duration_seconds:.2f}s"
+                f"Completed phase {phase_key}: {phase.duration_seconds: .2f}s"
             )
 
             return phase
@@ -299,7 +257,6 @@ class PerformanceMonitor:
         unit: str = "",
         metadata: dict[str, t.Any] | None = None,
     ) -> None:
-        """Record a performance metric."""
         metric = PerformanceMetric(
             name=metric_name,
             value=value,
@@ -307,7 +264,7 @@ class PerformanceMonitor:
             metadata=metadata or {},
         )
 
-        phase_key = f"{workflow_id}:{phase_name}"
+        phase_key = f"{workflow_id}: {phase_name}"
 
         with self._lock:
             if phase_key in self._active_phases:
@@ -318,16 +275,14 @@ class PerformanceMonitor:
                 )
 
     def record_parallel_operation(self, workflow_id: str, phase_name: str) -> None:
-        """Record a parallel operation."""
-        phase_key = f"{workflow_id}:{phase_name}"
+        phase_key = f"{workflow_id}: {phase_name}"
 
         with self._lock:
             if phase_key in self._active_phases:
                 self._active_phases[phase_key].parallel_operations += 1
 
     def record_sequential_operation(self, workflow_id: str, phase_name: str) -> None:
-        """Record a sequential operation."""
-        phase_key = f"{workflow_id}:{phase_name}"
+        phase_key = f"{workflow_id}: {phase_name}"
 
         with self._lock:
             if phase_key in self._active_phases:
@@ -336,13 +291,11 @@ class PerformanceMonitor:
     def benchmark_operation(
         self, operation_name: str, duration_seconds: float
     ) -> PerformanceBenchmark:
-        """Benchmark an operation against historical data."""
         with self._lock:
             history = self._benchmarks[operation_name]
             history.append(duration_seconds)
 
             if len(history) > 1:
-                # Use median as baseline to avoid outlier skew
                 sorted_history = sorted(history)
                 baseline = sorted_history[len(sorted_history) // 2]
 
@@ -352,7 +305,6 @@ class PerformanceMonitor:
                     current_duration_seconds=duration_seconds,
                 )
             else:
-                # First measurement, no baseline
                 return PerformanceBenchmark(
                     operation_name=operation_name,
                     baseline_duration_seconds=duration_seconds,
@@ -360,14 +312,12 @@ class PerformanceMonitor:
                 )
 
     def get_performance_summary(self, last_n_workflows: int = 10) -> dict[str, Any]:
-        """Get performance summary for recent workflows."""
         with self._lock:
             recent_workflows = list(self._completed_workflows)[-last_n_workflows:]
 
             if not recent_workflows:
                 return {"message": "No completed workflows to analyze"}
 
-            # Calculate aggregate statistics using helper methods
             basic_stats = self._calculate_basic_workflow_stats(recent_workflows)
             cache_stats = self._calculate_cache_statistics(recent_workflows)
             parallel_stats = self._calculate_parallelization_statistics(
@@ -387,7 +337,6 @@ class PerformanceMonitor:
     def _calculate_basic_workflow_stats(
         self, workflows: list[WorkflowPerformance]
     ) -> dict[str, Any]:
-        """Calculate basic workflow statistics (duration, score, success rate)."""
         total_duration = sum(w.total_duration_seconds for w in workflows)
         avg_duration = total_duration / len(workflows)
         avg_score = sum(w.performance_score for w in workflows) / len(workflows)
@@ -402,7 +351,6 @@ class PerformanceMonitor:
     def _calculate_cache_statistics(
         self, workflows: list[WorkflowPerformance]
     ) -> dict[str, Any]:
-        """Calculate cache hit/miss statistics across workflows."""
         total_cache_hits = sum(sum(p.cache_hits for p in w.phases) for w in workflows)
         total_cache_misses = sum(
             sum(p.cache_misses for p in w.phases) for w in workflows
@@ -423,7 +371,6 @@ class PerformanceMonitor:
     def _calculate_parallelization_statistics(
         self, workflows: list[WorkflowPerformance]
     ) -> dict[str, Any]:
-        """Calculate parallelization statistics across workflows."""
         total_parallel = sum(
             sum(p.parallel_operations for p in w.phases) for w in workflows
         )
@@ -444,7 +391,6 @@ class PerformanceMonitor:
         }
 
     def get_benchmark_trends(self) -> dict[str, dict[str, Any]]:
-        """Get benchmark trends for all operations."""
         trends = {}
 
         with self._lock:
@@ -466,7 +412,6 @@ class PerformanceMonitor:
     def _calculate_benchmark_basic_stats(
         self, history_list: list[float]
     ) -> dict[str, float]:
-        """Calculate basic statistics for benchmark history."""
         avg_duration = sum(history_list) / len(history_list)
         min_duration = min(history_list)
         max_duration = max(history_list)
@@ -478,7 +423,6 @@ class PerformanceMonitor:
         }
 
     def _calculate_trend_percentage(self, history_list: list[float]) -> float:
-        """Calculate trend percentage for benchmark improvement."""
         if len(history_list) < 5:
             return 0.0
 
@@ -492,7 +436,6 @@ class PerformanceMonitor:
         return ((older_avg - recent_avg) / older_avg * 100) if older_avg > 0 else 0.0
 
     def export_performance_data(self, output_path: Path) -> None:
-        """Export performance data to JSON file."""
         with self._lock:
             data = {
                 "export_timestamp": datetime.now().isoformat(),
@@ -533,44 +476,38 @@ class PerformanceMonitor:
         self._logger.info(f"Exported performance data to {output_path}")
 
     def _check_performance_warnings(self, workflow: WorkflowPerformance) -> None:
-        """Check for performance warnings and log them only in debug mode."""
         warnings = []
 
-        # Collect warnings from different checks
         warnings.extend(self._check_duration_warning(workflow))
         warnings.extend(self._check_memory_warning(workflow))
         warnings.extend(self._check_cache_warning(workflow))
 
-        # Log all warnings at debug level to avoid console spam
         for warning in warnings:
             self._logger.debug(
                 f"Performance warning for {workflow.workflow_id}: {warning}"
             )
 
     def _check_duration_warning(self, workflow: WorkflowPerformance) -> list[str]:
-        """Check for duration-based warnings."""
         if (
             workflow.total_duration_seconds
             > self._warning_thresholds["duration_seconds"]
         ):
             return [
-                f"Slow workflow duration: {workflow.total_duration_seconds:.1f}s "
+                f"Slow workflow duration: {workflow.total_duration_seconds: .1f}s "
                 f"(threshold: {self._warning_thresholds['duration_seconds']}s)"
             ]
         return []
 
     def _check_memory_warning(self, workflow: WorkflowPerformance) -> list[str]:
-        """Check for memory usage warnings."""
         max_memory = max((p.memory_peak_mb for p in workflow.phases), default=0)
         if max_memory > self._warning_thresholds["memory_mb"]:
             return [
-                f"High memory usage: {max_memory:.1f}MB "
+                f"High memory usage: {max_memory: .1f}MB "
                 f"(threshold: {self._warning_thresholds['memory_mb']}MB)"
             ]
         return []
 
     def _check_cache_warning(self, workflow: WorkflowPerformance) -> list[str]:
-        """Check for cache efficiency warnings."""
         total_hits = sum(p.cache_hits for p in workflow.phases)
         total_misses = sum(p.cache_misses for p in workflow.phases)
 
@@ -578,19 +515,17 @@ class PerformanceMonitor:
             hit_ratio = total_hits / (total_hits + total_misses)
             if hit_ratio < self._warning_thresholds["cache_hit_ratio"]:
                 return [
-                    f"Low cache hit ratio: {hit_ratio:.2f} "
+                    f"Low cache hit ratio: {hit_ratio: .2f} "
                     f"(threshold: {self._warning_thresholds['cache_hit_ratio']})"
                 ]
         return []
 
 
-# Global monitor instance
 _global_monitor: PerformanceMonitor | None = None
 _monitor_lock = Lock()
 
 
 def get_performance_monitor() -> PerformanceMonitor:
-    """Get global performance monitor instance."""
     global _global_monitor
     with _monitor_lock:
         if _global_monitor is None:
@@ -598,10 +533,7 @@ def get_performance_monitor() -> PerformanceMonitor:
         return _global_monitor
 
 
-# Context manager for easy phase monitoring
 class phase_monitor:
-    """Context manager for phase performance monitoring."""
-
     def __init__(self, workflow_id: str, phase_name: str):
         self.workflow_id = workflow_id
         self.phase_name = phase_name
@@ -621,13 +553,10 @@ class phase_monitor:
         self.monitor.end_phase(self.workflow_id, self.phase_name, success)
 
     def record_parallel_op(self):
-        """Record a parallel operation in this phase."""
         self.monitor.record_parallel_operation(self.workflow_id, self.phase_name)
 
     def record_sequential_op(self):
-        """Record a sequential operation in this phase."""
         self.monitor.record_sequential_operation(self.workflow_id, self.phase_name)
 
     def record_metric(self, name: str, value: float, unit: str = ""):
-        """Record a custom metric in this phase."""
         self.monitor.record_metric(self.workflow_id, self.phase_name, name, value, unit)

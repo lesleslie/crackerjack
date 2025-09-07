@@ -70,9 +70,7 @@ class AsyncHookExecutor:
 
         self._semaphore = asyncio.Semaphore(max_concurrent)
 
-        # Use dependency injection for hook lock manager
         if hook_lock_manager is None:
-            # Import here to avoid circular imports
             from crackerjack.executors.hook_lock_manager import (
                 hook_lock_manager as default_manager,
             )
@@ -143,11 +141,9 @@ class AsyncHookExecutor:
             )
 
     def get_lock_statistics(self) -> dict[str, t.Any]:
-        """Get comprehensive lock usage statistics for monitoring."""
         return self.hook_lock_manager.get_lock_stats()
 
     def get_comprehensive_status(self) -> dict[str, t.Any]:
-        """Get comprehensive status including lock manager status."""
         return {
             "executor_config": {
                 "max_concurrent": self.max_concurrent,
@@ -222,7 +218,6 @@ class AsyncHookExecutor:
 
     async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
         async with self._semaphore:
-            # Check if hook requires sequential execution
             if self.hook_lock_manager.requires_lock(hook.name):
                 self.logger.debug(
                     f"Hook {hook.name} requires sequential execution lock"
@@ -232,7 +227,6 @@ class AsyncHookExecutor:
                         f"[dim]🔒 {hook.name} (sequential execution)[/dim]"
                     )
 
-            # Acquire hook-specific lock if required (e.g., for complexipy)
             if self.hook_lock_manager.requires_lock(hook.name):
                 self.logger.debug(
                     f"Hook {hook.name} requires sequential execution lock"
@@ -242,7 +236,7 @@ class AsyncHookExecutor:
                         f"[dim]🔒 {hook.name} (sequential execution)[/dim]"
                     )
 
-                async with self.hook_lock_manager.acquire_hook_lock(hook.name):  # type: ignore
+                async with self.hook_lock_manager.acquire_hook_lock(hook.name):
                     return await self._run_hook_subprocess(hook)
             else:
                 return await self._run_hook_subprocess(hook)
@@ -261,7 +255,6 @@ class AsyncHookExecutor:
                 timeout=timeout_val,
             )
 
-            # Pre-commit must run from repository root, not package directory
             repo_root = (
                 self.pkg_path.parent
                 if self.pkg_path.name == "crackerjack"

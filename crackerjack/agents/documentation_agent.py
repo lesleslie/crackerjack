@@ -215,7 +215,7 @@ class DocumentationAgent(SubAgent):
 
     def _get_commit_messages(self, commit_range: str) -> str:
         result = subprocess.run(
-            ["git", "log", commit_range, "--pretty=format:%s|%h|%an"],
+            ["git", "log", commit_range, "--pretty=format: %s|%h|%an"],
             capture_output=True,
             text=True,
             check=False,
@@ -267,11 +267,11 @@ class DocumentationAgent(SubAgent):
         return categories
 
     def _get_change_category(self, message: str) -> str:
-        if message.startswith(("feat:", "feature:")):
+        if message.startswith(("feat: ", "feature: ")):
             return "features"
-        if message.startswith("fix:"):
+        if message.startswith("fix: "):
             return "fixes"
-        if message.startswith(("refactor:", "refact:")):
+        if message.startswith(("refactor: ", "refact: ")):
             return "refactors"
         return "other"
 
@@ -323,8 +323,8 @@ class DocumentationAgent(SubAgent):
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https: //keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https: //semver.org/spec/v2.0.0.html).
 
 {entry}
 """
@@ -376,7 +376,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         patterns: list[str],
         expected_count: int,
     ) -> tuple[Path, int, int] | None:
-        """Analyze file content for agent count inconsistencies."""
         pattern_map = self._get_safe_pattern_map()
 
         for pattern in patterns:
@@ -389,7 +388,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         return None
 
     def _get_safe_pattern_map(self) -> dict[str, str]:
-        """Get mapping of pattern strings to SAFE_PATTERNS keys."""
         return {
             SAFE_PATTERNS["agent_count_pattern"].pattern: "agent_count_pattern",
             SAFE_PATTERNS[
@@ -409,7 +407,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         file_path: Path,
         expected_count: int,
     ) -> tuple[Path, int, int] | None:
-        """Check a specific pattern for count mismatches."""
         if pattern not in pattern_map:
             return None
 
@@ -428,7 +425,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         file_path: Path,
         expected_count: int,
     ) -> tuple[Path, int, int] | None:
-        """Find count mismatches in pattern matches."""
         matches = safe_pattern.findall(content)
 
         for match in matches:
@@ -439,7 +435,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         return None
 
     def _is_count_mismatch(self, count: int, expected_count: int) -> bool:
-        """Check if count represents a mismatch worth reporting."""
         return count != expected_count and count > 4
 
     def _fix_agent_count_references(
@@ -448,16 +443,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         current_count: int,
         expected_count: int,
     ) -> str:
-        # Use SAFE_PATTERNS with dynamic replacement
         updated_content = content
 
-        # Replace agent count references using safe patterns
         agent_pattern = SAFE_PATTERNS["update_agent_count"]
         specialized_pattern = SAFE_PATTERNS["update_specialized_agent_count"]
         config_pattern = SAFE_PATTERNS["update_total_agents_config"]
         sub_agent_pattern = SAFE_PATTERNS["update_sub_agent_count"]
 
-        # Apply patterns with dynamic replacement (NEW_COUNT -> expected_count)
         updated_content = agent_pattern.apply(updated_content).replace(
             "NEW_COUNT", str(expected_count)
         )

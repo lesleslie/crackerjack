@@ -64,29 +64,24 @@ class PhaseCoordinator(ErrorHandlingMixin):
             security_logger=None,
             backup_service=None,
         )
-        # Initialize configuration service - could be injected via DI
+
         from crackerjack.services.config import ConfigurationService
 
         self.config_service = ConfigurationService(console=console, pkg_path=pkg_path)
-        # Lazy-loaded autofix coordinator (now using lazy service)
-        # self.autofix_coordinator will be accessed via property
 
         self.logger = logging.getLogger("crackerjack.phases")
 
-        # Performance optimization services
         self._memory_optimizer = get_memory_optimizer()
         self._parallel_executor = get_parallel_executor()
         self._async_executor = get_async_executor()
         self._git_cache = get_git_cache()
         self._filesystem_cache = get_filesystem_cache()
 
-        # Lazy-loaded heavy services
         self._lazy_autofix = create_lazy_service(
             lambda: AutofixCoordinator(console=console, pkg_path=pkg_path),
             "autofix_coordinator",
         )
 
-        # Initialize ErrorHandlingMixin
         super().__init__()
 
     def run_cleaning_phase(self, options: OptionsProtocol) -> bool:
@@ -111,16 +106,13 @@ class PhaseCoordinator(ErrorHandlingMixin):
         self.console.print("[yellow]🧹[/yellow] Starting code cleaning...")
 
     def _execute_cleaning_process(self) -> bool:
-        # Use the comprehensive backup cleaning system for safety
         cleaning_result = self.code_cleaner.clean_files(self.pkg_path, use_backup=True)
 
         if isinstance(cleaning_result, list):
-            # Legacy mode (should not happen with use_backup=True, but handle gracefully)
             cleaned_files = [str(r.file_path) for r in cleaning_result if r.success]
             self._report_cleaning_results(cleaned_files)
             return all(r.success for r in cleaning_result) if cleaning_result else True
         else:
-            # PackageCleaningResult from backup mode
             self._report_package_cleaning_results(cleaning_result)
             return cleaning_result.overall_success
 
@@ -141,7 +133,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
             self.session.complete_task("cleaning", "No cleaning needed")
 
     def _report_package_cleaning_results(self, result: PackageCleaningResult) -> None:
-        """Report package cleaning results with backup information."""
         if result.overall_success:
             self.console.print(
                 f"[green]✅[/ green] Package cleaning completed successfully! "
@@ -188,31 +179,24 @@ class PhaseCoordinator(ErrorHandlingMixin):
             return False
 
     def _execute_configuration_steps(self, options: OptionsProtocol) -> bool:
-        """Execute all configuration steps and return overall success."""
         success = True
 
-        # FIRST STEP: Smart config merge before all other operations
         self._handle_smart_config_merge(options)
 
-        # Handle crackerjack project specific configuration
         if self._is_crackerjack_project() and not self._copy_config_files_to_package():
             success = False
 
-        # Update configuration files
         success &= self._update_configuration_files(options)
 
         return success
 
     def _handle_smart_config_merge(self, options: OptionsProtocol) -> None:
-        """Handle smart config merge with warning on failure."""
         if not self._perform_smart_config_merge(options):
             self.console.print(
                 "[yellow]⚠️[/yellow] Smart config merge encountered issues (continuing)"
             )
-            # Don't fail the entire configuration phase, just log the warning
 
     def _update_configuration_files(self, options: OptionsProtocol) -> bool:
-        """Update precommit and pyproject configuration files."""
         success = True
         if not self.config_service.update_precommit_config(options):
             success = False
@@ -221,7 +205,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
         return success
 
     def _complete_configuration_task(self, success: bool) -> None:
-        """Complete the configuration task with appropriate message."""
         message = (
             "Configuration updated successfully"
             if success
@@ -230,24 +213,18 @@ class PhaseCoordinator(ErrorHandlingMixin):
         self.session.complete_task("configuration", message)
 
     def _perform_smart_config_merge(self, options: OptionsProtocol) -> bool:
-        """Perform smart config merge before git operations."""
         try:
             self.logger.debug("Starting smart config merge process")
 
-            # Smart merge for critical configuration files
             merged_files = []
 
-            # Skip smart merge if explicitly requested or in specific modes
             if hasattr(options, "skip_config_merge") and options.skip_config_merge:
                 self.logger.debug("Config merge skipped by option")
                 return True
 
-            # Merge .gitignore patterns (always safe to do)
             if self._smart_merge_gitignore():
                 merged_files.append(".gitignore")
 
-            # Merge configuration files (pyproject.toml, .pre-commit-config.yaml)
-            # Only for crackerjack projects to avoid breaking user projects
             if self._is_crackerjack_project():
                 if self._smart_merge_project_configs():
                     merged_files.extend(["pyproject.toml", ".pre-commit-config.yaml"])
@@ -268,17 +245,15 @@ class PhaseCoordinator(ErrorHandlingMixin):
             self.logger.warning(
                 f"Smart config merge failed: {e} (type: {type(e).__name__})"
             )
-            # Return True to not block the workflow - this is fail-safe
+
             return True
 
     def _smart_merge_gitignore(self) -> bool:
-        """Smart merge .gitignore patterns."""
         try:
             gitignore_path = self.pkg_path / ".gitignore"
             if not gitignore_path.exists():
                 return False
 
-            # Standard crackerjack ignore patterns to merge
             standard_patterns = [
                 "# Crackerjack generated files",
                 ".crackerjack/",
@@ -305,10 +280,7 @@ class PhaseCoordinator(ErrorHandlingMixin):
             return False
 
     def _smart_merge_project_configs(self) -> bool:
-        """Smart merge pyproject.toml and pre-commit config for crackerjack projects."""
         try:
-            # This would be where we implement project config merging
-            # For now, just return True as the existing config service handles this
             self.logger.debug(
                 "Project config smart merge placeholder - handled by existing config service"
             )
@@ -398,7 +370,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
         if options.skip_hooks:
             return True
 
-        # Use standard execution for now - parallel support can be added later
         hook_results = self.hook_manager.run_fast_hooks()
         return all(r.status == "passed" for r in hook_results)
 
@@ -406,7 +377,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
         if options.skip_hooks:
             return True
 
-        # Use standard execution for now - parallel support can be added later
         hook_results = self.hook_manager.run_comprehensive_hooks()
         return all(r.status == "passed" for r in hook_results)
 
@@ -469,7 +439,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
     ) -> bool:
         new_version = self.publish_manager.bump_version(version_type)
 
-        # Stage all changes after version bumping and code cleaning (if enabled)
         self.console.print("[blue]📂[/ blue] Staging all changes for publishing...")
         if not self.git_service.add_all_files():
             self.console.print(
@@ -515,7 +484,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
     def _handle_no_changes_to_commit(self) -> bool:
         self.console.print("[yellow]ℹ️[/ yellow] No changes to commit")
 
-        # Check if there are unpushed commits
         from contextlib import suppress
 
         with suppress(ValueError, Exception):
@@ -663,7 +631,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
     def _execute_single_hook_attempt(
         self, hook_runner: t.Callable[[], list[t.Any]]
     ) -> tuple[list[t.Any], dict[str, t.Any]] | None:
-        """Execute a single hook attempt and return results and summary."""
         try:
             results = hook_runner()
             summary = self.hook_manager.get_hook_summary(results)
@@ -680,7 +647,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
         attempt: int,
         max_retries: int,
     ) -> str:
-        """Process hook results and return action: 'continue', 'success', or 'failure'."""
         if not self._has_hook_failures(summary):
             self._handle_hook_success(hook_type, summary)
             return "success"
@@ -722,10 +688,9 @@ class PhaseCoordinator(ErrorHandlingMixin):
         return False
 
     def _attempt_autofix_for_fast_hooks(self, results: list[t.Any]) -> bool:
-        """Attempt to autofix fast hook failures using lazy-loaded coordinator."""
         try:
             self.logger.info("Attempting autofix for fast hook failures")
-            # Apply autofixes for fast hooks using lazy-loaded service
+
             autofix_coordinator = self._lazy_autofix.get()
             return autofix_coordinator.apply_fast_stage_fixes()
         except Exception as e:
@@ -749,15 +714,13 @@ class PhaseCoordinator(ErrorHandlingMixin):
             f"[red]❌[/ red] {hook_type.title()} hooks failed: {summary['failed']} failed, {summary['errors']} errors",
         )
 
-        # Try autofix for fast hooks before giving up
         if hook_type == "fast" and attempt < max_retries - 1:
             if self._attempt_autofix_for_fast_hooks(results):
                 self.console.print(
                     "[yellow]🔧[/ yellow] Applied autofixes for fast hooks, retrying...",
                 )
-                return True  # Return True to continue the retry loop
+                return True
 
-        # Display detailed hook errors in verbose mode
         if getattr(options, "verbose", False):
             self._display_verbose_hook_errors(results, hook_type)
 
@@ -772,13 +735,11 @@ class PhaseCoordinator(ErrorHandlingMixin):
     def _display_verbose_hook_errors(
         self, results: list[t.Any], hook_type: str
     ) -> None:
-        """Display detailed hook error output in verbose mode."""
         self.console.print(
-            f"\n[bold yellow]📋 Detailed {hook_type} hook errors:[/bold yellow]"
+            f"\n[bold yellow]📋 Detailed {hook_type} hook errors: [/bold yellow]"
         )
 
         for result in results:
-            # Check if this hook failed
             status = getattr(result, "status", "")
             if status not in ("failed", "error", "timeout"):
                 continue
@@ -791,12 +752,10 @@ class PhaseCoordinator(ErrorHandlingMixin):
             if issues:
                 for issue in issues:
                     if isinstance(issue, str) and issue.strip():
-                        # Clean up the issue text and display with proper indentation
                         cleaned_issue = issue.strip()
-                        self.console.print(f"   {cleaned_issue}")
+                        self.console.print(f" {cleaned_issue}")
             else:
-                # If no specific issues, show generic failure message
-                self.console.print(f"   Hook failed with exit code (status: {status})")
+                self.console.print(f" Hook failed with exit code (status: {status})")
 
     def _build_detailed_hook_error_message(
         self, results: list[t.Any], summary: dict[str, t.Any]
@@ -851,18 +810,15 @@ class PhaseCoordinator(ErrorHandlingMixin):
         self.session.fail_task(f"{hook_type}_hooks", str(e))
         return False
 
-    # Performance-optimized hook execution methods
     async def _execute_hooks_with_parallel_support(
         self,
         hook_type: str,
         hook_runner: t.Callable[[], list[t.Any]],
         options: OptionsProtocol,
     ) -> bool:
-        """Execute hooks with parallel optimization where safe."""
         self._initialize_hook_execution(hook_type)
 
         try:
-            # Execute hooks and handle results
             return await self._process_parallel_hook_execution(
                 hook_type, hook_runner, options
             )
@@ -876,16 +832,12 @@ class PhaseCoordinator(ErrorHandlingMixin):
         hook_runner: t.Callable[[], list[t.Any]],
         options: OptionsProtocol,
     ) -> bool:
-        """Process hook execution with autofix retry logic."""
-        # For now, maintain sequential execution for safety
-        # Future enhancement: implement parallel execution for independent hooks
         results = hook_runner()
         summary = self.hook_manager.get_hook_summary(results)
 
         if not self._has_hook_failures(summary):
             return self._handle_hook_success(hook_type, summary)
 
-        # Handle failures with potential autofix retry
         return self._handle_parallel_hook_failures(
             hook_type, hook_runner, options, results, summary
         )
@@ -898,19 +850,16 @@ class PhaseCoordinator(ErrorHandlingMixin):
         results: list[t.Any],
         summary: dict[str, t.Any],
     ) -> bool:
-        """Handle hook failures with autofix retry for fast hooks."""
         if hook_type != "fast":
             return self._handle_hook_failures(
                 hook_type, options, summary, results, 0, 1
             )
 
-        # Try autofix for fast hooks
         if not self._attempt_autofix_for_fast_hooks(results):
             return self._handle_hook_failures(
                 hook_type, options, summary, results, 0, 1
             )
 
-        # Retry after successful autofix
         return self._retry_hooks_after_autofix(hook_type, hook_runner, options)
 
     def _retry_hooks_after_autofix(
@@ -919,12 +868,10 @@ class PhaseCoordinator(ErrorHandlingMixin):
         hook_runner: t.Callable[[], list[t.Any]],
         options: OptionsProtocol,
     ) -> bool:
-        """Retry hooks after autofix was applied."""
         self.console.print(
             "[yellow]🔧[/ yellow] Applied autofixes for fast hooks, retrying..."
         )
 
-        # Retry after autofix
         results = hook_runner()
         summary = self.hook_manager.get_hook_summary(results)
 
@@ -935,5 +882,4 @@ class PhaseCoordinator(ErrorHandlingMixin):
 
     @property
     def autofix_coordinator(self):
-        """Lazy property for autofix coordinator."""
         return self._lazy_autofix.get()

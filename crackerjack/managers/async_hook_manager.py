@@ -28,7 +28,6 @@ class AsyncHookManager:
         self._config_path: Path | None = None
 
     def set_config_path(self, config_path: Path) -> None:
-        """Set the path to the pre-commit configuration file."""
         self._config_path = config_path
 
     async def run_fast_hooks_async(self) -> list[HookResult]:

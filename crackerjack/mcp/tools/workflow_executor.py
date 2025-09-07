@@ -13,13 +13,11 @@ async def execute_crackerjack_workflow(
 ) -> dict[str, t.Any]:
     job_id = str(uuid.uuid4())[:8]
 
-    # Configure extended timeout for long-running test operations
-    execution_timeout = kwargs.get("execution_timeout", 900)  # 15 minutes default
+    execution_timeout = kwargs.get("execution_timeout", 900)
     if kwargs.get("test", False) or kwargs.get("testing", False):
-        execution_timeout = max(execution_timeout, 1200)  # 20 minutes for test runs
+        execution_timeout = max(execution_timeout, 1200)
 
     try:
-        # Add overall execution timeout with keep-alive
         return await asyncio.wait_for(
             _execute_crackerjack_sync(job_id, args, kwargs, get_context()),
             timeout=execution_timeout,
@@ -81,7 +79,6 @@ async def _initialize_execution(
         context,
     )
 
-    # Ensure WebSocket server is running for progress tracking
     await _ensure_websocket_server_running(job_id, context)
 
     working_dir = kwargs.get("working_directory", ".")
@@ -230,7 +227,6 @@ async def _run_workflow_iterations(
     options = _create_workflow_options(kwargs)
     max_iterations = kwargs.get("max_iterations", 10)
 
-    # Start keep-alive task to prevent TCP timeouts
     keep_alive_task = asyncio.create_task(_keep_alive_heartbeat(job_id, context))
 
     try:
@@ -250,7 +246,6 @@ async def _execute_iterations_loop(
     max_iterations: int,
     context: t.Any,
 ) -> dict[str, t.Any]:
-    """Execute the main iterations loop."""
     for iteration in range(max_iterations):
         _update_iteration_progress(job_id, iteration, max_iterations, context)
 
@@ -276,7 +271,6 @@ async def _execute_iterations_loop(
 def _update_iteration_progress(
     job_id: str, iteration: int, max_iterations: int, context: t.Any
 ) -> None:
-    """Update progress for current iteration."""
     _update_progress(
         job_id,
         {
@@ -296,7 +290,6 @@ async def _handle_iteration_success(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> dict[str, t.Any]:
-    """Handle successful iteration."""
     coverage_result = None
     if kwargs.get("boost_coverage", False):
         coverage_result = await _attempt_coverage_improvement(
@@ -306,7 +299,6 @@ async def _handle_iteration_success(
 
 
 async def _cleanup_keep_alive_task(keep_alive_task: asyncio.Task[t.Any]) -> None:
-    """Clean up the keep-alive task."""
     if not keep_alive_task.cancelled():
         keep_alive_task.cancel()
         try:
@@ -316,10 +308,8 @@ async def _cleanup_keep_alive_task(keep_alive_task: asyncio.Task[t.Any]) -> None
 
 
 async def _keep_alive_heartbeat(job_id: str, context: t.Any) -> None:
-    """Send periodic keep-alive messages to prevent TCP timeouts."""
     try:
         while True:
-            # Send heartbeat every 60 seconds (well under 2-minute TCP timeout)
             await asyncio.sleep(60)
             _update_progress(
                 job_id,
@@ -332,7 +322,6 @@ async def _keep_alive_heartbeat(job_id: str, context: t.Any) -> None:
                 context,
             )
     except asyncio.CancelledError:
-        # Task was cancelled, cleanup
         _update_progress(
             job_id,
             {
@@ -606,11 +595,9 @@ def _create_failure_result(
 
 
 async def _ensure_websocket_server_running(job_id: str, context: t.Any) -> None:
-    """Ensure WebSocket server is running for progress tracking during crackerjack:run."""
     try:
         from crackerjack.mcp.progress_components import ServiceManager
 
-        # Initialize and start services if needed
         service_manager = ServiceManager()
         await service_manager.ensure_services_running()
 
@@ -624,7 +611,6 @@ async def _ensure_websocket_server_running(job_id: str, context: t.Any) -> None:
             context,
         )
     except Exception as e:
-        # Don't fail the whole workflow if WebSocket server fails to start
         _update_progress(
             job_id,
             {

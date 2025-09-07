@@ -1,5 +1,3 @@
-"""Performance analysis helper classes and utilities."""
-
 import ast
 import typing as t
 from dataclasses import dataclass
@@ -7,16 +5,12 @@ from dataclasses import dataclass
 
 @dataclass
 class OptimizationResult:
-    """Result of an optimization operation."""
-
     lines: list[str]
     modified: bool
     optimization_description: str | None = None
 
 
 class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
-    """Analyzer for detecting nested loops with complexity analysis."""
-
     def __init__(self) -> None:
         self.loop_stack: list[tuple[str, ast.AST, int]] = []
         self.nested_loops: list[dict[str, t.Any]] = []
@@ -29,7 +23,6 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
         self._process_loop_node(node, "nested_while_loop")
 
     def _process_loop_node(self, node: ast.For | ast.While, loop_type: str) -> None:
-        """Process a loop node and track nesting information."""
         current_depth = len(self.loop_stack) + 1
         self.loop_stack.append((loop_type.split("_")[1], node, current_depth))
 
@@ -44,7 +37,6 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
     def _create_loop_info(
         self, node: ast.For | ast.While, loop_type: str, current_depth: int
     ) -> dict[str, t.Any]:
-        """Create loop information dictionary."""
         loop_info: dict[str, t.Any] = {
             "line_number": node.lineno,
             "type": loop_type,
@@ -63,8 +55,7 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
     def _check_complexity_hotspot(
         self, loop_info: dict[str, t.Any], current_depth: int
     ) -> None:
-        """Check if loop is a complexity hotspot and add to hotspots list."""
-        if current_depth >= 3:  # O(n³) or higher
+        if current_depth >= 3:
             self.complexity_hotspots.append(
                 loop_info
                 | {
@@ -74,11 +65,9 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
             )
 
     def _calculate_complexity_factor(self, depth: int) -> int:
-        """Calculate relative complexity factor for optimization prioritization."""
-        return depth**2  # Exponential growth factor
+        return depth**2
 
     def _get_optimization_priority(self, depth: int) -> str:
-        """Determine optimization priority based on nesting depth."""
         if depth >= 4:
             return "critical"
         elif depth == 3:
@@ -88,7 +77,6 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
         return "low"
 
     def _extract_iterable_info(self, node: ast.For) -> dict[str, t.Any]:
-        """Extract information about the iterable for optimization hints."""
         iterable_info = {"type": "unknown", "name": None}
 
         if isinstance(node.iter, ast.Name):
@@ -107,8 +95,6 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
 
 
 class EnhancedListOpAnalyzer(ast.NodeVisitor):
-    """Analyzer for detecting inefficient list operations in loops."""
-
     def __init__(self) -> None:
         self.in_loop = False
         self.loop_depth = 0
@@ -131,22 +117,18 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _enter_loop_context(self, node: ast.For | ast.While) -> None:
-        """Enter loop context and save previous state."""
         self._old_state = (self.in_loop, self.loop_depth, self.current_loop_node)
         self.in_loop = True
         self.loop_depth += 1
         self.current_loop_node = node
 
     def _exit_loop_context(self) -> None:
-        """Exit loop context and restore previous state."""
         self.in_loop, self.loop_depth, self.current_loop_node = self._old_state
 
     def _should_analyze_aug_assign(self, node: ast.AugAssign) -> bool:
-        """Check if this augmented assignment should be analyzed."""
         return self.in_loop and isinstance(node.op, ast.Add)
 
     def _analyze_aug_assign_node(self, node: ast.AugAssign) -> None:
-        """Analyze an augmented assignment node for inefficiencies."""
         impact_factor = self._calculate_performance_impact()
 
         if isinstance(node.value, ast.List):
@@ -155,8 +137,6 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
             self._handle_variable_concat(node, impact_factor)
 
     def _handle_list_concat(self, node: ast.AugAssign, impact_factor: int) -> None:
-        """Handle list concatenation with literal list."""
-        # Type narrowing to help pyright understand that node.value is an ast.List
         assert isinstance(node.value, ast.List)
         list_size = len(node.value.elts)
 
@@ -175,7 +155,6 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
         )
 
     def _handle_variable_concat(self, node: ast.AugAssign, impact_factor: int) -> None:
-        """Handle list concatenation with variable."""
         var_name = getattr(node.value, "id", "unknown")
         self.list_ops.append(
             {
@@ -190,8 +169,7 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
         )
 
     def _calculate_performance_impact(self) -> int:
-        """Calculate expected performance impact based on context."""
-        base_impact = 2  # Baseline improvement factor
+        base_impact = 2
 
         if self.loop_depth > 1:
             base_impact *= self.loop_depth**2
@@ -199,17 +177,15 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
         if self._is_hot_loop():
             base_impact *= 5
 
-        return min(base_impact, 50)  # Cap at 50x impact
+        return min(base_impact, 50)
 
     def _is_hot_loop(self) -> bool:
-        """Check if current loop is a hot loop with large range."""
         if not (self.current_loop_node and isinstance(self.current_loop_node, ast.For)):
             return False
 
         return self._has_large_range_iterator()
 
     def _has_large_range_iterator(self) -> bool:
-        """Check if the for loop uses a large range."""
         if not isinstance(self.current_loop_node, ast.For):
             return False
 

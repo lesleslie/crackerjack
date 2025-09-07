@@ -17,7 +17,6 @@ console = Console()
 
 class JobManager:
     def __init__(self, progress_dir: Path) -> None:
-        # Validate and secure the progress directory path
         self.progress_dir = SecurePathValidator.validate_safe_path(progress_dir)
         self.active_connections: dict[str, set[Any]] = {}
         self.known_jobs: set[str] = set()
@@ -26,16 +25,13 @@ class JobManager:
         self.progress_dir.mkdir(exist_ok=True)
 
     def validate_job_id(self, job_id: str) -> bool:
-        """Validate job ID using secure input validator."""
         if not job_id:
             return False
 
-        # First check if it's a valid UUID
         with suppress(ValueError):
             uuid.UUID(job_id)
             return True
 
-        # Use secure input validator for additional validation
         result = get_input_validator().validate_job_id(job_id)
         return result.valid
 
@@ -57,40 +53,34 @@ class JobManager:
         timeout_manager = get_timeout_manager()
         connections = self.active_connections[job_id].copy()
 
-        # Create websocket send tasks
         send_tasks = self._create_broadcast_tasks(connections, timeout_manager, data)
 
-        # Execute broadcast with timeout handling
         if send_tasks:
             await self._execute_broadcast_tasks(job_id, send_tasks)
 
     def _create_broadcast_tasks(
         self, connections: set, timeout_manager, data: dict
     ) -> list:
-        """Create tasks for all websocket sends with timeout."""
         send_tasks = []
         for websocket in connections:
             task = asyncio.create_task(
                 timeout_manager.with_timeout(
                     "websocket_broadcast",
                     websocket.send_json(data),
-                    timeout=2.0,  # Quick broadcast timeout
+                    timeout=2.0,
                 )
             )
             send_tasks.append((websocket, task))
         return send_tasks
 
     async def _execute_broadcast_tasks(self, job_id: str, send_tasks: list) -> None:
-        """Execute broadcast tasks with timeout and error handling."""
         try:
-            # Use asyncio.wait with timeout for batch sending
             done, pending = await asyncio.wait(
                 [task for _, task in send_tasks],
-                timeout=5.0,  # Overall timeout for all broadcasts
+                timeout=5.0,
                 return_when=asyncio.ALL_COMPLETED,
             )
 
-            # Handle completed and pending tasks
             await self._handle_broadcast_results(job_id, send_tasks, done, pending)
 
         except Exception as e:
@@ -100,8 +90,6 @@ class JobManager:
     async def _handle_broadcast_results(
         self, job_id: str, send_tasks: list, done: set, pending: set
     ) -> None:
-        """Handle results of broadcast tasks."""
-        # Cancel any pending tasks and remove failed connections
         for websocket, task in send_tasks:
             if task in pending:
                 task.cancel()
@@ -112,12 +100,10 @@ class JobManager:
                 except Exception:
                     self.remove_connection(job_id, websocket)
 
-        # Wait for cancelled tasks to complete
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
 
     async def _cleanup_failed_broadcast(self, job_id: str, send_tasks: list) -> None:
-        """Clean up connections after broadcast failure."""
         for websocket, task in send_tasks:
             if not task.done():
                 task.cancel()
@@ -143,7 +129,6 @@ class JobManager:
         if not self.validate_job_id(job_id):
             return None
 
-        # Use secure path joining to create progress file path
         try:
             progress_file = SecurePathValidator.secure_path_join(
                 self.progress_dir, f"job-{job_id}.json"
@@ -151,7 +136,6 @@ class JobManager:
             if not progress_file.exists():
                 return None
 
-            # Validate file size before reading
             SecurePathValidator.validate_file_size(progress_file)
 
             return json.loads(progress_file.read_text())
@@ -159,13 +143,11 @@ class JobManager:
             return None
 
     async def _process_progress_file(self, progress_file: Path) -> None:
-        # Validate the progress file path is within our allowed directory
         try:
             validated_file = SecurePathValidator.validate_safe_path(
                 progress_file, self.progress_dir
             )
         except Exception:
-            # If path validation fails, skip processing this file
             return
 
         job_id = self.extract_job_id_from_file(validated_file)
@@ -185,20 +167,18 @@ class JobManager:
 
         while self.is_running:
             try:
-                # Monitor directory changes with timeout protection
                 async with timeout_manager.timeout_context(
                     "file_operations",
-                    timeout=10.0,  # Timeout for directory monitoring cycle
+                    timeout=10.0,
                     strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
                 ):
                     if self.progress_dir.exists():
-                        # Process files with individual timeouts
                         for progress_file in self.progress_dir.glob("job-*.json"):
                             try:
                                 await timeout_manager.with_timeout(
                                     "file_operations",
                                     self._process_progress_file(progress_file),
-                                    timeout=5.0,  # Per-file timeout
+                                    timeout=5.0,
                                 )
                             except Exception as e:
                                 console.print(
@@ -206,7 +186,6 @@ class JobManager:
                                 )
                                 continue
 
-                    # Reset error count on successful cycle
                     consecutive_errors = 0
                     await asyncio.sleep(1)
 
@@ -214,14 +193,12 @@ class JobManager:
                 consecutive_errors += 1
                 console.print(f"[red]Progress monitoring error: {e}[/red]")
 
-                # Implement exponential backoff for repeated errors
                 if consecutive_errors >= max_consecutive_errors:
                     console.print(
                         f"[red]Too many consecutive errors ({consecutive_errors}), stopping monitor[/red]"
                     )
                     break
 
-                # Exponential backoff with max delay
                 delay = min(5 * (2 ** (consecutive_errors - 1)), 60)
                 await asyncio.sleep(delay)
 
@@ -232,10 +209,9 @@ class JobManager:
         timeout_manager = get_timeout_manager()
 
         try:
-            # Start file monitor with timeout protection
             async with timeout_manager.timeout_context(
                 "file_operations",
-                timeout=30.0,  # Monitor startup timeout
+                timeout=30.0,
                 strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             ):
                 monitor = create_progress_monitor(self.progress_dir)
@@ -243,7 +219,7 @@ class JobManager:
 
                 def on_progress_update(job_id: str, progress_data: dict) -> None:
                     if job_id and self.validate_job_id(job_id):
-                        # Create broadcast task with timeout handling
+
                         async def safe_broadcast():
                             try:
                                 await timeout_manager.with_timeout(
@@ -262,7 +238,6 @@ class JobManager:
                             self.known_jobs.add(job_id)
                             console.print(f"[green]New job detected: {job_id}[/green]")
 
-                # Start directory monitoring with proper timeout handling
                 await self._monitor_directory_changes()
 
         except Exception as e:
@@ -273,18 +248,17 @@ class JobManager:
 
         while self.is_running:
             try:
-                # Cleanup cycle with timeout protection
                 await timeout_manager.with_timeout(
                     "file_operations",
                     self._perform_cleanup_cycle(),
-                    timeout=30.0,  # Cleanup timeout
+                    timeout=30.0,
                     strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
                 )
-                await asyncio.sleep(3600)  # 1 hour between cleanups
+                await asyncio.sleep(3600)
             except Exception as e:
                 console.print(f"[red]Cleanup error: {e}[/red]")
-                # Shorter sleep on error to retry sooner
-                await asyncio.sleep(1800)  # 30 minutes on error
+
+                await asyncio.sleep(1800)
 
     async def _perform_cleanup_cycle(self) -> None:
         if not self.progress_dir.exists():
@@ -318,17 +292,16 @@ class JobManager:
 
         while self.is_running:
             try:
-                # Timeout check with its own timeout protection
                 await timeout_manager.with_timeout(
                     "file_operations",
                     self._check_and_timeout_stuck_jobs(),
-                    timeout=60.0,  # Timeout check timeout
+                    timeout=60.0,
                     strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
                 )
-                await asyncio.sleep(300)  # 5 minutes between checks
+                await asyncio.sleep(300)
             except Exception as e:
                 console.print(f"[red]Timeout check error: {e}[/red]")
-                # Continue checking even on errors
+
                 await asyncio.sleep(300)
 
     async def _check_and_timeout_stuck_jobs(self) -> None:
@@ -352,12 +325,10 @@ class JobManager:
         timeout_seconds: int,
     ) -> None:
         try:
-            # Validate the progress file path is secure
             validated_file = SecurePathValidator.validate_safe_path(
                 progress_file, self.progress_dir
             )
 
-            # Validate file size before reading
             SecurePathValidator.validate_file_size(validated_file)
 
             progress_data = json.loads(validated_file.read_text())
@@ -371,7 +342,6 @@ class JobManager:
                 self._timeout_job(progress_data, validated_file)
 
         except (json.JSONDecodeError, OSError, Exception):
-            # Catch validation errors as well as file errors
             pass
 
     def _should_timeout_job(

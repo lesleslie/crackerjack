@@ -1,15 +1,3 @@
-"""
-Comprehensive input validation framework for security hardening.
-
-This module provides defense-in-depth input validation to prevent:
-- Command injection attacks (CWE-77)
-- Path traversal attacks (CWE-22)
-- SQL injection (CWE-89)
-- JSON injection (CWE-91)
-- DoS via malformed input (CWE-400)
-- Code injection (CWE-94)
-"""
-
 import json
 import typing as t
 from functools import wraps
@@ -26,29 +14,21 @@ from .security_logger import (
 
 
 class ValidationConfig(BaseModel):
-    """Configuration for input validation rules."""
-
-    # String limits
     MAX_STRING_LENGTH: int = Field(default=10000, ge=1)
     MAX_PROJECT_NAME_LENGTH: int = Field(default=255, ge=1)
     MAX_JOB_ID_LENGTH: int = Field(default=128, ge=1)
     MAX_COMMAND_LENGTH: int = Field(default=1000, ge=1)
 
-    # JSON limits
-    MAX_JSON_SIZE: int = Field(default=1024 * 1024, ge=1)  # 1MB
+    MAX_JSON_SIZE: int = Field(default=1024 * 1024, ge=1)
     MAX_JSON_DEPTH: int = Field(default=10, ge=1)
 
-    # Rate limiting
     MAX_VALIDATION_FAILURES_PER_MINUTE: int = Field(default=10, ge=1)
 
-    # Pattern validation
     ALLOW_SHELL_METACHARACTERS: bool = Field(default=False)
     STRICT_ALPHANUMERIC_MODE: bool = Field(default=False)
 
 
 class ValidationResult(BaseModel):
-    """Result of input validation."""
-
     valid: bool
     sanitized_value: t.Any = None
     error_message: str = ""
@@ -57,9 +37,6 @@ class ValidationResult(BaseModel):
 
 
 class InputSanitizer:
-    """Provides secure input sanitization utilities."""
-
-    # Shell metacharacters that could enable command injection
     SHELL_METACHARACTERS = {
         ";",
         "&",
@@ -85,7 +62,6 @@ class InputSanitizer:
         "^",
     }
 
-    # Dangerous path components
     DANGEROUS_PATH_COMPONENTS = {
         "..",
         ".",
@@ -121,9 +97,6 @@ class InputSanitizer:
         "LPT9",
     }
 
-    # NOTE: SQL and Code injection patterns now use centralized SAFE_PATTERNS
-    # from regex_patterns.py for security consistency and testing
-
     @classmethod
     def sanitize_string(
         cls,
@@ -132,29 +105,22 @@ class InputSanitizer:
         allow_shell_chars: bool = False,
         strict_alphanumeric: bool = False,
     ) -> ValidationResult:
-        """Sanitize string input with configurable restrictions."""
-
-        # Type validation
         type_result = cls._validate_string_type(value)
         if not type_result.valid:
             return type_result
 
-        # Length validation
         length_result = cls._validate_string_length(value, max_length)
         if not length_result.valid:
             return length_result
 
-        # Security validations
         security_result = cls._validate_string_security(value, allow_shell_chars)
         if not security_result.valid:
             return security_result
 
-        # Pattern validations
         pattern_result = cls._validate_string_patterns(value)
         if not pattern_result.valid:
             return pattern_result
 
-        # Strict alphanumeric mode
         if strict_alphanumeric and not cls._is_strictly_alphanumeric(value):
             return ValidationResult(
                 valid=False,
@@ -163,7 +129,6 @@ class InputSanitizer:
                 validation_type="alphanumeric_only",
             )
 
-        # Basic sanitization (remove leading/trailing whitespace)
         sanitized = value.strip()
 
         return ValidationResult(
@@ -172,7 +137,6 @@ class InputSanitizer:
 
     @classmethod
     def _validate_string_type(cls, value: t.Any) -> ValidationResult:
-        """Validate that the input is a string."""
         if not isinstance(value, str):
             return ValidationResult(
                 valid=False,
@@ -184,7 +148,6 @@ class InputSanitizer:
 
     @classmethod
     def _validate_string_length(cls, value: str, max_length: int) -> ValidationResult:
-        """Validate string length."""
         if len(value) > max_length:
             return ValidationResult(
                 valid=False,
@@ -198,8 +161,6 @@ class InputSanitizer:
     def _validate_string_security(
         cls, value: str, allow_shell_chars: bool
     ) -> ValidationResult:
-        """Validate string security constraints."""
-        # Null byte injection check
         if "\x00" in value:
             return ValidationResult(
                 valid=False,
@@ -208,7 +169,6 @@ class InputSanitizer:
                 validation_type="null_byte_injection",
             )
 
-        # Control character check
         if any(ord(c) < 32 and c not in "\t\n\r" for c in value):
             return ValidationResult(
                 valid=False,
@@ -217,7 +177,6 @@ class InputSanitizer:
                 validation_type="control_chars",
             )
 
-        # Shell metacharacter check
         if not allow_shell_chars:
             found_chars = [c for c in value if c in cls.SHELL_METACHARACTERS]
             if found_chars:
@@ -232,8 +191,6 @@ class InputSanitizer:
 
     @classmethod
     def _validate_string_patterns(cls, value: str) -> ValidationResult:
-        """Validate string against security patterns."""
-        # SQL injection pattern check using SAFE_PATTERNS
         sql_patterns = [
             "validate_sql_injection_patterns",
             "validate_sql_comment_patterns",
@@ -250,7 +207,6 @@ class InputSanitizer:
                     validation_type="sql_injection",
                 )
 
-        # Code injection pattern check using SAFE_PATTERNS
         code_patterns = [
             "validate_code_eval_injection",
             "validate_code_dynamic_access",
@@ -271,15 +227,12 @@ class InputSanitizer:
 
     @classmethod
     def _is_strictly_alphanumeric(cls, value: str) -> bool:
-        """Check if string is strictly alphanumeric with allowed characters."""
         return value.replace("-", "").replace("_", "").isalnum()
 
     @classmethod
     def sanitize_json(
         cls, value: str, max_size: int = 1024 * 1024, max_depth: int = 10
     ) -> ValidationResult:
-        """Sanitize JSON input with size and depth limits."""
-
         if len(value) > max_size:
             return ValidationResult(
                 valid=False,
@@ -289,10 +242,8 @@ class InputSanitizer:
             )
 
         try:
-            # Parse JSON to validate structure
             parsed = json.loads(value)
 
-            # Check nesting depth
             def check_depth(obj: t.Any, current_depth: int = 0) -> int:
                 if current_depth > max_depth:
                     return current_depth
@@ -339,17 +290,13 @@ class InputSanitizer:
         base_directory: Path | None = None,
         allow_absolute: bool = False,
     ) -> ValidationResult:
-        """Sanitize file path with traversal protection."""
-
         try:
             path = Path(value)
 
-            # Check for dangerous components in the original path before resolving
             danger_result = cls._check_dangerous_components(path)
             if not danger_result.valid:
                 return danger_result
 
-            # Handle base directory constraints
             if base_directory:
                 base_result = cls._validate_base_directory(
                     path, base_directory, allow_absolute
@@ -358,10 +305,8 @@ class InputSanitizer:
                     return base_result
                 resolved = base_result.sanitized_value
             else:
-                # Resolve to absolute path to eliminate .. components if no base directory
                 resolved = path.resolve()
 
-            # Check absolute path restrictions
             absolute_result = cls._validate_absolute_path(
                 resolved, allow_absolute, base_directory
             )
@@ -384,7 +329,6 @@ class InputSanitizer:
 
     @classmethod
     def _check_dangerous_components(cls, path: Path) -> ValidationResult:
-        """Check for dangerous components in the path."""
         for part in path.parts:
             if part.upper() in cls.DANGEROUS_PATH_COMPONENTS:
                 return ValidationResult(
@@ -399,10 +343,8 @@ class InputSanitizer:
     def _validate_base_directory(
         cls, path: Path, base_directory: Path, allow_absolute: bool
     ) -> ValidationResult:
-        """Validate path against base directory constraints."""
         base_resolved = base_directory.resolve()
 
-        # If the path is absolute and doesn't start with base directory, it's invalid
         if path.is_absolute() and not str(path).startswith(str(base_resolved)):
             return ValidationResult(
                 valid=False,
@@ -411,7 +353,6 @@ class InputSanitizer:
                 validation_type="directory_escape",
             )
 
-        # If the path is relative, resolve it relative to base directory
         if not path.is_absolute():
             resolved = (base_resolved / path).resolve()
             try:
@@ -424,7 +365,6 @@ class InputSanitizer:
                     validation_type="directory_escape",
                 )
         else:
-            # For absolute paths that start with base directory, resolve normally
             resolved = path.resolve()
             try:
                 resolved.relative_to(base_resolved)
@@ -444,7 +384,6 @@ class InputSanitizer:
     def _validate_absolute_path(
         cls, resolved: Path, allow_absolute: bool, base_directory: Path | None
     ) -> ValidationResult:
-        """Validate absolute path restrictions."""
         if not allow_absolute and resolved.is_absolute() and base_directory:
             return ValidationResult(
                 valid=False,
@@ -456,8 +395,6 @@ class InputSanitizer:
 
 
 class SecureInputValidator:
-    """Main input validation class with security logging."""
-
     def __init__(self, config: ValidationConfig | None = None):
         self.config = config or ValidationConfig()
         self.logger = get_security_logger()
@@ -465,8 +402,6 @@ class SecureInputValidator:
         self._failure_counts: dict[str, int] = {}
 
     def validate_project_name(self, name: str) -> ValidationResult:
-        """Validate project name with security constraints."""
-
         result = self.sanitizer.sanitize_string(
             name,
             max_length=self.config.MAX_PROJECT_NAME_LENGTH,
@@ -482,9 +417,6 @@ class SecureInputValidator:
         return result
 
     def validate_job_id(self, job_id: str) -> ValidationResult:
-        """Validate job ID with strict alphanumeric constraints."""
-
-        # Job IDs must be alphanumeric with hyphens only using SAFE_PATTERNS
         job_id_pattern = SAFE_PATTERNS["validate_job_id_format"]
         if not job_id_pattern.test(job_id):
             result = ValidationResult(
@@ -513,8 +445,6 @@ class SecureInputValidator:
         return result
 
     def validate_command_args(self, args: t.Any) -> ValidationResult:
-        """Validate command arguments to prevent injection."""
-
         if isinstance(args, str):
             result = self.sanitizer.sanitize_string(
                 args,
@@ -522,7 +452,6 @@ class SecureInputValidator:
                 allow_shell_chars=self.config.ALLOW_SHELL_METACHARACTERS,
             )
         elif isinstance(args, list):
-            # Validate each argument in the list
             sanitized_args = []
             for arg in args:
                 if not isinstance(arg, str):
@@ -567,8 +496,6 @@ class SecureInputValidator:
         return result
 
     def validate_json_payload(self, payload: str) -> ValidationResult:
-        """Validate JSON payload with size and structure limits."""
-
         result = self.sanitizer.sanitize_json(
             payload,
             max_size=self.config.MAX_JSON_SIZE,
@@ -591,8 +518,6 @@ class SecureInputValidator:
         base_directory: Path | None = None,
         allow_absolute: bool = False,
     ) -> ValidationResult:
-        """Validate file path with traversal protection."""
-
         result = self.sanitizer.sanitize_path(path, base_directory, allow_absolute)
 
         if not result.valid:
@@ -603,9 +528,6 @@ class SecureInputValidator:
         return result
 
     def validate_environment_var(self, name: str, value: str) -> ValidationResult:
-        """Validate environment variable name and value."""
-
-        # Environment variable names must be valid identifiers using SAFE_PATTERNS
         env_var_pattern = SAFE_PATTERNS["validate_env_var_name_format"]
         if not env_var_pattern.test(name):
             result = ValidationResult(
@@ -619,7 +541,6 @@ class SecureInputValidator:
             )
             return result
 
-        # Validate environment variable value
         result = self.sanitizer.sanitize_string(
             value, max_length=self.config.MAX_STRING_LENGTH, allow_shell_chars=False
         )
@@ -641,15 +562,12 @@ class SecureInputValidator:
         reason: str,
         level: SecurityEventLevel,
     ) -> None:
-        """Log validation failure with rate limiting."""
-
         self.logger.log_validation_failed(
             validation_type=validation_type,
-            file_path=input_value,  # Reusing file_path field for input value
+            file_path=input_value,
             reason=reason,
         )
 
-        # Track failure counts for rate limiting
         self._failure_counts[validation_type] = (
             self._failure_counts.get(validation_type, 0) + 1
         )
@@ -661,8 +579,6 @@ def validation_required(
     validate_kwargs: bool = True,
     config: ValidationConfig | None = None,
 ):
-    """Decorator to add automatic input validation to functions."""
-
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         @wraps(func)
         def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
@@ -684,7 +600,6 @@ def validation_required(
 def _validate_function_args(
     validator: SecureInputValidator, args: tuple[t.Any, ...]
 ) -> None:
-    """Validate string arguments in function args."""
     for i, arg in enumerate(args):
         if isinstance(arg, str):
             result = validator.sanitizer.sanitize_string(arg)
@@ -698,7 +613,6 @@ def _validate_function_args(
 def _validate_function_kwargs(
     validator: SecureInputValidator, kwargs: dict[str, t.Any]
 ) -> None:
-    """Validate string values in function kwargs."""
     for key, value in kwargs.items():
         if isinstance(value, str):
             result = validator.sanitizer.sanitize_string(value)
@@ -712,13 +626,10 @@ def _validate_function_kwargs(
 def get_input_validator(
     config: ValidationConfig | None = None,
 ) -> SecureInputValidator:
-    """Get configured input validator instance."""
     return SecureInputValidator(config)
 
 
-# Convenience validation functions
 def validate_and_sanitize_string(value: str, **kwargs: t.Any) -> str:
-    """Validate and return sanitized string, raising on failure."""
     validator = SecureInputValidator()
     result = validator.sanitizer.sanitize_string(value, **kwargs)
 
@@ -732,10 +643,8 @@ def validate_and_sanitize_string(value: str, **kwargs: t.Any) -> str:
 
 
 def validate_and_sanitize_path(value: str | Path, **kwargs: t.Any) -> Path:
-    """Validate and return sanitized path, raising on failure."""
     validator = SecureInputValidator()
     result = validator.sanitizer.sanitize_string(str(value), **kwargs)
-    # Convert back to Path if validation passes
 
     if not result.valid:
         raise ExecutionError(
@@ -747,7 +656,6 @@ def validate_and_sanitize_path(value: str | Path, **kwargs: t.Any) -> Path:
 
 
 def validate_and_parse_json(value: str, **kwargs: t.Any) -> t.Any:
-    """Validate and return parsed JSON, raising on failure."""
     validator = SecureInputValidator()
     result = validator.sanitizer.sanitize_json(value, **kwargs)
 

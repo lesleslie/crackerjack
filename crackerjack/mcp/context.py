@@ -130,7 +130,6 @@ class MCPServerConfig:
     cache_dir: Path | None = None
 
     def __post_init__(self) -> None:
-        # Validate all paths using secure path validation
         self.project_path = SecurePathValidator.validate_safe_path(self.project_path)
 
         if self.progress_dir:
@@ -149,7 +148,6 @@ class MCPServerContext:
     def __init__(self, config: MCPServerConfig) -> None:
         self.config = config
 
-        # Resource management
         self.resource_manager = ResourceManager()
         self.network_manager = NetworkResourceManager()
         register_global_resource_manager(self.resource_manager)
@@ -228,7 +226,6 @@ class MCPServerContext:
         if not self._initialized:
             return
 
-        # Run custom shutdown tasks first
         for task in reversed(self._shutdown_tasks):
             try:
                 await task()
@@ -236,24 +233,19 @@ class MCPServerContext:
                 if self.console:
                     self.console.print(f"[red]Error during shutdown: {e}[/red]")
 
-        # Cancel health check task
         if self._websocket_health_check_task:
             self._websocket_health_check_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._websocket_health_check_task
             self._websocket_health_check_task = None
 
-        # Stop WebSocket server
         await self._stop_websocket_server()
 
-        # Stop rate limiter
         if self.rate_limiter:
             await self.rate_limiter.stop()
 
-        # Stop batched saver
         await self.batched_saver.stop()
 
-        # Clean up all managed resources
         try:
             await self.network_manager.cleanup_all()
         except Exception as e:
@@ -369,7 +361,6 @@ class MCPServerContext:
             start_new_session=True,
         )
 
-        # Register the process with the network resource manager for automatic cleanup
         if self.websocket_server_process:
             managed_process = self.network_manager.create_subprocess(
                 self.websocket_server_process, timeout=30.0
@@ -568,7 +559,6 @@ class MCPServerContext:
             msg = f"Invalid job_id: {job_id}"
             raise ValueError(msg)
 
-        # Use secure path joining to prevent directory traversal
         return SecurePathValidator.secure_path_join(
             self.progress_dir, f"job-{job_id}.json"
         )

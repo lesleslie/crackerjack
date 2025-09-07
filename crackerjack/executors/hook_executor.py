@@ -170,17 +170,11 @@ class HookExecutor:
     def _run_hook_subprocess(
         self, hook: HookDefinition
     ) -> subprocess.CompletedProcess[str]:
-        """Run hook subprocess with comprehensive security validation."""
-        # Get sanitized environment
         clean_env = self._get_clean_environment()
 
-        # Use secure subprocess execution
         try:
-            # Pre-commit must run from repository root
-            # For crackerjack package structure, the repo root is pkg_path itself
             repo_root = self.pkg_path
-            # Pre-commit has compatibility issues with secure subprocess
-            # Use direct subprocess execution for hooks
+
             return subprocess.run(
                 hook.get_command(),
                 cwd=repo_root,
@@ -188,10 +182,9 @@ class HookExecutor:
                 timeout=hook.timeout,
                 capture_output=True,
                 text=True,
-                check=False,  # Don't raise on non-zero exit codes
+                check=False,
             )
         except Exception as e:
-            # Log security issues but convert to subprocess-compatible result
             security_logger = get_security_logger()
             security_logger.log_subprocess_failure(
                 command=hook.get_command(),
@@ -199,7 +192,6 @@ class HookExecutor:
                 error_output=str(e),
             )
 
-            # Return a failed CompletedProcess for consistency
             return subprocess.CompletedProcess(
                 args=hook.get_command(), returncode=1, stdout="", stderr=str(e)
             )
@@ -221,9 +213,7 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
         duration: float,
     ) -> HookResult:
-        # Formatting hooks return 1 when they fix files, which is success
         if hook.is_formatting and result.returncode == 1:
-            # Check if files were modified (successful formatting)
             output_text = result.stdout + result.stderr
             if "files were modified by this hook" in output_text:
                 status = "passed"
@@ -255,7 +245,6 @@ class HookExecutor:
 
         error_output = (result.stdout + result.stderr).strip()
 
-        # For formatting hooks that successfully modified files, don't report as issues
         if hook.is_formatting and "files were modified by this hook" in error_output:
             return []
 
@@ -376,13 +365,6 @@ class HookExecutor:
         return updated_results
 
     def _get_clean_environment(self) -> dict[str, str]:
-        """
-        Get a sanitized environment for hook execution.
-
-        This method now delegates to the secure subprocess utilities
-        for comprehensive environment sanitization with security logging.
-        """
-        # Create base environment with essential variables
         clean_env = {
             "HOME": os.environ.get("HOME", ""),
             "USER": os.environ.get("USER", ""),
@@ -392,14 +374,12 @@ class HookExecutor:
             "TERM": os.environ.get("TERM", "xterm-256color"),
         }
 
-        # Handle PATH sanitization with venv filtering
         system_path = os.environ.get("PATH", "")
         if system_path:
             venv_bin = str(Path(self.pkg_path) / ".venv" / "bin")
-            path_parts = [p for p in system_path.split(":") if p != venv_bin]
-            clean_env["PATH"] = ":".join(path_parts)
+            path_parts = [p for p in system_path.split(": ") if p != venv_bin]
+            clean_env["PATH"] = ": ".join(path_parts)
 
-        # Define Python-specific variables to exclude
         python_vars_to_exclude = {
             "VIRTUAL_ENV",
             "PYTHONPATH",
@@ -411,18 +391,15 @@ class HookExecutor:
             "POETRY_ACTIVE",
         }
 
-        # Add other safe environment variables
         security_logger = get_security_logger()
         original_count = len(os.environ)
         filtered_count = 0
 
         for key, value in os.environ.items():
             if key not in python_vars_to_exclude and key not in clean_env:
-                # Additional security filtering
                 if not key.startswith(
                     ("PYTHON", "PIP_", "CONDA_", "VIRTUAL_", "__PYVENV")
                 ):
-                    # Check for dangerous environment variables
                     if key not in {"LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "IFS", "PS4"}:
                         clean_env[key] = value
                     else:
@@ -435,12 +412,11 @@ class HookExecutor:
                 else:
                     filtered_count += 1
 
-        # Log environment sanitization if significant filtering occurred
-        if filtered_count > 5:  # Only log if substantial filtering
+        if filtered_count > 5:
             security_logger.log_subprocess_environment_sanitized(
                 original_count=original_count,
                 sanitized_count=len(clean_env),
-                filtered_vars=[],  # Don't expose all filtered vars for performance
+                filtered_vars=[],
             )
 
         return clean_env
@@ -451,6 +427,4 @@ class HookExecutor:
         results: list[HookResult],
         success: bool,
     ) -> None:
-        # Summary is handled by PhaseCoordinator to avoid duplicate messages
-        # Individual hook results are already displayed above
         pass

@@ -115,7 +115,6 @@ class DependencyResolver:
                     dependency = self.container.get(param.annotation)
                     kwargs[param_name] = dependency
                 except Exception as e:
-                    # Only log as warning for required parameters, debug for optional ones with defaults
                     if param.default == inspect.Parameter.empty:
                         self.logger.warning(
                             "Could not inject dependency",
@@ -476,11 +475,9 @@ class ServiceCollectionBuilder:
         return self
 
     def add_service_protocols(self) -> "ServiceCollectionBuilder":
-        """Add registrations for service protocols that don't have explicit builders."""
         console = self.console or Console(force_terminal=True)
         pkg_path = self.pkg_path or Path.cwd()
 
-        # Register CoverageRatchetProtocol
         def create_coverage_ratchet() -> CoverageRatchetProtocol:
             from crackerjack.services.coverage_ratchet import CoverageRatchetService
 
@@ -491,7 +488,6 @@ class ServiceCollectionBuilder:
             factory=create_coverage_ratchet,
         )
 
-        # Register ConfigurationServiceProtocol
         def create_configuration_service() -> ConfigurationServiceProtocol:
             from crackerjack.services.config import ConfigurationService
 
@@ -502,7 +498,6 @@ class ServiceCollectionBuilder:
             factory=create_configuration_service,
         )
 
-        # Register SecurityServiceProtocol
         def create_security_service() -> SecurityServiceProtocol:
             from crackerjack.services.security import SecurityService
 
@@ -513,7 +508,6 @@ class ServiceCollectionBuilder:
             factory=create_security_service,
         )
 
-        # Register InitializationServiceProtocol
         def create_initialization_service() -> InitializationServiceProtocol:
             from crackerjack.services.filesystem import FileSystemService
             from crackerjack.services.git import GitService
@@ -536,19 +530,16 @@ class ServiceCollectionBuilder:
 
         from crackerjack.services.unified_config import UnifiedConfigurationService
 
-        # Register concrete class for backwards compatibility
         self.container.register_singleton(
             UnifiedConfigurationService,
             factory=lambda: UnifiedConfigurationService(console, pkg_path),
         )
 
-        # Register protocol interface
         self.container.register_singleton(
             UnifiedConfigurationServiceProtocol,
             factory=lambda: self.container.get(UnifiedConfigurationService),
         )
 
-        # Register ConfigMergeService for smart configuration merging
         from crackerjack.services.config_merge import ConfigMergeService
 
         def create_config_merge_service() -> ConfigMergeService:
