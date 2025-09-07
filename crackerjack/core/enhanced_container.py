@@ -11,11 +11,16 @@ from rich.console import Console
 
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
+    ConfigurationServiceProtocol,
+    CoverageRatchetProtocol,
     FileSystemInterface,
     GitInterface,
     HookManager,
+    InitializationServiceProtocol,
     PublishManager,
+    SecurityServiceProtocol,
     TestManagerProtocol,
+    UnifiedConfigurationServiceProtocol,
 )
 from crackerjack.services.logging import get_logger
 
@@ -470,15 +475,69 @@ class ServiceCollectionBuilder:
 
         return self
 
+    def add_service_protocols(self) -> "ServiceCollectionBuilder":
+        """Add registrations for service protocols that don't have explicit builders."""
+        console = self.console or Console(force_terminal=True)
+        pkg_path = self.pkg_path or Path.cwd()
+
+        # Register CoverageRatchetProtocol
+        def create_coverage_ratchet() -> CoverageRatchetProtocol:
+            from crackerjack.services.coverage_ratchet import CoverageRatchetService
+            return CoverageRatchetService(pkg_path, console)
+
+        self.container.register_transient(
+            CoverageRatchetProtocol,
+            factory=create_coverage_ratchet,
+        )
+
+        # Register ConfigurationServiceProtocol  
+        def create_configuration_service() -> ConfigurationServiceProtocol:
+            from crackerjack.services.config import ConfigurationService
+            return ConfigurationService(console=console, pkg_path=pkg_path)
+
+        self.container.register_transient(
+            ConfigurationServiceProtocol,
+            factory=create_configuration_service,
+        )
+
+        # Register SecurityServiceProtocol
+        def create_security_service() -> SecurityServiceProtocol:
+            from crackerjack.services.security import SecurityService
+            return SecurityService()
+
+        self.container.register_transient(
+            SecurityServiceProtocol,
+            factory=create_security_service,
+        )
+
+        # Register InitializationServiceProtocol
+        def create_initialization_service() -> InitializationServiceProtocol:
+            from crackerjack.services.initialization import InitializationService
+            return InitializationService(console, pkg_path)
+
+        self.container.register_transient(
+            InitializationServiceProtocol,
+            factory=create_initialization_service,
+        )
+
+        return self
+
     def add_configuration_services(self) -> "ServiceCollectionBuilder":
         console = self.console or Console(force_terminal=True)
         pkg_path = self.pkg_path or Path.cwd()
 
         from crackerjack.services.unified_config import UnifiedConfigurationService
 
+        # Register concrete class for backwards compatibility
         self.container.register_singleton(
             UnifiedConfigurationService,
             factory=lambda: UnifiedConfigurationService(console, pkg_path),
+        )
+
+        # Register protocol interface  
+        self.container.register_singleton(
+            UnifiedConfigurationServiceProtocol,
+            factory=lambda: self.container.get(UnifiedConfigurationService),
         )
 
         # Register ConfigMergeService for smart configuration merging

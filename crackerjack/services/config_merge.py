@@ -8,9 +8,11 @@ import tomli_w
 import yaml
 from rich.console import Console
 
-from crackerjack.models.protocols import ConfigMergeServiceProtocol
-from crackerjack.services.filesystem import FileSystemService
-from crackerjack.services.git import GitService
+from crackerjack.models.protocols import (
+    ConfigMergeServiceProtocol,
+    FileSystemInterface,
+    GitInterface,
+)
 from crackerjack.services.logging import get_logger
 
 
@@ -29,8 +31,8 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
     def __init__(
         self,
         console: Console,
-        filesystem: FileSystemService,
-        git_service: GitService,
+        filesystem: FileSystemInterface,
+        git_service: GitInterface,
     ) -> None:
         self.console = console
         self.filesystem = filesystem

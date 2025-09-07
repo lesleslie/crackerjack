@@ -5,21 +5,31 @@ from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.models.protocols import OptionsProtocol
-from crackerjack.services.coverage_ratchet import CoverageRatchetService
+from crackerjack.models.protocols import CoverageRatchetProtocol, OptionsProtocol
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
 
 
 class TestManager:
-    def __init__(self, console: Console, pkg_path: Path) -> None:
+    def __init__(
+        self, 
+        console: Console, 
+        pkg_path: Path, 
+        coverage_ratchet: CoverageRatchetProtocol | None = None
+    ) -> None:
         self.console = console
         self.pkg_path = pkg_path
 
         self.executor = TestExecutor(console, pkg_path)
         self.command_builder = TestCommandBuilder(pkg_path)
-        self.coverage_ratchet = CoverageRatchetService(pkg_path, console)
+        
+        if coverage_ratchet is None:
+            # Import here to avoid circular imports
+            from crackerjack.services.coverage_ratchet import CoverageRatchetService
+            coverage_ratchet = CoverageRatchetService(pkg_path, console)
+        
+        self.coverage_ratchet = coverage_ratchet
 
         self._last_test_failures: list[str] = []
         self._progress_callback: t.Callable[[dict[str, t.Any]], None] | None = None

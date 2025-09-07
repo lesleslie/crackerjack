@@ -145,6 +145,63 @@ class SecurityAwareHookManager(HookManager, t.Protocol):
 
 
 @t.runtime_checkable
+class CoverageRatchetProtocol(t.Protocol):
+    """Protocol for coverage ratchet service."""
+
+    def get_baseline_coverage(self) -> float: ...
+
+    def update_baseline_coverage(self, new_coverage: float) -> bool: ...
+
+    def is_coverage_regression(self, current_coverage: float) -> bool: ...
+
+    def get_coverage_improvement_needed(self) -> float: ...
+
+
+@t.runtime_checkable
+class ConfigurationServiceProtocol(t.Protocol):
+    """Protocol for configuration service."""
+
+    def update_precommit_config(self, options: OptionsProtocol) -> bool: ...
+
+    def update_pyproject_config(self, options: OptionsProtocol) -> bool: ...
+
+    def get_temp_config_path(self) -> str | None: ...
+
+
+@t.runtime_checkable
+class SecurityServiceProtocol(t.Protocol):
+    """Protocol for security service."""
+
+    def validate_file_safety(self, path: str | Path) -> bool: ...
+
+    def check_hardcoded_secrets(self, content: str) -> list[dict[str, t.Any]]: ...
+
+    def is_safe_subprocess_call(self, cmd: list[str]) -> bool: ...
+
+
+@t.runtime_checkable
+class InitializationServiceProtocol(t.Protocol):
+    """Protocol for initialization service."""
+
+    def initialize_project(self, project_path: str | Path) -> bool: ...
+
+    def validate_project_structure(self) -> bool: ...
+
+    def setup_git_hooks(self) -> bool: ...
+
+
+@t.runtime_checkable
+class UnifiedConfigurationServiceProtocol(t.Protocol):
+    """Protocol for unified configuration service."""
+
+    def merge_configurations(self) -> dict[str, t.Any]: ...
+
+    def validate_configuration(self, config: dict[str, t.Any]) -> bool: ...
+
+    def get_merged_config(self) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
 class TestManagerProtocol(t.Protocol):
     def run_tests(self, options: OptionsProtocol) -> bool: ...
 

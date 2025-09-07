@@ -17,7 +17,7 @@ from crackerjack.models.protocols import (
     PublishManager,
     TestManagerProtocol,
 )
-from crackerjack.services.config import ConfigurationService
+from crackerjack.models.protocols import ConfigurationServiceProtocol
 
 from .session_coordinator import SessionCoordinator
 
@@ -56,6 +56,8 @@ class PhaseCoordinator(ErrorHandlingMixin):
             security_logger=None,
             backup_service=None,
         )
+        # Initialize configuration service - could be injected via DI
+        from crackerjack.services.config import ConfigurationService
         self.config_service = ConfigurationService(console=console, pkg_path=pkg_path)
         self.autofix_coordinator = AutofixCoordinator(
             console=console, pkg_path=pkg_path

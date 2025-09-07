@@ -5,17 +5,32 @@ from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.services.filesystem import FileSystemService
-from crackerjack.services.security import SecurityService
+from crackerjack.models.protocols import FileSystemInterface, SecurityServiceProtocol
 
 
 class PublishManagerImpl:
-    def __init__(self, console: Console, pkg_path: Path, dry_run: bool = False) -> None:
+    def __init__(
+        self, 
+        console: Console, 
+        pkg_path: Path, 
+        dry_run: bool = False,
+        filesystem: FileSystemInterface | None = None,
+        security: SecurityServiceProtocol | None = None
+    ) -> None:
         self.console = console
         self.pkg_path = pkg_path
         self.dry_run = dry_run
-        self.filesystem = FileSystemService()
-        self.security = SecurityService()
+        
+        if filesystem is None:
+            from crackerjack.services.filesystem import FileSystemService
+            filesystem = FileSystemService()
+        
+        if security is None:
+            from crackerjack.services.security import SecurityService
+            security = SecurityService()
+            
+        self.filesystem = filesystem
+        self.security = security
 
     def _run_command(
         self,

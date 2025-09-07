@@ -514,11 +514,17 @@ class TestMockProtocolImplementations:
             def add_files(self, files: list[str]) -> bool:
                 return len(files) == 0
 
+            def add_all_files(self) -> bool:
+                return False
+
             def get_commit_message_suggestions(
                 self,
                 changed_files: list[str],
             ) -> list[str]:
                 return ["No suggestions available"]
+
+            def get_unpushed_commit_count(self) -> int:
+                return 0
 
         edge_git = EdgeCaseGit()
         assert isinstance(edge_git, GitInterface)
