@@ -32,5 +32,6 @@
 /coverage.xml
 /dist/
 /htmlcov/
+/session_handoff_*.md
 __pycache__/
 crackerjack-debug-*.log
