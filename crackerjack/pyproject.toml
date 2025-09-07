@@ -113,7 +113,6 @@ fixable = [
 max-complexity = 15
 
 [tool.crackerjack]
-# MCP Server Configuration
 mcp_http_port = 8676
 mcp_http_host = "127.0.0.1"
 mcp_websocket_port = 8675

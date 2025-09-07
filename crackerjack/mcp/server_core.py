@@ -223,6 +223,81 @@ def _stop_websocket_server() -> None:
             pass
 
 
+def _merge_config_with_args(
+    mcp_config: dict[str, t.Any],
+    http_port: int | None,
+    http_mode: bool,
+) -> dict[str, t.Any]:
+    """Merge MCP configuration with command line arguments."""
+    if http_port:
+        mcp_config["http_port"] = http_port
+    if http_mode:
+        mcp_config["http_enabled"] = True
+    return mcp_config
+
+
+def _setup_server_context(
+    project_path: Path,
+    websocket_port: int | None,
+) -> MCPServerContext:
+    """Set up and initialize the MCP server context."""
+    config = MCPServerConfig(
+        project_path=project_path,
+        rate_limit_config=RateLimitConfig(),
+    )
+
+    context = MCPServerContext(config)
+    context.console = console
+
+    if websocket_port:
+        context.websocket_server_port = websocket_port
+
+    _initialize_context(context)
+    return context
+
+
+def _print_server_info(
+    project_path: Path,
+    mcp_config: dict[str, t.Any],
+    websocket_port: int | None,
+    http_mode: bool,
+) -> None:
+    """Print server startup information."""
+    console.print("[green]Starting Crackerjack MCP Server...[/ green]")
+    console.print(f"Project path: {project_path}")
+
+    if mcp_config.get("http_enabled", False) or http_mode:
+        console.print(
+            f"[cyan]HTTP Mode: http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp[/ cyan]"
+        )
+    else:
+        console.print("[cyan]STDIO Mode[/ cyan]")
+
+    if websocket_port:
+        console.print(f"WebSocket port: {websocket_port}")
+
+
+def _run_mcp_server(
+    mcp_app: t.Any, mcp_config: dict[str, t.Any], http_mode: bool
+) -> None:
+    """Execute the MCP server with appropriate transport mode."""
+    console.print("[yellow]MCP app created, about to run...[/ yellow]")
+
+    try:
+        if mcp_config.get("http_enabled", False) or http_mode:
+            host = mcp_config.get("http_host", "127.0.0.1")
+            port = mcp_config.get("http_port", 8676)
+            mcp_app.run(transport="streamable-http", host=host, port=port)
+        else:
+            mcp_app.run()
+    except Exception as e:
+        console.print(f"[red]MCP run failed: {e}[/ red]")
+        import traceback
+
+        traceback.print_exc()
+        raise
+
+
 def main(
     project_path_arg: str = ".",
     websocket_port: int | None = None,
@@ -235,60 +310,24 @@ def main(
     try:
         project_path = Path(project_path_arg).resolve()
 
-        # Load MCP configuration from pyproject.toml
+        # Load and merge configuration
         mcp_config = _load_mcp_config(project_path)
+        mcp_config = _merge_config_with_args(mcp_config, http_port, http_mode)
 
-        # Override with command line arguments
-        if http_port:
-            mcp_config["http_port"] = http_port
-        if http_mode:
-            mcp_config["http_enabled"] = True
+        # Set up server context
+        _setup_server_context(project_path, websocket_port)
 
-        config = MCPServerConfig(
-            project_path=project_path,
-            rate_limit_config=RateLimitConfig(),
-        )
-
-        context = MCPServerContext(config)
-        context.console = console
-
-        if websocket_port:
-            context.websocket_server_port = websocket_port
-
-        _initialize_context(context)
-
+        # Create MCP server
         mcp_app = create_mcp_server(mcp_config)
         if not mcp_app:
             console.print("[red]Failed to create MCP server[/ red]")
             return
 
-        console.print("[green]Starting Crackerjack MCP Server...[/ green]")
-        console.print(f"Project path: {project_path}")
+        # Print server information
+        _print_server_info(project_path, mcp_config, websocket_port, http_mode)
 
-        if mcp_config.get("http_enabled", False) or http_mode:
-            console.print(
-                f"[cyan]HTTP Mode: http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp[/ cyan]"
-            )
-        else:
-            console.print("[cyan]STDIO Mode[/ cyan]")
-
-        if websocket_port:
-            console.print(f"WebSocket port: {websocket_port}")
-
-        console.print("[yellow]MCP app created, about to run...[/ yellow]")
-        try:
-            if mcp_config.get("http_enabled", False) or http_mode:
-                host = mcp_config.get("http_host", "127.0.0.1")
-                port = mcp_config.get("http_port", 8676)
-                mcp_app.run(transport="streamable-http", host=host, port=port)
-            else:
-                mcp_app.run()
-        except Exception as e:
-            console.print(f"[red]MCP run failed: {e}[/ red]")
-            import traceback
-
-            traceback.print_exc()
-            raise
+        # Run the server
+        _run_mcp_server(mcp_app, mcp_config, http_mode)
 
     except KeyboardInterrupt:
         console.print("Server stopped by user")
