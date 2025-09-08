@@ -74,6 +74,13 @@ Repository = "https://github.com/lesleslie/session-mgmt-mcp"
 [project.scripts]
 session-mgmt-mcp = "session_mgmt_mcp.server:main"
 
+[tool.session-mgmt-mcp]
+# MCP Server Configuration
+mcp_http_port = 8678
+mcp_http_host = "127.0.0.1"
+websocket_monitor_port = 8677
+http_enabled = true
+
 [dependency-groups]
 dev = [
     "coverage>=7.10.5",

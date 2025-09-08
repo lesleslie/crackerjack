@@ -8,6 +8,22 @@ A dedicated MCP server that provides comprehensive session management functional
 - **🔍 Quality Checkpoints**: Mid-session quality monitoring with workflow analysis and optimization recommendations
 - **🏁 Session Cleanup**: Comprehensive cleanup with learning capture and handoff file creation
 - **📊 Status Monitoring**: Real-time session status and project context analysis
+- **⚡ Auto-Generated Shortcuts**: Automatically creates `/start`, `/checkpoint`, and `/end` Claude Code slash commands
+
+## 🚀 Automatic Session Management (NEW!)
+
+**For Git Repositories:**
+- ✅ **Automatic initialization** when Claude Code connects
+- ✅ **Automatic cleanup** when session ends (quit, crash, or network failure)
+- ✅ **Intelligent auto-compaction** during checkpoints
+- ✅ **Zero manual intervention** required
+
+**For Non-Git Projects:**
+- 📝 Use `/start` for manual initialization
+- 📝 Use `/end` for manual cleanup
+- 📝 Full session management features available on-demand
+
+The server automatically detects git repositories and provides seamless session lifecycle management with crash resilience and network failure recovery. Non-git projects retain manual control for flexible workflow management.
 
 ## Available MCP Tools
 
@@ -26,6 +42,7 @@ A dedicated MCP server that provides comprehensive session management functional
   - Real-time quality scoring (project health, permissions, tools)
   - Workflow drift detection and optimization recommendations
   - Progress tracking and goal alignment
+  - **Automatic context compaction when needed (NEW!)**
   - Automatic git checkpoint commits (if in git repo)
 
 - **`end`** - Complete session cleanup featuring:
@@ -209,6 +226,16 @@ Once configured, the following slash commands become available in Claude Code:
 - `/session-mgmt:checkpoint` - Quality monitoring checkpoint with scoring
 - `/session-mgmt:end` - Complete session cleanup with learning capture
 - `/session-mgmt:status` - Current status overview with health checks
+
+### Auto-Generated Shortcuts
+
+The first time you run `/session-mgmt:init`, convenient shortcuts are automatically created:
+
+- **`/start`** → `/session-mgmt:init` - Quick session initialization
+- **`/checkpoint [name]`** → `/session-mgmt:checkpoint` - Create named checkpoints
+- **`/end`** → `/session-mgmt:end` - Quick session cleanup
+
+> These shortcuts are created in `~/.claude/commands/` and work across all projects
 
 ### Memory & Search Commands
 

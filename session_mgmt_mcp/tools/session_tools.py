@@ -17,6 +17,95 @@ session_manager = SessionLifecycleManager()
 logger = get_session_logger()
 
 
+def _create_session_shortcuts() -> dict:
+    """Create Claude Code slash command shortcuts for session management.
+    
+    Creates /start, /checkpoint, and /end shortcuts in ~/.claude/commands/
+    that map to session-mgmt MCP tools.
+    
+    Returns:
+        Dict with 'created' bool, 'existed' bool, and 'shortcuts' list
+    """
+    claude_home = Path.home() / ".claude"
+    commands_dir = claude_home / "commands"
+    
+    # Create commands directory if it doesn't exist
+    commands_dir.mkdir(parents=True, exist_ok=True)
+    
+    shortcuts = {
+        "start": {
+            "file": "start.md",
+            "content": """---
+description: Start session management for current project
+---
+
+Please execute session-mgmt:init to initialize session management for the current project.
+
+This will:
+1. Set up session tracking for the git repository
+2. Initialize conversation memory and context
+3. Prepare the project for enhanced Claude Code workflows
+4. Install UV dependencies and automation tools
+""",
+        },
+        "checkpoint": {
+            "file": "checkpoint.md", 
+            "content": """---
+argument-hint: [checkpoint-name]
+description: Create a session checkpoint with progress summary
+---
+
+Please execute session-mgmt:checkpoint with name: $ARGUMENTS
+
+This command will:
+1. Create a checkpoint of the current development session
+2. Summarize progress made so far
+3. Document any pending tasks or context
+4. Prepare for seamless session resumption
+
+If no checkpoint name is provided, use a default timestamp-based name.
+""",
+        },
+        "end": {
+            "file": "end.md",
+            "content": """---
+description: End current session with cleanup and summary
+---
+
+Please execute session-mgmt:end to gracefully end the current session.
+
+This will:
+1. Create a final checkpoint of all work completed
+2. Generate session summary and insights
+3. Clean up temporary resources
+4. Prepare handoff documentation for next session
+""",
+        }
+    }
+    
+    created_shortcuts = []
+    existing_shortcuts = []
+    
+    for shortcut_name, shortcut_data in shortcuts.items():
+        shortcut_path = commands_dir / shortcut_data["file"]
+        
+        if shortcut_path.exists():
+            existing_shortcuts.append(shortcut_name)
+        else:
+            try:
+                shortcut_path.write_text(shortcut_data["content"])
+                created_shortcuts.append(shortcut_name)
+                logger.info(f"Created slash command shortcut: /{shortcut_name}")
+            except Exception as e:
+                logger.error(f"Failed to create shortcut /{shortcut_name}: {e}")
+    
+    return {
+        "created": bool(created_shortcuts),
+        "existed": bool(existing_shortcuts) and not created_shortcuts,
+        "shortcuts": created_shortcuts if created_shortcuts else existing_shortcuts,
+    }
+
+
 # Tool implementations
 async def _init_impl(working_directory: str | None = None) -> str:
     """Implementation for init tool."""
@@ -51,6 +140,15 @@ async def _init_impl(working_directory: str | None = None) -> str:
                 for rec in recommendations[:3]:
                     output.append(f"   • {rec}")
 
+            # Auto-create slash command shortcuts
+            shortcuts_result = _create_session_shortcuts()
+            if shortcuts_result["created"]:
+                output.append("\n🔧 Created session management shortcuts:")
+                for shortcut in shortcuts_result["shortcuts"]:
+                    output.append(f"   • /{shortcut}")
+            elif shortcuts_result["existed"]:
+                output.append("\n✅ Session shortcuts already exist")
+
             output.append("\n✅ Session initialization completed successfully!")
 
         else:
@@ -65,6 +163,8 @@ async def _init_impl(working_directory: str | None = None) -> str:
 
 async def _checkpoint_impl() -> str:
     """Implementation for checkpoint tool."""
+    from ..server_optimized import should_suggest_compact, _execute_auto_compact
+    
     output = []
     output.append(
         f"🔍 Claude Session Checkpoint - {session_manager.current_project or 'Current Project'}",
@@ -81,9 +181,25 @@ async def _checkpoint_impl() -> str:
             # Add git checkpoint output
             output.extend(result["git_output"])
 
+            # Auto-compact when needed (new functionality)
+            should_compact, reason = should_suggest_compact()
+            output.append("\n🔄 Automatic Compaction Analysis")
+            output.append(f"📊 {reason}")
+            
+            if should_compact:
+                output.append("\n🔄 Executing automatic compaction...")
+                try:
+                    compact_result = await _execute_auto_compact()
+                    output.append("✅ Context automatically optimized")
+                except Exception as e:
+                    output.append(f"⚠️ Auto-compact skipped: {str(e)}")
+                    output.append("💡 Consider running /compact manually")
+            else:
+                output.append("✅ Context appears well-optimized for current session")
+
             output.append(f"\n⏰ Checkpoint completed at: {result['timestamp']}")
             output.append(
-                "\n💡 Use this checkpoint data to track session progress and identify optimization opportunities.",
+                "\n💡 This checkpoint includes intelligent conversation management and optimization.",
             )
 
         else:

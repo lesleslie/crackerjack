@@ -294,12 +294,19 @@ class SessionLifecycleManager:
             # Analyze project context
             project_context = await self.analyze_project_context(current_dir)
             quality_score, quality_data = await self.perform_quality_assessment()
+            
+            # Check for previous session information
+            previous_session_info = None
+            latest_handoff = self._find_latest_handoff_file(current_dir)
+            if latest_handoff:
+                previous_session_info = self._read_previous_session_info(latest_handoff)
 
             self.logger.info(
                 "Session initialized",
                 project=self.current_project,
                 quality_score=quality_score,
                 working_directory=str(current_dir),
+                has_previous_session=previous_session_info is not None,
             )
 
             return {
@@ -310,6 +317,7 @@ class SessionLifecycleManager:
                 "quality_data": quality_data,
                 "project_context": project_context,
                 "claude_directory": str(claude_dir),
+                "previous_session": previous_session_info,
             }
 
         except Exception as e:
@@ -453,10 +461,14 @@ class SessionLifecycleManager:
     ) -> Path | None:
         """Save handoff documentation to file."""
         try:
+            # Create organized directory structure
+            handoff_dir = working_dir / ".crackerjack" / "session" / "handoff"
+            handoff_dir.mkdir(parents=True, exist_ok=True)
+            
             # Create handoff filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"session_handoff_{timestamp}.md"
-            handoff_path = working_dir / filename
+            handoff_path = handoff_dir / filename
 
             # Write content to file
             with open(handoff_path, "w", encoding="utf-8") as f:
@@ -465,6 +477,67 @@ class SessionLifecycleManager:
             return handoff_path
         except Exception as e:
             self.logger.exception("Failed to save handoff documentation", error=str(e))
+            return None
+
+    def _find_latest_handoff_file(self, working_dir: Path) -> Path | None:
+        """Find the most recent session handoff file."""
+        try:
+            handoff_dir = working_dir / ".crackerjack" / "session" / "handoff"
+            
+            if not handoff_dir.exists():
+                # Check for legacy handoff files in project root
+                legacy_files = list(working_dir.glob("session_handoff_*.md"))
+                if legacy_files:
+                    # Return the most recent legacy file
+                    return max(legacy_files, key=lambda f: f.stat().st_mtime)
+                return None
+            
+            # Find all handoff files
+            handoff_files = list(handoff_dir.glob("session_handoff_*.md"))
+            
+            if not handoff_files:
+                return None
+            
+            # Return the most recent file based on timestamp in filename
+            return max(handoff_files, key=lambda f: f.name)
+            
+        except Exception as e:
+            self.logger.debug(f"Error finding handoff files: {e}")
+            return None
+
+    def _read_previous_session_info(self, handoff_file: Path) -> dict[str, str] | None:
+        """Extract key information from previous session handoff file."""
+        try:
+            with open(handoff_file, encoding="utf-8") as f:
+                content = f.read()
+            
+            info = {}
+            lines = content.split("\n")
+            
+            for line in lines:
+                if line.startswith("**Session ended:**"):
+                    info["ended_at"] = line.split("**Session ended:**")[1].strip()
+                elif line.startswith("**Final quality score:**"):
+                    info["quality_score"] = line.split("**Final quality score:**")[1].strip()
+                elif line.startswith("**Working directory:**"):
+                    info["working_directory"] = line.split("**Working directory:**")[1].strip()
+            
+            # Extract first recommendation if available
+            in_recommendations = False
+            for line in lines:
+                if "## Recommendations for Next Session" in line:
+                    in_recommendations = True
+                    continue
+                elif in_recommendations and line.strip().startswith("1."):
+                    info["top_recommendation"] = line.strip()[3:].strip()  # Remove "1. "
+                    break
+                elif in_recommendations and line.startswith("##"):
+                    break  # End of recommendations section
+            
+            return info if info else None
+            
+        except Exception as e:
+            self.logger.debug(f"Error reading handoff file: {e}")
             return None
 
     async def get_session_status(

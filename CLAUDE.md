@@ -279,24 +279,45 @@ LIMIT 20;
 
 ### Session Management Workflow
 
-1. **Initialization** (`init` tool):
+## Recommended Session Workflow
 
+### Git Repositories (Automatic)
+1. **Start Claude Code** - Session auto-initializes
+2. **Work normally** - Automatic quality tracking
+3. **Run `/checkpoint`** - Manual checkpoints with auto-compaction
+4. **Exit any way** - Session auto-cleanup on disconnect
+
+### Non-Git Projects (Manual)
+1. **Start with**: `/start` (if you want session management)
+2. **Checkpoint**: `/checkpoint` as needed
+3. **End with**: `/end` before quitting
+
+### Detailed Tool Functions
+
+1. **Automatic Initialization** (Git repos only):
+
+   - **Triggers**: Claude Code connection in git repository
    - Sets up ~/.claude directory structure
    - Syncs UV dependencies and generates requirements.txt
    - Analyzes project context and calculates maturity score
    - Sets up session permissions and auto-checkpoints
+   - **Crash resilient**: Works even after network/system failures
 
-1. **Quality Monitoring** (`checkpoint` tool):
+1. **Enhanced Quality Monitoring** (`checkpoint` tool):
 
    - Calculates multi-factor quality score (project health, permissions, tools)
+   - **NEW: Automatic context compaction when needed**
    - Creates automatic Git commits with checkpoint metadata
    - Provides workflow optimization recommendations
+   - Intelligent analysis of development patterns
 
-1. **Session Cleanup** (`end` tool):
+1. **Automatic Session Cleanup** (Git repos only):
 
+   - **Triggers**: Any disconnect, quit, crash, or network failure
    - Generates session handoff documentation
    - Performs final quality assessment
    - Cleans up session artifacts
+   - **Zero manual intervention** required
 
 ### Memory System Architecture
 

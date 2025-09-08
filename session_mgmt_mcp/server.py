@@ -21,6 +21,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    import tomli
+except ImportError:
+    tomli = None
+
 
 # Configure structured logging
 class SessionLogger:
@@ -363,8 +368,56 @@ def _generate_server_guidance(detected_servers: dict[str, bool]) -> list[str]:
     return guidance
 
 
-# Initialize FastMCP 2.0 server
-mcp = FastMCP("session-mgmt-mcp")
+def _load_mcp_config() -> dict[str, Any]:
+    """Load MCP server configuration from pyproject.toml."""
+    # Look for pyproject.toml in the current project directory
+    pyproject_path = Path.cwd() / "pyproject.toml"
+    
+    # If not found in cwd, look in parent directories (up to 3 levels)
+    if not pyproject_path.exists():
+        for parent in Path.cwd().parents[:3]:
+            potential_path = parent / "pyproject.toml"
+            if potential_path.exists():
+                pyproject_path = potential_path
+                break
+    
+    if not pyproject_path.exists() or not tomli:
+        return {
+            "http_port": 8678,
+            "http_host": "127.0.0.1", 
+            "websocket_monitor_port": 8677,
+            "http_enabled": False
+        }
+    
+    try:
+        with pyproject_path.open("rb") as f:
+            pyproject_data = tomli.load(f)
+            
+        session_config = pyproject_data.get("tool", {}).get("session-mgmt-mcp", {})
+        
+        return {
+            "http_port": session_config.get("mcp_http_port", 8678),
+            "http_host": session_config.get("mcp_http_host", "127.0.0.1"),
+            "websocket_monitor_port": session_config.get("websocket_monitor_port", 8677),
+            "http_enabled": session_config.get("http_enabled", False)
+        }
+    except Exception as e:
+        print(f"Warning: Failed to load MCP config from pyproject.toml: {e}", file=sys.stderr)
+        return {
+            "http_port": 8678,
+            "http_host": "127.0.0.1",
+            "websocket_monitor_port": 8677,
+            "http_enabled": False
+        }
+
+
+# Load configuration and initialize FastMCP 2.0 server
+_mcp_config = _load_mcp_config()
+
+mcp = FastMCP(
+    "session-mgmt-mcp",
+    streamable_http_path="/mcp"
+)
 
 # Register extracted tool modules following crackerjack architecture patterns
 # Import session command definitions
@@ -411,10 +464,43 @@ register_team_tools(mcp)
 # Register slash commands as MCP prompts (not resources!)
 
 
+async def auto_setup_git_working_directory() -> None:
+    """Auto-detect and setup git working directory for enhanced DX."""
+    try:
+        # Get current working directory
+        current_dir = Path(os.getcwd())
+        
+        # Import git utilities
+        from session_mgmt_mcp.utils.git_operations import get_git_root, is_git_repository
+        
+        # Try to find git root from current directory
+        git_root = None
+        if is_git_repository(current_dir):
+            git_root = get_git_root(current_dir)
+        
+        if git_root and git_root.exists():
+            # Log the auto-setup action for Claude to see
+            session_logger.info(f"🔧 Auto-detected git repository: {git_root}")
+            session_logger.info(f"💡 Recommend: Use `mcp__git__git_set_working_dir` with path='{git_root}'")
+            
+            # Also log to stderr for immediate visibility
+            print(f"📍 Git repository detected: {git_root}", file=sys.stderr)
+            print(f"💡 Tip: Auto-setup git working directory with: git_set_working_dir('{git_root}')", file=sys.stderr)
+        else:
+            session_logger.debug("No git repository detected in current directory - skipping auto-setup")
+            
+    except Exception as e:
+        # Graceful fallback - don't break server startup
+        session_logger.debug(f"Git auto-setup failed (non-critical): {e}")
+
+
 # Register init prompt
 async def initialize_new_features() -> None:
     """Initialize multi-project coordination and advanced search features."""
     global multi_project_coordinator, advanced_search_engine, app_config
+
+    # Auto-setup git working directory for enhanced DX
+    await auto_setup_git_working_directory()
 
     # Load configuration
     if CONFIG_AVAILABLE:
@@ -3322,7 +3408,7 @@ async def git_worktree_switch(
         return f"❌ Failed to switch worktree context: {e}"
 
 
-def main() -> None:
+def main(http_mode: bool = False, http_port: int | None = None) -> None:
     """Main entry point for the MCP server."""
     # Initialize new features on startup
     import asyncio
@@ -3333,8 +3419,33 @@ def main() -> None:
         # Silently handle optional feature initialization failures
         pass
 
-    mcp.run()
+    # Get host and port from config
+    host = _mcp_config.get("http_host", "127.0.0.1")
+    port = http_port if http_port else _mcp_config.get("http_port", 8678)
+        
+    # Check configuration and command line flags
+    config_http_enabled = _mcp_config.get("http_enabled", False)
+    use_http = http_mode or config_http_enabled
+    
+    if use_http:
+        print(f"Starting Session Management MCP HTTP Server on http://{host}:{port}/mcp", file=sys.stderr)
+        print(f"WebSocket Monitor: {_mcp_config.get('websocket_monitor_port', 8677)}", file=sys.stderr)
+        mcp.run(transport="streamable-http", host=host, port=port)
+    else:
+        print("Starting Session Management MCP Server in STDIO mode", file=sys.stderr)
+        mcp.run()
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    
+    # Check for HTTP mode flags
+    http_mode = "--http" in sys.argv
+    http_port = None
+    
+    if "--http-port" in sys.argv:
+        port_idx = sys.argv.index("--http-port")
+        if port_idx + 1 < len(sys.argv):
+            http_port = int(sys.argv[port_idx + 1])
+    
+    main(http_mode, http_port)
