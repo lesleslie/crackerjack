@@ -75,28 +75,10 @@ Repository = "https://github.com/lesleslie/session-mgmt-mcp"
 session-mgmt-mcp = "session_mgmt_mcp.server:main"
 
 [tool.session-mgmt-mcp]
-# MCP Server Configuration
 mcp_http_port = 8678
 mcp_http_host = "127.0.0.1"
 websocket_monitor_port = 8677
 http_enabled = true
-
-[dependency-groups]
-dev = [
-    "coverage>=7.10.5",
-    "factory-boy>=3.3.3",
-    "hypothesis>=6.138.7",
-    "psutil>=7",
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.1",
-    "pytest-benchmark>=5.1",
-    "pytest-cov>=6.2.1",
-    "pytest-mock>=3.14.1",
-    "pytest-timeout>=2.4",
-    "pytest-xdist>=3.8",
-    "crackerjack",
-    "excalidraw-mcp>=0.1.2",
-]
 
 [tool.ruff]
 target-version = "py313"
@@ -503,3 +485,20 @@ exclude = [
 ]
 safe = true
 aggressive = true
+
+[dependency-groups]
+dev = [
+    "coverage>=7.10.5",
+    "factory-boy>=3.3.3",
+    "hypothesis>=6.138.7",
+    "psutil>=7",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1",
+    "pytest-benchmark>=5.1",
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.14.1",
+    "pytest-timeout>=2.4",
+    "pytest-xdist>=3.8",
+    "crackerjack",
+    "excalidraw-mcp>=0.1.2",
+]

@@ -13,12 +13,14 @@ A dedicated MCP server that provides comprehensive session management functional
 ## 🚀 Automatic Session Management (NEW!)
 
 **For Git Repositories:**
+
 - ✅ **Automatic initialization** when Claude Code connects
 - ✅ **Automatic cleanup** when session ends (quit, crash, or network failure)
 - ✅ **Intelligent auto-compaction** during checkpoints
 - ✅ **Zero manual intervention** required
 
 **For Non-Git Projects:**
+
 - 📝 Use `/start` for manual initialization
 - 📝 Use `/end` for manual cleanup
 - 📝 Full session management features available on-demand

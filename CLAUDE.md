@@ -282,15 +282,17 @@ LIMIT 20;
 ## Recommended Session Workflow
 
 ### Git Repositories (Automatic)
+
 1. **Start Claude Code** - Session auto-initializes
-2. **Work normally** - Automatic quality tracking
-3. **Run `/checkpoint`** - Manual checkpoints with auto-compaction
-4. **Exit any way** - Session auto-cleanup on disconnect
+1. **Work normally** - Automatic quality tracking
+1. **Run `/checkpoint`** - Manual checkpoints with auto-compaction
+1. **Exit any way** - Session auto-cleanup on disconnect
 
 ### Non-Git Projects (Manual)
+
 1. **Start with**: `/start` (if you want session management)
-2. **Checkpoint**: `/checkpoint` as needed
-3. **End with**: `/end` before quitting
+1. **Checkpoint**: `/checkpoint` as needed
+1. **End with**: `/end` before quitting
 
 ### Detailed Tool Functions
 

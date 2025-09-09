@@ -9,15 +9,19 @@ The session-mgmt MCP server automatically creates Claude Code slash command shor
 When you run `session-mgmt:init` for the first time, the following shortcuts are automatically created in `~/.claude/commands/`:
 
 ### `/start` → `session-mgmt:init`
+
 **File**: `~/.claude/commands/start.md`
+
 - Initializes session management for the current project
-- Sets up session tracking for git repositories  
+- Sets up session tracking for git repositories
 - Initializes conversation memory and context
 - Prepares project for enhanced Claude Code workflows
 - Installs UV dependencies and automation tools
 
 ### `/checkpoint [name]` → `session-mgmt:checkpoint`
+
 **File**: `~/.claude/commands/checkpoint.md`
+
 - Creates a checkpoint of the current development session
 - Summarizes progress made so far
 - Documents pending tasks or context
@@ -25,7 +29,9 @@ When you run `session-mgmt:init` for the first time, the following shortcuts are
 - Accepts optional checkpoint name argument
 
 ### `/end` → `session-mgmt:end`
+
 **File**: `~/.claude/commands/end.md`
+
 - Gracefully ends the current session
 - Creates final checkpoint of all work completed
 - Generates session summary and insights
@@ -35,26 +41,29 @@ When you run `session-mgmt:init` for the first time, the following shortcuts are
 ## How It Works
 
 1. **First-Time Setup**: When `session-mgmt:init` runs, it calls `_create_session_shortcuts()`
-2. **Directory Creation**: Creates `~/.claude/commands/` if it doesn't exist
-3. **Shortcut Detection**: Checks if shortcuts already exist to avoid overwriting
-4. **File Creation**: Creates Markdown files with proper Claude Code slash command format
-5. **User Feedback**: Reports which shortcuts were created or already existed
+1. **Directory Creation**: Creates `~/.claude/commands/` if it doesn't exist
+1. **Shortcut Detection**: Checks if shortcuts already exist to avoid overwriting
+1. **File Creation**: Creates Markdown files with proper Claude Code slash command format
+1. **User Feedback**: Reports which shortcuts were created or already existed
 
 ## Architecture
 
 ### Function: `_create_session_shortcuts()`
+
 **Location**: `session_mgmt_mcp/tools/session_tools.py`
 
 **Returns**:
+
 ```python
 {
-    "created": bool,        # True if new shortcuts were created
-    "existed": bool,        # True if shortcuts already existed  
-    "shortcuts": list[str]  # List of shortcut names
+    "created": bool,  # True if new shortcuts were created
+    "existed": bool,  # True if shortcuts already existed
+    "shortcuts": list[str],  # List of shortcut names
 }
 ```
 
 **Features**:
+
 - Creates `~/.claude/commands/` directory automatically
 - Checks for existing shortcuts to prevent overwriting
 - Uses proper Claude Code slash command YAML frontmatter format
@@ -65,9 +74,9 @@ When you run `session-mgmt:init` for the first time, the following shortcuts are
 ### Integration Points
 
 1. **Called from**: `_init_impl()` in session_tools.py
-2. **Triggered by**: First `session-mgmt:init` execution
-3. **File format**: Markdown with YAML frontmatter (Claude Code standard)
-4. **Location**: Global `~/.claude/commands/` (available in all projects)
+1. **Triggered by**: First `session-mgmt:init` execution
+1. **File format**: Markdown with YAML frontmatter (Claude Code standard)
+1. **Location**: Global `~/.claude/commands/` (available in all projects)
 
 ## Claude Code Integration
 
@@ -83,6 +92,7 @@ Command execution instructions using session-mgmt MCP tools.
 ```
 
 ### Key Features:
+
 - **Global Availability**: Shortcuts work in any project with session-mgmt configured
 - **Argument Support**: `/checkpoint` accepts optional checkpoint names
 - **Descriptive**: Clear descriptions show in Claude Code slash command menu
@@ -91,6 +101,7 @@ Command execution instructions using session-mgmt MCP tools.
 ## User Experience
 
 ### Before Auto-Creation:
+
 ```bash
 # User had to manually create shortcuts or use full MCP tool names
 session-mgmt:init
@@ -99,6 +110,7 @@ session-mgmt:end
 ```
 
 ### After Auto-Creation:
+
 ```bash
 # Convenient shortcuts available immediately after first init
 /start
@@ -109,27 +121,30 @@ session-mgmt:end
 ## Benefits
 
 1. **Convenience**: Short, memorable commands for frequent operations
-2. **Consistency**: Standardized shortcuts across all projects
-3. **Self-Maintaining**: Automatically created during initialization
-4. **Non-Intrusive**: Only creates shortcuts if they don't already exist
-5. **Discoverable**: Shows up in Claude Code's slash command menu
-6. **Documented**: Each shortcut includes usage descriptions
+1. **Consistency**: Standardized shortcuts across all projects
+1. **Self-Maintaining**: Automatically created during initialization
+1. **Non-Intrusive**: Only creates shortcuts if they don't already exist
+1. **Discoverable**: Shows up in Claude Code's slash command menu
+1. **Documented**: Each shortcut includes usage descriptions
 
 ## Technical Implementation
 
 ### Error Handling:
+
 - Gracefully handles permission errors
 - Logs shortcut creation attempts
 - Continues initialization even if shortcut creation fails
 - Returns status information for user feedback
 
 ### File Management:
+
 - Uses `pathlib.Path` for cross-platform compatibility
 - Creates parent directories as needed
 - Checks existing files before writing
 - Uses proper file encoding (UTF-8)
 
 ### Integration:
+
 - Minimal impact on initialization performance
 - No external dependencies beyond standard library
 - Compatible with existing Claude Code configurations

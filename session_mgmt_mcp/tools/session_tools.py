@@ -19,19 +19,20 @@ logger = get_session_logger()
 
 def _create_session_shortcuts() -> dict:
     """Create Claude Code slash command shortcuts for session management.
-    
+
     Creates /start, /checkpoint, and /end shortcuts in ~/.claude/commands/
     that map to session-mgmt MCP tools.
-    
+
     Returns:
         Dict with 'created' bool, 'existed' bool, and 'shortcuts' list
+
     """
     claude_home = Path.home() / ".claude"
     commands_dir = claude_home / "commands"
-    
+
     # Create commands directory if it doesn't exist
     commands_dir.mkdir(parents=True, exist_ok=True)
-    
+
     shortcuts = {
         "start": {
             "file": "start.md",
@@ -49,7 +50,7 @@ This will:
 """,
         },
         "checkpoint": {
-            "file": "checkpoint.md", 
+            "file": "checkpoint.md",
             "content": """---
 argument-hint: [checkpoint-name]
 description: Create a session checkpoint with progress summary
@@ -80,15 +81,15 @@ This will:
 3. Clean up temporary resources
 4. Prepare handoff documentation for next session
 """,
-        }
+        },
     }
-    
+
     created_shortcuts = []
     existing_shortcuts = []
-    
+
     for shortcut_name, shortcut_data in shortcuts.items():
         shortcut_path = commands_dir / shortcut_data["file"]
-        
+
         if shortcut_path.exists():
             existing_shortcuts.append(shortcut_name)
         else:
@@ -97,8 +98,8 @@ This will:
                 created_shortcuts.append(shortcut_name)
                 logger.info(f"Created slash command shortcut: /{shortcut_name}")
             except Exception as e:
-                logger.error(f"Failed to create shortcut /{shortcut_name}: {e}")
-    
+                logger.exception(f"Failed to create shortcut /{shortcut_name}: {e}")
+
     return {
         "created": bool(created_shortcuts),
         "existed": bool(existing_shortcuts) and not created_shortcuts,
@@ -163,8 +164,11 @@ async def _init_impl(working_directory: str | None = None) -> str:
 
 async def _checkpoint_impl() -> str:
     """Implementation for checkpoint tool."""
-    from ..server_optimized import should_suggest_compact, _execute_auto_compact
-    
+    from session_mgmt_mcp.server_optimized import (
+        _execute_auto_compact,
+        should_suggest_compact,
+    )
+
     output = []
     output.append(
         f"🔍 Claude Session Checkpoint - {session_manager.current_project or 'Current Project'}",
@@ -185,14 +189,14 @@ async def _checkpoint_impl() -> str:
             should_compact, reason = should_suggest_compact()
             output.append("\n🔄 Automatic Compaction Analysis")
             output.append(f"📊 {reason}")
-            
+
             if should_compact:
                 output.append("\n🔄 Executing automatic compaction...")
                 try:
-                    compact_result = await _execute_auto_compact()
+                    await _execute_auto_compact()
                     output.append("✅ Context automatically optimized")
                 except Exception as e:
-                    output.append(f"⚠️ Auto-compact skipped: {str(e)}")
+                    output.append(f"⚠️ Auto-compact skipped: {e!s}")
                     output.append("💡 Consider running /compact manually")
             else:
                 output.append("✅ Context appears well-optimized for current session")
@@ -415,3 +419,60 @@ def register_session_tools(mcp_server) -> None:
 
         """
         return await _status_impl(working_directory)
+
+    @mcp_server.tool()
+    async def health_check() -> str:
+        """Simple health check that doesn't require database or session context."""
+        import os
+        import platform
+        import time
+
+        health_info = {
+            "server_status": "✅ Active",
+            "timestamp": time.time(),
+            "platform": platform.system(),
+            "python_version": platform.python_version(),
+            "process_id": os.getpid(),
+            "working_directory": os.getcwd(),
+        }
+
+        return f"""🏥 MCP Server Health Check
+================================
+Server Status: {health_info["server_status"]}
+Platform: {health_info["platform"]}
+Python: {health_info["python_version"]}
+Process ID: {health_info["process_id"]}
+Working Directory: {health_info["working_directory"]}
+Timestamp: {health_info["timestamp"]}
+
+✅ MCP server is operational and responding to requests."""
+
+    @mcp_server.tool()
+    async def server_info() -> str:
+        """Get basic server information without requiring session context."""
+        import time
+        from pathlib import Path
+
+        try:
+            # Check if we can access basic file system info
+            home_dir = Path.home()
+            current_dir = Path.cwd()
+
+            return f"""📊 Session-mgmt MCP Server Information
+===========================================
+🏠 Home Directory: {home_dir}
+📁 Current Directory: {current_dir}
+🕐 Server Time: {time.strftime("%Y-%m-%d %H:%M:%S")}
+🔧 FastMCP Framework: Active
+🌐 Transport: streamable-http
+📡 Endpoint: /mcp
+
+✅ Server is running and accessible."""
+
+        except Exception as e:
+            return f"⚠️ Server info error: {e!s}"
+
+    @mcp_server.tool()
+    async def ping() -> str:
+        """Simple ping endpoint to test MCP connectivity."""
+        return "🏓 Pong! MCP server is responding."

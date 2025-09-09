@@ -52,6 +52,15 @@ class ReflectionDatabase:
         """Context manager exit with cleanup."""
         self.close()
 
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):  # noqa: vulture
+        """Async context manager exit with cleanup."""
+        self.close()
+
     def close(self) -> None:
         """Close database connection."""
         if self.conn:

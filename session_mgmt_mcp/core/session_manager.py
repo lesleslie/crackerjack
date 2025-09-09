@@ -294,7 +294,7 @@ class SessionLifecycleManager:
             # Analyze project context
             project_context = await self.analyze_project_context(current_dir)
             quality_score, quality_data = await self.perform_quality_assessment()
-            
+
             # Check for previous session information
             previous_session_info = None
             latest_handoff = self._find_latest_handoff_file(current_dir)
@@ -464,7 +464,7 @@ class SessionLifecycleManager:
             # Create organized directory structure
             handoff_dir = working_dir / ".crackerjack" / "session" / "handoff"
             handoff_dir.mkdir(parents=True, exist_ok=True)
-            
+
             # Create handoff filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"session_handoff_{timestamp}.md"
@@ -483,7 +483,7 @@ class SessionLifecycleManager:
         """Find the most recent session handoff file."""
         try:
             handoff_dir = working_dir / ".crackerjack" / "session" / "handoff"
-            
+
             if not handoff_dir.exists():
                 # Check for legacy handoff files in project root
                 legacy_files = list(working_dir.glob("session_handoff_*.md"))
@@ -491,16 +491,16 @@ class SessionLifecycleManager:
                     # Return the most recent legacy file
                     return max(legacy_files, key=lambda f: f.stat().st_mtime)
                 return None
-            
+
             # Find all handoff files
             handoff_files = list(handoff_dir.glob("session_handoff_*.md"))
-            
+
             if not handoff_files:
                 return None
-            
+
             # Return the most recent file based on timestamp in filename
             return max(handoff_files, key=lambda f: f.name)
-            
+
         except Exception as e:
             self.logger.debug(f"Error finding handoff files: {e}")
             return None
@@ -510,32 +510,38 @@ class SessionLifecycleManager:
         try:
             with open(handoff_file, encoding="utf-8") as f:
                 content = f.read()
-            
+
             info = {}
             lines = content.split("\n")
-            
+
             for line in lines:
                 if line.startswith("**Session ended:**"):
                     info["ended_at"] = line.split("**Session ended:**")[1].strip()
                 elif line.startswith("**Final quality score:**"):
-                    info["quality_score"] = line.split("**Final quality score:**")[1].strip()
+                    info["quality_score"] = line.split("**Final quality score:**")[
+                        1
+                    ].strip()
                 elif line.startswith("**Working directory:**"):
-                    info["working_directory"] = line.split("**Working directory:**")[1].strip()
-            
+                    info["working_directory"] = line.split("**Working directory:**")[
+                        1
+                    ].strip()
+
             # Extract first recommendation if available
             in_recommendations = False
             for line in lines:
                 if "## Recommendations for Next Session" in line:
                     in_recommendations = True
                     continue
-                elif in_recommendations and line.strip().startswith("1."):
-                    info["top_recommendation"] = line.strip()[3:].strip()  # Remove "1. "
+                if in_recommendations and line.strip().startswith("1."):
+                    info["top_recommendation"] = line.strip()[
+                        3:
+                    ].strip()  # Remove "1. "
                     break
-                elif in_recommendations and line.startswith("##"):
+                if in_recommendations and line.startswith("##"):
                     break  # End of recommendations section
-            
+
             return info if info else None
-            
+
         except Exception as e:
             self.logger.debug(f"Error reading handoff file: {e}")
             return None
