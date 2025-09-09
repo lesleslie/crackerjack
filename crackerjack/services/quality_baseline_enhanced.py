@@ -1,15 +1,14 @@
 """Enhanced Quality Baseline Service with trending, alerts, and export capabilities."""
 
 import json
-import subprocess
 import typing as t
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 
 from crackerjack.services.cache import CrackerjackCache
-from crackerjack.services.quality_baseline import QualityMetrics, QualityBaselineService
+from crackerjack.services.quality_baseline import QualityBaselineService, QualityMetrics
 
 
 class TrendDirection(str, Enum):

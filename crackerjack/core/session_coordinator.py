@@ -303,7 +303,7 @@ class SessionCoordinator:
 
             if metrics:
                 # Record baseline with individual parameters
-                quality_metrics = quality_service.record_baseline(
+                quality_service.record_baseline(
                     coverage_percent=metrics.get("coverage_percent", 0.0),
                     test_count=metrics.get("test_count", 0),
                     test_pass_rate=metrics.get("test_pass_rate", 100.0),

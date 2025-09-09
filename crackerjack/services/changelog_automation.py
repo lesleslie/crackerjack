@@ -1,7 +1,6 @@
 """Automatic changelog generation and updates service."""
 
 import re
-import typing as t
 from datetime import datetime
 from pathlib import Path
 

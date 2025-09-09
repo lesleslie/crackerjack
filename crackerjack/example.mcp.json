@@ -5,7 +5,7 @@
       "type": "streamable-http"
     },
     "session-mgmt": {
-      "url": "http://localhost:8678/mcp", 
+      "url": "http://localhost:8678/mcp",
       "type": "streamable-http"
     }
   }

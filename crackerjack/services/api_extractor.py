@@ -130,7 +130,7 @@ class APIExtractorImpl(APIExtractorProtocol):
                 continue
 
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     source_code = f.read()
 
                 tree = ast.parse(source_code)
@@ -151,7 +151,7 @@ class APIExtractorImpl(APIExtractorProtocol):
             return {}
 
         try:
-            with open(protocol_file, "r", encoding="utf-8") as f:
+            with open(protocol_file, encoding="utf-8") as f:
                 source_code = f.read()
 
             tree = ast.parse(source_code)
@@ -177,7 +177,7 @@ class APIExtractorImpl(APIExtractorProtocol):
                 continue
 
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     source_code = f.read()
 
                 tree = ast.parse(source_code)
@@ -202,7 +202,7 @@ class APIExtractorImpl(APIExtractorProtocol):
                 continue
 
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     source_code = f.read()
 
                 tree = ast.parse(source_code)
@@ -227,12 +227,12 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             try:
                 if file_path.suffix == ".py":
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    with open(file_path, encoding="utf-8") as f:
                         source_code = f.read()
                     tree = ast.parse(source_code)
                     tool_info = self._extract_mcp_python_tools(tree, source_code)
                 elif file_path.suffix == ".md":
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    with open(file_path, encoding="utf-8") as f:
                         markdown_content = f.read()
                     tool_info = self._extract_mcp_markdown_docs(markdown_content)
                 else:
@@ -268,7 +268,7 @@ class APIExtractorImpl(APIExtractorProtocol):
             elif isinstance(node, ast.FunctionDef):
                 func_info = self._extract_function_info(node, source_code)
                 module_info["functions"].append(func_info)
-            elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            elif isinstance(node, ast.Import | ast.ImportFrom):
                 import_info = self._extract_import_info(node)
                 module_info["imports"].append(import_info)
 

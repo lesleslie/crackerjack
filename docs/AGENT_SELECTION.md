@@ -11,9 +11,9 @@ Crackerjack's AI agent system automatically selects the most appropriate agent t
 Each agent implements a `can_handle(issue)` method that returns a confidence score (0.0-1.0) indicating how well it can handle a specific issue type. The system:
 
 1. **Filters Specialists**: Only agents that declare support for the issue type are considered
-2. **Evaluates Confidence**: Each specialist agent returns a confidence score
-3. **Applies Preference Logic**: Built-in agents receive preference when scores are close
-4. **Selects Best Match**: Returns the agent with the highest adjusted confidence
+1. **Evaluates Confidence**: Each specialist agent returns a confidence score
+1. **Applies Preference Logic**: Built-in agents receive preference when scores are close
+1. **Selects Best Match**: Returns the agent with the highest adjusted confidence
 
 ### 2. Built-in Agent Preference
 
@@ -62,8 +62,8 @@ python -m crackerjack --ai-agent --ai-debug -t
 The agent system is integrated into three workflow orchestrators:
 
 1. **WorkflowOrchestrator** (`_setup_agent_coordinator`)
-2. **AsyncWorkflowOrchestrator** (`_create_agent_coordinator`)  
-3. **ProactiveWorkflow** (`_architect_agent_coordinator`)
+1. **AsyncWorkflowOrchestrator** (`_create_agent_coordinator`)
+1. **ProactiveWorkflow** (`_architect_agent_coordinator`)
 
 All orchestrators use the same `AgentCoordinator` class, ensuring consistent selection logic.
 
@@ -102,19 +102,19 @@ Each issue type is handled by specific agents based on their declared capabiliti
 
 ```python
 class IssueType(Enum):
-    FORMATTING = "formatting"          # FormattingAgent
-    TYPE_ERROR = "type_error"          # ArchitectAgent, others  
-    SECURITY = "security"              # SecurityAgent
-    TEST_FAILURE = "test_failure"      # TestCreationAgent
-    IMPORT_ERROR = "import_error"      # ImportOptimizationAgent
-    COMPLEXITY = "complexity"          # RefactoringAgent, ArchitectAgent
-    DEAD_CODE = "dead_code"            # RefactoringAgent
-    DEPENDENCY = "dependency"          # ArchitectAgent
-    DRY_VIOLATION = "dry_violation"    # DRYAgent, ArchitectAgent
-    PERFORMANCE = "performance"        # PerformanceAgent, ArchitectAgent
-    DOCUMENTATION = "documentation"    # DocumentationAgent, ArchitectAgent
-    TEST_ORGANIZATION = "test_organization" # TestSpecialistAgent, ArchitectAgent
-    COVERAGE_IMPROVEMENT = "coverage_improvement" # TestCreationAgent
+    FORMATTING = "formatting"  # FormattingAgent
+    TYPE_ERROR = "type_error"  # ArchitectAgent, others
+    SECURITY = "security"  # SecurityAgent
+    TEST_FAILURE = "test_failure"  # TestCreationAgent
+    IMPORT_ERROR = "import_error"  # ImportOptimizationAgent
+    COMPLEXITY = "complexity"  # RefactoringAgent, ArchitectAgent
+    DEAD_CODE = "dead_code"  # RefactoringAgent
+    DEPENDENCY = "dependency"  # ArchitectAgent
+    DRY_VIOLATION = "dry_violation"  # DRYAgent, ArchitectAgent
+    PERFORMANCE = "performance"  # PerformanceAgent, ArchitectAgent
+    DOCUMENTATION = "documentation"  # DocumentationAgent, ArchitectAgent
+    TEST_ORGANIZATION = "test_organization"  # TestSpecialistAgent, ArchitectAgent
+    COVERAGE_IMPROVEMENT = "coverage_improvement"  # TestCreationAgent
 ```
 
 ## Debugging and Monitoring
@@ -124,14 +124,15 @@ class IssueType(Enum):
 When `--ai-debug` is enabled, the system logs detailed selection information:
 
 ```
-INFO: Preferring built-in agent RefactoringAgent (score: 0.87) 
-      over ExternalAgent (score: 0.90) 
+INFO: Preferring built-in agent RefactoringAgent (score: 0.87)
+      over ExternalAgent (score: 0.90)
       due to 0.03 threshold preference
 ```
 
 ### Agent Tracking
 
 The `AgentTracker` monitors:
+
 - Agent processing times
 - Success/failure rates
 - Confidence distributions
@@ -140,6 +141,7 @@ The `AgentTracker` monitors:
 ### Performance Caching
 
 Successful agent decisions (confidence > 0.7) are cached using issue hash keys:
+
 - Hash includes: issue type, message, file path, line number
 - Cached decisions bypass selection process for identical issues
 - Cache improves performance on repeated issues
@@ -149,16 +151,16 @@ Successful agent decisions (confidence > 0.7) are cached using issue hash keys:
 ### For Agent Development
 
 1. **Accurate Confidence**: Return realistic confidence scores based on actual capability
-2. **Issue Type Specificity**: Only claim support for issues you can reliably handle
-3. **Consistent Patterns**: Follow established conventions for predictable behavior
-4. **Error Handling**: Handle exceptions gracefully to avoid disrupting selection
+1. **Issue Type Specificity**: Only claim support for issues you can reliably handle
+1. **Consistent Patterns**: Follow established conventions for predictable behavior
+1. **Error Handling**: Handle exceptions gracefully to avoid disrupting selection
 
 ### For Users
 
 1. **Use Built-in Agents**: Trust the preference system for reliable fixes
-2. **Monitor Debug Output**: Use `--ai-debug` to understand selection decisions
-3. **Report Issues**: File bugs if agent selection seems inappropriate
-4. **Trust Caching**: Let the system cache successful patterns for speed
+1. **Monitor Debug Output**: Use `--ai-debug` to understand selection decisions
+1. **Report Issues**: File bugs if agent selection seems inappropriate
+1. **Trust Caching**: Let the system cache successful patterns for speed
 
 ## Technical Implementation
 
@@ -175,7 +177,7 @@ async def _find_best_specialist(
     best_agent = None
     best_score = 0.0
     candidates: list[tuple[SubAgent, float]] = []
-    
+
     CLOSE_SCORE_THRESHOLD = 0.05
 
     # Collect all agent scores
@@ -207,7 +209,7 @@ def _is_built_in_agent(self, agent: SubAgent) -> bool:
     """Check if agent is a built-in Crackerjack agent."""
     built_in_agent_names = {
         "ArchitectAgent",
-        "DocumentationAgent", 
+        "DocumentationAgent",
         "DRYAgent",
         "FormattingAgent",
         "ImportOptimizationAgent",
@@ -225,31 +227,35 @@ def _is_built_in_agent(self, agent: SubAgent) -> bool:
 Potential improvements to the agent selection system:
 
 1. **Dynamic Thresholds**: Adjust preference threshold based on agent performance history
-2. **Multi-Agent Collaboration**: Allow multiple agents to work on complex issues
-3. **Machine Learning**: Use ML to optimize confidence scoring and selection
-4. **Agent Specialization**: Create more focused agents for specific domains
-5. **Performance Metrics**: Track and optimize selection effectiveness over time
+1. **Multi-Agent Collaboration**: Allow multiple agents to work on complex issues
+1. **Machine Learning**: Use ML to optimize confidence scoring and selection
+1. **Agent Specialization**: Create more focused agents for specific domains
+1. **Performance Metrics**: Track and optimize selection effectiveness over time
 
 ## Troubleshooting
 
 ### Common Issues
 
 **Agent Not Selected**
+
 - Check issue type mapping
 - Verify agent confidence calculation
 - Review debug logs for selection reasoning
 
 **Unexpected Agent Choice**
+
 - Enable `--ai-debug` to see confidence scores
 - Check if built-in preference was applied
 - Verify issue classification is correct
 
 **Poor Fix Quality**
+
 - Agent may have overestimated confidence
 - Consider filing issue for agent improvement
 - Check if external agent would be more appropriate
 
 **Cache Not Working**
+
 - Ensure confidence > 0.7 for caching
 - Check issue hash consistency
 - Verify cache configuration

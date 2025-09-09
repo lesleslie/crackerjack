@@ -9,7 +9,7 @@ $overview
 ## Statistics
 
 - **Protocols:** $protocol_count
-- **Services:** $service_count  
+- **Services:** $service_count
 - **Classes:** $class_count
 - **Functions:** $function_count
 

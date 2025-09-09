@@ -211,7 +211,7 @@ class TestPythonSyntaxIntegrity:
         # Don't fail for this one, just warn, as some spacing in f-strings might be intentional
         if issues:
             print(
-                f"Warning: Found potential malformed f-string formatting:\n"
+                "Warning: Found potential malformed f-string formatting:\n"
                 + "\n".join(issues)
             )
 

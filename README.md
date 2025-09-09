@@ -731,6 +731,7 @@ For enhanced AI-assisted development with conversation memory and context persis
 ## 🤝 Session-mgmt Integration (Enhanced)
 
 **Automatic for Git Projects:**
+
 - Session management starts automatically
 - No manual `/start` or `/end` needed
 - Checkpoints auto-compact when necessary
@@ -763,6 +764,7 @@ For enhanced AI-assisted development with conversation memory and context persis
 ```
 
 **Example Workflow:**
+
 ```bash
 # Just start working - session auto-initializes!
 python -m crackerjack --ai-agent -t

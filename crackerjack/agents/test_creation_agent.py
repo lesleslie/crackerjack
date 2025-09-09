@@ -486,10 +486,14 @@ class TestCreationAgent(SubAgent):
     def _get_enhanced_test_creation_recommendations(self) -> list[str]:
         return [
             "Run 'python -m crackerjack -t' to execute comprehensive coverage analysis",
-            "Focus on testing high-priority functions in managers/ services/ and core/ "
-            "modules",
-            "Implement parametrized tests (@pytest.mark.parametrize) for functions with "
-            "multiple arguments",
+            (
+                "Focus on testing high-priority functions in managers/ services/ "
+                "and core/ modules"
+            ),
+            (
+                "Implement parametrized tests (@pytest.mark.parametrize) "
+                "for functions with multiple arguments"
+            ),
             "Add edge case testing for boundary conditions and error scenarios",
             "Use fixtures for complex object instantiation and dependency injection",
             "Consider integration tests for modules with multiple classes/functions",
@@ -1346,7 +1350,8 @@ class TestCreationAgent(SubAgent):
             f"class {class_name}:\n"
             f'    """Tests for {module_name}.\n'
             "\n"
-            f"    This module contains comprehensive tests for {module_name} including:\n"
+            f"    This module contains comprehensive tests for {module_name}\n"
+            "    including:\n"
             "    - Basic functionality tests\n"
             "    - Edge case validation\n"
             "    - Error handling verification\n"
@@ -1378,7 +1383,9 @@ class TestCreationAgent(SubAgent):
         result = {func_name}({self._generate_default_args(args)})
         assert result is not None or result is None
     except TypeError:
-        pytest.skip("Function requires specific arguments - manual implementation needed")
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
     except Exception as e:
         pytest.fail(f"Unexpected error in {func_name}: {{e}}")"""
 
@@ -1475,8 +1482,11 @@ class TestCreationAgent(SubAgent):
             "            result = FUNC_NAME(ARGS)\n"
             "            assert result is not None or result is None\n"
             "        except (TypeError, NotImplementedError) as e:\n"
-            "            pytest.skip('Function FUNC_NAME requires manual implementation: ' + str(e))\n"
-            "        except Exception as e:\n"
+            + (
+                "            pytest.skip('Function FUNC_NAME requires manual "
+                "implementation: ' + str(e))\n"
+            )
+            + "        except Exception as e:\n"
             "            pytest.fail('Unexpected error in FUNC_NAME: ' + str(e))"
         )
 
@@ -1498,8 +1508,11 @@ class TestCreationAgent(SubAgent):
             "                result = FUNC_NAME(ARGS)\n"
             "            assert result is not None or result is None\n"
             "        except (TypeError, NotImplementedError) as e:\n"
-            "            pytest.skip('Function FUNC_NAME requires manual implementation: ' + str(e))\n"
-            "        except Exception as e:\n"
+            + (
+                "            pytest.skip('Function FUNC_NAME requires manual "
+                "implementation: ' + str(e))\n"
+            )
+            + "        except Exception as e:\n"
             "            pytest.fail('Unexpected error in FUNC_NAME: ' + str(e))"
         )
 
@@ -1515,8 +1528,11 @@ class TestCreationAgent(SubAgent):
             "            result = FUNC_NAME(ARGS)\n"
             "            assert result is not None or result is None\n"
             "        except (TypeError, NotImplementedError) as e:\n"
-            "            pytest.skip('Function FUNC_NAME requires manual implementation: ' + str(e))\n"
-            "        except Exception as e:\n"
+            + (
+                "            pytest.skip('Function FUNC_NAME requires manual "
+                "implementation: ' + str(e))\n"
+            )
+            + "        except Exception as e:\n"
             "            pytest.fail('Unexpected error in FUNC_NAME: ' + str(e))"
         )
 
@@ -1574,7 +1590,8 @@ class TestCreationAgent(SubAgent):
             "\n"
             f"        if len({args}) > 0:\n"
             "            with pytest.raises((TypeError, ValueError)):\n"
-            f"                {func_name}({self._generate_edge_case_args(args, 'empty')})"
+            f"                {func_name}("
+            f"{self._generate_edge_case_args(args, 'empty')})"
         )
 
         return test_template
@@ -1603,7 +1620,8 @@ class TestCreationAgent(SubAgent):
             "\n"
             "                pass\n"
             "            except Exception as e:\n"
-            '                pytest.fail(f"Unexpected error with edge case {edge_case}: {e}")'
+            '                pytest.fail(f"Unexpected error with edge case {edge_case}: '
+            '{e}")'
         )
 
         return test_template
@@ -1987,8 +2005,10 @@ class TestCreationAgent(SubAgent):
             f"    async def test_{class_name.lower()}_{method_name}(self, {class_name.lower()}_instance):\n"
             f'        """Test {class_name}.{method_name} method."""\n'
             "        try:\n"
-            f'            method = getattr({class_name.lower()}_instance, "{method_name}", None)\n'
-            f'            assert method is not None, f"Method {method_name} should exist"\n'
+            f"            method = getattr({class_name.lower()}_instance, "
+            f'"{method_name}", None)\n'
+            f"            assert method is not None, "
+            f'f"Method {method_name} should exist"\n'
             "\n"
             "            if asyncio.iscoroutinefunction(method):\n"
             "                result = await method()\n"
@@ -2008,8 +2028,10 @@ class TestCreationAgent(SubAgent):
             f"    async def test_{class_name.lower()}_{method_name}(self, {class_name.lower()}_instance):\n"
             f'        """Test {class_name}.{method_name} method."""\n'
             "        try:\n"
-            f'            method = getattr({class_name.lower()}_instance, "{method_name}", None)\n'
-            f'            assert method is not None, f"Method {method_name} should exist"\n'
+            f"            method = getattr({class_name.lower()}_instance, "
+            f'"{method_name}", None)\n'
+            f"            assert method is not None, "
+            f'f"Method {method_name} should exist"\n'
             "\n"
             "            if asyncio.iscoroutinefunction(method):\n"
             "                result = await method()\n"
@@ -2029,8 +2051,10 @@ class TestCreationAgent(SubAgent):
             f"    def test_{class_name.lower()}_{method_name}(self, {class_name.lower()}_instance):\n"
             f'        """Test {class_name}.{method_name} method."""\n'
             "        try:\n"
-            f'            method = getattr({class_name.lower()}_instance, "{method_name}", None)\n'
-            f'            assert method is not None, f"Method {method_name} should exist"\n'
+            f"            method = getattr({class_name.lower()}_instance, "
+            f'"{method_name}", None)\n'
+            f"            assert method is not None, "
+            f'f"Method {method_name} should exist"\n'
             "\n"
             "            result = method()\n"
             "            assert result is not None or result is None\n"

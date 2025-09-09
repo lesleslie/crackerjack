@@ -27,13 +27,15 @@ The Unified Monitoring Dashboard consolidates real-time metrics, historical tren
 ### 2. Data Flow Architecture
 
 #### Real-time Metrics Pipeline
+
 ```
 Quality Events → MetricCollector → WebSocket Stream → Dashboard Updates
      ↓
 Historical Storage → Trend Analysis → Alert Generation → Notification System
 ```
 
-#### Historical Analysis Pipeline  
+#### Historical Analysis Pipeline
+
 ```
 Stored Metrics → Trend Calculator → Prediction Engine → Visualization Data
      ↓
@@ -43,24 +45,28 @@ Alert Thresholds → Anomaly Detection → Performance Insights → Recommendati
 ## Dashboard Features
 
 ### 1. Real-time Monitoring Panel
+
 - **Live Quality Score**: Current quality metrics with trend indicators
-- **Active Jobs**: Running tests, hooks, and analysis tasks with progress bars  
+- **Active Jobs**: Running tests, hooks, and analysis tasks with progress bars
 - **Resource Usage**: CPU, memory, and I/O metrics during operations
 - **Error Stream**: Real-time error detection and categorization
 
 ### 2. Historical Analytics
+
 - **Quality Trends**: 7, 30, 90-day quality score progression with statistical confidence
 - **Performance Metrics**: Test execution times, hook duration analysis, coverage trends
 - **Failure Analysis**: Error pattern recognition, recurring issue identification
 - **Productivity Insights**: Development velocity, fix rates, quality improvement velocity
 
 ### 3. Interactive Visualizations
+
 - **Time Series Charts**: Quality scores, test coverage, performance metrics over time
 - **Heatmaps**: Error patterns by module, time-of-day development patterns
 - **Network Graphs**: Dependency impact analysis, code complexity visualization
 - **Comparison Views**: Before/after analysis, team member performance comparison
 
 ### 4. Alert & Notification System
+
 - **Threshold Alerts**: Quality drops, coverage regression, performance degradation
 - **Anomaly Detection**: Unusual patterns, unexpected behavior, system health issues
 - **Predictive Warnings**: Trend-based predictions, potential failure forecasting
@@ -80,7 +86,7 @@ Alert Thresholds → Anomaly Detection → Performance Insights → Recommendati
 # REST API endpoints
 /api/metrics/summary          # Current system summary
 /api/trends/quality           # Quality trend analysis
-/api/alerts/configure         # Alert threshold configuration  
+/api/alerts/configure         # Alert threshold configuration
 /api/export/data             # Data export for external analysis
 ```
 
@@ -98,11 +104,12 @@ class UnifiedMetrics:
     trend_direction: TrendDirection
     predictions: dict[str, Any]
 
-@dataclass 
+
+@dataclass
 class DashboardState:
     current_metrics: UnifiedMetrics
     historical_data: list[UnifiedMetrics]
-    active_alerts: list[QualityAlert] 
+    active_alerts: list[QualityAlert]
     system_health: SystemHealthStatus
     recommendations: list[str]
 ```
@@ -110,13 +117,15 @@ class DashboardState:
 ### Visualization Components
 
 #### D3.js Chart Types
+
 - **Line Charts**: Quality score trends, coverage progression
-- **Bar Charts**: Error frequency, performance comparisons  
+- **Bar Charts**: Error frequency, performance comparisons
 - **Area Charts**: Resource usage over time, job completion rates
 - **Scatter Plots**: Correlation analysis, outlier detection
 - **Sankey Diagrams**: Process flow analysis, dependency mapping
 
 #### Interactive Features
+
 - **Zoom & Pan**: Detailed time range analysis
 - **Brushing**: Multi-chart coordination, cross-filtering
 - **Tooltips**: Contextual information, drill-down capabilities
@@ -125,12 +134,14 @@ class DashboardState:
 ## Integration Points
 
 ### Existing Systems Integration
+
 - **Quality Baseline Service**: Real-time quality score streaming
-- **WebSocket Server**: Bi-directional communication infrastructure  
+- **WebSocket Server**: Bi-directional communication infrastructure
 - **Job Manager**: Task progress tracking and status updates
 - **Cache System**: Performance optimization and historical data storage
 
 ### External Integration Capabilities
+
 - **CI/CD Pipelines**: Jenkins, GitHub Actions, GitLab CI integration
 - **Monitoring Tools**: Prometheus, Grafana, DataDog integration
 - **Communication**: Slack, Teams, Discord notification integration
@@ -139,12 +150,14 @@ class DashboardState:
 ## Performance Considerations
 
 ### Real-time Optimization
+
 - **WebSocket Connection Pooling**: Efficient connection management
 - **Data Compression**: Gzip compression for large data transfers
 - **Selective Updates**: Only send changed data to reduce bandwidth
 - **Client-side Caching**: Reduce server requests for static data
 
 ### Historical Data Management
+
 - **Data Aggregation**: Automatic rollup of old data to reduce storage
 - **Indexing Strategy**: Optimized queries for time-series data
 - **Cleanup Policies**: Automatic purging of old data based on retention policies
@@ -153,12 +166,14 @@ class DashboardState:
 ## Security & Privacy
 
 ### Access Control
+
 - **Authentication**: Token-based authentication for dashboard access
 - **Authorization**: Role-based access to different metrics and controls
 - **Rate Limiting**: Prevent abuse of WebSocket and API endpoints
 - **Audit Logging**: Track access and configuration changes
 
-### Data Protection  
+### Data Protection
+
 - **Sensitive Data Masking**: Hide sensitive paths, credentials in logs
 - **Encryption**: TLS for all communications, encrypted data storage
 - **Privacy Compliance**: GDPR-compliant data handling and retention
@@ -167,24 +182,28 @@ class DashboardState:
 ## Implementation Phases
 
 ### Phase 1: Enhanced WebSocket API (Week 5)
+
 - Extend existing WebSocket server with monitoring endpoints
 - Implement real-time metrics streaming
 - Add quality score broadcasting
 - Create basic alert system
 
-### Phase 2: Dashboard Frontend (Week 6) 
+### Phase 2: Dashboard Frontend (Week 6)
+
 - React-based dashboard with real-time updates
 - D3.js chart integration for visualizations
 - Responsive design for mobile/desktop access
 - Basic interactivity and filtering
 
 ### Phase 3: Historical Analytics (Week 7)
+
 - Historical data storage and retrieval
-- Trend analysis and prediction algorithms  
+- Trend analysis and prediction algorithms
 - Advanced alerting with anomaly detection
 - Export capabilities and external integrations
 
 ### Phase 4: Advanced Features (Week 8)
+
 - Machine learning-based insights
 - Predictive analytics and recommendations
 - Advanced visualization techniques
@@ -193,18 +212,21 @@ class DashboardState:
 ## Success Metrics
 
 ### Technical Metrics
+
 - **Real-time Latency**: < 100ms for metric updates
 - **Historical Query Performance**: < 2s for 90-day data queries
 - **Dashboard Load Time**: < 3s initial load, < 1s subsequent navigation
 - **Uptime**: 99.9% availability for monitoring infrastructure
 
 ### User Experience Metrics
+
 - **Time to Insight**: < 30s to identify quality issues
 - **Action Response Time**: < 5s from alert to actionable information
 - **Data Export Speed**: < 30s for comprehensive data exports
 - **Mobile Responsiveness**: Full functionality on mobile devices
 
 ### Business Impact Metrics
+
 - **Quality Improvement Velocity**: 25% faster issue identification and resolution
 - **Development Productivity**: 15% improvement in development cycle time
 - **Error Reduction**: 40% reduction in production issues through early detection

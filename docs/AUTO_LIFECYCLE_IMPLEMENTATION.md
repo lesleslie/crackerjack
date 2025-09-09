@@ -7,21 +7,27 @@ This document outlines the implementation of automatic session lifecycle managem
 ## Core Architecture Changes
 
 ### 1. Automatic Session Lifecycle Detection
+
 **Add FastMCP lifespan handlers to auto-detect client connections:**
+
 - On connection: Check if in git repo → auto-run init logic
 - On disconnection: Check if in git repo → auto-run end logic
 - Non-git projects: No automatic actions, rely on manual commands
 
 ### 2. Enhanced Checkpoint with Auto-Compaction
+
 **Modify checkpoint to execute compaction automatically:**
+
 - When `should_suggest_compact()` returns true
 - Execute session-mgmt's internal compaction instead of recommending `/compact`
 - Remove confusing "/compact" recommendations
 
 ### 3. Command Alias Strategy
+
 **Keep strategic aliases for flexibility:**
+
 - ✅ Keep `/start` → For manual init in non-git projects
-- ✅ Keep `/end` → For manual cleanup in non-git projects  
+- ✅ Keep `/end` → For manual cleanup in non-git projects
 - ✅ Keep `/checkpoint` → Universal manual checkpointing
 - ❌ Remove auto-hooks from settings.json (replaced by server-side detection)
 
@@ -30,20 +36,21 @@ This document outlines the implementation of automatic session lifecycle managem
 ### Phase 1: Core Server Changes
 
 #### 1.1 Add Lifespan Management (session_mgmt_mcp/server.py)
+
 ```python
 @mcp.lifespan
 async def session_lifecycle():
     """Automatic session lifecycle for git repositories only"""
     from session_mgmt_mcp.utils.git_operations import is_git_repository, get_git_root
-    
+
     current_dir = Path(os.getcwd())
-    
+
     # Only auto-initialize for git repositories
     if is_git_repository(current_dir):
         try:
             git_root = get_git_root(current_dir)
             logger.info(f"Git repository detected at {git_root}")
-            
+
             # Run the same logic as the init tool but silently
             await _internal_session_init(auto_mode=True)
             logger.info("✅ Auto-initialized session for git repository")
@@ -51,9 +58,9 @@ async def session_lifecycle():
             logger.warning(f"Auto-init failed (non-critical): {e}")
     else:
         logger.debug("Non-git directory - skipping auto-initialization")
-    
+
     yield  # Server runs normally
-    
+
     # On disconnect - cleanup for git repos only
     if is_git_repository(current_dir):
         try:
@@ -64,25 +71,26 @@ async def session_lifecycle():
 ```
 
 #### 1.2 Enhanced Checkpoint with Auto-Compaction
+
 ```python
 async def checkpoint(name: str | None = None) -> str:
     """Enhanced checkpoint with automatic compaction"""
     # ... existing checkpoint logic ...
-    
+
     # Auto-compact when needed
     should_compact, reason = should_suggest_compact()
-    
+
     if should_compact:
         # Execute internal compaction instead of recommending
         results.append("\n🔄 Automatic Compaction")
         results.append(f"📊 Reason: {reason}")
-        
+
         try:
             compact_result = await _execute_auto_compact()
             results.append("✅ Context automatically optimized")
         except Exception as e:
             results.append(f"⚠️ Auto-compact skipped: {str(e)}")
-    
+
     # Remove old recommendation text
     # DELETE: "🔄 RECOMMENDATION: Run /compact to optimize context"
 ```
@@ -90,7 +98,9 @@ async def checkpoint(name: str | None = None) -> str:
 ### Phase 2: Documentation Updates
 
 #### 2.1 Session-mgmt-mcp README.md Updates
+
 Add new section after "Features":
+
 ```markdown
 ## 🚀 Automatic Session Management (NEW!)
 
@@ -107,7 +117,9 @@ Add new section after "Features":
 ```
 
 #### 2.2 Session-mgmt-mcp CLAUDE.md Updates
+
 Replace workflow section:
+
 ```markdown
 ## Recommended Session Workflow
 
@@ -124,8 +136,10 @@ Replace workflow section:
 ```
 
 #### 2.3 Crackerjack README.md Updates
+
 Update integration section:
-```markdown
+
+````markdown
 ## 🤝 Session-mgmt Integration (Enhanced)
 
 **Automatic for Git Projects:**
@@ -144,8 +158,9 @@ python -m crackerjack --ai-agent -t
 
 # Quit any way - session auto-saves
 /quit  # or Cmd+Q, or network disconnect
-```
-```
+````
+
+````
 
 #### 2.4 Crackerjack CLAUDE.md Updates
 Add to workflow section:
@@ -165,12 +180,14 @@ Add to workflow section:
 **Best Practice:**
 For Crackerjack projects (always git repos), you can focus on development
 without worrying about session management - it's fully automatic!
-```
+````
 
 ### Phase 3: Configuration Cleanup
 
 #### 3.1 Remove Old Hooks from settings.json
+
 Remove from `/Users/les/.claude/settings.json`:
+
 ```json
 // REMOVE THESE:
 "UserPromptSubmit": [
@@ -191,16 +208,19 @@ Keep SessionStart hook for MCP server startup only.
 ### Phase 4: Testing Plan
 
 1. **Git Repository Tests:**
+
    - Start session in crackerjack → Verify auto-init
    - Run checkpoint → Verify auto-compact when needed
    - Quit various ways → Verify auto-cleanup
 
-2. **Non-Git Directory Tests:**
+1. **Non-Git Directory Tests:**
+
    - Start session in /tmp → Verify NO auto-init
    - Manual `/start` → Verify works
    - Manual `/end` → Verify works
 
-3. **Failure Recovery Tests:**
+1. **Failure Recovery Tests:**
+
    - Force quit Claude Code → Verify cleanup runs
    - Network disconnect → Verify cleanup runs
    - Server crash → Verify graceful degradation
@@ -208,12 +228,14 @@ Keep SessionStart hook for MCP server startup only.
 ## Benefits
 
 ### For Git Repositories (90% of use cases)
+
 - **Zero manual intervention** - Fully automatic lifecycle
 - **Crash resilient** - Cleanup runs even on force quit/crash
 - **Network failure safe** - Disconnection triggers cleanup
 - **Intelligent compaction** - Automatic during checkpoints
 
 ### For Non-Git Projects
+
 - **Manual control preserved** - Use `/start` and `/end` as needed
 - **Optional session management** - Only when explicitly desired
 - **Full feature access** - All session-mgmt features available
@@ -229,10 +251,10 @@ Keep SessionStart hook for MCP server startup only.
 ## Migration Path
 
 1. **Update server.py** with lifespan handlers
-2. **Test with git repositories** to verify auto-detection
-3. **Test with non-git directories** to verify no interference
-4. **Update documentation** to reflect new behavior
-5. **Clean up old hooks** from settings.json
+1. **Test with git repositories** to verify auto-detection
+1. **Test with non-git directories** to verify no interference
+1. **Update documentation** to reflect new behavior
+1. **Clean up old hooks** from settings.json
 
 ## Timeline
 
@@ -250,7 +272,7 @@ Total: ~3-4 hours implementation time
 - [ ] Phase 3: Configuration cleanup
 - [ ] Phase 4: Testing and validation
 
----
+______________________________________________________________________
 
 *Document created: 2025-09-07*
 *Status: Implementation in progress*

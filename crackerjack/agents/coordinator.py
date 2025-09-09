@@ -4,8 +4,8 @@ import logging
 import typing as t
 from collections import defaultdict
 
-from crackerjack.services.debug import get_ai_agent_debugger
 from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.debug import get_ai_agent_debugger
 
 from .base import (
     AgentContext,

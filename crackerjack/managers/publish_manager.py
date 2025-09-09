@@ -452,8 +452,8 @@ class PublishManagerImpl:
     def _update_changelog_for_version(self, old_version: str, new_version: str) -> None:
         """Update changelog with entries from git commits since last version."""
         try:
-            from crackerjack.services.git import GitService
             from crackerjack.services.changelog_automation import ChangelogGenerator
+            from crackerjack.services.git import GitService
 
             # Initialize services
             git_service = GitService(self.console, self.pkg_path)

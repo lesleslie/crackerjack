@@ -219,7 +219,10 @@ CLI_OPTIONS = {
         None,
         "-p",
         "--publish",
-        help="Bump version and publish to PyPI (patch, minor, major). Use 'interactive' to be prompted for version selection.",
+        help=(
+            "Bump version and publish to PyPI (patch, minor, major). "
+            "Use 'interactive' to be prompted for version selection."
+        ),
         case_sensitive=False,
     ),
     "bump": typer.Option(
@@ -244,12 +247,18 @@ CLI_OPTIONS = {
     "test_workers": typer.Option(
         0,
         "--test-workers",
-        help="Number of parallel workers for running tests (0 = auto-detect, 1 = disable parallelization).",
+        help=(
+            "Number of parallel workers for running tests "
+            "(0 = auto-detect, 1 = disable parallelization)."
+        ),
     ),
     "test_timeout": typer.Option(
         0,
         "--test-timeout",
-        help="Timeout in seconds for individual tests (0 = use default based on project size).",
+        help=(
+            "Timeout in seconds for individual tests "
+            "(0 = use default based on project size)."
+        ),
     ),
     "skip_hooks": typer.Option(
         False,
@@ -265,7 +274,10 @@ CLI_OPTIONS = {
     "comp": typer.Option(
         False,
         "--comp",
-        help="Run only comprehensive hooks (type checking, security, complexity analysis).",
+        help=(
+            "Run only comprehensive hooks (type checking, security, "
+            "complexity analysis)."
+        ),
     ),
     "all": typer.Option(
         None,
@@ -315,22 +327,33 @@ CLI_OPTIONS = {
     "enable_pyrefly": typer.Option(
         False,
         "--enable-pyrefly",
-        help="Enable pyrefly experimental type checking (requires experimental hooks mode).",
+        help=(
+            "Enable pyrefly experimental type checking "
+            "(requires experimental hooks mode)."
+        ),
     ),
     "enable_ty": typer.Option(
         False,
         "--enable-ty",
-        help="Enable ty experimental type verification (requires experimental hooks mode).",
+        help=(
+            "Enable ty experimental type verification "
+            "(requires experimental hooks mode)."
+        ),
     ),
     "no_git_tags": typer.Option(
         False,
         "--no-git-tags",
-        help="Skip creating git tags during version bumping (tags are created by default).",
+        help=(
+            "Skip creating git tags during version bumping "
+            "(tags are created by default)."
+        ),
     ),
     "skip_version_check": typer.Option(
         False,
         "--skip-version-check",
-        help="Skip version consistency verification between pyproject.toml and git tags.",
+        help=(
+            "Skip version consistency verification between pyproject.toml and git tags."
+        ),
     ),
     "start_websocket_server": typer.Option(
         False,
@@ -355,27 +378,42 @@ CLI_OPTIONS = {
     "watchdog": typer.Option(
         False,
         "--watchdog",
-        help="Start service watchdog to monitor and auto-restart MCP and WebSocket servers.",
+        help=(
+            "Start service watchdog to monitor and auto-restart "
+            "MCP and WebSocket servers."
+        ),
     ),
     "monitor": typer.Option(
         False,
         "--monitor",
-        help="Start multi-project progress monitor with WebSocket polling, watchdog services, and autodiscovery.",
+        help=(
+            "Start multi-project progress monitor with WebSocket polling, "
+            "watchdog services, and autodiscovery."
+        ),
     ),
     "enhanced_monitor": typer.Option(
         False,
         "--enhanced-monitor",
-        help="Start enhanced progress monitor with advanced MetricCard widgets and modern web UI patterns.",
+        help=(
+            "Start enhanced progress monitor with advanced MetricCard widgets "
+            "and modern web UI patterns."
+        ),
     ),
     "dev": typer.Option(
         False,
         "--dev",
-        help="Enable development mode for progress monitors (enables textual --dev mode).",
+        help=(
+            "Enable development mode for progress monitors "
+            "(enables textual --dev mode)."
+        ),
     ),
     "dashboard": typer.Option(
         False,
         "--dashboard",
-        help="Start the comprehensive dashboard with system metrics, job tracking, and performance monitoring.",
+        help=(
+            "Start the comprehensive dashboard with system metrics, "
+            "job tracking, and performance monitoring."
+        ),
     ),
     "max_iterations": typer.Option(
         5,
@@ -411,7 +449,10 @@ CLI_OPTIONS = {
     "orchestration_ai_mode": typer.Option(
         "single-agent",
         "--orchestration-ai-mode",
-        help="AI coordination mode: single-agent, multi-agent, coordinator (default: single-agent).",
+        help=(
+            "AI coordination mode: single-agent, multi-agent, coordinator "
+            "(default: single-agent)."
+        ),
     ),
     "coverage_status": typer.Option(
         False,
@@ -431,12 +472,17 @@ CLI_OPTIONS = {
     "boost_coverage": typer.Option(
         True,
         "--boost-coverage/--no-boost-coverage",
-        help="Automatically improve test coverage after successful workflow execution (default: True).",
+        help=(
+            "Automatically improve test coverage after successful "
+            "workflow execution (default: True)."
+        ),
     ),
     "disable_global_locks": typer.Option(
         False,
         "--disable-global-locks",
-        help="Disable global locking (allow concurrent hook execution across sessions).",
+        help=(
+            "Disable global locking (allow concurrent hook execution across sessions)."
+        ),
     ),
     "global_lock_timeout": typer.Option(
         600,
@@ -482,12 +528,18 @@ CLI_OPTIONS = {
     "run_tests": typer.Option(
         None,
         "--run-tests",
-        help="Execute the test suite with automatic worker detection and timeout handling. [Semantic alias for --test]",
+        help=(
+            "Execute the test suite with automatic worker detection "
+            "and timeout handling. [Semantic alias for --test]"
+        ),
     ),
     "ai_fix": typer.Option(
         None,
         "--ai-fix",
-        help="Enable AI-powered automatic fixing of code quality issues and test failures. [Semantic alias for --ai-agent]",
+        help=(
+            "Enable AI-powered automatic fixing of code quality issues "
+            "and test failures. [Semantic alias for --ai-agent]"
+        ),
     ),
     "full_release": typer.Option(
         None,
@@ -498,27 +550,42 @@ CLI_OPTIONS = {
     "show_progress": typer.Option(
         None,
         "--show-progress",
-        help="Display detailed progress tracking during execution. [Semantic alias for --track-progress]",
+        help=(
+            "Display detailed progress tracking during execution. "
+            "[Semantic alias for --track-progress]"
+        ),
     ),
     "advanced_monitor": typer.Option(
         None,
         "--advanced-monitor",
-        help="Enable advanced monitoring dashboard with detailed metrics and analytics. [Semantic alias for --enhanced-monitor]",
+        help=(
+            "Enable advanced monitoring dashboard with detailed metrics "
+            "and analytics. [Semantic alias for --enhanced-monitor]"
+        ),
     ),
     "coverage_report": typer.Option(
         None,
         "--coverage-report",
-        help="Display comprehensive coverage analysis and report. [Semantic alias for --coverage-status]",
+        help=(
+            "Display comprehensive coverage analysis and report. "
+            "[Semantic alias for --coverage-status]"
+        ),
     ),
     "clean_releases": typer.Option(
         None,
         "--clean-releases",
-        help="Clean up old releases from PyPI, keeping only the most recent versions. [Semantic alias for --cleanup-pypi]",
+        help=(
+            "Clean up old releases from PyPI, keeping only the most recent "
+            "versions. [Semantic alias for --cleanup-pypi]"
+        ),
     ),
     "generate_docs": typer.Option(
         False,
         "--generate-docs",
-        help="Generate comprehensive API documentation from source code with AST analysis and cross-references.",
+        help=(
+            "Generate comprehensive API documentation from source code "
+            "with AST analysis and cross-references."
+        ),
     ),
     "docs_format": typer.Option(
         "markdown",

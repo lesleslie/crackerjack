@@ -3,7 +3,7 @@
 import json
 import typing as t
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
@@ -11,10 +11,9 @@ import numpy as np
 from scipy import stats
 
 from crackerjack.services.quality_baseline_enhanced import (
-    EnhancedQualityBaselineService,
-    QualityMetrics,
-    TrendDirection,
     AlertSeverity,
+    EnhancedQualityBaselineService,
+    TrendDirection,
 )
 
 
@@ -461,7 +460,7 @@ class QualityIntelligenceService:
         ]
         if quality_drops:
             recommendations.append(
-                f"📉 Quality score drops detected - review recent commits and implement quality gates"
+                "📉 Quality score drops detected - review recent commits and implement quality gates"
             )
 
         # Pattern-based recommendations
@@ -476,7 +475,7 @@ class QualityIntelligenceService:
         strong_patterns = [p for p in patterns if p.confidence > 0.8]
         if strong_patterns:
             recommendations.append(
-                f"📊 Strong quality patterns detected - leverage insights for predictive quality management"
+                "📊 Strong quality patterns detected - leverage insights for predictive quality management"
             )
 
         # Prediction-based recommendations
@@ -494,7 +493,7 @@ class QualityIntelligenceService:
         ]
         if low_confidence_predictions:
             recommendations.append(
-                f"📈 Wide prediction intervals detected - increase data collection frequency for better forecasting"
+                "📈 Wide prediction intervals detected - increase data collection frequency for better forecasting"
             )
 
         # General ML insights
@@ -505,7 +504,7 @@ class QualityIntelligenceService:
 
         if not recommendations:
             recommendations.append(
-                f"✅ Quality metrics show stable patterns with no significant anomalies detected - maintain current practices"
+                "✅ Quality metrics show stable patterns with no significant anomalies detected - maintain current practices"
             )
 
         return recommendations

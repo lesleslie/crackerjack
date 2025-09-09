@@ -1,6 +1,5 @@
 """Service for generating documentation from extracted API data."""
 
-import re
 import typing as t
 from pathlib import Path
 from string import Template
@@ -51,7 +50,7 @@ $overview
 ## Protocols
 $protocols_section
 
-## Services  
+## Services
 $services_section
 
 ## Managers

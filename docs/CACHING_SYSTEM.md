@@ -11,9 +11,9 @@ Crackerjack uses a sophisticated multi-layer caching system designed to minimize
 The caching system consists of **4 layers** optimized for different use cases:
 
 1. **Hook Results Cache** - In-memory LRU cache for hook execution results
-2. **File Hash Cache** - In-memory cache for file content hashes  
-3. **Config Cache** - In-memory cache for configuration data
-4. **Disk Cache** - Persistent file-based cache for expensive operations
+1. **File Hash Cache** - In-memory cache for file content hashes
+1. **Config Cache** - In-memory cache for configuration data
+1. **Disk Cache** - Persistent file-based cache for expensive operations
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -44,7 +44,7 @@ def get_result(hook_name, file_hashes):
     result = memory_cache.get(cache_key)
     if result:
         return result
-    
+
     # 2. Check disk for expensive hooks (persistent)
     if hook_name in EXPENSIVE_HOOKS:
         result = disk_cache.get(versioned_cache_key)
@@ -52,13 +52,13 @@ def get_result(hook_name, file_hashes):
             # Promote to memory for faster access
             memory_cache.set(cache_key, result)
             return result
-    
+
     # 3. Execute and cache result
     result = execute_hook(hook_name)
     memory_cache.set(cache_key, result)
     if hook_name in EXPENSIVE_HOOKS:
         disk_cache.set(versioned_cache_key, result)
-    
+
     return result
 ```
 
@@ -71,6 +71,7 @@ def get_result(hook_name, file_hashes):
 **Invalidation**: Based on file content hashes - when any relevant file changes, cache becomes invalid
 
 **Example**:
+
 ```python
 # Files: main.py, config.py
 # Hash signature: md5("hash_of_main.py,hash_of_config.py")
@@ -86,6 +87,7 @@ cache.set_hook_result("ruff-check", file_hashes, result)
 **Invalidation**: Based on file modification time and size
 
 **Example**:
+
 ```python
 # Key includes mtime and size for automatic invalidation
 # Key: "file_hash:/path/to/file:1693123456.789:2048"
@@ -100,6 +102,7 @@ cache.set_file_hash(Path("main.py"), "sha256hash...")
 **Invalidation**: 2-hour TTL or when configuration files change
 
 **Use Cases**:
+
 - Parsed pyproject.toml settings
 - Hook strategy configurations
 - Tool version information
@@ -109,6 +112,7 @@ cache.set_file_hash(Path("main.py"), "sha256hash...")
 **Purpose**: Persist expensive computation results across sessions
 
 **Key Features**:
+
 - Survives process restarts
 - Version-aware cache invalidation
 - Configurable TTL per tool type
@@ -130,11 +134,13 @@ cache.set_file_hash(Path("main.py"), "sha256hash...")
 **Purpose**: Cache AI agent analysis and fix decisions
 
 **Benefits**:
+
 - Avoid redundant LLM API calls for identical issues
 - Consistent fix strategies across sessions
 - Faster batch processing
 
 **Example**:
+
 ```python
 # Cache key includes agent version for invalidation
 # Key: "agent:RefactoringAgent:issue_hash:1.0.0"
@@ -147,18 +153,17 @@ cache.set_agent_decision("RefactoringAgent", issue_hash, fix_result)
 **Purpose**: Track project quality metrics over time
 
 **Features**:
+
 - Per-commit quality scores
 - Baseline comparisons
 - Regression detection
 
 **Example**:
+
 ```python
 # Key: "baseline:a1b2c3d4e5f6789abcd..."
 metrics = QualityMetrics(
-    git_hash="a1b2c3d4...",
-    coverage_percent=85.2,
-    test_count=142,
-    quality_score=87
+    git_hash="a1b2c3d4...", coverage_percent=85.2, test_count=142, quality_score=87
 )
 cache.set_quality_baseline(git_hash, metrics)
 ```
@@ -202,8 +207,9 @@ cache.set_quality_baseline(git_hash, metrics)
 ### 2. Time-Based Expiration (TTL)
 
 **Use Cases**:
+
 - Security scans (weekly refresh)
-- Type checking (daily refresh)  
+- Type checking (daily refresh)
 - Configuration (hourly refresh)
 
 ### 3. Version-Based Invalidation
@@ -231,8 +237,8 @@ cache.set_quality_baseline(git_hash, metrics)
 ```python
 # In CrackerjackCache.__init__()
 self.hook_results_cache = InMemoryCache(max_entries=500, default_ttl=1800)  # 30 min
-self.file_hash_cache = InMemoryCache(max_entries=2000, default_ttl=3600)    # 1 hour  
-self.config_cache = InMemoryCache(max_entries=100, default_ttl=7200)        # 2 hours
+self.file_hash_cache = InMemoryCache(max_entries=2000, default_ttl=3600)  # 1 hour
+self.config_cache = InMemoryCache(max_entries=100, default_ttl=7200)  # 2 hours
 ```
 
 ### Cache Directory
@@ -262,7 +268,7 @@ stats = cache.get_cache_stats()
 {
     "hook_results": {"hits": 45, "misses": 12, "hit_rate_percent": 78.9},
     "file_hashes": {"hits": 156, "misses": 8, "hit_rate_percent": 95.1},
-    "disk_cache": {"hits": 23, "misses": 7, "hit_rate_percent": 76.7}
+    "disk_cache": {"hits": 23, "misses": 7, "hit_rate_percent": 76.7},
 }
 ```
 
@@ -326,31 +332,35 @@ python -m crackerjack
 **Symptoms**: Tools always re-execute, no speed improvement
 
 **Solutions**:
+
 1. Check file permissions on cache directory
-2. Verify files aren't constantly changing (timestamps)
-3. Enable debug logging to see cache decisions
+1. Verify files aren't constantly changing (timestamps)
+1. Enable debug logging to see cache decisions
 
 #### Memory Usage Too High
 
 **Symptoms**: High memory consumption during development
 
 **Solutions**:
+
 1. Reduce cache sizes in configuration
-2. More frequent cleanup: `cache.cleanup_all()`
-3. Disable caches for specific hook types
+1. More frequent cleanup: `cache.cleanup_all()`
+1. Disable caches for specific hook types
 
 #### Stale Cache Results
 
 **Symptoms**: Old results returned despite file changes
 
 **Solutions**:
+
 1. Clear all caches: `python -m crackerjack --clear-cache`
-2. Check if file modification detection is working
-3. Verify TTL settings are appropriate
+1. Check if file modification detection is working
+1. Verify TTL settings are appropriate
 
 ### Cache Corruption
 
 **Recovery**:
+
 ```bash
 # Nuclear option - clear all caches
 rm -rf .crackerjack/cache/
@@ -377,11 +387,11 @@ def get_file_hash(self, file_path: Path) -> str:
     # Cache based on mtime + size for efficiency
     stat = file_path.stat()
     cache_key = f"file_hash:{file_path}:{stat.st_mtime}:{stat.st_size}"
-    
+
     cached_hash = self.file_hash_cache.get(cache_key)
     if cached_hash:
         return cached_hash
-    
+
     # Calculate actual hash only when needed
     hash_value = hashlib.sha256(file_path.read_bytes()).hexdigest()
     self.file_hash_cache.set(cache_key, hash_value)
@@ -392,7 +402,7 @@ def get_file_hash(self, file_path: Path) -> str:
 
 The caching system is designed for single-threaded use within Crackerjack's workflow orchestration. For multi-threaded environments, additional synchronization would be required.
 
----
+______________________________________________________________________
 
 ## Future Enhancements
 
@@ -402,7 +412,7 @@ The caching system is designed for single-threaded use within Crackerjack's work
 - [ ] Integration with external cache stores (Redis)
 - [ ] Cache export/import for environment replication
 
----
+______________________________________________________________________
 
 *Last updated: 2025-01-09*
 *Cache system version: 1.0.0*

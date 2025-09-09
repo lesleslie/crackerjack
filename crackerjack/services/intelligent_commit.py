@@ -269,7 +269,7 @@ class CommitMessageGenerator:
         )
 
         if dry_run:
-            self.console.print(f"[cyan]📝[/cyan] Generated commit message:")
+            self.console.print("[cyan]📝[/cyan] Generated commit message:")
             self.console.print(f"[dim]{message}[/dim]")
             return True
 

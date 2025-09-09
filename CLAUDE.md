@@ -194,6 +194,7 @@ python -m crackerjack --ai-agent -t    # Quality + AI fixing
 **Manual Override**: Use `/session-mgmt:init`, `/session-mgmt:checkpoint`, `/session-mgmt:end` if needed for fine control
 
 **Integration Benefits**:
+
 - Crackerjack quality metrics tracked over time
 - Test patterns and failure resolutions remembered
 - Error fix strategies learned and suggested
@@ -237,4 +238,5 @@ from ..models.protocols import TestManagerProtocol
 ```
 
 **Current Status**: 10.11% coverage baseline targeting 100% (ratchet system: 2% tolerance, never reduce)
+
 - make sure to run `python -m crackerjack` after every editing/debugging cycle for quality checking

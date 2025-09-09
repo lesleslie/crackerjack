@@ -3,38 +3,31 @@
 import asyncio
 import json
 import typing as t
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from crackerjack.services.quality_baseline_enhanced import (
-    EnhancedQualityBaselineService,
-    UnifiedMetrics,
-    DashboardState,
-    SystemHealthStatus,
-    QualityAlert,
-    TrendDirection,
-)
-from crackerjack.services.quality_intelligence import (
-    QualityIntelligenceService,
-    QualityAnomaly,
-    QualityInsights,
-    QualityPrediction,
-)
+from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.dependency_analyzer import (
     DependencyAnalyzer,
     DependencyGraph,
-    analyze_project_dependencies,
 )
 from crackerjack.services.error_pattern_analyzer import (
     ErrorPatternAnalyzer,
-    ErrorPattern,
-    HeatMapData,
-    analyze_error_patterns,
 )
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.quality_baseline_enhanced import (
+    EnhancedQualityBaselineService,
+    QualityAlert,
+    SystemHealthStatus,
+    TrendDirection,
+    UnifiedMetrics,
+)
+from crackerjack.services.quality_intelligence import (
+    QualityIntelligenceService,
+)
+
 from .jobs import JobManager
 
 
@@ -162,7 +155,7 @@ def create_monitoring_endpoints(
                             )
                         )
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Send keepalive metrics
                     metrics = await get_current_metrics(quality_service, job_manager)
                     await ws_manager.broadcast_metrics(metrics)
@@ -358,7 +351,7 @@ def create_monitoring_endpoints(
                             )
                         )
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Periodic anomaly check
                     anomalies = intelligence_service.detect_anomalies(days=1)
                     if anomalies:  # Only send if there are new anomalies
@@ -437,7 +430,7 @@ def create_monitoring_endpoints(
                             )
                         )
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Periodic predictions update
                     insights = intelligence_service.generate_insights(days=7)
                     await websocket.send_text(
@@ -495,7 +488,7 @@ def create_monitoring_endpoints(
                             )
                         )
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Periodic pattern analysis
                     patterns = intelligence_service.identify_patterns(days=7)
                     await websocket.send_text(
@@ -579,7 +572,7 @@ def create_monitoring_endpoints(
                             )
                         )
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Send keepalive
                     await websocket.send_text(
                         json.dumps(
@@ -728,7 +721,9 @@ def create_monitoring_endpoints(
                     content=data,
                     media_type="text/csv",
                     headers={
-                        "Content-Disposition": f"attachment; filename=crackerjack_metrics_{days}d.csv"
+                        "Content-Disposition": (
+                            f"attachment; filename=crackerjack_metrics_{days}d.csv"
+                        )
                     },
                 )
             else:
@@ -939,8 +934,8 @@ def create_monitoring_endpoints(
     async def trigger_dependency_analysis(request: dict):
         """Trigger fresh dependency analysis."""
         try:
-            include_tests = request.get("include_tests", True)
-            max_depth = request.get("max_depth", 10)
+            request.get("include_tests", True)
+            request.get("max_depth", 10)
 
             # Reset analyzer for fresh analysis
             dependency_analyzer.dependency_graph = DependencyGraph()
@@ -1065,7 +1060,7 @@ def create_monitoring_endpoints(
                             )
                         )
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Send periodic updates if no client messages
                     await websocket.send_text(
                         json.dumps(
@@ -1123,7 +1118,7 @@ def create_monitoring_endpoints(
 
     @app.get("/api/error_patterns")
     async def get_error_patterns(
-        days: int = 30, min_occurrences: int = 2, severity: t.Optional[str] = None
+        days: int = 30, min_occurrences: int = 2, severity: str | None = None
     ):
         """Get analyzed error patterns."""
         try:
@@ -1326,7 +1321,8 @@ def _get_dashboard_html() -> str:
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <style>
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                         'Roboto', sans-serif;
             margin: 0;
             padding: 20px;
             background-color: #f5f5f5;
@@ -1396,51 +1392,55 @@ def _get_dashboard_html() -> str:
 <body>
     <div class="dashboard-container">
         <div id="connection-status" class="disconnected">Connecting...</div>
-        
+
         <h1>🚀 Crackerjack Monitoring Dashboard</h1>
-        
+
         <div id="metrics-cards"></div>
-        
+
         <div class="chart-container">
             <h3>Quality Score Trend (7 Days)</h3>
             <div id="quality-chart"></div>
         </div>
-        
+
         <div class="chart-container">
             <h3>Test Coverage & Performance</h3>
             <div id="coverage-chart"></div>
         </div>
-        
+
         <div class="chart-container">
             <h3>System Health</h3>
             <div id="health-chart"></div>
         </div>
-        
+
         <div class="chart-container">
             <h3>Active Alerts</h3>
             <div id="alerts-panel"></div>
         </div>
-        
+
         <div class="chart-container">
             <h3>🧠 ML Anomaly Detection</h3>
             <div id="anomalies-panel"></div>
         </div>
-        
+
         <div class="chart-container">
             <h3>🔮 Quality Predictions</h3>
             <div id="predictions-panel"></div>
         </div>
-        
+
         <div class="chart-container">
             <h3>📊 Pattern Analysis</h3>
             <div id="patterns-panel"></div>
         </div>
-        
+
         <div class="chart-container">
             <h3>🕸️ Code Dependencies Network</h3>
             <div style="margin-bottom: 10px;">
-                <button id="load-dependency-graph" onclick="loadDependencyGraph()">Load Dependency Graph</button>
-                <button id="refresh-graph" onclick="refreshDependencyGraph()" disabled>Refresh</button>
+                <button id="load-dependency-graph" onclick="loadDependencyGraph()">
+                    Load Dependency Graph
+                </button>
+                <button id="refresh-graph" onclick="refreshDependencyGraph()" disabled>
+                    Refresh
+                </button>
                 <select id="graph-filter" onchange="applyGraphFilter()" disabled>
                     <option value="">All Types</option>
                     <option value="module">Modules Only</option>
@@ -1448,11 +1448,14 @@ def _get_dashboard_html() -> str:
                     <option value="function">Functions Only</option>
                 </select>
                 <label>
-                    <input type="checkbox" id="include-external" onchange="applyGraphFilter()" disabled>
+                    <input type="checkbox" id="include-external"
+                           onchange="applyGraphFilter()" disabled>
                     Include External Dependencies
                 </label>
             </div>
-            <div id="dependency-graph" style="width: 100%; height: 600px; border: 1px solid #ddd;"></div>
+            <div id="dependency-graph"
+                 style="width: 100%; height: 600px; border: 1px solid #ddd;">
+            </div>
         </div>
     </div>
 
@@ -1466,21 +1469,31 @@ def _get_dashboard_html() -> str:
                 <option value="temporal">Over Time</option>
                 <option value="function">By Function</option>
             </select>
-            <button id="load-heatmap" onclick="loadErrorHeatMap()">Load Heat Map</button>
+            <button id="load-heatmap" onclick="loadErrorHeatMap()">
+                Load Heat Map
+            </button>
             <label>
-                <input type="number" id="analysis-days" value="30" min="1" max="365" onchange="updateHeatMap()">
+                <input type="number" id="analysis-days" value="30" min="1" max="365"
+                       onchange="updateHeatMap()">
                 Analysis Days
             </label>
             <label>
-                <input type="number" id="time-buckets" value="24" min="6" max="48" onchange="updateTemporalHeatMap()" disabled>
+                <input type="number" id="time-buckets" value="24" min="6" max="48"
+                       onchange="updateTemporalHeatMap()" disabled>
                 Time Buckets
             </label>
         </div>
         <div class="tab-container">
             <div class="tab-buttons">
-                <button class="tab-button active" onclick="showHeatMapTab('heatmap')">Heat Map</button>
-                <button class="tab-button" onclick="showHeatMapTab('patterns')">Error Patterns</button>
-                <button class="tab-button" onclick="showHeatMapTab('severity')">Severity Analysis</button>
+                <button class="tab-button active" onclick="showHeatMapTab('heatmap')">
+                    Heat Map
+                </button>
+                <button class="tab-button" onclick="showHeatMapTab('patterns')">
+                    Error Patterns
+                </button>
+                <button class="tab-button" onclick="showHeatMapTab('severity')">
+                    Severity Analysis
+                </button>
             </div>
             <div id="heatmap-tab" class="tab-content active">
                 <div id="error-heatmap" style="width: 100%; height: 600px; border: 1px solid #ddd; overflow: auto;"></div>
@@ -1499,7 +1512,7 @@ def _get_dashboard_html() -> str:
         let ws = null;
         let reconnectInterval = 5000;
         let isConnected = false;
-        
+
         // Dashboard state
         let currentMetrics = {{}};
         let historicalData = [];
@@ -1509,50 +1522,50 @@ def _get_dashboard_html() -> str:
         let patterns = {{}};
         let dependencyGraph = null;
         let dependencyWs = null;
-        
+
         // Intelligence WebSocket connections
         let anomaliesWs = null;
         let predictionsWs = null;
         let patternsWs = null;
-        
+
         // Heat map state
         let heatMapWs = null;
         let currentHeatMapData = null;
         let errorPatterns = [];
         let severityBreakdown = {{}};
-        
+
         function connect() {{
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${{protocol}}//${{window.location.host}}/ws/dashboard/overview`;
-            
+
             ws = new WebSocket(wsUrl);
-            
+
             // Connect intelligence WebSockets
             connectIntelligenceStreams();
-            
+
             ws.onopen = function() {{
                 isConnected = true;
                 updateConnectionStatus();
                 console.log('Connected to monitoring dashboard');
             }};
-            
+
             ws.onmessage = function(event) {{
                 const message = JSON.parse(event.data);
                 handleMessage(message);
             }};
-            
+
             ws.onclose = function() {{
                 isConnected = false;
                 updateConnectionStatus();
                 console.log('Disconnected from monitoring dashboard');
                 setTimeout(connect, reconnectInterval);
             }};
-            
+
             ws.onerror = function(error) {{
                 console.error('WebSocket error:', error);
             }};
         }}
-        
+
         function handleMessage(message) {{
             switch(message.type) {{
                 case 'dashboard_update':
@@ -1566,7 +1579,7 @@ def _get_dashboard_html() -> str:
                     break;
             }}
         }}
-        
+
         function updateConnectionStatus() {{
             const statusEl = document.getElementById('connection-status');
             if (isConnected) {{
@@ -1577,12 +1590,12 @@ def _get_dashboard_html() -> str:
                 statusEl.className = 'disconnected';
             }}
         }}
-        
+
         function updateDashboard(data) {{
             currentMetrics = data.current_metrics;
             historicalData = data.historical_data || [];
             activeAlerts = data.active_alerts || [];
-            
+
             renderMetricsCards();
             renderQualityChart();
             renderCoverageChart();
@@ -1592,16 +1605,16 @@ def _get_dashboard_html() -> str:
             renderPredictionsPanel();
             renderPatternsPanel();
         }}
-        
+
         function updateMetrics(data) {{
             currentMetrics = data;
             renderMetricsCards();
         }}
-        
+
         function handleAlert(alert) {{
             activeAlerts.unshift(alert);
             renderAlertsPanel();
-            
+
             // Show browser notification if permissions granted
             if (Notification.permission === 'granted') {{
                 new Notification('Crackerjack Alert', {{
@@ -1610,13 +1623,13 @@ def _get_dashboard_html() -> str:
                 }});
             }}
         }}
-        
+
         function renderMetricsCards() {{
             const container = document.getElementById('metrics-cards');
             const metrics = currentMetrics;
-            
+
             if (!metrics) return;
-            
+
             const cards = [
                 {{
                     label: 'Quality Score',
@@ -1644,7 +1657,7 @@ def _get_dashboard_html() -> str:
                     trend: metrics.error_count === 0 ? 'improving' : 'declining'
                 }}
             ];
-            
+
             container.innerHTML = cards.map(card => `
                 <div class="metric-card">
                     <div class="metric-value">${{card.value}}</div>
@@ -1657,58 +1670,58 @@ def _get_dashboard_html() -> str:
                 </div>
             `).join('');
         }}
-        
+
         function renderQualityChart() {{
             // D3.js quality score chart implementation
             const data = historicalData.map(d => ({{
                 date: new Date(d.timestamp),
                 score: d.quality_score
             }}));
-            
+
             if (data.length === 0) return;
-            
+
             const container = d3.select('#quality-chart');
             container.selectAll('*').remove();
-            
+
             const margin = {{top: 20, right: 30, bottom: 40, left: 50}};
             const width = 800 - margin.left - margin.right;
             const height = 300 - margin.top - margin.bottom;
-            
+
             const svg = container
                 .append('svg')
                 .attr('width', width + margin.left + margin.right)
                 .attr('height', height + margin.top + margin.bottom);
-                
+
             const g = svg.append('g')
                 .attr('transform', `translate(${{margin.left}},${{margin.top}})`);
-                
+
             const x = d3.scaleTime()
                 .domain(d3.extent(data, d => d.date))
                 .range([0, width]);
-                
+
             const y = d3.scaleLinear()
                 .domain([0, 100])
                 .range([height, 0]);
-                
+
             const line = d3.line()
                 .x(d => x(d.date))
                 .y(d => y(d.score))
                 .curve(d3.curveMonotoneX);
-                
+
             g.append('g')
                 .attr('transform', `translate(0,${{height}})`)
                 .call(d3.axisBottom(x));
-                
+
             g.append('g')
                 .call(d3.axisLeft(y));
-                
+
             g.append('path')
                 .datum(data)
                 .attr('fill', 'none')
                 .attr('stroke', '#007bff')
                 .attr('stroke-width', 2)
                 .attr('d', line);
-                
+
             g.selectAll('.dot')
                 .data(data)
                 .enter().append('circle')
@@ -1718,30 +1731,30 @@ def _get_dashboard_html() -> str:
                 .attr('r', 3)
                 .attr('fill', '#007bff');
         }}
-        
+
         function renderCoverageChart() {{
             // Similar D3.js implementation for coverage chart
             const container = document.getElementById('coverage-chart');
             container.innerHTML = '<p>Coverage and performance charts will be rendered here</p>';
         }}
-        
+
         function renderHealthChart() {{
             // System health visualization
             const container = document.getElementById('health-chart');
             container.innerHTML = '<p>System health metrics will be rendered here</p>';
         }}
-        
+
         function renderAlertsPanel() {{
             const container = document.getElementById('alerts-panel');
-            
+
             if (activeAlerts.length === 0) {{
                 container.innerHTML = '<p style="color: #28a745;">✅ No active alerts</p>';
                 return;
             }}
-            
+
             container.innerHTML = activeAlerts.slice(0, 10).map(alert => `
                 <div style="padding: 10px; margin: 5px 0; border-left: 4px solid ${{
-                    alert.severity === 'critical' ? '#dc3545' : 
+                    alert.severity === 'critical' ? '#dc3545' :
                     alert.severity === 'warning' ? '#ffc107' : '#17a2b8'
                 }}; background-color: #f8f9fa;">
                     <strong>${{alert.severity.toUpperCase()}}</strong>: ${{alert.message}}
@@ -1750,11 +1763,11 @@ def _get_dashboard_html() -> str:
                 </div>
             `).join('');
         }}
-        
+
         function connectIntelligenceStreams() {{
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const baseUrl = `${{protocol}}//${{window.location.host}}`;
-            
+
             // Anomaly detection stream
             anomaliesWs = new WebSocket(`${{baseUrl}}/ws/intelligence/anomalies`);
             anomaliesWs.onmessage = function(event) {{
@@ -1764,7 +1777,7 @@ def _get_dashboard_html() -> str:
                     renderAnomaliesPanel();
                 }}
             }};
-            
+
             // Predictions stream
             predictionsWs = new WebSocket(`${{baseUrl}}/ws/intelligence/predictions`);
             predictionsWs.onmessage = function(event) {{
@@ -1778,7 +1791,7 @@ def _get_dashboard_html() -> str:
                     renderPredictionsPanel();
                 }}
             }};
-            
+
             // Patterns stream
             patternsWs = new WebSocket(`${{baseUrl}}/ws/intelligence/patterns`);
             patternsWs.onmessage = function(event) {{
@@ -1788,12 +1801,12 @@ def _get_dashboard_html() -> str:
                     renderPatternsPanel();
                 }}
             }};
-            
+
             // Heat map stream
             heatMapWs = new WebSocket(`${{baseUrl}}/ws/heatmap/errors`);
             heatMapWs.onmessage = function(event) {{
                 const message = JSON.parse(event.data);
-                
+
                 if (message.type.includes('heatmap')) {{
                     currentHeatMapData = message.data;
                     renderHeatMap(currentHeatMapData, message.type);
@@ -1804,18 +1817,18 @@ def _get_dashboard_html() -> str:
                 }}
             }};
         }}
-        
+
         function renderAnomaliesPanel() {{
             const container = document.getElementById('anomalies-panel');
-            
+
             if (!anomalies || anomalies.length === 0) {{
                 container.innerHTML = '<p style="color: #28a745;">✅ No anomalies detected</p>';
                 return;
             }}
-            
+
             container.innerHTML = anomalies.slice(0, 5).map(anomaly => `
                 <div style="padding: 10px; margin: 5px 0; border-left: 4px solid ${{
-                    anomaly.severity === 'critical' ? '#dc3545' : 
+                    anomaly.severity === 'critical' ? '#dc3545' :
                     anomaly.severity === 'warning' ? '#ffc107' : '#17a2b8'
                 }}; background-color: #f8f9fa;">
                     <strong>🚨 ${{anomaly.metric}}</strong>: ${{anomaly.description}}
@@ -1824,23 +1837,23 @@ def _get_dashboard_html() -> str:
                 </div>
             `).join('');
         }}
-        
+
         function renderPredictionsPanel() {{
             const container = document.getElementById('predictions-panel');
-            
+
             if (!predictions || Object.keys(predictions).length === 0) {{
                 container.innerHTML = '<p>Loading predictions...</p>';
                 return;
             }}
-            
+
             let content = '';
-            
+
             if (predictions.summary) {{
                 content += `<div style="padding: 10px; background-color: #e7f3ff; border-radius: 5px; margin-bottom: 10px;">
                     <strong>📈 Summary:</strong> ${{predictions.summary}}
                 </div>`;
             }}
-            
+
             if (predictions.recommendations && predictions.recommendations.length > 0) {{
                 content += '<h4>🎯 Recommendations:</h4><ul>';
                 predictions.recommendations.slice(0, 3).forEach(rec => {{
@@ -1848,7 +1861,7 @@ def _get_dashboard_html() -> str:
                 }});
                 content += '</ul>';
             }}
-            
+
             if (predictions.risk_factors && predictions.risk_factors.length > 0) {{
                 content += '<h4>⚠️ Risk Factors:</h4><ul>';
                 predictions.risk_factors.slice(0, 3).forEach(risk => {{
@@ -1856,20 +1869,20 @@ def _get_dashboard_html() -> str:
                 }});
                 content += '</ul>';
             }}
-            
+
             container.innerHTML = content || '<p>No prediction data available</p>';
         }}
-        
+
         function renderPatternsPanel() {{
             const container = document.getElementById('patterns-panel');
-            
+
             if (!patterns || Object.keys(patterns).length === 0) {{
                 container.innerHTML = '<p>Loading pattern analysis...</p>';
                 return;
             }}
-            
+
             let content = '';
-            
+
             if (patterns.correlations && patterns.correlations.length > 0) {{
                 content += '<h4>🔗 Strong Correlations:</h4><ul>';
                 patterns.correlations.slice(0, 3).forEach(corr => {{
@@ -1879,7 +1892,7 @@ def _get_dashboard_html() -> str:
                 }});
                 content += '</ul>';
             }}
-            
+
             if (patterns.trends && patterns.trends.length > 0) {{
                 content += '<h4>📊 Trending Patterns:</h4><ul>';
                 patterns.trends.slice(0, 3).forEach(trend => {{
@@ -1887,28 +1900,28 @@ def _get_dashboard_html() -> str:
                 }});
                 content += '</ul>';
             }}
-            
+
             container.innerHTML = content || '<p>No significant patterns detected</p>';
         }}
-        
+
         // Dependency Graph Functions
         function loadDependencyGraph() {{
             const button = document.getElementById('load-dependency-graph');
             button.textContent = 'Loading...';
             button.disabled = true;
-            
+
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${{protocol}}//${{window.location.host}}/ws/dependencies/graph`;
-            
+
             dependencyWs = new WebSocket(wsUrl);
-            
+
             dependencyWs.onopen = function() {{
                 console.log('Connected to dependency analysis');
             }};
-            
+
             dependencyWs.onmessage = function(event) {{
                 const message = JSON.parse(event.data);
-                
+
                 switch(message.type) {{
                     case 'analysis_started':
                         updateGraphStatus(message.message);
@@ -1925,13 +1938,13 @@ def _get_dashboard_html() -> str:
                         break;
                 }}
             }};
-            
+
             dependencyWs.onclose = function() {{
                 console.log('Dependency analysis connection closed');
                 button.textContent = 'Load Dependency Graph';
                 button.disabled = false;
             }};
-            
+
             dependencyWs.onerror = function(error) {{
                 console.error('Dependency WebSocket error:', error);
                 updateGraphStatus('Error loading dependency graph');
@@ -1939,51 +1952,51 @@ def _get_dashboard_html() -> str:
                 button.disabled = false;
             }};
         }}
-        
+
         function refreshDependencyGraph() {{
             if (dependencyWs && dependencyWs.readyState === WebSocket.OPEN) {{
                 dependencyWs.send(JSON.stringify({{ type: 'refresh_request' }}));
                 updateGraphStatus('Refreshing dependency analysis...');
             }}
         }}
-        
+
         function applyGraphFilter() {{
             if (!dependencyWs || dependencyWs.readyState !== WebSocket.OPEN) return;
-            
+
             const filterType = document.getElementById('graph-filter').value;
             const includeExternal = document.getElementById('include-external').checked;
-            
+
             const filters = {{
                 type: filterType || null,
                 include_external: includeExternal,
                 max_nodes: 500  // Limit for performance
             }};
-            
+
             dependencyWs.send(JSON.stringify({{
                 type: 'filter_request',
                 filters: filters
             }}));
-            
+
             updateGraphStatus('Applying filters...');
         }}
-        
+
         function enableGraphControls() {{
             document.getElementById('refresh-graph').disabled = false;
             document.getElementById('graph-filter').disabled = false;
             document.getElementById('include-external').disabled = false;
         }}
-        
+
         function updateGraphStatus(message) {{
             const container = document.getElementById('dependency-graph');
             if (!dependencyGraph) {{
                 container.innerHTML = `<p style="padding: 20px; text-align: center;">${{message}}</p>`;
             }}
         }}
-        
+
         function renderDependencyGraph(graphData) {{
             const container = d3.select('#dependency-graph');
             container.selectAll('*').remove();
-            
+
             if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {{
                 container.append('p')
                     .style('padding', '20px')
@@ -1991,20 +2004,20 @@ def _get_dashboard_html() -> str:
                     .text('No dependency data available');
                 return;
             }}
-            
+
             const width = 800;
             const height = 600;
-            
+
             const svg = container
                 .append('svg')
                 .attr('width', width)
                 .attr('height', height);
-                
+
             // Create color scale for node types
             const colorScale = d3.scaleOrdinal()
                 .domain(['module', 'class', 'function', 'method'])
                 .range(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']);
-            
+
             // Create force simulation
             const simulation = d3.forceSimulation(graphData.nodes)
                 .force('link', d3.forceLink(graphData.edges)
@@ -2014,18 +2027,18 @@ def _get_dashboard_html() -> str:
                     .strength(d => -100 - d.size * 10))
                 .force('center', d3.forceCenter(width / 2, height / 2))
                 .force('collision', d3.forceCollide(d => Math.max(5, d.size * 2)));
-            
+
             // Add zoom behavior
             const zoom = d3.zoom()
                 .scaleExtent([0.1, 4])
                 .on('zoom', function(event) {{
                     g.attr('transform', event.transform);
                 }});
-                
+
             svg.call(zoom);
-            
+
             const g = svg.append('g');
-            
+
             // Add links
             const link = g.append('g')
                 .selectAll('line')
@@ -2041,7 +2054,7 @@ def _get_dashboard_html() -> str:
                 }})
                 .attr('stroke-width', d => Math.max(1, d.weight * 2))
                 .attr('stroke-opacity', 0.6);
-            
+
             // Add nodes
             const node = g.append('g')
                 .selectAll('circle')
@@ -2066,7 +2079,7 @@ def _get_dashboard_html() -> str:
                         d.fx = null;
                         d.fy = null;
                     }}));
-            
+
             // Add labels for important nodes
             const label = g.append('g')
                 .selectAll('text')
@@ -2078,14 +2091,14 @@ def _get_dashboard_html() -> str:
                 .attr('fill', '#333')
                 .attr('text-anchor', 'middle')
                 .attr('dy', '0.3em');
-            
+
             // Add tooltips
             node.append('title')
                 .text(d => `${{d.name}}\\nType: ${{d.type}}\\nComplexity: ${{d.complexity}}\\nFile: ${{d.file_path}}`);
-            
+
             link.append('title')
                 .text(d => `${{d.source.id}} → ${{d.target.id}}\\nType: ${{d.type}}\\nWeight: ${{d.weight}}`);
-            
+
             // Update positions on simulation tick
             simulation.on('tick', function() {{
                 link
@@ -2093,27 +2106,27 @@ def _get_dashboard_html() -> str:
                     .attr('y1', d => d.source.y)
                     .attr('x2', d => d.target.x)
                     .attr('y2', d => d.target.y);
-                
+
                 node
                     .attr('cx', d => d.x)
                     .attr('cy', d => d.y);
-                    
+
                 label
                     .attr('x', d => d.x)
                     .attr('y', d => d.y);
             }});
-            
+
             // Add legend
             const legend = svg.append('g')
                 .attr('transform', 'translate(20, 20)');
-            
+
             const legendData = [
                 {{ type: 'module', color: colorScale('module') }},
                 {{ type: 'class', color: colorScale('class') }},
                 {{ type: 'function', color: colorScale('function') }},
                 {{ type: 'method', color: colorScale('method') }}
             ];
-            
+
             legend.selectAll('g')
                 .data(legendData)
                 .join('g')
@@ -2132,105 +2145,105 @@ def _get_dashboard_html() -> str:
                         .text(d.type);
                 }});
         }}
-        
+
         // Heat map functions
         function loadErrorHeatMap() {{
             const button = document.getElementById('load-heatmap');
             button.textContent = 'Loading...';
             button.disabled = true;
-            
+
             // WebSocket will handle the data loading
             setTimeout(() => {{
                 button.textContent = 'Load Heat Map';
                 button.disabled = false;
             }}, 2000);
         }}
-        
+
         function updateHeatMap() {{
             if (!heatMapWs || heatMapWs.readyState !== WebSocket.OPEN) return;
-            
+
             const heatmapType = document.getElementById('heatmap-type').value;
             const days = parseInt(document.getElementById('analysis-days').value);
             const timeBuckets = document.getElementById('time-buckets').value;
-            
+
             // Enable/disable time buckets input based on type
             document.getElementById('time-buckets').disabled = heatmapType !== 'temporal';
-            
+
             const message = {{
                 type: 'refresh_heatmap',
                 heatmap_type: heatmapType,
                 days: days,
                 time_buckets: heatmapType === 'temporal' ? parseInt(timeBuckets) : 24
             }};
-            
+
             heatMapWs.send(JSON.stringify(message));
         }}
-        
+
         function updateTemporalHeatMap() {{
             if (document.getElementById('heatmap-type').value === 'temporal') {{
                 updateHeatMap();
             }}
         }}
-        
+
         function showHeatMapTab(tabName) {{
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(tab => {{
                 tab.classList.remove('active');
             }});
-            
+
             // Show selected tab content
             document.getElementById(tabName + '-tab').classList.add('active');
-            
+
             // Update tab buttons
             document.querySelectorAll('.tab-button').forEach(button => {{
                 button.classList.remove('active');
             }});
             event.target.classList.add('active');
         }}
-        
+
         function renderHeatMap(heatmapData, type) {{
             if (!heatmapData || !heatmapData.cells || heatmapData.cells.length === 0) {{
-                document.getElementById('error-heatmap').innerHTML = 
+                document.getElementById('error-heatmap').innerHTML =
                     '<div style="text-align: center; padding: 20px; color: #28a745;">✅ No error patterns found</div>';
                 return;
             }}
-            
+
             const container = d3.select('#error-heatmap');
             container.selectAll('*').remove();
-            
+
             const margin = {{ top: 80, right: 100, bottom: 100, left: 200 }};
             const width = 1000 - margin.left - margin.right;
             const height = 600 - margin.bottom - margin.top;
-            
+
             // Create SVG
             const svg = container.append('svg')
                 .attr('width', width + margin.left + margin.right)
                 .attr('height', height + margin.bottom + margin.top);
-                
+
             const g = svg.append('g')
                 .attr('transform', `translate(${{margin.left}},${{margin.top}})`);
-            
+
             // Create scales
             const xScale = d3.scaleBand()
                 .domain(heatmapData.x_labels)
                 .range([0, width])
                 .padding(0.1);
-                
+
             const yScale = d3.scaleBand()
                 .domain(heatmapData.y_labels)
                 .range([height, 0])
                 .padding(0.1);
-            
+
             // Color scale based on severity
             const colorScale = d3.scaleOrdinal()
                 .domain(['low', 'medium', 'high', 'critical'])
                 .range(['#fffbd4', '#ffeaa7', '#fd79a8', '#e84393']);
-            
+
             // Intensity scale for opacity
             const intensityScale = d3.scaleLinear()
                 .domain([0, 1])
                 .range([0.3, 1]);
-            
+
             // Create heat map cells
             const cells = g.selectAll('.heatmap-cell')
                 .data(heatmapData.cells)
@@ -2244,7 +2257,7 @@ def _get_dashboard_html() -> str:
                 .attr('opacity', d => intensityScale(d.color_intensity))
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 1);
-            
+
             // Add tooltips
             cells.append('title')
                 .text(d => {{
@@ -2254,7 +2267,7 @@ Error: ${{tooltip.error_type}}
 Count: ${{tooltip.count}}
 Severity: ${{tooltip.severity}}`;
                 }});
-            
+
             // Add value labels for high-intensity cells
             g.selectAll('.cell-label')
                 .data(heatmapData.cells.filter(d => d.color_intensity > 0.6))
@@ -2268,7 +2281,7 @@ Severity: ${{tooltip.severity}}`;
                 .attr('font-size', '10px')
                 .attr('font-weight', 'bold')
                 .text(d => d.value);
-            
+
             // Add axes
             const xAxis = g.append('g')
                 .attr('transform', `translate(0, ${{height}})`)
@@ -2278,10 +2291,10 @@ Severity: ${{tooltip.severity}}`;
                 .attr('dx', '-.8em')
                 .attr('dy', '.15em')
                 .attr('transform', 'rotate(-45)');
-            
+
             const yAxis = g.append('g')
                 .call(d3.axisLeft(yScale));
-            
+
             // Add title
             svg.append('text')
                 .attr('x', (width + margin.left + margin.right) / 2)
@@ -2290,7 +2303,7 @@ Severity: ${{tooltip.severity}}`;
                 .attr('font-size', '16px')
                 .attr('font-weight', 'bold')
                 .text(heatmapData.title);
-            
+
             // Add subtitle
             svg.append('text')
                 .attr('x', (width + margin.left + margin.right) / 2)
@@ -2299,18 +2312,18 @@ Severity: ${{tooltip.severity}}`;
                 .attr('font-size', '12px')
                 .attr('fill', '#666')
                 .text(heatmapData.subtitle);
-            
+
             // Add legend
             const legend = svg.append('g')
                 .attr('transform', `translate(${{width + margin.left + 20}}, ${{margin.top}})`);
-            
+
             const legendData = [
                 {{ severity: 'low', color: colorScale('low') }},
                 {{ severity: 'medium', color: colorScale('medium') }},
                 {{ severity: 'high', color: colorScale('high') }},
                 {{ severity: 'critical', color: colorScale('critical') }}
             ];
-            
+
             legend.selectAll('g')
                 .data(legendData)
                 .join('g')
@@ -2328,15 +2341,15 @@ Severity: ${{tooltip.severity}}`;
                         .text(d.severity);
                 }});
         }}
-        
+
         function renderErrorPatterns() {{
             const container = document.getElementById('error-patterns-list');
-            
+
             if (!errorPatterns || errorPatterns.length === 0) {{
                 container.innerHTML = '<p style="color: #28a745;">✅ No error patterns found</p>';
                 return;
             }}
-            
+
             // Sort by severity and count
             const sortedPatterns = [...errorPatterns].sort((a, b) => {{
                 const severityOrder = {{ critical: 4, high: 3, medium: 2, low: 1 }};
@@ -2345,26 +2358,26 @@ Severity: ${{tooltip.severity}}`;
                 }}
                 return b.count - a.count;
             }});
-            
+
             container.innerHTML = sortedPatterns.map(pattern => {{
                 const severityColor = {{
                     critical: '#e84393',
-                    high: '#fd79a8', 
+                    high: '#fd79a8',
                     medium: '#ffeaa7',
                     low: '#fffbd4'
                 }};
-                
+
                 const trendIcon = {{
                     increasing: '📈',
                     stable: '➡️',
                     decreasing: '📉'
                 }};
-                
+
                 return `
                     <div style="
-                        padding: 15px; 
-                        margin: 10px 0; 
-                        border: 1px solid #ddd; 
+                        padding: 15px;
+                        margin: 10px 0;
+                        border: 1px solid #ddd;
                         border-radius: 8px;
                         border-left: 4px solid ${{severityColor[pattern.severity]}};
                         background-color: ${{pattern.severity === 'critical' ? '#fff5f5' : '#fafafa'}};
@@ -2373,10 +2386,10 @@ Severity: ${{tooltip.severity}}`;
                             <h4 style="margin: 0; color: #333;">${{pattern.error_type}}</h4>
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="
-                                    background: ${{severityColor[pattern.severity]}}; 
-                                    padding: 2px 8px; 
-                                    border-radius: 12px; 
-                                    font-size: 12px; 
+                                    background: ${{severityColor[pattern.severity]}};
+                                    padding: 2px 8px;
+                                    border-radius: 12px;
+                                    font-size: 12px;
                                     font-weight: bold;
                                     color: ${{pattern.severity === 'low' ? '#333' : '#fff'}};
                                 ">${{pattern.severity.toUpperCase()}}</span>
@@ -2394,8 +2407,8 @@ Severity: ${{tooltip.severity}}`;
                         <div style="margin-top: 8px;">
                             <div style="background: #e9ecef; height: 4px; border-radius: 2px; overflow: hidden;">
                                 <div style="
-                                    background: ${{severityColor[pattern.severity]}}; 
-                                    height: 100%; 
+                                    background: ${{severityColor[pattern.severity]}};
+                                    height: 100%;
                                     width: ${{Math.min(pattern.confidence * 100, 100)}}%;
                                     transition: width 0.3s ease;
                                 "></div>
@@ -2406,53 +2419,65 @@ Severity: ${{tooltip.severity}}`;
                 `;
             }}).join('');
         }}
-        
+
         function calculateSeverityBreakdown() {{
             if (!errorPatterns) return;
-            
+
             severityBreakdown = errorPatterns.reduce((acc, pattern) => {{
                 acc[pattern.severity] = (acc[pattern.severity] || 0) + 1;
                 return acc;
             }}, {{}});
-            
+
             renderSeverityBreakdown();
         }}
-        
+
         function renderSeverityBreakdown() {{
             const container = document.getElementById('severity-breakdown');
-            
+
             if (!severityBreakdown || Object.keys(severityBreakdown).length === 0) {{
                 container.innerHTML = '<p style="color: #28a745;">✅ No severity data available</p>';
                 return;
             }}
-            
+
             const total = Object.values(severityBreakdown).reduce((sum, count) => sum + count, 0);
             const severityColors = {{
                 critical: '#e84393',
                 high: '#fd79a8',
-                medium: '#ffeaa7', 
+                medium: '#ffeaa7',
                 low: '#fffbd4'
             }};
-            
+
             const severityOrder = ['critical', 'high', 'medium', 'low'];
-            
+
             container.innerHTML = `
                 <div style="padding: 20px;">
                     <h3 style="margin-bottom: 20px;">Severity Distribution (${{total}} total patterns)</h3>
                     ${{severityOrder.map(severity => {{
                         const count = severityBreakdown[severity] || 0;
                         const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-                        
+
                         return `
                             <div style="margin-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                    <span style="font-weight: bold; text-transform: capitalize;">${{severity}}</span>
+                                <div style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    margin-bottom: 5px;
+                                ">
+                                    <span style="font-weight: bold; text-transform: capitalize;">
+                                        ${{severity}}
+                                    </span>
                                     <span>${{count}} (${{percentage}}%)</span>
                                 </div>
-                                <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div style="
+                                    background: #e9ecef;
+                                    height: 8px;
+                                    border-radius: 4px;
+                                    overflow: hidden;
+                                ">
                                     <div style="
-                                        background: ${{severityColors[severity]}}; 
-                                        height: 100%; 
+                                        background: ${{severityColors[severity]}};
+                                        height: 100%;
                                         width: ${{percentage}}%;
                                         transition: width 0.5s ease;
                                     "></div>
@@ -2460,25 +2485,46 @@ Severity: ${{tooltip.severity}}`;
                             </div>
                         `;
                     }}).join('')}}
-                    
-                    <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+
+                    <div style="
+                        margin-top: 30px;
+                        padding: 15px;
+                        background: #f8f9fa;
+                        border-radius: 8px;
+                    ">
                         <h4 style="margin-top: 0;">Recommendations</h4>
                         <ul style="margin: 0; padding-left: 20px;">
-                            ${{severityBreakdown.critical ? '<li style="color: #e84393;">🚨 <strong>Critical errors require immediate attention</strong></li>' : ''}}
-                            ${{severityBreakdown.high ? '<li style="color: #fd79a8;">⚠️ High severity errors should be prioritized</li>' : ''}}
-                            ${{severityBreakdown.medium && severityBreakdown.medium > 5 ? '<li style="color: #f39c12;">📊 Consider batch-fixing medium severity patterns</li>' : ''}}
-                            ${{severityBreakdown.low && severityBreakdown.low > 10 ? '<li style="color: #3498db;">🔧 Low severity issues can be automated or batched</li>' : ''}}
+                            ${{severityBreakdown.critical ? (
+                                '<li style="color: #e84393;">'
+                                + '🚨 <strong>Critical errors require immediate attention</strong>'
+                                + '</li>'
+                            ) : ''}}
+                            ${{severityBreakdown.high ? (
+                                '<li style="color: #fd79a8;">'
+                                + '⚠️ High severity errors should be prioritized'
+                                + '</li>'
+                            ) : ''}}
+                            ${{severityBreakdown.medium && severityBreakdown.medium > 5 ? (
+                                '<li style="color: #f39c12;">'
+                                + '📊 Consider batch-fixing medium severity patterns'
+                                + '</li>'
+                            ) : ''}}
+                            ${{severityBreakdown.low && severityBreakdown.low > 10 ? (
+                                '<li style="color: #3498db;">'
+                                + '🔧 Low severity issues can be automated or batched'
+                                + '</li>'
+                            ) : ''}}
                         </ul>
                     </div>
                 </div>
             `;
         }}
-        
+
         // Request notification permissions
         if ('Notification' in window && Notification.permission === 'default') {{
             Notification.requestPermission();
         }}
-        
+
         // Initialize dashboard
         connect();
         updateConnectionStatus();

@@ -267,6 +267,7 @@ def main(
     # Handle documentation generation
     if generate_docs or validate_docs:
         from pathlib import Path
+
         from crackerjack.services.documentation_service import DocumentationServiceImpl
 
         pkg_path = Path("crackerjack")
@@ -294,9 +295,8 @@ def main(
                 if issues:
                     console.print(f"⚠️ Found {len(issues)} documentation issues:")
                     for issue in issues:
-                        console.print(
-                            f"  - {issue.get('path', issue.get('file', 'unknown'))}: {issue['message']}"
-                        )
+                        file_path = issue.get("path", issue.get("file", "unknown"))
+                        console.print(f"  - {file_path}: {issue['message']}")
                 else:
                     console.print(
                         "✅ [bold green]Documentation validation passed![/bold green]"

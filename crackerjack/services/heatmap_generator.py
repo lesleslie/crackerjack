@@ -531,9 +531,9 @@ class HeatMapGenerator:
     <style>
         body {{ font-family: Arial, sans-serif; margin: 20px; }}
         .heatmap {{ display: grid; gap: 1px; background: #ddd; }}
-        .cell {{ 
-            padding: 5px; 
-            text-align: center; 
+        .cell {{
+            padding: 5px;
+            text-align: center;
             font-size: 10px;
             min-width: 80px;
             min-height: 20px;
@@ -563,7 +563,7 @@ class HeatMapGenerator:
             color = f"rgb({255}, {intensity}, {intensity})"
 
             cells_html += f"""
-                <div class="cell" style="background-color: {color};" 
+                <div class="cell" style="background-color: {color};"
                      title="{cell.label}">
                     {cell.value:.1f}
                 </div>

@@ -52,7 +52,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "trailing-whitespace",
             "name": "trailing-whitespace",
-            "repo": "https: //github.com/pre-commit/pre-commit-hooks",
+            "repo": "https://github.com/pre-commit/pre-commit-hooks",
             "rev": "v6.0.0",
             "tier": 1,
             "time_estimate": 0.2,
@@ -69,7 +69,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "end-of-file-fixer",
             "name": "end-of-file-fixer",
-            "repo": "https: //github.com/pre-commit/pre-commit-hooks",
+            "repo": "https://github.com/pre-commit/pre-commit-hooks",
             "rev": "v6.0.0",
             "tier": 1,
             "time_estimate": 0.2,
@@ -86,7 +86,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "check-yaml",
             "name": "check-yaml",
-            "repo": "https: //github.com/pre-commit/pre-commit-hooks",
+            "repo": "https://github.com/pre-commit/pre-commit-hooks",
             "rev": "v6.0.0",
             "tier": 1,
             "time_estimate": 0.3,
@@ -103,7 +103,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "check-toml",
             "name": "check-toml",
-            "repo": "https: //github.com/pre-commit/pre-commit-hooks",
+            "repo": "https://github.com/pre-commit/pre-commit-hooks",
             "rev": "v6.0.0",
             "tier": 1,
             "time_estimate": 0.3,
@@ -120,7 +120,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "check-added-large-files",
             "name": "check-added-large-files",
-            "repo": "https: //github.com/pre-commit/pre-commit-hooks",
+            "repo": "https://github.com/pre-commit/pre-commit-hooks",
             "rev": "v6.0.0",
             "tier": 1,
             "time_estimate": 0.5,
@@ -139,7 +139,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "uv-lock",
             "name": None,
-            "repo": "https: //github.com/astral-sh/uv-pre-commit",
+            "repo": "https://github.com/astral-sh/uv-pre-commit",
             "rev": "0.8.15",
             "tier": 1,
             "time_estimate": 0.5,
@@ -158,7 +158,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "gitleaks",
             "name": None,
-            "repo": "https: //github.com/gitleaks/gitleaks",
+            "repo": "https://github.com/gitleaks/gitleaks",
             "rev": "v8.28.0",
             "tier": 2,
             "time_estimate": 1.0,
@@ -175,7 +175,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "bandit",
             "name": None,
-            "repo": "https: //github.com/PyCQA/bandit",
+            "repo": "https://github.com/PyCQA/bandit",
             "rev": "1.8.6",
             "tier": 3,
             "time_estimate": 3.0,
@@ -194,7 +194,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "codespell",
             "name": None,
-            "repo": "https: //github.com/codespell-project/codespell",
+            "repo": "https://github.com/codespell-project/codespell",
             "rev": "v2.4.1",
             "tier": 2,
             "time_estimate": 1.0,
@@ -211,7 +211,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "ruff-check",
             "name": None,
-            "repo": "https: //github.com/astral-sh/ruff-pre-commit",
+            "repo": "https://github.com/astral-sh/ruff-pre-commit",
             "rev": "v0.12.12",
             "tier": 2,
             "time_estimate": 1.5,
@@ -228,7 +228,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "ruff-format",
             "name": None,
-            "repo": "https: //github.com/astral-sh/ruff-pre-commit",
+            "repo": "https://github.com/astral-sh/ruff-pre-commit",
             "rev": "v0.12.12",
             "tier": 2,
             "time_estimate": 1.0,
@@ -245,7 +245,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "mdformat",
             "name": None,
-            "repo": "https: //github.com/executablebooks/mdformat",
+            "repo": "https://github.com/executablebooks/mdformat",
             "rev": "0.7.22",
             "tier": 2,
             "time_estimate": 0.5,
@@ -264,7 +264,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "vulture",
             "name": None,
-            "repo": "https: //github.com/jendrikseipp/vulture",
+            "repo": "https://github.com/jendrikseipp/vulture",
             "rev": "v2.14",
             "tier": 3,
             "time_estimate": 2.0,
@@ -281,7 +281,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "creosote",
             "name": None,
-            "repo": "https: //github.com/fredrikaverpil/creosote",
+            "repo": "https://github.com/fredrikaverpil/creosote",
             "rev": "v4.1.0",
             "tier": 3,
             "time_estimate": 1.5,
@@ -298,7 +298,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "complexipy",
             "name": None,
-            "repo": "https: //github.com/rohaquinlop/complexipy-pre-commit",
+            "repo": "https://github.com/rohaquinlop/complexipy-pre-commit",
             "rev": "v3.3.0",
             "tier": 3,
             "time_estimate": 1.0,
@@ -315,7 +315,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "refurb",
             "name": None,
-            "repo": "https: //github.com/dosisod/refurb",
+            "repo": "https://github.com/dosisod/refurb",
             "rev": "v2.1.0",
             "tier": 3,
             "time_estimate": 3.0,
@@ -332,7 +332,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
         {
             "id": "pyright",
             "name": None,
-            "repo": "https: //github.com/RobertCraigie/pyright-python",
+            "repo": "https://github.com/RobertCraigie/pyright-python",
             "rev": "v1.1.405",
             "tier": 3,
             "time_estimate": 5.0,
@@ -500,7 +500,7 @@ class DynamicConfigGenerator:
 
     def _get_repo_comment(self, repo_url: str) -> str | None:
         repo_comments = {
-            "https: //github.com/pre-commit/pre-commit-hooks": "File structure and format validators",
+            "https://github.com/pre-commit/pre-commit-hooks": "File structure and format validators",
             "local": "Local tools and custom hooks",
         }
         if repo_url in repo_comments:

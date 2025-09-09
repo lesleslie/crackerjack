@@ -53,6 +53,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "refurb>=2.1",
     "rich>=14.1",
+    "scipy>=1.14.0",
     "ruff>=0.12.9",
     "structlog>=24.4",
     "textual>=0.89",

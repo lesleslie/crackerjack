@@ -1,16 +1,14 @@
 """Enhanced cache handlers with optimization, warming, and advanced analytics."""
 
 import typing as t
-from pathlib import Path
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from dataclasses import asdict, dataclass
+from datetime import datetime
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import Progress
 from rich.table import Table
 from rich.text import Text
-from rich.progress import Progress, TaskID
-from rich.live import Live
 
 from crackerjack.services.cache import CrackerjackCache
 

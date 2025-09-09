@@ -6,9 +6,9 @@ from pathlib import Path
 from rich.console import Console
 
 from ..models.protocols import (
-    DocumentationServiceProtocol,
     APIExtractorProtocol,
     DocumentationGeneratorProtocol,
+    DocumentationServiceProtocol,
 )
 from .api_extractor import APIExtractorImpl
 from .documentation_generator import DocumentationGeneratorImpl

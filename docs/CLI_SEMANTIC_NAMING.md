@@ -24,7 +24,7 @@ Enhance CLI flag names for better semantic clarity while maintaining backward co
 | `orchestrated` | `smart_workflow` | `--smart` | Intelligent workflow orchestration | "Orchestrated" is technical jargon |
 | `boost_coverage` | `improve_coverage` | `--improve-cov` | Automatically improve test coverage | More action-oriented |
 
-### Server Management  
+### Server Management
 
 | Current Flag | Semantic Name | Short Flag | Description | Reasoning |
 |-------------|---------------|------------|-------------|-----------|
@@ -35,7 +35,7 @@ Enhance CLI flag names for better semantic clarity while maintaining backward co
 
 ### Development & Debugging
 
-| Current Flag | Semantic Name | Short Flag | Description | Reasoning |  
+| Current Flag | Semantic Name | Short Flag | Description | Reasoning |
 |-------------|---------------|------------|-------------|-----------|
 | `skip_hooks` | `no_hooks` | `--no-hooks` | Skip pre-commit hooks | More intuitive negative form |
 | `experimental_hooks` | `beta_tools` | `--beta` | Enable beta/experimental tools | "Beta" is more user-friendly |
@@ -68,19 +68,19 @@ class Options(BaseModel):
     full_release: BumpOption | None = None
     run_tests: bool = False
     ai_fix: bool = False
-    
+
     # Legacy aliases (deprecated)
     clean: bool | None = None
-    all: BumpOption | None = None  
+    all: BumpOption | None = None
     test: bool | None = None
     ai_agent: bool | None = None
-    
+
     def __post_init__(self):
         """Handle legacy flag mapping."""
         if self.clean is not None:
             self.strip_code = self.clean
             warnings.warn("--clean is deprecated, use --strip-code", DeprecationWarning)
-            
+
         if self.all is not None:
             self.full_release = self.all
             warnings.warn("--all is deprecated, use --full-release", DeprecationWarning)
@@ -99,7 +99,7 @@ CLI_OPTIONS = {
     ),
     "full_release": typer.Option(
         None,
-        "-a", 
+        "-a",
         "--full-release",
         "--all",  # Backward compatibility alias
         help="Complete release workflow: strip code, run tests, publish, and commit changes (patch, minor, major).",
@@ -117,29 +117,32 @@ CLI_OPTIONS = {
 ### Phase 3: Documentation Updates
 
 Update all documentation files:
+
 - `README.md` - Update command examples
-- `CLAUDE.md` - Update essential commands section  
+- `CLAUDE.md` - Update essential commands section
 - `AI-REFERENCE.md` - Update command decision trees
 - Feature implementation plans - Update flag references
 
 ### Phase 4: Gradual Migration
 
 1. **Version 1.x**: Introduce semantic names with deprecation warnings for old flags
-2. **Version 2.x**: Remove deprecated flags (breaking change)
-3. **Documentation**: Always show semantic names, mention aliases for compatibility
+1. **Version 2.x**: Remove deprecated flags (breaking change)
+1. **Documentation**: Always show semantic names, mention aliases for compatibility
 
 ## Enhanced Help Messages
 
 ### Current vs Improved
 
 **Before:**
+
 ```bash
 --clean                Remove docstrings, line comments...
---all                  Run with `-x -t -p <version> -c` development options  
+--all                  Run with `-x -t -p <version> -c` development options
 --ai-agent             Enable AI agent mode with autonomous auto-fixing
 ```
 
 **After:**
+
 ```bash
 --strip-code, -x       Strip code: remove docstrings and comments (with backup protection)
 --full-release, -a     Full release workflow: code strip → tests → publish → commit
@@ -153,16 +156,16 @@ Update all documentation files:
 ```python
 def validate_workflow_options(options: Options) -> None:
     """Provide semantic error messages."""
-    
+
     if options.full_release and not options.run_tests:
         raise ValueError(
             "Full release workflow requires tests. "
             "Use: --full-release --run-tests (or just --full-release which implies tests)"
         )
-        
+
     if options.strip_code and options.interactive:
         print("⚠️  Strip code mode will modify files. Continue? (y/N): ")
-        
+
     if options.ai_fix and not options.run_tests:
         print("💡 Tip: AI auto-fix works best with --run-tests to validate fixes")
 ```
@@ -178,15 +181,16 @@ def validate_workflow_options(options: Options) -> None:
 ## Expected Benefits
 
 1. **Clarity**: Users immediately understand what commands do
-2. **Discoverability**: Semantic names are self-documenting
-3. **Consistency**: Similar operations use similar naming patterns
-4. **User Experience**: Less cognitive load, faster onboarding
-5. **Maintainability**: Code is more self-documenting
+1. **Discoverability**: Semantic names are self-documenting
+1. **Consistency**: Similar operations use similar naming patterns
+1. **User Experience**: Less cognitive load, faster onboarding
+1. **Maintainability**: Code is more self-documenting
 
 ## Backward Compatibility Guarantee
 
 All existing scripts and workflows will continue working through:
+
 - Alias support for all old flags
-- Deprecation warnings (not errors) 
+- Deprecation warnings (not errors)
 - Clear migration guidance in documentation
 - Gradual phase-out over major version releases

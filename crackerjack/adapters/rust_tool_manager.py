@@ -51,7 +51,10 @@ class RustToolHookManager:
             return {
                 "error": ToolResult(
                     success=False,
-                    error="No Rust tools are available. Install skylos and zuban with: uv add skylos zuban",
+                    error=(
+                        "No Rust tools are available. "
+                        "Install skylos and zuban with: uv add skylos zuban"
+                    ),
                 )
             }
 
@@ -84,14 +87,20 @@ class RustToolHookManager:
         if tool_name not in self.adapters:
             return ToolResult(
                 success=False,
-                error=f"Unknown tool: {tool_name}. Available: {list(self.adapters.keys())}",
+                error=(
+                    f"Unknown tool: {tool_name}. "
+                    f"Available: {list(self.adapters.keys())}"
+                ),
             )
 
         adapter = self.adapters[tool_name]
         if not adapter.validate_tool_available():
             return ToolResult(
                 success=False,
-                error=f"Tool {tool_name} is not available. Install with: uv add {tool_name}",
+                error=(
+                    f"Tool {tool_name} is not available. "
+                    f"Install with: uv add {tool_name}"
+                ),
             )
 
         return await self._run_single_tool(tool_name, adapter, target_files or [])

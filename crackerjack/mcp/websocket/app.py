@@ -5,11 +5,11 @@ from fastapi import FastAPI
 
 from .endpoints import register_endpoints
 from .jobs import JobManager
-from .websocket_handler import register_websocket_routes
 from .monitoring_endpoints import (
-    create_monitoring_endpoints,
     MonitoringWebSocketManager,
+    create_monitoring_endpoints,
 )
+from .websocket_handler import register_websocket_routes
 
 
 def create_websocket_app(job_manager: JobManager, progress_dir: Path) -> FastAPI:

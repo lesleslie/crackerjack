@@ -1,8 +1,7 @@
 import subprocess
 import typing as t
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from pathlib import Path
 
 from crackerjack.services.cache import CrackerjackCache
 
