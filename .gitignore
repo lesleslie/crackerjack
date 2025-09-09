@@ -31,7 +31,6 @@ __pycache__/
 /.crackerjack-state
 /.crackerjack-hooks-updated
 /.crackerjack-mcp/
-/.crackerjack_cache
 /.envrc
 /htmlcov/
 /examples/
@@ -67,7 +66,6 @@ __pycache__/
 /.crackerjack-mcp/
 /.crackerjack-state
 /.crackerjack/
-/.crackerjack_cache
 /.envrc
 /.hypothesis/
 /.idea

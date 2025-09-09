@@ -1,0 +1,33 @@
+# User Guide
+
+## Getting Started
+
+$getting_started_section
+
+## Installation
+
+$installation_instructions
+
+## Basic Usage
+
+$basic_usage_examples
+
+## Configuration
+
+$configuration_section
+
+## Advanced Features
+
+$advanced_features_section
+
+## Troubleshooting
+
+$troubleshooting_section
+
+## Examples
+
+$examples_section
+
+---
+
+For detailed API reference, see [API Reference](../api/API_REFERENCE.md).

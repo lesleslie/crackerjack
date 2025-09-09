@@ -47,9 +47,9 @@ class TestProgress:
             "start_time": self.start_time,
             "end_time": self.end_time,
             "duration": self.duration,
-            "output_lines": self.output_lines[-5: ] if self.output_lines else [],
+            "output_lines": self.output_lines[-5:] if self.output_lines else [],
             "error_message": self.error_message,
-            "failure_traceback": self.failure_traceback[: 500]
+            "failure_traceback": self.failure_traceback[:500]
             if self.failure_traceback
             else None,
             "assertions_count": self.assertions_count,
@@ -109,7 +109,6 @@ class PytestOutputParser:
         self.test_traceback_buffer: list[str] = []
         self.in_traceback = False
 
-
         self._test_start_pattern = CompiledPatternCache.get_compiled_pattern(
             SAFE_PATTERNS["pytest_test_start"].pattern
         )
@@ -154,7 +153,7 @@ class PytestOutputParser:
         line: str,
         suite_info: TestSuiteProgress,
     ) -> None:
-        if match:=self._test_collection_pattern.search(line):
+        if match := self._test_collection_pattern.search(line):
             suite_info.total_tests = int(match.group(1))
 
     def _process_test_result_line(
@@ -163,7 +162,7 @@ class PytestOutputParser:
         tests: dict[str, TestProgress],
         suite_info: TestSuiteProgress,
     ) -> None:
-        if match:=self._detailed_test_pattern.match(line):
+        if match := self._detailed_test_pattern.match(line):
             file_path, test_name, status = match.groups()
             test_id = f"{file_path}:: {test_name}"
 
@@ -211,7 +210,7 @@ class PytestOutputParser:
             suite_info.error_tests += 1
 
     def _process_coverage_line(self, line: str, suite_info: TestSuiteProgress) -> None:
-        if match:=self._coverage_pattern.search(line):
+        if match := self._coverage_pattern.search(line):
             suite_info.coverage_percentage = float(match.group(1))
 
     def _process_current_test_line(
@@ -530,7 +529,7 @@ class TestProgressStreamer:
             if parts:
                 suite_progress.current_test = parts[0]
 
-        if match:=self.parser._test_collection_pattern.search(line):
+        if match := self.parser._test_collection_pattern.search(line):
             suite_progress.total_tests = int(match.group(1))
 
         if "PASSED" in line:
@@ -626,7 +625,7 @@ class TestProgressStreamer:
         self.console.print(
             f"\n[bold red]Failed Tests ({len(failed_tests)}): [/ bold red]",
         )
-        for test in failed_tests[: 5]:
+        for test in failed_tests[:5]:
             self.console.print(f" ❌ {test.test_id}")
             if test.error_message:
                 error_preview = self._format_error_preview(test.error_message)
@@ -637,7 +636,7 @@ class TestProgressStreamer:
 
     def _format_error_preview(self, error_message: str) -> str:
         return (
-            error_message[: 100] + "..." if len(error_message) > 100 else error_message
+            error_message[:100] + "..." if len(error_message) > 100 else error_message
         )
 
     def _print_summary_footer(self) -> None:

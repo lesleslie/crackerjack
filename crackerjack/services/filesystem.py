@@ -350,7 +350,7 @@ class FileSystemService:
                 )
 
             with path_obj.open(encoding="utf-8") as file:
-                while chunk:=file.read(chunk_size):
+                while chunk := file.read(chunk_size):
                     yield chunk
 
         except PermissionError as e:

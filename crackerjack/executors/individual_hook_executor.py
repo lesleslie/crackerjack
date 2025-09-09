@@ -46,7 +46,7 @@ class HookProgress:
             "warnings_found": self.warnings_found,
             "files_processed": self.files_processed,
             "lines_processed": self.lines_processed,
-            "output_lines": self.output_lines[-10: ] if self.output_lines else [],
+            "output_lines": self.output_lines[-10:] if self.output_lines else [],
             "error_details": self.error_details,
         }
 
@@ -74,7 +74,6 @@ class IndividualExecutionResult:
 
 
 class HookOutputParser:
-
     HOOK_PATTERNS: dict[str, dict[str, str]] = {
         "ruff-check": {
             "error": "ruff_check_error",
@@ -145,7 +144,7 @@ class HookOutputParser:
             line = line.strip()
             if not line:
                 continue
-            if match:=error_pattern.match(line):
+            if match := error_pattern.match(line):
                 file_path, line_num, col_num, code, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -172,7 +171,7 @@ class HookOutputParser:
             line = line.strip()
             if not line:
                 continue
-            if match:=error_pattern.match(line):
+            if match := error_pattern.match(line):
                 file_path, line_num, col_num, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -184,7 +183,7 @@ class HookOutputParser:
                         "type": "error",
                     },
                 )
-            elif match:=warning_pattern.match(line):
+            elif match := warning_pattern.match(line):
                 file_path, line_num, col_num, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["warnings"].append(
@@ -209,7 +208,7 @@ class HookOutputParser:
             line = line.strip()
             if not line:
                 continue
-            if match:=issue_pattern.match(line):
+            if match := issue_pattern.match(line):
                 code, message = match.groups()
                 result["errors"].append(
                     {"code": code, "message": message, "type": "security"},
@@ -227,7 +226,7 @@ class HookOutputParser:
             line = line.strip()
             if not line:
                 continue
-            if match:=unused_pattern.match(line):
+            if match := unused_pattern.match(line):
                 file_path, line_num, item_type, item_name = match.groups()
                 result["files_processed"].add(file_path)
                 result["warnings"].append(
@@ -251,7 +250,7 @@ class HookOutputParser:
             line = line.strip()
             if not line:
                 continue
-            if match:=complex_pattern.match(line):
+            if match := complex_pattern.match(line):
                 file_path, line_num, col_num, function_name, complexity = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -326,9 +325,7 @@ class IndividualHookExecutor:
         self.suppress_realtime_output = False
         self.progress_callback_interval = 1
 
-
         if hook_lock_manager is None:
-
             from crackerjack.executors.hook_lock_manager import (
                 hook_lock_manager as default_manager,
             )
@@ -426,7 +423,6 @@ class IndividualHookExecutor:
         if self.progress_callback:
             self.progress_callback(progress)
 
-
         if self.hook_lock_manager.requires_lock(hook.name):
             self.console.print(
                 f"\n[bold cyan]🔍 Running {hook.name} (with lock)[/ bold cyan]"
@@ -437,7 +433,6 @@ class IndividualHookExecutor:
         cmd = hook.get_command()
 
         try:
-
             async with self.hook_lock_manager.acquire_hook_lock(hook.name):
                 result = await self._run_command_with_streaming(
                     cmd, hook.timeout, progress
@@ -516,7 +511,6 @@ class IndividualHookExecutor:
         return self._create_completed_process(cmd, process, stdout_lines, stderr_lines)
 
     async def _create_subprocess(self, cmd: list[str]) -> asyncio.subprocess.Process:
-
         repo_root = (
             self.pkg_path.parent
             if self.pkg_path.name == "crackerjack"

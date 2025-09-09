@@ -178,6 +178,66 @@ class MCPServerContext:
         self._startup_tasks: list[t.Callable[[], t.Awaitable[None]]] = []
         self._shutdown_tasks: list[t.Callable[[], t.Awaitable[None]]] = []
 
+    async def _auto_setup_git_working_directory(self) -> None:
+        """Auto-detect and setup git working directory for enhanced DX."""
+        try:
+            # Get current working directory
+            current_dir = Path(os.getcwd())
+
+            # Simple git root detection using subprocess
+            import subprocess
+            import sys
+
+            # Check if we're in a git repository
+            git_check = subprocess.run(
+                ["git", "rev-parse", "--is-inside-work-tree"],
+                capture_output=True,
+                text=True,
+                cwd=current_dir,
+            )
+
+            if git_check.returncode == 0:
+                # Get git root directory
+                git_root_result = subprocess.run(
+                    ["git", "rev-parse", "--show-toplevel"],
+                    capture_output=True,
+                    text=True,
+                    cwd=current_dir,
+                )
+
+                if git_root_result.returncode == 0:
+                    git_root = Path(git_root_result.stdout.strip())
+
+                    if git_root.exists():
+                        # Log the auto-setup action for Claude to see
+                        print(
+                            f"📍 Crackerjack MCP: Git repository detected at {git_root}",
+                            file=sys.stderr,
+                        )
+                        print(
+                            f"💡 Tip: Auto-setup git working directory with: git_set_working_dir('{git_root}')",
+                            file=sys.stderr,
+                        )
+
+                        # Also log to console if available
+                        if self.console:
+                            self.console.print(
+                                f"🔧 Auto-detected git repository: {git_root}"
+                            )
+                            self.console.print(
+                                f"💡 Recommend: Use `mcp__git__git_set_working_dir` with path='{git_root}'"
+                            )
+            else:
+                # Not in a git repository - this is fine, just skip
+                pass
+
+        except Exception as e:
+            # Graceful fallback - don't break server startup
+            if self.console:
+                self.console.print(
+                    f"[dim]Git auto-setup failed (non-critical): {e}[/dim]"
+                )
+
     async def initialize(self) -> None:
         if self._initialized:
             return
@@ -208,6 +268,9 @@ class MCPServerContext:
             self.rate_limiter = RateLimitMiddleware(self.config.rate_limit_config)
 
             await self.batched_saver.start()
+
+            # Auto-setup git working directory for enhanced DX
+            await self._auto_setup_git_working_directory()
 
             for task in self._startup_tasks:
                 await task()

@@ -565,15 +565,44 @@ class PhaseCoordinator(ErrorHandlingMixin):
         changed_files: list[str],
         options: OptionsProtocol,
     ) -> str:
-        suggestions = self.git_service.get_commit_message_suggestions(changed_files)
+        try:
+            from crackerjack.services.intelligent_commit import CommitMessageGenerator
 
-        if not suggestions:
-            return "Update project files"
+            commit_generator = CommitMessageGenerator(
+                console=self.console, git_service=self.git_service
+            )
 
-        if not options.interactive:
-            return suggestions[0]
+            intelligent_message = commit_generator.generate_commit_message(
+                include_body=False,
+                conventional_commits=True,
+            )
 
-        return self._interactive_commit_message_selection(suggestions)
+            if not options.interactive:
+                return intelligent_message
+
+            # In interactive mode, offer the intelligent message plus fallback suggestions
+            suggestions = [intelligent_message]
+            fallback_suggestions = self.git_service.get_commit_message_suggestions(
+                changed_files
+            )
+            suggestions.extend(fallback_suggestions[:3])  # Add up to 3 fallback options
+
+            return self._interactive_commit_message_selection(suggestions)
+
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Intelligent commit generation failed: {e}"
+            )
+            # Fallback to original logic
+            suggestions = self.git_service.get_commit_message_suggestions(changed_files)
+
+            if not suggestions:
+                return "Update project files"
+
+            if not options.interactive:
+                return suggestions[0]
+
+            return self._interactive_commit_message_selection(suggestions)
 
     def _interactive_commit_message_selection(self, suggestions: list[str]) -> str:
         self._display_commit_suggestions(suggestions)

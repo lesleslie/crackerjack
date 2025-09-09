@@ -220,12 +220,41 @@ class FileCache:
 
 
 class CrackerjackCache:
+    # Expensive hooks that benefit from disk caching across sessions
+    EXPENSIVE_HOOKS = {
+        "pyright",
+        "bandit",
+        "vulture",
+        "complexipy",
+        "refurb",
+        "gitleaks",
+        "detect-secrets",
+    }
+
+    # TTL configuration for different cache types (in seconds)
+    HOOK_DISK_TTLS = {
+        "pyright": 86400,  # 24 hours - type checking is stable
+        "bandit": 86400 * 3,  # 3 days - security patterns change slowly
+        "vulture": 86400 * 2,  # 2 days - dead code detection is stable
+        "complexipy": 86400,  # 24 hours - complexity analysis
+        "refurb": 86400,  # 24 hours - code improvements
+        "gitleaks": 86400 * 7,  # 7 days - secret detection is very stable
+        "detect-secrets": 86400 * 7,  # 7 days - secret detection
+    }
+
+    # Agent version for cache invalidation when agent logic changes
+    AGENT_VERSION = "1.0.0"
+
     def __init__(
         self,
         cache_dir: Path | None = None,
         enable_disk_cache: bool = True,
     ) -> None:
-        self.cache_dir = cache_dir or Path.cwd() / ".crackerjack_cache"
+        if cache_dir:
+            self.cache_dir = cache_dir
+        else:
+            self.cache_dir = Path.cwd() / ".crackerjack" / "cache"
+
         self.enable_disk_cache = enable_disk_cache
 
         self.hook_results_cache = InMemoryCache(max_entries=500, default_ttl=1800)
@@ -252,6 +281,46 @@ class CrackerjackCache:
         cache_key = self._get_hook_cache_key(hook_name, file_hashes)
         self.hook_results_cache.set(cache_key, result, ttl_seconds=1800)
 
+    def get_expensive_hook_result(
+        self,
+        hook_name: str,
+        file_hashes: list[str],
+        tool_version: str | None = None,
+    ) -> HookResult | None:
+        """Get hook result with disk cache fallback for expensive hooks."""
+        # Always check memory first for speed
+        result = self.get_hook_result(hook_name, file_hashes)
+        if result:
+            return result
+
+        # Fall back to disk cache for expensive hooks
+        if self.enable_disk_cache and hook_name in self.EXPENSIVE_HOOKS:
+            cache_key = self._get_versioned_hook_cache_key(
+                hook_name, file_hashes, tool_version
+            )
+            return self.disk_cache.get(cache_key)
+
+        return None
+
+    def set_expensive_hook_result(
+        self,
+        hook_name: str,
+        file_hashes: list[str],
+        result: HookResult,
+        tool_version: str | None = None,
+    ) -> None:
+        """Set hook result in both memory and disk cache for expensive hooks."""
+        # Always set in memory for current session
+        self.set_hook_result(hook_name, file_hashes, result)
+
+        # Also persist to disk for expensive hooks
+        if self.enable_disk_cache and hook_name in self.EXPENSIVE_HOOKS:
+            cache_key = self._get_versioned_hook_cache_key(
+                hook_name, file_hashes, tool_version
+            )
+            ttl = self.HOOK_DISK_TTLS.get(hook_name, 86400)  # Default 24 hours
+            self.disk_cache.set(cache_key, result, ttl_seconds=ttl)
+
     def get_file_hash(self, file_path: Path) -> str | None:
         stat = file_path.stat()
         cache_key = f"file_hash: {file_path}: {stat.st_mtime}: {stat.st_size}"
@@ -267,6 +336,40 @@ class CrackerjackCache:
 
     def set_config_data(self, config_key: str, data: t.Any) -> None:
         self.config_cache.set(f"config: {config_key}", data, ttl_seconds=7200)
+
+    def get_agent_decision(self, agent_name: str, issue_hash: str) -> t.Any | None:
+        """Get cached AI agent decision based on issue content."""
+        if not self.enable_disk_cache:
+            return None
+
+        cache_key = f"agent:{agent_name}:{issue_hash}:{self.AGENT_VERSION}"
+        return self.disk_cache.get(cache_key)
+
+    def set_agent_decision(
+        self, agent_name: str, issue_hash: str, decision: t.Any
+    ) -> None:
+        """Cache AI agent decision for future use."""
+        if not self.enable_disk_cache:
+            return
+
+        cache_key = f"agent:{agent_name}:{issue_hash}:{self.AGENT_VERSION}"
+        self.disk_cache.set(cache_key, decision, ttl_seconds=604800)  # 7 days
+
+    def get_quality_baseline(self, git_hash: str) -> dict[str, t.Any] | None:
+        """Get quality baseline metrics for a specific git commit."""
+        if not self.enable_disk_cache:
+            return None
+
+        return self.disk_cache.get(f"baseline:{git_hash}")
+
+    def set_quality_baseline(self, git_hash: str, metrics: dict[str, t.Any]) -> None:
+        """Store quality baseline metrics for a git commit."""
+        if not self.enable_disk_cache:
+            return
+
+        self.disk_cache.set(
+            f"baseline:{git_hash}", metrics, ttl_seconds=2592000
+        )  # 30 days
 
     def invalidate_hook_cache(self, hook_name: str | None = None) -> None:
         if hook_name:
@@ -310,3 +413,17 @@ class CrackerjackCache:
             usedforsecurity=False,
         ).hexdigest()
         return f"hook_result: {hook_name}: {hash_signature}"
+
+    def _get_versioned_hook_cache_key(
+        self,
+        hook_name: str,
+        file_hashes: list[str],
+        tool_version: str | None = None,
+    ) -> str:
+        """Get cache key with tool version for disk cache invalidation."""
+        hash_signature = hashlib.md5(
+            ", ".join(sorted(file_hashes)).encode(),
+            usedforsecurity=False,
+        ).hexdigest()
+        version_part = f":{tool_version}" if tool_version else ""
+        return f"hook_result: {hook_name}: {hash_signature}{version_part}"

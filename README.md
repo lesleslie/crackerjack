@@ -728,6 +728,14 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 
 For enhanced AI-assisted development with conversation memory and context persistence, consider using the [session-mgmt-mcp](https://github.com/lesleslie/session-mgmt-mcp) server alongside Crackerjack:
 
+## 🤝 Session-mgmt Integration (Enhanced)
+
+**Automatic for Git Projects:**
+- Session management starts automatically
+- No manual `/start` or `/end` needed
+- Checkpoints auto-compact when necessary
+- Works seamlessly with `python -m crackerjack`
+
 **Benefits of Combined Usage:**
 
 - **🧠 Persistent Learning**: Session-mgmt remembers your error patterns and successful fixes
@@ -735,6 +743,7 @@ For enhanced AI-assisted development with conversation memory and context persis
 - **📊 Quality Tracking**: Monitors your project's quality score evolution over time
 - **🔄 Workflow Optimization**: Learns from your development patterns to suggest improvements
 - **🎯 Intelligent Coordination**: The two servers share insights for smarter assistance
+- **🚀 Zero Manual Intervention**: Fully automatic lifecycle for git repositories
 
 **Quick Setup:**
 
@@ -751,6 +760,18 @@ For enhanced AI-assisted development with conversation memory and context persis
     }
   }
 }
+```
+
+**Example Workflow:**
+```bash
+# Just start working - session auto-initializes!
+python -m crackerjack --ai-agent -t
+
+# Checkpoint periodically (auto-compacts if needed)
+/checkpoint
+
+# Quit any way - session auto-saves
+/quit  # or Cmd+Q, or network disconnect
 ```
 
 **How They Work Together:**

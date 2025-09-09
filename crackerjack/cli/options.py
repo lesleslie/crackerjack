@@ -1,8 +1,9 @@
 import typing as t
+import warnings
 from enum import Enum
 
 import typer
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class BumpOption(str, Enum):
@@ -76,6 +77,91 @@ class Options(BaseModel):
     global_lock_dir: str | None = None
     quick: bool = False
     thorough: bool = False
+    clear_cache: bool = False
+    cache_stats: bool = False
+
+    # Semantic field names (new primary interface)
+    strip_code: bool | None = None  # Replaces clean
+    run_tests: bool | None = None  # Replaces test
+    ai_fix: bool | None = None  # Replaces ai_agent
+    full_release: BumpOption | None = None  # Replaces all
+    show_progress: bool | None = None  # Replaces track_progress
+    advanced_monitor: bool | None = None  # Replaces enhanced_monitor
+    coverage_report: bool | None = None  # Replaces coverage_status
+    clean_releases: bool | None = None  # Replaces cleanup_pypi
+
+    @model_validator(mode="after")
+    def handle_legacy_mappings(self) -> "Options":
+        """Handle backward compatibility for deprecated flags."""
+        # Map clean -> strip_code
+        if self.clean and self.strip_code is None:
+            self.strip_code = True
+            warnings.warn(
+                "--clean is deprecated, use --strip-code",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        elif self.strip_code is not None:
+            self.clean = self.strip_code
+
+        # Map test -> run_tests
+        if self.test and self.run_tests is None:
+            self.run_tests = True
+            warnings.warn(
+                "--test is deprecated, use --run-tests",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        elif self.run_tests is not None:
+            self.test = self.run_tests
+
+        # Map ai_agent -> ai_fix
+        if self.ai_agent and self.ai_fix is None:
+            self.ai_fix = True
+            warnings.warn(
+                "--ai-agent is deprecated, use --ai-fix",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        elif self.ai_fix is not None:
+            self.ai_agent = self.ai_fix
+
+        # Map all -> full_release
+        if self.all and self.full_release is None:
+            self.full_release = self.all
+            warnings.warn(
+                "--all is deprecated, use --full-release",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        elif self.full_release is not None:
+            self.all = self.full_release
+
+        # Map track_progress -> show_progress
+        if self.track_progress and self.show_progress is None:
+            self.show_progress = True
+        elif self.show_progress is not None:
+            self.track_progress = self.show_progress
+
+        # Map enhanced_monitor -> advanced_monitor
+        if self.enhanced_monitor and self.advanced_monitor is None:
+            self.advanced_monitor = True
+        elif self.advanced_monitor is not None:
+            self.enhanced_monitor = self.advanced_monitor
+
+        # Map coverage_status -> coverage_report
+        if self.coverage_status and self.coverage_report is None:
+            self.coverage_report = True
+        elif self.coverage_report is not None:
+            self.coverage_status = self.coverage_report
+
+        # Map cleanup_pypi -> clean_releases
+        if self.cleanup_pypi and self.clean_releases is None:
+            self.clean_releases = True
+        elif self.clean_releases is not None:
+            self.cleanup_pypi = self.clean_releases
+
+        return self
 
     @property
     def effective_max_iterations(self) -> int:
@@ -86,7 +172,7 @@ class Options(BaseModel):
         return self.max_iterations
 
     @classmethod
-    @field_validator("publish", "bump", mode="before")
+    @field_validator("publish", "bump", "full_release", mode="before")
     def validate_bump_options(cls, value: t.Any) -> BumpOption | None:
         if value is None:
             return None
@@ -377,6 +463,73 @@ CLI_OPTIONS = {
         "--thorough",
         help="Thorough mode: Run with maximum 8 iterations (for complex refactoring).",
     ),
+    "clear_cache": typer.Option(
+        False,
+        "--clear-cache",
+        help="Clear all caches (hook results, file hashes, agent decisions) and exit.",
+    ),
+    "cache_stats": typer.Option(
+        False,
+        "--cache-stats",
+        help="Display cache statistics (hit rates, sizes, entries) and exit.",
+    ),
+    # New semantic CLI options with backward compatibility
+    "strip_code": typer.Option(
+        None,
+        "--strip-code",
+        help="Remove docstrings, line comments, and unnecessary whitespace from source code with automatic backup protection (doesn't affect test files). [Semantic alias for --clean]",
+    ),
+    "run_tests": typer.Option(
+        None,
+        "--run-tests",
+        help="Execute the test suite with automatic worker detection and timeout handling. [Semantic alias for --test]",
+    ),
+    "ai_fix": typer.Option(
+        None,
+        "--ai-fix",
+        help="Enable AI-powered automatic fixing of code quality issues and test failures. [Semantic alias for --ai-agent]",
+    ),
+    "full_release": typer.Option(
+        None,
+        "--full-release",
+        help="Complete release workflow: strip code, run tests, bump version, and publish. Equivalent to `-x -t -p <version> -c`. [Semantic alias for --all]",
+        case_sensitive=False,
+    ),
+    "show_progress": typer.Option(
+        None,
+        "--show-progress",
+        help="Display detailed progress tracking during execution. [Semantic alias for --track-progress]",
+    ),
+    "advanced_monitor": typer.Option(
+        None,
+        "--advanced-monitor",
+        help="Enable advanced monitoring dashboard with detailed metrics and analytics. [Semantic alias for --enhanced-monitor]",
+    ),
+    "coverage_report": typer.Option(
+        None,
+        "--coverage-report",
+        help="Display comprehensive coverage analysis and report. [Semantic alias for --coverage-status]",
+    ),
+    "clean_releases": typer.Option(
+        None,
+        "--clean-releases",
+        help="Clean up old releases from PyPI, keeping only the most recent versions. [Semantic alias for --cleanup-pypi]",
+    ),
+    "generate_docs": typer.Option(
+        False,
+        "--generate-docs",
+        help="Generate comprehensive API documentation from source code with AST analysis and cross-references.",
+    ),
+    "docs_format": typer.Option(
+        "markdown",
+        "--docs-format",
+        help="Documentation output format: 'markdown' (default), 'rst', or 'html'.",
+    ),
+    "validate_docs": typer.Option(
+        False,
+        "--validate-docs",
+        help="Validate existing documentation for completeness and consistency.",
+    ),
 }
 
 
@@ -423,6 +576,20 @@ def create_options(
     global_lock_dir: str | None,
     quick: bool,
     thorough: bool,
+    clear_cache: bool,
+    cache_stats: bool,
+    generate_docs: bool,
+    docs_format: str,
+    validate_docs: bool,
+    # New semantic parameters
+    strip_code: bool | None = None,
+    run_tests: bool | None = None,
+    ai_fix: bool | None = None,
+    full_release: BumpOption | None = None,
+    show_progress: bool | None = None,
+    advanced_monitor: bool | None = None,
+    coverage_report: bool | None = None,
+    clean_releases: bool | None = None,
 ) -> Options:
     return Options(
         commit=commit,
@@ -467,4 +634,15 @@ def create_options(
         global_lock_dir=global_lock_dir,
         quick=quick,
         thorough=thorough,
+        clear_cache=clear_cache,
+        cache_stats=cache_stats,
+        # New semantic parameters
+        strip_code=strip_code,
+        run_tests=run_tests,
+        ai_fix=ai_fix,
+        full_release=full_release,
+        show_progress=show_progress,
+        advanced_monitor=advanced_monitor,
+        coverage_report=coverage_report,
+        clean_releases=clean_releases,
     )

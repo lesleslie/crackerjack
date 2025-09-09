@@ -6,6 +6,10 @@ from fastapi import FastAPI
 from .endpoints import register_endpoints
 from .jobs import JobManager
 from .websocket_handler import register_websocket_routes
+from .monitoring_endpoints import (
+    create_monitoring_endpoints,
+    MonitoringWebSocketManager,
+)
 
 
 def create_websocket_app(job_manager: JobManager, progress_dir: Path) -> FastAPI:
@@ -32,5 +36,9 @@ def create_websocket_app(job_manager: JobManager, progress_dir: Path) -> FastAPI
     register_endpoints(app, job_manager, progress_dir)
 
     register_websocket_routes(app, job_manager, progress_dir)
+
+    # Register monitoring endpoints
+    monitoring_ws_manager = MonitoringWebSocketManager()
+    create_monitoring_endpoints(app, job_manager, progress_dir, monitoring_ws_manager)
 
     return app

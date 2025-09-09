@@ -51,6 +51,10 @@ class OptionsProtocol(t.Protocol):
     global_lock_timeout: int = 600
     global_lock_cleanup: bool = True
     global_lock_dir: str | None = None
+    generate_docs: bool = False
+    docs_format: str = "markdown"
+    validate_docs: bool = False
+    update_docs_index: bool = False
 
 
 @t.runtime_checkable
@@ -266,3 +270,79 @@ class HookLockManagerProtocol(t.Protocol):
     def cleanup_stale_locks(self, max_age_hours: float = 2.0) -> int: ...
 
     def get_global_lock_stats(self) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
+class DocumentationServiceProtocol(t.Protocol):
+    """Service for automated documentation generation and maintenance."""
+
+    def extract_api_documentation(
+        self, source_paths: list[Path]
+    ) -> dict[str, t.Any]: ...
+
+    def generate_documentation(
+        self, template_name: str, context: dict[str, t.Any]
+    ) -> str: ...
+
+    def validate_documentation(self, doc_paths: list[Path]) -> list[dict[str, str]]: ...
+
+    def update_documentation_index(self) -> bool: ...
+
+    def get_documentation_coverage(self) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
+class APIExtractorProtocol(t.Protocol):
+    """Protocol for extracting API documentation from source code."""
+
+    def extract_from_python_files(self, files: list[Path]) -> dict[str, t.Any]: ...
+
+    def extract_protocol_definitions(self, protocol_file: Path) -> dict[str, t.Any]: ...
+
+    def extract_service_interfaces(
+        self, service_files: list[Path]
+    ) -> dict[str, t.Any]: ...
+
+    def extract_cli_commands(self, cli_files: list[Path]) -> dict[str, t.Any]: ...
+
+    def extract_mcp_tools(self, mcp_files: list[Path]) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
+class DocumentationGeneratorProtocol(t.Protocol):
+    """Protocol for generating documentation from extracted data."""
+
+    def generate_api_reference(self, api_data: dict[str, t.Any]) -> str: ...
+
+    def generate_user_guide(self, template_context: dict[str, t.Any]) -> str: ...
+
+    def generate_changelog_update(
+        self, version: str, changes: dict[str, t.Any]
+    ) -> str: ...
+
+    def render_template(
+        self, template_path: Path, context: dict[str, t.Any]
+    ) -> str: ...
+
+    def generate_cross_references(
+        self, api_data: dict[str, t.Any]
+    ) -> dict[str, list[str]]: ...
+
+
+@t.runtime_checkable
+class DocumentationValidatorProtocol(t.Protocol):
+    """Protocol for validating documentation quality and consistency."""
+
+    def validate_links(self, doc_content: str) -> list[dict[str, str]]: ...
+
+    def check_documentation_freshness(
+        self, api_data: dict[str, t.Any], doc_paths: list[Path]
+    ) -> dict[str, t.Any]: ...
+
+    def validate_cross_references(
+        self, docs: dict[str, str]
+    ) -> list[dict[str, str]]: ...
+
+    def calculate_coverage_metrics(
+        self, api_data: dict[str, t.Any], existing_docs: dict[str, str]
+    ) -> dict[str, float]: ...

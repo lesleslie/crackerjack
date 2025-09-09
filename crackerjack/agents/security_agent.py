@@ -24,10 +24,8 @@ class SecurityAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-
         if issue.type == IssueType.REGEX_VALIDATION:
             return 0.95
-
 
         if any(
             keyword in message_lower
@@ -43,7 +41,6 @@ class SecurityAgent(SubAgent):
             )
         ):
             return 0.95
-
 
         if any(
             keyword in message_lower
@@ -68,7 +65,6 @@ class SecurityAgent(SubAgent):
         ):
             return 0.9
 
-
         enhanced_patterns = [
             "detect_security_keywords",
             "detect_crypto_weak_algorithms",
@@ -81,13 +77,11 @@ class SecurityAgent(SubAgent):
             if SAFE_PATTERNS[pattern_name].test(issue.message):
                 return 0.9
 
-
         if issue.file_path and any(
             keyword in issue.file_path.lower()
             for keyword in ("security", "auth", "crypto", "password", "token", "jwt")
         ):
             return 0.7
-
 
         if issue.type == IssueType.SECURITY:
             return 0.6
@@ -156,7 +150,7 @@ class SecurityAgent(SubAgent):
             "insecure_random": self._fix_insecure_random,
         }
 
-        if fix_method:=vulnerability_fix_map.get(vulnerability_type):
+        if fix_method := vulnerability_fix_map.get(vulnerability_type):
             fixes = await fix_method(issue)
             fixes_applied.extend(fixes["fixes"])
             files_modified.extend(fixes["files"])
@@ -215,25 +209,20 @@ class SecurityAgent(SubAgent):
     def _identify_vulnerability_type(self, issue: Issue) -> str:
         message = issue.message
 
-
         if self._is_regex_validation_issue(issue):
             return "regex_validation"
-
 
         pattern_checks = self._check_enhanced_patterns(message)
         if pattern_checks:
             return pattern_checks
 
-
         bandit_checks = self._check_bandit_patterns(message)
         if bandit_checks:
             return bandit_checks
 
-
         legacy_checks = self._check_legacy_patterns(message)
         if legacy_checks:
             return legacy_checks
-
 
         if self._is_jwt_secret_issue(message):
             return "jwt_secrets"
@@ -309,7 +298,6 @@ class SecurityAgent(SubAgent):
         files: list[str] = []
 
         if not issue.file_path:
-
             await self._fix_regex_patterns_project_wide(fixes, files)
             return {"fixes": fixes, "files": files}
 
@@ -382,13 +370,11 @@ class SecurityAgent(SubAgent):
             self.log(f"Fixed regex patterns in {file_path}")
 
     async def _apply_regex_pattern_fixes(self, content: str) -> str:
-
         from crackerjack.services.regex_utils import (
             replace_unsafe_regex_with_safe_patterns,
         )
 
         try:
-
             fixed_content = replace_unsafe_regex_with_safe_patterns(content)
             return fixed_content
         except Exception as e:
@@ -450,12 +436,9 @@ class SecurityAgent(SubAgent):
         return lines, True
 
     def _replace_hardcoded_temp_paths(self, lines: list[str]) -> tuple[list[str], bool]:
-
         new_content = "\n".join(lines)
 
-
         if SAFE_PATTERNS["detect_hardcoded_temp_paths_basic"].test(new_content):
-
             new_content = SAFE_PATTERNS["replace_hardcoded_temp_paths"].apply(
                 new_content
             )
@@ -557,7 +540,6 @@ class SecurityAgent(SubAgent):
         return SAFE_PATTERNS["detect_hardcoded_secrets"].test(line)
 
     def _replace_hardcoded_secret_with_env_var(self, line: str) -> str:
-
         var_name = SAFE_PATTERNS["extract_variable_name_from_assignment"].apply(line)
         if var_name != line:
             env_var_name = var_name.upper()
@@ -641,9 +623,7 @@ class SecurityAgent(SubAgent):
 
         original_content = content
 
-
         content = SAFE_PATTERNS["fix_hardcoded_jwt_secret"].apply(content)
-
 
         if "os.getenv" in content and "import os" not in content:
             lines = content.split("\n")
@@ -674,11 +654,9 @@ class SecurityAgent(SubAgent):
         if not content:
             return {"fixes": fixes, "files": files}
 
-
         fixes.append(
             f"Documented unsafe pickle usage in {issue.file_path} - manual review required"
         )
-
 
         if "pickle.load" in content:
             lines = content.split("\n")
@@ -713,9 +691,7 @@ class SecurityAgent(SubAgent):
 
         original_content = content
 
-
         content = SAFE_PATTERNS["fix_insecure_random_choice"].apply(content)
-
 
         if "secrets.choice" in content and "import secrets" not in content:
             lines = content.split("\n")

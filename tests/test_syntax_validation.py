@@ -30,17 +30,19 @@ class TestWalrusOperatorSyntax:
         for py_file in python_files:
             try:
                 content = py_file.read_text(encoding="utf-8")
-                
+
                 # Check for walrus operators
                 if ":=" in content:
                     files_with_walrus.append(py_file)
-                    
+
                 # Check for malformed walrus operators (: =)
                 if ": =" in content:
-                    lines = content.split('\n')
+                    lines = content.split("\n")
                     for i, line in enumerate(lines, 1):
                         if ": =" in line:
-                            malformed_walrus_instances.append((py_file, i, line.strip()))
+                            malformed_walrus_instances.append(
+                                (py_file, i, line.strip())
+                            )
 
             except UnicodeDecodeError:
                 # Skip binary files
@@ -86,14 +88,13 @@ class TestWalrusOperatorSyntax:
         # These are patterns that were found to be broken by the code cleaner
         test_cases = [
             # From coverage_ratchet.py
-            'if (next_milestone := self._get_next_milestone(new_coverage))',
-            'points_to_next = (next_milestone - new_coverage) if (next_milestone := self._get_next_milestone(new_coverage)) else 0',
-            
+            "if (next_milestone := self._get_next_milestone(new_coverage))",
+            "points_to_next = (next_milestone - new_coverage) if (next_milestone := self._get_next_milestone(new_coverage)) else 0",
             # General patterns that should work
-            'if (value := some_function()) is not None:',
-            'while (line := file.readline()):',
-            'data = [(x, y) for x in range(10) if (y := x * 2) > 5]',
-            '[y for x in items if (y := process(x)) is not None]',
+            "if (value := some_function()) is not None:",
+            "while (line := file.readline()):",
+            "data = [(x, y) for x in range(10) if (y := x * 2) > 5]",
+            "[y for x in items if (y := process(x)) is not None]",
         ]
 
         for code in test_cases:
@@ -107,9 +108,9 @@ class TestWalrusOperatorSyntax:
         """Test that we can detect malformed walrus operators."""
         # These should all fail to parse
         malformed_cases = [
-            'if (value : = some_function()) is not None:',  # Space before =
-            'if (value: = some_function()) is not None:',   # Space after :
-            'if (value : = some_function()) is not None:',  # Spaces on both sides
+            "if (value : = some_function()) is not None:",  # Space before =
+            "if (value: = some_function()) is not None:",  # Space after :
+            "if (value : = some_function()) is not None:",  # Spaces on both sides
         ]
 
         for code in malformed_cases:
@@ -123,30 +124,33 @@ class TestPythonSyntaxIntegrity:
     def test_no_malformed_regex_quantifiers(self) -> None:
         """Test that regex patterns don't have spaces in quantifiers like {n, m}."""
         project_root = Path(__file__).parent.parent
-        
+
         # Check the regex_patterns file specifically since it had these issues
-        regex_patterns_file = project_root / "crackerjack" / "services" / "regex_patterns.py"
-        
+        regex_patterns_file = (
+            project_root / "crackerjack" / "services" / "regex_patterns.py"
+        )
+
         if regex_patterns_file.exists():
             content = regex_patterns_file.read_text(encoding="utf-8")
-            
+
             # Look for common malformed quantifier patterns
             malformed_patterns = [
                 r"{\d+, }",  # {n, } instead of {n,}
-                r"{ \d+,}",  # { n,} instead of {n,}  
+                r"{ \d+,}",  # { n,} instead of {n,}
                 r"{\d+, \d+}",  # {n, m} instead of {n,m}
             ]
-            
+
             import re
+
             issues = []
-            lines = content.split('\n')
-            
+            lines = content.split("\n")
+
             for pattern in malformed_patterns:
                 for i, line in enumerate(lines, 1):
                     matches = re.findall(pattern, line)
                     if matches:
                         issues.append(f"Line {i}: {line.strip()}")
-            
+
             if issues:
                 error_msg = f"Found malformed regex quantifiers in {regex_patterns_file.name}:\n"
                 error_msg += "\n".join(issues)
@@ -155,23 +159,26 @@ class TestPythonSyntaxIntegrity:
     def test_no_malformed_regex_character_classes(self) -> None:
         """Test that regex character classes don't have extra spaces."""
         project_root = Path(__file__).parent.parent
-        regex_patterns_file = project_root / "crackerjack" / "services" / "regex_patterns.py"
-        
+        regex_patterns_file = (
+            project_root / "crackerjack" / "services" / "regex_patterns.py"
+        )
+
         if regex_patterns_file.exists():
             content = regex_patterns_file.read_text(encoding="utf-8")
-            
+
             # Look for malformed character class patterns
             import re
+
             issues = []
-            lines = content.split('\n')
-            
+            lines = content.split("\n")
+
             # Pattern for character classes with spaces: [^, ] instead of [^,]
-            malformed_char_class_pattern = r'\[\^[^]]*,\s+[^]]*\]'
-            
+            malformed_char_class_pattern = r"\[\^[^]]*,\s+[^]]*\]"
+
             for i, line in enumerate(lines, 1):
                 if re.search(malformed_char_class_pattern, line):
                     issues.append(f"Line {i}: {line.strip()}")
-            
+
             if issues:
                 error_msg = f"Found malformed regex character classes in {regex_patterns_file.name}:\n"
                 error_msg += "\n".join(issues)
@@ -188,20 +195,25 @@ class TestPythonSyntaxIntegrity:
         for py_file in python_files:
             try:
                 content = py_file.read_text(encoding="utf-8")
-                lines = content.split('\n')
-                
+                lines = content.split("\n")
+
                 for i, line in enumerate(lines, 1):
                     # Check for common f-string formatting issues
-                    if ": ." in line and "f\"" in line:
+                    if ": ." in line and 'f"' in line:
                         # This might be a malformed f-string like f"{value: .2f}" instead of f"{value:.2f}"
-                        issues.append(f"{py_file.relative_to(project_root)}:{i}: {line.strip()}")
-                
+                        issues.append(
+                            f"{py_file.relative_to(project_root)}:{i}: {line.strip()}"
+                        )
+
             except UnicodeDecodeError:
                 continue
 
         # Don't fail for this one, just warn, as some spacing in f-strings might be intentional
         if issues:
-            print(f"Warning: Found potential malformed f-string formatting:\n" + "\n".join(issues))
+            print(
+                f"Warning: Found potential malformed f-string formatting:\n"
+                + "\n".join(issues)
+            )
 
     def test_filesystem_service_integration(self) -> None:
         """Test that FileSystemService can handle files with walrus operators."""
@@ -216,17 +228,19 @@ def another_test():
     data = [x for x in items if (processed := process(x)) is not None]
     return data
 """
-        
+
         # Use FileSystemService to validate the content would be handled correctly
         fs_service = FileSystemService()
-        
+
         # This should not raise any exceptions
-        cleaned_content = fs_service.clean_trailing_whitespace_and_newlines(test_content)
-        
+        cleaned_content = fs_service.clean_trailing_whitespace_and_newlines(
+            test_content
+        )
+
         # The walrus operators should remain intact
         assert ":=" in cleaned_content
         assert ": =" not in cleaned_content
-        
+
         # Should still be valid Python
         try:
             ast.parse(cleaned_content)
@@ -241,36 +255,40 @@ class TestCodeCleanerSafety:
         """Integration test: ensure all files remain syntactically valid after potential cleaning."""
         project_root = Path(__file__).parent.parent
         crackerjack_dir = project_root / "crackerjack"
-        
+
         python_files = list(crackerjack_dir.rglob("*.py"))
-        
+
         # Track files that should have walrus operators
         files_with_walrus = []
-        
+
         for py_file in python_files:
             try:
                 content = py_file.read_text(encoding="utf-8")
-                
+
                 # First, ensure the file parses correctly as-is
                 try:
                     ast.parse(content, filename=str(py_file))
                 except SyntaxError as e:
                     rel_path = py_file.relative_to(project_root)
                     pytest.fail(f"Syntax error in {rel_path}:{e.lineno}: {e.msg}")
-                
+
                 # Track files with walrus operators
                 if ":=" in content:
                     files_with_walrus.append(py_file)
-                    
+
                     # Ensure no malformed walrus operators
                     if ": =" in content:
                         rel_path = py_file.relative_to(project_root)
                         pytest.fail(f"Malformed walrus operator in {rel_path}")
-                        
+
             except UnicodeDecodeError:
                 continue
-        
+
         # Ensure we're actually testing files with walrus operators
-        assert len(files_with_walrus) > 0, "No files with walrus operators found for validation"
-        
-        print(f"Successfully validated {len(files_with_walrus)} files containing walrus operators")
+        assert len(files_with_walrus) > 0, (
+            "No files with walrus operators found for validation"
+        )
+
+        print(
+            f"Successfully validated {len(files_with_walrus)} files containing walrus operators"
+        )

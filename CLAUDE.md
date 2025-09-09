@@ -167,6 +167,38 @@ python -m crackerjack.mcp.progress_monitor <job_id>
 
 **Slash Commands**: `/crackerjack:run`, `/crackerjack:status`, `/crackerjack:init`
 
+## Session Management Integration
+
+**Automatic Lifecycle**: Crackerjack projects (git repositories) get automatic session management via session-mgmt-mcp:
+
+- **Session Start**: Automatically initialized when Claude Code connects
+- **Mid-Session**: `/session-mgmt:checkpoint` performs quality checks with intelligent auto-compaction
+- **Session End**: Automatically executed on `/quit`, disconnect, or crash with graceful cleanup
+
+**Enhanced Workflow Integration**:
+
+```bash
+# Standard crackerjack workflow with automatic session management
+python -m crackerjack --ai-agent -t    # Quality + AI fixing
+# Session checkpoints happen automatically during long runs
+# Session cleanup happens automatically when you quit Claude Code
+```
+
+**Key Features**:
+
+- **Crash Resilience**: Session data preserved through network/system failures
+- **Memory Management**: Auto-compaction during checkpoints when context is heavy
+- **Progress Continuity**: Next session resumes with accumulated learning from previous work
+- **Zero Manual Intervention**: All session lifecycle managed automatically for git repos
+
+**Manual Override**: Use `/session-mgmt:init`, `/session-mgmt:checkpoint`, `/session-mgmt:end` if needed for fine control
+
+**Integration Benefits**:
+- Crackerjack quality metrics tracked over time
+- Test patterns and failure resolutions remembered
+- Error fix strategies learned and suggested
+- Command effectiveness optimized based on history
+
 ## Critical Reminders
 
 **Core Instructions**:
@@ -205,3 +237,4 @@ from ..models.protocols import TestManagerProtocol
 ```
 
 **Current Status**: 10.11% coverage baseline targeting 100% (ratchet system: 2% tolerance, never reduce)
+- make sure to run `python -m crackerjack` after every editing/debugging cycle for quality checking

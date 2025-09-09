@@ -134,6 +134,8 @@ class PublishManagerImpl:
                 self.console.print(
                     f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
+                # Update changelog after successful version bump
+                self._update_changelog_for_version(current_version, new_version)
             else:
                 msg = "Failed to update version in file"
                 raise ValueError(msg)
@@ -446,3 +448,35 @@ class PublishManagerImpl:
         except Exception as e:
             self.console.print(f"[yellow]⚠️[/ yellow] Error reading package info: {e}")
             return {}
+
+    def _update_changelog_for_version(self, old_version: str, new_version: str) -> None:
+        """Update changelog with entries from git commits since last version."""
+        try:
+            from crackerjack.services.git import GitService
+            from crackerjack.services.changelog_automation import ChangelogGenerator
+
+            # Initialize services
+            git_service = GitService(self.console, self.pkg_path)
+            changelog_generator = ChangelogGenerator(self.console, git_service)
+
+            # Look for changelog file
+            changelog_path = self.pkg_path / "CHANGELOG.md"
+
+            # Generate changelog entries since last version
+            success = changelog_generator.generate_changelog_from_commits(
+                changelog_path=changelog_path,
+                version=new_version,
+                since_version=f"v{old_version}",  # Assumes git tags are prefixed with 'v'
+            )
+
+            if success:
+                self.console.print(
+                    f"[green]📝[/green] Updated changelog for version {new_version}"
+                )
+            else:
+                self.console.print(
+                    "[yellow]⚠️[/yellow] Changelog update encountered issues"
+                )
+
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️[/yellow] Failed to update changelog: {e}")

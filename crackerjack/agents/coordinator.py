@@ -1,9 +1,11 @@
 import asyncio
+import hashlib
 import logging
 import typing as t
 from collections import defaultdict
 
 from crackerjack.services.debug import get_ai_agent_debugger
+from crackerjack.services.cache import CrackerjackCache
 
 from .base import (
     AgentContext,
@@ -17,7 +19,9 @@ from .tracker import get_agent_tracker
 
 
 class AgentCoordinator:
-    def __init__(self, context: AgentContext) -> None:
+    def __init__(
+        self, context: AgentContext, cache: CrackerjackCache | None = None
+    ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
         self.logger = logging.getLogger(__name__)
@@ -26,6 +30,7 @@ class AgentCoordinator:
         self.tracker = get_agent_tracker()
         self.debugger = get_ai_agent_debugger()
         self.proactive_mode = True
+        self.cache = cache or CrackerjackCache()
 
     def initialize_agents(self) -> None:
         self.agents = agent_registry.create_all(self.context)
@@ -109,17 +114,56 @@ class AgentCoordinator:
     ) -> SubAgent | None:
         best_agent = None
         best_score = 0.0
+        candidates: list[tuple[SubAgent, float]] = []
 
+        # Threshold for considering scores "close" (5% difference)
+        CLOSE_SCORE_THRESHOLD = 0.05
+
+        # Collect all agent scores
         for agent in specialists:
             try:
                 score = await agent.can_handle(issue)
+                candidates.append((agent, score))
                 if score > best_score:
                     best_score = score
                     best_agent = agent
             except Exception as e:
                 self.logger.exception(f"Error evaluating specialist {agent.name}: {e}")
 
+        # Apply preference for built-in agents when scores are close
+        if best_agent and best_score > 0:
+            # Check if any built-in agents have scores close to the best
+            for agent, score in candidates:
+                if agent != best_agent and self._is_built_in_agent(agent):
+                    score_difference = best_score - score
+                    if 0 < score_difference <= CLOSE_SCORE_THRESHOLD:
+                        # Built-in agent with close score gets preference
+                        self.logger.info(
+                            f"Preferring built-in agent {agent.name} (score: {score:.2f}) "
+                            f"over {best_agent.name} (score: {best_score:.2f}) "
+                            f"due to {score_difference:.2f} threshold preference"
+                        )
+                        best_agent = agent
+                        best_score = score
+                        break
+
         return best_agent
+
+    def _is_built_in_agent(self, agent: SubAgent) -> bool:
+        """Check if agent is a built-in Crackerjack agent."""
+        built_in_agent_names = {
+            "ArchitectAgent",
+            "DocumentationAgent",
+            "DRYAgent",
+            "FormattingAgent",
+            "ImportOptimizationAgent",
+            "PerformanceAgent",
+            "RefactoringAgent",
+            "SecurityAgent",
+            "TestCreationAgent",
+            "TestSpecialistAgent",
+        }
+        return agent.__class__.__name__ in built_in_agent_names
 
     async def _handle_with_single_agent(
         self,
@@ -127,6 +171,16 @@ class AgentCoordinator:
         issue: Issue,
     ) -> FixResult:
         self.logger.info(f"Handling issue with {agent.name}: {issue.message[:100]}")
+
+        # Create cache key from issue content
+        issue_hash = self._create_issue_hash(issue)
+
+        # Check cache for previous agent decision
+        cached_decision = self.cache.get_agent_decision(agent.name, issue_hash)
+        if cached_decision:
+            self.logger.debug(f"Using cached decision for {agent.name}")
+            self.tracker.track_agent_complete(agent.name, cached_decision)
+            return cached_decision
 
         confidence = await agent.can_handle(issue)
         self.tracker.track_agent_processing(agent.name, issue, confidence)
@@ -145,6 +199,10 @@ class AgentCoordinator:
                 self.logger.info(f"{agent.name} successfully fixed issue")
             else:
                 self.logger.warning(f"{agent.name} failed to fix issue")
+
+            # Cache successful decisions for future use
+            if result.success and result.confidence > 0.7:
+                self.cache.set_agent_decision(agent.name, issue_hash, result)
 
             self.tracker.track_agent_complete(agent.name, result)
 
@@ -180,6 +238,13 @@ class AgentCoordinator:
         for issue in issues:
             grouped[issue.type].append(issue)
         return dict(grouped)
+
+    def _create_issue_hash(self, issue: Issue) -> str:
+        """Create a hash from issue content for caching decisions."""
+        content = (
+            f"{issue.type.value}:{issue.message}:{issue.file_path}:{issue.line_number}"
+        )
+        return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
 
     def get_agent_capabilities(self) -> dict[str, dict[str, t.Any]]:
         if not self.agents:

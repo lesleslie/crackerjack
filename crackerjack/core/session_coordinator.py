@@ -45,6 +45,10 @@ class SessionCoordinator:
     def end_session(self, success: bool = True) -> None:
         self.success = success
         self.end_time = time.time()
+
+        # Capture quality metrics at session end
+        self._capture_quality_metrics()
+
         if success:
             self.complete_task("session", "Session completed successfully")
         else:
@@ -283,3 +287,120 @@ class SessionCoordinator:
     def update_stage(self, stage: str, status: str) -> None:
         if self.web_job_id:
             self._update_websocket_progress(status, f"{stage}: {status}")
+
+    def _capture_quality_metrics(self) -> None:
+        """Capture quality metrics at the end of the session."""
+        try:
+            from crackerjack.services.quality_baseline_enhanced import (
+                EnhancedQualityBaselineService,
+            )
+
+            # Initialize quality service
+            quality_service = EnhancedQualityBaselineService()
+
+            # Extract metrics from current session
+            metrics = self._extract_session_metrics()
+
+            if metrics:
+                # Record baseline with individual parameters
+                quality_metrics = quality_service.record_baseline(
+                    coverage_percent=metrics.get("coverage_percent", 0.0),
+                    test_count=metrics.get("test_count", 0),
+                    test_pass_rate=metrics.get("test_pass_rate", 100.0),
+                    hook_failures=metrics.get("hook_failures", 0),
+                    complexity_violations=metrics.get("complexity_violations", 0),
+                    security_issues=metrics.get("security_issues", 0),
+                    type_errors=metrics.get("type_errors", 0),
+                    linting_issues=metrics.get("linting_issues", 0),
+                )
+
+                # Generate and display report
+                report = quality_service.generate_comprehensive_report(metrics)
+                self._display_quality_report(report)
+
+        except Exception as e:
+            # Don't fail the session for quality tracking errors
+            self.console.print(
+                f"[dim yellow]Warning: Quality tracking failed: {e}[/dim yellow]"
+            )
+
+    def _extract_session_metrics(self) -> dict[str, t.Any] | None:
+        """Extract quality metrics from the current session."""
+        try:
+            # Extract from task tracking
+            metrics = {}
+
+            # Coverage metrics (if available from testing task)
+            if "testing" in self.tasks:
+                test_task = self.tasks["testing"]
+                if hasattr(test_task, "coverage_percent"):
+                    metrics["coverage_percent"] = getattr(
+                        test_task, "coverage_percent", 0.0
+                    )
+                if hasattr(test_task, "test_count"):
+                    metrics["test_count"] = getattr(test_task, "test_count", 0)
+                if hasattr(test_task, "test_pass_rate"):
+                    metrics["test_pass_rate"] = getattr(
+                        test_task, "test_pass_rate", 0.0
+                    )
+
+            # Hook failure metrics
+            hook_failures = 0
+            for task_name, task in self.tasks.items():
+                if "hooks" in task_name and hasattr(task, "status"):
+                    if getattr(task, "status") == "failed":
+                        hook_failures += 1
+            metrics["hook_failures"] = hook_failures
+
+            # Default values for metrics we don't have direct access to
+            metrics.setdefault("coverage_percent", 0.0)
+            metrics.setdefault("test_count", 0)
+            metrics.setdefault("test_pass_rate", 100.0 if self.success else 0.0)
+            metrics.setdefault("complexity_violations", 0)
+            metrics.setdefault("security_issues", 0)
+            metrics.setdefault("type_errors", 0)
+            metrics.setdefault("linting_issues", 0)
+
+            return metrics if metrics else None
+
+        except Exception:
+            return None
+
+    def _display_quality_report(self, report) -> None:
+        """Display a summary of the quality report."""
+        try:
+            if report.current_metrics:
+                score = report.current_metrics.quality_score
+                self.console.print(f"\n[cyan]📊 Quality Score: {score}/100[/cyan]")
+
+                # Display trend if available
+                if report.trend:
+                    trend_emoji = {
+                        "improving": "📈",
+                        "declining": "📉",
+                        "stable": "📊",
+                        "volatile": "⚠️",
+                    }.get(report.trend.direction.value, "📊")
+
+                    self.console.print(
+                        f"[dim]{trend_emoji} Trend: {report.trend.direction.value} "
+                        f"({report.trend.confidence:.1%} confidence)[/dim]"
+                    )
+
+                # Display critical alerts
+                critical_alerts = [
+                    a for a in report.alerts if a.severity.value == "critical"
+                ]
+                if critical_alerts:
+                    self.console.print(
+                        f"[red]🚨 {len(critical_alerts)} critical quality issues[/red]"
+                    )
+
+                # Display top recommendations
+                if report.recommendations:
+                    self.console.print("\n[yellow]💡 Top Recommendations:[/yellow]")
+                    for rec in report.recommendations[:2]:  # Show top 2
+                        self.console.print(f"  {rec}")
+
+        except Exception:
+            pass  # Silently fail for display issues

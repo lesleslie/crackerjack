@@ -60,10 +60,20 @@ class CachedHookExecutor:
         for hook_def in strategy.hooks:
             cached_result = None
             try:
-                cached_result = self.cache.get_hook_result(
-                    hook_def.name,
-                    current_file_hashes,
-                )
+                # Use expensive hook cache for expensive operations
+                if hook_def.name in self.cache.EXPENSIVE_HOOKS:
+                    tool_version = self._get_tool_version(hook_def.name)
+                    cached_result = self.cache.get_expensive_hook_result(
+                        hook_def.name,
+                        current_file_hashes,
+                        tool_version,
+                    )
+                else:
+                    # Use regular in-memory cache for fast hooks
+                    cached_result = self.cache.get_hook_result(
+                        hook_def.name,
+                        current_file_hashes,
+                    )
             except Exception as e:
                 self.logger.warning(f"Cache error for hook {hook_def.name}: {e}")
                 cached_result = None
@@ -81,11 +91,22 @@ class CachedHookExecutor:
 
                 if hook_result.status == "passed":
                     try:
-                        self.cache.set_hook_result(
-                            hook_def.name,
-                            current_file_hashes,
-                            hook_result,
-                        )
+                        # Use expensive hook cache for expensive operations
+                        if hook_def.name in self.cache.EXPENSIVE_HOOKS:
+                            tool_version = self._get_tool_version(hook_def.name)
+                            self.cache.set_expensive_hook_result(
+                                hook_def.name,
+                                current_file_hashes,
+                                hook_result,
+                                tool_version,
+                            )
+                        else:
+                            # Use regular in-memory cache
+                            self.cache.set_hook_result(
+                                hook_def.name,
+                                current_file_hashes,
+                                hook_result,
+                            )
                     except Exception as e:
                         self.logger.warning(
                             f"Failed to cache result for {hook_def.name}: {e}",
@@ -240,3 +261,24 @@ class SmartCacheManager:
             "total_python_files": len(list(pkg_path.rglob("*.py"))),
             "project_size": "large" if recent_changes > 50 else "small",
         }
+
+
+# Add helper method to CachedHookExecutor for getting tool versions
+def _get_tool_version_method(self, tool_name: str) -> str | None:
+    """Get version of a tool for cache invalidation."""
+    # This is a simplified version - in production, you might want to
+    # actually call the tool to get its version
+    version_mapping = {
+        "pyright": "1.1.0",  # Could be dynamic: subprocess.run(["pyright", "--version"])
+        "bandit": "1.7.5",
+        "vulture": "2.7.0",
+        "complexipy": "0.13.0",
+        "refurb": "1.17.0",
+        "ruff": "0.1.0",
+        "gitleaks": "8.18.0",
+    }
+    return version_mapping.get(tool_name)
+
+
+# Add the method to CachedHookExecutor class
+CachedHookExecutor._get_tool_version = _get_tool_version_method

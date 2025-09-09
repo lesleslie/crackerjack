@@ -70,7 +70,7 @@ class FileHasher:
 
         try:
             with file_path.open("rb") as f:
-                while chunk:=f.read(8192):
+                while chunk := f.read(8192):
                     hash_func.update(chunk)
             return hash_func.hexdigest()
         except OSError:

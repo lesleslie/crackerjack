@@ -9,6 +9,7 @@ from .cli import (
     handle_standard_mode,
     setup_ai_agent_env,
 )
+from .cli.cache_handlers import _handle_cache_commands
 from .cli.handlers import (
     handle_dashboard_mode,
     handle_enhanced_monitor_mode,
@@ -175,6 +176,11 @@ def main(
     global_lock_dir: str | None = CLI_OPTIONS["global_lock_dir"],
     quick: bool = CLI_OPTIONS["quick"],
     thorough: bool = CLI_OPTIONS["thorough"],
+    clear_cache: bool = CLI_OPTIONS["clear_cache"],
+    cache_stats: bool = CLI_OPTIONS["cache_stats"],
+    generate_docs: bool = CLI_OPTIONS["generate_docs"],
+    docs_format: str = CLI_OPTIONS["docs_format"],
+    validate_docs: bool = CLI_OPTIONS["validate_docs"],
 ) -> None:
     options = create_options(
         commit,
@@ -219,6 +225,11 @@ def main(
         global_lock_dir,
         quick,
         thorough,
+        clear_cache,
+        cache_stats,
+        generate_docs,
+        docs_format,
+        validate_docs,
     )
 
     if ai_debug:
@@ -232,6 +243,10 @@ def main(
         options.verbose = True
 
     setup_ai_agent_env(ai_agent, ai_debug or debug)
+
+    # Handle cache management commands early (they exit after execution)
+    if _handle_cache_commands(clear_cache, cache_stats, console):
+        return
 
     if _handle_server_commands(
         monitor,
@@ -248,6 +263,52 @@ def main(
         dev,
     ):
         return
+
+    # Handle documentation generation
+    if generate_docs or validate_docs:
+        from pathlib import Path
+        from crackerjack.services.documentation_service import DocumentationServiceImpl
+
+        pkg_path = Path("crackerjack")
+        doc_service = DocumentationServiceImpl(pkg_path=pkg_path, console=console)
+
+        if generate_docs:
+            console.print("📖 [bold blue]Generating API documentation...[/bold blue]")
+            success = doc_service.generate_full_api_documentation()
+            if success:
+                console.print(
+                    "✅ [bold green]Documentation generated successfully![/bold green]"
+                )
+            else:
+                console.print(
+                    "❌ [bold red]Documentation generation failed![/bold red]"
+                )
+                return
+
+        if validate_docs:
+            console.print("🔍 [bold blue]Validating documentation...[/bold blue]")
+            doc_paths = [Path("docs"), Path("README.md"), Path("CHANGELOG.md")]
+            existing_docs = [p for p in doc_paths if p.exists()]
+            if existing_docs:
+                issues = doc_service.validate_documentation(existing_docs)
+                if issues:
+                    console.print(f"⚠️ Found {len(issues)} documentation issues:")
+                    for issue in issues:
+                        console.print(
+                            f"  - {issue.get('path', issue.get('file', 'unknown'))}: {issue['message']}"
+                        )
+                else:
+                    console.print(
+                        "✅ [bold green]Documentation validation passed![/bold green]"
+                    )
+            else:
+                console.print("⚠️ No documentation files found to validate.")
+
+        # Exit early if only doing documentation tasks
+        if not any(
+            [options.test, options.clean, options.all, options.publish, options.comp]
+        ):
+            return
 
     if interactive:
         handle_interactive_mode(options)

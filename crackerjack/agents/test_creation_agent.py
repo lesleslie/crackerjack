@@ -33,9 +33,7 @@ class TestCreationAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-
         if issue.type == IssueType.COVERAGE_IMPROVEMENT:
-
             if any(
                 term in message_lower
                 for term in (
@@ -52,7 +50,6 @@ class TestCreationAgent(SubAgent):
         if issue.type == IssueType.TEST_ORGANIZATION:
             return self._check_test_organization_confidence(message_lower)
 
-
         perfect_score = self._check_perfect_test_creation_matches(message_lower)
         if perfect_score > 0:
             return perfect_score
@@ -61,11 +58,9 @@ class TestCreationAgent(SubAgent):
         if good_score > 0:
             return good_score
 
-
         file_path_score = self._check_file_path_test_indicators(issue.file_path)
         if file_path_score > 0:
             return file_path_score
-
 
         if self._indicates_untested_functions(message_lower):
             return 0.85
@@ -125,9 +120,7 @@ class TestCreationAgent(SubAgent):
         if not file_path:
             return 0.0
 
-
         if not self._has_corresponding_test(file_path):
-
             if any(
                 core_path in file_path
                 for core_path in ("/managers/", "/services/", "/core/", "/agents/")
@@ -150,9 +143,7 @@ class TestCreationAgent(SubAgent):
         )
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
-
         self._log_analysis(issue)
-
 
         return await self._apply_fixes_and_create_result(issue)
 
@@ -172,7 +163,6 @@ class TestCreationAgent(SubAgent):
         self,
         issue: Issue,
     ) -> tuple[list[str], list[str]]:
-
         return await self._apply_all_test_creation_fixes(issue)
 
     async def _apply_all_test_creation_fixes(
@@ -181,7 +171,6 @@ class TestCreationAgent(SubAgent):
     ) -> tuple[list[str], list[str]]:
         fixes_applied: list[str] = []
         files_modified: list[str] = []
-
 
         fixes_applied, files_modified = await self._apply_all_fix_types(
             issue, fixes_applied, files_modified
@@ -195,7 +184,6 @@ class TestCreationAgent(SubAgent):
         fixes_applied: list[str],
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
-
         return await self._apply_sequential_fixes(issue, fixes_applied, files_modified)
 
     async def _apply_sequential_fixes(
@@ -204,7 +192,6 @@ class TestCreationAgent(SubAgent):
         fixes_applied: list[str],
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
-
         return await self._apply_all_fix_types_sequentially(
             issue, fixes_applied, files_modified
         )
@@ -215,7 +202,6 @@ class TestCreationAgent(SubAgent):
         fixes_applied: list[str],
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
-
         return await self._apply_all_fix_types_in_sequence(
             issue, fixes_applied, files_modified
         )
@@ -226,7 +212,6 @@ class TestCreationAgent(SubAgent):
         fixes_applied: list[str],
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
-
         return await self._apply_fix_types_in_defined_order(
             issue, fixes_applied, files_modified
         )
@@ -237,7 +222,6 @@ class TestCreationAgent(SubAgent):
         fixes_applied: list[str],
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
-
         (
             fixes_applied,
             files_modified,
@@ -245,14 +229,12 @@ class TestCreationAgent(SubAgent):
             fixes_applied, files_modified
         )
 
-
         (
             fixes_applied,
             files_modified,
         ) = await self._apply_file_specific_fixes_sequentially(
             issue, fixes_applied, files_modified
         )
-
 
         (
             fixes_applied,
@@ -352,7 +334,6 @@ class TestCreationAgent(SubAgent):
             f"Coverage below threshold: {coverage_analysis['current_coverage']: .1%}",
         )
 
-
         return await self._process_uncovered_modules_for_low_coverage(
             coverage_analysis["uncovered_modules"], fixes_applied, files_modified
         )
@@ -376,7 +357,6 @@ class TestCreationAgent(SubAgent):
         fixes_applied: list[str],
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
-
         return await self._process_each_uncovered_module(
             uncovered_modules, fixes_applied, files_modified
         )
@@ -387,7 +367,6 @@ class TestCreationAgent(SubAgent):
         fixes_applied: list[str],
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
-
         return await self._process_all_uncovered_modules(
             uncovered_modules, fixes_applied, files_modified
         )
@@ -443,7 +422,7 @@ class TestCreationAgent(SubAgent):
         fixes_applied: list[str],
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
-        for func_info in untested_functions[: 5]:
+        for func_info in untested_functions[:5]:
             func_fixes = await self._create_test_for_function(func_info)
             fixes_applied.extend(func_fixes["fixes"])
             files_modified.extend(func_fixes["files"])
@@ -456,7 +435,6 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str],
     ) -> FixResult:
         success = len(fixes_applied) > 0
-
 
         confidence = self._calculate_confidence(success, fixes_applied, files_modified)
 
@@ -475,14 +453,11 @@ class TestCreationAgent(SubAgent):
         if not success:
             return 0.0
 
-
         confidence = 0.5
-
 
         test_file_fixes = [f for f in fixes_applied if "test file" in f.lower()]
         function_fixes = [f for f in fixes_applied if "function" in f.lower()]
         coverage_fixes = [f for f in fixes_applied if "coverage" in f.lower()]
-
 
         if test_file_fixes:
             confidence += 0.25
@@ -491,10 +466,8 @@ class TestCreationAgent(SubAgent):
         if coverage_fixes:
             confidence += 0.1
 
-
         if len(files_modified) > 1:
             confidence += 0.1
-
 
         return min(confidence, 0.95)
 
@@ -539,11 +512,9 @@ class TestCreationAgent(SubAgent):
 
     async def _analyze_coverage(self) -> dict[str, Any]:
         try:
-
             coverage_data = await self._get_existing_coverage_data()
             if coverage_data:
                 return coverage_data
-
 
             returncode, _, stderr = await self._run_coverage_command()
 
@@ -558,14 +529,12 @@ class TestCreationAgent(SubAgent):
 
     async def _get_existing_coverage_data(self) -> dict[str, Any] | None:
         try:
-
             json_report = self.context.project_path / "coverage.json"
             if json_report.exists():
                 content = self.context.get_file_content(json_report)
                 if content:
                     coverage_json = json.loads(content)
                     return self._parse_coverage_json(coverage_json)
-
 
             coverage_file = self.context.project_path / ".coverage"
             if coverage_file.exists():
@@ -581,13 +550,11 @@ class TestCreationAgent(SubAgent):
             totals = coverage_json.get("totals", {})
             current_coverage = totals.get("percent_covered", 0) / 100.0
 
-
             uncovered_modules = []
             files = coverage_json.get("files", {})
 
             for file_path, file_data in files.items():
                 if file_data.get("summary", {}).get("percent_covered", 100) < 80:
-
                     rel_path = str(
                         Path(file_path).relative_to(self.context.project_path)
                     )
@@ -596,7 +563,7 @@ class TestCreationAgent(SubAgent):
             return {
                 "below_threshold": current_coverage < 0.8,
                 "current_coverage": current_coverage,
-                "uncovered_modules": uncovered_modules[: 15],
+                "uncovered_modules": uncovered_modules[:15],
                 "missing_lines": totals.get("num_statements", 0)
                 - totals.get("covered_lines", 0),
                 "total_lines": totals.get("num_statements", 0),
@@ -629,18 +596,16 @@ class TestCreationAgent(SubAgent):
         if not coverage_file.exists():
             return self._create_default_coverage_result()
 
-
         uncovered_modules = await self._find_uncovered_modules_enhanced()
         untested_functions = await self._find_untested_functions_enhanced()
-
 
         current_coverage = await self._estimate_current_coverage()
 
         return {
             "below_threshold": current_coverage < 0.8,
             "current_coverage": current_coverage,
-            "uncovered_modules": uncovered_modules[: 15],
-            "untested_functions": untested_functions[: 20],
+            "uncovered_modules": uncovered_modules[:15],
+            "untested_functions": untested_functions[:20],
             "coverage_gaps": await self._identify_coverage_gaps(),
             "improvement_potential": self._calculate_improvement_potential(
                 len(uncovered_modules), len(untested_functions)
@@ -659,9 +624,7 @@ class TestCreationAgent(SubAgent):
             if not source_files:
                 return 0.0
 
-
             coverage_ratio = len(test_files) / len(source_files)
-
 
             estimated_coverage = min(coverage_ratio * 0.6, 0.9)
 
@@ -676,13 +639,10 @@ class TestCreationAgent(SubAgent):
         if uncovered_modules == untested_functions == 0:
             return {"percentage_points": 0, "priority": "low"}
 
-
         module_improvement = uncovered_modules * 2.5
         function_improvement = untested_functions * 0.8
 
-        total_potential = min(
-            module_improvement + function_improvement, 40
-        )
+        total_potential = min(module_improvement + function_improvement, 40)
 
         priority = (
             "high"
@@ -711,7 +671,7 @@ class TestCreationAgent(SubAgent):
 
         package_dir = self.context.project_path / "crackerjack"
         if not package_dir.exists():
-            return uncovered[: 15]
+            return uncovered[:15]
 
         for py_file in package_dir.rglob("*.py"):
             if self._should_skip_module_for_coverage(py_file):
@@ -721,9 +681,8 @@ class TestCreationAgent(SubAgent):
                 module_info = await self._analyze_module_priority(py_file)
                 uncovered.append(module_info)
 
-
         uncovered.sort(key=operator.itemgetter("priority_score"), reverse=True)
-        return uncovered[: 15]
+        return uncovered[:15]
 
     async def _analyze_module_priority(self, py_file: Path) -> dict[str, Any]:
         try:
@@ -733,9 +692,7 @@ class TestCreationAgent(SubAgent):
             functions = await self._extract_functions_from_file(py_file)
             classes = await self._extract_classes_from_file(py_file)
 
-
             priority_score = 0
-
 
             rel_path = str(py_file.relative_to(self.context.project_path))
             if any(
@@ -744,14 +701,11 @@ class TestCreationAgent(SubAgent):
             ):
                 priority_score += 10
 
-
             priority_score += len(functions) * 2
             priority_score += len(classes) * 3
 
-
             public_functions = [f for f in functions if not f["name"].startswith("_")]
             priority_score += len(public_functions) * 2
-
 
             lines_count = len(content.split("\n"))
             if lines_count > 100:
@@ -803,7 +757,7 @@ class TestCreationAgent(SubAgent):
 
         package_dir = self.context.project_path / "crackerjack"
         if not package_dir.exists():
-            return untested[: 20]
+            return untested[:20]
 
         for py_file in package_dir.rglob("*.py"):
             if self._should_skip_file_for_testing(py_file):
@@ -814,9 +768,8 @@ class TestCreationAgent(SubAgent):
             )
             untested.extend(file_untested)
 
-
         untested.sort(key=operator.itemgetter("testing_priority"), reverse=True)
-        return untested[: 20]
+        return untested[:20]
 
     async def _find_untested_functions_in_file_enhanced(
         self, py_file: Path
@@ -839,7 +792,6 @@ class TestCreationAgent(SubAgent):
         self, func: dict[str, Any], py_file: Path
     ) -> dict[str, Any]:
         try:
-
             func_info = {
                 "name": func["name"],
                 "file": str(py_file),
@@ -853,13 +805,10 @@ class TestCreationAgent(SubAgent):
                 "test_strategy": "basic",
             }
 
-
             priority = 0
-
 
             if not func["name"].startswith("_"):
                 priority += 10
-
 
             arg_count = len(func.get("args", []))
             if arg_count > 3:
@@ -870,13 +819,11 @@ class TestCreationAgent(SubAgent):
                 priority += 2
                 func_info["complexity"] = "moderate"
 
-
             if any(
                 core_path in str(func_info["relative_file"])
                 for core_path in ("managers/", "services/", "core/")
             ):
                 priority += 8
-
 
             if func.get("is_async", False):
                 priority += 3
@@ -902,7 +849,6 @@ class TestCreationAgent(SubAgent):
         gaps = []
 
         try:
-
             package_dir = self.context.project_path / "crackerjack"
             tests_dir = self.context.project_path / "tests"
 
@@ -920,7 +866,7 @@ class TestCreationAgent(SubAgent):
         except Exception as e:
             self.log(f"Error identifying coverage gaps: {e}", "WARN")
 
-        return gaps[: 10]
+        return gaps[:10]
 
     async def _analyze_existing_test_coverage(self, py_file: Path) -> dict[str, Any]:
         try:
@@ -942,9 +888,7 @@ class TestCreationAgent(SubAgent):
                 ]
                 return coverage_info
 
-
             test_content = self.context.get_file_content(test_file_path) or ""
-
 
             missing_types = []
             if "def test_" not in test_content:
@@ -1061,7 +1005,7 @@ class TestCreationAgent(SubAgent):
 
         package_dir = self.context.project_path / "crackerjack"
         if not package_dir.exists():
-            return untested[: 10]
+            return untested[:10]
 
         for py_file in package_dir.rglob("*.py"):
             if self._should_skip_file_for_testing(py_file):
@@ -1070,7 +1014,7 @@ class TestCreationAgent(SubAgent):
             file_untested = await self._find_untested_functions_in_file(py_file)
             untested.extend(file_untested)
 
-        return untested[: 10]
+        return untested[:10]
 
     def _should_skip_file_for_testing(self, py_file: Path) -> bool:
         return py_file.name.startswith("test_")
@@ -1305,13 +1249,11 @@ class TestCreationAgent(SubAgent):
         functions: list[dict[str, Any]],
         classes: list[dict[str, Any]],
     ) -> str:
-
         base_content = self._generate_enhanced_test_file_header(
             test_params["module_name"],
             test_params["module_file"],
             test_params["module_category"],
         )
-
 
         function_tests = await self._generate_function_tests_content(
             functions, test_params["module_category"]
@@ -1352,7 +1294,6 @@ class TestCreationAgent(SubAgent):
     def _generate_enhanced_test_file_header(
         self, module_name: str, module_file: Path, module_category: str
     ) -> str:
-
         imports = [
             "import pytest",
             "from pathlib import Path",
@@ -1372,12 +1313,9 @@ class TestCreationAgent(SubAgent):
 
         imports_str = "\n".join(imports)
 
-
         try:
-
             content = self.context.get_file_content(module_file) or ""
             tree = ast.parse(content)
-
 
             importable_items = []
             for node in ast.walk(tree):
@@ -1390,7 +1328,7 @@ class TestCreationAgent(SubAgent):
 
             if importable_items:
                 specific_imports = (
-                    f"from {module_name} import {', '.join(importable_items[: 10])}"
+                    f"from {module_name} import {', '.join(importable_items[:10])}"
                 )
             else:
                 specific_imports = f"import {module_name}"
@@ -1402,30 +1340,30 @@ class TestCreationAgent(SubAgent):
 
         return (
             f'"""{imports_str}\n'
-            f'{specific_imports}\n'
-            '\n'
-            '\n'
-            f'class {class_name}:\n'
+            f"{specific_imports}\n"
+            "\n"
+            "\n"
+            f"class {class_name}:\n"
             f'    """Tests for {module_name}.\n'
-            '\n'
-            f'    This module contains comprehensive tests for {module_name} including:\n'
-            '    - Basic functionality tests\n'
-            '    - Edge case validation\n'
-            '    - Error handling verification\n'
-            '    - Integration testing\n'
-            '    - Performance validation (where applicable)\n'
+            "\n"
+            f"    This module contains comprehensive tests for {module_name} including:\n"
+            "    - Basic functionality tests\n"
+            "    - Edge case validation\n"
+            "    - Error handling verification\n"
+            "    - Integration testing\n"
+            "    - Performance validation (where applicable)\n"
             '    """\n'
-            '\n'
-            '    def test_module_imports_successfully(self):\n'
+            "\n"
+            "    def test_module_imports_successfully(self):\n"
             '        """Test that the module can be imported without errors."""\n'
-            f'        import {module_name}\n'
-            f'        assert {module_name} is not None\n'
+            f"        import {module_name}\n"
+            f"        assert {module_name} is not None\n"
         )
 
     def _get_module_import_path(self, file_path: Path) -> str:
         try:
             relative_path = file_path.relative_to(self.context.project_path)
-            parts = (*relative_path.parts[: -1], relative_path.stem)
+            parts = (*relative_path.parts[:-1], relative_path.stem)
             return ".".join(parts)
         except ValueError:
             return file_path.stem
@@ -1433,7 +1371,6 @@ class TestCreationAgent(SubAgent):
     async def _generate_function_test(self, func_info: dict[str, Any]) -> str:
         func_name = func_info["name"]
         args = func_info.get("args", [])
-
 
         test_template = f"""def test_{func_name}_basic(self):
     \"\"\"Test basic functionality of {func_name}.\"\"\"
@@ -1467,10 +1404,8 @@ class TestCreationAgent(SubAgent):
     ) -> list[str]:
         func_tests = []
 
-
         basic_test = await self._generate_basic_function_test(func, module_category)
         func_tests.append(basic_test)
-
 
         additional_tests = await self._generate_conditional_tests_for_function(
             func, module_category
@@ -1486,17 +1421,14 @@ class TestCreationAgent(SubAgent):
         args = func.get("args", [])
         func_name = func["name"]
 
-
         if self._should_generate_parametrized_test(args):
             parametrized_test = await self._generate_parametrized_test(
                 func, module_category
             )
             tests.append(parametrized_test)
 
-
         error_test = await self._generate_error_handling_test(func, module_category)
         tests.append(error_test)
-
 
         if self._should_generate_edge_case_test(args, func_name):
             edge_test = await self._generate_edge_case_test(func, module_category)
@@ -1547,8 +1479,10 @@ class TestCreationAgent(SubAgent):
             "        except Exception as e:\n"
             "            pytest.fail('Unexpected error in FUNC_NAME: ' + str(e))"
         )
-        
-        return template.replace('FUNC_NAME', func_name).replace('ARGS', self._generate_smart_default_args(args))
+
+        return template.replace("FUNC_NAME", func_name).replace(
+            "ARGS", self._generate_smart_default_args(args)
+        )
 
     def _generate_async_test_template(self, func_name: str, args: list[str]) -> str:
         template = (
@@ -1568,8 +1502,10 @@ class TestCreationAgent(SubAgent):
             "        except Exception as e:\n"
             "            pytest.fail('Unexpected error in FUNC_NAME: ' + str(e))"
         )
-        
-        return template.replace('FUNC_NAME', func_name).replace('ARGS', self._generate_smart_default_args(args))
+
+        return template.replace("FUNC_NAME", func_name).replace(
+            "ARGS", self._generate_smart_default_args(args)
+        )
 
     def _generate_default_test_template(self, func_name: str, args: list[str]) -> str:
         template = (
@@ -1583,15 +1519,16 @@ class TestCreationAgent(SubAgent):
             "        except Exception as e:\n"
             "            pytest.fail('Unexpected error in FUNC_NAME: ' + str(e))"
         )
-        
-        return template.replace('FUNC_NAME', func_name).replace('ARGS', self._generate_smart_default_args(args))
+
+        return template.replace("FUNC_NAME", func_name).replace(
+            "ARGS", self._generate_smart_default_args(args)
+        )
 
     async def _generate_parametrized_test(
         self, func: dict[str, Any], module_category: str
     ) -> str:
         func_name = func["name"]
         args = func.get("args", [])
-
 
         test_cases = self._generate_test_parameters(args)
 
@@ -1616,7 +1553,7 @@ class TestCreationAgent(SubAgent):
             "\n"
             "            pass\n"
             "        except Exception as e:\n"
-            "            pytest.fail(f\"Unexpected error with parameters: {e}\")"
+            '            pytest.fail(f"Unexpected error with parameters: {e}")'
         )
 
         return test_template
@@ -1666,7 +1603,7 @@ class TestCreationAgent(SubAgent):
             "\n"
             "                pass\n"
             "            except Exception as e:\n"
-            "                pytest.fail(f\"Unexpected error with edge case {edge_case}: {e}\")"
+            '                pytest.fail(f"Unexpected error with edge case {edge_case}: {e}")'
         )
 
         return test_template
@@ -1675,10 +1612,8 @@ class TestCreationAgent(SubAgent):
         if not args or len(args) > 5:
             return ""
 
-
         param_names = ", ".join(f'"{arg}"' for arg in args)
         param_values = []
-
 
         for i in range(min(3, len(args))):
             test_case = []
@@ -1869,11 +1804,9 @@ class TestCreationAgent(SubAgent):
         test_methods = []
         methods = cls.get("methods", [])
 
-
         fixture = await self._generate_class_fixture(cls, module_category)
         if fixture:
             fixtures.append(fixture)
-
 
         core_tests = await self._generate_core_class_tests(
             cls, methods, module_category
@@ -1887,18 +1820,15 @@ class TestCreationAgent(SubAgent):
     ) -> list[str]:
         test_methods = []
 
-
         instantiation_test = await self._generate_class_instantiation_test(
             cls, module_category
         )
         test_methods.append(instantiation_test)
 
-
         method_tests = await self._generate_method_tests(
-            cls, methods[: 5], module_category
+            cls, methods[:5], module_category
         )
         test_methods.extend(method_tests)
-
 
         property_test = await self._generate_class_property_test(cls, module_category)
         if property_test:
@@ -1930,7 +1860,6 @@ class TestCreationAgent(SubAgent):
         class_name = cls["name"]
 
         if module_category in ("service", "manager", "core"):
-
             fixture_template = (
                 "    @pytest.fixture\n"
                 f"    def {class_name.lower()}_instance(self):\n"
@@ -1946,7 +1875,6 @@ class TestCreationAgent(SubAgent):
             )
 
         elif module_category == "agent":
-
             fixture_template = (
                 "    @pytest.fixture\n"
                 f"    def {class_name.lower()}_instance(self):\n"
@@ -1964,7 +1892,6 @@ class TestCreationAgent(SubAgent):
             )
 
         else:
-
             fixture_template = (
                 "    @pytest.fixture\n"
                 f"    def {class_name.lower()}_instance(self):\n"
@@ -2119,7 +2046,6 @@ class TestCreationAgent(SubAgent):
     ) -> str:
         class_name = cls["name"]
 
-
         if module_category not in ("service", "manager", "agent"):
             return ""
 
@@ -2147,7 +2073,6 @@ class TestCreationAgent(SubAgent):
     ) -> str:
         if module_category not in ("service", "manager", "core"):
             return ""
-
 
         if len(functions) < 3 and len(classes) < 2:
             return ""
@@ -2180,11 +2105,9 @@ class TestCreationAgent(SubAgent):
         if not args or args == ["self"]:
             return ""
 
-
         filtered_args = [arg for arg in args if arg != "self"]
         if not filtered_args:
             return ""
-
 
         placeholders = []
         for arg in filtered_args:

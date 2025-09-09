@@ -1,0 +1,19 @@
+## [$version] - $date
+
+### Added
+$added_section
+
+### Changed
+$changed_section
+
+### Fixed
+$fixed_section
+
+### Removed
+$removed_section
+
+### Security
+$security_section
+
+### Deprecated
+$deprecated_section
