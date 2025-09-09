@@ -332,7 +332,9 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         issues = []
 
         # Find markdown links [text](path)
-        link_pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+        link_pattern = re.compile(
+            r"\[([^\]]+)\]\(([^)]+)\)"
+        )  # REGEX OK: markdown link parsing
         matches = link_pattern.findall(content)
 
         for link_text, link_path in matches:
@@ -365,7 +367,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         issues = []
 
         # Find headers followed immediately by another header (empty section)
-        empty_section_pattern = re.compile(
+        empty_section_pattern = re.compile(  # REGEX OK: markdown section parsing
             r"(#{1,6}\s+[^\n]+)\n\s*(#{1,6}\s+[^\n]+)", re.MULTILINE
         )
         matches = empty_section_pattern.findall(content)
@@ -390,7 +392,9 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         issues = []
 
         # Look for version patterns
-        version_pattern = re.compile(r"version\s+(\d+\.\d+\.\d+)", re.IGNORECASE)
+        version_pattern = re.compile(
+            r"version\s+(\d+\.\d+\.\d+)", re.IGNORECASE
+        )  # REGEX OK: version extraction
         matches = version_pattern.findall(content)
 
         # This is a placeholder - in a real implementation you'd compare with current version

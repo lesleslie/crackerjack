@@ -104,489 +104,690 @@ def create_monitoring_endpoints(
     ws_manager: MonitoringWebSocketManager,
 ) -> None:
     """Add monitoring endpoints to the FastAPI app."""
+    services = _initialize_monitoring_services(progress_dir)
 
-    # Initialize services
+    _register_websocket_endpoints(app, job_manager, ws_manager, services)
+    _register_rest_api_endpoints(app, job_manager, services)
+    _register_dashboard_endpoint(app)
+
+
+def _initialize_monitoring_services(progress_dir: Path) -> dict[str, t.Any]:
+    """Initialize all monitoring services."""
     cache = CrackerjackCache()
     quality_service = EnhancedQualityBaselineService(cache=cache)
     intelligence_service = QualityIntelligenceService(quality_service)
-    dependency_analyzer = DependencyAnalyzer(progress_dir.parent)  # Use project root
-    error_analyzer = ErrorPatternAnalyzer(progress_dir.parent)  # Use project root
+    dependency_analyzer = DependencyAnalyzer(progress_dir.parent)
+    error_analyzer = ErrorPatternAnalyzer(progress_dir.parent)
+
+    return {
+        "cache": cache,
+        "quality_service": quality_service,
+        "intelligence_service": intelligence_service,
+        "dependency_analyzer": dependency_analyzer,
+        "error_analyzer": error_analyzer,
+    }
+
+
+def _register_websocket_endpoints(
+    app: FastAPI,
+    job_manager: JobManager,
+    ws_manager: MonitoringWebSocketManager,
+    services: dict[str, t.Any],
+) -> None:
+    """Register all WebSocket endpoints."""
+    _register_metrics_websockets(app, job_manager, ws_manager, services)
+    _register_intelligence_websockets(app, ws_manager, services)
+    _register_dependency_websockets(app, ws_manager, services)
+    _register_heatmap_websockets(app, ws_manager, services)
+
+
+def _register_metrics_websockets(
+    app: FastAPI,
+    job_manager: JobManager,
+    ws_manager: MonitoringWebSocketManager,
+    services: dict[str, t.Any],
+) -> None:
+    """Register metrics-related WebSocket endpoints."""
+    quality_service = services["quality_service"]
 
     @app.websocket("/ws/metrics/live")
     async def websocket_metrics_live(websocket: WebSocket):
         """WebSocket endpoint for live metrics streaming."""
-        client_id = f"metrics_{datetime.now().timestamp()}"
-        await ws_manager.connect_metrics(websocket, client_id)
-
-        try:
-            # Send initial metrics
-            current_metrics = await get_current_metrics(quality_service, job_manager)
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "initial_metrics",
-                        "data": current_metrics.to_dict(),
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
-
-            # Keep connection alive and handle client messages
-            while True:
-                try:
-                    # Wait for client messages (keepalive, config changes, etc.)
-                    message = await asyncio.wait_for(
-                        websocket.receive_text(), timeout=30.0
-                    )
-                    data = json.loads(message)
-
-                    if data.get("type") == "request_update":
-                        # Send fresh metrics on request
-                        metrics = await get_current_metrics(
-                            quality_service, job_manager
-                        )
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "metrics_update",
-                                    "data": metrics.to_dict(),
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-                except TimeoutError:
-                    # Send keepalive metrics
-                    metrics = await get_current_metrics(quality_service, job_manager)
-                    await ws_manager.broadcast_metrics(metrics)
-
-        except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, client_id)
+        await _handle_live_metrics_websocket(
+            websocket, ws_manager, quality_service, job_manager
+        )
 
     @app.websocket("/ws/metrics/historical/{days}")
     async def websocket_metrics_historical(websocket: WebSocket, days: int):
         """WebSocket endpoint for historical metrics data."""
-        if days > 365:  # Limit to 1 year
-            await websocket.close(code=1008, reason="Days parameter too large")
-            return
-
-        client_id = f"historical_{datetime.now().timestamp()}"
-        await ws_manager.connect_metrics(websocket, client_id)
-
-        try:
-            # Get historical data
-            historical_baselines = quality_service.get_recent_baselines(limit=days)
-            historical_data = []
-
-            for baseline in historical_baselines:
-                historical_data.append(
-                    UnifiedMetrics(
-                        timestamp=baseline.timestamp,
-                        quality_score=baseline.quality_score,
-                        test_coverage=baseline.coverage_percent,
-                        hook_duration=0.0,
-                        active_jobs=0,
-                        error_count=baseline.hook_failures
-                        + baseline.security_issues
-                        + baseline.type_errors
-                        + baseline.linting_issues,
-                        trend_direction=TrendDirection.STABLE,
-                        predictions={},
-                    )
-                )
-
-            # Send historical data in chunks to avoid overwhelming the client
-            chunk_size = 100
-            for i in range(0, len(historical_data), chunk_size):
-                chunk = historical_data[i : i + chunk_size]
-                await websocket.send_text(
-                    json.dumps(
-                        {
-                            "type": "historical_chunk",
-                            "data": [m.to_dict() for m in chunk],
-                            "chunk_index": i // chunk_size,
-                            "total_chunks": (len(historical_data) + chunk_size - 1)
-                            // chunk_size,
-                            "timestamp": datetime.now().isoformat(),
-                        }
-                    )
-                )
-                await asyncio.sleep(0.1)  # Small delay to prevent overwhelming
-
-            # Send completion signal
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "historical_complete",
-                        "total_records": len(historical_data),
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
-
-            # Keep connection open for updates
-            while True:
-                await websocket.receive_text()  # Wait for client disconnect
-
-        except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, client_id)
+        await _handle_historical_metrics_websocket(
+            websocket, ws_manager, quality_service, days
+        )
 
     @app.websocket("/ws/alerts/subscribe")
     async def websocket_alerts_subscribe(websocket: WebSocket):
         """WebSocket endpoint for alert subscriptions."""
-        client_id = f"alerts_{datetime.now().timestamp()}"
-        await ws_manager.connect_alerts(websocket, client_id)
+        await _handle_alerts_websocket(websocket, ws_manager)
 
-        try:
-            # Send current active alerts - would need to track these separately
-            active_alerts = []  # For now, empty list
+    @app.websocket("/ws/dashboard/overview")
+    async def websocket_dashboard_overview(websocket: WebSocket):
+        """WebSocket endpoint for comprehensive dashboard data."""
+        await _handle_dashboard_websocket(
+            websocket, ws_manager, quality_service, job_manager
+        )
+
+
+async def _handle_live_metrics_websocket(
+    websocket: WebSocket,
+    ws_manager: MonitoringWebSocketManager,
+    quality_service: EnhancedQualityBaselineService,
+    job_manager: JobManager,
+) -> None:
+    """Handle live metrics WebSocket connection."""
+    client_id = f"metrics_{datetime.now().timestamp()}"
+    await ws_manager.connect_metrics(websocket, client_id)
+
+    try:
+        # Send initial metrics
+        current_metrics = await get_current_metrics(quality_service, job_manager)
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "initial_metrics",
+                    "data": current_metrics.to_dict(),
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+
+        # Keep connection alive and handle client messages
+        while True:
+            try:
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                data = json.loads(message)
+
+                if data.get("type") == "request_update":
+                    metrics = await get_current_metrics(quality_service, job_manager)
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "type": "metrics_update",
+                                "data": metrics.to_dict(),
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        )
+                    )
+
+            except TimeoutError:
+                metrics = await get_current_metrics(quality_service, job_manager)
+                await ws_manager.broadcast_metrics(metrics)
+
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
+
+
+async def _handle_historical_metrics_websocket(
+    websocket: WebSocket,
+    ws_manager: MonitoringWebSocketManager,
+    quality_service: EnhancedQualityBaselineService,
+    days: int,
+) -> None:
+    """Handle historical metrics WebSocket connection."""
+    if days > 365:
+        await websocket.close(code=1008, reason="Days parameter too large")
+        return
+
+    client_id = f"historical_{datetime.now().timestamp()}"
+    await ws_manager.connect_metrics(websocket, client_id)
+
+    try:
+        historical_data = _convert_baselines_to_metrics(
+            quality_service.get_recent_baselines(limit=days)
+        )
+
+        await _send_historical_data_chunks(websocket, historical_data)
+
+        # Keep connection open for updates
+        while True:
+            await websocket.receive_text()
+
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
+
+
+def _convert_baselines_to_metrics(
+    baselines: list[t.Any],
+) -> list[UnifiedMetrics]:
+    """Convert quality baselines to UnifiedMetrics objects."""
+    historical_data = []
+
+    for baseline in baselines:
+        historical_data.append(
+            UnifiedMetrics(
+                timestamp=baseline.timestamp,
+                quality_score=baseline.quality_score,
+                test_coverage=baseline.coverage_percent,
+                hook_duration=0.0,
+                active_jobs=0,
+                error_count=baseline.hook_failures
+                + baseline.security_issues
+                + baseline.type_errors
+                + baseline.linting_issues,
+                trend_direction=TrendDirection.STABLE,
+                predictions={},
+            )
+        )
+
+    return historical_data
+
+
+async def _send_historical_data_chunks(
+    websocket: WebSocket, historical_data: list[UnifiedMetrics]
+) -> None:
+    """Send historical data in chunks to avoid overwhelming the client."""
+    chunk_size = 100
+
+    for i in range(0, len(historical_data), chunk_size):
+        chunk = historical_data[i : i + chunk_size]
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "historical_chunk",
+                    "data": [m.to_dict() for m in chunk],
+                    "chunk_index": i // chunk_size,
+                    "total_chunks": (len(historical_data) + chunk_size - 1)
+                    // chunk_size,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+        await asyncio.sleep(0.1)
+
+    # Send completion signal
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "historical_complete",
+                "total_records": len(historical_data),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+
+async def _handle_alerts_websocket(
+    websocket: WebSocket, ws_manager: MonitoringWebSocketManager
+) -> None:
+    """Handle alerts WebSocket connection."""
+    client_id = f"alerts_{datetime.now().timestamp()}"
+    await ws_manager.connect_alerts(websocket, client_id)
+
+    try:
+        # Send current active alerts - would need to track these separately
+        active_alerts = []  # For now, empty list
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "active_alerts",
+                    "data": [alert.to_dict() for alert in active_alerts],
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+
+        # Keep connection alive
+        while True:
+            await websocket.receive_text()
+
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
+
+
+async def _handle_dashboard_websocket(
+    websocket: WebSocket,
+    ws_manager: MonitoringWebSocketManager,
+    quality_service: EnhancedQualityBaselineService,
+    job_manager: JobManager,
+) -> None:
+    """Handle dashboard overview WebSocket connection."""
+    client_id = f"dashboard_{datetime.now().timestamp()}"
+    await ws_manager.connect_metrics(websocket, client_id)
+
+    try:
+        while True:
+            current_metrics = await get_current_metrics(quality_service, job_manager)
+
+            metrics_dict = _create_dashboard_metrics_dict(current_metrics)
+
+            dashboard_state = quality_service.create_dashboard_state(
+                current_metrics=metrics_dict,
+                active_job_count=len(job_manager.active_connections),
+                historical_days=7,
+            )
+
             await websocket.send_text(
                 json.dumps(
                     {
-                        "type": "active_alerts",
-                        "data": [alert.to_dict() for alert in active_alerts],
+                        "type": "dashboard_update",
+                        "data": dashboard_state.to_dict(),
                         "timestamp": datetime.now().isoformat(),
                     }
                 )
             )
 
-            # Keep connection alive
-            while True:
-                await websocket.receive_text()
+            await asyncio.sleep(10)
 
-        except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, client_id)
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
 
-    @app.websocket("/ws/dashboard/overview")
-    async def websocket_dashboard_overview(websocket: WebSocket):
-        """WebSocket endpoint for comprehensive dashboard data."""
-        client_id = f"dashboard_{datetime.now().timestamp()}"
-        await ws_manager.connect_metrics(websocket, client_id)
 
-        try:
-            while True:
-                # Gather comprehensive dashboard state
-                current_metrics = await get_current_metrics(
-                    quality_service, job_manager
-                )
+def _create_dashboard_metrics_dict(current_metrics: UnifiedMetrics) -> dict[str, t.Any]:
+    """Create basic metrics dict for dashboard state."""
+    return {
+        "coverage_percent": current_metrics.test_coverage,
+        "test_count": 0,
+        "test_pass_rate": 100.0,
+        "hook_failures": 0,
+        "complexity_violations": 0,
+        "security_issues": 0,
+        "type_errors": 0,
+        "linting_issues": 0,
+    }
 
-                # Create basic metrics dict for dashboard state
-                metrics_dict = {
-                    "coverage_percent": current_metrics.test_coverage,
-                    "test_count": 0,
-                    "test_pass_rate": 100.0,
-                    "hook_failures": 0,
-                    "complexity_violations": 0,
-                    "security_issues": 0,
-                    "type_errors": 0,
-                    "linting_issues": 0,
+
+def _register_intelligence_websockets(
+    app: FastAPI,
+    ws_manager: MonitoringWebSocketManager,
+    services: dict[str, t.Any],
+) -> None:
+    """Register intelligence-related WebSocket endpoints."""
+    intelligence_service = services["intelligence_service"]
+
+    @app.websocket("/ws/intelligence/anomalies")
+    async def websocket_anomaly_detection(websocket: WebSocket):
+        """WebSocket endpoint for real-time anomaly detection."""
+        await _handle_anomaly_detection_websocket(
+            websocket, ws_manager, intelligence_service
+        )
+
+    @app.websocket("/ws/intelligence/predictions")
+    async def websocket_predictions(websocket: WebSocket):
+        """WebSocket endpoint for quality predictions."""
+        await _handle_predictions_websocket(websocket, ws_manager, intelligence_service)
+
+    @app.websocket("/ws/intelligence/patterns")
+    async def websocket_pattern_analysis(websocket: WebSocket):
+        """WebSocket endpoint for pattern recognition and correlation analysis."""
+        await _handle_pattern_analysis_websocket(
+            websocket, ws_manager, intelligence_service
+        )
+
+
+async def _handle_anomaly_detection_websocket(
+    websocket: WebSocket,
+    ws_manager: MonitoringWebSocketManager,
+    intelligence_service: QualityIntelligenceService,
+) -> None:
+    """Handle anomaly detection WebSocket connection."""
+    client_id = f"anomalies_{datetime.now().timestamp()}"
+    await ws_manager.connect_metrics(websocket, client_id)
+
+    try:
+        # Send initial anomaly analysis
+        anomalies = intelligence_service.detect_anomalies(days=7)
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "anomalies_initial",
+                    "data": [anomaly.to_dict() for anomaly in anomalies],
+                    "timestamp": datetime.now().isoformat(),
                 }
+            )
+        )
 
-                dashboard_state = quality_service.create_dashboard_state(
-                    current_metrics=metrics_dict,
-                    active_job_count=len(job_manager.active_connections),
-                    historical_days=7,
+        # Stream ongoing anomaly detection
+        while True:
+            try:
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=60.0)
+                data = json.loads(message)
+
+                if data.get("type") == "request_analysis":
+                    await _handle_anomaly_request(websocket, intelligence_service, data)
+
+            except TimeoutError:
+                await _send_periodic_anomaly_check(websocket, intelligence_service)
+
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
+
+
+async def _handle_anomaly_request(
+    websocket: WebSocket,
+    intelligence_service: QualityIntelligenceService,
+    data: dict[str, t.Any],
+) -> None:
+    """Handle anomaly analysis request."""
+    days = data.get("days", 7)
+    metrics_filter = data.get("metrics")
+
+    anomalies = intelligence_service.detect_anomalies(days=days, metrics=metrics_filter)
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "anomalies_update",
+                "data": [anomaly.to_dict() for anomaly in anomalies],
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+
+async def _send_periodic_anomaly_check(
+    websocket: WebSocket, intelligence_service: QualityIntelligenceService
+) -> None:
+    """Send periodic anomaly check."""
+    anomalies = intelligence_service.detect_anomalies(days=1)
+    if anomalies:
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "anomalies_alert",
+                    "data": [anomaly.to_dict() for anomaly in anomalies],
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+
+
+async def _handle_predictions_websocket(
+    websocket: WebSocket,
+    ws_manager: MonitoringWebSocketManager,
+    intelligence_service: QualityIntelligenceService,
+) -> None:
+    """Handle predictions WebSocket connection."""
+    client_id = f"predictions_{datetime.now().timestamp()}"
+    await ws_manager.connect_metrics(websocket, client_id)
+
+    try:
+        # Send initial predictions
+        insights = intelligence_service.generate_insights(days=30)
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "predictions_initial",
+                    "data": insights.to_dict(),
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+
+        # Stream prediction updates
+        while True:
+            try:
+                message = await asyncio.wait_for(
+                    websocket.receive_text(), timeout=300.0
+                )
+                data = json.loads(message)
+
+                if data.get("type") == "request_predictions":
+                    await _handle_prediction_request(
+                        websocket, intelligence_service, data
+                    )
+
+            except TimeoutError:
+                await _send_periodic_prediction_update(websocket, intelligence_service)
+
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
+
+
+async def _handle_prediction_request(
+    websocket: WebSocket,
+    intelligence_service: QualityIntelligenceService,
+    data: dict[str, t.Any],
+) -> None:
+    """Handle prediction request."""
+    days = data.get("days", 30)
+    horizon = data.get("horizon", 7)
+
+    insights = intelligence_service.generate_insights(days=days)
+
+    # Generate specific predictions for requested horizon
+    predictions = {}
+    for metric in ["quality_score", "test_coverage", "hook_duration"]:
+        pred = intelligence_service.predict_metric_value(metric, horizon_days=horizon)
+        if pred:
+            predictions[metric] = pred.to_dict()
+
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "predictions_update",
+                "data": {
+                    "insights": insights.to_dict(),
+                    "predictions": predictions,
+                },
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+
+async def _send_periodic_prediction_update(
+    websocket: WebSocket, intelligence_service: QualityIntelligenceService
+) -> None:
+    """Send periodic predictions update."""
+    insights = intelligence_service.generate_insights(days=7)
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "predictions_periodic",
+                "data": insights.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+
+async def _handle_pattern_analysis_websocket(
+    websocket: WebSocket,
+    ws_manager: MonitoringWebSocketManager,
+    intelligence_service: QualityIntelligenceService,
+) -> None:
+    """Handle pattern analysis WebSocket connection."""
+    client_id = f"patterns_{datetime.now().timestamp()}"
+    await ws_manager.connect_metrics(websocket, client_id)
+
+    try:
+        # Send initial pattern analysis
+        patterns = intelligence_service.identify_patterns(days=30)
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "patterns_initial",
+                    "data": patterns,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+
+        # Stream pattern updates
+        while True:
+            try:
+                message = await asyncio.wait_for(
+                    websocket.receive_text(), timeout=180.0
+                )
+                data = json.loads(message)
+
+                if data.get("type") == "request_patterns":
+                    await _handle_pattern_request(websocket, intelligence_service, data)
+
+            except TimeoutError:
+                await _send_periodic_pattern_update(websocket, intelligence_service)
+
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
+
+
+async def _handle_pattern_request(
+    websocket: WebSocket,
+    intelligence_service: QualityIntelligenceService,
+    data: dict[str, t.Any],
+) -> None:
+    """Handle pattern analysis request."""
+    days = data.get("days", 30)
+    patterns = intelligence_service.identify_patterns(days=days)
+
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "patterns_update",
+                "data": patterns,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+
+async def _send_periodic_pattern_update(
+    websocket: WebSocket, intelligence_service: QualityIntelligenceService
+) -> None:
+    """Send periodic pattern analysis update."""
+    patterns = intelligence_service.identify_patterns(days=7)
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "patterns_periodic",
+                "data": patterns,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+
+def _register_dependency_websockets(
+    app: FastAPI,
+    ws_manager: MonitoringWebSocketManager,
+    services: dict[str, t.Any],
+) -> None:
+    """Register dependency-related WebSocket endpoints."""
+    dependency_analyzer = services["dependency_analyzer"]
+
+    @app.websocket("/ws/dependencies/graph")
+    async def websocket_dependency_graph(websocket: WebSocket):
+        """WebSocket endpoint for dependency graph data."""
+        await _handle_dependency_graph_websocket(
+            websocket, ws_manager, dependency_analyzer
+        )
+
+
+async def _handle_dependency_graph_websocket(
+    websocket: WebSocket,
+    ws_manager: MonitoringWebSocketManager,
+    dependency_analyzer: DependencyAnalyzer,
+) -> None:
+    """Handle dependency graph WebSocket connection."""
+    client_id = f"dependencies_{datetime.now().timestamp()}"
+    await ws_manager.connect_metrics(websocket, client_id)
+
+    try:
+        # Send initial message
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "analysis_started",
+                    "message": "Starting dependency analysis...",
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+
+        # Generate dependency graph
+        graph = dependency_analyzer.analyze_project()
+
+        # Send the complete graph data
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "graph_data",
+                    "data": graph.to_dict(),
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+
+        # Listen for client requests
+        while True:
+            try:
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                data = json.loads(message)
+
+                await _handle_dependency_request(
+                    websocket, dependency_analyzer, graph, data
                 )
 
+            except TimeoutError:
                 await websocket.send_text(
                     json.dumps(
                         {
-                            "type": "dashboard_update",
-                            "data": dashboard_state.to_dict(),
+                            "type": "keepalive",
                             "timestamp": datetime.now().isoformat(),
                         }
                     )
                 )
 
-                # Wait 10 seconds before next update
-                await asyncio.sleep(10)
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
 
-        except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, client_id)
 
-    @app.websocket("/ws/intelligence/anomalies")
-    async def websocket_anomaly_detection(websocket: WebSocket):
-        """WebSocket endpoint for real-time anomaly detection."""
-        client_id = f"anomalies_{datetime.now().timestamp()}"
-        await ws_manager.connect_metrics(websocket, client_id)
-
-        try:
-            # Send initial anomaly analysis
-            anomalies = intelligence_service.detect_anomalies(days=7)
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "anomalies_initial",
-                        "data": [anomaly.to_dict() for anomaly in anomalies],
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
+async def _handle_dependency_request(
+    websocket: WebSocket,
+    dependency_analyzer: DependencyAnalyzer,
+    graph: DependencyGraph,
+    data: dict[str, t.Any],
+) -> None:
+    """Handle dependency graph request."""
+    if data.get("type") == "filter_request":
+        filtered_graph = await _apply_graph_filters(graph, data.get("filters", {}))
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "filtered_graph",
+                    "data": filtered_graph.to_dict(),
+                    "timestamp": datetime.now().isoformat(),
+                }
             )
+        )
 
-            # Stream ongoing anomaly detection
-            while True:
-                try:
-                    # Wait for client messages or timeout for periodic updates
-                    message = await asyncio.wait_for(
-                        websocket.receive_text(), timeout=60.0
-                    )
-                    data = json.loads(message)
-
-                    if data.get("type") == "request_analysis":
-                        days = data.get("days", 7)
-                        metrics_filter = data.get("metrics")
-
-                        anomalies = intelligence_service.detect_anomalies(
-                            days=days, metrics=metrics_filter
-                        )
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "anomalies_update",
-                                    "data": [
-                                        anomaly.to_dict() for anomaly in anomalies
-                                    ],
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-                except TimeoutError:
-                    # Periodic anomaly check
-                    anomalies = intelligence_service.detect_anomalies(days=1)
-                    if anomalies:  # Only send if there are new anomalies
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "anomalies_alert",
-                                    "data": [
-                                        anomaly.to_dict() for anomaly in anomalies
-                                    ],
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-        except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, client_id)
-
-    @app.websocket("/ws/intelligence/predictions")
-    async def websocket_predictions(websocket: WebSocket):
-        """WebSocket endpoint for quality predictions."""
-        client_id = f"predictions_{datetime.now().timestamp()}"
-        await ws_manager.connect_metrics(websocket, client_id)
-
-        try:
-            # Send initial predictions
-            insights = intelligence_service.generate_insights(days=30)
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "predictions_initial",
-                        "data": insights.to_dict(),
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
+    elif data.get("type") == "refresh_request":
+        fresh_graph = dependency_analyzer.analyze_project()
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "graph_data",
+                    "data": fresh_graph.to_dict(),
+                    "timestamp": datetime.now().isoformat(),
+                }
             )
+        )
 
-            # Stream prediction updates
-            while True:
-                try:
-                    message = await asyncio.wait_for(
-                        websocket.receive_text(),
-                        timeout=300.0,  # 5 minute updates
-                    )
-                    data = json.loads(message)
 
-                    if data.get("type") == "request_predictions":
-                        days = data.get("days", 30)
-                        horizon = data.get("horizon", 7)
+def _register_rest_api_endpoints(
+    app: FastAPI, job_manager: JobManager, services: dict[str, t.Any]
+) -> None:
+    """Register all REST API endpoints."""
+    _register_metrics_api_endpoints(app, job_manager, services)
+    _register_intelligence_api_endpoints(app, services)
+    _register_dependency_api_endpoints(app, services)
+    _register_heatmap_api_endpoints(app, services)
 
-                        insights = intelligence_service.generate_insights(days=days)
 
-                        # Generate specific predictions for requested horizon
-                        predictions = {}
-                        for metric in [
-                            "quality_score",
-                            "test_coverage",
-                            "hook_duration",
-                        ]:
-                            pred = intelligence_service.predict_metric_value(
-                                metric, horizon_days=horizon
-                            )
-                            if pred:
-                                predictions[metric] = pred.to_dict()
+def _register_metrics_api_endpoints(
+    app: FastAPI, job_manager: JobManager, services: dict[str, t.Any]
+) -> None:
+    """Register metrics-related REST API endpoints."""
+    quality_service = services["quality_service"]
 
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "predictions_update",
-                                    "data": {
-                                        "insights": insights.to_dict(),
-                                        "predictions": predictions,
-                                    },
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-                except TimeoutError:
-                    # Periodic predictions update
-                    insights = intelligence_service.generate_insights(days=7)
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "predictions_periodic",
-                                "data": insights.to_dict(),
-                                "timestamp": datetime.now().isoformat(),
-                            }
-                        )
-                    )
-
-        except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, client_id)
-
-    @app.websocket("/ws/intelligence/patterns")
-    async def websocket_pattern_analysis(websocket: WebSocket):
-        """WebSocket endpoint for pattern recognition and correlation analysis."""
-        client_id = f"patterns_{datetime.now().timestamp()}"
-        await ws_manager.connect_metrics(websocket, client_id)
-
-        try:
-            # Send initial pattern analysis
-            patterns = intelligence_service.identify_patterns(days=30)
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "patterns_initial",
-                        "data": patterns,
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
-
-            # Stream pattern updates
-            while True:
-                try:
-                    message = await asyncio.wait_for(
-                        websocket.receive_text(),
-                        timeout=180.0,  # 3 minute updates
-                    )
-                    data = json.loads(message)
-
-                    if data.get("type") == "request_patterns":
-                        days = data.get("days", 30)
-                        patterns = intelligence_service.identify_patterns(days=days)
-
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "patterns_update",
-                                    "data": patterns,
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-                except TimeoutError:
-                    # Periodic pattern analysis
-                    patterns = intelligence_service.identify_patterns(days=7)
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "patterns_periodic",
-                                "data": patterns,
-                                "timestamp": datetime.now().isoformat(),
-                            }
-                        )
-                    )
-
-        except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, client_id)
-
-    @app.websocket("/ws/dependencies/graph")
-    async def websocket_dependency_graph(websocket: WebSocket):
-        """WebSocket endpoint for dependency graph data."""
-        client_id = f"dependencies_{datetime.now().timestamp()}"
-        await ws_manager.connect_metrics(websocket, client_id)
-
-        try:
-            # Send initial message
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "analysis_started",
-                        "message": "Starting dependency analysis...",
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
-
-            # Generate dependency graph (this might take some time)
-            graph = dependency_analyzer.analyze_project()
-
-            # Send the complete graph data
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "graph_data",
-                        "data": graph.to_dict(),
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
-
-            # Listen for client requests
-            while True:
-                try:
-                    message = await asyncio.wait_for(
-                        websocket.receive_text(), timeout=30.0
-                    )
-                    data = json.loads(message)
-
-                    if data.get("type") == "filter_request":
-                        # Apply filters to the graph
-                        filtered_graph = await _apply_graph_filters(
-                            graph, data.get("filters", {})
-                        )
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "filtered_graph",
-                                    "data": filtered_graph.to_dict(),
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-                    elif data.get("type") == "refresh_request":
-                        # Re-analyze dependencies
-                        graph = dependency_analyzer.analyze_project()
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "graph_data",
-                                    "data": graph.to_dict(),
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-                except TimeoutError:
-                    # Send keepalive
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "keepalive",
-                                "timestamp": datetime.now().isoformat(),
-                            }
-                        )
-                    )
-
-        except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, client_id)
-
-    # REST API endpoints for dashboard
     @app.get("/api/metrics/summary")
     async def get_metrics_summary():
         """Get current system summary."""
@@ -605,270 +806,352 @@ def create_monitoring_endpoints(
     @app.get("/api/trends/quality")
     async def get_quality_trends(days: int = 30):
         """Get quality trend analysis."""
-        try:
-            if days > 365:
-                raise HTTPException(status_code=400, detail="Days parameter too large")
-
-            trends = quality_service.analyze_quality_trend(days=days)
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": trends.to_dict(),
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_quality_trends_request(quality_service, days)
 
     @app.get("/api/alerts/configure")
     async def get_alert_configuration():
         """Get current alert configuration."""
-        try:
-            config = quality_service.get_alert_thresholds()
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": config,
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_get_alert_configuration(quality_service)
 
     @app.post("/api/alerts/configure")
     async def update_alert_configuration(config: dict):
         """Update alert configuration."""
-        try:
-            # Update individual thresholds
-            for metric, threshold in config.items():
-                quality_service.set_alert_threshold(metric, threshold)
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "message": "Alert configuration updated",
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_update_alert_configuration(quality_service, config)
 
     @app.get("/api/export/data")
     async def export_data(days: int = 30, format: str = "json"):
         """Export historical data for external analysis."""
-        try:
-            if days > 365:
-                raise HTTPException(status_code=400, detail="Days parameter too large")
+        return await _handle_export_data_request(quality_service, days, format)
 
-            if format not in ["json", "csv"]:
-                raise HTTPException(
-                    status_code=400, detail="Format must be 'json' or 'csv'"
-                )
 
-            # Export historical data
-            historical_baselines = quality_service.get_recent_baselines(limit=days)
+async def _handle_quality_trends_request(
+    quality_service: EnhancedQualityBaselineService, days: int
+) -> JSONResponse:
+    """Handle quality trends API request."""
+    try:
+        if days > 365:
+            raise HTTPException(status_code=400, detail="Days parameter too large")
 
-            if format == "csv":
-                import csv
-                from io import StringIO
+        trends = quality_service.analyze_quality_trend(days=days)
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": trends.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-                output = StringIO()
-                writer = csv.writer(output)
 
-                # Write header
-                writer.writerow(
-                    [
-                        "timestamp",
-                        "git_hash",
-                        "quality_score",
-                        "coverage_percent",
-                        "test_count",
-                        "test_pass_rate",
-                        "hook_failures",
-                        "complexity_violations",
-                        "security_issues",
-                        "type_errors",
-                        "linting_issues",
-                    ]
-                )
+async def _handle_get_alert_configuration(
+    quality_service: EnhancedQualityBaselineService,
+) -> JSONResponse:
+    """Handle get alert configuration API request."""
+    try:
+        config = quality_service.get_alert_thresholds()
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": config,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-                # Write data
-                for baseline in historical_baselines:
-                    writer.writerow(
-                        [
-                            baseline.timestamp.isoformat(),
-                            baseline.git_hash,
-                            baseline.quality_score,
-                            baseline.coverage_percent,
-                            baseline.test_count,
-                            baseline.test_pass_rate,
-                            baseline.hook_failures,
-                            baseline.complexity_violations,
-                            baseline.security_issues,
-                            baseline.type_errors,
-                            baseline.linting_issues,
-                        ]
-                    )
 
-                data = output.getvalue()
-            else:
-                # JSON format
-                data = [baseline.to_dict() for baseline in historical_baselines]
+async def _handle_update_alert_configuration(
+    quality_service: EnhancedQualityBaselineService, config: dict
+) -> JSONResponse:
+    """Handle update alert configuration API request."""
+    try:
+        # Update individual thresholds
+        for metric, threshold in config.items():
+            quality_service.set_alert_threshold(metric, threshold)
+        return JSONResponse(
+            {
+                "status": "success",
+                "message": "Alert configuration updated",
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-            if format == "csv":
-                from fastapi.responses import Response
 
-                return Response(
-                    content=data,
-                    media_type="text/csv",
-                    headers={
-                        "Content-Disposition": (
-                            f"attachment; filename=crackerjack_metrics_{days}d.csv"
-                        )
-                    },
-                )
-            else:
-                return JSONResponse(
-                    {
-                        "status": "success",
-                        "data": data,
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+async def _handle_export_data_request(
+    quality_service: EnhancedQualityBaselineService, days: int, format_type: str
+) -> JSONResponse | t.Any:
+    """Handle export data API request."""
+    try:
+        if days > 365:
+            raise HTTPException(status_code=400, detail="Days parameter too large")
 
-    # Intelligence API endpoints
-    @app.get("/api/intelligence/anomalies")
-    async def get_anomalies(days: int = 7, metrics: str = None):
-        """Get anomaly detection results."""
-        try:
-            if days > 365:
-                raise HTTPException(status_code=400, detail="Days parameter too large")
-
-            metrics_list = metrics.split(",") if metrics else None
-            anomalies = intelligence_service.detect_anomalies(
-                days=days, metrics=metrics_list
+        if format_type not in ["json", "csv"]:
+            raise HTTPException(
+                status_code=400, detail="Format must be 'json' or 'csv'"
             )
 
+        historical_baselines = quality_service.get_recent_baselines(limit=days)
+
+        if format_type == "csv":
+            return _export_csv_data(historical_baselines, days)
+        else:
+            data = [baseline.to_dict() for baseline in historical_baselines]
             return JSONResponse(
                 {
                     "status": "success",
-                    "data": [anomaly.to_dict() for anomaly in anomalies],
+                    "data": data,
                     "timestamp": datetime.now().isoformat(),
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _export_csv_data(historical_baselines: list[t.Any], days: int) -> t.Any:
+    """Export data in CSV format."""
+    import csv
+    from io import StringIO
+
+    from fastapi.responses import Response
+
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow(
+        [
+            "timestamp",
+            "git_hash",
+            "quality_score",
+            "coverage_percent",
+            "test_count",
+            "test_pass_rate",
+            "hook_failures",
+            "complexity_violations",
+            "security_issues",
+            "type_errors",
+            "linting_issues",
+        ]
+    )
+
+    # Write data
+    for baseline in historical_baselines:
+        writer.writerow(
+            [
+                baseline.timestamp.isoformat(),
+                baseline.git_hash,
+                baseline.quality_score,
+                baseline.coverage_percent,
+                baseline.test_count,
+                baseline.test_pass_rate,
+                baseline.hook_failures,
+                baseline.complexity_violations,
+                baseline.security_issues,
+                baseline.type_errors,
+                baseline.linting_issues,
+            ]
+        )
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename=crackerjack_metrics_{days}d.csv"
+            )
+        },
+    )
+
+
+def _register_intelligence_api_endpoints(
+    app: FastAPI, services: dict[str, t.Any]
+) -> None:
+    """Register intelligence-related REST API endpoints."""
+    intelligence_service = services["intelligence_service"]
+
+    @app.get("/api/intelligence/anomalies")
+    async def get_anomalies(days: int = 7, metrics: str = None):
+        """Get anomaly detection results."""
+        return await _handle_anomalies_request(intelligence_service, days, metrics)
 
     @app.get("/api/intelligence/predictions/{metric}")
     async def get_metric_prediction(metric: str, horizon_days: int = 7):
         """Get prediction for a specific metric."""
-        try:
-            if horizon_days > 30:
-                raise HTTPException(
-                    status_code=400, detail="Horizon too far in the future"
-                )
-
-            prediction = intelligence_service.predict_metric_value(metric, horizon_days)
-            if not prediction:
-                raise HTTPException(status_code=404, detail="Prediction not available")
-
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": prediction.to_dict(),
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_metric_prediction_request(
+            intelligence_service, metric, horizon_days
+        )
 
     @app.get("/api/intelligence/insights")
     async def get_quality_insights(days: int = 30):
         """Get comprehensive quality insights."""
-        try:
-            if days > 365:
-                raise HTTPException(status_code=400, detail="Days parameter too large")
-
-            insights = intelligence_service.generate_insights(days=days)
-
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": insights.to_dict(),
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_quality_insights_request(intelligence_service, days)
 
     @app.get("/api/intelligence/patterns")
     async def get_pattern_analysis(days: int = 30):
         """Get pattern recognition analysis."""
-        try:
-            if days > 365:
-                raise HTTPException(status_code=400, detail="Days parameter too large")
-
-            patterns = intelligence_service.identify_patterns(days=days)
-
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": patterns,
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_pattern_analysis_request(intelligence_service, days)
 
     @app.post("/api/intelligence/analyze")
     async def run_comprehensive_analysis(request: dict):
         """Run comprehensive intelligence analysis."""
-        try:
-            days = request.get("days", 30)
-            include_anomalies = request.get("include_anomalies", True)
-            include_predictions = request.get("include_predictions", True)
-            include_patterns = request.get("include_patterns", True)
+        return await _handle_comprehensive_analysis_request(
+            intelligence_service, request
+        )
 
-            if days > 365:
-                raise HTTPException(status_code=400, detail="Days parameter too large")
 
-            results = {}
+async def _handle_anomalies_request(
+    intelligence_service: QualityIntelligenceService, days: int, metrics: str | None
+) -> JSONResponse:
+    """Handle anomalies API request."""
+    try:
+        if days > 365:
+            raise HTTPException(status_code=400, detail="Days parameter too large")
 
-            if include_anomalies:
-                results["anomalies"] = [
-                    anomaly.to_dict()
-                    for anomaly in intelligence_service.detect_anomalies(days=days)
-                ]
+        metrics_list = metrics.split(",") if metrics else None
+        anomalies = intelligence_service.detect_anomalies(
+            days=days, metrics=metrics_list
+        )
 
-            if include_predictions:
-                insights = intelligence_service.generate_insights(days=days)
-                results["insights"] = insights.to_dict()
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": [anomaly.to_dict() for anomaly in anomalies],
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-                # Generate specific predictions
-                predictions = {}
-                for metric in ["quality_score", "test_coverage", "hook_duration"]:
-                    pred = intelligence_service.predict_metric_value(
-                        metric, horizon_days=7
-                    )
-                    if pred:
-                        predictions[metric] = pred.to_dict()
-                results["predictions"] = predictions
 
-            if include_patterns:
-                results["patterns"] = intelligence_service.identify_patterns(days=days)
+async def _handle_metric_prediction_request(
+    intelligence_service: QualityIntelligenceService, metric: str, horizon_days: int
+) -> JSONResponse:
+    """Handle metric prediction API request."""
+    try:
+        if horizon_days > 30:
+            raise HTTPException(status_code=400, detail="Horizon too far in the future")
 
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": results,
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        prediction = intelligence_service.predict_metric_value(metric, horizon_days)
+        if not prediction:
+            raise HTTPException(status_code=404, detail="Prediction not available")
 
-    # Dependency analysis API endpoints
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": prediction.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_quality_insights_request(
+    intelligence_service: QualityIntelligenceService, days: int
+) -> JSONResponse:
+    """Handle quality insights API request."""
+    try:
+        if days > 365:
+            raise HTTPException(status_code=400, detail="Days parameter too large")
+
+        insights = intelligence_service.generate_insights(days=days)
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": insights.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_pattern_analysis_request(
+    intelligence_service: QualityIntelligenceService, days: int
+) -> JSONResponse:
+    """Handle pattern analysis API request."""
+    try:
+        if days > 365:
+            raise HTTPException(status_code=400, detail="Days parameter too large")
+
+        patterns = intelligence_service.identify_patterns(days=days)
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": patterns,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_comprehensive_analysis_request(
+    intelligence_service: QualityIntelligenceService, request: dict
+) -> JSONResponse:
+    """Handle comprehensive analysis API request."""
+    try:
+        days = request.get("days", 30)
+
+        if days > 365:
+            raise HTTPException(status_code=400, detail="Days parameter too large")
+
+        results = await _build_comprehensive_analysis_results(
+            intelligence_service, request, days
+        )
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": results,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _build_comprehensive_analysis_results(
+    intelligence_service: QualityIntelligenceService, request: dict, days: int
+) -> dict[str, t.Any]:
+    """Build comprehensive analysis results based on request parameters."""
+    results = {}
+
+    if request.get("include_anomalies", True):
+        results["anomalies"] = [
+            anomaly.to_dict()
+            for anomaly in intelligence_service.detect_anomalies(days=days)
+        ]
+
+    if request.get("include_predictions", True):
+        insights = intelligence_service.generate_insights(days=days)
+        results["insights"] = insights.to_dict()
+
+        # Generate specific predictions
+        predictions = {}
+        for metric in ["quality_score", "test_coverage", "hook_duration"]:
+            pred = intelligence_service.predict_metric_value(metric, horizon_days=7)
+            if pred:
+                predictions[metric] = pred.to_dict()
+        results["predictions"] = predictions
+
+    if request.get("include_patterns", True):
+        results["patterns"] = intelligence_service.identify_patterns(days=days)
+
+    return results
+
+
+def _register_dependency_api_endpoints(
+    app: FastAPI, services: dict[str, t.Any]
+) -> None:
+    """Register dependency-related REST API endpoints."""
+    dependency_analyzer = services["dependency_analyzer"]
+
     @app.get("/api/dependencies/graph")
     async def get_dependency_graph(
         filter_type: str = None,
@@ -876,304 +1159,422 @@ def create_monitoring_endpoints(
         include_external: bool = False,
     ):
         """Get dependency graph data."""
-        try:
-            graph = dependency_analyzer.analyze_project()
-
-            # Apply filters if requested
-            if filter_type or max_nodes < len(graph.nodes):
-                filters = {
-                    "type": filter_type,
-                    "max_nodes": max_nodes,
-                    "include_external": include_external,
-                }
-                graph = await _apply_graph_filters(graph, filters)
-
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": graph.to_dict(),
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_dependency_graph_request(
+            dependency_analyzer, filter_type, max_nodes, include_external
+        )
 
     @app.get("/api/dependencies/metrics")
     async def get_dependency_metrics():
         """Get dependency graph metrics."""
-        try:
-            graph = dependency_analyzer.analyze_project()
-
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": graph.metrics,
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_dependency_metrics_request(dependency_analyzer)
 
     @app.get("/api/dependencies/clusters")
     async def get_dependency_clusters():
         """Get dependency graph clusters."""
-        try:
-            graph = dependency_analyzer.analyze_project()
-
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "data": graph.clusters,
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_dependency_clusters_request(dependency_analyzer)
 
     @app.post("/api/dependencies/analyze")
     async def trigger_dependency_analysis(request: dict):
         """Trigger fresh dependency analysis."""
-        try:
-            request.get("include_tests", True)
-            request.get("max_depth", 10)
+        return await _handle_dependency_analysis_request(dependency_analyzer, request)
 
-            # Reset analyzer for fresh analysis
-            dependency_analyzer.dependency_graph = DependencyGraph()
-            graph = dependency_analyzer.analyze_project()
 
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "message": "Dependency analysis completed",
-                    "data": {
-                        "nodes": len(graph.nodes),
-                        "edges": len(graph.edges),
-                        "clusters": len(graph.clusters),
-                        "metrics": graph.metrics,
-                    },
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+async def _handle_dependency_graph_request(
+    dependency_analyzer: DependencyAnalyzer,
+    filter_type: str | None,
+    max_nodes: int,
+    include_external: bool,
+) -> JSONResponse:
+    """Handle dependency graph API request."""
+    try:
+        graph = dependency_analyzer.analyze_project()
 
-    # === Error Pattern Heat Map Endpoints ===
+        # Apply filters if requested
+        if filter_type or max_nodes < len(graph.nodes):
+            filters = {
+                "type": filter_type,
+                "max_nodes": max_nodes,
+                "include_external": include_external,
+            }
+            graph = await _apply_graph_filters(graph, filters)
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": graph.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_dependency_metrics_request(
+    dependency_analyzer: DependencyAnalyzer,
+) -> JSONResponse:
+    """Handle dependency metrics API request."""
+    try:
+        graph = dependency_analyzer.analyze_project()
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": graph.metrics,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_dependency_clusters_request(
+    dependency_analyzer: DependencyAnalyzer,
+) -> JSONResponse:
+    """Handle dependency clusters API request."""
+    try:
+        graph = dependency_analyzer.analyze_project()
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": graph.clusters,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_dependency_analysis_request(
+    dependency_analyzer: DependencyAnalyzer, request: dict
+) -> JSONResponse:
+    """Handle dependency analysis trigger API request."""
+    try:
+        # Reset analyzer for fresh analysis
+        dependency_analyzer.dependency_graph = DependencyGraph()
+        graph = dependency_analyzer.analyze_project()
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "message": "Dependency analysis completed",
+                "data": {
+                    "nodes": len(graph.nodes),
+                    "edges": len(graph.edges),
+                    "clusters": len(graph.clusters),
+                    "metrics": graph.metrics,
+                },
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _register_heatmap_websockets(
+    app: FastAPI,
+    ws_manager: MonitoringWebSocketManager,
+    services: dict[str, t.Any],
+) -> None:
+    """Register heatmap-related WebSocket endpoints."""
+    error_analyzer = services["error_analyzer"]
 
     @app.websocket("/ws/heatmap/errors")
     async def websocket_error_heatmap(websocket: WebSocket):
         """WebSocket endpoint for real-time error heat map streaming."""
-        await websocket.accept()
+        await _handle_error_heatmap_websocket(websocket, error_analyzer)
 
-        try:
-            # Analyze error patterns
-            error_patterns = error_analyzer.analyze_error_patterns(days=30)
 
-            # Send initial file-based heat map
-            file_heatmap = error_analyzer.generate_file_error_heatmap()
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "file_heatmap",
-                        "data": file_heatmap.to_dict(),
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
+async def _handle_error_heatmap_websocket(
+    websocket: WebSocket, error_analyzer: ErrorPatternAnalyzer
+) -> None:
+    """Handle error heatmap WebSocket connection."""
+    await websocket.accept()
 
-            # Send temporal heat map
-            temporal_heatmap = error_analyzer.generate_temporal_heatmap()
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "temporal_heatmap",
-                        "data": temporal_heatmap.to_dict(),
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
+    try:
+        # Analyze error patterns and send initial data
+        error_patterns = error_analyzer.analyze_error_patterns(days=30)
+        await _send_initial_heatmap_data(websocket, error_analyzer, error_patterns)
 
-            # Send function-based heat map
-            function_heatmap = error_analyzer.generate_function_error_heatmap()
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "function_heatmap",
-                        "data": function_heatmap.to_dict(),
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
+        # Handle client messages
+        while True:
+            try:
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                data = json.loads(message)
 
-            # Send error patterns summary
-            patterns_data = [pattern.to_dict() for pattern in error_patterns]
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "error_patterns",
-                        "data": patterns_data,
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            )
+                await _handle_heatmap_request(websocket, error_analyzer, data)
 
-            # Keep connection alive and handle client messages
-            while True:
-                try:
-                    message = await asyncio.wait_for(
-                        websocket.receive_text(), timeout=30.0
+            except TimeoutError:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "heartbeat",
+                            "timestamp": datetime.now().isoformat(),
+                        }
                     )
-                    data = json.loads(message)
-
-                    if data.get("type") == "refresh_heatmap":
-                        # Re-analyze and send fresh data
-                        error_patterns = error_analyzer.analyze_error_patterns(
-                            days=data.get("days", 30)
-                        )
-
-                        heatmap_type = data.get("heatmap_type", "file")
-                        if heatmap_type == "file":
-                            heatmap = error_analyzer.generate_file_error_heatmap()
-                        elif heatmap_type == "temporal":
-                            heatmap = error_analyzer.generate_temporal_heatmap(
-                                time_buckets=data.get("time_buckets", 24)
-                            )
-                        elif heatmap_type == "function":
-                            heatmap = error_analyzer.generate_function_error_heatmap()
-
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": f"{heatmap_type}_heatmap_refresh",
-                                    "data": heatmap.to_dict(),
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-                    elif data.get("type") == "keepalive":
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "pong",
-                                    "timestamp": datetime.now().isoformat(),
-                                }
-                            )
-                        )
-
-                except TimeoutError:
-                    # Send periodic updates if no client messages
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "heartbeat",
-                                "timestamp": datetime.now().isoformat(),
-                            }
-                        )
-                    )
-
-        except WebSocketDisconnect:
-            pass
-        except Exception as e:
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "error",
-                        "message": str(e),
-                        "timestamp": datetime.now().isoformat(),
-                    }
                 )
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "error",
+                    "message": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                }
             )
+        )
+
+
+async def _send_initial_heatmap_data(
+    websocket: WebSocket,
+    error_analyzer: ErrorPatternAnalyzer,
+    error_patterns: list[t.Any],
+) -> None:
+    """Send initial heatmap data to client."""
+    # Send file-based heat map
+    file_heatmap = error_analyzer.generate_file_error_heatmap()
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "file_heatmap",
+                "data": file_heatmap.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+    # Send temporal heat map
+    temporal_heatmap = error_analyzer.generate_temporal_heatmap()
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "temporal_heatmap",
+                "data": temporal_heatmap.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+    # Send function-based heat map
+    function_heatmap = error_analyzer.generate_function_error_heatmap()
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "function_heatmap",
+                "data": function_heatmap.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+    # Send error patterns summary
+    patterns_data = [pattern.to_dict() for pattern in error_patterns]
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": "error_patterns",
+                "data": patterns_data,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+
+async def _handle_heatmap_request(
+    websocket: WebSocket,
+    error_analyzer: ErrorPatternAnalyzer,
+    data: dict[str, t.Any],
+) -> None:
+    """Handle heatmap request from client."""
+    if data.get("type") == "refresh_heatmap":
+        await _handle_heatmap_refresh(websocket, error_analyzer, data)
+    elif data.get("type") == "keepalive":
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "pong",
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+        )
+
+
+async def _handle_heatmap_refresh(
+    websocket: WebSocket,
+    error_analyzer: ErrorPatternAnalyzer,
+    data: dict[str, t.Any],
+) -> None:
+    """Handle heatmap refresh request."""
+    error_analyzer.analyze_error_patterns(days=data.get("days", 30))
+
+    heatmap_type = data.get("heatmap_type", "file")
+
+    if heatmap_type == "file":
+        heatmap = error_analyzer.generate_file_error_heatmap()
+    elif heatmap_type == "temporal":
+        heatmap = error_analyzer.generate_temporal_heatmap(
+            time_buckets=data.get("time_buckets", 24)
+        )
+    elif heatmap_type == "function":
+        heatmap = error_analyzer.generate_function_error_heatmap()
+    else:
+        return
+
+    await websocket.send_text(
+        json.dumps(
+            {
+                "type": f"{heatmap_type}_heatmap_refresh",
+                "data": heatmap.to_dict(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    )
+
+
+def _register_heatmap_api_endpoints(app: FastAPI, services: dict[str, t.Any]) -> None:
+    """Register heatmap-related REST API endpoints."""
+    error_analyzer = services["error_analyzer"]
+    cache = services["cache"]
 
     @app.get("/api/heatmap/file_errors")
     async def get_file_error_heatmap():
         """Get error heat map by file."""
-        try:
-            error_analyzer.analyze_error_patterns(days=30)
-            heatmap = error_analyzer.generate_file_error_heatmap()
-            return JSONResponse(heatmap.to_dict())
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_file_error_heatmap_request(error_analyzer)
 
     @app.get("/api/heatmap/temporal_errors")
     async def get_temporal_error_heatmap(time_buckets: int = 24):
         """Get error heat map over time."""
-        try:
-            error_analyzer.analyze_error_patterns(days=30)
-            heatmap = error_analyzer.generate_temporal_heatmap(
-                time_buckets=time_buckets
-            )
-            return JSONResponse(heatmap.to_dict())
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_temporal_error_heatmap_request(
+            error_analyzer, time_buckets
+        )
 
     @app.get("/api/heatmap/function_errors")
     async def get_function_error_heatmap():
         """Get error heat map by function."""
-        try:
-            error_analyzer.analyze_error_patterns(days=30)
-            heatmap = error_analyzer.generate_function_error_heatmap()
-            return JSONResponse(heatmap.to_dict())
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_function_error_heatmap_request(error_analyzer)
 
     @app.get("/api/error_patterns")
     async def get_error_patterns(
         days: int = 30, min_occurrences: int = 2, severity: str | None = None
     ):
         """Get analyzed error patterns."""
-        try:
-            patterns = error_analyzer.analyze_error_patterns(
-                days=days, min_occurrences=min_occurrences
-            )
-
-            # Filter by severity if specified
-            if severity:
-                patterns = [p for p in patterns if p.severity == severity]
-
-            return JSONResponse(
-                {
-                    "patterns": [pattern.to_dict() for pattern in patterns],
-                    "total_count": len(patterns),
-                    "analysis_period_days": days,
-                    "generated_at": datetime.now().isoformat(),
-                }
-            )
-
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await _handle_error_patterns_request(
+            error_analyzer, days, min_occurrences, severity
+        )
 
     @app.post("/api/trigger_error_analysis")
     async def trigger_error_analysis(request: dict):
         """Trigger fresh error pattern analysis."""
-        try:
-            days = request.get("days", 30)
-            min_occurrences = request.get("min_occurrences", 2)
+        return await _handle_trigger_error_analysis_request(
+            error_analyzer, cache, request
+        )
 
-            # Perform fresh analysis
-            patterns = error_analyzer.analyze_error_patterns(
-                days=days, min_occurrences=min_occurrences
-            )
 
-            # Store results in cache
-            cache_key = f"error_patterns_{days}d"
-            cache.set(cache_key, [p.to_dict() for p in patterns], ttl_seconds=1800)
+async def _handle_file_error_heatmap_request(
+    error_analyzer: ErrorPatternAnalyzer,
+) -> JSONResponse:
+    """Handle file error heatmap API request."""
+    try:
+        error_analyzer.analyze_error_patterns(days=30)
+        heatmap = error_analyzer.generate_file_error_heatmap()
+        return JSONResponse(heatmap.to_dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-            return JSONResponse(
-                {
-                    "status": "success",
-                    "message": "Error pattern analysis completed",
-                    "patterns_found": len(patterns),
-                    "analysis_period_days": days,
-                    "severity_breakdown": {
-                        severity: len([p for p in patterns if p.severity == severity])
-                        for severity in ["low", "medium", "high", "critical"]
-                    },
-                    "generated_at": datetime.now().isoformat(),
-                }
-            )
 
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+async def _handle_temporal_error_heatmap_request(
+    error_analyzer: ErrorPatternAnalyzer, time_buckets: int
+) -> JSONResponse:
+    """Handle temporal error heatmap API request."""
+    try:
+        error_analyzer.analyze_error_patterns(days=30)
+        heatmap = error_analyzer.generate_temporal_heatmap(time_buckets=time_buckets)
+        return JSONResponse(heatmap.to_dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_function_error_heatmap_request(
+    error_analyzer: ErrorPatternAnalyzer,
+) -> JSONResponse:
+    """Handle function error heatmap API request."""
+    try:
+        error_analyzer.analyze_error_patterns(days=30)
+        heatmap = error_analyzer.generate_function_error_heatmap()
+        return JSONResponse(heatmap.to_dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_error_patterns_request(
+    error_analyzer: ErrorPatternAnalyzer,
+    days: int,
+    min_occurrences: int,
+    severity: str | None,
+) -> JSONResponse:
+    """Handle error patterns API request."""
+    try:
+        patterns = error_analyzer.analyze_error_patterns(
+            days=days, min_occurrences=min_occurrences
+        )
+
+        # Filter by severity if specified
+        if severity:
+            patterns = [p for p in patterns if p.severity == severity]
+
+        return JSONResponse(
+            {
+                "patterns": [pattern.to_dict() for pattern in patterns],
+                "total_count": len(patterns),
+                "analysis_period_days": days,
+                "generated_at": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _handle_trigger_error_analysis_request(
+    error_analyzer: ErrorPatternAnalyzer, cache: CrackerjackCache, request: dict
+) -> JSONResponse:
+    """Handle trigger error analysis API request."""
+    try:
+        days = request.get("days", 30)
+        min_occurrences = request.get("min_occurrences", 2)
+
+        # Perform fresh analysis
+        patterns = error_analyzer.analyze_error_patterns(
+            days=days, min_occurrences=min_occurrences
+        )
+
+        # Store results in cache
+        cache_key = f"error_patterns_{days}d"
+        cache.set(cache_key, [p.to_dict() for p in patterns], ttl_seconds=1800)
+
+        severity_breakdown = {
+            severity: len([p for p in patterns if p.severity == severity])
+            for severity in ["low", "medium", "high", "critical"]
+        }
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "message": "Error pattern analysis completed",
+                "patterns_found": len(patterns),
+                "analysis_period_days": days,
+                "severity_breakdown": severity_breakdown,
+                "generated_at": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _register_dashboard_endpoint(app: FastAPI) -> None:
+    """Register the dashboard HTML endpoint."""
 
     @app.get("/dashboard")
     async def get_dashboard_html():

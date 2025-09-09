@@ -53,12 +53,14 @@ class ChangelogGenerator:
         }
 
         # Regex patterns for parsing commit messages
-        self.conventional_commit_pattern = re.compile(
+        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing
             r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<description>.+)$"
         )
 
-        self.breaking_change_pattern = re.compile(
-            r"BREAKING\s*CHANGE[:]\s*(.+)", re.IGNORECASE | re.MULTILINE
+        self.breaking_change_pattern = (
+            re.compile(  # REGEX OK: breaking change detection
+                r"BREAKING\s*CHANGE[:]\s*(.+)", re.IGNORECASE | re.MULTILINE
+            )
         )
 
     def parse_commit_message(

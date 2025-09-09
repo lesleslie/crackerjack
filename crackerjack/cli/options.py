@@ -90,76 +90,42 @@ class Options(BaseModel):
     coverage_report: bool | None = None  # Replaces coverage_status
     clean_releases: bool | None = None  # Replaces cleanup_pypi
 
+    def _map_legacy_flag(
+        self, old_attr: str, new_attr: str, deprecation_msg: str | None = None
+    ) -> None:
+        """Helper to map legacy flag to new flag with optional deprecation warning."""
+        old_value = getattr(self, old_attr)
+        new_value = getattr(self, new_attr)
+
+        if old_value and new_value is None:
+            setattr(self, new_attr, old_value)
+            if deprecation_msg:
+                warnings.warn(deprecation_msg, DeprecationWarning, stacklevel=4)
+        elif new_value is not None:
+            setattr(self, old_attr, new_value)
+
     @model_validator(mode="after")
     def handle_legacy_mappings(self) -> "Options":
         """Handle backward compatibility for deprecated flags."""
-        # Map clean -> strip_code
-        if self.clean and self.strip_code is None:
-            self.strip_code = True
-            warnings.warn(
-                "--clean is deprecated, use --strip-code",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-        elif self.strip_code is not None:
-            self.clean = self.strip_code
+        # Map deprecated flags to new ones
+        self._map_legacy_flag(
+            "clean", "strip_code", "--clean is deprecated, use --strip-code"
+        )
+        self._map_legacy_flag(
+            "test", "run_tests", "--test is deprecated, use --run-tests"
+        )
+        self._map_legacy_flag(
+            "ai_agent", "ai_fix", "--ai-agent is deprecated, use --ai-fix"
+        )
+        self._map_legacy_flag(
+            "all", "full_release", "--all is deprecated, use --full-release"
+        )
 
-        # Map test -> run_tests
-        if self.test and self.run_tests is None:
-            self.run_tests = True
-            warnings.warn(
-                "--test is deprecated, use --run-tests",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-        elif self.run_tests is not None:
-            self.test = self.run_tests
-
-        # Map ai_agent -> ai_fix
-        if self.ai_agent and self.ai_fix is None:
-            self.ai_fix = True
-            warnings.warn(
-                "--ai-agent is deprecated, use --ai-fix",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-        elif self.ai_fix is not None:
-            self.ai_agent = self.ai_fix
-
-        # Map all -> full_release
-        if self.all and self.full_release is None:
-            self.full_release = self.all
-            warnings.warn(
-                "--all is deprecated, use --full-release",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-        elif self.full_release is not None:
-            self.all = self.full_release
-
-        # Map track_progress -> show_progress
-        if self.track_progress and self.show_progress is None:
-            self.show_progress = True
-        elif self.show_progress is not None:
-            self.track_progress = self.show_progress
-
-        # Map enhanced_monitor -> advanced_monitor
-        if self.enhanced_monitor and self.advanced_monitor is None:
-            self.advanced_monitor = True
-        elif self.advanced_monitor is not None:
-            self.enhanced_monitor = self.advanced_monitor
-
-        # Map coverage_status -> coverage_report
-        if self.coverage_status and self.coverage_report is None:
-            self.coverage_report = True
-        elif self.coverage_report is not None:
-            self.coverage_status = self.coverage_report
-
-        # Map cleanup_pypi -> clean_releases
-        if self.cleanup_pypi and self.clean_releases is None:
-            self.clean_releases = True
-        elif self.clean_releases is not None:
-            self.cleanup_pypi = self.clean_releases
+        # Map flags without deprecation warnings
+        self._map_legacy_flag("track_progress", "show_progress")
+        self._map_legacy_flag("enhanced_monitor", "advanced_monitor")
+        self._map_legacy_flag("coverage_status", "coverage_report")
+        self._map_legacy_flag("cleanup_pypi", "clean_releases")
 
         return self
 

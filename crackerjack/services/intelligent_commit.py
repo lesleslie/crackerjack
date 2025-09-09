@@ -124,7 +124,9 @@ class CommitMessageGenerator:
             file_str = str(path).lower()
             for commit_type, patterns in self.patterns.items():
                 for pattern in patterns:
-                    if re.search(pattern, file_str, re.IGNORECASE):
+                    if re.search(
+                        pattern, file_str, re.IGNORECASE
+                    ):  # REGEX OK: commit pattern analysis
                         analysis["patterns_found"].add(commit_type)
 
         return analysis

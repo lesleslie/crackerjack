@@ -169,103 +169,172 @@ class QualityIntelligenceService:
         self, days: int = 30, metrics: list[str] | None = None
     ) -> list[QualityAnomaly]:
         """Detect anomalies in quality metrics using statistical analysis."""
-        if metrics is None:
-            metrics = [
-                "quality_score",
-                "coverage_percent",
-                "hook_failures",
-                "security_issues",
-                "type_errors",
-                "linting_issues",
-            ]
+        metrics = self._get_default_metrics() if metrics is None else metrics
 
         baselines = self.quality_service.get_recent_baselines(limit=days * 2)
         if len(baselines) < self.min_data_points:
             return []
 
         anomalies = []
-
         for metric_name in metrics:
-            # Extract metric values
-            values = []
-            timestamps = []
-
-            for baseline in baselines:
-                if metric_name == "quality_score":
-                    values.append(baseline.quality_score)
-                elif metric_name == "coverage_percent":
-                    values.append(baseline.coverage_percent)
-                elif metric_name == "hook_failures":
-                    values.append(baseline.hook_failures)
-                elif metric_name == "security_issues":
-                    values.append(baseline.security_issues)
-                elif metric_name == "type_errors":
-                    values.append(baseline.type_errors)
-                elif metric_name == "linting_issues":
-                    values.append(baseline.linting_issues)
-                else:
-                    continue
-
-                timestamps.append(baseline.timestamp)
-
-            if len(values) < self.min_data_points:
-                continue
-
-            # Statistical analysis
-            values_array = np.array(values)
-            mean_val = np.mean(values_array)
-            std_val = np.std(values_array)
-
-            if std_val == 0:
-                continue  # No variation to detect anomalies
-
-            # Z-score based anomaly detection
-            z_scores = np.abs((values_array - mean_val) / std_val)
-
-            # Detect outliers
-            for i, (value, timestamp, z_score) in enumerate(
-                zip(values, timestamps, z_scores)
-            ):
-                if z_score > self.anomaly_sensitivity:
-                    # Determine anomaly type
-                    if value > mean_val:
-                        anomaly_type = AnomalyType.SPIKE
-                        severity = (
-                            AlertSeverity.CRITICAL
-                            if z_score > 3.0
-                            else AlertSeverity.WARNING
-                        )
-                    else:
-                        anomaly_type = AnomalyType.DROP
-                        severity = (
-                            AlertSeverity.CRITICAL
-                            if z_score > 3.0
-                            else AlertSeverity.WARNING
-                        )
-
-                    # Calculate confidence based on z-score
-                    confidence = min(1.0, z_score / 4.0)  # Scale to 0-1
-
-                    anomaly = QualityAnomaly(
-                        anomaly_type=anomaly_type,
-                        metric_name=metric_name,
-                        detected_at=timestamp,
-                        confidence=confidence,
-                        severity=severity,
-                        description=f"{metric_name} {anomaly_type} detected: {value:.2f} (expected ~{mean_val:.2f})",
-                        actual_value=value,
-                        expected_value=mean_val,
-                        deviation_sigma=z_score,
-                        context={
-                            "metric_mean": mean_val,
-                            "metric_std": std_val,
-                            "data_points": len(values),
-                            "position_in_series": i,
-                        },
-                    )
-                    anomalies.append(anomaly)
+            metric_anomalies = self._detect_metric_anomalies(metric_name, baselines)
+            anomalies.extend(metric_anomalies)
 
         return anomalies
+
+    def _get_default_metrics(self) -> list[str]:
+        """Get default metrics list for anomaly detection."""
+        return [
+            "quality_score",
+            "coverage_percent",
+            "hook_failures",
+            "security_issues",
+            "type_errors",
+            "linting_issues",
+        ]
+
+    def _detect_metric_anomalies(
+        self, metric_name: str, baselines: list
+    ) -> list[QualityAnomaly]:
+        """Detect anomalies for a specific metric."""
+        values, timestamps = self._extract_metric_values(metric_name, baselines)
+
+        if len(values) < self.min_data_points:
+            return []
+
+        stats_data = self._calculate_statistical_metrics(values)
+        if stats_data is None:  # No variation
+            return []
+
+        return self._identify_outlier_anomalies(
+            metric_name, values, timestamps, stats_data
+        )
+
+    def _extract_metric_values(
+        self, metric_name: str, baselines: list
+    ) -> tuple[list[float], list]:
+        """Extract metric values and timestamps from baselines."""
+        values = []
+        timestamps = []
+
+        for baseline in baselines:
+            metric_value = self._get_baseline_metric_value(baseline, metric_name)
+            if metric_value is not None:
+                values.append(metric_value)
+                timestamps.append(baseline.timestamp)
+
+        return values, timestamps
+
+    def _get_baseline_metric_value(self, baseline, metric_name: str) -> float | None:
+        """Get metric value from baseline object."""
+        metric_mapping = {
+            "quality_score": baseline.quality_score,
+            "coverage_percent": baseline.coverage_percent,
+            "hook_failures": baseline.hook_failures,
+            "security_issues": baseline.security_issues,
+            "type_errors": baseline.type_errors,
+            "linting_issues": baseline.linting_issues,
+        }
+        return metric_mapping.get(metric_name)
+
+    def _calculate_statistical_metrics(
+        self, values: list[float]
+    ) -> dict[str, float] | None:
+        """Calculate statistical metrics for anomaly detection."""
+        values_array = np.array(values)
+        mean_val = np.mean(values_array)
+        std_val = np.std(values_array)
+
+        if std_val == 0:
+            return None  # No variation to detect anomalies
+
+        z_scores = np.abs((values_array - mean_val) / std_val)
+
+        return {
+            "mean": mean_val,
+            "std": std_val,
+            "z_scores": z_scores,
+            "values_array": values_array,
+        }
+
+    def _identify_outlier_anomalies(
+        self,
+        metric_name: str,
+        values: list[float],
+        timestamps: list,
+        stats_data: dict[str, float],
+    ) -> list[QualityAnomaly]:
+        """Identify outlier anomalies based on z-scores."""
+        anomalies = []
+        z_scores = stats_data["z_scores"]
+        mean_val = stats_data["mean"]
+        std_val = stats_data["std"]
+
+        for i, (value, timestamp, z_score) in enumerate(
+            zip(values, timestamps, z_scores)
+        ):
+            if z_score > self.anomaly_sensitivity:
+                anomaly = self._create_anomaly_object(
+                    metric_name,
+                    value,
+                    timestamp,
+                    z_score,
+                    mean_val,
+                    std_val,
+                    i,
+                    len(values),
+                )
+                anomalies.append(anomaly)
+
+        return anomalies
+
+    def _create_anomaly_object(
+        self,
+        metric_name: str,
+        value: float,
+        timestamp,
+        z_score: float,
+        mean_val: float,
+        std_val: float,
+        position: int,
+        data_points: int,
+    ) -> QualityAnomaly:
+        """Create QualityAnomaly object from detected outlier."""
+        anomaly_type, severity = self._determine_anomaly_type_and_severity(
+            value, mean_val, z_score
+        )
+        confidence = min(1.0, z_score / 4.0)  # Scale to 0-1
+
+        return QualityAnomaly(
+            anomaly_type=anomaly_type,
+            metric_name=metric_name,
+            detected_at=timestamp,
+            confidence=confidence,
+            severity=severity,
+            description=f"{metric_name} {anomaly_type} detected: {value:.2f} (expected ~{mean_val:.2f})",
+            actual_value=value,
+            expected_value=mean_val,
+            deviation_sigma=z_score,
+            context={
+                "metric_mean": mean_val,
+                "metric_std": std_val,
+                "data_points": data_points,
+                "position_in_series": position,
+            },
+        )
+
+    def _determine_anomaly_type_and_severity(
+        self, value: float, mean_val: float, z_score: float
+    ) -> tuple[AnomalyType, AlertSeverity]:
+        """Determine anomaly type and severity based on value and z-score."""
+        if value > mean_val:
+            anomaly_type = AnomalyType.SPIKE
+        else:
+            anomaly_type = AnomalyType.DROP
+
+        severity = AlertSeverity.CRITICAL if z_score > 3.0 else AlertSeverity.WARNING
+
+        return anomaly_type, severity
 
     def identify_patterns(self, days: int = 60) -> list[QualityPattern]:
         """Identify patterns in quality metrics using correlation and trend analysis."""

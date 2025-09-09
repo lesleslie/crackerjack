@@ -16,11 +16,13 @@ class PythonDocstringParser:
 
     def __init__(self) -> None:
         # Regex patterns for different docstring styles
-        self.google_param_pattern = re.compile(
+        self.google_param_pattern = re.compile(  # REGEX OK: docstring parsing
             r"^\s*(\w+)(?:\s*\([^)]+\))?\s*:\s*(.+)$", re.MULTILINE
         )
-        self.sphinx_param_pattern = re.compile(r":param\s+(\w+):\s*(.+)$", re.MULTILINE)
-        self.returns_pattern = re.compile(
+        self.sphinx_param_pattern = re.compile(
+            r":param\s+(\w+):\s*(.+)$", re.MULTILINE
+        )  # REGEX OK: sphinx docstring parsing
+        self.returns_pattern = re.compile(  # REGEX OK: return value extraction
             r"(?:Returns?|Return):\s*(.+?)(?=\n\n|\n\w+:|\Z)", re.MULTILINE | re.DOTALL
         )
 
@@ -100,7 +102,7 @@ class PythonDocstringParser:
 
     def _extract_raises(self, docstring: str) -> list[str]:
         """Extract exception documentation from docstring."""
-        raises_pattern = re.compile(
+        raises_pattern = re.compile(  # REGEX OK: exception extraction
             r"(?:Raises?|Raise):\s*(.+?)(?=\n\n|\n\w+:|\Z)", re.MULTILINE | re.DOTALL
         )
         match = raises_pattern.search(docstring)
