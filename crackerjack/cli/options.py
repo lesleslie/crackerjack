@@ -22,16 +22,13 @@ class Options(BaseModel):
     no_config_updates: bool = False
     update_precommit: bool = False
     publish: BumpOption | None = None
+    all: BumpOption | None = None
     bump: BumpOption | None = None
     verbose: bool = False
     debug: bool = False
-    clean: bool = False
-    test: bool = False
     benchmark: bool = False
     test_workers: int = 0
     test_timeout: int = 0
-    all: BumpOption | None = None
-    ai_agent: bool = False
     start_mcp_server: bool = False
     stop_mcp_server: bool = False
     restart_mcp_server: bool = False
@@ -64,6 +61,8 @@ class Options(BaseModel):
     websocket_port: int | None = None
     dev: bool = False
     dashboard: bool = False
+    unified_dashboard: bool = False
+    unified_dashboard_port: int | None = None
     max_iterations: int = 5
     enterprise_batch: str | None = None
     monitor_dashboard: str | None = None
@@ -90,6 +89,18 @@ class Options(BaseModel):
     coverage_report: bool | None = None  # Replaces coverage_status
     clean_releases: bool | None = None  # Replaces cleanup_pypi
 
+    # Documentation and changelog generation fields
+    generate_docs: bool = False
+    docs_format: str = "markdown"
+    validate_docs: bool = False
+    generate_changelog: bool = False
+    changelog_version: str | None = None
+    changelog_since: str | None = None
+    changelog_dry_run: bool = False
+    auto_version: bool = False
+    version_since: str | None = None
+    accept_version: bool = False
+
     def _map_legacy_flag(
         self, old_attr: str, new_attr: str, deprecation_msg: str | None = None
     ) -> None:
@@ -107,21 +118,8 @@ class Options(BaseModel):
     @model_validator(mode="after")
     def handle_legacy_mappings(self) -> "Options":
         """Handle backward compatibility for deprecated flags."""
-        # Map deprecated flags to new ones
-        self._map_legacy_flag(
-            "clean", "strip_code", "--clean is deprecated, use --strip-code"
-        )
-        self._map_legacy_flag(
-            "test", "run_tests", "--test is deprecated, use --run-tests"
-        )
-        self._map_legacy_flag(
-            "ai_agent", "ai_fix", "--ai-agent is deprecated, use --ai-fix"
-        )
-        self._map_legacy_flag(
-            "all", "full_release", "--all is deprecated, use --full-release"
-        )
-
         # Map flags without deprecation warnings
+        self._map_legacy_flag("all", "full_release")
         self._map_legacy_flag("track_progress", "show_progress")
         self._map_legacy_flag("enhanced_monitor", "advanced_monitor")
         self._map_legacy_flag("coverage_status", "coverage_report")
@@ -191,6 +189,13 @@ CLI_OPTIONS = {
         ),
         case_sensitive=False,
     ),
+    "all": typer.Option(
+        None,
+        "-a",
+        "--all",
+        help="Full release workflow: bump version, run quality checks, and publish (patch, minor, major).",
+        case_sensitive=False,
+    ),
     "bump": typer.Option(
         None,
         "-b",
@@ -198,13 +203,6 @@ CLI_OPTIONS = {
         help="Bump version (patch, minor, major).",
         case_sensitive=False,
     ),
-    "clean": typer.Option(
-        False,
-        "-x",
-        "--clean",
-        help="Remove docstrings, line comments, and unnecessary whitespace from source code with automatic backup protection (doesn't affect test files).",
-    ),
-    "test": typer.Option(False, "-t", "--test", help="Run tests."),
     "benchmark": typer.Option(
         False,
         "--benchmark",
@@ -245,24 +243,12 @@ CLI_OPTIONS = {
             "complexity analysis)."
         ),
     ),
-    "all": typer.Option(
-        None,
-        "-a",
-        "--all",
-        help="Run with `-x -t -p <patch|minor|major> -c` development options).",
-        case_sensitive=False,
-    ),
     "create_pr": typer.Option(
         False,
         "-r",
         "--pr",
         "--new-pull-request",
         help="Create a new pull request to the upstream repository.",
-    ),
-    "ai_agent": typer.Option(
-        False,
-        "--ai-agent",
-        help="Enable AI agent mode with autonomous auto-fixing.",
     ),
     "start_mcp_server": typer.Option(
         False,
@@ -381,6 +367,19 @@ CLI_OPTIONS = {
             "job tracking, and performance monitoring."
         ),
     ),
+    "unified_dashboard": typer.Option(
+        False,
+        "--unified-dashboard",
+        help=(
+            "Start the unified monitoring dashboard with real-time WebSocket streaming, "
+            "web UI, and comprehensive system metrics aggregation."
+        ),
+    ),
+    "unified_dashboard_port": typer.Option(
+        None,
+        "--unified-dashboard-port",
+        help="Port for unified dashboard server (default: 8675).",
+    ),
     "max_iterations": typer.Option(
         5,
         "--max-iterations",
@@ -488,15 +487,17 @@ CLI_OPTIONS = {
     # New semantic CLI options with backward compatibility
     "strip_code": typer.Option(
         None,
+        "-x",
         "--strip-code",
-        help="Remove docstrings, line comments, and unnecessary whitespace from source code with automatic backup protection (doesn't affect test files). [Semantic alias for --clean]",
+        help="Remove docstrings, line comments, and unnecessary whitespace from source code with automatic backup protection (doesn't affect test files).",
     ),
     "run_tests": typer.Option(
         None,
+        "-t",
         "--run-tests",
         help=(
             "Execute the test suite with automatic worker detection "
-            "and timeout handling. [Semantic alias for --test]"
+            "and timeout handling."
         ),
     ),
     "ai_fix": typer.Option(
@@ -504,13 +505,14 @@ CLI_OPTIONS = {
         "--ai-fix",
         help=(
             "Enable AI-powered automatic fixing of code quality issues "
-            "and test failures. [Semantic alias for --ai-agent]"
+            "and test failures."
         ),
     ),
     "full_release": typer.Option(
         None,
+        "-a",
         "--full-release",
-        help="Complete release workflow: strip code, run tests, bump version, and publish. Equivalent to `-x -t -p <version> -c`. [Semantic alias for --all]",
+        help="Complete release workflow: strip code, run tests, bump version, and publish. Equivalent to `-x -t -p <version> -c`.",
         case_sensitive=False,
     ),
     "show_progress": typer.Option(
@@ -563,6 +565,41 @@ CLI_OPTIONS = {
         "--validate-docs",
         help="Validate existing documentation for completeness and consistency.",
     ),
+    "generate_changelog": typer.Option(
+        False,
+        "--generate-changelog",
+        help="Generate changelog entries from git commits.",
+    ),
+    "changelog_version": typer.Option(
+        None,
+        "--changelog-version",
+        help="Version number for changelog generation (default: next version).",
+    ),
+    "changelog_since": typer.Option(
+        None,
+        "--changelog-since",
+        help="Generate changelog since this version/tag (default: last release).",
+    ),
+    "changelog_dry_run": typer.Option(
+        False,
+        "--changelog-dry-run",
+        help="Preview changelog generation without writing to file.",
+    ),
+    "auto_version": typer.Option(
+        False,
+        "--auto-version",
+        help="Automatically analyze changes and recommend version bump.",
+    ),
+    "version_since": typer.Option(
+        None,
+        "--version-since",
+        help="Analyze changes since this version/tag for version bump recommendation.",
+    ),
+    "accept_version": typer.Option(
+        False,
+        "--accept-version",
+        help="Automatically accept version bump recommendation without confirmation.",
+    ),
 }
 
 
@@ -574,10 +611,7 @@ def create_options(
     verbose: bool,
     debug: bool,
     publish: BumpOption | None,
-    all: BumpOption | None,
     bump: BumpOption | None,
-    clean: bool,
-    test: bool,
     benchmark: bool,
     test_workers: int,
     test_timeout: int,
@@ -585,7 +619,6 @@ def create_options(
     fast: bool,
     comp: bool,
     create_pr: bool,
-    ai_agent: bool,
     async_mode: bool,
     experimental_hooks: bool,
     enable_pyrefly: bool,
@@ -598,6 +631,8 @@ def create_options(
     orchestration_ai_mode: str,
     dev: bool,
     dashboard: bool,
+    unified_dashboard: bool,
+    unified_dashboard_port: int | None,
     max_iterations: int,
     coverage_status: bool,
     coverage_goal: float | None,
@@ -614,6 +649,13 @@ def create_options(
     generate_docs: bool,
     docs_format: str,
     validate_docs: bool,
+    generate_changelog: bool,
+    changelog_version: str | None,
+    changelog_since: str | None,
+    changelog_dry_run: bool,
+    auto_version: bool,
+    version_since: str | None,
+    accept_version: bool,
     # New semantic parameters
     strip_code: bool | None = None,
     run_tests: bool | None = None,
@@ -633,16 +675,12 @@ def create_options(
         debug=debug,
         publish=publish,
         bump=bump,
-        clean=clean,
-        test=test,
         benchmark=benchmark,
         test_workers=test_workers,
         test_timeout=test_timeout,
         skip_hooks=skip_hooks,
         fast=fast,
         comp=comp,
-        all=all,
-        ai_agent=ai_agent,
         create_pr=create_pr,
         async_mode=async_mode,
         experimental_hooks=experimental_hooks,
@@ -656,6 +694,8 @@ def create_options(
         orchestration_ai_mode=orchestration_ai_mode,
         dev=dev,
         dashboard=dashboard,
+        unified_dashboard=unified_dashboard,
+        unified_dashboard_port=unified_dashboard_port,
         max_iterations=max_iterations,
         coverage_status=coverage_status,
         coverage_goal=coverage_goal,
@@ -669,6 +709,16 @@ def create_options(
         thorough=thorough,
         clear_cache=clear_cache,
         cache_stats=cache_stats,
+        generate_docs=generate_docs,
+        docs_format=docs_format,
+        validate_docs=validate_docs,
+        generate_changelog=generate_changelog,
+        changelog_version=changelog_version,
+        changelog_since=changelog_since,
+        changelog_dry_run=changelog_dry_run,
+        auto_version=auto_version,
+        version_since=version_since,
+        accept_version=accept_version,
         # New semantic parameters
         strip_code=strip_code,
         run_tests=run_tests,

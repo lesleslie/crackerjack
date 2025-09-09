@@ -10,7 +10,7 @@ from .skylos_adapter import SkylsAdapter
 from .zuban_adapter import ZubanAdapter
 
 if t.TYPE_CHECKING:
-    from crackerjack.models.context import ExecutionContext
+    from crackerjack.orchestration.execution_strategies import ExecutionContext
 
 
 class RustToolHookManager:

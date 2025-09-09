@@ -7,6 +7,7 @@ from pathlib import Path
 from rich.console import Console
 
 from .git import GitService
+from .regex_patterns import CompiledPatternCache
 
 
 class CommitMessageGenerator:
@@ -124,9 +125,13 @@ class CommitMessageGenerator:
             file_str = str(path).lower()
             for commit_type, patterns in self.patterns.items():
                 for pattern in patterns:
-                    if re.search(
-                        pattern, file_str, re.IGNORECASE
-                    ):  # REGEX OK: commit pattern analysis
+                    # Use safe compiled pattern cache instead of raw re.search
+                    compiled_pattern = (
+                        CompiledPatternCache.get_compiled_pattern_with_flags(
+                            f"commit_{commit_type}_{pattern}", pattern, re.IGNORECASE
+                        )
+                    )
+                    if compiled_pattern.search(file_str):
                         analysis["patterns_found"].add(commit_type)
 
         return analysis

@@ -7,7 +7,7 @@ from pathlib import Path
 from .rust_tool_adapter import BaseRustToolAdapter, Issue, ToolResult
 
 if t.TYPE_CHECKING:
-    from crackerjack.models.context import ExecutionContext
+    from crackerjack.orchestration.execution_strategies import ExecutionContext
 
 
 @dataclass
@@ -49,8 +49,8 @@ class ZubanAdapter(BaseRustToolAdapter):
         return "zuban"
 
     def supports_json_output(self) -> bool:
-        """Zuban supports JSON output mode."""
-        return True
+        """Zuban does not support JSON output mode."""
+        return False
 
     def get_command_args(self, target_files: list[Path]) -> list[str]:
         """Get command arguments for Zuban execution."""
@@ -66,9 +66,8 @@ class ZubanAdapter(BaseRustToolAdapter):
         if self.strict_mode:
             args.append("--strict")
 
-        # JSON output for AI agents
-        if self._should_use_json_output():
-            args.append("--output-format=json")
+        # Add error codes for better parsing
+        args.append("--show-error-codes")
 
         # Target files/directories
         if target_files:
@@ -164,74 +163,112 @@ class ZubanAdapter(BaseRustToolAdapter):
     def _parse_text_line(self, line: str) -> TypeIssue | None:
         """Parse a single line of Zuban text output."""
         try:
-            # MyPy/Zuban format: "file.py:line:col: severity: message [error-code]"
-            # Also support: "file.py:line: severity: message"
-
-            if ":" not in line:
+            basic_info = self._extract_line_components(line)
+            if not basic_info:
                 return None
 
-            # Split and parse components
-            parts = line.split(":", 3)
-            if len(parts) < 3:
-                return None
+            file_path, line_number, message_part = basic_info
+            column = self._extract_column_number(message_part)
 
-            file_path = Path(parts[0].strip())
-
-            try:
-                line_number = int(parts[1].strip())
-            except ValueError:
-                return None
-
-            # Check if we have column number
-            column = 1
-            message_part = ""
-
-            if len(parts) == 4:
-                # Try to parse column
-                try:
-                    column = int(parts[2].strip())
-                    message_part = parts[3].strip()
-                except ValueError:
-                    # parts[2] might be severity, not column
-                    message_part = f"{parts[2]}:{parts[3]}".strip()
-            else:
-                message_part = parts[2].strip()
-
-            # Parse severity and message
-            severity = "error"  # default
-            message = message_part
-            error_code = None
-
-            # Extract severity if present
-            severity_indicators = ["error:", "warning:", "note:", "info:"]
-            for indicator in severity_indicators:
-                if message_part.lower().startswith(indicator):
-                    severity = indicator[:-1]  # Remove colon
-                    message = message_part[len(indicator) :].strip()
-                    break
-
-            # Extract error code if present (e.g., [attr-defined])
-            if "[" in message and "]" in message:
-                code_start = message.rfind("[")
-                code_end = message.rfind("]")
-                if code_start < code_end:
-                    error_code = message[code_start + 1 : code_end]
-                    message = message[:code_start].strip()
-
-            # Map severity to standard values
-            if severity in ["note", "info"]:
-                severity = "info"
-            elif severity not in ["error", "warning"]:
-                severity = "error"
+            message_data = self._parse_message_content(message_part)
+            severity = self._normalize_severity(message_data["severity"])
 
             return TypeIssue(
                 file_path=file_path,
                 line_number=line_number,
                 column=column,
-                message=message,
+                message=message_data["message"],
                 severity=severity,
-                error_code=error_code,
+                error_code=message_data["error_code"],
             )
 
         except (IndexError, ValueError):
             return None
+
+    def _extract_line_components(self, line: str) -> tuple[Path, int, str] | None:
+        """Extract file path, line number, and remaining message from line."""
+        if ":" not in line:
+            return None
+
+        parts = line.split(":", 3)
+        if len(parts) < 3:
+            return None
+
+        file_path = Path(parts[0].strip())
+
+        try:
+            line_number = int(parts[1].strip())
+        except ValueError:
+            return None
+
+        # Handle both 3-part and 4-part formats
+        if len(parts) == 4:
+            message_part = f"{parts[2]}:{parts[3]}".strip()
+        else:
+            message_part = parts[2].strip()
+
+        return file_path, line_number, message_part
+
+    def _extract_column_number(self, message_part: str) -> int:
+        """Extract column number if present in message part."""
+        # Try to extract column from the beginning of message_part
+        parts = message_part.split(":", 2)
+        if len(parts) >= 2:
+            try:
+                return int(parts[0].strip())
+            except ValueError:
+                pass
+        return 1
+
+    def _parse_message_content(self, message_part: str) -> dict[str, str | None]:
+        """Parse message content to extract severity, message, and error code."""
+        # Skip column number if present
+        parts = message_part.split(":", 2)
+        if len(parts) >= 2:
+            try:
+                int(parts[0].strip())  # Check if first part is column number
+                working_message = ":".join(parts[1:]).strip()
+            except ValueError:
+                working_message = message_part
+        else:
+            working_message = message_part
+
+        severity, message = self._extract_severity_and_message(working_message)
+        error_code = self._extract_error_code(message)
+
+        # Remove error code from message if found
+        if error_code and "[" in message:
+            code_start = message.rfind("[")
+            message = message[:code_start].strip()
+
+        return {"severity": severity, "message": message, "error_code": error_code}
+
+    def _extract_severity_and_message(self, working_message: str) -> tuple[str, str]:
+        """Extract severity indicator and remaining message."""
+        severity_indicators = ["error:", "warning:", "note:", "info:"]
+
+        for indicator in severity_indicators:
+            if working_message.lower().startswith(indicator):
+                severity = indicator[:-1]  # Remove colon
+                message = working_message[len(indicator) :].strip()
+                return severity, message
+
+        # Default to error severity
+        return "error", working_message
+
+    def _extract_error_code(self, message: str) -> str | None:
+        """Extract error code from message if present."""
+        if "[" in message and "]" in message:
+            code_start = message.rfind("[")
+            code_end = message.rfind("]")
+            if code_start < code_end:
+                return message[code_start + 1 : code_end]
+        return None
+
+    def _normalize_severity(self, severity: str) -> str:
+        """Normalize severity to standard values."""
+        if severity in ["note", "info"]:
+            return "info"
+        elif severity not in ["error", "warning"]:
+            return "error"
+        return severity

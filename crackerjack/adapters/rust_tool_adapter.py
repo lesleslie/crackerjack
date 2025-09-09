@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Protocol
 
 if t.TYPE_CHECKING:
-    from crackerjack.models.context import ExecutionContext
+    from crackerjack.orchestration.execution_strategies import ExecutionContext
 
 
 @dataclass

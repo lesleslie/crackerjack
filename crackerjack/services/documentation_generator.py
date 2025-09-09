@@ -377,35 +377,108 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         """Find all places where an API component is referenced."""
         references = []
 
-        # Search in protocol method signatures
-        protocols = api_data.get("protocols", {})
+        # Search in protocols
+        protocol_refs = self._find_protocol_references(
+            name, api_data.get("protocols", {})
+        )
+        references.extend(protocol_refs)
+
+        # Search in modules/classes
+        module_refs = self._find_module_references(name, api_data.get("modules", {}))
+        references.extend(module_refs)
+
+        return references
+
+    def _find_protocol_references(
+        self, name: str, protocols: dict[str, t.Any]
+    ) -> list[str]:
+        """Find references in protocol definitions."""
+        references = []
+
         for protocol_name, protocol_info in protocols.items():
-            for method in protocol_info.get("methods", []):
-                # Check parameters
-                for param in method.get("parameters", []):
-                    if name in param.get("annotation", ""):
-                        references.append(
-                            f"{protocol_name}.{method['name']}() parameter"
-                        )
+            method_refs = self._find_protocol_method_references(
+                name, protocol_name, protocol_info.get("methods", [])
+            )
+            references.extend(method_refs)
 
-                # Check return type
-                if name in method.get("return_annotation", ""):
-                    references.append(f"{protocol_name}.{method['name']}() return type")
+        return references
 
-        # Search in class definitions
-        modules = api_data.get("modules", {})
+    def _find_protocol_method_references(
+        self, name: str, protocol_name: str, methods: list[dict[str, t.Any]]
+    ) -> list[str]:
+        """Find references in protocol method signatures."""
+        references = []
+
+        for method in methods:
+            # Check parameters
+            param_refs = self._find_method_parameter_references(
+                name,
+                f"{protocol_name}.{method['name']}()",
+                method.get("parameters", []),
+            )
+            references.extend(param_refs)
+
+            # Check return type
+            if name in method.get("return_annotation", ""):
+                references.append(f"{protocol_name}.{method['name']}() return type")
+
+        return references
+
+    def _find_module_references(
+        self, name: str, modules: dict[str, t.Any]
+    ) -> list[str]:
+        """Find references in module class definitions."""
+        references = []
+
         for module_path, module_data in modules.items():
-            for class_info in module_data.get("classes", []):
-                # Check base classes
-                if name in class_info.get("base_classes", []):
-                    references.append(f"{class_info['name']} base class")
+            class_refs = self._find_class_references(
+                name, module_data.get("classes", [])
+            )
+            references.extend(class_refs)
 
-                # Check method signatures
-                for method in class_info.get("methods", []):
-                    for param in method.get("parameters", []):
-                        if name in param.get("annotation", ""):
-                            references.append(
-                                f"{class_info['name']}.{method['name']}() parameter"
-                            )
+        return references
+
+    def _find_class_references(
+        self, name: str, classes: list[dict[str, t.Any]]
+    ) -> list[str]:
+        """Find references in class definitions."""
+        references = []
+
+        for class_info in classes:
+            # Check base classes
+            if name in class_info.get("base_classes", []):
+                references.append(f"{class_info['name']} base class")
+
+            # Check method signatures
+            method_refs = self._find_class_method_references(
+                name, class_info["name"], class_info.get("methods", [])
+            )
+            references.extend(method_refs)
+
+        return references
+
+    def _find_class_method_references(
+        self, name: str, class_name: str, methods: list[dict[str, t.Any]]
+    ) -> list[str]:
+        """Find references in class method signatures."""
+        references = []
+
+        for method in methods:
+            param_refs = self._find_method_parameter_references(
+                name, f"{class_name}.{method['name']}()", method.get("parameters", [])
+            )
+            references.extend(param_refs)
+
+        return references
+
+    def _find_method_parameter_references(
+        self, name: str, method_name: str, parameters: list[dict[str, t.Any]]
+    ) -> list[str]:
+        """Find references in method parameters."""
+        references = []
+
+        for param in parameters:
+            if name in param.get("annotation", ""):
+                references.append(f"{method_name} parameter")
 
         return references

@@ -89,6 +89,24 @@ def handle_dashboard_mode(dev_mode: bool = False) -> None:
         console.print("\n[yellow]🛑 Dashboard stopped[/ yellow]")
 
 
+def handle_unified_dashboard_mode(port: int = 8675, dev_mode: bool = False) -> None:
+    from crackerjack.monitoring.websocket_server import CrackerjackMonitoringServer
+
+    console = Console()
+    console.print("[bold green]🚀 Starting Unified Monitoring Dashboard[/bold green]")
+    console.print(
+        f"[bold cyan]🌐 WebSocket server on port {port} with real-time streaming and web UI[/bold cyan]",
+    )
+
+    try:
+        server = CrackerjackMonitoringServer()
+        asyncio.run(server.start_monitoring(port))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]🛑 Unified Dashboard stopped[/yellow]")
+    except Exception as e:
+        console.print(f"\n[red]❌ Unified Dashboard failed: {e}[/red]")
+
+
 def handle_watchdog_mode() -> None:
     from crackerjack.mcp.service_watchdog import main as start_watchdog
 

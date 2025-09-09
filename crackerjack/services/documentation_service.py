@@ -188,52 +188,15 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     def get_documentation_coverage(self) -> dict[str, t.Any]:
         """Calculate documentation coverage metrics."""
         # Find all source files
-        source_files = list(self.pkg_path.glob("**/*.py"))
-        source_files = [
-            f for f in source_files if not any(part.startswith(".") for part in f.parts)
-        ]
+        source_files = self._find_source_files()
 
         # Extract API data
         api_data = self.extract_api_documentation(source_files)
 
         # Count documented vs undocumented items
-        total_items = 0
-        documented_items = 0
+        total_items, documented_items = self._count_documentation_items(api_data)
 
-        # Count protocols
-        protocols = api_data.get("protocols", {})
-        for protocol_info in protocols.values():
-            total_items += 1
-            if protocol_info.get("docstring", {}).get("description"):
-                documented_items += 1
-
-            # Count protocol methods
-            for method in protocol_info.get("methods", []):
-                total_items += 1
-                if method.get("docstring", {}).get("description"):
-                    documented_items += 1
-
-        # Count classes and functions from modules
-        modules = api_data.get("modules", {})
-        for module_data in modules.values():
-            # Count classes
-            for class_info in module_data.get("classes", []):
-                total_items += 1
-                if class_info.get("docstring", {}).get("description"):
-                    documented_items += 1
-
-                # Count methods
-                for method in class_info.get("methods", []):
-                    total_items += 1
-                    if method.get("docstring", {}).get("description"):
-                        documented_items += 1
-
-            # Count functions
-            for func_info in module_data.get("functions", []):
-                total_items += 1
-                if func_info.get("docstring", {}).get("description"):
-                    documented_items += 1
-
+        # Calculate coverage percentage
         coverage_percentage = (
             (documented_items / total_items * 100) if total_items > 0 else 0.0
         )
@@ -244,6 +207,116 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             "coverage_percentage": coverage_percentage,
             "undocumented_items": total_items - documented_items,
         }
+
+    def _find_source_files(self) -> list[Path]:
+        """Find all Python source files excluding hidden directories."""
+        source_files = list(self.pkg_path.glob("**/*.py"))
+        return [
+            f for f in source_files if not any(part.startswith(".") for part in f.parts)
+        ]
+
+    def _count_documentation_items(self, api_data: dict[str, t.Any]) -> tuple[int, int]:
+        """Count total and documented items in API data."""
+        total_items = 0
+        documented_items = 0
+
+        # Count protocols
+        protocol_total, protocol_documented = self._count_protocol_items(
+            api_data.get("protocols", {})
+        )
+        total_items += protocol_total
+        documented_items += protocol_documented
+
+        # Count modules (classes and functions)
+        module_total, module_documented = self._count_module_items(
+            api_data.get("modules", {})
+        )
+        total_items += module_total
+        documented_items += module_documented
+
+        return total_items, documented_items
+
+    def _count_protocol_items(self, protocols: dict[str, t.Any]) -> tuple[int, int]:
+        """Count protocol-related documentation items."""
+        total_items = 0
+        documented_items = 0
+
+        for protocol_info in protocols.values():
+            # Count protocol itself
+            total_items += 1
+            if protocol_info.get("docstring", {}).get("description"):
+                documented_items += 1
+
+            # Count protocol methods
+            method_total, method_documented = self._count_method_items(
+                protocol_info.get("methods", [])
+            )
+            total_items += method_total
+            documented_items += method_documented
+
+        return total_items, documented_items
+
+    def _count_module_items(self, modules: dict[str, t.Any]) -> tuple[int, int]:
+        """Count module-related documentation items."""
+        total_items = 0
+        documented_items = 0
+
+        for module_data in modules.values():
+            # Count classes
+            class_total, class_documented = self._count_class_items(
+                module_data.get("classes", [])
+            )
+            total_items += class_total
+            documented_items += class_documented
+
+            # Count functions
+            func_total, func_documented = self._count_function_items(
+                module_data.get("functions", [])
+            )
+            total_items += func_total
+            documented_items += func_documented
+
+        return total_items, documented_items
+
+    def _count_class_items(self, classes: list[dict[str, t.Any]]) -> tuple[int, int]:
+        """Count class-related documentation items."""
+        total_items = 0
+        documented_items = 0
+
+        for class_info in classes:
+            # Count class itself
+            total_items += 1
+            if class_info.get("docstring", {}).get("description"):
+                documented_items += 1
+
+            # Count class methods
+            method_total, method_documented = self._count_method_items(
+                class_info.get("methods", [])
+            )
+            total_items += method_total
+            documented_items += method_documented
+
+        return total_items, documented_items
+
+    def _count_function_items(
+        self, functions: list[dict[str, t.Any]]
+    ) -> tuple[int, int]:
+        """Count function documentation items."""
+        total_items = len(functions)
+        documented_items = sum(
+            1
+            for func_info in functions
+            if func_info.get("docstring", {}).get("description")
+        )
+        return total_items, documented_items
+
+    def _count_method_items(self, methods: list[dict[str, t.Any]]) -> tuple[int, int]:
+        """Count method documentation items."""
+        total_items = len(methods)
+        documented_items = sum(
+            1 for method in methods if method.get("docstring", {}).get("description")
+        )
+        return total_items, documented_items
 
     def generate_full_api_documentation(self) -> bool:
         """Generate complete API documentation for the project."""
@@ -327,14 +400,12 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         self, content: str, doc_path: Path
     ) -> list[dict[str, str]]:
         """Check for broken internal links in documentation."""
-        import re
+        from .regex_patterns import SAFE_PATTERNS
 
         issues = []
 
         # Find markdown links [text](path)
-        link_pattern = re.compile(
-            r"\[([^\]]+)\]\(([^)]+)\)"
-        )  # REGEX OK: markdown link parsing
+        link_pattern = SAFE_PATTERNS["extract_markdown_links"]._get_compiled_pattern()
         matches = link_pattern.findall(content)
 
         for link_text, link_path in matches:
@@ -387,14 +458,14 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         self, content: str, doc_path: Path
     ) -> list[dict[str, str]]:
         """Check for outdated version references."""
-        import re
+        from .regex_patterns import SAFE_PATTERNS
 
         issues = []
 
         # Look for version patterns
-        version_pattern = re.compile(
-            r"version\s+(\d+\.\d+\.\d+)", re.IGNORECASE
-        )  # REGEX OK: version extraction
+        version_pattern = SAFE_PATTERNS[
+            "extract_version_numbers"
+        ]._get_compiled_pattern()
         matches = version_pattern.findall(content)
 
         # This is a placeholder - in a real implementation you'd compare with current version
@@ -492,35 +563,73 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         )
 
         for service_name, service_info in sorted(services.items()):
-            lines.append(f"## {service_name}\n\n")
-            lines.append(f"**Location:** `{service_info.get('path', 'Unknown')}`\n\n")
-
-            if service_info.get("protocols_implemented"):
-                lines.append("**Implements:**\n")
-                for protocol in service_info["protocols_implemented"]:
-                    lines.append(f"- {protocol}\n")
-                lines.append("\n")
-
-            for class_info in service_info.get("classes", []):
-                lines.append(f"### {class_info['name']}\n\n")
-                description = class_info.get("docstring", {}).get(
-                    "description", "No description provided."
-                )
-                lines.append(f"{description}\n\n")
-
-                public_methods = [
-                    m
-                    for m in class_info.get("methods", [])
-                    if m.get("visibility") == "public"
-                ]
-                if public_methods:
-                    lines.append("**Public Methods:**\n")
-                    for method in public_methods:
-                        method_desc = method.get("docstring", {}).get("description", "")
-                        lines.append(f"- `{method['name']}`: {method_desc}\n")
-                    lines.append("\n")
+            service_section = self._generate_service_section(service_name, service_info)
+            lines.extend(service_section)
 
         return "".join(lines)
+
+    def _generate_service_section(
+        self, service_name: str, service_info: dict[str, t.Any]
+    ) -> list[str]:
+        """Generate documentation section for a single service."""
+        lines = []
+        lines.append(f"## {service_name}\n\n")
+        lines.append(f"**Location:** `{service_info.get('path', 'Unknown')}`\n\n")
+
+        # Add protocols implemented
+        if service_info.get("protocols_implemented"):
+            protocol_lines = self._generate_protocols_implemented(
+                service_info["protocols_implemented"]
+            )
+            lines.extend(protocol_lines)
+
+        # Add class documentation
+        class_lines = self._generate_service_classes(service_info.get("classes", []))
+        lines.extend(class_lines)
+
+        return lines
+
+    def _generate_protocols_implemented(self, protocols: list[str]) -> list[str]:
+        """Generate protocols implemented section."""
+        lines = ["**Implements:**\n"]
+        for protocol in protocols:
+            lines.append(f"- {protocol}\n")
+        lines.append("\n")
+        return lines
+
+    def _generate_service_classes(self, classes: list[dict[str, t.Any]]) -> list[str]:
+        """Generate documentation for service classes."""
+        lines = []
+
+        for class_info in classes:
+            lines.append(f"### {class_info['name']}\n\n")
+            description = class_info.get("docstring", {}).get(
+                "description", "No description provided."
+            )
+            lines.append(f"{description}\n\n")
+
+            # Add public methods
+            public_method_lines = self._generate_public_methods(
+                class_info.get("methods", [])
+            )
+            lines.extend(public_method_lines)
+
+        return lines
+
+    def _generate_public_methods(self, methods: list[dict[str, t.Any]]) -> list[str]:
+        """Generate public methods documentation."""
+        public_methods = [m for m in methods if m.get("visibility") == "public"]
+
+        if not public_methods:
+            return []
+
+        lines = ["**Public Methods:**\n"]
+        for method in public_methods:
+            method_desc = method.get("docstring", {}).get("description", "")
+            lines.append(f"- `{method['name']}`: {method_desc}\n")
+        lines.append("\n")
+
+        return lines
 
     def _generate_cli_documentation(self, commands: dict[str, t.Any]) -> str:
         """Generate CLI reference documentation."""

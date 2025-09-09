@@ -2453,6 +2453,177 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("normal text", "normal text"),
         ],
     ),
+    # Template processing patterns
+    "extract_template_variables": ValidatedPattern(
+        name="extract_template_variables",
+        pattern=r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}",
+        replacement=r"\1",
+        description="Extract template variables from {{variable}} patterns",
+        test_cases=[
+            ("Hello {{name}}", "Hello name"),
+            ("{{user_name}}", "user_name"),
+            ("{{ spaced_var }}", "spaced_var"),
+            ("text {{var1}} and {{var2}}", "text var1 and {{var2}}"),
+        ],
+    ),
+    "extract_template_sections": ValidatedPattern(
+        name="extract_template_sections",
+        pattern=r"\{\%\s*section\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\%\}",
+        replacement=r"\1",
+        description="Extract section names from {% section name %} patterns",
+        test_cases=[
+            ("{% section intro %}", "intro"),
+            ("{%  section  main_content  %}", "main_content"),
+            ("text {% section footer %} more", "text footer more"),
+            ("{% section header_1 %}", "header_1"),
+        ],
+    ),
+    "extract_template_blocks": ValidatedPattern(
+        name="extract_template_blocks",
+        pattern=r"\{\%\s*block\s+(\w+)\s*\%\}(.*?)\{\%\s*endblock\s*\%\}",
+        replacement=r"\1",
+        description="Extract block names and content from template blocks",
+        flags=re.DOTALL,
+        test_cases=[
+            ("{% block title %}Hello{% endblock %}", "title"),
+            ("{%  block  content  %}Text content{% endblock %}", "content"),
+            ("{% block main %}Multi\nline{% endblock %}", "main"),
+            (
+                "prefix {% block nav %}nav content{% endblock %} suffix",
+                "prefix nav suffix",
+            ),
+        ],
+    ),
+    "replace_template_block": ValidatedPattern(
+        name="replace_template_block",
+        pattern=r"\{\%\s*block\s+BLOCK_NAME\s*\%\}.*?\{\%\s*endblock\s*\%\}",
+        replacement="REPLACEMENT_CONTENT",
+        description="Replace a specific template block (use with dynamic pattern substitution)",
+        flags=re.DOTALL,
+        test_cases=[
+            ("{% block BLOCK_NAME %}old{% endblock %}", "REPLACEMENT_CONTENT"),
+            (
+                "{%  block  BLOCK_NAME  %}old content{% endblock %}",
+                "REPLACEMENT_CONTENT",
+            ),
+        ],
+    ),
+    # Documentation parsing patterns
+    "extract_markdown_links": ValidatedPattern(
+        name="extract_markdown_links",
+        pattern=r"\[([^\]]+)\]\(([^)]+)\)",
+        replacement=r"\1 -> \2",
+        description="Extract markdown link text and URLs from [text](url) patterns",
+        test_cases=[
+            ("[Click here](http://example.com)", "Click here -> http://example.com"),
+            ("[Local file](./docs/readme.md)", "Local file -> ./docs/readme.md"),
+            (
+                "See [the docs](../reference.md) for more",
+                "See the docs -> ../reference.md for more",
+            ),
+            ("[Multi word link](path/to/file)", "Multi word link -> path/to/file"),
+        ],
+    ),
+    "extract_version_numbers": ValidatedPattern(
+        name="extract_version_numbers",
+        pattern=r"version\s+(\d+\.\d+\.\d+)",
+        replacement=r"\1",
+        description="Extract semantic version numbers from 'version X.Y.Z' patterns",
+        flags=re.IGNORECASE,
+        test_cases=[
+            ("version 1.2.3", "1.2.3"),
+            ("Version 10.0.1", "10.0.1"),
+            ("current version 0.5.0", "current 0.5.0"),
+            ("VERSION 2.11.4", "2.11.4"),
+        ],
+    ),
+    # Docstring parsing patterns
+    "extract_google_docstring_params": ValidatedPattern(
+        name="extract_google_docstring_params",
+        pattern=r"^\s*(\w+)(?:\s*\([^)]+\))?\s*:\s*(.+)$",
+        replacement=r"\1: \2",
+        description="Extract parameter names and descriptions from Google-style docstrings",
+        flags=re.MULTILINE,
+        test_cases=[
+            ("    param1: Description here", "param1: Description here"),
+            ("param2 (str): String parameter", "param2: String parameter"),
+            (
+                "  complex_param (Optional[int]): Complex type",
+                "complex_param: Complex type",
+            ),
+            ("simple: Simple desc", "simple: Simple desc"),
+        ],
+    ),
+    "extract_sphinx_docstring_params": ValidatedPattern(
+        name="extract_sphinx_docstring_params",
+        pattern=r":param\s+(\w+)\s*:\s*(.+)$",
+        replacement=r"\1: \2",
+        description="Extract parameter names and descriptions from Sphinx-style docstrings",
+        flags=re.MULTILINE,
+        test_cases=[
+            (":param name: The name parameter", "name: The name parameter"),
+            (":param user_id: User identifier", "user_id: User identifier"),
+            (
+                ":param  spaced  :  Description with spaces",
+                "spaced: Description with spaces",
+            ),
+            (
+                ":param complex_var: Multi-word description here",
+                "complex_var: Multi-word description here",
+            ),
+        ],
+    ),
+    "extract_docstring_returns": ValidatedPattern(
+        name="extract_docstring_returns",
+        pattern=r"(?:Returns?|Return):\s*(.+?)(?=\n\n|\n\w+:|\Z)",
+        replacement=r"\1",
+        description="Extract return descriptions from docstrings",
+        flags=re.MULTILINE | re.DOTALL,
+        test_cases=[
+            ("Returns: A string value", "A string value"),
+            ("Return: Boolean indicating success", "Boolean indicating success"),
+            ("Returns: Multi-line\n    description", "Multi-line\n    description"),
+            ("Returns: Simple value\n\nArgs:", "Simple value\n\nArgs:"),
+        ],
+    ),
+    # Command processing patterns
+    "enhance_command_blocks": ValidatedPattern(
+        name="enhance_command_blocks",
+        pattern=r"```(?:bash|shell|sh)?\n([^`]+)\n```",
+        replacement=r"```bash\n\1\n```",
+        description="Enhance command blocks with proper bash syntax highlighting",
+        test_cases=[
+            ("```\npython -m test\n```", "```bash\npython -m test\n```"),
+            ("```bash\necho hello\n```", "```bash\necho hello\n```"),
+            ("```sh\nls -la\n```", "```bash\nls -la\n```"),
+            ("```shell\ncd /tmp\n```", "```bash\ncd /tmp\n```"),
+        ],
+    ),
+    "extract_step_numbers": ValidatedPattern(
+        name="extract_step_numbers",
+        pattern=r"^(\s*)(\d+)\.\s*(.+)$",
+        replacement=r"\1**Step \2**: \3",
+        description="Extract and enhance numbered steps in documentation",
+        flags=re.MULTILINE,
+        test_cases=[
+            ("1. First step", "**Step 1**: First step"),
+            ("  2. Indented step", "  **Step 2**: Indented step"),
+            ("10. Double digit step", "**Step 10**: Double digit step"),
+            ("normal text", "normal text"),
+        ],
+    ),
+    "extract_bash_command_blocks": ValidatedPattern(
+        name="extract_bash_command_blocks",
+        pattern=r"```bash\n([^`]+)\n```",
+        replacement=r"\1",
+        description="Extract content from bash command blocks",
+        test_cases=[
+            ("```bash\necho hello\n```", "echo hello"),
+            ("```bash\npython -m test\n```", "python -m test"),
+            ("text\n```bash\nls -la\n```\nmore", "text\nls -la\nmore"),
+            ("```bash\nmulti\nline\ncommand\n```", "multi\nline\ncommand"),
+        ],
+    ),
 }
 
 

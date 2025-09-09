@@ -17,6 +17,24 @@ from .base import (
 )
 from .tracker import get_agent_tracker
 
+# Static mapping for O(1) agent lookup by issue type
+ISSUE_TYPE_TO_AGENTS = {
+    IssueType.COMPLEXITY: ["RefactoringAgent"],
+    IssueType.DEAD_CODE: ["RefactoringAgent", "ImportOptimizationAgent"],
+    IssueType.SECURITY: ["SecurityAgent"],
+    IssueType.PERFORMANCE: ["PerformanceAgent", "RefactoringAgent"],
+    IssueType.TEST_FAILURE: ["TestCreationAgent", "TestSpecialistAgent"],
+    IssueType.TYPE_ERROR: ["TestCreationAgent", "RefactoringAgent"],
+    IssueType.FORMATTING: ["FormattingAgent", "ImportOptimizationAgent"],
+    IssueType.DOCUMENTATION: ["DocumentationAgent"],
+    IssueType.DRY_VIOLATION: ["DRYAgent", "RefactoringAgent"],
+    IssueType.IMPORT_ERROR: ["ImportOptimizationAgent", "RefactoringAgent"],
+    IssueType.COVERAGE_IMPROVEMENT: ["TestCreationAgent", "TestSpecialistAgent"],
+    IssueType.TEST_ORGANIZATION: ["TestSpecialistAgent", "TestCreationAgent"],
+    IssueType.DEPENDENCY: ["RefactoringAgent"],
+    IssueType.REGEX_VALIDATION: ["SecurityAgent", "RefactoringAgent"],
+}
+
 
 class AgentCoordinator:
     def __init__(
@@ -57,11 +75,24 @@ class AgentCoordinator:
 
         issues_by_type = self._group_issues_by_type(issues)
 
-        overall_result = FixResult(success=True, confidence=1.0)
+        # Optimization: Run ALL issue types in parallel instead of sequential
+        tasks = [
+            self._handle_issues_by_type(issue_type, type_issues)
+            for issue_type, type_issues in issues_by_type.items()
+        ]
 
-        for issue_type, type_issues in issues_by_type.items():
-            type_result = await self._handle_issues_by_type(issue_type, type_issues)
-            overall_result = overall_result.merge_with(type_result)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        overall_result = FixResult(success=True, confidence=1.0)
+        for result in results:
+            if isinstance(result, FixResult):
+                overall_result = overall_result.merge_with(result)
+            else:
+                self.logger.error(f"Issue type handling failed: {result}")
+                overall_result.success = False
+                overall_result.remaining_issues.append(
+                    f"Type handling failed: {result}"
+                )
 
         return overall_result
 
@@ -72,9 +103,22 @@ class AgentCoordinator:
     ) -> FixResult:
         self.logger.info(f"Handling {len(issues)} {issue_type.value} issues")
 
-        specialist_agents = [
-            agent for agent in self.agents if issue_type in agent.get_supported_types()
-        ]
+        # Fast agent lookup using static mapping
+        preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
+        specialist_agents = []
+
+        # First, try to use agents from static mapping for O(1) lookup
+        for agent in self.agents:
+            if agent.__class__.__name__ in preferred_agent_names:
+                specialist_agents.append(agent)
+
+        # Fallback: use traditional dynamic lookup if no static match
+        if not specialist_agents:
+            specialist_agents = [
+                agent
+                for agent in self.agents
+                if issue_type in agent.get_supported_types()
+            ]
 
         if not specialist_agents:
             self.logger.warning(f"No specialist agents for {issue_type.value}")
@@ -194,15 +238,12 @@ class AgentCoordinator:
         )
 
         try:
-            result = await agent.analyze_and_fix(issue)
+            # Use cached analysis for better performance
+            result = await self._cached_analyze_and_fix(agent, issue)
             if result.success:
                 self.logger.info(f"{agent.name} successfully fixed issue")
             else:
                 self.logger.warning(f"{agent.name} failed to fix issue")
-
-            # Cache successful decisions for future use
-            if result.success and result.confidence > 0.7:
-                self.cache.set_agent_decision(agent.name, issue_hash, result)
 
             self.tracker.track_agent_complete(agent.name, result)
 
@@ -245,6 +286,42 @@ class AgentCoordinator:
             f"{issue.type.value}:{issue.message}:{issue.file_path}:{issue.line_number}"
         )
         return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
+
+    def _get_cache_key(self, agent_name: str, issue: Issue) -> str:
+        """Get cache key for agent-issue combination."""
+        issue_hash = self._create_issue_hash(issue)
+        return f"{agent_name}:{issue_hash}"
+
+    async def _cached_analyze_and_fix(self, agent: SubAgent, issue: Issue) -> FixResult:
+        """Analyze and fix issue with intelligent caching."""
+        cache_key = self._get_cache_key(agent.name, issue)
+
+        # Check in-memory cache first (fastest)
+        if cache_key in self._issue_cache:
+            self.logger.debug(f"Using in-memory cache for {agent.name}")
+            return self._issue_cache[cache_key]
+
+        # Check persistent cache
+        cached_result = self.cache.get_agent_decision(
+            agent.name, self._create_issue_hash(issue)
+        )
+        if cached_result:
+            self.logger.debug(f"Using persistent cache for {agent.name}")
+            # Store in memory cache for even faster future access
+            self._issue_cache[cache_key] = cached_result
+            return cached_result
+
+        # No cache hit - perform actual analysis
+        result = await agent.analyze_and_fix(issue)
+
+        # Cache successful results with high confidence
+        if result.success and result.confidence > 0.7:
+            self._issue_cache[cache_key] = result
+            self.cache.set_agent_decision(
+                agent.name, self._create_issue_hash(issue), result
+            )
+
+        return result
 
     def get_agent_capabilities(self) -> dict[str, dict[str, t.Any]]:
         if not self.agents:

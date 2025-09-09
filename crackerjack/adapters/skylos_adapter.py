@@ -7,7 +7,7 @@ from pathlib import Path
 from .rust_tool_adapter import BaseRustToolAdapter, Issue, ToolResult
 
 if t.TYPE_CHECKING:
-    from crackerjack.models.context import ExecutionContext
+    from crackerjack.orchestration.execution_strategies import ExecutionContext
 
 
 @dataclass
@@ -155,63 +155,78 @@ class SkylsAdapter(BaseRustToolAdapter):
     def _parse_text_line(self, line: str) -> DeadCodeIssue | None:
         """Parse a single line of Skylos text output."""
         try:
-            # Example: "src/main.py:10: unused import 'os' (confidence: 86%)"
-            if ":" not in line:
+            basic_info = self._extract_basic_line_info(line)
+            if not basic_info:
                 return None
 
-            # Split on first two colons to get file:line:message
-            parts = line.split(":", 2)
-            if len(parts) < 3:
-                return None
-
-            file_path = Path(parts[0].strip())
-            try:
-                line_number = int(parts[1].strip())
-            except ValueError:
-                line_number = 1
-
-            message_part = parts[2].strip()
-
-            # Extract issue type and name
-            issue_type = "unknown"
-            name = "unknown"
-            confidence = float(self.confidence_threshold)
-
-            # Parse message for details
-            if "unused import" in message_part.lower():
-                issue_type = "import"
-                # Extract import name from quotes
-                import_match = message_part.split("'")
-                if len(import_match) >= 2:
-                    name = import_match[1]
-            elif "unused function" in message_part.lower():
-                issue_type = "function"
-                func_match = message_part.split("'")
-                if len(func_match) >= 2:
-                    name = func_match[1]
-            elif "unused class" in message_part.lower():
-                issue_type = "class"
-                class_match = message_part.split("'")
-                if len(class_match) >= 2:
-                    name = class_match[1]
-
-            # Extract confidence if available
-            if "(confidence:" in message_part:
-                conf_part = message_part.split("(confidence:")[1].split(")")[0]
-                try:
-                    confidence = float(conf_part.strip().replace("%", ""))
-                except ValueError:
-                    pass
+            file_path, line_number, message_part = basic_info
+            issue_details = self._extract_issue_details(message_part)
+            confidence = self._extract_confidence(message_part)
 
             return DeadCodeIssue(
                 file_path=file_path,
                 line_number=line_number,
-                message=f"Dead {issue_type}: {name}",
+                message=f"Dead {issue_details['type']}: {issue_details['name']}",
                 severity="warning",
-                issue_type=issue_type,
-                name=name,
+                issue_type=issue_details["type"],
+                name=issue_details["name"],
                 confidence=confidence,
             )
 
         except (IndexError, ValueError):
             return None
+
+    def _extract_basic_line_info(self, line: str) -> tuple[Path, int, str] | None:
+        """Extract file path, line number, and message from line."""
+        if ":" not in line:
+            return None
+
+        parts = line.split(":", 2)
+        if len(parts) < 3:
+            return None
+
+        file_path = Path(parts[0].strip())
+        try:
+            line_number = int(parts[1].strip())
+        except ValueError:
+            line_number = 1
+
+        message_part = parts[2].strip()
+        return file_path, line_number, message_part
+
+    def _extract_issue_details(self, message_part: str) -> dict[str, str]:
+        """Extract issue type and name from message."""
+        issue_type = "unknown"
+        name = "unknown"
+
+        lower_message = message_part.lower()
+
+        if "unused import" in lower_message:
+            issue_type = "import"
+            name = self._extract_name_from_quotes(message_part)
+        elif "unused function" in lower_message:
+            issue_type = "function"
+            name = self._extract_name_from_quotes(message_part)
+        elif "unused class" in lower_message:
+            issue_type = "class"
+            name = self._extract_name_from_quotes(message_part)
+
+        return {"type": issue_type, "name": name}
+
+    def _extract_name_from_quotes(self, message_part: str) -> str:
+        """Extract name from single quotes in message."""
+        quoted_parts = message_part.split("'")
+        if len(quoted_parts) >= 2:
+            return quoted_parts[1]
+        return "unknown"
+
+    def _extract_confidence(self, message_part: str) -> float:
+        """Extract confidence percentage from message."""
+        if "(confidence:" not in message_part:
+            return float(self.confidence_threshold)
+
+        try:
+            conf_part = message_part.split("(confidence:")[1].split(")")[0]
+            return float(conf_part.strip().replace("%", ""))
+        except (ValueError, IndexError):
+            return float(self.confidence_threshold)

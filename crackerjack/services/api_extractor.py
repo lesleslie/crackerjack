@@ -9,22 +9,23 @@ from pathlib import Path
 from rich.console import Console
 
 from ..models.protocols import APIExtractorProtocol
+from .regex_patterns import SAFE_PATTERNS
 
 
 class PythonDocstringParser:
     """Parser for extracting structured information from Python docstrings."""
 
     def __init__(self) -> None:
-        # Regex patterns for different docstring styles
-        self.google_param_pattern = re.compile(  # REGEX OK: docstring parsing
-            r"^\s*(\w+)(?:\s*\([^)]+\))?\s*:\s*(.+)$", re.MULTILINE
-        )
-        self.sphinx_param_pattern = re.compile(
-            r":param\s+(\w+):\s*(.+)$", re.MULTILINE
-        )  # REGEX OK: sphinx docstring parsing
-        self.returns_pattern = re.compile(  # REGEX OK: return value extraction
-            r"(?:Returns?|Return):\s*(.+?)(?=\n\n|\n\w+:|\Z)", re.MULTILINE | re.DOTALL
-        )
+        # Regex patterns for different docstring styles using safe patterns
+        self.google_param_pattern = SAFE_PATTERNS[
+            "extract_google_docstring_params"
+        ]._get_compiled_pattern()
+        self.sphinx_param_pattern = SAFE_PATTERNS[
+            "extract_sphinx_docstring_params"
+        ]._get_compiled_pattern()
+        self.returns_pattern = SAFE_PATTERNS[
+            "extract_docstring_returns"
+        ]._get_compiled_pattern()
 
     def parse_docstring(self, docstring: str | None) -> dict[str, t.Any]:
         """Parse a docstring and extract structured information."""

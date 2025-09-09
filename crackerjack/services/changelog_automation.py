@@ -159,61 +159,97 @@ class ChangelogGenerator:
     ) -> dict[str, list[ChangelogEntry]]:
         """Generate changelog entries from git commits."""
         try:
-            # Get git log since last version/tag
-            if since_version:
-                git_command = [
-                    "log",
-                    f"{since_version}..HEAD",
-                    "--oneline",
-                    "--no-merges",
-                ]
-            else:
-                # Get commits since last release tag or last 50 commits
-                git_command = ["log", "-50", "--oneline", "--no-merges"]
-
-            result = self.git._run_git_command(git_command)
-            if result.returncode != 0:
-                self.console.print(
-                    f"[yellow]⚠️[/yellow] Failed to get git log: {result.stderr}"
-                )
+            # Get git commits
+            git_result = self._get_git_commits(since_version)
+            if not git_result:
                 return {}
 
-            # Parse commits
-            entries_by_type: dict[str, list[ChangelogEntry]] = {}
-
-            for line in result.stdout.strip().split("\n"):
-                if not line.strip():
-                    continue
-
-                # Parse commit hash and message
-                parts = line.strip().split(" ", 1)
-                if len(parts) < 2:
-                    continue
-
-                commit_hash = parts[0]
-                commit_message = parts[1]
-
-                # Get full commit message
-                full_commit_result = self.git._run_git_command(
-                    ["show", "--format=%B", "--no-patch", commit_hash]
-                )
-                full_message = (
-                    full_commit_result.stdout
-                    if full_commit_result.returncode == 0
-                    else commit_message
-                )
-
-                entry = self.parse_commit_message(full_message, commit_hash)
-                if entry:
-                    if entry.type not in entries_by_type:
-                        entries_by_type[entry.type] = []
-                    entries_by_type[entry.type].append(entry)
-
-            return entries_by_type
+            # Parse commits into entries
+            return self._parse_commits_to_entries(git_result)
 
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error generating changelog entries: {e}")
             return {}
+
+    def _get_git_commits(self, since_version: str | None = None) -> str | None:
+        """Get git commit log output."""
+        # Build git command
+        git_command = self._build_git_log_command(since_version)
+
+        # Execute git command
+        result = self.git._run_git_command(git_command)
+        if result.returncode != 0:
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Failed to get git log: {result.stderr}"
+            )
+            return None
+
+        return result.stdout
+
+    def _build_git_log_command(self, since_version: str | None = None) -> list[str]:
+        """Build the git log command based on parameters."""
+        if since_version:
+            return [
+                "log",
+                f"{since_version}..HEAD",
+                "--oneline",
+                "--no-merges",
+            ]
+        else:
+            # Get commits since last release tag or last 50 commits
+            return ["log", "-50", "--oneline", "--no-merges"]
+
+    def _parse_commits_to_entries(
+        self, git_output: str
+    ) -> dict[str, list[ChangelogEntry]]:
+        """Parse git commit output into changelog entries."""
+        entries_by_type: dict[str, list[ChangelogEntry]] = {}
+
+        for line in git_output.strip().split("\n"):
+            if not line.strip():
+                continue
+
+            entry = self._process_commit_line(line)
+            if entry:
+                self._add_entry_to_collection(entry, entries_by_type)
+
+        return entries_by_type
+
+    def _process_commit_line(self, line: str) -> ChangelogEntry | None:
+        """Process a single commit line into a changelog entry."""
+        # Parse commit hash and message
+        parts = line.strip().split(" ", 1)
+        if len(parts) < 2:
+            return None
+
+        commit_hash = parts[0]
+        commit_message = parts[1]
+
+        # Get full commit message
+        full_message = self._get_full_commit_message(commit_hash, commit_message)
+
+        # Parse into changelog entry
+        return self.parse_commit_message(full_message, commit_hash)
+
+    def _get_full_commit_message(self, commit_hash: str, fallback_message: str) -> str:
+        """Get the full commit message for detailed parsing."""
+        full_commit_result = self.git._run_git_command(
+            ["show", "--format=%B", "--no-patch", commit_hash]
+        )
+
+        return (
+            full_commit_result.stdout
+            if full_commit_result.returncode == 0
+            else fallback_message
+        )
+
+    def _add_entry_to_collection(
+        self, entry: ChangelogEntry, entries_by_type: dict[str, list[ChangelogEntry]]
+    ) -> None:
+        """Add a changelog entry to the appropriate type collection."""
+        if entry.type not in entries_by_type:
+            entries_by_type[entry.type] = []
+        entries_by_type[entry.type].append(entry)
 
     def update_changelog(
         self,
@@ -312,19 +348,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         lines = existing_content.split("\n")
         insert_index = 0
 
-        # Find the insertion point (after the header)
-        in_header = True
+        # Find the insertion point (after the header, before first version)
         for i, line in enumerate(lines):
-            if line.strip().startswith("## [") and in_header:
+            if line.strip().startswith("## ["):
                 insert_index = i
                 break
-            elif (
-                line.strip()
-                and not line.startswith("#")
-                and not line.startswith("All notable")
-                and not line.startswith("The format")
-            ):
-                in_header = False
+        else:
+            # No existing version sections found, insert at end
+            insert_index = len(lines)
 
         # Insert new section
         new_lines = (

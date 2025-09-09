@@ -117,6 +117,26 @@ class ExecutionContext:
 
         return base_time + file_factor + test_factor
 
+    @property
+    def ai_agent_mode(self) -> bool:
+        """Check if AI agent mode is enabled."""
+        return getattr(self.options, "ai_agent", False)
+
+    @property
+    def ai_debug_mode(self) -> bool:
+        """Check if AI debug mode is enabled."""
+        return getattr(self.options, "ai_debug", False)
+
+    @property
+    def interactive(self) -> bool:
+        """Check if interactive mode is enabled."""
+        return getattr(self.options, "interactive", False)
+
+    @property
+    def working_directory(self) -> Path:
+        """Get the working directory path."""
+        return self.pkg_path
+
 
 class StrategySelector:
     def __init__(self, console: Console) -> None:

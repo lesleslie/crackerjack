@@ -65,6 +65,8 @@ dependencies = [
     "watchdog>=6",
     "websockets>=15.0.1",
     "tomli>=2.2.1",
+    "skylos>=2.1.2",
+    "zuban>=0.0.22",
 ]
 
 [project.license]
@@ -291,6 +293,8 @@ exclude-deps = [
     "ruff",
     "hypothesis",
     "psutil",
+    "skylos",
+    "zuban",
 ]
 
 [tool.refurb]
@@ -324,6 +328,7 @@ max_complexity = 15
 
 [dependency-groups]
 dev = [
+    "complexipy>=4.0.2",
     "excalidraw-mcp>=0.1.2",
     "radon>=6.0.1",
     "session-mgmt-mcp>=0.1.3",

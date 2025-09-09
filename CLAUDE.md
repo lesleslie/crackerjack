@@ -20,21 +20,30 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 
 ```bash
 # Daily workflow
-python -m crackerjack                    # Quality checks
-python -m crackerjack -t                 # With tests
-python -m crackerjack --ai-agent -t      # AI auto-fixing (recommended)
+python -m crackerjack                       # Quality checks
+python -m crackerjack --run-tests            # With tests
+python -m crackerjack --ai-fix --run-tests   # AI auto-fixing (recommended)
 
 # Development
-python -m crackerjack --ai-debug -t      # Debug AI issues
-python -m crackerjack --skip-hooks       # Skip hooks during iteration
-python -m crackerjack -x                 # Code cleaning mode
+python -m crackerjack --ai-debug --run-tests # Debug AI issues
+python -m crackerjack --skip-hooks           # Skip hooks during iteration
+python -m crackerjack --strip-code           # Code cleaning mode
+
+# Monitoring & Performance
+python -m crackerjack --dashboard            # Comprehensive monitoring dashboard
+python -m crackerjack --unified-dashboard    # Unified real-time dashboard
+python -m crackerjack --monitor              # Multi-project progress monitor
+python -m crackerjack --benchmark            # Run in benchmark mode
+python -m crackerjack --cache-stats          # Display cache statistics
+python -m crackerjack --clear-cache          # Clear all caches
 
 # Server management
-python -m crackerjack --start-mcp-server    # MCP server
-python -m crackerjack --watchdog            # Monitor/restart services
+python -m crackerjack --start-mcp-server     # MCP server
+python -m crackerjack --restart-mcp-server   # Restart MCP server
+python -m crackerjack --watchdog             # Monitor/restart services
 
 # Release
-python -m crackerjack -a patch              # Full release workflow
+python -m crackerjack --full-release patch  # Full release workflow
 ```
 
 ## AI Agent System
@@ -51,7 +60,23 @@ python -m crackerjack -a patch              # Full release workflow
 - **ImportOptimizationAgent**: Import cleanup, reorganization
 - **TestSpecialistAgent** (0.8): Advanced testing scenarios
 
-**Usage**: `--ai-agent` enables batch fixing; confidence ≥0.7 uses specific agents
+**Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 uses specific agents
+
+## High-Performance Rust Integration
+
+**Ultra-Fast Static Analysis** with seamless Python integration:
+
+- **🦅 Skylos**: Dead code detection **20x faster** than vulture
+- **🔍 Zuban**: Type checking **20-200x faster** than pyright
+- **🚀 Performance**: 6,000+ operations/second throughput
+- **🔄 Compatibility**: Zero breaking changes, drop-in replacements
+
+**Benefits in Daily Workflow**:
+
+- Pre-commit hooks complete in seconds instead of minutes
+- `--run-tests` now blazingly fast with Rust-powered type checking
+- AI agents get faster feedback for more efficient fixing cycles
+- Development iteration speed dramatically improved
 
 ## Architecture
 
@@ -84,7 +109,7 @@ python -m pytest tests/test_file.py::TestClass::test_method -v
 python -m pytest --cov=crackerjack --cov-report=html
 
 # Custom workers
-python -m crackerjack -t --test-workers 4
+python -m crackerjack --run-tests --test-workers 4
 
 # Version bump
 python -m crackerjack --bump patch
@@ -139,7 +164,7 @@ text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
 
 **Development**:
 
-- **AI agent ineffective**: Use `--ai-debug -t` for analysis
+- **AI agent ineffective**: Use `--ai-debug --run-tests` for analysis
 - **Import errors**: Always import protocols from `models/protocols.py`
 - **Test hangs**: Avoid complex async tests, use simple synchronous config tests
 - **Coverage failing**: Never reduce below baseline, add tests incrementally
@@ -179,7 +204,7 @@ python -m crackerjack.mcp.progress_monitor <job_id>
 
 ```bash
 # Standard crackerjack workflow with automatic session management
-python -m crackerjack --ai-agent -t    # Quality + AI fixing
+python -m crackerjack --ai-fix --run-tests  # Quality + AI fixing
 # Session checkpoints happen automatically during long runs
 # Session cleanup happens automatically when you quit Claude Code
 ```
