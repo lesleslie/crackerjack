@@ -62,11 +62,13 @@ class WorkflowOrchestrator(WorkflowOrchestratorProtocol):
 #### 1. Orchestration Layer
 
 **Components**:
+
 - `WorkflowOrchestrator`: Primary workflow coordination
 - `Options`: Configuration and CLI argument processing
 - `ExecutionContext`: Shared execution state
 
 **Responsibilities**:
+
 - Overall workflow coordination
 - Phase sequencing and dependency management
 - Error handling and recovery
@@ -85,21 +87,23 @@ graph TD
 #### 2. Coordination Layer
 
 **SessionCoordinator**:
+
 ```python
 class SessionCoordinator:
     async def execute_session(self, options: Options) -> SessionResult:
         """Coordinate complete execution session with progress tracking."""
-    
+
     async def track_progress(self, phase: WorkflowPhase) -> None:
         """Track and broadcast progress updates via WebSocket."""
 ```
 
 **AgentCoordinator**:
+
 ```python
 class AgentCoordinator:
     async def handle_issues_parallel(self, issues: list[Issue]) -> FixResult:
         """Process issues in parallel using optimal agent selection."""
-    
+
     def route_to_best_agent(self, issue: Issue) -> SubAgent:
         """Route issue to highest-confidence agent (≥0.7)."""
 ```
@@ -113,6 +117,7 @@ class AgentCoordinator:
 #### 4. Service Layer
 
 Core services providing fundamental functionality:
+
 - `GitService`: Git operations and repository management
 - `FilesystemService`: File system operations and path management
 - `ConfigService`: Configuration loading and management
@@ -147,12 +152,12 @@ The high-performance layer provides dramatic speed improvements through Rust-pow
 ```python
 class SkylosAdapter(RustToolProtocol):
     """Ultra-fast dead code detection (20x performance improvement)."""
-    
+
     async def detect_dead_code(self, paths: list[Path]) -> list[DeadCodeIssue]:
         # Execute Skylos via subprocess with optimized argument parsing
         # Parse JSON output into strongly-typed Issue objects
         # Cache results for repeated analysis
-    
+
     def get_performance_metrics(self) -> PerformanceMetrics:
         # Track execution time, throughput, cache hit ratios
 ```
@@ -162,7 +167,7 @@ class SkylosAdapter(RustToolProtocol):
 ```python
 class ZubanAdapter(RustToolProtocol):
     """Lightning-fast type checking (20-200x performance improvement)."""
-    
+
     async def check_types(self, paths: list[Path]) -> list[TypeIssue]:
         # Execute Zuban with incremental type checking
         # Parse structured output with full LSP compatibility
@@ -176,7 +181,7 @@ class ZubanAdapter(RustToolProtocol):
 ```python
 class MemoryOptimizer:
     """Advanced memory management with lazy loading and GC optimization."""
-    
+
     def optimize_memory_usage(self) -> MemoryStats:
         # Implement lazy loading patterns
         # Optimize garbage collection cycles
@@ -188,7 +193,7 @@ class MemoryOptimizer:
 ```python
 class PerformanceCache:
     """High-performance caching with TTL and intelligent invalidation."""
-    
+
     async def get_with_stats(self, key: str) -> tuple[Any, CacheStats]:
         # Retrieve cached values with performance tracking
         # Implement LRU eviction with TTL expiration
@@ -200,7 +205,7 @@ class PerformanceCache:
 ```python
 class PerformanceBenchmarker:
     """Comprehensive benchmarking with automated performance regression detection."""
-    
+
     async def run_comprehensive_benchmark(self) -> BenchmarkSuite:
         # Memory optimization benchmarks
         # Caching performance analysis
@@ -246,19 +251,19 @@ The AI agent system uses a confidence-based routing system with parallel executi
 async def process_issues_intelligently(issues: list[Issue]) -> list[FixResult]:
     # 1. Group issues by type for batch processing
     issues_by_type = group_by_issue_type(issues)
-    
+
     # 2. Route each group to highest-confidence agent
     agent_assignments = route_to_best_agents(issues_by_type)
-    
+
     # 3. Execute in parallel for optimal performance
     tasks = [
         agent.analyze_and_fix_batch(type_issues)
         for agent, type_issues in agent_assignments
     ]
-    
+
     # 4. Gather results and handle cross-cutting concerns
     results = await asyncio.gather(*tasks)
-    
+
     return merge_and_validate_results(results)
 ```
 
@@ -287,12 +292,12 @@ async def process_issues_intelligently(issues: list[Issue]) -> list[FixResult]:
 ```python
 class MonitoringDashboard:
     """Real-time monitoring dashboard with WebSocket streaming."""
-    
+
     async def start_dashboard(self, port: int = 8675) -> None:
         # Initialize WebSocket server
         # Set up real-time metric collection
         # Start performance monitoring threads
-    
+
     async def stream_progress_updates(self, job_id: str) -> AsyncGenerator:
         # Stream job progress via WebSocket
         # Include performance metrics and error information
@@ -304,13 +309,13 @@ class MonitoringDashboard:
 ```python
 class MetricsCollector:
     """Comprehensive metrics collection system."""
-    
+
     def collect_system_metrics(self) -> SystemMetrics:
         # CPU, memory, disk I/O metrics
         # Cache performance statistics
         # Agent execution performance
         # Rust tool benchmark results
-    
+
     def collect_quality_metrics(self) -> QualityMetrics:
         # Code quality scores over time
         # Error detection and fix rates
@@ -355,12 +360,12 @@ Crackerjack provides both HTTP and WebSocket MCP server implementations for maxi
 ```python
 class WebSocketMCPServer:
     """WebSocket-enabled MCP server with real-time capabilities."""
-    
+
     async def handle_progress_stream(self, job_id: str) -> None:
         # Stream real-time progress updates
         # Include performance metrics
         # Provide intelligent status information
-    
+
     async def handle_dashboard_updates(self) -> None:
         # Stream system metrics to dashboard
         # Update agent performance statistics
@@ -376,27 +381,27 @@ flowchart TD
     A[CLI Entry] --> B[Options Processing]
     B --> C[WorkflowOrchestrator]
     C --> D[SessionCoordinator]
-    
+
     D --> E[Fast Hooks]
     E --> F{Fast Hooks Pass?}
     F -->|No| G[Retry Once]
     F -->|Yes| H[Test Execution]
     G --> H
-    
+
     H --> I[TestManager]
     I --> J[Parallel Test Workers]
     J --> K{Tests Pass?}
     K -->|No| L[Collect Test Issues]
     K -->|Yes| M[Comprehensive Hooks]
-    
+
     M --> N[Skylos Dead Code Detection]
     N --> O[Zuban Type Checking]
     O --> P[Other Quality Tools]
     P --> Q{Issues Found?}
-    
+
     Q -->|Yes| R[AgentCoordinator]
     Q -->|No| S[Publish/Complete]
-    
+
     R --> T[Issue Classification]
     T --> U[Agent Routing]
     U --> V[Parallel Agent Execution]
@@ -405,9 +410,9 @@ flowchart TD
     X --> Y{All Fixed?}
     Y -->|Yes| S
     Y -->|No| Z[Report Remaining Issues]
-    
+
     L --> R
-    
+
     D --> AA[Progress Monitoring]
     AA --> BB[WebSocket Streaming]
     BB --> CC[Dashboard Updates]
@@ -425,6 +430,7 @@ class ExecutionContext:
     current_stage: WorkflowStage
     performance_metrics: PerformanceMetrics
 
+
 @dataclass
 class WorkflowResult:
     success: bool
@@ -433,6 +439,7 @@ class WorkflowResult:
     issues_fixed: int
     execution_time: float
     performance_data: BenchmarkSuite
+
 
 # Agent system types
 @dataclass
@@ -444,6 +451,7 @@ class Issue:
     line_number: int | None
     confidence: float
     metadata: dict[str, Any]
+
 
 @dataclass
 class FixResult:
@@ -462,18 +470,21 @@ class FixResult:
 Based on comprehensive performance testing:
 
 **Rust Tool Performance**:
+
 - **Skylos**: 20x faster than vulture for dead code detection
 - **Zuban**: 20-200x faster than pyright for type checking
 - **Combined**: 6,000+ operations/second throughput
 - **Data Processing**: 600KB+/second during comprehensive checks
 
 **Memory Optimization**:
+
 - **Lazy Loading**: 30-50% memory usage reduction
 - **Cache Performance**: 60%+ hit ratio for repeated operations
 - **GC Optimization**: 25% reduction in garbage collection overhead
 
 **Agent Coordination**:
-- **Parallel Processing**: 40% faster than sequential agent execution  
+
+- **Parallel Processing**: 40% faster than sequential agent execution
 - **Intelligent Routing**: 35% reduction in unnecessary confidence checks
 - **Batch Processing**: 50% improvement in multi-issue scenarios
 
@@ -485,18 +496,18 @@ PERFORMANCE_CHARACTERISTICS = {
     "small_project": {  # < 50 files
         "total_time": "5-15 seconds",
         "rust_tools_impact": "2-3x improvement",
-        "memory_usage": "< 100MB"
+        "memory_usage": "< 100MB",
     },
-    "medium_project": {  # 50-500 files  
+    "medium_project": {  # 50-500 files
         "total_time": "15-60 seconds",
-        "rust_tools_impact": "5-10x improvement", 
-        "memory_usage": "100-500MB"
+        "rust_tools_impact": "5-10x improvement",
+        "memory_usage": "100-500MB",
     },
     "large_project": {  # 500+ files
         "total_time": "1-5 minutes",
         "rust_tools_impact": "10-20x improvement",
-        "memory_usage": "500MB-2GB"
-    }
+        "memory_usage": "500MB-2GB",
+    },
 }
 ```
 
@@ -564,15 +575,15 @@ jobs:
 ### Extensibility Points
 
 1. **Custom Agent Development**: Protocol-based agent system allows easy extension
-2. **Tool Integration**: Rust tool adapter pattern supports additional tools  
-3. **Monitoring Plugins**: Metrics collection system supports custom collectors
-4. **MCP Extensions**: Tool registry supports custom MCP tool implementations
+1. **Tool Integration**: Rust tool adapter pattern supports additional tools
+1. **Monitoring Plugins**: Metrics collection system supports custom collectors
+1. **MCP Extensions**: Tool registry supports custom MCP tool implementations
 
 ### Performance Optimization Opportunities
 
 1. **Incremental Analysis**: File-level change tracking for minimal re-analysis
-2. **Distributed Processing**: Multi-machine agent coordination
-3. **ML-Powered Optimization**: Learning-based agent routing and optimization
-4. **Advanced Caching**: Semantic-aware caching with dependency tracking
+1. **Distributed Processing**: Multi-machine agent coordination
+1. **ML-Powered Optimization**: Learning-based agent routing and optimization
+1. **Advanced Caching**: Semantic-aware caching with dependency tracking
 
 This architecture provides a solid foundation for high-performance, intelligent code quality enforcement while maintaining extensibility and monitoring capabilities for production environments.

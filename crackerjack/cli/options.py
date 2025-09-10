@@ -388,7 +388,7 @@ CLI_OPTIONS = {
     "ai_debug": typer.Option(
         False,
         "--ai-debug",
-        help="Enable verbose debugging for AI agent mode (implies --ai-agent).",
+        help="Enable verbose debugging for AI auto-fixing mode (implies --ai-fix).",
     ),
     "job_id": typer.Option(
         None,

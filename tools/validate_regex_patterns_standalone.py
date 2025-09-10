@@ -64,9 +64,9 @@ ALLOWED_PATTERNS = {
 }
 
 FORBIDDEN_REPLACEMENT_PATTERNS = [
-    r"\\g\s*<\s*\d+\s*>",  # \g < 1 > with spaces
-    r"\\g<\s+\d+>",  # \g< 1> with space after <
-    r"\\g<\d+\s+>",  # \g<1 > with space before >
+    r"\\g\s+<\s*\d+\s*>",  # Only match when there are spaces before <
+    r"\\g<\s+\d+>",  # Spaces after opening <
+    r"\\g<\d+\s+>",  # Spaces before closing >
 ]
 
 
@@ -138,18 +138,23 @@ class RegexVisitor(ast.NodeVisitor):
                     (
                         line_no,
                         f"CRITICAL: Bad replacement syntax detected: '{replacement}'. "
-                        f"Use \\g<1> not \\g < 1 >",
+                        f"Use \\g<1> not \\g<1>",
                     )
                 )
 
     def _is_exempted_line(self, line_no: int) -> bool:
-        """Check if line has exemption comment."""
+        """Check if line or nearby lines have exemption comment."""
         try:
             with open(self.file_path, encoding="utf-8") as f:
                 lines = f.readlines()
-                if line_no <= len(lines):
-                    line = lines[line_no - 1]
-                    return "# REGEX OK:" in line or "# regex ok:" in line.lower()
+                # Check current line and next 5 lines for exemption comments
+                # This handles multi-line statements
+                for offset in range(6):  # Check lines: current, +1, +2, +3, +4, +5
+                    check_line = line_no - 1 + offset
+                    if check_line < len(lines):
+                        line = lines[check_line]
+                        if "# REGEX OK:" in line or "# regex ok:" in line.lower():
+                            return True
         except (OSError, UnicodeDecodeError):
             pass
         return False

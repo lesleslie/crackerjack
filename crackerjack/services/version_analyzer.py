@@ -262,36 +262,51 @@ class VersionAnalyzer:
             msg = "Could not determine current version from pyproject.toml"
             raise ValueError(msg)
 
-        # Generate changelog entries for analysis
+        all_entries = self._collect_changelog_entries(since_version)
+
+        if not all_entries:
+            return self._create_no_changes_recommendation(current_version)
+
+        return self._analyze_entries_and_recommend(current_version, all_entries)
+
+    def _collect_changelog_entries(
+        self, since_version: str | None
+    ) -> list[ChangelogEntry]:
+        """Collect and flatten changelog entries for analysis."""
         entries_by_type = self.changelog_generator.generate_changelog_entries(
             since_version
         )
-
-        # Flatten all entries for analysis
         all_entries: list[ChangelogEntry] = []
         for entries in entries_by_type.values():
             all_entries.extend(entries)
+        return all_entries
 
-        if not all_entries:
-            # No changes - recommend patch version for consistency
-            return VersionBumpRecommendation(
-                bump_type=VersionBumpType.PATCH,
-                confidence=1.0,
-                reasoning=["No significant changes detected - patch bump recommended"],
-                current_version=current_version,
-                recommended_version=self._calculate_next_version(
-                    current_version, VersionBumpType.PATCH
-                ),
-                breaking_changes=[],
-                new_features=[],
-                bug_fixes=[],
-                commit_analysis={
-                    "type_counts": {},
-                    "recommended_bumps": [],
-                    "total_entries": 0,
-                },
-            )
+    def _create_no_changes_recommendation(
+        self, current_version: str
+    ) -> VersionBumpRecommendation:
+        """Create recommendation when no changes are detected."""
+        return VersionBumpRecommendation(
+            bump_type=VersionBumpType.PATCH,
+            confidence=1.0,
+            reasoning=["No significant changes detected - patch bump recommended"],
+            current_version=current_version,
+            recommended_version=self._calculate_next_version(
+                current_version, VersionBumpType.PATCH
+            ),
+            breaking_changes=[],
+            new_features=[],
+            bug_fixes=[],
+            commit_analysis={
+                "type_counts": {},
+                "recommended_bumps": [],
+                "total_entries": 0,
+            },
+        )
 
+    def _analyze_entries_and_recommend(
+        self, current_version: str, all_entries: list[ChangelogEntry]
+    ) -> VersionBumpRecommendation:
+        """Analyze entries and create version bump recommendation."""
         # Run specialized analyses
         has_breaking, breaking_changes, breaking_confidence = (
             self.breaking_analyzer.analyze(all_entries)
@@ -301,42 +316,22 @@ class VersionAnalyzer:
         )
         commit_analysis = self.commit_analyzer.analyze(all_entries)
 
-        # Extract bug fixes
         bug_fixes = [
             entry.description
             for entry in all_entries
             if entry.type.lower() in ["fixed", "fix", "bugfix", "patch"]
         ]
 
-        # Determine final recommendation
-        if has_breaking:
-            bump_type = VersionBumpType.MAJOR
-            confidence = breaking_confidence
-            reasoning = [
-                f"Breaking changes detected ({len(breaking_changes)} found)",
-                "MAJOR version bump required to maintain semantic versioning",
-            ]
-        elif has_features:
-            bump_type = VersionBumpType.MINOR
-            confidence = feature_confidence
-            reasoning = [
-                f"New features detected ({len(new_features)} found)",
-                "MINOR version bump recommended for backward-compatible functionality",
-            ]
-        elif bug_fixes:
-            bump_type = VersionBumpType.PATCH
-            confidence = 0.9
-            reasoning = [
-                f"Bug fixes detected ({len(bug_fixes)} found)",
-                "PATCH version bump recommended for backward-compatible fixes",
-            ]
-        else:
-            bump_type = VersionBumpType.PATCH
-            confidence = 0.5
-            reasoning = [
-                f"Changes detected ({len(all_entries)} commits) with unclear impact",
-                "PATCH version bump recommended as conservative choice",
-            ]
+        bump_type, confidence, reasoning = self._determine_bump_type(
+            has_breaking,
+            breaking_changes,
+            breaking_confidence,
+            has_features,
+            new_features,
+            feature_confidence,
+            bug_fixes,
+            all_entries,
+        )
 
         recommended_version = self._calculate_next_version(current_version, bump_type)
 
@@ -352,8 +347,64 @@ class VersionAnalyzer:
             commit_analysis=commit_analysis,
         )
 
+    def _determine_bump_type(
+        self,
+        has_breaking: bool,
+        breaking_changes: list[str],
+        breaking_confidence: float,
+        has_features: bool,
+        new_features: list[str],
+        feature_confidence: float,
+        bug_fixes: list[str],
+        all_entries: list[ChangelogEntry],
+    ) -> tuple[VersionBumpType, float, list[str]]:
+        """Determine the appropriate version bump type and reasoning."""
+        if has_breaking:
+            return (
+                VersionBumpType.MAJOR,
+                breaking_confidence,
+                [
+                    f"Breaking changes detected ({len(breaking_changes)} found)",
+                    "MAJOR version bump required to maintain semantic versioning",
+                ],
+            )
+        elif has_features:
+            return (
+                VersionBumpType.MINOR,
+                feature_confidence,
+                [
+                    f"New features detected ({len(new_features)} found)",
+                    "MINOR version bump recommended for backward-compatible functionality",
+                ],
+            )
+        elif bug_fixes:
+            return (
+                VersionBumpType.PATCH,
+                0.9,
+                [
+                    f"Bug fixes detected ({len(bug_fixes)} found)",
+                    "PATCH version bump recommended for backward-compatible fixes",
+                ],
+            )
+        else:
+            return (
+                VersionBumpType.PATCH,
+                0.5,
+                [
+                    f"Changes detected ({len(all_entries)} commits) with unclear impact",
+                    "PATCH version bump recommended as conservative choice",
+                ],
+            )
+
     def display_recommendation(self, recommendation: VersionBumpRecommendation) -> None:
         """Display version bump recommendation in a user-friendly format."""
+        self._display_summary(recommendation)
+        self._display_reasoning(recommendation)
+        self._display_changes(recommendation)
+        self._display_commit_analysis(recommendation)
+
+    def _display_summary(self, recommendation: VersionBumpRecommendation) -> None:
+        """Display the main version bump summary."""
         self.console.print("\n[cyan]📊 Version Bump Analysis[/cyan]")
         self.console.print(
             f"Current version: [bold]{recommendation.current_version}[/bold]"
@@ -366,44 +417,37 @@ class VersionAnalyzer:
         )
         self.console.print(f"Confidence: [bold]{recommendation.confidence:.0%}[/bold]")
 
+    def _display_reasoning(self, recommendation: VersionBumpRecommendation) -> None:
+        """Display the reasoning behind the recommendation."""
         self.console.print("\n[yellow]💡 Reasoning:[/yellow]")
         for reason in recommendation.reasoning:
             self.console.print(f"  • {reason}")
 
-        if recommendation.breaking_changes:
-            self.console.print(
-                f"\n[red]⚠️  Breaking Changes ({len(recommendation.breaking_changes)}):[/red]"
-            )
-            for change in recommendation.breaking_changes[:3]:
+    def _display_changes(self, recommendation: VersionBumpRecommendation) -> None:
+        """Display breaking changes, new features, and bug fixes."""
+        self._display_change_list(
+            recommendation.breaking_changes, "[red]⚠️  Breaking Changes", "red"
+        )
+        self._display_change_list(
+            recommendation.new_features, "[green]✨ New Features", "green"
+        )
+        self._display_change_list(
+            recommendation.bug_fixes, "[blue]🔧 Bug Fixes", "blue"
+        )
+
+    def _display_change_list(self, changes: list[str], title: str, color: str) -> None:
+        """Display a list of changes with truncation."""
+        if changes:
+            self.console.print(f"\n{title} ({len(changes)}):[/{color}]")
+            for change in changes[:3]:
                 self.console.print(f"  • {change}")
-            if len(recommendation.breaking_changes) > 3:
-                self.console.print(
-                    f"  • ... and {len(recommendation.breaking_changes) - 3} more"
-                )
+            if len(changes) > 3:
+                self.console.print(f"  • ... and {len(changes) - 3} more")
 
-        if recommendation.new_features:
-            self.console.print(
-                f"\n[green]✨ New Features ({len(recommendation.new_features)}):[/green]"
-            )
-            for feature in recommendation.new_features[:3]:
-                self.console.print(f"  • {feature}")
-            if len(recommendation.new_features) > 3:
-                self.console.print(
-                    f"  • ... and {len(recommendation.new_features) - 3} more"
-                )
-
-        if recommendation.bug_fixes:
-            self.console.print(
-                f"\n[blue]🔧 Bug Fixes ({len(recommendation.bug_fixes)}):[/blue]"
-            )
-            for fix in recommendation.bug_fixes[:3]:
-                self.console.print(f"  • {fix}")
-            if len(recommendation.bug_fixes) > 3:
-                self.console.print(
-                    f"  • ... and {len(recommendation.bug_fixes) - 3} more"
-                )
-
-        # Display commit analysis summary
+    def _display_commit_analysis(
+        self, recommendation: VersionBumpRecommendation
+    ) -> None:
+        """Display commit analysis summary."""
         analysis = recommendation.commit_analysis
         if analysis.get("type_counts"):
             self.console.print("\n[dim]📈 Commit Analysis:[/dim]")

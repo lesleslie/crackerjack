@@ -171,13 +171,13 @@ class ZubanAdapter(BaseRustToolAdapter):
             column = self._extract_column_number(message_part)
 
             message_data = self._parse_message_content(message_part)
-            severity = self._normalize_severity(message_data["severity"])
+            severity = self._normalize_severity(message_data["severity"] or "error")
 
             return TypeIssue(
                 file_path=file_path,
                 line_number=line_number,
                 column=column,
-                message=message_data["message"],
+                message=message_data["message"] or "Unknown error",
                 severity=severity,
                 error_code=message_data["error_code"],
             )

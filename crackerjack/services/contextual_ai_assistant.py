@@ -149,7 +149,7 @@ class ContextualAIAssistant:
                     priority="high",
                     title="Fix Lint Errors",
                     description=f"Found {context.lint_errors_count} lint errors that should be addressed.",
-                    action_command="python -m crackerjack --ai-agent",
+                    action_command="python -m crackerjack --ai-fix",
                     reasoning="High lint error count indicates technical debt and potential bugs",
                     confidence=0.95,
                 ),
@@ -497,10 +497,10 @@ class ContextualAIAssistant:
             return "Check security with: python -m crackerjack --check-dependencies\nRun security audit: uv run bandit -r ."
 
         if "lint" in query_lower or "format" in query_lower:
-            return "Fix code style with: python -m crackerjack\nFor AI-powered fixes: python -m crackerjack --ai-agent"
+            return "Fix code style with: python -m crackerjack\nFor AI-powered fixes: python -m crackerjack --ai-fix"
 
         if "test" in query_lower:
-            return "Run tests with: python -m crackerjack -t\nFor AI-powered test fixes: python -m crackerjack --ai-agent -t"
+            return "Run tests with: python -m crackerjack -t\nFor AI-powered test fixes: python -m crackerjack --ai-fix -t"
 
         if "publish" in query_lower or "release" in query_lower:
             return "Publish to PyPI: python -m crackerjack -p patch\nBump version only: python -m crackerjack -b patch"
@@ -511,4 +511,4 @@ class ContextualAIAssistant:
         if "dashboard" in query_lower or "monitor" in query_lower:
             return "Start monitoring dashboard: python -m crackerjack --dashboard\nStart WebSocket server: python -m crackerjack --start-websocket-server"
 
-        return "For full help, run: python -m crackerjack --help\nFor AI assistance: python -m crackerjack --ai-agent"
+        return "For full help, run: python -m crackerjack --help\nFor AI assistance: python -m crackerjack --ai-fix"

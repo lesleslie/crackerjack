@@ -178,7 +178,7 @@ class SecurityAgent(SubAgent):
     def _get_security_recommendations(self) -> list[str]:
         return [
             "Use centralized SAFE_PATTERNS for regex operations to prevent ReDoS attacks",
-            "Avoid raw regex patterns with vulnerable replacement syntax like \\g < 1 >",
+            "Avoid raw regex patterns with vulnerable replacement syntax like \\g<1>",
             "Use tempfile module for temporary file creation instead of hardcoded paths",
             "Avoid shell=True in subprocess calls to prevent command injection",
             "Store secrets in environment variables using os.getenv(), never hardcode them",

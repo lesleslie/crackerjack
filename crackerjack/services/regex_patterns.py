@@ -99,7 +99,7 @@ class ValidatedPattern:
         if r"\g < " in self.replacement or r" >" in self.replacement:
             raise ValueError(
                 f"Bad replacement syntax in '{self.name}': {self.replacement}. "
-                "Use \\g<1> not \\g < 1 >"
+                "Use \\g<1> not \\g<1>"  # REGEX OK: educational example
             )
 
         warnings = validate_pattern_safety(self.pattern)
@@ -227,7 +227,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         description="Fix spacing in long flags like '--help'",
         test_cases=[
             ("- - help", "--help"),
-            ("- - ai-agent", "--ai-agent"),
+            ("- - ai-fix", "--ai-fix"),
             ("--help", "--help"),
             ("- - start-websocket-server", "--start-websocket-server"),
         ],

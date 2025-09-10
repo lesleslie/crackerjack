@@ -24,7 +24,7 @@ Run Crackerjack with advanced orchestrated AI-powered auto-fix mode to automatic
 
 This slash command runs Crackerjack with AI agent mode for autonomous code quality enforcement:
 
-- `--ai-agent`: AI agent mode for structured error output and intelligent fixing
+- `--ai-fix`: AI auto-fixing mode for structured error output and intelligent fixing
 - `--test`: Run tests with comprehensive test coverage
 - `--verbose`: Show detailed AI decision-making and execution details
 
@@ -104,7 +104,7 @@ AI: I'll use the /crackerjack:run command to automatically fix all code quality 
 
 /crackerjack:run
 
-[AI runs: python -m crackerjack --ai-agent --test --verbose]
+[AI runs: python -m crackerjack --ai-fix --test --verbose]
 
 The crackerjack AI agent completed successfully after 3 iterations! Here's what was automatically fixed:
 

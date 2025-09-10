@@ -70,17 +70,17 @@ class TestValidatedPattern:
             ValidatedPattern(
                 name="bad_replacement",
                 pattern=r"(\w+)",
-                replacement=r"\g < 1 >",  # Bad syntax with spaces
+                replacement=r"\g<1>",  # Bad syntax with spaces
                 test_cases=[],
             )
 
     def test_bad_replacement_syntax_variations(self) -> None:
         """Test various bad replacement syntax patterns."""
         bad_replacements = [
-            r"\g < 1>",
+            r"\g<1>",
             r"\g<1 >",
-            r"\g < 1 >",
-            r"text \g < 2 > more",
+            r"\g<1>",
+            r"text \g<2> more",
         ]
 
         for bad_replacement in bad_replacements:

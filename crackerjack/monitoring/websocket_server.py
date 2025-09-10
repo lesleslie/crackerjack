@@ -391,7 +391,7 @@ class CrackerjackMonitoringServer:
 </head>
 <body>
     <div class="connection-status disconnected" id="connection-status">Connecting...</div>
-    
+
     <div class="header">
         <h1>🔧 Crackerjack Monitoring Dashboard</h1>
         <p>Real-time project monitoring and analytics</p>
@@ -475,70 +475,70 @@ class CrackerjackMonitoringServer:
 
         function connect() {
             ws = new WebSocket(wsUrl);
-            
+
             ws.onopen = function() {
                 document.getElementById('connection-status').textContent = 'Connected';
                 document.getElementById('connection-status').className = 'connection-status connected';
                 log('Connected to monitoring server');
             };
-            
+
             ws.onmessage = function(event) {
                 const message = JSON.parse(event.data);
                 if (message.type === 'metrics_update' || message.type === 'initial_metrics') {
                     updateDashboard(message.data);
                 }
             };
-            
+
             ws.onclose = function() {
                 document.getElementById('connection-status').textContent = 'Disconnected';
                 document.getElementById('connection-status').className = 'connection-status disconnected';
                 log('Disconnected from monitoring server');
                 setTimeout(connect, reconnectInterval);
             };
-            
+
             ws.onerror = function(error) {
                 log(`WebSocket error: ${error}`);
             };
         }
-        
+
         function updateDashboard(data) {
             // System metrics
             document.getElementById('cpu').textContent = data.system.cpu_usage.toFixed(1) + '%';
             document.getElementById('memory').textContent = (data.system.memory_usage_mb / 1024).toFixed(1) + 'GB';
             document.getElementById('uptime').textContent = formatUptime(data.system.uptime_seconds);
-            
+
             // Quality metrics
             document.getElementById('success-rate').textContent = (data.quality.success_rate * 100).toFixed(1) + '%';
             document.getElementById('issues-fixed').textContent = data.quality.issues_fixed;
             document.getElementById('coverage').textContent = (data.quality.test_coverage * 100).toFixed(1) + '%';
-            
+
             // Workflow metrics
             document.getElementById('jobs-completed').textContent = data.workflow.jobs_completed;
             document.getElementById('avg-duration').textContent = data.workflow.average_job_duration.toFixed(1) + 's';
             document.getElementById('throughput').textContent = data.workflow.throughput_per_hour.toFixed(1) + '/h';
-            
+
             // Agent metrics
             document.getElementById('active-agents').textContent = data.agents.active_agents;
             document.getElementById('total-fixes').textContent = data.agents.total_fixes_applied;
             document.getElementById('cache-hit-rate').textContent = (data.agents.cache_hit_rate * 100).toFixed(1) + '%';
         }
-        
+
         function formatUptime(seconds) {
             if (seconds < 3600) return Math.floor(seconds/60) + 'm';
             if (seconds < 86400) return Math.floor(seconds/3600) + 'h';
             return Math.floor(seconds/86400) + 'd';
         }
-        
+
         function log(message) {
             const logs = document.getElementById('logs');
             const timestamp = new Date().toLocaleTimeString();
             logs.innerHTML += `<div>[${timestamp}] ${message}</div>`;
             logs.scrollTop = logs.scrollHeight;
         }
-        
+
         // Start connection
         connect();
-        
+
         // Periodic ping to keep connection alive
         setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) {

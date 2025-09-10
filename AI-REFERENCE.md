@@ -12,7 +12,7 @@ This document is specifically structured for AI assistants to quickly understand
 |---------|----------|-------------|-----------------|
 | `python -m crackerjack` | Quality checks only | Standard development iteration | Exit code 0, no issues found |
 | `python -m crackerjack -t` | Quality + tests | Comprehensive validation | All tests pass, hooks pass |
-| `python -m crackerjack --ai-agent -t` | AI auto-fixing | **RECOMMENDED**: Autonomous issue resolution | 5 iterations max, all issues resolved |
+| `python -m crackerjack --ai-fix -t` | AI auto-fixing | **RECOMMENDED**: Autonomous issue resolution | 5 iterations max, all issues resolved |
 | `python -m crackerjack --ai-debug -t` | AI debugging | Troubleshooting AI agent issues | Verbose output, decision explanations |
 | `python -m crackerjack -x` | Code cleaning | TODO resolution required | Blocks if TODOs found, creates backups |
 
@@ -37,7 +37,7 @@ graph TD
     B -->|Documentation| G[Use DocumentationAgent]
     B -->|Performance| H[Use PerformanceAgent]
 
-    C --> I[python -m crackerjack --ai-agent -t]
+    C --> I[python -m crackerjack --ai-fix -t]
     D --> I
     E --> I
     F --> J[Single agent with 0.9 confidence]
@@ -54,7 +54,7 @@ graph TD
     A[Starting Development] --> B{What's the goal?}
     B -->|Quick Check| C[python -m crackerjack]
     B -->|Full Validation| D[python -m crackerjack -t]
-    B -->|Auto-Fix Issues| E[python -m crackerjack --ai-agent -t]
+    B -->|Auto-Fix Issues| E[python -m crackerjack --ai-fix -t]
     B -->|Clean Code| F[python -m crackerjack -x]
     B -->|Release| G[python -m crackerjack -a patch]
 
@@ -192,13 +192,13 @@ def complex_method(self, data: dict) -> bool:
 
 1. `python -m crackerjack` - Quick quality check
 1. `python -m crackerjack -t` - Full validation
-1. If issues found → `python -m crackerjack --ai-agent -t`
+1. If issues found → `python -m crackerjack --ai-fix -t`
 1. Commit changes
 1. Repeat
 
 ### Release Cycle
 
-1. `python -m crackerjack --ai-agent -t` - Ensure quality
+1. `python -m crackerjack --ai-fix -t` - Ensure quality
 1. `python -m crackerjack --bump patch` - Version bump
 1. `python -m crackerjack -a patch` - Publish release
 1. Verify deployment

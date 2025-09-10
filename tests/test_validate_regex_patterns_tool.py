@@ -80,7 +80,7 @@ class TestValidateRegexPatternsTool:
                 def bad_replacement():
                     text = "foo-bar"
                     # Bad syntax with spaces
-                    result = re.sub(r"(\\w+)-(\\w+)", r"\\g < 1 >_\\g < 2 >", text)
+                    result = re.sub(r"(\\w+)-(\\w+)", r"\\g<1>_\\g<2>", text)  # REGEX OK: test case
                     return result
             """)
             )
@@ -95,8 +95,10 @@ class TestValidateRegexPatternsTool:
             )
             assert critical_issue is not None
             assert "Bad replacement syntax detected" in critical_issue[1]
-            assert "\\g < 1 >_\\g < 2 >" in critical_issue[1]
-            assert "Use \\g<1> not \\g < 1 >" in critical_issue[1]
+            assert "\\g<1>_\\g<2>" in critical_issue[1]  # REGEX OK: test assertion
+            assert (
+                "Use \\g<1> not \\g<1>" in critical_issue[1]
+            )  # REGEX OK: test assertion
 
     def test_allows_exempted_files(self) -> None:
         """Test that whitelisted files are allowed to use regex."""

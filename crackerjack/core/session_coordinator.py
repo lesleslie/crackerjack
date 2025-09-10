@@ -291,80 +291,92 @@ class SessionCoordinator:
     def _capture_quality_metrics(self) -> None:
         """Capture quality metrics at the end of the session."""
         try:
-            from crackerjack.services.quality_baseline_enhanced import (
-                EnhancedQualityBaselineService,
-            )
-
-            # Initialize quality service
-            quality_service = EnhancedQualityBaselineService()
-
-            # Extract metrics from current session
+            quality_service = self._initialize_quality_service()
             metrics = self._extract_session_metrics()
 
             if metrics:
-                # Record baseline with individual parameters
-                quality_service.record_baseline(
-                    coverage_percent=metrics.get("coverage_percent", 0.0),
-                    test_count=metrics.get("test_count", 0),
-                    test_pass_rate=metrics.get("test_pass_rate", 100.0),
-                    hook_failures=metrics.get("hook_failures", 0),
-                    complexity_violations=metrics.get("complexity_violations", 0),
-                    security_issues=metrics.get("security_issues", 0),
-                    type_errors=metrics.get("type_errors", 0),
-                    linting_issues=metrics.get("linting_issues", 0),
-                )
-
-                # Generate and display report
+                self._record_quality_baseline(quality_service, metrics)
                 report = quality_service.generate_comprehensive_report(metrics)
                 self._display_quality_report(report)
-
         except Exception as e:
-            # Don't fail the session for quality tracking errors
-            self.console.print(
-                f"[dim yellow]Warning: Quality tracking failed: {e}[/dim yellow]"
-            )
+            self._handle_quality_tracking_error(e)
+
+    def _initialize_quality_service(self):
+        """Initialize the quality baseline service."""
+        from crackerjack.services.quality_baseline_enhanced import (
+            EnhancedQualityBaselineService,
+        )
+
+        return EnhancedQualityBaselineService()
+
+    def _record_quality_baseline(
+        self, quality_service, metrics: dict[str, t.Any]
+    ) -> None:
+        """Record quality baseline with metrics."""
+        quality_service.record_baseline(
+            coverage_percent=metrics.get("coverage_percent", 0.0),
+            test_count=metrics.get("test_count", 0),
+            test_pass_rate=metrics.get("test_pass_rate", 100.0),
+            hook_failures=metrics.get("hook_failures", 0),
+            complexity_violations=metrics.get("complexity_violations", 0),
+            security_issues=metrics.get("security_issues", 0),
+            type_errors=metrics.get("type_errors", 0),
+            linting_issues=metrics.get("linting_issues", 0),
+        )
+
+    def _handle_quality_tracking_error(self, error: Exception) -> None:
+        """Handle quality tracking errors without failing the session."""
+        self.console.print(
+            f"[dim yellow]Warning: Quality tracking failed: {error}[/dim yellow]"
+        )
 
     def _extract_session_metrics(self) -> dict[str, t.Any] | None:
         """Extract quality metrics from the current session."""
         try:
-            # Extract from task tracking
             metrics = {}
-
-            # Coverage metrics (if available from testing task)
-            if "testing" in self.tasks:
-                test_task = self.tasks["testing"]
-                if hasattr(test_task, "coverage_percent"):
-                    metrics["coverage_percent"] = getattr(
-                        test_task, "coverage_percent", 0.0
-                    )
-                if hasattr(test_task, "test_count"):
-                    metrics["test_count"] = getattr(test_task, "test_count", 0)
-                if hasattr(test_task, "test_pass_rate"):
-                    metrics["test_pass_rate"] = getattr(
-                        test_task, "test_pass_rate", 0.0
-                    )
-
-            # Hook failure metrics
-            hook_failures = 0
-            for task_name, task in self.tasks.items():
-                if "hooks" in task_name and hasattr(task, "status"):
-                    if getattr(task, "status") == "failed":
-                        hook_failures += 1
-            metrics["hook_failures"] = hook_failures
-
-            # Default values for metrics we don't have direct access to
-            metrics.setdefault("coverage_percent", 0.0)
-            metrics.setdefault("test_count", 0)
-            metrics.setdefault("test_pass_rate", 100.0 if self.success else 0.0)
-            metrics.setdefault("complexity_violations", 0)
-            metrics.setdefault("security_issues", 0)
-            metrics.setdefault("type_errors", 0)
-            metrics.setdefault("linting_issues", 0)
-
+            self._extract_test_metrics(metrics)
+            self._extract_hook_metrics(metrics)
+            self._set_default_metrics(metrics)
             return metrics if metrics else None
-
         except Exception:
             return None
+
+    def _extract_test_metrics(self, metrics: dict[str, t.Any]) -> None:
+        """Extract test-related metrics from tasks."""
+        if "testing" not in self.tasks:
+            return
+
+        test_task = self.tasks["testing"]
+
+        if hasattr(test_task, "coverage_percent"):
+            metrics["coverage_percent"] = getattr(test_task, "coverage_percent", 0.0)
+        if hasattr(test_task, "test_count"):
+            metrics["test_count"] = getattr(test_task, "test_count", 0)
+        if hasattr(test_task, "test_pass_rate"):
+            metrics["test_pass_rate"] = getattr(test_task, "test_pass_rate", 0.0)
+
+    def _extract_hook_metrics(self, metrics: dict[str, t.Any]) -> None:
+        """Extract hook failure metrics from tasks."""
+        hook_failures = 0
+        for task_name, task in self.tasks.items():
+            if "hooks" in task_name and hasattr(task, "status"):
+                if getattr(task, "status") == "failed":
+                    hook_failures += 1
+        metrics["hook_failures"] = hook_failures
+
+    def _set_default_metrics(self, metrics: dict[str, t.Any]) -> None:
+        """Set default values for metrics we don't have direct access to."""
+        defaults = {
+            "coverage_percent": 0.0,
+            "test_count": 0,
+            "test_pass_rate": 100.0 if self.success else 0.0,
+            "complexity_violations": 0,
+            "security_issues": 0,
+            "type_errors": 0,
+            "linting_issues": 0,
+        }
+        for key, default_value in defaults.items():
+            metrics.setdefault(key, default_value)
 
     def _display_quality_report(self, report) -> None:
         """Display a summary of the quality report."""

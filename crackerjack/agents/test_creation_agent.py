@@ -1068,7 +1068,7 @@ class TestCreationAgent(SubAgent):
                     fixes.append(f"Added test for function {func_info['name']}")
                     files.append(str(test_file_path))
             else:
-                test_content = await self._generate_minimal_test_file(func_info)
+                test_content = await self._generate_function_test(func_info)
                 if self.context.write_file_content(test_file_path, test_content):
                     fixes.append(f"Created test file with test for {func_info['name']}")
                     files.append(str(test_file_path))

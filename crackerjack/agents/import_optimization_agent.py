@@ -522,6 +522,13 @@ class ImportOptimizationAgent(SubAgent):
         return await self._process_import_optimization_issue(issue)
 
     async def _process_import_optimization_issue(self, issue: Issue) -> FixResult:
+        if not issue.file_path:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                fixes_applied=[],
+                remaining_issues=["No file path provided in issue"],
+            )
         file_path = Path(issue.file_path)
 
         analysis = await self.analyze_file(file_path)

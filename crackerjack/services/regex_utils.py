@@ -139,8 +139,8 @@ def suggest_migration_for_re_sub(
     }
 
     forbidden_checks = [
-        (r"\\g\s*<\s*\d+\s*>", "\\g < 1 > with spaces"),
-        (r"\\g<\s+\d+>", "\\g< 1> with space after <"),
+        (r"\\g\s*<\s*\d+\s*>", "\\g<1> with spaces"),
+        (r"\\g<\s+\d+>", "\\g<1> with space after <"),
         (r"\\\\g<\\d+\\s+>", "\\\\g<1 > with space before >"),
     ]
     for forbidden_pattern, _ in forbidden_checks:
