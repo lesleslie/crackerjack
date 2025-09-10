@@ -55,7 +55,7 @@ Add to your `.mcp.json` configuration:
 ### 1. Initialize Your Session
 
 ```
-/session-mgmt:init
+/session-mgmt:start
 ```
 
 This single command:
@@ -113,7 +113,7 @@ Automatic cleanup with:
 
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
-| `/session-mgmt:init` | Full session setup | Start of every session |
+| `/session-mgmt:start` | Full session setup | Start of every session |
 | `/session-mgmt:checkpoint` | Quality monitoring | Every 30-45 minutes |
 | `/session-mgmt:reflect_on_past` | Search conversations | When you need past context |
 | `/session-mgmt:store_reflection` | Save important insights | After solving tough problems |
@@ -166,7 +166,7 @@ ls /path/to/session-mgmt-mcp/session_mgmt_mcp/server.py
 
 ### No Conversations Found
 
-- Run `/session-mgmt:init` first to initialize the database
+- Run `/session-mgmt:start` first to initialize the database
 - Check `~/.claude/data/` directory exists and is writable
 
 ## What's Next?
@@ -184,4 +184,4 @@ ls /path/to/session-mgmt-mcp/session_mgmt_mcp/server.py
 
 ______________________________________________________________________
 
-**Ready to supercharge your Claude Code sessions?** Run `/session-mgmt:init` and experience the difference! 🚀
+**Ready to supercharge your Claude Code sessions?** Run `/session-mgmt:start` and experience the difference! 🚀

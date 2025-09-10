@@ -4,14 +4,14 @@ Complete reference guide for all Session Management MCP tools. Use these slash c
 
 ## 🚀 Core Session Management
 
-### `/session-mgmt:init` - Session Initialization
+### `/session-mgmt:start` - Session Initialization
 
 **Purpose**: Complete session setup with project analysis and dependency management
 
 **Usage**:
 
 ```
-/session-mgmt:init
+/session-mgmt:start
 ```
 
 **What it does**:
@@ -420,7 +420,7 @@ pip install "session-mgmt-mcp[embeddings]"
 
 #### "No conversations found"
 
-- Ensure you've run `/session-mgmt:init` to initialize the database
+- Ensure you've run `/session-mgmt:start` to initialize the database
 - Check that `~/.claude/data/` directory exists and is writable
 
 #### "Project not detected"

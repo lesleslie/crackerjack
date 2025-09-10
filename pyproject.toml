@@ -37,11 +37,16 @@ dependencies = [
     "duckdb>=0.9",
     "fastmcp>=2",
     "numpy>=1.24",
+    "onnxruntime>=1.15",
+    "psutil>=7.0.0",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
+    "rich>=14.1.0",
     "structlog>=25.4",
     "tiktoken>=0.5",
     "tomli>=2.2.1",
+    "transformers>=4.21",
+    "typer>=0.17.4",
 ]
 
 [project.license]
@@ -59,11 +64,6 @@ dev = [
     "pytest-mock>=3.10",
     "pytest-timeout>=2.1",
     "pytest-xdist>=3",
-]
-embeddings = [
-    "numpy>=1.24",
-    "onnxruntime>=1.15",
-    "transformers>=4.21",
 ]
 
 [project.urls]

@@ -40,7 +40,7 @@ def _create_session_shortcuts() -> dict:
 description: Start session management for current project
 ---
 
-Please execute session-mgmt:init to initialize session management for the current project.
+Please execute session-mgmt:start to initialize session management for the current project.
 
 This will:
 1. Set up session tracking for the git repository
@@ -108,8 +108,8 @@ This will:
 
 
 # Tool implementations
-async def _init_impl(working_directory: str | None = None) -> str:
-    """Implementation for init tool."""
+async def _start_impl(working_directory: str | None = None) -> str:
+    """Implementation for start tool."""
     output = []
     output.append("🚀 Claude Session Initialization via MCP Server")
     output.append("=" * 60)
@@ -391,14 +391,14 @@ def register_session_tools(mcp_server) -> None:
     """Register all session management tools with the MCP server."""
 
     @mcp_server.tool()
-    async def init(working_directory: str | None = None) -> str:
+    async def start(working_directory: str | None = None) -> str:
         """Initialize Claude session with comprehensive setup including UV dependencies and automation tools.
 
         Args:
             working_directory: Optional working directory override (defaults to PWD environment variable or current directory)
 
         """
-        return await _init_impl(working_directory)
+        return await _start_impl(working_directory)
 
     @mcp_server.tool()
     async def checkpoint() -> str:

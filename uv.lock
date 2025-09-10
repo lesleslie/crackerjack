@@ -2268,11 +2268,16 @@ dependencies = [
     { name = "duckdb" },
     { name = "fastmcp" },
     { name = "numpy" },
+    { name = "onnxruntime" },
+    { name = "psutil" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "rich" },
     { name = "structlog" },
     { name = "tiktoken" },
     { name = "tomli" },
+    { name = "transformers" },
+    { name = "typer" },
 ]
 
 [package.optional-dependencies]
@@ -2287,11 +2292,6 @@ dev = [
     { name = "pytest-mock" },
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
-]
-embeddings = [
-    { name = "numpy" },
-    { name = "onnxruntime" },
-    { name = "transformers" },
 ]
 
 [package.dev-dependencies]
@@ -2319,8 +2319,8 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=2" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.70" },
     { name = "numpy", specifier = ">=1.24" },
-    { name = "numpy", marker = "extra == 'embeddings'", specifier = ">=1.24" },
-    { name = "onnxruntime", marker = "extra == 'embeddings'", specifier = ">=1.15" },
+    { name = "onnxruntime", specifier = ">=1.15" },
+    { name = "psutil", specifier = ">=7.0.0" },
     { name = "psutil", marker = "extra == 'dev'", specifier = ">=5.9" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
@@ -2331,12 +2331,14 @@ requires-dist = [
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.10" },
     { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.1" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3" },
+    { name = "rich", specifier = ">=14.1.0" },
     { name = "structlog", specifier = ">=25.4" },
     { name = "tiktoken", specifier = ">=0.5" },
     { name = "tomli", specifier = ">=2.2.1" },
-    { name = "transformers", marker = "extra == 'embeddings'", specifier = ">=4.21" },
+    { name = "transformers", specifier = ">=4.21" },
+    { name = "typer", specifier = ">=0.17.4" },
 ]
-provides-extras = ["dev", "embeddings"]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [

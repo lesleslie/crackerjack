@@ -172,7 +172,7 @@ pip install "session-mgmt-mcp[embeddings]"
 
 ## Recommended Session Workflow
 
-1. Initialize Session: `/session-mgmt:init`
+1. Initialize Session: `/session-mgmt:start`
 1. Monitor Progress: `/session-mgmt:checkpoint` (every 30-45 minutes)
 1. Search Past Work: `/session-mgmt:reflect_on_past`
 1. Store Important Insights: `/session-mgmt:store_reflection`

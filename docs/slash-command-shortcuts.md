@@ -2,13 +2,13 @@
 
 ## Overview
 
-The session-mgmt MCP server automatically creates Claude Code slash command shortcuts the first time `session-mgmt:init` is executed. These shortcuts provide convenient aliases for session management operations.
+The session-mgmt MCP server automatically creates Claude Code slash command shortcuts the first time `session-mgmt:start` is executed. These shortcuts provide convenient aliases for session management operations.
 
 ## Auto-Created Shortcuts
 
-When you run `session-mgmt:init` for the first time, the following shortcuts are automatically created in `~/.claude/commands/`:
+When you run `session-mgmt:start` for the first time, the following shortcuts are automatically created in `~/.claude/commands/`:
 
-### `/start` → `session-mgmt:init`
+### `/start` → `session-mgmt:start`
 
 **File**: `~/.claude/commands/start.md`
 
@@ -40,7 +40,7 @@ When you run `session-mgmt:init` for the first time, the following shortcuts are
 
 ## How It Works
 
-1. **First-Time Setup**: When `session-mgmt:init` runs, it calls `_create_session_shortcuts()`
+1. **First-Time Setup**: When `session-mgmt:start` runs, it calls `_create_session_shortcuts()`
 1. **Directory Creation**: Creates `~/.claude/commands/` if it doesn't exist
 1. **Shortcut Detection**: Checks if shortcuts already exist to avoid overwriting
 1. **File Creation**: Creates Markdown files with proper Claude Code slash command format
@@ -73,8 +73,8 @@ When you run `session-mgmt:init` for the first time, the following shortcuts are
 
 ### Integration Points
 
-1. **Called from**: `_init_impl()` in session_tools.py
-1. **Triggered by**: First `session-mgmt:init` execution
+1. **Called from**: `_start_impl()` in session_tools.py
+1. **Triggered by**: First `session-mgmt:start` execution
 1. **File format**: Markdown with YAML frontmatter (Claude Code standard)
 1. **Location**: Global `~/.claude/commands/` (available in all projects)
 
@@ -104,7 +104,7 @@ Command execution instructions using session-mgmt MCP tools.
 
 ```bash
 # User had to manually create shortcuts or use full MCP tool names
-session-mgmt:init
+session-mgmt:start
 session-mgmt:checkpoint
 session-mgmt:end
 ```
@@ -112,7 +112,7 @@ session-mgmt:end
 ### After Auto-Creation:
 
 ```bash
-# Convenient shortcuts available immediately after first init
+# Convenient shortcuts available immediately after first start
 /start
 /checkpoint daily-standup
 /end

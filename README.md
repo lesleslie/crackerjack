@@ -224,16 +224,16 @@ Once configured, the following slash commands become available in Claude Code:
 
 ### Primary Session Commands
 
-- `/session-mgmt:init` - Full session initialization with workspace verification
+- `/session-mgmt:start` - Full session initialization with workspace verification
 - `/session-mgmt:checkpoint` - Quality monitoring checkpoint with scoring
 - `/session-mgmt:end` - Complete session cleanup with learning capture
 - `/session-mgmt:status` - Current status overview with health checks
 
 ### Auto-Generated Shortcuts
 
-The first time you run `/session-mgmt:init`, convenient shortcuts are automatically created:
+The first time you run `/session-mgmt:start`, convenient shortcuts are automatically created:
 
-- **`/start`** → `/session-mgmt:init` - Quick session initialization
+- **`/start`** → `/session-mgmt:start` - Quick session initialization
 - **`/checkpoint [name]`** → `/session-mgmt:checkpoint` - Create named checkpoints
 - **`/end`** → `/session-mgmt:end` - Quick session cleanup
 
@@ -294,7 +294,7 @@ This server manages its data locally in the user's home directory:
 
 ## Recommended Session Workflow
 
-1. **Initialize Session**: `/session-mgmt:init`
+1. **Initialize Session**: `/session-mgmt:start`
 
    - UV dependency synchronization
    - Project context analysis and health monitoring
@@ -338,7 +338,7 @@ This server manages its data locally in the user's home directory:
 
 ### Reduced Friction
 
-- **Single Command Setup**: One `/session-mgmt:init` sets up everything
+- **Single Command Setup**: One `/session-mgmt:start` sets up everything
 - **Local Dependencies**: No external API calls or services required
 - **Intelligent Permissions**: Reduces repeated permission prompts
 - **Automated Workflows**: Structured processes for common tasks

@@ -47,7 +47,7 @@ Once configured, these slash commands become available in Claude Code:
 
 ```bash
 # Session Management
-/session-mgmt:init              # Initialize session with project analysis
+/session-mgmt:start             # Initialize session with project analysis
 /session-mgmt:checkpoint        # Mid-session quality assessment
 /session-mgmt:end              # Complete session cleanup
 /session-mgmt:status           # Current session status

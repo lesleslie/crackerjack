@@ -17,6 +17,7 @@ import os
 import shutil
 import subprocess
 import sys
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -416,10 +417,71 @@ def _load_mcp_config() -> dict[str, Any]:
         }
 
 
-# Load configuration and initialize FastMCP 2.0 server
+# Import required components for automatic lifecycle
+from session_mgmt_mcp.core import SessionLifecycleManager
+from session_mgmt_mcp.utils.git_operations import get_git_root, is_git_repository
+
+# Global session manager for lifespan handlers
+lifecycle_manager = SessionLifecycleManager()
+
+# Global connection info for notification display
+_connection_info = None
+
+
+# Lifespan handler for automatic session management
+@asynccontextmanager
+async def session_lifecycle(app):
+    """Automatic session lifecycle for git repositories only."""
+    current_dir = Path(os.getcwd())
+
+    # Only auto-initialize for git repositories
+    if is_git_repository(current_dir):
+        try:
+            git_root = get_git_root(current_dir)
+            session_logger.info(f"Git repository detected at {git_root}")
+
+            # Run the same logic as the start tool but with connection notification
+            result = await lifecycle_manager.initialize_session(str(current_dir))
+            if result["success"]:
+                session_logger.info("✅ Auto-initialized session for git repository")
+
+                # Store connection info for display via tools
+                global _connection_info
+                _connection_info = {
+                    "connected_at": "just connected",
+                    "project": result["project"],
+                    "quality_score": result["quality_score"],
+                    "previous_session": result.get("previous_session"),
+                    "recommendations": result["quality_data"].get(
+                        "recommendations", []
+                    ),
+                }
+            else:
+                session_logger.warning(f"Auto-init failed: {result['error']}")
+        except Exception as e:
+            session_logger.warning(f"Auto-init failed (non-critical): {e}")
+    else:
+        session_logger.debug("Non-git directory - skipping auto-initialization")
+
+    yield  # Server runs normally
+
+    # On disconnect - cleanup for git repos only
+    if is_git_repository(current_dir):
+        try:
+            result = await lifecycle_manager.end_session()
+            if result["success"]:
+                session_logger.info("✅ Auto-ended session for git repository")
+            else:
+                session_logger.warning(f"Auto-cleanup failed: {result['error']}")
+        except Exception as e:
+            session_logger.warning(f"Auto-cleanup failed (non-critical): {e}")
+
+
+# Load configuration and initialize FastMCP 2.0 server with lifespan
 _mcp_config = _load_mcp_config()
 
-mcp = FastMCP("session-mgmt-mcp", streamable_http_path="/mcp")
+# Initialize MCP server with lifespan
+mcp = FastMCP("session-mgmt-mcp", lifespan=session_lifecycle)
 
 # Register extracted tool modules following crackerjack architecture patterns
 # Import session command definitions
@@ -3420,6 +3482,59 @@ async def git_worktree_switch(
         return f"❌ Failed to switch worktree context: {e}"
 
 
+@mcp.tool()
+async def session_welcome() -> str:
+    """Display session connection information and previous session details."""
+    global _connection_info
+
+    if not _connection_info:
+        return "ℹ️ Session information not available (may not be a git repository)"
+
+    output = []
+    output.append("🚀 Session Management Connected!")
+    output.append("=" * 40)
+
+    # Current session info
+    output.append(f"📁 Project: {_connection_info['project']}")
+    output.append(f"📊 Current quality score: {_connection_info['quality_score']}/100")
+    output.append(f"🔗 Connection status: {_connection_info['connected_at']}")
+
+    # Previous session info
+    previous = _connection_info.get("previous_session")
+    if previous:
+        output.append("\n📋 Previous Session Summary:")
+        output.append("-" * 30)
+
+        if "ended_at" in previous:
+            output.append(f"⏰ Last session ended: {previous['ended_at']}")
+        if "quality_score" in previous:
+            output.append(f"📈 Final score: {previous['quality_score']}")
+        if "top_recommendation" in previous:
+            output.append(f"💡 Key recommendation: {previous['top_recommendation']}")
+
+        output.append("\n✨ Session continuity restored - your progress is preserved!")
+    else:
+        output.append("\n🌟 This is your first session in this project!")
+        output.append("💡 Session data will be preserved for future continuity")
+
+    # Current recommendations
+    recommendations = _connection_info.get("recommendations", [])
+    if recommendations:
+        output.append("\n🎯 Current Recommendations:")
+        for i, rec in enumerate(recommendations[:3], 1):
+            output.append(f"   {i}. {rec}")
+
+    output.append("\n🔧 Use other session-mgmt tools for:")
+    output.append("   • /session-mgmt:status - Detailed project health")
+    output.append("   • /session-mgmt:checkpoint - Mid-session quality check")
+    output.append("   • /session-mgmt:end - Graceful session cleanup")
+
+    # Clear the connection info after display
+    _connection_info = None
+
+    return "\n".join(output)
+
+
 def main(http_mode: bool = False, http_port: int | None = None) -> None:
     """Main entry point for the MCP server."""
     # Initialize new features on startup
@@ -3448,7 +3563,7 @@ def main(http_mode: bool = False, http_port: int | None = None) -> None:
             f"WebSocket Monitor: {_mcp_config.get('websocket_monitor_port', 8677)}",
             file=sys.stderr,
         )
-        mcp.run(transport="streamable-http", host=host, port=port)
+        mcp.run(transport="streamable-http", host=host, port=port, path="/mcp")
     else:
         print("Starting Session Management MCP Server in STDIO mode", file=sys.stderr)
         mcp.run()
