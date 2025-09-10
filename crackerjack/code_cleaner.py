@@ -1087,32 +1087,47 @@ class CodeCleaner(BaseModel):
             return _safe_applicator.has_preserved_comment(stripped_line)
 
         def _remove_comment_from_line(self, line: str) -> str:
-            if '"' not in line and "'" not in line and "#" not in line:
+            """Remove comment from line while preserving strings."""
+            if not self._line_needs_comment_processing(line):
                 return line
 
+            return self._process_line_for_comment_removal(line)
+
+        def _line_needs_comment_processing(self, line: str) -> bool:
+            """Check if line needs comment processing."""
+            return '"' in line or "'" in line or "#" in line
+
+        def _process_line_for_comment_removal(self, line: str) -> str:
+            """Process line to remove comments while preserving strings."""
             result_chars = []
-            in_string = False
-            quote_char = None
-            i = 0
-            length = len(line)
+            string_state = {"in_string": False, "quote_char": None}
 
-            while i < length:
-                char = line[i]
+            for i, char in enumerate(line):
+                if self._should_break_for_comment(char, string_state):
+                    break
 
-                if not in_string:
-                    if char == "#":
-                        break
-                    elif char in ('"', "'"):
-                        in_string = True
-                        quote_char = char
-                elif char == quote_char and (i == 0 or line[i - 1] != "\\"):
-                    in_string = False
-                    quote_char = None
-
+                self._update_string_state(char, i, line, string_state)
                 result_chars.append(char)
-                i += 1
 
             return "".join(result_chars).rstrip()
+
+        def _should_break_for_comment(self, char: str, string_state: dict) -> bool:
+            """Check if we should break for a comment character."""
+            return not string_state["in_string"] and char == "#"
+
+        def _update_string_state(
+            self, char: str, index: int, line: str, string_state: dict
+        ) -> None:
+            """Update string parsing state."""
+            if not string_state["in_string"]:
+                if char in ('"', "'"):
+                    string_state["in_string"] = True
+                    string_state["quote_char"] = char
+            elif char == string_state["quote_char"] and (
+                index == 0 or line[index - 1] != "\\"
+            ):
+                string_state["in_string"] = False
+                string_state["quote_char"] = None
 
     def _create_docstring_finder_class(
         self,

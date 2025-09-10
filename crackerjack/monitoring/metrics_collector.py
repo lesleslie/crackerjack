@@ -423,5 +423,4 @@ class MetricsCollector:
             return f"{seconds / 60:.0f}m"
         elif seconds < 86400:
             return f"{seconds / 3600:.0f}h"
-        else:
-            return f"{seconds / 86400:.0f}d"
+        return f"{seconds / 86400:.0f}d"

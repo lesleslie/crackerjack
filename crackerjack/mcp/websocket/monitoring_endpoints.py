@@ -74,8 +74,7 @@ class MonitoringWebSocketManager:
                 disconnected.append(websocket)
 
         # Clean up disconnected clients
-        for websocket in disconnected:
-            self.metrics_subscribers.discard(websocket)
+        self.metrics_subscribers.difference_update(disconnected)
 
     async def broadcast_alert(self, alert: QualityAlert):
         """Broadcast alert to all connected alert subscribers."""
@@ -93,8 +92,7 @@ class MonitoringWebSocketManager:
                 disconnected.append(websocket)
 
         # Clean up disconnected clients
-        for websocket in disconnected:
-            self.alerts_subscribers.discard(websocket)
+        self.alerts_subscribers.difference_update(disconnected)
 
 
 def create_monitoring_endpoints(
@@ -259,26 +257,22 @@ def _convert_baselines_to_metrics(
     baselines: list[t.Any],
 ) -> list[UnifiedMetrics]:
     """Convert quality baselines to UnifiedMetrics objects."""
-    historical_data = []
-
-    for baseline in baselines:
-        historical_data.append(
-            UnifiedMetrics(
-                timestamp=baseline.timestamp,
-                quality_score=baseline.quality_score,
-                test_coverage=baseline.coverage_percent,
-                hook_duration=0.0,
-                active_jobs=0,
-                error_count=baseline.hook_failures
-                + baseline.security_issues
-                + baseline.type_errors
-                + baseline.linting_issues,
-                trend_direction=TrendDirection.STABLE,
-                predictions={},
-            )
+    return [
+        UnifiedMetrics(
+            timestamp=baseline.timestamp,
+            quality_score=baseline.quality_score,
+            test_coverage=baseline.coverage_percent,
+            hook_duration=0.0,
+            active_jobs=0,
+            error_count=baseline.hook_failures
+            + baseline.security_issues
+            + baseline.type_errors
+            + baseline.linting_issues,
+            trend_direction=TrendDirection.STABLE,
+            predictions={},
         )
-
-    return historical_data
+        for baseline in baselines
+    ]
 
 
 async def _send_historical_data_chunks(
@@ -554,7 +548,7 @@ async def _handle_prediction_request(
 
     # Generate specific predictions for requested horizon
     predictions = {}
-    for metric in ["quality_score", "test_coverage", "hook_duration"]:
+    for metric in ("quality_score", "test_coverage", "hook_duration"):
         pred = intelligence_service.predict_metric_value(metric, horizon_days=horizon)
         if pred:
             predictions[metric] = pred.to_dict()
@@ -888,7 +882,7 @@ async def _handle_export_data_request(
         if days > 365:
             raise HTTPException(status_code=400, detail="Days parameter too large")
 
-        if format_type not in ["json", "csv"]:
+        if format_type not in ("json", "csv"):
             raise HTTPException(
                 status_code=400, detail="Format must be 'json' or 'csv'"
             )
@@ -1134,7 +1128,7 @@ async def _build_comprehensive_analysis_results(
 
         # Generate specific predictions
         predictions = {}
-        for metric in ["quality_score", "test_coverage", "hook_duration"]:
+        for metric in ("quality_score", "test_coverage", "hook_duration"):
             pred = intelligence_service.predict_metric_value(metric, horizon_days=7)
             if pred:
                 predictions[metric] = pred.to_dict()
@@ -1556,7 +1550,7 @@ async def _handle_trigger_error_analysis_request(
 
         severity_breakdown = {
             severity: len([p for p in patterns if p.severity == severity])
-            for severity in ["low", "medium", "high", "critical"]
+            for severity in ("low", "medium", "high", "critical")
         }
 
         return JSONResponse(
@@ -1676,9 +1670,7 @@ async def _apply_graph_filters(
         def node_priority(node):
             # Count edges involving this node
             edge_count = sum(
-                1
-                for edge in graph.edges
-                if edge.source == node.id or edge.target == node.id
+                1 for edge in graph.edges if node.id in (edge.source, edge.target)
             )
             return node.complexity * edge_count
 

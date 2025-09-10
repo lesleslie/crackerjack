@@ -67,6 +67,9 @@ dependencies = [
     "tomli>=2.2.1",
     "skylos>=2.1.2",
     "zuban>=0.0.22",
+    "types-pyyaml>=6.0.12.12",
+    "types-psutil>=6.0.0.12",
+    "types-aiofiles>=24.1.0.20240626",
 ]
 
 [project.license]
@@ -295,6 +298,9 @@ exclude-deps = [
     "psutil",
     "skylos",
     "zuban",
+    "types-pyyaml",
+    "types-psutil",
+    "types-aiofiles",
 ]
 
 [tool.refurb]
@@ -332,4 +338,6 @@ dev = [
     "excalidraw-mcp>=0.1.2",
     "radon>=6.0.1",
     "session-mgmt-mcp>=0.1.3",
+    "types-psutil>=7.0.0.20250822",
+    "types-pyyaml>=6.0.12.20250822",
 ]

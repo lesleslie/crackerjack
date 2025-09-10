@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import requests
 from rich.console import Console
 
 from crackerjack.models.protocols import FileSystemInterface
@@ -344,7 +345,6 @@ class HealthMetricsService:
 
     def _fetch_package_data(self, package_name: str) -> dict[str, t.Any] | None:
         try:
-            import urllib.request
             from urllib.parse import urlparse
 
             url = f"https: //pypi.org/pypi/{package_name}/json"
@@ -360,8 +360,9 @@ class HealthMetricsService:
                 msg = f"Invalid PyPI API path: {parsed.path}"
                 raise ValueError(msg)
 
-            with urllib.request.urlopen(url, timeout=10) as response:
-                return json.load(response)
+            response = requests.get(url, timeout=10, verify=True)
+            response.raise_for_status()
+            return response.json()
         except Exception:
             return None
 

@@ -118,9 +118,9 @@ class SecurityAuditor:
     def _get_hook_security_level(self, hook_name: str) -> SecurityLevel:
         hook_name_lower = hook_name.lower()
 
-        if hook_name_lower in [name.lower() for name in self.CRITICAL_HOOKS]:
+        if hook_name_lower in (name.lower() for name in self.CRITICAL_HOOKS):
             return SecurityLevel.CRITICAL
-        elif hook_name_lower in [name.lower() for name in self.HIGH_SECURITY_HOOKS]:
+        elif hook_name_lower in (name.lower() for name in self.HIGH_SECURITY_HOOKS):
             return SecurityLevel.HIGH
         elif hook_name_lower in ("ruff-check", "vulture", "refurb", "complexipy"):
             return SecurityLevel.MEDIUM

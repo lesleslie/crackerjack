@@ -378,7 +378,7 @@ def _detect_ci_provider() -> str:
 
 def _is_parallel_safe():
     provider = _detect_ci_provider()
-    return provider not in ["travis", "unknown"]
+    return provider not in ("travis", "unknown")
 
 
 @pytest.fixture
@@ -413,7 +413,7 @@ def setup_test_environment():
 
 @pytest.fixture
 def test_isolation():
-    original_cwd = os.getcwd()
+    original_cwd = Path.cwd()
 
     with tempfile.TemporaryDirectory() as temp_dir:
         os.chdir(temp_dir)

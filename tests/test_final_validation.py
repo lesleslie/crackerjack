@@ -54,7 +54,7 @@ def test_fast_hooks_failure_behavior():
     print("\n=== Testing Fast Hooks Failure Behavior ===")
 
     temp_dir = create_project_with_guaranteed_fast_hook_failure()
-    original_dir = os.getcwd()
+    original_dir = Path.cwd()
 
     try:
         os.chdir(temp_dir)

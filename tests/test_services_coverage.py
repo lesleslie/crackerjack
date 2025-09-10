@@ -204,10 +204,3 @@ class TestOrchestrationModules:
         import crackerjack.orchestration.execution_strategies as strategies_module
 
         assert strategies_module is not None
-
-
-class TestPy313Module:
-    def test_py313_import(self) -> None:
-        import crackerjack.py313 as py313_module
-
-        assert py313_module is not None

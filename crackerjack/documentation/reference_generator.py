@@ -213,8 +213,7 @@ class ReferenceGenerator:
             if not module_file.exists():
                 raise FileNotFoundError(f"CLI module not found: {module_path}")
 
-            with open(module_file) as f:
-                source_code = f.read()
+            source_code = module_file.read_text()
 
             # Parse AST
             tree = ast.parse(source_code)
@@ -288,9 +287,9 @@ class ReferenceGenerator:
             True if command decorator
         """
         if isinstance(decorator, ast.Name):
-            return decorator.id in ["command", "click_command"]
+            return decorator.id in ("command", "click_command")
         elif isinstance(decorator, ast.Attribute):
-            return decorator.attr in ["command", "callback"]
+            return decorator.attr in ("command", "callback")
         return False
 
     def _extract_command_from_function(
@@ -627,10 +626,10 @@ class ReferenceGenerator:
         Returns:
             List of TOC lines
         """
-        toc_lines = []
-        for category, command_names in categories.items():
-            toc_lines.append(f"- [{category.title()}](#{category.replace('_', '-')})")
-        return toc_lines
+        return [
+            f"- [{category.title()}](#{category.replace('_', '-')})"
+            for category in categories
+        ]
 
     def _render_markdown_categories(self, reference: CommandReference) -> list[str]:
         """Render command categories for markdown.
@@ -858,7 +857,7 @@ class ReferenceGenerator:
         """Render reference as JSON."""
         import json
 
-        data = {
+        data: dict[str, t.Any] = {
             "generated_at": reference.generated_at.isoformat(),
             "version": reference.version,
             "categories": reference.categories,

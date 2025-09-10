@@ -150,7 +150,8 @@ class SecurityAgent(SubAgent):
             "insecure_random": self._fix_insecure_random,
         }
 
-        if fix_method := vulnerability_fix_map.get(vulnerability_type):
+        fix_method = vulnerability_fix_map.get(vulnerability_type)
+        if fix_method is not None:
             fixes = await fix_method(issue)
             fixes_applied.extend(fixes["fixes"])
             files_modified.extend(fixes["files"])
@@ -540,8 +541,11 @@ class SecurityAgent(SubAgent):
         return SAFE_PATTERNS["detect_hardcoded_secrets"].test(line)
 
     def _replace_hardcoded_secret_with_env_var(self, line: str) -> str:
-        var_name = SAFE_PATTERNS["extract_variable_name_from_assignment"].apply(line)
-        if var_name != line:
+        var_name_result = SAFE_PATTERNS["extract_variable_name_from_assignment"].apply(
+            line
+        )
+        if var_name_result != line:  # Pattern matched and extracted variable name
+            var_name = var_name_result
             env_var_name = var_name.upper()
             return f"{var_name} = os.getenv('{env_var_name}', '')"
         return line

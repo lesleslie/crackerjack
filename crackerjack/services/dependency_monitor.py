@@ -447,8 +447,9 @@ class DependencyMonitorService:
             return None
 
     def _fetch_pypi_data(self, package: str) -> dict[str, t.Any]:
-        import urllib.request
         from urllib.parse import urlparse
+
+        import requests
 
         url = f"https: //pypi.org/pypi/{package}/json"
         self._validate_pypi_url(url)
@@ -459,8 +460,9 @@ class DependencyMonitorService:
             msg = f"Invalid URL: only https: //pypi.org URLs are allowed, got {url}"
             raise ValueError(msg)
 
-        with urllib.request.urlopen(url, timeout=10) as response:
-            return json.load(response)
+        response = requests.get(url, timeout=10, verify=True)
+        response.raise_for_status()
+        return response.json()
 
     def _validate_pypi_url(self, url: str) -> None:
         from urllib.parse import urlparse

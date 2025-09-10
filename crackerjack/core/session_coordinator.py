@@ -332,14 +332,13 @@ class SessionCoordinator:
 
     def _extract_session_metrics(self) -> dict[str, t.Any] | None:
         """Extract quality metrics from the current session."""
-        try:
+        with suppress(Exception):
             metrics = {}
             self._extract_test_metrics(metrics)
             self._extract_hook_metrics(metrics)
             self._set_default_metrics(metrics)
-            return metrics if metrics else None
-        except Exception:
-            return None
+            return metrics or None
+        return None
 
     def _extract_test_metrics(self, metrics: dict[str, t.Any]) -> None:
         """Extract test-related metrics from tasks."""
@@ -380,39 +379,56 @@ class SessionCoordinator:
 
     def _display_quality_report(self, report) -> None:
         """Display a summary of the quality report."""
-        try:
-            if report.current_metrics:
-                score = report.current_metrics.quality_score
-                self.console.print(f"\n[cyan]📊 Quality Score: {score}/100[/cyan]")
+        with suppress(Exception):
+            if not report.current_metrics:
+                return
 
-                # Display trend if available
-                if report.trend:
-                    trend_emoji = {
-                        "improving": "📈",
-                        "declining": "📉",
-                        "stable": "📊",
-                        "volatile": "⚠️",
-                    }.get(report.trend.direction.value, "📊")
+            self._display_quality_score(report)
+            self._display_quality_trend(report)
+            self._display_critical_alerts(report)
+            self._display_top_recommendations(report)
 
-                    self.console.print(
-                        f"[dim]{trend_emoji} Trend: {report.trend.direction.value} "
-                        f"({report.trend.confidence:.1%} confidence)[/dim]"
-                    )
+    def _display_quality_score(self, report) -> None:
+        """Display the quality score."""
+        score = report.current_metrics.quality_score
+        self.console.print(f"\n[cyan]📊 Quality Score: {score}/100[/cyan]")
 
-                # Display critical alerts
-                critical_alerts = [
-                    a for a in report.alerts if a.severity.value == "critical"
-                ]
-                if critical_alerts:
-                    self.console.print(
-                        f"[red]🚨 {len(critical_alerts)} critical quality issues[/red]"
-                    )
+    def _display_quality_trend(self, report) -> None:
+        """Display quality trend information."""
+        if not report.trend:
+            return
 
-                # Display top recommendations
-                if report.recommendations:
-                    self.console.print("\n[yellow]💡 Top Recommendations:[/yellow]")
-                    for rec in report.recommendations[:2]:  # Show top 2
-                        self.console.print(f"  {rec}")
+        trend_emoji = self._get_trend_emoji(report.trend.direction.value)
+        self.console.print(
+            f"[dim]{trend_emoji} Trend: {report.trend.direction.value} "
+            f"({report.trend.confidence:.1%} confidence)[/dim]"
+        )
 
-        except Exception:
-            pass  # Silently fail for display issues
+    def _get_trend_emoji(self, direction: str) -> str:
+        """Get emoji for trend direction."""
+        trend_emojis = {
+            "improving": "📈",
+            "declining": "📉",
+            "stable": "📊",
+            "volatile": "⚠️",
+        }
+        return trend_emojis.get(direction, "📊")
+
+    def _display_critical_alerts(self, report) -> None:
+        """Display critical quality alerts."""
+        critical_alerts = [a for a in report.alerts if a.severity.value == "critical"]
+        if critical_alerts:
+            self.console.print(
+                f"[red]🚨 {len(critical_alerts)} critical quality issues[/red]"
+            )
+
+    def _display_top_recommendations(self, report) -> None:
+        """Display top quality recommendations."""
+        if not report.recommendations:
+            return
+
+        self.console.print("\n[yellow]💡 Top Recommendations:[/yellow]")
+        for rec in report.recommendations[:2]:  # Show top 2
+            self.console.print(f"  {rec}")
+
+        # Silently fail for display issues using suppress above

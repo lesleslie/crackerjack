@@ -158,25 +158,29 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
 
         # Generate getting started section
         if "installation" in template_context:
-            sections.append("## Getting Started\n")
-            sections.append(template_context["installation"])
-            sections.append("\n")
+            sections.extend(
+                ("## Getting Started\n", template_context["installation"], "\n")
+            )
 
         # Generate usage examples
         if "examples" in template_context:
             sections.append("## Usage Examples\n")
             for example in template_context["examples"]:
-                sections.append(f"### {example.get('title', 'Example')}\n")
-                sections.append(f"{example.get('description', '')}\n")
+                sections.extend(
+                    (
+                        f"### {example.get('title', 'Example')}\n",
+                        f"{example.get('description', '')}\n",
+                    )
+                )
                 if "code" in example:
                     sections.append(f"```bash\n{example['code']}\n```\n")
                 sections.append("\n")
 
         # Generate configuration section
         if "configuration" in template_context:
-            sections.append("## Configuration\n")
-            sections.append(template_context["configuration"])
-            sections.append("\n")
+            sections.extend(
+                ("## Configuration\n", template_context["configuration"], "\n")
+            )
 
         return "".join(sections)
 
@@ -227,16 +231,17 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
 
         # Add protocol names
         protocols = api_data.get("protocols", {})
-        for protocol_name in protocols.keys():
-            all_names.add(protocol_name)
+        all_names.update(protocols.keys())
 
         # Add class names from modules
         modules = api_data.get("modules", {})
         for module_data in modules.values():
-            for class_info in module_data.get("classes", []):
-                all_names.add(class_info["name"])
-            for func_info in module_data.get("functions", []):
-                all_names.add(func_info["name"])
+            all_names.update(
+                class_info["name"] for class_info in module_data.get("classes", [])
+            )
+            all_names.update(
+                func_info["name"] for func_info in module_data.get("functions", [])
+            )
 
         # Generate cross-references by finding mentions
         for name in all_names:
@@ -288,8 +293,12 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
 
         sections = []
         for service_name, service_info in services.items():
-            sections.append(f"## {service_name}\n")
-            sections.append(f"**Path:** `{service_info.get('path', 'Unknown')}`\n\n")
+            sections.extend(
+                (
+                    f"## {service_name}\n",
+                    f"**Path:** `{service_info.get('path', 'Unknown')}`\n\n",
+                )
+            )
 
             if service_info.get("protocols_implemented"):
                 sections.append("**Implements Protocols:**\n")
@@ -430,7 +439,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         """Find references in module class definitions."""
         references = []
 
-        for module_path, module_data in modules.items():
+        for module_data in modules.values():
             class_refs = self._find_class_references(
                 name, module_data.get("classes", [])
             )
@@ -475,10 +484,8 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         self, name: str, method_name: str, parameters: list[dict[str, t.Any]]
     ) -> list[str]:
         """Find references in method parameters."""
-        references = []
-
-        for param in parameters:
-            if name in param.get("annotation", ""):
-                references.append(f"{method_name} parameter")
-
-        return references
+        return [
+            f"{method_name} parameter"
+            for param in parameters
+            if name in param.get("annotation", "")
+        ]

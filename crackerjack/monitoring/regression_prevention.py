@@ -523,7 +523,7 @@ class RegressionPreventionSystem:
             },
         }
 
-        with open(patterns_file, "w") as f:
+        with patterns_file.open("w") as f:
             json.dump(data, f, indent=2)
 
     def _load_patterns_from_file(self):

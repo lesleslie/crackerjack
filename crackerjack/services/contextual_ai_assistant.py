@@ -488,27 +488,52 @@ class ContextualAIAssistant:
                 self.console.print()
 
     def get_quick_help(self, query: str) -> str:
+        """Get quick help for common queries using keyword matching."""
         query_lower = query.lower()
 
-        if "coverage" in query_lower:
-            return "Check test coverage with: python -m crackerjack -t\nView HTML report: uv run coverage html"
+        # Define help responses with keywords
+        help_mapping = self._get_help_keyword_mapping()
 
-        if "security" in query_lower or "vulnerabilit" in query_lower:
-            return "Check security with: python -m crackerjack --check-dependencies\nRun security audit: uv run bandit -r ."
-
-        if "lint" in query_lower or "format" in query_lower:
-            return "Fix code style with: python -m crackerjack\nFor AI-powered fixes: python -m crackerjack --ai-fix"
-
-        if "test" in query_lower:
-            return "Run tests with: python -m crackerjack -t\nFor AI-powered test fixes: python -m crackerjack --ai-fix -t"
-
-        if "publish" in query_lower or "release" in query_lower:
-            return "Publish to PyPI: python -m crackerjack -p patch\nBump version only: python -m crackerjack -b patch"
-
-        if "clean" in query_lower:
-            return "Clean code: python -m crackerjack -x\nNote: Resolve TODOs first before cleaning"
-
-        if "dashboard" in query_lower or "monitor" in query_lower:
-            return "Start monitoring dashboard: python -m crackerjack --dashboard\nStart WebSocket server: python -m crackerjack --start-websocket-server"
+        # Find the first matching help response
+        for keywords, response in help_mapping:
+            if self._query_contains_keywords(query_lower, keywords):
+                return response
 
         return "For full help, run: python -m crackerjack --help\nFor AI assistance: python -m crackerjack --ai-fix"
+
+    def _get_help_keyword_mapping(self) -> list[tuple[list[str], str]]:
+        """Get mapping of keywords to help responses."""
+        return [
+            (
+                ["coverage"],
+                "Check test coverage with: python -m crackerjack -t\nView HTML report: uv run coverage html",
+            ),
+            (
+                ["security", "vulnerabilit"],
+                "Check security with: python -m crackerjack --check-dependencies\nRun security audit: uv run bandit -r .",
+            ),
+            (
+                ["lint", "format"],
+                "Fix code style with: python -m crackerjack\nFor AI-powered fixes: python -m crackerjack --ai-fix",
+            ),
+            (
+                ["test"],
+                "Run tests with: python -m crackerjack -t\nFor AI-powered test fixes: python -m crackerjack --ai-fix -t",
+            ),
+            (
+                ["publish", "release"],
+                "Publish to PyPI: python -m crackerjack -p patch\nBump version only: python -m crackerjack -b patch",
+            ),
+            (
+                ["clean"],
+                "Clean code: python -m crackerjack -x\nNote: Resolve TODOs first before cleaning",
+            ),
+            (
+                ["dashboard", "monitor"],
+                "Start monitoring dashboard: python -m crackerjack --dashboard\nStart WebSocket server: python -m crackerjack --start-websocket-server",
+            ),
+        ]
+
+    def _query_contains_keywords(self, query: str, keywords: list[str]) -> bool:
+        """Check if query contains any of the specified keywords."""
+        return any(keyword in query for keyword in keywords)

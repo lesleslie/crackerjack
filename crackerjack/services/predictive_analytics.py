@@ -436,10 +436,12 @@ class PredictiveAnalyticsEngine:
         if estimated_exhaustion:
             days_until = (estimated_exhaustion - datetime.now()).days
             if days_until < 7:
-                recommendations.append(
-                    f"URGENT: {resource_type} capacity will be exceeded in {days_until} days"
+                recommendations.extend(
+                    (
+                        f"URGENT: {resource_type} capacity will be exceeded in {days_until} days",
+                        "Consider immediate scaling or optimization",
+                    )
                 )
-                recommendations.append("Consider immediate scaling or optimization")
             elif days_until < 30:
                 recommendations.append(
                     f"Plan capacity increase for {resource_type} within {days_until} days"
@@ -450,10 +452,12 @@ class PredictiveAnalyticsEngine:
                 )
 
         if utilization > 0.7:
-            recommendations.append(
-                f"High {resource_type} utilization ({utilization:.1%})"
+            recommendations.extend(
+                (
+                    f"High {resource_type} utilization ({utilization:.1%})",
+                    "Consider proactive scaling",
+                )
             )
-            recommendations.append("Consider proactive scaling")
 
         if not recommendations:
             recommendations.append(f"{resource_type} capacity is within normal limits")

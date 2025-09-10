@@ -8,7 +8,11 @@ from rich.console import Console
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
 from crackerjack.agents.coordinator import AgentCoordinator
 from crackerjack.models.protocols import OptionsProtocol
-from crackerjack.services.debug import get_ai_agent_debugger
+from crackerjack.services.debug import (
+    AIAgentDebugger,
+    NoOpDebugger,
+    get_ai_agent_debugger,
+)
 from crackerjack.services.logging import (
     LoggingContext,
     get_logger,
@@ -50,14 +54,14 @@ class WorkflowPipeline:
         self._last_security_audit: t.Any = None
 
         self.logger = get_logger("crackerjack.pipeline")
-        self._debugger = None
+        self._debugger: AIAgentDebugger | NoOpDebugger | None = None
 
         self._performance_monitor = get_performance_monitor()
         self._memory_optimizer = get_memory_optimizer()
         self._cache = get_performance_cache()
 
     @property
-    def debugger(self):
+    def debugger(self) -> AIAgentDebugger | NoOpDebugger:
         if self._debugger is None:
             self._debugger = get_ai_agent_debugger()
         return self._debugger

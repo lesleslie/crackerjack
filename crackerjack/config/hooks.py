@@ -142,9 +142,9 @@ FAST_HOOKS = [
 
 COMPREHENSIVE_HOOKS = [
     HookDefinition(
-        name="pyright",
+        name="zuban",
         command=[],
-        timeout=300,
+        timeout=30,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -158,9 +158,9 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.CRITICAL,
     ),
     HookDefinition(
-        name="vulture",
+        name="skylos",
         command=[],
-        timeout=300,
+        timeout=30,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

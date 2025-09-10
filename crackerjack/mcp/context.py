@@ -182,7 +182,7 @@ class MCPServerContext:
         """Auto-detect and setup git working directory for enhanced DX."""
         try:
             # Get current working directory
-            current_dir = Path(os.getcwd())
+            current_dir = Path.cwd()
 
             # Simple git root detection using subprocess
             import subprocess
@@ -243,47 +243,63 @@ class MCPServerContext:
             return
 
         try:
-            if self.config.stdio_mode:
-                null_file = io.StringIO()
-                self.console = Console(file=null_file, force_terminal=False)
-            else:
-                self.console = Console(force_terminal=True)
-
-            self.progress_dir.mkdir(exist_ok=True)
-
-            self.cli_runner = WorkflowOrchestrator(
-                console=self.console,
-                pkg_path=self.config.project_path,
-            )
-
-            self.state_manager = StateManager(
-                self.config.state_dir or Path.home() / ".cache" / "crackerjack-mcp",
-                self.batched_saver,
-            )
-
-            self.error_cache = ErrorCache(
-                self.config.cache_dir or Path.home() / ".cache" / "crackerjack-mcp",
-            )
-
-            self.rate_limiter = RateLimitMiddleware(self.config.rate_limit_config)
-
-            await self.batched_saver.start()
-
-            # Auto-setup git working directory for enhanced DX
-            await self._auto_setup_git_working_directory()
-
-            for task in self._startup_tasks:
-                await task()
+            self._setup_console()
+            self._setup_directories()
+            await self._initialize_components()
+            await self._finalize_initialization()
 
             self._initialized = True
 
         except Exception as e:
-            self.cli_runner = None
-            self.state_manager = None
-            self.error_cache = None
-            self.rate_limiter = None
+            self._cleanup_failed_initialization()
             msg = f"Failed to initialize MCP server context: {e}"
             raise RuntimeError(msg) from e
+
+    def _setup_console(self) -> None:
+        """Setup console based on configuration mode."""
+        if self.config.stdio_mode:
+            null_file = io.StringIO()
+            self.console = Console(file=null_file, force_terminal=False)
+        else:
+            self.console = Console(force_terminal=True)
+
+    def _setup_directories(self) -> None:
+        """Setup required directories."""
+        self.progress_dir.mkdir(exist_ok=True)
+
+    async def _initialize_components(self) -> None:
+        """Initialize all service components."""
+        self.cli_runner = WorkflowOrchestrator(
+            console=self.console,
+            pkg_path=self.config.project_path,
+        )
+
+        self.state_manager = StateManager(
+            self.config.state_dir or Path.home() / ".cache" / "crackerjack-mcp",
+            self.batched_saver,
+        )
+
+        self.error_cache = ErrorCache(
+            self.config.cache_dir or Path.home() / ".cache" / "crackerjack-mcp",
+        )
+
+        self.rate_limiter = RateLimitMiddleware(self.config.rate_limit_config)
+        await self.batched_saver.start()
+
+    async def _finalize_initialization(self) -> None:
+        """Complete initialization with optional setup and startup tasks."""
+        # Auto-setup git working directory for enhanced DX
+        await self._auto_setup_git_working_directory()
+
+        for task in self._startup_tasks:
+            await task()
+
+    def _cleanup_failed_initialization(self) -> None:
+        """Cleanup components after failed initialization."""
+        self.cli_runner = None
+        self.state_manager = None
+        self.error_cache = None
+        self.rate_limiter = None
 
     async def shutdown(self) -> None:
         if not self._initialized:
@@ -369,21 +385,31 @@ class MCPServerContext:
             if await self._check_existing_websocket_server():
                 return True
 
-            if self.console:
-                self.console.print(
-                    f"🚀 Starting WebSocket server on localhost: {self.websocket_server_port}...",
-                )
+            self._print_websocket_startup_message()
+            return await self._attempt_websocket_startup()
 
-            try:
-                await self._spawn_websocket_process()
-                await self._register_websocket_cleanup()
-                return await self._wait_for_websocket_startup()
+    def _print_websocket_startup_message(self) -> None:
+        """Print websocket server startup message."""
+        if self.console:
+            self.console.print(
+                f"🚀 Starting WebSocket server on localhost: {self.websocket_server_port}...",
+            )
 
-            except Exception as e:
-                if self.console:
-                    self.console.print(f"❌ Failed to start WebSocket server: {e}")
-                await self._cleanup_dead_websocket_process()
-                return False
+    async def _attempt_websocket_startup(self) -> bool:
+        """Attempt to start the websocket server with error handling."""
+        try:
+            await self._spawn_websocket_process()
+            await self._register_websocket_cleanup()
+            return await self._wait_for_websocket_startup()
+        except Exception as e:
+            await self._handle_websocket_startup_failure(e)
+            return False
+
+    async def _handle_websocket_startup_failure(self, error: Exception) -> None:
+        """Handle websocket server startup failure."""
+        if self.console:
+            self.console.print(f"❌ Failed to start WebSocket server: {error}")
+        await self._cleanup_dead_websocket_process()
 
     async def _check_existing_websocket_server(self) -> bool:
         if (

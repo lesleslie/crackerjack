@@ -194,7 +194,7 @@ def test_workflow_with_external_project():
     print("\n=== Test 2: External project with good formatting ===")
 
     temp_dir = create_minimal_project()
-    original_dir = os.getcwd()
+    original_dir = Path.cwd()
 
     try:
         os.chdir(temp_dir)
@@ -244,7 +244,7 @@ def test_workflow_with_bad_formatting():
     print("\n=== Test 3: External project with bad formatting ===")
 
     temp_dir = create_project_with_formatting_issues()
-    original_dir = os.getcwd()
+    original_dir = Path.cwd()
 
     try:
         os.chdir(temp_dir)

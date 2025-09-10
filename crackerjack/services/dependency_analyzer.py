@@ -147,8 +147,7 @@ class DependencyAnalyzer:
     def _analyze_file(self, file_path: Path) -> None:
         """Analyze a single Python file for dependencies."""
         try:
-            with open(file_path, encoding="utf-8") as f:
-                content = f.read()
+            content = file_path.read_text(encoding="utf-8")
 
             tree = ast.parse(content)
             visitor = DependencyVisitor(file_path, self.project_root)
@@ -230,8 +229,10 @@ class DependencyAnalyzer:
             in_degree[edge.target] = in_degree.get(edge.target, 0) + 1
 
         # Top 10 most connected nodes
-        top_in = sorted(in_degree.items(), key=lambda x: x[1], reverse=True)[:10]
-        top_out = sorted(out_degree.items(), key=lambda x: x[1], reverse=True)[:10]
+        from operator import itemgetter
+
+        top_in = sorted(in_degree.items(), key=itemgetter(1), reverse=True)[:10]
+        top_out = sorted(out_degree.items(), key=itemgetter(1), reverse=True)[:10]
 
         metrics["top_imported"] = [
             {"node": node, "count": count} for node, count in top_in
@@ -276,7 +277,7 @@ class DependencyVisitor(ast.NodeVisitor):
     def visit_Import(self, node: ast.Import) -> None:
         """Handle import statements."""
         for alias in node.names:
-            imported_name = alias.asname if alias.asname else alias.name
+            imported_name = alias.asname or alias.name
             self.imports[imported_name] = alias.name
 
             # Create import edge
@@ -292,7 +293,7 @@ class DependencyVisitor(ast.NodeVisitor):
         """Handle from...import statements."""
         if node.module:
             for alias in node.names:
-                imported_name = alias.asname if alias.asname else alias.name
+                imported_name = alias.asname or alias.name
                 full_name = f"{node.module}.{alias.name}"
                 self.imports[imported_name] = full_name
 

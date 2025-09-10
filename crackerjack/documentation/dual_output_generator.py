@@ -681,11 +681,11 @@ graph TD
         # Check file timestamps, cache, etc.
         if not all(
             p.exists()
-            for p in [
+            for p in (
                 self.ai_reference_path,
                 self.agent_capabilities_path,
                 self.error_patterns_path,
-            ]
+            )
         ):
             return True
 
@@ -697,7 +697,7 @@ graph TD
         latest_source = max(p.stat().st_mtime for p in source_paths if p.exists())
         oldest_doc = min(
             p.stat().st_mtime
-            for p in [self.ai_reference_path, self.agent_capabilities_path]
+            for p in (self.ai_reference_path, self.agent_capabilities_path)
             if p.exists()
         )
 
@@ -711,12 +711,12 @@ graph TD
         self.console.print(f"✅ Updated {self.ai_reference_path}")
 
         # Write AGENT-CAPABILITIES.json
-        with open(self.agent_capabilities_path, "w") as f:
+        with self.agent_capabilities_path.open("w") as f:
             json.dump(result.agent_capabilities, f, indent=2)
         self.console.print(f"✅ Updated {self.agent_capabilities_path}")
 
         # Write ERROR-PATTERNS.yaml
-        with open(self.error_patterns_path, "w") as f:
+        with self.error_patterns_path.open("w") as f:
             yaml.dump(result.error_patterns, f, default_flow_style=False)
         self.console.print(f"✅ Updated {self.error_patterns_path}")
 

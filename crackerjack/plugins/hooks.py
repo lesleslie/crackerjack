@@ -129,6 +129,13 @@ class CustomHookPlugin(HookPluginBase):
         start_time = time.time()
 
         try:
+            if hook_def.command is None:
+                return HookResult(
+                    name=hook_def.name,
+                    status="failed",
+                    message="Hook command is None",
+                    duration=0.0,
+                )
             cmd = hook_def.command.copy()
             if hook_def.requires_files and files:
                 cmd.extend(str(f) for f in files)

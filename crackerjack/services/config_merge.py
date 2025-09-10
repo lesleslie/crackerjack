@@ -65,7 +65,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             return source_content
 
         with target_path.open() as f:
-            target_content = yaml.safe_load(f) or {}
+            target_content: dict[str, t.Any] = yaml.safe_load(f) or {}
 
         if not isinstance(target_content, dict):
             self.logger.warning(
@@ -294,10 +294,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             sort_keys=False,
             width=float("inf"),
         )
-        content = (
-            yaml_content.decode() if isinstance(yaml_content, bytes) else yaml_content
-        )
-        content = content or ""
+        content = yaml_content or ""
 
         from crackerjack.services.filesystem import FileSystemService
 

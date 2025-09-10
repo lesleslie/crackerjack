@@ -119,7 +119,7 @@ class AsyncTimeoutManager:
         )
 
     @property
-    def performance_monitor(self):
+    def performance_monitor(self) -> t.Any:
         if self._performance_monitor is None:
             try:
                 from .performance_monitor import get_performance_monitor

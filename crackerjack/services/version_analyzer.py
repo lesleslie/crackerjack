@@ -119,7 +119,7 @@ class FeatureAnalyzer:
 
         for entry in entries:
             # Check entry type
-            if entry.type in ["Added", "feat"]:
+            if entry.type in ("Added", "feat"):
                 new_features.append(entry.description)
                 continue
 
@@ -238,8 +238,10 @@ class VersionAnalyzer:
             elif bump_type == VersionBumpType.PATCH:
                 return f"{major}.{minor}.{patch + 1}"
             else:
-                msg = f"Invalid bump type: {bump_type}"
-                raise ValueError(msg)
+                # All enum cases are covered above
+                from typing import assert_never
+
+                assert_never(bump_type)
 
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error calculating version: {e}")
@@ -319,7 +321,7 @@ class VersionAnalyzer:
         bug_fixes = [
             entry.description
             for entry in all_entries
-            if entry.type.lower() in ["fixed", "fix", "bugfix", "patch"]
+            if entry.type.lower() in ("fixed", "fix", "bugfix", "patch")
         ]
 
         bump_type, confidence, reasoning = self._determine_bump_type(
@@ -386,15 +388,14 @@ class VersionAnalyzer:
                     "PATCH version bump recommended for backward-compatible fixes",
                 ],
             )
-        else:
-            return (
-                VersionBumpType.PATCH,
-                0.5,
-                [
-                    f"Changes detected ({len(all_entries)} commits) with unclear impact",
-                    "PATCH version bump recommended as conservative choice",
-                ],
-            )
+        return (
+            VersionBumpType.PATCH,
+            0.5,
+            [
+                f"Changes detected ({len(all_entries)} commits) with unclear impact",
+                "PATCH version bump recommended as conservative choice",
+            ],
+        )
 
     def display_recommendation(self, recommendation: VersionBumpRecommendation) -> None:
         """Display version bump recommendation in a user-friendly format."""

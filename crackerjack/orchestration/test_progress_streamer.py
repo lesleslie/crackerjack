@@ -154,6 +154,7 @@ class PytestOutputParser:
         suite_info: TestSuiteProgress,
     ) -> None:
         if match := self._test_collection_pattern.search(line):
+            assert match is not None  # Type checker: match cannot be None here
             suite_info.total_tests = int(match.group(1))
 
     def _process_test_result_line(
@@ -163,6 +164,7 @@ class PytestOutputParser:
         suite_info: TestSuiteProgress,
     ) -> None:
         if match := self._detailed_test_pattern.match(line):
+            assert match is not None  # Type checker: match cannot be None here
             file_path, test_name, status = match.groups()
             test_id = f"{file_path}:: {test_name}"
 
@@ -211,6 +213,7 @@ class PytestOutputParser:
 
     def _process_coverage_line(self, line: str, suite_info: TestSuiteProgress) -> None:
         if match := self._coverage_pattern.search(line):
+            assert match is not None  # Type checker: match cannot be None here
             suite_info.coverage_percentage = float(match.group(1))
 
     def _process_current_test_line(
@@ -530,6 +533,7 @@ class TestProgressStreamer:
                 suite_progress.current_test = parts[0]
 
         if match := self.parser._test_collection_pattern.search(line):
+            assert match is not None  # Type checker: match cannot be None here
             suite_progress.total_tests = int(match.group(1))
 
         if "PASSED" in line:

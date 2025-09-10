@@ -110,8 +110,11 @@ class ConnectionPool:
         self._lock = threading.Lock()
 
     def add_connection(
-        self, connection_id: str, websocket: t.Any, metadata: dict = None
-    ):
+        self,
+        connection_id: str,
+        websocket: t.Any,
+        metadata: dict[str, t.Any] | None = None,
+    ) -> None:
         """Add connection with automatic cleanup if at capacity."""
         with self._lock:
             # Clean up stale connections if at capacity
@@ -154,10 +157,11 @@ class ConnectionPool:
         current_time = time.time()
         stale_threshold = 1800  # 30 minutes
 
-        stale_connections = []
-        for conn_id, stats in self.connection_stats.items():
-            if current_time - stats["last_activity"] > stale_threshold:
-                stale_connections.append(conn_id)
+        stale_connections = [
+            conn_id
+            for conn_id, stats in self.connection_stats.items()
+            if current_time - stats["last_activity"] > stale_threshold
+        ]
 
         for conn_id in stale_connections:
             self.remove_connection(conn_id)
@@ -237,30 +241,55 @@ class DataCompactionManager:
             return {"status": "error", "message": f"Unknown data type: {data_type}"}
 
         rules = self.compaction_rules[data_type]
-        cutoff_date = datetime.now() - timedelta(days=rules["retention_days"])
+        cutoff_date = self._calculate_cutoff_date(rules)
 
-        # Simulate compaction process
+        compaction_stats = self._process_data_directory(data_type, cutoff_date)
+
+        return self._build_compaction_result(data_type, rules, compaction_stats)
+
+    def _calculate_cutoff_date(self, rules: dict[str, t.Any]) -> datetime:
+        """Calculate the cutoff date for data retention."""
+        return datetime.now() - timedelta(days=rules["retention_days"])
+
+    def _process_data_directory(
+        self, data_type: str, cutoff_date: datetime
+    ) -> dict[str, int]:
+        """Process files in data directory and return compaction statistics."""
         compacted_records = 0
         freed_space_mb = 0
 
-        # Find files older than retention period
         data_dir = self.storage_dir / data_type
         if data_dir.exists():
             for file_path in data_dir.glob("**/*"):
-                if file_path.is_file():
-                    file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
-                    if file_mtime < cutoff_date:
-                        file_size_mb = file_path.stat().st_size / (1024**2)
-                        freed_space_mb += file_size_mb
-                        compacted_records += 1
-                        # In production, would actually delete/archive the file
-                        # file_path.unlink()
+                if self._should_compact_file(file_path, cutoff_date):
+                    file_size_mb = file_path.stat().st_size / (1024**2)
+                    freed_space_mb += file_size_mb
+                    compacted_records += 1
+                    # In production, would actually delete/archive the file
+                    # file_path.unlink()
 
+        return {
+            "compacted_records": compacted_records,
+            "freed_space_mb": freed_space_mb,
+        }
+
+    def _should_compact_file(self, file_path: Path, cutoff_date: datetime) -> bool:
+        """Determine if a file should be compacted based on age."""
+        if not file_path.is_file():
+            return False
+
+        file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+        return file_mtime < cutoff_date
+
+    def _build_compaction_result(
+        self, data_type: str, rules: dict[str, t.Any], stats: dict[str, int]
+    ) -> dict[str, t.Any]:
+        """Build the compaction result dictionary."""
         return {
             "status": "success",
             "data_type": data_type,
-            "compacted_records": compacted_records,
-            "freed_space_mb": round(freed_space_mb, 2),
+            "compacted_records": stats["compacted_records"],
+            "freed_space_mb": round(stats["freed_space_mb"], 2),
             "retention_days": rules["retention_days"],
             "next_compaction": datetime.now()
             + timedelta(hours=rules["compaction_interval_hours"]),
@@ -308,7 +337,9 @@ class EnterpriseOptimizer:
         self.executor = ThreadPoolExecutor(max_workers=4)
 
         # Metrics tracking
-        self.resource_history = deque(maxlen=1440)  # 24 hours of minute-level data
+        self.resource_history: deque[ResourceMetrics] = deque(
+            maxlen=1440
+        )  # 24 hours of minute-level data
         self.performance_profile = self._load_performance_profile()
 
         # Optimization state
@@ -321,7 +352,7 @@ class EnterpriseOptimizer:
 
         if profile_path.exists():
             try:
-                with open(profile_path) as f:
+                with profile_path.open() as f:
                     data = json.load(f)
                 return PerformanceProfile(**data)
             except Exception as e:
@@ -484,14 +515,29 @@ class EnterpriseOptimizer:
         scaling_metrics = self.analyze_scaling_needs()
         storage_usage = self.compaction_manager.get_storage_usage()
 
-        # High CPU usage recommendation
-        if latest_metrics.cpu_percent > 80:
+        # Generate different types of recommendations
+        recommendations.extend(self._generate_cpu_recommendations(latest_metrics))
+        recommendations.extend(self._generate_memory_recommendations(latest_metrics))
+        recommendations.extend(self._generate_storage_recommendations(storage_usage))
+        recommendations.extend(self._generate_connection_recommendations())
+        recommendations.extend(self._generate_scaling_recommendations(scaling_metrics))
+
+        self.optimization_recommendations = recommendations
+        return recommendations
+
+    def _generate_cpu_recommendations(
+        self, metrics: ResourceMetrics
+    ) -> list[OptimizationRecommendation]:
+        """Generate CPU-related optimization recommendations."""
+        recommendations = []
+
+        if metrics.cpu_percent > 80:
             recommendations.append(
                 OptimizationRecommendation(
                     category="performance",
                     priority="high",
                     title="High CPU Usage Detected",
-                    description=f"CPU usage at {latest_metrics.cpu_percent:.1f}%, approaching saturation",
+                    description=f"CPU usage at {metrics.cpu_percent:.1f}%, approaching saturation",
                     impact="May cause response time degradation and request queuing",
                     implementation="Consider scaling horizontally or optimizing CPU-intensive operations",
                     estimated_improvement="20-40% response time improvement",
@@ -500,14 +546,21 @@ class EnterpriseOptimizer:
                 )
             )
 
-        # High memory usage recommendation
-        if latest_metrics.memory_percent > 85:
+        return recommendations
+
+    def _generate_memory_recommendations(
+        self, metrics: ResourceMetrics
+    ) -> list[OptimizationRecommendation]:
+        """Generate memory-related optimization recommendations."""
+        recommendations = []
+
+        if metrics.memory_percent > 85:
             recommendations.append(
                 OptimizationRecommendation(
                     category="memory",
                     priority="critical",
                     title="Memory Pressure Critical",
-                    description=f"Memory usage at {latest_metrics.memory_percent:.1f}%, risk of OOM",
+                    description=f"Memory usage at {metrics.memory_percent:.1f}%, risk of OOM",
                     impact="High risk of application crashes and data loss",
                     implementation="Immediately reduce memory consumption or add memory resources",
                     estimated_improvement="Prevents system crashes",
@@ -516,7 +569,14 @@ class EnterpriseOptimizer:
                 )
             )
 
-        # Storage optimization
+        return recommendations
+
+    def _generate_storage_recommendations(
+        self, storage_usage: dict[str, t.Any]
+    ) -> list[OptimizationRecommendation]:
+        """Generate storage-related optimization recommendations."""
+        recommendations = []
+
         if storage_usage["utilization_percent"] > 80:
             recommendations.append(
                 OptimizationRecommendation(
@@ -532,7 +592,12 @@ class EnterpriseOptimizer:
                 )
             )
 
-        # Connection pool optimization
+        return recommendations
+
+    def _generate_connection_recommendations(self) -> list[OptimizationRecommendation]:
+        """Generate connection pool optimization recommendations."""
+        recommendations = []
+
         pool_stats = self.connection_pool.get_stats()
         if pool_stats["utilization_percent"] > 90:
             recommendations.append(
@@ -549,7 +614,14 @@ class EnterpriseOptimizer:
                 )
             )
 
-        # Scaling recommendation
+        return recommendations
+
+    def _generate_scaling_recommendations(
+        self, scaling_metrics: ScalingMetrics
+    ) -> list[OptimizationRecommendation]:
+        """Generate scaling-related optimization recommendations."""
+        recommendations = []
+
         if scaling_metrics.recommended_scale_factor > 1.2:
             recommendations.append(
                 OptimizationRecommendation(
@@ -565,48 +637,85 @@ class EnterpriseOptimizer:
                 )
             )
 
-        self.optimization_recommendations = recommendations
         return recommendations
 
-    def optimize_configuration(self, strategy: str = None) -> dict[str, t.Any]:
+    def optimize_configuration(self, strategy: str | None = None) -> dict[str, t.Any]:
         """Apply automatic configuration optimizations."""
         if strategy is None:
             strategy = self.performance_profile.optimization_strategy
 
-        optimizations_applied = []
-
-        # Get current metrics
-        latest_metrics = self.resource_history[-1] if self.resource_history else None
+        latest_metrics = self._get_latest_metrics()
         if not latest_metrics:
             return {"status": "error", "message": "No metrics available"}
 
-        # Memory optimization
-        if latest_metrics.memory_percent > 70:
-            # Reduce connection pool size
+        optimizations_applied = self._apply_all_optimizations(latest_metrics, strategy)
+
+        return self._build_optimization_result(strategy, optimizations_applied)
+
+    def _get_latest_metrics(self) -> ResourceMetrics | None:
+        """Get the latest resource metrics."""
+        return self.resource_history[-1] if self.resource_history else None
+
+    def _apply_all_optimizations(
+        self, metrics: ResourceMetrics, strategy: str
+    ) -> list[str]:
+        """Apply all optimization strategies and collect results."""
+        optimizations_applied = []
+
+        # Apply different types of optimizations
+        optimizations_applied.extend(self._apply_memory_optimizations(metrics))
+        optimizations_applied.extend(
+            self._apply_performance_optimizations(metrics, strategy)
+        )
+        optimizations_applied.extend(self._apply_storage_optimizations())
+
+        return optimizations_applied
+
+    def _apply_memory_optimizations(self, metrics: ResourceMetrics) -> list[str]:
+        """Apply memory-related optimizations."""
+        optimizations = []
+
+        if metrics.memory_percent > 70:
             if self.connection_pool.max_connections > 500:
                 self.connection_pool.max_connections = int(
                     self.connection_pool.max_connections * 0.8
                 )
-                optimizations_applied.append("Reduced connection pool size")
+                optimizations.append("Reduced connection pool size")
 
-        # Performance optimization
-        if latest_metrics.cpu_percent > 60 and strategy in ["performance", "balanced"]:
-            # Increase analysis frequency to reduce batch sizes
+        return optimizations
+
+    def _apply_performance_optimizations(
+        self, metrics: ResourceMetrics, strategy: str
+    ) -> list[str]:
+        """Apply performance-related optimizations."""
+        optimizations = []
+
+        if metrics.cpu_percent > 60 and strategy in ("performance", "balanced"):
             if self.performance_profile.analysis_frequency_minutes > 2:
                 self.performance_profile.analysis_frequency_minutes = max(
                     1, self.performance_profile.analysis_frequency_minutes - 1
                 )
-                optimizations_applied.append("Increased analysis frequency")
+                optimizations.append("Increased analysis frequency")
 
-        # Storage optimization
+        return optimizations
+
+    def _apply_storage_optimizations(self) -> list[str]:
+        """Apply storage-related optimizations."""
+        optimizations = []
         storage_usage = self.compaction_manager.get_storage_usage()
+
         if storage_usage["utilization_percent"] > 70:
-            # Trigger data compaction
-            for data_type in ["metrics_raw", "error_patterns"]:
+            for data_type in ("metrics_raw", "error_patterns"):
                 result = self.compaction_manager.compact_data(data_type)
                 if result["status"] == "success":
-                    optimizations_applied.append(f"Compacted {data_type} data")
+                    optimizations.append(f"Compacted {data_type} data")
 
+        return optimizations
+
+    def _build_optimization_result(
+        self, strategy: str, optimizations_applied: list[str]
+    ) -> dict[str, t.Any]:
+        """Build the optimization result dictionary."""
         return {
             "status": "success",
             "strategy": strategy,

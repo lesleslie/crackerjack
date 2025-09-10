@@ -102,7 +102,7 @@ class CommitMessageGenerator:
 
     def _analyze_changes(self, staged_files: list[str]) -> dict[str, t.Any]:
         """Analyze staged files to understand the nature of changes."""
-        analysis = {
+        analysis: dict[str, t.Any] = {
             "files": staged_files,
             "file_types": set(),
             "directories": set(),
@@ -118,7 +118,7 @@ class CommitMessageGenerator:
                 analysis["file_types"].add(path.suffix)
 
             # Track directories
-            if path.parent != Path("."):
+            if path.parent != Path():
                 analysis["directories"].add(str(path.parent))
 
             # Check for patterns in file names
@@ -142,28 +142,56 @@ class CommitMessageGenerator:
         files = analysis["files"]
         file_types = analysis["file_types"]
 
-        # Priority order for commit types
-        if "fix" in patterns_found:
-            return "fix"
-        if "feat" in patterns_found:
-            return "feat"
-        if "test" in patterns_found or any(
-            ".py" in f and "test" in f.lower() for f in files
-        ):
-            return "test"
-        if "docs" in patterns_found or any(
-            ext in file_types for ext in [".md", ".rst", ".txt"]
-        ):
-            return "docs"
-        if (
-            "style" in patterns_found or len(files) > 5
-        ):  # Multiple files suggest style changes
-            return "style"
-        if "refactor" in patterns_found:
-            return "refactor"
+        # Check commit types in priority order
+        commit_type_checks = self._get_commit_type_checks()
+
+        for commit_type, check_func in commit_type_checks:
+            if check_func(patterns_found, files, file_types):
+                return commit_type
 
         # Default to chore for misc changes
         return "chore"
+
+    def _get_commit_type_checks(self) -> list[tuple[str, callable]]:
+        """Get ordered list of commit type checks."""
+        return [
+            ("fix", self._is_fix_commit),
+            ("feat", self._is_feat_commit),
+            ("test", self._is_test_commit),
+            ("docs", self._is_docs_commit),
+            ("style", self._is_style_commit),
+            ("refactor", self._is_refactor_commit),
+        ]
+
+    def _is_fix_commit(self, patterns: set, files: list, file_types: set) -> bool:
+        """Check if this is a fix commit."""
+        return "fix" in patterns
+
+    def _is_feat_commit(self, patterns: set, files: list, file_types: set) -> bool:
+        """Check if this is a feature commit."""
+        return "feat" in patterns
+
+    def _is_test_commit(self, patterns: set, files: list, file_types: set) -> bool:
+        """Check if this is a test commit."""
+        return "test" in patterns or any(
+            ".py" in f and "test" in f.lower() for f in files
+        )
+
+    def _is_docs_commit(self, patterns: set, files: list, file_types: set) -> bool:
+        """Check if this is a documentation commit."""
+        return "docs" in patterns or any(
+            ext in file_types for ext in (".md", ".rst", ".txt")
+        )
+
+    def _is_style_commit(self, patterns: set, files: list, file_types: set) -> bool:
+        """Check if this is a style commit."""
+        return (
+            "style" in patterns or len(files) > 5
+        )  # Multiple files suggest style changes
+
+    def _is_refactor_commit(self, patterns: set, files: list, file_types: set) -> bool:
+        """Check if this is a refactor commit."""
+        return "refactor" in patterns
 
     def _determine_scope(self, analysis: dict[str, t.Any]) -> str | None:
         """Determine an appropriate scope for the commit."""
@@ -205,7 +233,7 @@ class CommitMessageGenerator:
             # Generate descriptive action based on file name
             if "test" in file_name.lower():
                 return f"update {file_name} test"
-            elif file_path.suffix in [".md", ".rst", ".txt"]:
+            elif file_path.suffix in (".md", ".rst", ".txt"):
                 return f"update {file_name} documentation"
             elif "config" in file_name.lower():
                 return f"update {file_name} configuration"

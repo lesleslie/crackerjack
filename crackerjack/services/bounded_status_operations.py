@@ -66,13 +66,15 @@ class BoundedStatusOperations:
 
         self._lock = RLock()
         self._active_operations: dict[str, OperationMetrics] = {}
-        self._client_operations: dict[str, deque[float]] = defaultdict(
-            lambda: deque(maxlen=100)
-        )
+
+        def _create_deque() -> deque[float]:
+            return deque(maxlen=100)
+
+        self._client_operations: dict[str, deque[float]] = defaultdict(_create_deque)
         self._operation_history: list[OperationMetrics] = []
 
         self._circuit_states: dict[str, OperationState] = defaultdict(
-            lambda: OperationState.CLOSED
+            lambda: OperationState.CLOSED  # type: ignore[misc]
         )
         self._failure_counts: dict[str, int] = defaultdict(int)
         self._last_failure_times: dict[str, float] = {}

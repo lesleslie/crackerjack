@@ -3,6 +3,7 @@ import hashlib
 import logging
 import typing as t
 from collections import defaultdict
+from itertools import starmap
 
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.debug import get_ai_agent_debugger
@@ -76,10 +77,7 @@ class AgentCoordinator:
         issues_by_type = self._group_issues_by_type(issues)
 
         # Optimization: Run ALL issue types in parallel instead of sequential
-        tasks = [
-            self._handle_issues_by_type(issue_type, type_issues)
-            for issue_type, type_issues in issues_by_type.items()
-        ]
+        tasks = list(starmap(self._handle_issues_by_type, issues_by_type.items()))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -108,9 +106,11 @@ class AgentCoordinator:
         specialist_agents = []
 
         # First, try to use agents from static mapping for O(1) lookup
-        for agent in self.agents:
-            if agent.__class__.__name__ in preferred_agent_names:
-                specialist_agents.append(agent)
+        specialist_agents = [
+            agent
+            for agent in self.agents
+            if agent.__class__.__name__ in preferred_agent_names
+        ]
 
         # Fallback: use traditional dynamic lookup if no static match
         if not specialist_agents:
@@ -156,42 +156,95 @@ class AgentCoordinator:
         specialists: list[SubAgent],
         issue: Issue,
     ) -> SubAgent | None:
-        best_agent = None
-        best_score = 0.0
+        candidates = await self._score_all_specialists(specialists, issue)
+        if not candidates:
+            return None
+
+        best_agent, best_score = self._find_highest_scoring_agent(candidates)
+        return self._apply_built_in_preference(candidates, best_agent, best_score)
+
+    async def _score_all_specialists(
+        self, specialists: list[SubAgent], issue: Issue
+    ) -> list[tuple[SubAgent, float]]:
+        """Score all specialist agents for handling an issue."""
         candidates: list[tuple[SubAgent, float]] = []
 
-        # Threshold for considering scores "close" (5% difference)
-        CLOSE_SCORE_THRESHOLD = 0.05
-
-        # Collect all agent scores
         for agent in specialists:
             try:
                 score = await agent.can_handle(issue)
                 candidates.append((agent, score))
-                if score > best_score:
-                    best_score = score
-                    best_agent = agent
             except Exception as e:
                 self.logger.exception(f"Error evaluating specialist {agent.name}: {e}")
 
-        # Apply preference for built-in agents when scores are close
-        if best_agent and best_score > 0:
-            # Check if any built-in agents have scores close to the best
-            for agent, score in candidates:
-                if agent != best_agent and self._is_built_in_agent(agent):
-                    score_difference = best_score - score
-                    if 0 < score_difference <= CLOSE_SCORE_THRESHOLD:
-                        # Built-in agent with close score gets preference
-                        self.logger.info(
-                            f"Preferring built-in agent {agent.name} (score: {score:.2f}) "
-                            f"over {best_agent.name} (score: {best_score:.2f}) "
-                            f"due to {score_difference:.2f} threshold preference"
-                        )
-                        best_agent = agent
-                        best_score = score
-                        break
+        return candidates
+
+    def _find_highest_scoring_agent(
+        self, candidates: list[tuple[SubAgent, float]]
+    ) -> tuple[SubAgent | None, float]:
+        """Find the agent with the highest score."""
+        best_agent = None
+        best_score = 0.0
+
+        for agent, score in candidates:
+            if score > best_score:
+                best_score = score
+                best_agent = agent
+
+        return best_agent, best_score
+
+    def _apply_built_in_preference(
+        self,
+        candidates: list[tuple[SubAgent, float]],
+        best_agent: SubAgent | None,
+        best_score: float,
+    ) -> SubAgent | None:
+        """Apply preference for built-in agents when scores are close."""
+        if not best_agent or best_score <= 0:
+            return best_agent
+
+        # Threshold for considering scores "close" (5% difference)
+        CLOSE_SCORE_THRESHOLD = 0.05
+
+        for agent, score in candidates:
+            if self._should_prefer_built_in_agent(
+                agent, best_agent, score, best_score, CLOSE_SCORE_THRESHOLD
+            ):
+                self._log_built_in_preference(
+                    agent, score, best_agent, best_score, best_score - score
+                )
+                return agent
 
         return best_agent
+
+    def _should_prefer_built_in_agent(
+        self,
+        agent: SubAgent,
+        best_agent: SubAgent,
+        score: float,
+        best_score: float,
+        threshold: float,
+    ) -> bool:
+        """Check if a built-in agent should be preferred over the current best."""
+        return (
+            agent != best_agent
+            and self._is_built_in_agent(agent)
+            and 0 < (best_score - score) <= threshold
+        )
+
+    def _log_built_in_preference(
+        self,
+        agent: SubAgent,
+        score: float,
+        best_agent: SubAgent,
+        best_score: float,
+        score_difference: float,
+    ) -> None:
+        """Log when preferring a built-in agent."""
+        self.logger.info(
+            f"Preferring built-in agent {agent.name} (score: {score:.2f}) "
+            f"over {best_agent.name} (score: {best_score:.2f}) "
+            f"due to {score_difference:.2f} threshold preference"
+        )
 
     def _is_built_in_agent(self, agent: SubAgent) -> bool:
         """Check if agent is a built-in Crackerjack agent."""
@@ -361,26 +414,41 @@ class AgentCoordinator:
         architect = self._get_architect_agent()
 
         if not architect:
-            self.logger.warning("No ArchitectAgent available for planning")
-            return {"strategy": "reactive_fallback", "patterns": []}
+            return self._create_fallback_plan(
+                "No ArchitectAgent available for planning"
+            )
 
-        complex_issues = [
-            issue
-            for issue in issues
-            if issue.type
-            in {IssueType.COMPLEXITY, IssueType.DRY_VIOLATION, IssueType.PERFORMANCE}
-        ]
-
+        complex_issues = self._filter_complex_issues(issues)
         if not complex_issues:
             return {"strategy": "simple_fixes", "patterns": ["standard_patterns"]}
 
+        return await self._generate_architectural_plan(
+            architect, complex_issues, issues
+        )
+
+    def _create_fallback_plan(self, reason: str) -> dict[str, t.Any]:
+        """Create a fallback plan when architectural planning fails."""
+        self.logger.warning(reason)
+        return {"strategy": "reactive_fallback", "patterns": []}
+
+    def _filter_complex_issues(self, issues: list[Issue]) -> list[Issue]:
+        """Filter issues that require architectural planning."""
+        complex_types = {
+            IssueType.COMPLEXITY,
+            IssueType.DRY_VIOLATION,
+            IssueType.PERFORMANCE,
+        }
+        return [issue for issue in issues if issue.type in complex_types]
+
+    async def _generate_architectural_plan(
+        self, architect, complex_issues: list[Issue], all_issues: list[Issue]
+    ) -> dict[str, t.Any]:
+        """Generate architectural plan using the architect agent."""
         primary_issue = complex_issues[0]
 
         try:
             plan = await architect.plan_before_action(primary_issue)
-
-            plan["all_issues"] = [issue.id for issue in issues]
-            plan["issue_types"] = list({issue.type.value for issue in issues})
+            plan = self._enrich_architectural_plan(plan, all_issues)
 
             self.logger.info(
                 f"Created architectural plan: {plan.get('strategy', 'unknown')}"
@@ -391,6 +459,14 @@ class AgentCoordinator:
             self.logger.exception(f"Failed to create architectural plan: {e}")
             return {"strategy": "reactive_fallback", "patterns": [], "error": str(e)}
 
+    def _enrich_architectural_plan(
+        self, plan: dict[str, t.Any], issues: list[Issue]
+    ) -> dict[str, t.Any]:
+        """Enrich the architectural plan with issue metadata."""
+        plan["all_issues"] = [issue.id for issue in issues]
+        plan["issue_types"] = list({issue.type.value for issue in issues})
+        return plan
+
     async def _apply_fixes_with_plan(
         self, issues: list[Issue], plan: dict[str, t.Any]
     ) -> FixResult:
@@ -400,21 +476,41 @@ class AgentCoordinator:
             return await self.handle_issues(issues)
 
         self.logger.info(f"Applying fixes with {strategy} strategy")
-
         prioritized_issues = self._prioritize_issues_by_plan(issues, plan)
 
+        return await self._process_prioritized_groups(prioritized_issues, plan)
+
+    async def _process_prioritized_groups(
+        self, prioritized_issues: list[list[Issue]], plan: dict[str, t.Any]
+    ) -> FixResult:
+        """Process prioritized issue groups according to the plan."""
         overall_result = FixResult(success=True, confidence=1.0)
 
         for issue_group in prioritized_issues:
             group_result = await self._handle_issue_group_with_plan(issue_group, plan)
             overall_result = overall_result.merge_with(group_result)
 
-            if not group_result.success and self._is_critical_group(issue_group, plan):
-                overall_result.success = False
-                overall_result.remaining_issues.append(
-                    f"Critical issue group failed: {[i.id for i in issue_group]}"
+            if self._should_fail_on_group_failure(group_result, issue_group, plan):
+                overall_result = self._mark_critical_group_failure(
+                    overall_result, issue_group
                 )
 
+        return overall_result
+
+    def _should_fail_on_group_failure(
+        self, group_result: FixResult, issue_group: list[Issue], plan: dict[str, t.Any]
+    ) -> bool:
+        """Determine if overall process should fail when a group fails."""
+        return not group_result.success and self._is_critical_group(issue_group, plan)
+
+    def _mark_critical_group_failure(
+        self, overall_result: FixResult, issue_group: list[Issue]
+    ) -> FixResult:
+        """Mark overall result as failed due to critical group failure."""
+        overall_result.success = False
+        overall_result.remaining_issues.append(
+            f"Critical issue group failed: {[i.id for i in issue_group]}"
+        )
         return overall_result
 
     async def _validate_against_plan(

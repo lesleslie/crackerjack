@@ -112,29 +112,44 @@ class ErrorPatternAnalyzer:
         """Analyze error patterns from various sources."""
         logger.info(f"Analyzing error patterns for last {days} days")
 
-        # Collect errors from different sources
+        # Collect and process errors
+        errors = self._collect_all_errors()
+        self.error_patterns = self._process_error_data(errors, min_occurrences)
+        self._finalize_pattern_analysis()
+
+        logger.info(f"Found {len(self.error_patterns)} error patterns")
+        return self.error_patterns
+
+    def _collect_all_errors(self) -> list[dict[str, t.Any]]:
+        """Collect errors from all available sources."""
         errors = []
         errors.extend(self._analyze_test_failures())
         errors.extend(self._analyze_lint_errors())
         errors.extend(self._analyze_git_history())
         errors.extend(self._analyze_log_files())
+        return errors
 
-        # Group and analyze patterns
+    def _process_error_data(
+        self, errors: list[dict[str, t.Any]], min_occurrences: int
+    ) -> list[ErrorPattern]:
+        """Process collected errors into patterns."""
         pattern_groups = self._group_similar_errors(errors)
-        self.error_patterns = self._create_error_patterns(
-            pattern_groups, min_occurrences
-        )
+        return self._create_error_patterns(pattern_groups, min_occurrences)
 
-        # Calculate trends and confidence
+    def _finalize_pattern_analysis(self) -> None:
+        """Apply final analysis steps to error patterns."""
         self._calculate_error_trends()
         self._assign_severity_levels()
 
-        logger.info(f"Found {len(self.error_patterns)} error patterns")
-        return self.error_patterns
-
     def generate_file_error_heatmap(self) -> HeatMapData:
         """Generate heat map showing errors by file."""
-        file_error_counts = defaultdict(lambda: defaultdict(float))
+
+        def _make_float_defaultdict() -> defaultdict[str, float]:
+            return defaultdict(float)
+
+        file_error_counts: defaultdict[str, defaultdict[str, float]] = defaultdict(
+            _make_float_defaultdict
+        )
         max_value = 0.0
 
         for pattern in self.error_patterns:
@@ -149,11 +164,11 @@ class ErrorPatternAnalyzer:
         cells = []
         files = sorted(file_error_counts.keys())
         error_types = sorted(
-            set(
+            {
                 error_type
                 for file_errors in file_error_counts.values()
                 for error_type in file_errors.keys()
-            )
+            }
         )
 
         for file_path in files:
@@ -191,65 +206,15 @@ class ErrorPatternAnalyzer:
 
     def generate_temporal_heatmap(self, time_buckets: int = 24) -> HeatMapData:
         """Generate heat map showing errors over time."""
-        now = datetime.now()
-        bucket_size = timedelta(hours=24 // time_buckets)
-
-        # Create time buckets
-        time_labels = []
-        time_buckets_data = []
-        for i in range(time_buckets):
-            bucket_start = now - timedelta(days=30) + (i * bucket_size)
-            time_labels.append(bucket_start.strftime("%m-%d %H:%M"))
-            time_buckets_data.append(bucket_start)
-
-        # Count errors by time bucket and type
-        temporal_counts = defaultdict(lambda: defaultdict(float))
-        max_value = 0.0
-
-        for pattern in self.error_patterns:
-            # Find which time bucket this error belongs to
-            for i, bucket_time in enumerate(time_buckets_data):
-                if bucket_time <= pattern.last_seen <= bucket_time + bucket_size:
-                    bucket_label = time_labels[i]
-                    error_type = pattern.error_type
-                    temporal_counts[bucket_label][error_type] += pattern.count
-                    max_value = max(
-                        max_value, temporal_counts[bucket_label][error_type]
-                    )
-                    break
-
-        # Create heat map cells
-        cells = []
-        error_types = sorted(
-            set(
-                error_type
-                for time_errors in temporal_counts.values()
-                for error_type in time_errors.keys()
-            )
+        time_labels, time_buckets_data, bucket_size = self._create_time_buckets(
+            time_buckets
         )
-
-        for time_label in time_labels:
-            for error_type in error_types:
-                count = temporal_counts[time_label].get(error_type, 0)
-                if count > 0:
-                    intensity = count / max_value if max_value > 0 else 0
-                    severity = self._get_severity_for_type(error_type)
-
-                    cells.append(
-                        HeatMapCell(
-                            x=time_label,
-                            y=error_type,
-                            value=count,
-                            color_intensity=intensity,
-                            tooltip_data={
-                                "time": time_label,
-                                "error_type": error_type,
-                                "count": count,
-                                "severity": severity,
-                            },
-                            severity=severity,
-                        )
-                    )
+        temporal_counts, max_value = self._count_errors_by_time(
+            time_labels, time_buckets_data, bucket_size
+        )
+        cells, error_types = self._create_temporal_heatmap_cells(
+            time_labels, temporal_counts, max_value
+        )
 
         return HeatMapData(
             cells=cells,
@@ -261,9 +226,138 @@ class ErrorPatternAnalyzer:
             min_value=0.0,
         )
 
+    def _create_time_buckets(
+        self, time_buckets: int
+    ) -> tuple[list[str], list[datetime], timedelta]:
+        """Create time buckets for temporal analysis."""
+        now = datetime.now()
+        bucket_size = timedelta(hours=24 // time_buckets)
+
+        time_labels = []
+        time_buckets_data = []
+        for i in range(time_buckets):
+            bucket_start = now - timedelta(days=30) + (i * bucket_size)
+            time_labels.append(bucket_start.strftime("%m-%d %H:%M"))
+            time_buckets_data.append(bucket_start)
+
+        return time_labels, time_buckets_data, bucket_size
+
+    def _count_errors_by_time(
+        self,
+        time_labels: list[str],
+        time_buckets_data: list[datetime],
+        bucket_size: timedelta,
+    ) -> tuple[defaultdict[str, defaultdict[str, float]], float]:
+        """Count errors by time bucket and type."""
+
+        def _make_float_defaultdict_temporal() -> defaultdict[str, float]:
+            return defaultdict(float)
+
+        temporal_counts: defaultdict[str, defaultdict[str, float]] = defaultdict(
+            _make_float_defaultdict_temporal
+        )
+        max_value = 0.0
+
+        for pattern in self.error_patterns:
+            bucket_idx = self._find_time_bucket(
+                pattern.last_seen, time_buckets_data, bucket_size
+            )
+            if bucket_idx is not None:
+                bucket_label = time_labels[bucket_idx]
+                error_type = pattern.error_type
+                temporal_counts[bucket_label][error_type] += pattern.count
+                max_value = max(max_value, temporal_counts[bucket_label][error_type])
+
+        return temporal_counts, max_value
+
+    def _find_time_bucket(
+        self,
+        error_time: datetime,
+        time_buckets_data: list[datetime],
+        bucket_size: timedelta,
+    ) -> int | None:
+        """Find which time bucket an error belongs to."""
+        for i, bucket_time in enumerate(time_buckets_data):
+            if bucket_time <= error_time <= bucket_time + bucket_size:
+                return i
+        return None
+
+    def _create_temporal_heatmap_cells(
+        self,
+        time_labels: list[str],
+        temporal_counts: defaultdict[str, defaultdict[str, float]],
+        max_value: float,
+    ) -> tuple[list[HeatMapCell], list[str]]:
+        """Create heatmap cells for temporal data."""
+        error_types = sorted(
+            {
+                error_type
+                for time_errors in temporal_counts.values()
+                for error_type in time_errors.keys()
+            }
+        )
+
+        cells = []
+        for time_label in time_labels:
+            for error_type in error_types:
+                count = temporal_counts[time_label].get(error_type, 0)
+                if count > 0:
+                    cell = self._create_temporal_cell(
+                        time_label, error_type, count, max_value
+                    )
+                    cells.append(cell)
+
+        return cells, error_types
+
+    def _create_temporal_cell(
+        self, time_label: str, error_type: str, count: float, max_value: float
+    ) -> HeatMapCell:
+        """Create a single temporal heatmap cell."""
+        intensity = count / max_value if max_value > 0 else 0
+        severity = self._get_severity_for_type(error_type)
+
+        return HeatMapCell(
+            x=time_label,
+            y=error_type,
+            value=count,
+            color_intensity=intensity,
+            tooltip_data={
+                "time": time_label,
+                "error_type": error_type,
+                "count": count,
+                "severity": severity,
+            },
+            severity=severity,
+        )
+
     def generate_function_error_heatmap(self) -> HeatMapData:
         """Generate heat map showing errors by function."""
-        function_error_counts = defaultdict(lambda: defaultdict(float))
+        function_error_counts, max_value = self._count_errors_by_function()
+        cells, functions, error_types = self._create_function_heatmap_cells(
+            function_error_counts, max_value
+        )
+
+        return HeatMapData(
+            cells=cells,
+            x_labels=functions,
+            y_labels=error_types,
+            title="Error Distribution by Function",
+            subtitle=f"Showing errors across {len(functions)} functions",
+            max_value=max_value,
+            min_value=0.0,
+        )
+
+    def _count_errors_by_function(
+        self,
+    ) -> tuple[defaultdict[str, defaultdict[str, float]], float]:
+        """Count errors by function and type."""
+
+        def _make_float_defaultdict_function() -> defaultdict[str, float]:
+            return defaultdict(float)
+
+        function_error_counts: defaultdict[str, defaultdict[str, float]] = defaultdict(
+            _make_float_defaultdict_function
+        )
         max_value = 0.0
 
         for pattern in self.error_patterns:
@@ -278,48 +372,54 @@ class ErrorPatternAnalyzer:
                     max_value, function_error_counts[function_id][error_type]
                 )
 
-        # Create heat map cells
-        cells = []
+        return function_error_counts, max_value
+
+    def _create_function_heatmap_cells(
+        self,
+        function_error_counts: defaultdict[str, defaultdict[str, float]],
+        max_value: float,
+    ) -> tuple[list[HeatMapCell], list[str], list[str]]:
+        """Create heatmap cells for function error data."""
         functions = sorted(function_error_counts.keys())
         error_types = sorted(
-            set(
+            {
                 error_type
                 for func_errors in function_error_counts.values()
                 for error_type in func_errors.keys()
-            )
+            }
         )
 
+        cells = []
         for function_id in functions:
             for error_type in error_types:
                 count = function_error_counts[function_id].get(error_type, 0)
                 if count > 0:
-                    intensity = count / max_value if max_value > 0 else 0
-                    severity = self._get_severity_for_type(error_type)
-
-                    cells.append(
-                        HeatMapCell(
-                            x=function_id,
-                            y=error_type,
-                            value=count,
-                            color_intensity=intensity,
-                            tooltip_data={
-                                "function": function_id,
-                                "error_type": error_type,
-                                "count": count,
-                                "severity": severity,
-                            },
-                            severity=severity,
-                        )
+                    cell = self._create_function_cell(
+                        function_id, error_type, count, max_value
                     )
+                    cells.append(cell)
 
-        return HeatMapData(
-            cells=cells,
-            x_labels=functions,
-            y_labels=error_types,
-            title="Error Distribution by Function",
-            subtitle=f"Showing errors across {len(functions)} functions",
-            max_value=max_value,
-            min_value=0.0,
+        return cells, functions, error_types
+
+    def _create_function_cell(
+        self, function_id: str, error_type: str, count: float, max_value: float
+    ) -> HeatMapCell:
+        """Create a single function heatmap cell."""
+        intensity = count / max_value if max_value > 0 else 0
+        severity = self._get_severity_for_type(error_type)
+
+        return HeatMapCell(
+            x=function_id,
+            y=error_type,
+            value=count,
+            color_intensity=intensity,
+            tooltip_data={
+                "function": function_id,
+                "error_type": error_type,
+                "count": count,
+                "severity": severity,
+            },
+            severity=severity,
         )
 
     def _analyze_test_failures(self) -> list[dict[str, t.Any]]:
@@ -493,7 +593,7 @@ class ErrorPatternAnalyzer:
                 confidence=min(1.0, len(error_list) / 10.0),
                 metadata={
                     "group_key": group_key,
-                    "unique_messages": len(set(e["message"] for e in error_list)),
+                    "unique_messages": len({e["message"] for e in error_list}),
                 },
             )
 

@@ -213,35 +213,45 @@ class AgentRegistry:
         return agent_data
 
     def _infer_capabilities_from_agent(self, agent: SubAgent) -> set[AgentCapability]:
-        capabilities = set()
-
+        """Infer agent capabilities from class name using keyword mapping."""
         class_name = agent.__class__.__name__.lower()
+        capability_mapping = self._get_agent_capability_mapping()
 
-        if "architect" in class_name:
-            capabilities.update(
-                {AgentCapability.ARCHITECTURE, AgentCapability.CODE_ANALYSIS}
-            )
-        if "refactor" in class_name:
-            capabilities.add(AgentCapability.REFACTORING)
-        if "test" in class_name:
-            capabilities.add(AgentCapability.TESTING)
-        if "security" in class_name:
-            capabilities.add(AgentCapability.SECURITY)
-        if "performance" in class_name:
-            capabilities.add(AgentCapability.PERFORMANCE)
-        if "documentation" in class_name or "doc" in class_name:
-            capabilities.add(AgentCapability.DOCUMENTATION)
-        if "format" in class_name:
-            capabilities.add(AgentCapability.FORMATTING)
-        if "import" in class_name:
-            capabilities.add(AgentCapability.CODE_ANALYSIS)
-        if "dry" in class_name:
-            capabilities.add(AgentCapability.REFACTORING)
+        capabilities = set()
+        for keywords, caps in capability_mapping:
+            if self._class_name_matches_keywords(class_name, keywords):
+                capabilities.update(caps)
 
+        # Fallback to default capability if none found
         if not capabilities:
             capabilities.add(AgentCapability.CODE_ANALYSIS)
 
         return capabilities
+
+    def _get_agent_capability_mapping(
+        self,
+    ) -> list[tuple[list[str], set[AgentCapability]]]:
+        """Get mapping of keywords to agent capabilities."""
+        return [
+            (
+                ["architect"],
+                {AgentCapability.ARCHITECTURE, AgentCapability.CODE_ANALYSIS},
+            ),
+            (["refactor"], {AgentCapability.REFACTORING}),
+            (["test"], {AgentCapability.TESTING}),
+            (["security"], {AgentCapability.SECURITY}),
+            (["performance"], {AgentCapability.PERFORMANCE}),
+            (["documentation", "doc"], {AgentCapability.DOCUMENTATION}),
+            (["format"], {AgentCapability.FORMATTING}),
+            (["import"], {AgentCapability.CODE_ANALYSIS}),
+            (["dry"], {AgentCapability.REFACTORING}),
+        ]
+
+    def _class_name_matches_keywords(
+        self, class_name: str, keywords: list[str]
+    ) -> bool:
+        """Check if class name contains any of the specified keywords."""
+        return any(keyword in class_name for keyword in keywords)
 
     def _infer_capabilities_from_user_agent(
         self, agent_data: dict[str, t.Any]

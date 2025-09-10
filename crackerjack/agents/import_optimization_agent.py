@@ -312,6 +312,9 @@ class ImportOptimizationAgent(SubAgent):
         all_imports: list[dict[str, t.Any]],
         module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> None:
+        if node.module is None:
+            return  # Skip relative imports without module name
+
         for alias in node.names:
             import_info = {
                 "type": "from",

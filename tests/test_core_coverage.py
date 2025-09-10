@@ -399,9 +399,7 @@ class TestCoreModuleIntegration:
 
         session.track_task("test_workflow", "Test workflow")
 
-        assert (
-            autofix.validate_fix_command(["uv", "run", "ruff", "format", "."]) is True
-        )
+        assert autofix.validate_fix_command(["uv", "run", "ruff", "format", "."])
 
         session.complete_task("test_workflow", "Success")
 

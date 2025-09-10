@@ -90,8 +90,6 @@ class AgentOrchestrator:
                 result = await self._execute_sequential(request, candidates)
             elif request.strategy == ExecutionStrategy.CONSENSUS:
                 result = await self._execute_consensus(request, candidates)
-            else:
-                result = await self._execute_single_best(request, candidates)
 
             execution_time = asyncio.get_event_loop().time() - start_time
             result.execution_time = execution_time
@@ -243,7 +241,6 @@ class AgentOrchestrator:
                 self.logger.warning(
                     f"Sequential agent {candidate.agent.metadata.name} failed: {e}"
                 )
-                continue
 
         return ExecutionResult(
             success=False,

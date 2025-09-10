@@ -9,7 +9,7 @@ from rich.console import Console
 try:
     import tomli
 except ImportError:
-    tomli = None
+    tomli = None  # type: ignore[assignment]
 
 try:
     from fastmcp import FastMCP
@@ -17,7 +17,7 @@ try:
     _mcp_available = True
 except ImportError:
     _mcp_available = False
-    FastMCP = None
+    FastMCP = None  # type: ignore[misc,assignment,no-redef]
 
 MCP_AVAILABLE: Final[bool] = _mcp_available
 

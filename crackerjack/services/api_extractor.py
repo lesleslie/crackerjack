@@ -133,8 +133,7 @@ class APIExtractorImpl(APIExtractorProtocol):
                 continue
 
             try:
-                with open(file_path, encoding="utf-8") as f:
-                    source_code = f.read()
+                source_code = Path(file_path).read_text(encoding="utf-8")
 
                 tree = ast.parse(source_code)
                 module_data = self._extract_module_info(tree, file_path, source_code)
@@ -154,8 +153,7 @@ class APIExtractorImpl(APIExtractorProtocol):
             return {}
 
         try:
-            with open(protocol_file, encoding="utf-8") as f:
-                source_code = f.read()
+            source_code = Path(protocol_file).read_text(encoding="utf-8")
 
             tree = ast.parse(source_code)
             protocols = {}
@@ -180,8 +178,7 @@ class APIExtractorImpl(APIExtractorProtocol):
                 continue
 
             try:
-                with open(file_path, encoding="utf-8") as f:
-                    source_code = f.read()
+                source_code = Path(file_path).read_text(encoding="utf-8")
 
                 tree = ast.parse(source_code)
                 service_info = self._extract_service_info(tree, file_path, source_code)
@@ -205,8 +202,7 @@ class APIExtractorImpl(APIExtractorProtocol):
                 continue
 
             try:
-                with open(file_path, encoding="utf-8") as f:
-                    source_code = f.read()
+                source_code = Path(file_path).read_text(encoding="utf-8")
 
                 tree = ast.parse(source_code)
                 cli_info = self._extract_cli_info(tree, source_code)
@@ -230,13 +226,11 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             try:
                 if file_path.suffix == ".py":
-                    with open(file_path, encoding="utf-8") as f:
-                        source_code = f.read()
+                    source_code = Path(file_path).read_text(encoding="utf-8")
                     tree = ast.parse(source_code)
                     tool_info = self._extract_mcp_python_tools(tree, source_code)
                 elif file_path.suffix == ".md":
-                    with open(file_path, encoding="utf-8") as f:
-                        markdown_content = f.read()
+                    markdown_content = Path(file_path).read_text(encoding="utf-8")
                     tool_info = self._extract_mcp_markdown_docs(markdown_content)
                 else:
                     continue
@@ -467,31 +461,50 @@ class APIExtractorImpl(APIExtractorProtocol):
             return ""
 
         try:
-            if isinstance(annotation, ast.Name):
-                return annotation.id
-            elif isinstance(annotation, ast.Attribute):
-                return f"{self._get_node_name(annotation.value)}.{annotation.attr}"
-            elif isinstance(annotation, ast.Subscript):
-                value = self._get_node_name(annotation.value)
-                slice_val = self._get_annotation_string(annotation.slice)
-                return f"{value}[{slice_val}]"
-            elif isinstance(annotation, ast.BinOp) and isinstance(
-                annotation.op, ast.BitOr
-            ):
-                # Handle Union types with | operator (Python 3.10+)
-                left = self._get_annotation_string(annotation.left)
-                right = self._get_annotation_string(annotation.right)
-                return f"{left} | {right}"
-            elif isinstance(annotation, ast.Constant):
-                return str(annotation.value)
-            elif isinstance(annotation, ast.Tuple):
-                elements = [self._get_annotation_string(elt) for elt in annotation.elts]
-                return f"({', '.join(elements)})"
-            else:
-                # Fallback: try to get source code representation
-                return ast.unparse(annotation) if hasattr(ast, "unparse") else "Any"
+            return self._process_annotation_node(annotation)
         except Exception:
             return "Any"
+
+    def _process_annotation_node(self, annotation: ast.AST) -> str:
+        """Process different types of annotation nodes."""
+        if isinstance(annotation, ast.Name):
+            return annotation.id
+        elif isinstance(annotation, ast.Attribute):
+            return self._process_attribute_annotation(annotation)
+        elif isinstance(annotation, ast.Subscript):
+            return self._process_subscript_annotation(annotation)
+        elif isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
+            return self._process_union_annotation(annotation)
+        elif isinstance(annotation, ast.Constant):
+            return str(annotation.value)
+        elif isinstance(annotation, ast.Tuple):
+            return self._process_tuple_annotation(annotation)
+        return self._get_fallback_annotation(annotation)
+
+    def _process_attribute_annotation(self, annotation: ast.Attribute) -> str:
+        """Process attribute-based annotation nodes."""
+        return f"{self._get_node_name(annotation.value)}.{annotation.attr}"
+
+    def _process_subscript_annotation(self, annotation: ast.Subscript) -> str:
+        """Process subscript-based annotation nodes (e.g., List[str])."""
+        value = self._get_node_name(annotation.value)
+        slice_val = self._get_annotation_string(annotation.slice)
+        return f"{value}[{slice_val}]"
+
+    def _process_union_annotation(self, annotation: ast.BinOp) -> str:
+        """Process Union types with | operator (Python 3.10+)."""
+        left = self._get_annotation_string(annotation.left)
+        right = self._get_annotation_string(annotation.right)
+        return f"{left} | {right}"
+
+    def _process_tuple_annotation(self, annotation: ast.Tuple) -> str:
+        """Process tuple-based annotation nodes."""
+        elements = [self._get_annotation_string(elt) for elt in annotation.elts]
+        return f"({', '.join(elements)})"
+
+    def _get_fallback_annotation(self, annotation: ast.AST) -> str:
+        """Get fallback annotation representation."""
+        return ast.unparse(annotation) if hasattr(ast, "unparse") else "Any"
 
     def _extract_import_info(
         self, node: ast.Import | ast.ImportFrom

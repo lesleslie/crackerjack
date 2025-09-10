@@ -310,7 +310,7 @@ def main():
     print("Testing crackerjack workflow fast hooks behavior")
     print("=" * 60)
 
-    original_cwd = os.getcwd()
+    original_cwd = Path.cwd()
 
     try:
         # Test 1: Fast hooks failure should stop workflow

@@ -238,7 +238,7 @@ def _handle_changelog_commands(
     from crackerjack.services.changelog_automation import ChangelogGenerator
     from crackerjack.services.git import GitService
 
-    pkg_path = Path(".")
+    pkg_path = Path()
     git_service = GitService(console, pkg_path)
     changelog_generator = ChangelogGenerator(console, git_service)
     changelog_path = pkg_path / "CHANGELOG.md"
@@ -301,7 +301,7 @@ def _handle_version_analysis(
     from crackerjack.services.git import GitService
     from crackerjack.services.version_analyzer import VersionAnalyzer
 
-    pkg_path = Path(".")
+    pkg_path = Path()
     git_service = GitService(console, pkg_path)
     version_analyzer = VersionAnalyzer(console, git_service)
 

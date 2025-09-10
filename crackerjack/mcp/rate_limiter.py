@@ -35,10 +35,10 @@ class RateLimiter:
         self.requests_per_hour = requests_per_hour
 
         self.minute_windows: dict[str, deque[float]] = defaultdict(
-            lambda: deque(maxlen=requests_per_minute),
+            lambda: deque(maxlen=requests_per_minute),  # type: ignore[misc]
         )
         self.hour_windows: dict[str, deque[float]] = defaultdict(
-            lambda: deque(maxlen=requests_per_hour),
+            lambda: deque(maxlen=requests_per_hour),  # type: ignore[misc]
         )
 
         self.global_minute_window: deque[float] = deque(maxlen=requests_per_minute * 10)

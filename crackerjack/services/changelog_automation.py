@@ -110,21 +110,21 @@ class ChangelogGenerator:
         header_lower = header.lower()
 
         if any(
-            keyword in header_lower for keyword in ["add", "new", "create", "implement"]
+            keyword in header_lower for keyword in ("add", "new", "create", "implement")
         ):
             entry_type = "Added"
         elif any(
-            keyword in header_lower for keyword in ["fix", "bug", "resolve", "correct"]
+            keyword in header_lower for keyword in ("fix", "bug", "resolve", "correct")
         ):
             entry_type = "Fixed"
         elif any(
             keyword in header_lower
-            for keyword in ["update", "change", "modify", "improve"]
+            for keyword in ("update", "change", "modify", "improve")
         ):
             entry_type = "Changed"
-        elif any(keyword in header_lower for keyword in ["remove", "delete", "drop"]):
+        elif any(keyword in header_lower for keyword in ("remove", "delete", "drop")):
             entry_type = "Removed"
-        elif any(keyword in header_lower for keyword in ["doc", "readme", "comment"]):
+        elif any(keyword in header_lower for keyword in ("doc", "readme", "comment")):
             entry_type = "Documentation"
         else:
             entry_type = "Changed"
@@ -195,9 +195,8 @@ class ChangelogGenerator:
                 "--oneline",
                 "--no-merges",
             ]
-        else:
-            # Get commits since last release tag or last 50 commits
-            return ["log", "-50", "--oneline", "--no-merges"]
+        # Get commits since last release tag or last 50 commits
+        return ["log", "-50", "--oneline", "--no-merges"]
 
     def _parse_commits_to_entries(
         self, git_output: str
@@ -316,8 +315,7 @@ class ChangelogGenerator:
             if section_name in entries_by_type:
                 entries = entries_by_type[section_name]
                 if entries:
-                    section_lines.append(f"### {section_name}")
-                    section_lines.append("")
+                    section_lines.extend((f"### {section_name}", ""))
 
                     # Sort entries: breaking changes first, then alphabetically
                     entries.sort(

@@ -549,7 +549,7 @@ class TestCLIOptionCompletion:
                 and hasattr(opts, "global_lock_dir")
             )
 
-        assert test_function(options) is True
+        assert test_function(options)
 
 
 class TestCLIErrorHandling:

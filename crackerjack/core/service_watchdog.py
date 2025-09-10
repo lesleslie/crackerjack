@@ -379,45 +379,62 @@ class ServiceWatchdog:
         return self.services.copy()
 
     def print_status_report(self) -> None:
-        self.console.print("\n[bold blue]🐕 Service Watchdog Status[/bold blue]")
-        self.console.print("=" * 50)
+        """Print detailed status report for all services."""
+        self._print_report_header()
 
         if not self.services:
             self.console.print("[dim]No services configured[/dim]")
             return
 
+        table = self._create_status_table()
+        self.console.print(table)
+
+    def _print_report_header(self) -> None:
+        """Print the status report header."""
+        self.console.print("\n[bold blue]🐕 Service Watchdog Status[/bold blue]")
+        self.console.print("=" * 50)
+
+    def _create_status_table(self) -> Table:
+        """Create and populate the status table."""
         table = Table()
         table.add_column("Service")
         table.add_column("Status")
         table.add_column("Uptime")
 
         for service in self.services.values():
-            if service.state == ServiceState.RUNNING and service.is_healthy:
-                status = "[green]🟢 Running[/green]"
-            elif service.state == ServiceState.STARTING:
-                status = "[yellow]🟡 Starting[/yellow]"
-            elif service.state == ServiceState.STOPPING:
-                status = "[yellow]🟡 Stopping[/yellow]"
-            elif service.state == ServiceState.FAILED:
-                status = "[red]🔴 Failed[/red]"
-            elif service.state == ServiceState.TIMEOUT:
-                status = "[red]⏰ Timeout[/red]"
-            else:
-                status = "[dim]⚫ Stopped[/dim]"
+            status_display = self._get_service_status_display(service)
+            uptime_display = self._format_uptime(service.uptime)
+            table.add_row(service.config.name, status_display, uptime_display)
 
-            uptime = service.uptime
-            if uptime > 3600:
-                uptime_str = f"{uptime / 3600: .1f}h"
-            elif uptime > 60:
-                uptime_str = f"{uptime / 60: .1f}m"
-            elif uptime > 0:
-                uptime_str = f"{uptime: .0f}s"
-            else:
-                uptime_str = "-"
+        return table
 
-            table.add_row(service.config.name, status, uptime_str)
+    def _get_service_status_display(self, service: ServiceStatus) -> str:
+        """Get formatted status display for a service."""
+        status_map = {
+            (ServiceState.RUNNING, True): "[green]🟢 Running[/green]",
+            (ServiceState.STARTING, None): "[yellow]🟡 Starting[/yellow]",
+            (ServiceState.STOPPING, None): "[yellow]🟡 Stopping[/yellow]",
+            (ServiceState.FAILED, None): "[red]🔴 Failed[/red]",
+            (ServiceState.TIMEOUT, None): "[red]⏰ Timeout[/red]",
+        }
 
-        self.console.print(table)
+        # Check for running with healthy status first
+        if service.state == ServiceState.RUNNING and service.is_healthy:
+            return status_map[(ServiceState.RUNNING, True)]
+
+        # Check other states
+        status_key = (service.state, None)
+        return status_map.get(status_key, "[dim]⚫ Stopped[/dim]")
+
+    def _format_uptime(self, uptime: float) -> str:
+        """Format uptime duration for display."""
+        if uptime > 3600:
+            return f"{uptime / 3600: .1f}h"
+        elif uptime > 60:
+            return f"{uptime / 60: .1f}m"
+        elif uptime > 0:
+            return f"{uptime: .0f}s"
+        return "-"
 
 
 _global_watchdog: ServiceWatchdog | None = None

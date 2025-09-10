@@ -22,7 +22,7 @@ class CoverageRatchetService:
         if self.ratchet_file.exists():
             return
 
-        ratchet_data = {
+        ratchet_data: dict[str, t.Any] = {
             "baseline": initial_coverage,
             "current_minimum": initial_coverage,
             "target": 100.0,

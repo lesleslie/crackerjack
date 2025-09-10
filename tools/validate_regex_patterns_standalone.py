@@ -144,27 +144,25 @@ class RegexVisitor(ast.NodeVisitor):
 
     def _is_exempted_line(self, line_no: int) -> bool:
         """Check if line or nearby lines have exemption comment."""
-        try:
-            with open(self.file_path, encoding="utf-8") as f:
-                lines = f.readlines()
-                # Check current line and next 5 lines for exemption comments
-                # This handles multi-line statements
-                for offset in range(6):  # Check lines: current, +1, +2, +3, +4, +5
-                    check_line = line_no - 1 + offset
-                    if check_line < len(lines):
-                        line = lines[check_line]
-                        if "# REGEX OK:" in line or "# regex ok:" in line.lower():
-                            return True
-        except (OSError, UnicodeDecodeError):
-            pass
+        from contextlib import suppress
+
+        with suppress(OSError, UnicodeDecodeError):
+            lines = self.file_path.read_text(encoding="utf-8").splitlines()
+            # Check current line and next 5 lines for exemption comments
+            # This handles multi-line statements
+            for offset in range(6):  # Check lines: current, +1, +2, +3, +4, +5
+                check_line = line_no - 1 + offset
+                if check_line < len(lines):
+                    line = lines[check_line]
+                    if "# REGEX OK:" in line or "# regex ok:" in line.lower():
+                        return True
         return False
 
 
 def validate_file(file_path: Path) -> list[tuple[int, str]]:
     """Validate a single Python file for regex pattern usage."""
     try:
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
+        content = file_path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as e:
         return [(1, f"Error reading file: {e}")]
 

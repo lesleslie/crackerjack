@@ -145,6 +145,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := error_pattern.match(line):
+                assert match is not None  # Type checker: match cannot be None here
                 file_path, line_num, col_num, code, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -172,6 +173,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := error_pattern.match(line):
+                assert match is not None  # Type checker: match cannot be None here
                 file_path, line_num, col_num, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -184,6 +186,7 @@ class HookOutputParser:
                     },
                 )
             elif match := warning_pattern.match(line):
+                assert match is not None  # Type checker: match cannot be None here
                 file_path, line_num, col_num, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["warnings"].append(
@@ -209,6 +212,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := issue_pattern.match(line):
+                assert match is not None  # Type checker: match cannot be None here
                 code, message = match.groups()
                 result["errors"].append(
                     {"code": code, "message": message, "type": "security"},
@@ -227,6 +231,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := unused_pattern.match(line):
+                assert match is not None  # Type checker: match cannot be None here
                 file_path, line_num, item_type, item_name = match.groups()
                 result["files_processed"].add(file_path)
                 result["warnings"].append(
@@ -251,6 +256,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := complex_pattern.match(line):
+                assert match is not None  # Type checker: match cannot be None here
                 file_path, line_num, col_num, function_name, complexity = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -324,13 +330,15 @@ class IndividualHookExecutor:
         self.progress_callback: t.Callable[[HookProgress], None] | None = None
         self.suppress_realtime_output = False
         self.progress_callback_interval = 1
+        self.hook_lock_manager: HookLockManagerProtocol
 
         if hook_lock_manager is None:
             from crackerjack.executors.hook_lock_manager import (
                 hook_lock_manager as default_manager,
             )
 
-            self.hook_lock_manager = default_manager
+            # Type cast: default_manager implements the protocol interface
+            self.hook_lock_manager = t.cast(HookLockManagerProtocol, default_manager)
         else:
             self.hook_lock_manager = hook_lock_manager
 
@@ -433,7 +441,7 @@ class IndividualHookExecutor:
         cmd = hook.get_command()
 
         try:
-            async with self.hook_lock_manager.acquire_hook_lock(hook.name):
+            async with self.hook_lock_manager.acquire_hook_lock(hook.name):  # type: ignore[attr-defined]
                 result = await self._run_command_with_streaming(
                     cmd, hook.timeout, progress
                 )

@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+from contextlib import suppress
 from datetime import datetime
 from typing import Any
 
@@ -151,106 +152,114 @@ class CrackerjackMonitoringServer:
 
     def _setup_websocket_endpoints(self):
         """Setup WebSocket endpoints for real-time communication."""
+        self.app.websocket("/ws/metrics")(self._handle_metrics_websocket)
+        self.app.websocket("/ws/alerts")(self._handle_alerts_websocket)
 
-        @self.app.websocket("/ws/metrics")
-        async def websocket_metrics_endpoint(websocket: WebSocket):
-            """WebSocket endpoint for real-time metrics streaming."""
-            client_id = f"metrics_{datetime.now().timestamp()}"
-            await websocket.accept()
+    async def _handle_metrics_websocket(self, websocket: WebSocket):
+        """Handle metrics WebSocket connection."""
+        client_id = f"metrics_{datetime.now().timestamp()}"
+        await websocket.accept()
 
-            try:
-                self.active_connections[client_id] = websocket
-                self.metrics_subscribers.add(websocket)
+        try:
+            await self._setup_metrics_connection(websocket, client_id)
+            await self._send_initial_metrics(websocket)
+            await self._handle_metrics_messages(websocket)
+        finally:
+            self._cleanup_connection(websocket, client_id)
 
-                # Send initial metrics
-                current_metrics = self.metrics_collector.get_current_metrics()
-                await websocket.send_text(
-                    json.dumps(
+    async def _handle_alerts_websocket(self, websocket: WebSocket):
+        """Handle alerts WebSocket connection."""
+        client_id = f"alerts_{datetime.now().timestamp()}"
+        await websocket.accept()
+
+        try:
+            await self._setup_alerts_connection(websocket, client_id)
+            await self._send_initial_alerts(websocket)
+            await self._handle_alerts_messages(websocket)
+        finally:
+            self._cleanup_connection(websocket, client_id)
+
+    async def _setup_metrics_connection(self, websocket: WebSocket, client_id: str):
+        """Setup metrics websocket connection."""
+        self.active_connections[client_id] = websocket
+        self.metrics_subscribers.add(websocket)
+
+    async def _setup_alerts_connection(self, websocket: WebSocket, client_id: str):
+        """Setup alerts websocket connection."""
+        self.active_connections[client_id] = websocket
+        self.alerts_subscribers.add(websocket)
+
+    async def _send_initial_metrics(self, websocket: WebSocket):
+        """Send initial metrics to websocket client."""
+        current_metrics = self.metrics_collector.get_current_metrics()
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "initial_metrics",
+                    "data": current_metrics.to_dict(),
+                }
+            )
+        )
+
+    async def _send_initial_alerts(self, websocket: WebSocket):
+        """Send initial alerts to websocket client."""
+        recent_alerts = self.ai_watchdog.get_recent_alerts(hours=24)
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "initial_alerts",
+                    "data": [
                         {
-                            "type": "initial_metrics",
-                            "data": current_metrics.to_dict(),
+                            "level": alert.level,
+                            "message": alert.message,
+                            "agent": alert.agent_name,
+                            "timestamp": alert.timestamp.isoformat(),
                         }
-                    )
-                )
+                        for alert in recent_alerts
+                    ],
+                }
+            )
+        )
 
-                # Keep connection alive and handle incoming messages
-                while True:
-                    try:
-                        message = await websocket.receive_text()
-                        data = json.loads(message)
-
-                        if data.get("type") == "ping":
-                            await websocket.send_text(
-                                json.dumps(
-                                    {
-                                        "type": "pong",
-                                        "timestamp": datetime.now().isoformat(),
-                                    }
-                                )
-                            )
-
-                    except WebSocketDisconnect:
-                        break
-                    except Exception as e:
-                        logger.error(f"WebSocket error: {e}")
-                        break
-
-            finally:
-                self._cleanup_connection(websocket, client_id)
-
-        @self.app.websocket("/ws/alerts")
-        async def websocket_alerts_endpoint(websocket: WebSocket):
-            """WebSocket endpoint for real-time alert notifications."""
-            client_id = f"alerts_{datetime.now().timestamp()}"
-            await websocket.accept()
-
+    async def _handle_metrics_messages(self, websocket: WebSocket):
+        """Handle incoming metrics websocket messages."""
+        while True:
             try:
-                self.active_connections[client_id] = websocket
-                self.alerts_subscribers.add(websocket)
+                message = await websocket.receive_text()
+                data = json.loads(message)
+                await self._process_websocket_message(websocket, data)
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"WebSocket error: {e}")
+                break
 
-                # Send recent alerts
-                recent_alerts = self.ai_watchdog.get_recent_alerts(hours=24)
-                await websocket.send_text(
-                    json.dumps(
-                        {
-                            "type": "initial_alerts",
-                            "data": [
-                                {
-                                    "level": alert.level,
-                                    "message": alert.message,
-                                    "agent": alert.agent_name,
-                                    "timestamp": alert.timestamp.isoformat(),
-                                }
-                                for alert in recent_alerts
-                            ],
-                        }
-                    )
+    async def _handle_alerts_messages(self, websocket: WebSocket):
+        """Handle incoming alerts websocket messages."""
+        while True:
+            try:
+                message = await websocket.receive_text()
+                data = json.loads(message)
+                await self._process_websocket_message(websocket, data)
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"WebSocket error: {e}")
+                break
+
+    async def _process_websocket_message(
+        self, websocket: WebSocket, data: dict[str, Any]
+    ):
+        """Process incoming websocket message."""
+        if data.get("type") == "ping":
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "pong",
+                        "timestamp": datetime.now().isoformat(),
+                    }
                 )
-
-                # Keep connection alive
-                while True:
-                    try:
-                        message = await websocket.receive_text()
-                        data = json.loads(message)
-
-                        if data.get("type") == "ping":
-                            await websocket.send_text(
-                                json.dumps(
-                                    {
-                                        "type": "pong",
-                                        "timestamp": datetime.now().isoformat(),
-                                    }
-                                )
-                            )
-
-                    except WebSocketDisconnect:
-                        break
-                    except Exception as e:
-                        logger.error(f"WebSocket error: {e}")
-                        break
-
-            finally:
-                self._cleanup_connection(websocket, client_id)
+            )
 
     def _cleanup_connection(self, websocket: WebSocket, client_id: str):
         """Clean up a WebSocket connection."""
@@ -315,10 +324,8 @@ class CrackerjackMonitoringServer:
 
             # Close all WebSocket connections
             for websocket in list(self.active_connections.values()):
-                try:
+                with suppress(Exception):
                     await websocket.close()
-                except Exception:
-                    pass
             self.active_connections.clear()
             self.metrics_subscribers.clear()
             self.alerts_subscribers.clear()
@@ -360,34 +367,27 @@ class CrackerjackMonitoringServer:
                 disconnected.append(websocket)
 
         # Clean up disconnected clients
-        for websocket in disconnected:
-            self.metrics_subscribers.discard(websocket)
+        self.metrics_subscribers.difference_update(disconnected)
 
     def _get_dashboard_html(self) -> str:
         """Generate the dashboard HTML interface."""
-        return """
-<!DOCTYPE html>
+        html_template = self._get_html_template()
+        css_styles = self._get_dashboard_css()
+        javascript_code = self._get_dashboard_javascript()
+
+        return html_template.format(
+            css_styles=css_styles, javascript_code=javascript_code
+        )
+
+    def _get_html_template(self) -> str:
+        """Get the HTML template structure."""
+        return """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crackerjack Monitoring Dashboard</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #1a1a1a; color: #fff; }
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: #2d2d2d; border-radius: 8px; padding: 20px; border: 1px solid #404040; }
-        .metric { display: flex; justify-content: space-between; margin: 10px 0; }
-        .metric-label { color: #aaa; }
-        .metric-value { color: #fff; font-weight: bold; }
-        .status-good { color: #4ade80; }
-        .status-warning { color: #fbbf24; }
-        .status-error { color: #ef4444; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .connection-status { position: fixed; top: 20px; right: 20px; padding: 10px; border-radius: 4px; }
-        .connected { background: #16a34a; }
-        .disconnected { background: #dc2626; }
-        #logs { height: 200px; overflow-y: auto; background: #000; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; }
-    </style>
+    <style>{css_styles}</style>
 </head>
 <body>
     <div class="connection-status disconnected" id="connection-status">Connecting...</div>
@@ -468,59 +468,119 @@ class CrackerjackMonitoringServer:
         </div>
     </div>
 
-    <script>
+    <script>{javascript_code}</script>
+</body>
+</html>"""
+
+    def _get_dashboard_css(self) -> str:
+        """Get the CSS styles for the dashboard."""
+        return """
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #1a1a1a; color: #fff; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #2d2d2d; border-radius: 8px; padding: 20px; border: 1px solid #404040; }
+        .metric { display: flex; justify-content: space-between; margin: 10px 0; }
+        .metric-label { color: #aaa; }
+        .metric-value { color: #fff; font-weight: bold; }
+        .status-good { color: #4ade80; }
+        .status-warning { color: #fbbf24; }
+        .status-error { color: #ef4444; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .connection-status { position: fixed; top: 20px; right: 20px; padding: 10px; border-radius: 4px; }
+        .connected { background: #16a34a; }
+        .disconnected { background: #dc2626; }
+        #logs { height: 200px; overflow-y: auto; background: #000; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+        """
+
+    def _get_dashboard_javascript(self) -> str:
+        """Get the JavaScript code for the dashboard."""
+        js_variables = self._get_js_variables()
+        js_websocket_handlers = self._get_js_websocket_handlers()
+        js_dashboard_functions = self._get_js_dashboard_functions()
+        js_initialization = self._get_js_initialization()
+
+        return f"""
+        {js_variables}
+        {js_websocket_handlers}
+        {js_dashboard_functions}
+        {js_initialization}
+        """
+
+    def _get_js_variables(self) -> str:
+        """Get JavaScript variable declarations."""
+        return """
         const wsUrl = `ws://${window.location.host}/ws/metrics`;
         let ws = null;
         let reconnectInterval = 5000;
+        """
 
+    def _get_js_websocket_handlers(self) -> str:
+        """Get JavaScript WebSocket connection handlers."""
+        return """
         function connect() {
             ws = new WebSocket(wsUrl);
-
-            ws.onopen = function() {
-                document.getElementById('connection-status').textContent = 'Connected';
-                document.getElementById('connection-status').className = 'connection-status connected';
-                log('Connected to monitoring server');
-            };
-
-            ws.onmessage = function(event) {
-                const message = JSON.parse(event.data);
-                if (message.type === 'metrics_update' || message.type === 'initial_metrics') {
-                    updateDashboard(message.data);
-                }
-            };
-
-            ws.onclose = function() {
-                document.getElementById('connection-status').textContent = 'Disconnected';
-                document.getElementById('connection-status').className = 'connection-status disconnected';
-                log('Disconnected from monitoring server');
-                setTimeout(connect, reconnectInterval);
-            };
-
-            ws.onerror = function(error) {
-                log(`WebSocket error: ${error}`);
-            };
+            ws.onopen = handleWebSocketOpen;
+            ws.onmessage = handleWebSocketMessage;
+            ws.onclose = handleWebSocketClose;
+            ws.onerror = handleWebSocketError;
         }
 
+        function handleWebSocketOpen() {
+            document.getElementById('connection-status').textContent = 'Connected';
+            document.getElementById('connection-status').className = 'connection-status connected';
+            log('Connected to monitoring server');
+        }
+
+        function handleWebSocketMessage(event) {
+            const message = JSON.parse(event.data);
+            if (message.type === 'metrics_update' || message.type === 'initial_metrics') {
+                updateDashboard(message.data);
+            }
+        }
+
+        function handleWebSocketClose() {
+            document.getElementById('connection-status').textContent = 'Disconnected';
+            document.getElementById('connection-status').className = 'connection-status disconnected';
+            log('Disconnected from monitoring server');
+            setTimeout(connect, reconnectInterval);
+        }
+
+        function handleWebSocketError(error) {
+            log(`WebSocket error: ${error}`);
+        }
+        """
+
+    def _get_js_dashboard_functions(self) -> str:
+        """Get JavaScript dashboard utility functions."""
+        return """
         function updateDashboard(data) {
-            // System metrics
-            document.getElementById('cpu').textContent = data.system.cpu_usage.toFixed(1) + '%';
-            document.getElementById('memory').textContent = (data.system.memory_usage_mb / 1024).toFixed(1) + 'GB';
-            document.getElementById('uptime').textContent = formatUptime(data.system.uptime_seconds);
+            updateSystemMetrics(data.system);
+            updateQualityMetrics(data.quality);
+            updateWorkflowMetrics(data.workflow);
+            updateAgentMetrics(data.agents);
+        }
 
-            // Quality metrics
-            document.getElementById('success-rate').textContent = (data.quality.success_rate * 100).toFixed(1) + '%';
-            document.getElementById('issues-fixed').textContent = data.quality.issues_fixed;
-            document.getElementById('coverage').textContent = (data.quality.test_coverage * 100).toFixed(1) + '%';
+        function updateSystemMetrics(system) {
+            document.getElementById('cpu').textContent = system.cpu_usage.toFixed(1) + '%';
+            document.getElementById('memory').textContent = (system.memory_usage_mb / 1024).toFixed(1) + 'GB';
+            document.getElementById('uptime').textContent = formatUptime(system.uptime_seconds);
+        }
 
-            // Workflow metrics
-            document.getElementById('jobs-completed').textContent = data.workflow.jobs_completed;
-            document.getElementById('avg-duration').textContent = data.workflow.average_job_duration.toFixed(1) + 's';
-            document.getElementById('throughput').textContent = data.workflow.throughput_per_hour.toFixed(1) + '/h';
+        function updateQualityMetrics(quality) {
+            document.getElementById('success-rate').textContent = (quality.success_rate * 100).toFixed(1) + '%';
+            document.getElementById('issues-fixed').textContent = quality.issues_fixed;
+            document.getElementById('coverage').textContent = (quality.test_coverage * 100).toFixed(1) + '%';
+        }
 
-            // Agent metrics
-            document.getElementById('active-agents').textContent = data.agents.active_agents;
-            document.getElementById('total-fixes').textContent = data.agents.total_fixes_applied;
-            document.getElementById('cache-hit-rate').textContent = (data.agents.cache_hit_rate * 100).toFixed(1) + '%';
+        function updateWorkflowMetrics(workflow) {
+            document.getElementById('jobs-completed').textContent = workflow.jobs_completed;
+            document.getElementById('avg-duration').textContent = workflow.average_job_duration.toFixed(1) + 's';
+            document.getElementById('throughput').textContent = workflow.throughput_per_hour.toFixed(1) + '/h';
+        }
+
+        function updateAgentMetrics(agents) {
+            document.getElementById('active-agents').textContent = agents.active_agents;
+            document.getElementById('total-fixes').textContent = agents.total_fixes_applied;
+            document.getElementById('cache-hit-rate').textContent = (agents.cache_hit_rate * 100).toFixed(1) + '%';
         }
 
         function formatUptime(seconds) {
@@ -535,7 +595,11 @@ class CrackerjackMonitoringServer:
             logs.innerHTML += `<div>[${timestamp}] ${message}</div>`;
             logs.scrollTop = logs.scrollHeight;
         }
+        """
 
+    def _get_js_initialization(self) -> str:
+        """Get JavaScript initialization code."""
+        return """
         // Start connection
         connect();
 
@@ -545,9 +609,6 @@ class CrackerjackMonitoringServer:
                 ws.send(JSON.stringify({type: 'ping'}));
             }
         }, 30000);
-    </script>
-</body>
-</html>
         """
 
 

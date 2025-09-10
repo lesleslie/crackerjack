@@ -337,6 +337,15 @@ class CrackerjackCache:
     def set_config_data(self, config_key: str, data: t.Any) -> None:
         self.config_cache.set(f"config: {config_key}", data, ttl_seconds=7200)
 
+    def get(self, key: str, default: t.Any = None) -> t.Any:
+        """General purpose get method for metrics and other data."""
+        return self.config_cache.get(key) or default
+
+    def set(self, key: str, value: t.Any, ttl_seconds: int | None = None) -> None:
+        """General purpose set method for metrics and other data."""
+        ttl = ttl_seconds or 3600  # Default 1 hour
+        self.config_cache.set(key, value, ttl_seconds=ttl)
+
     def get_agent_decision(self, agent_name: str, issue_hash: str) -> t.Any | None:
         """Get cached AI agent decision based on issue content."""
         if not self.enable_disk_cache:

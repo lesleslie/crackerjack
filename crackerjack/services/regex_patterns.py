@@ -851,12 +851,12 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "detect_suspicious_temp_traversal": ValidatedPattern(
         name="detect_suspicious_temp_traversal",
-        pattern=r"/tmp/.*\.\./",
+        pattern=r"/tmp/.*\.\./",  # nosec B108
         replacement="[SUSPICIOUS]",
         description="Detect traversal attempts in temp directories",
         test_cases=[
-            ("/tmp/safe/../etc/passwd", "[SUSPICIOUS]etc/passwd"),
-            ("/tmp/normal/file.txt", "/tmp/normal/file.txt"),
+            ("/tmp/safe/../etc/passwd", "[SUSPICIOUS]etc/passwd"),  # nosec B108
+            ("/tmp/normal/file.txt", "/tmp/normal/file.txt"),  # nosec B108
         ],
     ),
     "detect_suspicious_var_traversal": ValidatedPattern(
@@ -1416,12 +1416,12 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "detect_hardcoded_temp_paths_basic": ValidatedPattern(
         name="detect_hardcoded_temp_paths_basic",
-        pattern=r"(?:/tmp/|/temp/|C:\\temp\\|C:\\tmp\\)",
+        pattern=r"(?:/tmp/|/temp/|C:\\temp\\|C:\\tmp\\)",  # nosec B108
         replacement="[TEMP_PATH]/",
         description="Detect hardcoded temporary directory paths",
         global_replace=True,
         test_cases=[
-            ("/tmp/myfile.txt", "[TEMP_PATH]/myfile.txt"),
+            ("/tmp/myfile.txt", "[TEMP_PATH]/myfile.txt"),  # nosec B108
             (r"C:\tmp\data.log", "[TEMP_PATH]/data.log"),
             ("/temp/cache", "[TEMP_PATH]/cache"),
             (r"C:\temp\work", "[TEMP_PATH]/work"),

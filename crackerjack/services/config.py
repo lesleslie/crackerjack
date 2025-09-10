@@ -302,7 +302,9 @@ class ConfigurationService:
             return {}
 
         version_updates = {}
-        repos = config.get("repos", []) if isinstance(config, dict) else []
+        repos: list[dict[str, t.Any]] = (
+            config.get("repos", []) if isinstance(config, dict) else []
+        )
         for repo in repos:
             repo_url = repo.get("repo", "")
             rev = repo.get("rev", "")

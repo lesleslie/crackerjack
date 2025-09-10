@@ -51,7 +51,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         manager_files = [p for p in python_files if "/managers/" in str(p)]
         cli_files = [p for p in python_files if "/cli/" in str(p)]
         mcp_files = [
-            p for p in source_paths if "/mcp/" in str(p) or p.suffix in [".py", ".md"]
+            p for p in source_paths if "/mcp/" in str(p) or p.suffix in (".py", ".md")
         ]
 
         api_data = {}
@@ -163,7 +163,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             root_docs = [
                 f
                 for f in self.docs_dir.glob("*.md")
-                if f.name not in ["INDEX.md", "README.md"]
+                if f.name not in ("INDEX.md", "README.md")
             ]
 
             # Generate index content
@@ -573,8 +573,12 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     ) -> list[str]:
         """Generate documentation section for a single service."""
         lines = []
-        lines.append(f"## {service_name}\n\n")
-        lines.append(f"**Location:** `{service_info.get('path', 'Unknown')}`\n\n")
+        lines.extend(
+            (
+                f"## {service_name}\n\n",
+                f"**Location:** `{service_info.get('path', 'Unknown')}`\n\n",
+            )
+        )
 
         # Add protocols implemented
         if service_info.get("protocols_implemented"):
@@ -661,8 +665,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
         for name, references in sorted(cross_refs.items()):
             if references:
-                lines.append(f"## {name}\n\n")
-                lines.append("**Referenced in:**\n")
+                lines.extend((f"## {name}\n\n", "**Referenced in:**\n"))
                 for ref in references:
                     lines.append(f"- {ref}\n")
                 lines.append("\n")

@@ -393,7 +393,7 @@ class AITemplateEngine:
                 # For complex data, use JSON representation
                 value_str = json.dumps(value, indent=2)
             else:
-                value_str = str(value)
+                value_str = value
 
             content = content.replace(placeholder, value_str)
 

@@ -1,6 +1,7 @@
 """Zuban adapter for type checking."""
 
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,11 +93,11 @@ class ZubanAdapter(BaseRustToolAdapter):
             )
 
         try:
-            issues = []
+            issues: list[Issue] = []
             for item in data.get("diagnostics", []):
                 # Determine severity
                 severity = item.get("severity", "error").lower()
-                if severity not in ["error", "warning", "info"]:
+                if severity not in ("error", "warning", "info"):
                     severity = "error"
 
                 issues.append(
@@ -128,7 +129,7 @@ class ZubanAdapter(BaseRustToolAdapter):
 
     def _parse_text_output(self, output: str) -> ToolResult:
         """Parse text output for human-readable display."""
-        issues = []
+        issues: list[Issue] = []
 
         if not output.strip():
             # No output typically means no type errors found
@@ -214,10 +215,8 @@ class ZubanAdapter(BaseRustToolAdapter):
         # Try to extract column from the beginning of message_part
         parts = message_part.split(":", 2)
         if len(parts) >= 2:
-            try:
+            with suppress(ValueError):
                 return int(parts[0].strip())
-            except ValueError:
-                pass
         return 1
 
     def _parse_message_content(self, message_part: str) -> dict[str, str | None]:
@@ -267,8 +266,8 @@ class ZubanAdapter(BaseRustToolAdapter):
 
     def _normalize_severity(self, severity: str) -> str:
         """Normalize severity to standard values."""
-        if severity in ["note", "info"]:
+        if severity in ("note", "info"):
             return "info"
-        elif severity not in ["error", "warning"]:
+        elif severity not in ("error", "warning"):
             return "error"
         return severity

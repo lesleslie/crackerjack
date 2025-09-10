@@ -237,7 +237,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
             k: v
             for k, v in current_metrics.items()
             if k
-            in [
+            in (
                 "coverage_percent",
                 "test_pass_rate",
                 "hook_failures",
@@ -245,7 +245,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                 "security_issues",
                 "type_errors",
                 "linting_issues",
-            ]
+            )
         }
         current_score = self.calculate_quality_score(**score_metrics)
         git_hash = self.get_current_git_hash()
@@ -331,8 +331,20 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         """Generate actionable recommendations."""
         recommendations = []
 
-        # Coverage recommendations
-        coverage = current_metrics.get("coverage_percent", 0)
+        # Generate different types of recommendations
+        self._add_coverage_recommendations(current_metrics, recommendations)
+        self._add_error_recommendations(current_metrics, recommendations)
+        self._add_trend_recommendations(trend, recommendations)
+        self._add_alert_recommendations(alerts, recommendations)
+        self._add_general_recommendations(current_metrics, recommendations)
+
+        return recommendations
+
+    def _add_coverage_recommendations(
+        self, metrics: dict[str, t.Any], recommendations: list[str]
+    ) -> None:
+        """Add coverage-based recommendations."""
+        coverage = metrics.get("coverage_percent", 0)
         if coverage < 80:
             recommendations.append(
                 f"📊 Increase test coverage from {coverage:.1f}% to 80%+ by adding tests for uncovered code paths"
@@ -342,50 +354,58 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                 f"🎯 Consider targeting 95%+ coverage (currently {coverage:.1f}%) for better code quality"
             )
 
-        # Type error recommendations
-        type_errors = current_metrics.get("type_errors", 0)
+    def _add_error_recommendations(
+        self, metrics: dict[str, t.Any], recommendations: list[str]
+    ) -> None:
+        """Add error-based recommendations."""
+        type_errors = metrics.get("type_errors", 0)
         if type_errors > 0:
             recommendations.append(
                 f"🔧 Fix {type_errors} type errors to improve code reliability"
             )
 
-        # Security recommendations
-        security_issues = current_metrics.get("security_issues", 0)
+        security_issues = metrics.get("security_issues", 0)
         if security_issues > 0:
             recommendations.append(
                 f"🔒 Address {security_issues} security issues immediately"
             )
 
-        # Trend-based recommendations
-        if trend:
-            if trend.direction == TrendDirection.DECLINING:
-                recommendations.append(
-                    "📉 Quality trend is declining - consider code review process improvements"
-                )
-            elif trend.direction == TrendDirection.VOLATILE:
-                recommendations.append(
-                    "⚠️ Quality is volatile - implement more consistent testing practices"
-                )
-            elif trend.direction == TrendDirection.IMPROVING:
-                recommendations.append(
-                    "📈 Great job! Quality is improving - maintain current practices"
-                )
+    def _add_trend_recommendations(
+        self, trend: QualityTrend | None, recommendations: list[str]
+    ) -> None:
+        """Add trend-based recommendations."""
+        if not trend:
+            return
 
-        # Alert-based recommendations
+        trend_messages = {
+            TrendDirection.DECLINING: "📉 Quality trend is declining - consider code review process improvements",
+            TrendDirection.VOLATILE: "⚠️ Quality is volatile - implement more consistent testing practices",
+            TrendDirection.IMPROVING: "📈 Great job! Quality is improving - maintain current practices",
+        }
+
+        message = trend_messages.get(trend.direction)
+        if message:
+            recommendations.append(message)
+
+    def _add_alert_recommendations(
+        self, alerts: list[QualityAlert], recommendations: list[str]
+    ) -> None:
+        """Add alert-based recommendations."""
         critical_alerts = [a for a in alerts if a.severity == AlertSeverity.CRITICAL]
         if critical_alerts:
             recommendations.append(
                 f"🚨 Address {len(critical_alerts)} critical quality issues before proceeding"
             )
 
-        # General recommendations
-        hook_failures = current_metrics.get("hook_failures", 0)
+    def _add_general_recommendations(
+        self, metrics: dict[str, t.Any], recommendations: list[str]
+    ) -> None:
+        """Add general recommendations."""
+        hook_failures = metrics.get("hook_failures", 0)
         if hook_failures > 0:
             recommendations.append(
                 f"⚙️ Fix {hook_failures} pre-commit hook failures to streamline development"
             )
-
-        return recommendations
 
     def generate_comprehensive_report(
         self, current_metrics: dict[str, t.Any] | None = None, days: int = 30
@@ -401,7 +421,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                     k: v
                     for k, v in current_metrics.items()
                     if k
-                    in [
+                    in (
                         "coverage_percent",
                         "test_pass_rate",
                         "hook_failures",
@@ -409,7 +429,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                         "security_issues",
                         "type_errors",
                         "linting_issues",
-                    ]
+                    )
                 }
                 quality_score = self.calculate_quality_score(**score_metrics)
                 current_baseline = QualityMetrics(
@@ -472,7 +492,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     ) -> None:
         """Export quality report to file."""
         if format.lower() == "json":
-            with open(output_path, "w") as f:
+            with output_path.open("w") as f:
                 json.dump(report.to_dict(), f, indent=2, default=str)
         else:
             raise ValueError(f"Unsupported export format: {format}")
@@ -494,7 +514,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
             k: v
             for k, v in current_metrics.items()
             if k
-            in [
+            in (
                 "coverage_percent",
                 "test_pass_rate",
                 "hook_failures",
@@ -502,7 +522,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                 "security_issues",
                 "type_errors",
                 "linting_issues",
-            ]
+            )
         }
         quality_score = self.calculate_quality_score(**score_metrics)
 
@@ -588,26 +608,24 @@ class EnhancedQualityBaselineService(QualityBaselineService):
 
         # Get historical data and convert to UnifiedMetrics
         historical_baselines = self.get_recent_baselines(limit=historical_days)
-        historical_unified = []
-
-        for baseline in historical_baselines[-10:]:  # Last 10 data points
-            historical_unified.append(
-                UnifiedMetrics(
-                    timestamp=baseline.timestamp,
-                    quality_score=baseline.quality_score,
-                    test_coverage=baseline.coverage_percent,
-                    hook_duration=0.0,  # Not tracked in baseline
-                    active_jobs=0,  # Historical data
-                    error_count=(
-                        baseline.hook_failures
-                        + baseline.security_issues
-                        + baseline.type_errors
-                        + baseline.linting_issues
-                    ),
-                    trend_direction=TrendDirection.STABLE,  # Calculate per point if needed
-                    predictions={},
-                )
+        historical_unified = [
+            UnifiedMetrics(
+                timestamp=baseline.timestamp,
+                quality_score=baseline.quality_score,
+                test_coverage=baseline.coverage_percent,
+                hook_duration=0.0,  # Not tracked in baseline
+                active_jobs=0,  # Historical data
+                error_count=(
+                    baseline.hook_failures
+                    + baseline.security_issues
+                    + baseline.type_errors
+                    + baseline.linting_issues
+                ),
+                trend_direction=TrendDirection.STABLE,  # Calculate per point if needed
+                predictions={},
             )
+            for baseline in historical_baselines[-10:]  # Last 10 data points
+        ]
 
         # Get active alerts
         alerts = self.check_quality_alerts(current_metrics)

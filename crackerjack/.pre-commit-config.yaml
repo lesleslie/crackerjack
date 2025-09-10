@@ -3,10 +3,25 @@ repos:
     hooks:
       - id: validate-regex-patterns
         name: validate-regex-patterns
-        entry: uv run python /Users/les/Projects/session-mgmt-mcp/.venv/lib/python3.13/site-packages/tools/validate_regex_patterns_standalone.py
+        entry: uv run python -m crackerjack.tools.validate_regex_patterns
         language: system
         files: \.py$
         exclude: ^\.venv/
+      - id: skylos
+        name: skylos-dead-code-detection
+        entry: skylos
+        language: system
+        args: ["crackerjack"]
+        pass_filenames: false
+        stages: ["pre-push", "manual"]
+      - id: zuban
+        name: zuban-type-checking
+        entry: zuban
+        language: system
+        args: ["check"]
+        files: ^crackerjack/.*\.py$
+        exclude: ^crackerjack/(mcp|plugins)/.*\.py$|crackerjack/code_cleaner\.py$
+        stages: ["pre-push", "manual"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -61,12 +76,6 @@ repos:
       - id: mdformat
         exclude: ^\.venv/
         additional_dependencies: ["mdformat-ruff"]
-  - repo: https://github.com/jendrikseipp/vulture
-    rev: v2.14
-    hooks:
-      - id: vulture
-        files: ^crackerjack/.*\.py$
-        stages: ["pre-push", "manual"]
   - repo: https://github.com/fredrikaverpil/creosote
     rev: v4.1.0
     hooks:
@@ -88,11 +97,4 @@ repos:
         args: ["--ignore", "FURB184", "--ignore", "FURB120"]
         files: ^crackerjack/.*\.py$
         exclude: ^tests/.*\.py$
-        stages: ["pre-push", "manual"]
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.405
-    hooks:
-      - id: pyright
-        files: ^crackerjack/.*\.py$
-        exclude: ^crackerjack/(mcp|plugins)/.*\.py$|crackerjack/code_cleaner\.py$
         stages: ["pre-push", "manual"]

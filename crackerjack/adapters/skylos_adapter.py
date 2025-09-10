@@ -89,19 +89,18 @@ class SkylsAdapter(BaseRustToolAdapter):
             )
 
         try:
-            issues = []
-            for item in data.get("dead_code", []):
-                issues.append(
-                    DeadCodeIssue(
-                        file_path=Path(item["file"]),
-                        line_number=item.get("line", 1),
-                        message=f"Dead {item['type']}: {item['name']}",
-                        severity="warning",  # Dead code is typically a warning, not error
-                        issue_type=item["type"],
-                        name=item["name"],
-                        confidence=item.get("confidence", 0.0),
-                    )
+            issues: list[Issue] = [
+                DeadCodeIssue(
+                    file_path=Path(item["file"]),
+                    line_number=item.get("line", 1),
+                    message=f"Dead {item['type']}: {item['name']}",
+                    severity="warning",  # Dead code is typically a warning, not error
+                    issue_type=item["type"],
+                    name=item["name"],
+                    confidence=item.get("confidence", 0.0),
                 )
+                for item in data.get("dead_code", [])
+            ]
 
             # Skylos success means no issues found
             success = len(issues) == 0
@@ -120,7 +119,7 @@ class SkylsAdapter(BaseRustToolAdapter):
 
     def _parse_text_output(self, output: str) -> ToolResult:
         """Parse text output for human-readable display."""
-        issues = []
+        issues: list[Issue] = []
 
         if not output.strip():
             # No output typically means no dead code found

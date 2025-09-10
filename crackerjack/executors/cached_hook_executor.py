@@ -50,83 +50,120 @@ class CachedHookExecutor:
         )
 
         start_time = time.time()
-        results: list[HookResult] = []
-        cache_hits = 0
-        cache_misses = 0
+        execution_context = self._initialize_execution_context(strategy)
 
+        for hook_def in strategy.hooks:
+            self._execute_single_hook_with_cache(hook_def, execution_context)
+
+        return self._build_execution_result(strategy, execution_context, start_time)
+
+    def _initialize_execution_context(self, strategy: HookStrategy) -> dict[str, t.Any]:
+        """Initialize execution context for the strategy."""
         relevant_files = self._get_relevant_files_for_strategy(strategy)
         current_file_hashes = self.file_hasher.get_files_hash_list(relevant_files)
 
-        for hook_def in strategy.hooks:
-            cached_result = None
-            try:
-                # Use expensive hook cache for expensive operations
-                if hook_def.name in self.cache.EXPENSIVE_HOOKS:
-                    tool_version = self._get_tool_version(hook_def.name)
-                    cached_result = self.cache.get_expensive_hook_result(
-                        hook_def.name,
-                        current_file_hashes,
-                        tool_version,
-                    )
-                else:
-                    # Use regular in-memory cache for fast hooks
-                    cached_result = self.cache.get_hook_result(
-                        hook_def.name,
-                        current_file_hashes,
-                    )
-            except Exception as e:
-                self.logger.warning(f"Cache error for hook {hook_def.name}: {e}")
-                cached_result = None
+        return {
+            "results": [],
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "current_file_hashes": current_file_hashes,
+        }
 
-            if cached_result and self._is_cache_valid(cached_result, hook_def):
-                self.logger.debug(f"Using cached result for hook: {hook_def.name}")
-                results.append(cached_result)
-                cache_hits += 1
+    def _execute_single_hook_with_cache(
+        self, hook_def: HookDefinition, context: dict[str, t.Any]
+    ) -> None:
+        """Execute a single hook with caching logic."""
+        cached_result = self._get_cached_result(
+            hook_def, context["current_file_hashes"]
+        )
+
+        if cached_result and self._is_cache_valid(cached_result, hook_def):
+            self._handle_cache_hit(hook_def, cached_result, context)
+        else:
+            self._handle_cache_miss(hook_def, context)
+
+    def _get_cached_result(
+        self, hook_def: HookDefinition, current_file_hashes: list[str]
+    ) -> HookResult | None:
+        """Get cached result for a hook definition."""
+        try:
+            if hook_def.name in self.cache.EXPENSIVE_HOOKS:
+                tool_version = self._get_tool_version(hook_def.name)
+                return self.cache.get_expensive_hook_result(
+                    hook_def.name, current_file_hashes, tool_version
+                )
             else:
-                self.logger.debug(f"Executing hook (cache miss): {hook_def.name}")
+                return self.cache.get_hook_result(hook_def.name, current_file_hashes)
+        except Exception as e:
+            self.logger.warning(f"Cache error for hook {hook_def.name}: {e}")
+            return None
 
-                hook_result = self.base_executor.execute_single_hook(hook_def)
-                results.append(hook_result)
-                cache_misses += 1
+    def _handle_cache_hit(
+        self,
+        hook_def: HookDefinition,
+        cached_result: HookResult,
+        context: dict[str, t.Any],
+    ) -> None:
+        """Handle a cache hit scenario."""
+        self.logger.debug(f"Using cached result for hook: {hook_def.name}")
+        context["results"].append(cached_result)
+        context["cache_hits"] += 1
 
-                if hook_result.status == "passed":
-                    try:
-                        # Use expensive hook cache for expensive operations
-                        if hook_def.name in self.cache.EXPENSIVE_HOOKS:
-                            tool_version = self._get_tool_version(hook_def.name)
-                            self.cache.set_expensive_hook_result(
-                                hook_def.name,
-                                current_file_hashes,
-                                hook_result,
-                                tool_version,
-                            )
-                        else:
-                            # Use regular in-memory cache
-                            self.cache.set_hook_result(
-                                hook_def.name,
-                                current_file_hashes,
-                                hook_result,
-                            )
-                    except Exception as e:
-                        self.logger.warning(
-                            f"Failed to cache result for {hook_def.name}: {e}",
-                        )
+    def _handle_cache_miss(
+        self, hook_def: HookDefinition, context: dict[str, t.Any]
+    ) -> None:
+        """Handle a cache miss scenario."""
+        self.logger.debug(f"Executing hook (cache miss): {hook_def.name}")
 
+        hook_result = self.base_executor.execute_single_hook(hook_def)
+        context["results"].append(hook_result)
+        context["cache_misses"] += 1
+
+        if hook_result.status == "passed":
+            self._cache_successful_result(
+                hook_def, hook_result, context["current_file_hashes"]
+            )
+
+    def _cache_successful_result(
+        self,
+        hook_def: HookDefinition,
+        hook_result: HookResult,
+        current_file_hashes: list[str],
+    ) -> None:
+        """Cache a successful hook result."""
+        try:
+            if hook_def.name in self.cache.EXPENSIVE_HOOKS:
+                tool_version = self._get_tool_version(hook_def.name)
+                self.cache.set_expensive_hook_result(
+                    hook_def.name, current_file_hashes, hook_result, tool_version
+                )
+            else:
+                self.cache.set_hook_result(
+                    hook_def.name, current_file_hashes, hook_result
+                )
+        except Exception as e:
+            self.logger.warning(f"Failed to cache result for {hook_def.name}: {e}")
+
+    def _build_execution_result(
+        self, strategy: HookStrategy, context: dict[str, t.Any], start_time: float
+    ) -> HookExecutionResult:
+        """Build the final execution result."""
         total_time = time.time() - start_time
-        success = all(result.status == "passed" for result in results)
+        success = all(result.status == "passed" for result in context["results"])
 
         self.logger.info(
-            f"Cached strategy '{strategy.name}' completed in {total_time: .2f}s-"
-            f"Success: {success}, Cache hits: {cache_hits}, Cache misses: {cache_misses}",
+            f"Cached strategy '{strategy.name}' completed in {total_time:.2f}s - "
+            f"Success: {success}, Cache hits: {context['cache_hits']}, "
+            f"Cache misses: {context['cache_misses']}"
         )
 
         return HookExecutionResult(
             strategy_name=strategy.name,
-            results=results,
+            results=context["results"],
             success=success,
             total_duration=total_time,
-            cache_hits=cache_hits,
-            cache_misses=cache_misses,
+            cache_hits=context["cache_hits"],
+            cache_misses=context["cache_misses"],
         )
 
     def _get_relevant_files_for_strategy(self, strategy: HookStrategy) -> list[Path]:
@@ -198,6 +235,21 @@ class CachedHookExecutor:
     def cleanup_cache(self) -> dict[str, int]:
         return self.cache.cleanup_all()
 
+    def _get_tool_version(self, tool_name: str) -> str | None:
+        """Get version of a tool for cache invalidation."""
+        # This is a simplified version - in production, you might want to
+        # actually call the tool to get its version
+        version_mapping = {
+            "pyright": "1.1.0",  # Could be dynamic: subprocess.run(["pyright", "--version"])
+            "bandit": "1.7.5",
+            "vulture": "2.7.0",
+            "complexipy": "0.13.0",
+            "refurb": "1.17.0",
+            "ruff": "0.1.0",
+            "gitleaks": "8.18.0",
+        }
+        return version_mapping.get(tool_name)
+
 
 class SmartCacheManager:
     def __init__(self, cached_executor: CachedHookExecutor) -> None:
@@ -261,24 +313,3 @@ class SmartCacheManager:
             "total_python_files": len(list(pkg_path.rglob("*.py"))),
             "project_size": "large" if recent_changes > 50 else "small",
         }
-
-
-# Add helper method to CachedHookExecutor for getting tool versions
-def _get_tool_version_method(self, tool_name: str) -> str | None:
-    """Get version of a tool for cache invalidation."""
-    # This is a simplified version - in production, you might want to
-    # actually call the tool to get its version
-    version_mapping = {
-        "pyright": "1.1.0",  # Could be dynamic: subprocess.run(["pyright", "--version"])
-        "bandit": "1.7.5",
-        "vulture": "2.7.0",
-        "complexipy": "0.13.0",
-        "refurb": "1.17.0",
-        "ruff": "0.1.0",
-        "gitleaks": "8.18.0",
-    }
-    return version_mapping.get(tool_name)
-
-
-# Add the method to CachedHookExecutor class
-CachedHookExecutor._get_tool_version = _get_tool_version_method

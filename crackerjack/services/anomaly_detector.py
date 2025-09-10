@@ -230,38 +230,59 @@ class AnomalyDetector:
         if baseline.std_dev == 0:
             return "medium"
 
-        deviation = min(abs(point.value - lower_bound), abs(point.value - upper_bound))
-        z_score = deviation / baseline.std_dev
+        # Check for critical threshold breaches first
+        if self._is_critical_threshold_breached(point):
+            return "critical"
 
-        # Check critical thresholds
+        # Calculate z-score and map to severity
+        z_score = self._calculate_z_score(point, baseline, lower_bound, upper_bound)
+        return self._severity_from_z_score(z_score)
+
+    def _is_critical_threshold_breached(self, point: MetricPoint) -> bool:
+        """Check if point breaches critical thresholds."""
         config = self.metric_configs.get(point.metric_type, {})
         critical_threshold = config.get("critical_threshold")
 
-        if critical_threshold:
-            direction = config.get("direction", "both")
-            is_critical = False
+        if not critical_threshold:
+            return False
 
-            if direction == "up" and point.value > critical_threshold:
-                is_critical = True
-            elif direction == "down" and point.value < critical_threshold:
-                is_critical = True
-            elif direction == "both" and (
-                point.value > critical_threshold or point.value < -critical_threshold
-            ):
-                is_critical = True
+        direction = config.get("direction", "both")
+        return self._threshold_breached_in_direction(
+            point.value, critical_threshold, direction
+        )
 
-            if is_critical:
-                return "critical"
+    def _threshold_breached_in_direction(
+        self, value: float, threshold: float, direction: str
+    ) -> bool:
+        """Check if value breaches threshold in specified direction."""
+        if direction == "up":
+            return value > threshold
+        elif direction == "down":
+            return value < threshold
+        elif direction == "both":
+            return value > threshold or value < -threshold
+        return False
 
-        # Use z-score for severity
+    def _calculate_z_score(
+        self,
+        point: MetricPoint,
+        baseline: BaselineModel,
+        lower_bound: float,
+        upper_bound: float,
+    ) -> float:
+        """Calculate z-score for the point."""
+        deviation = min(abs(point.value - lower_bound), abs(point.value - upper_bound))
+        return deviation / baseline.std_dev
+
+    def _severity_from_z_score(self, z_score: float) -> str:
+        """Map z-score to severity level."""
         if z_score > 4:
             return "critical"
         elif z_score > 3:
             return "high"
         elif z_score > 2:
             return "medium"
-        else:
-            return "low"
+        return "low"
 
     def _calculate_confidence(
         self, point: MetricPoint, baseline: BaselineModel

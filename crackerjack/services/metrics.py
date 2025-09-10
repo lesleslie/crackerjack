@@ -21,45 +21,45 @@ class MetricsCollector:
     def _init_database(self) -> None:
         with self._get_connection() as conn:
             conn.executescript("""
-                - - Jobs table
+                -- Jobs table
                 CREATE TABLE IF NOT EXISTS jobs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT UNIQUE NOT NULL,
                     start_time TIMESTAMP NOT NULL,
                     end_time TIMESTAMP,
-                    status TEXT NOT NULL, - - 'running', 'success', 'failed', 'cancelled'
+                    status TEXT NOT NULL, -- 'running', 'success', 'failed', 'cancelled'
                     iterations INTEGER DEFAULT 0,
                     ai_agent BOOLEAN DEFAULT 0,
                     error_message TEXT,
-                    metadata TEXT - - JSON field for additional data
+                    metadata TEXT -- JSON field for additional data
                 );
 
-                - - Errors table
+                -- Errors table
                 CREATE TABLE IF NOT EXISTS errors (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT,
                     timestamp TIMESTAMP NOT NULL,
-                    error_type TEXT NOT NULL, - - 'hook', 'test', 'lint', 'type_check', etc.
-                    error_category TEXT, - - 'ruff', 'pyright', 'pytest', etc.
+                    error_type TEXT NOT NULL, -- 'hook', 'test', 'lint', 'type_check', etc.
+                    error_category TEXT, -- 'ruff', 'pyright', 'pytest', etc.
                     error_message TEXT,
                     file_path TEXT,
                     line_number INTEGER,
                     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
                 );
 
-                - - Hook executions table
+                -- Hook executions table
                 CREATE TABLE IF NOT EXISTS hook_executions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT,
                     timestamp TIMESTAMP NOT NULL,
                     hook_name TEXT NOT NULL,
-                    hook_type TEXT, - - 'fast', 'comprehensive'
+                    hook_type TEXT, -- 'fast', 'comprehensive'
                     execution_time_ms INTEGER,
-                    status TEXT, - - 'success', 'failed', 'skipped'
+                    status TEXT, -- 'success', 'failed', 'skipped'
                     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
                 );
 
-                - - Test executions table
+                -- Test executions table
                 CREATE TABLE IF NOT EXISTS test_executions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT,
@@ -73,17 +73,17 @@ class MetricsCollector:
                     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
                 );
 
-                - - Orchestration executions table (NEW)
+                -- Orchestration executions table (NEW)
                 CREATE TABLE IF NOT EXISTS orchestration_executions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT,
                     timestamp TIMESTAMP NOT NULL,
-                    execution_strategy TEXT NOT NULL, - - 'batch', 'individual', 'adaptive', 'selective'
-                    progress_level TEXT NOT NULL, - - 'basic', 'detailed', 'granular', 'streaming'
-                    ai_mode TEXT NOT NULL, - - 'single - agent', 'multi - agent', 'coordinator'
+                    execution_strategy TEXT NOT NULL, -- 'batch', 'individual', 'adaptive', 'selective'
+                    progress_level TEXT NOT NULL, -- 'basic', 'detailed', 'granular', 'streaming'
+                    ai_mode TEXT NOT NULL, -- 'single-agent', 'multi-agent', 'coordinator'
                     iteration_count INTEGER DEFAULT 1,
-                    strategy_switches INTEGER DEFAULT 0, - - How many times strategy changed
-                    correlation_insights TEXT, - - JSON of correlation analysis results
+                    strategy_switches INTEGER DEFAULT 0, -- How many times strategy changed
+                    correlation_insights TEXT, -- JSON of correlation analysis results
                     total_execution_time_ms INTEGER,
                     hooks_execution_time_ms INTEGER,
                     tests_execution_time_ms INTEGER,
@@ -91,7 +91,7 @@ class MetricsCollector:
                     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
                 );
 
-                - - Strategy decisions table (NEW)
+                -- Strategy decisions table (NEW)
                 CREATE TABLE IF NOT EXISTS strategy_decisions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT,
@@ -99,29 +99,29 @@ class MetricsCollector:
                     timestamp TIMESTAMP NOT NULL,
                     previous_strategy TEXT,
                     selected_strategy TEXT NOT NULL,
-                    decision_reason TEXT, - - Why this strategy was chosen
-                    context_data TEXT, - - JSON of execution context
-                    effectiveness_score REAL, - - How well the strategy worked (0 - 1)
+                    decision_reason TEXT, -- Why this strategy was chosen
+                    context_data TEXT, -- JSON of execution context
+                    effectiveness_score REAL, -- How well the strategy worked (0 - 1)
                     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
                 );
 
-                - - Individual test executions table (NEW - more granular than test_executions)
+                -- Individual test executions table (NEW - more granular than test_executions)
                 CREATE TABLE IF NOT EXISTS individual_test_executions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id TEXT,
                     timestamp TIMESTAMP NOT NULL,
-                    test_id TEXT NOT NULL, - - Full test identifier
+                    test_id TEXT NOT NULL, -- Full test identifier
                     test_file TEXT NOT NULL,
                     test_class TEXT,
                     test_method TEXT,
-                    status TEXT NOT NULL, - - 'passed', 'failed', 'skipped', 'error'
+                    status TEXT NOT NULL, -- 'passed', 'failed', 'skipped', 'error'
                     execution_time_ms INTEGER,
                     error_message TEXT,
                     error_traceback TEXT,
                     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
                 );
 
-                - - Daily summary table (for quick stats)
+                -- Daily summary table (for quick stats)
                 CREATE TABLE IF NOT EXISTS daily_summary (
                     date DATE PRIMARY KEY,
                     total_jobs INTEGER DEFAULT 0,
@@ -134,9 +134,9 @@ class MetricsCollector:
                     type_errors INTEGER DEFAULT 0,
                     avg_job_duration_ms INTEGER,
                     total_ai_fixes INTEGER DEFAULT 0,
-                    orchestrated_jobs INTEGER DEFAULT 0, - - NEW
-                    avg_orchestration_iterations REAL DEFAULT 0, - - NEW
-                    most_effective_strategy TEXT - - NEW
+                    orchestrated_jobs INTEGER DEFAULT 0, -- NEW
+                    avg_orchestration_iterations REAL DEFAULT 0, -- NEW
+                    most_effective_strategy TEXT -- NEW
                 );
 
                 --Create indexes for performance

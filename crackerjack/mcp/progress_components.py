@@ -138,7 +138,7 @@ class JobDataCollector:
         )
 
     async def _discover_jobs_websocket(self) -> dict[str, Any]:
-        jobs_data = {
+        jobs_data: dict[str, Any] = {
             "active": 0,
             "completed": 0,
             "failed": 0,

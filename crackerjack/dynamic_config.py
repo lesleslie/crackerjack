@@ -21,6 +21,7 @@ class HookMetadata(t.TypedDict):
     language: str | None
     entry: str | None
     experimental: bool
+    pass_filenames: bool | None
 
 
 class ConfigMode(t.TypedDict):
@@ -48,6 +49,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": "system",
             "entry": "uv run python -m crackerjack.tools.validate_regex_patterns",
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "trailing-whitespace",
@@ -65,6 +67,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "end-of-file-fixer",
@@ -82,6 +85,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "check-yaml",
@@ -99,6 +103,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "check-toml",
@@ -116,6 +121,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "check-added-large-files",
@@ -133,6 +139,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
     ],
     "package_management": [
@@ -152,6 +159,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
     ],
     "security": [
@@ -171,6 +179,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "bandit",
@@ -188,6 +197,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
     ],
     "formatting": [
@@ -207,6 +217,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "ruff-check",
@@ -224,6 +235,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "ruff-format",
@@ -241,6 +253,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "mdformat",
@@ -258,25 +271,27 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
     ],
     "analysis": [
         {
-            "id": "vulture",
-            "name": None,
-            "repo": "https://github.com/jendrikseipp/vulture",
-            "rev": "v2.14",
+            "id": "skylos",
+            "name": "skylos-dead-code-detection",
+            "repo": "local",
+            "rev": "",
             "tier": 3,
-            "time_estimate": 2.0,
+            "time_estimate": 0.1,
             "stages": ["pre-push", "manual"],
-            "args": None,
-            "files": "^crackerjack/.*\\.py$",
+            "args": ["crackerjack"],
+            "files": None,
             "exclude": None,
             "additional_dependencies": None,
             "types_or": None,
-            "language": None,
-            "entry": None,
+            "language": "system",
+            "entry": "skylos",
             "experimental": False,
+            "pass_filenames": False,
         },
         {
             "id": "creosote",
@@ -294,6 +309,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "complexipy",
@@ -311,6 +327,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
             "id": "refurb",
@@ -328,23 +345,25 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": None,
             "entry": None,
             "experimental": False,
+            "pass_filenames": None,
         },
         {
-            "id": "pyright",
-            "name": None,
-            "repo": "https://github.com/RobertCraigie/pyright-python",
-            "rev": "v1.1.405",
+            "id": "zuban",
+            "name": "zuban-type-checking",
+            "repo": "local",
+            "rev": "",
             "tier": 3,
-            "time_estimate": 5.0,
+            "time_estimate": 0.25,
             "stages": ["pre-push", "manual"],
-            "args": None,
+            "args": ["check"],
             "files": "^crackerjack/.*\\.py$",
             "exclude": r"^crackerjack/(mcp|plugins)/.*\.py$|crackerjack/code_cleaner\.py$",
             "additional_dependencies": None,
             "types_or": None,
-            "language": None,
-            "entry": None,
+            "language": "system",
+            "entry": "zuban",
             "experimental": False,
+            "pass_filenames": None,
         },
     ],
     "experimental": [
@@ -364,6 +383,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": "python",
             "entry": "python -m pyrefly",
             "experimental": True,
+            "pass_filenames": None,
         },
         {
             "id": "ty",
@@ -381,6 +401,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "language": "python",
             "entry": "python -m ty",
             "experimental": True,
+            "pass_filenames": None,
         },
     ],
 }
@@ -429,6 +450,9 @@ PRE_COMMIT_TEMPLATE = """repos:
         {%- endif %}
         {%- if hook.args %}
         args: {{ hook.args | tojson }}
+        {%- endif %}
+        {%- if hook.pass_filenames is not none %}
+        pass_filenames: {{ hook.pass_filenames | lower }}
         {%- endif %}
         {%- if hook.files %}
         files: {{ hook.files }}

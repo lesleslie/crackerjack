@@ -99,7 +99,7 @@ class MkDocsIntegrationService:
             doc_path = docs_dir / file_path
             await self.filesystem.ensure_directory(doc_path.parent)
             await self.filesystem.write_file(doc_path, content)
-            pages[str(file_path)] = content
+            pages[file_path] = content
 
         # Copy theme assets if needed
         assets = await self._copy_theme_assets(site_dir, config.theme)
@@ -374,7 +374,7 @@ class MkDocsIntegrationService:
         name = Path(file_path).stem
 
         # Convert various formats to title case
-        if name == "index" or name == "README":
+        if name in ("index", "README"):
             return "Home"
 
         # Convert snake_case and kebab-case to Title Case
@@ -392,8 +392,7 @@ class MkDocsIntegrationService:
         Returns:
             Repository name
         """
-        if repo_url.endswith(".git"):
-            repo_url = repo_url[:-4]
+        repo_url = repo_url.removesuffix(".git")
 
         return repo_url.split("/")[-1]
 

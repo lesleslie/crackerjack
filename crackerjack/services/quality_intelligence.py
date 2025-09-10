@@ -342,9 +342,11 @@ class QualityIntelligenceService:
         if len(baselines) < self.min_data_points:
             return []
 
-        patterns = []
+        metrics_data = self._extract_metrics_data(baselines)
+        return self._find_correlation_patterns(metrics_data, days)
 
-        # Extract metric data for correlation analysis
+    def _extract_metrics_data(self, baselines) -> dict[str, list[float]]:
+        """Extract metric data from baselines for correlation analysis."""
         metrics_data = {
             "quality_score": [],
             "coverage_percent": [],
@@ -362,54 +364,102 @@ class QualityIntelligenceService:
             metrics_data["type_errors"].append(baseline.type_errors)
             metrics_data["linting_issues"].append(baseline.linting_issues)
 
-        # Find correlations between metrics
+        return metrics_data
+
+    def _find_correlation_patterns(
+        self, metrics_data: dict[str, list[float]], days: int
+    ) -> list[QualityPattern]:
+        """Find correlation patterns between metrics."""
+        patterns = []
         metric_names = list(metrics_data.keys())
+
         for i, metric1 in enumerate(metric_names):
             for metric2 in metric_names[i + 1 :]:
-                values1 = np.array(metrics_data[metric1])
-                values2 = np.array(metrics_data[metric2])
-
-                if len(values1) < self.min_data_points:
-                    continue
-
-                # Calculate correlation
-                correlation, p_value = stats.pearsonr(values1, values2)
-
-                # Strong correlation threshold
-                if abs(correlation) > 0.7 and p_value < 0.05:
-                    # Determine trend direction
-                    if correlation > 0:
-                        trend_dir = TrendDirection.IMPROVING
-                        description = f"Strong positive correlation between {metric1} and {metric2}"
-                    else:
-                        trend_dir = TrendDirection.DECLINING
-                        description = f"Strong negative correlation between {metric1} and {metric2}"
-
-                    pattern = QualityPattern(
-                        pattern_type=PatternType.CORRELATION,
-                        metric_names=[metric1, metric2],
-                        detected_at=datetime.now(),
-                        confidence=abs(correlation),
-                        description=description,
-                        period_days=days,
-                        correlation_strength=abs(correlation),
-                        trend_direction=trend_dir,
-                        statistical_significance=p_value,
-                        context={
-                            "correlation_coefficient": correlation,
-                            "sample_size": len(values1),
-                            "strength": (
-                                "very strong"
-                                if abs(correlation) > 0.9
-                                else "strong"
-                                if abs(correlation) > 0.7
-                                else "moderate"
-                            ),
-                        },
-                    )
+                pattern = self._analyze_metric_correlation(
+                    metric1, metric2, metrics_data, days
+                )
+                if pattern:
                     patterns.append(pattern)
 
         return patterns
+
+    def _analyze_metric_correlation(
+        self,
+        metric1: str,
+        metric2: str,
+        metrics_data: dict[str, list[float]],
+        days: int,
+    ) -> QualityPattern | None:
+        """Analyze correlation between two metrics."""
+        values1 = np.array(metrics_data[metric1])
+        values2 = np.array(metrics_data[metric2])
+
+        if len(values1) < self.min_data_points:
+            return None
+
+        correlation, p_value = stats.pearsonr(values1, values2)
+
+        # Strong correlation threshold
+        if abs(correlation) > 0.7 and p_value < 0.05:
+            return self._create_correlation_pattern(
+                metric1, metric2, correlation, p_value, values1, days
+            )
+
+        return None
+
+    def _create_correlation_pattern(
+        self,
+        metric1: str,
+        metric2: str,
+        correlation: float,
+        p_value: float,
+        values1: np.ndarray,
+        days: int,
+    ) -> QualityPattern:
+        """Create a quality pattern from correlation analysis."""
+        trend_dir, description = self._get_correlation_trend_and_description(
+            metric1, metric2, correlation
+        )
+
+        return QualityPattern(
+            pattern_type=PatternType.CORRELATION,
+            metric_names=[metric1, metric2],
+            detected_at=datetime.now(),
+            confidence=abs(correlation),
+            description=description,
+            period_days=days,
+            correlation_strength=abs(correlation),
+            trend_direction=trend_dir,
+            statistical_significance=p_value,
+            context={
+                "correlation_coefficient": correlation,
+                "sample_size": len(values1),
+                "strength": self._get_correlation_strength_label(correlation),
+            },
+        )
+
+    def _get_correlation_trend_and_description(
+        self, metric1: str, metric2: str, correlation: float
+    ) -> tuple[TrendDirection, str]:
+        """Get trend direction and description for correlation."""
+        if correlation > 0:
+            return (
+                TrendDirection.IMPROVING,
+                f"Strong positive correlation between {metric1} and {metric2}",
+            )
+        return (
+            TrendDirection.DECLINING,
+            f"Strong negative correlation between {metric1} and {metric2}",
+        )
+
+    def _get_correlation_strength_label(self, correlation: float) -> str:
+        """Get strength label for correlation coefficient."""
+        abs_corr = abs(correlation)
+        if abs_corr > 0.9:
+            return "very strong"
+        elif abs_corr > 0.7:
+            return "strong"
+        return "moderate"
 
     def generate_advanced_predictions(
         self, horizon_days: int = 14, confidence_level: float = 0.95
@@ -423,86 +473,147 @@ class QualityIntelligenceService:
         metrics = ["quality_score", "coverage_percent"]
 
         for metric_name in metrics:
-            # Extract time series data
-            values = []
-            timestamps = []
-
-            for baseline in baselines:
-                if metric_name == "quality_score":
-                    values.append(baseline.quality_score)
-                elif metric_name == "coverage_percent":
-                    values.append(baseline.coverage_percent)
-                timestamps.append(baseline.timestamp)
+            values, timestamps = self._extract_time_series(baselines, metric_name)
 
             if len(values) < self.min_data_points:
                 continue
 
-            # Convert to numpy arrays for analysis
-            values_array = np.array(values)
-            time_indices = np.arange(len(values))
-
-            # Linear regression for trend
-            slope, intercept, r_value, p_value, std_err = stats.linregress(
-                time_indices, values_array
-            )
-
-            # Predict future value
-            future_index = len(values) + horizon_days
-            predicted_value = slope * future_index + intercept
-
-            # Calculate confidence interval
-            residuals = values_array - (slope * time_indices + intercept)
-            residual_std = np.std(residuals)
-
-            # t-distribution for confidence interval
-            t_value = stats.t.ppf((1 + confidence_level) / 2, len(values) - 2)
-            margin_error = (
-                t_value
-                * residual_std
-                * np.sqrt(
-                    1
-                    + 1 / len(values)
-                    + (future_index - np.mean(time_indices)) ** 2
-                    / np.sum((time_indices - np.mean(time_indices)) ** 2)
-                )
-            )
-
-            confidence_lower = predicted_value - margin_error
-            confidence_upper = predicted_value + margin_error
-
-            # Risk assessment
-            if metric_name == "quality_score":
-                if predicted_value < 70:
-                    risk = "critical"
-                elif predicted_value < 80:
-                    risk = "high"
-                elif predicted_value < 90:
-                    risk = "medium"
-                else:
-                    risk = "low"
-            else:  # coverage_percent
-                if predicted_value < 70:
-                    risk = "high"
-                elif predicted_value < 85:
-                    risk = "medium"
-                else:
-                    risk = "low"
-
-            prediction = QualityPrediction(
-                metric_name=metric_name,
-                predicted_value=float(predicted_value),
-                confidence_lower=float(confidence_lower),
-                confidence_upper=float(confidence_upper),
-                confidence_level=confidence_level,
-                prediction_horizon_days=horizon_days,
-                prediction_method="linear_regression_with_confidence_intervals",
-                created_at=datetime.now(),
-                factors=["historical_trend", "statistical_analysis"],
-                risk_assessment=risk,
+            prediction = self._create_metric_prediction(
+                metric_name, values, horizon_days, confidence_level
             )
             predictions.append(prediction)
 
         return predictions
+
+    def _extract_time_series(self, baselines, metric_name: str) -> tuple[list, list]:
+        """Extract time series data for specified metric."""
+        values = []
+        timestamps = []
+
+        for baseline in baselines:
+            if metric_name == "quality_score":
+                values.append(baseline.quality_score)
+            elif metric_name == "coverage_percent":
+                values.append(baseline.coverage_percent)
+            timestamps.append(baseline.timestamp)
+
+        return values, timestamps
+
+    def _create_metric_prediction(
+        self, metric_name: str, values: list, horizon_days: int, confidence_level: float
+    ) -> QualityPrediction:
+        """Create prediction for a single metric."""
+        regression_results = self._perform_linear_regression(values, horizon_days)
+        confidence_bounds = self._calculate_confidence_interval(
+            values, regression_results, confidence_level
+        )
+        risk_level = self._assess_prediction_risk(
+            metric_name, regression_results["predicted_value"]
+        )
+
+        return QualityPrediction(
+            metric_name=metric_name,
+            predicted_value=float(regression_results["predicted_value"]),
+            confidence_lower=float(confidence_bounds["lower"]),
+            confidence_upper=float(confidence_bounds["upper"]),
+            confidence_level=confidence_level,
+            prediction_horizon_days=horizon_days,
+            prediction_method="linear_regression_with_confidence_intervals",
+            created_at=datetime.now(),
+            factors=["historical_trend", "statistical_analysis"],
+            risk_assessment=risk_level,
+        )
+
+    def _perform_linear_regression(self, values: list, horizon_days: int) -> dict:
+        """Perform linear regression and predict future value."""
+        values_array = np.array(values)
+        time_indices = np.arange(len(values))
+
+        slope, intercept, r_value, p_value, std_err = stats.linregress(
+            time_indices, values_array
+        )
+
+        future_index = len(values) + horizon_days
+        predicted_value = slope * future_index + intercept
+
+        return {
+            "slope": slope,
+            "intercept": intercept,
+            "predicted_value": predicted_value,
+            "time_indices": time_indices,
+            "values_array": values_array,
+            "horizon_days": horizon_days,
+        }
+
+    def _calculate_confidence_interval(
+        self, values: list, regression_results: dict, confidence_level: float
+    ) -> dict:
+        """Calculate confidence interval for prediction."""
+        slope = regression_results["slope"]
+        intercept = regression_results["intercept"]
+        time_indices = regression_results["time_indices"]
+        values_array = regression_results["values_array"]
+        predicted_value = regression_results["predicted_value"]
+
+        residuals = values_array - (slope * time_indices + intercept)
+        residual_std = np.std(residuals)
+
+        future_index = len(values) + regression_results["horizon_days"]
+        t_value = stats.t.ppf((1 + confidence_level) / 2, len(values) - 2)
+
+        margin_error = self._calculate_margin_error(
+            t_value, residual_std, len(values), future_index, time_indices
+        )
+
+        return {
+            "lower": predicted_value - margin_error,
+            "upper": predicted_value + margin_error,
+        }
+
+    def _calculate_margin_error(
+        self,
+        t_value: float,
+        residual_std: float,
+        n_values: int,
+        future_index: int,
+        time_indices: np.ndarray,
+    ) -> float:
+        """Calculate margin of error for confidence interval."""
+        return (
+            t_value
+            * residual_std
+            * np.sqrt(
+                1
+                + 1 / n_values
+                + (future_index - np.mean(time_indices)) ** 2
+                / np.sum((time_indices - np.mean(time_indices)) ** 2)
+            )
+        )
+
+    def _assess_prediction_risk(self, metric_name: str, predicted_value: float) -> str:
+        """Assess risk level based on predicted value."""
+        if metric_name == "quality_score":
+            return self._assess_quality_score_risk(predicted_value)
+        # coverage_percent
+        return self._assess_coverage_risk(predicted_value)
+
+    def _assess_quality_score_risk(self, predicted_value: float) -> str:
+        """Assess risk for quality score predictions."""
+        if predicted_value < 70:
+            return "critical"
+        elif predicted_value < 80:
+            return "high"
+        elif predicted_value < 90:
+            return "medium"
+        return "low"
+
+    def _assess_coverage_risk(self, predicted_value: float) -> str:
+        """Assess risk for coverage predictions."""
+        if predicted_value < 70:
+            return "high"
+        elif predicted_value < 85:
+            return "medium"
+        return "low"
 
     def generate_ml_recommendations(
         self,
@@ -549,7 +660,7 @@ class QualityIntelligenceService:
 
         # Prediction-based recommendations
         high_risk_predictions = [
-            p for p in predictions if p.risk_assessment in ["high", "critical"]
+            p for p in predictions if p.risk_assessment in ("high", "critical")
         ]
         if high_risk_predictions:
             metrics = [p.metric_name for p in high_risk_predictions]
@@ -582,53 +693,18 @@ class QualityIntelligenceService:
         self, analysis_days: int = 30, prediction_days: int = 14
     ) -> QualityInsights:
         """Generate comprehensive quality insights with ML analysis."""
-        # Detect anomalies
+        # Collect all analysis results
         anomalies = self.detect_anomalies(days=analysis_days)
-
-        # Identify patterns
         patterns = self.identify_patterns(days=analysis_days * 2)
-
-        # Generate predictions
         predictions = self.generate_advanced_predictions(horizon_days=prediction_days)
-
-        # Generate recommendations
         recommendations = self.generate_ml_recommendations(
             anomalies, patterns, predictions
         )
 
-        # Calculate overall health score
-        critical_anomalies = len(
-            [a for a in anomalies if a.severity == AlertSeverity.CRITICAL]
+        # Calculate derived metrics
+        health_score, risk_level = self._calculate_health_metrics(
+            anomalies, predictions
         )
-        warning_anomalies = len(
-            [a for a in anomalies if a.severity == AlertSeverity.WARNING]
-        )
-        high_risk_predictions = len(
-            [p for p in predictions if p.risk_assessment in ["high", "critical"]]
-        )
-
-        # Health score calculation (0.0 to 1.0)
-        health_score = 1.0
-        health_score -= (
-            critical_anomalies * 0.2
-        )  # Critical anomalies heavily impact health
-        health_score -= (
-            warning_anomalies * 0.1
-        )  # Warning anomalies moderately impact health
-        health_score -= (
-            high_risk_predictions * 0.15
-        )  # High-risk predictions impact health
-        health_score = max(0.0, min(1.0, health_score))
-
-        # Overall risk level
-        if health_score < 0.5:
-            risk_level = "critical"
-        elif health_score < 0.7:
-            risk_level = "high"
-        elif health_score < 0.85:
-            risk_level = "medium"
-        else:
-            risk_level = "low"
 
         return QualityInsights(
             anomalies=anomalies,
@@ -639,7 +715,62 @@ class QualityIntelligenceService:
             risk_level=risk_level,
         )
 
+    def _calculate_health_metrics(
+        self, anomalies: list[QualityAnomaly], predictions: list[QualityPrediction]
+    ) -> tuple[float, str]:
+        """Calculate overall health score and risk level."""
+        anomaly_counts = self._count_anomalies_by_severity(anomalies)
+        risk_prediction_count = self._count_high_risk_predictions(predictions)
+
+        health_score = self._compute_health_score(anomaly_counts, risk_prediction_count)
+        risk_level = self._determine_risk_level(health_score)
+
+        return health_score, risk_level
+
+    def _count_anomalies_by_severity(
+        self, anomalies: list[QualityAnomaly]
+    ) -> dict[str, int]:
+        """Count anomalies by severity level."""
+        return {
+            "critical": len(
+                [a for a in anomalies if a.severity == AlertSeverity.CRITICAL]
+            ),
+            "warning": len(
+                [a for a in anomalies if a.severity == AlertSeverity.WARNING]
+            ),
+        }
+
+    def _count_high_risk_predictions(self, predictions: list[QualityPrediction]) -> int:
+        """Count predictions with high or critical risk assessment."""
+        return len(
+            [p for p in predictions if p.risk_assessment in ("high", "critical")]
+        )
+
+    def _compute_health_score(
+        self, anomaly_counts: dict[str, int], risk_predictions: int
+    ) -> float:
+        """Compute health score based on anomalies and risk predictions."""
+        health_score = 1.0
+        health_score -= (
+            anomaly_counts["critical"] * 0.2
+        )  # Critical anomalies heavily impact health
+        health_score -= (
+            anomaly_counts["warning"] * 0.1
+        )  # Warning anomalies moderately impact health
+        health_score -= risk_predictions * 0.15  # High-risk predictions impact health
+        return max(0.0, min(1.0, health_score))
+
+    def _determine_risk_level(self, health_score: float) -> str:
+        """Determine overall risk level based on health score."""
+        if health_score < 0.5:
+            return "critical"
+        elif health_score < 0.7:
+            return "high"
+        elif health_score < 0.85:
+            return "medium"
+        return "low"
+
     def export_insights(self, insights: QualityInsights, output_path: Path) -> None:
         """Export quality insights to JSON file."""
-        with open(output_path, "w") as f:
+        with output_path.open("w") as f:
             json.dump(insights.to_dict(), f, indent=2, default=str)
