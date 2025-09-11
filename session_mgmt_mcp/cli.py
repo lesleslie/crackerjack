@@ -49,7 +49,7 @@ def find_server_processes() -> list[psutil.Process]:
                 "server.py" in cmdline_str
                 or "session_mgmt_mcp.server" in cmdline_str
                 or "--http" in cmdline_str
-                or 
+                or
                 # Check if it's bound to our ports (for HTTP mode)
                 any(
                     conn.laddr.port in [8678, 8677]
@@ -61,7 +61,7 @@ def find_server_processes() -> list[psutil.Process]:
             # Exclude CLI processes that are not servers
             is_cli_only = (
                 "--start-mcp-server" in cmdline_str
-                or "--stop-mcp-server" in cmdline_str  
+                or "--stop-mcp-server" in cmdline_str
                 or "--status" in cmdline_str
                 or "--version" in cmdline_str
             )
@@ -171,11 +171,11 @@ def start_mcp_server(
         # Use the configured ports or defaults
         http_port = port or 8678
         ws_port = websocket_port or 8677
-        
+
         cmd = [
-            sys.executable, 
-            "-c", 
-            f"from session_mgmt_mcp.server import main; main(http_mode=True, http_port={http_port})"
+            sys.executable,
+            "-c",
+            f"from session_mgmt_mcp.server import main; main(http_mode=True, http_port={http_port})",
         ]
 
         process = subprocess.Popen(
@@ -195,7 +195,9 @@ def start_mcp_server(
                 f"[red]❌ Server process exited with code {process.returncode}[/red]"
             )
             if not verbose:
-                console.print("[yellow]💡 Try --verbose flag to see startup errors[/yellow]")
+                console.print(
+                    "[yellow]💡 Try --verbose flag to see startup errors[/yellow]"
+                )
             raise typer.Exit(1)
 
         # Check if server is detected by our process monitoring
@@ -238,7 +240,7 @@ def stop_mcp_server() -> bool:
             Panel(
                 "[yellow]⚠️ No running server processes found[/yellow]\n"
                 "Server may already be stopped or running in STDIO mode.",
-                title="Server Status"
+                title="Server Status",
             )
         )
         return True  # Not an error if already stopped
@@ -296,7 +298,7 @@ def restart_mcp_server(
     console.print(
         Panel(
             "[blue]🔄 Restarting Session Management MCP Server...[/blue]",
-            title="Server Restart"
+            title="Server Restart",
         )
     )
 
