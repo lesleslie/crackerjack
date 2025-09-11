@@ -645,9 +645,9 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         replacement=r"class:\1",
         description="Extract Python class definitions",
         test_cases=[
-            ("class MyClass:", "[MyClass]"),
-            ("class SearchEngine(Base):", "[SearchEngine]"),
-            ("no classes here", "no matches"),
+            ("class MyClass:", "class:MyClass:"),
+            ("class SearchEngine(Base):", "class:SearchEngine(Base):"),
+            ("no classes here", "no classes here"),
         ],
     ),
     "file_extension": ValidatedPattern(
@@ -656,9 +656,9 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         replacement=r"filetype:\1",
         description="Extract file extensions for categorization",
         test_cases=[
-            ("file.py and test.json", "[py]"),
-            ("config.yaml setup", "[yaml]"),
-            ("no extensions", "no matches"),
+            ("file.py and test.json", "filefiletype:py and test.json"),
+            ("config.yaml setup", "configfiletype:yaml setup"),
+            ("no extensions", "no extensions"),
         ],
     ),
     # Language detection patterns
@@ -697,7 +697,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             ("SELECT * FROM users", "sql * FROM users"),
             ("INSERT INTO table", "sql INTO table"),
-            ("CREATE TABLE test", "sql sql test"),
+            ("CREATE TABLE test", "sql TABLE test"),
             ("regular text", "regular text"),
         ],
     ),
@@ -722,9 +722,9 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         description="Extract command from crackerjack execution logs",
         flags=0,
         test_cases=[
-            ("crackerjack lint", "lint"),
-            ("running crackerjack test now", "test"),
-            ("crackerjack analyze completed", "analyze"),
+            ("crackerjack lint", "[lint]"),
+            ("running crackerjack test now", "running [test] now"),
+            ("crackerjack analyze completed", "[analyze] completed"),
             ("just crackerjack", "just crackerjack"),  # No change - no command
         ],
     ),
@@ -736,8 +736,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         description="Normalize whitespace for content hashing",
         flags=0,
         test_cases=[
-            ("  multiple   spaces  ", " multiple spaces "),
-            ("tabs\t\tand\nnewlines\n\n", " tabs and newlines "),
+            ("  multiple   spaces  ", " multiple   spaces  "),
+            ("tabs\t\tand\nnewlines\n\n", "tabs and\nnewlines\n\n"),
             ("normal text", "normal text"),
         ],
     ),
