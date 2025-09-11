@@ -7,7 +7,6 @@ and intelligent result ranking.
 
 import hashlib
 import json
-import re
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -15,6 +14,7 @@ from typing import Any
 
 from .reflection_tools import ReflectionDatabase
 from .search_enhanced import EnhancedSearchEngine
+from .utils.regex_patterns import SAFE_PATTERNS
 
 
 @dataclass
@@ -560,28 +560,38 @@ class AdvancedSearchEngine:
         """Extract technical terms and patterns from content."""
         terms = []
 
-        # Programming language keywords
-        lang_patterns = {
-            "python": r"\b(def|class|import|from|try|except|if|else|for|while|return)\b",
-            "javascript": r"\b(function|const|let|var|async|await|=>|class|export|import)\b",
-            "sql": r"\b(SELECT|FROM|WHERE|JOIN|INSERT|UPDATE|DELETE|CREATE|TABLE)\b",
-            "error": r"\b(Error|Exception|Traceback|Failed|TypeError|ValueError)\b",
+        # Programming language detection
+        lang_pattern_names = [
+            "python_code",
+            "javascript_code",
+            "sql_code",
+            "error_keywords",
+        ]
+        lang_mapping = {
+            "python_code": "python",
+            "javascript_code": "javascript",
+            "sql_code": "sql",
+            "error_keywords": "error",
         }
 
-        for lang, pattern in lang_patterns.items():
-            if re.search(pattern, content, re.IGNORECASE):
-                terms.append(lang)
+        for pattern_name in lang_pattern_names:
+            pattern = SAFE_PATTERNS[pattern_name]
+            if pattern.search(content):
+                terms.append(lang_mapping[pattern_name])
 
         # Extract function names
-        func_matches = re.findall(r"\bdef\s+(\w+)", content)
+        func_pattern = SAFE_PATTERNS["function_definition"]
+        func_matches = func_pattern.findall(content)
         terms.extend([f"function:{func}" for func in func_matches[:5]])  # Limit to 5
 
         # Extract class names
-        class_matches = re.findall(r"\bclass\s+(\w+)", content)
+        class_pattern = SAFE_PATTERNS["class_definition"]
+        class_matches = class_pattern.findall(content)
         terms.extend([f"class:{cls}" for cls in class_matches[:5]])
 
         # Extract file extensions
-        file_matches = re.findall(r"\.(\w{2,4})\b", content)
+        ext_pattern = SAFE_PATTERNS["file_extension"]
+        file_matches = ext_pattern.findall(content)
         terms.extend([f"filetype:{ext}" for ext in set(file_matches[:10])])
 
         return terms[:20]  # Limit total terms

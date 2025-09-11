@@ -28,6 +28,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+# Constants for typer.Option to fix FBT003 boolean positional values
+DEFAULT_FALSE = False
+
 console = Console()
 
 
@@ -398,37 +401,37 @@ def show_config() -> None:
 @app.command()
 def main(
     start_mcp_server: bool = typer.Option(
-        False,
+        DEFAULT_FALSE,
         "--start-mcp-server",
         help="Start MCP server for session management",
     ),
     stop_mcp_server: bool = typer.Option(
-        False,
+        DEFAULT_FALSE,
         "--stop-mcp-server",
         help="Stop all running MCP servers",
     ),
     restart_mcp_server: bool = typer.Option(
-        False,
+        DEFAULT_FALSE,
         "--restart-mcp-server",
         help="Restart MCP server (stop and start again)",
     ),
     status: bool = typer.Option(
-        False,
+        DEFAULT_FALSE,
         "--status",
         help="Show comprehensive server status information",
     ),
     version: bool = typer.Option(
-        False,
+        DEFAULT_FALSE,
         "--version",
         help="Show version information",
     ),
     config: bool = typer.Option(
-        False,
+        DEFAULT_FALSE,
         "--config",
         help="Show current server configuration",
     ),
     logs: bool = typer.Option(
-        False,
+        DEFAULT_FALSE,
         "--logs",
         help="Show server logs",
     ),
@@ -443,7 +446,7 @@ def main(
         help="WebSocket monitor port (for start/restart)",
     ),
     verbose: bool = typer.Option(
-        False,
+        DEFAULT_FALSE,
         "--verbose",
         help="Enable verbose output",
     ),

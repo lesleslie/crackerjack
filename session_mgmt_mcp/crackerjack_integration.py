@@ -10,7 +10,6 @@ This module provides deep integration with Crackerjack for:
 import asyncio
 import json
 import logging
-import re
 import sqlite3
 import threading
 import time
@@ -19,6 +18,8 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any
+
+from .utils.regex_patterns import SAFE_PATTERNS
 
 logger = logging.getLogger(__name__)
 
@@ -127,42 +128,23 @@ class CrackerjackOutputParser:
 
     def __init__(self) -> None:
         """Initialize output parser."""
+        # Map pattern names to validated patterns from our registry
         self.patterns = {
-            # Test results patterns
-            "pytest_result": re.compile(
-                r"(\w+\.py)::\s*(\w+)\s*(PASSED|FAILED|SKIPPED|ERROR|XFAIL|XPASS)\s*(?:\[(\d+%)\])?\s*(?:\((.+)\))?",
-            ),
-            "pytest_summary": re.compile(r"=+ (.+) =+"),
-            "pytest_coverage": re.compile(r"TOTAL\s+\d+\s+\d+\s+(\d+)%"),
-            # Lint results patterns
-            "ruff_error": re.compile(r"(\S+):(\d+):(\d+):\s*(\w+):\s*(.+)"),
-            "pyright_error": re.compile(
-                r"(\S+):(\d+):(\d+)\s*-\s*(error|warning|info):\s*(.+)",
-            ),
-            # Security patterns
-            "bandit_issue": re.compile(r">> Issue: \[([^\]]+)\]\s*(.+)"),
-            "bandit_severity": re.compile(r"Severity: (\w+)\s*Confidence: (\w+)"),
-            # Complexity patterns
-            "complexity_score": re.compile(r"(\S+)\s+(\d+)\s+(\d+\.\d+)"),
-            # Coverage patterns
-            "coverage_line": re.compile(r"(\S+)\s+(\d+)\s+(\d+)\s+(\d+)%"),
-            # Progress patterns
-            "progress_indicator": re.compile(r"(?:Progress:|Stage:|Running:)\s*(.+)"),
-            "percentage": re.compile(r"(\d+(?:\.\d+)?)%"),
-            "task_completion": re.compile(r"✅\s*(.+)|PASSED\s*(.+)|SUCCESS\s*(.+)"),
-            "task_failure": re.compile(r"❌\s*(.+)|FAILED\s*(.+)|ERROR\s*(.+)"),
-            # New crackerjack v0.31.4+ patterns
-            "ai_agent_action": re.compile(r"🤖\s*AI Agent:\s*(.+)"),
-            "quality_gate": re.compile(r"Quality Gate:\s*(\w+)\s*\((\d+)%\)"),
-            "release_info": re.compile(r"Release:\s*(.+)\s*→\s*(.+)"),
-            "typecheck_error": re.compile(
-                r"(\S+):(\d+):(\d+)\s*-\s*(error|warning):\s*(.+)"
-            ),
-            # Enhanced progress patterns
-            "stage_progress": re.compile(r"Stage\s+(\d+)/(\d+):\s*(.+)"),
-            "eta_estimate": re.compile(r"ETA:\s*(\d+m\s*\d+s|\d+s)"),
-            "crackerjack_stage": re.compile(r"🔧\s*(.+)\s*\.\.\.\s*(.+)"),
-            "auto_fix": re.compile(r"🔧\s*Auto-fixing:\s*(.+)"),
+            # Test results patterns - use validated patterns
+            "pytest_result": "pytest_result",
+            "pytest_coverage": "coverage_summary",
+            # Lint results patterns - use validated patterns
+            "ruff_error": "ruff_error",
+            "mypy_error": "mypy_error",
+            # Security patterns - use validated patterns
+            "bandit_issue": "bandit_finding",
+            # Quality patterns - use validated patterns
+            "quality_score": "quality_score",
+            # Progress patterns - use validated patterns
+            "progress_indicator": "progress_indicator",
+            "git_commit": "git_commit_hash",
+            "file_path_line": "file_path_with_line",
+            "execution_time": "execution_time",
         }
 
     def parse_output(
@@ -223,7 +205,8 @@ class CrackerjackOutputParser:
 
         for line in lines:
             # Test result lines
-            match = self.patterns["pytest_result"].search(line)
+            pytest_pattern = SAFE_PATTERNS[self.patterns["pytest_result"]]
+            match = pytest_pattern.search(line)
             if match:
                 file_path, test_name, status, coverage, duration = match.groups()
                 data["test_results"].append(
@@ -237,7 +220,8 @@ class CrackerjackOutputParser:
                 )
 
             # Summary lines
-            summary_match = self.patterns["pytest_summary"].search(line)
+            summary_pattern = SAFE_PATTERNS[self.patterns["pytest_summary"]]
+            summary_match = summary_pattern.search(line)
             if summary_match:
                 summary_text = summary_match.group(1)
                 if "passed" in summary_text or "failed" in summary_text:
@@ -254,7 +238,8 @@ class CrackerjackOutputParser:
 
         for line in lines:
             # Ruff errors
-            ruff_match = self.patterns["ruff_error"].search(line)
+            ruff_pattern = SAFE_PATTERNS[self.patterns["ruff_error"]]
+            ruff_match = ruff_pattern.search(line)
             if ruff_match:
                 file_path, line_num, col_num, error_type, message = ruff_match.groups()
                 data["lint_issues"].append(
@@ -270,7 +255,8 @@ class CrackerjackOutputParser:
                 total_errors += 1
 
             # Pyright errors
-            pyright_match = self.patterns["pyright_error"].search(line)
+            pyright_pattern = SAFE_PATTERNS[self.patterns["pyright_error"]]
+            pyright_match = pyright_pattern.search(line)
             if pyright_match:
                 file_path, line_num, col_num, severity, message = pyright_match.groups()
                 data["lint_issues"].append(
@@ -296,7 +282,8 @@ class CrackerjackOutputParser:
         current_issue = None
 
         for line in lines:
-            issue_match = self.patterns["bandit_issue"].search(line)
+            bandit_issue_pattern = SAFE_PATTERNS[self.patterns["bandit_issue"]]
+            issue_match = bandit_issue_pattern.search(line)
             if issue_match:
                 issue_id, description = issue_match.groups()
                 current_issue = {
@@ -307,7 +294,8 @@ class CrackerjackOutputParser:
                 }
                 data["security_issues"].append(current_issue)
 
-            severity_match = self.patterns["bandit_severity"].search(line)
+            bandit_severity_pattern = SAFE_PATTERNS[self.patterns["bandit_severity"]]
+            severity_match = bandit_severity_pattern.search(line)
             if severity_match and current_issue:
                 severity, confidence = severity_match.groups()
                 current_issue["severity"] = severity
@@ -324,7 +312,8 @@ class CrackerjackOutputParser:
 
         for line in lines:
             # Individual file coverage
-            coverage_match = self.patterns["coverage_line"].search(line)
+            coverage_line_pattern = SAFE_PATTERNS[self.patterns["coverage_line"]]
+            coverage_match = coverage_line_pattern.search(line)
             if coverage_match:
                 file_path, statements, missing, coverage = coverage_match.groups()
                 data["coverage_data"][file_path] = {
@@ -334,7 +323,8 @@ class CrackerjackOutputParser:
                 }
 
             # Total coverage
-            total_match = self.patterns["pytest_coverage"].search(line)
+            pytest_coverage_pattern = SAFE_PATTERNS[self.patterns["pytest_coverage"]]
+            total_match = pytest_coverage_pattern.search(line)
             if total_match:
                 total_coverage = int(total_match.group(1))
                 data["coverage_summary"]["total_coverage"] = total_coverage
@@ -350,7 +340,8 @@ class CrackerjackOutputParser:
         high_complexity = 0
 
         for line in lines:
-            complexity_match = self.patterns["complexity_score"].search(line)
+            complexity_pattern = SAFE_PATTERNS[self.patterns["complexity_score"]]
+            complexity_match = complexity_pattern.search(line)
             if complexity_match:
                 file_path, lines_count, complexity_score = complexity_match.groups()
                 complexity_val = float(complexity_score)
@@ -379,17 +370,20 @@ class CrackerjackOutputParser:
 
         for line in lines:
             # Progress indicators
-            progress_match = self.patterns["progress_indicator"].search(line)
+            progress_pattern = SAFE_PATTERNS[self.patterns["progress_indicator"]]
+            progress_match = progress_pattern.search(line)
             if progress_match:
                 data["progress_info"]["current_task"] = progress_match.group(1)
 
             # Percentage completion
-            percentage_match = self.patterns["percentage"].search(line)
+            percentage_pattern = SAFE_PATTERNS[self.patterns["percentage"]]
+            percentage_match = percentage_pattern.search(line)
             if percentage_match:
                 current_percentage = float(percentage_match.group(1))
 
             # Task completions
-            completion_match = self.patterns["task_completion"].search(line)
+            completion_pattern = SAFE_PATTERNS[self.patterns["task_completion"]]
+            completion_match = completion_pattern.search(line)
             if completion_match:
                 task = (
                     completion_match.group(1)
@@ -400,7 +394,8 @@ class CrackerjackOutputParser:
                     completed_tasks.append(task.strip())
 
             # Task failures
-            failure_match = self.patterns["task_failure"].search(line)
+            failure_pattern = SAFE_PATTERNS[self.patterns["task_failure"]]
+            failure_match = failure_pattern.search(line)
             if failure_match:
                 task = (
                     failure_match.group(1)

@@ -7,7 +7,6 @@ to reduce token usage while maintaining functionality.
 
 import hashlib
 import json
-import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -248,8 +247,11 @@ class TokenOptimizer:
 
         for result in results:
             content = result.get("content", "")
-            # Create hash of normalized content
-            normalized_content = re.sub(r"\s+", " ", content.lower().strip())
+            # Create hash of normalized content using validated pattern
+            from session_mgmt_mcp.utils.regex_patterns import SAFE_PATTERNS
+
+            normalize_pattern = SAFE_PATTERNS["whitespace_normalize"]
+            normalized_content = normalize_pattern.sub(content.lower().strip())
             content_hash = hashlib.md5(normalized_content.encode()).hexdigest()
 
             if content_hash not in seen_hashes:

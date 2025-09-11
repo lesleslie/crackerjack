@@ -321,11 +321,20 @@ def register_search_tools(mcp) -> None:
                 if include_files and results:
                     # Extract mentioned files
                     all_content = " ".join([r.get("content", "") for r in results])
-                    import re
+                    from session_mgmt_mcp.utils.regex_patterns import SAFE_PATTERNS
 
-                    files = re.findall(
-                        r"[\w-]+\.(py|js|ts|md|json|yaml|yml|toml)", all_content
-                    )
+                    # Use validated pattern for file extraction
+                    files = []
+                    for pattern_name in [
+                        "python_files",
+                        "javascript_files",
+                        "typescript_files",
+                        "markdown_files",
+                        "json_files",
+                    ]:
+                        pattern = SAFE_PATTERNS[pattern_name]
+                        matches = pattern.findall(all_content)
+                        files.extend(matches)
                     if files:
                         unique_files = list(set(files))[:10]
                         output += f"📁 **Related Files**: {', '.join(unique_files)}"
@@ -415,12 +424,11 @@ def register_search_tools(mcp) -> None:
                         output += f"({result['timestamp']}) "
 
                     content = result.get("content", "")
-                    # Look for code blocks
-                    import re
+                    # Look for code blocks using validated pattern
+                    from session_mgmt_mcp.utils.regex_patterns import SAFE_PATTERNS
 
-                    code_blocks = re.findall(
-                        r"```[\w]*\n(.*?)\n```", content, re.DOTALL
-                    )
+                    code_pattern = SAFE_PATTERNS["generic_code_block"]
+                    code_blocks = code_pattern.findall(content)
 
                     if code_blocks:
                         # Show first code block

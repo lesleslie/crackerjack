@@ -6,11 +6,11 @@ Provides conversation consolidation, summarization, and memory compression capab
 
 import hashlib
 import json
-import re
 from datetime import datetime, timedelta
 from typing import Any
 
 from .reflection_tools import ReflectionDatabase
+from .utils.regex_patterns import SAFE_PATTERNS
 
 
 class ConversationSummarizer:
@@ -25,7 +25,8 @@ class ConversationSummarizer:
 
     def _extractive_summarization(self, content: str, max_sentences: int = 3) -> str:
         """Extract most important sentences from conversation."""
-        sentences = re.split(r"[.!?]+", content)
+        sentence_pattern = SAFE_PATTERNS["sentence_split"]
+        sentences = sentence_pattern.split(content)
         sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
 
         # Score sentences based on various factors
@@ -90,43 +91,49 @@ class ConversationSummarizer:
         summary_parts = []
 
         # Detect code blocks
-        code_blocks = re.findall(r"```[\w]*\n(.*?)\n```", content, re.DOTALL)
+        code_pattern = SAFE_PATTERNS["python_code_block"]
+        code_blocks = code_pattern.findall(content)
         if code_blocks:
             summary_parts.append(
                 f"Code discussion involving {len(code_blocks)} code block(s)",
             )
 
         # Detect errors/exceptions
-        error_patterns = [
-            r"(\w+Error): (.+)",
-            r"Exception: (.+)",
-            r"Traceback \(most recent call last\):",
-            r"error: (.+)",
-        ]
         errors_found = []
-        for pattern in error_patterns:
-            matches = re.findall(pattern, content, re.IGNORECASE)
-            if matches:
-                if isinstance(matches[0], tuple):
-                    errors_found.extend([match[0] for match in matches[:2]])
-                else:
-                    errors_found.extend(matches[:2])
+
+        # Check for Python exceptions
+        exception_pattern = SAFE_PATTERNS["python_exception"]
+        exc_matches = exception_pattern.findall(content)
+        if exc_matches:
+            errors_found.extend(
+                [
+                    match[0] if isinstance(match, tuple) else match
+                    for match in exc_matches[:2]
+                ]
+            )
+
+        # Check for Python tracebacks
+        traceback_pattern = SAFE_PATTERNS["python_traceback"]
+        if traceback_pattern.search(content):
+            errors_found.append("Python traceback")
 
         if errors_found:
             error_summary = ", ".join(set(errors_found))[:100]
             summary_parts.append(f"Error troubleshooting: {error_summary}")
 
         # Detect file/project references
-        file_patterns = [
-            r"(\w+\.py)",
-            r"(\w+\.js)",
-            r"(\w+\.ts)",
-            r"(\w+\.json)",
-            r"(\w+\.md)",
-        ]
         files_mentioned = set()
-        for pattern in file_patterns:
-            matches = re.findall(pattern, content)
+
+        file_pattern_names = [
+            "python_files",
+            "javascript_files",
+            "typescript_files",
+            "json_files",
+            "markdown_files",
+        ]
+        for pattern_name in file_pattern_names:
+            pattern = SAFE_PATTERNS[pattern_name]
+            matches = pattern.findall(content)
             files_mentioned.update(matches[:5])  # Limit to 5 files
 
         if files_mentioned:
@@ -164,11 +171,15 @@ class ConversationSummarizer:
     def _keyword_based_summarization(self, content: str, max_keywords: int = 10) -> str:
         """Create summary based on extracted keywords."""
         # Clean content
-        content_clean = re.sub(r"```.*?```", "", content, flags=re.DOTALL)
-        content_clean = re.sub(r"`[^`]+`", "", content_clean)
+        code_block_pattern = SAFE_PATTERNS["code_block_cleanup"]
+        content_clean = code_block_pattern.sub("", content)
+
+        inline_code_pattern = SAFE_PATTERNS["inline_code_cleanup"]
+        content_clean = inline_code_pattern.sub("", content_clean)
 
         # Extract potential keywords
-        words = re.findall(r"\b[a-zA-Z]{3,}\b", content_clean.lower())
+        word_pattern = SAFE_PATTERNS["word_extraction"]
+        words = word_pattern.findall(content_clean.lower())
 
         # Filter common words
         stop_words = {
@@ -330,8 +341,13 @@ class ConversationClusterer:
             pass
 
         # Content similarity (simple keyword overlap)
-        content1_words = set(re.findall(r"\b\w+\b", conv1.get("content", "").lower()))
-        content2_words = set(re.findall(r"\b\w+\b", conv2.get("content", "").lower()))
+        word_boundary_pattern = SAFE_PATTERNS["word_boundary"]
+        content1_words = set(
+            word_boundary_pattern.findall(conv1.get("content", "").lower())
+        )
+        content2_words = set(
+            word_boundary_pattern.findall(conv2.get("content", "").lower())
+        )
 
         if content1_words and content2_words:
             overlap = len(content1_words & content2_words)

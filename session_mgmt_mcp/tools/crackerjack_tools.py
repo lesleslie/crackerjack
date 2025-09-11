@@ -192,9 +192,12 @@ def register_crackerjack_tools(mcp) -> None:
                     content = result.get("content", "")
                     if "crackerjack" in content.lower():
                         # Extract command from content
-                        import re
 
-                        match = re.search(r"crackerjack\s+(\w+)", content.lower())
+                        # Use validated pattern for command extraction
+                        from session_mgmt_mcp.utils.regex_patterns import SAFE_PATTERNS
+
+                        crackerjack_cmd_pattern = SAFE_PATTERNS["crackerjack_command"]
+                        match = crackerjack_cmd_pattern.search(content.lower())
                         cmd = match.group(1) if match else "unknown"
 
                         if cmd not in commands:
@@ -320,9 +323,29 @@ def register_crackerjack_tools(mcp) -> None:
                     for keyword in failure_keywords:
                         if keyword in content:
                             # Extract context around the keyword
-                            import re
 
-                            matches = re.finditer(keyword, content)
+                            # Find keyword occurrences using simple string search
+                            matches = []
+                            start_pos = 0
+                            while True:
+                                pos = content.find(keyword, start_pos)
+                                if pos == -1:
+                                    break
+
+                                # Create a match-like object with start() and end() methods
+                                class SimpleMatch:
+                                    def __init__(self, start_pos, end_pos):
+                                        self._start = start_pos
+                                        self._end = end_pos
+
+                                    def start(self):
+                                        return self._start
+
+                                    def end(self):
+                                        return self._end
+
+                                matches.append(SimpleMatch(pos, pos + len(keyword)))
+                                start_pos = pos + 1
                             for match in matches:
                                 start = max(0, match.start() - 30)
                                 end = min(len(content), match.end() + 30)

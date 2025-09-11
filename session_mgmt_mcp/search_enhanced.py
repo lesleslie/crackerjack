@@ -5,7 +5,6 @@ Provides multi-modal search including code snippets, error patterns, and time-ba
 """
 
 import ast
-import re
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -17,7 +16,9 @@ try:
 except ImportError:
     DATEUTIL_AVAILABLE = False
 
+
 from .reflection_tools import ReflectionDatabase
+from .utils.regex_patterns import SAFE_PATTERNS
 
 
 class CodeSearcher:
@@ -40,9 +41,10 @@ class CodeSearcher:
         """Extract code patterns from conversation content."""
         patterns = []
 
-        # Extract Python code blocks
-        code_blocks = re.findall(r"```python\n(.*?)\n```", content, re.DOTALL)
-        code_blocks.extend(re.findall(r"```\n(.*?)\n```", content, re.DOTALL))
+        # Extract Python code blocks using validated patterns
+        python_code_blocks = SAFE_PATTERNS["python_code_block"].findall(content)
+        generic_code_blocks = SAFE_PATTERNS["generic_code_block"].findall(content)
+        code_blocks = python_code_blocks + generic_code_blocks
 
         for i, code in enumerate(code_blocks):
             try:
@@ -89,36 +91,40 @@ class ErrorPatternMatcher:
     """Pattern matching for error messages and debugging contexts."""
 
     def __init__(self) -> None:
+        # Map pattern names to our validated patterns
         self.error_patterns = {
-            "python_traceback": r"Traceback \(most recent call last\):.*?(?=\n\n|\Z)",
-            "python_exception": r"(\w+Error): (.+)",
-            "javascript_error": r"(Error|TypeError|ReferenceError): (.+)",
-            "compile_error": r"(error|Error): (.+) at line (\d+)",
-            "warning": r"(warning|Warning): (.+)",
-            "assertion": r"AssertionError: (.+)",
-            "import_error": r"ImportError: (.+)",
-            "module_not_found": r"ModuleNotFoundError: (.+)",
-            "file_not_found": r"FileNotFoundError: (.+)",
-            "permission_denied": r"PermissionError: (.+)",
-            "network_error": r"(ConnectionError|TimeoutError|HTTPError): (.+)",
+            "python_traceback": "python_traceback",
+            "python_exception": "python_exception",
+            "javascript_error": "javascript_error",
+            "compile_error": "compile_error",
+            "warning": "warning_pattern",
+            "assertion": "assertion_error",
+            "import_error": "import_error",
+            "module_not_found": "module_not_found",
+            "file_not_found": "file_not_found",
+            "permission_denied": "permission_denied",
+            "network_error": "network_error",
         }
 
+        # Map context pattern names to our validated patterns
         self.context_patterns = {
-            "debugging": r"(debug|debugging|breakpoint|pdb|print\()",
-            "testing": r"(test|pytest|unittest|assert|mock)",
-            "error_handling": r"(try|except|finally|raise|catch)",
-            "performance": r"(slow|performance|benchmark|optimize|profil)",
-            "security": r"(security|authentication|authorization|token|password)",
+            "debugging": "debugging_context",
+            "testing": "testing_context",
+            "error_handling": "error_handling_context",
+            "performance": "performance_context",
+            "security": "security_context",
         }
 
     def extract_error_patterns(self, content: str) -> list[dict[str, Any]]:
         """Extract error patterns and debugging context from content."""
         patterns = []
 
-        # Find error patterns
-        for pattern_name, regex in self.error_patterns.items():
-            matches = re.finditer(regex, content, re.MULTILINE | re.DOTALL)
-            for match in matches:
+        # Find error patterns using validated patterns
+        for pattern_name, safe_pattern_key in self.error_patterns.items():
+            safe_pattern = SAFE_PATTERNS[safe_pattern_key]
+            # Use search() method to find matches with position info
+            match = safe_pattern.search(content)
+            if match:
                 patterns.append(
                     {
                         "type": "error",
@@ -130,9 +136,10 @@ class ErrorPatternMatcher:
                     },
                 )
 
-        # Find context patterns
-        for context_name, regex in self.context_patterns.items():
-            if re.search(regex, content, re.IGNORECASE):
+        # Find context patterns using validated patterns
+        for context_name, safe_pattern_key in self.context_patterns.items():
+            safe_pattern = SAFE_PATTERNS[safe_pattern_key]
+            if safe_pattern.test(content):
                 patterns.append(
                     {
                         "type": "context",
@@ -167,13 +174,14 @@ class TemporalSearchParser:
             else timedelta(days=365),
         }
 
+        # Map to validated time parsing patterns
         self.time_patterns = [
-            r"(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago",
-            r"(today|yesterday|this\s+week|last\s+week|this\s+month|last\s+month)",
-            r"since\s+(today|yesterday|this\s+week|last\s+week)",
-            r"in\s+the\s+last\s+(\d+)\s+(minute|hour|day|week|month|year)s?",
-            r"(\d{4}-\d{2}-\d{2})",  # ISO date
-            r"(\d{1,2}/\d{1,2}/\d{4})",  # MM/DD/YYYY
+            "time_ago_pattern",
+            "relative_time_pattern",
+            "since_time_pattern",
+            "last_duration_pattern",
+            "iso_date_pattern",
+            "us_date_pattern",
         ]
 
     def _calculate_delta(self, amount: int, unit: str) -> timedelta:
@@ -223,10 +231,7 @@ class TemporalSearchParser:
         now: datetime,
     ) -> tuple[datetime | None, datetime | None]:
         """Parse 'X time units ago' pattern."""
-        match = re.search(
-            r"(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago",
-            expression,
-        )
+        match = SAFE_PATTERNS["time_ago_pattern"].search(expression)
         if match:
             amount = int(match.group(1))
             unit = match.group(2)
@@ -241,10 +246,7 @@ class TemporalSearchParser:
         now: datetime,
     ) -> tuple[datetime | None, datetime | None]:
         """Parse 'in the last X units' pattern."""
-        match = re.search(
-            r"in\s+the\s+last\s+(\d+)\s+(minute|hour|day|week|month|year)s?",
-            expression,
-        )
+        match = SAFE_PATTERNS["last_duration_pattern"].search(expression)
         if match:
             amount = int(match.group(1))
             unit = match.group(2)
