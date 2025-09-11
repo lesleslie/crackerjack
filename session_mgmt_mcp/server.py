@@ -17,10 +17,15 @@ import os
 import shutil
 import subprocess
 import sys
+import warnings
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+# Suppress transformers warnings about PyTorch/TensorFlow for cleaner CLI output
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+warnings.filterwarnings("ignore", message=".*PyTorch.*TensorFlow.*Flax.*")
 
 try:
     import tomli

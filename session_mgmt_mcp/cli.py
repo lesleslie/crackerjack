@@ -5,10 +5,16 @@ Provides CLI interface matching crackerjack's server management pattern
 with boolean options instead of subcommands.
 """
 
+import os
 import subprocess
 import sys
 import time
+import warnings
 from pathlib import Path
+
+# Suppress transformers warnings about PyTorch/TensorFlow
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+warnings.filterwarnings("ignore", message=".*PyTorch.*TensorFlow.*Flax.*")
 
 import psutil
 import typer
@@ -40,10 +46,11 @@ def find_server_processes() -> list[psutil.Process]:
 
             # Check if it's running a server (various ways to start)
             is_server = (
-                "--start-server" in cmdline_str
-                or "server.py" in cmdline_str
-                or
-                # Also check if it's bound to our ports
+                "server.py" in cmdline_str
+                or "session_mgmt_mcp.server" in cmdline_str
+                or "--http" in cmdline_str
+                or 
+                # Check if it's bound to our ports (for HTTP mode)
                 any(
                     conn.laddr.port in [8678, 8677]
                     for conn in proc.net_connections()
@@ -51,7 +58,15 @@ def find_server_processes() -> list[psutil.Process]:
                 )
             )
 
-            if is_session_mcp and is_server:
+            # Exclude CLI processes that are not servers
+            is_cli_only = (
+                "--start-mcp-server" in cmdline_str
+                or "--stop-mcp-server" in cmdline_str  
+                or "--status" in cmdline_str
+                or "--version" in cmdline_str
+            )
+
+            if is_session_mcp and is_server and not is_cli_only:
                 processes.append(proc)
 
         except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -152,10 +167,16 @@ def start_mcp_server(
     console.print("[blue]🚀 Starting Session Management MCP Server...[/blue]")
 
     try:
-        # Start server directly using the server module to avoid recursion
-
-        # Start server in background using subprocess calling the server directly
-        cmd = [sys.executable, "-c", "from session_mgmt_mcp.server import main; main()"]
+        # Start server in HTTP mode so it can be properly detected by process monitoring
+        # Use the configured ports or defaults
+        http_port = port or 8678
+        ws_port = websocket_port or 8677
+        
+        cmd = [
+            sys.executable, 
+            "-c", 
+            f"from session_mgmt_mcp.server import main; main(http_mode=True, http_port={http_port})"
+        ]
 
         process = subprocess.Popen(
             cmd,
@@ -164,34 +185,46 @@ def start_mcp_server(
             start_new_session=True,
         )
 
-        # Wait a moment and check if it started successfully
-        time.sleep(3)
+        # Wait a moment for server to start and bind to ports
+        console.print("[cyan]⏳ Waiting for server to start...[/cyan]")
+        time.sleep(4)
 
-        if process.poll() is None:  # Still running
-            final_status = get_server_status()
-            if final_status["running"]:
-                console.print(
-                    Panel(
-                        f"[green]✅ Server started successfully![/green]\n"
-                        f"HTTP: http://127.0.0.1:{final_status['http_port']}/mcp\n"
-                        f"WebSocket: ws://127.0.0.1:{final_status['websocket_port']}",
-                        title="Success",
-                    )
-                )
-            else:
-                console.print(
-                    "[red]❌ Server failed to start (no processes found)[/red]"
-                )
-                raise typer.Exit(1)
-        else:
+        # Check if process is still running
+        if process.poll() is not None:  # Process has exited
             console.print(
                 f"[red]❌ Server process exited with code {process.returncode}[/red]"
             )
-            return False
+            if not verbose:
+                console.print("[yellow]💡 Try --verbose flag to see startup errors[/yellow]")
+            raise typer.Exit(1)
+
+        # Check if server is detected by our process monitoring
+        final_status = get_server_status()
+        if final_status["running"]:
+            console.print(
+                Panel(
+                    f"[green]✅ Server started successfully![/green]\n"
+                    f"🌐 HTTP Endpoint: http://127.0.0.1:{http_port}/mcp\n"
+                    f"🔌 WebSocket Monitor: ws://127.0.0.1:{ws_port}\n"
+                    f"📊 Process ID: {final_status['processes'][0]['pid']}",
+                    title="Session Management MCP Server",
+                )
+            )
+        else:
+            console.print(
+                Panel(
+                    "[yellow]⚠️ Server process is running but not responding on expected ports[/yellow]\n"
+                    f"Process might be starting in STDIO mode instead of HTTP mode.\n"
+                    f"Process ID: {process.pid}",
+                    title="Warning",
+                )
+            )
 
     except Exception as e:
         console.print(f"[red]❌ Failed to start server: {e}[/red]")
-        return False
+        if not verbose:
+            console.print("[yellow]💡 Try --verbose flag for more details[/yellow]")
+        raise typer.Exit(1)
 
     return True
 
@@ -201,8 +234,14 @@ def stop_mcp_server() -> bool:
     processes = find_server_processes()
 
     if not processes:
-        console.print("[yellow]⚠️  No running server processes found[/yellow]")
-        return None
+        console.print(
+            Panel(
+                "[yellow]⚠️ No running server processes found[/yellow]\n"
+                "Server may already be stopped or running in STDIO mode.",
+                title="Server Status"
+            )
+        )
+        return True  # Not an error if already stopped
 
     console.print(f"[blue]🛑 Stopping {len(processes)} server process(es)...[/blue]")
 
@@ -254,9 +293,15 @@ def restart_mcp_server(
     verbose: bool = False,
 ) -> bool:
     """Restart the session management MCP server (stop and start)."""
-    console.print("[blue]🔄 Restarting Session Management MCP Server...[/blue]")
+    console.print(
+        Panel(
+            "[blue]🔄 Restarting Session Management MCP Server...[/blue]",
+            title="Server Restart"
+        )
+    )
 
     # Stop existing servers
+    console.print("[cyan]📴 Stopping existing servers...[/cyan]")
     stop_mcp_server()
 
     # Wait for cleanup
@@ -264,6 +309,7 @@ def restart_mcp_server(
     time.sleep(2)
 
     # Start new server
+    console.print("[cyan]🚀 Starting fresh server instance...[/cyan]")
     return start_mcp_server(port=port, websocket_port=websocket_port, verbose=verbose)
 
 
