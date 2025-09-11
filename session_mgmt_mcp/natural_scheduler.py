@@ -136,8 +136,9 @@ class NaturalLanguageParser:
 
         # Try relative patterns first
         for pattern, handler in self.time_patterns.items():
-            # REGEX OK: Dynamic pattern matching for natural language time parsing
-            match = re.search(pattern, expression, re.IGNORECASE)
+            match = re.search(
+                pattern, expression, re.IGNORECASE
+            )  # REGEX OK: Dynamic pattern matching for natural language time parsing
             if match:
                 try:
                     if callable(handler):
@@ -170,8 +171,9 @@ class NaturalLanguageParser:
         expression = expression.lower().strip()
 
         for pattern, handler in self.recurrence_patterns.items():
-            # REGEX OK: Dynamic pattern matching for natural language recurrence parsing
-            match = re.search(pattern, expression, re.IGNORECASE)
+            match = re.search(
+                pattern, expression, re.IGNORECASE
+            )  # REGEX OK: Dynamic pattern matching for natural language recurrence parsing
             if match:
                 if callable(handler):
                     return handler(match)

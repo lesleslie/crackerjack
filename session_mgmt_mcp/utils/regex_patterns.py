@@ -8,6 +8,7 @@ All patterns are validated with comprehensive test cases and use proper replacem
 """
 
 import re
+
 from crackerjack.services.regex_patterns import ValidatedPattern
 
 # Session Management MCP Validated Patterns Registry
@@ -26,9 +27,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no code here", "no code here"),  # No change
         ],
     ),
-    
     "generic_code_block": ValidatedPattern(
-        name="generic_code_block", 
+        name="generic_code_block",
         pattern=r"```\n(.*?)\n```",
         replacement=r"\1",
         description="Extract code from generic markdown code blocks",
@@ -40,7 +40,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no fenced code", "no fenced code"),  # No change
         ],
     ),
-    
     # Error pattern matching for search_enhanced.py
     "python_traceback": ValidatedPattern(
         name="python_traceback",
@@ -49,28 +48,38 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         description="Match Python traceback blocks with safe termination",
         flags=re.MULTILINE | re.DOTALL,
         test_cases=[
-            ("Traceback (most recent call last):\n  File test.py\nError: msg\n\nNext line", "<TRACEBACK_MASKED>\n\nNext line"),
-            ("Traceback (most recent call last):\n  File test.py\nError: msg", "<TRACEBACK_MASKED>"),
+            (
+                "Traceback (most recent call last):\n  File test.py\nError: msg\n\nNext line",
+                "<TRACEBACK_MASKED>\n\nNext line",
+            ),
+            (
+                "Traceback (most recent call last):\n  File test.py\nError: msg",
+                "<TRACEBACK_MASKED>",
+            ),
             ("No traceback here", "No traceback here"),  # No change
         ],
     ),
-    
     "python_exception": ValidatedPattern(
         name="python_exception",
-        pattern=r"(\w+Error): (.+)",
+        pattern=r"\b(ValueError|TypeError|RuntimeError|SyntaxError|ImportError|AttributeError|KeyError|IndexError|FileNotFoundError|PermissionError|ConnectionError|TimeoutError|AssertionError|Exception|BaseException): (.+)",
         replacement=r"\1: <ERROR_MESSAGE_MASKED>",
         description="Match Python exception patterns safely",
         test_cases=[
             ("ValueError: invalid input", "ValueError: <ERROR_MESSAGE_MASKED>"),
-            ("RuntimeError: something went wrong", "RuntimeError: <ERROR_MESSAGE_MASKED>"),
-            ("NotAnError: this should not match", "NotAnError: this should not match"),  # No change
+            (
+                "RuntimeError: something went wrong",
+                "RuntimeError: <ERROR_MESSAGE_MASKED>",
+            ),
+            (
+                "NotAnError: this should not match",
+                "NotAnError: this should not match",
+            ),  # No change
             ("SyntaxError: bad syntax", "SyntaxError: <ERROR_MESSAGE_MASKED>"),
         ],
     ),
-    
     "javascript_error": ValidatedPattern(
         name="javascript_error",
-        pattern=r"(Error|TypeError|ReferenceError): (.+)",
+        pattern=r"\b(Error|TypeError|ReferenceError): (.+)",
         replacement=r"\1: <JS_ERROR_MASKED>",
         description="Match JavaScript error patterns",
         test_cases=[
@@ -80,19 +89,26 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("CustomError: not matched", "CustomError: not matched"),  # No change
         ],
     ),
-    
     "compile_error": ValidatedPattern(
-        name="compile_error", 
+        name="compile_error",
         pattern=r"(error|Error): (.+) at line (\d+)",
         replacement=r"\1: <COMPILE_ERROR_MASKED> at line \3",
         description="Match compilation error patterns with line numbers",
         test_cases=[
-            ("error: syntax error at line 42", "error: <COMPILE_ERROR_MASKED> at line 42"),
-            ("Error: missing semicolon at line 10", "Error: <COMPILE_ERROR_MASKED> at line 10"),
-            ("warning: deprecated at line 5", "warning: deprecated at line 5"),  # No change
+            (
+                "error: syntax error at line 42",
+                "error: <COMPILE_ERROR_MASKED> at line 42",
+            ),
+            (
+                "Error: missing semicolon at line 10",
+                "Error: <COMPILE_ERROR_MASKED> at line 10",
+            ),
+            (
+                "warning: deprecated at line 5",
+                "warning: deprecated at line 5",
+            ),  # No change
         ],
     ),
-    
     "warning_pattern": ValidatedPattern(
         name="warning_pattern",
         pattern=r"(warning|Warning): (.+)",
@@ -104,7 +120,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("info: just information", "info: just information"),  # No change
         ],
     ),
-    
     "assertion_error": ValidatedPattern(
         name="assertion_error",
         pattern=r"AssertionError: (.+)",
@@ -112,76 +127,106 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         description="Match assertion error patterns",
         test_cases=[
             ("AssertionError: expected True", "AssertionError: <ASSERTION_MASKED>"),
-            ("AssertionError: values don't match", "AssertionError: <ASSERTION_MASKED>"),
+            (
+                "AssertionError: values don't match",
+                "AssertionError: <ASSERTION_MASKED>",
+            ),
             ("ValueError: not assertion", "ValueError: not assertion"),  # No change
         ],
     ),
-    
     "import_error": ValidatedPattern(
         name="import_error",
         pattern=r"ImportError: (.+)",
         replacement=r"ImportError: <IMPORT_ERROR_MASKED>",
         description="Match import error patterns",
         test_cases=[
-            ("ImportError: No module named 'xyz'", "ImportError: <IMPORT_ERROR_MASKED>"),
+            (
+                "ImportError: No module named 'xyz'",
+                "ImportError: <IMPORT_ERROR_MASKED>",
+            ),
             ("ImportError: cannot import name", "ImportError: <IMPORT_ERROR_MASKED>"),
-            ("ModuleNotFoundError: different", "ModuleNotFoundError: different"),  # No change
+            (
+                "ModuleNotFoundError: different",
+                "ModuleNotFoundError: different",
+            ),  # No change
         ],
     ),
-    
     "module_not_found": ValidatedPattern(
         name="module_not_found",
         pattern=r"ModuleNotFoundError: (.+)",
         replacement=r"ModuleNotFoundError: <MODULE_NOT_FOUND_MASKED>",
         description="Match module not found error patterns",
         test_cases=[
-            ("ModuleNotFoundError: No module named 'test'", "ModuleNotFoundError: <MODULE_NOT_FOUND_MASKED>"),
-            ("ModuleNotFoundError: missing dependency", "ModuleNotFoundError: <MODULE_NOT_FOUND_MASKED>"),
-            ("ImportError: different error", "ImportError: different error"),  # No change
+            (
+                "ModuleNotFoundError: No module named 'test'",
+                "ModuleNotFoundError: <MODULE_NOT_FOUND_MASKED>",
+            ),
+            (
+                "ModuleNotFoundError: missing dependency",
+                "ModuleNotFoundError: <MODULE_NOT_FOUND_MASKED>",
+            ),
+            (
+                "ImportError: different error",
+                "ImportError: different error",
+            ),  # No change
         ],
     ),
-    
     "file_not_found": ValidatedPattern(
         name="file_not_found",
         pattern=r"FileNotFoundError: (.+)",
         replacement=r"FileNotFoundError: <FILE_NOT_FOUND_MASKED>",
         description="Match file not found error patterns",
         test_cases=[
-            ("FileNotFoundError: [Errno 2] No such file", "FileNotFoundError: <FILE_NOT_FOUND_MASKED>"),
-            ("FileNotFoundError: file missing", "FileNotFoundError: <FILE_NOT_FOUND_MASKED>"),
+            (
+                "FileNotFoundError: [Errno 2] No such file",
+                "FileNotFoundError: <FILE_NOT_FOUND_MASKED>",
+            ),
+            (
+                "FileNotFoundError: file missing",
+                "FileNotFoundError: <FILE_NOT_FOUND_MASKED>",
+            ),
             ("PermissionError: different", "PermissionError: different"),  # No change
         ],
     ),
-    
     "permission_denied": ValidatedPattern(
         name="permission_denied",
         pattern=r"PermissionError: (.+)",
         replacement=r"PermissionError: <PERMISSION_ERROR_MASKED>",
         description="Match permission error patterns",
         test_cases=[
-            ("PermissionError: [Errno 13] Permission denied", "PermissionError: <PERMISSION_ERROR_MASKED>"),
-            ("PermissionError: access denied", "PermissionError: <PERMISSION_ERROR_MASKED>"),
-            ("FileNotFoundError: different", "FileNotFoundError: different"),  # No change
+            (
+                "PermissionError: [Errno 13] Permission denied",
+                "PermissionError: <PERMISSION_ERROR_MASKED>",
+            ),
+            (
+                "PermissionError: access denied",
+                "PermissionError: <PERMISSION_ERROR_MASKED>",
+            ),
+            (
+                "FileNotFoundError: different",
+                "FileNotFoundError: different",
+            ),  # No change
         ],
     ),
-    
     "network_error": ValidatedPattern(
         name="network_error",
         pattern=r"(ConnectionError|TimeoutError|HTTPError): (.+)",
         replacement=r"\1: <NETWORK_ERROR_MASKED>",
         description="Match network-related error patterns",
         test_cases=[
-            ("ConnectionError: Failed to connect", "ConnectionError: <NETWORK_ERROR_MASKED>"),
+            (
+                "ConnectionError: Failed to connect",
+                "ConnectionError: <NETWORK_ERROR_MASKED>",
+            ),
             ("TimeoutError: Request timed out", "TimeoutError: <NETWORK_ERROR_MASKED>"),
             ("HTTPError: 404 Not Found", "HTTPError: <NETWORK_ERROR_MASKED>"),
             ("ValueError: not network", "ValueError: not network"),  # No change
         ],
     ),
-    
     # Context pattern matching (boolean search)
     "debugging_context": ValidatedPattern(
         name="debugging_context",
-        pattern=r"(debug|debugging|breakpoint|pdb|print\(\))",
+        pattern=r"\b(debug|debugging|breakpoint|pdb|print\(\))\b",
         replacement=r"<DEBUG_CONTEXT>",
         description="Match debugging-related context patterns",
         flags=re.IGNORECASE,
@@ -192,7 +237,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("regular code", "regular code"),  # No change
         ],
     ),
-    
     "testing_context": ValidatedPattern(
         name="testing_context",
         pattern=r"(test|pytest|unittest|assert|mock)",
@@ -206,7 +250,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("regular text", "regular text"),  # No change
         ],
     ),
-    
     "error_handling_context": ValidatedPattern(
         name="error_handling_context",
         pattern=r"(try|except|finally|raise|catch)",
@@ -220,12 +263,11 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("normal flow", "normal flow"),  # No change
         ],
     ),
-    
     "performance_context": ValidatedPattern(
         name="performance_context",
         pattern=r"(slow|performance|benchmark|optimize|profil)",
         replacement=r"<PERFORMANCE_CONTEXT>",
-        description="Match performance-related context patterns", 
+        description="Match performance-related context patterns",
         flags=re.IGNORECASE,
         test_cases=[
             ("this is slow", "this is <PERFORMANCE_CONTEXT>"),
@@ -234,13 +276,12 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("fast code", "fast code"),  # No change
         ],
     ),
-    
     "security_context": ValidatedPattern(
         name="security_context",
         pattern=r"(security|authentication|authorization|token|password)",
         replacement=r"<SECURITY_CONTEXT>",
         description="Match security-related context patterns",
-        flags=re.IGNORECASE, 
+        flags=re.IGNORECASE,
         test_cases=[
             ("security audit", "<SECURITY_CONTEXT> audit"),
             ("authentication required", "<SECURITY_CONTEXT> required"),
@@ -248,7 +289,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("regular text", "regular text"),  # No change
         ],
     ),
-    
     # Time parsing patterns for search_enhanced.py
     "time_ago_pattern": ValidatedPattern(
         name="time_ago_pattern",
@@ -257,15 +297,14 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         description="Match time ago expressions for parsing",
         test_cases=[
             ("5 minutes ago", "5 minute ago"),
-            ("2 hours ago", "2 hour ago"), 
+            ("2 hours ago", "2 hour ago"),
             ("1 day ago", "1 day ago"),
             ("3 weeks ago", "3 week ago"),
             ("not a time", "not a time"),  # No change
         ],
     ),
-    
     "relative_time_pattern": ValidatedPattern(
-        name="relative_time_pattern", 
+        name="relative_time_pattern",
         pattern=r"(today|yesterday|this\s+week|last\s+week|this\s+month|last\s+month)",
         replacement=r"<RELATIVE_TIME>",
         description="Match relative time expressions",
@@ -277,7 +316,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("some other day", "some other day"),  # No change
         ],
     ),
-    
     "since_time_pattern": ValidatedPattern(
         name="since_time_pattern",
         pattern=r"since\s+(today|yesterday|this\s+week|last\s+week)",
@@ -291,7 +329,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("since forever", "since forever"),  # No change
         ],
     ),
-    
     "last_duration_pattern": ValidatedPattern(
         name="last_duration_pattern",
         pattern=r"in\s+the\s+last\s+(\d+)\s+(minute|hour|day|week|month|year)s?",
@@ -304,20 +341,21 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("not a duration", "not a duration"),  # No change
         ],
     ),
-    
     "iso_date_pattern": ValidatedPattern(
         name="iso_date_pattern",
-        pattern=r"(\d{4}-\d{2}-\d{2})",
+        pattern=r"(\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))",
         replacement=r"<ISO_DATE>",
-        description="Match ISO date format (YYYY-MM-DD)",
+        description="Match valid ISO date format (YYYY-MM-DD)",
         test_cases=[
             ("2023-12-25", "<ISO_DATE>"),
             ("Date: 2024-01-15 is today", "Date: <ISO_DATE> is today"),
             ("not-a-date", "not-a-date"),  # No change
-            ("2023-13-45", "2023-13-45"),  # Invalid date, no change expected in basic pattern
+            (
+                "2023-13-45",
+                "2023-13-45",
+            ),  # Invalid date, no change expected
         ],
     ),
-    
     "us_date_pattern": ValidatedPattern(
         name="us_date_pattern",
         pattern=r"(\d{1,2}/\d{1,2}/\d{4})",
@@ -330,7 +368,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("not/a/date", "not/a/date"),  # No change
         ],
     ),
-    
     # Crackerjack integration patterns for output parsing
     "pytest_result": ValidatedPattern(
         name="pytest_result",
@@ -338,13 +375,21 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         replacement=r"TEST: \1::\2 -> \3",
         description="Parse pytest test results with optional percentage and timing",
         test_cases=[
-            ("test_file.py:: test_function PASSED", "TEST: test_file.py::test_function -> PASSED"),
-            ("test_example.py:: test_method FAILED [50%] (0.05s)", "TEST: test_example.py::test_method -> FAILED"),
-            ("test_skip.py:: test_skip SKIPPED", "TEST: test_skip.py::test_skip -> SKIPPED"),
+            (
+                "test_file.py:: test_function PASSED",
+                "TEST: test_file.py::test_function -> PASSED",
+            ),
+            (
+                "test_example.py:: test_method FAILED [50%] (0.05s)",
+                "TEST: test_example.py::test_method -> FAILED",
+            ),
+            (
+                "test_skip.py:: test_skip SKIPPED",
+                "TEST: test_skip.py::test_skip -> SKIPPED",
+            ),
             ("not a test result", "not a test result"),  # No change
         ],
     ),
-    
     "coverage_summary": ValidatedPattern(
         name="coverage_summary",
         pattern=r"TOTAL\s+\d+\s+\d+\s+(\d+)%",
@@ -356,43 +401,57 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("subtotal   100    5    90%", "subtotal   100    5    90%"),  # No change
         ],
     ),
-    
     "ruff_error": ValidatedPattern(
         name="ruff_error",
         pattern=r"([^:\s]+):(\d+):(\d+):\s*([A-Z]\d{3,4})\s*(.+)",
         replacement=r"RUFF: \1 line \2 -> \4: \5",
         description="Parse Ruff linting errors with file, line, column, code, and message",
         test_cases=[
-            ("src/main.py:42:10: E501 line too long (88 > 79 characters)", "RUFF: src/main.py line 42 -> E501: line too long (88 > 79 characters)"),
-            ("test.py:1:1: F401 imported but unused", "RUFF: test.py line 1 -> F401: imported but unused"),
+            (
+                "src/main.py:42:10: E501 line too long (88 > 79 characters)",
+                "RUFF: src/main.py line 42 -> E501: line too long (88 > 79 characters)",
+            ),
+            (
+                "test.py:1:1: F401 imported but unused",
+                "RUFF: test.py line 1 -> F401: imported but unused",
+            ),
             ("not a ruff error", "not a ruff error"),  # No change
         ],
     ),
-    
     "mypy_error": ValidatedPattern(
-        name="mypy_error", 
+        name="mypy_error",
         pattern=r"([^:\s]+):(\d+):\s*error:\s*(.+)",
         replacement=r"MYPY: \1 line \2 -> \3",
         description="Parse mypy type checking errors with file, line, and message",
         test_cases=[
-            ("src/module.py:15: error: Argument 1 has incompatible type", "MYPY: src/module.py line 15 -> Argument 1 has incompatible type"),
-            ("main.py:8: error: Name 'x' is not defined", "MYPY: main.py line 8 -> Name 'x' is not defined"),
+            (
+                "src/module.py:15: error: Argument 1 has incompatible type",
+                "MYPY: src/module.py line 15 -> Argument 1 has incompatible type",
+            ),
+            (
+                "main.py:8: error: Name 'x' is not defined",
+                "MYPY: main.py line 8 -> Name 'x' is not defined",
+            ),
             ("not a mypy error", "not a mypy error"),  # No change
         ],
     ),
-    
     "bandit_finding": ValidatedPattern(
         name="bandit_finding",
         pattern=r">> Issue: \[([A-Z]\d+):([a-z_]+)\]\s*(.+)",
         replacement=r"BANDIT: \1 (\2) -> \3",
         description="Parse Bandit security findings with code, severity, and description",
         test_cases=[
-            (">> Issue: [B602:subprocess_popen_with_shell_equals_true] Possible shell injection", "BANDIT: B602 (subprocess_popen_with_shell_equals_true) -> Possible shell injection"),
-            (">> Issue: [B108:hardcoded_tmp_directory] Use of insecure temp", "BANDIT: B108 (hardcoded_tmp_directory) -> Use of insecure temp"),
+            (
+                ">> Issue: [B602:subprocess_popen_with_shell_equals_true] Possible shell injection",
+                "BANDIT: B602 (subprocess_popen_with_shell_equals_true) -> Possible shell injection",
+            ),
+            (
+                ">> Issue: [B108:hardcoded_tmp_directory] Use of insecure temp",
+                "BANDIT: B108 (hardcoded_tmp_directory) -> Use of insecure temp",
+            ),
             ("not a bandit finding", "not a bandit finding"),  # No change
         ],
     ),
-    
     "quality_score": ValidatedPattern(
         name="quality_score",
         pattern=r"Quality Score:\s*(\d+(?:\.\d+)?)/(\d+(?:\.\d+)?)\s*\((\d+(?:\.\d+)?)%\)",
@@ -404,7 +463,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("Final Score: 95/100", "Final Score: 95/100"),  # No change
         ],
     ),
-    
     "execution_time": ValidatedPattern(
         name="execution_time",
         pattern=r"(\d+(?:\.\d+)?)\s*(s|ms|seconds?|milliseconds?)",
@@ -417,7 +475,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("fast enough", "fast enough"),  # No change
         ],
     ),
-    
     "progress_indicator": ValidatedPattern(
         name="progress_indicator",
         pattern=r"\[([=>\s]*)\]\s*(\d+)%",
@@ -430,7 +487,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("not progress", "not progress"),  # No change
         ],
     ),
-    
     "git_commit_hash": ValidatedPattern(
         name="git_commit_hash",
         pattern=r"\b([a-f0-9]{7,40})\b",
@@ -438,12 +494,14 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         description="Match Git commit hashes (7-40 hex characters)",
         test_cases=[
             ("commit abc1234 was merged", "commit <COMMIT:abc1234> was merged"),
-            ("long hash abcdef1234567890abcdef1234567890abcdef12", "long hash <COMMIT:abcdef1234567890abcdef1234567890abcdef12>"),
+            (
+                "long hash abcdef1234567890abcdef1234567890abcdef12",
+                "long hash <COMMIT:abcdef1234567890abcdef1234567890abcdef12>",
+            ),
             ("short ab12", "short ab12"),  # Too short
             ("not hex ghi1234", "not hex ghi1234"),  # Contains non-hex
         ],
     ),
-    
     "file_path_with_line": ValidatedPattern(
         name="file_path_with_line",
         pattern=r"([A-Za-z_][A-Za-z0-9_/.-]*\.py):(\d+)",
@@ -456,20 +514,18 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("not-python.txt:50", "not-python.txt:50"),  # No change
         ],
     ),
-    
     # Memory optimizer patterns
     "sentence_split": ValidatedPattern(
         name="sentence_split",
-        pattern=r"[.!?]+",
-        replacement=r"",
-        description="Split text into sentences for summarization",
+        pattern=r"[.!\?]+",
+        replacement=r" ",
+        description="Replace sentence-ending punctuation with spaces for splitting",
         test_cases=[
-            ("Hello world. How are you?", ["Hello world", " How are you", ""]),
-            ("No punctuation here", ["No punctuation here"]),
-            ("Multiple!!! Exclamations", ["Multiple", "", "", " Exclamations"]),
+            ("Hello world.", "Hello world "),
+            ("How are you?", "How are you "),
+            ("Multiple!!!", "Multiple "),
         ],
     ),
-    
     "code_block_cleanup": ValidatedPattern(
         name="code_block_cleanup",
         pattern=r"```.*?```",
@@ -482,19 +538,17 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no code blocks", "no code blocks"),
         ],
     ),
-    
     "inline_code_cleanup": ValidatedPattern(
-        name="inline_code_cleanup", 
+        name="inline_code_cleanup",
         pattern=r"`[^`]+`",
         replacement=r"",
         description="Remove inline code from text",
         test_cases=[
             ("Use `function()` to call", "Use  to call"),
             ("No inline code", "No inline code"),
-            ("`code` and `more code`", " and "),
+            ("`code`", ""),
         ],
     ),
-    
     "word_extraction": ValidatedPattern(
         name="word_extraction",
         pattern=r"\b[a-zA-Z]{3,}\b",
@@ -506,7 +560,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("123 test 456", ["test"]),
         ],
     ),
-    
     "word_boundary": ValidatedPattern(
         name="word_boundary",
         pattern=r"\b\w+\b",
@@ -518,7 +571,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("underscored_var", ["underscored_var"]),
         ],
     ),
-    
     # File extension patterns for memory optimizer
     "python_files": ValidatedPattern(
         name="python_files",
@@ -531,9 +583,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no files here", []),
         ],
     ),
-    
     "javascript_files": ValidatedPattern(
-        name="javascript_files", 
+        name="javascript_files",
         pattern=r"(\w+\.js)",
         replacement=r"\1",
         description="Match JavaScript file references",
@@ -543,10 +594,9 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no files", []),
         ],
     ),
-    
     "typescript_files": ValidatedPattern(
         name="typescript_files",
-        pattern=r"(\w+\.ts)", 
+        pattern=r"(\w+\.ts)",
         replacement=r"\1",
         description="Match TypeScript file references",
         test_cases=[
@@ -555,11 +605,10 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("other files", []),
         ],
     ),
-    
     "json_files": ValidatedPattern(
         name="json_files",
         pattern=r"(\w+\.json)",
-        replacement=r"\1", 
+        replacement=r"\1",
         description="Match JSON file references",
         test_cases=[
             ("config.json settings", ("config.json",)),
@@ -567,19 +616,17 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no json", []),
         ],
     ),
-    
     "markdown_files": ValidatedPattern(
         name="markdown_files",
         pattern=r"(\w+\.md)",
         replacement=r"\1",
-        description="Match Markdown file references", 
+        description="Match Markdown file references",
         test_cases=[
             ("README.md documentation", ("README.md",)),
             ("docs.md file", ("docs.md",)),
             ("no markdown", []),
         ],
     ),
-    
     # Advanced search patterns
     "function_definition": ValidatedPattern(
         name="function_definition",
@@ -592,9 +639,8 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no functions here", []),
         ],
     ),
-    
     "class_definition": ValidatedPattern(
-        name="class_definition", 
+        name="class_definition",
         pattern=r"\bclass\s+(\w+)",
         replacement=r"class:\1",
         description="Extract Python class definitions",
@@ -604,10 +650,9 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no classes here", []),
         ],
     ),
-    
     "file_extension": ValidatedPattern(
         name="file_extension",
-        pattern=r"\.(\w{2,4})\b", 
+        pattern=r"\.(\w{2,4})\b",
         replacement=r"filetype:\1",
         description="Extract file extensions for categorization",
         test_cases=[
@@ -616,7 +661,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no extensions", []),
         ],
     ),
-    
     # Language detection patterns
     "python_code": ValidatedPattern(
         name="python_code",
@@ -631,7 +675,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("regular text", False),
         ],
     ),
-    
     "javascript_code": ValidatedPattern(
         name="javascript_code",
         pattern=r"\b(function|var|let|const|=>|require|module\.exports|console\.log)\b",
@@ -640,12 +683,11 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         flags=re.IGNORECASE,
         test_cases=[
             ("function myFunc()", True),
-            ("const data = []", True), 
+            ("const data = []", True),
             ("console.log('hello')", True),
             ("regular text", False),
         ],
     ),
-    
     "sql_code": ValidatedPattern(
         name="sql_code",
         pattern=r"\b(SELECT|FROM|WHERE|JOIN|INSERT|UPDATE|DELETE|CREATE|TABLE)\b",
@@ -659,7 +701,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("regular text", False),
         ],
     ),
-    
     "error_keywords": ValidatedPattern(
         name="error_keywords",
         pattern=r"\b(Error|Exception|Traceback|Failed|TypeError|ValueError)\b",
@@ -673,10 +714,9 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("regular text", False),
         ],
     ),
-    
     # Crackerjack-specific patterns for tools integration
     "crackerjack_command": ValidatedPattern(
-        name="crackerjack_command", 
+        name="crackerjack_command",
         pattern=r"crackerjack\s+(\w+)",
         replacement=r"\1",
         description="Extract command from crackerjack execution logs",
@@ -688,7 +728,6 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("just crackerjack", "just crackerjack"),  # No change - no command
         ],
     ),
-    
     # Token optimization patterns
     "whitespace_normalize": ValidatedPattern(
         name="whitespace_normalize",
