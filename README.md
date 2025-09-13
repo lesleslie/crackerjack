@@ -350,6 +350,34 @@ This server manages its data locally in the user's home directory:
 - **Project Templates**: Accelerates development setup
 - **Knowledge Persistence**: Maintains context across sessions
 
+## Documentation
+
+The project documentation is organized into the following categories:
+
+### For Developers
+- **[Testing Strategy](docs/developer/TESTING_STRATEGY.md)** - Comprehensive testing approach and implementation plan
+- **[Testing Status](docs/developer/TESTING_STATUS.md)** - Current testing progress and improvements
+- **[Parameter Validation](docs/developer/PARAMETER_VALIDATION.md)** - Pydantic parameter validation guide
+- **[Architecture](docs/developer/ARCHITECTURE.md)** - System architecture and design patterns
+- **[Integration](docs/developer/INTEGRATION.md)** - Integration patterns and best practices
+- **[Advanced Search Fixes](docs/developer/ADVANCED_SEARCH_FIXES_PLAN.md)** - Search functionality improvements
+
+### For Users
+- **[Quick Start](docs/user/QUICK_START.md)** - Getting started guide
+- **[Configuration](docs/user/CONFIGURATION.md)** - Setup and configuration options
+- **[Deployment](docs/user/DEPLOYMENT.md)** - Deployment and production setup
+- **[MCP Tools Reference](docs/user/MCP_TOOLS_REFERENCE.md)** - Complete tool documentation
+
+### Features
+- **[AI Integration Patterns](docs/features/AI_INTEGRATION_PATTERNS.md)** - AI integration strategies
+- **[Token Optimization](docs/features/TOKEN_OPTIMIZATION_FEATURES.md)** - Token management features
+- **[Auto Lifecycle](docs/features/AUTO_LIFECYCLE_IMPLEMENTATION.md)** - Automatic session management
+- **[Crackerjack Integration](docs/features/CRACKERJACK_INTEGRATION.md)** - Code quality integration
+
+### Reference
+- **[MCP Schema Reference](docs/reference/MCP_SCHEMA_REFERENCE.md)** - MCP protocol schemas
+- **[Slash Command Shortcuts](docs/reference/slash-command-shortcuts.md)** - Command reference
+
 ## Troubleshooting
 
 ### Common Issues
