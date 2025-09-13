@@ -15,6 +15,36 @@ import pytest
 from fastmcp import FastMCP
 from session_mgmt_mcp.reflection_tools import ReflectionDatabase
 
+# Import test factories for enhanced test data generation
+try:
+    from tests.fixtures.data_factories import (
+        ProjectDataFactory,
+        ReflectionDataFactory,
+        SessionDataFactory,
+        UserDataFactory,
+    )
+except ImportError:
+    # Create minimal mocks when factories aren't available
+    class ProjectDataFactory:
+        @staticmethod
+        def create():
+            return {"id": "test_project", "name": "Test Project"}
+    
+    class ReflectionDataFactory:
+        @staticmethod
+        def create():
+            return {"content": "Test reflection", "tags": ["test"]}
+    
+    class SessionDataFactory:
+        @staticmethod
+        def create():
+            return {"id": "test_session", "user": "test_user"}
+    
+    class UserDataFactory:
+        @staticmethod
+        def create():
+            return {"id": "test_user", "name": "Test User"}
+
 
 @pytest.fixture(scope="session")
 def event_loop() -> Generator[asyncio.AbstractEventLoop]:
@@ -339,6 +369,78 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "mcp_test: mark test as MCP server test")
 
 
+# Performance Testing Fixtures
+@pytest.fixture
+def performance_monitor():
+    """Monitor for performance testing with memory and timing metrics."""
+    import time
+    try:
+        import psutil
+    except ImportError:
+        # Fallback monitor when psutil unavailable
+        class SimplePerformanceMonitor:
+            def __init__(self):
+                self.start_time = None
+            
+            def start_monitoring(self):
+                self.start_time = time.time()
+            
+            def stop_monitoring(self):
+                return {
+                    "duration": time.time() - self.start_time if self.start_time else 0,
+                    "memory_delta": 0,
+                    "peak_memory": 0,
+                }
+        return SimplePerformanceMonitor()
+
+    class PerformanceMonitor:
+        def __init__(self):
+            self.process = psutil.Process()
+            self.start_time = None
+            self.start_memory = None
+
+        def start_monitoring(self):
+            self.start_time = time.time()
+            self.start_memory = self.process.memory_info().rss / 1024 / 1024  # MB
+
+        def stop_monitoring(self):
+            end_time = time.time()
+            end_memory = self.process.memory_info().rss / 1024 / 1024  # MB
+
+            return {
+                "duration": end_time - self.start_time,
+                "memory_delta": end_memory - self.start_memory,
+                "peak_memory": end_memory,
+            }
+
+    return PerformanceMonitor()
+
+
+# Data Factory Fixtures
+@pytest.fixture
+def session_data():
+    """Generate test session data using factory."""
+    return SessionDataFactory.create()
+
+
+@pytest.fixture
+def reflection_data():
+    """Generate test reflection data using factory."""
+    return ReflectionDataFactory.create()
+
+
+@pytest.fixture
+def user_data():
+    """Generate test user data using factory."""
+    return UserDataFactory.create()
+
+
+@pytest.fixture
+def project_data():
+    """Generate test project data using factory."""
+    return ProjectDataFactory.create()
+
+
 def pytest_collection_modifyitems(config, items):
     """Modify test collection based on markers and environment."""
     # Add async marker to all async tests
@@ -353,6 +455,10 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker("unit")
         elif "functional" in str(item.fspath):
             item.add_marker("functional")
+        elif "performance" in str(item.fspath):
+            item.add_marker("performance")
+        elif "security" in str(item.fspath):
+            item.add_marker("security")
 
 
 # Async test timeout configuration
