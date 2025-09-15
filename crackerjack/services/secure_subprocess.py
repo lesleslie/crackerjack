@@ -87,13 +87,23 @@ class SecureSubprocessExecutor:
         self.security_logger = get_security_logger()
 
         self.dangerous_patterns = [
-            r"[;&|`$(){}[\]<>*?~]",
+            r"[;&|`$()[\]<>*?~]",
             r"\.\./",
             r"\$\{.*\}",
             r"`.*`",
             r"\$\(.*\)",
             r">\s*/",
             r"<\s*/",
+        ]
+
+        # Git reference patterns that should be allowed despite containing special chars
+        self.allowed_git_patterns = [
+            r"^@\{u\}\.\.HEAD$",  # upstream..HEAD
+            r"^@\{upstream\}\.\.HEAD$",  # upstream..HEAD (long form)
+            r"^HEAD\.\.@\{u\}$",  # HEAD..upstream
+            r"^HEAD\.\.@\{upstream\}$",  # HEAD..upstream (long form)
+            r"^@\{[0-9]+\}$",  # reflog references like @{1}
+            r"^@\{[0-9]+ (minute|hour|day|week|month|year)s? ago\}$",  # time references
         ]
 
         self.dangerous_env_vars = {
@@ -316,6 +326,12 @@ class SecureSubprocessExecutor:
         return validated_command, issues
 
     def _has_dangerous_patterns(self, arg: str, index: int, issues: list[str]) -> bool:
+        # First check if this is an allowed git pattern
+        for git_pattern in self.allowed_git_patterns:
+            if re.match(git_pattern, arg):
+                return False  # It's an allowed git pattern, don't flag as dangerous
+
+        # Check for dangerous patterns
         for pattern in self.dangerous_patterns:
             if re.search(pattern, arg):
                 issues.append(
