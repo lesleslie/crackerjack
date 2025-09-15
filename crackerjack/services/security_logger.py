@@ -131,7 +131,8 @@ class SecurityLogger:
             if debug_enabled:
                 console_handler.setLevel(logging.WARNING)
             else:
-                console_handler.setLevel(logging.CRITICAL + 1)
+                # Suppress all security logs during normal operation
+                console_handler.setLevel(logging.CRITICAL + 10)
 
             formatter = logging.Formatter(
                 "%(asctime)s - SECURITY - %(levelname)s-%(message)s"

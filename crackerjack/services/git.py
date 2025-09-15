@@ -19,7 +19,7 @@ GIT_COMMANDS = {
     "add_updated": ["add", "-u"],
     "push_porcelain": ["push", "--porcelain"],
     "current_branch": ["branch", "--show-current"],
-    "commits_ahead": ["rev-list[t.Any]", "--count", "@{u}..HEAD"],
+    "commits_ahead": ["rev-list", "--count", "@{u}..HEAD"],
 }
 
 
