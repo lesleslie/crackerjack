@@ -65,7 +65,13 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         target_path = Path(target_path)
 
         if not target_path.exists():
-            return source_content
+            # Process source content for project-specific references
+            processed_source = copy.deepcopy(source_content)
+            source_repos = processed_source.get("repos", [])
+            processed_source["repos"] = self._process_pre_commit_repos_for_project(
+                source_repos, project_name
+            )
+            return processed_source
 
         with target_path.open() as f:
             loaded_config = yaml.safe_load(f)
@@ -96,7 +102,11 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         ]
 
         if new_repos:
-            target_repos.extend(new_repos)
+            # Replace project-specific references in new repos before adding them
+            processed_new_repos = self._process_pre_commit_repos_for_project(
+                new_repos, project_name
+            )
+            target_repos.extend(processed_new_repos)
             target_content["repos"] = target_repos
             self.logger.info(
                 "Merged .pre-commit-config.yaml",
@@ -485,3 +495,46 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
                 for key, val in value.items()
             }
         return value
+
+    def _process_pre_commit_repos_for_project(
+        self, repos: list[dict[str, t.Any]], project_name: str
+    ) -> list[dict[str, t.Any]]:
+        """Process pre-commit repos to replace project-specific references."""
+        if project_name == "crackerjack":
+            return repos  # No changes needed for crackerjack itself
+
+        processed_repos = []
+        for repo in repos:
+            processed_repo = copy.deepcopy(repo)
+
+            # Process hooks within each repo
+            hooks = processed_repo.get("hooks", [])
+            for hook in hooks:
+                if isinstance(hook, dict):
+                    # Replace crackerjack directory references in args
+                    if "args" in hook:
+                        hook["args"] = [
+                            arg.replace("crackerjack", project_name)
+                            if isinstance(arg, str)
+                            else arg
+                            for arg in hook["args"]
+                        ]
+
+                    # Replace crackerjack directory references in files pattern
+                    if "files" in hook:
+                        files_pattern = hook["files"]
+                        if isinstance(files_pattern, str):
+                            hook["files"] = files_pattern.replace(
+                                "^crackerjack/", f"^{project_name}/"
+                            )
+
+                    # Special handling for validate-regex-patterns hook - keep it pointing to crackerjack package
+                    if hook.get("id") == "validate-regex-patterns":
+                        # This should reference the installed crackerjack package, not the current project
+                        # The entry already uses "uv run python -m crackerjack.tools.validate_regex_patterns"
+                        # which is correct - it runs from the installed crackerjack package
+                        pass
+
+            processed_repos.append(processed_repo)
+
+        return processed_repos

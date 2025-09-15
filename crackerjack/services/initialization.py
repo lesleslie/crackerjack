@@ -138,7 +138,9 @@ class InitializationService:
             self._process_mcp_config(target_path, force, results)
             return
 
-        source_file = self.pkg_path.parent / file_name
+        # Use crackerjack's project root for template files
+        crackerjack_project_root = Path(__file__).parent.parent.parent
+        source_file = crackerjack_project_root / file_name
         target_file = target_path / file_name
 
         if not source_file.exists():
@@ -304,7 +306,9 @@ class InitializationService:
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        source_file = self.pkg_path / "example.mcp.json"
+        # Use crackerjack's project root for template files
+        crackerjack_project_root = Path(__file__).parent.parent.parent
+        source_file = crackerjack_project_root / "example.mcp.json"
 
         target_file = target_path / ".mcp.json"
 

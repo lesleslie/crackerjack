@@ -644,7 +644,7 @@ def validate_and_sanitize_string(value: str, **kwargs: t.Any) -> str:
 
 def validate_and_sanitize_path(value: str | Path, **kwargs: t.Any) -> Path:
     validator = SecureInputValidator()
-    result = validator.sanitizer.sanitize_string(str(value), **kwargs)
+    result = validator.sanitizer.sanitize_path(value, **kwargs)
 
     if not result.valid:
         raise ExecutionError(
