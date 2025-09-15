@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Fix missing 'import typing as t' in files that use 't' but don't import it."""
 
-import re
 import subprocess
 from pathlib import Path
+
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
 def get_files_needing_typing_import() -> list[str]:
@@ -34,8 +35,8 @@ def file_needs_typing_import(file_path: str) -> bool:
         with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
-        # Check if file uses t.Any, t.Dict, etc.
-        uses_t = bool(re.search(r"\bt\.[A-Z]", content))
+        # REGEX OK: Using safe pattern for typing detection
+        uses_t = SAFE_PATTERNS["detect_typing_usage"].test(content)
 
         # Check if it already has the import
         has_import = "import typing as t" in content or "from typing import" in content

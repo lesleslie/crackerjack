@@ -2704,6 +2704,19 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("no coverage here", "no coverage here"),  # No match
         ],
     ),
+    "detect_typing_usage": ValidatedPattern(
+        name="detect_typing_usage",
+        pattern=r"\bt\.[A-Z]",
+        replacement="",
+        description="Detect usage of typing module aliases like t.Any, t.Dict, etc.",
+        global_replace=True,
+        test_cases=[
+            ("def func(x: t.Any) -> t.Dict:", "def func(x: ny) -> ict:"),  # Removes t.A and t.D
+            ("value: t.Optional[str] = None", "value: ptional[str] = None"),  # Removes t.O
+            ("from typing import Dict", "from typing import Dict"),  # No match
+            ("data = dict()", "data = dict()"),  # No match
+        ],
+    ),
 }
 
 
