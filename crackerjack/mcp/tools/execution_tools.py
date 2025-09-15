@@ -15,7 +15,7 @@ def register_execution_tools(mcp_app: t.Any) -> None:
 
 
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     async def execute_crackerjack(args: str, kwargs: str) -> str:
         context = get_context()
 
@@ -51,7 +51,7 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     async def smart_error_analysis(use_cache: bool = True) -> str:
         context = get_context()
 
@@ -69,7 +69,7 @@ def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
 
 
 def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     def init_crackerjack(args: str = "", kwargs: str = "{}") -> str:
         try:
             target_path, force, error = _parse_init_arguments(args, kwargs)
@@ -84,7 +84,7 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     def suggest_agents(
         task_description: str = "",
         project_type: str = "python",
@@ -137,7 +137,7 @@ def _parse_kwargs(kwargs: str) -> dict[str, t.Any]:
 def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | None]:
     try:
         target_path = args.strip() or "."
-        kwargs_dict = json.loads(kwargs) if kwargs.strip() else {}
+        kwargs_dict: dict[str, t.Any] = json.loads(kwargs) if kwargs.strip() else {}
         force = kwargs_dict.get("force") or False
 
         from pathlib import Path
@@ -163,7 +163,7 @@ def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]
     from crackerjack.services.git import GitService
 
     filesystem = FileSystemService()
-    git_service = GitService()
+    git_service = GitService(console)
     return InitializationService(
         console, filesystem, git_service, target_path
     ).initialize_project_full(force=force)

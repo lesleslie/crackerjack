@@ -353,57 +353,38 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "repo": "local",
             "rev": "",
             "tier": 3,
+            "time_estimate": 0.15,
+            "stages": ["pre-push", "manual"],
+            "args": ["--config-file", "mypy.ini", "./crackerjack"],
+            "files": None,
+            "exclude": None,
+            "additional_dependencies": None,
+            "types_or": None,
+            "language": "system",
+            "entry": "uv run zuban check",
+            "experimental": False,
+            "pass_filenames": False,
+        },
+        {
+            "id": "pyright",
+            "name": "pyright-type-checking",
+            "repo": "local",
+            "rev": "",
+            "tier": 3,
             "time_estimate": 0.25,
             "stages": ["pre-push", "manual"],
-            "args": ["check"],
+            "args": [],
             "files": "^crackerjack/.*\\.py$",
             "exclude": r"^crackerjack/(mcp|plugins)/.*\.py$|crackerjack/code_cleaner\.py$",
             "additional_dependencies": None,
             "types_or": None,
             "language": "system",
-            "entry": "zuban",
+            "entry": "uv run pyright",
             "experimental": False,
             "pass_filenames": None,
         },
     ],
-    "experimental": [
-        {
-            "id": "pyrefly",
-            "name": "pyrefly",
-            "repo": "local",
-            "rev": "",
-            "tier": 3,
-            "time_estimate": 5.0,
-            "stages": ["manual"],
-            "args": ["--check"],
-            "files": "^crackerjack/.*\\.py$",
-            "exclude": None,
-            "additional_dependencies": ["pyrefly >= 0.1.0"],
-            "types_or": ["python"],
-            "language": "python",
-            "entry": "python -m pyrefly",
-            "experimental": True,
-            "pass_filenames": None,
-        },
-        {
-            "id": "ty",
-            "name": "ty",
-            "repo": "local",
-            "rev": "",
-            "tier": 3,
-            "time_estimate": 2.0,
-            "stages": ["manual"],
-            "args": ["--check"],
-            "files": "^crackerjack/.*\\.py$",
-            "exclude": None,
-            "additional_dependencies": ["ty >= 0.1.0"],
-            "types_or": ["python"],
-            "language": "python",
-            "entry": "python -m ty",
-            "experimental": True,
-            "pass_filenames": None,
-        },
-    ],
+    "experimental": [],
 }
 
 CONFIG_MODES: dict[str, ConfigMode] = {
@@ -604,7 +585,7 @@ def generate_config_for_mode(
 
 
 def get_available_modes() -> list[str]:
-    return list(CONFIG_MODES.keys())
+    return list[t.Any](CONFIG_MODES.keys())
 
 
 def add_experimental_hook(hook_id: str, hook_config: HookMetadata) -> None:

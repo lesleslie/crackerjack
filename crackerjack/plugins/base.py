@@ -24,7 +24,7 @@ class PluginMetadata:
     requires_python: str = "> = 3.11"
     dependencies: list[str] = field(default_factory=list)
     entry_point: str = ""
-    config_schema: dict[str, t.Any] = field(default_factory=dict)
+    config_schema: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
         return {
@@ -148,7 +148,7 @@ class PluginRegistry:
         if plugin_type:
             plugins = self.get_by_type(plugin_type)
         else:
-            plugins = list(self._plugins.values())
+            plugins = list[t.Any](self._plugins.values())
 
         return [p for p in plugins if p.enabled]
 

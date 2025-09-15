@@ -238,7 +238,7 @@ class StatusSecurityManager:
 
             return {
                 "concurrent_requests": self._concurrent_requests,
-                "active_request_ids": list(self._active_requests),
+                "active_request_ids": list[t.Any](self._active_requests),
                 "recent_requests_per_minute": recent_requests,
                 "rate_limit_clients": len(self._rate_limit_tracker),
                 "max_concurrent_limit": self.max_concurrent_requests,

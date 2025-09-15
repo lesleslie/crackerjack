@@ -85,7 +85,7 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
     return None
 
 
-def _handle_task_exception(job_id: str, task: asyncio.Task) -> None:
+def _handle_task_exception(job_id: str, task: asyncio.Task[t.Any]) -> None:
     import tempfile
     from pathlib import Path
 
@@ -405,10 +405,9 @@ def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
 
     options = WorkflowOptions()
     options.testing.test = kwargs.get("test", True)
-    options.ai_agent = kwargs.get("ai_agent", True)
-    options.skip_hooks = kwargs.get("skip_hooks", False)
+    options.ai.ai_agent = kwargs.get("ai_agent", True)
+    options.hooks.skip_hooks = kwargs.get("skip_hooks", False)
 
-    options.proactive_mode = kwargs.get("proactive_mode", True)
     return options
 
 
@@ -418,8 +417,10 @@ async def _execute_single_iteration(
     options: t.Any,
 ) -> bool:
     if use_advanced_orchestrator:
-        return await orchestrator.execute_orchestrated_workflow(options)
-    return await orchestrator.run_complete_workflow(options)
+        result = await orchestrator.execute_orchestrated_workflow(options)
+        return bool(result)
+    result = await orchestrator.run_complete_workflow(options)
+    return bool(result)
 
 
 def _create_success_result(
@@ -715,6 +716,8 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
 
         try:
             results = _execute_initialization(context, target_path, force)
+            if isinstance(results, bool):
+                return json.dumps({"success": results})
             return _create_init_success_response(results, target_path, force)
         except Exception as e:
             return _create_init_exception_response(e, target_path)
@@ -730,18 +733,20 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
     target_path = args.strip() or None
 
     try:
-        extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+        extra_kwargs: dict[str, t.Any] = json.loads(kwargs) if kwargs.strip() else {}
     except json.JSONDecodeError as e:
         return None, False, _create_init_error_response(f"Invalid JSON in kwargs: {e}")
 
     force = extra_kwargs.get("force", False)
 
     if target_path:
-        target_path = Path(target_path).resolve()
+        target_path_obj = Path(target_path).resolve()
+        target_path = str(target_path_obj)
     else:
-        target_path = Path.cwd()
+        target_path_obj = Path.cwd()
+        target_path = str(target_path_obj)
 
-    if not target_path.exists():
+    if not Path(target_path).exists():
         return (
             None,
             False,
@@ -751,9 +756,7 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
     return target_path, force, None
 
 
-def _execute_initialization(
-    context: t.Any, target_path: t.Any, force: bool
-) -> dict[str, t.Any]:
+def _execute_initialization(context: t.Any, target_path: t.Any, force: bool) -> bool:
     from crackerjack.services.filesystem import FileSystemService
     from crackerjack.services.git import GitService
     from crackerjack.services.initialization import InitializationService
@@ -792,15 +795,24 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
         project_type: str = "python",
         current_context: str = "",
     ) -> str:
-        suggestions = {
-            "primary_agents": [],
-            "task_specific_agents": [],
-            "usage_patterns": [],
+        suggestions: dict[str, list[dict[str, str]] | list[str] | str] = {
+            "primary_agents": t.cast(list[dict[str, str]], []),
+            "task_specific_agents": t.cast(list[dict[str, str]], []),
+            "usage_patterns": t.cast(list[str], []),
             "rationale": "",
         }
 
+        # Type cast the lists to ensure proper typing
+        primary_agents: list[dict[str, str]] = t.cast(
+            list[dict[str, str]], suggestions["primary_agents"]
+        )
+        task_specific_agents: list[dict[str, str]] = t.cast(
+            list[dict[str, str]], suggestions["task_specific_agents"]
+        )
+        t.cast(list[str], suggestions["usage_patterns"])
+
         if project_type.lower() == "python" or "python" in task_description.lower():
-            suggestions["primary_agents"].append(
+            primary_agents.append(
                 {
                     "name": "crackerjack-architect",
                     "emoji": "🏗️",
@@ -810,11 +822,11 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
                 }
             )
 
-            suggestions["primary_agents"].append(
+            primary_agents.append(
                 {
                     "name": "python-pro",
                     "emoji": "🐍",
-                    "description": "Modern Python development with type hints, async / await patterns, and clean architecture",
+                    "description": "Modern Python development with type hints, async/await patterns, and clean architecture",
                     "usage": "Use for implementing Python code with best practices",
                     "priority": "HIGH",
                 }
@@ -827,9 +839,9 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             word in task_lower + context_lower
             for word in ("test", "testing", "coverage", "pytest")
         ):
-            suggestions["task_specific_agents"].append(
+            task_specific_agents.append(
                 {
-                    "name": "crackerjack - test-specialist",
+                    "name": "crackerjack-test-specialist",
                     "emoji": "🧪",
                     "description": "Advanced testing specialist for complex scenarios and coverage optimization",
                     "usage": "Use for test creation, debugging test failures, and coverage improvements",
@@ -837,9 +849,9 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
                 }
             )
 
-            suggestions["task_specific_agents"].append(
+            task_specific_agents.append(
                 {
-                    "name": "pytest - hypothesis-specialist",
+                    "name": "pytest-hypothesis-specialist",
                     "emoji": "🧪",
                     "description": "Advanced testing patterns and property-based testing",
                     "usage": "Use for comprehensive test development and optimization",
@@ -851,12 +863,12 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             word in task_lower + context_lower
             for word in ("security", "vulnerability", "auth", "permission")
         ):
-            suggestions["task_specific_agents"].append(
+            task_specific_agents.append(
                 {
                     "name": "security-auditor",
                     "emoji": "🔒",
-                    "description": "Security analysis, vulnerability detection, and secure coding practices",
-                    "usage": "Use for security review and vulnerability assessment",
+                    "description": "Security auditing and vulnerability detection specialist",
+                    "usage": "Use for identifying and mitigating security vulnerabilities",
                     "priority": "HIGH",
                 }
             )
@@ -865,12 +877,12 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             word in task_lower + context_lower
             for word in ("architecture", "design", "api", "backend")
         ):
-            suggestions["task_specific_agents"].append(
+            task_specific_agents.append(
                 {
                     "name": "backend-architect",
                     "emoji": "🏗️",
-                    "description": "System design, API architecture, and service integration patterns",
-                    "usage": "Use for architectural planning and system design",
+                    "description": "Backend architecture and system design specialist",
+                    "usage": "Use for complex backend design decisions and system architecture",
                     "priority": "MEDIUM",
                 }
             )

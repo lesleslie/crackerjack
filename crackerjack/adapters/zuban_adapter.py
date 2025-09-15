@@ -1,5 +1,6 @@
-"""Zuban adapter for type checking."""
+"""Zuban adapter for type checking with LSP integration."""
 
+import asyncio
 import typing as t
 from contextlib import suppress
 from dataclasses import dataclass
@@ -9,6 +10,10 @@ from .rust_tool_adapter import BaseRustToolAdapter, Issue, ToolResult
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.execution_strategies import ExecutionContext
+    from crackerjack.services.lsp_client import LSPClient
+
+# Import the LSP client wrapper
+from .lsp_client import ZubanLSPClient
 
 
 @dataclass
@@ -32,34 +37,235 @@ class TypeIssue(Issue):
 
 
 class ZubanAdapter(BaseRustToolAdapter):
-    """Zuban type checking adapter."""
+    """Zuban type checking adapter with LSP integration."""
 
     def __init__(
         self,
         context: "ExecutionContext",
         strict_mode: bool = True,
         mypy_compatibility: bool = True,
+        use_lsp: bool = True,
     ) -> None:
-        """Initialize Zuban adapter."""
+        """Initialize Zuban adapter.
+
+        Args:
+            context: Execution context
+            strict_mode: Enable strict type checking
+            mypy_compatibility: Use MyPy-compatible mode
+            use_lsp: Enable LSP integration for faster checking
+        """
         super().__init__(context)
         self.strict_mode = strict_mode
         self.mypy_compatibility = mypy_compatibility
+        self.use_lsp = use_lsp
+        self._lsp_client: LSPClient | None = None
+        self._lsp_wrapper: ZubanLSPClient | None = None
+        self._lsp_available = False
 
     def get_tool_name(self) -> str:
         """Get the name of the tool."""
         return "zuban"
 
+    def check_tool_health(self) -> bool:
+        """Check if Zuban is functional before use.
+
+        Returns:
+            True if Zuban can be used safely, False otherwise
+        """
+        try:
+            import subprocess
+
+            # Test basic version command - this should not crash
+            result = subprocess.run(
+                ["uv", "run", "zuban", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            if result.returncode != 0:
+                return False
+
+            # Test if we can parse TOML without crashing
+            # Create a minimal test to check for TOML parsing bug
+            result = subprocess.run(
+                ["uv", "run", "zuban", "--help"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            return result.returncode == 0
+
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, Exception):
+            return False
+
     def supports_json_output(self) -> bool:
         """Zuban does not support JSON output mode."""
         return False
 
+    def _ensure_lsp_client(self) -> None:
+        """Initialize LSP client if not already available."""
+        if not self.use_lsp or self._lsp_client is not None:
+            return
+
+        try:
+            # Import here to avoid circular imports
+            from rich.console import Console
+
+            from crackerjack.services.lsp_client import LSPClient
+
+            console = getattr(self.context, "console", Console())
+            self._lsp_client = LSPClient(console=console)
+            self._lsp_available = self._lsp_client.is_server_running()
+
+        except ImportError:
+            self._lsp_available = False
+
+    async def get_lsp_diagnostics(self, target_files: list[Path]) -> list[TypeIssue]:
+        """Get real-time diagnostics from LSP server.
+
+        Args:
+            target_files: List of files to check
+
+        Returns:
+            List of type issues found by LSP server
+        """
+        self._ensure_lsp_client()
+
+        if not self._lsp_available or not self._lsp_client:
+            return []
+
+        try:
+            # Convert paths to strings for LSP client
+            [str(f.resolve()) for f in target_files]
+
+            # Get diagnostics from LSP client
+            diagnostics, _ = self._lsp_client.check_project_with_feedback(
+                project_path=target_files[0].parent if target_files else Path.cwd(),
+                show_progress=False,
+            )
+
+            # Convert LSP diagnostics to TypeIssue objects
+            issues: list[TypeIssue] = []
+            for file_path, file_diagnostics in diagnostics.items():
+                for diag in file_diagnostics:
+                    issues.append(
+                        TypeIssue(
+                            file_path=Path(file_path),
+                            line_number=diag.get("line", 1),
+                            column=diag.get("column", 1),
+                            message=diag.get("message", "Type error"),
+                            severity=diag.get("severity", "error"),
+                            error_code=diag.get("code"),
+                        )
+                    )
+
+            return issues
+
+        except Exception:
+            # LSP failed, return empty list[t.Any] to trigger fallback
+            self._lsp_available = False
+            return []
+
+    async def get_lsp_diagnostics_optimized(
+        self, target_files: list[Path]
+    ) -> list[TypeIssue]:
+        """Get diagnostics using optimized LSP wrapper.
+
+        Args:
+            target_files: List of files to check
+
+        Returns:
+            List of type issues found by LSP server
+        """
+        if not self.use_lsp:
+            return []
+
+        if not self._lsp_wrapper:
+            self._lsp_wrapper = ZubanLSPClient()
+
+        try:
+            async with self._lsp_wrapper as lsp:
+                if not await self._initialize_lsp_workspace(lsp, target_files):
+                    return []
+
+                issues = await self._process_files_with_lsp(lsp, target_files)
+                return issues
+
+        except Exception:
+            # Fallback to original LSP client method
+            return await self.get_lsp_diagnostics(target_files)
+
+    async def _initialize_lsp_workspace(
+        self, lsp: t.Any, target_files: list[Path]
+    ) -> bool:
+        """Initialize LSP workspace and return success status."""
+        root_path = target_files[0].parent if target_files else Path.cwd()
+        init_result = await lsp.initialize(root_path)
+        return init_result and not init_result.get("error")
+
+    async def _process_files_with_lsp(
+        self, lsp: t.Any, target_files: list[Path]
+    ) -> list[TypeIssue]:
+        """Process files with LSP and collect diagnostics."""
+        issues: list[TypeIssue] = []
+        for file_path in target_files:
+            if file_path.exists():
+                file_issues = await self._get_file_diagnostics_from_lsp(lsp, file_path)
+                issues.extend(file_issues)
+        return issues
+
+    async def _get_file_diagnostics_from_lsp(
+        self, lsp: t.Any, file_path: Path
+    ) -> list[TypeIssue]:
+        """Get diagnostics for a single file from LSP."""
+        await lsp.text_document_did_open(file_path)
+        await asyncio.sleep(0.1)  # Wait briefly for diagnostics
+
+        diagnostics = await lsp.get_diagnostics()
+        issues = []
+
+        for diag in diagnostics:
+            issue = self._create_type_issue_from_diagnostic(diag, file_path)
+            issues.append(issue)
+
+        await lsp.text_document_did_close(file_path)
+        return issues
+
+    def _create_type_issue_from_diagnostic(
+        self, diag: dict[str, t.Any], file_path: Path
+    ) -> TypeIssue:
+        """Create a TypeIssue from an LSP diagnostic."""
+        return TypeIssue(
+            file_path=Path(diag.get("uri", str(file_path)).replace("file://", "")),
+            line_number=diag.get("range", {}).get("start", {}).get("line", 0) + 1,
+            column=diag.get("range", {}).get("start", {}).get("character", 0) + 1,
+            message=diag.get("message", "Type error"),
+            severity=self._map_lsp_severity(diag.get("severity", 1)),
+            error_code=diag.get("code"),
+        )
+
+    def _map_lsp_severity(self, lsp_severity: int) -> str:
+        """Map LSP severity codes to string values.
+
+        Args:
+            lsp_severity: LSP severity (1=Error, 2=Warning, 3=Information, 4=Hint)
+
+        Returns:
+            String severity level
+        """
+        return {1: "error", 2: "warning", 3: "info", 4: "info"}.get(
+            lsp_severity, "error"
+        )
+
     def get_command_args(self, target_files: list[Path]) -> list[str]:
-        """Get command arguments for Zuban execution."""
+        """Get command arguments for Zuban execution (fallback mode)."""
         args = ["uv", "run", "zuban"]
 
         # Mode selection
         if self.mypy_compatibility:
-            args.append("zmypy")  # MyPy-compatible mode
+            args.append("mypy")  # MyPy-compatible mode
         else:
             args.append("check")  # Native Zuban mode
 
@@ -77,6 +283,87 @@ class ZubanAdapter(BaseRustToolAdapter):
             args.append(".")  # Check entire project
 
         return args
+
+    async def check_with_lsp_or_fallback(self, target_files: list[Path]) -> ToolResult:
+        """Check files using LSP if available, otherwise fallback to CLI mode.
+
+        Args:
+            target_files: Files to type-check
+
+        Returns:
+            ToolResult with issues found
+        """
+        # First check if Zuban is functional at all
+        if not self.check_tool_health():
+            return self._create_error_result(
+                "Zuban is not functional due to TOML parsing bug. "
+                "Consider using pyright as alternative. "
+                "See ZUBAN_TOML_PARSING_BUG_ANALYSIS.md for details."
+            )
+
+        # Try optimized LSP mode first
+        if self.use_lsp:
+            # Try optimized LSP wrapper first, then fallback to basic LSP client
+            lsp_issues = await self.get_lsp_diagnostics_optimized(target_files)
+            if not lsp_issues:  # If optimized fails, try basic LSP client
+                lsp_issues = await self.get_lsp_diagnostics(target_files)
+
+            if lsp_issues is not None:  # LSP succeeded (empty list is valid)
+                # Create successful result from LSP
+                error_issues = [i for i in lsp_issues if i.severity == "error"]
+                success = len(error_issues) == 0
+
+                result = ToolResult(
+                    success=success,
+                    issues=list[Issue](
+                        lsp_issues
+                    ),  # Convert TypeIssue list to Issue list
+                    raw_output=f"LSP diagnostics: {len(lsp_issues)} issue(s) found",
+                    tool_version=self.get_tool_version(),
+                )
+                # Add execution mode as custom attribute for tracking
+                result._execution_mode = "lsp"
+                return result
+
+        # LSP unavailable or failed, fallback to CLI mode
+        return await self._run_cli_fallback(target_files)
+
+    async def _run_cli_fallback(self, target_files: list[Path]) -> ToolResult:
+        """Run Zuban in CLI mode as fallback.
+
+        Args:
+            target_files: Files to check
+
+        Returns:
+            ToolResult from CLI execution
+        """
+        # Use the existing CLI execution logic
+        import subprocess
+
+        try:
+            cmd_args = self.get_command_args(target_files)
+            result = subprocess.run(
+                cmd_args,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=self.context.root_path
+                if hasattr(self.context, "root_path")
+                else None,
+            )
+
+            # Parse the CLI output using existing methods
+            tool_result = self.parse_output(result.stdout + result.stderr)
+
+            # Mark as CLI mode for tracking
+            tool_result._execution_mode = "cli"
+
+            return tool_result
+
+        except subprocess.TimeoutExpired:
+            return self._create_error_result("Zuban execution timed out")
+        except Exception as e:
+            return self._create_error_result(f"Zuban execution failed: {e}")
 
     def parse_output(self, output: str) -> ToolResult:
         """Parse Zuban output into standardized result."""

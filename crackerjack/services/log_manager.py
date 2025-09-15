@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import time
+import typing as t
 from contextlib import suppress
 from pathlib import Path
 
@@ -141,7 +142,7 @@ class LogManager:
             return {"moved": 0, "failed": 0, "found": 0}
 
         debug_pattern = "crackerjack-debug-*.log"
-        legacy_files = list(source_dir.glob(debug_pattern))
+        legacy_files = list[t.Any](source_dir.glob(debug_pattern))
 
         results = {"found": len(legacy_files), "moved": 0, "failed": 0}
 
@@ -184,8 +185,8 @@ class LogManager:
 
         return results
 
-    def get_log_stats(self) -> dict[str, dict[str, int | str]]:
-        stats = {}
+    def get_log_stats(self) -> dict[str, dict[str, int | str | float]]:
+        stats: dict[str, dict[str, int | str | float]] = {}
 
         for log_type, log_dir in (
             ("debug", self.debug_dir),
@@ -193,7 +194,7 @@ class LogManager:
             ("audit", self.audit_dir),
         ):
             if log_dir.exists():
-                files = list(log_dir.glob("*.log"))
+                files = list[t.Any](log_dir.glob("*.log"))
                 total_size = sum(f.stat().st_size for f in files if f.exists())
 
                 stats[log_type] = {
@@ -250,17 +251,19 @@ class LogManager:
         console.print("\n[bold]📊 Log File Summary[/ bold]")
         console.print(f"[dim]Location: {self.log_dir}[/ dim]")
 
-        total_files = 0
-        total_size = 0.0
+        total_files: int = 0
+        total_size: float = 0.0
 
         for log_type, data in stats.items():
-            count = (
-                int(data["count"]) if isinstance(data["count"], str) else data["count"]
+            count_raw = data["count"]
+            count: int = (
+                int(count_raw) if isinstance(count_raw, str) else t.cast(int, count_raw)
             )
-            size = (
-                float(data["size_mb"])
-                if isinstance(data["size_mb"], str)
-                else data["size_mb"]
+            size_raw = data["size_mb"]
+            size: float = (
+                float(size_raw)
+                if isinstance(size_raw, str)
+                else t.cast(float, size_raw)
             )
 
             total_files += count

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import typing as t
 
@@ -173,10 +174,12 @@ async def get_smart_agent_recommendation(
         if include_analysis:
             try:
                 analysis = await system.analyze_task_complexity(task_description)
-                response["complexity_analysis"] = analysis
+                response["complexity_analysis"] = json.dumps(analysis, indent=2)
             except Exception as e:
                 logger.warning(f"Failed to analyze task complexity: {e}")
-                response["complexity_analysis"] = {"error": str(e)}
+                response["complexity_analysis"] = json.dumps(
+                    {"error": str(e)}, indent=2
+                )
 
         logger.debug(f"Generated recommendation for task: {task_description[:50]}...")
         return response

@@ -1,9 +1,15 @@
 import typing as t
 
-from crackerjack.mcp.context import get_context
+from crackerjack.mcp.context import MCPServerContext, get_context
+from crackerjack.mcp.rate_limiter import RateLimitMiddleware
 from crackerjack.services.input_validator import (
+    SecureInputValidator,
     get_input_validator,
 )
+
+if t.TYPE_CHECKING:
+    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+    from crackerjack.models.config import WorkflowOptions
 
 
 async def create_task_with_subagent(
@@ -67,7 +73,9 @@ async def create_task_with_subagent(
         }
 
 
-async def _validate_stage_request(context, rate_limiter) -> str | None:
+async def _validate_stage_request(
+    context: MCPServerContext | None, rate_limiter: RateLimitMiddleware | None
+) -> str | None:
     if not context:
         return '{"error": "Server context not available", "success": false}'
 
@@ -78,7 +86,7 @@ async def _validate_stage_request(context, rate_limiter) -> str | None:
     return None
 
 
-def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
+def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict[str, t.Any]] | str:
     try:
         validator = get_input_validator()
 
@@ -98,14 +106,14 @@ def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict] | str:
         return f'{{"error": "Stage argument parsing failed: {e}", "success": false}}'
 
 
-def _validate_stage_argument(validator, args: str) -> str:
+def _validate_stage_argument(validator: SecureInputValidator, args: str) -> str:
     stage_result = validator.sanitizer.sanitize_string(
         args.strip(), max_length=50, strict_alphanumeric=True
     )
     if not stage_result.valid:
         return f'{{"error": "Invalid stage argument: {stage_result.error_message}", "success": false}}'
 
-    stage = stage_result.sanitized_value.lower()
+    stage: str = str(stage_result.sanitized_value).lower()
     valid_stages = {"fast", "comprehensive", "tests", "cleaning", "init"}
 
     if stage not in valid_stages:
@@ -114,8 +122,10 @@ def _validate_stage_argument(validator, args: str) -> str:
     return stage
 
 
-def _validate_kwargs_argument(validator, kwargs: str) -> dict | str:
-    extra_kwargs = {}
+def _validate_kwargs_argument(
+    validator: SecureInputValidator, kwargs: str
+) -> dict[str, t.Any] | str:
+    extra_kwargs: dict[str, t.Any] = {}
     if not kwargs.strip():
         return extra_kwargs
 
@@ -136,31 +146,171 @@ def _configure_stage_options(stage: str) -> "WorkflowOptions":
 
     options = WorkflowOptions()
     if stage in {"fast", "comprehensive"}:
-        options.skip_hooks = False
+        options.hooks.skip_hooks = False
     elif stage == "tests":
         options.testing.test = True
     elif stage == "cleaning":
         options.cleaning.clean = True
     elif stage == "init":
-        options.skip_hooks = True
+        options.hooks.skip_hooks = True
     return options
 
 
-def _execute_stage(orchestrator, stage: str, options) -> bool:
+def _execute_stage(
+    orchestrator: "WorkflowOrchestrator", stage: str, options: "WorkflowOptions"
+) -> bool:
+    # Convert WorkflowOptions to OptionsProtocol
+    adapted_options = _adapt_workflow_options_to_protocol(options)
+
     if stage == "fast":
-        return orchestrator.run_fast_hooks_only(options)
+        return orchestrator.run_fast_hooks_only(adapted_options)
     if stage == "comprehensive":
-        return orchestrator.run_comprehensive_hooks_only(options)
+        return orchestrator.run_comprehensive_hooks_only(adapted_options)
     if stage == "tests":
-        return orchestrator.run_testing_phase(options)
+        return orchestrator.run_testing_phase(adapted_options)
     if stage == "cleaning":
-        return orchestrator.run_cleaning_phase(options)
-    if stage == "init":
-        return _execute_init_stage(orchestrator)
+        return orchestrator.run_cleaning_phase(adapted_options)
     return False
 
 
-def _execute_init_stage(orchestrator) -> bool:
+def _adapt_workflow_options_to_protocol(options: "WorkflowOptions") -> t.Any:
+    """Adapt WorkflowOptions to match OptionsProtocol."""
+    return _AdaptedOptions(options)  # type: ignore
+
+
+class _AdaptedOptions:
+    """Adapter class to convert WorkflowOptions to OptionsProtocol."""
+
+    def __init__(self, opts: "WorkflowOptions"):
+        self.opts = opts
+
+    # Git properties
+    @property
+    def commit(self) -> bool:
+        return getattr(self.opts.git, "commit", False)
+
+    @property
+    def create_pr(self) -> bool:
+        return getattr(self.opts.git, "create_pr", False)
+
+    # Execution properties
+    @property
+    def interactive(self) -> bool:
+        return getattr(self.opts.execution, "interactive", False)
+
+    @property
+    def no_config_updates(self) -> bool:
+        return getattr(self.opts.execution, "no_config_updates", False)
+
+    @property
+    def verbose(self) -> bool:
+        return getattr(self.opts.execution, "verbose", False)
+
+    @property
+    def async_mode(self) -> bool:
+        return getattr(self.opts.execution, "async_mode", False)
+
+    # Testing properties
+    @property
+    def test(self) -> bool:
+        return getattr(self.opts.testing, "test", False)
+
+    @property
+    def benchmark(self) -> bool:
+        return getattr(self.opts.testing, "benchmark", False)
+
+    @property
+    def test_workers(self) -> int:
+        return getattr(self.opts.testing, "test_workers", 0)
+
+    @property
+    def test_timeout(self) -> int:
+        return getattr(self.opts.testing, "test_timeout", 0)
+
+    # Publishing properties
+    @property
+    def publish(self) -> t.Any | None:
+        return getattr(self.opts.publishing, "publish", None)
+
+    @property
+    def bump(self) -> t.Any | None:
+        return getattr(self.opts.publishing, "bump", None)
+
+    @property
+    def all(self) -> t.Any | None:
+        return getattr(self.opts.publishing, "all", None)
+
+    @property
+    def no_git_tags(self) -> bool:
+        return getattr(self.opts.publishing, "no_git_tags", False)
+
+    @property
+    def skip_version_check(self) -> bool:
+        return getattr(self.opts.publishing, "skip_version_check", False)
+
+    # AI properties
+    @property
+    def ai_agent(self) -> bool:
+        return getattr(self.opts.ai, "ai_agent", False)
+
+    @property
+    def start_mcp_server(self) -> bool:
+        return getattr(self.opts.ai, "start_mcp_server", False)
+
+    # Hook properties
+    @property
+    def skip_hooks(self) -> bool:
+        return getattr(self.opts.hooks, "skip_hooks", False)
+
+    @property
+    def update_precommit(self) -> bool:
+        return getattr(self.opts.hooks, "update_precommit", False)
+
+    @property
+    def experimental_hooks(self) -> bool:
+        return getattr(self.opts.hooks, "experimental_hooks", False)
+
+    @property
+    def enable_pyrefly(self) -> bool:
+        return getattr(self.opts.hooks, "enable_pyrefly", False)
+
+    @property
+    def enable_ty(self) -> bool:
+        return getattr(self.opts.hooks, "enable_ty", False)
+
+    # Cleaning properties
+    @property
+    def clean(self) -> bool:
+        return getattr(self.opts.cleaning, "clean", False)
+
+    # Progress properties
+    @property
+    def track_progress(self) -> bool:
+        return getattr(self.opts.progress, "track_progress", False)
+
+    # Default/static properties
+    @property
+    def cleanup(self) -> t.Any | None:
+        return None
+
+    @property
+    def cleanup_pypi(self) -> bool:
+        return False
+
+    @property
+    def coverage(self) -> bool:
+        return False
+
+    @property
+    def keep_releases(self) -> int:
+        return 10
+
+    @property
+    def fast(self) -> bool:
+        return False
+
+
+def _execute_init_stage(orchestrator: "WorkflowOrchestrator") -> bool:
     try:
         from pathlib import Path
 
@@ -178,7 +328,8 @@ def _execute_init_stage(orchestrator) -> bool:
 
         results = init_service.initialize_project_full(target_path=Path.cwd())
 
-        return results.get("success", False)
+        success_result: bool = bool(results.get("success", False))
+        return success_result
 
     except Exception as e:
         if hasattr(orchestrator, "console"):
@@ -187,7 +338,7 @@ def _execute_init_stage(orchestrator) -> bool:
 
 
 def register_core_tools(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     async def run_crackerjack_stage(args: str, kwargs: str) -> str:
         context = get_context()
         rate_limiter = context.rate_limiter if context else None
@@ -248,8 +399,8 @@ def _detect_errors_and_suggestions(
 ) -> tuple[list[str], list[str]]:
     import re
 
-    detected_errors = []
-    suggestions = []
+    detected_errors: list[str] = []
+    suggestions: list[str] = []
 
     for error_type, pattern in _get_error_patterns():
         if re.search(pattern, text, re.IGNORECASE):
@@ -261,7 +412,7 @@ def _detect_errors_and_suggestions(
 
 
 def register_analyze_errors_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     async def analyze_errors(output: str = "", include_suggestions: bool = True) -> str:
         context = get_context()
         if not context:

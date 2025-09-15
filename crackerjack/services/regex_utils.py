@@ -111,7 +111,8 @@ def quick_pattern_test(
 ) -> bool:
     results = test_pattern_immediately(pattern, replacement, test_cases, description)
     print_pattern_test_report(results)
-    return results["all_passed"]
+    passed: bool = results["all_passed"]
+    return passed
 
 
 def find_safe_pattern_for_text(text: str) -> list[str]:

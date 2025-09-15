@@ -172,7 +172,7 @@ class TestManagementImpl:
             self.console.print("[yellow]⚠️[/ yellow] Coverage ratchet disabled")
 
     def get_coverage_ratchet_status(self) -> dict[str, t.Any]:
-        return self.coverage_ratchet.get_status_report()
+        return self.coverage_ratchet.get_ratchet_data()
 
     def _run_test_command(
         self,
@@ -727,7 +727,7 @@ class TestManagementImpl:
         import os
 
         cpu_count = os.cpu_count() or 1
-        test_files = list(self.pkg_path.glob("tests/test_*.py"))
+        test_files = list[t.Any](self.pkg_path.glob("tests/test_*.py"))
         if len(test_files) < 5:
             return min(2, cpu_count)
 
@@ -736,7 +736,7 @@ class TestManagementImpl:
     def _get_test_timeout(self, options: OptionsProtocol) -> int:
         if options.test_timeout > 0:
             return options.test_timeout
-        test_files = list(self.pkg_path.glob("tests/test_*.py"))
+        test_files = list[t.Any](self.pkg_path.glob("tests/test_*.py"))
         base_timeout = 300
 
         import math
@@ -1019,7 +1019,9 @@ class TestManagementImpl:
         test_dir = self.pkg_path / "tests"
         if not test_dir.exists():
             issues.append("tests directory not found")
-        test_files = list(test_dir.glob("test_ *.py")) if test_dir.exists() else []
+        test_files = (
+            list[t.Any](test_dir.glob("test_ *.py")) if test_dir.exists() else []
+        )
         if not test_files:
             issues.append("no test files found")
         if issues:
@@ -1034,7 +1036,7 @@ class TestManagementImpl:
         test_dir = self.pkg_path / "tests"
         if not test_dir.exists():
             return {"test_files": 0, "total_tests": 0, "test_lines": 0}
-        test_files = list(test_dir.glob("test_ *.py"))
+        test_files = list[t.Any](test_dir.glob("test_ *.py"))
         total_lines = 0
         total_tests = 0
         for test_file in test_files:
@@ -1069,5 +1071,5 @@ class TestManagementImpl:
             return None
 
     def has_tests(self) -> bool:
-        test_files = list(self.pkg_path.glob("tests/test_*.py"))
+        test_files = list[t.Any](self.pkg_path.glob("tests/test_*.py"))
         return len(test_files) > 0

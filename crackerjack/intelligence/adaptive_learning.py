@@ -34,7 +34,7 @@ class AgentPerformanceMetrics:
     average_execution_time: float = 0.0
     average_confidence: float = 0.0
     success_rate: float = 0.0
-    capability_success_rates: dict[str, float] = field(default_factory=dict)
+    capability_success_rates: dict[str, float] = field(default_factory=dict[str, t.Any])
     recent_performance_trend: float = 0.0
     last_updated: datetime = field(default_factory=datetime.now)
 
@@ -357,7 +357,12 @@ class AdaptiveLearningSystem:
         return insights
 
     def _group_capability_performance(self) -> dict[str, dict[str, list[bool]]]:
-        capability_performance = defaultdict(lambda: defaultdict(list))
+        def make_inner_defaultdict() -> defaultdict[str, list[bool]]:
+            return defaultdict(list)
+
+        capability_performance: dict[str, dict[str, list[bool]]] = defaultdict(
+            make_inner_defaultdict
+        )
 
         for record in self._execution_records[-100:]:
             for capability in record.task_capabilities:
@@ -365,7 +370,7 @@ class AdaptiveLearningSystem:
                     record.success
                 )
 
-        return dict(capability_performance)
+        return dict[str, t.Any](capability_performance)
 
     def _find_capability_experts(
         self, capability: str, agents: dict[str, list[bool]]
@@ -398,7 +403,12 @@ class AdaptiveLearningSystem:
         return self._extract_significant_failure_insights(failure_patterns)
 
     def _group_failure_patterns(self) -> dict[str, dict[str, int]]:
-        failure_patterns = defaultdict(lambda: defaultdict(int))
+        def make_inner_defaultdict() -> defaultdict[str, int]:
+            return defaultdict(int)
+
+        failure_patterns: dict[str, dict[str, int]] = defaultdict(
+            make_inner_defaultdict
+        )
 
         for record in self._execution_records[-100:]:
             if not record.success and record.error_message:
@@ -406,7 +416,7 @@ class AdaptiveLearningSystem:
                 failure_patterns[record.agent_name][error_type] += 1
 
         return {
-            agent_name: dict(patterns)
+            agent_name: dict[str, t.Any](patterns)
             for agent_name, patterns in failure_patterns.items()
         }
 
@@ -471,7 +481,12 @@ class AdaptiveLearningSystem:
         return insights
 
     def _group_task_performance(self) -> dict[str, dict[str, list[bool]]]:
-        task_performance = defaultdict(lambda: defaultdict(list))
+        def make_inner_defaultdict() -> defaultdict[str, list[bool]]:
+            return defaultdict(list)
+
+        task_performance: dict[str, dict[str, list[bool]]] = defaultdict(
+            make_inner_defaultdict
+        )
 
         for record in self._execution_records[-100:]:
             if record.task_hash:
@@ -479,7 +494,7 @@ class AdaptiveLearningSystem:
                     record.success
                 )
 
-        return dict(task_performance)
+        return dict[str, t.Any](task_performance)
 
     def _find_best_performing_agent(
         self, agents: dict[str, list[bool]]
@@ -521,7 +536,7 @@ class AdaptiveLearningSystem:
                 "task_pattern": task_hash,
                 "success_rate": best_rate,
                 "example_task": example_task,
-                "competing_agents": list(agents.keys()),
+                "competing_agents": list[t.Any](agents.keys()),
             },
         )
 
@@ -647,7 +662,7 @@ class AdaptiveLearningSystem:
                 "trend": metrics.recent_performance_trend,
             }
 
-        insights_by_type = defaultdict(int)
+        insights_by_type: dict[str, int] = defaultdict(int)
         for insight in self._learning_insights:
             insights_by_type[insight.insight_type] += 1
 
@@ -657,7 +672,7 @@ class AdaptiveLearningSystem:
             "recent_success_rate": recent_success_rate,
             "agents_tracked": len(self._agent_metrics),
             "insights_discovered": len(self._learning_insights),
-            "insights_by_type": dict(insights_by_type),
+            "insights_by_type": dict[str, t.Any](insights_by_type),
             "top_performers": sorted(
                 agent_summary.items(),
                 key=lambda x: x[1]["success_rate"],

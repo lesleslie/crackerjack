@@ -111,7 +111,7 @@ class AsyncTimeoutManager:
         self.circuit_breakers: dict[str, CircuitBreakerStateData] = {}
         self.operation_stats: dict[str, list[float]] = {}
 
-        self._performance_monitor = None
+        self._performance_monitor: t.Any = None
 
     def get_timeout(self, operation: str) -> float:
         return self.config.operation_timeouts.get(

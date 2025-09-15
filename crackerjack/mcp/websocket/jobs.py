@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+import typing as t
 import uuid
 from contextlib import suppress
 from pathlib import Path
@@ -46,7 +47,7 @@ class JobManager:
             if not self.active_connections[job_id]:
                 del self.active_connections[job_id]
 
-    async def broadcast_to_job(self, job_id: str, data: dict) -> None:
+    async def broadcast_to_job(self, job_id: str, data: dict[str, t.Any]) -> None:
         if job_id not in self.active_connections:
             return
 
@@ -59,8 +60,8 @@ class JobManager:
             await self._execute_broadcast_tasks(job_id, send_tasks)
 
     def _create_broadcast_tasks(
-        self, connections: set, timeout_manager, data: dict
-    ) -> list:
+        self, connections: set[t.Any], timeout_manager: t.Any, data: dict[str, t.Any]
+    ) -> list[tuple[t.Any, asyncio.Task[t.Any]]]:
         send_tasks = []
         for websocket in connections:
             task = asyncio.create_task(
@@ -73,7 +74,9 @@ class JobManager:
             send_tasks.append((websocket, task))
         return send_tasks
 
-    async def _execute_broadcast_tasks(self, job_id: str, send_tasks: list) -> None:
+    async def _execute_broadcast_tasks(
+        self, job_id: str, send_tasks: list[t.Any]
+    ) -> None:
         try:
             done, pending = await asyncio.wait(
                 [task for _, task in send_tasks],
@@ -88,7 +91,11 @@ class JobManager:
             await self._cleanup_failed_broadcast(job_id, send_tasks)
 
     async def _handle_broadcast_results(
-        self, job_id: str, send_tasks: list, done: set, pending: set
+        self,
+        job_id: str,
+        send_tasks: list[t.Any],
+        done: set[t.Any],
+        pending: set[t.Any],
     ) -> None:
         for websocket, task in send_tasks:
             if task in pending:
@@ -103,7 +110,9 @@ class JobManager:
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
 
-    async def _cleanup_failed_broadcast(self, job_id: str, send_tasks: list) -> None:
+    async def _cleanup_failed_broadcast(
+        self, job_id: str, send_tasks: list[t.Any]
+    ) -> None:
         for websocket, task in send_tasks:
             if not task.done():
                 task.cancel()
@@ -113,7 +122,7 @@ class JobManager:
         if not self.progress_dir.exists():
             return None
 
-        progress_files = list(self.progress_dir.glob("job-*.json"))
+        progress_files = list[t.Any](self.progress_dir.glob("job-*.json"))
         if not progress_files:
             return None
 
@@ -125,7 +134,7 @@ class JobManager:
             progress_file.stem[4:] if progress_file.stem.startswith("job -") else None
         )
 
-    def get_job_progress(self, job_id: str) -> dict | None:
+    def get_job_progress(self, job_id: str) -> dict[str, t.Any] | None:
         if not self.validate_job_id(job_id):
             return None
 
@@ -138,7 +147,7 @@ class JobManager:
 
             SecurePathValidator.validate_file_size(progress_file)
 
-            return json.loads(progress_file.read_text())
+            return json.loads(progress_file.read_text())  # type: ignore[no-any-return]
         except (json.JSONDecodeError, OSError):
             return None
 
@@ -217,10 +226,12 @@ class JobManager:
                 monitor = create_progress_monitor(self.progress_dir)
                 await monitor.start()
 
-                def on_progress_update(job_id: str, progress_data: dict) -> None:
+                def on_progress_update(
+                    job_id: str, progress_data: dict[str, t.Any]
+                ) -> None:
                     if job_id and self.validate_job_id(job_id):
 
-                        async def safe_broadcast():
+                        async def safe_broadcast() -> None:
                             try:
                                 await timeout_manager.with_timeout(
                                     "websocket_broadcast",
@@ -232,7 +243,7 @@ class JobManager:
                                     f"[yellow]Broadcast failed for job {job_id}: {e}[/yellow]"
                                 )
 
-                        asyncio.create_task(safe_broadcast())
+                        asyncio.create_task(safe_broadcast())  # type: ignore[no-untyped-call]
 
                         if job_id not in self.known_jobs:
                             self.known_jobs.add(job_id)
@@ -346,7 +357,7 @@ class JobManager:
 
     def _should_timeout_job(
         self,
-        progress_data: dict,
+        progress_data: dict[str, t.Any],
         progress_file: Path,
         current_time: float,
         timeout_seconds: int,
@@ -356,7 +367,9 @@ class JobManager:
             and current_time - progress_file.stat().st_mtime > timeout_seconds
         )
 
-    def _timeout_job(self, progress_data: dict, progress_file: Path) -> None:
+    def _timeout_job(
+        self, progress_data: dict[str, t.Any], progress_file: Path
+    ) -> None:
         progress_data["status"] = "failed"
         progress_data["message"] = "Job timed out (no updates for 30 minutes)"
 

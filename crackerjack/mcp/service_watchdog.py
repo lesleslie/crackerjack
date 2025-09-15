@@ -34,11 +34,12 @@ class ServiceConfig:
         self.max_restarts = max_restarts
         self.restart_window = restart_window
 
-        self.process: subprocess.Popen | None = None
+        self.process: subprocess.Popen[bytes] | None = None
         self.restart_count = 0
         self.restart_timestamps: list[float] = []
         self.last_health_check = 0.0
         self.is_healthy = False
+        self._port_acknowledged = False
         self.last_error: str | None = None
 
 

@@ -90,6 +90,16 @@ class ServiceWatchdog:
                 startup_timeout=20.0,
                 shutdown_timeout=10.0,
             ),
+            "zuban_lsp": ServiceConfig(
+                name="Zuban LSP Server",
+                command=["uv", "run", "zuban", "server"],
+                startup_timeout=15.0,
+                shutdown_timeout=10.0,
+                max_restarts=5,
+                restart_delay=5.0,
+                restart_backoff_multiplier=2.0,
+                max_restart_delay=300.0,
+            ),
         }
 
     def add_service(self, service_id: str, config: ServiceConfig) -> None:

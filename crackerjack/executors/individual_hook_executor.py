@@ -129,7 +129,7 @@ class HookOutputParser:
             output_lines, patterns, result
         )
 
-        result["files_processed"] = list(result["files_processed"])
+        result["files_processed"] = list[t.Any](result["files_processed"])
         return result
 
     def _parse_ruff_check(
@@ -680,7 +680,7 @@ class IndividualHookExecutor:
         total_warnings = sum(p.warnings_found for p in progress_list)
         total_duration = sum(p.duration or 0 for p in progress_list)
 
-        self.console.print("\n" + "-" * 80)
+        self.console.print("\n" + "-" * 74)
         self.console.print(
             f"[bold]📊 INDIVIDUAL EXECUTION SUMMARY[/ bold]-{strategy.name.upper()}",
         )
@@ -702,4 +702,4 @@ class IndividualHookExecutor:
                     )
                     self.console.print(f" ❌ {progress.hook_name}-{error_summary}")
 
-        self.console.print("-" * 80)
+        self.console.print("-" * 74)

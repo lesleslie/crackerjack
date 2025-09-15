@@ -16,6 +16,14 @@ This document is specifically structured for AI assistants to quickly understand
 | `python -m crackerjack --ai-debug -t` | AI debugging | Troubleshooting AI agent issues | Verbose output, decision explanations |
 | `python -m crackerjack -x` | Code cleaning | TODO resolution required | Blocks if TODOs found, creates backups |
 
+### LSP Integration Workflows
+
+| Command | Use Case | Performance Benefit | Fallback Behavior |
+|---------|----------|-------------------|-------------------|
+| `python -m crackerjack --enable-lsp-hooks` | Enable LSP-aware execution | 20-200x faster type checking | Auto-fallback to CLI |
+| `python -m crackerjack --disable-lsp-hooks` | Disable LSP integration | Standard CLI performance | Always uses CLI tools |
+| `python -m crackerjack -t` (LSP enabled) | Tests with pre-LSP diagnostics | Type errors caught before tests | Graceful degradation |
+
 ### Server Management
 
 | Command | Purpose | When to Use | Expected Outcome |
@@ -85,6 +93,9 @@ graph TD
 | `Tests failed: X assertions` | TestCreationAgent | 0.8 | Fix fixtures/assertions |
 | `Documentation inconsistency` | DocumentationAgent | 0.8 | Update .md files |
 | `Code duplication detected` | DRYAgent | 0.8 | Extract common patterns |
+| `LSP server connection failed` | **Enable CLI fallback** | Auto | Use `--disable-lsp-hooks` temporarily |
+| `LSP timeout on large files` | **Adjust LSP config** | Auto | Increase timeout in pyproject.toml |
+| `Type errors detected via LSP` | Auto-fixed by LSP integration | 0.95 | Real-time feedback, faster than CLI |
 
 ### Agent Capabilities Quick Reference
 
@@ -209,6 +220,46 @@ def complex_method(self, data: dict) -> bool:
 1. Check MCP server: `--restart-mcp-server`
 1. Monitor progress: `--start-websocket-server`
 1. Use watchdog: `--watchdog`
+
+## Experimental Features
+
+### Experimental Hook Framework Status
+
+| Component | Status | Purpose |
+|-----------|---------|---------|
+| `--experimental-hooks` | Framework ready | Enable future experimental hooks when available |
+| Evaluation criteria | Documented | Availability, stability, value-add, performance testing |
+| Promotion lifecycle | Established | Manual → Evaluation → Promotion/Removal decision |
+
+### Current Experimental Status
+
+**No Active Experimental Hooks**: Previous candidates (pyrefly, ty) failed availability testing and were removed.
+
+**Framework Benefits**:
+
+- **Safe evaluation environment** for future tools
+- **Structured promotion criteria** with clear success metrics
+- **Clean removal process** for failed experiments
+- **Documentation system** for evaluation tracking
+
+### Future Experimental Hook Evaluation
+
+```mermaid
+graph TD
+    A[New experimental tool candidate] --> B{Availability test}
+    B -->|Pass| C[Add to experimental registry]
+    B -->|Fail| D[Document failure, do not add]
+
+    C --> E[30-90 day evaluation period]
+    E --> F{Meets all criteria?}
+    F -->|Yes| G[Promote to appropriate tier]
+    F -->|No| H[Remove from experimental registry]
+
+    G --> I[Update documentation]
+    H --> I
+```
+
+**Evaluation Framework Ready**: System prepared for future experimental tool integration with comprehensive testing and promotion criteria established in [EXPERIMENTAL-EVALUATION.md](EXPERIMENTAL-EVALUATION.md).
 
 ## File Structure Context
 

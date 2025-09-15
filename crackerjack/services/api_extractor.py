@@ -126,7 +126,12 @@ class APIExtractorImpl(APIExtractorProtocol):
 
     def extract_from_python_files(self, files: list[Path]) -> dict[str, t.Any]:
         """Extract API documentation from Python files."""
-        api_data = {"modules": {}, "classes": {}, "functions": {}, "protocols": {}}
+        api_data: dict[str, t.Any] = {
+            "modules": {},
+            "classes": {},
+            "functions": {},
+            "protocols": {},
+        }
 
         for file_path in files:
             if not file_path.exists() or file_path.suffix != ".py":
@@ -195,7 +200,7 @@ class APIExtractorImpl(APIExtractorProtocol):
 
     def extract_cli_commands(self, cli_files: list[Path]) -> dict[str, t.Any]:
         """Extract CLI command definitions and options."""
-        cli_data = {"commands": {}, "options": {}}
+        cli_data: dict[str, t.Any] = {"commands": {}, "options": {}}
 
         for file_path in cli_files:
             if not file_path.exists() or file_path.suffix != ".py":
@@ -250,26 +255,50 @@ class APIExtractorImpl(APIExtractorProtocol):
         self, tree: ast.AST, file_path: Path, source_code: str
     ) -> dict[str, t.Any]:
         """Extract information from a Python module."""
-        module_info = {
+        module_info = self._create_base_module_info(tree, file_path)
+        self._populate_module_components(module_info, tree, source_code)
+        return module_info
+
+    def _create_base_module_info(
+        self, tree: ast.AST, file_path: Path
+    ) -> dict[str, t.Any]:
+        """Create the base module information structure."""
+        # ast.get_docstring requires Module, ClassDef, FunctionDef, or AsyncFunctionDef
+        docstring = (
+            ast.get_docstring(tree)
+            if isinstance(
+                tree, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+            )
+            else None
+        )
+        return {
             "path": str(file_path),
-            "docstring": ast.get_docstring(tree),
+            "docstring": docstring,
             "classes": [],
             "functions": [],
             "imports": [],
         }
 
+    def _populate_module_components(
+        self, module_info: dict[str, t.Any], tree: ast.AST, source_code: str
+    ) -> None:
+        """Populate module components by walking the AST."""
         for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef):
-                class_info = self._extract_class_info(node, source_code)
-                module_info["classes"].append(class_info)
-            elif isinstance(node, ast.FunctionDef):
-                func_info = self._extract_function_info(node, source_code)
-                module_info["functions"].append(func_info)
-            elif isinstance(node, ast.Import | ast.ImportFrom):
-                import_info = self._extract_import_info(node)
-                module_info["imports"].append(import_info)
+            self._process_ast_node(module_info, node, source_code)
 
-        return module_info
+    def _process_ast_node(
+        self, module_info: dict[str, t.Any], node: ast.AST, source_code: str
+    ) -> None:
+        """Process individual AST nodes and extract relevant information."""
+        if isinstance(node, ast.ClassDef):
+            class_info = self._extract_class_info(node, source_code)
+            module_info["classes"].append(class_info)
+        elif isinstance(node, ast.FunctionDef):
+            func_info = self._extract_function_info(node, source_code)
+            module_info["functions"].append(func_info)
+        elif isinstance(node, ast.Import | ast.ImportFrom):
+            import_info = self._extract_import_info(node)
+            module_info["imports"].append(import_info)
 
     def _extract_class_info(
         self, node: ast.ClassDef, source_code: str
@@ -278,7 +307,16 @@ class APIExtractorImpl(APIExtractorProtocol):
         docstring = ast.get_docstring(node)
         parsed_doc = self.docstring_parser.parse_docstring(docstring)
 
-        class_info = {
+        class_info = self._build_base_class_info(node, parsed_doc)
+        self._extract_class_methods(class_info, node, source_code)
+
+        return class_info
+
+    def _build_base_class_info(
+        self, node: ast.ClassDef, parsed_doc: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
+        """Build the base class information structure."""
+        return {
             "name": node.name,
             "docstring": parsed_doc,
             "base_classes": [self._get_node_name(base) for base in node.bases],
@@ -287,19 +325,24 @@ class APIExtractorImpl(APIExtractorProtocol):
             "is_protocol": self._is_protocol_class(node),
         }
 
+    def _extract_class_methods(
+        self, class_info: dict[str, t.Any], node: ast.ClassDef, source_code: str
+    ) -> None:
+        """Extract method information from class body."""
         for item in node.body:
             if isinstance(item, ast.FunctionDef):
                 method_info = self._extract_function_info(item, source_code)
                 method_info["is_method"] = True
-                if item.name.startswith("_") and not item.name.startswith("__"):
-                    method_info["visibility"] = "protected"
-                elif item.name.startswith("__"):
-                    method_info["visibility"] = "private"
-                else:
-                    method_info["visibility"] = "public"
+                method_info["visibility"] = self._determine_method_visibility(item.name)
                 class_info["methods"].append(method_info)
 
-        return class_info
+    def _determine_method_visibility(self, method_name: str) -> str:
+        """Determine method visibility based on naming convention."""
+        if method_name.startswith("_") and not method_name.startswith("__"):
+            return "protected"
+        elif method_name.startswith("__"):
+            return "private"
+        return "public"
 
     def _extract_function_info(
         self, node: ast.FunctionDef, source_code: str
@@ -341,7 +384,7 @@ class APIExtractorImpl(APIExtractorProtocol):
         docstring = ast.get_docstring(node)
         parsed_doc = self.docstring_parser.parse_docstring(docstring)
 
-        protocol_info = {
+        protocol_info: dict[str, t.Any] = {
             "name": node.name,
             "docstring": parsed_doc,
             "methods": [],
@@ -355,56 +398,102 @@ class APIExtractorImpl(APIExtractorProtocol):
             if isinstance(item, ast.FunctionDef):
                 method_info = self._extract_function_info(item, source_code)
                 method_info["is_abstract"] = True  # Protocol methods are abstract
-                protocol_info["methods"].append(method_info)
+                if isinstance(protocol_info["methods"], list):
+                    protocol_info["methods"].append(method_info)
 
         return protocol_info
 
     def _extract_service_info(
         self, tree: ast.AST, file_path: Path, source_code: str
-    ) -> dict[str, t.Any]:
+    ) -> dict[str, t.Any] | None:
         """Extract service implementation information."""
-        service_info = {
+        service_info = self._create_service_info_structure(file_path)
+        self._populate_service_classes(service_info, tree, source_code)
+        return service_info if service_info["classes"] else None
+
+    def _create_service_info_structure(self, file_path: Path) -> dict[str, t.Any]:
+        """Create the base service information structure."""
+        return {
             "path": str(file_path),
             "classes": [],
             "functions": [],
             "protocols_implemented": [],
         }
 
+    def _populate_service_classes(
+        self, service_info: dict[str, t.Any], tree: ast.AST, source_code: str
+    ) -> None:
+        """Populate service classes by walking the AST."""
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
-                class_info = self._extract_class_info(node, source_code)
-                # Check if this class implements any protocols
-                for base in node.bases:
-                    base_name = self._get_node_name(base)
-                    if "Protocol" in base_name:
-                        service_info["protocols_implemented"].append(base_name)
-                service_info["classes"].append(class_info)
+                self._process_service_class(service_info, node, source_code)
 
-        return service_info if service_info["classes"] else None
+    def _process_service_class(
+        self, service_info: dict[str, t.Any], node: ast.ClassDef, source_code: str
+    ) -> None:
+        """Process a single service class and extract its information."""
+        class_info = self._extract_class_info(node, source_code)
+        self._extract_implemented_protocols(service_info, node)
+        self._add_class_to_service_info(service_info, class_info)
+
+    def _extract_implemented_protocols(
+        self, service_info: dict[str, t.Any], node: ast.ClassDef
+    ) -> None:
+        """Extract protocol implementations from class bases."""
+        for base in node.bases:
+            base_name = self._get_node_name(base)
+            if "Protocol" in base_name and isinstance(
+                service_info["protocols_implemented"], list[t.Any]
+            ):
+                service_info["protocols_implemented"].append(base_name)
+
+    def _add_class_to_service_info(
+        self, service_info: dict[str, t.Any], class_info: dict[str, t.Any]
+    ) -> None:
+        """Add class information to the service info structure."""
+        if isinstance(service_info["classes"], list):
+            service_info["classes"].append(class_info)
 
     def _extract_cli_info(self, tree: ast.AST, source_code: str) -> dict[str, t.Any]:
         """Extract CLI command and option information."""
-        cli_info = {"options": [], "commands": [], "arguments": []}
+        cli_info: dict[str, t.Any] = {"options": [], "commands": [], "arguments": []}
 
         # Look for Pydantic model fields that represent CLI options
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
-                for item in node.body:
-                    if isinstance(item, ast.AnnAssign) and item.target:
-                        field_name = getattr(item.target, "id", None)
-                        if field_name:
-                            field_info = {
-                                "name": field_name,
-                                "type": self._get_annotation_string(item.annotation),
-                                "description": "",
-                            }
-                            cli_info["options"].append(field_info)
+                self._extract_class_cli_options(node, cli_info)
 
         return cli_info
 
+    def _extract_class_cli_options(
+        self, class_node: ast.ClassDef, cli_info: dict[str, t.Any]
+    ) -> None:
+        """Extract CLI options from a class definition."""
+        for item in class_node.body:
+            if self._is_cli_field(item) and isinstance(item, ast.AnnAssign):
+                field_info = self._create_cli_field_info(item)
+                if field_info and isinstance(cli_info["options"], list):
+                    cli_info["options"].append(field_info)
+
+    def _is_cli_field(self, item: ast.stmt) -> bool:
+        """Check if an AST item represents a CLI field."""
+        return isinstance(item, ast.AnnAssign) and item.target is not None
+
+    def _create_cli_field_info(self, item: ast.AnnAssign) -> dict[str, t.Any] | None:
+        """Create field information from an annotated assignment."""
+        field_name = getattr(item.target, "id", None)
+        if not field_name:
+            return None
+
+        return {
+            "name": field_name,
+            "type": self._get_annotation_string(item.annotation),
+            "description": "",
+        }
+
     def _extract_mcp_python_tools(
         self, tree: ast.AST, source_code: str
-    ) -> dict[str, t.Any]:
+    ) -> dict[str, t.Any] | None:
         """Extract MCP tool information from Python files."""
         tools = []
 
@@ -422,8 +511,8 @@ class APIExtractorImpl(APIExtractorProtocol):
     def _extract_mcp_markdown_docs(self, content: str) -> dict[str, t.Any]:
         """Extract MCP tool documentation from markdown files."""
         # Simple extraction of sections and command examples
-        sections = []
-        current_section = None
+        sections: list[dict[str, t.Any]] = []
+        current_section: dict[str, t.Any] | None = None
 
         for line in content.split("\n"):
             if line.startswith("#"):
@@ -516,11 +605,11 @@ class APIExtractorImpl(APIExtractorProtocol):
                 "names": [alias.name for alias in node.names],
                 "from": None,
             }
-        elif isinstance(node, ast.ImportFrom):
-            return {
-                "type": "from_import",
-                "from": node.module,
-                "names": [alias.name for alias in node.names] if node.names else ["*"],
-                "level": node.level,
-            }
-        return {}
+
+        # ast.ImportFrom
+        return {
+            "type": "from_import",
+            "from": node.module,
+            "names": [alias.name for alias in node.names] if node.names else ["*"],
+            "level": node.level,
+        }

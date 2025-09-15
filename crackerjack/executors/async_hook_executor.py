@@ -75,7 +75,9 @@ class AsyncHookExecutor:
                 hook_lock_manager as default_manager,
             )
 
-            self.hook_lock_manager = default_manager
+            self.hook_lock_manager: HookLockManagerProtocol = t.cast(
+                HookLockManagerProtocol, default_manager
+            )
         else:
             self.hook_lock_manager = hook_lock_manager
 
@@ -154,7 +156,7 @@ class AsyncHookExecutor:
         }
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
-        self.console.print("\n" + "-" * 80)
+        self.console.print("\n" + "-" * 74)
         if strategy.name == "fast":
             self.console.print(
                 "[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running code quality checks (async)[/ bold bright_white]",
@@ -167,7 +169,7 @@ class AsyncHookExecutor:
             self.console.print(
                 f"[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running {strategy.name} hooks (async)[/ bold bright_white]",
             )
-        self.console.print("-" * 80 + "\n")
+        self.console.print("-" * 74 + "\n")
 
     async def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
@@ -196,21 +198,21 @@ class AsyncHookExecutor:
             tasks = [self._execute_single_hook(hook) for hook in other_hooks]
             parallel_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for i, result in enumerate(parallel_results):
-                if isinstance(result, Exception):
+            for i, task_result in enumerate(parallel_results):
+                if isinstance(task_result, Exception):
                     hook = other_hooks[i]
                     error_result = HookResult(
                         id=getattr(hook, "name", f"hook_{i}"),
                         name=getattr(hook, "name", f"hook_{i}"),
                         status="error",
                         duration=0.0,
-                        issues_found=[str(result)],
+                        issues_found=[str(task_result)],
                         stage=hook.stage.value,
                     )
                     results.append(error_result)
                     self._display_hook_result(error_result)
                 else:
-                    hook_result = t.cast("HookResult", result)
+                    hook_result = t.cast(HookResult, task_result)
                     results.append(hook_result)
                     self._display_hook_result(hook_result)
 

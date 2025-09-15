@@ -1,4 +1,5 @@
 import time
+import typing as t
 from enum import Enum, auto
 
 from rich.box import ROUNDED
@@ -146,7 +147,7 @@ class InteractiveWorkflowManager:
 
     def _setup_commit_task(self, options: OptionsProtocol) -> None:
         if options.commit:
-            all_deps = list(self.tasks.keys())
+            all_deps = list[t.Any](self.tasks.keys())
             self.add_task(
                 "commit",
                 "Commit changes and push to Git",
@@ -193,9 +194,10 @@ class InteractiveWorkflowManager:
         task.start()
         try:
             phase_method = getattr(self.orchestrator, task.phase_method)
-            success = phase_method(options)
-            task.complete(success)
-            return success
+            success_result = phase_method(options)
+            success_bool = bool(success_result)
+            task.complete(success_bool)
+            return success_bool
         except Exception as e:
             error = CrackerjackError(
                 message=str(e),

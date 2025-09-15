@@ -105,7 +105,7 @@ class ConnectionPool:
         self.max_connections = max_connections
         self.cleanup_interval = cleanup_interval
         self.connections: dict[str, t.Any] = {}
-        self.connection_stats: dict[str, dict] = {}
+        self.connection_stats: dict[str, dict[str, t.Any]] = {}
         self.last_cleanup = time.time()
         self._lock = threading.Lock()
 
@@ -137,7 +137,7 @@ class ConnectionPool:
                 "metadata": metadata or {},
             }
 
-    def remove_connection(self, connection_id: str):
+    def remove_connection(self, connection_id: str) -> None:
         """Remove connection and cleanup resources."""
         with self._lock:
             if connection_id in self.connections:
@@ -145,14 +145,14 @@ class ConnectionPool:
             if connection_id in self.connection_stats:
                 del self.connection_stats[connection_id]
 
-    def update_activity(self, connection_id: str):
+    def update_activity(self, connection_id: str) -> None:
         """Update last activity timestamp."""
         with self._lock:
             if connection_id in self.connection_stats:
                 self.connection_stats[connection_id]["last_activity"] = time.time()
                 self.connection_stats[connection_id]["message_count"] += 1
 
-    def _cleanup_stale_connections(self):
+    def _cleanup_stale_connections(self) -> None:
         """Remove stale connections based on inactivity."""
         current_time = time.time()
         stale_threshold = 1800  # 30 minutes
@@ -205,34 +205,65 @@ class DataCompactionManager:
         self.max_storage_bytes = max_storage_gb * 1024**3
         self.compaction_rules = self._load_compaction_rules()
 
-    def _load_compaction_rules(self) -> dict[str, dict]:
+    def _load_compaction_rules(self) -> dict[str, dict[str, t.Any]]:
         """Load data retention and compaction rules."""
+        rules = {}
+
+        # Raw metrics configuration
+        rules["metrics_raw"] = self._create_metrics_raw_config()
+
+        # Hourly metrics configuration
+        rules["metrics_hourly"] = self._create_metrics_hourly_config()
+
+        # Daily metrics configuration
+        rules["metrics_daily"] = self._create_metrics_daily_config()
+
+        # Error patterns configuration
+        rules["error_patterns"] = self._create_error_patterns_config()
+
+        # Dependency graphs configuration
+        rules["dependency_graphs"] = self._create_dependency_graphs_config()
+
+        return rules
+
+    def _create_metrics_raw_config(self) -> dict[str, t.Any]:
+        """Create configuration for raw metrics data."""
         return {
-            "metrics_raw": {
-                "retention_days": 7,
-                "compaction_interval_hours": 1,
-                "aggregation_method": "downsample",
-            },
-            "metrics_hourly": {
-                "retention_days": 30,
-                "compaction_interval_hours": 24,
-                "aggregation_method": "statistical",
-            },
-            "metrics_daily": {
-                "retention_days": 365,
-                "compaction_interval_hours": 168,  # Weekly
-                "aggregation_method": "statistical",
-            },
-            "error_patterns": {
-                "retention_days": 90,
-                "compaction_interval_hours": 24,
-                "aggregation_method": "deduplication",
-            },
-            "dependency_graphs": {
-                "retention_days": 30,
-                "compaction_interval_hours": 24,
-                "aggregation_method": "latest_version",
-            },
+            "retention_days": 7,
+            "compaction_interval_hours": 1,
+            "aggregation_method": "downsample",
+        }
+
+    def _create_metrics_hourly_config(self) -> dict[str, t.Any]:
+        """Create configuration for hourly metrics data."""
+        return {
+            "retention_days": 30,
+            "compaction_interval_hours": 24,
+            "aggregation_method": "statistical",
+        }
+
+    def _create_metrics_daily_config(self) -> dict[str, t.Any]:
+        """Create configuration for daily metrics data."""
+        return {
+            "retention_days": 365,
+            "compaction_interval_hours": 168,  # Weekly
+            "aggregation_method": "statistical",
+        }
+
+    def _create_error_patterns_config(self) -> dict[str, t.Any]:
+        """Create configuration for error patterns data."""
+        return {
+            "retention_days": 90,
+            "compaction_interval_hours": 24,
+            "aggregation_method": "deduplication",
+        }
+
+    def _create_dependency_graphs_config(self) -> dict[str, t.Any]:
+        """Create configuration for dependency graphs data."""
+        return {
+            "retention_days": 30,
+            "compaction_interval_hours": 24,
+            "aggregation_method": "latest_version",
         }
 
     def compact_data(self, data_type: str) -> dict[str, t.Any]:
@@ -253,10 +284,10 @@ class DataCompactionManager:
 
     def _process_data_directory(
         self, data_type: str, cutoff_date: datetime
-    ) -> dict[str, int]:
+    ) -> dict[str, int | float]:
         """Process files in data directory and return compaction statistics."""
         compacted_records = 0
-        freed_space_mb = 0
+        freed_space_mb: float = 0.0
 
         data_dir = self.storage_dir / data_type
         if data_dir.exists():
@@ -297,30 +328,51 @@ class DataCompactionManager:
 
     def get_storage_usage(self) -> dict[str, t.Any]:
         """Get detailed storage usage information."""
+        total_size, type_sizes = self._calculate_storage_sizes()
+        return self._build_storage_usage_report(total_size, type_sizes)
+
+    def _calculate_storage_sizes(self) -> tuple[int, dict[str, int]]:
+        """Calculate total storage size and size by data type."""
         total_size = 0
         type_sizes = {}
 
         if self.storage_dir.exists():
             for data_type in self.compaction_rules.keys():
-                data_dir = self.storage_dir / data_type
-                type_size = 0
-                if data_dir.exists():
-                    for file_path in data_dir.glob("**/*"):
-                        if file_path.is_file():
-                            type_size += file_path.stat().st_size
-
+                type_size = self._calculate_data_type_size(data_type)
                 type_sizes[data_type] = type_size
                 total_size += type_size
 
+        return total_size, type_sizes
+
+    def _calculate_data_type_size(self, data_type: str) -> int:
+        """Calculate storage size for a specific data type."""
+        data_dir = self.storage_dir / data_type
+        type_size = 0
+
+        if data_dir.exists():
+            for file_path in data_dir.glob("**/*"):
+                if file_path.is_file():
+                    type_size += file_path.stat().st_size
+
+        return type_size
+
+    def _build_storage_usage_report(
+        self, total_size: int, type_sizes: dict[str, int]
+    ) -> dict[str, t.Any]:
+        """Build the storage usage report dictionary."""
         return {
             "total_size_gb": round(total_size / (1024**3), 3),
             "max_size_gb": round(self.max_storage_bytes / (1024**3), 3),
-            "utilization_percent": round((total_size / self.max_storage_bytes) * 100, 2)
-            if self.max_storage_bytes > 0
-            else 0,
+            "utilization_percent": self._calculate_utilization_percent(total_size),
             "by_type_mb": {k: round(v / (1024**2), 2) for k, v in type_sizes.items()},
             "compaction_needed": total_size > (self.max_storage_bytes * 0.8),
         }
+
+    def _calculate_utilization_percent(self, total_size: int) -> float:
+        """Calculate storage utilization percentage."""
+        if self.max_storage_bytes > 0:
+            return round((total_size / self.max_storage_bytes) * 100, 2)
+        return 0.0
 
 
 class EnterpriseOptimizer:
@@ -443,7 +495,7 @@ class EnterpriseOptimizer:
                 confidence_score=0.0,
             )
 
-        recent_metrics = list(self.resource_history)[-10:]  # Last 10 minutes
+        recent_metrics = list[t.Any](self.resource_history)[-10:]  # Last 10 minutes
 
         # Calculate current load indicators
         avg_cpu = statistics.mean([m.cpu_percent for m in recent_metrics])
@@ -506,7 +558,7 @@ class EnterpriseOptimizer:
 
     def generate_optimization_recommendations(self) -> list[OptimizationRecommendation]:
         """Generate optimization recommendations based on current metrics."""
-        recommendations = []
+        recommendations: list[OptimizationRecommendation] = []
 
         if not self.resource_history:
             return recommendations
@@ -529,7 +581,7 @@ class EnterpriseOptimizer:
         self, metrics: ResourceMetrics
     ) -> list[OptimizationRecommendation]:
         """Generate CPU-related optimization recommendations."""
-        recommendations = []
+        recommendations: list[OptimizationRecommendation] = []
 
         if metrics.cpu_percent > 80:
             recommendations.append(
@@ -552,7 +604,7 @@ class EnterpriseOptimizer:
         self, metrics: ResourceMetrics
     ) -> list[OptimizationRecommendation]:
         """Generate memory-related optimization recommendations."""
-        recommendations = []
+        recommendations: list[OptimizationRecommendation] = []
 
         if metrics.memory_percent > 85:
             recommendations.append(
@@ -575,7 +627,7 @@ class EnterpriseOptimizer:
         self, storage_usage: dict[str, t.Any]
     ) -> list[OptimizationRecommendation]:
         """Generate storage-related optimization recommendations."""
-        recommendations = []
+        recommendations: list[OptimizationRecommendation] = []
 
         if storage_usage["utilization_percent"] > 80:
             recommendations.append(
@@ -596,7 +648,7 @@ class EnterpriseOptimizer:
 
     def _generate_connection_recommendations(self) -> list[OptimizationRecommendation]:
         """Generate connection pool optimization recommendations."""
-        recommendations = []
+        recommendations: list[OptimizationRecommendation] = []
 
         pool_stats = self.connection_pool.get_stats()
         if pool_stats["utilization_percent"] > 90:
@@ -620,7 +672,7 @@ class EnterpriseOptimizer:
         self, scaling_metrics: ScalingMetrics
     ) -> list[OptimizationRecommendation]:
         """Generate scaling-related optimization recommendations."""
-        recommendations = []
+        recommendations: list[OptimizationRecommendation] = []
 
         if scaling_metrics.recommended_scale_factor > 1.2:
             recommendations.append(
@@ -809,4 +861,5 @@ class EnterpriseOptimizer:
             + connection_score * 0.2
         )
 
-        return round(health_score, 1)
+        result: float = round(health_score, 1)
+        return result

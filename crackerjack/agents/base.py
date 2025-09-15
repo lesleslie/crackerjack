@@ -56,9 +56,13 @@ class FixResult:
             success=self.success and other.success,
             confidence=max(self.confidence, other.confidence),
             fixes_applied=self.fixes_applied + other.fixes_applied,
-            remaining_issues=list(set(self.remaining_issues + other.remaining_issues)),
+            remaining_issues=list[t.Any](
+                set[t.Any](self.remaining_issues + other.remaining_issues)
+            ),
             recommendations=self.recommendations + other.recommendations,
-            files_modified=list(set(self.files_modified + other.files_modified)),
+            files_modified=list[t.Any](
+                set[t.Any](self.files_modified + other.files_modified)
+            ),
         )
 
 
@@ -66,7 +70,7 @@ class FixResult:
 class AgentContext:
     project_path: Path
     temp_dir: Path | None = None
-    config: dict[str, t.Any] = field(default_factory=dict)
+    config: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
     session_id: str | None = None
 
     subprocess_timeout: int = 300

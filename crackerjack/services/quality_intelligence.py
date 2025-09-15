@@ -50,7 +50,7 @@ class QualityAnomaly:
     actual_value: float
     expected_value: float
     deviation_sigma: float  # Standard deviations from normal
-    context: dict[str, t.Any] = field(default_factory=dict)
+    context: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
         data = {
@@ -81,7 +81,7 @@ class QualityPattern:
     correlation_strength: float  # For correlation patterns
     trend_direction: TrendDirection
     statistical_significance: float  # p-value
-    context: dict[str, t.Any] = field(default_factory=dict)
+    context: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
         return {
@@ -183,7 +183,7 @@ class QualityIntelligenceService:
         return anomalies
 
     def _get_default_metrics(self) -> list[str]:
-        """Get default metrics list for anomaly detection."""
+        """Get default metrics list[t.Any] for anomaly detection."""
         return [
             "quality_score",
             "coverage_percent",
@@ -194,7 +194,7 @@ class QualityIntelligenceService:
         ]
 
     def _detect_metric_anomalies(
-        self, metric_name: str, baselines: list
+        self, metric_name: str, baselines: list[t.Any]
     ) -> list[QualityAnomaly]:
         """Detect anomalies for a specific metric."""
         values, timestamps = self._extract_metric_values(metric_name, baselines)
@@ -211,8 +211,8 @@ class QualityIntelligenceService:
         )
 
     def _extract_metric_values(
-        self, metric_name: str, baselines: list
-    ) -> tuple[list[float], list]:
+        self, metric_name: str, baselines: list[t.Any]
+    ) -> tuple[list[float], list[t.Any]]:
         """Extract metric values and timestamps from baselines."""
         values = []
         timestamps = []
@@ -225,7 +225,9 @@ class QualityIntelligenceService:
 
         return values, timestamps
 
-    def _get_baseline_metric_value(self, baseline, metric_name: str) -> float | None:
+    def _get_baseline_metric_value(
+        self, baseline: t.Any, metric_name: str
+    ) -> float | None:
         """Get metric value from baseline object."""
         metric_mapping = {
             "quality_score": baseline.quality_score,
@@ -261,7 +263,7 @@ class QualityIntelligenceService:
         self,
         metric_name: str,
         values: list[float],
-        timestamps: list,
+        timestamps: list[t.Any],
         stats_data: dict[str, float],
     ) -> list[QualityAnomaly]:
         """Identify outlier anomalies based on z-scores."""
@@ -292,7 +294,7 @@ class QualityIntelligenceService:
         self,
         metric_name: str,
         value: float,
-        timestamp,
+        timestamp: t.Any,
         z_score: float,
         mean_val: float,
         std_val: float,
@@ -345,7 +347,7 @@ class QualityIntelligenceService:
         metrics_data = self._extract_metrics_data(baselines)
         return self._find_correlation_patterns(metrics_data, days)
 
-    def _extract_metrics_data(self, baselines) -> dict[str, list[float]]:
+    def _extract_metrics_data(self, baselines: list[t.Any]) -> dict[str, list[float]]:
         """Extract metric data from baselines for correlation analysis."""
         metrics_data = {
             "quality_score": [],
@@ -371,7 +373,7 @@ class QualityIntelligenceService:
     ) -> list[QualityPattern]:
         """Find correlation patterns between metrics."""
         patterns = []
-        metric_names = list(metrics_data.keys())
+        metric_names = list[t.Any](metrics_data.keys())
 
         for i, metric1 in enumerate(metric_names):
             for metric2 in metric_names[i + 1 :]:
@@ -485,7 +487,9 @@ class QualityIntelligenceService:
 
         return predictions
 
-    def _extract_time_series(self, baselines, metric_name: str) -> tuple[list, list]:
+    def _extract_time_series(
+        self, baselines: list[t.Any], metric_name: str
+    ) -> tuple[list[t.Any], list[t.Any]]:
         """Extract time series data for specified metric."""
         values = []
         timestamps = []
@@ -500,7 +504,11 @@ class QualityIntelligenceService:
         return values, timestamps
 
     def _create_metric_prediction(
-        self, metric_name: str, values: list, horizon_days: int, confidence_level: float
+        self,
+        metric_name: str,
+        values: list[t.Any],
+        horizon_days: int,
+        confidence_level: float,
     ) -> QualityPrediction:
         """Create prediction for a single metric."""
         regression_results = self._perform_linear_regression(values, horizon_days)
@@ -524,7 +532,9 @@ class QualityIntelligenceService:
             risk_assessment=risk_level,
         )
 
-    def _perform_linear_regression(self, values: list, horizon_days: int) -> dict:
+    def _perform_linear_regression(
+        self, values: list[t.Any], horizon_days: int
+    ) -> dict[str, t.Any]:
         """Perform linear regression and predict future value."""
         values_array = np.array(values)
         time_indices = np.arange(len(values))
@@ -546,8 +556,11 @@ class QualityIntelligenceService:
         }
 
     def _calculate_confidence_interval(
-        self, values: list, regression_results: dict, confidence_level: float
-    ) -> dict:
+        self,
+        values: list[t.Any],
+        regression_results: dict[str, t.Any],
+        confidence_level: float,
+    ) -> dict[str, t.Any]:
         """Calculate confidence interval for prediction."""
         slope = regression_results["slope"]
         intercept = regression_results["intercept"]
@@ -579,16 +592,12 @@ class QualityIntelligenceService:
         time_indices: np.ndarray,
     ) -> float:
         """Calculate margin of error for confidence interval."""
-        return (
-            t_value
-            * residual_std
-            * np.sqrt(
-                1
-                + 1 / n_values
-                + (future_index - np.mean(time_indices)) ** 2
-                / np.sum((time_indices - np.mean(time_indices)) ** 2)
-            )
-        )
+        mean_time: float = float(np.mean(time_indices))
+        sum_sq_diff: float = float(np.sum((time_indices - mean_time) ** 2))
+        numerator: float = (future_index - mean_time) ** 2
+
+        sqrt_term: float = float(np.sqrt(1 + 1 / n_values + numerator / sum_sq_diff))
+        return t_value * residual_std * sqrt_term
 
     def _assess_prediction_risk(self, metric_name: str, predicted_value: float) -> str:
         """Assess risk level based on predicted value."""

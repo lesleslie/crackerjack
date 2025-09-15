@@ -6,8 +6,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.33.0"
-description = "Crackerjack Python project management tool"
+version = "0.31.10"
+description = "Opinionated Python project management tool"
 readme = "README.md"
 authors = [
     { name = "Les Leslie", email = "les@lesleslie.com" },
@@ -53,7 +53,6 @@ dependencies = [
     "pyyaml>=6.0.2",
     "refurb>=2.1",
     "rich>=14.1",
-    "scipy>=1.14.0",
     "ruff>=0.12.9",
     "structlog>=24.4",
     "textual>=0.89",
@@ -65,11 +64,6 @@ dependencies = [
     "watchdog>=6",
     "websockets>=15.0.1",
     "tomli>=2.2.1",
-    "skylos>=2.1.2",
-    "zuban>=0.0.22",
-    "types-pyyaml>=6.0.12.12",
-    "types-psutil>=6.0.0.12",
-    "types-aiofiles>=24.1.0.20240626",
 ]
 
 [project.license]
@@ -117,12 +111,6 @@ fixable = [
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15
-
-[tool.crackerjack]
-mcp_http_port = 8676
-mcp_http_host = "127.0.0.1"
-mcp_websocket_port = 8675
-mcp_http_enabled = true
 
 [tool.codespell]
 skip = "*/data/*"
@@ -215,8 +203,6 @@ include = [
 exclude = [
     "scratch",
     ".venv",
-    "*/.venv",
-    "**/.venv",
     "build",
     "dist",
     "tests/*",
@@ -296,11 +282,6 @@ exclude-deps = [
     "ruff",
     "hypothesis",
     "psutil",
-    "skylos",
-    "zuban",
-    "types-pyyaml",
-    "types-psutil",
-    "types-aiofiles",
 ]
 
 [tool.refurb]
@@ -334,10 +315,6 @@ max_complexity = 15
 
 [dependency-groups]
 dev = [
-    "complexipy>=4.0.2",
     "excalidraw-mcp>=0.1.2",
-    "radon>=6.0.1",
     "session-mgmt-mcp>=0.1.3",
-    "types-psutil>=7.0.0.20250822",
-    "types-pyyaml>=6.0.12.20250822",
 ]

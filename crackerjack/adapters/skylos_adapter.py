@@ -32,7 +32,7 @@ class DeadCodeIssue(Issue):
         return base_dict
 
 
-class SkylsAdapter(BaseRustToolAdapter):
+class SkylosAdapter(BaseRustToolAdapter):
     """Skylos dead code detection adapter."""
 
     def __init__(

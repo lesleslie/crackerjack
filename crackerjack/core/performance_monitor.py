@@ -174,7 +174,7 @@ class AsyncPerformanceMonitor:
 
     def get_recent_timeout_events(self, limit: int = 10) -> list[TimeoutEvent]:
         with self._lock:
-            return list(self.timeout_events)[-limit:]
+            return list[t.Any](self.timeout_events)[-limit:]
 
     def get_performance_alerts(self) -> list[dict[str, t.Any]]:
         alerts = []
@@ -276,7 +276,7 @@ class AsyncPerformanceMonitor:
                         "timestamp": event.timestamp,
                         "error_message": event.error_message,
                     }
-                    for event in list(self.timeout_events)[-50:]
+                    for event in list[t.Any](self.timeout_events)[-50:]
                 ],
                 "performance_alerts": self.get_performance_alerts(),
             }

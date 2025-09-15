@@ -47,25 +47,34 @@ class CoverageRatchetService:
     def get_ratchet_data(self) -> dict[str, t.Any]:
         if not self.ratchet_file.exists():
             return {}
-        return json.loads(self.ratchet_file.read_text())
+        return t.cast(dict[str, t.Any], json.loads(self.ratchet_file.read_text()))
+
+    def get_status_report(self) -> dict[str, t.Any]:
+        """Get status report for coverage ratchet service."""
+        return self.get_ratchet_data()
 
     def get_baseline(self) -> float:
-        return self.get_ratchet_data().get("baseline", 0.0)
+        data = self.get_ratchet_data()
+        baseline = data.get("baseline")
+        return float(baseline) if baseline is not None else 0.0
 
     def get_baseline_coverage(self) -> float:
         return self.get_baseline()
 
     def update_baseline_coverage(self, new_coverage: float) -> bool:
-        return self.update_coverage(new_coverage).get("success", False)
+        result: bool = self.update_coverage(new_coverage).get("success", False)
+        return result
 
     def is_coverage_regression(self, current_coverage: float) -> bool:
         baseline = self.get_baseline()
         return current_coverage < (baseline - self.TOLERANCE_MARGIN)
 
-    def get_coverage_improvement_needed(self) -> float:
+    def calculate_coverage_gap(self) -> float:
         data = self.get_ratchet_data()
-        baseline = data.get("baseline", 0.0)
+        baseline = data.get("baseline")
+        baseline = float(baseline) if baseline is not None else 0.0
         next_milestone = data.get("next_milestone")
+        next_milestone = float(next_milestone) if next_milestone is not None else None
         if next_milestone:
             return next_milestone - baseline
         return 100.0 - baseline
@@ -111,6 +120,7 @@ class CoverageRatchetService:
                 "next_milestone": self._get_next_milestone(new_coverage),
                 "points_to_next": (next_milestone - new_coverage)
                 if (next_milestone := self._get_next_milestone(new_coverage))
+                is not None
                 else 0,
                 "allowed": True,
                 "baseline_updated": True,
@@ -126,7 +136,7 @@ class CoverageRatchetService:
     def _check_milestones(
         self, old_coverage: float, new_coverage: float, data: dict[str, t.Any]
     ) -> list[float]:
-        achieved_milestones = set(data.get("milestones_achieved", []))
+        achieved_milestones = set[t.Any](data.get("milestones_achieved", []))
         return [
             milestone
             for milestone in self.MILESTONES
@@ -218,7 +228,14 @@ class CoverageRatchetService:
 
         return result
 
-    def get_status_report(self) -> dict[str, t.Any]:
+    def get_coverage_improvement_needed(self) -> float:
+        """Get percentage improvement needed to reach next milestone."""
+        current = self.get_baseline_coverage()
+        for milestone in self.MILESTONES:
+            if current < milestone:
+                needed = milestone - current
+                return max(0.0, needed)
+        return 0.0
         data = self.get_ratchet_data()
         if not data:
             return {"status": "not_initialized"}

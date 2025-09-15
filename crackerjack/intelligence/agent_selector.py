@@ -180,7 +180,7 @@ class AgentSelector:
             TaskContext.GENERAL: [AgentCapability.CODE_ANALYSIS],
         }
 
-        return set(context_map.get(task.context, []))
+        return set[t.Any](context_map.get(task.context, []))
 
     def _analyze_file_patterns(self, task: TaskDescription) -> set[AgentCapability]:
         if not task.file_patterns:
@@ -289,8 +289,8 @@ class AgentSelector:
         if not agent.metadata.description:
             return 0.0
 
-        desc_words = set(agent.metadata.description.lower().split())
-        task_words = set(task_text.split())
+        desc_words = set[t.Any](agent.metadata.description.lower().split())
+        task_words = set[t.Any](task_text.split())
         common_words = desc_words & task_words
 
         if common_words:
@@ -353,7 +353,7 @@ class AgentSelector:
         parts.append(source_desc.get(agent.metadata.source.value, "Unknown source"))
 
         if agent.metadata.capabilities:
-            top_caps = list(agent.metadata.capabilities)[:2]
+            top_caps = list[t.Any](agent.metadata.capabilities)[:2]
             cap_names = [cap.value.replace("_", " ") for cap in top_caps]
             parts.append(f"Strengths: {', '.join(cap_names)}")
 

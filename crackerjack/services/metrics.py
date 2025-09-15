@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import threading
+import typing as t
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
@@ -152,7 +153,7 @@ class MetricsCollector:
             """)
 
     @contextmanager
-    def _get_connection(self):
+    def _get_connection(self) -> t.Iterator[sqlite3.Connection]:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
@@ -442,10 +443,18 @@ class MetricsCollector:
             """).fetchall()
 
             return {
-                "strategy_effectiveness": [dict(row) for row in strategy_stats],
-                "correlation_patterns": [dict(row) for row in correlation_patterns],
-                "performance_by_strategy": [dict(row) for row in performance_stats],
-                "test_failure_patterns": [dict(row) for row in test_failure_patterns],
+                "strategy_effectiveness": [
+                    dict[str, t.Any](row) for row in strategy_stats
+                ],
+                "correlation_patterns": [
+                    dict[str, t.Any](row) for row in correlation_patterns
+                ],
+                "performance_by_strategy": [
+                    dict[str, t.Any](row) for row in performance_stats
+                ],
+                "test_failure_patterns": [
+                    dict[str, t.Any](row) for row in test_failure_patterns
+                ],
             }
 
     def _update_daily_summary(
@@ -564,7 +573,7 @@ class MetricsCollector:
                 "error_breakdown": {
                     row["error_type"]: row["count"] for row in error_stats
                 },
-                "common_errors": [dict(row) for row in common_errors],
+                "common_errors": [dict[str, t.Any](row) for row in common_errors],
             }
 
 

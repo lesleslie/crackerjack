@@ -19,7 +19,7 @@ def register_utility_tools(mcp_app: t.Any) -> None:
 
 def _clean_file_if_old(
     file_path: Path, cutoff_time: float, dry_run: bool, file_type: str
-) -> dict | None:
+) -> dict[str, t.Any] | None:
     with suppress(OSError):
         if file_path.stat().st_mtime < cutoff_time:
             file_size = file_path.stat().st_size
@@ -29,7 +29,9 @@ def _clean_file_if_old(
     return None
 
 
-def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[dict], int]:
+def _clean_temp_files(
+    cutoff_time: float, dry_run: bool
+) -> tuple[list[dict[str, t.Any]], int]:
     import tempfile
 
     cleaned_files = []
@@ -49,7 +51,7 @@ def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[dict], in
 
 def _clean_progress_files(
     context: t.Any, cutoff_time: float, dry_run: bool
-) -> tuple[list[dict], int]:
+) -> tuple[list[dict[str, t.Any]], int]:
     cleaned_files = []
     total_size = 0
 
@@ -65,9 +67,9 @@ def _clean_progress_files(
     return cleaned_files, total_size
 
 
-def _parse_cleanup_options(kwargs: str) -> tuple[dict, str | None]:
+def _parse_cleanup_options(kwargs: str) -> tuple[dict[str, t.Any], str | None]:
     try:
-        extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+        extra_kwargs: dict[str, t.Any] = json.loads(kwargs) if kwargs.strip() else {}
         return extra_kwargs, None
     except json.JSONDecodeError as e:
         return {}, f"Invalid JSON in kwargs: {e}"
@@ -91,7 +93,7 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
             return _create_error_response(f"Cleanup failed: {e}")
 
 
-def _parse_clean_configuration(args: str, kwargs: str) -> dict:
+def _parse_clean_configuration(args: str, kwargs: str) -> dict[str, t.Any]:
     extra_kwargs, parse_error = _parse_cleanup_options(kwargs)
     if parse_error:
         return {"error": parse_error}
@@ -103,7 +105,9 @@ def _parse_clean_configuration(args: str, kwargs: str) -> dict:
     }
 
 
-def _execute_cleanup_operations(context: t.Any, clean_config: dict) -> dict:
+def _execute_cleanup_operations(
+    context: t.Any, clean_config: dict[str, t.Any]
+) -> dict[str, t.Any]:
     from datetime import datetime, timedelta
 
     cutoff_time = (
@@ -130,7 +134,9 @@ def _execute_cleanup_operations(context: t.Any, clean_config: dict) -> dict:
     return {"all_cleaned_files": all_cleaned_files, "total_size": total_size}
 
 
-def _create_cleanup_response(clean_config: dict, cleanup_results: dict) -> str:
+def _create_cleanup_response(
+    clean_config: dict[str, t.Any], cleanup_results: dict[str, t.Any]
+) -> str:
     all_cleaned_files = cleanup_results["all_cleaned_files"]
 
     return json.dumps(
@@ -208,16 +214,16 @@ def _register_config_tool(mcp_app: t.Any) -> None:
         if parse_error:
             return _create_error_response(parse_error)
 
-        args_parts = args.strip().split() if args.strip() else ["list"]
+        args_parts = args.strip().split() if args.strip() else ["list[t.Any]"]
         action = args_parts[0].lower()
 
         try:
-            if action == "list":
+            if action == "list[t.Any]":
                 config_info = _handle_config_list(context)
                 result = {
                     "success": True,
                     "command": "config_crackerjack",
-                    "action": "list",
+                    "action": "list[t.Any]",
                     "configuration": config_info,
                 }
             elif action == "get" and len(args_parts) > 1:
@@ -226,7 +232,7 @@ def _register_config_tool(mcp_app: t.Any) -> None:
                 result = _handle_config_validate(context)
             else:
                 return _create_error_response(
-                    f"Invalid action '{action}'. Valid actions: list, get < key >, validate"
+                    f"Invalid action '{action}'. Valid actions: list[t.Any], get < key >, validate"
                 )
 
             return json.dumps(result, indent=2)
@@ -235,7 +241,7 @@ def _register_config_tool(mcp_app: t.Any) -> None:
             return _create_error_response(f"Config operation failed: {e}")
 
 
-def _run_hooks_analysis(orchestrator: t.Any, options: t.Any) -> dict:
+def _run_hooks_analysis(orchestrator: t.Any, options: t.Any) -> dict[str, t.Any]:
     fast_result = orchestrator.run_fast_hooks_only(options)
     comprehensive_result = orchestrator.run_comprehensive_hooks_only(options)
 
@@ -245,7 +251,7 @@ def _run_hooks_analysis(orchestrator: t.Any, options: t.Any) -> dict:
     }
 
 
-def _run_tests_analysis(orchestrator: t.Any, options: t.Any) -> dict:
+def _run_tests_analysis(orchestrator: t.Any, options: t.Any) -> dict[str, t.Any]:
     test_result = orchestrator.run_testing_phase(options)
     return {"status": "passed" if test_result else "failed"}
 

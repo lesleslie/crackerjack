@@ -176,7 +176,7 @@ class CachedHookExecutor:
 
         files: list[Path] = []
         for pattern in patterns:
-            files.extend(list(self.pkg_path.rglob(pattern)))
+            files.extend(list[t.Any](self.pkg_path.rglob(pattern)))
 
         return [f for f in files if f.is_file() and not self._should_ignore_file(f)]
 
@@ -276,7 +276,8 @@ class SmartCacheManager:
         }
         if hook_name in formatting_hooks:
             recent_changes = project_state.get("recent_changes", 0)
-            return recent_changes < 5
+            result: bool = recent_changes < 5
+            return result
 
         return True
 
@@ -310,6 +311,6 @@ class SmartCacheManager:
 
         return {
             "recent_changes": recent_changes,
-            "total_python_files": len(list(pkg_path.rglob("*.py"))),
+            "total_python_files": len(list[t.Any](pkg_path.rglob("*.py"))),
             "project_size": "large" if recent_changes > 50 else "small",
         }

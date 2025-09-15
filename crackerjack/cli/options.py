@@ -13,7 +13,7 @@ class BumpOption(str, Enum):
     interactive = "interactive"
 
     def __str__(self) -> str:
-        return self.value
+        return str(self.value)
 
 
 class Options(BaseModel):
@@ -59,6 +59,14 @@ class Options(BaseModel):
     stop_websocket_server: bool = False
     restart_websocket_server: bool = False
     websocket_port: int | None = None
+    start_zuban_lsp: bool = False
+    stop_zuban_lsp: bool = False
+    restart_zuban_lsp: bool = False
+    no_zuban_lsp: bool = False
+    zuban_lsp_port: int = 8677
+    zuban_lsp_mode: str = "tcp"
+    zuban_lsp_timeout: int = 30
+    enable_lsp_hooks: bool = False
     dev: bool = False
     dashboard: bool = False
     unified_dashboard: bool = False
@@ -81,7 +89,7 @@ class Options(BaseModel):
 
     # Semantic field names (new primary interface)
     strip_code: bool | None = None  # Replaces clean
-    run_tests: bool | None = None  # Replaces test
+    run_tests: bool = False  # Replaces test
     ai_fix: bool | None = None  # Replaces ai_agent
     full_release: BumpOption | None = None  # Replaces all
     show_progress: bool | None = None  # Replaces track_progress
@@ -100,6 +108,39 @@ class Options(BaseModel):
     auto_version: bool = False
     version_since: str | None = None
     accept_version: bool = False
+
+    # Intelligent features
+    smart_commit: bool = False
+
+    # Analytics and visualization features
+    heatmap: bool = False
+    heatmap_type: str = "error_frequency"
+    heatmap_output: str | None = None
+    anomaly_detection: bool = False
+    anomaly_sensitivity: float = 2.0
+    anomaly_report: str | None = None
+    predictive_analytics: bool = False
+    prediction_periods: int = 10
+    analytics_dashboard: str | None = None
+
+    # Configuration management features
+    check_config_updates: bool = False
+    apply_config_updates: bool = False
+    diff_config: str | None = None
+    config_interactive: bool = False
+    refresh_cache: bool = False
+
+    # Enterprise features
+    enterprise_optimizer: bool = False
+    enterprise_profile: str | None = None
+    enterprise_report: str | None = None
+    mkdocs_integration: bool = False
+    mkdocs_serve: bool = False
+    mkdocs_theme: str = "material"
+    mkdocs_output: str | None = None
+    contextual_ai: bool = False
+    ai_recommendations: int = 5
+    ai_help_query: str | None = None
 
     def _map_legacy_flag(
         self, old_attr: str, new_attr: str, deprecation_msg: str | None = None
@@ -128,9 +169,49 @@ class Options(BaseModel):
         return self
 
     @property
+    def test(self) -> bool:
+        """Compatibility property for run_tests field."""
+        return self.run_tests
+
+    @test.setter
+    def test(self, value: bool) -> None:
+        """Setter for test property."""
+        self.run_tests = value
+
+    @property
+    def ai_agent(self) -> bool:
+        """Compatibility property for ai_fix field."""
+        return bool(self.ai_fix)
+
+    @ai_agent.setter
+    def ai_agent(self, value: bool) -> None:
+        """Setter for ai_agent property."""
+        self.ai_fix = value if self.ai_fix is not None else value
+
+    @property
+    def clean(self) -> bool:
+        """Compatibility property for strip_code field."""
+        return bool(self.strip_code)
+
+    @clean.setter
+    def clean(self, value: bool) -> None:
+        """Setter for clean property."""
+        self.strip_code = value
+
+    @property
+    def update_docs_index(self) -> bool:
+        """Compatibility property for generate_docs field."""
+        return self.generate_docs
+
+    @update_docs_index.setter
+    def update_docs_index(self, value: bool) -> None:
+        """Setter for update_docs_index property."""
+        self.generate_docs = value
+
+    @property
     def effective_max_iterations(self) -> int:
         if self.quick:
-            return 3
+            return 2
         if self.thorough:
             return 8
         return self.max_iterations
@@ -150,6 +231,17 @@ class Options(BaseModel):
             raise ValueError(
                 msg,
             )
+
+    @classmethod
+    @field_validator("zuban_lsp_mode", mode="before")
+    def validate_zuban_lsp_mode(cls, value: t.Any) -> str:
+        if value is None:
+            return "tcp"
+        valid_modes = ["tcp", "stdio"]
+        if value.lower() not in valid_modes:
+            msg = f"Invalid zuban LSP mode: {value}. Must be one of: {', '.join(valid_modes)}"
+            raise ValueError(msg)
+        return str(value).lower()
 
 
 CLI_OPTIONS = {
@@ -327,6 +419,46 @@ CLI_OPTIONS = {
         "--websocket-port",
         help="Port for WebSocket server when using --start-mcp-server (e.g., 8675).",
     ),
+    "start_zuban_lsp": typer.Option(
+        False,
+        "--start-zuban-lsp",
+        help="Start Zuban LSP server for real-time type checking.",
+    ),
+    "stop_zuban_lsp": typer.Option(
+        False,
+        "--stop-zuban-lsp",
+        help="Stop all running Zuban LSP servers.",
+    ),
+    "restart_zuban_lsp": typer.Option(
+        False,
+        "--restart-zuban-lsp",
+        help="Restart Zuban LSP server (stop and start again).",
+    ),
+    "no_zuban_lsp": typer.Option(
+        False,
+        "--no-zuban-lsp",
+        help="Disable automatic Zuban LSP server startup.",
+    ),
+    "zuban_lsp_port": typer.Option(
+        8677,
+        "--zuban-lsp-port",
+        help="Port for Zuban LSP server (default: 8677).",
+    ),
+    "zuban_lsp_mode": typer.Option(
+        "tcp",
+        "--zuban-lsp-mode",
+        help="Transport mode for Zuban LSP: tcp or stdio (default: tcp).",
+    ),
+    "zuban_lsp_timeout": typer.Option(
+        30,
+        "--zuban-lsp-timeout",
+        help="Timeout in seconds for LSP server operations (default: 30).",
+    ),
+    "enable_lsp_hooks": typer.Option(
+        False,
+        "--enable-lsp-hooks",
+        help="Enable LSP-optimized hook execution for faster type checking.",
+    ),
     "watchdog": typer.Option(
         False,
         "--watchdog",
@@ -492,7 +624,7 @@ CLI_OPTIONS = {
         help="Remove docstrings, line comments, and unnecessary whitespace from source code with automatic backup protection (doesn't affect test files).",
     ),
     "run_tests": typer.Option(
-        None,
+        False,
         "-t",
         "--run-tests",
         help=(
@@ -600,6 +732,133 @@ CLI_OPTIONS = {
         "--accept-version",
         help="Automatically accept version bump recommendation without confirmation.",
     ),
+    "smart_commit": typer.Option(
+        False,
+        "--smart-commit",
+        help="Generate intelligent commit messages based on code changes using AI analysis.",
+    ),
+    "heatmap": typer.Option(
+        False,
+        "--heatmap",
+        help="Generate visual heat map analysis of code quality patterns and error distributions.",
+    ),
+    "heatmap_type": typer.Option(
+        "error_frequency",
+        "--heatmap-type",
+        help="Type of heat map to generate: error_frequency, complexity, quality_metrics, test_failures.",
+    ),
+    "heatmap_output": typer.Option(
+        None,
+        "--heatmap-output",
+        help="Output file path for heat map data (JSON/CSV) or HTML visualization.",
+    ),
+    "anomaly_detection": typer.Option(
+        False,
+        "--anomaly-detection",
+        help="Enable ML-based anomaly detection for quality metrics monitoring.",
+    ),
+    "anomaly_sensitivity": typer.Option(
+        2.0,
+        "--anomaly-sensitivity",
+        help="Sensitivity level for anomaly detection (1.0=very sensitive, 3.0=less sensitive).",
+    ),
+    "anomaly_report": typer.Option(
+        None,
+        "--anomaly-report",
+        help="Output file path for anomaly detection report (JSON format).",
+    ),
+    "predictive_analytics": typer.Option(
+        False,
+        "--predictive-analytics",
+        help="Enable predictive analytics for quality metrics forecasting and trend analysis.",
+    ),
+    "prediction_periods": typer.Option(
+        10,
+        "--prediction-periods",
+        help="Number of future periods to predict (default: 10).",
+    ),
+    "analytics_dashboard": typer.Option(
+        None,
+        "--analytics-dashboard",
+        help="Output file path for analytics dashboard (HTML format).",
+    ),
+    # Enterprise features
+    "enterprise_optimizer": typer.Option(
+        False,
+        "--enterprise-optimizer",
+        help="Enable enterprise-scale optimization engine with resource monitoring and scaling analysis.",
+    ),
+    "enterprise_profile": typer.Option(
+        None,
+        "--enterprise-profile",
+        help="Enterprise optimization profile: balanced, performance, memory, throughput.",
+    ),
+    "enterprise_report": typer.Option(
+        None,
+        "--enterprise-report",
+        help="Output file path for enterprise optimization report (JSON format).",
+    ),
+    "mkdocs_integration": typer.Option(
+        False,
+        "--mkdocs-integration",
+        help="Generate complete MkDocs documentation site with Material theme and automation.",
+    ),
+    "mkdocs_serve": typer.Option(
+        False,
+        "--mkdocs-serve",
+        help="Start MkDocs development server after building documentation site.",
+    ),
+    "mkdocs_theme": typer.Option(
+        "material",
+        "--mkdocs-theme",
+        help="MkDocs theme to use for documentation generation (default: material).",
+    ),
+    "mkdocs_output": typer.Option(
+        None,
+        "--mkdocs-output",
+        help="Output directory for MkDocs site generation (default: ./docs_site).",
+    ),
+    "contextual_ai": typer.Option(
+        False,
+        "--contextual-ai",
+        help="Enable contextual AI assistant with project-specific recommendations and insights.",
+    ),
+    "ai_recommendations": typer.Option(
+        5,
+        "--ai-recommendations",
+        help="Maximum number of AI recommendations to display (default: 5).",
+    ),
+    "ai_help_query": typer.Option(
+        None,
+        "--ai-help-query",
+        help="Get contextual help for specific query using AI assistant.",
+    ),
+    # Configuration management features
+    "check_config_updates": typer.Option(
+        False,
+        "--check-config-updates",
+        help="Check for available configuration template updates.",
+    ),
+    "apply_config_updates": typer.Option(
+        False,
+        "--apply-config-updates",
+        help="Apply available configuration template updates.",
+    ),
+    "diff_config": typer.Option(
+        None,
+        "--diff-config",
+        help="Show diff preview for a specific configuration type.",
+    ),
+    "config_interactive": typer.Option(
+        False,
+        "--config-interactive",
+        help="Apply configuration updates interactively with confirmations.",
+    ),
+    "refresh_cache": typer.Option(
+        False,
+        "--refresh-cache",
+        help="Refresh pre-commit cache to ensure fresh environment.",
+    ),
 }
 
 
@@ -623,6 +882,14 @@ def create_options(
     experimental_hooks: bool,
     enable_pyrefly: bool,
     enable_ty: bool,
+    start_zuban_lsp: bool,
+    stop_zuban_lsp: bool,
+    restart_zuban_lsp: bool,
+    no_zuban_lsp: bool,
+    zuban_lsp_port: int,
+    zuban_lsp_mode: str,
+    zuban_lsp_timeout: int,
+    enable_lsp_hooks: bool,
     no_git_tags: bool,
     skip_version_check: bool,
     orchestrated: bool,
@@ -656,9 +923,35 @@ def create_options(
     auto_version: bool,
     version_since: str | None,
     accept_version: bool,
+    smart_commit: bool,
+    heatmap: bool,
+    heatmap_type: str,
+    heatmap_output: str | None,
+    anomaly_detection: bool,
+    anomaly_sensitivity: float,
+    anomaly_report: str | None,
+    predictive_analytics: bool,
+    prediction_periods: int,
+    analytics_dashboard: str | None,
+    # Enterprise features
+    enterprise_optimizer: bool,
+    enterprise_profile: str | None,
+    enterprise_report: str | None,
+    mkdocs_integration: bool,
+    mkdocs_serve: bool,
+    mkdocs_theme: str,
+    mkdocs_output: str | None,
+    contextual_ai: bool,
+    ai_recommendations: int,
+    ai_help_query: str | None,
+    check_config_updates: bool,
+    apply_config_updates: bool,
+    diff_config: str | None,
+    config_interactive: bool,
+    refresh_cache: bool,
     # New semantic parameters
     strip_code: bool | None = None,
-    run_tests: bool | None = None,
+    run_tests: bool = False,
     ai_fix: bool | None = None,
     full_release: BumpOption | None = None,
     show_progress: bool | None = None,
@@ -686,6 +979,14 @@ def create_options(
         experimental_hooks=experimental_hooks,
         enable_pyrefly=enable_pyrefly,
         enable_ty=enable_ty,
+        start_zuban_lsp=start_zuban_lsp,
+        stop_zuban_lsp=stop_zuban_lsp,
+        restart_zuban_lsp=restart_zuban_lsp,
+        no_zuban_lsp=no_zuban_lsp,
+        zuban_lsp_port=zuban_lsp_port,
+        zuban_lsp_mode=zuban_lsp_mode,
+        zuban_lsp_timeout=zuban_lsp_timeout,
+        enable_lsp_hooks=enable_lsp_hooks,
         no_git_tags=no_git_tags,
         skip_version_check=skip_version_check,
         orchestrated=orchestrated,
@@ -719,6 +1020,32 @@ def create_options(
         auto_version=auto_version,
         version_since=version_since,
         accept_version=accept_version,
+        smart_commit=smart_commit,
+        heatmap=heatmap,
+        heatmap_type=heatmap_type,
+        heatmap_output=heatmap_output,
+        anomaly_detection=anomaly_detection,
+        anomaly_sensitivity=anomaly_sensitivity,
+        anomaly_report=anomaly_report,
+        predictive_analytics=predictive_analytics,
+        prediction_periods=prediction_periods,
+        analytics_dashboard=analytics_dashboard,
+        # Enterprise features
+        enterprise_optimizer=enterprise_optimizer,
+        enterprise_profile=enterprise_profile,
+        enterprise_report=enterprise_report,
+        mkdocs_integration=mkdocs_integration,
+        mkdocs_serve=mkdocs_serve,
+        mkdocs_theme=mkdocs_theme,
+        mkdocs_output=mkdocs_output,
+        contextual_ai=contextual_ai,
+        ai_recommendations=ai_recommendations,
+        ai_help_query=ai_help_query,
+        check_config_updates=check_config_updates,
+        apply_config_updates=apply_config_updates,
+        diff_config=diff_config,
+        config_interactive=config_interactive,
+        refresh_cache=refresh_cache,
         # New semantic parameters
         strip_code=strip_code,
         run_tests=run_tests,

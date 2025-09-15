@@ -20,7 +20,7 @@ except ImportError:
 class AIAgentWorkflowTester:
     def __init__(self) -> None:
         self.project_root = Path("/ Users / les / Projects / crackerjack")
-        self.test_results = {}
+        self.test_results: dict[str, str] = {}
         self.verification_toolkit = None
 
         if VERIFICATION_AVAILABLE:
@@ -209,7 +209,7 @@ class AIAgentWorkflowTester:
             }
 
     def _parse_iterations_from_output(self, output: str) -> list[dict[str, Any]]:
-        iterations = []
+        iterations: list[dict[str, Any]] = []
         lines = output.split("\n")
         current_iteration = None
 
@@ -418,7 +418,7 @@ class AIAgentWorkflowTester:
 
         all_criteria_met = True
         for criterion, met in criteria:
-            status = "✅ PASS" if met else "❌ FAIL"
+            status: str = "✅ PASS" if met else "❌ FAIL"
             report.append(f"{status} {criterion}")
             if not met:
                 all_criteria_met = False

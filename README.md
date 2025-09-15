@@ -6,6 +6,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+![Coverage](https://img.shields.io/badge/coverage-36.5%25-red)
 
 ## 🎯 Purpose
 
@@ -43,7 +44,7 @@ pip install black isort flake8 mypy pytest pre-commit
 pip install crackerjack
 python -m crackerjack        # Setup + quality checks
 python -m crackerjack --run-tests        # Add testing
-python -m crackerjack --full-release patch # Full release workflow
+python -m crackerjack --all patch # Full release workflow
 ```
 
 **Key differentiators:**
@@ -139,7 +140,7 @@ Limited tool-specific auto-fixes for simple formatting issues:
 1. **🚀 Run All Checks**: Fast hooks, comprehensive hooks, full test suite
 1. **🔍 Analyze Failures**: AI parses error messages, identifies root causes
 1. **🤖 Intelligent Fixes**: AI reads source code and makes targeted modifications
-1. **🔄 Repeat**: Continue until ALL checks pass (up to 10 iterations)
+1. **🔄 Repeat**: Continue until ALL checks pass (up to 8 iterations)
 1. **🎉 Perfect Quality**: Zero manual intervention required
 
 #### Comprehensive Coverage
@@ -635,7 +636,7 @@ python -m crackerjack
 python -m crackerjack --run-tests
 
 # Full release workflow
-python -m crackerjack --full-release patch
+python -m crackerjack --all patch
 
 # AI agent mode
 python -m crackerjack --ai-fix
@@ -652,7 +653,7 @@ python -m crackerjack --run-tests        # Quality checks + tests
 python -m crackerjack --ai-fix --run-tests  # AI auto-fixing + tests (recommended)
 
 # Release workflow
-python -m crackerjack --full-release patch # Full release workflow
+python -m crackerjack --all patch # Full release workflow
 python -m crackerjack --publish patch      # Version bump + publish
 ```
 
@@ -662,6 +663,9 @@ python -m crackerjack --publish patch      # Version bump + publish
 python -m crackerjack --ai-fix              # AI auto-fixing mode
 python -m crackerjack --ai-debug --run-tests # AI debugging with verbose output
 python -m crackerjack --ai-fix --run-tests --verbose # Full AI workflow
+python -m crackerjack --orchestrated        # Advanced orchestrated workflow
+python -m crackerjack --quick               # Quick mode (3 iterations max)
+python -m crackerjack --thorough            # Thorough mode (8 iterations max)
 ```
 
 **Monitoring & Observability:**
@@ -691,6 +695,62 @@ python -m crackerjack --clear-cache         # Clear all caches
 python -m crackerjack --benchmark           # Run in benchmark mode
 ```
 
+**Coverage Management:**
+
+```bash
+python -m crackerjack --coverage-status     # Show coverage ratchet status
+python -m crackerjack --coverage-goal 85.0  # Set explicit coverage target
+python -m crackerjack --no-coverage-ratchet # Disable coverage ratchet temporarily
+python -m crackerjack --boost-coverage      # Auto-improve test coverage (default)
+python -m crackerjack --no-boost-coverage   # Disable coverage improvements
+```
+
+**Zuban LSP Server Management:**
+
+```bash
+python -m crackerjack --start-zuban-lsp     # Start Zuban LSP server
+python -m crackerjack --stop-zuban-lsp      # Stop Zuban LSP server
+python -m crackerjack --restart-zuban-lsp   # Restart Zuban LSP server
+python -m crackerjack --no-zuban-lsp        # Disable automatic LSP startup
+python -m crackerjack --zuban-lsp-port 8677 # Custom LSP port
+python -m crackerjack --zuban-lsp-mode tcp  # Transport mode (tcp/stdio)
+python -m crackerjack --zuban-lsp-timeout 30 # LSP operation timeout
+python -m crackerjack --enable-lsp-hooks    # Enable LSP-optimized hooks
+```
+
+**Documentation Generation:**
+
+```bash
+python -m crackerjack --generate-docs       # Generate comprehensive API docs
+python -m crackerjack --docs-format markdown # Documentation format (markdown/rst/html)
+python -m crackerjack --validate-docs       # Validate existing documentation
+```
+
+**Global Locking & Concurrency:**
+
+```bash
+python -m crackerjack --disable-global-locking # Allow concurrent execution
+python -m crackerjack --global-lock-timeout 600 # Lock timeout in seconds
+python -m crackerjack --cleanup-stale-locks # Clean stale lock files (default)
+python -m crackerjack --no-cleanup-stale-locks # Don't clean stale locks
+python -m crackerjack --global-lock-dir ~/.crackerjack/locks # Custom lock directory
+```
+
+**Git & Version Control:**
+
+```bash
+python -m crackerjack --no-git-tags         # Skip creating git tags
+python -m crackerjack --skip-version-check  # Skip version consistency verification
+```
+
+**Experimental Features:**
+
+```bash
+python -m crackerjack --experimental-hooks  # Enable experimental pre-commit hooks
+python -m crackerjack --enable-pyrefly      # Enable pyrefly type checking (experimental)
+python -m crackerjack --enable-ty           # Enable ty type verification (experimental)
+```
+
 **Common Options:**
 
 - `-i, --interactive`: Rich UI interface with better experience
@@ -699,8 +759,13 @@ python -m crackerjack --benchmark           # Run in benchmark mode
 - `--skip-hooks`: Skip quality checks during development iteration
 - `--strip-code`: Remove docstrings/comments for production
 - `--dev`: Enable development mode for progress monitors
-- `--fast`: Use faster execution mode (fewer checks)
-- `--thorough`: Use comprehensive quality checks
+- `--fast`: Run only fast hooks (formatting and basic checks)
+- `--comp`: Run only comprehensive hooks (type checking, security, complexity)
+- `--quick`: Quick mode (3 iterations max, ideal for CI/CD)
+- `--thorough`: Thorough mode (8 iterations max, for complex refactoring)
+- `--debug`: Enable debug output with detailed information
+- `--no-config-update`: Do not update configuration files
+- `--update-precommit`: Update pre-commit hooks configuration
 
 ## Style Guide
 

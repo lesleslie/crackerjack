@@ -88,7 +88,7 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
             }
             if node.iter.func.id == "range":
                 iterable_info["optimization_hint"] = (
-                    "Consider list comprehension or vectorization"
+                    "Consider list[t.Any] comprehension or vectorization"
                 )
 
         return iterable_info
@@ -144,7 +144,7 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
             {
                 "line_number": node.lineno,
                 "type": "list_concat_in_loop",
-                "pattern": f"list += [{list_size} items]",
+                "pattern": f"list[t.Any] += [{list_size} items]",
                 "loop_depth": self.loop_depth,
                 "impact_factor": impact_factor,
                 "optimization": "append" if list_size == 1 else "extend",
@@ -160,7 +160,7 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
             {
                 "line_number": node.lineno,
                 "type": "list_concat_variable",
-                "pattern": f"list += {var_name}",
+                "pattern": f"list[t.Any] += {var_name}",
                 "loop_depth": self.loop_depth,
                 "impact_factor": impact_factor,
                 "optimization": "extend",

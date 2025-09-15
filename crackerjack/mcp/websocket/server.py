@@ -4,6 +4,7 @@ import signal
 import subprocess
 import tempfile
 import time
+import typing as t
 from pathlib import Path
 
 import uvicorn
@@ -23,9 +24,9 @@ class WebSocketServer:
         self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
         self.is_running = True
         self.job_manager: JobManager | None = None
-        self.app = None
+        self.app: t.Any = None
         self.timeout_manager = get_timeout_manager()
-        self.server_task: asyncio.Task | None = None
+        self.server_task: asyncio.Task[t.Any] | None = None
 
     def setup(self) -> None:
         self.progress_dir.mkdir(exist_ok=True)
@@ -37,7 +38,7 @@ class WebSocketServer:
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
-    def _signal_handler(self, _signum: int, _frame) -> None:
+    def _signal_handler(self, _signum: int, _frame: t.Any) -> None:
         console.print("\n[yellow]Shutting down WebSocket server...[/yellow]")
         self.is_running = False
 

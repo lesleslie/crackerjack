@@ -92,7 +92,9 @@ class SessionState:
 
 
 class StateManager:
-    def __init__(self, state_dir: Path | None = None, batched_saver=None) -> None:
+    def __init__(
+        self, state_dir: Path | None = None, batched_saver: t.Any | None = None
+    ) -> None:
         self._lock = asyncio.Lock()
         self.state_dir = state_dir or Path.home() / ".cache" / "crackerjack-mcp"
         self.state_dir.mkdir(exist_ok=True)
@@ -258,7 +260,7 @@ class StateManager:
         priority_counts = {}
         for priority in Priority:
             priority_counts[priority.value] = len(self.get_issues_by_priority(priority))
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for issue in issues:
             type_counts[issue.type] = type_counts.get(issue.type, 0) + 1
         stage_status = {}

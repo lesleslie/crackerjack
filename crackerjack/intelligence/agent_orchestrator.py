@@ -365,7 +365,7 @@ class AgentOrchestrator:
 
         return result
 
-    def _map_task_to_issue_type(self, task: TaskDescription):
+    def _map_task_to_issue_type(self, task: TaskDescription) -> t.Any:
         from crackerjack.agents.base import IssueType
 
         context_map = {
@@ -392,7 +392,7 @@ class AgentOrchestrator:
 
         return IssueType.FORMATTING
 
-    def _map_task_priority_to_severity(self, task: TaskDescription):
+    def _map_task_priority_to_severity(self, task: TaskDescription) -> t.Any:
         from crackerjack.agents.base import Priority
 
         if task.priority >= 80:

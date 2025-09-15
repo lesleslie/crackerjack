@@ -34,31 +34,31 @@ from .jobs import JobManager
 class MonitoringWebSocketManager:
     """Manages WebSocket connections for real-time monitoring."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.active_connections: dict[str, WebSocket] = {}
         self.metrics_subscribers: set[WebSocket] = set()
         self.alerts_subscribers: set[WebSocket] = set()
 
-    async def connect_metrics(self, websocket: WebSocket, client_id: str):
+    async def connect_metrics(self, websocket: WebSocket, client_id: str) -> None:
         """Connect a client for metrics streaming."""
         await websocket.accept()
         self.active_connections[client_id] = websocket
         self.metrics_subscribers.add(websocket)
 
-    async def connect_alerts(self, websocket: WebSocket, client_id: str):
+    async def connect_alerts(self, websocket: WebSocket, client_id: str) -> None:
         """Connect a client for alert notifications."""
         await websocket.accept()
         self.active_connections[client_id] = websocket
         self.alerts_subscribers.add(websocket)
 
-    def disconnect(self, websocket: WebSocket, client_id: str):
+    def disconnect(self, websocket: WebSocket, client_id: str) -> None:
         """Disconnect a client."""
         if client_id in self.active_connections:
             del self.active_connections[client_id]
         self.metrics_subscribers.discard(websocket)
         self.alerts_subscribers.discard(websocket)
 
-    async def broadcast_metrics(self, metrics: UnifiedMetrics):
+    async def broadcast_metrics(self, metrics: UnifiedMetrics) -> None:
         """Broadcast metrics to all connected metrics subscribers."""
         message = {
             "type": "metrics_update",
@@ -76,7 +76,7 @@ class MonitoringWebSocketManager:
         # Clean up disconnected clients
         self.metrics_subscribers.difference_update(disconnected)
 
-    async def broadcast_alert(self, alert: QualityAlert):
+    async def broadcast_alert(self, alert: QualityAlert) -> None:
         """Broadcast alert to all connected alert subscribers."""
         message = {
             "type": "alert",
@@ -149,26 +149,26 @@ def _register_metrics_websockets(
     quality_service = services["quality_service"]
 
     @app.websocket("/ws/metrics/live")
-    async def websocket_metrics_live(websocket: WebSocket):
+    async def websocket_metrics_live(websocket: WebSocket) -> None:
         """WebSocket endpoint for live metrics streaming."""
         await _handle_live_metrics_websocket(
             websocket, ws_manager, quality_service, job_manager
         )
 
     @app.websocket("/ws/metrics/historical/{days}")
-    async def websocket_metrics_historical(websocket: WebSocket, days: int):
+    async def websocket_metrics_historical(websocket: WebSocket, days: int) -> None:
         """WebSocket endpoint for historical metrics data."""
         await _handle_historical_metrics_websocket(
             websocket, ws_manager, quality_service, days
         )
 
     @app.websocket("/ws/alerts/subscribe")
-    async def websocket_alerts_subscribe(websocket: WebSocket):
+    async def websocket_alerts_subscribe(websocket: WebSocket) -> None:
         """WebSocket endpoint for alert subscriptions."""
         await _handle_alerts_websocket(websocket, ws_manager)
 
     @app.websocket("/ws/dashboard/overview")
-    async def websocket_dashboard_overview(websocket: WebSocket):
+    async def websocket_dashboard_overview(websocket: WebSocket) -> None:
         """WebSocket endpoint for comprehensive dashboard data."""
         await _handle_dashboard_websocket(
             websocket, ws_manager, quality_service, job_manager
@@ -398,19 +398,19 @@ def _register_intelligence_websockets(
     intelligence_service = services["intelligence_service"]
 
     @app.websocket("/ws/intelligence/anomalies")
-    async def websocket_anomaly_detection(websocket: WebSocket):
+    async def websocket_anomaly_detection(websocket: WebSocket) -> None:
         """WebSocket endpoint for real-time anomaly detection."""
         await _handle_anomaly_detection_websocket(
             websocket, ws_manager, intelligence_service
         )
 
     @app.websocket("/ws/intelligence/predictions")
-    async def websocket_predictions(websocket: WebSocket):
+    async def websocket_predictions(websocket: WebSocket) -> None:
         """WebSocket endpoint for quality predictions."""
         await _handle_predictions_websocket(websocket, ws_manager, intelligence_service)
 
     @app.websocket("/ws/intelligence/patterns")
-    async def websocket_pattern_analysis(websocket: WebSocket):
+    async def websocket_pattern_analysis(websocket: WebSocket) -> None:
         """WebSocket endpoint for pattern recognition and correlation analysis."""
         await _handle_pattern_analysis_websocket(
             websocket, ws_manager, intelligence_service
@@ -504,7 +504,7 @@ async def _handle_predictions_websocket(
 
     try:
         # Send initial predictions
-        insights = intelligence_service.generate_insights(days=30)
+        insights = intelligence_service.generate_comprehensive_insights(days=30)
         await websocket.send_text(
             json.dumps(
                 {
@@ -544,12 +544,16 @@ async def _handle_prediction_request(
     days = data.get("days", 30)
     horizon = data.get("horizon", 7)
 
-    insights = intelligence_service.generate_insights(days=days)
+    insights = intelligence_service.generate_comprehensive_insights(days=days)
 
     # Generate specific predictions for requested horizon
     predictions = {}
+    all_predictions = intelligence_service.generate_advanced_predictions(
+        horizon_days=horizon
+    )
     for metric in ("quality_score", "test_coverage", "hook_duration"):
-        pred = intelligence_service.predict_metric_value(metric, horizon_days=horizon)
+        # Find the prediction for this specific metric
+        pred = next((p for p in all_predictions if p.metric_name == metric), None)
         if pred:
             predictions[metric] = pred.to_dict()
 
@@ -571,7 +575,7 @@ async def _send_periodic_prediction_update(
     websocket: WebSocket, intelligence_service: QualityIntelligenceService
 ) -> None:
     """Send periodic predictions update."""
-    insights = intelligence_service.generate_insights(days=7)
+    insights = intelligence_service.generate_comprehensive_insights(days=7)
     await websocket.send_text(
         json.dumps(
             {
@@ -668,7 +672,7 @@ def _register_dependency_websockets(
     dependency_analyzer = services["dependency_analyzer"]
 
     @app.websocket("/ws/dependencies/graph")
-    async def websocket_dependency_graph(websocket: WebSocket):
+    async def websocket_dependency_graph(websocket: WebSocket) -> None:
         """WebSocket endpoint for dependency graph data."""
         await _handle_dependency_graph_websocket(
             websocket, ws_manager, dependency_analyzer
@@ -783,7 +787,7 @@ def _register_metrics_api_endpoints(
     quality_service = services["quality_service"]
 
     @app.get("/api/metrics/summary")
-    async def get_metrics_summary():
+    async def get_metrics_summary() -> None:
         """Get current system summary."""
         try:
             current_metrics = await get_current_metrics(quality_service, job_manager)
@@ -798,22 +802,22 @@ def _register_metrics_api_endpoints(
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.get("/api/trends/quality")
-    async def get_quality_trends(days: int = 30):
+    async def get_quality_trends(days: int = 30) -> None:
         """Get quality trend analysis."""
         return await _handle_quality_trends_request(quality_service, days)
 
     @app.get("/api/alerts/configure")
-    async def get_alert_configuration():
+    async def get_alert_configuration() -> None:
         """Get current alert configuration."""
         return await _handle_get_alert_configuration(quality_service)
 
     @app.post("/api/alerts/configure")
-    async def update_alert_configuration(config: dict):
+    async def update_alert_configuration(config: dict) -> None:
         """Update alert configuration."""
         return await _handle_update_alert_configuration(quality_service, config)
 
     @app.get("/api/export/data")
-    async def export_data(days: int = 30, format: str = "json"):
+    async def export_data(days: int = 30, format: str = "json") -> None:
         """Export historical data for external analysis."""
         return await _handle_export_data_request(quality_service, days, format)
 
@@ -967,29 +971,29 @@ def _register_intelligence_api_endpoints(
     intelligence_service = services["intelligence_service"]
 
     @app.get("/api/intelligence/anomalies")
-    async def get_anomalies(days: int = 7, metrics: str = None):
+    async def get_anomalies(days: int = 7, metrics: str = None) -> None:
         """Get anomaly detection results."""
         return await _handle_anomalies_request(intelligence_service, days, metrics)
 
     @app.get("/api/intelligence/predictions/{metric}")
-    async def get_metric_prediction(metric: str, horizon_days: int = 7):
+    async def get_metric_prediction(metric: str, horizon_days: int = 7) -> None:
         """Get prediction for a specific metric."""
         return await _handle_metric_prediction_request(
             intelligence_service, metric, horizon_days
         )
 
     @app.get("/api/intelligence/insights")
-    async def get_quality_insights(days: int = 30):
+    async def get_quality_insights(days: int = 30) -> None:
         """Get comprehensive quality insights."""
         return await _handle_quality_insights_request(intelligence_service, days)
 
     @app.get("/api/intelligence/patterns")
-    async def get_pattern_analysis(days: int = 30):
+    async def get_pattern_analysis(days: int = 30) -> None:
         """Get pattern recognition analysis."""
         return await _handle_pattern_analysis_request(intelligence_service, days)
 
     @app.post("/api/intelligence/analyze")
-    async def run_comprehensive_analysis(request: dict):
+    async def run_comprehensive_analysis(request: dict) -> None:
         """Run comprehensive intelligence analysis."""
         return await _handle_comprehensive_analysis_request(
             intelligence_service, request
@@ -1028,7 +1032,10 @@ async def _handle_metric_prediction_request(
         if horizon_days > 30:
             raise HTTPException(status_code=400, detail="Horizon too far in the future")
 
-        prediction = intelligence_service.predict_metric_value(metric, horizon_days)
+        all_predictions = intelligence_service.generate_advanced_predictions(
+            horizon_days
+        )
+        prediction = next((p for p in all_predictions if p.metric_name == metric), None)
         if not prediction:
             raise HTTPException(status_code=404, detail="Prediction not available")
 
@@ -1051,7 +1058,7 @@ async def _handle_quality_insights_request(
         if days > 365:
             raise HTTPException(status_code=400, detail="Days parameter too large")
 
-        insights = intelligence_service.generate_insights(days=days)
+        insights = intelligence_service.generate_comprehensive_insights(days=days)
 
         return JSONResponse(
             {
@@ -1123,13 +1130,15 @@ async def _build_comprehensive_analysis_results(
         ]
 
     if request.get("include_predictions", True):
-        insights = intelligence_service.generate_insights(days=days)
+        insights = intelligence_service.generate_comprehensive_insights(days=days)
         results["insights"] = insights.to_dict()
 
         # Generate specific predictions
         predictions = {}
         for metric in ("quality_score", "test_coverage", "hook_duration"):
-            pred = intelligence_service.predict_metric_value(metric, horizon_days=7)
+            pred = intelligence_service.generate_advanced_predictions(
+                metric, horizon_days=7
+            )
             if pred:
                 predictions[metric] = pred.to_dict()
         results["predictions"] = predictions
@@ -1151,24 +1160,24 @@ def _register_dependency_api_endpoints(
         filter_type: str = None,
         max_nodes: int = 1000,
         include_external: bool = False,
-    ):
+    ) -> None:
         """Get dependency graph data."""
         return await _handle_dependency_graph_request(
             dependency_analyzer, filter_type, max_nodes, include_external
         )
 
     @app.get("/api/dependencies/metrics")
-    async def get_dependency_metrics():
+    async def get_dependency_metrics() -> None:
         """Get dependency graph metrics."""
         return await _handle_dependency_metrics_request(dependency_analyzer)
 
     @app.get("/api/dependencies/clusters")
-    async def get_dependency_clusters():
+    async def get_dependency_clusters() -> None:
         """Get dependency graph clusters."""
         return await _handle_dependency_clusters_request(dependency_analyzer)
 
     @app.post("/api/dependencies/analyze")
-    async def trigger_dependency_analysis(request: dict):
+    async def trigger_dependency_analysis(request: dict) -> None:
         """Trigger fresh dependency analysis."""
         return await _handle_dependency_analysis_request(dependency_analyzer, request)
 
@@ -1274,7 +1283,7 @@ def _register_heatmap_websockets(
     error_analyzer = services["error_analyzer"]
 
     @app.websocket("/ws/heatmap/errors")
-    async def websocket_error_heatmap(websocket: WebSocket):
+    async def websocket_error_heatmap(websocket: WebSocket) -> None:
         """WebSocket endpoint for real-time error heat map streaming."""
         await _handle_error_heatmap_websocket(websocket, error_analyzer)
 
@@ -1434,33 +1443,33 @@ def _register_heatmap_api_endpoints(app: FastAPI, services: dict[str, t.Any]) ->
     cache = services["cache"]
 
     @app.get("/api/heatmap/file_errors")
-    async def get_file_error_heatmap():
+    async def get_file_error_heatmap() -> None:
         """Get error heat map by file."""
         return await _handle_file_error_heatmap_request(error_analyzer)
 
     @app.get("/api/heatmap/temporal_errors")
-    async def get_temporal_error_heatmap(time_buckets: int = 24):
+    async def get_temporal_error_heatmap(time_buckets: int = 24) -> None:
         """Get error heat map over time."""
         return await _handle_temporal_error_heatmap_request(
             error_analyzer, time_buckets
         )
 
     @app.get("/api/heatmap/function_errors")
-    async def get_function_error_heatmap():
+    async def get_function_error_heatmap() -> None:
         """Get error heat map by function."""
         return await _handle_function_error_heatmap_request(error_analyzer)
 
     @app.get("/api/error_patterns")
     async def get_error_patterns(
         days: int = 30, min_occurrences: int = 2, severity: str | None = None
-    ):
+    ) -> None:
         """Get analyzed error patterns."""
         return await _handle_error_patterns_request(
             error_analyzer, days, min_occurrences, severity
         )
 
     @app.post("/api/trigger_error_analysis")
-    async def trigger_error_analysis(request: dict):
+    async def trigger_error_analysis(request: dict) -> None:
         """Trigger fresh error pattern analysis."""
         return await _handle_trigger_error_analysis_request(
             error_analyzer, cache, request
@@ -1571,7 +1580,7 @@ def _register_dashboard_endpoint(app: FastAPI) -> None:
     """Register the dashboard HTML endpoint."""
 
     @app.get("/dashboard")
-    async def get_dashboard_html():
+    async def get_dashboard_html() -> None:
         """Serve the monitoring dashboard HTML."""
         return HTMLResponse(_get_dashboard_html())
 
@@ -1667,12 +1676,12 @@ async def _apply_graph_filters(
     # Limit number of nodes
     if len(candidate_nodes) > max_nodes:
         # Prioritize by complexity and connectivity
-        def node_priority(node):
+        def node_priority(node: t.Any) -> int:
             # Count edges involving this node
             edge_count = sum(
                 1 for edge in graph.edges if node.id in (edge.source, edge.target)
             )
-            return node.complexity * edge_count
+            return int(node.complexity * edge_count)
 
         candidate_nodes.sort(key=node_priority, reverse=True)
         candidate_nodes = candidate_nodes[:max_nodes]

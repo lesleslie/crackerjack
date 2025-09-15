@@ -35,7 +35,7 @@ class ExecutionResult:
     output: str = ""
     error: str = ""
     exit_code: int = 0
-    metadata: dict[str, t.Any] = field(default_factory=dict)
+    metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
 
 @dataclass
@@ -372,7 +372,8 @@ class AsyncCommandExecutor:
     ) -> ExecutionResult | None:
         from crackerjack.services.performance_cache import get_command_cache
 
-        return get_command_cache().get_command_result(command, cwd)
+        cache_result = get_command_cache().get_command_result(command, cwd)
+        return t.cast(ExecutionResult | None, cache_result)
 
     async def _cache_result(
         self,
@@ -386,7 +387,7 @@ class AsyncCommandExecutor:
         command_cache = get_command_cache()
         command_cache.set_command_result(command, result, cwd, ttl_seconds)
 
-    def __del__(self):
+    def __del__(self) -> None:
         if hasattr(self, "_thread_pool"):
             self._thread_pool.shutdown(wait=False)
 

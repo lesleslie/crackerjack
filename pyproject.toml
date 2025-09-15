@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.33.0"
+version = "0.33.1"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -123,6 +123,11 @@ mcp_http_port = 8676
 mcp_http_host = "127.0.0.1"
 mcp_websocket_port = 8675
 mcp_http_enabled = true
+zuban_lsp_enabled = false
+zuban_lsp_host = "127.0.0.1"
+zuban_lsp_port = 8677
+zuban_lsp_timeout = 10.0
+zuban_lsp_strict_mode = true
 
 [tool.codespell]
 skip = "*/data/*"
@@ -331,6 +336,17 @@ exclude_patterns = [
     "**/test_*.py",
 ]
 max_complexity = 15
+
+[tool.zuban]
+strict = true
+show_error_codes = true
+
+[tool.zuban.lsp]
+host = "127.0.0.1"
+port = 8677
+timeout = 10.0
+enable_diagnostics = true
+real_time_feedback = true
 
 [dependency-groups]
 dev = [

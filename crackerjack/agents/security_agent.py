@@ -150,8 +150,7 @@ class SecurityAgent(SubAgent):
             "insecure_random": self._fix_insecure_random,
         }
 
-        fix_method = vulnerability_fix_map.get(vulnerability_type)
-        if fix_method is not None:
+        if (fix_method := vulnerability_fix_map.get(vulnerability_type)) is not None:
             fixes = await fix_method(issue)
             fixes_applied.extend(fixes["fixes"])
             files_modified.extend(fixes["files"])

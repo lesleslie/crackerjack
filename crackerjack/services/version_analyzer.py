@@ -217,7 +217,8 @@ class VersionAnalyzer:
 
             content = pyproject_path.read_text(encoding="utf-8")
             data = loads(content)
-            return data.get("project", {}).get("version")
+            version: str | None = data.get("project", {}).get("version")
+            return version
         except Exception:
             return None
 
@@ -437,7 +438,7 @@ class VersionAnalyzer:
         )
 
     def _display_change_list(self, changes: list[str], title: str, color: str) -> None:
-        """Display a list of changes with truncation."""
+        """Display a list[t.Any] of changes with truncation."""
         if changes:
             self.console.print(f"\n{title} ({len(changes)}):[/{color}]")
             for change in changes[:3]:

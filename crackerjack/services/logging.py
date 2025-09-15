@@ -69,7 +69,7 @@ def setup_structured_logging(
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
 
-    handlers = [console_handler]
+    handlers: list[logging.Handler] = [console_handler]
 
     if log_file:
         log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -85,7 +85,8 @@ def setup_structured_logging(
 
 
 def get_logger(name: str) -> structlog.BoundLogger:
-    return structlog.get_logger(name)
+    logger: structlog.BoundLogger = structlog.get_logger(name)
+    return logger
 
 
 class LoggingContext:

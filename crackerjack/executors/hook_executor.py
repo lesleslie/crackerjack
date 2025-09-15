@@ -90,7 +90,7 @@ class HookExecutor:
         )
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
-        self.console.print("\n" + "-" * 80)
+        self.console.print("\n" + "-" * 74)
         if strategy.name == "fast":
             self.console.print(
                 "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks[/bold bright_white]",
@@ -103,7 +103,7 @@ class HookExecutor:
             self.console.print(
                 f"[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running {strategy.name} hooks[/bold bright_white]",
             )
-        self.console.print("-" * 80 + "\n")
+        self.console.print("-" * 74 + "\n")
 
     def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []

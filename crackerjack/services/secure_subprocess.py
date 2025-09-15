@@ -388,7 +388,7 @@ class SecureSubprocessExecutor:
 
         self._validate_environment_size(env)
 
-        filtered_vars = []
+        filtered_vars: list[str] = []
         sanitized_env = self._filter_environment_variables(env, filtered_vars)
 
         self._add_safe_environment_variables(sanitized_env)

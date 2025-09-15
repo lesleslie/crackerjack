@@ -81,7 +81,7 @@ class SecurityService:
                 with suppress(OSError):
                     temp_file.unlink()
                 raise FileError(
-                    message="Failed to set secure file permissions",
+                    message="Failed to set[t.Any] secure file permissions",
                     details=str(e),
                     recovery="Check file system permissions and try again",
                 ) from e

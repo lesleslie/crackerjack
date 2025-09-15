@@ -18,7 +18,7 @@ class MetricPoint:
     timestamp: datetime
     value: float
     metric_type: str
-    metadata: dict[str, t.Any] = field(default_factory=dict)
+    metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
 
 @dataclass
@@ -32,7 +32,7 @@ class AnomalyDetection:
     severity: str  # low, medium, high, critical
     confidence: float
     description: str
-    metadata: dict[str, t.Any] = field(default_factory=dict)
+    metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
 
 @dataclass
@@ -46,7 +46,7 @@ class BaselineModel:
     max_value: float
     sample_count: int
     last_updated: datetime
-    seasonal_patterns: dict[str, float] = field(default_factory=dict)
+    seasonal_patterns: dict[str, float] = field(default_factory=dict[str, t.Any])
 
 
 class AnomalyDetector:
@@ -71,7 +71,7 @@ class AnomalyDetector:
 
         # Data storage
         self.metric_history: dict[str, deque[MetricPoint]] = defaultdict(
-            lambda: deque(maxlen=baseline_window)
+            lambda: deque[MetricPoint](maxlen=baseline_window)
         )
         self.baselines: dict[str, BaselineModel] = {}
         self.anomalies: list[AnomalyDetection] = []
@@ -118,7 +118,7 @@ class AnomalyDetector:
 
     def _update_baseline(self, metric_type: str) -> None:
         """Update statistical baseline for a metric type."""
-        history = list(self.metric_history[metric_type])
+        history = list[t.Any](self.metric_history[metric_type])
         values = [point.value for point in history]
 
         # Calculate basic statistics
@@ -143,7 +143,7 @@ class AnomalyDetector:
 
     def _detect_seasonal_patterns(self, history: list[MetricPoint]) -> dict[str, float]:
         """Detect seasonal patterns in metric history."""
-        patterns = {}
+        patterns: dict[str, float] = {}
 
         if len(history) < 24:  # Need at least 24 points for pattern detection
             return patterns
@@ -247,8 +247,11 @@ class AnomalyDetector:
             return False
 
         direction = config.get("direction", "both")
+        threshold_float: float = (
+            float(str(critical_threshold)) if critical_threshold is not None else 0.0
+        )
         return self._threshold_breached_in_direction(
-            point.value, critical_threshold, direction
+            point.value, threshold_float, str(direction)
         )
 
     def _threshold_breached_in_direction(

@@ -13,33 +13,65 @@ async def execute_crackerjack_workflow(
 ) -> dict[str, t.Any]:
     job_id = str(uuid.uuid4())[:8]
 
-    execution_timeout = kwargs.get("execution_timeout", 900)
-    if kwargs.get("test", False) or kwargs.get("testing", False):
-        execution_timeout = max(execution_timeout, 1200)
+    # Initialize progress immediately
+    await _update_progress(
+        job_id,
+        {"status": "started", "args": args, "timestamp": time.time()},
+        0,
+        message="Crackerjack execution started",
+    )
 
+    # Start execution in background - no timeout!
+    context = get_context()
+    asyncio.create_task(_execute_crackerjack_background(job_id, args, kwargs, context))
+
+    # Return job_id immediately for progress monitoring
+    return {
+        "job_id": job_id,
+        "status": "running",
+        "message": "Execution started. Use get_job_progress(job_id) to monitor progress.",
+        "timestamp": time.time(),
+    }
+
+
+async def _execute_crackerjack_background(
+    job_id: str,
+    args: str,
+    kwargs: dict[str, t.Any],
+    context: t.Any,
+) -> None:
+    """Execute crackerjack workflow in background with progress updates."""
     try:
-        return await asyncio.wait_for(
-            _execute_crackerjack_sync(job_id, args, kwargs, get_context()),
-            timeout=execution_timeout,
+        result = await _execute_crackerjack_sync(job_id, args, kwargs, context)
+
+        # Update final progress with result
+        await _update_progress(
+            job_id,
+            {
+                "status": result.get("status", "completed"),
+                "result": result,
+                "timestamp": time.time(),
+                "final": True,
+            },
+            100,
+            message=f"Execution {result.get('status', 'completed')}",
         )
-    except TimeoutError:
-        return {
-            "job_id": job_id,
-            "status": "timeout",
-            "error": f"Execution timed out after {execution_timeout} seconds",
-            "timestamp": time.time(),
-        }
     except Exception as e:
         import traceback
 
-        error_details = traceback.format_exc()
-        return {
-            "job_id": job_id,
-            "status": "failed",
-            "error": f"Execution failed: {e}",
-            "traceback": error_details,
-            "timestamp": time.time(),
-        }
+        # Update progress with error
+        await _update_progress(
+            job_id,
+            {
+                "status": "failed",
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+                "timestamp": time.time(),
+                "final": True,
+            },
+            -1,
+            message=f"Execution failed: {e}",
+        )
 
 
 async def _execute_crackerjack_sync(
@@ -225,7 +257,7 @@ async def _run_workflow_iterations(
     context: t.Any,
 ) -> dict[str, t.Any]:
     options = _create_workflow_options(kwargs)
-    max_iterations = kwargs.get("max_iterations", 10)
+    max_iterations = kwargs.get("max_iterations", 5)
 
     keep_alive_task = asyncio.create_task(_keep_alive_heartbeat(job_id, context))
 
@@ -393,23 +425,27 @@ async def _execute_single_iteration(
                 raise ValueError(
                     "Method run_complete_workflow_async returned None instead of awaitable"
                 )
-            return await result
+            workflow_result: bool = await result
+            return workflow_result
         elif hasattr(orchestrator, "run_complete_workflow"):
             result = orchestrator.run_complete_workflow(options)
             if result is None:
                 raise ValueError(
                     "Method run_complete_workflow returned None instead of awaitable"
                 )
-            return await result
+            workflow_result: bool = await result
+            return workflow_result
         elif hasattr(orchestrator, "execute_workflow"):
             result = orchestrator.execute_workflow(options)
             if result is None:
                 raise ValueError(
                     "Method execute_workflow returned None instead of awaitable"
                 )
-            return await result
+            workflow_result: bool = await result
+            return workflow_result
         elif hasattr(orchestrator, "run"):
-            return orchestrator.run(options)
+            run_result: bool = orchestrator.run(options)
+            return run_result
         else:
             raise ValueError(
                 f"Orchestrator {type(orchestrator)} has no recognized workflow execution method"

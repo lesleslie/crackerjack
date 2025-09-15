@@ -122,6 +122,9 @@ class WorkflowPipeline:
 
         self._log_workflow_startup_debug(options)
         self._configure_session_cleanup(options)
+        self._initialize_zuban_lsp(options)
+        self._configure_hook_manager_lsp(options)
+        self._register_lsp_cleanup_handler(options)
         self._log_workflow_startup_info(options)
 
     def _log_workflow_startup_debug(self, options: OptionsProtocol) -> None:
@@ -142,6 +145,138 @@ class WorkflowPipeline:
         if hasattr(options, "cleanup"):
             self.session.set_cleanup_config(options.cleanup)
 
+    def _initialize_zuban_lsp(self, options: OptionsProtocol) -> None:
+        """Initialize Zuban LSP server if not disabled."""
+        # Check if LSP is disabled via CLI flag or configuration
+        if getattr(options, "no_zuban_lsp", False):
+            self.logger.debug("Zuban LSP server disabled by --no-zuban-lsp flag")
+            return
+
+        # Get configuration from options (will use config system if available)
+        config = getattr(options, "zuban_lsp", None)
+        if config and not config.enabled:
+            self.logger.debug("Zuban LSP server disabled in configuration")
+            return
+
+        if config and not config.auto_start:
+            self.logger.debug("Zuban LSP server auto-start disabled in configuration")
+            return
+
+        # Check if LSP server is already running to avoid duplicates
+        from crackerjack.services.server_manager import find_zuban_lsp_processes
+
+        existing_processes = find_zuban_lsp_processes()
+        if existing_processes:
+            self.logger.debug(
+                f"Zuban LSP server already running (PID: {existing_processes[0]['pid']})"
+            )
+            return
+
+        # Auto-start LSP server in background
+        try:
+            import subprocess
+            import sys
+
+            # Use configuration values if available, otherwise fallback to CLI options
+            if config:
+                zuban_lsp_port = config.port
+                zuban_lsp_mode = config.mode
+            else:
+                zuban_lsp_port = getattr(options, "zuban_lsp_port", 8677)
+                zuban_lsp_mode = getattr(options, "zuban_lsp_mode", "stdio")
+
+            cmd = [
+                sys.executable,
+                "-m",
+                "crackerjack",
+                "--start-zuban-lsp",
+                "--zuban-lsp-port",
+                str(zuban_lsp_port),
+                "--zuban-lsp-mode",
+                zuban_lsp_mode,
+            ]
+
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+
+            self.logger.info(
+                f"Auto-started Zuban LSP server on port {zuban_lsp_port} ({zuban_lsp_mode} mode)"
+            )
+
+        except Exception as e:
+            self.logger.warning(f"Failed to auto-start Zuban LSP server: {e}")
+
+    def _log_zuban_lsp_status(self) -> None:
+        """Display current Zuban LSP server status during workflow startup."""
+        from crackerjack.services.server_manager import find_zuban_lsp_processes
+
+        try:
+            lsp_processes = find_zuban_lsp_processes()
+
+            if lsp_processes:
+                proc = lsp_processes[0]  # Show first running process
+                self.logger.info(
+                    f"🔍 Zuban LSP server running (PID: {proc['pid']}, "
+                    f"CPU: {proc['cpu']}%, Memory: {proc['mem']}%)"
+                )
+            else:
+                self.logger.info("🔍 Zuban LSP server not running")
+
+        except Exception as e:
+            self.logger.debug(f"Failed to check Zuban LSP status: {e}")
+
+    def _configure_hook_manager_lsp(self, options: OptionsProtocol) -> None:
+        """Configure hook manager with LSP optimization settings."""
+        # Check if LSP hooks are enabled
+        enable_lsp_hooks = getattr(options, "enable_lsp_hooks", False)
+
+        # Configure the hook manager
+        hook_manager = self.phases.hook_manager
+        if hasattr(hook_manager, "configure_lsp_optimization"):
+            hook_manager.configure_lsp_optimization(enable_lsp_hooks)
+
+            if enable_lsp_hooks and not getattr(options, "no_zuban_lsp", False):
+                self.console.print(
+                    "🔍 LSP-optimized hook execution enabled for faster type checking",
+                    style="blue",
+                )
+
+    def _register_lsp_cleanup_handler(self, options: OptionsProtocol) -> None:
+        """Register cleanup handler to stop LSP server when workflow completes."""
+        # Get configuration to check if we should handle LSP cleanup
+        config = getattr(options, "zuban_lsp", None)
+        if config and not config.enabled:
+            return
+
+        if getattr(options, "no_zuban_lsp", False):
+            return
+
+        def cleanup_lsp_server() -> None:
+            """Cleanup function to gracefully stop LSP server if it was auto-started."""
+            try:
+                from crackerjack.services.server_manager import (
+                    find_zuban_lsp_processes,
+                    stop_process,
+                )
+
+                lsp_processes = find_zuban_lsp_processes()
+                if lsp_processes:
+                    for proc in lsp_processes:
+                        self.logger.debug(
+                            f"Stopping auto-started Zuban LSP server (PID: {proc['pid']})"
+                        )
+                        stop_process(proc["pid"])
+
+            except Exception as e:
+                self.logger.debug(f"Error during LSP cleanup: {e}")
+
+        # Register the cleanup handler with the session
+        self.session.register_cleanup(cleanup_lsp_server)
+
     def _log_workflow_startup_info(self, options: OptionsProtocol) -> None:
         self.logger.info(
             "Starting complete workflow execution",
@@ -149,6 +284,9 @@ class WorkflowPipeline:
             skip_hooks=getattr(options, "skip_hooks", False),
             package_path=str(self.pkg_path),
         )
+
+        # Display Zuban LSP server status
+        self._log_zuban_lsp_status()
 
     async def _execute_workflow_with_timing(
         self, options: OptionsProtocol, start_time: float, workflow_id: str
@@ -1322,7 +1460,7 @@ class WorkflowPipeline:
         return results
 
     def _extract_hook_results_from_session(self, hook_type: str) -> list[t.Any]:
-        results = []
+        results: list[t.Any] = []
 
         session_tracker = self._get_session_tracker()
         if not session_tracker:
@@ -1343,7 +1481,7 @@ class WorkflowPipeline:
         )
 
     def _create_mock_hook_results(self, critical_hooks: list[str]) -> list[t.Any]:
-        results = []
+        results: list[t.Any] = []
 
         for hook_name in critical_hooks:
             mock_result = self._create_mock_hook_result(hook_name)
@@ -1621,7 +1759,12 @@ class WorkflowOrchestrator:
         return self.phases.run_configuration_phase(options)
 
     async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
-        return await self.pipeline.run_complete_workflow(options)
+        result: bool = await self.pipeline.run_complete_workflow(options)
+        return result
+
+    def run_complete_workflow_sync(self, options: OptionsProtocol) -> bool:
+        """Sync wrapper for run_complete_workflow."""
+        return asyncio.run(self.run_complete_workflow(options))
 
     def _cleanup_resources(self) -> None:
         self.session.cleanup_resources()

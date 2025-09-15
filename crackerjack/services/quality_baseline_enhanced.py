@@ -71,7 +71,7 @@ class UnifiedMetrics:
     active_jobs: int
     error_count: int
     trend_direction: TrendDirection
-    predictions: dict[str, t.Any] = field(default_factory=dict)
+    predictions: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
         data = asdict(self)
@@ -87,7 +87,7 @@ class SystemHealthStatus:
     cpu_usage: float
     memory_usage: float
     disk_usage: float
-    service_status: dict[str, str] = field(default_factory=dict)
+    service_status: dict[str, str] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
         return asdict(self)
@@ -189,7 +189,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         sum_x2 = sum(x * x for x in timestamps)
 
         if n * sum_x2 - sum_x * sum_x == 0:
-            slope = 0
+            slope: float = 0.0
         else:
             slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
 
@@ -329,7 +329,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         alerts: list[QualityAlert],
     ) -> list[str]:
         """Generate actionable recommendations."""
-        recommendations = []
+        recommendations: list[str] = []
 
         # Generate different types of recommendations
         self._add_coverage_recommendations(current_metrics, recommendations)
@@ -543,7 +543,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         if trend and trend.confidence > 0.5:
             days_ahead = 7
             predicted_score = quality_score + (trend.change_rate * days_ahead)
-            predictions["quality_score_7_days"] = max(0, min(100, predicted_score))
+            predictions["quality_score_7_days"] = max(0.0, min(100.0, predicted_score))
 
         return UnifiedMetrics(
             timestamp=datetime.now(),

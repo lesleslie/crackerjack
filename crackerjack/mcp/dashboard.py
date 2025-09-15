@@ -1,4 +1,5 @@
 import time
+import typing as t
 from collections import deque
 from datetime import datetime
 from pathlib import Path
@@ -74,7 +75,7 @@ class MetricCard(Static):
         value: str = " --",
         trend: str = "",
         status: str = "",
-        **kwargs,
+        **kwargs: t.Any,
     ) -> None:
         super().__init__(**kwargs)
         self.label = label
@@ -205,7 +206,7 @@ class PerformanceWidget(Static):
     }
     """
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
         self.cpu_history: deque[float] = deque(maxlen=50)
         self.memory_history: deque[float] = deque(maxlen=50)
@@ -307,7 +308,7 @@ class CrackerjackDashboard(App):
     }
     """
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
 
         self.job_collector = JobDataCollector()
@@ -463,7 +464,8 @@ class CrackerjackDashboard(App):
                     "http: / / localhost: 8675 / api / jobs"
                 ) as response:
                     if response.status == 200:
-                        return await response.json()
+                        json_result = await response.json()
+                        return t.cast(dict[str, t.Any], json_result)
                     return {}
         except Exception as e:
             self.log(f"Error fetching WebSocket jobs: {e}")
@@ -471,7 +473,7 @@ class CrackerjackDashboard(App):
 
     async def _collect_jobs_from_filesystem(self) -> dict[str, Any]:
         try:
-            jobs = {}
+            jobs: dict[str, Any] = {}
 
             import tempfile
 

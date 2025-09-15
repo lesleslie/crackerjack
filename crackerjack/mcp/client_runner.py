@@ -22,7 +22,7 @@ def is_mcp_server_running(host: str = "localhost", port: int = 5173) -> bool:
         sock.close()
 
 
-async def ensure_mcp_server_running() -> subprocess.Popen | None:
+async def ensure_mcp_server_running() -> subprocess.Popen[bytes] | None:
     console = Console()
 
     if is_mcp_server_running():

@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import typing as t
 from contextlib import suppress
 from pathlib import Path
 
@@ -26,7 +27,7 @@ from .progress_components import (
 
 
 class AgentStatusPanel(Widget):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
         self.border_title = "🤖 AI Agents"
         self.border_title_align = "left"
@@ -49,13 +50,13 @@ class AgentStatusPanel(Widget):
 
             agents_table.styles.max_height = "8"
 
-    def update_agent_data(self, agent_data: dict) -> None:
+    def update_agent_data(self, agent_data: dict[str, t.Any]) -> None:
         with suppress(Exception):
             self._update_coordinator_status(agent_data)
             self._update_agents_table(agent_data)
             self._update_stats(agent_data)
 
-    def _update_coordinator_status(self, data: dict) -> None:
+    def _update_coordinator_status(self, data: dict[str, t.Any]) -> None:
         with suppress(Exception):
             activity = data.get("agent_activity", {})
             registry = activity.get("agent_registry", {})
@@ -68,7 +69,7 @@ class AgentStatusPanel(Widget):
                 f"Coordinator: {status_emoji} {coordinator_status.title()} ({total_agents} agents)",
             )
 
-    def _update_agents_table(self, data: dict) -> None:
+    def _update_agents_table(self, data: dict[str, t.Any]) -> None:
         with suppress(Exception):
             agents_table = self.query_one("#agents-table", DataTable)
             agents_table.clear()
@@ -105,7 +106,7 @@ class AgentStatusPanel(Widget):
                     f"{processing_time: .1f}s" if processing_time > 0 else "-",
                 )
 
-    def _update_stats(self, data: dict) -> None:
+    def _update_stats(self, data: dict[str, t.Any]) -> None:
         with suppress(Exception):
             performance = data.get("agent_performance", {})
             total_issues = performance.get("total_issues_processed", 0)
@@ -152,12 +153,12 @@ class AgentStatusPanel(Widget):
 
 
 class JobPanel(Widget):
-    def __init__(self, job_data: dict, **kwargs) -> None:
+    def __init__(self, job_data: dict[str, t.Any], **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
         self.job_data = job_data
         self.completion_time = None
         self.iteration_count = job_data.get("iteration", 0)
-        self.max_iterations = job_data.get("max_iterations", 10)
+        self.max_iterations = job_data.get("max_iterations", 5)
         self.fade_timer = None
         self.remove_timer = None
         self.fade_level = 0
@@ -417,11 +418,13 @@ class CrackerjackDashboard(App):
 
     def __init__(self) -> None:
         super().__init__()
-        self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack - mcp-progress"
-        self.websocket_url = "ws: //localhost: 8675"
+        self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
+        self.websocket_url = "ws://localhost:8675"
         self.refresh_timer = None
-        self.active_jobs = {}
-        self.completed_jobs_stats = {}
+        self._refresh_counter = 0
+        self.dev = False
+        self.active_jobs: dict[str, t.Any] = {}
+        self.completed_jobs_stats: dict[str, t.Any] = {}
         self.current_polling_method = "File"
         self.timeout_manager = get_timeout_manager()
 
@@ -537,10 +540,7 @@ class CrackerjackDashboard(App):
                 timeout=10.0,
                 strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             ):
-                if hasattr(self, "_refresh_counter"):
-                    self._refresh_counter += 1
-                else:
-                    self._refresh_counter = 0
+                self._refresh_counter += 1
 
                 if self._refresh_counter % 20 == 0:
                     with suppress(Exception):
@@ -586,7 +586,7 @@ class CrackerjackDashboard(App):
                 console = Console()
                 console.print(f"[red]Dashboard refresh error: {e}[/red]")
 
-    async def _discover_jobs(self) -> dict:
+    async def _discover_jobs(self) -> dict[str, t.Any]:
         try:
             result = await self.timeout_manager.with_timeout(
                 "network_operations",
@@ -595,7 +595,8 @@ class CrackerjackDashboard(App):
                 strategy=TimeoutStrategy.FAIL_FAST,
             )
             self.current_polling_method = result["method"]
-            return result["data"]
+            data_result = result["data"]
+            return t.cast(dict[str, t.Any], data_result)
         except Exception:
             return {
                 "active": 0,
@@ -609,29 +610,31 @@ class CrackerjackDashboard(App):
                 "current_errors": 0,
             }
 
-    async def _collect_services_data(self) -> list:
+    async def _collect_services_data(self) -> list[t.Any]:
         try:
-            return await self.timeout_manager.with_timeout(
+            services_data = await self.timeout_manager.with_timeout(
                 "network_operations",
                 self.service_checker.collect_services_data(),
                 timeout=3.0,
                 strategy=TimeoutStrategy.FAIL_FAST,
             )
+            return t.cast(list[t.Any], services_data)
         except Exception:
             return [("Services", "🔴 Timeout", "0")]
 
-    async def _collect_recent_errors(self) -> list:
+    async def _collect_recent_errors(self) -> list[t.Any]:
         try:
-            return await self.timeout_manager.with_timeout(
+            errors_data = await self.timeout_manager.with_timeout(
                 "file_operations",
                 self.error_collector.collect_recent_errors(),
                 timeout=2.0,
                 strategy=TimeoutStrategy.FAIL_FAST,
             )
+            return t.cast(list[t.Any], errors_data)
         except Exception:
             return []
 
-    def _update_jobs_table(self, jobs_data: dict) -> None:
+    def _update_jobs_table(self, jobs_data: dict[str, t.Any]) -> None:
         with suppress(Exception):
             jobs_table = self.query_one("#jobs-table", DataTable)
             jobs_table.clear()
@@ -673,7 +676,7 @@ class CrackerjackDashboard(App):
                 ],
             )
 
-    def _update_services_table(self, services_data: list) -> None:
+    def _update_services_table(self, services_data: list[t.Any]) -> None:
         with suppress(Exception):
             services_table = self.query_one("#services-table", DataTable)
             services_table.clear()
@@ -697,7 +700,7 @@ class CrackerjackDashboard(App):
                 polling_status += " 🟢"
             services_table.add_row("Polling", polling_status, "")
 
-    def _update_errors_table(self, errors_data: list) -> None:
+    def _update_errors_table(self, errors_data: list[t.Any]) -> None:
         with suppress(Exception):
             errors_table = self.query_one("#errors-table", DataTable)
             errors_table.clear()
@@ -759,7 +762,7 @@ class CrackerjackDashboard(App):
                 ],
             )
 
-    def _update_agent_panel(self, jobs_data: dict) -> None:
+    def _update_agent_panel(self, jobs_data: dict[str, t.Any]) -> None:
         with suppress(Exception):
             agent_panel = self.query_one("#agent - status-panel", AgentStatusPanel)
 
@@ -772,7 +775,7 @@ class CrackerjackDashboard(App):
             if agent_data:
                 agent_panel.update_agent_data(agent_data)
 
-    def _update_job_panels(self, jobs_data: dict) -> None:
+    def _update_job_panels(self, jobs_data: dict[str, t.Any]) -> None:
         with suppress(Exception):
             container = self.query_one("#job - discovery-container")
             current_job_ids = self._get_current_job_ids(jobs_data)
@@ -781,14 +784,14 @@ class CrackerjackDashboard(App):
             self._update_or_create_panels(jobs_data, container)
             self._handle_placeholder_visibility(container)
 
-    def _get_current_job_ids(self, jobs_data: dict) -> set:
+    def _get_current_job_ids(self, jobs_data: dict[str, t.Any]) -> set[t.Any]:
         return (
             {job["job_id"] for job in jobs_data["individual_jobs"]}
             if jobs_data["individual_jobs"]
             else set()
         )
 
-    def _remove_obsolete_panels(self, current_job_ids: set) -> None:
+    def _remove_obsolete_panels(self, current_job_ids: set[t.Any]) -> None:
         jobs_to_remove = []
         for job_id, panel in self.active_jobs.items():
             panel_status = panel.job_data.get("status", "").lower()
@@ -803,7 +806,9 @@ class CrackerjackDashboard(App):
             panel = self.active_jobs.pop(job_id)
             panel.remove()
 
-    def _update_or_create_panels(self, jobs_data: dict, container) -> None:
+    def _update_or_create_panels(
+        self, jobs_data: dict[str, t.Any], container: t.Any
+    ) -> None:
         if not jobs_data["individual_jobs"]:
             return
 
@@ -814,7 +819,7 @@ class CrackerjackDashboard(App):
             else:
                 self._create_new_panel(job, container)
 
-    def _update_existing_panel(self, job: dict) -> None:
+    def _update_existing_panel(self, job: dict[str, t.Any]) -> None:
         existing_panel = self.active_jobs[job["job_id"]]
         existing_panel.job_data = job
         existing_panel.iteration_count = job.get("iteration", 0)
@@ -825,7 +830,7 @@ class CrackerjackDashboard(App):
         self._handle_job_completion(existing_panel, job)
         self._update_panel_border(existing_panel)
 
-    def _update_panel_title(self, panel, job: dict) -> None:
+    def _update_panel_title(self, panel: t.Any, job: dict[str, t.Any]) -> None:
         project_name = job.get("project", "crackerjack")
         status = job.get("status", "").lower()
 
@@ -838,25 +843,25 @@ class CrackerjackDashboard(App):
         else:
             panel.border_subtitle = ""
 
-    def _handle_job_completion(self, panel, job: dict) -> None:
+    def _handle_job_completion(self, panel: t.Any, job: dict[str, t.Any]) -> None:
         job_status = job.get("status", "").lower()
         if job_status in ("completed", "failed") and panel.completion_time is None:
             panel.completion_time = time.time()
             panel.fade_timer = panel.set_timer(300.0, panel._start_fade)
             panel.remove_timer = panel.set_timer(1200.0, panel._remove_panel)
 
-    def _update_panel_border(self, panel) -> None:
+    def _update_panel_border(self, panel: t.Any) -> None:
         new_border = panel._calculate_border_style()
         if new_border != panel.border_style:
             panel.border_style = new_border
             panel.refresh()
 
-    def _create_new_panel(self, job: dict, container) -> None:
+    def _create_new_panel(self, job: dict[str, t.Any], container: t.Any) -> None:
         job_panel = JobPanel(job)
         self.active_jobs[job["job_id"]] = job_panel
         container.mount(job_panel)
 
-    def _handle_placeholder_visibility(self, container) -> None:
+    def _handle_placeholder_visibility(self, container: t.Any) -> None:
         has_placeholder = bool(container.query("#no - jobs-label"))
 
         if not self.active_jobs and not has_placeholder:
@@ -869,7 +874,7 @@ class CrackerjackDashboard(App):
         elif self.active_jobs and has_placeholder:
             container.query("#no - jobs-label").remove()
 
-    def _update_status_bars(self, jobs_data: dict) -> None:
+    def _update_status_bars(self, jobs_data: dict[str, t.Any]) -> None:
         pass
 
     def action_refresh(self) -> None:
@@ -900,7 +905,7 @@ class CrackerjackDashboard(App):
     def _restore_terminal_fallback(self) -> None:
         self.terminal_restorer.restore_terminal()
 
-    def _signal_handler(self, _signum, _frame) -> None:
+    def _signal_handler(self, _signum: t.Any, _frame: t.Any) -> None:
         with suppress(Exception):
             self._restore_terminal()
             self._cleanup_started_services()
@@ -933,18 +938,18 @@ class JobMetrics:
         self.completion_time: float | None = None
 
         self.iteration = 0
-        self.max_iterations = 10
+        self.max_iterations = 5
         self.current_stage = "Initializing"
         self.status = "running"
         self.message = ""
 
-        self.stages_completed = set()
-        self.stages_failed = set()
+        self.stages_completed: set[str] = set()
+        self.stages_failed: set[str] = set()
 
-        self.errors = []
-        self.warnings = []
-        self.hook_failures = []
-        self.test_failures = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
+        self.hook_failures: list[str] = []
+        self.test_failures: list[str] = []
 
 
 async def run_progress_monitor(

@@ -133,16 +133,14 @@ class ConfigurationService:
 
             with config_file.open() as f:
                 yaml_result = yaml.safe_load(f)
-                config_data = (
-                    t.cast("dict[str, t.Any]", yaml_result)
-                    if isinstance(yaml_result, dict)
-                    else {}
-                )
+                config_data = yaml_result if isinstance(yaml_result, dict) else {}
             repos = config_data.get("repos", [])
             if not isinstance(repos, list):
                 repos = []
             hook_count = sum(
-                len(repo.get("hooks", [])) for repo in repos if isinstance(repo, dict)
+                len(repo.get("hooks", []))
+                for repo in t.cast(list[dict[str, t.Any]], repos)
+                if isinstance(repo, dict)
             )
             stat = config_file.stat()
 
@@ -150,7 +148,13 @@ class ConfigurationService:
                 "exists": True,
                 "file_size": stat.st_size,
                 "modified_time": stat.st_mtime,
-                "repo_count": len([r for r in repos if isinstance(r, dict)]),
+                "repo_count": len(
+                    [
+                        r
+                        for r in t.cast(list[dict[str, t.Any]], repos)
+                        if isinstance(r, dict)
+                    ]
+                ),
                 "hook_count": hook_count,
                 "repos": [
                     {
@@ -158,7 +162,7 @@ class ConfigurationService:
                         "rev": repo.get("rev", "unknown"),
                         "hooks": len(repo.get("hooks", [])),
                     }
-                    for repo in repos
+                    for repo in t.cast(list[dict[str, t.Any]], repos)
                     if isinstance(repo, dict)
                 ],
             }

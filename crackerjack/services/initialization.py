@@ -36,7 +36,8 @@ class InitializationService:
     def initialize_project(self, project_path: str | Path) -> bool:
         try:
             result = self.initialize_project_full(Path(project_path))
-            return result.get("success", False)
+            success = result.get("success", False)
+            return bool(success)
         except Exception:
             return False
 
@@ -688,7 +689,10 @@ python -m crackerjack - a patch
 
     def _load_source_config(self, source_file: Path) -> dict[str, t.Any] | None:
         with source_file.open() as f:
-            source_config = yaml.safe_load(f) or {}
+            loaded_config = yaml.safe_load(f)
+            source_config: dict[str, t.Any] = (
+                loaded_config if isinstance(loaded_config, dict) else {}
+            )
 
         if not isinstance(source_config, dict):
             self.console.print(
@@ -715,7 +719,10 @@ python -m crackerjack - a patch
             return False
 
         with target_file.open() as f:
-            old_config = yaml.safe_load(f) or {}
+            loaded_config = yaml.safe_load(f)
+            old_config: dict[str, t.Any] = (
+                loaded_config if isinstance(loaded_config, dict) else {}
+            )
 
         if not isinstance(old_config, dict):
             old_config = {}

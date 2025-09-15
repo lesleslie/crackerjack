@@ -18,6 +18,7 @@ class HookConfig:
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
+    enable_lsp_optimization: bool = False
 
 
 @dataclass
@@ -47,7 +48,7 @@ class GitConfig:
 class AIConfig:
     ai_agent: bool = False
     start_mcp_server: bool = False
-    max_iterations: int = 10
+    max_iterations: int = 5
     autofix: bool = True
     ai_agent_autofix: bool = False
 
@@ -88,6 +89,15 @@ class MCPServerConfig:
 
 
 @dataclass
+class ZubanLSPConfig:
+    enabled: bool = True
+    auto_start: bool = True
+    port: int = 8677
+    mode: str = "stdio"
+    timeout: int = 30
+
+
+@dataclass
 class WorkflowOptions:
     cleaning: CleaningConfig = field(default_factory=CleaningConfig)
     hooks: HookConfig = field(default_factory=HookConfig)
@@ -100,3 +110,4 @@ class WorkflowOptions:
     cleanup: CleanupConfig = field(default_factory=CleanupConfig)
     enterprise: EnterpriseConfig = field(default_factory=EnterpriseConfig)
     mcp_server: MCPServerConfig = field(default_factory=MCPServerConfig)
+    zuban_lsp: ZubanLSPConfig = field(default_factory=ZubanLSPConfig)

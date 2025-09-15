@@ -67,7 +67,8 @@ class PublishManagerImpl:
 
             content = self.filesystem.read_file(pyproject_path)
             data = loads(content)
-            return data.get("project", {}).get("version")
+            version = data.get("project", {}).get("version")
+            return version if isinstance(version, str) else None
         except Exception as e:
             self.console.print(f"[yellow]⚠️[/ yellow] Error reading version: {e}")
             return None
@@ -230,7 +231,7 @@ class PublishManagerImpl:
             " 1. Set environment variable: export UV_PUBLISH_TOKEN=<your-pypi-token>",
         )
         self.console.print(
-            " 2. Use keyring: keyring set https: //upload.pypi.org/legacy/ __token__",
+            " 2. Use keyring: keyring set[t.Any] https: //upload.pypi.org/legacy/ __token__",
         )
         self.console.print(
             " 3. Ensure token starts with 'pypi-' and is properly formatted",
@@ -288,7 +289,7 @@ class PublishManagerImpl:
         if not dist_dir.exists():
             return
 
-        artifacts = list(dist_dir.glob("*"))
+        artifacts = list[t.Any](dist_dir.glob("*"))
         self.console.print(f"[cyan]📦[/ cyan] Build artifacts ({len(artifacts)}): ")
 
         for artifact in artifacts[-5:]:
@@ -360,7 +361,8 @@ class PublishManagerImpl:
 
             content = self.filesystem.read_file(pyproject_path)
             data = loads(content)
-            return data.get("project", {}).get("name", "")
+            name = data.get("project", {}).get("name", "")
+            return name if isinstance(name, str) else None
 
         return None
 

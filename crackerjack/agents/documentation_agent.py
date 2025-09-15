@@ -94,7 +94,9 @@ class DocumentationAgent(SubAgent):
     async def _fix_documentation_consistency(self, issue: Issue) -> FixResult:
         self.log("Checking documentation consistency")
 
-        md_files = list(Path().glob("*.md")) + list(Path("docs").glob("*.md"))
+        md_files = list[t.Any](Path().glob("*.md")) + list[t.Any](
+            Path("docs").glob("*.md")
+        )
 
         agent_count_issues = self._check_agent_count_consistency(md_files)
 

@@ -16,9 +16,15 @@ repos:
         stages: ["pre-push", "manual"]
       - id: zuban
         name: zuban-type-checking
-        entry: zuban
+        entry: uv run zuban check
         language: system
-        args: ["check"]
+        args: ["--config-file", "mypy.ini", "./crackerjack"]
+        pass_filenames: false
+        stages: ["pre-push", "manual"]
+      - id: pyright
+        name: pyright-type-checking
+        entry: uv run pyright
+        language: system
         files: ^crackerjack/.*\.py$
         exclude: ^crackerjack/(mcp|plugins)/.*\.py$|crackerjack/code_cleaner\.py$
         stages: ["pre-push", "manual"]

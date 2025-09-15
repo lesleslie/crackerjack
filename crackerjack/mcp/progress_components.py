@@ -109,7 +109,7 @@ class JobDataCollector:
         status = data.get("status", "unknown")
         stage = data.get("current_stage", "Unknown")
         iteration = data.get("iteration", 0)
-        max_iterations = data.get("max_iterations", 10)
+        max_iterations = data.get("max_iterations", 5)
 
         status_emoji = {
             "running": "🚀 Running",
@@ -302,7 +302,7 @@ class ErrorCollector:
         self.console = Console()
 
     async def collect_recent_errors(self) -> list[tuple[str, str, str, str]]:
-        errors = []
+        errors: list[tuple[str, str, str, str]] = []
 
         errors.extend(self._check_debug_logs())
 
@@ -322,7 +322,7 @@ class ErrorCollector:
         return errors[-5:]
 
     def _check_debug_logs(self) -> list[tuple[str, str, str, str]]:
-        errors = []
+        errors: list[tuple[str, str, str, str]] = []
 
         with suppress(Exception):
             debug_log = Path(tempfile.gettempdir()) / "tui_debug.log"
@@ -335,7 +335,7 @@ class ErrorCollector:
         self,
         debug_log: Path,
     ) -> list[tuple[str, str, str, str]]:
-        errors = []
+        errors: list[tuple[str, str, str, str]] = []
 
         with debug_log.open() as f:
             lines = f.readlines()[-10:]
@@ -364,7 +364,7 @@ class ErrorCollector:
         return message[:40] + "..." if len(message) > 40 else message
 
     def _check_crackerjack_logs(self) -> list[tuple[str, str, str, str]]:
-        errors = []
+        errors: list[tuple[str, str, str, str]] = []
 
         with suppress(Exception):
             for log_file in Path(tempfile.gettempdir()).glob(
@@ -382,7 +382,7 @@ class ErrorCollector:
         self,
         log_file: Path,
     ) -> list[tuple[str, str, str, str]]:
-        errors = []
+        errors: list[tuple[str, str, str, str]] = []
 
         with log_file.open() as f:
             lines = f.readlines()[-5:]
@@ -417,7 +417,7 @@ class ErrorCollector:
 
 class ServiceManager:
     def __init__(self) -> None:
-        self.started_services: list[tuple[str, subprocess.Popen]] = []
+        self.started_services: list[tuple[str, subprocess.Popen[bytes]]] = []
         self.console = Console()
 
     async def ensure_services_running(self) -> None:
@@ -469,6 +469,14 @@ class ServiceManager:
             return result.returncode == 0
         return False
 
+    def collect_services_data(self) -> list[tuple[str, str, str]]:
+        """Check all services and return their status information."""
+        mcp_status = "running" if self._check_mcp_server() else "stopped"
+        return [
+            ("mcp_server", mcp_status, "localhost:8675"),
+            ("websocket_server", "unknown", "localhost:8676"),
+        ]
+
     async def _start_websocket_server(self) -> None:
         with suppress(Exception):
             process = subprocess.Popen(
@@ -516,7 +524,7 @@ class ServiceManager:
             self._cleanup_single_service(process)
         self.started_services.clear()
 
-    def _cleanup_single_service(self, process: subprocess.Popen) -> None:
+    def _cleanup_single_service(self, process: subprocess.Popen[bytes]) -> None:
         with suppress(Exception):
             if process.poll() is not None:
                 return

@@ -310,7 +310,7 @@ class CrackerjackCache:
         tool_version: str | None = None,
     ) -> None:
         """Set hook result in both memory and disk cache for expensive hooks."""
-        # Always set in memory for current session
+        # Always set[t.Any] in memory for current session
         self.set_hook_result(hook_name, file_hashes, result)
 
         # Also persist to disk for expensive hooks

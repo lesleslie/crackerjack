@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TaskInfo:
     task_id: str
-    task: asyncio.Task
+    task: asyncio.Task[t.Any]
     created_at: float
     description: str = ""
     timeout_seconds: float | None = None
@@ -25,7 +25,7 @@ class AsyncTaskManager:
         self.max_concurrent_tasks = max_concurrent_tasks
         self._tasks: dict[str, TaskInfo] = {}
         self._task_semaphore = asyncio.Semaphore(max_concurrent_tasks)
-        self._cleanup_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task[t.Any] | None = None
         self._running = False
         self._lock = asyncio.Lock()
 
@@ -61,11 +61,11 @@ class AsyncTaskManager:
 
     async def create_task(
         self,
-        coro: t.Coroutine,
+        coro: t.Coroutine[t.Any, t.Any, t.Any],
         task_id: str,
         description: str = "",
         timeout_seconds: float | None = None,
-    ) -> asyncio.Task:
+    ) -> asyncio.Task[t.Any]:
         async with self._lock:
             if task_id in self._tasks:
                 msg = f"Task {task_id} already exists"
@@ -100,7 +100,9 @@ class AsyncTaskManager:
             console.print(f"[blue]🚀 Task {task_id} created: {description}[ / blue]")
         return task
 
-    async def _wrap_task(self, coro: t.Coroutine, task_id: str) -> t.Any:
+    async def _wrap_task(
+        self, coro: t.Coroutine[t.Any, t.Any, t.Any], task_id: str
+    ) -> t.Any:
         try:
             async with self._task_semaphore:
                 result = await coro
@@ -185,11 +187,11 @@ class AsyncTaskManager:
     @asynccontextmanager
     async def managed_task(
         self,
-        coro: t.Coroutine,
+        coro: t.Coroutine[t.Any, t.Any, t.Any],
         task_id: str,
         description: str = "",
         timeout_seconds: float | None = None,
-    ):
+    ) -> t.AsyncGenerator[asyncio.Task[t.Any]]:
         task = await self.create_task(coro, task_id, description, timeout_seconds)
         try:
             yield task
@@ -201,7 +203,7 @@ class AsyncTaskManager:
 
     async def _cancel_all_tasks(self) -> None:
         async with self._lock:
-            tasks_to_cancel = list(self._tasks.values())
+            tasks_to_cancel = list[t.Any](self._tasks.values())
 
         if not tasks_to_cancel:
             return
@@ -240,7 +242,7 @@ class AsyncTaskManager:
     async def _cleanup_completed_tasks(self) -> None:
         async with self._lock:
             completed_tasks = []
-            for task_id, task_info in list(self._tasks.items()):
+            for task_id, task_info in list[t.Any](self._tasks.items()):
                 if task_info.task.done():
                     completed_tasks.append(task_id)
                     del self._tasks[task_id]

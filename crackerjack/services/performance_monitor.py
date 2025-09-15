@@ -18,7 +18,7 @@ class PerformanceMetric:
     value: float
     unit: str
     timestamp: datetime = field(default_factory=datetime.now)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict[str, t.Any])
 
 
 @dataclass
@@ -137,7 +137,7 @@ class PerformanceMonitor:
             maxlen=history_size
         )
         self._benchmarks: dict[str, deque[float]] = defaultdict(
-            lambda: deque(maxlen=history_size)
+            lambda: deque(maxlen=history_size)  # type: ignore[arg-type]
         )
 
     def _initialize_services(self) -> None:
@@ -313,7 +313,9 @@ class PerformanceMonitor:
 
     def get_performance_summary(self, last_n_workflows: int = 10) -> dict[str, Any]:
         with self._lock:
-            recent_workflows = list(self._completed_workflows)[-last_n_workflows:]
+            recent_workflows = list[t.Any](self._completed_workflows)[
+                -last_n_workflows:
+            ]
 
             if not recent_workflows:
                 return {"message": "No completed workflows to analyze"}
@@ -398,7 +400,7 @@ class PerformanceMonitor:
                 if len(history) < 2:
                     continue
 
-                history_list = list(history)
+                history_list = list[t.Any](history)
                 basic_stats = self._calculate_benchmark_basic_stats(history_list)
                 trend_percentage = self._calculate_trend_percentage(history_list)
 
@@ -464,7 +466,8 @@ class PerformanceMonitor:
                     for w in self._completed_workflows
                 ],
                 "benchmarks": {
-                    name: list(history) for name, history in self._benchmarks.items()
+                    name: list[t.Any](history)
+                    for name, history in self._benchmarks.items()
                 },
                 "summary": self.get_performance_summary(),
                 "trends": self.get_benchmark_trends(),
@@ -539,7 +542,7 @@ class phase_monitor:
         self.phase_name = phase_name
         self.monitor = get_performance_monitor()
 
-    def __enter__(self):
+    def __enter__(self) -> "phase_monitor":
         self.monitor.start_phase(self.workflow_id, self.phase_name)
         return self
 
@@ -552,11 +555,11 @@ class phase_monitor:
         success = exc_type is None
         self.monitor.end_phase(self.workflow_id, self.phase_name, success)
 
-    def record_parallel_op(self):
+    def record_parallel_op(self) -> None:
         self.monitor.record_parallel_operation(self.workflow_id, self.phase_name)
 
-    def record_sequential_op(self):
+    def record_sequential_op(self) -> None:
         self.monitor.record_sequential_operation(self.workflow_id, self.phase_name)
 
-    def record_metric(self, name: str, value: float, unit: str = ""):
+    def record_metric(self, name: str, value: float, unit: str = "") -> None:
         self.monitor.record_metric(self.workflow_id, self.phase_name, name, value, unit)

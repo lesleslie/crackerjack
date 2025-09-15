@@ -27,13 +27,22 @@ class TestManager:
         if coverage_ratchet is None:
             from crackerjack.services.coverage_ratchet import CoverageRatchetService
 
-            coverage_ratchet = CoverageRatchetService(pkg_path, console)
-
-        self.coverage_ratchet = coverage_ratchet
+            coverage_ratchet_obj = CoverageRatchetService(pkg_path, console)
+            self.coverage_ratchet: CoverageRatchetProtocol | None = t.cast(
+                CoverageRatchetProtocol, coverage_ratchet_obj
+            )
+        else:
+            self.coverage_ratchet = coverage_ratchet
 
         self._last_test_failures: list[str] = []
         self._progress_callback: t.Callable[[dict[str, t.Any]], None] | None = None
         self.coverage_ratchet_enabled = True
+        self.use_lsp_diagnostics = True
+
+        # Initialize coverage badge service
+        from crackerjack.services.coverage_badge_service import CoverageBadgeService
+
+        self._coverage_badge_service = CoverageBadgeService(console, pkg_path)
 
     def set_progress_callback(
         self,
@@ -155,11 +164,11 @@ class TestManager:
             test_path = self.pkg_path / test_dir
             if test_path.exists() and test_path.is_dir():
                 for test_file_pattern in test_files:
-                    if list(test_path.glob(f"**/{test_file_pattern}")):
+                    if list[t.Any](test_path.glob(f"**/{test_file_pattern}")):
                         return True
 
         for test_file_pattern in test_files:
-            if list(self.pkg_path.glob(test_file_pattern)):
+            if list[t.Any](self.pkg_path.glob(test_file_pattern)):
                 return True
 
         return False
@@ -211,7 +220,43 @@ class TestManager:
             return True
 
         ratchet_result = self.coverage_ratchet.check_and_update_coverage()
+
+        # Update coverage badge if coverage information is available
+        self._update_coverage_badge(ratchet_result)
+
         return self._handle_ratchet_result(ratchet_result)
+
+    def _update_coverage_badge(self, ratchet_result: dict[str, t.Any]) -> None:
+        """Update coverage badge in README.md if coverage changed."""
+        try:
+            # Get current coverage directly from coverage.json to ensure freshest data
+            import json
+
+            current_coverage = None
+            coverage_json_path = self.pkg_path / "coverage.json"
+
+            if coverage_json_path.exists():
+                with coverage_json_path.open() as f:
+                    data = json.load(f)
+                    current_coverage = data.get("totals", {}).get("percent_covered")
+
+            # Fallback to ratchet result if coverage.json not available
+            if current_coverage is None:
+                current_coverage = ratchet_result.get("current_coverage")
+
+            # Final fallback to coverage service
+            if current_coverage is None:
+                coverage_info = self.get_coverage()
+                current_coverage = coverage_info.get("coverage_percent")
+
+            if current_coverage is not None:
+                if self._coverage_badge_service.should_update_badge(current_coverage):
+                    self._coverage_badge_service.update_readme_coverage_badge(
+                        current_coverage
+                    )
+        except Exception as e:
+            # Don't fail the test process if badge update fails
+            self.console.print(f"[yellow]⚠️[/yellow] Badge update failed: {e}")
 
     def _handle_ratchet_result(self, ratchet_result: dict[str, t.Any]) -> bool:
         if ratchet_result.get("success", False):
@@ -253,6 +298,53 @@ class TestManager:
 
     def _get_timeout(self, options: OptionsProtocol) -> int:
         return self.command_builder.get_test_timeout(options)
+
+    async def run_pre_test_lsp_diagnostics(self) -> bool:
+        """Run LSP diagnostics before tests to catch type errors early."""
+        if not self.use_lsp_diagnostics:
+            return True
+
+        try:
+            from crackerjack.services.lsp_client import LSPClient
+
+            lsp_client = LSPClient(self.console)
+
+            # Check if LSP server is available
+            if not lsp_client.is_server_running():
+                return True  # No LSP server, skip diagnostics
+
+            # Run type diagnostics on the project
+            diagnostics, summary = lsp_client.check_project_with_feedback(
+                self.pkg_path,
+                show_progress=False,  # Keep quiet for test integration
+            )
+
+            # Check if there are type errors
+            has_errors = any(diags for diags in diagnostics.values())
+
+            if has_errors:
+                self.console.print(
+                    "[yellow]⚠️ LSP detected type errors before running tests[/yellow]"
+                )
+                # Format and show a summary
+                error_count = sum(len(diags) for diags in diagnostics.values())
+                self.console.print(f"[yellow]Found {error_count} type issues[/yellow]")
+
+            return not has_errors  # Return False if there are type errors
+
+        except Exception as e:
+            # If LSP diagnostics fail, don't block tests
+            self.console.print(f"[dim]LSP diagnostics failed: {e}[/dim]")
+            return True
+
+    def configure_lsp_diagnostics(self, enable: bool) -> None:
+        """Enable or disable LSP diagnostics integration."""
+        self.use_lsp_diagnostics = enable
+
+        if enable:
+            self.console.print(
+                "[cyan]🔍 LSP diagnostics enabled for faster test feedback[/cyan]"
+            )
 
 
 TestManagementImpl = TestManager

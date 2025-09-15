@@ -1,5 +1,6 @@
 import asyncio
 import time
+import typing as t
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
@@ -29,7 +30,7 @@ class MetricCard(Widget):
         value: str = " --",
         trend: str = "",
         color: str = "white",
-        **kwargs,
+        **kwargs: t.Any,
     ) -> None:
         super().__init__(**kwargs)
         self.label = label
@@ -43,7 +44,7 @@ class MetricCard(Widget):
 
 
 class AgentActivityWidget(Widget):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
         self.border_title = "🤖 AI Agent Activity"
         self.border_title_align = "left"
@@ -93,7 +94,7 @@ class AgentActivityWidget(Widget):
         table.zebra_stripes = True
         table.styles.max_height = 6
 
-    def update_metrics(self, data: dict) -> None:
+    def update_metrics(self, data: dict[str, t.Any]) -> None:
         with suppress(Exception):
             activity = data.get("agent_activity", {})
             activity.get("agent_registry", {})
@@ -123,7 +124,7 @@ class AgentActivityWidget(Widget):
 
             self._update_agent_table(active_agents)
 
-    def _update_coordinator_status(self, activity: dict) -> None:
+    def _update_coordinator_status(self, activity: dict[str, t.Any]) -> None:
         status = activity.get("coordinator_status", "idle")
         total_agents = activity.get("agent_registry", {}).get("total_agents", 0)
 
@@ -135,7 +136,7 @@ class AgentActivityWidget(Widget):
             f"{icon} Coordinator: {status.title()} ({total_agents} agents available)",
         )
 
-    def _update_agent_table(self, agents: list) -> None:
+    def _update_agent_table(self, agents: list[t.Any]) -> None:
         table = self.query_one("#agents-detail-table", DataTable)
         table.clear()
 
@@ -176,7 +177,7 @@ class AgentActivityWidget(Widget):
 
 
 class JobProgressPanel(Widget):
-    def __init__(self, job_data: dict, **kwargs) -> None:
+    def __init__(self, job_data: dict[str, t.Any], **kwargs) -> None:
         super().__init__(**kwargs)
         self.job_data = job_data
         self.start_time = time.time()
@@ -198,10 +199,12 @@ class JobProgressPanel(Widget):
 
         with Horizontal():
             with Vertical(id="job-progress-section"):
-                yield self._compose_progress_section()
+                for widget in self._compose_progress_section():
+                    yield widget
 
             with Vertical(id="job-metrics-section"):
-                yield self._compose_metrics_section()
+                for widget in self._compose_metrics_section():
+                    yield widget
 
     def _compose_progress_section(self) -> ComposeResult:
         iteration = self.job_data.get("iteration", 1)
@@ -279,7 +282,7 @@ class ServiceHealthPanel(Widget):
         )
         table.zebra_stripes = True
 
-    def update_services(self, services: list[dict]) -> None:
+    def update_services(self, services: list[dict[str, t.Any]]) -> None:
         table = self.query_one("#services-table", DataTable)
         table.clear()
 
@@ -367,7 +370,7 @@ class EnhancedCrackerjackDashboard(App):
             jobs_result = await self.data_collector.discover_jobs()
             jobs_data = jobs_result.get("data", {})
 
-            services = self.service_manager.check_all_services()
+            services = self.service_manager.collect_services_data()
             self.query_one("#service-panel", ServiceHealthPanel).update_services(
                 services,
             )
@@ -385,8 +388,8 @@ class EnhancedCrackerjackDashboard(App):
         except Exception as e:
             self.console.print(f"[red]Dashboard update error: {e}[/]")
 
-    def _aggregate_agent_data(self, jobs: list[dict]) -> dict:
-        aggregated = {
+    def _aggregate_agent_data(self, jobs: list[dict[str, t.Any]]) -> dict[str, t.Any]:
+        aggregated: dict[str, dict[str, t.Any]] = {
             "agent_activity": {
                 "active_agents": [],
                 "coordinator_status": "idle",
@@ -418,7 +421,7 @@ class EnhancedCrackerjackDashboard(App):
 
         return aggregated
 
-    def _update_job_panels(self, jobs: list[dict]) -> None:
+    def _update_job_panels(self, jobs: list[dict[str, t.Any]]) -> None:
         container = self.query_one("#jobs-container", Container)
 
         with suppress(Exception):

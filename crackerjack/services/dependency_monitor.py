@@ -71,7 +71,7 @@ class DependencyMonitorService:
             with self.pyproject_path.open("rb") as f:
                 data = tomllib.load(f)
 
-            dependencies = {}
+            dependencies: dict[str, str] = {}
             project_data = data.get("project", {})
 
             self._extract_main_dependencies(project_data, dependencies)
@@ -357,7 +357,8 @@ class DependencyMonitorService:
 
         cached_data = cache[cache_key]
         cache_age = current_time - cached_data["timestamp"]
-        return cache_age < 86400
+        is_fresh: bool = cache_age < 86400
+        return is_fresh
 
     def _create_major_update_from_cache(
         self,
@@ -462,7 +463,7 @@ class DependencyMonitorService:
 
         response = requests.get(url, timeout=10, verify=True)
         response.raise_for_status()
-        return response.json()
+        return t.cast(dict[str, t.Any], response.json())
 
     def _validate_pypi_url(self, url: str) -> None:
         from urllib.parse import urlparse
@@ -501,7 +502,8 @@ class DependencyMonitorService:
     def _get_release_date(self, releases: dict[str, t.Any], version: str) -> str:
         release_info = releases.get(version, [])
         if release_info:
-            return release_info[0].get("upload_time", "")
+            upload_time: str = release_info[0].get("upload_time", "")
+            return upload_time
         return ""
 
     def _has_breaking_changes(self, version: str) -> bool:
@@ -535,7 +537,7 @@ class DependencyMonitorService:
         with suppress(Exception):
             if self.cache_file.exists():
                 with self.cache_file.open() as f:
-                    return json.load(f)
+                    return t.cast(dict[str, t.Any], json.load(f))
         return {}
 
     def _save_update_cache(self, cache: dict[str, t.Any]) -> None:

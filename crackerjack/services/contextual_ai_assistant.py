@@ -2,6 +2,7 @@ import json
 import subprocess
 import time
 import tomllib
+import typing as t
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -127,7 +128,7 @@ class ContextualAIAssistant:
                     category="testing",
                     priority="medium",
                     title="Progress Toward 100 % Coverage",
-                    description=f"Current coverage: {context.test_coverage: .1f}%. Next milestone: {next_milestone}% on the journey to 100 %.",
+                    description=f"Current coverage: {context.test_coverage:.1f}%. Next milestone: {next_milestone}% on the journey to 100%.",
                     action_command="python -m crackerjack -t",
                     reasoning="Coverage ratchet system prevents regression and targets 100 % coverage incrementally",
                     confidence=0.85,
@@ -297,7 +298,7 @@ class ContextualAIAssistant:
 
     def _determine_project_size(self) -> str:
         try:
-            python_files = list(self.project_root.rglob("*.py"))
+            python_files = list[t.Any](self.project_root.rglob("*.py"))
             if len(python_files) < 10:
                 return "small"
             if len(python_files) < 50:
@@ -481,7 +482,7 @@ class ContextualAIAssistant:
                 10 - int(rec.confidence * 10)
             )
             self.console.print(
-                f" [dim]Confidence: [{confidence_bar}] {rec.confidence: .1 %}[/ dim]",
+                f" [dim]Confidence: [{confidence_bar}] {rec.confidence:.1%}[/ dim]",
             )
 
             if i < len(recommendations):

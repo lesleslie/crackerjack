@@ -46,7 +46,8 @@ class CrackerjackConfig(BaseModel):
     def validate_package_path(cls, v: Any) -> Path:
         if isinstance(v, str):
             v = Path(v)
-        return v.resolve()
+        resolved_path: Path = v.resolve()
+        return resolved_path
 
     @field_validator("log_file", mode="before")
     @classmethod
@@ -54,8 +55,10 @@ class CrackerjackConfig(BaseModel):
         if v is None:
             return v
         if isinstance(v, str):
-            v = Path(v)
-        return v
+            path_v: Path = Path(v)
+            return path_v
+        validated_v: Path = t.cast(Path, v)
+        return validated_v
 
     @field_validator("test_workers")
     @classmethod
@@ -183,9 +186,13 @@ class PyprojectConfigSource(ConfigSource):
             with self.pyproject_path.open("rb") as f:
                 pyproject_data = tomllib.load(f)
 
-            config = pyproject_data.get("tool", {}).get("crackerjack", {})
+            config: dict[str, t.Any] = pyproject_data.get("tool", {}).get(
+                "crackerjack", {}
+            )
 
-            self.logger.debug("Loaded pyproject config", keys=list(config.keys()))
+            self.logger.debug(
+                "Loaded pyproject config", keys=list[t.Any](config.keys())
+            )
             return config
 
         except ImportError:
@@ -194,9 +201,13 @@ class PyprojectConfigSource(ConfigSource):
 
                 with self.pyproject_path.open("rb") as f:
                     pyproject_data = tomllib.load(f)
-                config = pyproject_data.get("tool", {}).get("crackerjack", {})
-                self.logger.debug("Loaded pyproject config", keys=list(config.keys()))
-                return config
+                config_data: dict[str, t.Any] = pyproject_data.get("tool", {}).get(
+                    "crackerjack", {}
+                )
+                self.logger.debug(
+                    "Loaded pyproject config", keys=list[t.Any](config_data.keys())
+                )
+                return config_data
             except ImportError:
                 self.logger.warning(
                     "No TOML library available for pyproject.toml parsing",
@@ -233,7 +244,7 @@ class OptionsConfigSource(ConfigSource):
                 if value is not None:
                     config[config_key] = value
 
-        self.logger.debug("Loaded options config", keys=list(config.keys()))
+        self.logger.debug("Loaded options config", keys=list[t.Any](config.keys()))
         return config
 
 
@@ -301,7 +312,7 @@ class UnifiedConfigurationService:
                             "Merged config from source",
                             source_type=type(source).__name__,
                             priority=source.priority,
-                            keys=list(source_config.keys()),
+                            keys=list[t.Any](source_config.keys()),
                         )
                 except Exception as e:
                     self.logger.exception(

@@ -1,4 +1,5 @@
 import asyncio
+import typing as t
 from contextlib import suppress
 from pathlib import Path
 
@@ -66,7 +67,7 @@ class WebSocketHandler:
                 f"[red]Failed to send initial progress for {job_id}: {e}[/red]"
             )
 
-    def _create_initial_progress_message(self, job_id: str) -> dict:
+    def _create_initial_progress_message(self, job_id: str) -> dict[str, t.Any]:
         return {
             "job_id": job_id,
             "status": "waiting",

@@ -25,7 +25,8 @@ def _get_cached_patterns(context: t.Any, use_cache: bool) -> list[t.Any]:
     with suppress(Exception):
         cache = getattr(context, "cache", None)
         if cache and hasattr(cache, "get_error_patterns"):
-            return cache.get_error_patterns()
+            patterns: list[t.Any] = cache.get_error_patterns()
+            return patterns
 
     return []
 
@@ -70,7 +71,7 @@ def _build_error_analysis(patterns: list[t.Any], context: t.Any) -> dict[str, t.
 
 
 def _categorize_error_patterns(patterns: list[t.Any]) -> dict[str, list[t.Any]]:
-    categories = {
+    categories: dict[str, list[t.Any]] = {
         "syntax_errors": [],
         "import_errors": [],
         "type_errors": [],

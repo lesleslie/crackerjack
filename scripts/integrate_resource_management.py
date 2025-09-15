@@ -394,7 +394,7 @@ def main():
         "**/managers/**/*.py",
     ]
 
-    priority_files = []
+    priority_files: list[Path] = []
     for pattern in priority_patterns:
         priority_files.extend(CRACKERJACK_DIR.glob(pattern))
 

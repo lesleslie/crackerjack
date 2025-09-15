@@ -3,11 +3,11 @@
 import asyncio
 import logging
 import time
+import typing as t
 from collections import deque
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
 
 from rich.console import Console
 
@@ -27,7 +27,7 @@ class SystemMetrics:
     active_processes: int = 0
     uptime_seconds: float = 0.0
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, t.Any]:
         return asdict(self)
 
 
@@ -44,7 +44,7 @@ class QualityMetrics:
     security_issues: int = 0
     performance_issues: int = 0
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, t.Any]:
         return asdict(self)
 
 
@@ -60,7 +60,7 @@ class WorkflowMetrics:
     queue_depth: int = 0
     throughput_per_hour: float = 0.0
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, t.Any]:
         return asdict(self)
 
 
@@ -72,10 +72,10 @@ class AgentMetrics:
     total_fixes_applied: int = 0
     cache_hit_rate: float = 0.0
     average_response_time: float = 0.0
-    agent_effectiveness: dict[str, float] = field(default_factory=dict)
-    issue_type_distribution: dict[str, int] = field(default_factory=dict)
+    agent_effectiveness: dict[str, float] = field(default_factory=dict[str, t.Any])
+    issue_type_distribution: dict[str, int] = field(default_factory=dict[str, t.Any])
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, t.Any]:
         return asdict(self)
 
 
@@ -89,7 +89,7 @@ class UnifiedDashboardMetrics:
     workflow: WorkflowMetrics = field(default_factory=WorkflowMetrics)
     agents: AgentMetrics = field(default_factory=AgentMetrics)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, t.Any]:
         return {
             "timestamp": self.timestamp.isoformat(),
             "system": self.system.to_dict(),
@@ -132,7 +132,7 @@ class MetricsCollector:
         self.job_durations: list[float] = []
 
         # Collection tasks
-        self.collection_task: asyncio.Task | None = None
+        self.collection_task: asyncio.Task[t.Any] | None = None
         self.listeners: list[Callable[[UnifiedDashboardMetrics], None]] = []
 
     async def start_collection(self) -> None:
@@ -294,9 +294,9 @@ class MetricsCollector:
 
             # Calculate agent effectiveness
             effectiveness = {}
-            issue_distribution = {}
+            issue_distribution: dict[str, int] = {}
             total_fixes = 0
-            total_response_time = 0
+            total_response_time = 0.0
 
             for agent_name, metrics in self.agent_metrics.items():
                 if metrics.total_issues_handled > 0:
@@ -386,7 +386,7 @@ class MetricsCollector:
         cutoff = datetime.now() - timedelta(hours=hours)
         return [m for m in self.metrics_history if m.timestamp > cutoff]
 
-    def get_metrics_summary(self) -> dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, t.Any]:
         """Get a summary of current metrics for display."""
         metrics = self.current_metrics
 

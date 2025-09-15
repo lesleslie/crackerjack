@@ -33,7 +33,8 @@ class FileCache:
 
         self._access_times[key] = now
         self.logger.debug("Cache hit", key=key)
-        return cache_entry["content"]
+        content: str | None = cache_entry["content"]
+        return content
 
     def put(self, key: str, content: str, ttl: float | None = None) -> None:
         if len(self._cache) >= self.max_size:
@@ -93,7 +94,7 @@ class BatchFileOperations:
         return await future
 
     async def queue_write(self, path: Path, content: str) -> None:
-        future: asyncio.Future[None] = asyncio.Future()
+        future: asyncio.Future[None] = asyncio.Future[None]()
         self.write_queue.append((path, content, future))
 
         if len(self.write_queue) >= self.batch_size:
@@ -259,7 +260,7 @@ class EnhancedFileSystemService(FileSystemInterface):
                         error=str(result),
                     )
                     results[path] = ""
-                else:
+                elif isinstance(result, str):  # Explicit check for mypy
                     results[path] = result
 
             return results
@@ -403,7 +404,7 @@ class EnhancedFileSystemService(FileSystemInterface):
         if not path_obj.is_dir():
             raise FileError(
                 message=f"Path is not a directory: {path_obj}",
-                details=f"Cannot list files in {path_obj}",
+                details=f"Cannot list[t.Any] files in {path_obj}",
                 recovery="Ensure path points to a valid directory",
             )
 
@@ -411,7 +412,7 @@ class EnhancedFileSystemService(FileSystemInterface):
             yield from path_obj.glob(pattern)
         except OSError as e:
             raise FileError(
-                message=f"Cannot list files in directory: {path_obj}",
+                message=f"Cannot list[t.Any] files in directory: {path_obj}",
                 details=str(e),
                 recovery="Check directory permissions",
             ) from e

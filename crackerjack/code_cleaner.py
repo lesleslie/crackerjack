@@ -39,7 +39,14 @@ class SafePatternApplicator:
             return True
 
         line_lower = line.lower()
-        preserved_keywords = ["coding: ", "encoding: ", "type: ", "noqa", "pragma"]
+        preserved_keywords = [
+            "coding: ",
+            "encoding: ",
+            "type: ",
+            "noqa",
+            "pragma",
+            "regex ok",
+        ]
         return any(keyword in line_lower for keyword in preserved_keywords)
 
 
@@ -414,7 +421,8 @@ class CodeCleaner(BaseModel):
             self._create_formatting_step(),
         ]
 
-        return self.pipeline.clean_file(file_path, cleaning_steps)
+        result = self.pipeline.clean_file(file_path, cleaning_steps)
+        return t.cast(CleaningResult, result)
 
     def clean_files(
         self, pkg_dir: Path | None = None, use_backup: bool = True
@@ -501,9 +509,10 @@ class CodeCleaner(BaseModel):
             "[yellow]📦 Creating backup of all package files...[/yellow]"
         )
 
-        backup_metadata = self.backup_service.create_package_backup(
+        backup_result = self.backup_service.create_package_backup(
             validated_pkg_dir, self.base_directory
         )
+        backup_metadata: BackupMetadata = t.cast(BackupMetadata, backup_result)
 
         self.console.print(
             f"[green]✅ Backup created: {backup_metadata.backup_id}[/green] "
@@ -531,7 +540,7 @@ class CodeCleaner(BaseModel):
 
         self.logger.debug(f"Using package directory: {package_dir}")
 
-        package_files = list(package_dir.rglob("*.py"))
+        package_files = list[t.Any](package_dir.rglob("*.py"))
 
         exclude_dirs = {
             "__pycache__",
@@ -558,7 +567,8 @@ class CodeCleaner(BaseModel):
                 with pyproject_path.open("rb") as f:
                     config = tomllib.load(f)
 
-                project_name = config.get("project", {}).get("name")
+                project_name_raw = config.get("project", {}).get("name")
+                project_name: str | None = t.cast(str | None, project_name_raw)
                 if project_name:
                     package_name = project_name.replace("-", "_").lower()
                     package_dir = root_dir / package_name
@@ -623,7 +633,7 @@ class CodeCleaner(BaseModel):
     def _should_include_file_path(
         self, file_path: Path, exclude_dirs: set[str]
     ) -> bool:
-        path_parts = set(file_path.parts)
+        path_parts = set[t.Any](file_path.parts)
 
         return not bool(path_parts.intersection(exclude_dirs))
 
@@ -923,7 +933,7 @@ class CodeCleaner(BaseModel):
             return backup_dirs
 
         except Exception as e:
-            self.logger.error(f"Failed to list backups: {e}")
+            self.logger.error(f"Failed to list[t.Any] backups: {e}")
             self.console.print(f"[red]💥 Error listing backups: {e}[/red]")
             return []
 
@@ -1111,12 +1121,14 @@ class CodeCleaner(BaseModel):
 
             return "".join(result_chars).rstrip()
 
-        def _should_break_for_comment(self, char: str, string_state: dict) -> bool:
+        def _should_break_for_comment(
+            self, char: str, string_state: dict[str, t.Any]
+        ) -> bool:
             """Check if we should break for a comment character."""
             return not string_state["in_string"] and char == "#"
 
         def _update_string_state(
-            self, char: str, index: int, line: str, string_state: dict
+            self, char: str, index: int, line: str, string_state: dict[str, t.Any]
         ) -> None:
             """Update string parsing state."""
             if not string_state["in_string"]:

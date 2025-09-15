@@ -33,7 +33,7 @@ class BatchedStateSaver:
         self._pending_saves: dict[str, t.Callable[[], None]] = {}
         self._last_save_time: dict[str, float] = {}
 
-        self._save_task: asyncio.Task | None = None
+        self._save_task: asyncio.Task[None] | None = None
         self._running = False
         self._lock = asyncio.Lock()
 
@@ -85,7 +85,7 @@ class BatchedStateSaver:
         ready_saves = []
 
         async with self._lock:
-            for save_id, last_time in list(self._last_save_time.items()):
+            for save_id, last_time in list[t.Any](self._last_save_time.items()):
                 if now - last_time >= self.debounce_delay:
                     ready_saves.append(save_id)
 
@@ -106,7 +106,7 @@ class BatchedStateSaver:
 
     async def _flush_saves(self) -> None:
         async with self._lock:
-            save_ids = list(self._pending_saves.keys())
+            save_ids = list[t.Any](self._pending_saves.keys())
 
         if save_ids:
             await self._execute_saves(save_ids)
@@ -153,7 +153,7 @@ class MCPServerContext:
         register_global_resource_manager(self.resource_manager)
 
         self.console: Console | None = None
-        self.cli_runner = None
+        self.cli_runner: WorkflowOrchestrator | None = None
         self.state_manager: StateManager | None = None
         self.error_cache: ErrorCache | None = None
         self.rate_limiter: RateLimitMiddleware | None = None
@@ -172,7 +172,7 @@ class MCPServerContext:
         )
         self._websocket_process_lock = asyncio.Lock()
         self._websocket_cleanup_registered = False
-        self._websocket_health_check_task: asyncio.Task | None = None
+        self._websocket_health_check_task: asyncio.Task[None] | None = None
 
         self._initialized = False
         self._startup_tasks: list[t.Callable[[], t.Awaitable[None]]] = []
@@ -181,79 +181,112 @@ class MCPServerContext:
     async def _auto_setup_git_working_directory(self) -> None:
         """Auto-detect and setup git working directory for enhanced DX."""
         try:
-            # Get current working directory
-            current_dir = Path.cwd()
-
-            # Simple git root detection using subprocess
-            import subprocess
-            import sys
-
-            # Check if we're in a git repository
-            git_check = subprocess.run(
-                ["git", "rev-parse", "--is-inside-work-tree"],
-                capture_output=True,
-                text=True,
-                cwd=current_dir,
-            )
-
-            if git_check.returncode == 0:
-                # Get git root directory
-                git_root_result = subprocess.run(
-                    ["git", "rev-parse", "--show-toplevel"],
-                    capture_output=True,
-                    text=True,
-                    cwd=current_dir,
-                )
-
-                if git_root_result.returncode == 0:
-                    git_root = Path(git_root_result.stdout.strip())
-
-                    if git_root.exists():
-                        # Log the auto-setup action for Claude to see
-                        print(
-                            f"📍 Crackerjack MCP: Git repository detected at {git_root}",
-                            file=sys.stderr,
-                        )
-                        print(
-                            f"💡 Tip: Auto-setup git working directory with: git_set_working_dir('{git_root}')",
-                            file=sys.stderr,
-                        )
-
-                        # Also log to console if available
-                        if self.console:
-                            self.console.print(
-                                f"🔧 Auto-detected git repository: {git_root}"
-                            )
-                            self.console.print(
-                                f"💡 Recommend: Use `mcp__git__git_set_working_dir` with path='{git_root}'"
-                            )
-            else:
-                # Not in a git repository - this is fine, just skip
-                pass
+            git_root = await self._detect_git_repository()
+            if git_root:
+                await self._log_git_detection(git_root)
 
         except Exception as e:
-            # Graceful fallback - don't break server startup
-            if self.console:
-                self.console.print(
-                    f"[dim]Git auto-setup failed (non-critical): {e}[/dim]"
-                )
+            self._handle_git_setup_failure(e)
+
+    async def _detect_git_repository(self) -> Path | None:
+        """Detect if we're in a git repository and return the root path."""
+
+        current_dir = Path.cwd()
+
+        # Check if we're in a git repository
+        if not self._is_git_repository(current_dir):
+            return None
+
+        return self._get_git_root_directory(current_dir)
+
+    def _is_git_repository(self, current_dir: Path) -> bool:
+        """Check if the current directory is within a git repository."""
+        import subprocess
+
+        git_check = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+            cwd=current_dir,
+        )
+        return git_check.returncode == 0
+
+    def _get_git_root_directory(self, current_dir: Path) -> Path | None:
+        """Get the git repository root directory."""
+        import subprocess
+
+        git_root_result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            cwd=current_dir,
+        )
+
+        if git_root_result.returncode == 0:
+            git_root = Path(git_root_result.stdout.strip())
+            return git_root if git_root.exists() else None
+        return None
+
+    async def _log_git_detection(self, git_root: Path) -> None:
+        """Log git repository detection to stderr and console."""
+
+        # Log to stderr for Claude to see
+        self._log_to_stderr(git_root)
+
+        # Log to console if available
+        self._log_to_console(git_root)
+
+    def _log_to_stderr(self, git_root: Path) -> None:
+        """Log git detection messages to stderr."""
+        import sys
+
+        print(
+            f"📍 Crackerjack MCP: Git repository detected at {git_root}",
+            file=sys.stderr,
+        )
+        print(
+            f"💡 Tip: Auto-setup git working directory with: git_set_working_dir('{git_root}')",
+            file=sys.stderr,
+        )
+
+    def _log_to_console(self, git_root: Path) -> None:
+        """Log git detection messages to console if available."""
+        if self.console:
+            self.console.print(f"🔧 Auto-detected git repository: {git_root}")
+            self.console.print(
+                f"💡 Recommend: Use `mcp__git__git_set_working_dir` with path='{git_root}'"
+            )
+
+    def _handle_git_setup_failure(self, error: Exception) -> None:
+        """Handle git setup failure with graceful fallback."""
+        if self.console:
+            self.console.print(
+                f"[dim]Git auto-setup failed (non-critical): {error}[/dim]"
+            )
 
     async def initialize(self) -> None:
         if self._initialized:
             return
 
         try:
-            self._setup_console()
-            self._setup_directories()
-            await self._initialize_components()
-            await self._finalize_initialization()
-
+            await self._perform_initialization_sequence()
             self._initialized = True
 
         except Exception as e:
-            self._cleanup_failed_initialization()
-            msg = f"Failed to initialize MCP server context: {e}"
-            raise RuntimeError(msg) from e
+            self._handle_initialization_failure(e)
+
+    async def _perform_initialization_sequence(self) -> None:
+        """Perform the complete initialization sequence."""
+        self._setup_console()
+        self._setup_directories()
+        await self._initialize_components()
+        await self._finalize_initialization()
+
+    def _handle_initialization_failure(self, error: Exception) -> None:
+        """Handle initialization failure with cleanup and error propagation."""
+        self._cleanup_failed_initialization()
+        msg = f"Failed to initialize MCP server context: {error}"
+        raise RuntimeError(msg) from error
 
     def _setup_console(self) -> None:
         """Setup console based on configuration mode."""
@@ -471,7 +504,10 @@ class MCPServerContext:
         for _attempt in range(max_attempts):
             await asyncio.sleep(0.5)
 
-            if self.websocket_server_process.poll() is not None:
+            if (
+                self.websocket_server_process is not None
+                and self.websocket_server_process.poll() is not None
+            ):
                 return_code = self.websocket_server_process.returncode
                 if self.console:
                     self.console.print(
@@ -500,7 +536,10 @@ class MCPServerContext:
     async def _cleanup_dead_websocket_process(self) -> None:
         if self.websocket_server_process:
             try:
-                if self.websocket_server_process.poll() is None:
+                if (
+                    self.websocket_server_process is not None
+                    and self.websocket_server_process.poll() is None
+                ):
                     self.websocket_server_process.terminate()
                     try:
                         self.websocket_server_process.wait(timeout=2)
@@ -537,7 +576,8 @@ class MCPServerContext:
         if self.console:
             self.console.print("🛑 Stopping WebSocket server...")
 
-        self.websocket_server_process.terminate()
+        if self.websocket_server_process is not None:
+            self.websocket_server_process.terminate()
 
         if await self._wait_for_graceful_termination():
             return
@@ -546,7 +586,8 @@ class MCPServerContext:
 
     async def _wait_for_graceful_termination(self) -> bool:
         try:
-            self.websocket_server_process.wait(timeout=5)
+            if self.websocket_server_process is not None:
+                self.websocket_server_process.wait(timeout=5)
             if self.console:
                 self.console.print("✅ WebSocket server stopped gracefully")
             return True
@@ -557,10 +598,12 @@ class MCPServerContext:
         if self.console:
             self.console.print("⚡ Force killing unresponsive WebSocket server...")
 
-        self.websocket_server_process.kill()
+        if self.websocket_server_process is not None:
+            self.websocket_server_process.kill()
 
         try:
-            self.websocket_server_process.wait(timeout=2)
+            if self.websocket_server_process is not None:
+                self.websocket_server_process.wait(timeout=2)
             if self.console:
                 self.console.print("💀 WebSocket server force killed")
         except subprocess.TimeoutExpired:
@@ -618,7 +661,8 @@ class MCPServerContext:
                 await self._handle_unresponsive_websocket_server()
 
     async def _handle_dead_websocket_process(self) -> None:
-        return_code = self.websocket_server_process.returncode
+        if self.websocket_server_process is not None:
+            return_code = self.websocket_server_process.returncode
         if self.console:
             self.console.print(
                 f"⚠️ WebSocket server process died (exit code: {return_code}), attempting restart...",
@@ -639,7 +683,7 @@ class MCPServerContext:
         elif self.console:
             self.console.print("❌ Failed to restart WebSocket server")
 
-    def safe_print(self, *args, **kwargs) -> None:
+    def safe_print(self, *args: t.Any, **kwargs: t.Any) -> None:
         if not self.config.stdio_mode and self.console:
             self.console.print(*args, **kwargs)
 
@@ -750,7 +794,7 @@ def get_rate_limiter() -> RateLimitMiddleware | None:
     return get_context().rate_limiter
 
 
-def safe_print(*args, **kwargs) -> None:
+def safe_print(*args: t.Any, **kwargs: t.Any) -> None:
     get_context().safe_print(*args, **kwargs)
 
 

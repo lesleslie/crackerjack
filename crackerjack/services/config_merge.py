@@ -37,8 +37,11 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         target_path = Path(target_path)
 
         if not target_path.exists():
-            return self._replace_project_name_in_config_value(
-                source_content, project_name
+            return t.cast(
+                dict[str, t.Any],
+                self._replace_project_name_in_config_value(
+                    source_content, project_name
+                ),
             )
 
         with target_path.open("rb") as f:
@@ -65,7 +68,10 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             return source_content
 
         with target_path.open() as f:
-            target_content: dict[str, t.Any] = yaml.safe_load(f) or {}
+            loaded_config = yaml.safe_load(f)
+            target_content: dict[str, t.Any] = (
+                loaded_config if isinstance(loaded_config, dict) else {}
+            )
 
         if not isinstance(target_content, dict):
             self.logger.warning(
@@ -173,9 +179,9 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
 
     def _parse_existing_gitignore_content(self, lines: list[str]) -> t.Any:
         class ParsedContent:
-            def __init__(self):
-                self.cleaned_lines = []
-                self.existing_patterns = set()
+            def __init__(self) -> None:
+                self.cleaned_lines: list[str] = []
+                self.existing_patterns: set[str] = set()
 
         parsed = ParsedContent()
         parser_state = self._init_parser_state()
@@ -259,7 +265,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         self, existing_patterns: set[str], new_patterns: list[str]
     ) -> list[str]:
         new_patterns_to_add = [p for p in new_patterns if p not in existing_patterns]
-        return list(existing_patterns) + new_patterns_to_add
+        return list[t.Any](existing_patterns) + new_patterns_to_add
 
     def write_pyproject_config(
         self,
@@ -455,7 +461,10 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             return tool_config
 
         result = copy.deepcopy(tool_config)
-        return self._replace_project_name_in_config_value(result, project_name)
+        return t.cast(
+            dict[str, t.Any],
+            self._replace_project_name_in_config_value(result, project_name),
+        )
 
     def _replace_project_name_in_config_value(
         self, value: t.Any, project_name: str

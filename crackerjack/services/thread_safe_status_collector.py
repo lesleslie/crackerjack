@@ -11,10 +11,10 @@ from .security_logger import SecurityEventLevel, SecurityEventType, get_security
 
 @dataclass
 class StatusSnapshot:
-    services: dict[str, t.Any] = field(default_factory=dict)
-    jobs: dict[str, t.Any] = field(default_factory=dict)
-    server_stats: dict[str, t.Any] = field(default_factory=dict)
-    agent_suggestions: dict[str, t.Any] = field(default_factory=dict)
+    services: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
+    jobs: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
+    server_stats: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
+    agent_suggestions: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
     timestamp: float = field(default_factory=time.time)
     collection_duration: float = 0.0
     is_complete: bool = False
@@ -22,7 +22,7 @@ class StatusSnapshot:
 
 
 class ThreadSafeStatusCollector:
-    def __init__(self, timeout: float = 30.0):
+    def __init__(self, timeout: float = 30.0) -> None:
         self.timeout = timeout
         self.security_logger = get_security_logger()
 
@@ -126,7 +126,7 @@ class ThreadSafeStatusCollector:
                 return snapshot
 
     @asynccontextmanager
-    async def _collection_context(self, client_id: str):
+    async def _collection_context(self, client_id: str) -> t.AsyncGenerator[None]:
         collection_acquired = False
         start_wait = time.time()
 
@@ -262,7 +262,7 @@ class ThreadSafeStatusCollector:
             from crackerjack.mcp.context import get_context
 
             try:
-                context = get_context()
+                context: MCPServerContext | None = get_context()
             except RuntimeError:
                 context = None
 
@@ -287,7 +287,7 @@ class ThreadSafeStatusCollector:
                 snapshot.server_stats = {"error": error_msg}
 
     async def _get_active_jobs_safe(self) -> list[dict[str, t.Any]]:
-        jobs = []
+        jobs: list[dict[str, t.Any]] = []
 
         with self._file_lock:
             try:
@@ -358,7 +358,9 @@ class ThreadSafeStatusCollector:
                     else None,
                 },
                 "resource_usage": {
-                    "temp_files_count": len(list(context.progress_dir.glob("*.json")))
+                    "temp_files_count": len(
+                        list[t.Any](context.progress_dir.glob("*.json"))
+                    )
                     if context.progress_dir.exists()
                     else 0,
                     "progress_dir": str(context.progress_dir),
@@ -386,7 +388,8 @@ class ThreadSafeStatusCollector:
             if key in self._cache and key in self._cache_timestamps:
                 cache_age = current_time - self._cache_timestamps[key]
                 if cache_age < self._cache_ttl:
-                    return self._cache[key]
+                    cached_result: dict[str, t.Any] = self._cache[key]
+                    return cached_result
 
         return None
 

@@ -122,7 +122,8 @@ class ManagedWebSocketServer(ManagedResource):
 
         if self.connections:
             close_tasks = [
-                asyncio.create_task(conn.cleanup()) for conn in list(self.connections)
+                asyncio.create_task(conn.cleanup())
+                for conn in list[t.Any](self.connections)
             ]
 
             if close_tasks:
@@ -299,7 +300,7 @@ async def with_websocket_server(
     port: int,
     handler: t.Callable[[t.Any], t.Awaitable[None]],
     host: str = "127.0.0.1",
-):
+) -> t.AsyncIterator[t.Any]:
     async with NetworkResourceManager() as manager:
         server = await manager.create_websocket_server(port, host)
         try:
@@ -310,7 +311,7 @@ async def with_websocket_server(
 
 
 @contextlib.asynccontextmanager
-async def with_http_client(**kwargs: t.Any):
+async def with_http_client(**kwargs: t.Any) -> t.AsyncIterator[t.Any]:
     async with NetworkResourceManager() as manager:
         client = await manager.create_http_client(**kwargs)
         try:
@@ -324,7 +325,7 @@ async def with_managed_subprocess(
     command: list[str],
     timeout: float = 30.0,
     **popen_kwargs: t.Any,
-):
+) -> t.AsyncIterator[t.Any]:
     async with NetworkResourceManager() as manager:
         process = subprocess.Popen[bytes](command, text=False, **popen_kwargs)
         managed_proc = manager.create_subprocess(process, timeout)

@@ -74,7 +74,7 @@ class CorrelationTracker:
             current = self.iteration_data[i]
             previous = self.iteration_data[i - 1]
 
-            recurring_failures = set(current["failed_hooks"]) & set(
+            recurring_failures = set[t.Any](current["failed_hooks"]) & set[t.Any](
                 previous["failed_hooks"],
             )
 
@@ -101,8 +101,13 @@ class CorrelationTracker:
         }
 
 
-class MinimalProgressStreamer:
-    def __init__(self) -> None:
+class MinimalProgressStreamer(ProgressStreamer):
+    def __init__(
+        self,
+        config: OrchestrationConfig | None = None,
+        session: SessionCoordinator | None = None,
+    ) -> None:
+        # Minimal implementation doesn't use config or session
         pass
 
     def update_stage(self, stage: str, substage: str = "") -> None:
@@ -387,9 +392,9 @@ class AdvancedWorkflowOrchestrator:
 
         success = False
         strategy_switches = 0
-        hooks_time = 0
-        tests_time = 0
-        ai_time = 0
+        hooks_time: float = 0.0
+        tests_time: float = 0.0
+        ai_time: float = 0.0
 
         for iteration in range(1, max_iterations + 1):
             self.console.print(

@@ -82,7 +82,7 @@ class PackageBackupService(BaseModel):
         )
 
         try:
-            python_files = list(validated_pkg_dir.rglob("*.py"))
+            python_files = list[t.Any](validated_pkg_dir.rglob("*.py"))
 
             files_to_backup = self._filter_package_files(
                 python_files, validated_pkg_dir

@@ -308,7 +308,7 @@ def register_global_resource_manager(manager: ResourceManager) -> None:
 
 
 async def cleanup_all_global_resources() -> None:
-    managers = list(_global_managers)
+    managers = list[t.Any](_global_managers)
 
     cleanup_tasks = [asyncio.create_task(manager.cleanup_all()) for manager in managers]
 
@@ -317,13 +317,15 @@ async def cleanup_all_global_resources() -> None:
 
 
 @contextlib.asynccontextmanager
-async def with_resource_cleanup():
+async def with_resource_cleanup() -> t.AsyncIterator[ResourceContext]:
     async with ResourceContext() as ctx:
         yield ctx
 
 
 @contextlib.asynccontextmanager
-async def with_temp_file(suffix: str = "", prefix: str = "crackerjack-"):
+async def with_temp_file(
+    suffix: str = "", prefix: str = "crackerjack-"
+) -> t.AsyncIterator[ManagedTemporaryFile]:
     async with ResourceContext() as ctx:
         temp_file = ctx.managed_temp_file(suffix, prefix)
         try:
@@ -333,7 +335,9 @@ async def with_temp_file(suffix: str = "", prefix: str = "crackerjack-"):
 
 
 @contextlib.asynccontextmanager
-async def with_temp_dir(suffix: str = "", prefix: str = "crackerjack-"):
+async def with_temp_dir(
+    suffix: str = "", prefix: str = "crackerjack-"
+) -> t.AsyncIterator[ManagedTemporaryDirectory]:
     async with ResourceContext() as ctx:
         temp_dir = ctx.managed_temp_dir(suffix, prefix)
         try:
@@ -346,11 +350,11 @@ async def with_temp_dir(suffix: str = "", prefix: str = "crackerjack-"):
 async def with_managed_process(
     process: asyncio.subprocess.Process,
     timeout: float = 30.0,
-):
+) -> t.AsyncIterator[asyncio.subprocess.Process]:
     async with ResourceContext() as ctx:
         managed_proc = ctx.managed_process(process, timeout)
         try:
-            yield managed_proc
+            yield managed_proc.process
         finally:
             await managed_proc.cleanup()
 
@@ -383,8 +387,8 @@ class ResourceLeakDetector:
     def get_leak_report(self) -> dict[str, t.Any]:
         return {
             "duration_seconds": time.time() - self._start_time,
-            "open_files": list(self.open_files),
-            "active_processes": list(self.active_processes),
+            "open_files": list[t.Any](self.open_files),
+            "active_processes": list[t.Any](self.active_processes),
             "active_tasks": len([t for t in self.active_tasks if not t.done()]),
             "total_tracked_files": len(self.open_files),
             "total_tracked_processes": len(self.active_processes),

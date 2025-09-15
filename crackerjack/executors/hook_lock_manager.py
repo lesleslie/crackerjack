@@ -5,7 +5,7 @@ import os
 import time
 import typing as t
 from collections import defaultdict
-from contextlib import asynccontextmanager, suppress
+from contextlib import AbstractAsyncContextManager, asynccontextmanager, suppress
 from pathlib import Path
 
 from ..config.global_lock_config import GlobalLockConfig
@@ -59,7 +59,9 @@ class HookLockManager:
         return hook_name in self._hooks_requiring_locks
 
     @asynccontextmanager
-    async def acquire_hook_lock(self, hook_name: str) -> t.AsyncIterator[None]:
+    async def acquire_hook_lock(
+        self, hook_name: str
+    ) -> AbstractAsyncContextManager[None]:
         if not self.requires_lock(hook_name):
             yield
             return
@@ -578,7 +580,7 @@ class HookLockManager:
             "lock_directory": str(self._global_config.lock_directory),
             "session_id": self._global_config.session_id,
             "hostname": self._global_config.hostname,
-            "active_global_locks": list(self._active_global_locks),
+            "active_global_locks": list[t.Any](self._active_global_locks),
             "active_heartbeat_tasks": len(self._heartbeat_tasks),
             "configuration": {
                 "timeout_seconds": self._global_config.timeout_seconds,
@@ -592,9 +594,9 @@ class HookLockManager:
         }
 
         all_hooks = (
-            set(self._global_lock_attempts.keys())
-            | set(self._global_lock_successes.keys())
-            | set(self._global_lock_failures.keys())
+            set[t.Any](self._global_lock_attempts.keys())
+            | set[t.Any](self._global_lock_successes.keys())
+            | set[t.Any](self._global_lock_failures.keys())
         )
 
         for hook_name in all_hooks:
@@ -669,7 +671,7 @@ class HookLockManager:
 
     def get_comprehensive_status(self) -> dict[str, t.Any]:
         status = {
-            "hooks_requiring_locks": list(self._hooks_requiring_locks),
+            "hooks_requiring_locks": list[t.Any](self._hooks_requiring_locks),
             "default_timeout": self._default_lock_timeout,
             "custom_timeouts": self._lock_timeouts.copy(),
             "max_history": self._max_history,

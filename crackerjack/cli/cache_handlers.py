@@ -1,3 +1,5 @@
+import typing as t
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -74,7 +76,9 @@ def _create_cache_stats_table() -> Table:
     return table
 
 
-def _populate_cache_stats_table(table: Table, stats: dict) -> dict:
+def _populate_cache_stats_table(
+    table: Table, stats: dict[str, t.Any]
+) -> dict[str, t.Any]:
     """Populate table with cache statistics and return totals."""
     totals = {"hits": 0, "misses": 0, "entries": 0, "size": 0.0}
 
@@ -109,7 +113,7 @@ def _get_hit_rate_style(hit_rate: float) -> str:
     return "green" if hit_rate > 70 else "yellow" if hit_rate > 40 else "red"
 
 
-def _add_cache_totals_row(table: Table, totals: dict) -> None:
+def _add_cache_totals_row(table: Table, totals: dict[str, t.Any]) -> None:
     """Add totals row to cache statistics table."""
     overall_hit_rate = (
         (totals["hits"] / (totals["hits"] + totals["misses"]) * 100)
@@ -130,7 +134,7 @@ def _add_cache_totals_row(table: Table, totals: dict) -> None:
     )
 
 
-def _display_performance_insights(console: Console, totals: dict) -> None:
+def _display_performance_insights(console: Console, totals: dict[str, t.Any]) -> None:
     """Display performance insights panel based on cache statistics."""
     overall_hit_rate = (
         (totals["hits"] / (totals["hits"] + totals["misses"]) * 100)
@@ -178,7 +182,7 @@ def _display_cache_directory_info(console: Console, cache: CrackerjackCache) -> 
 
     cache_dir_info = f"📁 Cache Directory: {cache.cache_dir}"
     if cache.cache_dir.exists():
-        disk_files = len(list(cache.cache_dir.rglob("*.cache")))
+        disk_files = len(list[t.Any](cache.cache_dir.rglob("*.cache")))
         cache_dir_info += f" ({disk_files} files)"
 
     console.print()

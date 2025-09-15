@@ -13,6 +13,7 @@ def get_package_version() -> str:
             pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
             with pyproject_path.open("rb") as f:
                 pyproject_data = tomllib.load(f)
-            return pyproject_data["project"]["version"]
+            version_value = pyproject_data["project"]["version"]
+            return str(version_value)
         except Exception:
             return "unknown"

@@ -29,7 +29,7 @@ from crackerjack.services.websocket_resource_limiter import (
 )
 
 
-def _suggest_agent_for_context(state_manager) -> dict[str, t.Any]:
+def _suggest_agent_for_context(state_manager: t.Any) -> dict[str, t.Any]:
     suggestions = {
         "recommended_agent": None,
         "reason": "",
@@ -95,12 +95,12 @@ def _create_error_response(message: str, success: bool = False) -> str:
     return json.dumps({"error": message, "success": success})
 
 
-def _get_stage_status_dict(state_manager) -> dict[str, str]:
+def _get_stage_status_dict(state_manager: t.Any) -> dict[str, str]:
     stages = ["fast", "comprehensive", "tests", "cleaning"]
     return {stage: state_manager.get_stage_status(stage) for stage in stages}
 
 
-def _get_session_info(state_manager) -> dict[str, t.Any]:
+def _get_session_info(state_manager: t.Any) -> dict[str, t.Any]:
     return {
         "total_iterations": getattr(state_manager, "iteration_count", 0),
         "current_iteration": getattr(state_manager, "current_iteration", 0),
@@ -108,7 +108,7 @@ def _get_session_info(state_manager) -> dict[str, t.Any]:
     }
 
 
-def _determine_next_action(state_manager) -> dict[str, t.Any]:
+async def _determine_next_action(state_manager: t.Any) -> dict[str, t.Any]:
     stage_priorities = [
         ("fast", "Fast hooks not completed"),
         ("tests", "Tests not completed"),
@@ -130,7 +130,7 @@ def _determine_next_action(state_manager) -> dict[str, t.Any]:
     }
 
 
-def _build_server_stats(context) -> dict[str, t.Any]:
+async def _build_server_stats(context: t.Any) -> dict[str, t.Any]:
     return {
         "server_info": {
             "project_path": str(context.config.project_path),
@@ -145,7 +145,7 @@ def _build_server_stats(context) -> dict[str, t.Any]:
             else None,
         },
         "resource_usage": {
-            "temp_files_count": len(list(context.progress_dir.glob("*.json")))
+            "temp_files_count": len(list[t.Any](context.progress_dir.glob("*.json")))
             if context.progress_dir.exists()
             else 0,
             "progress_dir": str(context.progress_dir),
@@ -154,7 +154,7 @@ def _build_server_stats(context) -> dict[str, t.Any]:
     }
 
 
-def _add_state_manager_stats(stats: dict, state_manager) -> None:
+def _add_state_manager_stats(stats: dict[str, t.Any], state_manager: t.Any) -> None:
     if state_manager:
         stats["state_manager"] = {
             "iteration_count": getattr(state_manager, "iteration_count", 0),
@@ -163,8 +163,8 @@ def _add_state_manager_stats(stats: dict, state_manager) -> None:
         }
 
 
-def _get_active_jobs(context) -> list[dict[str, t.Any]]:
-    jobs = []
+def _get_active_jobs(context: t.Any) -> list[dict[str, t.Any]]:
+    jobs: list[dict[str, t.Any]] = []
     if not context.progress_dir.exists():
         return jobs
 
@@ -218,13 +218,14 @@ async def _get_comprehensive_status_secure(
         return {"error": f"Security validation failed: {e}"}
 
     try:
-        return await execute_bounded_status_operation(
+        result: dict[str, t.Any] = await execute_bounded_status_operation(
             "status_collection",
             client_id,
             _collect_comprehensive_status_internal,
             client_id,
             verbosity,
         )
+        return result
     except Exception as e:
         return {"error": f"Resource limit exceeded: {e}"}
 
@@ -281,7 +282,7 @@ def register_monitoring_tools(mcp_app: t.Any) -> None:
 
 
 def _register_stage_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]  # type: ignore[misc]
     async def get_stage_status() -> str:
         client_id = "mcp_client"
 
@@ -309,7 +310,7 @@ def _register_stage_status_tool(mcp_app: t.Any) -> None:
             return f'{{"error": "Failed to get stage status: {e}"}}'
 
 
-def _build_stage_status(state_manager) -> dict[str, t.Any]:
+async def _build_stage_status(state_manager: t.Any) -> dict[str, t.Any]:
     return {
         "stages": _get_stage_status_dict(state_manager),
         "session": _get_session_info(state_manager),
@@ -318,7 +319,7 @@ def _build_stage_status(state_manager) -> dict[str, t.Any]:
 
 
 def _register_next_action_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]  # type: ignore[misc]
     async def get_next_action() -> str:
         client_id = "mcp_client"
 
@@ -347,7 +348,7 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
 
 
 def _register_server_stats_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]  # type: ignore[misc]
     async def get_server_stats() -> str:
         client_id = "mcp_client"
 
@@ -388,8 +389,8 @@ def _register_server_stats_tool(mcp_app: t.Any) -> None:
             return json.dumps(error_response, indent=2)
 
 
-def _build_server_stats_secure(context) -> dict[str, t.Any]:
-    stats = _build_server_stats(context)
+async def _build_server_stats_secure(context: t.Any) -> dict[str, t.Any]:
+    stats = await _build_server_stats(context)
 
     state_manager = getattr(context, "state_manager", None)
     _add_state_manager_stats(stats, state_manager)
@@ -405,7 +406,7 @@ def _build_server_stats_secure(context) -> dict[str, t.Any]:
 
 
 def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     async def get_comprehensive_status() -> str:
         client_id = "mcp_client"
         client_ip = "127.0.0.1"
@@ -440,7 +441,7 @@ def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
 
 
 def _register_command_help_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     async def list_slash_commands() -> str:
         try:
             commands = {
@@ -484,7 +485,7 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
 
             return json.dumps(
                 {
-                    "available_commands": list(commands.keys()),
+                    "available_commands": list[t.Any](commands.keys()),
                     "command_details": commands,
                     "total_commands": len(commands),
                 },
@@ -493,7 +494,10 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
 
         except Exception as e:
             return json.dumps(
-                {"error": f"Failed to list slash commands: {e}", "success": False},
+                {
+                    "error": f"Failed to list[t.Any] slash commands: {e}",
+                    "success": False,
+                },
                 indent=2,
             )
 
@@ -509,7 +513,7 @@ def _validate_status_components(components: str) -> tuple[set[str], str | None]:
     return requested, None
 
 
-def _get_services_status() -> dict:
+def _get_services_status() -> dict[str, t.Any]:
     from crackerjack.services.server_manager import (
         find_mcp_server_processes,
         find_websocket_server_processes,
@@ -530,9 +534,9 @@ def _get_services_status() -> dict:
     }
 
 
-def _get_resources_status(context: t.Any) -> dict:
+def _get_resources_status(context: t.Any) -> dict[str, t.Any]:
     temp_files_count = (
-        len(list(context.progress_dir.glob("*.json")))
+        len(list[t.Any](context.progress_dir.glob("*.json")))
         if context.progress_dir.exists()
         else 0
     )
@@ -543,8 +547,10 @@ def _get_resources_status(context: t.Any) -> dict:
     }
 
 
-def _build_filtered_status(requested: set[str], context: t.Any) -> dict:
-    filtered_status = {"timestamp": time.time()}
+async def _build_filtered_status(
+    requested: set[str], context: t.Any
+) -> dict[str, t.Any]:
+    filtered_status: dict[str, t.Any] = {"timestamp": time.time()}
 
     if "services" in requested:
         filtered_status["services"] = _get_services_status()
@@ -559,7 +565,7 @@ def _build_filtered_status(requested: set[str], context: t.Any) -> dict:
 
 
 def _register_filtered_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()
+    @mcp_app.tool()  # type: ignore[misc]
     async def get_filtered_status(components: str = "all") -> str:
         client_id = "mcp_client"
 
@@ -607,7 +613,7 @@ async def _collect_status_data(client_id: str, requested: set[str]) -> str:
     return _apply_secure_formatting(raw_status, context)
 
 
-def _apply_secure_formatting(raw_status: dict, context: t.Any) -> str:
+def _apply_secure_formatting(raw_status: dict[str, t.Any], context: t.Any) -> str:
     project_root = context.config.project_path if context else None
     secure_status = format_secure_status(
         raw_status,

@@ -85,13 +85,13 @@ class SecureStatusFormatter:
             endpoint="status_data",
             verbosity_level=verbosity.value,
             user_context=user_context,
-            data_keys=list(status_data.keys()),
+            data_keys=list[t.Any](status_data.keys()),
         )
 
     def _prepare_data_for_sanitization(
         self, status_data: dict[str, t.Any]
     ) -> dict[str, t.Any]:
-        return self._deep_copy_dict(status_data)
+        return self._deep_copy_dict(status_data)  # type: ignore[no-any-return]
 
     def _apply_all_sanitization_steps(
         self, data: dict[str, t.Any], verbosity: StatusVerbosity
@@ -119,7 +119,7 @@ class SecureStatusFormatter:
         else:
             remove_keys = set()
 
-        for key in list(data.keys()):
+        for key in list[t.Any](data.keys()):
             if key in remove_keys:
                 del data[key]
 
@@ -132,7 +132,7 @@ class SecureStatusFormatter:
     def _sanitize_sensitive_data(
         self, data: dict[str, t.Any], verbosity: StatusVerbosity
     ) -> dict[str, t.Any]:
-        return self._sanitize_recursive(data, verbosity)
+        return self._sanitize_recursive(data, verbosity)  # type: ignore[no-any-return]
 
     def _sanitize_recursive(self, obj: t.Any, verbosity: StatusVerbosity) -> t.Any:
         if isinstance(obj, dict):

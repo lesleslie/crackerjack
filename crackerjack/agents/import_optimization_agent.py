@@ -118,7 +118,7 @@ class ImportOptimizationAgent(SubAgent):
     def _extract_unused_imports_from_result(
         self, result: subprocess.CompletedProcess[str]
     ) -> list[str]:
-        unused_imports = []
+        unused_imports: list[str] = []
         if not self._is_valid_vulture_result(result):
             return unused_imports
 
@@ -730,7 +730,7 @@ class ImportOptimizationAgent(SubAgent):
     ) -> list[t.Pattern[str]]:
         import re
 
-        unused_patterns = []
+        unused_patterns: list[t.Pattern[str]] = []
         for unused in unused_imports:
             escaped_unused = re.escape(unused)
 
@@ -1053,7 +1053,7 @@ class ImportOptimizationAgent(SubAgent):
         other_lines: list[tuple[int, str]],
         import_bounds: tuple[int, int],
     ) -> list[str]:
-        result_lines = []
+        result_lines: list[str] = []
         import_start, import_end = import_bounds
 
         self._add_lines_before_imports(result_lines, other_lines, import_start)
@@ -1105,7 +1105,7 @@ class ImportOptimizationAgent(SubAgent):
             return self._build_error_diagnostics(str(e))
 
     def _get_python_files(self) -> list[Path]:
-        return list(self.context.project_path.rglob("*.py"))
+        return list[t.Any](self.context.project_path.rglob("*.py"))
 
     async def _analyze_file_sample(self, python_files: list[Path]) -> dict[str, int]:
         metrics = {

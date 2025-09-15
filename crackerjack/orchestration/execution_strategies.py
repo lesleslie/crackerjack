@@ -95,8 +95,8 @@ class ExecutionContext:
         self.changed_files = changed_files or []
         self.iteration_count = iteration_count
 
-        self.total_python_files = len(list(pkg_path.rglob(" * .py")))
-        self.total_test_files = len(list(pkg_path.glob("tests / test_ * .py")))
+        self.total_python_files = len(list[t.Any](pkg_path.rglob(" * .py")))
+        self.total_test_files = len(list[t.Any](pkg_path.glob("tests / test_ * .py")))
         self.has_complex_setup = self._detect_complex_setup()
         self.estimated_hook_duration = self._estimate_hook_duration()
 
@@ -105,8 +105,8 @@ class ExecutionContext:
             (self.pkg_path / "pyproject.toml").exists(),
             (self.pkg_path / "setup.py").exists(),
             (self.pkg_path / "requirements.txt").exists(),
-            len(list(self.pkg_path.rglob(" * .py"))) > 50,
-            len(list(self.pkg_path.glob("tests / test_ * .py"))) > 20,
+            len(list[t.Any](self.pkg_path.rglob(" * .py"))) > 50,
+            len(list[t.Any](self.pkg_path.glob("tests / test_ * .py"))) > 20,
         ]
         return sum(complex_indicators) >= 3
 
@@ -189,7 +189,7 @@ class StrategySelector:
         strategy: HookStrategy,
         context: ExecutionContext,
     ) -> HookStrategy:
-        priority_hooks = set(context.previous_failures)
+        priority_hooks = set[t.Any](context.previous_failures)
 
         if context.changed_files:
             for file_path in context.changed_files:
@@ -263,7 +263,7 @@ class OrchestrationPlanner:
             test_plan=test_plan,
             ai_plan=ai_plan,
             estimated_total_duration=sum(
-                plan["estimated_duration"] for plan in hook_plans
+                int(plan["estimated_duration"]) for plan in hook_plans
             )
             + test_plan["estimated_duration"],
         )

@@ -26,7 +26,7 @@ class ErrorPattern:
     last_seen: datetime
     trend: str  # increasing, decreasing, stable
     confidence: float  # 0.0 to 1.0
-    metadata: dict[str, t.Any] = field(default_factory=dict)
+    metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
         """Convert to dictionary for JSON serialization."""
@@ -122,7 +122,7 @@ class ErrorPatternAnalyzer:
 
     def _collect_all_errors(self) -> list[dict[str, t.Any]]:
         """Collect errors from all available sources."""
-        errors = []
+        errors: list[dict[str, t.Any]] = []
         errors.extend(self._analyze_test_failures())
         errors.extend(self._analyze_lint_errors())
         errors.extend(self._analyze_git_history())
@@ -175,7 +175,7 @@ class ErrorPatternAnalyzer:
             for error_type in error_types:
                 count = file_error_counts[file_path].get(error_type, 0)
                 if count > 0:
-                    intensity = count / max_value if max_value > 0 else 0
+                    intensity: float = count / max_value if max_value > 0 else 0
                     severity = self._get_severity_for_type(error_type)
 
                     cells.append(
@@ -313,7 +313,7 @@ class ErrorPatternAnalyzer:
         self, time_label: str, error_type: str, count: float, max_value: float
     ) -> HeatMapCell:
         """Create a single temporal heatmap cell."""
-        intensity = count / max_value if max_value > 0 else 0
+        intensity: float = count / max_value if max_value > 0 else 0
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(
@@ -405,7 +405,7 @@ class ErrorPatternAnalyzer:
         self, function_id: str, error_type: str, count: float, max_value: float
     ) -> HeatMapCell:
         """Create a single function heatmap cell."""
-        intensity = count / max_value if max_value > 0 else 0
+        intensity: float = count / max_value if max_value > 0 else 0
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(
@@ -424,7 +424,7 @@ class ErrorPatternAnalyzer:
 
     def _analyze_test_failures(self) -> list[dict[str, t.Any]]:
         """Analyze test failure patterns."""
-        errors = []
+        errors: list[dict[str, t.Any]] = []
 
         # Look for pytest cache and reports
         pytest_cache = self.project_root / ".pytest_cache"
@@ -455,7 +455,7 @@ class ErrorPatternAnalyzer:
 
     def _analyze_lint_errors(self) -> list[dict[str, t.Any]]:
         """Analyze linting error patterns."""
-        errors = []
+        errors: list[dict[str, t.Any]] = []
 
         # Look for ruff/flake8 outputs
         # Simulate common linting errors
@@ -492,7 +492,7 @@ class ErrorPatternAnalyzer:
 
     def _analyze_git_history(self) -> list[dict[str, t.Any]]:
         """Analyze git commit history for error patterns."""
-        errors = []
+        errors: list[dict[str, t.Any]] = []
 
         # Look for fix commits and reverts
         # This would normally parse git log
@@ -521,7 +521,7 @@ class ErrorPatternAnalyzer:
 
     def _analyze_log_files(self) -> list[dict[str, t.Any]]:
         """Analyze application log files for error patterns."""
-        errors = []
+        errors: list[dict[str, t.Any]] = []
 
         # Look for log files with error patterns
         log_dirs = [self.project_root / "logs", Path.home() / "logs"]
@@ -552,7 +552,9 @@ class ErrorPatternAnalyzer:
 
         return errors
 
-    def _group_similar_errors(self, errors: list[dict]) -> dict[str, list[dict]]:
+    def _group_similar_errors(
+        self, errors: list[dict[str, t.Any]]
+    ) -> dict[str, list[dict[str, t.Any]]]:
         """Group similar errors together."""
         groups = defaultdict(list)
 
@@ -564,10 +566,10 @@ class ErrorPatternAnalyzer:
 
             groups[key].append(error)
 
-        return dict(groups)
+        return dict[str, t.Any](groups)
 
     def _create_error_patterns(
-        self, groups: dict[str, list[dict]], min_occurrences: int
+        self, groups: dict[str, list[dict[str, t.Any]]], min_occurrences: int
     ) -> list[ErrorPattern]:
         """Create ErrorPattern objects from grouped errors."""
         patterns = []

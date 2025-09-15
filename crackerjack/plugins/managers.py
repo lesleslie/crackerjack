@@ -7,7 +7,7 @@ from rich.console import Console
 from crackerjack.models.protocols import OptionsProtocol
 
 from .base import PluginRegistry, PluginType, get_plugin_registry
-from .hooks import HookPluginRegistry, get_hook_plugin_registry
+from .hooks import HookPluginBase, HookPluginRegistry, get_hook_plugin_registry
 from .loader import PluginDiscovery, PluginLoader
 
 
@@ -59,9 +59,10 @@ class PluginManager:
 
             hook_plugins = self.registry.get_enabled(PluginType.HOOK)
             for plugin in hook_plugins:
-                if hasattr(plugin, "initialize"):
-                    plugin.initialize(self.console, self.project_path)
-                self.hook_registry.register_hook_plugin(plugin)
+                if isinstance(plugin, HookPluginBase):
+                    if hasattr(plugin, "initialize"):
+                        plugin.initialize(self.console, self.project_path)
+                    self.hook_registry.register_hook_plugin(plugin)
 
             self._initialized = True
             return True
@@ -97,7 +98,7 @@ class PluginManager:
         if plugin_type:
             plugins = self.registry.get_by_type(plugin_type)
         else:
-            plugins = list(self.registry.list_all().values())
+            plugins = list[t.Any](self.registry.list_all().values())
 
         plugin_info = []
         for plugin in plugins:
@@ -120,7 +121,7 @@ class PluginManager:
         stats["hook_plugins"] = {
             "active_plugins": len(hook_plugins),
             "total_custom_hooks": len(custom_hooks),
-            "hook_names": list(custom_hooks.keys()),
+            "hook_names": list[t.Any](custom_hooks.keys()),
         }
 
         return stats
@@ -144,7 +145,9 @@ class PluginManager:
             if success:
                 self.console.print(f"[green]✅[/ green] Enabled plugin: {plugin_name}")
 
-                if plugin.plugin_type == PluginType.HOOK:
+                if plugin.plugin_type == PluginType.HOOK and isinstance(
+                    plugin, HookPluginBase
+                ):
                     self.hook_registry.register_hook_plugin(plugin)
 
                 return True
@@ -250,7 +253,7 @@ class PluginManager:
 
     def get_available_custom_hooks(self) -> list[str]:
         custom_hooks = self.hook_registry.get_all_custom_hooks()
-        return list(custom_hooks.keys())
+        return list[t.Any](custom_hooks.keys())
 
     def execute_custom_hook(
         self,

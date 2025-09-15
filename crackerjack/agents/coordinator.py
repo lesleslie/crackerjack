@@ -77,7 +77,9 @@ class AgentCoordinator:
         issues_by_type = self._group_issues_by_type(issues)
 
         # Optimization: Run ALL issue types in parallel instead of sequential
-        tasks = list(starmap(self._handle_issues_by_type, issues_by_type.items()))
+        tasks = list[t.Any](
+            starmap(self._handle_issues_by_type, issues_by_type.items())
+        )
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -277,7 +279,7 @@ class AgentCoordinator:
         if cached_decision:
             self.logger.debug(f"Using cached decision for {agent.name}")
             self.tracker.track_agent_complete(agent.name, cached_decision)
-            return cached_decision
+            return cached_decision  # type: ignore[no-any-return]
 
         confidence = await agent.can_handle(issue)
         self.tracker.track_agent_processing(agent.name, issue, confidence)
@@ -362,7 +364,7 @@ class AgentCoordinator:
             self.logger.debug(f"Using persistent cache for {agent.name}")
             # Store in memory cache for even faster future access
             self._issue_cache[cache_key] = cached_result
-            return cached_result
+            return cached_result  # type: ignore[no-any-return]
 
         # No cache hit - perform actual analysis
         result = await agent.analyze_and_fix(issue)
@@ -441,7 +443,7 @@ class AgentCoordinator:
         return [issue for issue in issues if issue.type in complex_types]
 
     async def _generate_architectural_plan(
-        self, architect, complex_issues: list[Issue], all_issues: list[Issue]
+        self, architect: t.Any, complex_issues: list[Issue], all_issues: list[Issue]
     ) -> dict[str, t.Any]:
         """Generate architectural plan using the architect agent."""
         primary_issue = complex_issues[0]
@@ -453,7 +455,7 @@ class AgentCoordinator:
             self.logger.info(
                 f"Created architectural plan: {plan.get('strategy', 'unknown')}"
             )
-            return plan
+            return plan  # type: ignore[no-any-return]
 
         except Exception as e:
             self.logger.exception(f"Failed to create architectural plan: {e}")
@@ -464,7 +466,7 @@ class AgentCoordinator:
     ) -> dict[str, t.Any]:
         """Enrich the architectural plan with issue metadata."""
         plan["all_issues"] = [issue.id for issue in issues]
-        plan["issue_types"] = list({issue.type.value for issue in issues})
+        plan["issue_types"] = list[t.Any]({issue.type.value for issue in issues})
         return plan
 
     async def _apply_fixes_with_plan(
@@ -554,7 +556,7 @@ class AgentCoordinator:
             return [complex_issues, other_issues] if complex_issues else [other_issues]
 
         groups = self._group_issues_by_type(issues)
-        return list(groups.values())
+        return list[t.Any](groups.values())
 
     async def _handle_issue_group_with_plan(
         self, issues: list[Issue], plan: dict[str, t.Any]

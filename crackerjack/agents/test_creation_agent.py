@@ -618,12 +618,14 @@ class TestCreationAgent(SubAgent):
 
     async def _estimate_current_coverage(self) -> float:
         try:
-            source_files = list(
+            source_files: list[Path] = list(
                 (self.context.project_path / "crackerjack").rglob("*.py")
             )
             source_files = [f for f in source_files if not f.name.startswith("test_")]
 
-            test_files = list((self.context.project_path / "tests").rglob("test_*.py"))
+            test_files: list[Path] = list(
+                (self.context.project_path / "tests").rglob("test_*.py")
+            )
 
             if not source_files:
                 return 0.0
@@ -850,7 +852,7 @@ class TestCreationAgent(SubAgent):
             }
 
     async def _identify_coverage_gaps(self) -> list[dict[str, Any]]:
-        gaps = []
+        gaps: list[dict[str, Any]] = []
 
         try:
             package_dir = self.context.project_path / "crackerjack"
@@ -876,7 +878,7 @@ class TestCreationAgent(SubAgent):
         try:
             test_file_path = await self._generate_test_file_path(py_file)
 
-            coverage_info = {
+            coverage_info: dict[str, Any] = {
                 "source_file": str(py_file.relative_to(self.context.project_path)),
                 "test_file": str(test_file_path) if test_file_path.exists() else None,
                 "has_gaps": True,
@@ -1085,7 +1087,7 @@ class TestCreationAgent(SubAgent):
         self,
         file_path: Path,
     ) -> list[dict[str, Any]]:
-        functions = []
+        functions: list[dict[str, Any]] = []
 
         try:
             content = self.context.get_file_content(file_path)
@@ -1133,7 +1135,7 @@ class TestCreationAgent(SubAgent):
         }
 
     async def _extract_classes_from_file(self, file_path: Path) -> list[dict[str, Any]]:
-        classes = []
+        classes: list[dict[str, Any]] = []
 
         try:
             content = self.context.get_file_content(file_path)
@@ -1716,10 +1718,12 @@ class TestCreationAgent(SubAgent):
         return any(term in arg_lower for term in ("data", "content", "text"))
 
     def _is_list_arg(self, arg_lower: str) -> bool:
-        return any(term in arg_lower for term in ("list", "items"))
+        return any(term in arg_lower for term in ("list[t.Any]", "items"))
 
     def _is_dict_arg(self, arg_lower: str) -> bool:
-        return any(term in arg_lower for term in ("dict", "config", "options"))
+        return any(
+            term in arg_lower for term in ("dict[str, t.Any]", "config", "options")
+        )
 
     def _generate_invalid_args(self, args: list[str]) -> str:
         filtered_args = [arg for arg in args if arg != "self"]
@@ -1753,9 +1757,9 @@ class TestCreationAgent(SubAgent):
             arg_lower = arg.lower()
             if any(term in arg_lower for term in ("str", "name", "text")):
                 placeholders.append('""')
-            elif any(term in arg_lower for term in ("list", "items")):
+            elif any(term in arg_lower for term in ("list[t.Any]", "items")):
                 placeholders.append("[]")
-            elif any(term in arg_lower for term in ("dict", "config")):
+            elif any(term in arg_lower for term in ("dict[str, t.Any]", "config")):
                 placeholders.append("{}")
             else:
                 placeholders.append("None")

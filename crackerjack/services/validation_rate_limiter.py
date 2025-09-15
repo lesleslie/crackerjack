@@ -19,7 +19,7 @@ class ValidationRateLimit:
 
 
 class ValidationRateLimiter:
-    def __init__(self):
+    def __init__(self) -> None:
         self._failure_windows: dict[str, deque[float]] = defaultdict(deque)
         self._blocked_until: dict[str, float] = {}
         self._lock = Lock()
@@ -138,7 +138,7 @@ class ValidationRateLimiter:
                 del self._blocked_until[client_id]
                 removed_count += 1
 
-            for client_id, window in list(self._failure_windows.items()):
+            for client_id, window in list[t.Any](self._failure_windows.items()):
                 while window and current_time - window[0] > 86400:
                     window.popleft()
                     removed_count += 1

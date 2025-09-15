@@ -66,7 +66,7 @@ class PatternDetector:
         self.logger.info("Starting proactive anti-pattern analysis")
 
         anti_patterns = []
-        python_files = list(self.project_path.glob("**/*.py"))
+        python_files = list[t.Any](self.project_path.glob("**/*.py"))
 
         for file_path in python_files:
             if self._should_skip_file(file_path):
@@ -155,7 +155,7 @@ class PatternDetector:
         anti_patterns = []
 
         lines = content.split("\n")
-        line_groups = {}
+        line_groups: dict[str, list[int]] = {}
 
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
@@ -197,7 +197,7 @@ class PatternDetector:
                             (
                                 node.lineno,
                                 "Nested loop detected-potential O(n²) complexity",
-                                "Consider using dictionary lookups or set operations",
+                                "Consider using dictionary lookups or set[t.Any] operations",
                             )
                         )
                         break
@@ -212,7 +212,7 @@ class PatternDetector:
                             (
                                 stmt.lineno,
                                 "List concatenation in loop-inefficient",
-                                "Use list.append() and join at the end",
+                                "Use list[t.Any].append() and join at the end",
                             )
                         )
 

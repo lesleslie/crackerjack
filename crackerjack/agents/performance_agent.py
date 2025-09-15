@@ -46,7 +46,7 @@ class PerformanceAgent(SubAgent):
                 "nested loop",
                 "o(n²)",
                 "string concatenation",
-                "list concatenation",
+                "list[t.Any] concatenation",
                 "inefficient",
                 "complexity",
             )
@@ -320,7 +320,7 @@ class PerformanceAgent(SubAgent):
         )
         if high_impact_count > 0:
             suggestions.append(
-                f"HIGH IMPACT: {high_impact_count} list operations in hot loops"
+                f"HIGH IMPACT: {high_impact_count} list[t.Any] operations in hot loops"
             )
 
         append_count = len([op for op in list_ops if op["optimization"] == "append"])
@@ -449,7 +449,7 @@ class PerformanceAgent(SubAgent):
                 {
                     "type": "string_concatenation_in_loop",
                     "instances": string_concat_in_loop,
-                    "suggestion": 'Use list.append() and "".join() for string building',
+                    "suggestion": 'Use list[t.Any].append() and "".join() for string building',
                 },
             )
 
@@ -636,7 +636,7 @@ class PerformanceAgent(SubAgent):
             )
             suggestions.append(
                 f"String concatenation: {len(concat_patterns)} instances "
-                f"({high_impact} high-impact) - use list.append + join"
+                f"({high_impact} high-impact) - use list[t.Any].append + join"
             )
 
         if inefficient_joins:
@@ -697,7 +697,7 @@ class PerformanceAgent(SubAgent):
                     "instances": analyzer.opportunities,
                     "total_count": len(analyzer.opportunities),
                     "suggestion": f"Convert {len(analyzer.opportunities)} append loops"
-                    f" to list comprehensions for better performance "
+                    f" to list[t.Any] comprehensions for better performance "
                     f"and readability",
                 }
             )
@@ -926,7 +926,7 @@ class PerformanceAgent(SubAgent):
         for instance in instances:
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
-                original_line = t.cast(str, lines[line_idx])
+                original_line = lines[line_idx]
 
                 optimization_type = instance.get(
                     "optimization",
@@ -1075,7 +1075,7 @@ class PerformanceAgent(SubAgent):
                 ]
 
                 comment = (
-                    f"{indent}# Performance: Consider list comprehension for "
+                    f"{indent}# Performance: Consider list[t.Any] comprehension for "
                     f"20-30% improvement"
                 )
                 lines.insert(line_idx, comment)
@@ -1134,7 +1134,7 @@ class PerformanceAgent(SubAgent):
         for instance in instances:
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
-                original_line = t.cast(str, lines[line_idx])
+                original_line = lines[line_idx]
 
                 if list_pattern.test(original_line):
                     optimized_line = list_pattern.apply(original_line)
@@ -1185,7 +1185,7 @@ class PerformanceAgent(SubAgent):
         if line_idx >= len(lines):
             return None
 
-        original_line = t.cast(str, lines[line_idx])
+        original_line = lines[line_idx]
 
         concat_pattern = SAFE_PATTERNS["string_concatenation_pattern"]
         if concat_pattern.test(original_line):
@@ -1281,7 +1281,7 @@ class PerformanceAgent(SubAgent):
         indent: str,
     ) -> None:
         lines[init_line_idx] = (
-            f"{indent}{var_name}_parts = [] # Performance: Use list for string building"
+            f"{indent}{var_name}_parts = [] # Performance: Use list[t.Any] for string building"
         )
 
     @staticmethod
@@ -1339,7 +1339,7 @@ class PerformanceAgent(SubAgent):
         for instance in issue["instances"]:
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
-                original_line = t.cast(str, lines[line_idx])
+                original_line = lines[line_idx]
                 indent_level = len(original_line) - len(original_line.lstrip())
                 indent_str = " " * indent_level
 

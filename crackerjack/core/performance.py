@@ -142,13 +142,13 @@ class OptimizedFileWatcher:
 
     @memoize_with_ttl(ttl=30.0)
     def get_python_files(self) -> list[Path]:
-        return list(self.root_path.rglob("*.py"))
+        return list[t.Any](self.root_path.rglob("*.py"))
 
     def get_modified_files(self, since: float) -> list[Path]:
         cache_key = f"modified_since_{since}"
         cached = self._file_cache.get(cache_key)
         if cached is not None:
-            return cached
+            return t.cast(list[Path], cached)
         modified_files: list[Path] = []
         for py_file in self.get_python_files():
             try:

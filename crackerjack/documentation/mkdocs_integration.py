@@ -82,13 +82,13 @@ class MkDocsIntegrationService:
         site_dir = output_dir / "site"
         docs_dir = site_dir / "docs"
 
-        await self.filesystem.ensure_directory(site_dir)
-        await self.filesystem.ensure_directory(docs_dir)
+        self.filesystem.ensure_directory(site_dir)
+        self.filesystem.ensure_directory(docs_dir)
 
         # Generate mkdocs.yml
         mkdocs_config = self._create_mkdocs_config(config, docs_content)
         config_path = site_dir / "mkdocs.yml"
-        await self.filesystem.write_file(
+        self.filesystem.write_file(
             config_path,
             yaml.dump(mkdocs_config, default_flow_style=False, sort_keys=False),
         )
@@ -97,8 +97,8 @@ class MkDocsIntegrationService:
         pages = {}
         for file_path, content in docs_content.items():
             doc_path = docs_dir / file_path
-            await self.filesystem.ensure_directory(doc_path.parent)
-            await self.filesystem.write_file(doc_path, content)
+            self.filesystem.ensure_directory(doc_path.parent)
+            self.filesystem.write_file(doc_path, content)
             pages[file_path] = content
 
         # Copy theme assets if needed
@@ -126,7 +126,7 @@ class MkDocsIntegrationService:
             True if build successful, False otherwise
         """
         if not site.build_path:
-            self.logger.error("Site has no build path set")
+            self.logger.error("Site has no build path set[t.Any]")
             return False
 
         try:
@@ -206,7 +206,7 @@ class MkDocsIntegrationService:
         Returns:
             Configuration dictionary for mkdocs.yml
         """
-        mkdocs_config = {
+        mkdocs_config: dict[str, t.Any] = {
             "site_name": config.site_name,
             "site_description": config.site_description,
             "site_author": config.site_author,
@@ -339,7 +339,7 @@ class MkDocsIntegrationService:
             docs_content: Dictionary of file paths to content
 
         Returns:
-            Navigation structure list
+            Navigation structure list[t.Any]
         """
         nav = []
 
@@ -417,9 +417,9 @@ class MkDocsIntegrationService:
             custom_css_content = self._get_material_custom_css()
             if custom_css_content:
                 css_dir = site_dir / "docs" / "stylesheets"
-                await self.filesystem.ensure_directory(css_dir)
+                self.filesystem.ensure_directory(css_dir)
                 css_path = css_dir / "extra.css"
-                await self.filesystem.write_file(css_path, custom_css_content)
+                self.filesystem.write_file(css_path, custom_css_content)
                 assets["stylesheets/extra.css"] = custom_css_content.encode()
 
         return assets
@@ -462,7 +462,7 @@ class MkDocsIntegrationService:
 class MkDocsSiteBuilder:
     """High-level builder for MkDocs documentation sites."""
 
-    def __init__(self, integration_service: MkDocsIntegrationService):
+    def __init__(self, integration_service: MkDocsIntegrationService) -> None:
         self.integration = integration_service
 
     async def build_documentation_site(

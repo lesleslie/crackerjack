@@ -6,7 +6,7 @@ import typing as t
 from pathlib import Path
 
 from .rust_tool_adapter import BaseRustToolAdapter, ToolResult
-from .skylos_adapter import SkylsAdapter
+from .skylos_adapter import SkylosAdapter
 from .zuban_adapter import ZubanAdapter
 
 if t.TYPE_CHECKING:
@@ -25,14 +25,10 @@ class RustToolHookManager:
     def _initialize_adapters(self) -> None:
         """Initialize available Rust tool adapters."""
         # Dead code detection with Skylos
-        self.adapters["skylos"] = SkylsAdapter(
-            context=self.context, confidence_threshold=86, web_dashboard_port=5090
-        )
+        self.adapters["skylos"] = SkylosAdapter(context=self.context)
 
         # Type checking with Zuban
-        self.adapters["zuban"] = ZubanAdapter(
-            context=self.context, strict_mode=True, mypy_compatibility=True
-        )
+        self.adapters["zuban"] = ZubanAdapter(context=self.context)
 
     async def run_all_tools(
         self, target_files: list[Path] | None = None
@@ -75,7 +71,7 @@ class RustToolHookManager:
                     success=False,
                     error=f"Tool execution failed: {result}",
                 )
-            else:
+            elif isinstance(result, ToolResult):  # Explicit check for mypy
                 tool_results[name] = result
 
         return tool_results
@@ -89,7 +85,7 @@ class RustToolHookManager:
                 success=False,
                 error=(
                     f"Unknown tool: {tool_name}. "
-                    f"Available: {list(self.adapters.keys())}"
+                    f"Available: {list[t.Any](self.adapters.keys())}"
                 ),
             )
 
@@ -124,7 +120,7 @@ class RustToolHookManager:
             )
 
             stdout, _ = await process.communicate()
-            output = stdout.decode("utf-8", errors="replace") if stdout else ""
+            output = stdout.decode() if stdout else ""
 
             # Parse output
             result = adapter.parse_output(output)
@@ -141,7 +137,7 @@ class RustToolHookManager:
             )
 
     def get_available_tools(self) -> list[str]:
-        """Get list of available Rust tools."""
+        """Get list[t.Any] of available Rust tools."""
         return [
             name
             for name, adapter in self.adapters.items()
@@ -150,7 +146,7 @@ class RustToolHookManager:
 
     def get_tool_info(self) -> dict[str, dict[str, t.Any]]:
         """Get information about all configured tools."""
-        info = {}
+        info: dict[str, dict[str, t.Any]] = {}
         for name, adapter in self.adapters.items():
             info[name] = {
                 "available": adapter.validate_tool_available(),
@@ -188,7 +184,7 @@ class RustToolHookManager:
             "total_issues": total_issues,
             "total_errors": total_errors,
             "total_warnings": total_warnings,
-            "tools_run": list(results.keys()),
+            "tools_run": list[t.Any](results.keys()),
             "execution_times": execution_times,
             "total_time": sum(execution_times.values()),
             "results_by_tool": {

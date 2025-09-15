@@ -24,7 +24,7 @@ class DependencyNode:
     complexity: int = 0
     imports: list[str] = field(default_factory=list)
     exports: list[str] = field(default_factory=list)
-    metadata: dict[str, t.Any] = field(default_factory=dict)
+    metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
         """Convert to dictionary for JSON serialization."""
@@ -50,7 +50,7 @@ class DependencyEdge:
     target: str
     type: str  # import, call, inheritance, composition
     weight: float = 1.0
-    metadata: dict[str, t.Any] = field(default_factory=dict)
+    metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
         """Convert to dictionary for JSON serialization."""
@@ -67,10 +67,10 @@ class DependencyEdge:
 class DependencyGraph:
     """Complete dependency graph data structure."""
 
-    nodes: dict[str, DependencyNode] = field(default_factory=dict)
+    nodes: dict[str, DependencyNode] = field(default_factory=dict[str, t.Any])
     edges: list[DependencyEdge] = field(default_factory=list)
-    clusters: dict[str, list[str]] = field(default_factory=dict)
-    metrics: dict[str, t.Any] = field(default_factory=dict)
+    clusters: dict[str, list[str]] = field(default_factory=dict[str, t.Any])
+    metrics: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
     generated_at: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, t.Any]:
@@ -122,7 +122,7 @@ class DependencyAnalyzer:
 
     def _discover_python_files(self) -> None:
         """Discover all Python files in the project."""
-        self.python_files = list(self.project_root.rglob("*.py"))
+        self.python_files = list[t.Any](self.project_root.rglob("*.py"))
 
         # Filter out common excluded directories
         excluded_patterns = {

@@ -20,7 +20,9 @@ class GlobalLockConfig:
     enable_lock_monitoring: bool = True
 
     @classmethod
-    def from_options(cls, options: "OptionsProtocol") -> "GlobalLockConfig":
+    def from_options(
+        cls: type["GlobalLockConfig"], options: "OptionsProtocol"
+    ) -> "GlobalLockConfig":
         enabled = not options.disable_global_locks
         timeout_seconds = float(options.global_lock_timeout)
 

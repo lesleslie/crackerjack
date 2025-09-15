@@ -483,7 +483,7 @@ class SecureInputValidator:
         else:
             result = ValidationResult(
                 valid=False,
-                error_message=f"Command args must be string or list, got {type(args).__name__}",
+                error_message=f"Command args must be string or list[t.Any], got {type(args).__name__}",
                 security_level=SecurityEventLevel.HIGH,
                 validation_type="command_args_type",
             )
@@ -578,7 +578,7 @@ def validation_required(
     validate_args: bool = True,
     validate_kwargs: bool = True,
     config: ValidationConfig | None = None,
-):
+) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         @wraps(func)
         def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
@@ -639,7 +639,7 @@ def validate_and_sanitize_string(value: str, **kwargs: t.Any) -> str:
             error_code=ErrorCode.VALIDATION_ERROR,
         )
 
-    return result.sanitized_value
+    return result.sanitized_value  # type: ignore[no-any-return]
 
 
 def validate_and_sanitize_path(value: str | Path, **kwargs: t.Any) -> Path:

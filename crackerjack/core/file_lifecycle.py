@@ -231,13 +231,13 @@ class BatchFileOperations:
         content: str,
         backup: bool = True,
     ) -> None:
-        def write_op():
+        def write_op() -> None:
             writer = AtomicFileWriter(path, backup, self.manager)
             asyncio.create_task(writer.initialize())
             writer.write(content)
             asyncio.create_task(writer.commit())
 
-        def rollback_op():
+        def rollback_op() -> None:
             writer = AtomicFileWriter(path, backup)
             asyncio.create_task(writer.rollback())
 
@@ -250,13 +250,13 @@ class BatchFileOperations:
         dest: Path,
         backup: bool = True,
     ) -> None:
-        def copy_op():
+        def copy_op() -> None:
             if backup and dest.exists():
                 backup_path = dest.with_suffix(f"{dest.suffix}.bak")
                 shutil.copy2(dest, backup_path)
             shutil.copy2(source, dest)
 
-        def rollback_op():
+        def rollback_op() -> None:
             if backup:
                 backup_path = dest.with_suffix(f"{dest.suffix}.bak")
                 if backup_path.exists():
@@ -270,10 +270,10 @@ class BatchFileOperations:
         source: Path,
         dest: Path,
     ) -> None:
-        def move_op():
+        def move_op() -> None:
             shutil.move(source, dest)
 
-        def rollback_op():
+        def rollback_op() -> None:
             shutil.move(dest, source)
 
         self.operations.append(move_op)
@@ -286,7 +286,7 @@ class BatchFileOperations:
     ) -> None:
         backup_path: Path | None = None
 
-        def delete_op():
+        def delete_op() -> None:
             nonlocal backup_path
             if backup and path.exists():
                 backup_path = path.with_suffix(f"{path.suffix}.bak.{os.getpid()}")
@@ -294,7 +294,7 @@ class BatchFileOperations:
             elif path.exists():
                 path.unlink()
 
-        def rollback_op():
+        def rollback_op() -> None:
             if backup_path and backup_path.exists():
                 shutil.move(backup_path, path)
 
@@ -329,7 +329,7 @@ class BatchFileOperations:
 async def atomic_file_write(
     path: Path,
     backup: bool = True,
-):
+) -> t.AsyncGenerator[AtomicFileWriter]:
     writer = AtomicFileWriter(path, backup)
     try:
         await writer.initialize()
@@ -347,7 +347,7 @@ async def locked_file_access(
     path: Path,
     mode: str = "r+",
     timeout: float = 30.0,
-):
+) -> t.AsyncGenerator[LockedFileResource]:
     file_resource = LockedFileResource(path, mode, timeout)
     try:
         await file_resource.initialize()
@@ -360,7 +360,7 @@ async def locked_file_access(
 async def safe_directory_creation(
     path: Path,
     cleanup_on_error: bool = True,
-):
+) -> t.AsyncGenerator[SafeDirectoryCreator]:
     creator = SafeDirectoryCreator(path, cleanup_on_error)
     try:
         await creator.initialize()
@@ -370,7 +370,7 @@ async def safe_directory_creation(
 
 
 @contextlib.asynccontextmanager
-async def batch_file_operations():
+async def batch_file_operations() -> t.AsyncGenerator[BatchFileOperations]:
     batch = BatchFileOperations()
     try:
         yield batch

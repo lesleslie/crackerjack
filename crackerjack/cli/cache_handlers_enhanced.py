@@ -578,7 +578,7 @@ class EnhancedCacheHandlers:
             cache_dir_info = f"📁 Cache Directory: {cache_dir}"
 
             if cache_dir.exists():
-                cache_files = list(cache_dir.rglob("*.cache"))
+                cache_files = list[t.Any](cache_dir.rglob("*.cache"))
                 disk_files_count = len(cache_files)
 
                 # Calculate disk usage

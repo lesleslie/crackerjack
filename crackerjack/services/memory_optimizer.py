@@ -93,7 +93,7 @@ class LazyLoader:
 
                 gc.collect()
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._auto_dispose:
             self.dispose()
 
@@ -177,7 +177,7 @@ class ResourcePool:
 
 
 class MemoryProfiler:
-    def __init__(self):
+    def __init__(self) -> None:
         self._start_memory = 0.0
         self._peak_memory = 0.0
         self._measurements: list[tuple[float, float]] = []
@@ -223,7 +223,8 @@ class MemoryProfiler:
             import psutil
 
             process = psutil.Process(os.getpid())
-            return process.memory_info().rss / 1024 / 1024
+            memory_mb: float = process.memory_info().rss / 1024 / 1024
+            return memory_mb
         except ImportError:
             import tracemalloc
 
@@ -238,7 +239,7 @@ class MemoryOptimizer:
     _instance: t.Optional["MemoryOptimizer"] = None
     _lock = Lock()
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._lazy_objects: WeakSet[t.Any] = WeakSet()
         self._resource_pools: dict[str, ResourcePool] = {}
         self._profiler = MemoryProfiler()
@@ -307,7 +308,8 @@ class MemoryOptimizer:
 
     def _should_run_gc(self) -> bool:
         current_memory = self._profiler.get_summary().get("current_memory_mb", 0)
-        return current_memory > self._gc_threshold
+        should_gc: bool = current_memory > self._gc_threshold
+        return should_gc
 
     def _run_memory_cleanup(self) -> None:
         self._logger.debug("Running automatic memory cleanup")
@@ -326,7 +328,7 @@ class MemoryOptimizer:
     def _cleanup_lazy_objects(self) -> None:
         disposed_count = 0
 
-        lazy_objects = list(self._lazy_objects)
+        lazy_objects = list[t.Any](self._lazy_objects)
 
         for lazy_obj in lazy_objects:
             if (
@@ -349,7 +351,7 @@ class MemoryOptimizer:
                 self._logger.debug(f"Cleared inefficient resource pool: {name}")
 
 
-def lazy_property(factory: t.Callable[[], Any]) -> t.Callable[[t.Any], Any]:
+def lazy_property(factory: t.Callable[[], t.Any]) -> property:
     def decorator(self: t.Any) -> Any:
         attr_name = f"_lazy_{factory.__name__}"
 

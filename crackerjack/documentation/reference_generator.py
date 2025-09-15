@@ -63,7 +63,7 @@ class CommandInfo:
     side_effects: list[str] = field(default_factory=list)
 
     # AI optimization
-    ai_context: dict[str, t.Any] = field(default_factory=dict)
+    ai_context: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
     success_patterns: list[str] = field(default_factory=list)
     failure_patterns: list[str] = field(default_factory=list)
 
@@ -235,7 +235,7 @@ class ReferenceGenerator:
         Returns:
             Dictionary of commands
         """
-        commands = {}
+        commands: dict[str, CommandInfo] = {}
         visitor = self._create_command_visitor(commands)
         visitor.visit(tree)
         return commands
@@ -253,10 +253,10 @@ class ReferenceGenerator:
         """
 
         class CommandVisitor(ast.NodeVisitor):
-            def __init__(self, generator):
+            def __init__(self, generator: t.Any) -> None:
                 self.generator = generator
 
-            def visit_FunctionDef(self, node):
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
                 self.generator._process_function_node(node, commands)
                 self.generic_visit(node)
 
@@ -507,7 +507,7 @@ class ReferenceGenerator:
         Returns:
             Dictionary of category to command names
         """
-        categories = {}
+        categories: dict[str, list[str]] = {}
 
         category_patterns = {
             "development": ["test", "format", "lint", "check", "run"],
@@ -794,12 +794,14 @@ class ReferenceGenerator:
 
     def _render_html(self, reference: CommandReference) -> str:
         """Render reference as HTML."""
-        html = self._render_html_header(reference.generated_at)
+        html = self._render_html_header(
+            reference.generated_at.strftime("%Y-%m-%d %H:%M:%S")
+        )
         html += self._render_html_commands(reference)
         html += "</body></html>"
         return html
 
-    def _render_html_header(self, generated_at) -> str:
+    def _render_html_header(self, generated_at: str) -> str:
         """Render HTML header with styles and metadata."""
         return f"""<!DOCTYPE html>
 <html>
@@ -815,7 +817,7 @@ class ReferenceGenerator:
 </head>
 <body>
     <h1>Command Reference</h1>
-    <p>Generated: {generated_at.strftime("%Y-%m-%d %H:%M:%S")}</p>
+    <p>Generated: {generated_at}</p>
 """
 
     def _render_html_commands(self, reference: CommandReference) -> str:

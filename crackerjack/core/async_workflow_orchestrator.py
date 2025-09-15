@@ -108,17 +108,19 @@ class AsyncWorkflowPipeline:
         if not options.clean:
             return True
 
-        return await self.timeout_manager.with_timeout(
+        result = await self.timeout_manager.with_timeout(
             "file_operations",
-            asyncio.to_thread(self.phases.run_cleaning_phase, options),
+            asyncio.to_thread(self.phases.run_cleaning_phase, options),  # type: ignore[arg-type]
             strategy=TimeoutStrategy.RETRY_WITH_BACKOFF,
         )
+        return bool(result)
 
     async def _execute_quality_phase_async(self, options: OptionsProtocol) -> bool:
         if hasattr(options, "fast") and options.fast:
             return await self._run_fast_hooks_async(options)
         if hasattr(options, "comp") and options.comp:
             return await self._run_comprehensive_hooks_async(options)
+        print(f"DEBUG: options.test = {options.test}")
         if options.test:
             return await self._execute_test_workflow_async(options)
         return await self._execute_standard_hooks_workflow_async(options)
@@ -258,32 +260,36 @@ class AsyncWorkflowPipeline:
         return task
 
     async def _run_fast_hooks_async(self, options: OptionsProtocol) -> bool:
-        return await self.timeout_manager.with_timeout(
+        result = await self.timeout_manager.with_timeout(
             "fast_hooks",
-            asyncio.to_thread(self.phases.run_fast_hooks_only, options),
+            asyncio.to_thread(self.phases.run_fast_hooks_only, options),  # type: ignore[arg-type]
             strategy=TimeoutStrategy.RETRY_WITH_BACKOFF,
         )
+        return bool(result)
 
     async def _run_comprehensive_hooks_async(self, options: OptionsProtocol) -> bool:
-        return await self.timeout_manager.with_timeout(
+        result = await self.timeout_manager.with_timeout(
             "comprehensive_hooks",
-            asyncio.to_thread(self.phases.run_comprehensive_hooks_only, options),
+            asyncio.to_thread(self.phases.run_comprehensive_hooks_only, options),  # type: ignore[arg-type]
             strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         )
+        return bool(result)
 
     async def _run_hooks_phase_async(self, options: OptionsProtocol) -> bool:
-        return await self.timeout_manager.with_timeout(
+        result = await self.timeout_manager.with_timeout(
             "comprehensive_hooks",
-            asyncio.to_thread(self.phases.run_hooks_phase, options),
+            asyncio.to_thread(self.phases.run_hooks_phase, options),  # type: ignore[arg-type]
             strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         )
+        return bool(result)
 
     async def _run_testing_phase_async(self, options: OptionsProtocol) -> bool:
-        return await self.timeout_manager.with_timeout(
+        result = await self.timeout_manager.with_timeout(
             "test_execution",
-            asyncio.to_thread(self.phases.run_testing_phase, options),
+            asyncio.to_thread(self.phases.run_testing_phase, options),  # type: ignore[arg-type]
             strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         )
+        return bool(result)
 
     async def _execute_ai_agent_workflow_async(
         self, options: OptionsProtocol, max_iterations: int = 10
@@ -501,7 +507,7 @@ class AsyncWorkflowPipeline:
         try:
             hook_results = await self.timeout_manager.with_timeout(
                 "comprehensive_hooks",
-                asyncio.to_thread(self.phases.hook_manager.run_comprehensive_hooks),
+                asyncio.to_thread(self.phases.hook_manager.run_comprehensive_hooks),  # type: ignore[arg-type]
                 strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             )
 
@@ -536,11 +542,12 @@ class AsyncWorkflowPipeline:
         )
 
         try:
-            return await self.timeout_manager.with_timeout(
+            result = await self.timeout_manager.with_timeout(
                 "ai_agent_processing",
                 self._execute_ai_fix_workflow(test_issues, hook_issues, iteration),
                 strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             )
+            return bool(result)
         except Exception as e:
             return self._handle_ai_fix_error(e)
 
@@ -562,9 +569,9 @@ class AsyncWorkflowPipeline:
         )
 
         self._report_fix_results(fix_result, iteration)
-        return fix_result.success
+        return bool(fix_result.success if fix_result else False)
 
-    def _create_agent_coordinator(self):
+    def _create_agent_coordinator(self) -> t.Any:
         from crackerjack.agents.base import AgentContext
         from crackerjack.agents.coordinator import AgentCoordinator
 

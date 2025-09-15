@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.1] - 2025-09-14
+
+### Added
+
+- Complete Phase 4 Advanced Features implementation
+- Complete Phase 4 enterprise features and fix hook system
+- Fix SQL syntax errors, refactor complexity violations, improve type annotations
+
+### Changed
+
+- Crackerjack (quality: 80/100) - 2025-09-07 16:59:59
+- Crackerjack (quality: 80/100) - 2025-09-09 14:44:05
+- Crackerjack (quality: 80/100) - 2025-09-09 18:14:20
+- Fix complexity violations and regex validation
+- Post-release updates
+- Update configuration
+
 ## [0.31.9] - 2025-01-09
 
 ### Added

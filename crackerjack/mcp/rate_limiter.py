@@ -110,7 +110,7 @@ class RateLimiter:
         self._cleanup_global_windows(minute_cutoff, hour_cutoff)
 
     def _cleanup_client_windows(self, minute_cutoff: float, hour_cutoff: float) -> None:
-        for client_id in list(self.minute_windows.keys()):
+        for client_id in list[t.Any](self.minute_windows.keys()):
             minute_window = self.minute_windows[client_id]
             hour_window = self.hour_windows[client_id]
 
@@ -200,7 +200,7 @@ class ResourceMonitor:
         stale_jobs = []
 
         async with self._lock:
-            for job_id, start_time in list(self.active_jobs.items()):
+            for job_id, start_time in list[t.Any](self.active_jobs.items()):
                 if now - start_time > max_duration:
                     stale_jobs.append(job_id)
                     del self.active_jobs[job_id]
@@ -234,7 +234,7 @@ class ResourceMonitor:
             if not progress_dir.exists():
                 return True
 
-            file_count = len(list(progress_dir.glob("job-* .json")))
+            file_count = len(list[t.Any](progress_dir.glob("job-* .json")))
             if file_count > self.config.max_progress_files:
                 console.print(
                     f"[red]🚫 Progress files ({file_count}) exceed limit ({self.config.max_progress_files})[/ red]",
@@ -272,7 +272,7 @@ class RateLimitMiddleware:
         )
         self.resource_monitor = ResourceMonitor(self.config)
 
-        self._cleanup_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task[None] | None = None
         self._running = False
 
     async def start(self) -> None:

@@ -45,8 +45,8 @@ class TemplateContext:
     template_type: TemplateType | None = None
 
     # Dynamic content
-    variables: dict[str, t.Any] = field(default_factory=dict)
-    sections: dict[str, str] = field(default_factory=dict)
+    variables: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
+    sections: dict[str, str] = field(default_factory=dict[str, t.Any])
 
     # AI-specific context
     ai_optimization_level: str = "standard"  # minimal, standard, comprehensive
@@ -79,7 +79,7 @@ class Template:
     variables: list[str] = field(default_factory=list)
     sections: list[str] = field(default_factory=list)
     parent_template: str | None = None
-    ai_optimizations: dict[str, t.Any] = field(default_factory=dict)
+    ai_optimizations: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def extract_placeholders(self) -> tuple[list[str], list[str]]:
         """Extract variable and section placeholders from template content.
@@ -99,7 +99,7 @@ class Template:
         ]._get_compiled_pattern()
         sections = section_pattern.findall(self.content)
 
-        return list(set(variables)), list(set(sections))
+        return list[t.Any](set[t.Any](variables)), list[t.Any](set[t.Any](sections))
 
 
 class AITemplateEngine:
@@ -389,6 +389,7 @@ class AITemplateEngine:
         # Replace variables
         for var_name, value in replacements.items():
             placeholder = f"{{{{{var_name}}}}}"
+            # Check if value is a complex type (dict[str, t.Any] or list[t.Any]) that needs JSON serialization
             if isinstance(value, dict | list):
                 # For complex data, use JSON representation
                 value_str = json.dumps(value, indent=2)
@@ -414,7 +415,7 @@ class AITemplateEngine:
             "extract_template_sections"
         ]._get_compiled_pattern()
 
-        def replace_section(match):
+        def replace_section(match: t.Any) -> str:
             section_name = match.group(1)
             return context.get_section(
                 section_name, f"<!-- Section {section_name} not found -->"
@@ -510,10 +511,9 @@ class AITemplateEngine:
         Returns:
             Command matrix optimized content
         """
-        # Add command execution markers
-        command_pattern = r"```bash\n([^`]+)\n```"
 
-        def enhance_command_block(match):
+        # Add command execution markers
+        def enhance_command_block(match: t.Any) -> str:
             command = match.group(1).strip()
             return f"""```bash
 # Command: {command.split()[0] if command.split() else "unknown"}
@@ -523,7 +523,7 @@ class AITemplateEngine:
         command_pattern = SAFE_PATTERNS[
             "extract_bash_command_blocks"
         ]._get_compiled_pattern()
-        return command_pattern.sub(enhance_command_block, content)
+        return command_pattern.sub(enhance_command_block, content)  # type: ignore[no-any-return]
 
     def _optimize_for_step_by_step(self, content: str, context: TemplateContext) -> str:
         """Optimize content for step-by-step processing.
@@ -538,7 +538,7 @@ class AITemplateEngine:
         # Add step markers to numbered lists
         step_pattern = SAFE_PATTERNS["extract_step_numbers"]._get_compiled_pattern()
 
-        def enhance_step(match):
+        def enhance_step(match: t.Any) -> str:
             indent, number, text = match.groups()
             return f"{indent}**Step {number}**: {text}"
 

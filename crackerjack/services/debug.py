@@ -24,13 +24,13 @@ class AIAgentDebugger:
         self.logger = get_logger("crackerjack.ai_agent.debug")
         self.session_id = f"debug_{int(time.time())}"
 
+        self.debug_log_path: Path | None = None
+
         if self.enabled:
             log_manager = get_log_manager()
             self.debug_log_path = log_manager.create_debug_log_file(
                 f"ai-agent -{self.session_id}",
             )
-        else:
-            self.debug_log_path = None
 
         self.mcp_operations: list[dict[str, Any]] = []
         self.agent_activities: list[dict[str, Any]] = []
@@ -400,7 +400,7 @@ class AIAgentDebugger:
         self.console.print(table)
 
     def _print_agent_activity_breakdown(self, border_style: str = "red") -> None:
-        agent_stats = {}
+        agent_stats: dict[str, dict[str, t.Any]] = {}
         for activity in self.agent_activities:
             agent = activity["agent"]
             if agent not in agent_stats:

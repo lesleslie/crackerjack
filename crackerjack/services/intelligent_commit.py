@@ -6,14 +6,15 @@ from pathlib import Path
 
 from rich.console import Console
 
-from .git import GitService
+from crackerjack.models.protocols import GitInterface
+
 from .regex_patterns import CompiledPatternCache
 
 
 class CommitMessageGenerator:
     """Generate intelligent commit messages based on changes and context."""
 
-    def __init__(self, console: Console, git_service: GitService) -> None:
+    def __init__(self, console: Console, git_service: GitInterface) -> None:
         """Initialize commit message generator."""
         self.console = console
         self.git = git_service
@@ -152,8 +153,8 @@ class CommitMessageGenerator:
         # Default to chore for misc changes
         return "chore"
 
-    def _get_commit_type_checks(self) -> list[tuple[str, callable]]:
-        """Get ordered list of commit type checks."""
+    def _get_commit_type_checks(self) -> list[tuple[str, t.Callable[..., t.Any]]]:
+        """Get ordered list[t.Any] of commit type checks."""
         return [
             ("fix", self._is_fix_commit),
             ("feat", self._is_feat_commit),
@@ -163,33 +164,45 @@ class CommitMessageGenerator:
             ("refactor", self._is_refactor_commit),
         ]
 
-    def _is_fix_commit(self, patterns: set, files: list, file_types: set) -> bool:
+    def _is_fix_commit(
+        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+    ) -> bool:
         """Check if this is a fix commit."""
         return "fix" in patterns
 
-    def _is_feat_commit(self, patterns: set, files: list, file_types: set) -> bool:
+    def _is_feat_commit(
+        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+    ) -> bool:
         """Check if this is a feature commit."""
         return "feat" in patterns
 
-    def _is_test_commit(self, patterns: set, files: list, file_types: set) -> bool:
+    def _is_test_commit(
+        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+    ) -> bool:
         """Check if this is a test commit."""
         return "test" in patterns or any(
             ".py" in f and "test" in f.lower() for f in files
         )
 
-    def _is_docs_commit(self, patterns: set, files: list, file_types: set) -> bool:
+    def _is_docs_commit(
+        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+    ) -> bool:
         """Check if this is a documentation commit."""
         return "docs" in patterns or any(
             ext in file_types for ext in (".md", ".rst", ".txt")
         )
 
-    def _is_style_commit(self, patterns: set, files: list, file_types: set) -> bool:
+    def _is_style_commit(
+        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+    ) -> bool:
         """Check if this is a style commit."""
         return (
             "style" in patterns or len(files) > 5
         )  # Multiple files suggest style changes
 
-    def _is_refactor_commit(self, patterns: set, files: list, file_types: set) -> bool:
+    def _is_refactor_commit(
+        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+    ) -> bool:
         """Check if this is a refactor commit."""
         return "refactor" in patterns
 
@@ -200,7 +213,7 @@ class CommitMessageGenerator:
 
         if len(directories) == 1:
             # Single directory - use as scope
-            directory = list(directories)[0]
+            directory = list[str](directories)[0]
             # Simplify common directory patterns
             if "/" in directory:
                 return directory.split("/")[0]  # Use top-level directory
@@ -248,7 +261,7 @@ class CommitMessageGenerator:
 
         # Handle bulk changes
         if len(file_types) == 1:
-            file_type = list(file_types)[0]
+            file_type = list[t.Any](file_types)[0]
             return f"update {total_files} {file_type} files"
 
         return f"update {total_files} files"

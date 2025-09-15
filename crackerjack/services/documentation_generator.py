@@ -154,7 +154,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
 
     def generate_user_guide(self, template_context: dict[str, t.Any]) -> str:
         """Generate user guide documentation."""
-        sections = []
+        sections: list[str] = []
 
         # Generate getting started section
         if "installation" in template_context:
@@ -291,7 +291,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         if not services:
             return "No services found.\n"
 
-        sections = []
+        sections: list[str] = []
         for service_name, service_info in services.items():
             sections.extend(
                 (

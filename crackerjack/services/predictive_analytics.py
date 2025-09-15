@@ -35,7 +35,7 @@ class Prediction:
     confidence_interval: tuple[float, float]
     confidence_level: float
     model_accuracy: float
-    metadata: dict[str, t.Any] = field(default_factory=dict)
+    metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
 
 @dataclass
@@ -78,7 +78,7 @@ class LinearTrendPredictor:
 
         # Simple linear regression
         n = len(values)
-        x = list(range(n))
+        x = list[t.Any](range(n))
         y = values
 
         # Calculate slope and intercept
@@ -137,7 +137,7 @@ class PredictiveAnalyticsEngine:
 
         # Data storage
         self.metric_history: dict[str, deque[tuple[datetime, float]]] = defaultdict(
-            lambda: deque(maxlen=history_limit)
+            lambda: deque[tuple[datetime, float]](maxlen=history_limit)
         )
 
         # Predictors
@@ -195,7 +195,7 @@ class PredictiveAnalyticsEngine:
 
     def _update_trend_analysis(self, metric_type: str) -> None:
         """Update trend analysis for a metric."""
-        history = list(self.metric_history[metric_type])
+        history: list[tuple[datetime, float]] = list(self.metric_history[metric_type])
         values = [point[1] for point in history]
         timestamps = [point[0] for point in history]
 
@@ -229,7 +229,7 @@ class PredictiveAnalyticsEngine:
 
         # Use linear regression to determine trend
         n = len(values)
-        x = list(range(n))
+        x: list[int] = list(range(n))
         y = values
 
         x_mean = statistics.mean(x)
@@ -249,7 +249,7 @@ class PredictiveAnalyticsEngine:
         ss_tot = sum((y[i] - y_mean) ** 2 for i in range(n))
 
         r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
-        trend_strength = max(0, min(1, r_squared))
+        trend_strength = max(0.0, min(1.0, r_squared))
 
         # Determine direction
         if abs(slope) < 0.01:
@@ -297,14 +297,14 @@ class PredictiveAnalyticsEngine:
         if metric_type not in self.metric_history:
             return []
 
-        history = list(self.metric_history[metric_type])
+        history: list[tuple[datetime, float]] = list(self.metric_history[metric_type])
         values = [point[1] for point in history]
         last_timestamp = history[-1][0] if history else datetime.now()
 
         # Select predictor
         if predictor_name is None:
             config = self.metric_configs.get(metric_type, {})
-            predictor_name = config.get("predictor", "moving_average")
+            predictor_name = t.cast(str, config.get("predictor", "moving_average"))
 
         predictor = self.predictors[predictor_name]
         predicted_values = predictor.predict(values, periods_ahead)
@@ -346,7 +346,7 @@ class PredictiveAnalyticsEngine:
         if len(self.metric_history[metric_type]) < 20:
             return 0.5  # Default accuracy for insufficient data
 
-        history = list(self.metric_history[metric_type])
+        history: list[tuple[datetime, float]] = list(self.metric_history[metric_type])
         values = [point[1] for point in history]
 
         # Use last 10 points for validation
@@ -429,7 +429,7 @@ class PredictiveAnalyticsEngine:
         estimated_exhaustion: datetime | None,
     ) -> list[str]:
         """Generate capacity planning recommendations."""
-        recommendations = []
+        recommendations: list[str] = []
 
         utilization = current_usage / threshold if threshold > 0 else 0
 

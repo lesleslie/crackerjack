@@ -581,10 +581,10 @@ class RefactoringAgent(SubAgent):
     def _extract_logical_sections(
         self, func_content: str, func_info: dict[str, t.Any]
     ) -> list[dict[str, str]]:
-        sections = []
+        sections: list[dict[str, str]] = []
         lines = func_content.split("\n")
-        current_section = []
-        section_type = None
+        current_section: list[str] = []
+        section_type: str | None = None
 
         for line in lines:
             stripped = line.strip()
@@ -630,7 +630,7 @@ class RefactoringAgent(SubAgent):
 
     def _create_section(
         self, current_section: list[str], section_type: str | None, section_count: int
-    ) -> dict[str, str | None]:
+    ) -> dict[str, str]:
         effective_type = section_type or "general"
         name_prefix = "handle" if effective_type == "conditional" else "process"
 
@@ -731,8 +731,8 @@ class RefactoringAgent(SubAgent):
         self, analysis: dict[str, t.Any], tree: ast.AST, content: str
     ) -> None:
         class UnreachableCodeDetector(ast.NodeVisitor):
-            def __init__(self):
-                self.unreachable_blocks = []
+            def __init__(self) -> None:
+                self.unreachable_blocks: list[dict[str, t.Any]] = []
 
             def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
                 self._check_unreachable_in_function(node)
@@ -782,8 +782,8 @@ class RefactoringAgent(SubAgent):
                 line_hashes[line_hash] = i
 
         class RedundantPatternDetector(ast.NodeVisitor):
-            def __init__(self):
-                self.redundant_items = []
+            def __init__(self) -> None:
+                self.redundant_items: list[dict[str, t.Any]] = []
 
             def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
                 if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
@@ -833,7 +833,7 @@ class RefactoringAgent(SubAgent):
         for unused_import in analysis["unused_imports"]:
             line_idx = unused_import["line"] - 1
             if 0 <= line_idx < len(lines):
-                line = t.cast(str, lines[line_idx])
+                line = lines[line_idx]
                 if self._should_remove_import_line(line, unused_import):
                     lines_to_remove.add(line_idx)
 

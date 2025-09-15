@@ -1,4 +1,5 @@
 import subprocess
+import typing as t
 from pathlib import Path
 
 from rich.console import Console
@@ -18,7 +19,7 @@ GIT_COMMANDS = {
     "add_updated": ["add", "-u"],
     "push_porcelain": ["push", "--porcelain"],
     "current_branch": ["branch", "--show-current"],
-    "commits_ahead": ["rev-list", "--count", "@{u}..HEAD"],
+    "commits_ahead": ["rev-list[t.Any]", "--count", "@{u}..HEAD"],
 }
 
 
@@ -89,7 +90,7 @@ class GitService:
                 else []
             )
 
-            all_files = set(staged_files + unstaged_files + untracked_files)
+            all_files = set[t.Any](staged_files + unstaged_files + untracked_files)
             return [f for f in all_files if f]
         except Exception as e:
             self.console.print(f"[yellow]⚠️[/ yellow] Error getting changed files: {e}")

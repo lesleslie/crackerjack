@@ -202,7 +202,7 @@ class AgentRegistry:
 
     def _build_agent_data(self, lines: list[str], yaml_end: int) -> dict[str, t.Any]:
         yaml_lines = lines[1:yaml_end]
-        agent_data = {}
+        agent_data: dict[str, t.Any] = {}
 
         for line in yaml_lines:
             if ": " in line:
@@ -344,7 +344,7 @@ class AgentRegistry:
         return self._agents.get(name)
 
     def list_all_agents(self) -> list[RegisteredAgent]:
-        agents = list(self._agents.values())
+        agents = list[t.Any](self._agents.values())
         agents.sort(key=lambda a: a.metadata.priority, reverse=True)
         return agents
 

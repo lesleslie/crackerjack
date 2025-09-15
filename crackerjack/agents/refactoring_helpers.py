@@ -87,7 +87,7 @@ class ComplexityCalculator(ast.NodeVisitor):
 
 
 class UsageDataCollector:
-    def __init__(self):
+    def __init__(self) -> None:
         self.defined_names: set[str] = set()
         self.used_names: set[str] = set()
         self.import_lines: list[tuple[int, str, str]] = []
@@ -108,10 +108,10 @@ class UsageDataCollector:
 
 
 class EnhancedUsageAnalyzer(ast.NodeVisitor):
-    def __init__(self, collector: UsageDataCollector):
-        self.scope_stack = [set()]
-        self.class_methods = {}
-        self.function_calls = set()
+    def __init__(self, collector: UsageDataCollector) -> None:
+        self.scope_stack: list[set[str]] = [set()]
+        self.class_methods: dict[str, list[str]] = {}
+        self.function_calls: set[str] = set()
         self.collector = collector
 
     def visit_Import(self, node: ast.Import) -> None:

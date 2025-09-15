@@ -7,7 +7,7 @@ from crackerjack.services.input_validator import SecureInputValidator
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
-def test_sql_injection_patterns():
+def test_sql_injection_patterns() -> bool:
     print("Testing SQL injection patterns...")
 
     test_cases = [
@@ -50,7 +50,7 @@ def test_sql_injection_patterns():
     return True
 
 
-def test_code_injection_patterns():
+def test_code_injection_patterns() -> bool:
     print("\nTesting code injection patterns...")
 
     test_cases = [
@@ -94,7 +94,7 @@ def test_code_injection_patterns():
     return True
 
 
-def test_job_id_validation():
+def test_job_id_validation() -> bool:
     print("\nTesting job ID validation...")
 
     test_cases = [
@@ -130,7 +130,7 @@ def test_job_id_validation():
     return True
 
 
-def test_env_var_validation():
+def test_env_var_validation() -> bool:
     print("\nTesting environment variable name validation...")
 
     test_cases = [
@@ -165,7 +165,7 @@ def test_env_var_validation():
     return True
 
 
-def test_integration_with_validator():
+def test_integration_with_validator() -> bool:
     print("\nTesting integration with SecureInputValidator...")
 
     validator = SecureInputValidator()
@@ -204,7 +204,7 @@ def test_integration_with_validator():
     return True
 
 
-def main():
+def main() -> int:
     print("🔒 Validating Input Validator Security Patterns")
     print("=" * 50)
 

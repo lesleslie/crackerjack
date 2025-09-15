@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+import typing as t
 from collections.abc import Callable
 from pathlib import Path
 
@@ -10,9 +11,10 @@ try:
 
     WATCHDOG_AVAILABLE = True
 except ImportError:
-    FileSystemEvent = None
-    FileSystemEventHandler = None
-    Observer = None
+    # Type stubs for when watchdog is not available
+    FileSystemEvent = t.Any
+    FileSystemEventHandler = t.Any
+    Observer = t.Any
     WATCHDOG_AVAILABLE = False
 
 import contextlib
@@ -28,7 +30,7 @@ if WATCHDOG_AVAILABLE:
 
     class ProgressFileHandler(FileSystemEventHandler):
         def __init__(
-            self, callback: Callable[[str, dict], None], progress_dir: Path
+            self, callback: Callable[[str, dict[str, t.Any]], None], progress_dir: Path
         ) -> None:
             super().__init__()
             self.callback = callback
@@ -85,7 +87,7 @@ if WATCHDOG_AVAILABLE:
 else:
 
     class ProgressFileHandler:
-        def __init__(self, callback: Callable[[str, dict], None]) -> None:
+        def __init__(self, callback: Callable[[str, dict[str, t.Any]], None]) -> None:
             pass
 
 
@@ -93,7 +95,7 @@ class AsyncProgressMonitor:
     def __init__(self, progress_dir: Path) -> None:
         self.progress_dir = SecurePathValidator.validate_safe_path(progress_dir)
         self.observer: Observer | None = None
-        self.subscribers: dict[str, set[Callable[[dict], None]]] = {}
+        self.subscribers: dict[str, set[Callable[[dict[str, t.Any]], None]]] = {}
         self._running = False
 
         self.progress_dir.mkdir(exist_ok=True)
@@ -129,14 +131,18 @@ class AsyncProgressMonitor:
 
         console.print("[yellow]📁 Stopped progress directory monitoring[/ yellow]")
 
-    def subscribe(self, job_id: str, callback: Callable[[dict], None]) -> None:
+    def subscribe(
+        self, job_id: str, callback: Callable[[dict[str, t.Any]], None]
+    ) -> None:
         if job_id not in self.subscribers:
             self.subscribers[job_id] = set()
 
         self.subscribers[job_id].add(callback)
         console.print(f"[cyan]📋 Subscribed to job updates: {job_id}[/ cyan]")
 
-    def unsubscribe(self, job_id: str, callback: Callable[[dict], None]) -> None:
+    def unsubscribe(
+        self, job_id: str, callback: Callable[[dict[str, t.Any]], None]
+    ) -> None:
         if job_id in self.subscribers:
             self.subscribers[job_id].discard(callback)
 
@@ -145,7 +151,7 @@ class AsyncProgressMonitor:
 
         console.print(f"[cyan]📋 Unsubscribed from job updates: {job_id}[/ cyan]")
 
-    def _on_file_changed(self, job_id: str, progress_data: dict) -> None:
+    def _on_file_changed(self, job_id: str, progress_data: dict[str, t.Any]) -> None:
         if job_id in self.subscribers:
             for callback in self.subscribers[job_id].copy():
                 try:
@@ -157,7 +163,7 @@ class AsyncProgressMonitor:
 
                     self.subscribers[job_id].discard(callback)
 
-    async def get_current_progress(self, job_id: str) -> dict | None:
+    async def get_current_progress(self, job_id: str) -> dict[str, t.Any] | None:
         progress_file = self.progress_dir / f"job-{job_id}.json"
 
         if not progress_file.exists():
@@ -165,7 +171,8 @@ class AsyncProgressMonitor:
 
         try:
             with progress_file.open() as f:
-                return json.load(f)
+                json_result = json.load(f)
+                return t.cast(dict[str, t.Any] | None, json_result)
         except (json.JSONDecodeError, OSError):
             return None
 
@@ -205,9 +212,9 @@ class AsyncProgressMonitor:
 class PollingProgressMonitor:
     def __init__(self, progress_dir: Path) -> None:
         self.progress_dir = SecurePathValidator.validate_safe_path(progress_dir)
-        self.subscribers: dict[str, set[Callable[[dict], None]]] = {}
+        self.subscribers: dict[str, set[Callable[[dict[str, t.Any]], None]]] = {}
         self._running = False
-        self._poll_task: asyncio.Task | None = None
+        self._poll_task: asyncio.Task[None] | None = None
         self._file_mtimes: dict[str, float] = {}
 
         self.progress_dir.mkdir(exist_ok=True)
@@ -279,7 +286,7 @@ class PollingProgressMonitor:
 
         self._file_mtimes = current_files
 
-    def _notify_subscribers(self, job_id: str, progress_data: dict) -> None:
+    def _notify_subscribers(self, job_id: str, progress_data: dict[str, t.Any]) -> None:
         if job_id in self.subscribers:
             for callback in self.subscribers[job_id].copy():
                 try:
@@ -290,14 +297,18 @@ class PollingProgressMonitor:
                     )
                     self.subscribers[job_id].discard(callback)
 
-    def subscribe(self, job_id: str, callback: Callable[[dict], None]) -> None:
+    def subscribe(
+        self, job_id: str, callback: Callable[[dict[str, t.Any]], None]
+    ) -> None:
         if job_id not in self.subscribers:
             self.subscribers[job_id] = set()
 
         self.subscribers[job_id].add(callback)
         console.print(f"[cyan]📋 Subscribed to job updates: {job_id} (polling)[/ cyan]")
 
-    def unsubscribe(self, job_id: str, callback: Callable[[dict], None]) -> None:
+    def unsubscribe(
+        self, job_id: str, callback: Callable[[dict[str, t.Any]], None]
+    ) -> None:
         if job_id in self.subscribers:
             self.subscribers[job_id].discard(callback)
 
@@ -308,7 +319,7 @@ class PollingProgressMonitor:
             f"[cyan]📋 Unsubscribed from job updates: {job_id} (polling)[/ cyan]",
         )
 
-    async def get_current_progress(self, job_id: str) -> dict | None:
+    async def get_current_progress(self, job_id: str) -> dict[str, t.Any] | None:
         progress_file = self.progress_dir / f"job-{job_id}.json"
 
         if not progress_file.exists():
@@ -316,7 +327,8 @@ class PollingProgressMonitor:
 
         try:
             with progress_file.open() as f:
-                return json.load(f)
+                json_result = json.load(f)
+                return t.cast(dict[str, t.Any] | None, json_result)
         except (json.JSONDecodeError, OSError):
             return None
 

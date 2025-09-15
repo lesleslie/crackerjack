@@ -2,6 +2,7 @@ import asyncio
 import json
 import statistics
 import time
+import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -87,7 +88,7 @@ class BenchmarkSuite:
 
 
 class PerformanceBenchmarker:
-    def __init__(self):
+    def __init__(self) -> None:
         self._logger = get_logger("crackerjack.benchmarker")
         self._monitor = get_performance_monitor()
         self._memory_optimizer = get_memory_optimizer()
@@ -129,7 +130,7 @@ class PerformanceBenchmarker:
             obj = {
                 "data": f"heavy_data_{i}" * 100,
                 "metadata": {"created": time.time(), "index": i},
-                "payload": list(range(100)),
+                "payload": list[t.Any](range(100)),
             }
             heavy_objects.append(obj)
 
@@ -148,11 +149,11 @@ class PerformanceBenchmarker:
         lazy_objects = []
         for i in range(50):
 
-            def create_heavy_object(index: int = i):
+            def create_heavy_object(index: int = i) -> dict[str, t.Any]:
                 return {
                     "data": f"heavy_data_{index}" * 100,
                     "metadata": {"created": time.time(), "index": index},
-                    "payload": list(range(100)),
+                    "payload": list[t.Any](range(100)),
                 }
 
             lazy_obj = LazyLoader(create_heavy_object, f"heavy_object_{i}")
@@ -246,7 +247,7 @@ class PerformanceBenchmarker:
     async def _simulate_cached_operation(self, operation_id: str) -> str:
         cached_result = await self._cache.get_async(f"expensive_op: {operation_id}")
         if cached_result is not None:
-            return cached_result
+            return str(cached_result)
 
         result = await self._simulate_expensive_operation(operation_id)
         await self._cache.set_async(

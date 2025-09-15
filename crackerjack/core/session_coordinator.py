@@ -301,7 +301,7 @@ class SessionCoordinator:
         except Exception as e:
             self._handle_quality_tracking_error(e)
 
-    def _initialize_quality_service(self):
+    def _initialize_quality_service(self) -> t.Any:
         """Initialize the quality baseline service."""
         from crackerjack.services.quality_baseline_enhanced import (
             EnhancedQualityBaselineService,
@@ -310,7 +310,7 @@ class SessionCoordinator:
         return EnhancedQualityBaselineService()
 
     def _record_quality_baseline(
-        self, quality_service, metrics: dict[str, t.Any]
+        self, quality_service: t.Any, metrics: dict[str, t.Any]
     ) -> None:
         """Record quality baseline with metrics."""
         quality_service.record_baseline(
@@ -333,7 +333,7 @@ class SessionCoordinator:
     def _extract_session_metrics(self) -> dict[str, t.Any] | None:
         """Extract quality metrics from the current session."""
         with suppress(Exception):
-            metrics = {}
+            metrics: dict[str, t.Any] = {}
             self._extract_test_metrics(metrics)
             self._extract_hook_metrics(metrics)
             self._set_default_metrics(metrics)
@@ -377,7 +377,7 @@ class SessionCoordinator:
         for key, default_value in defaults.items():
             metrics.setdefault(key, default_value)
 
-    def _display_quality_report(self, report) -> None:
+    def _display_quality_report(self, report: t.Any) -> None:
         """Display a summary of the quality report."""
         with suppress(Exception):
             if not report.current_metrics:
@@ -388,12 +388,12 @@ class SessionCoordinator:
             self._display_critical_alerts(report)
             self._display_top_recommendations(report)
 
-    def _display_quality_score(self, report) -> None:
+    def _display_quality_score(self, report: t.Any) -> None:
         """Display the quality score."""
         score = report.current_metrics.quality_score
         self.console.print(f"\n[cyan]📊 Quality Score: {score}/100[/cyan]")
 
-    def _display_quality_trend(self, report) -> None:
+    def _display_quality_trend(self, report: t.Any) -> None:
         """Display quality trend information."""
         if not report.trend:
             return
@@ -414,7 +414,7 @@ class SessionCoordinator:
         }
         return trend_emojis.get(direction, "📊")
 
-    def _display_critical_alerts(self, report) -> None:
+    def _display_critical_alerts(self, report: t.Any) -> None:
         """Display critical quality alerts."""
         critical_alerts = [a for a in report.alerts if a.severity.value == "critical"]
         if critical_alerts:
@@ -422,7 +422,7 @@ class SessionCoordinator:
                 f"[red]🚨 {len(critical_alerts)} critical quality issues[/red]"
             )
 
-    def _display_top_recommendations(self, report) -> None:
+    def _display_top_recommendations(self, report: t.Any) -> None:
         """Display top quality recommendations."""
         if not report.recommendations:
             return

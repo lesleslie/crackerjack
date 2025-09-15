@@ -21,7 +21,7 @@ class AgentPerformanceMetrics:
     failed_fixes: int = 0
     average_confidence: float = 0.0
     average_execution_time: float = 0.0
-    issue_types_handled: dict[IssueType, int] = field(default_factory=dict)
+    issue_types_handled: dict[IssueType, int] = field(default_factory=dict[str, t.Any])
     recent_failures: list[str] = field(default_factory=list)
     last_successful_fix: datetime | None = None
     regression_patterns: list[str] = field(default_factory=list)
@@ -34,7 +34,7 @@ class WatchdogAlert:
     agent_name: str | None = None
     issue_id: str | None = None
     timestamp: datetime = field(default_factory=datetime.now)
-    details: dict[str, t.Any] = field(default_factory=dict)
+    details: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
 
 class AIAgentWatchdog:
@@ -54,7 +54,7 @@ class AIAgentWatchdog:
         self.min_success_rate = 0.6
         self.max_recent_failures = 3
 
-    async def start_monitoring(self, coordinator: AgentCoordinator):
+    async def start_monitoring(self, coordinator: AgentCoordinator) -> None:
         self.monitoring_active = True
         self.console.print("🔍 [bold green]AI Agent Watchdog Started[/bold green]")
 
@@ -70,14 +70,14 @@ class AIAgentWatchdog:
             f"📊 Monitoring {len(coordinator.agents)} agents: {[a.__class__.__name__ for a in coordinator.agents]}"
         )
 
-    def stop_monitoring(self):
+    def stop_monitoring(self) -> None:
         self.monitoring_active = False
         self.console.print("🔍 [bold yellow]AI Agent Watchdog Stopped[/bold yellow]")
         self._generate_final_report()
 
     async def monitor_issue_handling(
         self, agent_name: str, issue: Issue, result: FixResult, execution_time: float
-    ):
+    ) -> None:
         if not self.monitoring_active:
             return
 
@@ -134,7 +134,7 @@ class AIAgentWatchdog:
         result: FixResult,
         execution_time: float,
         metrics: AgentPerformanceMetrics,
-    ):
+    ) -> None:
         alerts = []
 
         if execution_time > self.max_execution_time:
@@ -179,14 +179,14 @@ class AIAgentWatchdog:
             )
 
         if len(metrics.recent_failures) >= self.max_recent_failures:
-            unique_failures = set(metrics.recent_failures)
+            unique_failures = set[t.Any](metrics.recent_failures)
             if len(unique_failures) == 1:
                 alerts.append(
                     WatchdogAlert(
                         level="error",
                         message=f"Agent repeating same failure {len(metrics.recent_failures)} times",
                         agent_name=agent_name,
-                        details={"repeated_failure": list(unique_failures)[0]},
+                        details={"repeated_failure": list[t.Any](unique_failures)[0]},
                     )
                 )
 
@@ -194,7 +194,7 @@ class AIAgentWatchdog:
             self.alerts.append(alert)
             await self._handle_alert(alert)
 
-    async def _handle_alert(self, alert: WatchdogAlert):
+    async def _handle_alert(self, alert: WatchdogAlert) -> None:
         colors = {"warning": "yellow", "error": "red", "critical": "bold red"}
         color = colors.get(alert.level) or "white"
 
@@ -270,7 +270,7 @@ class AIAgentWatchdog:
         cutoff = datetime.now() - timedelta(hours=hours)
         return [alert for alert in self.alerts if alert.timestamp > cutoff]
 
-    def _generate_final_report(self):
+    def _generate_final_report(self) -> None:
         self.console.print("\n📊 [bold]AI Agent Watchdog Final Report[/bold]")
 
         total_issues = sum(
@@ -314,7 +314,7 @@ class AIAgentWatchdog:
 
         self._save_monitoring_report()
 
-    def _save_monitoring_report(self):
+    def _save_monitoring_report(self) -> None:
         report_data = {
             "timestamp": datetime.now().isoformat(),
             "metrics": {
@@ -351,13 +351,13 @@ class AIAgentWatchdog:
         report_file = Path(".crackerjack") / "ai_agent_monitoring_report.json"
         report_file.parent.mkdir(exist_ok=True)
 
-        with open(report_file, "w") as f:
+        with report_file.open("w") as f:
             json.dump(report_data, f, indent=2)
 
         self.console.print(f"📄 Detailed report saved: {report_file}")
 
 
-async def run_agent_monitoring_demo():
+async def run_agent_monitoring_demo() -> None:
     console = Console()
     watchdog = AIAgentWatchdog(console)
 

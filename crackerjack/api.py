@@ -400,7 +400,7 @@ class CrackerjackAPI:
             git_dir = self.project_path / ".git"
             is_git_repo = git_dir.exists()
 
-            python_files = list(self.project_path.rglob("*.py"))
+            python_files = list[t.Any](self.project_path.rglob("*.py"))
 
             return {
                 "project_path": str(self.project_path),
@@ -479,13 +479,13 @@ class CrackerjackAPI:
                     data = tomllib.load(f)
 
                 if "project" in data and "version" in data["project"]:
-                    return data["project"]["version"]
+                    return str(data["project"]["version"])
                 if (
                     "tool" in data
                     and "poetry" in data["tool"]
                     and "version" in data["tool"]["poetry"]
                 ):
-                    return data["tool"]["poetry"]["version"]
+                    return str(data["tool"]["poetry"]["version"])
 
             import importlib.metadata
 
@@ -590,7 +590,7 @@ class CrackerjackAPI:
                 data = tomllib.load(f)
 
             if "project" in data and "name" in data["project"]:
-                return data["project"]["name"]
+                return str(data["project"]["name"])
 
         return None
 

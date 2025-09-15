@@ -245,7 +245,7 @@ class StatusAuthenticator:
                 access_level=access_level,
                 method=AuthenticationMethod.JWT_TOKEN,
                 expires_at=payload.get("exp"),
-                allowed_operations=set(allowed_operations)
+                allowed_operations=set[t.Any](allowed_operations)
                 if allowed_operations
                 else None,
             )
@@ -324,7 +324,9 @@ class StatusAuthenticator:
                 operation=operation,
                 additional_data={
                     "access_level": credentials.access_level.value,
-                    "allowed_operations": list(credentials.allowed_operations or []),
+                    "allowed_operations": list[t.Any](
+                        credentials.allowed_operations or []
+                    ),
                 },
             )
             raise AccessDeniedError(f"Operation not allowed: {operation}")

@@ -105,6 +105,34 @@ class PhaseCoordinator(ErrorHandlingMixin):
         self.console.print("-" * 40 + "\n")
         self.console.print("[yellow]🧹[/yellow] Starting code cleaning...")
 
+    def _display_version_bump_header(self, version_type: str) -> None:
+        self.console.print("\n" + "-" * 74)
+        self.console.print(
+            f"[bold bright_magenta]📦 BUMP VERSION[/bold bright_magenta] [bold bright_white]Updating package version ({version_type})[/bold bright_white]",
+        )
+        self.console.print("-" * 74 + "\n")
+
+    def _display_publish_header(self) -> None:
+        self.console.print("\n" + "-" * 74)
+        self.console.print(
+            "[bold bright_yellow]🚀 PUBLISH[/bold bright_yellow] [bold bright_white]Publishing to PyPI[/bold bright_white]",
+        )
+        self.console.print("-" * 74 + "\n")
+
+    def _display_git_staging_header(self) -> None:
+        self.console.print("\n" + "-" * 74)
+        self.console.print(
+            "[bold bright_cyan]🏷️ GIT OPERATIONS[/bold bright_cyan] [bold bright_white]Staging files and creating tags[/bold bright_white]",
+        )
+        self.console.print("-" * 74 + "\n")
+
+    def _display_commit_push_header(self) -> None:
+        self.console.print("\n" + "-" * 74)
+        self.console.print(
+            "[bold bright_green]📤 COMMIT & PUSH[/bold bright_green] [bold bright_white]Committing and pushing changes[/bold bright_white]",
+        )
+        self.console.print("-" * 74 + "\n")
+
     def _execute_cleaning_process(self) -> bool:
         cleaning_result = self.code_cleaner.clean_files(self.pkg_path, use_backup=True)
 
@@ -181,20 +209,9 @@ class PhaseCoordinator(ErrorHandlingMixin):
     def _execute_configuration_steps(self, options: OptionsProtocol) -> bool:
         success = True
 
-        self._handle_smart_config_merge(options)
-
-        if self._is_crackerjack_project() and not self._copy_config_files_to_package():
-            success = False
-
         success &= self._update_configuration_files(options)
 
         return success
-
-    def _handle_smart_config_merge(self, options: OptionsProtocol) -> None:
-        if not self._perform_smart_config_merge(options):
-            self.console.print(
-                "[yellow]⚠️[/yellow] Smart config merge encountered issues (continuing)"
-            )
 
     def _update_configuration_files(self, options: OptionsProtocol) -> bool:
         success = True
@@ -212,84 +229,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
         )
         self.session.complete_task("configuration", message)
 
-    def _perform_smart_config_merge(self, options: OptionsProtocol) -> bool:
-        try:
-            self.logger.debug("Starting smart config merge process")
-
-            merged_files = []
-
-            if hasattr(options, "skip_config_merge") and options.skip_config_merge:
-                self.logger.debug("Config merge skipped by option")
-                return True
-
-            if self._smart_merge_gitignore():
-                merged_files.append(".gitignore")
-
-            if self._is_crackerjack_project():
-                if self._smart_merge_project_configs():
-                    merged_files.extend(["pyproject.toml", ".pre-commit-config.yaml"])
-
-            if merged_files:
-                files_str = ", ".join(merged_files)
-                self.console.print(
-                    f"[green]🔧[/green] Smart-merged configurations: {files_str}"
-                )
-                self.logger.info(f"Smart config merge completed: {merged_files}")
-            else:
-                self.logger.debug("No configuration files needed smart merging")
-
-            return True
-
-        except Exception as e:
-            self.console.print(f"[yellow]⚠️[/yellow] Smart config merge failed: {e}")
-            self.logger.warning(
-                f"Smart config merge failed: {e} (type: {type(e).__name__})"
-            )
-
-            return True
-
-    def _smart_merge_gitignore(self) -> bool:
-        try:
-            gitignore_path = self.pkg_path / ".gitignore"
-            if not gitignore_path.exists():
-                return False
-
-            standard_patterns = [
-                "# Crackerjack generated files",
-                ".crackerjack/",
-                "*.crackerjack.bak",
-                ".coverage.*",
-                "crackerjack-debug-*.log",
-                "__pycache__/",
-                "*.py[cod]",
-                "*$py.class",
-                ".pytest_cache/",
-                ".tox/",
-                ".mypy_cache/",
-                ".ruff_cache/",
-            ]
-
-            self.config_merge_service.smart_merge_gitignore(
-                patterns=standard_patterns, target_path=str(gitignore_path)
-            )
-
-            return True
-
-        except Exception as e:
-            self.logger.warning(f"Failed to smart merge .gitignore: {e}")
-            return False
-
-    def _smart_merge_project_configs(self) -> bool:
-        try:
-            self.logger.debug(
-                "Project config smart merge placeholder - handled by existing config service"
-            )
-            return True
-
-        except Exception as e:
-            self.logger.warning(f"Failed to smart merge project configs: {e}")
-            return False
-
     def _is_crackerjack_project(self) -> bool:
         pyproject_path = self.pkg_path / "pyproject.toml"
         if not pyproject_path.exists():
@@ -301,56 +240,9 @@ class PhaseCoordinator(ErrorHandlingMixin):
             with pyproject_path.open("rb") as f:
                 data = tomllib.load(f)
 
-            project_name = data.get("project", {}).get("name", "")
+            project_name: str = data.get("project", {}).get("name", "")
             return project_name == "crackerjack"
         except Exception:
-            return False
-
-    def _copy_config_files_to_package(self) -> bool:
-        try:
-            files_to_copy = [
-                "pyproject.toml",
-                ".pre-commit-config.yaml",
-                "CLAUDE.md",
-                "RULES.md",
-                ".gitignore",
-                "example.mcp.json",
-                "uv.lock",
-            ]
-
-            package_dir = self.pkg_path / "crackerjack"
-            if not package_dir.exists():
-                self.console.print(
-                    "[yellow]⚠️[/ yellow] Package directory not found: crackerjack /",
-                )
-                return False
-
-            copied_count = 0
-            for filename in files_to_copy:
-                src_path = self.pkg_path / filename
-                if src_path.exists():
-                    dst_path = package_dir / filename
-                    try:
-                        import shutil
-
-                        shutil.copy2(src_path, dst_path)
-                        copied_count += 1
-                        self.logger.debug(f"Copied {filename} to package directory")
-                    except Exception as e:
-                        self.console.print(
-                            f"[yellow]⚠️[/ yellow] Failed to copy {filename}: {e}",
-                        )
-
-            if copied_count > 0:
-                self.console.print(
-                    f"[green]✅[/ green] Copied {copied_count} config files to package directory",
-                )
-
-            return True
-        except Exception as e:
-            self.console.print(
-                f"[red]❌[/ red] Failed to copy config files to package: {e}",
-            )
             return False
 
     def run_hooks_phase(self, options: OptionsProtocol) -> bool:
@@ -385,11 +277,11 @@ class PhaseCoordinator(ErrorHandlingMixin):
             return True
         self.session.track_task("testing", "Test execution")
         try:
-            self.console.print("\n" + "-" * 40)
+            self.console.print("\n" + "-" * 74)
             self.console.print(
                 "[bold bright_blue]🧪 TESTS[/ bold bright_blue] [bold bright_white]Running test suite[/ bold bright_white]",
             )
-            self.console.print("-" * 40 + "\n")
+            self.console.print("-" * 74 + "\n")
             if not self.test_manager.validate_test_environment():
                 self.session.fail_task("testing", "Test environment validation failed")
                 return False
@@ -424,9 +316,15 @@ class PhaseCoordinator(ErrorHandlingMixin):
 
     def _determine_version_type(self, options: OptionsProtocol) -> str | None:
         if options.publish:
-            return options.publish
+            publish_value: str | None = (
+                options.publish if isinstance(options.publish, str) else None
+            )
+            return publish_value
         if options.all:
-            return options.all
+            all_value: str | None = (
+                options.all if isinstance(options.all, str) else None
+            )
+            return all_value
         if options.bump:
             self._handle_version_bump_only(options.bump)
             return None
@@ -437,8 +335,12 @@ class PhaseCoordinator(ErrorHandlingMixin):
         options: OptionsProtocol,
         version_type: str,
     ) -> bool:
+        # Display version bump header
+        self._display_version_bump_header(version_type)
         new_version = self.publish_manager.bump_version(version_type)
 
+        # Display git operations header for staging and tagging
+        self._display_git_staging_header()
         self.console.print("[blue]📂[/ blue] Staging all changes for publishing...")
         if not self.git_service.add_all_files():
             self.console.print(
@@ -448,6 +350,8 @@ class PhaseCoordinator(ErrorHandlingMixin):
         if not options.no_git_tags:
             self.publish_manager.create_git_tag(new_version)
 
+        # Display publish header
+        self._display_publish_header()
         if self.publish_manager.publish_package():
             self._handle_successful_publish(options, new_version)
             return True
@@ -469,6 +373,9 @@ class PhaseCoordinator(ErrorHandlingMixin):
     def run_commit_phase(self, options: OptionsProtocol) -> bool:
         if not options.commit:
             return True
+
+        # Display commit & push header
+        self._display_commit_push_header()
         self.session.track_task("commit", "Git commit and push")
         try:
             changed_files = self.git_service.get_changed_files()
@@ -551,6 +458,8 @@ class PhaseCoordinator(ErrorHandlingMixin):
     def _handle_version_bump_only(self, bump_type: str) -> bool:
         self.session.track_task("version_bump", f"Version bump ({bump_type})")
         try:
+            # Display version bump header
+            self._display_version_bump_header(bump_type)
             new_version = self.publish_manager.bump_version(bump_type)
             self.console.print(f"[green]🎯[/ green] Version bumped to {new_version}")
             self.session.complete_task("version_bump", f"Bumped to {new_version}")
@@ -565,44 +474,58 @@ class PhaseCoordinator(ErrorHandlingMixin):
         changed_files: list[str],
         options: OptionsProtocol,
     ) -> str:
-        try:
-            from crackerjack.services.intelligent_commit import CommitMessageGenerator
+        # Check if smart commit is enabled
+        if getattr(options, "smart_commit", False):
+            try:
+                from crackerjack.services.intelligent_commit import (
+                    CommitMessageGenerator,
+                )
 
-            commit_generator = CommitMessageGenerator(
-                console=self.console, git_service=self.git_service
-            )
+                self.console.print(
+                    "[cyan]🤖[/cyan] Generating intelligent commit message..."
+                )
+                commit_generator = CommitMessageGenerator(
+                    console=self.console, git_service=self.git_service
+                )
 
-            intelligent_message = commit_generator.generate_commit_message(
-                include_body=False,
-                conventional_commits=True,
-            )
+                intelligent_message = commit_generator.generate_commit_message(
+                    include_body=False,
+                    conventional_commits=True,
+                )
 
-            if not options.interactive:
-                return intelligent_message
+                if not options.interactive:
+                    self.console.print(
+                        f"[green]✨[/green] Generated: {intelligent_message}"
+                    )
+                    return intelligent_message
 
-            # In interactive mode, offer the intelligent message plus fallback suggestions
-            suggestions = [intelligent_message]
-            fallback_suggestions = self.git_service.get_commit_message_suggestions(
-                changed_files
-            )
-            suggestions.extend(fallback_suggestions[:3])  # Add up to 3 fallback options
+                # In interactive mode, offer the intelligent message plus fallback suggestions
+                suggestions = [intelligent_message]
+                fallback_suggestions = self.git_service.get_commit_message_suggestions(
+                    changed_files
+                )
+                suggestions.extend(
+                    fallback_suggestions[:3]
+                )  # Add up to 3 fallback options
 
-            return self._interactive_commit_message_selection(suggestions)
+                return self._interactive_commit_message_selection(suggestions)
 
-        except Exception as e:
-            self.console.print(
-                f"[yellow]⚠️[/yellow] Intelligent commit generation failed: {e}"
-            )
-            # Fallback to original logic
-            suggestions = self.git_service.get_commit_message_suggestions(changed_files)
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]⚠️[/yellow] Intelligent commit generation failed: {e}"
+                )
+                # Fallback to original logic
 
-            if not suggestions:
-                return "Update project files"
+        # Original logic for non-smart commits
+        suggestions = self.git_service.get_commit_message_suggestions(changed_files)
 
-            if not options.interactive:
-                return suggestions[0]
+        if not suggestions:
+            return "Update project files"
 
-            return self._interactive_commit_message_selection(suggestions)
+        if not options.interactive:
+            return suggestions[0]
+
+        return self._interactive_commit_message_selection(suggestions)
 
     def _interactive_commit_message_selection(self, suggestions: list[str]) -> str:
         self._display_commit_suggestions(suggestions)
@@ -721,7 +644,8 @@ class PhaseCoordinator(ErrorHandlingMixin):
             self.logger.info("Attempting autofix for fast hook failures")
 
             autofix_coordinator = self._lazy_autofix.get()
-            return autofix_coordinator.apply_fast_stage_fixes()
+            fix_result: bool = autofix_coordinator.apply_fast_stage_fixes()
+            return fix_result
         except Exception as e:
             self.logger.warning(f"Autofix attempt failed: {e}")
             return False
@@ -910,5 +834,6 @@ class PhaseCoordinator(ErrorHandlingMixin):
         return self._handle_hook_failures(hook_type, options, summary, results, 0, 1)
 
     @property
-    def autofix_coordinator(self):
-        return self._lazy_autofix.get()
+    def autofix_coordinator(self) -> AutofixCoordinator:
+        coordinator: AutofixCoordinator = self._lazy_autofix.get()
+        return coordinator

@@ -44,7 +44,7 @@ class ServiceDescriptor:
     created_count: int = 0
     dependencies: list[type] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.implementation is self.factory is self.instance is None:
             msg = "Must provide either implementation, factory, or instance"
             raise ValueError(msg)
@@ -146,7 +146,7 @@ class DependencyResolver:
 
     def _build_constructor_kwargs(self, implementation: type) -> dict[str, Any]:
         init_sig = inspect.signature(implementation.__init__)
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
 
         for param_name, param in init_sig.parameters.items():
             if param_name == "self":
@@ -300,7 +300,7 @@ class EnhancedDependencyContainer:
         self._current_scope = scope
 
     def get_service_info(self) -> dict[str, Any]:
-        info = {}
+        info: dict[str, Any] = {}
 
         with self._lock:
             for key, descriptor in self._services.items():
@@ -391,7 +391,7 @@ class EnhancedDependencyContainer:
     def _get_service_key(self, interface: type) -> str:
         return f"{interface.__module__}.{interface.__name__}"
 
-    def __enter__(self):
+    def __enter__(self) -> "EnhancedDependencyContainer":
         return self
 
     def __exit__(

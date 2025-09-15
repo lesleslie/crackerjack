@@ -1,4 +1,5 @@
 import json
+import typing as t
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -11,8 +12,10 @@ from ...services.secure_status_formatter import (
 from .jobs import JobManager
 
 
-def _build_job_list(job_manager: JobManager, progress_dir: Path) -> list[dict]:
-    jobs = []
+def _build_job_list(
+    job_manager: JobManager, progress_dir: Path
+) -> list[dict[str, t.Any]]:
+    jobs: list[dict[str, t.Any]] = []
     if not progress_dir.exists():
         return jobs
     for progress_file in progress_dir.glob("job-*.json"):
@@ -34,7 +37,9 @@ def _build_job_list(job_manager: JobManager, progress_dir: Path) -> list[dict]:
     return jobs
 
 
-def _build_status_response(job_manager: JobManager, jobs: list[dict]) -> dict:
+def _build_status_response(
+    job_manager: JobManager, jobs: list[dict[str, t.Any]]
+) -> dict[str, t.Any]:
     return {
         "status": "running",
         "message": "Crackerjack WebSocket Server",
@@ -416,7 +421,7 @@ def register_endpoints(
     progress_dir: Path,
 ) -> None:
     @app.get("/")
-    async def get_status():
+    async def get_status() -> dict[str, t.Any]:
         try:
             jobs = _build_job_list(job_manager, progress_dir)
             raw_status = _build_status_response(job_manager, jobs)
@@ -436,7 +441,7 @@ def register_endpoints(
             return error_response
 
     @app.get("/latest")
-    async def get_latest_job():
+    async def get_latest_job() -> dict[str, t.Any]:
         try:
             latest_job_id = job_manager.get_latest_job_id()
 
@@ -453,7 +458,7 @@ def register_endpoints(
                     "status": "success",
                     "message": f"Latest job: {latest_job_id}",
                     "job_id": latest_job_id,
-                    "progress": progress_data,
+                    "progress": progress_data or {},
                     "websocket_url": f"ws: //[INTERNAL_URL]/ws/progress/{latest_job_id}",
                     "monitor_url": f"http: //[INTERNAL_URL]/monitor/{latest_job_id}",
                 }
@@ -474,7 +479,7 @@ def register_endpoints(
             return error_response
 
     @app.get("/monitor/{job_id}")
-    async def get_job_monitor_page(job_id: str):
+    async def get_job_monitor_page(job_id: str) -> HTMLResponse:
         if not job_manager.validate_job_id(job_id):
             return HTMLResponse(
                 content="<h1>Error</h1><p>Invalid job ID</p>",
@@ -483,5 +488,5 @@ def register_endpoints(
         return HTMLResponse(content=_get_monitor_html(job_id))
 
     @app.get("/test")
-    async def get_test_page():
+    async def get_test_page() -> HTMLResponse:
         return HTMLResponse(content=_get_test_html())

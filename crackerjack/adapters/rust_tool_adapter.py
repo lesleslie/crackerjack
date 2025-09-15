@@ -40,6 +40,7 @@ class ToolResult:
     raw_output: str = ""
     execution_time: float = 0.0
     tool_version: str | None = None
+    _execution_mode: str | None = None
 
     @property
     def has_errors(self) -> bool:
@@ -175,7 +176,8 @@ class BaseRustToolAdapter(ABC):
     def _parse_json_output_safe(self, output: str) -> dict[str, t.Any] | None:
         """Safely parse JSON output with error handling."""
         try:
-            return json.loads(output)
+            json_result = json.loads(output)
+            return t.cast(dict[str, t.Any] | None, json_result)
         except json.JSONDecodeError:
             # Log the error but don't fail completely
             return None

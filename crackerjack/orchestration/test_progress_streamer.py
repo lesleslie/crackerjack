@@ -143,7 +143,7 @@ class PytestOutputParser:
             self._process_current_test_line(line, suite_info)
 
         return {
-            "tests": list(tests.values()),
+            "tests": list[t.Any](tests.values()),
             "suite_progress": suite_info,
             "test_count": len(tests),
         }
@@ -227,9 +227,9 @@ class PytestOutputParser:
             suite_info.current_test = line.split()[0] if line.split() else None
 
     def parse_test_failure_details(self, output_lines: list[str]) -> dict[str, str]:
-        failures = {}
-        current_test = None
-        current_traceback = []
+        failures: dict[str, str] = {}
+        current_test: str | None = None
+        current_traceback: list[str] = []
         in_failure_section = False
 
         for line in output_lines:

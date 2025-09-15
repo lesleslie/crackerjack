@@ -48,7 +48,7 @@ FORBIDDEN_REPLACEMENT_PATTERNS = [
 
 
 class RegexVisitor(ast.NodeVisitor):
-    def __init__(self, file_path: Path):
+    def __init__(self, file_path: Path) -> None:
         self.file_path = file_path
         self.issues: list[tuple[int, str]] = []
         self.has_regex_import = False

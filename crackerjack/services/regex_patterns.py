@@ -50,7 +50,7 @@ class CompiledPatternCache:
             return {
                 "size": len(cls._cache),
                 "max_size": cls._max_size,
-                "patterns": list(cls._cache.keys()),
+                "patterns": list[t.Any](cls._cache.keys()),
             }
 
 
@@ -84,7 +84,7 @@ class ValidatedPattern:
     flags: int = 0
     _compiled_pattern: Pattern[str] | None = field(default=None, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._validate()
 
     def _validate(self) -> None:
@@ -2120,7 +2120,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("results += [result]", "results.append(result)"),
             (" data += [value, other]", " data.append(value, other)"),
         ],
-        description="Replace inefficient list concatenation with append for"
+        description="Replace inefficient list[t.Any] concatenation with append for"
         " performance",
     ),
     "string_concatenation_pattern": ValidatedPattern(
@@ -2132,7 +2132,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("result += line", "result_parts.append(line)"),
             (" output += data", " output_parts.append(data)"),
         ],
-        description="Replace string concatenation with list append for performance "
+        description="Replace string concatenation with list[t.Any] append for performance "
         "optimization",
     ),
     "nested_loop_detection_pattern": ValidatedPattern(
@@ -2164,7 +2164,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("results += [x, y]", "results.extend([x, y])"),
             (" data += [single_item]", " data.extend([single_item])"),
         ],
-        description="Replace list concatenation with extend for better performance with multiple items",
+        description="Replace list[t.Any] concatenation with extend for better performance with multiple items",
     ),
     "inefficient_string_join_pattern": ValidatedPattern(
         name="inefficient_string_join_pattern",
@@ -2181,7 +2181,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
                 "result = '' # Performance: Use empty string directly instead of join",
             ),
         ],
-        description="Replace inefficient empty list join with direct empty string"
+        description="Replace inefficient empty list[t.Any] join with direct empty string"
         " assignment",
     ),
     "repeated_len_in_loop_pattern": ValidatedPattern(
@@ -2206,21 +2206,21 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     "list_comprehension_optimization_pattern": ValidatedPattern(
         name="list_comprehension_optimization_pattern",
         pattern=r"(\s*)(\w+)\.append\(([^)]+)\)",
-        replacement=r"\1# Performance: Consider list comprehension if this is in a "
+        replacement=r"\1# Performance: Consider list[t.Any] comprehension if this is in a "
         r"simple loop\n\1\2.append(\3)",
         test_cases=[
             (
                 " results.append(item * 2)",
-                " # Performance: Consider list comprehension if this is in a "
+                " # Performance: Consider list[t.Any] comprehension if this is in a "
                 "simple loop\n results.append(item * 2)",
             ),
             (
                 "data.append(value)",
-                "# Performance: Consider list comprehension if this is in a simple"
+                "# Performance: Consider list[t.Any] comprehension if this is in a simple"
                 " loop\ndata.append(value)",
             ),
         ],
-        description="Suggest list comprehensions for simple append patterns",
+        description="Suggest list[t.Any] comprehensions for simple append patterns",
     ),
     "detect_crypto_weak_algorithms": ValidatedPattern(
         name="detect_crypto_weak_algorithms",
@@ -2405,7 +2405,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             ("from module import a, , b", "from module import a, b"),
             ("items = [a, , b]", "items = [a, b]"),
-            ("normal, list", "normal, list"),
+            ("normal, list[t.Any]", "normal, list[t.Any]"),
         ],
     ),
     "clean_trailing_import_comma": ValidatedPattern(
@@ -2624,11 +2624,91 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
             ("```bash\nmulti\nline\ncommand\n```", "multi\nline\ncommand"),
         ],
     ),
+    "detect_coverage_badge": ValidatedPattern(
+        name="detect_coverage_badge",
+        pattern=r"!\[Coverage.*?\]\(.*?coverage.*?\)|!\[.*coverage.*?\]\(.*?shields\.io.*?coverage.*?\)|https://img\.shields\.io/badge/coverage-[\d\.]+%25-\w+",
+        replacement="",
+        description="Detect existing coverage badges in README content",
+        flags=re.IGNORECASE,
+        test_cases=[
+            (
+                "![Coverage](https://img.shields.io/badge/coverage-85.0%25-brightgreen)",
+                "",
+            ),
+            (
+                "![Code Coverage](https://img.shields.io/badge/coverage-75.5%25-yellow)",
+                "",
+            ),
+            (
+                "![coverage badge](https://shields.io/badge/coverage-90.0%25-brightgreen)",
+                "",
+            ),
+            ("Some text without badge", "Some text without badge"),
+        ],
+    ),
+    "update_coverage_badge_url": ValidatedPattern(
+        name="update_coverage_badge_url",
+        pattern=r"(!\[Coverage.*?\]\()([^)]+)(\))",
+        replacement=r"\1NEW_BADGE_URL\3",
+        description="Update coverage badge URL in markdown links",
+        test_cases=[
+            ("![Coverage](old_url)", "![Coverage](NEW_BADGE_URL)"),
+            ("![Coverage Badge](old_badge_url)", "![Coverage Badge](NEW_BADGE_URL)"),
+            ("text ![Coverage](url) more", "text ![Coverage](NEW_BADGE_URL) more"),
+            ("no badge here", "no badge here"),
+        ],
+    ),
+    "update_coverage_badge_any": ValidatedPattern(
+        name="update_coverage_badge_any",
+        pattern=r"(!\[.*coverage.*?\]\()([^)]+)(\))",
+        replacement=r"\1NEW_BADGE_URL\3",
+        description="Update any coverage-related badge URL",
+        flags=re.IGNORECASE,
+        test_cases=[
+            ("![Code Coverage](old_url)", "![Code Coverage](NEW_BADGE_URL)"),
+            ("![coverage badge](old_url)", "![coverage badge](NEW_BADGE_URL)"),
+            ("![test coverage](url)", "![test coverage](NEW_BADGE_URL)"),
+            ("![Other Badge](url)", "![Other Badge](url)"),
+        ],
+    ),
+    "update_shields_coverage_url": ValidatedPattern(
+        name="update_shields_coverage_url",
+        pattern=r"(https://img\.shields\.io/badge/coverage-[\d\.]+%25-\w+)",
+        replacement="NEW_BADGE_URL",
+        description="Update shields.io coverage badge URLs directly",
+        test_cases=[
+            (
+                "https://img.shields.io/badge/coverage-85.0%25-brightgreen",
+                "NEW_BADGE_URL",
+            ),
+            ("https://img.shields.io/badge/coverage-75.5%25-yellow", "NEW_BADGE_URL"),
+            (
+                "https://img.shields.io/badge/coverage-90.1%25-brightgreen",
+                "NEW_BADGE_URL",
+            ),
+            (
+                "https://img.shields.io/badge/build-passing-green",
+                "https://img.shields.io/badge/build-passing-green",
+            ),
+        ],
+    ),
+    "extract_coverage_percentage": ValidatedPattern(
+        name="extract_coverage_percentage",
+        pattern=r"coverage-([\d\.]+)%25",
+        replacement="",  # Not used for extraction, just validation
+        description="Search for coverage percentage in badge URL",
+        test_cases=[
+            ("coverage-85.0%25", ""),  # Will use search() to get group(1)
+            ("coverage-75.5%25", ""),
+            ("coverage-100.0%25", ""),
+            ("no coverage here", "no coverage here"),  # No match
+        ],
+    ),
 }
 
 
 def validate_all_patterns() -> dict[str, bool]:
-    validate_results = {}
+    validate_results: dict[str, bool] = {}
     for name, pattern in SAFE_PATTERNS.items():
         try:
             pattern._validate()
@@ -2776,9 +2856,9 @@ def apply_pattern_iteratively(
     return SAFE_PATTERNS[pattern_name].apply_iteratively(text, max_iterations)
 
 
-def get_all_pattern_stats() -> dict[str, dict[str, int | float]]:
+def get_all_pattern_stats() -> dict[str, dict[str, float] | dict[str, str]]:
     test_text = "python - m crackerjack - t with pytest - hypothesis - specialist"
-    stats = {}
+    stats: dict[str, dict[str, float] | dict[str, str]] = {}
 
     for name, pattern in SAFE_PATTERNS.items():
         try:

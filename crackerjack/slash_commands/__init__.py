@@ -51,7 +51,7 @@ def list_available_commands() -> list[str]:
 
     except Exception as e:
         raise ExecutionError(
-            message="Failed to list available commands",
+            message="Failed to list[t.Any] available commands",
             error_code=ErrorCode.FILE_READ_ERROR,
         ) from e
 

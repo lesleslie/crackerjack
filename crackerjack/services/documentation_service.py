@@ -153,12 +153,14 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
             # Collect all documentation files
             api_docs = (
-                list(self.api_docs_dir.glob("*.md"))
+                list[t.Any](self.api_docs_dir.glob("*.md"))
                 if self.api_docs_dir.exists()
                 else []
             )
             guide_docs = (
-                list(self.guides_dir.glob("*.md")) if self.guides_dir.exists() else []
+                list[t.Any](self.guides_dir.glob("*.md"))
+                if self.guides_dir.exists()
+                else []
             )
             root_docs = [
                 f
@@ -210,7 +212,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
     def _find_source_files(self) -> list[Path]:
         """Find all Python source files excluding hidden directories."""
-        source_files = list(self.pkg_path.glob("**/*.py"))
+        source_files = list[t.Any](self.pkg_path.glob("**/*.py"))
         return [
             f for f in source_files if not any(part.startswith(".") for part in f.parts)
         ]
@@ -326,7 +328,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             )
 
             # Find all source files
-            source_files = list(self.pkg_path.glob("**/*.py"))
+            source_files = list[t.Any](self.pkg_path.glob("**/*.py"))
             source_files = [
                 f
                 for f in source_files
@@ -572,7 +574,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         self, service_name: str, service_info: dict[str, t.Any]
     ) -> list[str]:
         """Generate documentation section for a single service."""
-        lines = []
+        lines: list[str] = []
         lines.extend(
             (
                 f"## {service_name}\n\n",

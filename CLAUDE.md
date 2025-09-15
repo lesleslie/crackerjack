@@ -12,7 +12,7 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 
 ## AI Documentation References
 
-- **[AI-REFERENCE.md](AI-REFERENCE.md)** - Command reference with decision trees
+- **[AI-REFERENCE.md](docs/ai/AI-REFERENCE.md)** - Command reference with decision trees
 - **[AGENT-CAPABILITIES.json](AGENT-CAPABILITIES.json)** - Structured agent data
 - **[ERROR-PATTERNS.yaml](ERROR-PATTERNS.yaml)** - Automated issue resolution patterns
 
@@ -225,6 +225,40 @@ python -m crackerjack --ai-fix --run-tests  # Quality + AI fixing
 - Error fix strategies learned and suggested
 - Command effectiveness optimized based on history
 
+## Experimental Features
+
+**Framework for Future Innovations**: Crackerjack includes a comprehensive experimental features framework designed to safely evaluate and integrate next-generation tools.
+
+### Experimental Hook Framework
+
+The experimental hook system provides a structured pathway for evaluating new tools before promoting them to stable status:
+
+```bash
+# Framework supports experimental evaluation
+python -m crackerjack --experimental-hooks  # (when experimental hooks are available)
+```
+
+**Evaluation Criteria**:
+
+1. **Availability**: Tool consistently available across environments
+1. **Stability**: No crashes or inconsistent results across runs
+1. **Value Added**: Catches issues not found by existing tools
+1. **Performance**: Stays within time budgets
+1. **Integration**: Works reliably with pre-commit workflow
+
+**Promotion Lifecycle**:
+
+1. **Experimental Phase**: Limited to `manual` stage only
+1. **Evaluation Period**: 30-90 day assessment with metrics
+1. **Promotion Decision**: Move to appropriate tier if criteria met
+1. **Removal**: Clean removal if criteria not met
+
+**Current Status**:
+
+- **No Active Experimental Hooks**: Previous experimental candidates (pyrefly, ty) failed availability testing and were removed
+- **Framework Ready**: System prepared for future experimental tool evaluation
+- **Documentation**: Complete evaluation criteria in [EXPERIMENTAL-EVALUATION.md](EXPERIMENTAL-EVALUATION.md)
+
 ## Critical Reminders
 
 **Core Instructions**:
@@ -265,3 +299,5 @@ from ..models.protocols import TestManagerProtocol
 **Current Status**: 10.11% coverage baseline targeting 100% (ratchet system: 2% tolerance, never reduce)
 
 - make sure to run `python -m crackerjack` after every editing/debugging cycle for quality checking
+- always put implementation plans in a md doc for review and reference
+- think when you need to think, think harder when you need to think harder

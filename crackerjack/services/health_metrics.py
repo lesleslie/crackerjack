@@ -19,7 +19,7 @@ from crackerjack.models.protocols import FileSystemInterface
 class ProjectHealth:
     lint_error_trend: list[int] = field(default_factory=list)
     test_coverage_trend: list[float] = field(default_factory=list)
-    dependency_age: dict[str, int] = field(default_factory=dict)
+    dependency_age: dict[str, int] = field(default_factory=dict[str, t.Any])
     config_completeness: float = 0.0
     last_updated: float = field(default_factory=time.time)
 
@@ -362,7 +362,8 @@ class HealthMetricsService:
 
             response = requests.get(url, timeout=10, verify=True)
             response.raise_for_status()
-            return response.json()
+            json_result = response.json()
+            return t.cast(dict[str, t.Any] | None, json_result)
         except Exception:
             return None
 
@@ -378,7 +379,8 @@ class HealthMetricsService:
         if not release_info:
             return None
 
-        return release_info[0].get("upload_time", "")
+        upload_time_raw = release_info[0].get("upload_time", "")
+        return t.cast(str | None, upload_time_raw)
 
     def _calculate_days_since_upload(self, upload_time: str) -> int | None:
         try:

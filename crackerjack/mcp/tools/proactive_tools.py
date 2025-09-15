@@ -1,7 +1,9 @@
 import typing as t
 
 
-def _create_architectural_assessment(args: str, parsed_kwargs: dict) -> dict:
+def _create_architectural_assessment(
+    args: str, parsed_kwargs: dict[str, t.Any]
+) -> dict[str, t.Any]:
     assessment = {
         "feature": parsed_kwargs.get("feature", "unknown"),
         "complexity": parsed_kwargs.get("complexity", "medium"),
@@ -56,7 +58,7 @@ def _create_architectural_assessment(args: str, parsed_kwargs: dict) -> dict:
     return assessment
 
 
-def _create_validation_results(file_path: str) -> dict:
+def _create_validation_results(file_path: str) -> dict[str, t.Any]:
     validation = {
         "file_path": file_path,
         "validation_results": [],
@@ -95,7 +97,10 @@ def _create_validation_results(file_path: str) -> dict:
         },
     ]
 
-    validation["validation_results"] = compliance_checks
+    validation["validation_results"] = [
+        f"{check['check']}: {check['status']} - {check['message']}"
+        for check in compliance_checks
+    ]
 
     validation["recommendations"] = [
         "Run full crackerjack quality process: python - m crackerjack-t",
@@ -113,7 +118,7 @@ def _create_validation_results(file_path: str) -> dict:
     return validation
 
 
-def _create_pattern_suggestions(problem_context: str) -> dict:
+def _create_pattern_suggestions(problem_context: str) -> dict[str, t.Any]:
     pattern_suggestions = {
         "context": problem_context,
         "recommended_patterns": [],
@@ -168,7 +173,9 @@ def _create_pattern_suggestions(problem_context: str) -> dict:
     return pattern_suggestions
 
 
-def _add_complexity_patterns(pattern_suggestions: dict, problem_context: str) -> None:
+def _add_complexity_patterns(
+    pattern_suggestions: dict[str, t.Any], problem_context: str
+) -> None:
     if any(
         keyword in problem_context.lower()
         for keyword in ("complex", "refactor", "cleanup")
@@ -197,7 +204,9 @@ def _add_complexity_patterns(pattern_suggestions: dict, problem_context: str) ->
         )
 
 
-def _add_dry_patterns(pattern_suggestions: dict, problem_context: str) -> None:
+def _add_dry_patterns(
+    pattern_suggestions: dict[str, t.Any], problem_context: str
+) -> None:
     if any(
         keyword in problem_context.lower() for keyword in ("duplicate", "repeat", "dry")
     ):
@@ -225,7 +234,9 @@ def _add_dry_patterns(pattern_suggestions: dict, problem_context: str) -> None:
         )
 
 
-def _add_performance_patterns(pattern_suggestions: dict, problem_context: str) -> None:
+def _add_performance_patterns(
+    pattern_suggestions: dict[str, t.Any], problem_context: str
+) -> None:
     if any(
         keyword in problem_context.lower()
         for keyword in ("slow", "performance", "optimize")
@@ -234,7 +245,7 @@ def _add_performance_patterns(pattern_suggestions: dict, problem_context: str) -
             [
                 {
                     "pattern": "list_comprehension",
-                    "description": "Use list comprehensions instead of manual loops",
+                    "description": "Use list[t.Any] comprehensions instead of manual loops",
                     "benefits": [
                         "Better performance",
                         "More readable",
@@ -254,7 +265,9 @@ def _add_performance_patterns(pattern_suggestions: dict, problem_context: str) -
         )
 
 
-def _add_security_patterns(pattern_suggestions: dict, problem_context: str) -> None:
+def _add_security_patterns(
+    pattern_suggestions: dict[str, t.Any], problem_context: str
+) -> None:
     if any(
         keyword in problem_context.lower() for keyword in ("security", "safe", "secure")
     ):
@@ -314,7 +327,7 @@ def _register_plan_development_tool(mcp_app: t.Any) -> None:
         import json
 
         try:
-            parsed_kwargs = json.loads(kwargs) if kwargs else {}
+            parsed_kwargs: dict[str, t.Any] = json.loads(kwargs) if kwargs else {}
             assessment = _create_architectural_assessment(args, parsed_kwargs)
             return json.dumps(assessment, indent=2)
         except Exception as e:
@@ -327,7 +340,7 @@ def _register_validate_architecture_tool(mcp_app: t.Any) -> None:
         import json
 
         try:
-            parsed_kwargs = json.loads(kwargs) if kwargs else {}
+            parsed_kwargs: dict[str, t.Any] = json.loads(kwargs) if kwargs else {}
             file_path = args or parsed_kwargs.get("file_path", "")
             validation = _create_validation_results(file_path)
             return json.dumps(validation, indent=2)

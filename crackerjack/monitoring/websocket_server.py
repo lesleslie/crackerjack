@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import typing as t
 from contextlib import suppress
 from datetime import datetime
 from typing import Any
@@ -47,7 +48,7 @@ class CrackerjackMonitoringServer:
 
         # Server state
         self.is_running = False
-        self.server_task: asyncio.Task | None = None
+        self.server_task: asyncio.Task[None] | None = None
 
         # WebSocket connections
         self.active_connections: dict[str, WebSocket] = {}
@@ -57,16 +58,16 @@ class CrackerjackMonitoringServer:
         self._setup_routes()
         self._setup_websocket_endpoints()
 
-    def _setup_routes(self):
+    def _setup_routes(self) -> None:
         """Setup HTTP API routes."""
 
         @self.app.get("/")
-        async def dashboard():
+        async def dashboard() -> HTMLResponse:
             """Main dashboard interface."""
             return HTMLResponse(content=self._get_dashboard_html())
 
         @self.app.get("/api/status")
-        async def status():
+        async def status() -> JSONResponse:
             """Get server status."""
             return JSONResponse(
                 {
@@ -80,23 +81,23 @@ class CrackerjackMonitoringServer:
             )
 
         @self.app.get("/api/metrics")
-        async def current_metrics():
+        async def current_metrics() -> JSONResponse:
             """Get current metrics snapshot."""
             return JSONResponse(self.metrics_collector.get_current_metrics().to_dict())
 
         @self.app.get("/api/metrics/summary")
-        async def metrics_summary():
+        async def metrics_summary() -> JSONResponse:
             """Get metrics summary for quick display."""
             return JSONResponse(self.metrics_collector.get_metrics_summary())
 
         @self.app.get("/api/metrics/history")
-        async def metrics_history(hours: int = 1):
+        async def metrics_history(hours: int = 1) -> JSONResponse:
             """Get metrics history."""
             history = self.metrics_collector.get_metrics_history(hours)
             return JSONResponse([m.to_dict() for m in history])
 
         @self.app.get("/api/agents/status")
-        async def agents_status():
+        async def agents_status() -> JSONResponse:
             """Get AI agent status and performance."""
             return JSONResponse(
                 {
@@ -124,7 +125,7 @@ class CrackerjackMonitoringServer:
             )
 
         @self.app.post("/api/metrics/record")
-        async def record_metrics(data: dict[str, Any]):
+        async def record_metrics(data: dict[str, Any]) -> JSONResponse:
             """Record metrics from external sources."""
             try:
                 if "job_start" in data:
@@ -150,12 +151,12 @@ class CrackerjackMonitoringServer:
                 logger.error(f"Error recording metrics: {e}")
                 return JSONResponse({"error": str(e)}, status_code=400)
 
-    def _setup_websocket_endpoints(self):
+    def _setup_websocket_endpoints(self) -> None:
         """Setup WebSocket endpoints for real-time communication."""
         self.app.websocket("/ws/metrics")(self._handle_metrics_websocket)
         self.app.websocket("/ws/alerts")(self._handle_alerts_websocket)
 
-    async def _handle_metrics_websocket(self, websocket: WebSocket):
+    async def _handle_metrics_websocket(self, websocket: WebSocket) -> None:
         """Handle metrics WebSocket connection."""
         client_id = f"metrics_{datetime.now().timestamp()}"
         await websocket.accept()
@@ -167,7 +168,7 @@ class CrackerjackMonitoringServer:
         finally:
             self._cleanup_connection(websocket, client_id)
 
-    async def _handle_alerts_websocket(self, websocket: WebSocket):
+    async def _handle_alerts_websocket(self, websocket: WebSocket) -> None:
         """Handle alerts WebSocket connection."""
         client_id = f"alerts_{datetime.now().timestamp()}"
         await websocket.accept()
@@ -179,17 +180,21 @@ class CrackerjackMonitoringServer:
         finally:
             self._cleanup_connection(websocket, client_id)
 
-    async def _setup_metrics_connection(self, websocket: WebSocket, client_id: str):
+    async def _setup_metrics_connection(
+        self, websocket: WebSocket, client_id: str
+    ) -> None:
         """Setup metrics websocket connection."""
         self.active_connections[client_id] = websocket
         self.metrics_subscribers.add(websocket)
 
-    async def _setup_alerts_connection(self, websocket: WebSocket, client_id: str):
+    async def _setup_alerts_connection(
+        self, websocket: WebSocket, client_id: str
+    ) -> None:
         """Setup alerts websocket connection."""
         self.active_connections[client_id] = websocket
         self.alerts_subscribers.add(websocket)
 
-    async def _send_initial_metrics(self, websocket: WebSocket):
+    async def _send_initial_metrics(self, websocket: WebSocket) -> None:
         """Send initial metrics to websocket client."""
         current_metrics = self.metrics_collector.get_current_metrics()
         await websocket.send_text(
@@ -201,7 +206,7 @@ class CrackerjackMonitoringServer:
             )
         )
 
-    async def _send_initial_alerts(self, websocket: WebSocket):
+    async def _send_initial_alerts(self, websocket: WebSocket) -> None:
         """Send initial alerts to websocket client."""
         recent_alerts = self.ai_watchdog.get_recent_alerts(hours=24)
         await websocket.send_text(
@@ -221,7 +226,7 @@ class CrackerjackMonitoringServer:
             )
         )
 
-    async def _handle_metrics_messages(self, websocket: WebSocket):
+    async def _handle_metrics_messages(self, websocket: WebSocket) -> None:
         """Handle incoming metrics websocket messages."""
         while True:
             try:
@@ -234,7 +239,7 @@ class CrackerjackMonitoringServer:
                 logger.error(f"WebSocket error: {e}")
                 break
 
-    async def _handle_alerts_messages(self, websocket: WebSocket):
+    async def _handle_alerts_messages(self, websocket: WebSocket) -> None:
         """Handle incoming alerts websocket messages."""
         while True:
             try:
@@ -249,7 +254,7 @@ class CrackerjackMonitoringServer:
 
     async def _process_websocket_message(
         self, websocket: WebSocket, data: dict[str, Any]
-    ):
+    ) -> None:
         """Process incoming websocket message."""
         if data.get("type") == "ping":
             await websocket.send_text(
@@ -261,7 +266,7 @@ class CrackerjackMonitoringServer:
                 )
             )
 
-    def _cleanup_connection(self, websocket: WebSocket, client_id: str):
+    def _cleanup_connection(self, websocket: WebSocket, client_id: str) -> None:
         """Clean up a WebSocket connection."""
         if client_id in self.active_connections:
             del self.active_connections[client_id]
@@ -323,7 +328,7 @@ class CrackerjackMonitoringServer:
             await self.metrics_collector.stop_collection()
 
             # Close all WebSocket connections
-            for websocket in list(self.active_connections.values()):
+            for websocket in list[t.Any](self.active_connections.values()):
                 with suppress(Exception):
                     await websocket.close()
             self.active_connections.clear()
@@ -627,7 +632,7 @@ if __name__ == "__main__":
 
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8675
 
-    async def main():
+    async def main() -> None:
         server = CrackerjackMonitoringServer(port=port)
         try:
             await server.start_monitoring()

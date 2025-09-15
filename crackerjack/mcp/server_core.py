@@ -317,6 +317,20 @@ def main(
 
         _print_server_info(project_path, mcp_config, websocket_port, http_mode)
 
+        # Auto-start WebSocket server if websocket_port is specified
+        if websocket_port:
+            import asyncio
+
+            try:
+                asyncio.run(_start_websocket_server())
+                console.print(
+                    f"[green]✅ WebSocket server auto-started on port {websocket_port}[/green]"
+                )
+            except Exception as e:
+                console.print(
+                    f"[yellow]⚠️ WebSocket server auto-start failed: {e}[/yellow]"
+                )
+
         _run_mcp_server(mcp_app, mcp_config, http_mode)
 
     except KeyboardInterrupt:

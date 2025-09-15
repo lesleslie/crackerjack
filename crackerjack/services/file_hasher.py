@@ -52,7 +52,7 @@ class FileHasher:
     async def get_files_hash_list_async(self, files: list[Path]) -> list[str]:
         loop = asyncio.get_running_loop()
         tasks = [
-            loop.run_in_executor(self._executor, self.get_file_hash, file_path)
+            loop.run_in_executor(self._executor, self.get_file_hash, file_path, "md5")
             for file_path in files
             if file_path.exists()
         ]

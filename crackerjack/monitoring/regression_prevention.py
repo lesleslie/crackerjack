@@ -48,7 +48,7 @@ class RegressionPreventionSystem:
         self._initialize_known_patterns()
         self._load_patterns_from_file()
 
-    def _initialize_known_patterns(self):
+    def _initialize_known_patterns(self) -> None:
         self.register_regression_pattern(
             pattern_id="detect_agent_needs_complexity_22",
             name="detect_agent_needs Complexity Failure",
@@ -162,7 +162,7 @@ class RegressionPreventionSystem:
         agent_name: str,
         issue_type: IssueType,
         test_cases: list[dict[str, Any]] | None = None,
-    ):
+    ) -> None:
         pattern = RegressionPattern(
             pattern_id=pattern_id,
             name=name,
@@ -313,7 +313,7 @@ class RegressionPreventionSystem:
             return "critical"
         return "error"
 
-    async def _handle_regression_alert(self, alert: RegressionAlert):
+    async def _handle_regression_alert(self, alert: RegressionAlert) -> None:
         color = {"warning": "yellow", "error": "red", "critical": "bold red"}.get(
             alert.severity, "white"
         )
@@ -345,7 +345,7 @@ class RegressionPreventionSystem:
 
             self._log_critical_regression(alert)
 
-    def _log_critical_regression(self, alert: RegressionAlert):
+    def _log_critical_regression(self, alert: RegressionAlert) -> None:
         log_file = Path(".crackerjack") / "critical_regressions.log"
         log_file.parent.mkdir(exist_ok=True)
 
@@ -501,7 +501,7 @@ class RegressionPreventionSystem:
         cutoff = datetime.now() - timedelta(hours=hours)
         return [alert for alert in self.regression_alerts if alert.detected_at > cutoff]
 
-    def _save_patterns_to_file(self):
+    def _save_patterns_to_file(self) -> None:
         patterns_file = Path(".crackerjack") / "regression_patterns.json"
         patterns_file.parent.mkdir(exist_ok=True)
 
@@ -526,13 +526,13 @@ class RegressionPreventionSystem:
         with patterns_file.open("w") as f:
             json.dump(data, f, indent=2)
 
-    def _load_patterns_from_file(self):
+    def _load_patterns_from_file(self) -> None:
         patterns_file = Path(".crackerjack") / "regression_patterns.json"
         if not patterns_file.exists():
             return
 
         try:
-            with open(patterns_file) as f:
+            with patterns_file.open() as f:
                 data = json.load(f)
 
             for pid, pdata in data.get("patterns", {}).items():

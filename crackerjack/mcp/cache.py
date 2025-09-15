@@ -97,7 +97,7 @@ class ErrorCache:
         ]
 
     def get_common_patterns(self, limit: int = 20) -> list[ErrorPattern]:
-        patterns = list(self.patterns.values())
+        patterns = list[t.Any](self.patterns.values())
         patterns.sort(key=lambda p: p.frequency, reverse=True)
         return patterns[:limit]
 
@@ -252,7 +252,7 @@ class ErrorCache:
         successful_fixes = sum(1 for result in self.fix_results if result.success)
         frequencies = [pattern.frequency for pattern in self.patterns.values()]
         avg_frequency = sum(frequencies) / len(frequencies) if frequencies else 0
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for pattern in self.patterns.values():
             type_counts[pattern.error_type] = type_counts.get(pattern.error_type, 0) + 1
 

@@ -3,16 +3,41 @@ import typing as t
 from .config import (
     AIConfig,
     CleaningConfig,
+    CleanupConfig,
     EnterpriseConfig,
     ExecutionConfig,
     GitConfig,
     HookConfig,
+    MCPServerConfig,
     ProgressConfig,
     PublishConfig,
     TestConfig,
     WorkflowOptions,
+    ZubanLSPConfig,
 )
 from .protocols import OptionsProtocol
+
+
+def _determine_max_iterations(options: OptionsProtocol) -> int:
+    """Determine max_iterations using effective_max_iterations if available, otherwise fallback logic.
+
+    Priority:
+    1. Use effective_max_iterations property if available (handles quick/thorough flags)
+    2. Explicit max_iterations value
+    3. Default: 5 iterations
+    """
+    # Use effective_max_iterations property if available (Options class has this)
+    if hasattr(options, "effective_max_iterations"):
+        return getattr(options, "effective_max_iterations")  # type: ignore[no-any-return]
+
+    # Fallback for other OptionsProtocol implementations
+    if hasattr(options, "max_iterations") and getattr(
+        options, "max_iterations", None
+    ) not in (0, None):
+        return getattr(options, "max_iterations")  # type: ignore[no-any-return]
+
+    # Default to 5 iterations
+    return 5
 
 
 class OptionsAdapter:
@@ -32,6 +57,7 @@ class OptionsAdapter:
                 experimental_hooks=getattr(options, "experimental_hooks", False),
                 enable_pyrefly=getattr(options, "enable_pyrefly", False),
                 enable_ty=getattr(options, "enable_ty", False),
+                enable_lsp_optimization=getattr(options, "enable_lsp_hooks", False),
             ),
             testing=TestConfig(
                 test=getattr(options, "test", False),
@@ -55,7 +81,7 @@ class OptionsAdapter:
                 autofix=getattr(options, "autofix", True),
                 ai_agent_autofix=getattr(options, "ai_agent_autofix", False),
                 start_mcp_server=getattr(options, "start_mcp_server", False),
-                max_iterations=getattr(options, "max_iterations", 10),
+                max_iterations=_determine_max_iterations(options),
             ),
             execution=ExecutionConfig(
                 interactive=getattr(options, "interactive", False),
@@ -66,10 +92,28 @@ class OptionsAdapter:
             progress=ProgressConfig(
                 enabled=getattr(options, "track_progress", False),
             ),
+            cleanup=CleanupConfig(
+                auto_cleanup=getattr(options, "auto_cleanup", True),
+                keep_debug_logs=getattr(options, "keep_debug_logs", 5),
+                keep_coverage_files=getattr(options, "keep_coverage_files", 10),
+            ),
             enterprise=EnterpriseConfig(
                 enabled=getattr(options, "enterprise_batch", None) is not None,
                 license_key=getattr(options, "license_key", None),
                 organization=getattr(options, "organization", None),
+            ),
+            mcp_server=MCPServerConfig(
+                http_port=getattr(options, "http_port", 8676),
+                http_host=getattr(options, "http_host", "127.0.0.1"),
+                websocket_port=getattr(options, "websocket_port", 8675),
+                http_enabled=getattr(options, "http_enabled", False),
+            ),
+            zuban_lsp=ZubanLSPConfig(
+                enabled=not getattr(options, "no_zuban_lsp", False),
+                auto_start=True,
+                port=getattr(options, "zuban_lsp_port", 8677),
+                mode=getattr(options, "zuban_lsp_mode", "stdio"),
+                timeout=getattr(options, "zuban_lsp_timeout", 30),
             ),
         )
 
@@ -199,6 +243,10 @@ class LegacyOptionsWrapper:
     @property
     def enable_ty(self) -> bool:
         return self._options.hooks.enable_ty
+
+    @property
+    def enable_lsp_hooks(self) -> bool:
+        return self._options.hooks.enable_lsp_optimization
 
     @property
     def no_git_tags(self) -> bool:

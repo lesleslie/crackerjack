@@ -133,7 +133,7 @@ class VersionChecker:
                 async with session.get(url) as response:
                     response.raise_for_status()
                     data = await response.json()
-                    return data.get("info", {}).get("version")
+                    return data.get("info", {}).get("version")  # type: ignore[no-any-return]
 
         except Exception:
             return None

@@ -96,10 +96,10 @@ def _notify_websocket(final_progress_data: dict[str, t.Any]) -> None:
 
 def _update_progress(
     job_id: str,
-    progress_data: dict[str, t.Any] | str = None,
+    progress_data: dict[str, t.Any] | str | None = None,
     context: t.Any = None,
     iteration: int = 1,
-    max_iterations: int = 10,
+    max_iterations: int = 5,
     overall_progress: int = 0,
     current_stage: str = "initialization",
     stage_progress: int = 0,
@@ -164,10 +164,10 @@ def _handle_get_job_progress(job_id: str) -> str:
 
 
 async def _execute_session_action(
-    state_manager,
+    state_manager: t.Any,
     action: str,
     checkpoint_name: str | None,
-    context,
+    context: t.Any,
 ) -> str:
     if action == "start":
         state_manager.start_session()

@@ -20,7 +20,7 @@ class CoverageImprovementOrchestrator:
     ) -> bool:
         try:
             if current_coverage is None:
-                coverage_status = self.coverage_service.get_status_report()
+                coverage_status = self.coverage_service.get_ratchet_data()
                 current_coverage = coverage_status.get("current_coverage", 0.0)
 
             if current_coverage is not None and current_coverage < 100.0:
@@ -42,7 +42,7 @@ class CoverageImprovementOrchestrator:
     ) -> Issue:
         if coverage_gap is None:
             try:
-                coverage_status = self.coverage_service.get_status_report()
+                coverage_status = self.coverage_service.get_ratchet_data()
                 current_coverage = coverage_status.get("current_coverage", 0.0)
                 coverage_gap = 100.0 - current_coverage
             except Exception:
@@ -150,7 +150,7 @@ class CoverageImprovementOrchestrator:
         from contextlib import suppress
 
         with suppress(Exception):
-            coverage_status = self.coverage_service.get_status_report()
+            coverage_status = self.coverage_service.get_ratchet_data()
             current_coverage = coverage_status.get("current_coverage", 0.0)
 
             if current_coverage < 25.0:

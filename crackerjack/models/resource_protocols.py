@@ -219,8 +219,12 @@ class AbstractNetworkResource(AbstractManagedResource):
         await self.disconnect()
 
 
-def with_resource_cleanup(resource_attr: str):
-    def decorator(func: t.Callable[..., t.Awaitable[t.Any]]):
+def with_resource_cleanup(
+    resource_attr: str,
+) -> t.Callable[..., t.Callable[..., t.Awaitable[t.Any]]]:
+    def decorator(
+        func: t.Callable[..., t.Awaitable[t.Any]],
+    ) -> t.Callable[..., t.Awaitable[t.Any]]:
         async def wrapper(self: t.Any, *args: t.Any, **kwargs: t.Any) -> t.Any:
             resource = getattr(self, resource_attr, None)
             try:
@@ -234,8 +238,12 @@ def with_resource_cleanup(resource_attr: str):
     return decorator
 
 
-def ensure_initialized(resource_attr: str):
-    def decorator(func: t.Callable[..., t.Awaitable[t.Any]]):
+def ensure_initialized(
+    resource_attr: str,
+) -> t.Callable[..., t.Callable[..., t.Awaitable[t.Any]]]:
+    def decorator(
+        func: t.Callable[..., t.Awaitable[t.Any]],
+    ) -> t.Callable[..., t.Awaitable[t.Any]]:
         async def wrapper(self: t.Any, *args: t.Any, **kwargs: t.Any) -> t.Any:
             resource = getattr(self, resource_attr, None)
             if resource and hasattr(resource, "initialize"):
