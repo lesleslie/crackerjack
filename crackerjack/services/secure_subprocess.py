@@ -78,7 +78,12 @@ class SubprocessSecurityConfig:
 
 class SecureSubprocessExecutor:
     def __init__(self, config: SubprocessSecurityConfig | None = None):
-        self.config = config or SubprocessSecurityConfig()
+        if config is None:
+            # When no explicit config provided, respect debug mode for logging
+            debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
+            self.config = SubprocessSecurityConfig(enable_command_logging=debug_enabled)
+        else:
+            self.config = config
         self.security_logger = get_security_logger()
 
         self.dangerous_patterns = [
