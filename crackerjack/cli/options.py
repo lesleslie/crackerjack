@@ -16,6 +16,8 @@ def parse_bump_option_with_flag_support(
 
     # If the value starts with a dash, it's likely another flag that typer mistakenly captured
     if value.startswith("-"):
+        print(f"🐛 DEBUG: Flag '{value}' consumed by -p")
+
         # Map of consumed flags to their corresponding parameter names
         flag_mapping = {
             "-c": "commit",
