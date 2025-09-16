@@ -601,10 +601,10 @@ class CrackerjackAPI:
         return None
 
     def _find_fallback_package_directory(self) -> Path | None:
-        for possible_name in ("src", self.project_path.name):
-            package_dir = self.project_path / possible_name
-            if self._is_valid_python_package_directory(package_dir):
-                return package_dir
+        # Only check project directory name, not src
+        package_dir = self.project_path / self.project_path.name
+        if self._is_valid_python_package_directory(package_dir):
+            return package_dir
         return None
 
     def _is_valid_python_package_directory(self, directory: Path) -> bool:

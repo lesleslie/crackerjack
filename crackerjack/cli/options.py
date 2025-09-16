@@ -2,8 +2,28 @@ import typing as t
 import warnings
 from enum import Enum
 
+import click
 import typer
 from pydantic import BaseModel, field_validator, model_validator
+
+
+def parse_bump_option_with_flag_support(
+    ctx: click.Context, param: click.Parameter, value: str | None
+) -> str | None:
+    """Parse bump option that supports both flag usage (-p) and value usage (-p patch)."""
+    if value is None:
+        return None
+
+    # If the value starts with a dash, it's likely another flag that typer mistakenly captured
+    if value.startswith("-"):
+        # Put the value back into the arguments for typer to process
+        if hasattr(ctx, "protected_args"):
+            ctx.protected_args.insert(0, value)
+        elif hasattr(ctx, "args"):
+            ctx.args.insert(0, value)
+        return "interactive"
+
+    return value
 
 
 class BumpOption(str, Enum):
@@ -92,7 +112,7 @@ class Options(BaseModel):
     strip_code: bool | None = None  # Replaces clean
     run_tests: bool = False  # Replaces test
     ai_fix: bool | None = None  # Replaces ai_agent
-    full_release: BumpOption | None = None  # Replaces all
+    full_release: str | None = None  # Replaces all
     show_progress: bool | None = None  # Replaces track_progress
     advanced_monitor: bool | None = None  # Replaces enhanced_monitor
     coverage_report: bool | None = None  # Replaces coverage_status
@@ -224,6 +244,11 @@ class Options(BaseModel):
             return None
         if value == "":
             return BumpOption.interactive
+
+        # Handle case where typer parsed a flag as the value (e.g., -p -c becomes value="-c")
+        if isinstance(value, str) and value.startswith("-"):
+            return BumpOption.interactive
+
         try:
             return BumpOption(value.lower())
         except ValueError:
@@ -276,10 +301,12 @@ CLI_OPTIONS = {
         None,
         "-p",
         "--publish",
+        callback=parse_bump_option_with_flag_support,
         help=(
             "Bump version and publish to PyPI (patch, minor, major, auto). "
             "Use 'interactive' to be prompted for version selection. "
-            "Use 'auto' to automatically use AI recommendations."
+            "Use 'auto' to automatically use AI recommendations. "
+            "When used as a flag (-p), defaults to 'interactive'."
         ),
         case_sensitive=False,
     ),
@@ -287,14 +314,16 @@ CLI_OPTIONS = {
         None,
         "-a",
         "--all",
-        help="Full release workflow: bump version, run quality checks, and publish (patch, minor, major, auto).",
+        callback=parse_bump_option_with_flag_support,
+        help="Full release workflow: bump version, run quality checks, and publish (patch, minor, major, auto). When used as a flag (-a), defaults to 'interactive'.",
         case_sensitive=False,
     ),
     "bump": typer.Option(
         None,
         "-b",
         "--bump",
-        help="Bump version (patch, minor, major, auto).",
+        callback=parse_bump_option_with_flag_support,
+        help="Bump version (patch, minor, major, auto). When used as a flag (-b), defaults to 'interactive'.",
         case_sensitive=False,
     ),
     "benchmark": typer.Option(
@@ -646,7 +675,8 @@ CLI_OPTIONS = {
         None,
         "-a",
         "--full-release",
-        help="Complete release workflow: strip code, run tests, bump version, and publish (patch, minor, major, auto). Equivalent to `-x -t -p <version> -c`.",
+        callback=parse_bump_option_with_flag_support,
+        help="Complete release workflow: strip code, run tests, bump version, and publish (patch, minor, major, auto). Equivalent to `-x -t -p <version> -c`. When used as a flag (-a), defaults to 'interactive'.",
         case_sensitive=False,
     ),
     "show_progress": typer.Option(
@@ -871,8 +901,8 @@ def create_options(
     update_precommit: bool,
     verbose: bool,
     debug: bool,
-    publish: BumpOption | None,
-    bump: BumpOption | None,
+    publish: str | None,
+    bump: str | None,
     benchmark: bool,
     test_workers: int,
     test_timeout: int,
@@ -955,7 +985,7 @@ def create_options(
     strip_code: bool | None = None,
     run_tests: bool = False,
     ai_fix: bool | None = None,
-    full_release: BumpOption | None = None,
+    full_release: str | None = None,
     show_progress: bool | None = None,
     advanced_monitor: bool | None = None,
     coverage_report: bool | None = None,

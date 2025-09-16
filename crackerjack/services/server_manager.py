@@ -7,6 +7,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from ..ui.server_panels import create_server_panels
 from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
 
@@ -201,20 +202,26 @@ def stop_mcp_server(console: Console | None = None) -> bool:
     if console is None:
         console = Console()
 
+    panels = create_server_panels(console)
     processes = find_mcp_server_processes()
 
     if not processes:
         console.print("[yellow]⚠️ No MCP server processes found[/ yellow]")
         return True
 
+    panels.stop_servers(len(processes))
+
     success = True
     for proc in processes:
-        console.print(f"🛑 Stopping MCP server process {proc['pid']}")
+        console.print(f"Stopping process {proc['pid']}...")
         if stop_process(proc["pid"]):
-            console.print(f"✅ Stopped process {proc['pid']}")
+            console.print(f"✅ Process {proc['pid']} terminated gracefully")
         else:
             console.print(f"❌ Failed to stop process {proc['pid']}")
             success = False
+
+    if success:
+        panels.stop_complete(len(processes))
 
     return success
 
@@ -282,14 +289,15 @@ def restart_mcp_server(
     if console is None:
         console = Console()
 
-    console.print("[bold cyan]🔄 Restarting MCP server...[/ bold cyan]")
+    panels = create_server_panels(console)
+    panels.restart_header()
 
     stop_mcp_server(console)
 
-    console.print("⏳ Waiting for cleanup...")
+    panels.cleanup_wait()
     time.sleep(2)
 
-    console.print("🚀 Starting new MCP server...")
+    panels.starting_server()
     try:
         cmd = [sys.executable, "-m", "crackerjack", "--start-mcp-server"]
         if websocket_port:
@@ -297,7 +305,7 @@ def restart_mcp_server(
 
         import subprocess
 
-        subprocess.Popen(
+        process = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -310,11 +318,24 @@ def restart_mcp_server(
             purpose="mcp_server_restart",
         )
 
-        console.print("✅ MCP server restart initiated")
+        # Give the server a moment to start
+        time.sleep(1)
+
+        # Display success panel with server details
+        http_endpoint = "http://127.0.0.1:8676/mcp"
+        websocket_monitor = (
+            f"ws://127.0.0.1:{websocket_port or 8675}" if websocket_port else None
+        )
+
+        panels.success_panel(
+            http_endpoint=http_endpoint,
+            websocket_monitor=websocket_monitor,
+            process_id=process.pid,
+        )
         return True
 
     except Exception as e:
-        console.print(f"❌ Failed to restart MCP server: {e}")
+        panels.failure_panel(str(e))
         return False
 
 

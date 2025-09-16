@@ -11,7 +11,6 @@ from crackerjack.services.git import GitService
 
 from .cli import (
     CLI_OPTIONS,
-    BumpOption,
     create_options,
     handle_interactive_mode,
     handle_standard_mode,
@@ -1220,9 +1219,9 @@ def main(
     update_precommit: bool = CLI_OPTIONS["update_precommit"],
     verbose: bool = CLI_OPTIONS["verbose"],
     debug: bool = CLI_OPTIONS["debug"],
-    publish: BumpOption | None = CLI_OPTIONS["publish"],
-    all: BumpOption | None = CLI_OPTIONS["all"],
-    bump: BumpOption | None = CLI_OPTIONS["bump"],
+    publish: str | None = CLI_OPTIONS["publish"],
+    all: str | None = CLI_OPTIONS["all"],
+    bump: str | None = CLI_OPTIONS["bump"],
     strip_code: bool = CLI_OPTIONS["strip_code"],
     run_tests: bool = CLI_OPTIONS["run_tests"],
     benchmark: bool = CLI_OPTIONS["benchmark"],

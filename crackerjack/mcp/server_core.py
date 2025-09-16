@@ -6,6 +6,8 @@ from typing import Final
 
 from rich.console import Console
 
+from ..ui.server_panels import create_server_panels
+
 try:
     import tomli
 except ImportError:
@@ -259,18 +261,23 @@ def _print_server_info(
     websocket_port: int | None,
     http_mode: bool,
 ) -> None:
-    console.print("[green]Starting Crackerjack MCP Server...[/ green]")
-    console.print(f"Project path: {project_path}")
+    panels = create_server_panels(console)
 
     if mcp_config.get("http_enabled", False) or http_mode:
-        console.print(
-            f"[cyan]HTTP Mode: http: //{mcp_config['http_host']}: {mcp_config['http_port']}/mcp[/ cyan]"
+        mode = "HTTP"
+        http_endpoint = (
+            f"http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp"
         )
     else:
-        console.print("[cyan]STDIO Mode[/ cyan]")
+        mode = "STDIO"
+        http_endpoint = None
 
-    if websocket_port:
-        console.print(f"WebSocket port: {websocket_port}")
+    panels.start_panel(
+        project_path=project_path,
+        mode=mode,
+        http_endpoint=http_endpoint,
+        websocket_port=websocket_port,
+    )
 
 
 def _run_mcp_server(
@@ -330,6 +337,26 @@ def main(
                 console.print(
                     f"[yellow]⚠️ WebSocket server auto-start failed: {e}[/yellow]"
                 )
+
+        # Show final success panel before starting the server
+        panels = create_server_panels(console)
+
+        if mcp_config.get("http_enabled", False) or http_mode:
+            http_endpoint = (
+                f"http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp"
+            )
+        else:
+            http_endpoint = None
+
+        websocket_monitor = (
+            f"ws://127.0.0.1:{websocket_port}" if websocket_port else None
+        )
+
+        panels.success_panel(
+            http_endpoint=http_endpoint,
+            websocket_monitor=websocket_monitor,
+            process_id=None,  # Will be set by the process manager
+        )
 
         _run_mcp_server(mcp_app, mcp_config, http_mode)
 

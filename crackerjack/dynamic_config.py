@@ -499,13 +499,12 @@ class DynamicConfigGenerator:
             except Exception:
                 pass
 
-        # Fallback to common patterns
-        for possible_name in ("src", current_dir.name):
-            if (current_dir / possible_name).exists():
-                return possible_name
+        # Fallback to project directory name
+        if (current_dir / current_dir.name).exists():
+            return current_dir.name
 
-        # Default fallback
-        return "src"
+        # Default fallback to current directory name
+        return current_dir.name
 
     def _should_include_hook(
         self,
@@ -564,6 +563,13 @@ class DynamicConfigGenerator:
             hook["exclude"] = hook["exclude"].replace(
                 "crackerjack", self.package_directory
             )
+
+        # Ensure hooks exclude src directories to avoid JavaScript conflicts
+        if hook["exclude"]:
+            if "src/" not in hook["exclude"]:
+                hook["exclude"] = f"{hook['exclude']}|^src/"
+        else:
+            hook["exclude"] = "^src/"
 
         return hook
 

@@ -165,15 +165,15 @@ css = [
 
 [[package]]
 name = "blessed"
-version = "1.21.0"
+version = "1.22.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinxed", marker = "sys_platform == 'win32'" },
     { name = "wcwidth" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0c/5e/3cada2f7514ee2a76bb8168c71f9b65d056840ebb711962e1ec08eeaa7b0/blessed-1.21.0.tar.gz", hash = "sha256:ece8bbc4758ab9176452f4e3a719d70088eb5739798cd5582c9e05f2a28337ec", size = 6660011, upload-time = "2025-04-26T21:56:58.199Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7c/51/a72df7730aa34a94bc43cebecb7b63ffa42f019868637dbeb45e0620d26e/blessed-1.22.0.tar.gz", hash = "sha256:1818efb7c10015478286f21a412fcdd31a3d8b94a18f6d926e733827da7a844b", size = 6660050, upload-time = "2025-09-15T19:15:26.551Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/8e/0a37e44878fd76fac9eff5355a1bf760701f53cb5c38cdcd59a8fd9ab2a2/blessed-1.21.0-py2.py3-none-any.whl", hash = "sha256:f831e847396f5a2eac6c106f4dfadedf46c4f804733574b15fe86d2ed45a9588", size = 84727, upload-time = "2025-04-26T16:58:29.919Z" },
+    { url = "https://files.pythonhosted.org/packages/11/b7/a19b55c4cd0b5ca5009ca11d3634994758a1a446976b8e7afa25e719613c/blessed-1.22.0-py2.py3-none-any.whl", hash = "sha256:a1fed52d708a1aa26dfb8d3eaecf6f4714bff590e728baeefcb44f2c16c8de82", size = 85078, upload-time = "2025-09-15T19:15:24.787Z" },
 ]
 
 [[package]]
@@ -398,7 +398,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.34.2"
+version = "0.35.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -963,7 +963,7 @@ wheels = [
 
 [[package]]
 name = "huggingface-hub"
-version = "0.34.4"
+version = "0.34.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -975,9 +975,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/45/c9/bdbe19339f76d12985bc03572f330a01a93c04dffecaaea3061bdd7fb892/huggingface_hub-0.34.4.tar.gz", hash = "sha256:a4228daa6fb001be3f4f4bdaf9a0db00e1739235702848df00885c9b5742c85c", size = 459768, upload-time = "2025-08-08T09:14:52.365Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/08/306b0d3db3679b3c07cab9ce117a920de77f3ea4dba6ba27646660518619/huggingface_hub-0.34.5.tar.gz", hash = "sha256:f676c6db41bc3fbd4020f520c842a0548f4c9a3f698dbfa6514bd8e41c3ab52a", size = 460006, upload-time = "2025-09-15T14:24:24.734Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/7b/bb06b061991107cd8783f300adff3e7b7f284e330fd82f507f2a1417b11d/huggingface_hub-0.34.4-py3-none-any.whl", hash = "sha256:9b365d781739c93ff90c359844221beef048403f1bc1f1c123c191257c3c890a", size = 561452, upload-time = "2025-08-08T09:14:50.159Z" },
+    { url = "https://files.pythonhosted.org/packages/79/3d/55ef77a0539b0124efd47d8b3759bf49e880f57729f7123c0311b41a9bb8/huggingface_hub-0.34.5-py3-none-any.whl", hash = "sha256:fea377adc6e9b6c239c1450e41a1409cbf2c6364d289c04c31d7dbaa222842e3", size = 562219, upload-time = "2025-09-15T14:24:22.851Z" },
 ]
 
 [[package]]
@@ -1003,15 +1003,15 @@ wheels = [
 
 [[package]]
 name = "hypothesis"
-version = "6.138.16"
+version = "6.138.17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "sortedcontainers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/21/2f/3f41181a7054f8049c0c2ef2eb8a86f43c2bfb0da7b0aba69c24019f56eb/hypothesis-6.138.16.tar.gz", hash = "sha256:08f9015dadc877ce5ca04752efc56df797238148a44d1c69db656ed29bfbbf73", size = 466040, upload-time = "2025-09-13T23:26:07.448Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/d9/933014091e35e849a1555bc87866809dd985bb558d43734e5b9cd2191c1f/hypothesis-6.138.17.tar.gz", hash = "sha256:2419eef387211c63bed091938cf17fa909898f064d320e996bcd90383f5ce3c6", size = 466016, upload-time = "2025-09-15T22:09:21.512Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ac/f3/6aa509411e72828ad1c6ed107e9efe7b3e1464e8ef620bb39338954bff58/hypothesis-6.138.16-py3-none-any.whl", hash = "sha256:63dde4b45a04caef2a59ccae5541083cbadfe7605435e7a23454fe7c2113577c", size = 533690, upload-time = "2025-09-13T23:26:03.93Z" },
+    { url = "https://files.pythonhosted.org/packages/92/81/fbb1beddafb8bfc1deff69cbf6e2aaba10c1c7bdafe7a323845539ba14af/hypothesis-6.138.17-py3-none-any.whl", hash = "sha256:b2cf91f1926445cf4d44f5ec9a955c7f637f93e34247ac04e4fb44d010141c85", size = 533688, upload-time = "2025-09-15T22:09:18.063Z" },
 ]
 
 [[package]]
@@ -2604,7 +2604,7 @@ wheels = [
 
 [[package]]
 name = "session-mgmt-mcp"
-version = "0.3.6"
+version = "0.3.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crackerjack" },
@@ -2622,9 +2622,9 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/35/d2/ae271696455f988eee9334874775340799cd1834329ed0b1926cdbec1fc9/session_mgmt_mcp-0.3.6.tar.gz", hash = "sha256:ab83b1010ce9d2230442610b892d9405cb541f38b07539244fecbb1944d1de0f", size = 489393, upload-time = "2025-09-15T10:20:29.602Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ed/ce/c062659fbb3b4b05f71ad5c5229b80310d1297aa38abe8f1ca14447272a6/session_mgmt_mcp-0.3.7.tar.gz", hash = "sha256:e8c2a251772ee06d4e8b1d53b7f413af1d745e2886467ca9db96b058adfba23d", size = 491514, upload-time = "2025-09-16T02:27:32.692Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/50/1865f3ad40a7ced8342530729e0fbf494b2fb9a4e2c8dd4a507ef0d2d135/session_mgmt_mcp-0.3.6-py3-none-any.whl", hash = "sha256:219e5e06c589747e1400ba5dd2935e7886707d5ed7ed56eeaf9041d9308f72d0", size = 218158, upload-time = "2025-09-15T10:20:27.697Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/41/ffb2a66455d9fe29efe7c46387295a604f29fc006f522edda0fe7784114e/session_mgmt_mcp-0.3.7-py3-none-any.whl", hash = "sha256:eacf82edd79d9a012642181c5769eb5d9f768d3ad98ee17c06dc16600517d483", size = 219032, upload-time = "2025-09-16T02:27:30.908Z" },
 ]
 
 [[package]]
