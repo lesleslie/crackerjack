@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.37.8"
+version = "0.37.9"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -130,7 +130,7 @@ zuban_lsp_timeout = 10.0
 zuban_lsp_strict_mode = true
 
 [tool.codespell]
-skip = "*/data/*"
+skip = "*/data/*,htmlcov/*"
 quiet-level = 3
 ignore-words-list = "crate,uptodate,nd,nin"
 
@@ -347,6 +347,9 @@ port = 8677
 timeout = 10.0
 enable_diagnostics = true
 real_time_feedback = true
+
+[tool.mypy]
+python_version = "3.13"
 
 [dependency-groups]
 dev = [

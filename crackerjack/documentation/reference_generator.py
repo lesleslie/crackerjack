@@ -397,11 +397,27 @@ class ReferenceGenerator:
 
         arg_index = func_node.args.args.index(arg)
         if arg_index >= defaults_start:
-            default_index = arg_index - defaults_start
-            default_node = func_node.args.defaults[default_index]
-            if isinstance(default_node, ast.Constant):
-                return default_node.value, False
+            return self._extract_argument_default(arg_index, defaults_start, func_node)
 
+        return None, True
+
+    def _extract_argument_default(
+        self, arg_index: int, defaults_start: int, func_node: ast.FunctionDef
+    ) -> tuple[t.Any, bool]:
+        """Extract default value for a specific argument.
+
+        Args:
+            arg_index: Index of the argument
+            defaults_start: Index where defaults start
+            func_node: Parent function node
+
+        Returns:
+            Tuple of (default_value, required)
+        """
+        default_index = arg_index - defaults_start
+        default_node = func_node.args.defaults[default_index]
+        if isinstance(default_node, ast.Constant):
+            return default_node.value, False
         return None, True
 
     async def _enhance_with_examples(
@@ -416,35 +432,47 @@ class ReferenceGenerator:
             Enhanced commands with examples
         """
         for command in commands.values():
-            # Generate basic examples
-            basic_example = f"python -m crackerjack --{command.name}"
+            self._add_basic_example(command)
+            self._add_parameter_examples(command)
+        return commands
 
-            # Add parameter examples
-            param_examples = []
-            for param in command.parameters:
-                if not param.required and param.default_value is not None:
-                    if isinstance(param.default_value, bool):
-                        param_examples.append(f"--{param.name}")
-                    else:
-                        param_examples.append(f"--{param.name} {param.default_value}")
+    def _add_basic_example(self, command: CommandInfo) -> None:
+        """Add a basic example for a command."""
+        basic_example = f"python -m crackerjack --{command.name}"
+        command.examples.append(
+            {
+                "description": f"Basic {command.name} usage",
+                "command": basic_example,
+            }
+        )
 
-            if param_examples:
-                enhanced_example = f"{basic_example} {' '.join(param_examples)}"
-                command.examples.append(
-                    {
-                        "description": f"Using {command.name} with parameters",
-                        "command": enhanced_example,
-                    }
-                )
+    def _add_parameter_examples(self, command: CommandInfo) -> None:
+        """Add parameter examples for a command."""
+        # Generate basic examples
+        basic_example = f"python -m crackerjack --{command.name}"
 
+        # Add parameter examples
+        param_examples = []
+        for param in command.parameters:
+            if not param.required and param.default_value is not None:
+                param_example = self._format_parameter_example(param)
+                if param_example:
+                    param_examples.append(param_example)
+
+        if param_examples:
+            enhanced_example = f"{basic_example} {' '.join(param_examples)}"
             command.examples.append(
                 {
-                    "description": f"Basic {command.name} usage",
-                    "command": basic_example,
+                    "description": f"Using {command.name} with parameters",
+                    "command": enhanced_example,
                 }
             )
 
-        return commands
+    def _format_parameter_example(self, param: ParameterInfo) -> str | None:
+        """Format a parameter example."""
+        if isinstance(param.default_value, bool):
+            return f"--{param.name}"
+        return f"--{param.name} {param.default_value}"
 
     async def _enhance_with_workflows(
         self, commands: dict[str, CommandInfo]
@@ -632,26 +660,26 @@ class ReferenceGenerator:
         ]
 
     def _render_markdown_categories(self, reference: CommandReference) -> list[str]:
-        """Render command categories for markdown.
-
-        Args:
-            reference: Command reference
-
-        Returns:
-            List of category section lines
-        """
+        """Render command categories for markdown."""
         category_lines = []
         for category, command_names in reference.categories.items():
-            category_lines.extend(
-                [
-                    f"## {category.title()}",
-                    "",
-                ]
-            )
+            category_section = self._render_markdown_category(category, reference.commands, command_names)
+            category_lines.extend(category_section)
+        return category_lines
 
-            for command_name in command_names:
-                command = reference.commands[command_name]
-                category_lines.extend(self._render_command_markdown(command))
+    def _render_markdown_category(
+        self, category: str, commands: dict[str, CommandInfo], command_names: list[str]
+    ) -> list[str]:
+        """Render markdown for a single category."""
+        category_lines = [
+            f"## {category.title()}",
+            "",
+        ]
+
+        for command_name in command_names:
+            command = commands[command_name]
+            command_lines = self._render_command_markdown(command)
+            category_lines.extend(command_lines)
 
         return category_lines
 
@@ -685,14 +713,7 @@ class ReferenceGenerator:
         return workflow_lines
 
     def _render_command_markdown(self, command: CommandInfo) -> list[str]:
-        """Render single command as Markdown.
-
-        Args:
-            command: Command to render
-
-        Returns:
-            List of markdown lines
-        """
+        """Render single command as Markdown."""
         lines = [
             f"### `{command.name}`",
             "",
@@ -702,49 +723,46 @@ class ReferenceGenerator:
 
         # Add parameters section
         if command.parameters:
-            lines.extend(self._render_command_parameters_markdown(command.parameters))
+            param_lines = self._render_command_parameters_markdown(command.parameters)
+            lines.extend(param_lines)
 
         # Add examples section
         if command.examples:
-            lines.extend(self._render_command_examples_markdown(command.examples))
+            example_lines = self._render_command_examples_markdown(command.examples)
+            lines.extend(example_lines)
 
         # Add related commands section
         if command.related_commands:
-            lines.extend(
-                self._render_command_related_markdown(command.related_commands)
-            )
+            related_lines = self._render_command_related_markdown(command.related_commands)
+            lines.extend(related_lines)
 
         return lines
 
     def _render_command_parameters_markdown(
         self, parameters: list[ParameterInfo]
     ) -> list[str]:
-        """Render command parameters for markdown.
-
-        Args:
-            parameters: List of parameters to render
-
-        Returns:
-            List of parameter section lines
-        """
+        """Render command parameters for markdown."""
         param_lines = [
             "**Parameters:**",
             "",
         ]
 
         for param in parameters:
-            required_str = " (required)" if param.required else ""
-            default_str = (
-                f" (default: {param.default_value})"
-                if param.default_value is not None
-                else ""
-            )
-            param_lines.append(
-                f"- `--{param.name}` ({param.type_hint}){required_str}{default_str}: {param.description}"
-            )
+            param_line = self._format_parameter_line(param)
+            param_lines.append(param_line)
 
         param_lines.append("")
         return param_lines
+
+    def _format_parameter_line(self, param: ParameterInfo) -> str:
+        """Format a single parameter line."""
+        required_str = " (required)" if param.required else ""
+        default_str = (
+            f" (default: {param.default_value})"
+            if param.default_value is not None
+            else ""
+        )
+        return f"- `--{param.name}` ({param.type_hint}){required_str}{default_str}: {param.description}"
 
     def _render_command_examples_markdown(
         self, examples: list[dict[str, str]]
@@ -794,12 +812,12 @@ class ReferenceGenerator:
 
     def _render_html(self, reference: CommandReference) -> str:
         """Render reference as HTML."""
-        html = self._render_html_header(
-            reference.generated_at.strftime("%Y-%m-%d %H:%M:%S")
-        )
-        html += self._render_html_commands(reference)
-        html += "</body></html>"
-        return html
+        html_parts = [
+            self._render_html_header(reference.generated_at.strftime("%Y-%m-%d %H:%M:%S")),
+            self._render_html_commands(reference),
+            "</body></html>"
+        ]
+        return "".join(html_parts)
 
     def _render_html_header(self, generated_at: str) -> str:
         """Render HTML header with styles and metadata."""
@@ -822,26 +840,38 @@ class ReferenceGenerator:
 
     def _render_html_commands(self, reference: CommandReference) -> str:
         """Render HTML commands by category."""
-        html = ""
+        html_parts = []
         for category, command_names in reference.categories.items():
-            html += f"<h2>{category.title()}</h2>"
-            html += self._render_html_category_commands(
-                reference.commands, command_names
-            )
+            category_html = self._render_html_category(category, reference.commands, command_names)
+            html_parts.append(category_html)
+        return "".join(html_parts)
+
+    def _render_html_category(
+        self, category: str, commands: dict[str, CommandInfo], command_names: list[str]
+    ) -> str:
+        """Render HTML for a single category."""
+        html = f"<h2>{category.title()}</h2>"
+        html += self._render_html_category_commands(commands, command_names)
         return html
 
     def _render_html_category_commands(
         self, commands: dict[str, CommandInfo], command_names: list[str]
     ) -> str:
         """Render HTML for commands in a category."""
-        html = ""
+        html_parts = []
         for command_name in command_names:
             command = commands[command_name]
-            html += '<div class="command">'
-            html += f"<h3><code>{command.name}</code></h3>"
-            html += f"<p>{command.description}</p>"
-            html += self._render_html_command_parameters(command.parameters)
-            html += "</div>"
+            command_html = self._render_single_html_command(command)
+            html_parts.append(command_html)
+        return "".join(html_parts)
+
+    def _render_single_html_command(self, command: CommandInfo) -> str:
+        """Render HTML for a single command."""
+        html = '<div class="command">'
+        html += f"<h3><code>{command.name}</code></h3>"
+        html += f"<p>{command.description}</p>"
+        html += self._render_html_command_parameters(command.parameters)
+        html += "</div>"
         return html
 
     def _render_html_command_parameters(self, parameters: list[ParameterInfo]) -> str:
@@ -864,30 +894,43 @@ class ReferenceGenerator:
             "version": reference.version,
             "categories": reference.categories,
             "workflows": reference.workflows,
-            "commands": {},
+            "commands": self._serialize_commands(reference.commands),
         }
 
-        for name, command in reference.commands.items():
-            data["commands"][name] = {
-                "name": command.name,
-                "description": command.description,
-                "category": command.category,
-                "parameters": [
-                    {
-                        "name": param.name,
-                        "type": param.type_hint,
-                        "default": param.default_value,
-                        "description": param.description,
-                        "required": param.required,
-                    }
-                    for param in command.parameters
-                ],
-                "examples": command.examples,
-                "related_commands": command.related_commands,
-                "aliases": command.aliases,
-            }
-
         return json.dumps(data, indent=2, default=str)
+
+    def _serialize_commands(self, commands: dict[str, CommandInfo]) -> dict[str, t.Any]:
+        """Serialize commands for JSON output."""
+        serialized_commands = {}
+        for name, command in commands.items():
+            serialized_commands[name] = self._serialize_command(command)
+        return serialized_commands
+
+    def _serialize_command(self, command: CommandInfo) -> dict[str, t.Any]:
+        """Serialize a single command for JSON output."""
+        return {
+            "name": command.name,
+            "description": command.description,
+            "category": command.category,
+            "parameters": self._serialize_parameters(command.parameters),
+            "examples": command.examples,
+            "related_commands": command.related_commands,
+            "aliases": command.aliases,
+        }
+
+    def _serialize_parameters(self, parameters: list[ParameterInfo]) -> list[dict[str, t.Any]]:
+        """Serialize parameters for JSON output."""
+        return [self._serialize_parameter(param) for param in parameters]
+
+    def _serialize_parameter(self, param: ParameterInfo) -> dict[str, t.Any]:
+        """Serialize a single parameter for JSON output."""
+        return {
+            "name": param.name,
+            "type": param.type_hint,
+            "default": param.default_value,
+            "description": param.description,
+            "required": param.required,
+        }
 
     def _render_yaml(self, reference: CommandReference) -> str:
         """Render reference as YAML."""

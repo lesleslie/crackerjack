@@ -812,24 +812,23 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
         t.cast(list[str], suggestions["usage_patterns"])
 
         if project_type.lower() == "python" or "python" in task_description.lower():
-            primary_agents.append(
-                {
-                    "name": "crackerjack-architect",
-                    "emoji": "🏗️",
-                    "description": "Expert in crackerjack's modular architecture and Python project management patterns",
-                    "usage": "Use PROACTIVELY for all feature development, architectural decisions, and ensuring code follows crackerjack standards",
-                    "priority": "HIGH",
-                }
-            )
-
-            primary_agents.append(
-                {
-                    "name": "python-pro",
-                    "emoji": "🐍",
-                    "description": "Modern Python development with type hints, async/await patterns, and clean architecture",
-                    "usage": "Use for implementing Python code with best practices",
-                    "priority": "HIGH",
-                }
+            primary_agents.extend(
+                (
+                    {
+                        "name": "crackerjack-architect",
+                        "emoji": "🏗️",
+                        "description": "Expert in crackerjack's modular architecture and Python project management patterns",
+                        "usage": "Use PROACTIVELY for all feature development, architectural decisions, and ensuring code follows crackerjack standards",
+                        "priority": "HIGH",
+                    },
+                    {
+                        "name": "python-pro",
+                        "emoji": "🐍",
+                        "description": "Modern Python development with type hints, async/await patterns, and clean architecture",
+                        "usage": "Use for implementing Python code with best practices",
+                        "priority": "HIGH",
+                    },
+                )
             )
 
         task_lower = task_description.lower()
@@ -839,24 +838,23 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
             word in task_lower + context_lower
             for word in ("test", "testing", "coverage", "pytest")
         ):
-            task_specific_agents.append(
-                {
-                    "name": "crackerjack-test-specialist",
-                    "emoji": "🧪",
-                    "description": "Advanced testing specialist for complex scenarios and coverage optimization",
-                    "usage": "Use for test creation, debugging test failures, and coverage improvements",
-                    "priority": "HIGH",
-                }
-            )
-
-            task_specific_agents.append(
-                {
-                    "name": "pytest-hypothesis-specialist",
-                    "emoji": "🧪",
-                    "description": "Advanced testing patterns and property-based testing",
-                    "usage": "Use for comprehensive test development and optimization",
-                    "priority": "MEDIUM",
-                }
+            task_specific_agents.extend(
+                (
+                    {
+                        "name": "crackerjack-test-specialist",
+                        "emoji": "🧪",
+                        "description": "Advanced testing specialist for complex scenarios and coverage optimization",
+                        "usage": "Use for test creation, debugging test failures, and coverage improvements",
+                        "priority": "HIGH",
+                    },
+                    {
+                        "name": "pytest-hypothesis-specialist",
+                        "emoji": "🧪",
+                        "description": "Advanced testing patterns and property-based testing",
+                        "usage": "Use for comprehensive test development and optimization",
+                        "priority": "MEDIUM",
+                    },
+                )
             )
 
         if any(

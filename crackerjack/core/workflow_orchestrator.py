@@ -67,10 +67,8 @@ class WorkflowPipeline:
 
         # Initialize quality intelligence for advanced decision making
         try:
-            quality_baseline = EnhancedQualityBaselineService(console, pkg_path)
-            self._quality_intelligence = QualityIntelligenceService(
-                quality_baseline, console
-            )
+            quality_baseline = EnhancedQualityBaselineService()
+            self._quality_intelligence = QualityIntelligenceService(quality_baseline)
         except Exception:
             # Fallback gracefully if quality intelligence is not available
             self._quality_intelligence = None
@@ -418,11 +416,11 @@ class WorkflowPipeline:
             success = success and config_success
 
         quality_success = await self._execute_quality_phase(options, workflow_id)
-        if not quality_success:
-            success = False
+        success = success and quality_success
 
-            if self._is_publishing_workflow(options):
-                return False
+        # If quality phase failed and we're in publishing mode, stop here
+        if not quality_success and self._is_publishing_workflow(options):
+            return False
 
         # Execute publishing workflow if requested
         publishing_success = await self._execute_publishing_workflow(
@@ -445,6 +443,30 @@ class WorkflowPipeline:
             )
             return False
 
+        return success
+
+    def _handle_quality_phase_result(
+        self, success: bool, quality_success: bool, options: OptionsProtocol
+    ) -> bool:
+        """Handle the result of the quality phase execution."""
+        if not quality_success:
+            if self._is_publishing_workflow(options):
+                # For publishing workflows, quality failures should stop execution
+                return False
+            # For non-publishing workflows, we continue but mark as failed
+            return False
+        return success
+
+    def _handle_workflow_completion(
+        self, success: bool, publishing_success: bool, options: OptionsProtocol
+    ) -> bool:
+        """Handle workflow completion and determine final success status."""
+        # Only fail the overall workflow if publishing was explicitly requested and failed
+        if not publishing_success and (options.publish or options.all):
+            self.console.print(
+                "[red]❌ Publishing failed - overall workflow marked as failed[/red]"
+            )
+            return False
         return success
 
     def _is_publishing_workflow(self, options: OptionsProtocol) -> bool:
@@ -504,14 +526,14 @@ class WorkflowPipeline:
                 return "Quality intelligence not available"
 
             # Analyze recent quality trends and anomalies
-            anomalies = await self._quality_intelligence.detect_anomalies()
-            patterns = await self._quality_intelligence.identify_patterns()
+            anomalies = self._quality_intelligence.detect_anomalies()
+            patterns = self._quality_intelligence.identify_patterns()
 
             # Make intelligent recommendations based on current state
             recommendations = []
             if anomalies:
                 high_severity_anomalies = [
-                    a for a in anomalies if a.severity.name in ["CRITICAL", "HIGH"]
+                    a for a in anomalies if a.severity.name in ("CRITICAL", "HIGH")
                 ]
                 if high_severity_anomalies:
                     recommendations.append(

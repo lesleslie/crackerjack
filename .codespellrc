@@ -1,0 +1,5 @@
+[codespell]
+skip = */data/*,htmlcov/*
+quiet-level = 3
+ignore-words-list = crate,uptodate,nd,nin
+ignore-words = .codespell-ignore

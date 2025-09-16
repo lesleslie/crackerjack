@@ -37,23 +37,12 @@ class WorkflowOptions:
     @classmethod
     def from_args(cls, args: t.Any) -> "WorkflowOptions":
         return cls(
-            cleaning=CleaningConfig(
-                clean=getattr(args, "clean", False),
-            ),
-            testing=TestConfig(
-                test=getattr(args, "test", False),
-            ),
-            publishing=PublishConfig(
-                publish=getattr(args, "publish", None),
-                bump=getattr(args, "bump", None),
-            ),
-            git=GitConfig(
-                commit=getattr(args, "commit", False),
-                create_pr=getattr(args, "create_pr", False),
-            ),
-            ai=AIConfig(
-                ai_agent=getattr(args, "ai_agent", False),
-            ),
+            clean=getattr(args, "clean", False),
+            test=getattr(args, "test", False),
+            publish=getattr(args, "publish", None),
+            bump=getattr(args, "bump", None),
+            commit=getattr(args, "commit", False),
+            create_pr=getattr(args, "create_pr", False),
             interactive=getattr(args, "interactive", True),
             dry_run=getattr(args, "dry_run", False),
         )

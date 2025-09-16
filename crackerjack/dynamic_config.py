@@ -1,5 +1,6 @@
 import tempfile
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 import jinja2
@@ -469,29 +470,26 @@ class DynamicConfigGenerator:
 
     def _detect_package_directory(self) -> str:
         """Detect the package directory name for the current project."""
-        import os
         from pathlib import Path
 
         # Check if we're in the crackerjack project itself
-        current_dir = Path(os.getcwd())
+        current_dir = Path.cwd()
         if (current_dir / "crackerjack").exists() and (
             current_dir / "pyproject.toml"
         ).exists():
             # Check if this is actually the crackerjack project
-            try:
+            with suppress(Exception):
                 import tomllib
 
                 with (current_dir / "pyproject.toml").open("rb") as f:
                     data = tomllib.load(f)
                 if data.get("project", {}).get("name") == "crackerjack":
                     return "crackerjack"
-            except Exception:
-                pass
 
         # Try to read package name from pyproject.toml
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
-            try:
+            with suppress(Exception):
                 import tomllib
 
                 with pyproject_path.open("rb") as f:
@@ -502,8 +500,6 @@ class DynamicConfigGenerator:
                     # Check if package directory exists
                     if (current_dir / package_name).exists():
                         return package_name
-            except Exception:
-                pass
 
         # Fallback to project directory name
         if (current_dir / current_dir.name).exists():

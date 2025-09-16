@@ -329,36 +329,54 @@ class SecureSubprocessExecutor:
         self, arg: str, index: int, issues: list[str], command: list[str]
     ) -> bool:
         # First check if this is an allowed git pattern
-        for git_pattern in self.allowed_git_patterns:
-            if re.match(git_pattern, arg):
-                return False  # It's an allowed git pattern, don't flag as dangerous
+        if self._is_allowed_git_pattern(arg):
+            return False
 
         # Special handling for git commit messages
         if self._is_git_commit_message(index, command):
-            # For git commit messages, only check for truly dangerous patterns
-            # Parentheses are common in commit messages and should be allowed
-            safe_commit_patterns = [
-                r"[;&|`$]",  # Still dangerous in commit messages
-                r"\.\./",  # Path traversal
-                r"\$\{.*\}",  # Variable expansion
-                r"`.*`",  # Command substitution
-                r"\$\(.*\)",  # Command substitution (but allow simple parentheses)
-                r">\s*/",  # Redirection to paths
-                r"<\s*/",  # Redirection from paths
-            ]
-
-            for pattern in safe_commit_patterns:
-                if re.search(pattern, arg):
-                    # Allow simple parentheses that don't look like command substitution
-                    if pattern == r"\$\(.*\)" and not re.search(r"\$\(", arg):
-                        continue
-                    issues.append(
-                        f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}"
-                    )
-                    return True
-            return False
+            return self._check_dangerous_patterns_in_commit_message(arg, index, issues)
 
         # Check for dangerous patterns in other contexts
+        return self._check_dangerous_patterns_in_other_contexts(arg, index, issues)
+
+    def _is_allowed_git_pattern(self, arg: str) -> bool:
+        """Check if the argument matches an allowed git pattern."""
+        for git_pattern in self.allowed_git_patterns:
+            if re.match(git_pattern, arg):
+                return True
+        return False
+
+    def _check_dangerous_patterns_in_commit_message(
+        self, arg: str, index: int, issues: list[str]
+    ) -> bool:
+        """Check for dangerous patterns specifically in git commit messages."""
+        # For git commit messages, only check for truly dangerous patterns
+        # Parentheses are common in commit messages and should be allowed
+        safe_commit_patterns = [
+            r"[;&|`$]",  # Still dangerous in commit messages
+            r"\.\./",  # Path traversal
+            r"\$\{.*\}",  # Variable expansion
+            r"`.*`",  # Command substitution
+            r"\$\(.*\)",  # Command substitution (but allow simple parentheses)
+            r">\s*/",  # Redirection to paths
+            r"<\s*/",  # Redirection from paths
+        ]
+
+        for pattern in safe_commit_patterns:
+            if re.search(pattern, arg):
+                # Allow simple parentheses that don't look like command substitution
+                if pattern == r"\$\(.*\)" and not re.search(r"\$\(", arg):
+                    continue
+                issues.append(
+                    f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}"
+                )
+                return True
+        return False
+
+    def _check_dangerous_patterns_in_other_contexts(
+        self, arg: str, index: int, issues: list[str]
+    ) -> bool:
+        """Check for dangerous patterns in non-commit message contexts."""
         for pattern in self.dangerous_patterns:
             if re.search(pattern, arg):
                 issues.append(

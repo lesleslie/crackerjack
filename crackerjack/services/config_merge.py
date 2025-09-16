@@ -310,7 +310,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             sort_keys=False,
             width=float("inf"),
         )
-        content = yaml_content or ""
+        content = yaml_content
 
         from crackerjack.services.filesystem import FileSystemService
 
@@ -506,35 +506,38 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         processed_repos = []
         for repo in repos:
             processed_repo = copy.deepcopy(repo)
-
-            # Process hooks within each repo
-            hooks = processed_repo.get("hooks", [])
-            for hook in hooks:
-                if isinstance(hook, dict):
-                    # Replace crackerjack directory references in args
-                    if "args" in hook:
-                        hook["args"] = [
-                            arg.replace("crackerjack", project_name)
-                            if isinstance(arg, str)
-                            else arg
-                            for arg in hook["args"]
-                        ]
-
-                    # Replace crackerjack directory references in files pattern
-                    if "files" in hook:
-                        files_pattern = hook["files"]
-                        if isinstance(files_pattern, str):
-                            hook["files"] = files_pattern.replace(
-                                "^crackerjack/", f"^{project_name}/"
-                            )
-
-                    # Special handling for validate-regex-patterns hook - keep it pointing to crackerjack package
-                    if hook.get("id") == "validate-regex-patterns":
-                        # This should reference the installed crackerjack package, not the current project
-                        # The entry already uses "uv run python -m crackerjack.tools.validate_regex_patterns"
-                        # which is correct - it runs from the installed crackerjack package
-                        pass
-
+            self._process_repo_hooks(processed_repo, project_name)
             processed_repos.append(processed_repo)
 
         return processed_repos
+
+    def _process_repo_hooks(self, repo: dict[str, t.Any], project_name: str) -> None:
+        """Process hooks within a repo to replace project-specific references."""
+        hooks = repo.get("hooks", [])
+        for hook in hooks:
+            if isinstance(hook, dict):
+                self._process_hook_args(hook, project_name)
+                self._process_hook_files(hook, project_name)
+                # Special handling for validate-regex-patterns hook - keep it pointing to crackerjack package
+                # This should reference the installed crackerjack package, not the current project
+                # The entry already uses "uv run python -m crackerjack.tools.validate_regex_patterns"
+                # which is correct - it runs from the installed crackerjack package
+
+    def _process_hook_args(self, hook: dict[str, t.Any], project_name: str) -> None:
+        """Process hook args to replace project-specific references."""
+        if "args" in hook:
+            hook["args"] = [
+                arg.replace("crackerjack", project_name)
+                if isinstance(arg, str)
+                else arg
+                for arg in hook["args"]
+            ]
+
+    def _process_hook_files(self, hook: dict[str, t.Any], project_name: str) -> None:
+        """Process hook files pattern to replace project-specific references."""
+        if "files" in hook:
+            files_pattern = hook["files"]
+            if isinstance(files_pattern, str):
+                hook["files"] = files_pattern.replace(
+                    "^crackerjack/", f"^{project_name}/"
+                )

@@ -124,7 +124,7 @@ class PublishManagerImpl:
 
         # Get intelligent version analysis and recommendation
         recommendation = self._get_version_recommendation()
-        if recommendation and version_type not in ["interactive"]:
+        if recommendation and version_type != "interactive":
             self._display_version_analysis(recommendation)
             if version_type == "auto":
                 version_type = recommendation.bump_type.value

@@ -37,6 +37,7 @@ ALLOWED_PATTERNS = {
     r"crackerjack/intelligence/agent_selector\.py$",
     r"crackerjack/managers/test_.*\.py$",
     r"crackerjack/core/async_workflow_orchestrator\.py$",
+    r"crackerjack/core/workflow_orchestrator\.py$",
     r"crackerjack/agents/.*\.py$",
 }
 
