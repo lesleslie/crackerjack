@@ -415,12 +415,28 @@ class PublishManagerImpl:
     def _execute_publish(self) -> bool:
         result = self._run_command(["uv", "publish"])
 
-        if result.returncode != 0:
-            self._handle_publish_failure(result.stderr)
-            return False
+        # Check for success indicators in output even if return code is non-zero
+        # UV can return non-zero codes for warnings while still succeeding
+        success_indicators = [
+            "Successfully uploaded",
+            "Package uploaded successfully",
+            "Upload successful",
+            "Successfully published",
+        ]
 
-        self._handle_publish_success()
-        return True
+        has_success_indicator = (
+            any(indicator in result.stdout for indicator in success_indicators)
+            if result.stdout
+            else False
+        )
+
+        # Consider it successful if either return code is 0 OR we find success indicators
+        if result.returncode == 0 or has_success_indicator:
+            self._handle_publish_success()
+            return True
+
+        self._handle_publish_failure(result.stderr)
+        return False
 
     def _handle_publish_failure(self, error_msg: str) -> None:
         self.console.print(f"[red]❌[/ red] Publish failed: {error_msg}")

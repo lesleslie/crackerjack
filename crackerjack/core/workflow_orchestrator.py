@@ -430,14 +430,20 @@ class WorkflowPipeline:
         )
         if not publishing_success:
             success = False
-            # Only return early if publishing was requested but failed
-            if options.publish or options.all:
-                return False
 
         # Execute commit workflow independently if requested
+        # Note: Commit workflow runs regardless of publish success to ensure
+        # version bump changes are always committed when requested
         commit_success = await self._execute_commit_workflow(options, workflow_id)
         if not commit_success:
             success = False
+
+        # Only fail the overall workflow if publishing was explicitly requested and failed
+        if not publishing_success and (options.publish or options.all):
+            self.console.print(
+                "[red]❌ Publishing failed - overall workflow marked as failed[/red]"
+            )
+            return False
 
         return success
 
