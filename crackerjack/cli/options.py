@@ -16,12 +16,34 @@ def parse_bump_option_with_flag_support(
 
     # If the value starts with a dash, it's likely another flag that typer mistakenly captured
     if value.startswith("-"):
-        # Handle specific flags that were consumed
-        if value in ["-c", "--commit"]:
-            # Set the commit parameter directly in the context
+        # Map of consumed flags to their corresponding parameter names
+        flag_mapping = {
+            "-c": "commit",
+            "--commit": "commit",
+            "-v": "verbose",
+            "--verbose": "verbose",
+            "-s": "skip_hooks",
+            "--skip-hooks": "skip_hooks",
+            "-i": "interactive",
+            "--interactive": "interactive",
+            "-n": "no_config_updates",
+            "--no-config-updates": "no_config_updates",
+            "-u": "update_precommit",
+            "--update-precommit": "update_precommit",
+            "-t": "run_tests",
+            "--run-tests": "run_tests",
+            "-x": "strip_code",
+            "--strip-code": "strip_code",
+            "--debug": "debug",
+        }
+
+        # Handle any consumed flag
+        if value in flag_mapping:
+            param_name = flag_mapping[value]
+            # Set the parameter directly in the context
             if not hasattr(ctx, 'params'):
                 ctx.params = {}
-            ctx.params['commit'] = True
+            ctx.params[param_name] = True
 
         # Default to interactive mode when used as a flag
         return "interactive"
