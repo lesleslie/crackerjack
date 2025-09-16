@@ -474,8 +474,12 @@ class PhaseCoordinator(ErrorHandlingMixin):
         changed_files: list[str],
         options: OptionsProtocol,
     ) -> str:
-        # Check if smart commit is enabled
-        if getattr(options, "smart_commit", False):
+        # Smart commit is now enabled by default for all commit operations
+        # Use basic commit messages only if explicitly disabled
+        use_smart_commit = getattr(options, "smart_commit", True)
+        disable_smart_commit = getattr(options, "basic_commit", False)
+
+        if use_smart_commit and not disable_smart_commit:
             try:
                 from crackerjack.services.intelligent_commit import (
                     CommitMessageGenerator,

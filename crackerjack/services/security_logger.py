@@ -122,20 +122,26 @@ class SecurityLogger:
         self._setup_security_logger()
 
     def _setup_security_logger(self) -> None:
-        self.logger.setLevel(logging.DEBUG)
+        debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
+
+        # Set appropriate logger level based on debug mode
+        if debug_enabled:
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            # Suppress all security logs during normal operation
+            self.logger.setLevel(logging.CRITICAL + 10)
 
         if not self.logger.handlers:
             console_handler = logging.StreamHandler()
 
-            debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
             if debug_enabled:
-                console_handler.setLevel(logging.WARNING)
+                console_handler.setLevel(logging.DEBUG)
             else:
                 # Suppress all security logs during normal operation
                 console_handler.setLevel(logging.CRITICAL + 10)
 
             formatter = logging.Formatter(
-                "%(asctime)s - SECURITY - %(levelname)s-%(message)s"
+                "%(asctime)s - SECURITY - %(levelname)s - %(message)s"
             )
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)

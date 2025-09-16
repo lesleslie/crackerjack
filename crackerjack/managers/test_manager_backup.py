@@ -71,7 +71,7 @@ class TestProgress:
             border_style="yellow",
             title_style="bold yellow",
             expand=True,
-            min_width=80,
+            min_width=74,
         )
 
         table.add_column("Type", style="cyan", ratio=1)
@@ -106,7 +106,7 @@ class TestProgress:
             border_style="cyan",
             title_style="bold cyan",
             expand=True,
-            min_width=80,
+            min_width=74,
         )
 
         table.add_column("Metric", style="cyan", ratio=1)

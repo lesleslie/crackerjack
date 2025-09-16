@@ -318,26 +318,65 @@ class SecureSubprocessExecutor:
                 )
                 continue
 
-            if self._has_dangerous_patterns(arg, i, issues):
+            if self._has_dangerous_patterns(arg, i, issues, command):
                 continue
 
             validated_command.append(arg)
 
         return validated_command, issues
 
-    def _has_dangerous_patterns(self, arg: str, index: int, issues: list[str]) -> bool:
+    def _has_dangerous_patterns(
+        self, arg: str, index: int, issues: list[str], command: list[str]
+    ) -> bool:
         # First check if this is an allowed git pattern
         for git_pattern in self.allowed_git_patterns:
             if re.match(git_pattern, arg):
                 return False  # It's an allowed git pattern, don't flag as dangerous
 
-        # Check for dangerous patterns
+        # Special handling for git commit messages
+        if self._is_git_commit_message(index, command):
+            # For git commit messages, only check for truly dangerous patterns
+            # Parentheses are common in commit messages and should be allowed
+            safe_commit_patterns = [
+                r"[;&|`$]",  # Still dangerous in commit messages
+                r"\.\./",  # Path traversal
+                r"\$\{.*\}",  # Variable expansion
+                r"`.*`",  # Command substitution
+                r"\$\(.*\)",  # Command substitution (but allow simple parentheses)
+                r">\s*/",  # Redirection to paths
+                r"<\s*/",  # Redirection from paths
+            ]
+
+            for pattern in safe_commit_patterns:
+                if re.search(pattern, arg):
+                    # Allow simple parentheses that don't look like command substitution
+                    if pattern == r"\$\(.*\)" and not re.search(r"\$\(", arg):
+                        continue
+                    issues.append(
+                        f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}"
+                    )
+                    return True
+            return False
+
+        # Check for dangerous patterns in other contexts
         for pattern in self.dangerous_patterns:
             if re.search(pattern, arg):
                 issues.append(
                     f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}"
                 )
                 return True
+        return False
+
+    def _is_git_commit_message(self, index: int, command: list[str]) -> bool:
+        """Check if the current argument is likely a git commit message."""
+        # Check if we have a git commit command structure: git commit -m <message>
+        if (
+            len(command) >= 3
+            and command[0] == "git"
+            and command[1] == "commit"
+            and command[2] == "-m"
+        ):
+            return index == 3
         return False
 
     def _validate_executable_permissions(

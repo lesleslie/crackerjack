@@ -140,7 +140,7 @@ class PerformanceCache:
         ttl_seconds: int | None = None,
         invalidation_keys: builtins.set[str] | None = None,
     ) -> None:
-        self.set[t.Any](key, value, ttl_seconds, invalidation_keys)
+        self.set(key, value, ttl_seconds, invalidation_keys)
 
     def invalidate(self, invalidation_key: str) -> int:
         with self._lock:

@@ -208,15 +208,15 @@ def main(file_paths: list[str]) -> int:
         if exit_code == 0:
             print("✅ All regex patterns validated successfully!")
         else:
-            print("\n" + "=" * 80)
+            print("\n" + "=" * 74)
             print("REGEX VALIDATION FAILED")
-            print("=" * 80)
+            print("=" * 74)
             print("To fix these issues:")
             print("1. Use patterns from crackerjack.services.regex_patterns")
             print("2. Add new patterns to SAFE_PATTERNS with comprehensive tests")
             print("3. Use '# REGEX OK: reason' comment for legitimate exceptions")
             print("4. Fix \\g<1> replacement syntax (no spaces)")
-            print("=" * 80)
+            print("=" * 74)
 
         return exit_code
     except Exception as e:

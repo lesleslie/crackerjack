@@ -130,7 +130,7 @@ class PerformanceBenchmarker:
             obj = {
                 "data": f"heavy_data_{i}" * 100,
                 "metadata": {"created": time.time(), "index": i},
-                "payload": list[t.Any](range(100)),
+                "payload": list(range(100)),
             }
             heavy_objects.append(obj)
 
@@ -153,7 +153,7 @@ class PerformanceBenchmarker:
                 return {
                     "data": f"heavy_data_{index}" * 100,
                     "metadata": {"created": time.time(), "index": index},
-                    "payload": list[t.Any](range(100)),
+                    "payload": list(range(100)),
                 }
 
             lazy_obj = LazyLoader(create_heavy_object, f"heavy_object_{i}")
@@ -296,6 +296,28 @@ class PerformanceBenchmarker:
             json.dump(data, f, indent=2)
 
         self._logger.info(f"Exported benchmark results to {output_path}")
+
+
+class PerformanceBenchmarkService:
+    """Service wrapper for performance benchmarking in workflow orchestration."""
+
+    def __init__(self, console, pkg_path):
+        self._console = console
+        self._pkg_path = pkg_path
+        self._benchmarker = PerformanceBenchmarker()
+        self._logger = get_logger("crackerjack.benchmark_service")
+
+    async def run_benchmark_suite(self) -> BenchmarkSuite | None:
+        """Run comprehensive benchmark suite and return results."""
+        try:
+            return await self._benchmarker.run_comprehensive_benchmark()
+        except Exception as e:
+            self._logger.warning(f"Benchmark suite failed: {e}")
+            return None
+
+    def export_results(self, suite: BenchmarkSuite, output_path: Path) -> None:
+        """Export benchmark results to file."""
+        self._benchmarker.export_benchmark_results(suite, output_path)
 
 
 def get_benchmarker() -> PerformanceBenchmarker:

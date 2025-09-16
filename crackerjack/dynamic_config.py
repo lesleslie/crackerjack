@@ -457,8 +457,55 @@ PRE_COMMIT_TEMPLATE = """repos:
 
 
 class DynamicConfigGenerator:
-    def __init__(self) -> None:
+    def __init__(self, package_directory: str | None = None) -> None:
         self.template = jinja2.Template(PRE_COMMIT_TEMPLATE)
+        self.package_directory = package_directory or self._detect_package_directory()
+
+    def _detect_package_directory(self) -> str:
+        """Detect the package directory name for the current project."""
+        import os
+        from pathlib import Path
+
+        # Check if we're in the crackerjack project itself
+        current_dir = Path(os.getcwd())
+        if (current_dir / "crackerjack").exists() and (
+            current_dir / "pyproject.toml"
+        ).exists():
+            # Check if this is actually the crackerjack project
+            try:
+                import tomllib
+
+                with (current_dir / "pyproject.toml").open("rb") as f:
+                    data = tomllib.load(f)
+                if data.get("project", {}).get("name") == "crackerjack":
+                    return "crackerjack"
+            except Exception:
+                pass
+
+        # Try to read package name from pyproject.toml
+        pyproject_path = current_dir / "pyproject.toml"
+        if pyproject_path.exists():
+            try:
+                import tomllib
+
+                with pyproject_path.open("rb") as f:
+                    data = tomllib.load(f)
+
+                if "project" in data and "name" in data["project"]:
+                    package_name = str(data["project"]["name"])
+                    # Check if package directory exists
+                    if (current_dir / package_name).exists():
+                        return package_name
+            except Exception:
+                pass
+
+        # Fallback to common patterns
+        for possible_name in ("src", current_dir.name):
+            if (current_dir / possible_name).exists():
+                return possible_name
+
+        # Default fallback
+        return "src"
 
     def _should_include_hook(
         self,
@@ -486,9 +533,39 @@ class DynamicConfigGenerator:
         for category_hooks in HOOKS_REGISTRY.values():
             for hook in category_hooks:
                 if self._should_include_hook(hook, config, enabled_experimental):
-                    filtered_hooks.append(hook)
+                    # Create a copy and update package-specific configurations
+                    updated_hook = self._update_hook_for_package(hook.copy())
+                    filtered_hooks.append(updated_hook)
 
         return filtered_hooks
+
+    def _update_hook_for_package(self, hook: HookMetadata) -> HookMetadata:
+        """Update hook configuration to use the detected package directory."""
+        # Update skylos hook
+        if hook["id"] == "skylos" and hook["args"]:
+            hook["args"] = [self.package_directory]
+
+        # Update zuban hook
+        elif hook["id"] == "zuban" and hook["args"]:
+            # Replace the hardcoded "./crackerjack" with the dynamic package directory
+            updated_args = []
+            for arg in hook["args"]:
+                if arg == "./crackerjack":
+                    updated_args.append(f"./{self.package_directory}")
+                else:
+                    updated_args.append(arg)
+            hook["args"] = updated_args
+
+        # Update other hooks that use hardcoded "crackerjack" patterns
+        elif hook["files"] and "crackerjack" in hook["files"]:
+            hook["files"] = hook["files"].replace("crackerjack", self.package_directory)
+
+        elif hook["exclude"] and "crackerjack" in hook["exclude"]:
+            hook["exclude"] = hook["exclude"].replace(
+                "crackerjack", self.package_directory
+            )
+
+        return hook
 
     def group_hooks_by_repo(
         self,
@@ -580,8 +657,11 @@ class DynamicConfigGenerator:
 def generate_config_for_mode(
     mode: str,
     enabled_experimental: list[str] | None = None,
+    package_directory: str | None = None,
 ) -> Path:
-    return DynamicConfigGenerator().create_temp_config(mode, enabled_experimental)
+    return DynamicConfigGenerator(package_directory).create_temp_config(
+        mode, enabled_experimental
+    )
 
 
 def get_available_modes() -> list[str]:

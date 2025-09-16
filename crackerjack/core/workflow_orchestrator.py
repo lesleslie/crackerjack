@@ -19,11 +19,16 @@ from crackerjack.services.logging import (
     setup_structured_logging,
 )
 from crackerjack.services.memory_optimizer import get_memory_optimizer, memory_optimized
+from crackerjack.services.performance_benchmarks import PerformanceBenchmarkService
 from crackerjack.services.performance_cache import get_performance_cache
 from crackerjack.services.performance_monitor import (
     get_performance_monitor,
     phase_monitor,
 )
+from crackerjack.services.quality_baseline_enhanced import (
+    EnhancedQualityBaselineService,
+)
+from crackerjack.services.quality_intelligence import QualityIntelligenceService
 
 from .phase_coordinator import PhaseCoordinator
 from .session_coordinator import SessionCoordinator
@@ -59,6 +64,25 @@ class WorkflowPipeline:
         self._performance_monitor = get_performance_monitor()
         self._memory_optimizer = get_memory_optimizer()
         self._cache = get_performance_cache()
+
+        # Initialize quality intelligence for advanced decision making
+        try:
+            quality_baseline = EnhancedQualityBaselineService(console, pkg_path)
+            self._quality_intelligence = QualityIntelligenceService(
+                quality_baseline, console
+            )
+        except Exception:
+            # Fallback gracefully if quality intelligence is not available
+            self._quality_intelligence = None
+
+        # Initialize performance benchmarking for workflow analysis
+        try:
+            self._performance_benchmarks = PerformanceBenchmarkService(
+                console, pkg_path
+            )
+        except Exception:
+            # Fallback gracefully if benchmarking is not available
+            self._performance_benchmarks = None
 
     @property
     def debugger(self) -> AIAgentDebugger | NoOpDebugger:
@@ -297,6 +321,9 @@ class WorkflowPipeline:
         duration = time.time() - start_time
         self._log_workflow_completion(success, duration)
         self._log_workflow_completion_debug(success, duration)
+        await self._generate_performance_benchmark_report(
+            workflow_id, duration, success
+        )
 
         return success
 
@@ -317,6 +344,50 @@ class WorkflowPipeline:
             "completed" if success else "failed",
             duration=duration,
         )
+
+    async def _generate_performance_benchmark_report(
+        self, workflow_id: str, duration: float, success: bool
+    ) -> None:
+        """Generate and display performance benchmark report for workflow execution."""
+        if not self._performance_benchmarks:
+            return
+
+        try:
+            # Gather performance metrics from the workflow execution
+            {
+                "workflow_id": workflow_id,
+                "total_duration": duration,
+                "success": success,
+                "cache_metrics": self._cache.get_stats() if self._cache else {},
+                "memory_metrics": self._memory_optimizer.get_stats()
+                if hasattr(self._memory_optimizer, "get_stats")
+                else {},
+            }
+
+            # Generate benchmark comparison
+            benchmark_results = await self._performance_benchmarks.run_benchmark_suite()
+
+            # Display compact performance summary
+            if benchmark_results:
+                self.console.print("\n[cyan]📊 Performance Benchmark Summary[/cyan]")
+                self.console.print(f"Workflow Duration: [bold]{duration:.2f}s[/bold]")
+
+                # Show key performance improvements if available
+                for result in benchmark_results.results[:3]:  # Top 3 results
+                    if result.time_improvement_percentage > 0:
+                        self.console.print(
+                            f"[green]⚡[/green] {result.test_name}: {result.time_improvement_percentage:.1f}% faster"
+                        )
+
+                    if result.cache_hit_ratio > 0:
+                        self.console.print(
+                            f"[blue]🎯[/blue] Cache efficiency: {result.cache_hit_ratio:.0%}"
+                        )
+
+        except Exception as e:
+            self.console.print(
+                f"[dim]⚠️ Performance benchmark failed: {str(e)[:50]}...[/dim]"
+            )
 
         if self.debugger.enabled:
             self.debugger.print_debug_summary()
@@ -391,6 +462,13 @@ class WorkflowPipeline:
     async def _execute_quality_phase(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
+        # Use quality intelligence to make informed decisions about quality phase
+        if self._quality_intelligence:
+            quality_decision = await self._make_quality_intelligence_decision(options)
+            self.console.print(
+                f"[dim]🧠 Quality Intelligence: {quality_decision}[/dim]"
+            )
+
         if hasattr(options, "fast") and options.fast:
             return await self._run_fast_hooks_phase_monitored(options, workflow_id)
         if hasattr(options, "comp") and options.comp:
@@ -402,6 +480,48 @@ class WorkflowPipeline:
         return await self._execute_standard_hooks_workflow_monitored(
             options, workflow_id
         )
+
+    async def _make_quality_intelligence_decision(
+        self, options: OptionsProtocol
+    ) -> str:
+        """Use quality intelligence to make informed decisions about workflow execution."""
+        try:
+            if not self._quality_intelligence:
+                return "Quality intelligence not available"
+
+            # Analyze recent quality trends and anomalies
+            anomalies = await self._quality_intelligence.detect_anomalies()
+            patterns = await self._quality_intelligence.identify_patterns()
+
+            # Make intelligent recommendations based on current state
+            recommendations = []
+            if anomalies:
+                high_severity_anomalies = [
+                    a for a in anomalies if a.severity.name in ["CRITICAL", "HIGH"]
+                ]
+                if high_severity_anomalies:
+                    recommendations.append(
+                        "comprehensive analysis recommended due to quality anomalies"
+                    )
+                else:
+                    recommendations.append("standard quality checks sufficient")
+
+            if patterns:
+                improving_patterns = [
+                    p for p in patterns if p.trend_direction.name == "IMPROVING"
+                ]
+                if improving_patterns:
+                    recommendations.append("quality trending upward")
+                else:
+                    recommendations.append("quality monitoring active")
+
+            if not recommendations:
+                recommendations.append("baseline quality analysis active")
+
+            return "; ".join(recommendations)
+
+        except Exception as e:
+            return f"Quality intelligence analysis failed: {str(e)[:50]}..."
 
     async def _execute_test_workflow(
         self, options: OptionsProtocol, workflow_id: str

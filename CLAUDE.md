@@ -62,6 +62,52 @@ python -m crackerjack --full-release patch  # Full release workflow
 
 **Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 uses specific agents
 
+## Advanced Services (Enabled by Default)
+
+Crackerjack now includes sophisticated intelligence services that enhance the development experience automatically:
+
+### 🧠 Smart Commit Messages (Default)
+
+- **AI-Powered Analysis**: Analyzes staged changes using conventional commit patterns
+- **Context-Aware**: Considers file types, change patterns, and scope for descriptive messages
+- **Automatic Detection**: Identifies breaking changes, features, fixes, and refactoring
+- **Fallback Option**: Use `--basic-commit` to disable smart messages when needed
+
+### 📈 Version Intelligence (Integrated)
+
+- **Semantic Analysis**: AI recommends version bumps (major/minor/patch) based on commits
+- **Breaking Change Detection**: Automatically identifies API-breaking changes
+- **Conventional Commits**: Analyzes feat/fix/breaking patterns with confidence scoring
+- **Interactive Mode**: Use `--bump interactive` to see AI recommendations during selection
+
+### 📝 Changelog Automation (Default)
+
+- **Git History Analysis**: Automatically generates changelog entries from commits
+- **Categorized Entries**: Groups changes by type (Added, Fixed, Changed, etc.)
+- **Version Integration**: Updates changelog during version bumps and publishing
+- **Markdown Generation**: Creates properly formatted CHANGELOG.md entries
+
+### 🎯 Quality Intelligence (Active)
+
+- **Anomaly Detection**: ML-based quality trend analysis and early warning system
+- **Pattern Recognition**: Identifies improvement/regression patterns in code quality
+- **Workflow Decisions**: Influences hook selection based on quality history
+- **Predictive Analytics**: Recommends comprehensive vs. fast quality checks intelligently
+
+### ⚡ Performance Benchmarks (Reporting)
+
+- **Real-time Metrics**: Tracks workflow execution time and resource usage
+- **Improvement Analysis**: Shows performance gains from optimizations and caching
+- **Memory Optimization**: Reports cache hit ratios and memory efficiency metrics
+- **Historical Trends**: Maintains performance baselines for comparison
+
+**Integration Benefits**:
+
+- All services work together seamlessly with graceful fallbacks
+- Zero configuration required - intelligent defaults work out of the box
+- Enhanced developer experience with minimal performance impact
+- Comprehensive quality assurance with intelligent automation
+
 ## High-Performance Rust Integration
 
 **Ultra-Fast Static Analysis** with seamless Python integration:

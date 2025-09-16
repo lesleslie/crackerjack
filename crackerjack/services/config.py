@@ -12,12 +12,20 @@ class ConfigurationService:
     def __init__(self, console: Console, pkg_path: Path) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        self.config_generator = DynamicConfigGenerator()
+        # Extract package directory name from the pkg_path
+        package_directory = pkg_path.name if pkg_path != Path.cwd() else None
+        self.config_generator = DynamicConfigGenerator(package_directory)
 
     def update_precommit_config(self, options: OptionsProtocol) -> bool:
         try:
             mode = self._determine_config_mode(options)
-            config_temp_path = generate_config_for_mode(mode)
+            # Extract package directory name from the pkg_path
+            package_directory = (
+                self.pkg_path.name if self.pkg_path != Path.cwd() else None
+            )
+            config_temp_path = generate_config_for_mode(
+                mode, package_directory=package_directory
+            )
             if not config_temp_path:
                 self.console.print("[yellow]⚠️ No configuration generated[/ yellow]")
                 return False

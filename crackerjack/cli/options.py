@@ -110,7 +110,7 @@ class Options(BaseModel):
     accept_version: bool = False
 
     # Intelligent features
-    smart_commit: bool = False
+    smart_commit: bool = True  # Default enabled for advanced services integration
 
     # Analytics and visualization features
     heatmap: bool = False
@@ -733,9 +733,9 @@ CLI_OPTIONS = {
         help="Automatically accept version bump recommendation without confirmation.",
     ),
     "smart_commit": typer.Option(
-        False,
-        "--smart-commit",
-        help="Generate intelligent commit messages based on code changes using AI analysis.",
+        True,  # Now enabled by default for advanced services integration
+        "--smart-commit/--basic-commit",
+        help="Generate intelligent commit messages using AI analysis (default: enabled). Use --basic-commit for simple messages.",
     ),
     "heatmap": typer.Option(
         False,

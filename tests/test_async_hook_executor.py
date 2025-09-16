@@ -20,7 +20,7 @@ from crackerjack.models.task import HookResult
 class TestAsyncHookExecutor:
     @pytest.fixture
     def console(self):
-        return Console(force_terminal=False, width=80)
+        return Console(force_terminal=False, width=74)
 
     @pytest.fixture
     def pkg_path(self, tmp_path):

@@ -122,8 +122,18 @@ class PublishManagerImpl:
             raise ValueError(msg)
         self.console.print(f"[cyan]📦[/ cyan] Current version: {current_version}")
 
+        # Get intelligent version analysis and recommendation
+        recommendation = self._get_version_recommendation()
+        if recommendation and version_type not in ["interactive"]:
+            self._display_version_analysis(recommendation)
+            if version_type == "auto":
+                version_type = recommendation.bump_type.value
+                self.console.print(
+                    f"[green]🎯[/green] Using AI-recommended bump type: {version_type}"
+                )
+
         if version_type == "interactive":
-            version_type = self._prompt_for_version_type()
+            version_type = self._prompt_for_version_type(recommendation)
 
         try:
             new_version = self._calculate_next_version(current_version, version_type)
@@ -146,20 +156,94 @@ class PublishManagerImpl:
             self.console.print(f"[red]❌[/ red] Version bump failed: {e}")
             raise
 
-    def _prompt_for_version_type(self) -> str:
+    def _prompt_for_version_type(self, recommendation=None) -> str:
         try:
             from rich.prompt import Prompt
+
+            default_type = "patch"
+            if recommendation:
+                default_type = recommendation.bump_type.value
+                self.console.print(
+                    f"[dim]AI recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]"
+                )
 
             return Prompt.ask(
                 "[cyan]📦[/ cyan] Select version bump type",
                 choices=["patch", "minor", "major"],
-                default="patch",
+                default=default_type,
             )
         except ImportError:
             self.console.print(
                 "[yellow]⚠️[/ yellow] Rich prompt not available, defaulting to patch"
             )
             return "patch"
+
+    def _get_version_recommendation(self):
+        """Get AI-powered version bump recommendation based on git history."""
+        try:
+            import asyncio
+
+            from crackerjack.services.git import GitService
+            from crackerjack.services.version_analyzer import VersionAnalyzer
+
+            # Initialize services
+            git_service = GitService(self.console, self.pkg_path)
+            version_analyzer = VersionAnalyzer(self.console, git_service)
+
+            # Get recommendation asynchronously
+            try:
+                # Try to get existing event loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Create a new event loop in a thread if one is already running
+                    import concurrent.futures
+
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(
+                            asyncio.run, version_analyzer.recommend_version_bump()
+                        )
+                        recommendation = future.result(timeout=10)
+                else:
+                    recommendation = loop.run_until_complete(
+                        version_analyzer.recommend_version_bump()
+                    )
+            except RuntimeError:
+                # No event loop, create one
+                recommendation = asyncio.run(version_analyzer.recommend_version_bump())
+
+            return recommendation
+
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️[/yellow] Version analysis failed: {e}")
+            return None
+
+    def _display_version_analysis(self, recommendation):
+        """Display version analysis in a compact format."""
+        if not recommendation:
+            return
+
+        self.console.print("\n[cyan]🎯 AI Version Analysis[/cyan]")
+        self.console.print(
+            f"Recommended: [bold green]{recommendation.recommended_version}[/bold green] "
+            f"({recommendation.bump_type.value.upper()}) - {recommendation.confidence:.0%} confidence"
+        )
+
+        if recommendation.reasoning:
+            self.console.print(f"[dim]→ {recommendation.reasoning[0]}[/dim]")
+
+        # Show key changes briefly
+        if recommendation.breaking_changes:
+            self.console.print(
+                f"[red]⚠️[/red] {len(recommendation.breaking_changes)} breaking changes detected"
+            )
+        elif recommendation.new_features:
+            self.console.print(
+                f"[green]✨[/green] {len(recommendation.new_features)} new features detected"
+            )
+        elif recommendation.bug_fixes:
+            self.console.print(
+                f"[blue]🔧[/blue] {len(recommendation.bug_fixes)} bug fixes detected"
+            )
 
     def validate_auth(self) -> bool:
         auth_methods = self._collect_auth_methods()
