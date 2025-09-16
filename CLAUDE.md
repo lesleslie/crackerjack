@@ -347,3 +347,5 @@ from ..models.protocols import TestManagerProtocol
 - make sure to run `python -m crackerjack` after every editing/debugging cycle for quality checking
 - always put implementation plans in a md doc for review and reference
 - think when you need to think, think harder when you need to think harder
+
+# Test debug logging
