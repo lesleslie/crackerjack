@@ -1,6 +1,5 @@
 """Rich panel utilities for MCP server operations with consistent styling."""
 
-import typing as t
 from pathlib import Path
 
 from rich.console import Console
@@ -60,7 +59,7 @@ class ServerPanels:
         self,
         http_endpoint: str | None = None,
         websocket_monitor: str | None = None,
-        process_id: int | None = None
+        process_id: int | None = None,
     ) -> None:
         """Display success panel with server details."""
         content = Text()

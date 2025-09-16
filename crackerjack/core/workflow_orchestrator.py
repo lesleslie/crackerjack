@@ -424,17 +424,25 @@ class WorkflowPipeline:
             if self._is_publishing_workflow(options):
                 return False
 
-        if not await self._execute_publishing_workflow(options, workflow_id):
+        # Execute publishing workflow if requested
+        publishing_success = await self._execute_publishing_workflow(
+            options, workflow_id
+        )
+        if not publishing_success:
             success = False
-            return False
+            # Only return early if publishing was requested but failed
+            if options.publish or options.all:
+                return False
 
-        if not await self._execute_commit_workflow(options, workflow_id):
+        # Execute commit workflow independently if requested
+        commit_success = await self._execute_commit_workflow(options, workflow_id)
+        if not commit_success:
             success = False
 
         return success
 
     def _is_publishing_workflow(self, options: OptionsProtocol) -> bool:
-        return bool(options.publish or options.all or options.commit)
+        return bool(options.publish or options.all)
 
     async def _execute_publishing_workflow(
         self, options: OptionsProtocol, workflow_id: str
@@ -1457,7 +1465,7 @@ class WorkflowPipeline:
     def _check_security_gates_for_publishing(
         self, options: OptionsProtocol
     ) -> tuple[bool, bool]:
-        publishing_requested = bool(options.publish or options.all or options.commit)
+        publishing_requested = bool(options.publish or options.all)
 
         if not publishing_requested:
             return False, False
