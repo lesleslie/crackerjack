@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.2] - 2025-09-15
+
+### Changed
+
+- Crackerjack (quality: 76/100) - 2025-09-15 23:04:41
+
+### Fixed
+
+- test: Update 5 files
+
 ## [0.36.1] - 2025-09-15
 
 ### Documentation
