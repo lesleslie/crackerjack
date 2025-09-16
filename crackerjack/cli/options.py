@@ -11,6 +11,7 @@ class BumpOption(str, Enum):
     minor = "minor"
     major = "major"
     interactive = "interactive"
+    auto = "auto"
 
     def __str__(self) -> str:
         return str(self.value)
@@ -276,8 +277,9 @@ CLI_OPTIONS = {
         "-p",
         "--publish",
         help=(
-            "Bump version and publish to PyPI (patch, minor, major). "
-            "Use 'interactive' to be prompted for version selection."
+            "Bump version and publish to PyPI (patch, minor, major, auto). "
+            "Use 'interactive' to be prompted for version selection. "
+            "Use 'auto' to automatically use AI recommendations."
         ),
         case_sensitive=False,
     ),
@@ -285,14 +287,14 @@ CLI_OPTIONS = {
         None,
         "-a",
         "--all",
-        help="Full release workflow: bump version, run quality checks, and publish (patch, minor, major).",
+        help="Full release workflow: bump version, run quality checks, and publish (patch, minor, major, auto).",
         case_sensitive=False,
     ),
     "bump": typer.Option(
         None,
         "-b",
         "--bump",
-        help="Bump version (patch, minor, major).",
+        help="Bump version (patch, minor, major, auto).",
         case_sensitive=False,
     ),
     "benchmark": typer.Option(
@@ -644,7 +646,7 @@ CLI_OPTIONS = {
         None,
         "-a",
         "--full-release",
-        help="Complete release workflow: strip code, run tests, bump version, and publish. Equivalent to `-x -t -p <version> -c`.",
+        help="Complete release workflow: strip code, run tests, bump version, and publish (patch, minor, major, auto). Equivalent to `-x -t -p <version> -c`.",
         case_sensitive=False,
     ),
     "show_progress": typer.Option(

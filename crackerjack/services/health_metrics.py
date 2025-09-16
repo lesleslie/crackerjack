@@ -347,11 +347,11 @@ class HealthMetricsService:
         try:
             from urllib.parse import urlparse
 
-            url = f"https: //pypi.org/pypi/{package_name}/json"
+            url = f"https://pypi.org/pypi/{package_name}/json"
 
             parsed = urlparse(url)
             if parsed.scheme != "https" or parsed.netloc != "pypi.org":
-                msg = f"Invalid URL: only https: //pypi.org URLs are allowed, got {url}"
+                msg = f"Invalid URL: only https://pypi.org URLs are allowed, got {url}"
                 raise ValueError(msg)
 
             if not parsed.path.startswith("/pypi/") or not parsed.path.endswith(

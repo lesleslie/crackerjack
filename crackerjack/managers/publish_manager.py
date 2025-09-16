@@ -284,7 +284,7 @@ class PublishManagerImpl:
                 [
                     "keyring",
                     "get",
-                    "https: //upload.pypi.org/legacy/",
+                    "https://upload.pypi.org/legacy/",
                     "__token__",
                 ],
             )
@@ -315,7 +315,7 @@ class PublishManagerImpl:
             " 1. Set environment variable: export UV_PUBLISH_TOKEN=<your-pypi-token>",
         )
         self.console.print(
-            " 2. Use keyring: keyring set[t.Any] https: //upload.pypi.org/legacy/ __token__",
+            " 2. Use keyring: keyring set[t.Any] https://upload.pypi.org/legacy/ __token__",
         )
         self.console.print(
             " 3. Ensure token starts with 'pypi-' and is properly formatted",
@@ -434,7 +434,7 @@ class PublishManagerImpl:
         package_name = self._get_package_name()
 
         if package_name and current_version:
-            url = f"https: //pypi.org/project/{package_name}/{current_version}/"
+            url = f"https://pypi.org/project/{package_name}/{current_version}/"
             self.console.print(f"[cyan]🔗[/ cyan] Package URL: {url}")
 
     def _get_package_name(self) -> str | None:

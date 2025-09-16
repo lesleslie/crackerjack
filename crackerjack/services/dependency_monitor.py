@@ -452,13 +452,13 @@ class DependencyMonitorService:
 
         import requests
 
-        url = f"https: //pypi.org/pypi/{package}/json"
+        url = f"https://pypi.org/pypi/{package}/json"
         self._validate_pypi_url(url)
 
         parsed = urlparse(url)
 
         if parsed.scheme != "https" or parsed.netloc != "pypi.org":
-            msg = f"Invalid URL: only https: //pypi.org URLs are allowed, got {url}"
+            msg = f"Invalid URL: only https://pypi.org URLs are allowed, got {url}"
             raise ValueError(msg)
 
         response = requests.get(url, timeout=10, verify=True)

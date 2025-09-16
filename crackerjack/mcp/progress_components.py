@@ -157,11 +157,9 @@ class JobDataCollector:
                 "network_operations",
                 timeout=5.0,
             ):
-                websocket_base = self.websocket_url.replace(
-                    "ws: //", "http: //"
-                ).replace(
-                    "wss: //",
-                    "https: //",
+                websocket_base = self.websocket_url.replace("ws://", "http://").replace(
+                    "wss://",
+                    "https://",
                 )
 
                 async with (
