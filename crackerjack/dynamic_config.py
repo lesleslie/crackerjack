@@ -459,7 +459,13 @@ PRE_COMMIT_TEMPLATE = """repos:
 class DynamicConfigGenerator:
     def __init__(self, package_directory: str | None = None) -> None:
         self.template = jinja2.Template(PRE_COMMIT_TEMPLATE)
-        self.package_directory = package_directory or self._detect_package_directory()
+        self.package_directory = self._sanitize_package_directory(
+            package_directory or self._detect_package_directory()
+        )
+
+    def _sanitize_package_directory(self, package_directory: str) -> str:
+        """Convert hyphens to underscores in package directory names."""
+        return package_directory.replace("-", "_")
 
     def _detect_package_directory(self) -> str:
         """Detect the package directory name for the current project."""

@@ -12,8 +12,10 @@ class ConfigurationService:
     def __init__(self, console: Console, pkg_path: Path) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        # Extract package directory name from the pkg_path
+        # Extract package directory name from the pkg_path and sanitize it
         package_directory = pkg_path.name if pkg_path != Path.cwd() else None
+        if package_directory:
+            package_directory = package_directory.replace("-", "_")
         self.config_generator = DynamicConfigGenerator(package_directory)
 
     def update_precommit_config(self, options: OptionsProtocol) -> bool:
