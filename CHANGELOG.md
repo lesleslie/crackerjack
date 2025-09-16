@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Crackerjack (quality: 76/100) - 2025-09-15 22:25:11
 
+### Fixed
+
+- Fixed commit/push stage being skipped when using -s -p -c flags together
+
 ## [0.35.0] - 2025-09-15
 
 ### Fixed
