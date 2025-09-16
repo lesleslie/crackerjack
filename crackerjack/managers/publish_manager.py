@@ -430,14 +430,8 @@ class PublishManagerImpl:
             else False
         )
 
-        # DEBUG: Log the actual publish result for troubleshooting
-        self.console.print(f"[dim]DEBUG: uv publish returncode={result.returncode}[/dim]")
-        if result.stdout:
-            self.console.print(f"[dim]DEBUG: stdout contains success indicator={has_success_indicator}[/dim]")
-
         # Consider it successful if either return code is 0 OR we find success indicators
         success = result.returncode == 0 or has_success_indicator
-        self.console.print(f"[dim]DEBUG: publish_package() returning {success}[/dim]")
 
         if success:
             self._handle_publish_success()

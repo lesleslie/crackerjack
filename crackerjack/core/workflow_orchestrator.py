@@ -428,16 +428,13 @@ class WorkflowPipeline:
         publishing_success = await self._execute_publishing_workflow(
             options, workflow_id
         )
-        self.console.print(f"[dim]DEBUG: publishing_success={publishing_success}[/dim]")
         if not publishing_success:
             success = False
 
         # Execute commit workflow independently if requested
         # Note: Commit workflow runs regardless of publish success to ensure
         # version bump changes are always committed when requested
-        self.console.print(f"[dim]DEBUG: About to execute commit workflow, options.commit={options.commit}[/dim]")
         commit_success = await self._execute_commit_workflow(options, workflow_id)
-        self.console.print(f"[dim]DEBUG: commit_success={commit_success}[/dim]")
         if not commit_success:
             success = False
 
