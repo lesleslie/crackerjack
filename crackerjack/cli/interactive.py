@@ -447,10 +447,22 @@ class InteractiveCLI:
             default=options.clean,
         )
         updated_options.test = Confirm.ask("🧪 Run tests?", default=options.test)
-        updated_options.commit = Confirm.ask(
-            "📝 Commit changes to git?",
-            default=options.commit,
-        )
+
+        # Only ask about commit if not explicitly set via command line
+        # Check if commit was explicitly provided by looking at original vs default
+        from ..cli.options import Options
+
+        default_options = Options()
+        if options.commit != default_options.commit:
+            # Command line flag was used, preserve it
+            self.console.print(f"📝 Using command line flag: --commit={options.commit}")
+            updated_options.commit = options.commit  # Preserve the command line value
+        else:
+            # No command line flag, ask user
+            updated_options.commit = Confirm.ask(
+                "📝 Commit changes to git?",
+                default=options.commit,
+            )
         if not any([options.publish, options.all, options.bump]):
             if Confirm.ask("📦 Bump version and publish?", default=False):
                 version_type = Prompt.ask(

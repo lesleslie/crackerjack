@@ -6,11 +6,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.36.2"
+version = "0.37.2"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
-    { name = "Les Leslie", email = "les@lesleslie.com" },
+    { name = "Les Leslie", email = "les@wedgwoodwebworks.com" },
 ]
 requires-python = ">=3.13"
 classifiers = [

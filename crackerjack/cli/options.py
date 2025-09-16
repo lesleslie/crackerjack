@@ -16,11 +16,14 @@ def parse_bump_option_with_flag_support(
 
     # If the value starts with a dash, it's likely another flag that typer mistakenly captured
     if value.startswith("-"):
-        # Put the value back into the arguments for typer to process
-        if hasattr(ctx, "protected_args"):
-            ctx.protected_args.insert(0, value)
-        elif hasattr(ctx, "args"):
-            ctx.args.insert(0, value)
+        # Handle specific flags that were consumed
+        if value in ["-c", "--commit"]:
+            # Set the commit parameter directly in the context
+            if not hasattr(ctx, 'params'):
+                ctx.params = {}
+            ctx.params['commit'] = True
+
+        # Default to interactive mode when used as a flag
         return "interactive"
 
     return value
