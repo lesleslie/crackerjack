@@ -45,6 +45,12 @@ def parse_bump_option_with_flag_support(
                 ctx.params = {}
             ctx.params[param_name] = True
 
+            # CRITICAL FIX: Remove the consumed flag from sys.argv to prevent double processing
+            import sys
+
+            if value in sys.argv:
+                sys.argv.remove(value)
+
         # Default to interactive mode when used as a flag
         return "interactive"
 
