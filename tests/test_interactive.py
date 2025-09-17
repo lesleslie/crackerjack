@@ -10,6 +10,7 @@ def test_launch_interactive_cli_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in launch_interactive_cli: {e}")
 
+
 def test_from_args_basic(self):
     """Test basic functionality of from_args."""
     try:
@@ -21,6 +22,7 @@ def test_from_args_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in from_args: {e}")
+
 
 def test_name_basic(self):
     """Test basic functionality of name."""
@@ -34,6 +36,7 @@ def test_name_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in name: {e}")
 
+
 def test_description_basic(self):
     """Test basic functionality of description."""
     try:
@@ -45,6 +48,7 @@ def test_description_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in description: {e}")
+
 
 def test_dependencies_basic(self):
     """Test basic functionality of dependencies."""
@@ -58,6 +62,7 @@ def test_dependencies_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in dependencies: {e}")
 
+
 def test_get_resolved_dependencies_basic(self):
     """Test basic functionality of get_resolved_dependencies."""
     try:
@@ -69,6 +74,7 @@ def test_get_resolved_dependencies_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in get_resolved_dependencies: {e}")
+
 
 def test_duration_basic(self):
     """Test basic functionality of duration."""
@@ -82,6 +88,7 @@ def test_duration_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in duration: {e}")
 
+
 def test_start_basic(self):
     """Test basic functionality of start."""
     try:
@@ -93,6 +100,7 @@ def test_start_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in start: {e}")
+
 
 def test_complete_basic(self):
     """Test basic functionality of complete."""
@@ -106,6 +114,7 @@ def test_complete_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in complete: {e}")
 
+
 def test_skip_basic(self):
     """Test basic functionality of skip."""
     try:
@@ -117,6 +126,7 @@ def test_skip_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in skip: {e}")
+
 
 def test_fail_basic(self):
     """Test basic functionality of fail."""

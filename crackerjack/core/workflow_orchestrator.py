@@ -169,22 +169,33 @@ class WorkflowPipeline:
 
     def _initialize_zuban_lsp(self, options: OptionsProtocol) -> None:
         """Initialize Zuban LSP server if not disabled."""
-        # Check if LSP is disabled via CLI flag or configuration
-        if getattr(options, "no_zuban_lsp", False):
-            self.logger.debug("Zuban LSP server disabled by --no-zuban-lsp flag")
+        if self._should_skip_zuban_lsp(options):
             return
 
-        # Get configuration from options (will use config system if available)
+        if self._is_zuban_lsp_already_running():
+            return
+
+        self._start_zuban_lsp_server(options)
+
+    def _should_skip_zuban_lsp(self, options: OptionsProtocol) -> bool:
+        """Check if Zuban LSP server should be skipped."""
+        if getattr(options, "no_zuban_lsp", False):
+            self.logger.debug("Zuban LSP server disabled by --no-zuban-lsp flag")
+            return True
+
         config = getattr(options, "zuban_lsp", None)
         if config and not config.enabled:
             self.logger.debug("Zuban LSP server disabled in configuration")
-            return
+            return True
 
         if config and not config.auto_start:
             self.logger.debug("Zuban LSP server auto-start disabled in configuration")
-            return
+            return True
 
-        # Check if LSP server is already running to avoid duplicates
+        return False
+
+    def _is_zuban_lsp_already_running(self) -> bool:
+        """Check if LSP server is already running to avoid duplicates."""
         from crackerjack.services.server_manager import find_zuban_lsp_processes
 
         existing_processes = find_zuban_lsp_processes()
@@ -192,20 +203,17 @@ class WorkflowPipeline:
             self.logger.debug(
                 f"Zuban LSP server already running (PID: {existing_processes[0]['pid']})"
             )
-            return
+            return True
+        return False
 
-        # Auto-start LSP server in background
+    def _start_zuban_lsp_server(self, options: OptionsProtocol) -> None:
+        """Start the Zuban LSP server in background."""
         try:
             import subprocess
             import sys
 
-            # Use configuration values if available, otherwise fallback to CLI options
-            if config:
-                zuban_lsp_port = config.port
-                zuban_lsp_mode = config.mode
-            else:
-                zuban_lsp_port = getattr(options, "zuban_lsp_port", 8677)
-                zuban_lsp_mode = getattr(options, "zuban_lsp_mode", "stdio")
+            config = getattr(options, "zuban_lsp", None)
+            zuban_lsp_port, zuban_lsp_mode = self._get_zuban_lsp_config(options, config)
 
             cmd = [
                 sys.executable,
@@ -231,6 +239,17 @@ class WorkflowPipeline:
 
         except Exception as e:
             self.logger.warning(f"Failed to auto-start Zuban LSP server: {e}")
+
+    def _get_zuban_lsp_config(
+        self, options: OptionsProtocol, config: any
+    ) -> tuple[int, str]:
+        """Get Zuban LSP configuration values."""
+        if config:
+            return config.port, config.mode
+        return (
+            getattr(options, "zuban_lsp_port", 8677),
+            getattr(options, "zuban_lsp_mode", "stdio"),
+        )
 
     def _log_zuban_lsp_status(self) -> None:
         """Display current Zuban LSP server status during workflow startup."""
@@ -351,36 +370,9 @@ class WorkflowPipeline:
             return
 
         try:
-            # Gather performance metrics from the workflow execution
-            {
-                "workflow_id": workflow_id,
-                "total_duration": duration,
-                "success": success,
-                "cache_metrics": self._cache.get_stats() if self._cache else {},
-                "memory_metrics": self._memory_optimizer.get_stats()
-                if hasattr(self._memory_optimizer, "get_stats")
-                else {},
-            }
-
-            # Generate benchmark comparison
+            self._gather_performance_metrics(workflow_id, duration, success)
             benchmark_results = await self._performance_benchmarks.run_benchmark_suite()
-
-            # Display compact performance summary
-            if benchmark_results:
-                self.console.print("\n[cyan]📊 Performance Benchmark Summary[/cyan]")
-                self.console.print(f"Workflow Duration: [bold]{duration:.2f}s[/bold]")
-
-                # Show key performance improvements if available
-                for result in benchmark_results.results[:3]:  # Top 3 results
-                    if result.time_improvement_percentage > 0:
-                        self.console.print(
-                            f"[green]⚡[/green] {result.test_name}: {result.time_improvement_percentage:.1f}% faster"
-                        )
-
-                    if result.cache_hit_ratio > 0:
-                        self.console.print(
-                            f"[blue]🎯[/blue] Cache efficiency: {result.cache_hit_ratio:.0%}"
-                        )
+            self._display_benchmark_results(benchmark_results, duration)
 
         except Exception as e:
             self.console.print(
@@ -389,6 +381,52 @@ class WorkflowPipeline:
 
         if self.debugger.enabled:
             self.debugger.print_debug_summary()
+
+    def _gather_performance_metrics(
+        self, workflow_id: str, duration: float, success: bool
+    ) -> dict:
+        """Gather performance metrics from workflow execution."""
+        return {
+            "workflow_id": workflow_id,
+            "total_duration": duration,
+            "success": success,
+            "cache_metrics": self._cache.get_stats() if self._cache else {},
+            "memory_metrics": self._memory_optimizer.get_stats()
+            if hasattr(self._memory_optimizer, "get_stats")
+            else {},
+        }
+
+    def _display_benchmark_results(
+        self, benchmark_results: t.Any, duration: float
+    ) -> None:
+        """Display compact performance summary."""
+        if not benchmark_results:
+            return
+
+        self.console.print("\n[cyan]📊 Performance Benchmark Summary[/cyan]")
+        self.console.print(f"Workflow Duration: [bold]{duration:.2f}s[/bold]")
+
+        self._show_performance_improvements(benchmark_results)
+
+    def _show_performance_improvements(self, benchmark_results: t.Any) -> None:
+        """Show key performance improvements from benchmark results."""
+        for result in benchmark_results.results[:3]:  # Top 3 results
+            self._display_time_improvement(result)
+            self._display_cache_efficiency(result)
+
+    def _display_time_improvement(self, result: t.Any) -> None:
+        """Display time improvement percentage if available."""
+        if result.time_improvement_percentage > 0:
+            self.console.print(
+                f"[green]⚡[/green] {result.test_name}: {result.time_improvement_percentage:.1f}% faster"
+            )
+
+    def _display_cache_efficiency(self, result: t.Any) -> None:
+        """Display cache hit ratio if available."""
+        if result.cache_hit_ratio > 0:
+            self.console.print(
+                f"[blue]🎯[/blue] Cache efficiency: {result.cache_hit_ratio:.0%}"
+            )
 
     def _handle_user_interruption(self) -> bool:
         self.console.print("Interrupted by user")
@@ -525,39 +563,51 @@ class WorkflowPipeline:
             if not self._quality_intelligence:
                 return "Quality intelligence not available"
 
-            # Analyze recent quality trends and anomalies
             anomalies = self._quality_intelligence.detect_anomalies()
             patterns = self._quality_intelligence.identify_patterns()
 
-            # Make intelligent recommendations based on current state
-            recommendations = []
-            if anomalies:
-                high_severity_anomalies = [
-                    a for a in anomalies if a.severity.name in ("CRITICAL", "HIGH")
-                ]
-                if high_severity_anomalies:
-                    recommendations.append(
-                        "comprehensive analysis recommended due to quality anomalies"
-                    )
-                else:
-                    recommendations.append("standard quality checks sufficient")
-
-            if patterns:
-                improving_patterns = [
-                    p for p in patterns if p.trend_direction.name == "IMPROVING"
-                ]
-                if improving_patterns:
-                    recommendations.append("quality trending upward")
-                else:
-                    recommendations.append("quality monitoring active")
-
-            if not recommendations:
-                recommendations.append("baseline quality analysis active")
-
+            recommendations = self._build_quality_recommendations(anomalies, patterns)
             return "; ".join(recommendations)
 
         except Exception as e:
             return f"Quality intelligence analysis failed: {str(e)[:50]}..."
+
+    def _build_quality_recommendations(
+        self, anomalies: t.Any, patterns: t.Any
+    ) -> list[str]:
+        """Build quality recommendations based on anomalies and patterns."""
+        recommendations = []
+
+        if anomalies:
+            recommendations.extend(self._analyze_anomalies(anomalies))
+
+        if patterns:
+            recommendations.extend(self._analyze_patterns(patterns))
+
+        if not recommendations:
+            recommendations.append("baseline quality analysis active")
+
+        return recommendations
+
+    def _analyze_anomalies(self, anomalies: t.Any) -> list[str]:
+        """Analyze anomalies and return recommendations."""
+        high_severity_anomalies = [
+            a for a in anomalies if a.severity.name in ("CRITICAL", "HIGH")
+        ]
+
+        if high_severity_anomalies:
+            return ["comprehensive analysis recommended due to quality anomalies"]
+        return ["standard quality checks sufficient"]
+
+    def _analyze_patterns(self, patterns: t.Any) -> list[str]:
+        """Analyze patterns and return recommendations."""
+        improving_patterns = [
+            p for p in patterns if p.trend_direction.name == "IMPROVING"
+        ]
+
+        if improving_patterns:
+            return ["quality trending upward"]
+        return ["quality monitoring active"]
 
     async def _execute_test_workflow(
         self, options: OptionsProtocol, workflow_id: str
@@ -886,27 +936,36 @@ class WorkflowPipeline:
     def _execute_standard_hooks_workflow(self, options: OptionsProtocol) -> bool:
         self._update_hooks_status_running()
 
-        fast_hooks_success = self._run_fast_hooks_phase(options)
-        if not fast_hooks_success:
+        if not self._execute_fast_hooks_workflow(options):
             self._handle_hooks_completion(False)
             return False
 
-        if getattr(options, "clean", False):
-            if not self._run_code_cleaning_phase(options):
-                self._handle_hooks_completion(False)
-                return False
-
-            if not self._run_post_cleaning_fast_hooks(options):
-                self._handle_hooks_completion(False)
-                return False
-            self._mark_code_cleaning_complete()
+        if not self._execute_cleaning_workflow_if_needed(options):
+            self._handle_hooks_completion(False)
+            return False
 
         comprehensive_success = self._run_comprehensive_hooks_phase(options)
+        self._handle_hooks_completion(comprehensive_success)
 
-        hooks_success = fast_hooks_success and comprehensive_success
-        self._handle_hooks_completion(hooks_success)
+        return comprehensive_success
 
-        return hooks_success
+    def _execute_fast_hooks_workflow(self, options: OptionsProtocol) -> bool:
+        """Execute fast hooks phase."""
+        return self._run_fast_hooks_phase(options)
+
+    def _execute_cleaning_workflow_if_needed(self, options: OptionsProtocol) -> bool:
+        """Execute cleaning workflow if requested."""
+        if not getattr(options, "clean", False):
+            return True
+
+        if not self._run_code_cleaning_phase(options):
+            return False
+
+        if not self._run_post_cleaning_fast_hooks(options):
+            return False
+
+        self._mark_code_cleaning_complete()
+        return True
 
     def _update_hooks_status_running(self) -> None:
         if self._has_mcp_state_manager():
@@ -1116,14 +1175,15 @@ class WorkflowPipeline:
         return test_success
 
     def _should_verify_hook_fixes(self, fixes_applied: list[str]) -> bool:
-        hook_fixes = [
-            f
-            for f in fixes_applied
-            if "hook" not in f.lower()
-            or "complexity" in f.lower()
-            or "type" in f.lower()
-        ]
+        hook_fixes = [fix for fix in fixes_applied if self._is_hook_related_fix(fix)]
         return bool(hook_fixes)
+
+    def _is_hook_related_fix(self, fix: str) -> bool:
+        """Check if a fix is related to hooks and should trigger hook verification."""
+        fix_lower = fix.lower()
+        return (
+            "hook" not in fix_lower or "complexity" in fix_lower or "type" in fix_lower
+        )
 
     async def _verify_hook_fixes(self, options: OptionsProtocol) -> bool:
         self.logger.info("Re-running comprehensive hooks to verify hook fixes")
@@ -1299,34 +1359,29 @@ class WorkflowPipeline:
         return issues
 
     def _parse_comprehensive_hook_errors(self, error_msg: str) -> list[Issue]:
-        issues: list[Issue] = []
         error_lower = error_msg.lower()
+        error_checkers = self._get_comprehensive_error_checkers()
 
-        complexity_issue = self._check_complexity_error(error_lower)
-        if complexity_issue:
-            issues.append(complexity_issue)
-
-        type_error_issue = self._check_type_error(error_lower)
-        if type_error_issue:
-            issues.append(type_error_issue)
-
-        security_issue = self._check_security_error(error_lower)
-        if security_issue:
-            issues.append(security_issue)
-
-        performance_issue = self._check_performance_error(error_lower)
-        if performance_issue:
-            issues.append(performance_issue)
-
-        dead_code_issue = self._check_dead_code_error(error_lower)
-        if dead_code_issue:
-            issues.append(dead_code_issue)
-
-        regex_issue = self._check_regex_validation_error(error_lower)
-        if regex_issue:
-            issues.append(regex_issue)
+        issues = []
+        for check_func in error_checkers:
+            issue = check_func(error_lower)
+            if issue:
+                issues.append(issue)
 
         return issues
+
+    def _get_comprehensive_error_checkers(
+        self,
+    ) -> list[t.Callable[[str], Issue | None]]:
+        """Get list of error checking functions for comprehensive hooks."""
+        return [
+            self._check_complexity_error,
+            self._check_type_error,
+            self._check_security_error,
+            self._check_performance_error,
+            self._check_dead_code_error,
+            self._check_regex_validation_error,
+        ]
 
     def _check_complexity_error(self, error_lower: str) -> Issue | None:
         if "complexipy" in error_lower or "c901" in error_lower:
@@ -1426,23 +1481,65 @@ class WorkflowPipeline:
     def _classify_issue(self, issue_str: str) -> tuple[IssueType, Priority]:
         issue_lower = issue_str.lower()
 
-        if self._is_type_error(issue_lower):
-            return IssueType.TYPE_ERROR, Priority.HIGH
-        if self._is_security_issue(issue_lower):
-            return IssueType.SECURITY, Priority.HIGH
-        if self._is_complexity_issue(issue_lower):
-            return IssueType.COMPLEXITY, Priority.HIGH
-        if self._is_regex_validation_issue(issue_lower):
-            return IssueType.REGEX_VALIDATION, Priority.HIGH
+        # Check high priority issues first
+        high_priority_result = self._check_high_priority_issues(issue_lower)
+        if high_priority_result:
+            return high_priority_result
 
-        if self._is_dead_code_issue(issue_lower):
-            return IssueType.DEAD_CODE, Priority.MEDIUM
-        if self._is_performance_issue(issue_lower):
-            return IssueType.PERFORMANCE, Priority.MEDIUM
-        if self._is_import_error(issue_lower):
-            return IssueType.IMPORT_ERROR, Priority.MEDIUM
+        # Check medium priority issues
+        medium_priority_result = self._check_medium_priority_issues(issue_lower)
+        if medium_priority_result:
+            return medium_priority_result
 
+        # Default to formatting issue
         return IssueType.FORMATTING, Priority.MEDIUM
+
+    def _check_high_priority_issues(
+        self, issue_lower: str
+    ) -> tuple[IssueType, Priority] | None:
+        """Check for high priority issue types.
+
+        Args:
+            issue_lower: Lowercase issue string
+
+        Returns:
+            Tuple of issue type and priority if found, None otherwise
+        """
+        high_priority_checks = [
+            (self._is_type_error, IssueType.TYPE_ERROR),
+            (self._is_security_issue, IssueType.SECURITY),
+            (self._is_complexity_issue, IssueType.COMPLEXITY),
+            (self._is_regex_validation_issue, IssueType.REGEX_VALIDATION),
+        ]
+
+        for check_func, issue_type in high_priority_checks:
+            if check_func(issue_lower):
+                return issue_type, Priority.HIGH
+
+        return None
+
+    def _check_medium_priority_issues(
+        self, issue_lower: str
+    ) -> tuple[IssueType, Priority] | None:
+        """Check for medium priority issue types.
+
+        Args:
+            issue_lower: Lowercase issue string
+
+        Returns:
+            Tuple of issue type and priority if found, None otherwise
+        """
+        medium_priority_checks = [
+            (self._is_dead_code_issue, IssueType.DEAD_CODE),
+            (self._is_performance_issue, IssueType.PERFORMANCE),
+            (self._is_import_error, IssueType.IMPORT_ERROR),
+        ]
+
+        for check_func, issue_type in medium_priority_checks:
+            if check_func(issue_lower):
+                return issue_type, Priority.MEDIUM
+
+        return None
 
     def _is_type_error(self, issue_lower: str) -> bool:
         return any(
@@ -1512,43 +1609,76 @@ class WorkflowPipeline:
     async def _handle_security_gate_failure(
         self, options: OptionsProtocol, allow_ai_fixing: bool = False
     ) -> bool:
+        self._display_security_gate_failure_message()
+
+        if allow_ai_fixing:
+            return await self._attempt_ai_assisted_security_fix(options)
+        return self._handle_manual_security_fix()
+
+    def _display_security_gate_failure_message(self) -> None:
+        """Display initial security gate failure message."""
         self.console.print(
             "[red]🔒 SECURITY GATE: Critical security checks failed[/red]"
         )
 
-        if allow_ai_fixing:
-            self.console.print(
-                "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
-            )
-            self.console.print(
-                "[yellow]🤖 Attempting AI-assisted security issue resolution...[/yellow]"
-            )
+    async def _attempt_ai_assisted_security_fix(self, options: OptionsProtocol) -> bool:
+        """Attempt to fix security issues using AI assistance.
 
-            ai_fix_success = await self._run_ai_agent_fixing_phase(options)
-            if ai_fix_success:
-                try:
-                    security_still_blocks = self._check_security_critical_failures()
-                    if not security_still_blocks:
-                        self.console.print(
-                            "[green]✅ AI agents resolved security issues - publishing allowed[/green]"
-                        )
-                        return True
-                    else:
-                        self.console.print(
-                            "[red]🔒 Security issues persist after AI fixing - publishing still BLOCKED[/red]"
-                        )
-                        return False
-                except Exception as e:
-                    self.logger.warning(
-                        f"Security re-check failed: {e} - blocking publishing"
-                    )
-                    return False
+        Args:
+            options: Configuration options
+
+        Returns:
+            True if security issues were resolved, False otherwise
+        """
+        self._display_ai_fixing_messages()
+
+        ai_fix_success = await self._run_ai_agent_fixing_phase(options)
+        if ai_fix_success:
+            return self._verify_security_fix_success()
+
+        return False
+
+    def _display_ai_fixing_messages(self) -> None:
+        """Display messages about AI-assisted security fixing."""
+        self.console.print(
+            "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
+        )
+        self.console.print(
+            "[yellow]🤖 Attempting AI-assisted security issue resolution...[/yellow]"
+        )
+
+    def _verify_security_fix_success(self) -> bool:
+        """Verify that AI fixes resolved the security issues.
+
+        Returns:
+            True if security issues were resolved, False otherwise
+        """
+        try:
+            security_still_blocks = self._check_security_critical_failures()
+            if not security_still_blocks:
+                self.console.print(
+                    "[green]✅ AI agents resolved security issues - publishing allowed[/green]"
+                )
+                return True
+            else:
+                self.console.print(
+                    "[red]🔒 Security issues persist after AI fixing - publishing still BLOCKED[/red]"
+                )
+                return False
+        except Exception as e:
+            self.logger.warning(f"Security re-check failed: {e} - blocking publishing")
             return False
-        else:
-            self.console.print(
-                "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
-            )
-            return False
+
+    def _handle_manual_security_fix(self) -> bool:
+        """Handle security fix when AI assistance is not allowed.
+
+        Returns:
+            Always False since manual intervention is required
+        """
+        self.console.print(
+            "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
+        )
+        return False
 
     def _determine_ai_fixing_needed(
         self,

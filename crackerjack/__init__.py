@@ -30,7 +30,7 @@ from .errors import (
     check_file_exists,
     handle_error,
 )
-from .interactive import WorkflowOptions
+from .interactive import InteractiveWorkflowOptions as WorkflowOptions
 
 try:
     from importlib.metadata import version

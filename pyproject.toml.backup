@@ -96,11 +96,6 @@ fix = true
 unsafe-fixes = true
 show-fixes = true
 output-format = "full"
-exclude = [
-    "tests/",
-    "test_*.py",
-    "*_test.py",
-]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -135,7 +130,7 @@ zuban_lsp_timeout = 10.0
 zuban_lsp_strict_mode = true
 
 [tool.codespell]
-skip = "*/data/*,htmlcov/*,tests/*,*_test.py,test_*.py"
+skip = "*/data/*,htmlcov/*"
 quiet-level = 3
 ignore-words-list = "crate,uptodate,nd,nin"
 
@@ -263,11 +258,6 @@ min_confidence = 86
 paths = [
     "crackerjack",
 ]
-exclude = [
-    "tests/",
-    "test_*.py",
-    "*_test.py",
-]
 ignore_names = [
     "cls",
 ]
@@ -322,15 +312,6 @@ exclude-deps = [
 enable_all = true
 quiet = true
 python_version = "3.13"
-ignore = [
-    "FURB184",
-    "FURB120",
-]
-exclude = [
-    "tests/",
-    "test_*.py",
-    "*_test.py",
-]
 
 [tool.bandit]
 target = [
@@ -345,9 +326,7 @@ skips = [
     "B607",
 ]
 exclude_dirs = [
-    "tests/",
-    "test_*.py",
-    "*_test.py",
+    "tests/data",
 ]
 
 [tool.complexipy]
@@ -357,15 +336,6 @@ exclude_patterns = [
     "**/test_*.py",
 ]
 max_complexity = 15
-
-[tool.mypy]
-python_version = "3.13"
-strict = true
-ignore_missing_imports = true
-show_error_codes = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
 
 [tool.zuban]
 strict = true
@@ -377,3 +347,16 @@ port = 8677
 timeout = 10.0
 enable_diagnostics = true
 real_time_feedback = true
+
+[tool.mypy]
+python_version = "3.13"
+
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "crackerjack"
+version = "0.37.9"

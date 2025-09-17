@@ -485,44 +485,74 @@ class ReferenceGenerator:
         Returns:
             Enhanced commands with workflow info
         """
-        # Define common workflow patterns
-        workflow_patterns = {
+        workflow_patterns = self._get_workflow_patterns()
+
+        for command in commands.values():
+            self._assign_command_workflows(command, workflow_patterns)
+            self._add_ai_context_to_command(command)
+
+        return commands
+
+    def _get_workflow_patterns(self) -> dict[str, list[str]]:
+        """Get workflow patterns for command categorization.
+
+        Returns:
+            Dictionary mapping workflow names to pattern lists
+        """
+        return {
             "development": ["test", "format", "lint", "type-check"],
             "release": ["version", "build", "publish", "tag"],
             "maintenance": ["clean", "update", "optimize", "backup"],
             "monitoring": ["status", "health", "metrics", "logs"],
         }
 
-        for command in commands.values():
-            # Assign workflows based on command name patterns
-            for workflow, patterns in workflow_patterns.items():
-                if any(pattern in command.name for pattern in patterns):
-                    command.common_workflows.append(workflow)
+    def _assign_command_workflows(
+        self, command: CommandInfo, workflow_patterns: dict[str, list[str]]
+    ) -> None:
+        """Assign workflows to a command based on name patterns.
 
-            # Add AI context based on command purpose
-            if "test" in command.name:
-                command.ai_context.update(
-                    {
-                        "purpose": "quality_assurance",
-                        "automation_level": "high",
-                        "ai_agent_compatible": True,
-                    }
-                )
-                command.success_patterns.append("All tests passed")
-                command.failure_patterns.append("Test failures detected")
+        Args:
+            command: Command to assign workflows to
+            workflow_patterns: Workflow patterns to match against
+        """
+        for workflow, patterns in workflow_patterns.items():
+            if any(pattern in command.name for pattern in patterns):
+                command.common_workflows.append(workflow)
 
-            elif "format" in command.name or "lint" in command.name:
-                command.ai_context.update(
-                    {
-                        "purpose": "code_quality",
-                        "automation_level": "high",
-                        "ai_agent_compatible": True,
-                    }
-                )
-                command.success_patterns.append("No formatting issues")
-                command.failure_patterns.append("Style violations found")
+    def _add_ai_context_to_command(self, command: CommandInfo) -> None:
+        """Add AI context to a command based on its purpose.
 
-        return commands
+        Args:
+            command: Command to enhance with AI context
+        """
+        if "test" in command.name:
+            self._add_test_ai_context(command)
+        elif "format" in command.name or "lint" in command.name:
+            self._add_quality_ai_context(command)
+
+    def _add_test_ai_context(self, command: CommandInfo) -> None:
+        """Add AI context for test-related commands."""
+        command.ai_context.update(
+            {
+                "purpose": "quality_assurance",
+                "automation_level": "high",
+                "ai_agent_compatible": True,
+            }
+        )
+        command.success_patterns.append("All tests passed")
+        command.failure_patterns.append("Test failures detected")
+
+    def _add_quality_ai_context(self, command: CommandInfo) -> None:
+        """Add AI context for code quality commands."""
+        command.ai_context.update(
+            {
+                "purpose": "code_quality",
+                "automation_level": "high",
+                "ai_agent_compatible": True,
+            }
+        )
+        command.success_patterns.append("No formatting issues")
+        command.failure_patterns.append("Style violations found")
 
     def _categorize_commands(
         self, commands: dict[str, CommandInfo]
@@ -536,8 +566,18 @@ class ReferenceGenerator:
             Dictionary of category to command names
         """
         categories: dict[str, list[str]] = {}
+        category_patterns = self._get_category_patterns()
 
-        category_patterns = {
+        for command in commands.values():
+            category = self._determine_command_category(command, category_patterns)
+            command.category = category
+            self._add_command_to_category(categories, category, command.name)
+
+        return categories
+
+    def _get_category_patterns(self) -> dict[str, list[str]]:
+        """Get category patterns for command classification."""
+        return {
             "development": ["test", "format", "lint", "check", "run"],
             "server": ["server", "start", "stop", "restart", "monitor"],
             "release": ["version", "bump", "publish", "build", "tag"],
@@ -545,27 +585,22 @@ class ReferenceGenerator:
             "utilities": ["clean", "help", "info", "status"],
         }
 
-        for command in commands.values():
-            assigned = False
+    def _determine_command_category(
+        self, command: CommandInfo, category_patterns: dict[str, list[str]]
+    ) -> str:
+        """Determine the category for a command based on patterns."""
+        for category, patterns in category_patterns.items():
+            if any(pattern in command.name for pattern in patterns):
+                return category
+        return "general"
 
-            # Assign based on patterns
-            for category, patterns in category_patterns.items():
-                if any(pattern in command.name for pattern in patterns):
-                    command.category = category
-                    if category not in categories:
-                        categories[category] = []
-                    categories[category].append(command.name)
-                    assigned = True
-                    break
-
-            # Default category
-            if not assigned:
-                command.category = "general"
-                if "general" not in categories:
-                    categories["general"] = []
-                categories["general"].append(command.name)
-
-        return categories
+    def _add_command_to_category(
+        self, categories: dict[str, list[str]], category: str, command_name: str
+    ) -> None:
+        """Add command to the specified category."""
+        if category not in categories:
+            categories[category] = []
+        categories[category].append(command_name)
 
     def _generate_workflows(
         self, commands: dict[str, CommandInfo]
@@ -663,7 +698,9 @@ class ReferenceGenerator:
         """Render command categories for markdown."""
         category_lines = []
         for category, command_names in reference.categories.items():
-            category_section = self._render_markdown_category(category, reference.commands, command_names)
+            category_section = self._render_markdown_category(
+                category, reference.commands, command_names
+            )
             category_lines.extend(category_section)
         return category_lines
 
@@ -733,7 +770,9 @@ class ReferenceGenerator:
 
         # Add related commands section
         if command.related_commands:
-            related_lines = self._render_command_related_markdown(command.related_commands)
+            related_lines = self._render_command_related_markdown(
+                command.related_commands
+            )
             lines.extend(related_lines)
 
         return lines
@@ -813,9 +852,11 @@ class ReferenceGenerator:
     def _render_html(self, reference: CommandReference) -> str:
         """Render reference as HTML."""
         html_parts = [
-            self._render_html_header(reference.generated_at.strftime("%Y-%m-%d %H:%M:%S")),
+            self._render_html_header(
+                reference.generated_at.strftime("%Y-%m-%d %H:%M:%S")
+            ),
             self._render_html_commands(reference),
-            "</body></html>"
+            "</body></html>",
         ]
         return "".join(html_parts)
 
@@ -842,7 +883,9 @@ class ReferenceGenerator:
         """Render HTML commands by category."""
         html_parts = []
         for category, command_names in reference.categories.items():
-            category_html = self._render_html_category(category, reference.commands, command_names)
+            category_html = self._render_html_category(
+                category, reference.commands, command_names
+            )
             html_parts.append(category_html)
         return "".join(html_parts)
 
@@ -918,7 +961,9 @@ class ReferenceGenerator:
             "aliases": command.aliases,
         }
 
-    def _serialize_parameters(self, parameters: list[ParameterInfo]) -> list[dict[str, t.Any]]:
+    def _serialize_parameters(
+        self, parameters: list[ParameterInfo]
+    ) -> list[dict[str, t.Any]]:
         """Serialize parameters for JSON output."""
         return [self._serialize_parameter(param) for param in parameters]
 

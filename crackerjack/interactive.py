@@ -24,7 +24,7 @@ class TaskStatus(Enum):
 
 
 @dataclass
-class WorkflowOptions:
+class InteractiveWorkflowOptions:
     clean: bool = False
     test: bool = False
     publish: str | None = None
@@ -35,7 +35,7 @@ class WorkflowOptions:
     dry_run: bool = False
 
     @classmethod
-    def from_args(cls, args: t.Any) -> "WorkflowOptions":
+    def from_args(cls, args: t.Any) -> "InteractiveWorkflowOptions":
         return cls(
             clean=getattr(args, "clean", False),
             test=getattr(args, "test", False),
@@ -399,7 +399,7 @@ class InteractiveCLI:
 
         self.logger = logging.getLogger("crackerjack.interactive.cli")
 
-    def create_dynamic_workflow(self, options: WorkflowOptions) -> None:
+    def create_dynamic_workflow(self, options: InteractiveWorkflowOptions) -> None:
         builder = WorkflowBuilder(self.console)
 
         workflow_steps = [
@@ -581,7 +581,7 @@ class InteractiveCLI:
             or last_task
         )
 
-    def run_interactive_workflow(self, options: WorkflowOptions) -> bool:
+    def run_interactive_workflow(self, options: InteractiveWorkflowOptions) -> bool:
         self.logger.info(
             f"Starting interactive workflow with options: {options.__dict__}",
         )
@@ -682,7 +682,9 @@ def launch_interactive_cli(version: str, options: t.Any = None) -> None:
     console.print()
 
     workflow_options = (
-        WorkflowOptions.from_args(options) if options else WorkflowOptions()
+        InteractiveWorkflowOptions.from_args(options)
+        if options
+        else InteractiveWorkflowOptions()
     )
     cli.create_dynamic_workflow(workflow_options)
     cli.run_interactive_workflow(workflow_options)

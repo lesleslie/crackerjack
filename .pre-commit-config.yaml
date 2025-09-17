@@ -11,9 +11,9 @@ repos:
         name: skylos-dead-code-detection
         entry: skylos
         language: system
-        args: ["crackerjack"]
+        args: ["crackerjack", "--exclude", "tests"]
         pass_filenames: false
-        exclude: ^src/
+        exclude: ^tests/|^src/
         stages: ["pre-push", "manual"]
       - id: zuban
         name: zuban-type-checking
@@ -21,7 +21,7 @@ repos:
         language: system
         args: ["--config-file", "mypy.ini", "./crackerjack"]
         pass_filenames: false
-        exclude: ^src/
+        exclude: ^tests/|^src/
         stages: ["pre-push", "manual"]
       - id: pyright
         name: pyright-type-checking
@@ -65,7 +65,7 @@ repos:
       - id: bandit
         args: ["-c", "pyproject.toml", "-r", "-ll"]
         files: ^crackerjack/.*\.py$
-        exclude: ^src/
+        exclude: ^tests/|^src/
         stages: ["pre-push", "manual"]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
@@ -104,7 +104,7 @@ repos:
     rev: v2.1.0
     hooks:
       - id: refurb
-        args: ["--ignore", "FURB184", "--ignore", "FURB120"]
+        args: ["--config", "pyproject.toml"]
         files: ^crackerjack/.*\.py$
-        exclude: ^tests/.*\.py$|^src/
+        exclude: ^tests/|^src/
         stages: ["pre-push", "manual"]

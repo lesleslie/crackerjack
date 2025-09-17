@@ -8,8 +8,7 @@ from rich.console import Console
 from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
 from .core.workflow_orchestrator import WorkflowOrchestrator
 from .errors import CrackerjackError, ErrorCode
-from .interactive import InteractiveCLI
-from .interactive import WorkflowOptions as InteractiveWorkflowOptions
+from .interactive import InteractiveCLI, InteractiveWorkflowOptions
 from .models.config import WorkflowOptions
 from .services.regex_patterns import SAFE_PATTERNS
 

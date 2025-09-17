@@ -133,7 +133,7 @@ class CustomHookPlugin(HookPluginBase):
                 return HookResult(
                     name=hook_def.name,
                     status="failed",
-                    message="Hook command is None",
+                    issues_found=["Hook command is None"],
                     duration=0.0,
                 )
             cmd = hook_def.command.copy()

@@ -192,7 +192,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": ["pre-push", "manual"],
             "args": ["-c", "pyproject.toml", "-r", "-ll"],
             "files": "^crackerjack/.*\\.py$",
-            "exclude": None,
+            "exclude": r"^tests/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -284,9 +284,9 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "tier": 3,
             "time_estimate": 0.1,
             "stages": ["pre-push", "manual"],
-            "args": ["crackerjack"],
+            "args": ["crackerjack", "--exclude", "tests"],
             "files": None,
-            "exclude": None,
+            "exclude": r"^tests/",
             "additional_dependencies": None,
             "types_or": None,
             "language": "system",
@@ -338,9 +338,9 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "tier": 3,
             "time_estimate": 3.0,
             "stages": ["pre-push", "manual"],
-            "args": ["--ignore", "FURB184", "--ignore", "FURB120"],
+            "args": ["--config", "pyproject.toml"],
             "files": "^crackerjack/.*\\.py$",
-            "exclude": r"^tests/.*\.py$",
+            "exclude": r"^tests/",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
@@ -358,7 +358,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": ["pre-push", "manual"],
             "args": ["--config-file", "mypy.ini", "./crackerjack"],
             "files": None,
-            "exclude": None,
+            "exclude": r"^tests/",
             "additional_dependencies": None,
             "types_or": None,
             "language": "system",
@@ -544,7 +544,7 @@ class DynamicConfigGenerator:
         """Update hook configuration to use the detected package directory."""
         # Update skylos hook
         if hook["id"] == "skylos" and hook["args"]:
-            hook["args"] = [self.package_directory]
+            hook["args"] = [self.package_directory, "--exclude", "tests"]
 
         # Update zuban hook
         elif hook["id"] == "zuban" and hook["args"]:
@@ -566,12 +566,24 @@ class DynamicConfigGenerator:
                 "crackerjack", self.package_directory
             )
 
-        # Ensure hooks exclude src directories to avoid JavaScript conflicts
+        # Ensure hooks exclude src directories to avoid JavaScript conflicts and tests
         if hook["exclude"]:
+            # Add src exclusion if not present
             if "src/" not in hook["exclude"]:
                 hook["exclude"] = f"{hook['exclude']}|^src/"
         else:
-            hook["exclude"] = "^src/"
+            # If no exclusion, add both tests and src
+            if hook["id"] in [
+                "skylos",
+                "zuban",
+                "bandit",
+                "refurb",
+                "complexipy",
+                "pyright",
+            ]:
+                hook["exclude"] = r"^tests/|^src/"
+            else:
+                hook["exclude"] = "^src/"
 
         return hook
 
