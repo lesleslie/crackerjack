@@ -104,7 +104,6 @@ repos:
     rev: v2.1.0
     hooks:
       - id: refurb
-        args: ["--config", "pyproject.toml"]
         files: ^crackerjack/.*\.py$
         exclude: ^tests/|^src/
         stages: ["pre-push", "manual"]

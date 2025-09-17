@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.37.9"
+version = "0.38.0"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -326,10 +326,26 @@ ignore = [
     "FURB184",
     "FURB120",
 ]
-exclude = [
-    "tests/",
-    "test_*.py",
-    "*_test.py",
+
+[[tool.refurb.amend]]
+path = "tests"
+ignore = [
+    "FURB184",
+    "FURB120",
+]
+
+[[tool.refurb.amend]]
+path = "test_*.py"
+ignore = [
+    "FURB184",
+    "FURB120",
+]
+
+[[tool.refurb.amend]]
+path = "*_test.py"
+ignore = [
+    "FURB184",
+    "FURB120",
 ]
 
 [tool.bandit]

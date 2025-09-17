@@ -338,7 +338,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "tier": 3,
             "time_estimate": 3.0,
             "stages": ["pre-push", "manual"],
-            "args": ["--config", "pyproject.toml"],
+            "args": [],
             "files": "^crackerjack/.*\\.py$",
             "exclude": r"^tests/",
             "additional_dependencies": None,
@@ -573,14 +573,14 @@ class DynamicConfigGenerator:
                 hook["exclude"] = f"{hook['exclude']}|^src/"
         else:
             # If no exclusion, add both tests and src
-            if hook["id"] in [
+            if hook["id"] in (
                 "skylos",
                 "zuban",
                 "bandit",
                 "refurb",
                 "complexipy",
                 "pyright",
-            ]:
+            ):
                 hook["exclude"] = r"^tests/|^src/"
             else:
                 hook["exclude"] = "^src/"
