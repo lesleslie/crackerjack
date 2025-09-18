@@ -132,7 +132,7 @@ class PluginLoader:
 
     def _try_factory_function(
         self,
-        factory: t.Callable,
+        factory: t.Callable[..., t.Any],
         name: str,
     ) -> PluginBase | None:
         try:

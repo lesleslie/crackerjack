@@ -13,12 +13,15 @@ from crackerjack.code_cleaner import (
 )
 from crackerjack.interactive import (
     InteractiveCLI,
+    InteractiveWorkflowOptions,
+    Task,
     TaskDefinition,
+    TaskExecutor,
     TaskStatus,
     WorkflowBuilder,
     WorkflowManager,
-    WorkflowOptions,
 )
+from crackerjack.models.config import WorkflowOptions
 
 
 class TestCodeCleaner:

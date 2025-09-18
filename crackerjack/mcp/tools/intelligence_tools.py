@@ -147,7 +147,7 @@ async def get_smart_agent_recommendation(
             context=task_context,
         )
 
-        response = {
+        response: dict[str, t.Any] = {
             "task_description": task_description,
             "context_type": context_type,
         }

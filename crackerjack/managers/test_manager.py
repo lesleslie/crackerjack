@@ -132,21 +132,54 @@ class TestManager:
         try:
             status = self.coverage_ratchet.get_status_report()
 
-            if status.get("status") == "not_initialized":
+            # Check if we have actual coverage data from coverage.json even if ratchet is not initialized
+            coverage_json_path = self.pkg_path / "coverage.json"
+            direct_coverage = None
+
+            if coverage_json_path.exists():
+                try:
+                    import json
+
+                    with coverage_json_path.open() as f:
+                        data = json.load(f)
+                        direct_coverage = data.get("totals", {}).get("percent_covered")
+                except (json.JSONDecodeError, KeyError):
+                    pass  # Fall back to ratchet data
+
+            # If ratchet is not initialized but we have direct coverage data, use it
+            if (
+                not status or status.get("status") == "not_initialized"
+            ) and direct_coverage is not None:
+                return {
+                    "status": "coverage_available",
+                    "coverage_percent": direct_coverage,
+                    "message": "Coverage data available from coverage.json",
+                    "source": "coverage.json",
+                }
+
+            # If ratchet is not initialized and no direct coverage, return not initialized
+            if not status or status.get("status") == "not_initialized":
                 return {
                     "status": "not_initialized",
                     "coverage_percent": 0.0,
                     "message": "Coverage ratchet not initialized",
                 }
 
+            # Use ratchet data, but prefer direct coverage if available and different
+            ratchet_coverage = status.get("current_coverage", 0.0)
+            final_coverage = (
+                direct_coverage if direct_coverage is not None else ratchet_coverage
+            )
+
             return {
                 "status": "active",
-                "coverage_percent": status.get("current_coverage", 0.0),
+                "coverage_percent": final_coverage,
                 "target_coverage": status.get("target_coverage", 100.0),
                 "next_milestone": status.get("next_milestone"),
                 "progress_percent": status.get("progress_percent", 0.0),
                 "last_updated": status.get("last_updated"),
                 "milestones_achieved": status.get("milestones_achieved", []),
+                "source": "coverage.json" if direct_coverage is not None else "ratchet",
             }
         except Exception as e:
             return {
@@ -235,25 +268,64 @@ class TestManager:
             current_coverage = None
             coverage_json_path = self.pkg_path / "coverage.json"
 
+            # Primary: Try to extract from coverage.json
             if coverage_json_path.exists():
-                with coverage_json_path.open() as f:
-                    data = json.load(f)
-                    current_coverage = data.get("totals", {}).get("percent_covered")
+                try:
+                    with coverage_json_path.open() as f:
+                        data = json.load(f)
+                        current_coverage = data.get("totals", {}).get("percent_covered")
+                        if current_coverage is not None:
+                            self.console.print(
+                                f"[dim]📊 Coverage extracted from coverage.json: {current_coverage:.2f}%[/dim]"
+                            )
+                except (json.JSONDecodeError, KeyError) as e:
+                    self.console.print(
+                        f"[yellow]⚠️[/yellow] Failed to parse coverage.json: {e}"
+                    )
 
-            # Fallback to ratchet result if coverage.json not available
+            # Secondary: Try ratchet result if coverage.json failed
             if current_coverage is None:
                 current_coverage = ratchet_result.get("current_coverage")
+                if current_coverage is not None:
+                    self.console.print(
+                        f"[dim]📊 Coverage from ratchet result: {current_coverage:.2f}%[/dim]"
+                    )
 
-            # Final fallback to coverage service
+            # Tertiary: Try coverage service, but only accept non-zero values
             if current_coverage is None:
                 coverage_info = self.get_coverage()
-                current_coverage = coverage_info.get("coverage_percent")
+                fallback_coverage = coverage_info.get("coverage_percent")
+                # Only use fallback if it's meaningful (>0) or if no coverage.json exists
+                if fallback_coverage and (
+                    fallback_coverage > 0 or not coverage_json_path.exists()
+                ):
+                    current_coverage = fallback_coverage
+                    self.console.print(
+                        f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
+                    )
+                else:
+                    self.console.print(
+                        "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists"
+                    )
 
-            if current_coverage is not None:
+            # Only update badge if we have valid coverage data
+            if current_coverage is not None and current_coverage >= 0:
                 if self._coverage_badge_service.should_update_badge(current_coverage):
                     self._coverage_badge_service.update_readme_coverage_badge(
                         current_coverage
                     )
+                    self.console.print(
+                        f"[green]✅[/green] Badge updated to {current_coverage:.2f}%"
+                    )
+                else:
+                    self.console.print(
+                        f"[dim]📊 Badge unchanged (current: {current_coverage:.2f}%)[/dim]"
+                    )
+            else:
+                self.console.print(
+                    "[yellow]⚠️[/yellow] No valid coverage data found for badge update"
+                )
+
         except Exception as e:
             # Don't fail the test process if badge update fails
             self.console.print(f"[yellow]⚠️[/yellow] Badge update failed: {e}")

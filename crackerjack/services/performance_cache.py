@@ -268,7 +268,7 @@ class GitOperationCache:
     ) -> None:
         key = self._make_repo_key(repo_path, "branch_info")
         invalidation_keys = {f"git_repo: {repo_path}"}
-        self.cache.set[t.Any](key, branch_info, ttl_seconds, invalidation_keys)
+        self.cache.set(key, branch_info, ttl_seconds, invalidation_keys)
 
     def get_file_status(self, repo_path: Path) -> t.Any:
         key = self._make_repo_key(repo_path, "file_status")
@@ -282,7 +282,7 @@ class GitOperationCache:
     ) -> None:
         key = self._make_repo_key(repo_path, "file_status")
         invalidation_keys = {f"git_repo: {repo_path}", "git_files"}
-        self.cache.set[t.Any](key, file_status, ttl_seconds, invalidation_keys)
+        self.cache.set(key, file_status, ttl_seconds, invalidation_keys)
 
     def invalidate_repo(self, repo_path: Path) -> None:
         self.cache.invalidate(f"git_repo: {repo_path}")
@@ -312,7 +312,7 @@ class FileSystemCache:
     ) -> None:
         key = self._make_file_key(file_path, "stats")
         invalidation_keys = {f"file: {file_path}"}
-        self.cache.set[t.Any](key, stats, ttl_seconds, invalidation_keys)
+        self.cache.set(key, stats, ttl_seconds, invalidation_keys)
 
     def invalidate_file(self, file_path: Path) -> None:
         self.cache.invalidate(f"file: {file_path}")
@@ -352,7 +352,7 @@ class CommandResultCache:
         if cwd:
             invalidation_keys.add(f"cwd: {cwd}")
 
-        self.cache.set[t.Any](key, result, ttl_seconds, invalidation_keys)
+        self.cache.set(key, result, ttl_seconds, invalidation_keys)
 
     def invalidate_commands(self) -> None:
         self.cache.invalidate("commands")

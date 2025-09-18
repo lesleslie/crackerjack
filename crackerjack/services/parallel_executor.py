@@ -239,7 +239,7 @@ class ParallelHookExecutor:
                     f"Hook {hooks[i].name} failed with exception: {result}"
                 )
             else:
-                processed_results.append(result)
+                processed_results.append(t.cast(ExecutionResult, result))
 
         successful = sum(1 for r in processed_results if r.success)
         self._logger.info(
@@ -307,7 +307,7 @@ class AsyncCommandExecutor:
                 )
                 processed_results.append(error_result)
             else:
-                processed_results.append(result)
+                processed_results.append(t.cast(ExecutionResult, result))
 
         successful = sum(1 for r in processed_results if r.success)
         self._logger.info(

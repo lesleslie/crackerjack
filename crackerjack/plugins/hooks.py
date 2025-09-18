@@ -131,6 +131,7 @@ class CustomHookPlugin(HookPluginBase):
         try:
             if hook_def.command is None:
                 return HookResult(
+                    id=f"hook_{hook_def.name}",
                     name=hook_def.name,
                     status="failed",
                     issues_found=["Hook command is None"],

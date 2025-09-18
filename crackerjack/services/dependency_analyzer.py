@@ -67,10 +67,10 @@ class DependencyEdge:
 class DependencyGraph:
     """Complete dependency graph data structure."""
 
-    nodes: dict[str, DependencyNode] = field(default_factory=dict[str, t.Any])
+    nodes: dict[str, DependencyNode] = field(default_factory=dict)
     edges: list[DependencyEdge] = field(default_factory=list)
-    clusters: dict[str, list[str]] = field(default_factory=dict[str, t.Any])
-    metrics: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
+    clusters: dict[str, list[str]] = field(default_factory=dict)
+    metrics: dict[str, t.Any] = field(default_factory=dict)
     generated_at: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, t.Any]:
@@ -193,7 +193,7 @@ class DependencyAnalyzer:
         edges = self.dependency_graph.edges
 
         # Basic metrics
-        metrics = {
+        metrics: dict[str, t.Any] = {
             "total_nodes": len(nodes),
             "total_edges": len(edges),
             "total_clusters": len(self.dependency_graph.clusters),

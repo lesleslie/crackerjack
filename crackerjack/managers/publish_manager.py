@@ -156,7 +156,7 @@ class PublishManagerImpl:
             self.console.print(f"[red]❌[/ red] Version bump failed: {e}")
             raise
 
-    def _prompt_for_version_type(self, recommendation=None) -> str:
+    def _prompt_for_version_type(self, recommendation: t.Any = None) -> str:
         try:
             from rich.prompt import Prompt
 
@@ -178,7 +178,7 @@ class PublishManagerImpl:
             )
             return "patch"
 
-    def _get_version_recommendation(self):
+    def _get_version_recommendation(self) -> t.Any:
         """Get AI-powered version bump recommendation based on git history."""
         try:
             import asyncio
@@ -217,7 +217,7 @@ class PublishManagerImpl:
             self.console.print(f"[yellow]⚠️[/yellow] Version analysis failed: {e}")
             return None
 
-    def _display_version_analysis(self, recommendation):
+    def _display_version_analysis(self, recommendation: t.Any) -> None:
         """Display version analysis in a compact format."""
         if not recommendation:
             return

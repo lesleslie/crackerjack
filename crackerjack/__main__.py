@@ -11,6 +11,7 @@ from crackerjack.services.git import GitService
 
 from .cli import (
     CLI_OPTIONS,
+    BumpOption,
     create_options,
     handle_interactive_mode,
     handle_standard_mode,
@@ -1219,9 +1220,9 @@ def main(
     update_precommit: bool = CLI_OPTIONS["update_precommit"],
     verbose: bool = CLI_OPTIONS["verbose"],
     debug: bool = CLI_OPTIONS["debug"],
-    publish: str | None = CLI_OPTIONS["publish"],
+    publish: BumpOption | None = CLI_OPTIONS["publish"],
     all: str | None = CLI_OPTIONS["all"],
-    bump: str | None = CLI_OPTIONS["bump"],
+    bump: BumpOption | None = CLI_OPTIONS["bump"],
     strip_code: bool = CLI_OPTIONS["strip_code"],
     run_tests: bool = CLI_OPTIONS["run_tests"],
     benchmark: bool = CLI_OPTIONS["benchmark"],
@@ -1466,6 +1467,10 @@ def _process_all_commands(local_vars: t.Any, console: t.Any, options: t.Any) -> 
     ):
         return False
 
+    # Handle coverage status command
+    if not _handle_coverage_status(local_vars["coverage_status"], console, options):
+        return False
+
     # Handle documentation and analysis commands
     return _handle_analysis_commands(local_vars, console, options)
 
@@ -1536,6 +1541,78 @@ def _handle_specialized_analytics(local_vars: t.Any, console: t.Any) -> bool:
 
     # Handle enterprise features
     return _handle_enterprise_features(local_vars, console)
+
+
+def _handle_coverage_status(
+    coverage_status: bool, console: t.Any, options: t.Any
+) -> bool:
+    """Handle coverage status display command."""
+    if not coverage_status:
+        return True
+
+    try:
+        from pathlib import Path
+
+        from crackerjack.managers.test_manager import TestManager
+
+        # Use current working directory as package path
+        pkg_path = Path.cwd()
+
+        # Create test manager directly
+        test_manager = TestManager(console, pkg_path)
+
+        console.print("[cyan]📊[/cyan] Coverage Status Report")
+        console.print("=" * 50)
+
+        # Get coverage information
+        coverage_info = test_manager.get_coverage()
+        coverage_percent = coverage_info.get("coverage_percent", 0.0)
+        coverage_source = coverage_info.get("source", "unknown")
+
+        if coverage_percent > 0:
+            console.print(
+                f"[green]Current Coverage:[/green] {coverage_percent:.2f}% (from {coverage_source})"
+            )
+        else:
+            console.print(
+                "[yellow]Current Coverage:[/yellow] No coverage data available"
+            )
+
+        # Show status message if available
+        status_message = coverage_info.get("message")
+        if status_message:
+            console.print(f"[dim]{status_message}[/dim]")
+
+        # Try to get more detailed coverage report
+        coverage_report = test_manager.get_coverage_report()
+        if coverage_report:
+            console.print(f"[cyan]Details:[/cyan] {coverage_report}")
+
+        # Show coverage ratchet status if available
+        try:
+            ratchet_status = test_manager.get_coverage_ratchet_status()
+            if ratchet_status:
+                next_milestone = ratchet_status.get("next_milestone")
+                if next_milestone:
+                    console.print(f"[cyan]Next Milestone:[/cyan] {next_milestone:.0f}%")
+
+                milestones = ratchet_status.get("milestones_achieved", [])
+                if milestones:
+                    console.print(
+                        f"[green]Milestones Achieved:[/green] {len(milestones)}"
+                    )
+        except Exception:
+            pass  # Ignore ratchet status errors
+
+        console.print()
+        return False  # Exit after showing status
+
+    except Exception as e:
+        console.print(f"[red]❌[/red] Failed to get coverage status: {e}")
+        import traceback
+
+        console.print(f"[dim]{traceback.format_exc()}[/dim]")
+        return False
 
 
 def _handle_enterprise_features(local_vars: t.Any, console: t.Any) -> bool:

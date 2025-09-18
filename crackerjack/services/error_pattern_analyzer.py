@@ -157,7 +157,7 @@ class ErrorPatternAnalyzer:
             error_type = pattern.error_type
             count = pattern.count
 
-            file_error_counts[file_path][error_type] += count
+            file_error_counts[file_path][error_type] += float(count)
             max_value = max(max_value, file_error_counts[file_path][error_type])
 
         # Create heat map cells
@@ -175,7 +175,7 @@ class ErrorPatternAnalyzer:
             for error_type in error_types:
                 count = file_error_counts[file_path].get(error_type, 0)
                 if count > 0:
-                    intensity: float = count / max_value if max_value > 0 else 0
+                    intensity: float = count / max_value if max_value > 0 else 0.0
                     severity = self._get_severity_for_type(error_type)
 
                     cells.append(
@@ -313,7 +313,7 @@ class ErrorPatternAnalyzer:
         self, time_label: str, error_type: str, count: float, max_value: float
     ) -> HeatMapCell:
         """Create a single temporal heatmap cell."""
-        intensity: float = count / max_value if max_value > 0 else 0
+        intensity: float = count / max_value if max_value > 0 else 0.0
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(
@@ -405,7 +405,7 @@ class ErrorPatternAnalyzer:
         self, function_id: str, error_type: str, count: float, max_value: float
     ) -> HeatMapCell:
         """Create a single function heatmap cell."""
-        intensity: float = count / max_value if max_value > 0 else 0
+        intensity: float = count / max_value if max_value > 0 else 0.0
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(

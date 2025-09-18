@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from rich.console import Console
+
 from crackerjack.services.logging import get_logger
 from crackerjack.services.memory_optimizer import get_memory_optimizer
 from crackerjack.services.performance_cache import get_performance_cache
@@ -301,7 +303,7 @@ class PerformanceBenchmarker:
 class PerformanceBenchmarkService:
     """Service wrapper for performance benchmarking in workflow orchestration."""
 
-    def __init__(self, console, pkg_path):
+    def __init__(self, console: Console, pkg_path: Path) -> None:
         self._console = console
         self._pkg_path = pkg_path
         self._benchmarker = PerformanceBenchmarker()

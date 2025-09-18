@@ -264,7 +264,7 @@ class QualityIntelligenceService:
         metric_name: str,
         values: list[float],
         timestamps: list[t.Any],
-        stats_data: dict[str, float],
+        stats_data: dict[str, t.Any],
     ) -> list[QualityAnomaly]:
         """Identify outlier anomalies based on z-scores."""
         anomalies = []

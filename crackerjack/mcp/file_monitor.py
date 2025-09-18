@@ -5,10 +5,20 @@ import typing as t
 from collections.abc import Callable
 from pathlib import Path
 
-try:
-    from watchdog.events import FileSystemEvent, FileSystemEventHandler
-    from watchdog.observers import Observer
+# Type aliases for watchdog types
+FileSystemEvent: t.Any
+FileSystemEventHandler: t.Any
+Observer: t.Any
+WATCHDOG_AVAILABLE: bool
 
+try:
+    from watchdog.events import FileSystemEvent as WatchdogFileSystemEvent
+    from watchdog.events import FileSystemEventHandler as WatchdogFileSystemEventHandler
+    from watchdog.observers import Observer as WatchdogObserver
+
+    FileSystemEvent = WatchdogFileSystemEvent
+    FileSystemEventHandler = WatchdogFileSystemEventHandler
+    Observer = WatchdogObserver
     WATCHDOG_AVAILABLE = True
 except ImportError:
     # Type stubs for when watchdog is not available

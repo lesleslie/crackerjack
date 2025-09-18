@@ -1,12 +1,13 @@
 # Crackerjack: Advanced AI-Driven Python Development Platform
 
+[![Code style: crackerjack](https://img.shields.io/badge/code%20style-crackerjack-000042)](https://github.com/lesleslie/crackerjack)
 [![Python: 3.13+](https://img.shields.io/badge/python-3.13%2B-green)](https://www.python.org/downloads/)
 [![pytest](https://img.shields.io/badge/pytest-coverage%20ratchet-blue)](https://pytest.org)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-![Coverage](https://img.shields.io/badge/coverage-37.1%25-red)
+![Coverage](https://img.shields.io/badge/coverage-17.7%25-red)
 
 ## 🎯 Purpose
 

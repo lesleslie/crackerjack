@@ -3,6 +3,7 @@ import socket
 import subprocess
 import sys
 import time
+from contextlib import suppress
 from typing import Any
 
 import aiohttp
@@ -34,7 +35,7 @@ class ServiceConfig:
         self.max_restarts = max_restarts
         self.restart_window = restart_window
 
-        self.process: subprocess.Popen[bytes] | None = None
+        self.process: subprocess.Popen[str] | None = None
         self.restart_count = 0
         self.restart_timestamps: list[float] = []
         self.last_health_check = 0.0
@@ -125,7 +126,7 @@ class ServiceWatchdog:
         return False
 
     async def _launch_service_process(self, service: ServiceConfig) -> bool:
-        service.process = subprocess.Popen(
+        service.process = subprocess.Popen[str](
             service.command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -137,6 +138,8 @@ class ServiceWatchdog:
         return await self._check_process_startup_success(service)
 
     async def _check_process_startup_success(self, service: ServiceConfig) -> bool:
+        if service.process is None:
+            return False
         exit_code = service.process.poll()
         if exit_code is not None:
             return await self._handle_process_died(service, exit_code)
@@ -147,6 +150,8 @@ class ServiceWatchdog:
         service: ServiceConfig,
         exit_code: int,
     ) -> bool:
+        if service.process is None:
+            return False
         stdout, stderr = service.process.communicate()
         error_msg = f"Process died (exit: {exit_code})"
         if stderr and stderr.strip():
@@ -441,8 +446,6 @@ class ServiceWatchdog:
         message: str,
     ) -> None:
         if self.event_queue:
-            from contextlib import suppress
-
             with suppress(Exception):
                 event = {
                     "type": event_type,

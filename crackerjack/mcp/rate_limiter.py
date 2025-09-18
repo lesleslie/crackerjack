@@ -35,14 +35,18 @@ class RateLimiter:
         self.requests_per_hour = requests_per_hour
 
         self.minute_windows: dict[str, deque[float]] = defaultdict(
-            lambda: deque(maxlen=requests_per_minute),  # type: ignore[misc]
+            lambda: deque[float](maxlen=requests_per_minute),  # type: ignore[arg-type,misc]
         )
         self.hour_windows: dict[str, deque[float]] = defaultdict(
-            lambda: deque(maxlen=requests_per_hour),  # type: ignore[misc]
+            lambda: deque[float](maxlen=requests_per_hour),  # type: ignore[arg-type,misc]
         )
 
-        self.global_minute_window: deque[float] = deque(maxlen=requests_per_minute * 10)
-        self.global_hour_window: deque[float] = deque(maxlen=requests_per_hour * 10)
+        self.global_minute_window: deque[float] = deque[float](
+            maxlen=requests_per_minute * 10
+        )
+        self.global_hour_window: deque[float] = deque[float](
+            maxlen=requests_per_hour * 10
+        )
 
         self._lock = asyncio.Lock()
 
@@ -126,7 +130,7 @@ class RateLimiter:
         self._remove_expired_entries(self.global_minute_window, minute_cutoff)
         self._remove_expired_entries(self.global_hour_window, hour_cutoff)
 
-    def _remove_expired_entries(self, window: deque, cutoff: float) -> None:
+    def _remove_expired_entries(self, window: deque[float], cutoff: float) -> None:
         while window and window[0] < cutoff:
             window.popleft()
 

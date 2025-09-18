@@ -119,7 +119,7 @@ def _create_validation_results(file_path: str) -> dict[str, t.Any]:
 
 
 def _create_pattern_suggestions(problem_context: str) -> dict[str, t.Any]:
-    pattern_suggestions = {
+    pattern_suggestions: dict[str, t.Any] = {
         "context": problem_context,
         "recommended_patterns": [],
         "implementation_guidance": [],

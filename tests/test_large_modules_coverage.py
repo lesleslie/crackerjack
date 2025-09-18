@@ -10,8 +10,8 @@ from crackerjack.interactive import (
     Task,
     TaskDefinition,
     TaskStatus,
-    WorkflowOptions,
 )
+from crackerjack.models.config import WorkflowOptions
 
 
 @pytest.fixture

@@ -15,7 +15,7 @@ from crackerjack.api import (
     run_quality_checks,
     run_tests,
 )
-from crackerjack.interactive import WorkflowOptions
+from crackerjack.models.config import WorkflowOptions
 
 
 class TestCrackerjackAPI:

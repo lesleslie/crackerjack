@@ -262,10 +262,10 @@ class OrchestrationPlanner:
             hook_plans=hook_plans,
             test_plan=test_plan,
             ai_plan=ai_plan,
-            estimated_total_duration=sum(
-                int(plan["estimated_duration"]) for plan in hook_plans
+            estimated_total_duration=float(
+                sum(int(float(str(plan["estimated_duration"]))) for plan in hook_plans)
             )
-            + test_plan["estimated_duration"],
+            + float(test_plan["estimated_duration"]),
         )
 
     def _estimate_strategy_duration(self, strategy: HookStrategy) -> float:

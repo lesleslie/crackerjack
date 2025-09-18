@@ -66,6 +66,7 @@ class WorkflowPipeline:
         self._cache = get_performance_cache()
 
         # Initialize quality intelligence for advanced decision making
+        self._quality_intelligence: QualityIntelligenceService | None
         try:
             quality_baseline = EnhancedQualityBaselineService()
             self._quality_intelligence = QualityIntelligenceService(quality_baseline)
@@ -74,6 +75,7 @@ class WorkflowPipeline:
             self._quality_intelligence = None
 
         # Initialize performance benchmarking for workflow analysis
+        self._performance_benchmarks: PerformanceBenchmarkService | None
         try:
             self._performance_benchmarks = PerformanceBenchmarkService(
                 console, pkg_path
@@ -241,7 +243,7 @@ class WorkflowPipeline:
             self.logger.warning(f"Failed to auto-start Zuban LSP server: {e}")
 
     def _get_zuban_lsp_config(
-        self, options: OptionsProtocol, config: any
+        self, options: OptionsProtocol, config: t.Any
     ) -> tuple[int, str]:
         """Get Zuban LSP configuration values."""
         if config:
@@ -384,7 +386,7 @@ class WorkflowPipeline:
 
     def _gather_performance_metrics(
         self, workflow_id: str, duration: float, success: bool
-    ) -> dict:
+    ) -> dict[str, t.Any]:
         """Gather performance metrics from workflow execution."""
         return {
             "workflow_id": workflow_id,
@@ -622,7 +624,7 @@ class WorkflowPipeline:
             comprehensive_passed,
         ) = await self._run_main_quality_phases_async(options, workflow_id)
 
-        return await self._handle_workflow_completion(
+        return await self._handle_ai_workflow_completion(
             options, iteration, testing_passed, comprehensive_passed, workflow_id
         )
 
@@ -650,7 +652,7 @@ class WorkflowPipeline:
         self._mark_code_cleaning_complete()
         return True
 
-    async def _handle_workflow_completion(
+    async def _handle_ai_workflow_completion(
         self,
         options: OptionsProtocol,
         iteration: int,
