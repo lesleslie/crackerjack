@@ -1901,13 +1901,11 @@ class WorkflowPipeline:
 
             # Create agent context for coverage improvement
             from crackerjack.agents.base import AgentContext
-            from crackerjack.services.filesystem_enhanced import FileSystemService
+            from crackerjack.services.filesystem import FileSystemService
 
-            filesystem_service = FileSystemService(self.pkg_path)
+            filesystem_service = FileSystemService()
             agent_context = AgentContext(
-                pkg_path=self.pkg_path,
-                filesystem=filesystem_service,
-                console=self.console,
+                project_path=self.pkg_path,
             )
 
             result = await coverage_orchestrator.execute_coverage_improvement(

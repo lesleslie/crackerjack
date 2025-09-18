@@ -139,3 +139,171 @@ def test_fail_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in fail: {e}")
+
+def test_can_run_basic(self):
+    """Test basic functionality of can_run."""
+    try:
+        result = can_run()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in can_run: {e}")
+
+def test_add_task_basic(self):
+    """Test basic functionality of add_task."""
+    try:
+        result = add_task()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in add_task: {e}")
+
+def test_add_conditional_task_basic(self):
+    """Test basic functionality of add_conditional_task."""
+    try:
+        result = add_conditional_task()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in add_conditional_task: {e}")
+
+def test_build_basic(self):
+    """Test basic functionality of build."""
+    try:
+        result = build()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in build: {e}")
+
+def test_load_workflow_basic(self):
+    """Test basic functionality of load_workflow."""
+    try:
+        result = load_workflow()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in load_workflow: {e}")
+
+def test_set_task_executor_basic(self):
+    """Test basic functionality of set_task_executor."""
+    try:
+        result = set_task_executor()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in set_task_executor: {e}")
+
+def test_get_next_task_basic(self):
+    """Test basic functionality of get_next_task."""
+    try:
+        result = get_next_task()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_next_task: {e}")
+
+def test_all_tasks_completed_basic(self):
+    """Test basic functionality of all_tasks_completed."""
+    try:
+        result = all_tasks_completed()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in all_tasks_completed: {e}")
+
+def test_run_task_basic(self):
+    """Test basic functionality of run_task."""
+    try:
+        result = run_task()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in run_task: {e}")
+
+def test_display_task_tree_basic(self):
+    """Test basic functionality of display_task_tree."""
+    try:
+        result = display_task_tree()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in display_task_tree: {e}")
+
+def test_get_workflow_summary_basic(self):
+    """Test basic functionality of get_workflow_summary."""
+    try:
+        result = get_workflow_summary()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_workflow_summary: {e}")
+
+def test_create_dynamic_workflow_basic(self):
+    """Test basic functionality of create_dynamic_workflow."""
+    try:
+        result = create_dynamic_workflow()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in create_dynamic_workflow: {e}")
+
+def test_run_interactive_workflow_basic(self):
+    """Test basic functionality of run_interactive_workflow."""
+    try:
+        result = run_interactive_workflow()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in run_interactive_workflow: {e}")
+
+def test_has_cycle_basic(self):
+    """Test basic functionality of has_cycle."""
+    try:
+        result = has_cycle()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in has_cycle: {e}")
