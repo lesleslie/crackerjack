@@ -123,10 +123,13 @@ class CoverageImprovementOrchestrator:
                     f"tests created in {len(fix_result.files_modified)} files"
                 )
         else:
-            self.logger.warning("Coverage improvement failed")
+            # Log at debug level rather than warning since this is normal behavior
+            self.logger.debug(
+                "Test creation for coverage improvement was not successful"
+            )
             if self.console:
                 self.console.print(
-                    "[yellow]⚠️[/ yellow] Coverage improvement attempt completed with issues"
+                    "[dim]📈 Coverage improvement: no new tests created[/dim]"
                 )
 
     def _create_error_result(self, error: Exception) -> dict[str, t.Any]:

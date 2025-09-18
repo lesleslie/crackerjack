@@ -1913,23 +1913,18 @@ class WorkflowPipeline:
             )
 
             if result["status"] == "completed":
-                self.console.print(
-                    f"[green]📈[/green] Coverage improvement: {len(result.get('fixes_applied', []))} "
-                    f"tests created in {len(result.get('files_modified', []))} files"
-                )
+                # Coverage orchestrator already printed success message
+                pass
             elif result["status"] == "skipped":
                 self.console.print(
                     f"[dim]📈 Coverage improvement skipped: {result.get('reason', 'Unknown')}[/dim]"
                 )
             else:
-                self.console.print(
-                    "[yellow]⚠️[/yellow] Coverage improvement completed with issues"
-                )
+                # Coverage orchestrator already printed failure message
+                pass
 
         except Exception as e:
-            self.console.print(
-                f"[yellow]⚠️[/yellow] Coverage improvement failed: {str(e)}"
-            )
+            # Coverage orchestrator handles error display, only log for internal tracking
             self.logger.warning(f"Coverage improvement error: {e}")
 
     async def _execute_standard_hooks_workflow_monitored(
