@@ -2338,7 +2338,7 @@ wheels = [
 
 [[package]]
 name = "skylos"
-version = "2.2.2"
+version = "2.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "flask" },
@@ -2346,9 +2346,9 @@ dependencies = [
     { name = "inquirer" },
     { name = "libcst" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/44/6c/9411fa0a78fbcaffa0226fb3e42f35a184c027ec12064d5c1aaf0c65c821/skylos-2.2.2.tar.gz", hash = "sha256:e3122ea96240515064f53876975808d1a436255c82cc8bbd3fa23da2999c1026", size = 68464, upload-time = "2025-09-17T13:25:14.705Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/75/fad2bb417a659156b761e31012032754bb710db2e21683ad0ded5934289d/skylos-2.2.3.tar.gz", hash = "sha256:2d3bf33528bf95eef8bcc101a00f7435b0873fefb7ade71bc60550b3194ad455", size = 68479, upload-time = "2025-09-18T06:03:09.826Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/b6/1189b50a82e58c9700e8c3788474929f663557af31326a3b152dedca7cc6/skylos-2.2.2-py3-none-any.whl", hash = "sha256:d3e40fdc3b111abab9ca1369cc7369ce3cf115dae8606cf4c01e38f34507a62e", size = 71183, upload-time = "2025-09-17T13:25:13.154Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/7e/a1acb3196afcd7860193e4bac126d050b626a54d096fe9f8d4f8489616d6/skylos-2.2.3-py3-none-any.whl", hash = "sha256:e618c5eeea45e9abce95355feb48c088581ec6a50280a5b006ce8c60814768e9", size = 71232, upload-time = "2025-09-18T06:03:08.1Z" },
 ]
 
 [[package]]
