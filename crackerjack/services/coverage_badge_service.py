@@ -154,8 +154,8 @@ class CoverageBadgeService:
             if current_coverage is None:
                 return True  # No badge exists, should add one
 
-            # Only update if coverage changed by at least 0.1%
-            return abs(coverage_percent - current_coverage) >= 0.1
+            # Only update if coverage changed by at least 0.01% (more accurate reporting)
+            return abs(coverage_percent - current_coverage) >= 0.01
 
         except Exception:
             return True  # On error, attempt update
