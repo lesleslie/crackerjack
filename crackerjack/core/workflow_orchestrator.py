@@ -1903,7 +1903,7 @@ class WorkflowPipeline:
             from crackerjack.agents.base import AgentContext
             from crackerjack.services.filesystem import FileSystemService
 
-            filesystem_service = FileSystemService()
+            FileSystemService()
             agent_context = AgentContext(
                 project_path=self.pkg_path,
             )
