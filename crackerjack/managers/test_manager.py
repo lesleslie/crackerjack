@@ -142,7 +142,25 @@ class TestManager:
 
                     with coverage_json_path.open() as f:
                         data = json.load(f)
+                        # Check for totals field first (newer format)
                         direct_coverage = data.get("totals", {}).get("percent_covered")
+
+                        # If no totals, calculate from files data (standard pytest-cov format)
+                        if direct_coverage is None and "files" in data:
+                            total_statements = 0
+                            total_covered = 0
+
+                            for file_data in data["files"].values():
+                                summary = file_data.get("summary", {})
+                                statements = summary.get("num_statements", 0)
+                                covered = summary.get("covered_lines", 0)
+                                total_statements += statements
+                                total_covered += covered
+
+                            if total_statements > 0:
+                                direct_coverage = (
+                                    total_covered / total_statements
+                                ) * 100
                 except (json.JSONDecodeError, KeyError):
                     pass  # Fall back to ratchet data
 
@@ -273,7 +291,26 @@ class TestManager:
                 try:
                     with coverage_json_path.open() as f:
                         data = json.load(f)
+                        # Check for totals field first (newer format)
                         current_coverage = data.get("totals", {}).get("percent_covered")
+
+                        # If no totals, calculate from files data (standard pytest-cov format)
+                        if current_coverage is None and "files" in data:
+                            total_statements = 0
+                            total_covered = 0
+
+                            for file_data in data["files"].values():
+                                summary = file_data.get("summary", {})
+                                statements = summary.get("num_statements", 0)
+                                covered = summary.get("covered_lines", 0)
+                                total_statements += statements
+                                total_covered += covered
+
+                            if total_statements > 0:
+                                current_coverage = (
+                                    total_covered / total_statements
+                                ) * 100
+
                         if current_coverage is not None:
                             self.console.print(
                                 f"[dim]📊 Coverage extracted from coverage.json: {current_coverage:.2f}%[/dim]"

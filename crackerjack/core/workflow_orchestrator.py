@@ -1873,7 +1873,66 @@ class WorkflowPipeline:
     ) -> bool:
         with phase_monitor(workflow_id, "testing") as monitor:
             monitor.record_sequential_op()
-            return self._run_testing_phase(options)
+            test_result = self._run_testing_phase(options)
+
+            # Execute coverage improvement if boost_coverage is enabled and tests passed
+            if test_result and getattr(options, "boost_coverage", False):
+                await self._execute_coverage_improvement(options)
+
+            return test_result
+
+    async def _execute_coverage_improvement(self, options: OptionsProtocol) -> None:
+        """Execute coverage improvement when boost_coverage is enabled."""
+        try:
+            from crackerjack.orchestration.coverage_improvement import (
+                create_coverage_improvement_orchestrator,
+            )
+
+            coverage_orchestrator = await create_coverage_improvement_orchestrator(
+                self.pkg_path, console=self.console
+            )
+
+            should_improve = await coverage_orchestrator.should_improve_coverage()
+            if not should_improve:
+                self.console.print(
+                    "[dim]📈 Coverage at 100% - no improvement needed[/dim]"
+                )
+                return
+
+            # Create agent context for coverage improvement
+            from crackerjack.agents.base import AgentContext
+            from crackerjack.services.filesystem_enhanced import FileSystemService
+
+            filesystem_service = FileSystemService(self.pkg_path)
+            agent_context = AgentContext(
+                pkg_path=self.pkg_path,
+                filesystem=filesystem_service,
+                console=self.console,
+            )
+
+            result = await coverage_orchestrator.execute_coverage_improvement(
+                agent_context
+            )
+
+            if result["status"] == "completed":
+                self.console.print(
+                    f"[green]📈[/green] Coverage improvement: {len(result.get('fixes_applied', []))} "
+                    f"tests created in {len(result.get('files_modified', []))} files"
+                )
+            elif result["status"] == "skipped":
+                self.console.print(
+                    f"[dim]📈 Coverage improvement skipped: {result.get('reason', 'Unknown')}[/dim]"
+                )
+            else:
+                self.console.print(
+                    "[yellow]⚠️[/yellow] Coverage improvement completed with issues"
+                )
+
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Coverage improvement failed: {str(e)}"
+            )
+            self.logger.warning(f"Coverage improvement error: {e}")
 
     async def _execute_standard_hooks_workflow_monitored(
         self, options: OptionsProtocol, workflow_id: str
