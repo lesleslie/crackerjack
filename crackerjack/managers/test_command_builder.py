@@ -38,7 +38,9 @@ class TestCommandBuilder:
         # Method 1: Try to read from pyproject.toml
         pyproject_path = self.pkg_path / "pyproject.toml"
         if pyproject_path.exists():
-            try:
+            from contextlib import suppress
+
+            with suppress(Exception):
                 import tomllib
 
                 with pyproject_path.open("rb") as f:
@@ -47,8 +49,7 @@ class TestCommandBuilder:
                     if project_name:
                         # Convert project name to package name (hyphens to underscores)
                         return project_name.replace("-", "_")
-            except Exception:
-                pass  # Fall back to directory detection
+            # Fall back to directory detection
 
         # Method 2: Look for Python packages in the project root
         for item in self.pkg_path.iterdir():

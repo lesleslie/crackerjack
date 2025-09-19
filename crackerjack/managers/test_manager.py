@@ -130,11 +130,44 @@ class TestManager:
 
     def _get_coverage_from_file(self) -> float | None:
         """Extract coverage from coverage.json file."""
+        import json
+        
         coverage_json_path = self.pkg_path / "coverage.json"
         if not coverage_json_path.exists():
             return None
-
-        return self._extract_coverage_from_json(coverage_json_path)
+            
+        try:
+            with open(coverage_json_path, "r", encoding="utf-8") as f:
+                coverage_data = json.load(f)
+                
+            # Extract coverage percentage from totals
+            totals = coverage_data.get("totals", {})
+            percent_covered = totals.get("percent_covered", None)
+            
+            if percent_covered is not None:
+                return float(percent_covered)
+                
+            # Alternative extraction methods for different coverage formats
+            if "percent_covered" in coverage_data:
+                return float(coverage_data["percent_covered"])
+                
+            # Check for coverage in files section
+            files = coverage_data.get("files", {})
+            if files:
+                total_lines = 0
+                covered_lines = 0
+                for file_data in files.values():
+                    summary = file_data.get("summary", {})
+                    total_lines += summary.get("num_statements", 0)
+                    covered_lines += summary.get("covered_lines", 0)
+                    
+                if total_lines > 0:
+                    return (covered_lines / total_lines) * 100
+                    
+            return None
+            
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+            return None
 
     def _handle_no_ratchet_status(
         self, direct_coverage: float | None
@@ -272,7 +305,7 @@ class TestManager:
     def _attempt_coverage_extraction(self) -> float | None:
         """Attempt to extract coverage from various sources."""
         # Primary: Try to extract from coverage.json
-        current_coverage = self._get_coverage_from_json()
+        current_coverage = self._get_coverage_from_file()
         if current_coverage is not None:
             return current_coverage
 

@@ -1,4 +1,4 @@
-import subprocess
+import subprocess  # nosec B404
 import typing as t
 from pathlib import Path
 
@@ -156,7 +156,7 @@ class GitService:
 
     def _retry_commit_after_restage(self, message: str) -> bool:
         self.console.print(
-            "[yellow]🔄[/ yellow] Pre - commit hooks modified files - attempting to re-stage and retry commit"
+            "[yellow]🔄[/yellow] Pre-commit hooks modified files - attempting to re-stage and retry commit"
         )
 
         add_result = self._run_git_command(GIT_COMMANDS["add_updated"])
