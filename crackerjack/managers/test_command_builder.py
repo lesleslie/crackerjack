@@ -33,12 +33,45 @@ class TestCommandBuilder:
             return 900
         return 300
 
+    def _detect_package_name(self) -> str:
+        """Detect the main package name for coverage reporting."""
+        # Method 1: Try to read from pyproject.toml
+        pyproject_path = self.pkg_path / "pyproject.toml"
+        if pyproject_path.exists():
+            try:
+                import tomllib
+                with pyproject_path.open("rb") as f:
+                    data = tomllib.load(f)
+                    project_name = data.get("project", {}).get("name")
+                    if project_name:
+                        # Convert project name to package name (hyphens to underscores)
+                        return project_name.replace("-", "_")
+            except Exception:
+                pass  # Fall back to directory detection
+
+        # Method 2: Look for Python packages in the project root
+        for item in self.pkg_path.iterdir():
+            if (
+                item.is_dir()
+                and not item.name.startswith(".")
+                and not item.name in ("tests", "docs", "build", "dist", "__pycache__")
+                and (item / "__init__.py").exists()
+            ):
+                return item.name
+
+        # Method 3: Fallback to crackerjack if nothing found (for crackerjack itself)
+        return "crackerjack"
+
     def _add_coverage_options(self, cmd: list[str], options: OptionsProtocol) -> None:
+        # Determine package name from project structure
+        package_name = self._detect_package_name()
+
         cmd.extend(
             [
-                "--cov=crackerjack",
+                f"--cov={package_name}",
                 "--cov-report=term-missing",
                 "--cov-report=html",
+                "--cov-report=json",  # Required for badge updates
                 "--cov-fail-under=0",
             ]
         )
