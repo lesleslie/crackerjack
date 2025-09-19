@@ -131,26 +131,26 @@ class TestManager:
     def _get_coverage_from_file(self) -> float | None:
         """Extract coverage from coverage.json file."""
         import json
-        
+
         coverage_json_path = self.pkg_path / "coverage.json"
         if not coverage_json_path.exists():
             return None
-            
+
         try:
-            with open(coverage_json_path, "r", encoding="utf-8") as f:
+            with coverage_json_path.open() as f:
                 coverage_data = json.load(f)
-                
+
             # Extract coverage percentage from totals
             totals = coverage_data.get("totals", {})
             percent_covered = totals.get("percent_covered", None)
-            
+
             if percent_covered is not None:
                 return float(percent_covered)
-                
+
             # Alternative extraction methods for different coverage formats
             if "percent_covered" in coverage_data:
                 return float(coverage_data["percent_covered"])
-                
+
             # Check for coverage in files section
             files = coverage_data.get("files", {})
             if files:
@@ -160,12 +160,12 @@ class TestManager:
                     summary = file_data.get("summary", {})
                     total_lines += summary.get("num_statements", 0)
                     covered_lines += summary.get("covered_lines", 0)
-                    
+
                 if total_lines > 0:
                     return (covered_lines / total_lines) * 100
-                    
+
             return None
-            
+
         except (json.JSONDecodeError, ValueError, KeyError, TypeError):
             return None
 

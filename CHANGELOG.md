@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.11] - 2025-09-19
+
+### Changed
+
+- Crackerjack (quality: 76/100) - 2025-09-18 18:57:37
+- Crackerjack (quality: 76/100) - 2025-09-19 01:12:30
+
+### Fixed
+
+- Fix pre-commit hook issues and type checking errors
+
+### Testing
+
+- crackerjack: Update CHANGELOG, test_command_builder, pyproject
+
 ## [0.38.10] - 2025-09-18
 
 ### Documentation
