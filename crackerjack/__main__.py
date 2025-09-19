@@ -1318,7 +1318,6 @@ def main(
     config_interactive: bool = CLI_OPTIONS["config_interactive"],
     refresh_cache: bool = CLI_OPTIONS["refresh_cache"],
 ) -> None:
-    """Main CLI entry point with complexity <= 15."""
     options = create_options(
         commit,
         interactive,
