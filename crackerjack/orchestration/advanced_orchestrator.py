@@ -1,6 +1,5 @@
 import time
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 
 from rich.console import Console, Group
@@ -101,6 +100,30 @@ class CorrelationTracker:
         }
 
 
+class ProgressStreamer:
+    """Base class for streaming progress updates during orchestration."""
+
+    def __init__(
+        self,
+        config: OrchestrationConfig | None = None,
+        session: SessionCoordinator | None = None,
+    ) -> None:
+        self.config = config
+        self.session = session
+
+    def update_stage(self, stage: str, substage: str = "") -> None:
+        """Update current stage."""
+        pass
+
+    def update_hook_progress(self, progress: HookProgress) -> None:
+        """Update hook progress."""
+        pass
+
+    def _stream_update(self, data: dict[str, t.Any]) -> None:
+        """Stream update data."""
+        pass
+
+
 class MinimalProgressStreamer(ProgressStreamer):
     def __init__(
         self,
@@ -118,77 +141,6 @@ class MinimalProgressStreamer(ProgressStreamer):
 
     def _stream_update(self, data: dict[str, t.Any]) -> None:
         pass
-
-
-class ProgressStreamer:
-    def __init__(
-        self,
-        config: OrchestrationConfig,
-        session: SessionCoordinator,
-    ) -> None:
-        self.config = config
-        self.session = session
-        self.current_stage = "initialization"
-        self.current_substage = ""
-        self.hook_progress: dict[str, HookProgress] = {}
-
-    def update_stage(self, stage: str, substage: str = "") -> None:
-        self.current_stage = stage
-        self.current_substage = substage
-        self._stream_update(
-            {
-                "type": "stage_update",
-                "stage": stage,
-                "substage": substage,
-                "timestamp": time.time(),
-            },
-        )
-
-    def update_hook_progress(self, progress: HookProgress) -> None:
-        self.hook_progress[progress.hook_name] = progress
-        self._stream_update(
-            {
-                "type": "hook_progress",
-                "hook_name": progress.hook_name,
-                "progress": progress.to_dict(),
-                "timestamp": time.time(),
-            },
-        )
-
-    def _stream_update(self, update_data: dict[str, t.Any]) -> None:
-        self.session.update_stage(
-            self.current_stage,
-            f"{self.current_substage}: {update_data.get('hook_name', 'processing')}",
-        )
-
-        if hasattr(self.session, "web_job_id") and self.session.web_job_id:
-            self._update_websocket_progress(update_data)
-
-    def _update_websocket_progress(self, update_data: dict[str, t.Any]) -> None:
-        with suppress(Exception):
-            if hasattr(self.session, "progress_file") and self.session.progress_file:
-                import json
-
-                progress_data: dict[str, t.Any] = {}
-                if self.session.progress_file.exists():
-                    with self.session.progress_file.open() as f:
-                        progress_data = json.load(f)
-
-                progress_data.update(
-                    {
-                        "current_stage": self.current_stage,
-                        "current_substage": self.current_substage,
-                        "hook_progress": {
-                            name: prog.to_dict()
-                            for name, prog in self.hook_progress.items()
-                        },
-                        "last_update": update_data,
-                        "updated_at": time.time(),
-                    },
-                )
-
-                with self.session.progress_file.open("w") as f:
-                    json.dump(progress_data, f, indent=2)
 
 
 class AdvancedWorkflowOrchestrator:

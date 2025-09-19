@@ -128,66 +128,58 @@ class TestManager:
         except Exception:
             return None
 
+    def _get_coverage_from_file(self) -> float | None:
+        """Extract coverage from coverage.json file."""
+        coverage_json_path = self.pkg_path / "coverage.json"
+        if not coverage_json_path.exists():
+            return None
+
+        return self._extract_coverage_from_json(coverage_json_path)
+
+    def _handle_no_ratchet_status(
+        self, direct_coverage: float | None
+    ) -> dict[str, t.Any]:
+        """Handle case when ratchet is not initialized."""
+        if direct_coverage is not None:
+            return {
+                "status": "coverage_available",
+                "coverage_percent": direct_coverage,
+                "message": "Coverage data available from coverage.json",
+                "source": "coverage.json",
+            }
+
+        return {
+            "status": "not_initialized",
+            "coverage_percent": 0.0,
+            "message": "Coverage ratchet not initialized",
+        }
+
+    def _get_final_coverage(
+        self, ratchet_coverage: float, direct_coverage: float | None
+    ) -> float:
+        """Determine final coverage value."""
+        return direct_coverage if direct_coverage is not None else ratchet_coverage
+
     def get_coverage(self) -> dict[str, t.Any]:
         try:
             status = self.coverage_ratchet.get_status_report()
 
             # Check if we have actual coverage data from coverage.json even if ratchet is not initialized
-            coverage_json_path = self.pkg_path / "coverage.json"
-            direct_coverage = None
-
-            if coverage_json_path.exists():
-                try:
-                    import json
-
-                    with coverage_json_path.open() as f:
-                        data = json.load(f)
-                        # Check for totals field first (newer format)
-                        direct_coverage = data.get("totals", {}).get("percent_covered")
-
-                        # If no totals, calculate from files data (standard pytest-cov format)
-                        if direct_coverage is None and "files" in data:
-                            total_statements = 0
-                            total_covered = 0
-
-                            for file_data in data["files"].values():
-                                summary = file_data.get("summary", {})
-                                statements = summary.get("num_statements", 0)
-                                covered = summary.get("covered_lines", 0)
-                                total_statements += statements
-                                total_covered += covered
-
-                            if total_statements > 0:
-                                direct_coverage = (
-                                    total_covered / total_statements
-                                ) * 100
-                except (json.JSONDecodeError, KeyError):
-                    pass  # Fall back to ratchet data
+            direct_coverage = self._get_coverage_from_file()
 
             # If ratchet is not initialized but we have direct coverage data, use it
             if (
                 not status or status.get("status") == "not_initialized"
             ) and direct_coverage is not None:
-                return {
-                    "status": "coverage_available",
-                    "coverage_percent": direct_coverage,
-                    "message": "Coverage data available from coverage.json",
-                    "source": "coverage.json",
-                }
+                return self._handle_no_ratchet_status(direct_coverage)
 
             # If ratchet is not initialized and no direct coverage, return not initialized
             if not status or status.get("status") == "not_initialized":
-                return {
-                    "status": "not_initialized",
-                    "coverage_percent": 0.0,
-                    "message": "Coverage ratchet not initialized",
-                }
+                return self._handle_no_ratchet_status(None)
 
             # Use ratchet data, but prefer direct coverage if available and different
             ratchet_coverage = status.get("current_coverage", 0.0)
-            final_coverage = (
-                direct_coverage if direct_coverage is not None else ratchet_coverage
-            )
+            final_coverage = self._get_final_coverage(ratchet_coverage, direct_coverage)
 
             return {
                 "status": "active",
@@ -277,73 +269,64 @@ class TestManager:
 
         return self._handle_ratchet_result(ratchet_result)
 
+    def _attempt_coverage_extraction(self) -> float | None:
+        """Attempt to extract coverage from various sources."""
+        # Primary: Try to extract from coverage.json
+        current_coverage = self._get_coverage_from_json()
+        if current_coverage is not None:
+            return current_coverage
+
+        return None
+
+    def _handle_coverage_extraction_result(
+        self, current_coverage: float | None
+    ) -> float | None:
+        """Handle the result of coverage extraction attempts."""
+        if current_coverage is not None:
+            self.console.print(
+                f"[dim]📊 Coverage extracted from coverage.json: {current_coverage:.2f}%[/dim]"
+            )
+        return current_coverage
+
+    def _get_fallback_coverage(
+        self, ratchet_result: dict[str, t.Any], current_coverage: float | None
+    ) -> float | None:
+        """Get coverage from fallback sources."""
+        # Secondary: Try ratchet result if coverage.json failed
+        if current_coverage is None:
+            current_coverage = self._get_coverage_from_ratchet(ratchet_result)
+            if current_coverage is not None:
+                self.console.print(
+                    f"[dim]📊 Coverage from ratchet result: {current_coverage:.2f}%[/dim]"
+                )
+
+        # Tertiary: Try coverage service, but only accept non-zero values
+        if current_coverage is None:
+            current_coverage = self._get_coverage_from_service()
+            if current_coverage is not None:
+                self.console.print(
+                    f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
+                )
+            else:
+                coverage_json_path = self.pkg_path / "coverage.json"
+                if coverage_json_path.exists():
+                    self.console.print(
+                        "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists"
+                    )
+
+        return current_coverage
+
     def _update_coverage_badge(self, ratchet_result: dict[str, t.Any]) -> None:
         """Update coverage badge in README.md if coverage changed."""
         try:
             # Get current coverage directly from coverage.json to ensure freshest data
-            import json
+            current_coverage = self._attempt_coverage_extraction()
+            current_coverage = self._handle_coverage_extraction_result(current_coverage)
 
-            current_coverage = None
-            coverage_json_path = self.pkg_path / "coverage.json"
-
-            # Primary: Try to extract from coverage.json
-            if coverage_json_path.exists():
-                try:
-                    with coverage_json_path.open() as f:
-                        data = json.load(f)
-                        # Check for totals field first (newer format)
-                        current_coverage = data.get("totals", {}).get("percent_covered")
-
-                        # If no totals, calculate from files data (standard pytest-cov format)
-                        if current_coverage is None and "files" in data:
-                            total_statements = 0
-                            total_covered = 0
-
-                            for file_data in data["files"].values():
-                                summary = file_data.get("summary", {})
-                                statements = summary.get("num_statements", 0)
-                                covered = summary.get("covered_lines", 0)
-                                total_statements += statements
-                                total_covered += covered
-
-                            if total_statements > 0:
-                                current_coverage = (
-                                    total_covered / total_statements
-                                ) * 100
-
-                        if current_coverage is not None:
-                            self.console.print(
-                                f"[dim]📊 Coverage extracted from coverage.json: {current_coverage:.2f}%[/dim]"
-                            )
-                except (json.JSONDecodeError, KeyError) as e:
-                    self.console.print(
-                        f"[yellow]⚠️[/yellow] Failed to parse coverage.json: {e}"
-                    )
-
-            # Secondary: Try ratchet result if coverage.json failed
-            if current_coverage is None:
-                current_coverage = ratchet_result.get("current_coverage")
-                if current_coverage is not None:
-                    self.console.print(
-                        f"[dim]📊 Coverage from ratchet result: {current_coverage:.2f}%[/dim]"
-                    )
-
-            # Tertiary: Try coverage service, but only accept non-zero values
-            if current_coverage is None:
-                coverage_info = self.get_coverage()
-                fallback_coverage = coverage_info.get("coverage_percent")
-                # Only use fallback if it's meaningful (>0) or if no coverage.json exists
-                if fallback_coverage and (
-                    fallback_coverage > 0 or not coverage_json_path.exists()
-                ):
-                    current_coverage = fallback_coverage
-                    self.console.print(
-                        f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
-                    )
-                else:
-                    self.console.print(
-                        "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists"
-                    )
+            # Get fallback coverage if needed
+            current_coverage = self._get_fallback_coverage(
+                ratchet_result, current_coverage
+            )
 
             # Only update badge if we have valid coverage data
             if current_coverage is not None and current_coverage >= 0:

@@ -40,6 +40,7 @@ class TestCommandBuilder:
         if pyproject_path.exists():
             try:
                 import tomllib
+
                 with pyproject_path.open("rb") as f:
                     data = tomllib.load(f)
                     project_name = data.get("project", {}).get("name")
@@ -54,7 +55,7 @@ class TestCommandBuilder:
             if (
                 item.is_dir()
                 and not item.name.startswith(".")
-                and not item.name in ("tests", "docs", "build", "dist", "__pycache__")
+                and item.name not in ("tests", "docs", "build", "dist", "__pycache__")
                 and (item / "__init__.py").exists()
             ):
                 return item.name

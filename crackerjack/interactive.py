@@ -34,6 +34,26 @@ class InteractiveWorkflowOptions:
     interactive: bool = True
     dry_run: bool = False
 
+    def __init__(
+        self,
+        clean: bool = False,
+        test: bool = False,
+        publish: str | None = None,
+        bump: str | None = None,
+        commit: bool = False,
+        create_pr: bool = False,
+        interactive: bool = True,
+        dry_run: bool = False,
+    ) -> None:
+        self.clean = clean
+        self.test = test
+        self.publish = publish
+        self.bump = bump
+        self.commit = commit
+        self.create_pr = create_pr
+        self.interactive = interactive
+        self.dry_run = dry_run
+
     @classmethod
     def from_args(cls, args: t.Any) -> "InteractiveWorkflowOptions":
         return cls(

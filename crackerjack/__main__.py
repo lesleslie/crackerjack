@@ -1543,6 +1543,47 @@ def _handle_specialized_analytics(local_vars: t.Any, console: t.Any) -> bool:
     return _handle_enterprise_features(local_vars, console)
 
 
+def _display_coverage_info(console: t.Any, coverage_info: dict[str, t.Any]) -> None:
+    """Display basic coverage information."""
+    coverage_percent = coverage_info.get("coverage_percent", 0.0)
+    coverage_source = coverage_info.get("source", "unknown")
+
+    if coverage_percent > 0:
+        console.print(
+            f"[green]Current Coverage:[/green] {coverage_percent:.2f}% (from {coverage_source})"
+        )
+    else:
+        console.print("[yellow]Current Coverage:[/yellow] No coverage data available")
+
+    # Show status message if available
+    status_message = coverage_info.get("message")
+    if status_message:
+        console.print(f"[dim]{status_message}[/dim]")
+
+
+def _display_coverage_report(console: t.Any, test_manager: t.Any) -> None:
+    """Display detailed coverage report if available."""
+    coverage_report = test_manager.get_coverage_report()
+    if coverage_report:
+        console.print(f"[cyan]Details:[/cyan] {coverage_report}")
+
+
+def _display_ratchet_status(console: t.Any, test_manager: t.Any) -> None:
+    """Display coverage ratchet status if available."""
+    from contextlib import suppress
+
+    with suppress(Exception):
+        ratchet_status = test_manager.get_coverage_ratchet_status()
+        if ratchet_status:
+            next_milestone = ratchet_status.get("next_milestone")
+            if next_milestone:
+                console.print(f"[cyan]Next Milestone:[/cyan] {next_milestone:.0f}%")
+
+            milestones = ratchet_status.get("milestones_achieved", [])
+            if milestones:
+                console.print(f"[green]Milestones Achieved:[/green] {len(milestones)}")
+
+
 def _handle_coverage_status(
     coverage_status: bool, console: t.Any, options: t.Any
 ) -> bool:
@@ -1566,43 +1607,13 @@ def _handle_coverage_status(
 
         # Get coverage information
         coverage_info = test_manager.get_coverage()
-        coverage_percent = coverage_info.get("coverage_percent", 0.0)
-        coverage_source = coverage_info.get("source", "unknown")
-
-        if coverage_percent > 0:
-            console.print(
-                f"[green]Current Coverage:[/green] {coverage_percent:.2f}% (from {coverage_source})"
-            )
-        else:
-            console.print(
-                "[yellow]Current Coverage:[/yellow] No coverage data available"
-            )
-
-        # Show status message if available
-        status_message = coverage_info.get("message")
-        if status_message:
-            console.print(f"[dim]{status_message}[/dim]")
+        _display_coverage_info(console, coverage_info)
 
         # Try to get more detailed coverage report
-        coverage_report = test_manager.get_coverage_report()
-        if coverage_report:
-            console.print(f"[cyan]Details:[/cyan] {coverage_report}")
+        _display_coverage_report(console, test_manager)
 
         # Show coverage ratchet status if available
-        try:
-            ratchet_status = test_manager.get_coverage_ratchet_status()
-            if ratchet_status:
-                next_milestone = ratchet_status.get("next_milestone")
-                if next_milestone:
-                    console.print(f"[cyan]Next Milestone:[/cyan] {next_milestone:.0f}%")
-
-                milestones = ratchet_status.get("milestones_achieved", [])
-                if milestones:
-                    console.print(
-                        f"[green]Milestones Achieved:[/green] {len(milestones)}"
-                    )
-        except Exception:
-            pass  # Ignore ratchet status errors
+        _display_ratchet_status(console, test_manager)
 
         console.print()
         return False  # Exit after showing status

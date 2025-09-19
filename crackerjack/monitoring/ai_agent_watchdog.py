@@ -21,7 +21,7 @@ class AgentPerformanceMetrics:
     failed_fixes: int = 0
     average_confidence: float = 0.0
     average_execution_time: float = 0.0
-    issue_types_handled: dict[IssueType, int] = field(default_factory=dict[str, t.Any])
+    issue_types_handled: dict[IssueType, int] = field(default_factory=dict)
     recent_failures: list[str] = field(default_factory=list)
     last_successful_fix: datetime | None = None
     regression_patterns: list[str] = field(default_factory=list)
