@@ -228,7 +228,6 @@ class CrackerjackCache:
         "complexipy",
         "refurb",
         "gitleaks",
-        "detect-secrets",
     }
 
     # TTL configuration for different cache types (in seconds)
@@ -239,7 +238,6 @@ class CrackerjackCache:
         "complexipy": 86400,  # 24 hours - complexity analysis
         "refurb": 86400,  # 24 hours - code improvements
         "gitleaks": 86400 * 7,  # 7 days - secret detection is very stable
-        "detect-secrets": 86400 * 7,  # 7 days - secret detection
     }
 
     # Agent version for cache invalidation when agent logic changes

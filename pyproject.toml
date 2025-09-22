@@ -393,3 +393,8 @@ port = 8677
 timeout = 10.0
 enable_diagnostics = true
 real_time_feedback = true
+
+[dependency-groups]
+dev = [
+    "crackerjack",
+]

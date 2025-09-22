@@ -198,7 +198,7 @@ class StrategySelector:
                 if "test" in str(file_path):
                     priority_hooks.update(["pytest", "coverage"])
                 if str(file_path).endswith(("setup.py", "pyproject.toml")):
-                    priority_hooks.update(["bandit", "creosote", "detect-secrets"])
+                    priority_hooks.update(["bandit", "creosote", "gitleaks"])
 
         selected_hooks = [
             hook for hook in strategy.hooks if hook.name in priority_hooks

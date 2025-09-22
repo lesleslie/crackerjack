@@ -127,7 +127,6 @@ cache.set_file_hash(Path("main.py"), "sha256hash...")
 | `complexipy` | 24 hours | Complexity analysis |
 | `refurb` | 24 hours | Code improvement suggestions |
 | `gitleaks` | 7 days | Secret detection is very stable |
-| `detect-secrets` | 7 days | Secret scanning patterns |
 
 #### AI Agent Decision Caching
 

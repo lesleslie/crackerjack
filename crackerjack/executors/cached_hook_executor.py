@@ -261,11 +261,11 @@ class SmartCacheManager:
         hook_name: str,
         project_state: dict[str, t.Any],
     ) -> bool:
-        external_hooks = {"detect-secrets"}
+        external_hooks = set()
         if hook_name in external_hooks:
             return False
 
-        expensive_hooks = {"pyright", "bandit", "vulture", "complexipy"}
+        expensive_hooks = {"pyright", "bandit", "vulture", "complexipy", "gitleaks"}
         if hook_name in expensive_hooks:
             return True
 
