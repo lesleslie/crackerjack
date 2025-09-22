@@ -148,7 +148,7 @@ Limited tool-specific auto-fixes for simple formatting issues:
 
 The AI agent intelligently fixes:
 
-- **Type Errors (pyright)**: Adds missing annotations, fixes type mismatches
+- **Type Errors (zuban)**: Adds missing annotations, fixes type mismatches
 - **🔒 Security Issues (bandit)**: Comprehensive security hardening including:
   - **Shell Injection Prevention**: Removes `shell=True` from subprocess calls
   - **Weak Cryptography**: Replaces MD5/SHA1 with SHA256
@@ -612,7 +612,7 @@ Crackerjack runs hooks in a two-stage process for optimal development workflow:
 
 **Comprehensive Hooks (~30 seconds):**
 
-- Pyright type checking
+- Zuban type checking
 - Bandit security analysis
 - Dead code detection (vulture)
 - Dependency analysis (creosote)

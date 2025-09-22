@@ -366,24 +366,6 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "experimental": False,
             "pass_filenames": False,
         },
-        {
-            "id": "pyright",
-            "name": "pyright-type-checking",
-            "repo": "local",
-            "rev": "",
-            "tier": 3,
-            "time_estimate": 0.25,
-            "stages": ["pre-push", "manual"],
-            "args": [],
-            "files": "^crackerjack/.*\\.py$",
-            "exclude": r"^crackerjack/(mcp|plugins)/.*\.py$|crackerjack/code_cleaner\.py$",
-            "additional_dependencies": None,
-            "types_or": None,
-            "language": "system",
-            "entry": "uv run pyright",
-            "experimental": False,
-            "pass_filenames": None,
-        },
     ],
     "experimental": [],
 }
@@ -579,7 +561,6 @@ class DynamicConfigGenerator:
                 "bandit",
                 "refurb",
                 "complexipy",
-                "pyright",
             ):
                 hook["exclude"] = r"^tests/|^src/"
             else:

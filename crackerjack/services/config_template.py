@@ -95,12 +95,13 @@ class ConfigTemplateService:
                 "stages": ["pre-push", "manual"],
             },
             {
-                "id": "pyright",
-                "name": "pyright-type-checking",
-                "entry": "uv run pyright",
+                "id": "zuban",
+                "name": "zuban-type-checking",
+                "entry": "uv run zuban check",
                 "language": "system",
-                "files": r"^crackerjack/.*\.py$",
-                "exclude": r"^crackerjack/(mcp|plugins)/.*\.py$|crackerjack/code_cleaner\.py$",
+                "args": ["--config-file", "mypy.ini", "./crackerjack"],
+                "pass_filenames": False,
+                "exclude": r"^tests/|^src/",
                 "stages": ["pre-push", "manual"],
             },
         ]
