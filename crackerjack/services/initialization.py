@@ -116,8 +116,8 @@ class InitializationService:
         }
 
     def _get_config_files(self) -> dict[str, str]:
+        # Skip pre-commit configuration to prevent hook installation
         return {
-            ".pre-commit-config.yaml": "smart_merge",
             "pyproject.toml": "smart_merge",
             ".gitignore": "smart_merge_gitignore",
             "CLAUDE.md": "smart_append",
