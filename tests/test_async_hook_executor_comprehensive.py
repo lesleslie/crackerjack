@@ -7,7 +7,7 @@ import pytest
 from rich.console import Console
 
 from crackerjack.executors.async_hook_executor import AsyncHookExecutor
-from crackerjack.models.config import HookDefinition, HookStrategy
+from crackerjack.config.hooks import HookDefinition, HookStrategy
 
 
 class TestAsyncHookExecutor:

@@ -105,18 +105,16 @@ def categorize_file(file_path: Path) -> str:
     return "Unknown File Type"
 
 
-def process_hook_results[T, R](
+def process_hook_results[T: HookResult, R](
     results: list[T],
     success_handler: typing.Callable[[T], R],
     failure_handler: typing.Callable[[T], R],
 ) -> list[R]:
     processed_results: list[R] = []
     for result in results:
-        if (
-            isinstance(result, dict)
-            and "status" in result
-            and result["status"] == HookStatus.SUCCESS
-        ):
+        # Type checker knows T is HookResult, so no need for isinstance check
+        # But we keep it for runtime safety
+        if hasattr(result, "status") and result.status == HookStatus.SUCCESS:
             processed_results.append(success_handler(result))
         else:
             processed_results.append(failure_handler(result))

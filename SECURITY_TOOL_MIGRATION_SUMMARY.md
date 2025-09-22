@@ -9,14 +9,17 @@ We have successfully completed the migration from `detect-secrets` to `gitleaks`
 ### Files Updated
 
 1. **`crackerjack/executors/cached_hook_executor.py`**
+
    - Modified the `should_use_cache_for_hook` method to reference `gitleaks` instead of `detect-secrets` in the external hooks set
    - Changed: `external_hooks = {"detect-secrets"}` → `external_hooks = {"gitleaks"}`
 
-2. **`crackerjack/orchestration/execution_strategies.py`**
+1. **`crackerjack/orchestration/execution_strategies.py`**
+
    - Updated priority hook selection logic to use `gitleaks` instead of `detect-secrets`
    - Changed: `priority_hooks.update(["bandit", "creosote", "detect-secrets"])` → `priority_hooks.update(["bandit", "creosote", "gitleaks"])`
 
-3. **`docs/systems/CACHING_SYSTEM.md`**
+1. **`docs/systems/CACHING_SYSTEM.md`**
+
    - Removed outdated `detect-secrets` entry from the caching TTL table
    - Ensured only `gitleaks` is listed for secret detection
 
@@ -31,10 +34,10 @@ We have successfully completed the migration from `detect-secrets` to `gitleaks`
 ## Benefits Achieved
 
 1. **Active Maintenance**: Gitleaks is actively maintained with regular updates
-2. **Better Performance**: Gitleaks offers superior performance compared to detect-secrets
-3. **Enhanced Detection**: Gitleaks has a more comprehensive ruleset for secret detection
-4. **Community Support**: Larger community and better documentation
-5. **Integration**: Better integration with modern development workflows
+1. **Better Performance**: Gitleaks offers superior performance compared to detect-secrets
+1. **Enhanced Detection**: Gitleaks has a more comprehensive ruleset for secret detection
+1. **Community Support**: Larger community and better documentation
+1. **Integration**: Better integration with modern development workflows
 
 ## Technical Details
 
