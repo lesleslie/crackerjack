@@ -44,10 +44,10 @@ class TestInitializationService:
     def test_get_config_files_excludes_precommit(self, init_service):
         """Test that pre-commit config is excluded from initialization."""
         config_files = init_service._get_config_files()
-        
+
         # Verify that .pre-commit-config.yaml is not in the list
         assert ".pre-commit-config.yaml" not in config_files
-        
+
         # Verify that other expected files are still present
         expected_files = {
             "pyproject.toml",
@@ -62,17 +62,17 @@ class TestInitializationService:
         """Test that project initialization doesn't copy pre-commit config."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
-            
+
             # Mock the process_config_file method to track what files are processed
             with patch.object(init_service, '_process_config_file') as mock_process:
                 result = init_service.initialize_project_full(target_path)
-                
+
                 # Verify the operation was successful
                 assert result["success"] is True
-                
+
                 # Check that _process_config_file was called
                 assert mock_process.call_count > 0
-                
+
                 # Verify that .pre-commit-config.yaml was never processed
                 processed_files = [call[0][0] for call in mock_process.call_args_list]
                 assert ".pre-commit-config.yaml" not in processed_files
@@ -81,11 +81,11 @@ class TestInitializationService:
         """Test that pre-commit config file processing is skipped."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
-            
+
             # Mock filesystem operations
             with patch.object(init_service.filesystem, 'read_file') as mock_read, \
                  patch.object(init_service.filesystem, 'write_file') as mock_write:
-                
+
                 # Test processing a pre-commit config file (should be skipped)
                 init_service._process_config_file(
                     ".pre-commit-config.yaml",
@@ -95,7 +95,7 @@ class TestInitializationService:
                     False,
                     {"files_copied": [], "files_skipped": [], "errors": []}
                 )
-                
+
                 # Verify no file operations were performed
                 mock_read.assert_not_called()
                 mock_write.assert_not_called()
@@ -105,14 +105,14 @@ class TestInitializationService:
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
             test_file = target_path / "pyproject.toml"
-            
+
             # Instead of mocking filesystem operations, let's test the actual behavior
             # by checking that the method doesn't raise an exception when processing
             # a valid file type
-            
+
             # Create a mock results dictionary
             results = {"files_copied": [], "files_skipped": [], "errors": []}
-            
+
             # Test processing a pyproject.toml file (should be processed)
             # This should not raise an exception
             init_service._process_config_file(
@@ -123,7 +123,7 @@ class TestInitializationService:
                 False,
                 results
             )
-            
+
             # Verify the method completed without error
             # The actual file operations are tested in other tests
 

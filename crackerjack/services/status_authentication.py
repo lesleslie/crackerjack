@@ -18,9 +18,9 @@ class AccessLevel(str, Enum):
 
 
 class AuthenticationMethod(str, Enum):
-    API_KEY = "api_key"
-    JWT_TOKEN = "jwt_token"
-    HMAC_SIGNATURE = "hmac_signature"
+    API_KEY = "api_key"  # nosec B105
+    JWT_TOKEN = "jwt_token"  # nosec B105
+    HMAC_SIGNATURE = "hmac_signature"  # nosec B105
     LOCAL_ONLY = "local_only"
 
 

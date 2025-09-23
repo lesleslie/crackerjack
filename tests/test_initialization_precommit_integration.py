@@ -37,21 +37,21 @@ class TestInitializationPrecommitHandling:
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
             pkg_path = Path(tmp_dir)
-            
+
             # Create initialization service
             init_service = InitializationService(console, filesystem, git_service, pkg_path)
-            
+
             # Run initialization
             result = init_service.initialize_project_full(target_path)
-            
+
             # Verify initialization was successful
             assert result["success"] is True
-            
+
             # Check that .pre-commit-config.yaml was not created in the target directory
             precommit_config_path = target_path / ".pre-commit-config.yaml"
             assert not precommit_config_path.exists(), \
                 ".pre-commit-config.yaml should not be copied during initialization"
-            
+
             # Verify that other expected files were created
             expected_files = [
                 "pyproject.toml",
@@ -59,7 +59,7 @@ class TestInitializationPrecommitHandling:
                 "CLAUDE.md",
                 "RULES.md"
             ]
-            
+
             for filename in expected_files:
                 file_path = target_path / filename
                 assert file_path.exists(), f"{filename} should be created during initialization"
@@ -69,14 +69,14 @@ class TestInitializationPrecommitHandling:
         with tempfile.TemporaryDirectory() as tmp_dir:
             pkg_path = Path(tmp_dir)
             init_service = InitializationService(console, filesystem, git_service, pkg_path)
-            
+
             # Get the config files dictionary
             config_files = init_service._get_config_files()
-            
+
             # Verify that .pre-commit-config.yaml is not in the dictionary
             assert ".pre-commit-config.yaml" not in config_files, \
                 "Pre-commit config should not be in the config files dictionary"
-            
+
             # Verify that expected files are still present
             expected_keys = {
                 "pyproject.toml",
@@ -93,16 +93,16 @@ class TestInitializationPrecommitHandling:
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
             pkg_path = Path(tmp_dir)
-            
+
             # Create initialization service
             init_service = InitializationService(console, filesystem, git_service, pkg_path)
-            
+
             # Run initialization with force flag
             result = init_service.initialize_project_full(target_path, force=True)
-            
+
             # Verify initialization was successful
             assert result["success"] is True
-            
+
             # Check that .pre-commit-config.yaml was not created
             precommit_config_path = target_path / ".pre-commit-config.yaml"
             assert not precommit_config_path.exists(), \
