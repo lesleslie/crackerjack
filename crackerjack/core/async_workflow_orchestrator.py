@@ -110,7 +110,7 @@ class AsyncWorkflowPipeline:
 
         result = await self.timeout_manager.with_timeout(
             "file_operations",
-            asyncio.to_thread(self.phases.run_cleaning_phase, options),  # type: ignore[arg-type]
+            asyncio.to_thread(self.phases.run_cleaning_phase, options),
             strategy=TimeoutStrategy.RETRY_WITH_BACKOFF,
         )
         return bool(result)
@@ -262,7 +262,7 @@ class AsyncWorkflowPipeline:
     async def _run_fast_hooks_async(self, options: OptionsProtocol) -> bool:
         result = await self.timeout_manager.with_timeout(
             "fast_hooks",
-            asyncio.to_thread(self.phases.run_fast_hooks_only, options),  # type: ignore[arg-type]
+            asyncio.to_thread(self.phases.run_fast_hooks_only, options),
             strategy=TimeoutStrategy.RETRY_WITH_BACKOFF,
         )
         return bool(result)
@@ -270,7 +270,7 @@ class AsyncWorkflowPipeline:
     async def _run_comprehensive_hooks_async(self, options: OptionsProtocol) -> bool:
         result = await self.timeout_manager.with_timeout(
             "comprehensive_hooks",
-            asyncio.to_thread(self.phases.run_comprehensive_hooks_only, options),  # type: ignore[arg-type]
+            asyncio.to_thread(self.phases.run_comprehensive_hooks_only, options),
             strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         )
         return bool(result)
@@ -278,7 +278,7 @@ class AsyncWorkflowPipeline:
     async def _run_hooks_phase_async(self, options: OptionsProtocol) -> bool:
         result = await self.timeout_manager.with_timeout(
             "comprehensive_hooks",
-            asyncio.to_thread(self.phases.run_hooks_phase, options),  # type: ignore[arg-type]
+            asyncio.to_thread(self.phases.run_hooks_phase, options),
             strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         )
         return bool(result)
@@ -286,7 +286,7 @@ class AsyncWorkflowPipeline:
     async def _run_testing_phase_async(self, options: OptionsProtocol) -> bool:
         result = await self.timeout_manager.with_timeout(
             "test_execution",
-            asyncio.to_thread(self.phases.run_testing_phase, options),  # type: ignore[arg-type]
+            asyncio.to_thread(self.phases.run_testing_phase, options),
             strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         )
         return bool(result)
@@ -507,7 +507,7 @@ class AsyncWorkflowPipeline:
         try:
             hook_results = await self.timeout_manager.with_timeout(
                 "comprehensive_hooks",
-                asyncio.to_thread(self.phases.hook_manager.run_comprehensive_hooks),  # type: ignore[arg-type]
+                asyncio.to_thread(self.phases.hook_manager.run_comprehensive_hooks),
                 strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
             )
 

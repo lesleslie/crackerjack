@@ -264,7 +264,7 @@ class PluginDiscovery:
         if not directory.exists() or not directory.is_dir():
             return []
 
-        plugin_files = []
+        plugin_files: list[Path] = []
 
         patterns = ["*.py", "*.json", "*.yaml", "*.yml"]
 
@@ -277,7 +277,7 @@ class PluginDiscovery:
         return [f for f in plugin_files if self._looks_like_plugin_file(f)]
 
     def discover_in_project(self, project_path: Path) -> list[Path]:
-        plugin_files = []
+        plugin_files: list[Path] = []
 
         plugin_dirs = [
             project_path / "plugins",

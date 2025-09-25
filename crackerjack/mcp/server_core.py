@@ -38,6 +38,7 @@ from .tools import (
     register_monitoring_tools,
     register_proactive_tools,
     register_progress_tools,
+    register_semantic_tools,
     register_utility_tools,
 )
 
@@ -163,6 +164,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     register_monitoring_tools(mcp_app)
     register_progress_tools(mcp_app)
     register_proactive_tools(mcp_app)
+    register_semantic_tools(mcp_app)
     register_utility_tools(mcp_app)
 
     return mcp_app

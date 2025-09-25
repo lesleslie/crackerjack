@@ -34,6 +34,12 @@ from .cli.handlers import (
     handle_stop_zuban_lsp,
     handle_watchdog_mode,
 )
+from .cli.semantic_handlers import (
+    handle_remove_from_semantic_index,
+    handle_semantic_index,
+    handle_semantic_search,
+    handle_semantic_stats,
+)
 
 console = Console(force_terminal=True)
 app = typer.Typer(
@@ -1089,7 +1095,25 @@ def _create_mkdocs_services() -> dict[str, t.Any]:
     config_manager = ConfigManager()
     logger = getLogger(__name__)
 
-    integration_service = MkDocsIntegrationService(config_manager, filesystem, logger)
+    # Create logger adapter for protocol compatibility
+    class LoggerAdapter:
+        def __init__(self, logger: t.Any) -> None:
+            self._logger = logger
+
+        def debug(self, message: str, **kwargs: t.Any) -> None:
+            self._logger.debug(message)
+
+        def info(self, message: str, **kwargs: t.Any) -> None:
+            self._logger.info(message)
+
+        def warning(self, message: str, **kwargs: t.Any) -> None:
+            self._logger.warning(message)
+
+        def error(self, message: str, **kwargs: t.Any) -> None:
+            self._logger.error(message)
+
+    logger_adapter = LoggerAdapter(logger)
+    integration_service = MkDocsIntegrationService(config_manager, filesystem, logger_adapter)
     builder = MkDocsSiteBuilder(integration_service)
 
     return {"builder": builder, "filesystem": filesystem, "config": config_manager}
@@ -1317,6 +1341,11 @@ def main(
     diff_config: str | None = CLI_OPTIONS["diff_config"],
     config_interactive: bool = CLI_OPTIONS["config_interactive"],
     refresh_cache: bool = CLI_OPTIONS["refresh_cache"],
+    # Semantic search options
+    index: str | None = CLI_OPTIONS["index"],
+    search: str | None = CLI_OPTIONS["search"],
+    semantic_stats: bool = CLI_OPTIONS["semantic_stats"],
+    remove_from_index: str | None = CLI_OPTIONS["remove_from_index"],
 ) -> None:
     options = create_options(
         commit,
@@ -1409,6 +1438,12 @@ def main(
         run_tests=run_tests,
     )
 
+    # Add semantic search options to the options object
+    options.index = index
+    options.search = search
+    options.semantic_stats = semantic_stats
+    options.remove_from_index = remove_from_index
+
     # Setup debug and verbose flags
     ai_fix, verbose = _setup_debug_and_verbose_flags(ai_debug, debug, verbose, options)
     setup_ai_agent_env(ai_fix, ai_debug or debug)
@@ -1440,6 +1475,17 @@ def _process_all_commands(local_vars: t.Any, console: t.Any, options: t.Any) -> 
         or local_vars["refresh_cache"]
     ):
         handle_config_updates(options)
+        return False
+
+    # Handle semantic search commands early (they exit after execution)
+    if not _handle_semantic_commands(
+        local_vars["index"],
+        local_vars["search"],
+        local_vars["semantic_stats"],
+        local_vars["remove_from_index"],
+        console,
+        options,
+    ):
         return False
 
     # Handle server commands (monitoring, websocket, MCP, zuban LSP)
@@ -1623,6 +1669,64 @@ def _handle_coverage_status(
 
         console.print(f"[dim]{traceback.format_exc()}[/dim]")
         return False
+
+
+def _handle_semantic_commands(
+    index: str | None,
+    search: str | None,
+    semantic_stats: bool,
+    remove_from_index: str | None,
+    console: Console,
+    options: t.Any,
+) -> bool:
+    """Handle semantic search commands.
+
+    Returns True if execution should continue, False if should return early.
+    """
+    if not _has_semantic_operations(index, search, semantic_stats, remove_from_index):
+        return True
+
+    console.print("[cyan]🔍[/cyan] Running semantic search operations...")
+
+    try:
+        _execute_semantic_operations(index, search, semantic_stats, remove_from_index)
+        return False  # Exit after semantic operations
+
+    except Exception as e:
+        console.print(f"[red]❌[/red] Semantic search error: {e}")
+        return False
+
+
+def _has_semantic_operations(
+    index: str | None,
+    search: str | None,
+    semantic_stats: bool,
+    remove_from_index: str | None,
+) -> bool:
+    """Check if any semantic operations are requested."""
+    return any([index, search, semantic_stats, remove_from_index])
+
+
+def _execute_semantic_operations(
+    index: str | None,
+    search: str | None,
+    semantic_stats: bool,
+    remove_from_index: str | None,
+) -> list[str]:
+    """Execute semantic operations in sequence and return remaining operations."""
+    if index:
+        handle_semantic_index(index)
+
+    if search:
+        handle_semantic_search(search)
+
+    if semantic_stats:
+        handle_semantic_stats()
+
+    if remove_from_index:
+        handle_remove_from_semantic_index(remove_from_index)
+
+    return []
 
 
 def _handle_enterprise_features(local_vars: t.Any, console: t.Any) -> bool:

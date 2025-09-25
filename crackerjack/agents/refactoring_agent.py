@@ -4,11 +4,17 @@ from pathlib import Path
 
 from ..services.regex_patterns import SAFE_PATTERNS
 from .base import (
+    AgentContext,
     FixResult,
     Issue,
     IssueType,
     SubAgent,
     agent_registry,
+)
+from .semantic_helpers import (
+    SemanticInsight,
+    create_semantic_enhancer,
+    get_session_enhanced_recommendations,
 )
 
 if t.TYPE_CHECKING:
@@ -20,6 +26,11 @@ if t.TYPE_CHECKING:
 
 
 class RefactoringAgent(SubAgent):
+    def __init__(self, context: AgentContext) -> None:
+        super().__init__(context)
+        self.semantic_enhancer = create_semantic_enhancer(context.project_path)
+        self.semantic_insights: dict[str, SemanticInsight] = {}
+
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.COMPLEXITY, IssueType.DEAD_CODE}
 
@@ -126,7 +137,9 @@ class RefactoringAgent(SubAgent):
                         "Applied proven complexity reduction pattern for detect_agent_needs"
                     ],
                     files_modified=[str(file_path)],
-                    recommendations=["Verify functionality after complexity reduction"],
+                    recommendations=await self._enhance_recommendations_with_semantic(
+                        ["Verify functionality after complexity reduction"]
+                    ),
                 )
             else:
                 return FixResult(
@@ -178,6 +191,13 @@ class RefactoringAgent(SubAgent):
         tree = ast.parse(content)
         complex_functions = self._find_complex_functions(tree, content)
 
+        # Enhance complex function detection with semantic analysis
+        semantic_complex_functions = await self._find_semantic_complex_patterns(
+            content, file_path
+        )
+        if semantic_complex_functions:
+            complex_functions.extend(semantic_complex_functions)
+
         if not complex_functions:
             return FixResult(
                 success=True,
@@ -185,9 +205,11 @@ class RefactoringAgent(SubAgent):
                 recommendations=["No overly complex functions found"],
             )
 
-        return self._apply_and_save_refactoring(file_path, content, complex_functions)
+        return await self._apply_and_save_refactoring(
+            file_path, content, complex_functions
+        )
 
-    def _apply_and_save_refactoring(
+    async def _apply_and_save_refactoring(
         self,
         file_path: Path,
         content: str,
@@ -214,7 +236,9 @@ class RefactoringAgent(SubAgent):
             confidence=0.8,
             fixes_applied=[f"Reduced complexity in {len(complex_functions)} functions"],
             files_modified=[str(file_path)],
-            recommendations=["Verify functionality after complexity reduction"],
+            recommendations=await self._enhance_recommendations_with_semantic(
+                ["Verify functionality after complexity reduction"]
+            ),
         )
 
     def _create_no_changes_result(self) -> FixResult:
@@ -852,7 +876,7 @@ class RefactoringAgent(SubAgent):
     def _collect_all_removable_lines(
         self, lines: list[str], analysis: dict[str, t.Any]
     ) -> set[int]:
-        removal_functions = [
+        removal_functions: list[t.Callable[[], set[int]]] = [
             lambda: self._find_lines_to_remove(lines, analysis),
             lambda: self._find_unreachable_lines(lines, analysis),
             lambda: self._find_redundant_lines(lines, analysis),
@@ -1005,6 +1029,231 @@ class RefactoringAgent(SubAgent):
             if line.strip() and len(line) - len(line.lstrip()) <= class_indent:
                 return i
         return len(lines)
+
+    async def _find_semantic_complex_patterns(
+        self, content: str, file_path: Path
+    ) -> list[dict[str, t.Any]]:
+        """Find semantically complex patterns using vector similarity."""
+        semantic_functions = []
+
+        try:
+            # Extract code functions for semantic complexity analysis
+            code_elements = self._extract_code_functions_for_semantic_analysis(content)
+
+            for element in code_elements:
+                if (
+                    element["type"] == "function"
+                    and element["estimated_complexity"] > 10
+                ):
+                    # Search for similar complex patterns
+                    insight = (
+                        await self.semantic_enhancer.find_refactoring_opportunities(
+                            element["signature"]
+                            + "\n"
+                            + element["body"][:150],  # Include body sample
+                            current_file=file_path,
+                        )
+                    )
+
+                    if insight.total_matches > 2:
+                        semantic_functions.append(
+                            {
+                                "name": element["name"],
+                                "line_start": element["start_line"],
+                                "line_end": element["end_line"],
+                                "complexity": element["estimated_complexity"],
+                                "semantic_matches": insight.total_matches,
+                                "refactor_opportunities": insight.related_patterns[
+                                    :3
+                                ],  # Top 3 matches
+                                "node": element.get("node"),
+                            }
+                        )
+
+                        # Store insight for recommendation enhancement
+                        self.semantic_insights[element["name"]] = insight
+
+        except Exception as e:
+            self.log(f"Warning: Semantic complexity detection failed: {e}")
+
+        return semantic_functions
+
+    def _extract_code_functions_for_semantic_analysis(
+        self, content: str
+    ) -> list[dict[str, t.Any]]:
+        """Extract functions with complexity estimation for semantic analysis."""
+        functions: list[dict[str, t.Any]] = []
+        lines = content.split("\n")
+        current_function = None
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+
+            if self._should_skip_semantic_line(stripped, current_function, line):
+                continue
+
+            indent = len(line) - len(line.lstrip())
+
+            if self._is_semantic_function_definition(stripped):
+                current_function = self._handle_semantic_function_definition(
+                    functions, current_function, stripped, indent, i
+                )
+            elif current_function:
+                current_function = self._handle_semantic_function_body_line(
+                    functions, current_function, line, stripped, indent, i
+                )
+
+        # Add last function if exists
+        if current_function:
+            current_function["end_line"] = len(lines)
+            current_function["estimated_complexity"] = (
+                self._estimate_function_complexity(current_function["body"])
+            )
+            functions.append(current_function)
+
+        return functions
+
+    def _estimate_function_complexity(self, function_body: str) -> int:
+        """Estimate function complexity based on code patterns."""
+        if not function_body:
+            return 0
+
+        complexity_score = 1  # Base complexity
+        lines = function_body.split("\n")
+
+        for line in lines:
+            stripped = line.strip()
+            # Control flow statements increase complexity
+            if any(
+                stripped.startswith(keyword)
+                for keyword in ("if ", "elif ", "for ", "while ", "try:", "except")
+            ):
+                complexity_score += 1
+            # Nested structures
+            indent_level = len(line) - len(line.lstrip())
+            if indent_level > 8:  # Deeply nested
+                complexity_score += 1
+            # Complex conditions
+            if " and " in stripped or " or " in stripped:
+                complexity_score += 1
+
+        return complexity_score
+
+    async def _enhance_recommendations_with_semantic(
+        self, base_recommendations: list[str]
+    ) -> list[str]:
+        """Enhance recommendations with semantic insights."""
+        enhanced = base_recommendations.copy()
+
+        # Add semantic insights if available
+        if self.semantic_insights:
+            total_semantic_matches = sum(
+                insight.total_matches for insight in self.semantic_insights.values()
+            )
+            high_conf_matches = sum(
+                insight.high_confidence_matches
+                for insight in self.semantic_insights.values()
+            )
+
+            if high_conf_matches > 0:
+                enhanced.append(
+                    f"Semantic analysis found {high_conf_matches} similar complex patterns - "
+                    f"consider extracting common refactoring utilities"
+                )
+
+            if total_semantic_matches >= 3:
+                enhanced.append(
+                    f"Found {total_semantic_matches} related complexity patterns across codebase - "
+                    f"review for consistent refactoring approach"
+                )
+
+            # Store insights for session continuity
+            for func_name, insight in self.semantic_insights.items():
+                summary = self.semantic_enhancer.get_semantic_context_summary(insight)
+                self.log(f"Semantic context for {func_name}: {summary}")
+                await self.semantic_enhancer.store_insight_to_session(
+                    insight, "RefactoringAgent"
+                )
+
+        # Enhance with session-stored insights
+        enhanced = await get_session_enhanced_recommendations(
+            enhanced, "RefactoringAgent", self.context.project_path
+        )
+
+        return enhanced
+
+    def _should_skip_semantic_line(
+        self, stripped: str, current_function: dict[str, t.Any] | None, line: str
+    ) -> bool:
+        """Check if line should be skipped during semantic function extraction."""
+        if not stripped or stripped.startswith("#"):
+            if current_function:
+                current_function["body"] += line + "\n"
+            return True
+        return False
+
+    def _is_semantic_function_definition(self, stripped: str) -> bool:
+        """Check if line is a function definition for semantic analysis."""
+        return stripped.startswith("def ") and "(" in stripped
+
+    def _handle_semantic_function_definition(
+        self,
+        functions: list[dict[str, t.Any]],
+        current_function: dict[str, t.Any] | None,
+        stripped: str,
+        indent: int,
+        line_index: int,
+    ) -> dict[str, t.Any]:
+        """Handle a new function definition for semantic analysis."""
+        # Save previous function if exists
+        if current_function:
+            current_function["end_line"] = line_index
+            current_function["estimated_complexity"] = (
+                self._estimate_function_complexity(current_function["body"])
+            )
+            functions.append(current_function)
+
+        func_name = stripped.split("(")[0].replace("def ", "").strip()
+        return {
+            "type": "function",
+            "name": func_name,
+            "signature": stripped,
+            "start_line": line_index + 1,
+            "body": "",
+            "indent_level": indent,
+        }
+
+    def _handle_semantic_function_body_line(
+        self,
+        functions: list[dict[str, t.Any]],
+        current_function: dict[str, t.Any],
+        line: str,
+        stripped: str,
+        indent: int,
+        line_index: int,
+    ) -> dict[str, t.Any] | None:
+        """Handle a line within a function body for semantic analysis."""
+        # Check if we're still inside the function
+        if self._is_semantic_line_inside_function(current_function, indent, stripped):
+            current_function["body"] += line + "\n"
+            return current_function
+        else:
+            # Function ended
+            current_function["end_line"] = line_index
+            current_function["estimated_complexity"] = (
+                self._estimate_function_complexity(current_function["body"])
+            )
+            functions.append(current_function)
+            return None
+
+    def _is_semantic_line_inside_function(
+        self, current_function: dict[str, t.Any], indent: int, stripped: str
+    ) -> bool:
+        """Check if line is still inside the current function for semantic analysis."""
+        return indent > current_function["indent_level"] or (
+            indent == current_function["indent_level"]
+            and stripped.startswith(('"', "'", "@"))
+        )
 
 
 agent_registry.register(RefactoringAgent)

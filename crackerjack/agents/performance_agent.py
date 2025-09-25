@@ -16,11 +16,24 @@ from .base import (
     agent_registry,
 )
 from .performance_helpers import OptimizationResult
+from .semantic_helpers import (
+    SemanticInsight,
+    create_semantic_enhancer,
+    get_session_enhanced_recommendations,
+)
 
 
 class PerformanceAgent(SubAgent):
+    """Agent for detecting and fixing performance issues.
+
+    Enhanced with semantic context to detect performance patterns across
+    the codebase and find similar bottlenecks that may not be immediately visible.
+    """
+
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
+        self.semantic_enhancer = create_semantic_enhancer(context.project_path)
+        self.semantic_insights: dict[str, SemanticInsight] = {}
         self.performance_metrics: dict[str, t.Any] = {}
         self.optimization_stats: dict[str, int] = {
             "nested_loops_optimized": 0,
@@ -118,7 +131,14 @@ class PerformanceAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {file_path}"],
             )
 
+        # Detect traditional performance issues
         performance_issues = self._detect_performance_issues(content, file_path)
+
+        # Enhance with semantic performance pattern detection
+        semantic_issues = await self._detect_semantic_performance_issues(
+            content, file_path
+        )
+        performance_issues.extend(semantic_issues)
 
         if not performance_issues:
             return FixResult(
@@ -127,13 +147,13 @@ class PerformanceAgent(SubAgent):
                 recommendations=["No performance issues detected"],
             )
 
-        return self._apply_and_save_optimizations(
+        return await self._apply_and_save_optimizations(
             file_path,
             content,
             performance_issues,
         )
 
-    def _apply_and_save_optimizations(
+    async def _apply_and_save_optimizations(
         self,
         file_path: Path,
         content: str,
@@ -160,7 +180,7 @@ class PerformanceAgent(SubAgent):
                 "Applied algorithmic improvements",
             ],
             files_modified=[str(file_path)],
-            recommendations=["Test performance improvements with benchmarks"],
+            recommendations=await self._generate_enhanced_recommendations(issues),
         )
 
     @staticmethod
@@ -1351,6 +1371,307 @@ class PerformanceAgent(SubAgent):
                 modified = True
 
         return lines, modified
+
+    async def _detect_semantic_performance_issues(
+        self, content: str, file_path: Path
+    ) -> list[dict[str, t.Any]]:
+        """Detect performance issues using semantic analysis of similar code patterns."""
+        issues = []
+
+        try:
+            # Extract performance-critical functions for analysis
+            critical_functions = self._extract_performance_critical_functions(content)
+
+            for func in critical_functions:
+                if (
+                    func["estimated_complexity"] > 2
+                ):  # Focus on potentially complex functions
+                    # Search for similar performance patterns
+                    insight = await self.semantic_enhancer.find_similar_patterns(
+                        f"performance {func['signature']} {func['body_sample']}",
+                        current_file=file_path,
+                        min_similarity=0.6,
+                        max_results=8,
+                    )
+
+                    if insight.total_matches > 1:
+                        # Analyze the similar patterns for performance insights
+                        analysis = self._analyze_performance_patterns(insight, func)
+                        if analysis["issues_found"]:
+                            issues.append(
+                                {
+                                    "type": "semantic_performance_pattern",
+                                    "function": func,
+                                    "similar_patterns": insight.related_patterns,
+                                    "performance_analysis": analysis,
+                                    "confidence_score": insight.high_confidence_matches
+                                    / max(insight.total_matches, 1),
+                                    "suggestion": analysis["optimization_suggestion"],
+                                }
+                            )
+
+                            # Store insight for recommendation enhancement
+                            self.semantic_insights[func["name"]] = insight
+
+        except Exception as e:
+            self.log(f"Warning: Semantic performance analysis failed: {e}")
+
+        return issues
+
+    def _extract_performance_critical_functions(
+        self, content: str
+    ) -> list[dict[str, t.Any]]:
+        """Extract functions that are likely performance-critical."""
+        functions: list[dict[str, t.Any]] = []
+        lines = content.split("\n")
+        current_function = None
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+
+            if self._is_empty_or_comment_line(stripped):
+                if current_function:
+                    current_function["body"] += line + "\n"
+                continue
+
+            indent = len(line) - len(line.lstrip())
+
+            if self._is_function_definition(stripped):
+                current_function = self._handle_function_definition(
+                    current_function, functions, stripped, indent, i
+                )
+            elif current_function:
+                current_function = self._handle_function_body_line(
+                    current_function, functions, line, stripped, indent, i
+                )
+
+        self._handle_last_function(current_function, functions, len(lines))
+        return functions
+
+    def _is_empty_or_comment_line(self, stripped: str) -> bool:
+        """Check if line is empty or a comment."""
+        return not stripped or stripped.startswith("#")
+
+    def _is_function_definition(self, stripped: str) -> bool:
+        """Check if line is a function definition."""
+        return stripped.startswith("def ") and "(" in stripped
+
+    def _handle_function_definition(
+        self,
+        current_function: dict[str, t.Any] | None,
+        functions: list[dict[str, t.Any]],
+        stripped: str,
+        indent: int,
+        line_number: int,
+    ) -> dict[str, t.Any]:
+        """Handle a function definition line."""
+        # Save previous function if it looks performance-critical
+        if current_function and self._is_performance_critical(current_function):
+            self._finalize_function(current_function, functions, line_number)
+
+        func_name = stripped.split("(")[0].replace("def ", "").strip()
+        return {
+            "name": func_name,
+            "signature": stripped,
+            "start_line": line_number + 1,
+            "body": "",
+            "indent_level": indent,
+        }
+
+    def _handle_function_body_line(
+        self,
+        current_function: dict[str, t.Any],
+        functions: list[dict[str, t.Any]],
+        line: str,
+        stripped: str,
+        indent: int,
+        line_number: int,
+    ) -> dict[str, t.Any] | None:
+        """Handle a line within a function body."""
+        # Check if we're still inside the function
+        if self._is_still_in_function(current_function, indent, stripped):
+            current_function["body"] += line + "\n"
+            return current_function
+        else:
+            # Function ended - check if performance-critical
+            if self._is_performance_critical(current_function):
+                self._finalize_function(current_function, functions, line_number)
+            return None
+
+    def _is_still_in_function(
+        self, current_function: dict[str, t.Any], indent: int, stripped: str
+    ) -> bool:
+        """Check if we're still inside the current function."""
+        return indent > current_function["indent_level"] or (
+            indent == current_function["indent_level"]
+            and stripped.startswith(('"', "'", "@"))
+        )
+
+    def _finalize_function(
+        self,
+        function: dict[str, t.Any],
+        functions: list[dict[str, t.Any]],
+        end_line: int,
+    ) -> None:
+        """Finalize a function and add it to the results."""
+        function["end_line"] = end_line
+        function["body_sample"] = function["body"][:300]
+        function["estimated_complexity"] = self._estimate_complexity(function["body"])
+        functions.append(function)
+
+    def _handle_last_function(
+        self,
+        current_function: dict[str, t.Any] | None,
+        functions: list[dict[str, t.Any]],
+        total_lines: int,
+    ) -> None:
+        """Handle the last function in the file."""
+        if current_function and self._is_performance_critical(current_function):
+            self._finalize_function(current_function, functions, total_lines)
+
+    def _is_performance_critical(self, function_info: dict[str, t.Any]) -> bool:
+        """Determine if a function is likely performance-critical."""
+        body = function_info.get("body", "")
+        name = function_info.get("name", "")
+
+        # Check for performance indicators
+        performance_indicators = [
+            "for " in body
+            and len([line for line in body.split("\n") if "for " in line])
+            > 1,  # Multiple loops
+            "while " in body,  # While loops
+            body.count("for ") > 0 and len(body) > 200,  # Long function with loops
+            any(
+                pattern in body for pattern in (".append(", "+=", ".extend(", "len(")
+            ),  # List operations
+            any(
+                pattern in name
+                for pattern in (
+                    "process",
+                    "analyze",
+                    "compute",
+                    "calculate",
+                    "optimize",
+                )
+            ),  # Performance-related names
+            "range(" in body
+            and ("1000" in body or "len(" in body),  # Large ranges or length operations
+        ]
+
+        return any(performance_indicators)
+
+    def _estimate_complexity(self, body: str) -> int:
+        """Estimate the computational complexity of a function body."""
+        complexity = 1
+
+        # Count nested structures
+        nested_for_loops = 0
+        for_depth = 0
+        lines = body.split("\n")
+
+        for line in lines:
+            stripped = line.strip()
+            if "for " in stripped:
+                for_depth += 1
+                nested_for_loops = max(nested_for_loops, for_depth)
+            elif (
+                stripped
+                and not stripped.startswith("#")
+                and len(line) - len(line.lstrip()) == 0
+            ):
+                for_depth = 0  # Reset at function/class level
+
+        # Estimate complexity based on nested loops and other factors
+        complexity = max(complexity, nested_for_loops)
+
+        # Add complexity for other expensive operations
+        if ".sort(" in body or "sorted(" in body:
+            complexity += 1
+        if body.count("len(") > 5:  # Many length operations
+            complexity += 1
+        if ".index(" in body or ".find(" in body:  # Linear search operations
+            complexity += 1
+
+        return complexity
+
+    def _analyze_performance_patterns(
+        self, insight: SemanticInsight, current_func: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
+        """Analyze semantic patterns for performance insights."""
+        analysis: dict[str, t.Any] = {
+            "issues_found": False,
+            "optimization_suggestion": "Consider reviewing similar implementations for consistency",
+            "pattern_insights": [],
+        }
+
+        if insight.high_confidence_matches > 0:
+            analysis["issues_found"] = True
+            analysis["pattern_insights"].append(
+                f"Found {insight.high_confidence_matches} highly similar implementations"
+            )
+
+            # Analyze the patterns for common performance issues
+            performance_concerns = []
+            for pattern in insight.related_patterns:
+                content = pattern.get("content", "").lower()
+                if any(
+                    concern in content for concern in ("for", "while", "+=", "append")
+                ):
+                    performance_concerns.append(pattern["file_path"])
+
+            if performance_concerns:
+                analysis["optimization_suggestion"] = (
+                    f"Performance review needed: {len(performance_concerns)} similar functions "
+                    f"may benefit from the same optimization approach"
+                )
+                analysis["pattern_insights"].append(
+                    f"Similar performance patterns found in: {', '.join(list(set(performance_concerns))[:3])}"
+                )
+
+        return analysis
+
+    async def _generate_enhanced_recommendations(
+        self, issues: list[dict[str, t.Any]]
+    ) -> list[str]:
+        """Generate enhanced recommendations including semantic insights."""
+        recommendations = ["Test performance improvements with benchmarks"]
+
+        # Add semantic insights
+        semantic_issues = [
+            issue for issue in issues if issue["type"] == "semantic_performance_pattern"
+        ]
+        if semantic_issues:
+            recommendations.append(
+                f"Semantic analysis found {len(semantic_issues)} similar performance patterns "
+                "across codebase - consider applying optimizations consistently"
+            )
+
+            # Store insights for session continuity
+            for issue in semantic_issues:
+                if "semantic_insight" in issue:
+                    await self.semantic_enhancer.store_insight_to_session(
+                        issue["semantic_insight"], "PerformanceAgent"
+                    )
+
+        # Enhance with session-stored insights
+        recommendations = await get_session_enhanced_recommendations(
+            recommendations, "PerformanceAgent", self.context.project_path
+        )
+
+        # Add insights from stored semantic analysis
+        for func_name, insight in self.semantic_insights.items():
+            if insight.high_confidence_matches > 0:
+                enhanced_recs = self.semantic_enhancer.enhance_recommendations(
+                    [],  # Start with empty list to get just semantic recommendations
+                    insight,
+                )
+                recommendations.extend(enhanced_recs)
+
+                # Log semantic context for debugging
+                summary = self.semantic_enhancer.get_semantic_context_summary(insight)
+                self.log(f"Performance semantic context for {func_name}: {summary}")
+
+        return recommendations
 
 
 agent_registry.register(PerformanceAgent)

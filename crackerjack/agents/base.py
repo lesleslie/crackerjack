@@ -28,6 +28,7 @@ class IssueType(Enum):
     TEST_ORGANIZATION = "test_organization"
     COVERAGE_IMPROVEMENT = "coverage_improvement"
     REGEX_VALIDATION = "regex_validation"
+    SEMANTIC_CONTEXT = "semantic_context"
 
 
 @dataclass

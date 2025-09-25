@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "crackerjack": {
+      "command": "python",
+      "args": [
+        "-m",
+        "crackerjack",
+        "--start-mcp-server"
+      ],
+      "env": {
+        "UV_KEYRING_PROVIDER": "subprocess",
+        "EDITOR": "code --wait"
+      }
+    }
+  }
+}

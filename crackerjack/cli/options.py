@@ -137,6 +137,12 @@ class Options(BaseModel):
     quick: bool = False
     thorough: bool = False
     clear_cache: bool = False
+
+    # Semantic search options
+    index: str | None = None
+    search: str | None = None
+    semantic_stats: bool = False
+    remove_from_index: str | None = None
     cache_stats: bool = False
 
     # Semantic field names (new primary interface)
@@ -923,6 +929,27 @@ CLI_OPTIONS = {
         False,
         "--refresh-cache",
         help="Refresh pre-commit cache to ensure fresh environment.",
+    ),
+    # Semantic search options
+    "index": typer.Option(
+        None,
+        "--index",
+        help="Index a file or directory for semantic search (e.g., --index path/to/file.py).",
+    ),
+    "search": typer.Option(
+        None,
+        "--search",
+        help="Perform semantic search across indexed files (e.g., --search 'similarity calculation').",
+    ),
+    "semantic_stats": typer.Option(
+        False,
+        "--semantic-stats",
+        help="Display statistics about the semantic search index.",
+    ),
+    "remove_from_index": typer.Option(
+        None,
+        "--remove-from-index",
+        help="Remove a file from the semantic search index (e.g., --remove-from-index path/to/file.py).",
     ),
 }
 

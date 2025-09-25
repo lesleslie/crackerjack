@@ -7,6 +7,7 @@ from . import (
     performance_agent,
     refactoring_agent,
     security_agent,
+    semantic_agent,
     test_creation_agent,
     test_specialist_agent,
 )
@@ -33,6 +34,7 @@ __all__ = [
     "refactoring_agent",
     "reset_agent_tracker",
     "security_agent",
+    "semantic_agent",
     "test_creation_agent",
     "test_specialist_agent",
 ]

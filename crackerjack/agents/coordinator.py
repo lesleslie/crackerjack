@@ -455,7 +455,7 @@ class AgentCoordinator:
             self.logger.info(
                 f"Created architectural plan: {plan.get('strategy', 'unknown')}"
             )
-            return plan  # type: ignore[no-any-return]
+            return plan
 
         except Exception as e:
             self.logger.exception(f"Failed to create architectural plan: {e}")

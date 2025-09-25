@@ -69,7 +69,7 @@ class ProactiveWorkflowPipeline:
         )
 
     async def _identify_potential_issues(self) -> list[Issue]:
-        potential_issues = []
+        potential_issues: list[Issue] = []
 
         potential_issues.extend(
             (

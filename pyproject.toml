@@ -37,6 +37,8 @@ dependencies = [
     "jinja2>=3.1",
     "keyring>=25.6",
     "mcp>=1.12.2",
+    "nltk>=3.9.1",
+    "numpy>=2.2.1",
     "pre-commit>=4.2",
     "pydantic>=2.11.7",
     "pyleak>=0.1.14",
@@ -53,8 +55,11 @@ dependencies = [
     "pyyaml>=6.0.2",
     "refurb>=2.1",
     "rich>=14.1",
+    "scikit-learn>=1.6.1",
     "scipy>=1.14.0",
     "ruff>=0.12.9",
+    "onnxruntime>=1.19.0",
+    "transformers>=4.21.0",
     "structlog>=24.4",
     "textual>=0.89",
     "tomli-w>=1.2",
@@ -316,6 +321,11 @@ exclude-deps = [
     "types-pyyaml",
     "types-psutil",
     "types-aiofiles",
+    "onnxruntime",
+    "transformers",
+    "scikit-learn",
+    "numpy",
+    "nltk",
 ]
 
 [tool.refurb]
@@ -374,15 +384,6 @@ exclude_patterns = [
 ]
 max_complexity = 15
 
-[tool.mypy]
-python_version = "3.13"
-strict = true
-ignore_missing_imports = true
-show_error_codes = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-
 [tool.zuban]
 strict = true
 show_error_codes = true
@@ -398,3 +399,6 @@ real_time_feedback = true
 dev = [
     "crackerjack",
 ]
+
+
+

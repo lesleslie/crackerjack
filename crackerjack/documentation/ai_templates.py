@@ -523,7 +523,7 @@ class AITemplateEngine:
         command_pattern = SAFE_PATTERNS[
             "extract_bash_command_blocks"
         ]._get_compiled_pattern()
-        return command_pattern.sub(enhance_command_block, content)  # type: ignore[no-any-return]
+        return command_pattern.sub(enhance_command_block, content)
 
     def _optimize_for_step_by_step(self, content: str, context: TemplateContext) -> str:
         """Optimize content for step-by-step processing.
