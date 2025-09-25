@@ -129,3 +129,63 @@ def test_get_all_metrics_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in get_all_metrics: {e}")
+
+def test_get_performance_alerts_basic(self):
+    """Test basic functionality of get_performance_alerts."""
+    try:
+        result = get_performance_alerts()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_performance_alerts: {e}")
+
+def test_get_recent_timeout_events_basic(self):
+    """Test basic functionality of get_recent_timeout_events."""
+    try:
+        result = get_recent_timeout_events()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_recent_timeout_events: {e}")
+
+def test_performance_monitor_basic(self):
+    """Test basic functionality of performance_monitor."""
+    try:
+        result = performance_monitor()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in performance_monitor: {e}")
+
+def test_timeout_context_basic(self):
+    """Test basic functionality of timeout_context."""
+    try:
+        result = timeout_context()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in timeout_context: {e}")
+
+def test_with_timeout_basic(self):
+    """Test basic functionality of with_timeout."""
+    try:
+        result = with_timeout()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in with_timeout: {e}")

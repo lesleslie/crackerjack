@@ -104,7 +104,7 @@ class ClaudeCodeBridge:
         self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
         """Generate structured consultation response from agent expertise."""
-        consultation = {
+        consultation: dict[str, t.Any] = {
             "status": "success",
             "agent": agent_name,
             "issue_type": issue.type.value,

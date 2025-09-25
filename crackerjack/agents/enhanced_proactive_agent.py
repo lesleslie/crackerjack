@@ -172,7 +172,7 @@ def enhance_agent_with_claude_code_bridge(
     while preserving the original agent's logic.
     """
 
-    class EnhancedAgent(EnhancedProactiveAgent, agent_class):  # type: ignore[misc]
+    class EnhancedAgent(EnhancedProactiveAgent, agent_class):  # type: ignore[misc,valid-type]
         def __init__(self, context: AgentContext) -> None:
             # Initialize both parent classes
             EnhancedProactiveAgent.__init__(self, context)
@@ -182,4 +182,4 @@ def enhance_agent_with_claude_code_bridge(
     EnhancedAgent.__name__ = f"Enhanced{agent_class.__name__}"
     EnhancedAgent.__qualname__ = f"Enhanced{agent_class.__qualname__}"
 
-    return EnhancedAgent  # type: ignore[return-value]
+    return EnhancedAgent
