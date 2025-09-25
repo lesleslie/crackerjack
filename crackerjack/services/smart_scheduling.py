@@ -109,7 +109,7 @@ class SmartSchedulingService:
     def _has_recent_activity(self) -> bool:
         try:
             result = subprocess.run(
-                ["git", "log", "- 1", "--since=24.hours", "--oneline"],
+                ["git", "log", "-1", "--since=24.hours", "--oneline"],
                 cwd=self.project_path,
                 capture_output=True,
                 text=True,

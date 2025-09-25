@@ -50,6 +50,14 @@ class ClaudeCodeBridge:
         # Check if we have relevant external agents for this issue type
         return issue.type in CLAUDE_CODE_AGENT_MAPPING
 
+    def _get_agent_mapping(self) -> dict[t.Any, list[str]]:
+        """Get the agent mapping for external access."""
+        return CLAUDE_CODE_AGENT_MAPPING
+
+    def _get_consultation_threshold(self) -> float:
+        """Get the consultation threshold for external access."""
+        return EXTERNAL_CONSULTATION_THRESHOLD
+
     def get_recommended_external_agents(self, issue: Issue) -> list[str]:
         """Get list of recommended external agents for an issue."""
         return CLAUDE_CODE_AGENT_MAPPING.get(issue.type, [])

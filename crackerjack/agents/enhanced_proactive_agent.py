@@ -80,7 +80,9 @@ class EnhancedProactiveAgent(ProactiveAgent):
         # 2. Issue is complex and requires specialized expertise
         # 3. Plan strategy indicates external specialist guidance
         return (
-            self.claude_bridge.should_consult_external_agent(issue, internal_result.confidence)
+            self.claude_bridge.should_consult_external_agent(
+                issue, internal_result.confidence
+            )
             or plan.get("strategy") == "external_specialist_guided"
             or not internal_result.success
         )
@@ -116,8 +118,9 @@ class EnhancedProactiveAgent(ProactiveAgent):
         )
 
         # Add metadata about external consultation
-        enhanced_result.recommendations.insert(0,
-            f"Enhanced with consultation from {len(external_consultations)} Claude Code agents"
+        enhanced_result.recommendations.insert(
+            0,
+            f"Enhanced with consultation from {len(external_consultations)} Claude Code agents",
         )
 
         return enhanced_result
@@ -158,7 +161,9 @@ class EnhancedProactiveAgent(ProactiveAgent):
 
 
 # Convenience function to enhance existing agents
-def enhance_agent_with_claude_code_bridge(agent_class: type[ProactiveAgent]) -> type[EnhancedProactiveAgent]:
+def enhance_agent_with_claude_code_bridge(
+    agent_class: type[ProactiveAgent],
+) -> type[EnhancedProactiveAgent]:
     """
     Enhance an existing ProactiveAgent class with Claude Code external consultation.
 
@@ -167,7 +172,7 @@ def enhance_agent_with_claude_code_bridge(agent_class: type[ProactiveAgent]) -> 
     while preserving the original agent's logic.
     """
 
-    class EnhancedAgent(EnhancedProactiveAgent, agent_class):
+    class EnhancedAgent(EnhancedProactiveAgent, agent_class):  # type: ignore[misc]
         def __init__(self, context: AgentContext) -> None:
             # Initialize both parent classes
             EnhancedProactiveAgent.__init__(self, context)
@@ -177,4 +182,4 @@ def enhance_agent_with_claude_code_bridge(agent_class: type[ProactiveAgent]) -> 
     EnhancedAgent.__name__ = f"Enhanced{agent_class.__name__}"
     EnhancedAgent.__qualname__ = f"Enhanced{agent_class.__qualname__}"
 
-    return EnhancedAgent
+    return EnhancedAgent  # type: ignore[return-value]

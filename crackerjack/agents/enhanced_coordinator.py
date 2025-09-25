@@ -6,9 +6,7 @@ Claude Code's external agents while maintaining full compatibility with
 the existing crackerjack agent system.
 """
 
-import logging
 import typing as t
-from pathlib import Path
 
 from .base import AgentContext, FixResult, Issue
 from .claude_code_bridge import ClaudeCodeBridge
@@ -28,7 +26,7 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         self,
         context: AgentContext,
         cache: t.Any = None,
-        enable_external_agents: bool = True
+        enable_external_agents: bool = True,
     ) -> None:
         super().__init__(context, cache)
         self.claude_bridge = ClaudeCodeBridge(context)
@@ -39,7 +37,9 @@ class EnhancedAgentCoordinator(AgentCoordinator):
             "improvements_achieved": 0,
         }
 
-        self.logger.info(f"Enhanced coordinator initialized with external agents: {enable_external_agents}")
+        self.logger.info(
+            f"Enhanced coordinator initialized with external agents: {enable_external_agents}"
+        )
 
     def enable_external_agents(self, enabled: bool = True) -> None:
         """Enable or disable external Claude Code agent consultation."""
@@ -94,15 +94,16 @@ class EnhancedAgentCoordinator(AgentCoordinator):
 
     async def _pre_consult_for_strategy(self, issues: list[Issue]) -> dict[str, t.Any]:
         """Pre-consult with external agents for strategic guidance."""
-        strategic_consultations = {
+        strategic_consultations: dict[str, t.Any] = {
             "crackerjack_architect_guidance": None,
             "specialist_recommendations": {},
-            "coordination_strategy": "internal_first"
+            "coordination_strategy": "internal_first",
         }
 
         # Identify complex issues that need architectural guidance
         complex_issues = [
-            issue for issue in issues
+            issue
+            for issue in issues
             if self.claude_bridge.should_consult_external_agent(issue, 0.0)
         ]
 
@@ -116,11 +117,15 @@ class EnhancedAgentCoordinator(AgentCoordinator):
             # Use the first complex issue as representative for strategic planning
             primary_issue = complex_issues[0]
             architect_consultation = await self.claude_bridge.consult_external_agent(
-                primary_issue, "crackerjack-architect", {"context": "strategic_planning"}
+                primary_issue,
+                "crackerjack-architect",
+                {"context": "strategic_planning"},
             )
 
             if architect_consultation.get("status") == "success":
-                strategic_consultations["crackerjack_architect_guidance"] = architect_consultation
+                strategic_consultations["crackerjack_architect_guidance"] = (
+                    architect_consultation
+                )
                 strategic_consultations["coordination_strategy"] = "architect_guided"
                 self._external_consultation_stats["consultations_successful"] += 1
 
@@ -134,12 +139,16 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         base_plan = await self._create_architectural_plan(issues)
 
         # Enhance with external guidance if available
-        architect_guidance = strategic_consultations.get("crackerjack_architect_guidance")
+        architect_guidance = strategic_consultations.get(
+            "crackerjack_architect_guidance"
+        )
         if architect_guidance and architect_guidance.get("status") == "success":
             # Integrate external architectural guidance
             base_plan["external_guidance"] = architect_guidance
             base_plan["enhanced_patterns"] = architect_guidance.get("patterns", [])
-            base_plan["external_validation"] = architect_guidance.get("validation_steps", [])
+            base_plan["external_validation"] = architect_guidance.get(
+                "validation_steps", []
+            )
 
             # Update strategy based on external guidance
             if "strategy" in architect_guidance:
@@ -151,7 +160,7 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         self,
         issues: list[Issue],
         plan: dict[str, t.Any],
-        strategic_consultations: dict[str, t.Any]
+        strategic_consultations: dict[str, t.Any],
     ) -> FixResult:
         """Apply fixes using enhanced strategy with external guidance."""
         # Use the base implementation but with enhanced plan
@@ -167,13 +176,16 @@ class EnhancedAgentCoordinator(AgentCoordinator):
             return result
 
         # Add validation recommendations from external agents
-        validation_recommendations = []
-        for validation_step in external_validation:
-            validation_recommendations.append(f"External validation: {validation_step}")
+        validation_recommendations = [
+            f"External validation: {validation_step}"
+            for validation_step in external_validation
+        ]
 
         enhanced_result = FixResult(
             success=result.success,
-            confidence=min(result.confidence + 0.1, 1.0),  # Slight confidence boost for external validation
+            confidence=min(
+                result.confidence + 0.1, 1.0
+            ),  # Slight confidence boost for external validation
             fixes_applied=result.fixes_applied.copy(),
             remaining_issues=result.remaining_issues.copy(),
             recommendations=result.recommendations + validation_recommendations,
@@ -198,12 +210,15 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         internal_result = await super()._handle_with_single_agent(agent, issue)
 
         # If the agent is proactive and has external consultation capability, enhance it
-        if (hasattr(agent, 'claude_bridge') and
-            self.external_agents_enabled and
-            not internal_result.success):
-
+        if (
+            hasattr(agent, "claude_bridge")
+            and self.external_agents_enabled
+            and not internal_result.success
+        ):
             # Try external consultation for failed fixes
-            recommended_agents = self.claude_bridge.get_recommended_external_agents(issue)
+            recommended_agents = self.claude_bridge.get_recommended_external_agents(
+                issue
+            )
             if recommended_agents:
                 self._external_consultation_stats["consultations_requested"] += 1
 
@@ -229,27 +244,28 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         enhanced_info = {
             "external_agents_enabled": self.external_agents_enabled,
             "available_external_agents": [
-                agent for agent in ["crackerjack-architect", "python-pro", "security-auditor",
-                                  "refactoring-specialist", "crackerjack-test-specialist"]
+                agent
+                for agent in (
+                    "crackerjack-architect",
+                    "python-pro",
+                    "security-auditor",
+                    "refactoring-specialist",
+                    "crackerjack-test-specialist",
+                )
                 if self.claude_bridge.verify_agent_availability(agent)
             ],
             "consultation_stats": self.get_external_consultation_stats(),
             "claude_code_bridge": {
-                "agent_mapping_coverage": len(self.claude_bridge.CLAUDE_CODE_AGENT_MAPPING),
-                "consultation_threshold": self.claude_bridge.EXTERNAL_CONSULTATION_THRESHOLD,
-            }
+                "agent_mapping_coverage": len(self.claude_bridge._get_agent_mapping()),
+                "consultation_threshold": self.claude_bridge._get_consultation_threshold(),
+            },
         }
 
-        return {
-            **base_capabilities,
-            "_enhanced_coordinator_info": enhanced_info
-        }
+        return base_capabilities | {"_enhanced_coordinator_info": enhanced_info}
 
 
 def create_enhanced_coordinator(
-    context: AgentContext,
-    cache: t.Any = None,
-    enable_external_agents: bool = True
+    context: AgentContext, cache: t.Any = None, enable_external_agents: bool = True
 ) -> EnhancedAgentCoordinator:
     """
     Factory function to create an enhanced coordinator.
@@ -259,7 +275,5 @@ def create_enhanced_coordinator(
     with existing code.
     """
     return EnhancedAgentCoordinator(
-        context=context,
-        cache=cache,
-        enable_external_agents=enable_external_agents
+        context=context, cache=cache, enable_external_agents=enable_external_agents
     )
