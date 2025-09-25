@@ -39,7 +39,9 @@ class ClaudeCodeBridge:
         self._agent_path = Path.home() / ".claude" / "agents"
         self._consultation_cache: dict[str, dict[str, t.Any]] = {}
 
-    def should_consult_external_agent(self, issue: Issue, internal_confidence: float) -> bool:
+    def should_consult_external_agent(
+        self, issue: Issue, internal_confidence: float
+    ) -> bool:
         """Determine if we should consult an external Claude Code agent."""
         # Only consult for complex issues that meet threshold
         if internal_confidence >= EXTERNAL_CONSULTATION_THRESHOLD:
@@ -58,10 +60,7 @@ class ClaudeCodeBridge:
         return agent_file.exists()
 
     async def consult_external_agent(
-        self,
-        issue: Issue,
-        agent_name: str,
-        context: dict[str, t.Any] | None = None
+        self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
         """
         Consult with a Claude Code external agent for expert guidance.
@@ -70,7 +69,9 @@ class ClaudeCodeBridge:
         but since we're within crackerjack's internal system, we'll simulate
         the consultation process and provide structured recommendations.
         """
-        cache_key = f"{agent_name}:{issue.type.value}:{issue.file_path}:{issue.line_number}"
+        cache_key = (
+            f"{agent_name}:{issue.type.value}:{issue.file_path}:{issue.line_number}"
+        )
 
         if cache_key in self._consultation_cache:
             self.logger.debug(f"Using cached consultation for {agent_name}")
@@ -81,7 +82,9 @@ class ClaudeCodeBridge:
             return {"status": "unavailable", "recommendations": []}
 
         # Generate consultation based on agent expertise and issue type
-        consultation = await self._generate_agent_consultation(issue, agent_name, context)
+        consultation = await self._generate_agent_consultation(
+            issue, agent_name, context
+        )
 
         # Cache successful consultations
         if consultation.get("status") == "success":
@@ -90,10 +93,7 @@ class ClaudeCodeBridge:
         return consultation
 
     async def _generate_agent_consultation(
-        self,
-        issue: Issue,
-        agent_name: str,
-        context: dict[str, t.Any] | None = None
+        self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
         """Generate structured consultation response from agent expertise."""
         consultation = {
@@ -108,17 +108,23 @@ class ClaudeCodeBridge:
 
         # Agent-specific consultation logic
         if agent_name == "crackerjack-architect":
-            consultation.update(await self._consult_crackerjack_architect(issue, context))
+            consultation.update(
+                await self._consult_crackerjack_architect(issue, context)
+            )
         elif agent_name == "python-pro":
             consultation.update(await self._consult_python_pro(issue, context))
         elif agent_name == "security-auditor":
             consultation.update(await self._consult_security_auditor(issue, context))
         elif agent_name == "refactoring-specialist":
-            consultation.update(await self._consult_refactoring_specialist(issue, context))
+            consultation.update(
+                await self._consult_refactoring_specialist(issue, context)
+            )
         elif agent_name == "crackerjack-test-specialist":
             consultation.update(await self._consult_test_specialist(issue, context))
         else:
-            consultation.update(await self._consult_generic_agent(issue, agent_name, context))
+            consultation.update(
+                await self._consult_generic_agent(issue, agent_name, context)
+            )
 
         return consultation
 
@@ -258,10 +264,7 @@ class ClaudeCodeBridge:
         }
 
     async def _consult_generic_agent(
-        self,
-        issue: Issue,
-        agent_name: str,
-        context: dict[str, t.Any] | None = None
+        self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
         """Generic consultation for unspecified agents."""
         return {
@@ -275,9 +278,7 @@ class ClaudeCodeBridge:
         }
 
     def create_enhanced_fix_result(
-        self,
-        base_result: FixResult,
-        consultations: list[dict[str, t.Any]]
+        self, base_result: FixResult, consultations: list[dict[str, t.Any]]
     ) -> FixResult:
         """Enhance a FixResult with external agent consultations."""
         enhanced_result = FixResult(
@@ -293,16 +294,18 @@ class ClaudeCodeBridge:
         for consultation in consultations:
             if consultation.get("status") == "success":
                 agent_name = consultation.get("agent", "unknown")
-                enhanced_result.recommendations.extend([
-                    f"[{agent_name}] {rec}"
-                    for rec in consultation.get("recommendations", [])
-                ])
+                enhanced_result.recommendations.extend(
+                    [
+                        f"[{agent_name}] {rec}"
+                        for rec in consultation.get("recommendations", [])
+                    ]
+                )
 
                 # Boost confidence if external agents provided guidance
                 external_confidence = consultation.get("confidence", 0.0)
                 enhanced_result.confidence = max(
                     enhanced_result.confidence,
-                    (enhanced_result.confidence + external_confidence) / 2
+                    (enhanced_result.confidence + external_confidence) / 2,
                 )
 
         return enhanced_result

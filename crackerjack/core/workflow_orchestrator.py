@@ -6,7 +6,7 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
-from crackerjack.agents.coordinator import AgentCoordinator
+from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
 from crackerjack.models.protocols import OptionsProtocol
 from crackerjack.services.debug import (
     AIAgentDebugger,
@@ -1033,7 +1033,7 @@ class WorkflowPipeline:
 
     async def _setup_ai_fixing_workflow(
         self,
-    ) -> tuple[AgentCoordinator, list[t.Any]]:
+    ) -> tuple[EnhancedAgentCoordinator, list[t.Any]]:
         agent_coordinator = self._setup_agent_coordinator()
         issues = await self._collect_issues_from_failures()
         return agent_coordinator, issues
@@ -1041,7 +1041,7 @@ class WorkflowPipeline:
     async def _execute_ai_fixes(
         self,
         options: OptionsProtocol,
-        agent_coordinator: AgentCoordinator,
+        agent_coordinator: EnhancedAgentCoordinator,
         issues: list[t.Any],
     ) -> bool:
         self.logger.info(f"AI agents will attempt to fix {len(issues)} issues")
@@ -1056,15 +1056,18 @@ class WorkflowPipeline:
                 details={"ai_agent": True},
             )
 
-    def _setup_agent_coordinator(self) -> AgentCoordinator:
-        from crackerjack.agents.coordinator import AgentCoordinator
+    def _setup_agent_coordinator(self) -> EnhancedAgentCoordinator:
+        from crackerjack.agents.enhanced_coordinator import create_enhanced_coordinator
 
         agent_context = AgentContext(
             project_path=self.pkg_path,
             session_id=getattr(self.session, "session_id", None),
         )
 
-        agent_coordinator = AgentCoordinator(agent_context)
+        # Use enhanced coordinator with Claude Code agent integration
+        agent_coordinator = create_enhanced_coordinator(
+            context=agent_context, enable_external_agents=True
+        )
         agent_coordinator.initialize_agents()
         return agent_coordinator
 

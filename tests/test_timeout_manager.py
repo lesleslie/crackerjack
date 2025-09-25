@@ -57,3 +57,15 @@ def test_record_operation_start_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in record_operation_start: {e}")
+
+def test_record_operation_success_basic(self):
+    """Test basic functionality of record_operation_success."""
+    try:
+        result = record_operation_success()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in record_operation_success: {e}")

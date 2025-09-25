@@ -573,10 +573,11 @@ class AsyncWorkflowPipeline:
 
     def _create_agent_coordinator(self) -> t.Any:
         from crackerjack.agents.base import AgentContext
-        from crackerjack.agents.coordinator import AgentCoordinator
+        from crackerjack.agents.enhanced_coordinator import create_enhanced_coordinator
 
         context = AgentContext(project_path=self.pkg_path)
-        return AgentCoordinator(context)
+        # Use enhanced coordinator with Claude Code agent integration
+        return create_enhanced_coordinator(context=context, enable_external_agents=True)
 
     def _report_fix_results(self, fix_result: FixResult, iteration: int) -> None:
         if fix_result.success:
