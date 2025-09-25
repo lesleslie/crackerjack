@@ -450,12 +450,15 @@ class AgentCoordinator:
 
         try:
             plan = await architect.plan_before_action(primary_issue)
-            plan = self._enrich_architectural_plan(plan, all_issues)
+            # Ensure plan is properly typed as dict[str, Any]
+            if not isinstance(plan, dict):
+                plan = {"strategy": "default", "confidence": 0.5}
+            enriched_plan = self._enrich_architectural_plan(plan, all_issues)
 
             self.logger.info(
-                f"Created architectural plan: {plan.get('strategy', 'unknown')}"
+                f"Created architectural plan: {enriched_plan.get('strategy', 'unknown')}"
             )
-            return plan
+            return enriched_plan
 
         except Exception as e:
             self.logger.exception(f"Failed to create architectural plan: {e}")

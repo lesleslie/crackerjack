@@ -1047,17 +1047,10 @@ def _handle_mkdocs_integration(
         return False
 
 
-def _create_mkdocs_services() -> dict[str, t.Any]:
-    """Create and configure MkDocs services."""
-    from logging import getLogger
+def _create_sync_filesystem_service() -> t.Any:
+    """Create filesystem service that matches FileSystemServiceProtocol."""
     from pathlib import Path
 
-    from crackerjack.documentation.mkdocs_integration import (
-        MkDocsIntegrationService,
-        MkDocsSiteBuilder,
-    )
-
-    # Create filesystem service that matches FileSystemServiceProtocol
     class SyncFileSystemService:
         def read_file(self, path: str | Path) -> str:
             return Path(path).read_text()
@@ -1074,7 +1067,12 @@ def _create_mkdocs_services() -> dict[str, t.Any]:
         def ensure_directory(self, path: str | Path) -> None:
             Path(path).mkdir(parents=True, exist_ok=True)
 
-    # Create config manager that implements ConfigManagerProtocol
+    return SyncFileSystemService()
+
+
+def _create_config_manager() -> t.Any:
+    """Create config manager that implements ConfigManagerProtocol."""
+
     class ConfigManager:
         def __init__(self) -> None:
             self._config: dict[str, t.Any] = {}
@@ -1091,11 +1089,12 @@ def _create_mkdocs_services() -> dict[str, t.Any]:
         def load(self) -> bool:
             return True
 
-    filesystem = SyncFileSystemService()
-    config_manager = ConfigManager()
-    logger = getLogger(__name__)
+    return ConfigManager()
 
-    # Create logger adapter for protocol compatibility
+
+def _create_logger_adapter(logger: t.Any) -> t.Any:
+    """Create logger adapter for protocol compatibility."""
+
     class LoggerAdapter:
         def __init__(self, logger: t.Any) -> None:
             self._logger = logger
@@ -1112,8 +1111,26 @@ def _create_mkdocs_services() -> dict[str, t.Any]:
         def error(self, message: str, **kwargs: t.Any) -> None:
             self._logger.error(message)
 
-    logger_adapter = LoggerAdapter(logger)
-    integration_service = MkDocsIntegrationService(config_manager, filesystem, logger_adapter)
+    return LoggerAdapter(logger)
+
+
+def _create_mkdocs_services() -> dict[str, t.Any]:
+    """Create and configure MkDocs services."""
+    from logging import getLogger
+
+    from crackerjack.documentation.mkdocs_integration import (
+        MkDocsIntegrationService,
+        MkDocsSiteBuilder,
+    )
+
+    filesystem = _create_sync_filesystem_service()
+    config_manager = _create_config_manager()
+    logger = getLogger(__name__)
+    logger_adapter = _create_logger_adapter(logger)
+
+    integration_service = MkDocsIntegrationService(
+        config_manager, filesystem, logger_adapter
+    )
     builder = MkDocsSiteBuilder(integration_service)
 
     return {"builder": builder, "filesystem": filesystem, "config": config_manager}

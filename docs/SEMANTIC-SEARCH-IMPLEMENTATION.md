@@ -9,22 +9,26 @@ This document outlines the implementation of a semantic search and vector embedd
 ### Core Components
 
 1. **Vector Store Service** (`crackerjack/services/vector_store.py`)
+
    - File content embedding generation
    - Similarity search functionality
    - Incremental indexing with file watching
    - Cache management and persistence
 
-2. **Semantic Search Agent** (new 10th agent: `crackerjack/agents/semantic_search_agent.py`)
+1. **Semantic Search Agent** (new 10th agent: `crackerjack/agents/semantic_search_agent.py`)
+
    - Context-aware code pattern finding
    - Related file discovery
    - Documentation search and correlation
 
-3. **MCP Integration** (`crackerjack/mcp/tools/semantic_tools.py`)
+1. **MCP Integration** (`crackerjack/mcp/tools/semantic_tools.py`)
+
    - `semantic_search_codebase` tool
    - `index_project_files` tool
    - `get_semantic_stats` tool
 
-4. **Enhanced AI Agent Integration**
+1. **Enhanced AI Agent Integration**
+
    - Modify existing 9 agents to leverage semantic search
    - Context injection for better fixing decisions
    - Pattern recognition across similar codebases
@@ -34,12 +38,14 @@ This document outlines the implementation of a semantic search and vector embedd
 ### Phase 1: Core Vector Store Infrastructure (Week 1)
 
 **Files to Create:**
+
 - `crackerjack/services/vector_store.py` - Main vector store service
 - `crackerjack/services/embeddings.py` - Embedding generation (sentence-transformers)
 - `crackerjack/models/semantic_models.py` - Data models for search results
 - `tests/test_vector_store.py` - Comprehensive test suite
 
 **Features:**
+
 - File content chunking and embedding
 - SQLite/JSON persistence for embeddings
 - Incremental file indexing
@@ -48,10 +54,12 @@ This document outlines the implementation of a semantic search and vector embedd
 ### Phase 2: MCP Tool Integration (Week 2)
 
 **Files to Create:**
+
 - `crackerjack/mcp/tools/semantic_tools.py` - MCP semantic search tools
 - `crackerjack/cli/semantic_commands.py` - CLI commands for indexing/search
 
 **Features:**
+
 - `/crackerjack:index` - Create/update semantic index
 - `/crackerjack:search` - Semantic search across codebase
 - Integration with existing MCP server architecture
@@ -59,15 +67,18 @@ This document outlines the implementation of a semantic search and vector embedd
 ### Phase 3: AI Agent Enhancement (Week 3)
 
 **Files to Modify:**
+
 - All 9 existing agents in `crackerjack/agents/`
 - `crackerjack/intelligence/agent_orchestrator.py`
 - `crackerjack/intelligence/agent_selector.py`
 
 **Files to Create:**
+
 - `crackerjack/agents/semantic_search_agent.py` - New 10th agent
 - `crackerjack/intelligence/semantic_context.py` - Context injection system
 
 **Features:**
+
 - Semantic context for refactoring decisions
 - Related test file discovery
 - Pattern-based security vulnerability detection
@@ -76,10 +87,12 @@ This document outlines the implementation of a semantic search and vector embedd
 ### Phase 4: Session Management Integration (Week 4)
 
 **Files to Modify:**
+
 - Session-mgmt integration for conversation indexing
 - Quality intelligence with semantic pattern recognition
 
 **Features:**
+
 - Index previous conversation patterns
 - Learn from semantic fix patterns
 - Cross-session knowledge retention
@@ -89,6 +102,7 @@ This document outlines the implementation of a semantic search and vector embedd
 ### Dependencies
 
 **New Dependencies (add to pyproject.toml):**
+
 ```toml
 "sentence-transformers>=3.3.1",  # For embeddings
 "numpy>=2.2.1",                  # Vector operations
@@ -99,6 +113,7 @@ This document outlines the implementation of a semantic search and vector embedd
 ### CLI Interface
 
 **New Commands:**
+
 ```bash
 # Index entire codebase
 python -m crackerjack --index-codebase
@@ -117,6 +132,7 @@ python -m crackerjack --clear-semantic-cache
 ### File Structure Changes
 
 **New Directories:**
+
 ```
 crackerjack/
 ├── services/
@@ -136,14 +152,17 @@ crackerjack/
 ### 1. Existing AI Agents Enhancement
 
 **RefactoringAgent:**
+
 - Find similar code patterns before refactoring
 - Suggest consistent naming across codebase
 
 **SecurityAgent:**
+
 - Detect similar security patterns across files
 - Find related vulnerabilities
 
 **TestCreationAgent:**
+
 - Discover related test files and patterns
 - Suggest test cases based on similar functions
 
@@ -164,9 +183,9 @@ crackerjack/
 ### Efficiency Measures
 
 1. **Incremental Indexing**: Only re-index changed files
-2. **Lazy Loading**: Load embeddings on-demand
-3. **Caching Strategy**: Cache frequent searches
-4. **Batch Processing**: Bulk operations for initial indexing
+1. **Lazy Loading**: Load embeddings on-demand
+1. **Caching Strategy**: Cache frequent searches
+1. **Batch Processing**: Bulk operations for initial indexing
 
 ### Resource Management
 
@@ -179,9 +198,9 @@ crackerjack/
 ### Test Coverage Areas
 
 1. **Unit Tests**: Vector store operations, embedding generation
-2. **Integration Tests**: MCP tool functionality, agent enhancements
-3. **Performance Tests**: Large codebase indexing, search speed
-4. **End-to-End Tests**: Full workflow with semantic context
+1. **Integration Tests**: MCP tool functionality, agent enhancements
+1. **Performance Tests**: Large codebase indexing, search speed
+1. **End-to-End Tests**: Full workflow with semantic context
 
 ### Test Data
 
@@ -209,16 +228,16 @@ crackerjack/
 ### Quantitative Metrics
 
 1. **Search Accuracy**: >85% relevant results in top 5
-2. **Index Performance**: <1 minute for 10k files
-3. **Memory Usage**: <200MB for typical project
-4. **Agent Enhancement**: 20% reduction in fix iterations
+1. **Index Performance**: \<1 minute for 10k files
+1. **Memory Usage**: \<200MB for typical project
+1. **Agent Enhancement**: 20% reduction in fix iterations
 
 ### Qualitative Metrics
 
 1. **Developer Experience**: Easier pattern discovery
-2. **Code Quality**: Better context-aware fixes
-3. **Documentation**: Improved correlation and updates
-4. **Learning**: Cross-session knowledge retention
+1. **Code Quality**: Better context-aware fixes
+1. **Documentation**: Improved correlation and updates
+1. **Learning**: Cross-session knowledge retention
 
 ## Risk Mitigation
 
@@ -248,9 +267,9 @@ crackerjack/
 ### Advanced Features (Post-MVP)
 
 1. **Multi-language Support**: Different embeddings for different file types
-2. **Semantic Code Metrics**: Complexity scoring based on semantic similarity
-3. **Cross-Project Learning**: Pattern recognition across multiple projects
-4. **Visual Search Interface**: Web UI for exploring semantic relationships
+1. **Semantic Code Metrics**: Complexity scoring based on semantic similarity
+1. **Cross-Project Learning**: Pattern recognition across multiple projects
+1. **Visual Search Interface**: Web UI for exploring semantic relationships
 
 This implementation will position crackerjack as not just a quality tool, but an intelligent development assistant that understands and learns from codebases.
 

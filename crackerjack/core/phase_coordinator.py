@@ -626,7 +626,7 @@ class PhaseCoordinator(ErrorHandlingMixin):
         return 2 if hook_type == "fast" else 1
 
     def _has_hook_failures(self, summary: dict[str, t.Any]) -> bool:
-        return summary["failed"] > 0 or summary["errors"] > 0
+        return t.cast(int, summary["failed"]) > 0 or t.cast(int, summary["errors"]) > 0
 
     def _should_retry_hooks(
         self,

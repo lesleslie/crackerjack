@@ -2,12 +2,32 @@
 
 import hashlib
 import logging
+
+# Suppress transformers framework warnings (we only use tokenizers, not models)
+import os
+import sys
 import typing as t
+import warnings
+from io import StringIO
 from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
-from transformers import AutoTokenizer
+
+# Temporarily redirect stderr to suppress transformers warnings
+_original_stderr = sys.stderr
+sys.stderr = StringIO()
+
+# Also set environment variable to suppress transformers warnings
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+
+try:
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        from transformers import AutoTokenizer
+finally:
+    # Restore original stderr
+    sys.stderr = _original_stderr
 
 from ..models.semantic_models import SemanticConfig
 
@@ -65,11 +85,17 @@ class EmbeddingService:
             self._session = None  # Placeholder - would load actual ONNX file
             self._model_loaded = True
 
-            logger.info(f"Successfully loaded tokenizer for: {self.config.embedding_model}")
-            logger.warning("ONNX session not implemented yet - using fallback embeddings")
+            logger.info(
+                f"Successfully loaded tokenizer for: {self.config.embedding_model}"
+            )
+            logger.warning(
+                "ONNX session not implemented yet - using fallback embeddings"
+            )
 
         except Exception as e:
-            logger.error(f"Failed to load embedding model {self.config.embedding_model}: {e}")
+            logger.error(
+                f"Failed to load embedding model {self.config.embedding_model}: {e}"
+            )
             self._session = None
             self._tokenizer = None
             self._model_loaded = True
@@ -110,8 +136,10 @@ class EmbeddingService:
 
         # Convert hex to numbers and normalize
         embedding = []
-        for i in range(0, min(len(text_hash), 96), 2):  # 96 hex chars = 48 bytes = 384 bits
-            hex_pair = text_hash[i:i+2]
+        for i in range(
+            0, min(len(text_hash), 96), 2
+        ):  # 96 hex chars = 48 bytes = 384 bits
+            hex_pair = text_hash[i : i + 2]
             value = int(hex_pair, 16) / 255.0  # Normalize to 0-1
             embedding.extend([value] * 8)  # Expand to 384 dimensions
 
@@ -168,7 +196,9 @@ class EmbeddingService:
             logger.error(f"Failed to generate batch embeddings: {e}")
             raise RuntimeError(f"Batch embedding generation failed: {e}") from e
 
-    def calculate_similarity(self, embedding1: list[float], embedding2: list[float]) -> float:
+    def calculate_similarity(
+        self, embedding1: list[float], embedding2: list[float]
+    ) -> float:
         """Calculate cosine similarity between two embeddings.
 
         Args:
@@ -186,7 +216,9 @@ class EmbeddingService:
             raise ValueError(msg)
 
         if len(embedding1) != len(embedding2):
-            msg = f"Embedding dimensions mismatch: {len(embedding1)} vs {len(embedding2)}"
+            msg = (
+                f"Embedding dimensions mismatch: {len(embedding1)} vs {len(embedding2)}"
+            )
             raise ValueError(msg)
 
         try:
@@ -199,7 +231,7 @@ class EmbeddingService:
             norm1 = np.linalg.norm(vec1)
             norm2 = np.linalg.norm(vec2)
 
-            if norm1 == 0 or norm2 == 0:
+            if 0 in (norm1, norm2):
                 return 0.0
 
             similarity = dot_product / (norm1 * norm2)
@@ -212,9 +244,7 @@ class EmbeddingService:
             raise RuntimeError(f"Similarity calculation failed: {e}") from e
 
     def calculate_similarities_batch(
-        self,
-        query_embedding: list[float],
-        embeddings: list[list[float]]
+        self, query_embedding: list[float], embeddings: list[list[float]]
     ) -> list[float]:
         """Calculate similarities between query and multiple embeddings efficiently.
 
@@ -324,7 +354,9 @@ class EmbeddingService:
                     chunks.append(current_chunk.strip())
 
                 # Start new chunk with overlap
-                overlap_text = "".join(overlap_sentences[-2:]) if overlap_sentences else ""
+                overlap_text = (
+                    "".join(overlap_sentences[-2:]) if overlap_sentences else ""
+                )
                 current_chunk = overlap_text + sentence
 
             overlap_sentences.append(sentence)
@@ -360,7 +392,7 @@ class EmbeddingService:
         if current_sentence.strip():
             sentences.append(current_sentence.strip())
 
-        return sentences if sentences else [text]
+        return sentences or [text]
 
     def is_model_available(self) -> bool:
         """Check if the embedding model is available and loaded.
@@ -388,7 +420,7 @@ class EmbeddingService:
                 "model_name": self.config.embedding_model,
                 "loaded": False,
                 "error": "Model not available",
-                "embedding_dimension": 384  # Fallback dimension
+                "embedding_dimension": 384,  # Fallback dimension
             }
 
         try:
@@ -399,11 +431,11 @@ class EmbeddingService:
                 "loaded": True,
                 "max_seq_length": "unknown",
                 "embedding_dimension": len(test_embedding),
-                "device": "cpu"
+                "device": "cpu",
             }
         except Exception as e:
             return {
                 "model_name": self.config.embedding_model,
                 "loaded": True,
-                "error": str(e)
+                "error": str(e),
             }

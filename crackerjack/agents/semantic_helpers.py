@@ -56,7 +56,7 @@ class SemanticEnhancer:
             chunk_overlap=50,
             max_search_results=10,
             similarity_threshold=0.7,
-            embedding_dimension=384
+            embedding_dimension=384,
         )
 
     def _get_vector_store(self) -> VectorStore:
@@ -105,14 +105,12 @@ class SemanticEnhancer:
             # Filter out results from current file if specified
             if current_file:
                 results = [
-                    result for result in results
-                    if result.file_path != current_file
+                    result for result in results if result.file_path != current_file
                 ]
 
             # Categorize results by confidence
             high_confidence = [
-                result for result in results
-                if result.similarity_score >= 0.8
+                result for result in results if result.similarity_score >= 0.8
             ]
 
             # Convert to pattern format
@@ -123,7 +121,9 @@ class SemanticEnhancer:
                     "similarity_score": result.similarity_score,
                     "lines": f"{result.start_line}-{result.end_line}",
                     "file_type": result.file_type,
-                    "confidence_level": "high" if result.similarity_score >= 0.8 else "medium",
+                    "confidence_level": "high"
+                    if result.similarity_score >= 0.8
+                    else "medium",
                 }
                 for result in results
             ]
@@ -246,15 +246,11 @@ class SemanticEnhancer:
             }
 
             if high_conf_files:
-                file_list = ", ".join(
-                    Path(f).name for f in sorted(high_conf_files)[:3]
-                )
+                file_list = ", ".join(Path(f).name for f in sorted(high_conf_files)[:3])
                 if len(high_conf_files) > 3:
                     file_list += f" (+{len(high_conf_files) - 3} more)"
 
-                enhanced.append(
-                    f"Similar implementations found in: {file_list}"
-                )
+                enhanced.append(f"Similar implementations found in: {file_list}")
 
         return enhanced
 
@@ -272,7 +268,8 @@ class SemanticEnhancer:
 
         high_conf_pct = (
             insight.high_confidence_matches / insight.total_matches * 100
-            if insight.total_matches > 0 else 0
+            if insight.total_matches > 0
+            else 0
         )
 
         return (
@@ -317,9 +314,7 @@ def create_semantic_enhancer(project_path: Path) -> SemanticEnhancer:
 
 
 async def get_session_enhanced_recommendations(
-    base_recommendations: list[str],
-    agent_type: str,
-    project_path: Path
+    base_recommendations: list[str], agent_type: str, project_path: Path
 ) -> list[str]:
     """Get enhanced recommendations based on session insights.
 
@@ -336,7 +331,8 @@ async def get_session_enhanced_recommendations(
 
         # Try to find stored insights for this agent type
         session_insights = [
-            insight for key, insight in enhancer._session_insights.items()
+            insight
+            for key, insight in enhancer._session_insights.items()
             if key.startswith(agent_type)
         ]
 

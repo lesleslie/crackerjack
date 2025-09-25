@@ -35,7 +35,7 @@ def handle_semantic_index(file_path: str) -> None:
             chunk_overlap=50,
             max_search_results=10,
             similarity_threshold=0.7,
-            embedding_dimension=384
+            embedding_dimension=384,
         )
 
         # Initialize vector store with persistent database
@@ -46,7 +46,9 @@ def handle_semantic_index(file_path: str) -> None:
         if path_obj.is_file():
             # Index single file
             embeddings = vector_store.index_file(path_obj)
-            console.print(f"[green]✅ Successfully indexed {len(embeddings)} chunks from {path_obj.name}[/green]")
+            console.print(
+                f"[green]✅ Successfully indexed {len(embeddings)} chunks from {path_obj.name}[/green]"
+            )
         else:
             # Index directory (recursively)
             total_files = 0
@@ -57,18 +59,28 @@ def handle_semantic_index(file_path: str) -> None:
                     embeddings = vector_store.index_file(file)
                     total_files += 1
                     total_chunks += len(embeddings)
-                    console.print(f"[dim]Indexed {len(embeddings)} chunks from {file.relative_to(path_obj)}[/dim]")
+                    console.print(
+                        f"[dim]Indexed {len(embeddings)} chunks from {file.relative_to(path_obj)}[/dim]"
+                    )
                 except Exception as e:
-                    console.print(f"[yellow]Warning:[/yellow] Failed to index {file}: {e}")
+                    console.print(
+                        f"[yellow]Warning:[/yellow] Failed to index {file}: {e}"
+                    )
 
-            console.print(f"[green]✅ Successfully indexed {total_files} files with {total_chunks} total chunks[/green]")
+            console.print(
+                f"[green]✅ Successfully indexed {total_files} files with {total_chunks} total chunks[/green]"
+            )
 
         # Show index stats
         stats = vector_store.get_stats()
-        console.print(f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks")
+        console.print(
+            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks"
+        )
 
     except Exception as e:
-        console.print(f"[red]Error indexing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}")
+        console.print(
+            f"[red]Error indexing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}"
+        )
 
 
 def handle_semantic_search(query: str) -> None:
@@ -87,7 +99,7 @@ def handle_semantic_search(query: str) -> None:
             chunk_overlap=50,
             max_search_results=10,
             similarity_threshold=0.7,
-            embedding_dimension=384
+            embedding_dimension=384,
         )
 
         # Create search query
@@ -104,7 +116,9 @@ def handle_semantic_search(query: str) -> None:
         results = vector_store.search(search_query)
 
         if not results:
-            console.print("[yellow]No results found. Try a different search term or index more files.[/yellow]")
+            console.print(
+                "[yellow]No results found. Try a different search term or index more files.[/yellow]"
+            )
             return
 
         # Display results in a table
@@ -116,7 +130,11 @@ def handle_semantic_search(query: str) -> None:
 
         for result in results:
             # Truncate content for display
-            content_preview = result.content[:80] + "..." if len(result.content) > 80 else result.content
+            content_preview = (
+                result.content[:80] + "..."
+                if len(result.content) > 80
+                else result.content
+            )
             content_preview = content_preview.replace("\n", " ").strip()
 
             # Escape Rich markup in content to prevent rendering issues
@@ -126,7 +144,7 @@ def handle_semantic_search(query: str) -> None:
                 str(result.file_path.name),
                 f"{result.start_line}-{result.end_line}",
                 f"{result.similarity_score:.3f}",
-                content_preview
+                content_preview,
             )
 
         console.print(table)
@@ -135,9 +153,12 @@ def handle_semantic_search(query: str) -> None:
         if results:
             top_result = results[0]
             # Escape Rich markup in the detailed content
-            escaped_content = top_result.content.strip().replace("[", "\\[").replace("]", "\\]")
-            console.print(Panel(
-                dedent(f"""
+            escaped_content = (
+                top_result.content.strip().replace("[", "\\[").replace("]", "\\]")
+            )
+            console.print(
+                Panel(
+                    dedent(f"""
                 [cyan]Top Result Details:[/cyan]
                 [bold]File:[/bold] {top_result.file_path}
                 [bold]Lines:[/bold] {top_result.start_line}-{top_result.end_line}
@@ -146,12 +167,15 @@ def handle_semantic_search(query: str) -> None:
                 [bold]Content:[/bold]
                 {escaped_content}
                 """).strip(),
-                title="🎯 Best Match",
-                border_style="green"
-            ))
+                    title="🎯 Best Match",
+                    border_style="green",
+                )
+            )
 
     except Exception as e:
-        console.print(f"[red]Error performing search:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}")
+        console.print(
+            f"[red]Error performing search:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}"
+        )
 
 
 def handle_semantic_stats() -> None:
@@ -166,7 +190,7 @@ def handle_semantic_stats() -> None:
             chunk_overlap=50,
             max_search_results=10,
             similarity_threshold=0.7,
-            embedding_dimension=384
+            embedding_dimension=384,
         )
 
         # Initialize vector store with persistent database
@@ -185,26 +209,34 @@ def handle_semantic_stats() -> None:
         table.add_row("Index Size", f"{stats.index_size_mb:.2f} MB")
 
         # Calculate average chunks per file
-        avg_chunks = stats.total_chunks / stats.total_files if stats.total_files > 0 else 0.0
+        avg_chunks = (
+            stats.total_chunks / stats.total_files if stats.total_files > 0 else 0.0
+        )
         table.add_row("Average Chunks per File", f"{avg_chunks:.1f}")
 
         table.add_row("Embedding Model", config.embedding_model)
         table.add_row("Embedding Dimension", "384")  # ONNX fallback uses 384 dimensions
 
         if stats.last_updated:
-            table.add_row("Last Updated", stats.last_updated.strftime("%Y-%m-%d %H:%M:%S"))
+            table.add_row(
+                "Last Updated", stats.last_updated.strftime("%Y-%m-%d %H:%M:%S")
+            )
 
         console.print(table)
 
         if stats.total_files == 0:
-            console.print(Panel(
-                "[yellow]The semantic search index is empty. Use [bold]--index[/bold] to add files.[/yellow]",
-                title="💡 Tip",
-                border_style="yellow"
-            ))
+            console.print(
+                Panel(
+                    "[yellow]The semantic search index is empty. Use [bold]--index[/bold] to add files.[/yellow]",
+                    title="💡 Tip",
+                    border_style="yellow",
+                )
+            )
 
     except Exception as e:
-        console.print(f"[red]Error retrieving stats:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}")
+        console.print(
+            f"[red]Error retrieving stats:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}"
+        )
 
 
 def handle_remove_from_semantic_index(file_path: str) -> None:
@@ -214,7 +246,9 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
         file_path: Path to the file to remove
     """
     try:
-        console.print(f"[cyan]Removing file from semantic search index:[/cyan] {file_path}")
+        console.print(
+            f"[cyan]Removing file from semantic search index:[/cyan] {file_path}"
+        )
 
         # Validate path
         path_obj = Path(file_path)
@@ -226,7 +260,7 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
             chunk_overlap=50,
             max_search_results=10,
             similarity_threshold=0.7,
-            embedding_dimension=384
+            embedding_dimension=384,
         )
 
         # Initialize vector store with persistent database
@@ -236,13 +270,21 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
         success = vector_store.remove_file(path_obj)
 
         if success:
-            console.print(f"[green]✅ Successfully removed {path_obj.name} from index[/green]")
+            console.print(
+                f"[green]✅ Successfully removed {path_obj.name} from index[/green]"
+            )
         else:
-            console.print(f"[yellow]Warning:[/yellow] File {path_obj.name} was not found in index")
+            console.print(
+                f"[yellow]Warning:[/yellow] File {path_obj.name} was not found in index"
+            )
 
         # Show updated stats
         stats = vector_store.get_stats()
-        console.print(f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks")
+        console.print(
+            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks"
+        )
 
     except Exception as e:
-        console.print(f"[red]Error removing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}")
+        console.print(
+            f"[red]Error removing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}"
+        )

@@ -422,7 +422,7 @@ class InteractiveCLI:
     def create_dynamic_workflow(self, options: InteractiveWorkflowOptions) -> None:
         builder = WorkflowBuilder(self.console)
 
-        workflow_steps = [
+        workflow_steps: list[t.Callable[[WorkflowBuilder, str], str]] = [
             self._add_setup_phase,
             self._add_config_phase,
             partial(self._add_cleaning_phase, enabled=options.clean),
