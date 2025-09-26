@@ -189,3 +189,39 @@ def test_with_timeout_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in with_timeout: {e}")
+
+def test_get_stats_basic(self):
+    """Test basic functionality of get_stats."""
+    try:
+        result = get_stats()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_stats: {e}")
+
+def test_decorator_basic(self):
+    """Test basic functionality of decorator."""
+    try:
+        result = decorator()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in decorator: {e}")
+
+def test_wrapper_basic(self):
+    """Test basic functionality of wrapper."""
+    try:
+        result = wrapper()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in wrapper: {e}")

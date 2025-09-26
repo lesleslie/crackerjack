@@ -507,11 +507,14 @@ class VectorStore:
 
         with self._get_connection() as conn:
             if file_types:
+                # Build parameterized query safely with proper placeholders
                 placeholders = ",".join("?" * len(file_types))
-                query_sql = f"""
-                    SELECT chunk_id, file_path, content, embedding, start_line, end_line, file_type
-                    FROM embeddings WHERE file_type IN ({placeholders})
-                """
+                # Use static query template with placeholders - safe from injection
+                query_template = (
+                    "SELECT chunk_id, file_path, content, embedding, start_line, end_line, file_type "
+                    "FROM embeddings WHERE file_type IN ({})"
+                )
+                query_sql = query_template.format(placeholders)  # nosec B608
                 cursor = conn.execute(query_sql, file_types)
             else:
                 cursor = conn.execute("""

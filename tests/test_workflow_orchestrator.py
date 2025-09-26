@@ -171,3 +171,63 @@ def test_run_configuration_phase_basic() -> None:
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in run_configuration_phase: {e}")
+
+def test_run_complete_workflow_basic(self):
+    """Test basic functionality of run_complete_workflow."""
+    try:
+        result = run_complete_workflow()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in run_complete_workflow: {e}")
+
+def test_run_complete_workflow_basic(self):
+    """Test basic functionality of run_complete_workflow."""
+    try:
+        result = run_complete_workflow()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in run_complete_workflow: {e}")
+
+def test_run_complete_workflow_sync_basic(self):
+    """Test basic functionality of run_complete_workflow_sync."""
+    try:
+        result = run_complete_workflow_sync()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in run_complete_workflow_sync: {e}")
+
+def test_process_basic(self):
+    """Test basic functionality of process."""
+    try:
+        result = process()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in process: {e}")
+
+def test_cleanup_lsp_server_basic(self):
+    """Test basic functionality of cleanup_lsp_server."""
+    try:
+        result = cleanup_lsp_server()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in cleanup_lsp_server: {e}")

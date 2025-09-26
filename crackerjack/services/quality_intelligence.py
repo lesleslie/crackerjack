@@ -399,7 +399,17 @@ class QualityIntelligenceService:
         if len(values1) < self.min_data_points:
             return None
 
-        correlation, p_value = stats.pearsonr(values1, values2)
+        # Handle constant input arrays that would cause correlation warnings
+        try:
+            # Check for constant arrays (all values the same)
+            if 0 in (np.var(values1), np.var(values2)):
+                # Cannot calculate correlation for constant arrays
+                return None
+
+            correlation, p_value = stats.pearsonr(values1, values2)
+        except (ValueError, RuntimeWarning):
+            # Handle any other correlation calculation issues
+            return None
 
         # Strong correlation threshold
         if abs(correlation) > 0.7 and p_value < 0.05:

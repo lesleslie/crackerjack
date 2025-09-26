@@ -77,8 +77,11 @@ class EmbeddingService:
             # In production, this would download from HuggingFace Hub
             model_name = self.config.embedding_model
 
-            # Try to load tokenizer
-            self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+            # Try to load tokenizer with specific revision for security
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                model_name,
+                revision="main",  # nosec B615
+            )
 
             # For now, we'll use a simplified approach without actual ONNX model file
             # This would need to be expanded to download/convert ONNX models

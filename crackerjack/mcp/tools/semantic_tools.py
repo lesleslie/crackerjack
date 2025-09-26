@@ -522,8 +522,7 @@ def _generate_embeddings_for_texts(
 
     if len(texts_list) == 1:
         return [embedding_service.generate_embedding(texts_list[0])]
-    else:
-        return embedding_service.generate_embeddings_batch(texts_list)
+    return embedding_service.generate_embeddings_batch(texts_list)
 
 
 def _format_embeddings_response(texts_list: list[str], embeddings: list) -> str:
