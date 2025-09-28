@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
-from crackerjack.agents.enhanced_proactive_agent import EnhancedProactiveAgent, enhance_agent_with_claude_code_bridge, enable_external_consultation, plan_before_action, analyze_and_fix, EnhancedAgent
+from crackerjack.agents.enhanced_proactive_agent import EnhancedProactiveAgent
 
 
 class TestEnhancedproactiveagent:
@@ -53,8 +53,8 @@ class TestEnhancedproactiveagent:
             pytest.skip('Function enable_external_consultation requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in enable_external_consultation: ' + str(e))
-    @pytest.mark.parametrize(["self", "enabled"], [(None, None), (None, None)])
-    def test_enable_external_consultation_with_parameters(self, self, enabled):
+    @pytest.mark.parametrize("enabled", [None, None])
+    def test_enable_external_consultation_with_parameters(self, enabled):
         """Test enable_external_consultation with various parameter combinations."""
         try:
             if len(['self', 'enabled']) <= 5:
@@ -89,8 +89,8 @@ class TestEnhancedproactiveagent:
             pytest.skip('Function plan_before_action requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in plan_before_action: ' + str(e))
-    @pytest.mark.parametrize(["self", "issue"], [(None, None), (None, None)])
-    def test_plan_before_action_with_parameters(self, self, issue):
+    @pytest.mark.parametrize("issue", [None, None])
+    def test_plan_before_action_with_parameters(self, issue):
         """Test plan_before_action with various parameter combinations."""
         try:
             if len(['self', 'issue']) <= 5:
@@ -125,8 +125,8 @@ class TestEnhancedproactiveagent:
             pytest.skip('Function analyze_and_fix requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in analyze_and_fix: ' + str(e))
-    @pytest.mark.parametrize(["self", "issue"], [(None, None), (None, None)])
-    def test_analyze_and_fix_with_parameters(self, self, issue):
+    @pytest.mark.parametrize("issue", [None, None])
+    def test_analyze_and_fix_with_parameters(self, issue):
         """Test analyze_and_fix with various parameter combinations."""
         try:
             if len(['self', 'issue']) <= 5:

@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
-from crackerjack.agents.coordinator import AgentCoordinator, initialize_agents, handle_issues, get_agent_capabilities, handle_issues_proactively, set_proactive_mode
+from crackerjack.agents.coordinator import AgentCoordinator
 
 
 class TestCoordinator:
@@ -53,8 +53,8 @@ class TestCoordinator:
             pytest.skip('Function handle_issues requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in handle_issues: ' + str(e))
-    @pytest.mark.parametrize(["self", "issues"], [(None, None), (None, None)])
-    def test_handle_issues_with_parameters(self, self, issues):
+    @pytest.mark.parametrize("issues", [None, None])
+    def test_handle_issues_with_parameters(self, issues):
         """Test handle_issues with various parameter combinations."""
         try:
             if len(['self', 'issues']) <= 5:
@@ -110,8 +110,8 @@ class TestCoordinator:
             pytest.skip('Function handle_issues_proactively requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in handle_issues_proactively: ' + str(e))
-    @pytest.mark.parametrize(["self", "issues"], [(None, None), (None, None)])
-    def test_handle_issues_proactively_with_parameters(self, self, issues):
+    @pytest.mark.parametrize("issues", [None, None])
+    def test_handle_issues_proactively_with_parameters(self, issues):
         """Test handle_issues_proactively with various parameter combinations."""
         try:
             if len(['self', 'issues']) <= 5:
@@ -146,8 +146,8 @@ class TestCoordinator:
             pytest.skip('Function set_proactive_mode requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in set_proactive_mode: ' + str(e))
-    @pytest.mark.parametrize(["self", "enabled"], [(None, None), (None, None)])
-    def test_set_proactive_mode_with_parameters(self, self, enabled):
+    @pytest.mark.parametrize("enabled", [None, None])
+    def test_set_proactive_mode_with_parameters(self, enabled):
         """Test set_proactive_mode with various parameter combinations."""
         try:
             if len(['self', 'enabled']) <= 5:

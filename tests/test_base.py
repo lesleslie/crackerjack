@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
-from crackerjack.agents.base import Priority, IssueType, Issue, FixResult, AgentContext, SubAgent, AgentRegistry, merge_with, get_file_content, write_file_content
+from crackerjack.agents.base import Priority, IssueType, Issue, FixResult, AgentContext, SubAgent, AgentRegistry
 
 
 class TestBase:
@@ -32,8 +32,8 @@ class TestBase:
             pytest.skip('Function merge_with requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in merge_with: ' + str(e))
-    @pytest.mark.parametrize(["self", "other"], [(None, None), (None, None)])
-    def test_merge_with_with_parameters(self, self, other):
+    @pytest.mark.parametrize("other", [None, None])
+    def test_merge_with_with_parameters(self, other):
         """Test merge_with with various parameter combinations."""
         try:
             if len(['self', 'other']) <= 5:
@@ -68,8 +68,8 @@ class TestBase:
             pytest.skip('Function get_file_content requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in get_file_content: ' + str(e))
-    @pytest.mark.parametrize(["self", "file_path"], [(None, Path("test_0")), (None, Path("test_1"))])
-    def test_get_file_content_with_parameters(self, self, file_path):
+    @pytest.mark.parametrize("file_path", [Path("test_0"), Path("test_1")])
+    def test_get_file_content_with_parameters(self, file_path):
         """Test get_file_content with various parameter combinations."""
         try:
             if len(['self', 'file_path']) <= 5:
@@ -104,8 +104,8 @@ class TestBase:
             pytest.skip('Function write_file_content requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in write_file_content: ' + str(e))
-    @pytest.mark.parametrize(["self", "file_path", "content"], [(None, Path("test_0"), None), (None, Path("test_1"), None), (None, Path("test_2"), None)])
-    def test_write_file_content_with_parameters(self, self, file_path, content):
+    @pytest.mark.parametrize(["file_path", "content"], [(Path("test_0"), None), (Path("test_1"), None), (Path("test_2"), None)])
+    def test_write_file_content_with_parameters(self, file_path, content):
         """Test write_file_content with various parameter combinations."""
         try:
             if len(['self', 'file_path', 'content']) <= 5:
@@ -158,8 +158,8 @@ class TestBase:
             pytest.skip('Function can_handle requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in can_handle: ' + str(e))
-    @pytest.mark.parametrize(["self", "issue"], [(None, None), (None, None)])
-    def test_can_handle_with_parameters(self, self, issue):
+    @pytest.mark.parametrize("issue", [None, None])
+    def test_can_handle_with_parameters(self, issue):
         """Test can_handle with various parameter combinations."""
         try:
             if len(['self', 'issue']) <= 5:
@@ -194,8 +194,8 @@ class TestBase:
             pytest.skip('Function analyze_and_fix requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in analyze_and_fix: ' + str(e))
-    @pytest.mark.parametrize(["self", "issue"], [(None, None), (None, None)])
-    def test_analyze_and_fix_with_parameters(self, self, issue):
+    @pytest.mark.parametrize("issue", [None, None])
+    def test_analyze_and_fix_with_parameters(self, issue):
         """Test analyze_and_fix with various parameter combinations."""
         try:
             if len(['self', 'issue']) <= 5:
@@ -251,8 +251,8 @@ class TestBase:
             pytest.skip('Function run_command requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in run_command: ' + str(e))
-    @pytest.mark.parametrize(["self", "cmd", "cwd", "timeout"], [(None, None, None, None), (None, None, None, None), (None, None, None, None)])
-    def test_run_command_with_parameters(self, self, cmd, cwd, timeout):
+    @pytest.mark.parametrize(["cmd", "cwd", "timeout"], [(None, None, None), (None, None, None), (None, None, None)])
+    def test_run_command_with_parameters(self, cmd, cwd, timeout):
         """Test run_command with various parameter combinations."""
         try:
             if len(['self', 'cmd', 'cwd', 'timeout']) <= 5:
@@ -305,8 +305,8 @@ class TestBase:
             pytest.skip('Function log requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in log: ' + str(e))
-    @pytest.mark.parametrize(["self", "message", "level"], [(None, None, None), (None, None, None), (None, None, None)])
-    def test_log_with_parameters(self, self, message, level):
+    @pytest.mark.parametrize(["message", "level"], [(None, None), (None, None), (None, None)])
+    def test_log_with_parameters(self, message, level):
         """Test log with various parameter combinations."""
         try:
             if len(['self', 'message', 'level']) <= 5:
@@ -359,8 +359,8 @@ class TestBase:
             pytest.skip('Function plan_before_action requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in plan_before_action: ' + str(e))
-    @pytest.mark.parametrize(["self", "issue"], [(None, None), (None, None)])
-    def test_plan_before_action_with_parameters(self, self, issue):
+    @pytest.mark.parametrize("issue", [None, None])
+    def test_plan_before_action_with_parameters(self, issue):
         """Test plan_before_action with various parameter combinations."""
         try:
             if len(['self', 'issue']) <= 5:
@@ -416,8 +416,8 @@ class TestBase:
             pytest.skip('Function register requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in register: ' + str(e))
-    @pytest.mark.parametrize(["self", "agent_class"], [(None, None), (None, None)])
-    def test_register_with_parameters(self, self, agent_class):
+    @pytest.mark.parametrize("agent_class", [None, None])
+    def test_register_with_parameters(self, agent_class):
         """Test register with various parameter combinations."""
         try:
             if len(['self', 'agent_class']) <= 5:
@@ -452,8 +452,8 @@ class TestBase:
             pytest.skip('Function create_all requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in create_all: ' + str(e))
-    @pytest.mark.parametrize(["self", "context"], [(None, None), (None, None)])
-    def test_create_all_with_parameters(self, self, context):
+    @pytest.mark.parametrize("context", [None, None])
+    def test_create_all_with_parameters(self, context):
         """Test create_all with various parameter combinations."""
         try:
             if len(['self', 'context']) <= 5:

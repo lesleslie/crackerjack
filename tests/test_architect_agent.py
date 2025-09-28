@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
-from crackerjack.agents.architect_agent import ArchitectAgent, get_supported_types, can_handle, plan_before_action, analyze_and_fix
+from crackerjack.agents.architect_agent import ArchitectAgent
 
 
 class TestArchitectagent:
@@ -53,8 +53,8 @@ class TestArchitectagent:
             pytest.skip('Function can_handle requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in can_handle: ' + str(e))
-    @pytest.mark.parametrize(["self", "issue"], [(None, None), (None, None)])
-    def test_can_handle_with_parameters(self, self, issue):
+    @pytest.mark.parametrize("issue", [None, None])
+    def test_can_handle_with_parameters(self, issue):
         """Test can_handle with various parameter combinations."""
         try:
             if len(['self', 'issue']) <= 5:
@@ -89,8 +89,8 @@ class TestArchitectagent:
             pytest.skip('Function plan_before_action requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in plan_before_action: ' + str(e))
-    @pytest.mark.parametrize(["self", "issue"], [(None, None), (None, None)])
-    def test_plan_before_action_with_parameters(self, self, issue):
+    @pytest.mark.parametrize("issue", [None, None])
+    def test_plan_before_action_with_parameters(self, issue):
         """Test plan_before_action with various parameter combinations."""
         try:
             if len(['self', 'issue']) <= 5:
@@ -125,8 +125,8 @@ class TestArchitectagent:
             pytest.skip('Function analyze_and_fix requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in analyze_and_fix: ' + str(e))
-    @pytest.mark.parametrize(["self", "issue"], [(None, None), (None, None)])
-    def test_analyze_and_fix_with_parameters(self, self, issue):
+    @pytest.mark.parametrize("issue", [None, None])
+    def test_analyze_and_fix_with_parameters(self, issue):
         """Test analyze_and_fix with various parameter combinations."""
         try:
             if len(['self', 'issue']) <= 5:

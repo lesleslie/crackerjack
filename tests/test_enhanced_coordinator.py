@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
-from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator, create_enhanced_coordinator, enable_external_agents, get_external_consultation_stats, handle_issues_proactively, get_enhanced_agent_capabilities
+from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
 
 
 class TestEnhancedcoordinator:
@@ -86,8 +86,8 @@ class TestEnhancedcoordinator:
             pytest.skip('Function enable_external_agents requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in enable_external_agents: ' + str(e))
-    @pytest.mark.parametrize(["self", "enabled"], [(None, None), (None, None)])
-    def test_enable_external_agents_with_parameters(self, self, enabled):
+    @pytest.mark.parametrize("enabled", [None, None])
+    def test_enable_external_agents_with_parameters(self, enabled):
         """Test enable_external_agents with various parameter combinations."""
         try:
             if len(['self', 'enabled']) <= 5:
@@ -143,8 +143,8 @@ class TestEnhancedcoordinator:
             pytest.skip('Function handle_issues_proactively requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in handle_issues_proactively: ' + str(e))
-    @pytest.mark.parametrize(["self", "issues"], [(None, None), (None, None)])
-    def test_handle_issues_proactively_with_parameters(self, self, issues):
+    @pytest.mark.parametrize("issues", [None, None])
+    def test_handle_issues_proactively_with_parameters(self, issues):
         """Test handle_issues_proactively with various parameter combinations."""
         try:
             if len(['self', 'issues']) <= 5:

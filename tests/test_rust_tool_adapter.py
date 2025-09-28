@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
-from crackerjack.adapters.rust_tool_adapter import Issue, ToolResult, RustToolAdapter, BaseRustToolAdapter, to_dict, has_errors, error_count, warning_count, to_dict, get_command_args
+from crackerjack.adapters.rust_tool_adapter import Issue, ToolResult, RustToolAdapter, BaseRustToolAdapter
 
 
 class TestRusttooladapter:
@@ -124,8 +124,8 @@ class TestRusttooladapter:
             pytest.skip('Function get_command_args requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in get_command_args: ' + str(e))
-    @pytest.mark.parametrize(["self", "target_files"], [(None, None), (None, None)])
-    def test_get_command_args_with_parameters(self, self, target_files):
+    @pytest.mark.parametrize("target_files", [None, None])
+    def test_get_command_args_with_parameters(self, target_files):
         """Test get_command_args with various parameter combinations."""
         try:
             if len(['self', 'target_files']) <= 5:
@@ -158,8 +158,8 @@ class TestRusttooladapter:
             pytest.skip('Function parse_output requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in parse_output: ' + str(e))
-    @pytest.mark.parametrize(["self", "output"], [(None, None), (None, None)])
-    def test_parse_output_with_parameters(self, self, output):
+    @pytest.mark.parametrize("output", [None, None])
+    def test_parse_output_with_parameters(self, output):
         """Test parse_output with various parameter combinations."""
         try:
             if len(['self', 'output']) <= 5:
@@ -285,8 +285,8 @@ class TestRusttooladapter:
             pytest.skip('Function get_command_args requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in get_command_args: ' + str(e))
-    @pytest.mark.parametrize(["self", "target_files"], [(None, None), (None, None)])
-    def test_get_command_args_with_parameters(self, self, target_files):
+    @pytest.mark.parametrize("target_files", [None, None])
+    def test_get_command_args_with_parameters(self, target_files):
         """Test get_command_args with various parameter combinations."""
         try:
             if len(['self', 'target_files']) <= 5:
@@ -319,8 +319,8 @@ class TestRusttooladapter:
             pytest.skip('Function parse_output requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in parse_output: ' + str(e))
-    @pytest.mark.parametrize(["self", "output"], [(None, None), (None, None)])
-    def test_parse_output_with_parameters(self, self, output):
+    @pytest.mark.parametrize("output", [None, None])
+    def test_parse_output_with_parameters(self, output):
         """Test parse_output with various parameter combinations."""
         try:
             if len(['self', 'output']) <= 5:

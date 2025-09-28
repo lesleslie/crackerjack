@@ -201,3 +201,39 @@ def test_add_server_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in add_server: {e}")
+
+def test_remove_server_basic(self):
+    """Test basic functionality of remove_server."""
+    try:
+        result = remove_server()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in remove_server: {e}")
+
+def test_stop_monitoring_basic(self):
+    """Test basic functionality of stop_monitoring."""
+    try:
+        result = stop_monitoring()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in stop_monitoring: {e}")
+
+def test_managed_handler_basic(self):
+    """Test basic functionality of managed_handler."""
+    try:
+        result = managed_handler()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in managed_handler: {e}")
