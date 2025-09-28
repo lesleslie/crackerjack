@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.39.0"
+version = "0.39.1"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -398,4 +398,6 @@ real_time_feedback = true
 [dependency-groups]
 dev = [
     "crackerjack",
+    "excalidraw-mcp>=0.34.0",
+    "session-mgmt-mcp>=0.4.0",
 ]
