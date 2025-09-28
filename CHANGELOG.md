@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.0] - 2025-09-28
+
+### Added
+
+- test: Update 24 files
+
+### Changed
+
+- Crackerjack (quality: 73/100) - 2025-09-25 03:49:18
+- Crackerjack (quality: 73/100) - 2025-09-25 07:28:02
+- Crackerjack (quality: 73/100) - 2025-09-25 07:43:25
+- Crackerjack (quality: 73/100) - 2025-09-25 07:55:55
+- Crackerjack (quality: 73/100) - 2025-09-25 08:27:08
+- Crackerjack (quality: 73/100) - 2025-09-25 11:31:40
+- Crackerjack (quality: 73/100) - 2025-09-26 13:55:31
+- Crackerjack (quality: 73/100) - 2025-09-28 08:40:14
+
+## [Unreleased] - 2025-09-28
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-09-28
+
+### Added
+
+- feat: add new feature
+
+### Fixed
+
+- fix: resolve bug in parser
+
 ## [Unreleased] - 2025-09-26
 
 ### Added
