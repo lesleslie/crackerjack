@@ -137,3 +137,6 @@ crackerjack-debug-*.log
 dist/
 htmlcov/
 venv/
+/NOTES.md
+/.obsidian/
+/.smart-env/
