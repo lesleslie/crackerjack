@@ -4,7 +4,7 @@ import typing as t
 from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class EmbeddingVector(BaseModel):
@@ -26,13 +26,17 @@ class EmbeddingVector(BaseModel):
     end_line: int = Field(..., description="Ending line number in the source file")
     file_type: str = Field(..., description="File extension or type identifier")
 
-    class Config:
-        """Pydantic configuration."""
+    model_config = ConfigDict(ser_json_timedelta="iso8601")
 
-        json_encoders = {
-            Path: str,
-            datetime: lambda v: v.isoformat(),
-        }
+    @field_serializer("file_path")
+    def serialize_path(self, value: Path) -> str:
+        """Serialize Path to string."""
+        return str(value)
+
+    @field_serializer("created_at")
+    def serialize_datetime(self, value: datetime) -> str:
+        """Serialize datetime to ISO format."""
+        return value.isoformat()
 
 
 class SearchResult(BaseModel):
@@ -51,12 +55,10 @@ class SearchResult(BaseModel):
         default_factory=list, description="Surrounding context lines"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {
-            Path: str,
-        }
+    @field_serializer("file_path")
+    def serialize_path(self, value: Path) -> str:
+        """Serialize Path to string."""
+        return str(value)
 
 
 class IndexStats(BaseModel):
@@ -72,12 +74,10 @@ class IndexStats(BaseModel):
     embedding_model: str = Field(..., description="Name of the embedding model used")
     avg_chunk_size: float = Field(..., description="Average chunk size in characters")
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-        }
+    @field_serializer("last_updated")
+    def serialize_datetime(self, value: datetime) -> str:
+        """Serialize datetime to ISO format."""
+        return value.isoformat()
 
 
 class SearchQuery(BaseModel):
@@ -100,10 +100,7 @@ class SearchQuery(BaseModel):
         default=3, ge=0, le=10, description="Number of context lines"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        validate_assignment = True
+    model_config = ConfigDict(validate_assignment=True)
 
 
 class IndexingProgress(BaseModel):
@@ -125,12 +122,10 @@ class IndexingProgress(BaseModel):
             return 0.0
         return min(100.0, (self.files_processed / self.total_files) * 100.0)
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {
-            Path: str,
-        }
+    @field_serializer("current_file")
+    def serialize_path(self, value: Path) -> str:
+        """Serialize Path to string."""
+        return str(value)
 
 
 class SemanticConfig(BaseModel):
@@ -195,10 +190,7 @@ class SemanticConfig(BaseModel):
         default=24, ge=1, le=168, description="Cache time-to-live in hours"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        validate_assignment = True
+    model_config = ConfigDict(validate_assignment=True)
 
 
 class FileChangeEvent(BaseModel):
@@ -215,13 +207,15 @@ class FileChangeEvent(BaseModel):
         default=None, description="New file hash if available"
     )
 
-    class Config:
-        """Pydantic configuration."""
+    @field_serializer("file_path")
+    def serialize_path(self, value: Path) -> str:
+        """Serialize Path to string."""
+        return str(value)
 
-        json_encoders = {
-            Path: str,
-            datetime: lambda v: v.isoformat(),
-        }
+    @field_serializer("timestamp")
+    def serialize_datetime(self, value: datetime) -> str:
+        """Serialize datetime to ISO format."""
+        return value.isoformat()
 
 
 class SemanticContext(BaseModel):
@@ -240,13 +234,6 @@ class SemanticContext(BaseModel):
     confidence: float = Field(
         ..., ge=0.0, le=1.0, description="Confidence in the context relevance"
     )
-
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {
-            Path: str,
-        }
 
 
 # Type aliases for better code readability

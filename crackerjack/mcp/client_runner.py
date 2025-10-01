@@ -4,9 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from rich.console import Console
-
 from mcp import stdio_client
+from rich.console import Console
 
 from .progress_monitor import (
     run_crackerjack_with_enhanced_progress as run_crackerjack_with_progress,

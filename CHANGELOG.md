@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.39.2] - 2025-10-01
+## [0.39.3] - 2025-10-01
 
 ### Testing
 
-- tests: Update 5 files
+- tests: Update 7 files
 
 ## [Unreleased] - 2025-10-01
 
@@ -19,6 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - fix: resolve bug in parser
 
+
+## [0.39.2] - 2025-10-01
+
+### Testing
+
+- tests: Update 5 files
+
+## [Unreleased] - 2025-10-01
+
+### Added
+
+- feat: add new feature
+
+### Fixed
+
+- fix: resolve bug in parser
 
 ## [0.39.1] - 2025-09-28
 

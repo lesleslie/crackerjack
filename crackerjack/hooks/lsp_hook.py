@@ -10,8 +10,9 @@ type checking during pre-commit hooks.
 import sys
 from pathlib import Path
 
-from crackerjack.services.lsp_client import LSPClient
 from rich.console import Console
+
+from crackerjack.services.lsp_client import LSPClient
 
 
 def main() -> int:
