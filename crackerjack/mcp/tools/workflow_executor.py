@@ -419,11 +419,18 @@ async def _execute_single_iteration(
     context: t.Any,
 ) -> bool:
     try:
+        # Try async workflow methods first
         if hasattr(orchestrator, "run_complete_workflow_async"):
             result = orchestrator.run_complete_workflow_async(options)
             if result is None:
                 raise ValueError(
-                    "Method run_complete_workflow_async returned None instead of awaitable"
+                    "Method run_complete_workflow_async returned None instead of awaitable. "
+                    f"Orchestrator type: {type(orchestrator).__name__}"
+                )
+            # Ensure result is awaitable
+            if not hasattr(result, "__await__"):
+                raise ValueError(
+                    f"Method run_complete_workflow_async returned non-awaitable object: {type(result).__name__}"
                 )
             workflow_result: bool = await result
             return workflow_result
@@ -431,7 +438,13 @@ async def _execute_single_iteration(
             result = orchestrator.run_complete_workflow(options)
             if result is None:
                 raise ValueError(
-                    "Method run_complete_workflow returned None instead of awaitable"
+                    "Method run_complete_workflow returned None instead of awaitable. "
+                    f"Orchestrator type: {type(orchestrator).__name__}"
+                )
+            # Ensure result is awaitable
+            if not hasattr(result, "__await__"):
+                raise ValueError(
+                    f"Method run_complete_workflow returned non-awaitable object: {type(result).__name__}"
                 )
             workflow_result: bool = await result
             return workflow_result
@@ -439,16 +452,24 @@ async def _execute_single_iteration(
             result = orchestrator.execute_workflow(options)
             if result is None:
                 raise ValueError(
-                    "Method execute_workflow returned None instead of awaitable"
+                    "Method execute_workflow returned None instead of awaitable. "
+                    f"Orchestrator type: {type(orchestrator).__name__}"
+                )
+            # Ensure result is awaitable
+            if not hasattr(result, "__await__"):
+                raise ValueError(
+                    f"Method execute_workflow returned non-awaitable object: {type(result).__name__}"
                 )
             workflow_result: bool = await result
             return workflow_result
+        # Fallback to sync method
         elif hasattr(orchestrator, "run"):
             run_result: bool = orchestrator.run(options)
             return run_result
         else:
             raise ValueError(
-                f"Orchestrator {type(orchestrator)} has no recognized workflow execution method"
+                f"Orchestrator {type(orchestrator).__name__} has no recognized workflow execution method. "
+                f"Available methods: {[m for m in dir(orchestrator) if not m.startswith('_')]}"
             )
     except Exception as e:
         raise RuntimeError(

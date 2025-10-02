@@ -1,3 +1,6 @@
+---
+id: 01K6K1AYRBPF8CGY95H0RMV9C4
+---
 # Crackerjack: AI-Powered Python Development Platform
 
 ## Project Overview

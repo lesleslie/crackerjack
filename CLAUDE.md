@@ -94,27 +94,27 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 
 ## RESPONSE PROTOCOLS
 
-### When Uncertain:
+### When Uncertain
 
 - State: "I need clarification on [specific point] before proceeding."
 - **NEVER** guess or make assumptions.
 - Ask specific questions to get the information needed.
 
-### When Asked "Are You Sure?":
+### When Asked "Are You Sure?"
 
 - Re-examine the code thoroughly.
 - Provide specific evidence for your answer.
 - If uncertain after re-examination, state: "After reviewing, I'm not certain about [specific aspect]. Let me check [specific file/code section]."
 - **MAINTAIN CONSISTENCY** - don't change answers without new evidence.
 
-### Error Handling:
+### Error Handling
 
 - **ANALYZE** the actual error message/response.
 - **NEVER** assume error causes (like rate limits) without evidence.
 - Ask the user to share error details if needed.
 - Provide specific debugging steps.
 
-### Code Cleanup:
+### Code Cleanup
 
 - **ALWAYS** remove unused code when making changes.
 - **NEVER** leave orphaned functions, imports, or variables.
@@ -158,8 +158,8 @@ Remember: It's better to ask for clarification than to make assumptions that cou
 ## AI Documentation References
 
 - **[AI-REFERENCE.md](docs/ai/AI-REFERENCE.md)** - Command reference with decision trees
-- **[AGENT-CAPABILITIES.json](AGENT-CAPABILITIES.json)** - Structured agent data
-- **[ERROR-PATTERNS.yaml](ERROR-PATTERNS.yaml)** - Automated issue resolution patterns
+- **[[AGENT-CAPABILITIES.json]]** - Structured agent data
+- **[[ERROR-PATTERNS.yaml]]** - Automated issue resolution patterns
 
 ## Essential Commands
 
@@ -448,7 +448,7 @@ python -m crackerjack --experimental-hooks  # (when experimental hooks are avail
 
 - **No Active Experimental Hooks**: Previous experimental candidates (pyrefly, ty) failed availability testing and were removed
 - **Framework Ready**: System prepared for future experimental tool evaluation
-- **Documentation**: Complete evaluation criteria in [EXPERIMENTAL-EVALUATION.md](EXPERIMENTAL-EVALUATION.md)
+- **Documentation**: Complete evaluation criteria in [[EXPERIMENTAL-EVALUATION|EXPERIMENTAL-EVALUATION.md]]
 
 ## Critical Reminders
 
@@ -492,5 +492,3 @@ from ..models.protocols import TestManagerProtocol
 - make sure to run `python -m crackerjack` after every editing/debugging cycle for quality checking
 - always put implementation plans in a md doc for review and reference
 - think when you need to think, think harder when you need to think harder
-
-# Test debug logging

@@ -70,17 +70,17 @@ Crackerjack is built on the following core principles:
 
 ## Table of Contents
 
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [AI Auto-Fix Features](#ai-auto-fix-features)
-- [Core Features](#core-features)
-- [MCP Server Configuration](#mcp-server-configuration)
-- [Pre-commit Hook Modes](#pre-commit-hook-modes)
-- [Testing Features](#testing-features)
-- [Command Reference](#command-reference)
-- [Style Guide](#style-guide)
-- [Publishing & Version Management](#publishing--version-management)
-- [Developer Experience](#developer-experience)
+- [[#installation|Installation]]
+- [[#quick-start|Quick Start]]
+- [[#ai-auto-fix-features|AI Auto-Fix Features]]
+- [[#core-workflow|Core Workflow]]
+- [[#core-features|Core Features]]
+- [[#mcp-server-configuration|MCP Server Configuration]]
+- [[#pre-commit-hook-modes|Pre-commit Hook Modes]]
+- [[#command-reference|Command Reference]]
+- [[#style-guide|Style Guide]]
+- [[#publishing--version-management|Publishing & Version Management]]
+- [[#-troubleshooting|Troubleshooting]]
 
 ## Installation
 

@@ -17,35 +17,63 @@ def register_execution_tools(mcp_app: t.Any) -> None:
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc]
     async def execute_crackerjack(args: str, kwargs: str) -> str:
-        context = get_context()
-
-        validation_error = await _validate_context_and_rate_limit(context)
-        if validation_error:
-            return validation_error
-
-        kwargs_result = _parse_kwargs(kwargs)
-        if "error" in kwargs_result:
-            return json.dumps(kwargs_result)
-
-        extra_kwargs = kwargs_result["kwargs"]
-
-        if "execution_timeout" not in extra_kwargs:
-            if extra_kwargs.get("test", False) or extra_kwargs.get("testing", False):
-                extra_kwargs["execution_timeout"] = 1200
-            else:
-                extra_kwargs["execution_timeout"] = 900
+        import traceback
+        from datetime import datetime
 
         try:
+            context = get_context()
+
+            # Validate context and rate limit with better error handling
+            try:
+                validation_error = await _validate_context_and_rate_limit(context)
+                if validation_error:
+                    return validation_error
+            except TypeError as e:
+                if "NoneType" in str(e) and "await" in str(e):
+                    return json.dumps({
+                        "status": "failed",
+                        "error": "Context validation failed: rate limiter returned None. "
+                               "MCP server may not be properly initialized.",
+                        "timestamp": datetime.now().isoformat(),
+                        "details": str(e),
+                    })
+                raise
+
+            kwargs_result = _parse_kwargs(kwargs)
+            if "error" in kwargs_result:
+                return json.dumps(kwargs_result)
+
+            extra_kwargs = kwargs_result["kwargs"]
+
+            if "execution_timeout" not in extra_kwargs:
+                if extra_kwargs.get("test", False) or extra_kwargs.get("testing", False):
+                    extra_kwargs["execution_timeout"] = 1200
+                else:
+                    extra_kwargs["execution_timeout"] = 900
+
             result = await execute_crackerjack_workflow(args, extra_kwargs)
             return json.dumps(result, indent=2)
+        except TypeError as e:
+            if "NoneType" in str(e) and "await" in str(e):
+                return json.dumps(
+                    {
+                        "status": "failed",
+                        "error": f"Async execution error: A function returned None instead of an awaitable. {e}",
+                        "traceback": traceback.format_exc(),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+            raise
         except Exception as e:
+            context = get_context()
             return json.dumps(
                 {
                     "status": "failed",
                     "error": f"Execution failed: {e}",
+                    "traceback": traceback.format_exc(),
                     "timestamp": context.get_current_time()
-                    if hasattr(context, "get_current_time")
-                    else None,
+                    if context and hasattr(context, "get_current_time")
+                    else datetime.now().isoformat(),
                 }
             )
 
