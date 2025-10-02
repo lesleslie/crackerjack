@@ -405,7 +405,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.39.3"
+version = "0.39.4"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -2741,7 +2741,7 @@ wheels = [
 
 [[package]]
 name = "session-mgmt-mcp"
-version = "0.5.2"
+version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crackerjack" },
@@ -2759,9 +2759,9 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/93/4e/f67548ebd23f9ca41726509f03ea5285fcdde848ee4893696289be3e9c50/session_mgmt_mcp-0.5.2.tar.gz", hash = "sha256:46b9ecab5057b1b360d718ad01e4047065b0118dbf74abcab5abe385a44afc92", size = 627543, upload-time = "2025-10-01T23:08:01.546Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/89/4b/19928021784718331404e33bd97f19808134f1d134bab90c39e32b1519b5/session_mgmt_mcp-0.5.3.tar.gz", hash = "sha256:2773c481825d42beefd297550b8feadc6dd67bda59d545e853f432f877de8a29", size = 640568, upload-time = "2025-10-02T07:10:55.602Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/cf/fa5dc75c02f5e0642bc20a32bd491d8b660cae12c323852e62924f6a21a3/session_mgmt_mcp-0.5.2-py3-none-any.whl", hash = "sha256:8cf55d98adf1b13eefa221f046497770e4b55bdd87a64a95c07858aab31515e6", size = 244715, upload-time = "2025-10-01T23:07:59.486Z" },
+    { url = "https://files.pythonhosted.org/packages/54/38/eee4dd2469375df7e32d7ca8f7eda1ea4947bb2a2b787736625954e87081/session_mgmt_mcp-0.5.3-py3-none-any.whl", hash = "sha256:358d693d9ec56de142cfafb4bd5e99da898881daa025a4b58371db4425118109", size = 252451, upload-time = "2025-10-02T07:10:53.758Z" },
 ]
 
 [[package]]
