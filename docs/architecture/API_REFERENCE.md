@@ -4,14 +4,14 @@ This document provides comprehensive API documentation for Crackerjack's service
 
 ## Table of Contents
 
-- [Core Services](#core-services)
-- [AI Agent System](#ai-agent-system)
-- [High-Performance Adapters](#high-performance-adapters)
-- [Monitoring & Performance](#monitoring--performance)
-- [MCP Server Integration](#mcp-server-integration)
-- [WebSocket API](#websocket-api)
-- [CLI Interface](#cli-interface)
-- [Configuration System](#configuration-system)
+- [[#core-services|Core Services]]
+- [[#ai-agent-system|AI Agent System]]
+- [[#high-performance-adapters|High-Performance Adapters]]
+- [[#monitoring--performance|Monitoring & Performance]]
+- [[#mcp-server-integration|MCP Server Integration]]
+- [[#websocket-api|WebSocket API]]
+- [[#cli-interface|CLI Interface]]
+- [[#configuration-system|Configuration System]]
 
 ## Core Services
 
@@ -136,14 +136,53 @@ Optimizes algorithm performance and identifies bottlenecks.
 - Loop optimization
 - Memory usage improvements
 
+#### SemanticAgent (Confidence: 0.85)
+
+**Location**: `crackerjack.agents.semantic_agent.SemanticAgent`
+
+Provides advanced semantic analysis and code comprehension.
+
+**Capabilities**:
+
+- Semantic code analysis and understanding
+- Business logic comprehension
+- Intelligent refactoring based on intent
+- Context-aware code improvements
+
+#### ArchitectAgent (Confidence: 0.85)
+
+**Location**: `crackerjack.agents.architect_agent.ArchitectAgent`
+
+Handles high-level architectural patterns and design recommendations.
+
+**Capabilities**:
+
+- Architectural pattern recognition
+- Design recommendation and optimization
+- System-level improvements
+- Structural anti-pattern detection
+
+#### EnhancedProactiveAgent (Confidence: 0.9)
+
+**Location**: `crackerjack.agents.enhanced_proactive_agent.EnhancedProactiveAgent`
+
+Proactive issue prevention and predictive monitoring.
+
+**Capabilities**:
+
+- Proactive issue prevention before problems occur
+- Predictive quality monitoring
+- Pre-emptive optimization strategies
+- Early warning system for potential issues
+
 #### Additional Agents
 
-- **DocumentationAgent**: Changelog generation, markdown consistency
-- **TestCreationAgent**: Test failure fixes, fixture management
-- **DRYAgent**: Code duplication elimination
-- **FormattingAgent**: Code style and import organization
+- **DocumentationAgent** (0.8): Changelog generation, markdown consistency
+- **TestCreationAgent** (0.8): Test failure fixes, fixture management
+- **DRYAgent** (0.8): Code duplication elimination
+- **FormattingAgent** (0.8): Code style and import organization
 - **ImportOptimizationAgent**: Import cleanup and restructuring
-- **TestSpecialistAgent**: Advanced testing scenarios
+- **TestSpecialistAgent** (0.8): Advanced testing scenarios
 
 ### Agent Configuration
 

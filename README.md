@@ -646,6 +646,70 @@ python -m crackerjack --all patch
 python -m crackerjack --ai-fix
 ```
 
+## Quick Reference Index
+
+**📋 Command Index by Use Case**
+
+| Use Case | Command | Description |
+|----------|---------|-------------|
+| **Basic Quality Check** | `python -m crackerjack` | Run quality checks only |
+| **Quality + Tests** | `python -m crackerjack --run-tests` | Quality checks with test suite |
+| **AI Auto-Fix** | `python -m crackerjack --ai-fix --run-tests` | AI-powered fixing + tests (recommended) |
+| **Full Release** | `python -m crackerjack --all patch` | Version bump, quality checks, publish |
+| **Quick Publish** | `python -m crackerjack --publish patch` | Version bump + publish only |
+| **Start MCP Server** | `python -m crackerjack --start-mcp-server` | Launch MCP agent integration |
+| **Monitoring Dashboard** | `python -m crackerjack --dashboard` | Comprehensive monitoring view |
+| **AI Debugging** | `python -m crackerjack --ai-debug --run-tests` | Verbose AI debugging mode |
+| **Coverage Status** | `python -m crackerjack --coverage-status` | Show coverage ratchet progress |
+| **Clear Caches** | `python -m crackerjack --clear-cache` | Reset all cache data |
+| **Fast Iteration** | `python -m crackerjack --skip-hooks` | Skip quality checks during dev |
+| **Documentation** | `python -m crackerjack --generate-docs` | Generate API documentation |
+| **Advanced Features** | See [[ADVANCED-FEATURES|ADVANCED-FEATURES.md]] | 82 enterprise/power user flags |
+
+**📑 Alphabetical Flag Reference**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--ai-debug` | - | Verbose debugging for AI auto-fixing |
+| `--ai-fix` | - | Enable AI-powered auto-fixing |
+| `--all` | `-a` | Full release workflow (bump, test, publish) |
+| `--benchmark` | - | Run tests in benchmark mode |
+| `--boost-coverage` | - | Auto-improve test coverage (default) |
+| `--bump` | `-b` | Bump version (patch/minor/major/auto) |
+| `--cache-stats` | - | Display cache statistics |
+| `--clear-cache` | - | Clear all caches and exit |
+| `--commit` | `-c` | Commit and push changes to Git |
+| `--comp` | - | Run only comprehensive hooks |
+| `--coverage-status` | - | Show coverage ratchet status |
+| `--dashboard` | - | Start comprehensive monitoring dashboard |
+| `--debug` | - | Enable debug output |
+| `--dev` | - | Enable development mode for monitors |
+| `--enhanced-monitor` | - | Advanced monitoring with patterns |
+| `--fast` | - | Run only fast hooks |
+| `--generate-docs` | - | Generate API documentation |
+| `--interactive` | `-i` | Use Rich UI interface |
+| `--monitor` | - | Multi-project progress monitor |
+| `--orchestrated` | - | Advanced orchestrated workflow mode |
+| `--publish` | `-p` | Bump version and publish to PyPI |
+| `--quick` | - | Quick mode (3 iterations, for CI/CD) |
+| `--restart-mcp-server` | - | Restart MCP server |
+| `--run-tests` | `-t` | Execute test suite |
+| `--skip-hooks` | `-s` | Skip pre-commit hooks |
+| `--start-mcp-server` | - | Start MCP server |
+| `--stop-mcp-server` | - | Stop MCP server |
+| `--strip-code` | `-x` | Remove docstrings/comments |
+| `--thorough` | - | Thorough mode (8 iterations) |
+| `--unified-dashboard` | - | Unified real-time dashboard |
+| `--verbose` | `-v` | Enable verbose output |
+| `--watchdog` | - | Service watchdog with auto-restart |
+
+**🔗 Related Documentation**
+- **Advanced Features**: [[ADVANCED-FEATURES|ADVANCED-FEATURES.md]] - 82 enterprise/power user flags
+- **Developer Guide**: [[CLAUDE|CLAUDE.md]] - AI assistant guidelines and developer commands
+- **Phase 2 Analysis**: [[PHASE2-CROSS-REFERENCE-ANALYSIS|docs/PHASE2-CROSS-REFERENCE-ANALYSIS.md]] - CLI flag audit
+
+---
+
 ## Command Reference
 
 **Core Workflow Commands:**

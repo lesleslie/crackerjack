@@ -191,6 +191,73 @@ python -m crackerjack --watchdog             # Monitor/restart services
 python -m crackerjack --all patch  # Full release workflow
 ```
 
+## Developer Command Index
+
+**🔧 Daily Development Workflow**
+
+| Workflow Stage | Command | When to Use |
+|---------------|---------|-------------|
+| **Quick Check** | `python -m crackerjack` | Before committing changes |
+| **Full Validation** | `python -m crackerjack --run-tests` | After feature completion |
+| **AI-Assisted Fix** | `python -m crackerjack --ai-fix --run-tests` | When tests fail or quality issues found |
+| **Fast Iteration** | `python -m crackerjack --skip-hooks` | During active development/debugging |
+| **Debug AI Issues** | `python -m crackerjack --ai-debug --run-tests` | When AI agents behave unexpectedly |
+
+**🐛 Debugging & Troubleshooting**
+
+| Issue | Command | Description |
+|-------|---------|-------------|
+| **AI Agent Issues** | `python -m crackerjack --ai-debug` | Verbose AI debugging output |
+| **Slow Tests** | `python -m crackerjack --test-workers 2` | Reduce parallelization |
+| **Hook Failures** | `python -m crackerjack --skip-hooks` | Bypass pre-commit during dev |
+| **Cache Problems** | `python -m crackerjack --clear-cache` | Reset all caches |
+| **Coverage Issues** | `python -m crackerjack --coverage-status` | Check ratchet status |
+
+**🚀 Release & Publishing**
+
+| Task | Command | Notes |
+|------|---------|-------|
+| **Quick Publish** | `python -m crackerjack --publish patch` | Version bump + publish |
+| **Full Release** | `python -m crackerjack --all patch` | Complete release workflow |
+| **Version Bump Only** | `python -m crackerjack --bump minor` | Update version without publishing |
+| **Interactive Release** | `python -m crackerjack --all interactive` | Choose version interactively |
+
+**🤖 AI Agent Invocation**
+
+| Agent Task | Command Pattern | Confidence Threshold |
+|-----------|----------------|---------------------|
+| **Refactoring** | `--ai-fix` (complexity ≤15) | 0.9 |
+| **Performance** | `--ai-fix` (O(n²) detection) | 0.85 |
+| **Security** | `--ai-fix` (unsafe patterns) | 0.8 |
+| **Testing** | `--ai-fix` (test failures) | 0.8 |
+| **All Agents** | `--ai-fix --run-tests` | ≥0.7 |
+
+**⚡ Performance Optimization**
+
+| Optimization | Command | Impact |
+|--------------|---------|--------|
+| **Benchmark Mode** | `python -m crackerjack --benchmark` | Disable parallelization for accurate timing |
+| **Cache Stats** | `python -m crackerjack --cache-stats` | View hit rates and sizes |
+| **Fast Hooks Only** | `python -m crackerjack --fast` | ~5s execution (formatting only) |
+| **Comprehensive Hooks** | `python -m crackerjack --comp` | ~30s execution (full analysis) |
+| **Quick Mode (CI/CD)** | `python -m crackerjack --quick` | Max 3 iterations |
+
+**📊 Monitoring Commands**
+
+| Monitor Type | Command | Access |
+|-------------|---------|--------|
+| **Comprehensive Dashboard** | `python -m crackerjack --dashboard` | Terminal UI |
+| **Unified Dashboard** | `python -m crackerjack --unified-dashboard` | http://localhost:8675 |
+| **Multi-Project** | `python -m crackerjack --monitor` | Terminal UI |
+| **Enhanced Monitor** | `python -m crackerjack --enhanced-monitor` | Advanced patterns |
+
+**🔗 Quick Links**
+- **Advanced Features**: See `docs/ADVANCED-FEATURES.md` for 82 enterprise/power user flags
+- **User Reference**: See `README.md` for comprehensive command reference
+- **Error Patterns**: See `docs/ai/ERROR-PATTERNS.yaml` for automated fixes
+
+---
+
 ## AI Agent System
 
 **12 Specialized Agents** handle domain-specific issues:
