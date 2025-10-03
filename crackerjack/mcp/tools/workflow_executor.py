@@ -13,16 +13,23 @@ async def execute_crackerjack_workflow(
 ) -> dict[str, t.Any]:
     job_id = str(uuid.uuid4())[:8]
 
+    # Get context first
+    context = get_context()
+
     # Initialize progress immediately
-    await _update_progress(
+    _update_progress(
         job_id,
         {"status": "started", "args": args, "timestamp": time.time()},
+        context,
+        1,
+        5,
         0,
-        message="Crackerjack execution started",
+        "initialization",
+        0,
+        "Crackerjack execution started",
     )
 
     # Start execution in background - no timeout!
-    context = get_context()
     asyncio.create_task(_execute_crackerjack_background(job_id, args, kwargs, context))
 
     # Return job_id immediately for progress monitoring
@@ -45,7 +52,7 @@ async def _execute_crackerjack_background(
         result = await _execute_crackerjack_sync(job_id, args, kwargs, context)
 
         # Update final progress with result
-        await _update_progress(
+        _update_progress(
             job_id,
             {
                 "status": result.get("status", "completed"),
@@ -53,14 +60,19 @@ async def _execute_crackerjack_background(
                 "timestamp": time.time(),
                 "final": True,
             },
+            context,
+            1,
+            5,
             100,
-            message=f"Execution {result.get('status', 'completed')}",
+            "completed",
+            100,
+            f"Execution {result.get('status', 'completed')}",
         )
     except Exception as e:
         import traceback
 
         # Update progress with error
-        await _update_progress(
+        _update_progress(
             job_id,
             {
                 "status": "failed",
@@ -69,8 +81,13 @@ async def _execute_crackerjack_background(
                 "timestamp": time.time(),
                 "final": True,
             },
+            context,
+            1,
+            5,
             -1,
-            message=f"Execution failed: {e}",
+            "failed",
+            -1,
+            f"Execution failed: {e}",
         )
 
 
