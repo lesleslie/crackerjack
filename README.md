@@ -186,7 +186,7 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 
 #### 🤖 Specialized Agent Architecture
 
-**9 Domain-Specific Sub-Agents** for targeted code quality improvements:
+**12 Specialized AI Agents** for comprehensive code quality improvements:
 
 - **🔒 SecurityAgent**: Fixes shell injections, weak crypto, token exposure, unsafe library usage
 - **♻️ RefactoringAgent**: Reduces complexity ≤15, extracts helper methods, applies SOLID principles
@@ -197,6 +197,9 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 - **🧪 TestCreationAgent**: Fixes test failures, missing fixtures, dependency issues
 - **📦 ImportOptimizationAgent**: Removes unused imports, restructures import statements
 - **🔬 TestSpecialistAgent**: Advanced testing scenarios, fixture management
+- **🔍 SemanticAgent**: Advanced semantic analysis, code comprehension, intelligent refactoring suggestions based on business logic understanding
+- **🏗️ ArchitectAgent**: High-level architectural patterns, design recommendations, system-level optimization strategies
+- **🎯 EnhancedProactiveAgent**: Proactive issue prevention, predictive quality monitoring, optimization before problems occur
 
 **Agent Coordination Features**:
 

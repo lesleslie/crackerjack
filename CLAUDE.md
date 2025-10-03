@@ -188,12 +188,12 @@ python -m crackerjack --restart-mcp-server   # Restart MCP server
 python -m crackerjack --watchdog             # Monitor/restart services
 
 # Release
-python -m crackerjack --full-release patch  # Full release workflow
+python -m crackerjack --all patch  # Full release workflow
 ```
 
 ## AI Agent System
 
-**9 Specialized Agents** handle domain-specific issues:
+**12 Specialized Agents** handle domain-specific issues:
 
 - **RefactoringAgent** (0.9): Complexity ≤15, dead code removal
 - **PerformanceAgent** (0.85): O(n²) detection, optimization
@@ -204,6 +204,9 @@ python -m crackerjack --full-release patch  # Full release workflow
 - **FormattingAgent** (0.8): Style violations, imports
 - **ImportOptimizationAgent**: Import cleanup, reorganization
 - **TestSpecialistAgent** (0.8): Advanced testing scenarios
+- **SemanticAgent** (0.85): Semantic analysis, code comprehension, intelligent refactoring
+- **ArchitectAgent** (0.85): Architecture patterns, design recommendations, system optimization
+- **EnhancedProactiveAgent** (0.9): Proactive prevention, predictive monitoring, pre-emptive optimization
 
 **Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 uses specific agents
 

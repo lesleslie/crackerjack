@@ -3,11 +3,14 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-03
 
 ### Added
-- feat: add new feature
 
-### Fixed
-- fix: resolve bug in parser
+- docs: Add documentation for 3 new AI agents (SemanticAgent, ArchitectAgent, EnhancedProactiveAgent)
+- docs: Comprehensive documentation audit report with 73-file inventory
 
+### Changed
+
+- docs: Update agent count from 9 to 12 across README.md and CLAUDE.md
+- docs: Enhanced agent descriptions with capabilities and use cases
 
 ## [0.39.6] - 2025-10-03
 
@@ -25,16 +28,6 @@ ______________________________________________________________________
 ### Testing
 
 - tests: Update 4 files
-
-## [Unreleased] - 2025-10-03
-
-### Added
-
-- feat: add new feature
-
-### Fixed
-
-- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-02
 
