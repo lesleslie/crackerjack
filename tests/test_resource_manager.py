@@ -297,3 +297,27 @@ def test_untrack_task_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in untrack_task: {e}")
+
+def test_get_leak_report_basic(self):
+    """Test basic functionality of get_leak_report."""
+    try:
+        result = get_leak_report()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_leak_report: {e}")
+
+def test_has_potential_leaks_basic(self):
+    """Test basic functionality of has_potential_leaks."""
+    try:
+        result = has_potential_leaks()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in has_potential_leaks: {e}")

@@ -1,6 +1,23 @@
 ______________________________________________________________________
 
-## [Unreleased] - 2025-10-02
+## [0.39.6] - 2025-10-03
+
+### Changed
+
+- Crackerjack (quality: 64/100) - 2025-10-02 13:40:49
+- Crackerjack (quality: 64/100) - 2025-10-02 20:06:38
+- Crackerjack (quality: 64/100) - 2025-10-02 20:47:06
+- Crackerjack (quality: 64/100) - 2025-10-02 20:54:53
+- Crackerjack (quality: 64/100) - 2025-10-02 21:20:59
+- Crackerjack (quality: 64/100) - 2025-10-02 22:04:12
+- Crackerjack (quality: 64/100) - 2025-10-02 22:16:32
+- Crackerjack (quality: 68/100) - 2025-10-02 22:58:03
+
+### Testing
+
+- tests: Update 4 files
+
+## [Unreleased] - 2025-10-03
 
 ### Added
 - feat: add new feature
@@ -8,6 +25,16 @@ ______________________________________________________________________
 ### Fixed
 - fix: resolve bug in parser
 
+
+## [Unreleased] - 2025-10-02
+
+### Added
+
+- feat: add new feature
+
+### Fixed
+
+- fix: resolve bug in parser
 
 ## id: 01K6K1AYFVG7DAPYM597FJRPA8
 
