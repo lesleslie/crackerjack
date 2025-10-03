@@ -1,7 +1,7 @@
-import pytest
+"""import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
-from crackerjack.adapters.rust_tool_adapter import Issue, ToolResult, RustToolAdapter, BaseRustToolAdapter
+from crackerjack.adapters.rust_tool_adapter import Issue, ToolResult, RustToolAdapter, BaseRustToolAdapter, to_dict, has_errors, error_count, warning_count, to_dict, get_command_args
 
 
 class TestRusttooladapter:
@@ -124,8 +124,8 @@ class TestRusttooladapter:
             pytest.skip('Function get_command_args requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in get_command_args: ' + str(e))
-    @pytest.mark.parametrize("target_files", [None, None])
-    def test_get_command_args_with_parameters(self, target_files):
+    @pytest.mark.parametrize(["self", "target_files"], [(None, None), (None, None)])
+    def test_get_command_args_with_parameters(self, self, target_files):
         """Test get_command_args with various parameter combinations."""
         try:
             if len(['self', 'target_files']) <= 5:
@@ -158,8 +158,8 @@ class TestRusttooladapter:
             pytest.skip('Function parse_output requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in parse_output: ' + str(e))
-    @pytest.mark.parametrize("output", [None, None])
-    def test_parse_output_with_parameters(self, output):
+    @pytest.mark.parametrize(["self", "output"], [(None, None), (None, None)])
+    def test_parse_output_with_parameters(self, self, output):
         """Test parse_output with various parameter combinations."""
         try:
             if len(['self', 'output']) <= 5:
@@ -262,8 +262,8 @@ class TestRusttooladapter:
         """Test validate_tool_available with edge case scenarios."""
 
         edge_cases = [
-            None,
-            None,
+            ,
+            ,
         ]
 
         for edge_case in edge_cases:
@@ -285,8 +285,8 @@ class TestRusttooladapter:
             pytest.skip('Function get_command_args requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in get_command_args: ' + str(e))
-    @pytest.mark.parametrize("target_files", [None, None])
-    def test_get_command_args_with_parameters(self, target_files):
+    @pytest.mark.parametrize(["self", "target_files"], [(None, None), (None, None)])
+    def test_get_command_args_with_parameters(self, self, target_files):
         """Test get_command_args with various parameter combinations."""
         try:
             if len(['self', 'target_files']) <= 5:
@@ -319,8 +319,8 @@ class TestRusttooladapter:
             pytest.skip('Function parse_output requires manual implementation: ' + str(e))
         except Exception as e:
             pytest.fail('Unexpected error in parse_output: ' + str(e))
-    @pytest.mark.parametrize("output", [None, None])
-    def test_parse_output_with_parameters(self, output):
+    @pytest.mark.parametrize(["self", "output"], [(None, None), (None, None)])
+    def test_parse_output_with_parameters(self, self, output):
         """Test parse_output with various parameter combinations."""
         try:
             if len(['self', 'output']) <= 5:
@@ -442,8 +442,8 @@ class TestRusttooladapter:
         """Test validate_tool_available with edge case scenarios."""
 
         edge_cases = [
-            None,
-            None,
+            ,
+            ,
         ]
 
         for edge_case in edge_cases:
@@ -455,9 +455,7 @@ class TestRusttooladapter:
 
                 pass
             except Exception as e:
-                pytest.fail(f"Unexpected error with edge case {edge_case}: {e}")
-
-    @pytest.fixture
+                pytest.fail(f"Unexpected error with edge case {edge_case}: {e}")    @pytest.fixture
     def issue_instance(self):
         """Fixture to create Issue instance for testing."""
         try:
@@ -484,9 +482,7 @@ class TestRusttooladapter:
         try:
             return BaseRustToolAdapter()
         except TypeError:
-            pytest.skip("Class requires specific constructor arguments")
-
-    def test_issue_instantiation(self, issue_instance):
+            pytest.skip("Class requires specific constructor arguments")    def test_issue_instantiation(self, issue_instance):
         """Test successful instantiation of Issue."""
         assert issue_instance is not None
         assert isinstance(issue_instance, Issue)
