@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
@@ -174,7 +174,8 @@ class TestEnhancedproactiveagent:
         try:
             return EnhancedAgent(mock_context)
         except Exception:
-            pytest.skip("Agent requires specific context configuration")    def test_enhancedproactiveagent_instantiation(self, enhancedproactiveagent_instance):
+            pytest.skip("Agent requires specific context configuration")
+    def test_enhancedproactiveagent_instantiation(self, enhancedproactiveagent_instance):
         """Test successful instantiation of EnhancedProactiveAgent."""
         assert enhancedproactiveagent_instance is not None
         assert isinstance(enhancedproactiveagent_instance, EnhancedProactiveAgent)

@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.adapters.zuban_adapter import TypeIssue, ZubanAdapter, to_dict, get_tool_name, check_tool_health, supports_json_output, get_lsp_diagnostics, get_lsp_diagnostics_optimized, get_command_args, check_with_lsp_or_fallback
@@ -296,7 +296,8 @@ class TestZubanadapter:
         try:
             return ZubanAdapter()
         except TypeError:
-            pytest.skip("Class requires specific constructor arguments")    def test_typeissue_instantiation(self, typeissue_instance):
+            pytest.skip("Class requires specific constructor arguments")
+    def test_typeissue_instantiation(self, typeissue_instance):
         """Test successful instantiation of TypeIssue."""
         assert typeissue_instance is not None
         assert isinstance(typeissue_instance, TypeIssue)

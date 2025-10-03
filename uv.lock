@@ -2741,7 +2741,7 @@ wheels = [
 
 [[package]]
 name = "session-mgmt-mcp"
-version = "0.6.0"
+version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crackerjack" },
@@ -2759,9 +2759,9 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/4a/99604f613912fe5e10efe24e5a9a804cb3f925b040604cf539e1dbfae345/session_mgmt_mcp-0.6.0.tar.gz", hash = "sha256:a5bcebd1fe374145293f96f77fe5695178f2e38a644f6d528d90d3213de143da", size = 665726, upload-time = "2025-10-03T08:48:18.088Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/1e/8927c48f102e473c530629a81c7276936f0dc04e2a6a62ad6550fc4a4c55/session_mgmt_mcp-0.6.1.tar.gz", hash = "sha256:89e0b89a267bc6ec76b4c9e2613bd3d7a866e9431e4b79573aad45fb60dd4c0c", size = 665463, upload-time = "2025-10-03T09:05:44.563Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/5b/3f1e1be4b979e7241b745d1bcdc88b0d282ce78a2d3035983699d175788f/session_mgmt_mcp-0.6.0-py3-none-any.whl", hash = "sha256:0e1a43b87015171d1bf6d781f69cb39d9e937332eb5f1bc2eb357ad43b885e93", size = 266427, upload-time = "2025-10-03T08:48:16.387Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/67/c56a13f9263183c30dc9577b7080517ce02236221ad3e0987ae36cf014cf/session_mgmt_mcp-0.6.1-py3-none-any.whl", hash = "sha256:7a7f653f2fb49c7c92f95382afe2ea1020a4fed98229ad2a70f0de9b8b3030fb", size = 266428, upload-time = "2025-10-03T09:05:42.661Z" },
 ]
 
 [[package]]
@@ -3028,7 +3028,7 @@ wheels = [
 
 [[package]]
 name = "transformers"
-version = "4.56.2"
+version = "4.57.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -3042,9 +3042,9 @@ dependencies = [
     { name = "tokenizers" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e5/82/0bcfddd134cdf53440becb5e738257cc3cf34cf229d63b57bfd288e6579f/transformers-4.56.2.tar.gz", hash = "sha256:5e7c623e2d7494105c726dd10f6f90c2c99a55ebe86eef7233765abd0cb1c529", size = 9844296, upload-time = "2025-09-19T15:16:26.778Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/5c/a22c39dac2687f3fe2a6b97e2c1ae516e91cd4d3976a7a2b7c24ff2fae48/transformers-4.57.0.tar.gz", hash = "sha256:d045753f3d93f9216e693cdb168698dfd2e9d3aad1bb72579a5d60ebf1545a8b", size = 10142956, upload-time = "2025-10-03T17:03:47.177Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/26/2591b48412bde75e33bfd292034103ffe41743cacd03120e3242516cd143/transformers-4.56.2-py3-none-any.whl", hash = "sha256:79c03d0e85b26cb573c109ff9eafa96f3c8d4febfd8a0774e8bba32702dd6dde", size = 11608055, upload-time = "2025-09-19T15:16:23.736Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/2b/4d2708ac1ff5cd708b6548f4c5812d0ae40d1c28591c4c1c762b6dbdef2d/transformers-4.57.0-py3-none-any.whl", hash = "sha256:9d7c6d098c026e40d897e017ed1f481ab803cbac041021dbc6ae6100e4949b55", size = 11990588, upload-time = "2025-10-03T17:03:43.629Z" },
 ]
 
 [[package]]

@@ -664,7 +664,7 @@ python -m crackerjack --ai-fix
 | **Clear Caches** | `python -m crackerjack --clear-cache` | Reset all cache data |
 | **Fast Iteration** | `python -m crackerjack --skip-hooks` | Skip quality checks during dev |
 | **Documentation** | `python -m crackerjack --generate-docs` | Generate API documentation |
-| **Advanced Features** | See [[ADVANCED-FEATURES|ADVANCED-FEATURES.md]] | 82 enterprise/power user flags |
+| **Advanced Features** | See \[[ADVANCED-FEATURES|ADVANCED-FEATURES.md]\] | 82 enterprise/power user flags |
 
 **📑 Alphabetical Flag Reference**
 
@@ -704,11 +704,12 @@ python -m crackerjack --ai-fix
 | `--watchdog` | - | Service watchdog with auto-restart |
 
 **🔗 Related Documentation**
-- **Advanced Features**: [[ADVANCED-FEATURES|ADVANCED-FEATURES.md]] - 82 enterprise/power user flags
-- **Developer Guide**: [[CLAUDE|CLAUDE.md]] - AI assistant guidelines and developer commands
-- **Phase 2 Analysis**: [[PHASE2-CROSS-REFERENCE-ANALYSIS|docs/PHASE2-CROSS-REFERENCE-ANALYSIS.md]] - CLI flag audit
 
----
+- **Advanced Features**: \[[ADVANCED-FEATURES|ADVANCED-FEATURES.md]\] - 82 enterprise/power user flags
+- **Developer Guide**: \[[CLAUDE|CLAUDE.md]\] - AI assistant guidelines and developer commands
+- **Phase 2 Analysis**: \[[PHASE2-CROSS-REFERENCE-ANALYSIS|docs/PHASE2-CROSS-REFERENCE-ANALYSIS.md]\] - CLI flag audit
+
+______________________________________________________________________
 
 ## Command Reference
 

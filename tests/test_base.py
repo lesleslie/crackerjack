@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
@@ -566,7 +566,8 @@ class TestBase:
         try:
             return AgentRegistry(mock_context)
         except Exception:
-            pytest.skip("Agent requires specific context configuration")    def test_priority_instantiation(self, priority_instance):
+            pytest.skip("Agent requires specific context configuration")
+    def test_priority_instantiation(self, priority_instance):
         """Test successful instantiation of Priority."""
         assert priority_instance is not None
         assert isinstance(priority_instance, Priority)

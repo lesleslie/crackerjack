@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
@@ -125,7 +125,8 @@ class TestFormattingagent:
         try:
             return FormattingAgent(mock_context)
         except Exception:
-            pytest.skip("Agent requires specific context configuration")    def test_formattingagent_instantiation(self, formattingagent_instance):
+            pytest.skip("Agent requires specific context configuration")
+    def test_formattingagent_instantiation(self, formattingagent_instance):
         """Test successful instantiation of FormattingAgent."""
         assert formattingagent_instance is not None
         assert isinstance(formattingagent_instance, FormattingAgent)

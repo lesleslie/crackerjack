@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.adapters.rust_tool_adapter import Issue, ToolResult, RustToolAdapter, BaseRustToolAdapter, to_dict, has_errors, error_count, warning_count, to_dict, get_command_args
@@ -262,8 +262,7 @@ class TestRusttooladapter:
         """Test validate_tool_available with edge case scenarios."""
 
         edge_cases = [
-            ,
-            ,
+            None,
         ]
 
         for edge_case in edge_cases:
@@ -442,8 +441,7 @@ class TestRusttooladapter:
         """Test validate_tool_available with edge case scenarios."""
 
         edge_cases = [
-            ,
-            ,
+            None,
         ]
 
         for edge_case in edge_cases:
@@ -482,7 +480,8 @@ class TestRusttooladapter:
         try:
             return BaseRustToolAdapter()
         except TypeError:
-            pytest.skip("Class requires specific constructor arguments")    def test_issue_instantiation(self, issue_instance):
+            pytest.skip("Class requires specific constructor arguments")
+    def test_issue_instantiation(self, issue_instance):
         """Test successful instantiation of Issue."""
         assert issue_instance is not None
         assert isinstance(issue_instance, Issue)

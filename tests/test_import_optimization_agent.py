@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
@@ -285,7 +285,8 @@ class TestImportoptimizationagent:
         try:
             return ImportOptimizationAgent(mock_context)
         except Exception:
-            pytest.skip("Agent requires specific context configuration")    def test_importanalysis_instantiation(self, importanalysis_instance):
+            pytest.skip("Agent requires specific context configuration")
+    def test_importanalysis_instantiation(self, importanalysis_instance):
         """Test successful instantiation of ImportAnalysis."""
         assert importanalysis_instance is not None
         assert isinstance(importanalysis_instance, ImportAnalysis)

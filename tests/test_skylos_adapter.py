@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.adapters.skylos_adapter import DeadCodeIssue, SkylosAdapter, to_dict, get_tool_name, supports_json_output, get_command_args, parse_output
@@ -175,7 +175,8 @@ class TestSkylosadapter:
         try:
             return SkylosAdapter()
         except TypeError:
-            pytest.skip("Class requires specific constructor arguments")    def test_deadcodeissue_instantiation(self, deadcodeissue_instance):
+            pytest.skip("Class requires specific constructor arguments")
+    def test_deadcodeissue_instantiation(self, deadcodeissue_instance):
         """Test successful instantiation of DeadCodeIssue."""
         assert deadcodeissue_instance is not None
         assert isinstance(deadcodeissue_instance, DeadCodeIssue)

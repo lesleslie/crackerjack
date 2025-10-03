@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.adapters.lsp_client import ZubanLSPClient, connect, disconnect, initialize, text_document_did_open, text_document_did_change, text_document_did_close, get_diagnostics
@@ -266,7 +266,8 @@ class TestLspclient:
         try:
             return ZubanLSPClient()
         except TypeError:
-            pytest.skip("Class requires specific constructor arguments")    def test_zubanlspclient_instantiation(self, zubanlspclient_instance):
+            pytest.skip("Class requires specific constructor arguments")
+    def test_zubanlspclient_instantiation(self, zubanlspclient_instance):
         """Test successful instantiation of ZubanLSPClient."""
         assert zubanlspclient_instance is not None
         assert isinstance(zubanlspclient_instance, ZubanLSPClient)

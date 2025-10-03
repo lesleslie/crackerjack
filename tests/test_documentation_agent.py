@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
@@ -125,7 +125,8 @@ class TestDocumentationagent:
         try:
             return DocumentationAgent(mock_context)
         except Exception:
-            pytest.skip("Agent requires specific context configuration")    def test_documentationagent_instantiation(self, documentationagent_instance):
+            pytest.skip("Agent requires specific context configuration")
+    def test_documentationagent_instantiation(self, documentationagent_instance):
         """Test successful instantiation of DocumentationAgent."""
         assert documentationagent_instance is not None
         assert isinstance(documentationagent_instance, DocumentationAgent)

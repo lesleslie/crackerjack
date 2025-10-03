@@ -1,28 +1,29 @@
 # Advanced Features Reference
+
 ## Crackerjack Power User Guide
 
 This document covers advanced CLI flags and enterprise features not included in the main README. These features are designed for power users, enterprise deployments, CI/CD pipelines, and specialized workflows.
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
-1. [Enterprise Features](#enterprise-features)
-2. [AI & Intelligence](#ai--intelligence)
-3. [Documentation Generation](#documentation-generation)
-4. [Quality Analytics](#quality-analytics)
-5. [Monitoring & Dashboards](#monitoring--dashboards)
-6. [Orchestration & Execution](#orchestration--execution)
-7. [Zuban LSP Integration](#zuban-lsp-integration)
-8. [WebSocket & Servers](#websocket--servers)
-9. [Semantic Search](#semantic-search)
-10. [Visualization](#visualization)
-11. [Configuration Management](#configuration-management)
-12. [Coverage & Performance](#coverage--performance)
-13. [Global Locking](#global-locking)
-14. [Experimental Features](#experimental-features)
+1. \[[#enterprise-features|Enterprise Features]\]
+1. \[[#ai--intelligence|AI & Intelligence]\]
+1. \[[#documentation-generation|Documentation Generation]\]
+1. \[[#quality-analytics|Quality Analytics]\]
+1. \[[#monitoring--dashboards|Monitoring & Dashboards]\]
+1. \[[#orchestration--execution|Orchestration & Execution]\]
+1. \[[#zuban-lsp-integration|Zuban LSP Integration]\]
+1. \[[#websocket--servers|WebSocket & Servers]\]
+1. \[[#semantic-search|Semantic Search]\]
+1. \[[#visualization|Visualization]\]
+1. \[[#configuration-management|Configuration Management]\]
+1. \[[#coverage--performance|Coverage & Performance]\]
+1. \[[#global-locking|Global Locking]\]
+1. \[[#experimental-features|Experimental Features]\]
 
----
+______________________________________________________________________
 
 ## Enterprise Features
 
@@ -35,6 +36,7 @@ python -m crackerjack --enterprise-optimization
 ```
 
 **Optimization Profiles**:
+
 ```bash
 # Balanced optimization (default)
 python -m crackerjack --enterprise-optimization --enterprise-profiling balanced
@@ -50,17 +52,19 @@ python -m crackerjack --enterprise-optimization --enterprise-profiling throughpu
 ```
 
 **Generate Enterprise Reports**:
+
 ```bash
 python -m crackerjack --enterprise-optimization --enterprise-reporting ./reports/enterprise-analysis.json
 ```
 
 **Use Cases**:
+
 - Large-scale codebases (100k+ lines)
 - Multi-service architectures
 - Resource-constrained environments
 - High-throughput CI/CD pipelines
 
----
+______________________________________________________________________
 
 ## AI & Intelligence
 
@@ -107,12 +111,13 @@ python -m crackerjack --auto-version --accept-version
 ```
 
 **How It Works**:
+
 - Analyzes conventional commits (feat/fix/breaking)
 - Detects API-breaking changes
 - Provides confidence scores
 - Recommends major/minor/patch based on changes
 
----
+______________________________________________________________________
 
 ## Documentation Generation
 
@@ -172,7 +177,7 @@ python -m crackerjack --generate-changelog --changelog-version 0.40.0
 python -m crackerjack --generate-changelog --changelog-dry-run
 ```
 
----
+______________________________________________________________________
 
 ## Quality Analytics
 
@@ -207,12 +212,13 @@ python -m crackerjack --predictive-analytics --analytics-dashboard ./dashboard.h
 ```
 
 **What It Predicts**:
+
 - Test failure rates
 - Code complexity trends
 - Coverage trajectory
 - Quality score forecasts
 
----
+______________________________________________________________________
 
 ## Monitoring & Dashboards
 
@@ -229,6 +235,7 @@ python -m crackerjack --enhanced-monitor --dev
 ```
 
 **Features**:
+
 - Real-time metric cards
 - Modern web UI patterns
 - Advanced visualization
@@ -244,6 +251,7 @@ python -m crackerjack --monitor
 ```
 
 **Capabilities**:
+
 - WebSocket polling
 - Watchdog services
 - Project autodiscovery
@@ -272,7 +280,7 @@ python -m crackerjack --unified-dashboard --unified-dashboard-port 9000
 
 **Access**: http://localhost:8675/
 
----
+______________________________________________________________________
 
 ## Orchestration & Execution
 
@@ -343,7 +351,7 @@ python -m crackerjack --quick
 python -m crackerjack --thorough
 ```
 
----
+______________________________________________________________________
 
 ## Zuban LSP Integration
 
@@ -386,12 +394,13 @@ python -m crackerjack --no-zuban-lsp
 ```
 
 **Benefits**:
+
 - 20-200x faster type checking vs pyright
 - Real-time feedback
 - Editor integration
 - Reduced pre-commit time
 
----
+______________________________________________________________________
 
 ## WebSocket & Servers
 
@@ -421,12 +430,13 @@ python -m crackerjack --watchdog
 ```
 
 **Monitors**:
+
 - MCP server health
 - WebSocket server status
 - Auto-restart on failure
 - Service availability
 
----
+______________________________________________________________________
 
 ## Semantic Search
 
@@ -450,12 +460,13 @@ python -m crackerjack --remove-from-index path/to/file.py
 ```
 
 **Use Cases**:
+
 - Finding similar code patterns
 - Duplicate detection
 - Code reuse identification
 - Architecture understanding
 
----
+______________________________________________________________________
 
 ## Visualization
 
@@ -488,7 +499,7 @@ python -m crackerjack --heatmap --heatmap-output ./data.csv
 python -m crackerjack --heatmap --heatmap-output ./report.html
 ```
 
----
+______________________________________________________________________
 
 ## Configuration Management
 
@@ -522,12 +533,13 @@ python -m crackerjack --clear-cache
 ```
 
 **Cache Types**:
+
 - Hook execution results
 - File content hashes
 - AI agent decisions
 - Pre-commit environments
 
----
+______________________________________________________________________
 
 ## Coverage & Performance
 
@@ -548,12 +560,13 @@ python -m crackerjack --no-boost-coverage
 ```
 
 **Coverage Ratchet**:
+
 - Progressive improvement system
 - Never allows decrease
 - 2% tolerance for flaky tests
 - Targets 100% coverage
 
----
+______________________________________________________________________
 
 ## Global Locking
 
@@ -574,12 +587,13 @@ python -m crackerjack --no-cleanup-stale-locks
 ```
 
 **Use Cases**:
+
 - CI/CD parallel builds
 - Multi-developer workflows
 - Container orchestration
 - Distributed systems
 
----
+______________________________________________________________________
 
 ## Experimental Features
 
@@ -608,7 +622,7 @@ python -m crackerjack --no-git-tags --bump patch
 python -m crackerjack --skip-version-check --publish
 ```
 
----
+______________________________________________________________________
 
 ## Shell Completion
 
@@ -620,7 +634,7 @@ python -m crackerjack --install-completion
 python -m crackerjack --show-completion
 ```
 
----
+______________________________________________________________________
 
 ## Advanced Workflows
 
@@ -669,19 +683,21 @@ python -m crackerjack \
   --analytics-dashboard ./quality-report.html
 ```
 
----
+______________________________________________________________________
 
 ## Performance Optimization
 
 ### Caching Strategy
 
 **Cache Hit Optimization**:
+
 - Pre-commit results cached by file hash
 - AI agent decisions memoized
 - Semantic index persisted
 - Hook environments reused
 
 **When to Clear Cache**:
+
 ```bash
 # After dependency updates
 uv sync && python -m crackerjack --clear-cache
@@ -696,6 +712,7 @@ python -m crackerjack --clear-cache --benchmark
 ### Parallel Execution
 
 **Optimal Workers**:
+
 ```bash
 # Auto-detect (default - recommended)
 python -m crackerjack --run-tests --test-workers 0
@@ -707,13 +724,14 @@ python -m crackerjack --run-tests --test-workers 1
 python -m crackerjack --run-tests --test-workers 2
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting Advanced Features
 
 ### Common Issues
 
 **Zuban LSP Not Starting**:
+
 ```bash
 # Check LSP status
 lsof -i :8677
@@ -723,6 +741,7 @@ python -m crackerjack --restart-zuban-lsp --debug
 ```
 
 **WebSocket Connection Failed**:
+
 ```bash
 # Verify port availability
 lsof -i :8675
@@ -732,6 +751,7 @@ python -m crackerjack --start-websocket-server --websocket-port 9000
 ```
 
 **Anomaly Detection False Positives**:
+
 ```bash
 # Reduce sensitivity
 python -m crackerjack --anomaly-detection --anomaly-sensitivity 2.5
@@ -741,6 +761,7 @@ python -m crackerjack --predictive-analytics --prediction-period 30
 ```
 
 **Enterprise Optimization Performance**:
+
 ```bash
 # Use memory-optimized profile for large codebases
 python -m crackerjack --enterprise-optimization --enterprise-profiling memory
@@ -749,32 +770,32 @@ python -m crackerjack --enterprise-optimization --enterprise-profiling memory
 python -m crackerjack --enterprise-optimization --enterprise-reporting analysis.json
 ```
 
----
+______________________________________________________________________
 
 ## Best Practices
 
 ### For Enterprise Deployments
 
 1. **Use Global Locking Control**: Configure timeouts appropriate for your infrastructure
-2. **Enable Enterprise Optimization**: Profile-based optimization for your environment
-3. **Implement Anomaly Detection**: Early warning system for quality regressions
-4. **Automate Documentation**: Keep API docs synchronized with code
+1. **Enable Enterprise Optimization**: Profile-based optimization for your environment
+1. **Implement Anomaly Detection**: Early warning system for quality regressions
+1. **Automate Documentation**: Keep API docs synchronized with code
 
 ### For CI/CD Pipelines
 
 1. **Quick Mode**: Use `--quick` for fast feedback loops
-2. **Disable Coverage Boost**: Use `--no-boost-coverage` to avoid CI conflicts
-3. **Global Locking**: Use `--disable-global-locking` for parallel builds
-4. **Auto-accept Versions**: Use `--auto-version --accept-version` for automated releases
+1. **Disable Coverage Boost**: Use `--no-boost-coverage` to avoid CI conflicts
+1. **Global Locking**: Use `--disable-global-locking` for parallel builds
+1. **Auto-accept Versions**: Use `--auto-version --accept-version` for automated releases
 
 ### For Development Teams
 
 1. **Zuban LSP**: Integrate for real-time type checking in editors
-2. **Semantic Search**: Index codebase for better code discovery
-3. **Heat Maps**: Visualize quality patterns for team insights
-4. **Contextual AI**: Use `--contextual-ai` for project-specific guidance
+1. **Semantic Search**: Index codebase for better code discovery
+1. **Heat Maps**: Visualize quality patterns for team insights
+1. **Contextual AI**: Use `--contextual-ai` for project-specific guidance
 
----
+______________________________________________________________________
 
 ## Migration from Core Features
 
@@ -789,7 +810,7 @@ If you're moving from basic to advanced usage:
 **From**: `python -m crackerjack --bump patch --publish`
 **To**: `python -m crackerjack --auto-version --accept-version --generate-changelog --all`
 
----
+______________________________________________________________________
 
 ## Feature Maturity Matrix
 
@@ -806,7 +827,7 @@ If you're moving from basic to advanced usage:
 | WebSocket Streaming | Stable | Real-time Monitoring |
 | Experimental Hooks | Alpha | Testing Only |
 
----
+______________________________________________________________________
 
 ## Performance Benchmarks
 
@@ -819,11 +840,12 @@ If you're moving from basic to advanced usage:
 - **With Caching**: 60-80% improvement on subsequent runs
 
 **Resource Usage**:
+
 - **Memory**: 200-500MB (standard), 500MB-1GB (enterprise)
 - **CPU**: Scales with worker count (auto-detected)
 - **Disk**: 50-200MB cache (varies by project)
 
----
+______________________________________________________________________
 
 ## Future Roadmap
 
@@ -835,7 +857,7 @@ Planned advanced features (subject to change):
 - **Multi-Language Support**: Expand beyond Python
 - **Real-time Collaboration**: Shared monitoring dashboards
 
----
+______________________________________________________________________
 
 ## Support & Resources
 
@@ -844,10 +866,10 @@ Planned advanced features (subject to change):
 - **Quality Concerns**: Enable `--anomaly-detection --predictive-analytics`
 - **Integration Help**: Use `--contextual-ai --ai-help-query "your question"`
 
-For core features, see [README.md](../README.md).
-For developer guidance, see [CLAUDE.md](../CLAUDE.md).
+For core features, see \[[README|README.md]\].
+For developer guidance, see \[[CLAUDE|CLAUDE.md]\].
 
----
+______________________________________________________________________
 
 **Last Updated**: 2025-10-03
 **Coverage**: 103 total CLI flags (100% documented)

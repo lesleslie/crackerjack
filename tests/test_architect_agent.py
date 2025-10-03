@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
@@ -161,7 +161,8 @@ class TestArchitectagent:
         try:
             return ArchitectAgent(mock_context)
         except Exception:
-            pytest.skip("Agent requires specific context configuration")    def test_architectagent_instantiation(self, architectagent_instance):
+            pytest.skip("Agent requires specific context configuration")
+    def test_architectagent_instantiation(self, architectagent_instance):
         """Test successful instantiation of ArchitectAgent."""
         assert architectagent_instance is not None
         assert isinstance(architectagent_instance, ArchitectAgent)

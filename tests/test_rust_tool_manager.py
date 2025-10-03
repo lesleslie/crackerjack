@@ -1,4 +1,4 @@
-"""import pytest
+import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from crackerjack.adapters.rust_tool_manager import RustToolHookManager, run_all_tools, run_single_tool, get_available_tools, get_tool_info, create_consolidated_report
@@ -183,7 +183,8 @@ class TestRusttoolmanager:
         try:
             return RustToolHookManager()
         except TypeError:
-            pytest.skip("Class requires specific constructor arguments")    def test_rusttoolhookmanager_instantiation(self, rusttoolhookmanager_instance):
+            pytest.skip("Class requires specific constructor arguments")
+    def test_rusttoolhookmanager_instantiation(self, rusttoolhookmanager_instance):
         """Test successful instantiation of RustToolHookManager."""
         assert rusttoolhookmanager_instance is not None
         assert isinstance(rusttoolhookmanager_instance, RustToolHookManager)

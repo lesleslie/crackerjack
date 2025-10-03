@@ -4,14 +4,14 @@ This document provides comprehensive API documentation for Crackerjack's service
 
 ## Table of Contents
 
-- [[#core-services|Core Services]]
-- [[#ai-agent-system|AI Agent System]]
-- [[#high-performance-adapters|High-Performance Adapters]]
-- [[#monitoring--performance|Monitoring & Performance]]
-- [[#mcp-server-integration|MCP Server Integration]]
-- [[#websocket-api|WebSocket API]]
-- [[#cli-interface|CLI Interface]]
-- [[#configuration-system|Configuration System]]
+- \[[#core-services|Core Services]\]
+- \[[#ai-agent-system|AI Agent System]\]
+- \[[#high-performance-adapters|High-Performance Adapters]\]
+- \[[#monitoring--performance|Monitoring & Performance]\]
+- \[[#mcp-server-integration|MCP Server Integration]\]
+- \[[#websocket-api|WebSocket API]\]
+- \[[#cli-interface|CLI Interface]\]
+- \[[#configuration-system|Configuration System]\]
 
 ## Core Services
 
@@ -172,7 +172,7 @@ Proactive issue prevention and predictive monitoring.
 
 - Proactive issue prevention before problems occur
 - Predictive quality monitoring
-- Pre-emptive optimization strategies
+- Preemptive optimization strategies
 - Early warning system for potential issues
 
 #### Additional Agents
