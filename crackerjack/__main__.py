@@ -474,14 +474,15 @@ def _handle_version_analysis(
 
 
 def _setup_debug_and_verbose_flags(
-    ai_debug: bool, debug: bool, verbose: bool, options: t.Any
+    ai_fix: bool, ai_debug: bool, debug: bool, verbose: bool, options: t.Any
 ) -> tuple[bool, bool]:
     """Configure debug and verbose flags and update options.
 
+    Preserves the user's ai_fix flag value, but ai_debug can override it to True.
+
     Returns tuple of (ai_fix, verbose) flags.
     """
-    ai_fix = False
-
+    # Preserve user's ai_fix flag, but ai_debug implies ai_fix
     if ai_debug:
         ai_fix = True
         verbose = True
@@ -1462,7 +1463,9 @@ def main(
     options.remove_from_index = remove_from_index
 
     # Setup debug and verbose flags
-    ai_fix, verbose = _setup_debug_and_verbose_flags(ai_debug, debug, verbose, options)
+    ai_fix, verbose = _setup_debug_and_verbose_flags(
+        ai_fix, ai_debug, debug, verbose, options
+    )
     setup_ai_agent_env(ai_fix, ai_debug or debug)
 
     # Process all commands - returns True if should continue to main workflow
