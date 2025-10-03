@@ -11,6 +11,7 @@ Phase 5 transforms the crackerjack:run workflow from a feature-complete prototyp
 ## What We Already Have (Phases 1-4)
 
 ✅ **Core Infrastructure**:
+
 - Quality metrics extraction (Phase 1)
 - AI agent recommendations with 12 patterns (Phase 2)
 - 30-day learning system with pattern detection (Phase 3)
@@ -21,6 +22,7 @@ Phase 5 transforms the crackerjack:run workflow from a feature-complete prototyp
 ## Phase 5 Goals
 
 ### 1. Complete Test Coverage
+
 - ✅ RecommendationEngine (7 tests - DONE in Phase 4)
 - ✅ QualityMetrics (18 tests - DONE in Phase 4)
 - ⏳ AgentAnalyzer (pending - ~12 tests)
@@ -28,18 +30,21 @@ Phase 5 transforms the crackerjack:run workflow from a feature-complete prototyp
 - ⏳ End-to-end workflow tests (pending - ~3 tests)
 
 ### 2. Advanced Intelligence Features
+
 - Multi-project pattern correlation
 - Predictive failure detection
 - Automated fix suggestions with code generation
 - Team collaboration insights
 
 ### 3. Production Hardening
+
 - Performance monitoring and metrics
 - Error recovery and resilience
 - Rate limiting and resource management
 - Security audit and validation
 
 ### 4. Comprehensive Documentation
+
 - User guide with examples
 - API reference documentation
 - Architecture decision records (ADRs)
@@ -117,7 +122,9 @@ class TestAgentAnalyzer:
 
         recommendations = AgentAnalyzer.analyze(stdout, stderr, exit_code=1)
 
-        import_recs = [r for r in recommendations if r.agent == AgentType.IMPORT_OPTIMIZATION]
+        import_recs = [
+            r for r in recommendations if r.agent == AgentType.IMPORT_OPTIMIZATION
+        ]
         assert len(import_recs) >= 1
 
     def test_analyze_dry_violations(self):
@@ -240,11 +247,13 @@ class MockReflectionDB:
         return self.stored_conversations
 
     async def store_conversation(self, content, metadata=None):
-        self.stored_conversations.append({
-            "content": content,
-            "metadata": metadata or {},
-            "timestamp": datetime.now().isoformat(),
-        })
+        self.stored_conversations.append(
+            {
+                "content": content,
+                "metadata": metadata or {},
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
 
 @pytest.mark.asyncio
@@ -470,6 +479,7 @@ class CrossProjectAnalyzer:
 
                 if all_fixes:
                     from collections import Counter
+
                     most_common = Counter(all_fixes).most_common(1)[0]
                     most_effective = most_common[0].value
                     confidence = most_common[1] / len(all_fixes)
@@ -477,14 +487,16 @@ class CrossProjectAnalyzer:
                     most_effective = "Unknown"
                     confidence = 0.0
 
-                insights.append(CrossProjectInsight(
-                    pattern_signature=signature,
-                    affected_projects=projects,
-                    total_occurrences=total_occurrences,
-                    most_effective_agent=most_effective,
-                    avg_fix_time=avg_fix_time,
-                    confidence=confidence,
-                ))
+                insights.append(
+                    CrossProjectInsight(
+                        pattern_signature=signature,
+                        affected_projects=projects,
+                        total_occurrences=total_occurrences,
+                        most_effective_agent=most_effective,
+                        avg_fix_time=avg_fix_time,
+                        confidence=confidence,
+                    )
+                )
 
         # Sort by impact (occurrences * projects)
         return sorted(
@@ -501,12 +513,14 @@ class CrossProjectAnalyzer:
         """Aggregate agent effectiveness across projects."""
         from collections import defaultdict
 
-        agent_stats = defaultdict(lambda: {
-            "total_recommendations": 0,
-            "successful_fixes": 0,
-            "failed_fixes": 0,
-            "confidences": [],
-        })
+        agent_stats = defaultdict(
+            lambda: {
+                "total_recommendations": 0,
+                "successful_fixes": 0,
+                "failed_fixes": 0,
+                "confidences": [],
+            }
+        )
 
         for project, agents in effectiveness_by_project.items():
             for agent in agents:
@@ -526,14 +540,16 @@ class CrossProjectAnalyzer:
             success_rate = stats["successful_fixes"] / total
             avg_confidence = sum(stats["confidences"]) / len(stats["confidences"])
 
-            result.append(AgentEffectiveness(
-                agent=agent,
-                total_recommendations=total,
-                successful_fixes=stats["successful_fixes"],
-                failed_fixes=stats["failed_fixes"],
-                avg_confidence=avg_confidence,
-                success_rate=success_rate,
-            ))
+            result.append(
+                AgentEffectiveness(
+                    agent=agent,
+                    total_recommendations=total,
+                    successful_fixes=stats["successful_fixes"],
+                    failed_fixes=stats["failed_fixes"],
+                    avg_confidence=avg_confidence,
+                    success_rate=success_rate,
+                )
+            )
 
         return sorted(result, key=lambda e: e.success_rate, reverse=True)
 
@@ -584,6 +600,7 @@ class CrossProjectAnalyzer:
 ```
 
 **Benefits**:
+
 - Identifies team-wide failure patterns
 - Shares successful solutions across projects
 - Enables collaborative learning
@@ -634,23 +651,17 @@ class PredictiveAnalyzer:
         alerts = []
 
         # Check for coverage trends
-        coverage_alert = cls._check_coverage_trends(
-            current_metrics, history
-        )
+        coverage_alert = cls._check_coverage_trends(current_metrics, history)
         if coverage_alert:
             alerts.append(coverage_alert)
 
         # Check for complexity trends
-        complexity_alert = cls._check_complexity_trends(
-            current_metrics, history
-        )
+        complexity_alert = cls._check_complexity_trends(current_metrics, history)
         if complexity_alert:
             alerts.append(complexity_alert)
 
         # Check for recurring patterns
-        pattern_alerts = cls._check_recurring_patterns(
-            current_metrics, history
-        )
+        pattern_alerts = cls._check_recurring_patterns(current_metrics, history)
         alerts.extend(pattern_alerts)
 
         return sorted(alerts, key=lambda a: a.confidence, reverse=True)
@@ -786,7 +797,7 @@ class ErrorRecovery:
             except Exception as e:
                 last_exception = e
                 if attempt < max_retries - 1:
-                    wait_time = backoff_seconds * (2 ** attempt)
+                    wait_time = backoff_seconds * (2**attempt)
                     await asyncio.sleep(wait_time)
 
         # All retries failed
@@ -816,6 +827,7 @@ class ErrorRecovery:
 **File**: `docs/crackerjack-run-user-guide.md`
 
 Complete user guide with:
+
 - Overview and features
 - Installation and setup
 - Usage examples
@@ -827,6 +839,7 @@ Complete user guide with:
 **File**: `docs/crackerjack-run-api-reference.md`
 
 API documentation for:
+
 - All public classes and methods
 - Protocol interfaces
 - Data structures
@@ -845,41 +858,46 @@ Document key architectural decisions and rationale.
 ## Success Criteria
 
 ### Testing
+
 - [ ] 40+ unit tests total (25 done, 15 more needed)
 - [ ] 90%+ code coverage for new modules
 - [ ] All integration tests passing
 - [ ] Performance benchmarks documented
 
 ### Features
+
 - [ ] Cross-project pattern analysis working
 - [ ] Predictive failure detection operational
 - [ ] Performance monitoring integrated
 - [ ] Error recovery tested and validated
 
 ### Documentation
+
 - [ ] User guide complete with examples
 - [ ] API reference fully documented
 - [ ] ADRs capture key decisions
 - [ ] Troubleshooting guide comprehensive
 
 ### Production Readiness
+
 - [ ] No critical security issues
-- [ ] Performance meets SLAs (<5s for cached queries)
+- [ ] Performance meets SLAs (\<5s for cached queries)
 - [ ] Error handling covers edge cases
 - [ ] Monitoring and observability in place
 
 ## Deliverables Summary
 
 **New Files** (estimated):
+
 1. `test_agent_analyzer.py` (~250 lines, 12 tests)
-2. `test_workflow_integration.py` (~200 lines, 5 tests)
-3. `cross_project_analyzer.py` (~300 lines)
-4. `predictive_analyzer.py` (~250 lines)
-5. `performance_monitor.py` (~150 lines)
-6. `error_recovery.py` (~100 lines)
-7. `crackerjack-run-user-guide.md` (~500 lines)
-8. `crackerjack-run-api-reference.md` (~400 lines)
-9. 3 ADR documents (~300 lines total)
+1. `test_workflow_integration.py` (~200 lines, 5 tests)
+1. `cross_project_analyzer.py` (~300 lines)
+1. `predictive_analyzer.py` (~250 lines)
+1. `performance_monitor.py` (~150 lines)
+1. `error_recovery.py` (~100 lines)
+1. `crackerjack-run-user-guide.md` (~500 lines)
+1. `crackerjack-run-api-reference.md` (~400 lines)
+1. 3 ADR documents (~300 lines total)
 
 **Total**: ~2,450 lines of new code + documentation
 
@@ -895,10 +913,11 @@ Document key architectural decisions and rationale.
 ## Next Steps
 
 Once Phase 5 is approved, we'll begin with:
+
 1. AgentAnalyzer unit tests (immediate)
-2. Integration test suite
-3. Advanced features implementation
-4. Production hardening
-5. Documentation completion
+1. Integration test suite
+1. Advanced features implementation
+1. Production hardening
+1. Documentation completion
 
 This will complete the transformation of crackerjack:run into a **world-class intelligent development assistant**! 🚀

@@ -17,69 +17,91 @@ def register_execution_tools(mcp_app: t.Any) -> None:
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()  # type: ignore[misc]
     async def execute_crackerjack(args: str, kwargs: str) -> str:
-        import traceback
-        from datetime import datetime
-
         try:
             context = get_context()
-
-            # Validate context and rate limit with better error handling
-            try:
-                validation_error = await _validate_context_and_rate_limit(context)
-                if validation_error:
-                    return validation_error
-            except TypeError as e:
-                if "NoneType" in str(e) and "await" in str(e):
-                    return json.dumps(
-                        {
-                            "status": "failed",
-                            "error": "Context validation failed: rate limiter returned None. "
-                            "MCP server may not be properly initialized.",
-                            "timestamp": datetime.now().isoformat(),
-                            "details": str(e),
-                        }
-                    )
-                raise
+            validation_error = await _handle_context_validation(context)
+            if validation_error:
+                return validation_error
 
             kwargs_result = _parse_kwargs(kwargs)
             if "error" in kwargs_result:
                 return json.dumps(kwargs_result)
 
-            extra_kwargs = kwargs_result["kwargs"]
-
-            if "execution_timeout" not in extra_kwargs:
-                if extra_kwargs.get("test", False) or extra_kwargs.get(
-                    "testing", False
-                ):
-                    extra_kwargs["execution_timeout"] = 1200
-                else:
-                    extra_kwargs["execution_timeout"] = 900
-
+            extra_kwargs = _prepare_execution_kwargs(kwargs_result["kwargs"])
             result = await execute_crackerjack_workflow(args, extra_kwargs)
             return json.dumps(result, indent=2)
         except TypeError as e:
-            if "NoneType" in str(e) and "await" in str(e):
-                return json.dumps(
-                    {
-                        "status": "failed",
-                        "error": f"Async execution error: A function returned None instead of an awaitable. {e}",
-                        "traceback": traceback.format_exc(),
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-            raise
+            return _handle_type_error(e)
         except Exception as e:
-            context = get_context()
+            return _handle_general_error(e)
+
+
+async def _handle_context_validation(context: t.Any) -> str | None:
+    """Handle context validation with proper error handling."""
+    from datetime import datetime
+
+    try:
+        validation_error = await _validate_context_and_rate_limit(context)
+        if validation_error:
+            return validation_error
+        return None
+    except TypeError as e:
+        if "NoneType" in str(e) and "await" in str(e):
             return json.dumps(
                 {
                     "status": "failed",
-                    "error": f"Execution failed: {e}",
-                    "traceback": traceback.format_exc(),
-                    "timestamp": context.get_current_time()
-                    if context and hasattr(context, "get_current_time")
-                    else datetime.now().isoformat(),
+                    "error": "Context validation failed: rate limiter returned None. "
+                    "MCP server may not be properly initialized.",
+                    "timestamp": datetime.now().isoformat(),
+                    "details": str(e),
                 }
             )
+        raise
+
+
+def _prepare_execution_kwargs(kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
+    """Prepare execution kwargs with appropriate timeout defaults."""
+    if "execution_timeout" not in kwargs:
+        if kwargs.get("test", False) or kwargs.get("testing", False):
+            kwargs["execution_timeout"] = 1200
+        else:
+            kwargs["execution_timeout"] = 900
+    return kwargs
+
+
+def _handle_type_error(error: TypeError) -> str:
+    """Handle TypeError with specific async execution error details."""
+    import traceback
+    from datetime import datetime
+
+    if "NoneType" in str(error) and "await" in str(error):
+        return json.dumps(
+            {
+                "status": "failed",
+                "error": f"Async execution error: A function returned None instead of an awaitable. {error}",
+                "traceback": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    raise error
+
+
+def _handle_general_error(error: Exception) -> str:
+    """Handle general execution errors with traceback."""
+    import traceback
+    from datetime import datetime
+
+    context = get_context()
+    return json.dumps(
+        {
+            "status": "failed",
+            "error": f"Execution failed: {error}",
+            "traceback": traceback.format_exc(),
+            "timestamp": context.get_current_time()
+            if context and hasattr(context, "get_current_time")
+            else datetime.now().isoformat(),
+        }
+    )
 
 
 def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:

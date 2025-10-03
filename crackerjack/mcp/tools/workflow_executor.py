@@ -419,62 +419,67 @@ async def _execute_single_iteration(
     context: t.Any,
 ) -> bool:
     try:
-        # Try async workflow methods first
-        if hasattr(orchestrator, "run_complete_workflow_async"):
-            result = orchestrator.run_complete_workflow_async(options)
-            if result is None:
-                raise ValueError(
-                    "Method run_complete_workflow_async returned None instead of awaitable. "
-                    f"Orchestrator type: {type(orchestrator).__name__}"
-                )
-            # Ensure result is awaitable
-            if not hasattr(result, "__await__"):
-                raise ValueError(
-                    f"Method run_complete_workflow_async returned non-awaitable object: {type(result).__name__}"
-                )
-            workflow_result: bool = await result
-            return workflow_result
-        elif hasattr(orchestrator, "run_complete_workflow"):
-            result = orchestrator.run_complete_workflow(options)
-            if result is None:
-                raise ValueError(
-                    "Method run_complete_workflow returned None instead of awaitable. "
-                    f"Orchestrator type: {type(orchestrator).__name__}"
-                )
-            # Ensure result is awaitable
-            if not hasattr(result, "__await__"):
-                raise ValueError(
-                    f"Method run_complete_workflow returned non-awaitable object: {type(result).__name__}"
-                )
-            workflow_result: bool = await result
-            return workflow_result
-        elif hasattr(orchestrator, "execute_workflow"):
-            result = orchestrator.execute_workflow(options)
-            if result is None:
-                raise ValueError(
-                    "Method execute_workflow returned None instead of awaitable. "
-                    f"Orchestrator type: {type(orchestrator).__name__}"
-                )
-            # Ensure result is awaitable
-            if not hasattr(result, "__await__"):
-                raise ValueError(
-                    f"Method execute_workflow returned non-awaitable object: {type(result).__name__}"
-                )
-            workflow_result: bool = await result
-            return workflow_result
-        # Fallback to sync method
-        elif hasattr(orchestrator, "run"):
-            run_result: bool = orchestrator.run(options)
-            return run_result
-        else:
-            raise ValueError(
-                f"Orchestrator {type(orchestrator).__name__} has no recognized workflow execution method. "
-                f"Available methods: {[m for m in dir(orchestrator) if not m.startswith('_')]}"
-            )
+        method_name = _detect_orchestrator_method(orchestrator)
+        result = _invoke_orchestrator_method(orchestrator, method_name, options)
+
+        # Sync methods return directly, async methods need await
+        if method_name == "run":
+            return result
+
+        # Async methods - validate and await
+        _validate_awaitable_result(result, method_name, orchestrator)
+        return await result
     except Exception as e:
         raise RuntimeError(
             f"Error in _execute_single_iteration (iteration {iteration}): {e}"
         ) from e
+
+
+def _detect_orchestrator_method(orchestrator: t.Any) -> str:
+    """Detect which workflow method the orchestrator supports."""
+    method_priority = [
+        "run_complete_workflow_async",
+        "run_complete_workflow",
+        "execute_workflow",
+        "run",
+    ]
+
+    for method_name in method_priority:
+        if hasattr(orchestrator, method_name):
+            return method_name
+
+    available_methods = [m for m in dir(orchestrator) if not m.startswith("_")]
+    raise ValueError(
+        f"Orchestrator {type(orchestrator).__name__} has no recognized workflow execution method. "
+        f"Available methods: {available_methods}"
+    )
+
+
+def _invoke_orchestrator_method(
+    orchestrator: t.Any, method_name: str, options: t.Any
+) -> t.Any:
+    """Invoke the detected orchestrator method with options."""
+    method = getattr(orchestrator, method_name)
+    result = method(options)
+
+    if result is None:
+        raise ValueError(
+            f"Method {method_name} returned None instead of expected result. "
+            f"Orchestrator type: {type(orchestrator).__name__}"
+        )
+
+    return result
+
+
+def _validate_awaitable_result(
+    result: t.Any, method_name: str, orchestrator: t.Any
+) -> None:
+    """Validate that async method result is awaitable."""
+    if not hasattr(result, "__await__"):
+        raise ValueError(
+            f"Method {method_name} returned non-awaitable object: {type(result).__name__}. "
+            f"Orchestrator: {type(orchestrator).__name__}"
+        )
 
 
 def _create_success_result(

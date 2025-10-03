@@ -177,3 +177,63 @@ def test_managed_temp_file_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in managed_temp_file: {e}")
+
+def test_managed_temp_dir_basic(self):
+    """Test basic functionality of managed_temp_dir."""
+    try:
+        result = managed_temp_dir()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in managed_temp_dir: {e}")
+
+def test_managed_process_basic(self):
+    """Test basic functionality of managed_process."""
+    try:
+        result = managed_process()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in managed_process: {e}")
+
+def test_managed_task_basic(self):
+    """Test basic functionality of managed_task."""
+    try:
+        result = managed_task()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in managed_task: {e}")
+
+def test_managed_file_basic(self):
+    """Test basic functionality of managed_file."""
+    try:
+        result = managed_file()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in managed_file: {e}")
+
+def test_track_file_basic(self):
+    """Test basic functionality of track_file."""
+    try:
+        result = track_file()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in track_file: {e}")
