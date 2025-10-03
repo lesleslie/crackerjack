@@ -1,5 +1,14 @@
 ______________________________________________________________________
 
+## [Unreleased] - 2025-10-02
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## id: 01K6K1AYFVG7DAPYM597FJRPA8
 
 # Changelog

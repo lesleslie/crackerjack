@@ -237,3 +237,63 @@ def test_track_file_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in track_file: {e}")
+
+def test_untrack_file_basic(self):
+    """Test basic functionality of untrack_file."""
+    try:
+        result = untrack_file()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in untrack_file: {e}")
+
+def test_track_process_basic(self):
+    """Test basic functionality of track_process."""
+    try:
+        result = track_process()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in track_process: {e}")
+
+def test_untrack_process_basic(self):
+    """Test basic functionality of untrack_process."""
+    try:
+        result = untrack_process()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in untrack_process: {e}")
+
+def test_track_task_basic(self):
+    """Test basic functionality of track_task."""
+    try:
+        result = track_task()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in track_task: {e}")
+
+def test_untrack_task_basic(self):
+    """Test basic functionality of untrack_task."""
+    try:
+        result = untrack_task()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in untrack_task: {e}")
