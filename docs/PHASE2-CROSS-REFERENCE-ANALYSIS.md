@@ -62,7 +62,7 @@ ______________________________________________________________________
 
 #### Agent Documentation
 
-- ✅ Both docs now show 12 specialized agents (updated in Phase 1)
+- ✅ Both docs now show 9 specialized agents (updated in Phase 1)
 - ✅ Agent names match across both documents
 - ✅ Agent capabilities described consistently
 

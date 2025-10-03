@@ -43,7 +43,7 @@ Comprehensive audit of 73 markdown files across the Crackerjack project to ensur
 #### 1. **Incorrect Agent Count** (README.md:189, CLAUDE.md:196)
 
 - **Current Documentation**: Claims "9 Domain-Specific Sub-Agents"
-- **Actual Codebase**: 11-12 specialized agents
+- **Actual Codebase**: 11-9 specialized agents
 
 **Actual Specialized Agents**:
 

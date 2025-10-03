@@ -80,7 +80,7 @@ Phase 3 optimization has been successfully completed, achieving 100% CLI flag do
 **Impact**:
 
 - API documentation now consistent with codebase
-- All 12 specialized agents fully documented
+- All 9 specialized agents fully documented
 - Developer reference complete and accurate
 
 ## Documentation Metrics - Phase 3
@@ -90,7 +90,7 @@ Phase 3 optimization has been successfully completed, achieving 100% CLI flag do
 - **CLI Flags**: 100% (103/103 flags documented)
   - Core flags: 21 (in README/CLAUDE)
   - Advanced flags: 82 (in ADVANCED-FEATURES.md)
-- **AI Agents**: 100% (12/12 agents documented across all docs)
+- **AI Agents**: 100% (12/9 agents documented across all docs)
 - **API Reference**: 100% (all current services and agents)
 
 ### Quality Metrics

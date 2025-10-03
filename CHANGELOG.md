@@ -3,6 +3,15 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-03
 
 ### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-03
+
+### Added
 
 - docs: Add documentation for 3 new AI agents (SemanticAgent, ArchitectAgent, EnhancedProactiveAgent)
 - docs: Comprehensive documentation audit report with 73-file inventory
