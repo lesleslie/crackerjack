@@ -1,6 +1,7 @@
----
-id: 01K6K1AYFVG7DAPYM597FJRPA8
----
+______________________________________________________________________
+
+## id: 01K6K1AYFVG7DAPYM597FJRPA8
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -17,11 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - 2025-10-02
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.39.4] - 2025-10-01
 

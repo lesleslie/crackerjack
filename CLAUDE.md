@@ -158,8 +158,8 @@ Remember: It's better to ask for clarification than to make assumptions that cou
 ## AI Documentation References
 
 - **[AI-REFERENCE.md](docs/ai/AI-REFERENCE.md)** - Command reference with decision trees
-- **[[AGENT-CAPABILITIES.json]]** - Structured agent data
-- **[[ERROR-PATTERNS.yaml]]** - Automated issue resolution patterns
+- **\[[AGENT-CAPABILITIES.json]\]** - Structured agent data
+- **\[[ERROR-PATTERNS.yaml]\]** - Automated issue resolution patterns
 
 ## Essential Commands
 
@@ -448,7 +448,7 @@ python -m crackerjack --experimental-hooks  # (when experimental hooks are avail
 
 - **No Active Experimental Hooks**: Previous experimental candidates (pyrefly, ty) failed availability testing and were removed
 - **Framework Ready**: System prepared for future experimental tool evaluation
-- **Documentation**: Complete evaluation criteria in [[EXPERIMENTAL-EVALUATION|EXPERIMENTAL-EVALUATION.md]]
+- **Documentation**: Complete evaluation criteria in \[[EXPERIMENTAL-EVALUATION|EXPERIMENTAL-EVALUATION.md]\]
 
 ## Critical Reminders
 

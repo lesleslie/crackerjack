@@ -30,13 +30,15 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
                     return validation_error
             except TypeError as e:
                 if "NoneType" in str(e) and "await" in str(e):
-                    return json.dumps({
-                        "status": "failed",
-                        "error": "Context validation failed: rate limiter returned None. "
-                               "MCP server may not be properly initialized.",
-                        "timestamp": datetime.now().isoformat(),
-                        "details": str(e),
-                    })
+                    return json.dumps(
+                        {
+                            "status": "failed",
+                            "error": "Context validation failed: rate limiter returned None. "
+                            "MCP server may not be properly initialized.",
+                            "timestamp": datetime.now().isoformat(),
+                            "details": str(e),
+                        }
+                    )
                 raise
 
             kwargs_result = _parse_kwargs(kwargs)
@@ -46,7 +48,9 @@ def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
             extra_kwargs = kwargs_result["kwargs"]
 
             if "execution_timeout" not in extra_kwargs:
-                if extra_kwargs.get("test", False) or extra_kwargs.get("testing", False):
+                if extra_kwargs.get("test", False) or extra_kwargs.get(
+                    "testing", False
+                ):
                     extra_kwargs["execution_timeout"] = 1200
                 else:
                     extra_kwargs["execution_timeout"] = 900

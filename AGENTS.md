@@ -1,6 +1,7 @@
----
-id: 01K6K1ATWK012TB0ND8A2YZD8F
----
+______________________________________________________________________
+
+## id: 01K6K1ATWK012TB0ND8A2YZD8F
+
 # Repository Guidelines
 
 ## Project Structure & Module Organization
