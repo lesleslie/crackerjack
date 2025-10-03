@@ -5,13 +5,14 @@
 **Status**: Phase 4 Complete ✅ | Phase 5 Ready for Planning
 **Estimated Effort**: 2-3 weeks (Phases 1-4: Complete)
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 This plan transforms the `crackerjack:run` workflow from a basic command wrapper into an **intelligent development assistant** that leverages crackerjack's 9-agent AI system for automated failure analysis, proactive recommendations, and session-aware learning.
 
 ### Initial State (Phase 0)
+
 - ❌ Basic command execution with formatted output
 - ❌ Session history storage (but unused `start_date` variable)
 - ❌ AI agent mode parameter exists but isn't utilized
@@ -19,6 +20,7 @@ This plan transforms the `crackerjack:run` workflow from a basic command wrapper
 - ❌ Generic error messages without actionable context
 
 ### Current State (Phase 2 Complete ✅)
+
 - ✅ **Date filtering fixed** - History correctly filters by date range
 - ✅ **Quality metrics extraction** - Coverage, complexity, security, tests, formatting
 - ✅ **Enhanced error messages** - Context-aware with troubleshooting steps
@@ -26,6 +28,7 @@ This plan transforms the `crackerjack:run` workflow from a basic command wrapper
 - ✅ **Session integration** - Metrics and recommendations stored in history
 
 ### Target State (Phase 5)
+
 - ⏳ Intelligent failure analysis using specialized AI agents (Phase 2 ✅)
 - ⏳ Automated quality metrics extraction (Phase 1 ✅)
 - ⏳ Context-aware error messages (Phase 1 ✅)
@@ -33,14 +36,16 @@ This plan transforms the `crackerjack:run` workflow from a basic command wrapper
 - 🔜 Session learning tracks fix effectiveness over time (Phase 3)
 - 🔜 Comprehensive testing and documentation (Phase 4-5)
 
----
+______________________________________________________________________
 
 ## Code Review Findings
 
 ### 🚨 CRITICAL Issues
 
 #### 1. Unused Variable (Line 208-209)
+
 **Location**: `crackerjack_tools.py:208-209`
+
 ```python
 # ISSUE: start_date calculated but never used
 end_date = datetime.now()
@@ -58,7 +63,9 @@ results = await db.search_conversations(
 **Fix Priority**: P0 - Immediate fix required
 
 #### 2. AI Agent Mode Not Utilized
+
 **Location**: `crackerjack_tools.py:97, 110`
+
 ```python
 # ISSUE: ai_agent_mode accepted but never used for intelligent analysis
 async def _crackerjack_run_impl(
@@ -78,7 +85,9 @@ async def _crackerjack_run_impl(
 ### ⚠️ HIGH PRIORITY Issues
 
 #### 3. Generic Error Handling
+
 **Location**: `crackerjack_tools.py:151-153`
+
 ```python
 # ISSUE: Generic error with no context
 except Exception as e:
@@ -91,19 +100,23 @@ except Exception as e:
 **Fix Priority**: P1 - Developer experience issue
 
 #### 4. No Quality Metrics Extraction
+
 **Location**: `crackerjack_tools.py:114-149`
-```python
+
+````python
 # ISSUE: Output contains quality metrics but they're not extracted
 if result.stdout.strip():
     formatted_result += f"\n**Output**:\n```\n{result.stdout}\n```\n"
     # Should parse: coverage %, complexity violations, security issues
-```
+````
 
 **Impact**: Can't track quality trends over time or provide data-driven recommendations
 **Fix Priority**: P1 - Analytics capability missing
 
 #### 5. Code Duplication Between Functions
+
 **Location**: `crackerjack_tools.py:56-90 vs 92-153`
+
 ```python
 # _execute_crackerjack_command_impl and _crackerjack_run_impl
 # have 70% duplicated formatting logic
@@ -115,15 +128,17 @@ if result.stdout.strip():
 ### 💡 SUGGESTIONS
 
 #### 6. Missing Session-Aware Learning
+
 - No tracking of which AI fixes actually worked
 - No pattern recognition for repeated failures
 - No proactive recommendations based on history
 
 #### 7. Limited Output Length Control
+
 - No truncation of large outputs (could overwhelm response)
 - No summary mode for quick feedback
 
----
+______________________________________________________________________
 
 ## Architecture Analysis
 
@@ -149,10 +164,11 @@ crackerjack:run workflow (session-mgmt-mcp)
 ```
 
 **Problems**:
+
 1. **No AI Agent Integration** - Despite crackerjack having 9 specialized agents
-2. **No Quality Metrics** - Can't extract coverage, complexity, security metrics
-3. **No Pattern Recognition** - Can't detect repeated failures or suggest fixes
-4. **Tight Coupling** - Hard to test, extend, or reuse components
+1. **No Quality Metrics** - Can't extract coverage, complexity, security metrics
+1. **No Pattern Recognition** - Can't detect repeated failures or suggest fixes
+1. **Tight Coupling** - Hard to test, extend, or reuse components
 
 ### Target Architecture (Solution)
 
@@ -199,53 +215,63 @@ crackerjack:run workflow (Enhanced)
 ```
 
 **Benefits**:
-1. **Leverages Existing AI** - Uses crackerjack's 9 specialized agents
-2. **Data-Driven Decisions** - Tracks quality metrics over time
-3. **Learns From History** - Recognizes patterns and improves suggestions
-4. **Modular & Testable** - Each component has single responsibility
 
----
+1. **Leverages Existing AI** - Uses crackerjack's 9 specialized agents
+1. **Data-Driven Decisions** - Tracks quality metrics over time
+1. **Learns From History** - Recognizes patterns and improves suggestions
+1. **Modular & Testable** - Each component has single responsibility
+
+______________________________________________________________________
 
 ## Progress Summary
 
 ### ✅ Phase 1: Foundation & Quick Wins (COMPLETE)
+
 **Duration**: ~30 minutes | **Status**: All tasks completed and validated
 
 **Completed**:
+
 - ✅ Fixed unused `start_date` variable - date filtering now works correctly
 - ✅ Created `QualityMetricsExtractor` module - automated metrics extraction
 - ✅ Enhanced error messages - context-aware troubleshooting guidance
 - ✅ All hooks passing (except 2 unrelated complexity issues)
 
 **Deliverables**:
+
 - `quality_metrics.py` (140 lines, 6 regex patterns)
 - Enhanced `crackerjack_tools.py` with metrics integration
-- [[phase-1-completion-summary|Phase 1 Completion Summary]]
+- \[[phase-1-completion-summary|Phase 1 Completion Summary]\]
 
 ### ✅ Phase 2: AI Agent Integration (COMPLETE)
+
 **Duration**: ~45 minutes | **Status**: All tasks completed and validated
 
 **Completed**:
+
 - ✅ Created `AgentAnalyzer` module - 12 error pattern detectors
 - ✅ Integrated AI recommendations into workflow - confidence-scored suggestions
 - ✅ Enhanced session metadata - stores recommendations for learning
 - ✅ Conditional activation via `ai_agent_mode` flag
 
 **Deliverables**:
+
 - `agent_analyzer.py` (194 lines, 9 agents, 12 patterns)
 - Enhanced `crackerjack_tools.py` with AI recommendations
-- [[phase-2-completion-summary|Phase 2 Completion Summary]]
+- \[[phase-2-completion-summary|Phase 2 Completion Summary]\]
 
 **Key Features**:
+
 - 🔥 Confidence-scored recommendations (0.7-0.9)
 - 🎯 Top 3 agent suggestions per failure
 - 💡 Quick-fix commands for each recommendation
 - 📊 Historical tracking for future learning
 
 ### ✅ Phase 3: Recommendation Engine & Pattern Detection (COMPLETE)
+
 **Duration**: ~1 hour | **Status**: All tasks completed and validated
 
 **Completed**:
+
 - ✅ Created RecommendationEngine module - 396 lines, pattern detection & learning
 - ✅ Integrated into workflow - 30-day history analysis, confidence adjustment
 - ✅ Pattern signature generation - unique fingerprints for failure combinations
@@ -253,23 +279,27 @@ crackerjack:run workflow (Enhanced)
 - ✅ Historical insights - actionable recommendations from patterns
 
 **Deliverables**:
+
 - `recommendation_engine.py` (396 lines, 3 classes, 6 methods)
 - Enhanced `crackerjack_tools.py` with learning integration
-- [[phase-3-completion-summary|Phase 3 Completion Summary]]
+- \[[phase-3-completion-summary|Phase 3 Completion Summary]\]
 
 **Key Features**:
+
 - 🧠 30-day history analysis for pattern detection
 - 📊 Dynamic confidence adjustment (60/40 weighted blend)
 - 🎯 Pattern-agent matching with success tracking
 - 💡 Top 3 historical insights per execution
 
 ### 🔜 Phase 4: Architecture Refactoring (Upcoming)
+
 **Estimated**: 5 days | **Status**: Not started
 
 ### 🔜 Phase 5: Testing & Documentation (Upcoming)
+
 **Estimated**: 4 days | **Status**: Not started
 
----
+______________________________________________________________________
 
 ## Implementation Phases
 
@@ -278,6 +308,7 @@ crackerjack:run workflow (Enhanced)
 **Goal**: Fix critical issues and establish architecture foundation
 
 #### Task 1.1: Fix Unused Variable & Date Filtering
+
 **File**: `session_mgmt_mcp/tools/crackerjack_tools.py:208-214`
 
 ```python
@@ -309,11 +340,13 @@ results = await db.search_conversations(
 ```
 
 **Testing**:
+
 - Verify date filtering works correctly
 - Test edge cases (0 days, 365 days)
 - Validate no results are incorrectly excluded
 
 #### Task 1.2: Create Quality Metrics Extractor
+
 **New File**: `session_mgmt_mcp/tools/quality_metrics.py`
 
 ```python
@@ -339,7 +372,8 @@ class QualityMetrics:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            k: v for k, v in self.__dict__.items()
+            k: v
+            for k, v in self.__dict__.items()
             if v is not None and (not isinstance(v, int) or v > 0)
         }
 
@@ -377,12 +411,12 @@ class QualityMetricsExtractor:
 
     # Regex patterns for metric extraction
     PATTERNS = {
-        'coverage': r'coverage:?\s*(\d+(?:\.\d+)?)%',
-        'complexity': r'Complexity of (\d+) is too high',
-        'security': r'B\d{3}:',  # Bandit security codes
-        'tests': r'(\d+) passed.*?(?:(\d+) failed)?',
-        'type_errors': r'error:|Found \d+ error',
-        'formatting': r'would reformat|line too long',
+        "coverage": r"coverage:?\s*(\d+(?:\.\d+)?)%",
+        "complexity": r"Complexity of (\d+) is too high",
+        "security": r"B\d{3}:",  # Bandit security codes
+        "tests": r"(\d+) passed.*?(?:(\d+) failed)?",
+        "type_errors": r"error:|Found \d+ error",
+        "formatting": r"would reformat|line too long",
     }
 
     @classmethod
@@ -392,47 +426,48 @@ class QualityMetricsExtractor:
         combined = stdout + stderr
 
         # Coverage
-        if match := re.search(cls.PATTERNS['coverage'], combined):
+        if match := re.search(cls.PATTERNS["coverage"], combined):
             metrics.coverage_percent = float(match.group(1))
 
         # Complexity
-        complexity_matches = re.findall(cls.PATTERNS['complexity'], stderr)
+        complexity_matches = re.findall(cls.PATTERNS["complexity"], stderr)
         if complexity_matches:
             complexities = [int(c) for c in complexity_matches]
             metrics.max_complexity = max(complexities)
             metrics.complexity_violations = len(complexities)
 
         # Security
-        metrics.security_issues = len(re.findall(cls.PATTERNS['security'], stderr))
+        metrics.security_issues = len(re.findall(cls.PATTERNS["security"], stderr))
 
         # Tests
-        if match := re.search(cls.PATTERNS['tests'], stdout):
+        if match := re.search(cls.PATTERNS["tests"], stdout):
             metrics.tests_passed = int(match.group(1))
             if match.group(2):
                 metrics.tests_failed = int(match.group(2))
 
         # Type errors
-        if re.search(cls.PATTERNS['type_errors'], stderr):
+        if re.search(cls.PATTERNS["type_errors"], stderr):
             # Count error lines
-            metrics.type_errors = len([
-                line for line in stderr.split('\n')
-                if 'error:' in line.lower()
-            ])
+            metrics.type_errors = len(
+                [line for line in stderr.split("\n") if "error:" in line.lower()]
+            )
 
         # Formatting
         metrics.formatting_issues = len(
-            re.findall(cls.PATTERNS['formatting'], combined)
+            re.findall(cls.PATTERNS["formatting"], combined)
         )
 
         return metrics
 ```
 
 **Testing**:
+
 - Unit tests with sample crackerjack outputs
 - Verify regex patterns match actual output formats
 - Test edge cases (no metrics, all metrics, partial metrics)
 
 #### Task 1.3: Enhance Error Messages
+
 **File**: `session_mgmt_mcp/tools/crackerjack_tools.py:151-153`
 
 ```python
@@ -488,23 +523,26 @@ except Exception as e:
 ```
 
 **Testing**:
+
 - Trigger different error types (ImportError, FileNotFoundError, TimeoutError)
 - Verify troubleshooting steps are appropriate for each error type
 - Test logging includes proper context
 
 **Deliverables**:
+
 - ✅ Date filtering fixed
 - ✅ Quality metrics extractor implemented
 - ✅ Enhanced error messages with context
 - ✅ All changes tested with unit tests
 
----
+______________________________________________________________________
 
 ### Phase 2: AI Agent Integration (Days 4-8)
 
 **Goal**: Integrate crackerjack's AI agent system for intelligent failure analysis
 
 #### Task 2.1: Create Agent Analyzer Module
+
 **New File**: `session_mgmt_mcp/tools/agent_analyzer.py`
 
 ```python
@@ -517,6 +555,7 @@ from enum import Enum
 
 class AgentType(Enum):
     """Available crackerjack AI agents."""
+
     REFACTORING = "RefactoringAgent"
     SECURITY = "SecurityAgent"
     PERFORMANCE = "PerformanceAgent"
@@ -531,6 +570,7 @@ class AgentType(Enum):
 @dataclass
 class AgentRecommendation:
     """AI agent recommendation for fixing issues."""
+
     agent: AgentType
     confidence: float
     reason: str
@@ -543,45 +583,45 @@ class AgentAnalyzer:
     # Pattern matching for error types → agents
     ERROR_PATTERNS = {
         AgentType.REFACTORING: [
-            (r'Complexity of (\d+) is too high', 0.9),
-            (r'function.*too complex', 0.85),
-            (r'cognitive complexity', 0.9),
+            (r"Complexity of (\d+) is too high", 0.9),
+            (r"function.*too complex", 0.85),
+            (r"cognitive complexity", 0.9),
         ],
         AgentType.SECURITY: [
-            (r'B\d{3}:', 0.9),  # Bandit codes
-            (r'hardcoded.*path', 0.85),
-            (r'unsafe.*operation', 0.8),
-            (r'shell=True', 0.95),
+            (r"B\d{3}:", 0.9),  # Bandit codes
+            (r"hardcoded.*path", 0.85),
+            (r"unsafe.*operation", 0.8),
+            (r"shell=True", 0.95),
         ],
         AgentType.PERFORMANCE: [
-            (r'O\(n[²³⁴]\)', 0.9),
-            (r'inefficient.*loop', 0.8),
-            (r'performance.*warning', 0.75),
+            (r"O\(n[²³⁴]\)", 0.9),
+            (r"inefficient.*loop", 0.8),
+            (r"performance.*warning", 0.75),
         ],
         AgentType.TEST_CREATION: [
-            (r'FAILED.*test_', 0.9),
-            (r'AssertionError', 0.85),
-            (r'test.*not found', 0.8),
-            (r'coverage.*below', 0.75),
+            (r"FAILED.*test_", 0.9),
+            (r"AssertionError", 0.85),
+            (r"test.*not found", 0.8),
+            (r"coverage.*below", 0.75),
         ],
         AgentType.DRY: [
-            (r'duplicate.*code', 0.9),
-            (r'similar.*block', 0.85),
-            (r'repeated.*pattern', 0.8),
+            (r"duplicate.*code", 0.9),
+            (r"similar.*block", 0.85),
+            (r"repeated.*pattern", 0.8),
         ],
         AgentType.FORMATTING: [
-            (r'would reformat', 0.95),
-            (r'line too long', 0.9),
-            (r'missing.*type.*annotation', 0.85),
-            (r'import.*not.*sorted', 0.8),
+            (r"would reformat", 0.95),
+            (r"line too long", 0.9),
+            (r"missing.*type.*annotation", 0.85),
+            (r"import.*not.*sorted", 0.8),
         ],
         AgentType.IMPORT_OPTIMIZATION: [
-            (r'unused.*import', 0.9),
-            (r'import.*could.*be.*simplified', 0.85),
+            (r"unused.*import", 0.9),
+            (r"import.*could.*be.*simplified", 0.85),
         ],
         AgentType.DOCUMENTATION: [
-            (r'missing.*docstring', 0.8),
-            (r'undocumented.*parameter', 0.75),
+            (r"missing.*docstring", 0.8),
+            (r"undocumented.*parameter", 0.75),
         ],
     }
 
@@ -611,12 +651,14 @@ class AgentAnalyzer:
 
                     reason = cls._generate_reason(agent, pattern, match_count)
 
-                    recommendations.append(AgentRecommendation(
-                        agent=agent,
-                        confidence=confidence,
-                        reason=reason,
-                        quick_fix_command=cls.QUICK_FIX_COMMANDS[agent],
-                    ))
+                    recommendations.append(
+                        AgentRecommendation(
+                            agent=agent,
+                            confidence=confidence,
+                            reason=reason,
+                            quick_fix_command=cls.QUICK_FIX_COMMANDS[agent],
+                        )
+                    )
                     break  # Only first matching pattern per agent
 
         # Sort by confidence descending
@@ -652,7 +694,9 @@ class AgentAnalyzer:
             output += f"   └─ Quick fix: `{rec.quick_fix_command}`\n\n"
 
         if len(recommendations) > 3:
-            output += f"_+ {len(recommendations) - 3} more recommendations available_\n\n"
+            output += (
+                f"_+ {len(recommendations) - 3} more recommendations available_\n\n"
+            )
 
         output += "💡 **Pro Tip**: Run `python -m crackerjack --ai-fix --run-tests` for automated fixing\n"
 
@@ -660,11 +704,13 @@ class AgentAnalyzer:
 ```
 
 **Testing**:
+
 - Test pattern matching with real crackerjack outputs
 - Verify confidence scoring is accurate
 - Test recommendation formatting
 
 #### Task 2.2: Integrate Agent Analyzer into Workflow
+
 **File**: `session_mgmt_mcp/tools/crackerjack_tools.py`
 
 ```python
@@ -696,18 +742,20 @@ async def _crackerjack_run_impl(
 ```
 
 **Deliverables**:
+
 - ✅ Agent analyzer implemented with pattern matching
 - ✅ Integration into workflow complete
 - ✅ Recommendations displayed when AI mode enabled
 - ✅ Comprehensive testing with various error types
 
----
+______________________________________________________________________
 
 ### Phase 3: Recommendation Engine & Pattern Detection (Days 9-12)
 
 **Goal**: Build proactive recommendation system based on execution history
 
 #### Task 3.1: Create Recommendation Engine
+
 **New File**: `session_mgmt_mcp/tools/recommendation_engine.py`
 
 ```python
@@ -722,6 +770,7 @@ from typing import Any
 @dataclass
 class ExecutionPattern:
     """Detected pattern in execution history."""
+
     pattern_type: str
     severity: str  # 'info', 'warning', 'critical'
     message: str
@@ -744,90 +793,98 @@ class RecommendationEngine:
 
         # Pattern 1: Repeated Failures
         recent_failures = [
-            h for h in history[-10:]
-            if "failed" in h.get("content", "").lower()
+            h for h in history[-10:] if "failed" in h.get("content", "").lower()
         ]
 
         if len(recent_failures) >= 3:
-            patterns.append(ExecutionPattern(
-                pattern_type="repeated_failures",
-                severity="warning",
-                message=f"Detected {len(recent_failures)} failures in last 10 executions",
-                recommendation=(
-                    "Consider running `python -m crackerjack --ai-debug --run-tests` "
-                    "for detailed analysis. The AI system can identify root causes."
-                ),
-                occurrences=len(recent_failures),
-            ))
+            patterns.append(
+                ExecutionPattern(
+                    pattern_type="repeated_failures",
+                    severity="warning",
+                    message=f"Detected {len(recent_failures)} failures in last 10 executions",
+                    recommendation=(
+                        "Consider running `python -m crackerjack --ai-debug --run-tests` "
+                        "for detailed analysis. The AI system can identify root causes."
+                    ),
+                    occurrences=len(recent_failures),
+                )
+            )
 
         # Pattern 2: Slow Execution
         if current_result.execution_time > 60:
-            patterns.append(ExecutionPattern(
-                pattern_type="slow_execution",
-                severity="info",
-                message=f"Execution took {current_result.execution_time:.1f}s",
-                recommendation=(
-                    "For faster iteration during development:\n"
-                    "  • Use `--skip-hooks` to bypass comprehensive checks\n"
-                    "  • Use `--test-workers N` to parallelize tests\n"
-                    "  • Run specific tests: `pytest tests/test_specific.py`"
-                ),
-                occurrences=1,
-            ))
-
-        # Pattern 3: Coverage Drop
-        if hasattr(current_result, 'quality_metrics'):
-            coverage = current_result.quality_metrics.get('coverage_percent', 100)
-            if coverage < 40:  # Below ratchet baseline (42%)
-                patterns.append(ExecutionPattern(
-                    pattern_type="coverage_drop",
-                    severity="critical",
-                    message=f"Coverage at {coverage:.1f}% (below 42% baseline)",
+            patterns.append(
+                ExecutionPattern(
+                    pattern_type="slow_execution",
+                    severity="info",
+                    message=f"Execution took {current_result.execution_time:.1f}s",
                     recommendation=(
-                        "Coverage ratchet violation detected:\n"
-                        "  ⚠️ NEVER reduce coverage below baseline\n"
-                        "  ✅ Add tests to restore coverage\n"
-                        "  📊 Run `pytest --cov-report=html` to identify gaps"
+                        "For faster iteration during development:\n"
+                        "  • Use `--skip-hooks` to bypass comprehensive checks\n"
+                        "  • Use `--test-workers N` to parallelize tests\n"
+                        "  • Run specific tests: `pytest tests/test_specific.py`"
                     ),
                     occurrences=1,
-                ))
+                )
+            )
+
+        # Pattern 3: Coverage Drop
+        if hasattr(current_result, "quality_metrics"):
+            coverage = current_result.quality_metrics.get("coverage_percent", 100)
+            if coverage < 40:  # Below ratchet baseline (42%)
+                patterns.append(
+                    ExecutionPattern(
+                        pattern_type="coverage_drop",
+                        severity="critical",
+                        message=f"Coverage at {coverage:.1f}% (below 42% baseline)",
+                        recommendation=(
+                            "Coverage ratchet violation detected:\n"
+                            "  ⚠️ NEVER reduce coverage below baseline\n"
+                            "  ✅ Add tests to restore coverage\n"
+                            "  📊 Run `pytest --cov-report=html` to identify gaps"
+                        ),
+                        occurrences=1,
+                    )
+                )
 
         # Pattern 4: Same Error Recurring
         if current_result.exit_code != 0:
             error_signature = cls._extract_error_signature(current_result.stderr)
             recurring = sum(
-                1 for h in history[-20:]
-                if error_signature in h.get("content", "")
+                1 for h in history[-20:] if error_signature in h.get("content", "")
             )
 
             if recurring >= 2:
-                patterns.append(ExecutionPattern(
-                    pattern_type="recurring_error",
-                    severity="warning",
-                    message=f"Same error occurred {recurring} times recently",
-                    recommendation=(
-                        f"This error has appeared {recurring} times:\n"
-                        "  • Review previous attempts: check session history\n"
-                        "  • Try different approach: the current fix strategy isn't working\n"
-                        "  • Consider asking for help or reviewing documentation"
-                    ),
-                    occurrences=recurring,
-                ))
+                patterns.append(
+                    ExecutionPattern(
+                        pattern_type="recurring_error",
+                        severity="warning",
+                        message=f"Same error occurred {recurring} times recently",
+                        recommendation=(
+                            f"This error has appeared {recurring} times:\n"
+                            "  • Review previous attempts: check session history\n"
+                            "  • Try different approach: the current fix strategy isn't working\n"
+                            "  • Consider asking for help or reviewing documentation"
+                        ),
+                        occurrences=recurring,
+                    )
+                )
 
         # Pattern 5: AI Fix Ineffectiveness
         if "--ai-fix" in command and current_result.exit_code != 0:
-            patterns.append(ExecutionPattern(
-                pattern_type="ai_fix_incomplete",
-                severity="warning",
-                message="AI fix didn't resolve all issues",
-                recommendation=(
-                    "AI fix was incomplete:\n"
-                    "  • Review remaining errors in output above\n"
-                    "  • Try `--ai-debug` for deeper analysis\n"
-                    "  • Some issues may require manual intervention"
-                ),
-                occurrences=1,
-            ))
+            patterns.append(
+                ExecutionPattern(
+                    pattern_type="ai_fix_incomplete",
+                    severity="warning",
+                    message="AI fix didn't resolve all issues",
+                    recommendation=(
+                        "AI fix was incomplete:\n"
+                        "  • Review remaining errors in output above\n"
+                        "  • Try `--ai-debug` for deeper analysis\n"
+                        "  • Some issues may require manual intervention"
+                    ),
+                    occurrences=1,
+                )
+            )
 
         return patterns
 
@@ -835,13 +892,16 @@ class RecommendationEngine:
     def _extract_error_signature(cls, stderr: str) -> str:
         """Extract a signature from error output for pattern matching."""
         # Take first significant error line
-        lines = [line.strip() for line in stderr.split('\n') if line.strip()]
+        lines = [line.strip() for line in stderr.split("\n") if line.strip()]
         for line in lines:
-            if any(keyword in line.lower() for keyword in ['error:', 'failed', 'exception']):
+            if any(
+                keyword in line.lower() for keyword in ["error:", "failed", "exception"]
+            ):
                 # Normalize by removing file paths and line numbers
                 import re
-                normalized = re.sub(r'/[^\s]+:\d+', '', line)
-                normalized = re.sub(r'\d+', 'N', normalized)
+
+                normalized = re.sub(r"/[^\s]+:\d+", "", line)
+                normalized = re.sub(r"\d+", "N", normalized)
                 return normalized[:100]  # First 100 chars
         return ""
 
@@ -873,6 +933,7 @@ class RecommendationEngine:
 ```
 
 #### Task 3.2: Track AI Fix Effectiveness
+
 **File**: `session_mgmt_mcp/tools/recommendation_engine.py` (add to class)
 
 ```python
@@ -889,7 +950,11 @@ async def track_fix_effectiveness(
         return ""
 
     # Check if fix was successful
-    if previous_result and previous_result.exit_code != 0 and current_result.exit_code == 0:
+    if (
+        previous_result
+        and previous_result.exit_code != 0
+        and current_result.exit_code == 0
+    ):
         effectiveness_msg = (
             "✅ **AI Fix Success!**\n"
             f"   Previous exit code: {previous_result.exit_code} → Current: 0\n"
@@ -904,7 +969,7 @@ async def track_fix_effectiveness(
                 "success": True,
                 "command": command,
                 "previous_exit_code": previous_result.exit_code,
-            }
+            },
         )
 
         return effectiveness_msg
@@ -922,6 +987,7 @@ async def track_fix_effectiveness(
 ```
 
 #### Task 3.3: Integrate Recommendation Engine
+
 **File**: `session_mgmt_mcp/tools/crackerjack_tools.py`
 
 ```python
@@ -978,21 +1044,23 @@ async def _crackerjack_run_impl(...):
 ```
 
 **Deliverables**:
+
 - ✅ Recommendation engine with pattern detection
 - ✅ AI fix effectiveness tracking
 - ✅ Integration into workflow
 - ✅ Historical pattern analysis
 
----
+______________________________________________________________________
 
 ### Phase 4: Architecture Refactoring (Days 13-17)
 
 **Goal**: Refactor for testability, maintainability, and extensibility
 
 #### Task 4.1: Create Output Formatter Module (DRY)
+
 **New File**: `session_mgmt_mcp/tools/output_formatter.py`
 
-```python
+````python
 """Output formatting for crackerjack execution results."""
 
 from typing import Any
@@ -1016,7 +1084,7 @@ class CrackerjackOutputFormatter:
         output = ""
 
         if result.stdout.strip():
-            stdout = result.stdout[:cls.MAX_OUTPUT_LENGTH]
+            stdout = result.stdout[: cls.MAX_OUTPUT_LENGTH]
             truncated = len(result.stdout) > cls.MAX_OUTPUT_LENGTH
 
             output += "\n**Output**:\n```\n{}\n```\n".format(stdout)
@@ -1024,7 +1092,7 @@ class CrackerjackOutputFormatter:
                 output += f"_Output truncated (showing first {cls.MAX_OUTPUT_LENGTH} chars)_\n"
 
         if result.stderr.strip():
-            stderr = result.stderr[:cls.MAX_OUTPUT_LENGTH]
+            stderr = result.stderr[: cls.MAX_OUTPUT_LENGTH]
             truncated = len(result.stderr) > cls.MAX_OUTPUT_LENGTH
 
             output += "\n**Errors**:\n```\n{}\n```\n".format(stderr)
@@ -1063,9 +1131,10 @@ class CrackerjackOutputFormatter:
             output += patterns
 
         return output
-```
+````
 
 #### Task 4.2: Create Workflow Orchestrator (DI Pattern)
+
 **New File**: `session_mgmt_mcp/tools/workflow_orchestrator.py`
 
 ```python
@@ -1077,14 +1146,20 @@ from typing import Any, Protocol
 
 class CrackerjackIntegrationProtocol(Protocol):
     """Protocol for crackerjack integration."""
+
     async def execute_crackerjack_command(
-        self, command: str, args: list[str] | None,
-        working_directory: str, timeout: int, ai_agent_mode: bool
+        self,
+        command: str,
+        args: list[str] | None,
+        working_directory: str,
+        timeout: int,
+        ai_agent_mode: bool,
     ) -> Any: ...
 
 
 class ReflectionDatabaseProtocol(Protocol):
     """Protocol for reflection database."""
+
     async def search_conversations(
         self, query: str, project: str, limit: int
     ) -> list[dict[str, Any]]: ...
@@ -1167,7 +1242,7 @@ class CrackerjackWorkflowOrchestrator:
                     "execution_time": result.execution_time,
                     "ai_mode": ai_agent_mode,
                     "metrics": metrics.to_dict(),
-                }
+                },
             )
 
         # 7. Format complete output
@@ -1195,13 +1270,12 @@ class CrackerjackWorkflowOrchestrator:
                 class PreviousResult:
                     exit_code: int
 
-                return PreviousResult(
-                    exit_code=entry["metadata"]["exit_code"]
-                )
+                return PreviousResult(exit_code=entry["metadata"]["exit_code"])
         return None
 ```
 
 #### Task 4.3: Update Main Implementation to Use Orchestrator
+
 **File**: `session_mgmt_mcp/tools/crackerjack_tools.py`
 
 ```python
@@ -1238,12 +1312,13 @@ async def _crackerjack_run_impl(
 ```
 
 **Deliverables**:
+
 - ✅ Output formatter module (DRY)
 - ✅ Workflow orchestrator with DI
 - ✅ Main implementation refactored
 - ✅ All code properly tested
 
----
+______________________________________________________________________
 
 ### Phase 5: Testing & Documentation (Days 18-21)
 
@@ -1252,15 +1327,18 @@ async def _crackerjack_run_impl(
 #### Task 5.1: Unit Tests for All New Modules
 
 **File**: `tests/tools/test_quality_metrics.py`
+
 ```python
 import pytest
 from session_mgmt_mcp.tools.quality_metrics import QualityMetricsExtractor
+
 
 def test_extract_coverage():
     stdout = "coverage: 85.5%"
     stderr = ""
     metrics = QualityMetricsExtractor.extract(stdout, stderr)
     assert metrics.coverage_percent == 85.5
+
 
 def test_extract_complexity():
     stderr = "Complexity of 18 is too high\nComplexity of 22 is too high"
@@ -1269,13 +1347,16 @@ def test_extract_complexity():
     assert metrics.max_complexity == 22
     assert metrics.complexity_violations == 2
 
+
 # ... more tests for each metric type
 ```
 
 **File**: `tests/tools/test_agent_analyzer.py`
+
 ```python
 import pytest
 from session_mgmt_mcp.tools.agent_analyzer import AgentAnalyzer, AgentType
+
 
 def test_analyze_complexity_issues():
     stderr = "Complexity of 20 is too high in function foo"
@@ -1286,13 +1367,16 @@ def test_analyze_complexity_issues():
     assert recommendations[0].agent == AgentType.REFACTORING
     assert recommendations[0].confidence >= 0.85
 
+
 # ... more tests for each agent type
 ```
 
 **File**: `tests/tools/test_recommendation_engine.py`
+
 ```python
 import pytest
 from session_mgmt_mcp.tools.recommendation_engine import RecommendationEngine
+
 
 @pytest.mark.asyncio
 async def test_detect_repeated_failures():
@@ -1316,15 +1400,18 @@ async def test_detect_repeated_failures():
 
     assert any(p.pattern_type == "repeated_failures" for p in patterns)
 
+
 # ... more pattern detection tests
 ```
 
 #### Task 5.2: Integration Tests
 
 **File**: `tests/tools/test_workflow_integration.py`
+
 ```python
 import pytest
 from session_mgmt_mcp.tools.workflow_orchestrator import CrackerjackWorkflowOrchestrator
+
 
 @pytest.mark.asyncio
 async def test_full_workflow_execution(tmp_path):
@@ -1340,11 +1427,15 @@ async def test_full_workflow_execution(tmp_path):
                 execution_time = 5.5
                 quality_metrics = {}
                 memory_insights = []
+
             return Result()
 
     class MockDatabase:
-        async def __aenter__(self): return self
-        async def __aexit__(self, *args): pass
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
 
         async def search_conversations(self, **kwargs):
             return [
@@ -1372,13 +1463,15 @@ async def test_full_workflow_execution(tmp_path):
     assert "AI Agent Recommendations" in result
     assert "Pattern Analysis" in result
 
+
 # ... more integration tests
 ```
 
 #### Task 5.3: Documentation
 
 **File**: `docs/crackerjack-run-workflow-guide.md`
-```markdown
+
+````markdown
 # Crackerjack:Run Workflow Guide
 
 ## Overview
@@ -1419,9 +1512,10 @@ await crackerjack_run(
     args="--run-tests",
     working_directory=".",
 )
-```
+````
 
 ### With AI Analysis
+
 ```python
 await crackerjack_run(
     command="test",
@@ -1440,7 +1534,9 @@ await crackerjack_run(
 
 **Output**:
 ```
+
 ... stdout ...
+
 ```
 
 ⏱️ **Execution Time**: 5.2s
@@ -1481,6 +1577,7 @@ CrackerjackWorkflowOrchestrator
 ## Testing
 
 Run tests:
+
 ```bash
 pytest tests/tools/ -v
 ```
@@ -1488,7 +1585,8 @@ pytest tests/tools/ -v
 ## Troubleshooting
 
 See error messages for context-specific troubleshooting steps.
-```
+
+````
 
 **Deliverables**:
 - ✅ Comprehensive unit tests (>80% coverage)
@@ -1637,7 +1735,7 @@ await crackerjack_run(
 # - AI agent recommendations with confidence scores
 # - Pattern analysis (repeated failures, slow execution)
 # - Proactive suggestions (quick fixes, optimization tips)
-```
+````
 
 ### Example 2: Interpreting Recommendations
 
@@ -1658,18 +1756,18 @@ python -m crackerjack --ai-fix
    All issues resolved by AI agents!
 ```
 
----
+______________________________________________________________________
 
 ## Summary
 
 This implementation plan transforms `crackerjack:run` from a basic wrapper into an **intelligent development assistant** by:
 
 1. **Fixing critical issues** (unused variables, generic errors)
-2. **Integrating AI agents** (9 specialized agents for pattern-based recommendations)
-3. **Extracting quality metrics** (coverage, complexity, security)
-4. **Detecting patterns** (repeated failures, slow execution, coverage drops)
-5. **Learning from history** (tracking fix effectiveness, proactive suggestions)
-6. **Improving architecture** (DI, testability, DRY principles)
+1. **Integrating AI agents** (9 specialized agents for pattern-based recommendations)
+1. **Extracting quality metrics** (coverage, complexity, security)
+1. **Detecting patterns** (repeated failures, slow execution, coverage drops)
+1. **Learning from history** (tracking fix effectiveness, proactive suggestions)
+1. **Improving architecture** (DI, testability, DRY principles)
 
 **Total Effort**: 2-3 weeks
 **Expected Impact**: 40% reduction in debugging time, 60% increase in AI fix success rate

@@ -4,7 +4,7 @@
 **Status**: Analysis Complete
 **Risk Level**: Medium
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -13,19 +13,21 @@ The `crackerjack:run` workflow is implemented in `session-mgmt-mcp` (not in crac
 ### Key Findings
 
 ✅ **Strengths**:
+
 - Good separation of concerns with dedicated implementation functions
 - Session history integration for tracking executions
 - Enhanced formatting with status indicators and metrics
 - Structured error handling
 
 ❌ **Areas for Improvement**:
+
 - Limited error pattern analysis capabilities
 - Minimal quality metrics extraction
 - No proactive recommendations based on execution results
 - Missing integration with crackerjack's AI agent system
 - Unused `start_date` variable in history implementation (line 209)
 
----
+______________________________________________________________________
 
 ## Current Implementation Analysis
 
@@ -34,13 +36,15 @@ The `crackerjack:run` workflow is implemented in `session-mgmt-mcp` (not in crac
 Located at: `.venv/lib/python3.13/site-packages/session_mgmt_mcp/tools/crackerjack_tools.py:93-154`
 
 **Core Workflow**:
+
 1. Accepts command, args, working_directory, timeout, ai_agent_mode parameters
-2. Executes crackerjack command via `CrackerjackIntegration.execute_crackerjack_command()`
-3. Formats output with status indicators (✅/❌)
-4. Stores execution in ReflectionDatabase for session history
-5. Returns formatted results with execution metadata
+1. Executes crackerjack command via `CrackerjackIntegration.execute_crackerjack_command()`
+1. Formats output with status indicators (✅/❌)
+1. Stores execution in ReflectionDatabase for session history
+1. Returns formatted results with execution metadata
 
 **Key Components**:
+
 ```python
 async def _crackerjack_run_impl(
     command: str,
@@ -68,27 +72,31 @@ async def _crackerjack_run_impl(
 ### Supporting Functions
 
 1. **History Analysis** (`_crackerjack_history_impl`, line 194):
+
    - Searches last N days of executions
    - Groups by command type
    - Shows recent execution summary
    - **Issue**: Unused `start_date` variable (line 209)
 
-2. **Metrics Calculation** (referenced, not shown):
+1. **Metrics Calculation** (referenced, not shown):
+
    - Basic execution statistics
    - Success/failure counts
    - **Limitation**: No quality trend analysis
 
-3. **Pattern Detection** (referenced, not shown):
+1. **Pattern Detection** (referenced, not shown):
+
    - Test failure pattern analysis
    - **Limitation**: Generic patterns, not crackerjack-specific
 
----
+______________________________________________________________________
 
 ## Comparison with Crackerjack's AI System
 
 ### What's Missing
 
 Crackerjack has a sophisticated **9-agent AI system** with:
+
 - RefactoringAgent (complexity ≤15, dead code)
 - PerformanceAgent (O(n²) detection)
 - SecurityAgent (unsafe operations)
@@ -101,18 +109,20 @@ Crackerjack has a sophisticated **9-agent AI system** with:
 ### AI Integration Gap
 
 Current workflow:
+
 ```python
 # Accepts ai_agent_mode parameter but doesn't use it effectively
 ai_agent_mode: bool = False  # Just passed through, no specialized handling
 ```
 
 What it SHOULD do:
+
 - Analyze execution failures with appropriate agents
 - Suggest fixes based on error patterns
 - Provide actionable recommendations
 - Track fix success rates over time
 
----
+______________________________________________________________________
 
 ## Recommended Agents & Workflows for Audit
 
@@ -121,12 +131,14 @@ What it SHOULD do:
 **Agent**: `code-reviewer` (`.claude/agents/code-reviewer.md`)
 **Why**: Expert at analyzing code quality, security, and configuration issues
 **Focus Areas**:
+
 - Unused variable detection (line 209 issue)
 - Error handling patterns
 - Integration point validation
 - Security review of command execution
 
 **Usage**:
+
 ```bash
 # Invoke via Task tool
 Task tool with subagent_type="code-reviewer"
@@ -137,6 +149,7 @@ Task tool with subagent_type="code-reviewer"
 **Agent**: `refactoring-specialist` (`.claude/agents/refactoring-specialist.md`)
 **Why**: Identifies complexity issues and architectural improvements
 **Focus Areas**:
+
 - Function complexity analysis
 - Extraction opportunities
 - DRY violations
@@ -147,27 +160,30 @@ Task tool with subagent_type="code-reviewer"
 **Workflow**: `.claude/commands/workflows/maintenance/improve-agent.md`
 **Why**: Structured approach to enhancing the workflow itself
 **Phases**:
+
 1. Assess & Plan (usage analytics, gap analysis)
-2. Design & Draft (structural improvements)
-3. Validate & Iterate (scenario testing)
-4. Publish & Communicate (rollout coordination)
+1. Design & Draft (structural improvements)
+1. Validate & Iterate (scenario testing)
+1. Publish & Communicate (rollout coordination)
 
 ### 4. **Agent Creation Specialist** (Strategic)
 
 **Agent**: `.claude/agents/agent-creation-specialist.md`
 **Why**: Design new specialized agents for crackerjack workflow orchestration
 **Use For**:
+
 - Creating "crackerjack-workflow-optimizer" agent
 - Defining integration patterns with AI agents
 - Establishing workflow quality standards
 
----
+______________________________________________________________________
 
 ## Detailed Improvement Recommendations
 
 ### Priority 1: Fix Immediate Issues (Low-Hanging Fruit)
 
 #### 1.1 Remove Unused Variable
+
 **File**: `crackerjack_tools.py:209`
 **Issue**: `start_date` is calculated but never used
 
@@ -182,11 +198,12 @@ results = await db.search_conversations(
     query=f"crackerjack {command_filter}".strip(),
     project=Path(working_directory).name,
     limit=50,
-    after=start_date  # ← If supported by API
+    after=start_date,  # ← If supported by API
 )
 ```
 
 #### 1.2 Enhance Error Context
+
 **Current**: Generic error messages
 **Improvement**: Include actionable context
 
@@ -216,7 +233,7 @@ except Exception as e:
     return error_context
 ```
 
----
+______________________________________________________________________
 
 ### Priority 2: Leverage Crackerjack AI Agents
 
@@ -225,10 +242,7 @@ except Exception as e:
 **New Function**: `_analyze_with_agents()`
 
 ```python
-async def _analyze_with_agents(
-    result: CrackerjackResult,
-    ai_agent_mode: bool
-) -> str:
+async def _analyze_with_agents(result: CrackerjackResult, ai_agent_mode: bool) -> str:
     """Analyze execution results with crackerjack AI agents."""
     if not ai_agent_mode or result.exit_code == 0:
         return ""
@@ -241,7 +255,7 @@ async def _analyze_with_agents(
         "security": r"B\d{3}:|hardcoded|unsafe",
         "type": r"error:|type.*error",
         "test": r"FAILED|test.*failed",
-        "formatting": r"would reformat|line too long"
+        "formatting": r"would reformat|line too long",
     }
 
     recommendations = []
@@ -271,7 +285,9 @@ async def _analyze_with_agents(
 
     if recommendations:
         analysis += "\n".join(recommendations)
-        analysis += "\n\n💡 **Quick Fix**: Run `python -m crackerjack --ai-fix --run-tests`\n"
+        analysis += (
+            "\n\n💡 **Quick Fix**: Run `python -m crackerjack --ai-fix --run-tests`\n"
+        )
     else:
         analysis += "- No specific agent recommendations. Review output above.\n"
 
@@ -279,6 +295,7 @@ async def _analyze_with_agents(
 ```
 
 **Integration**:
+
 ```python
 async def _crackerjack_run_impl(...):
     # ... existing execution code ...
@@ -301,31 +318,31 @@ def _extract_quality_metrics(result: CrackerjackResult) -> dict[str, float]:
     metrics = {}
 
     # Parse coverage from output
-    coverage_match = re.search(r'coverage:?\s*(\d+)%', result.stdout)
+    coverage_match = re.search(r"coverage:?\s*(\d+)%", result.stdout)
     if coverage_match:
-        metrics['coverage'] = float(coverage_match.group(1))
+        metrics["coverage"] = float(coverage_match.group(1))
 
     # Parse complexity violations
-    complexity_matches = re.findall(r'Complexity of (\d+)', result.stderr)
+    complexity_matches = re.findall(r"Complexity of (\d+)", result.stderr)
     if complexity_matches:
-        metrics['max_complexity'] = max(int(c) for c in complexity_matches)
-        metrics['complexity_violations'] = len(complexity_matches)
+        metrics["max_complexity"] = max(int(c) for c in complexity_matches)
+        metrics["complexity_violations"] = len(complexity_matches)
 
     # Parse test results
-    test_match = re.search(r'(\d+) passed.*?(\d+) failed', result.stdout)
+    test_match = re.search(r"(\d+) passed.*?(\d+) failed", result.stdout)
     if test_match:
-        metrics['tests_passed'] = int(test_match.group(1))
-        metrics['tests_failed'] = int(test_match.group(2))
+        metrics["tests_passed"] = int(test_match.group(1))
+        metrics["tests_failed"] = int(test_match.group(2))
 
     # Security issues
-    security_count = len(re.findall(r'B\d{3}:', result.stderr))
+    security_count = len(re.findall(r"B\d{3}:", result.stderr))
     if security_count:
-        metrics['security_issues'] = security_count
+        metrics["security_issues"] = security_count
 
     return metrics
 ```
 
----
+______________________________________________________________________
 
 ### Priority 3: Enhanced Workflow Intelligence
 
@@ -335,17 +352,14 @@ def _extract_quality_metrics(result: CrackerjackResult) -> dict[str, float]:
 
 ```python
 async def _generate_recommendations(
-    result: CrackerjackResult,
-    command: str,
-    history: list[dict]
+    result: CrackerjackResult, command: str, history: list[dict]
 ) -> str:
     """Generate proactive recommendations based on execution patterns."""
     recommendations = []
 
     # Check for repeated failures
     recent_failures = [
-        h for h in history[-10:]
-        if "failed" in h.get("content", "").lower()
+        h for h in history[-10:] if "failed" in h.get("content", "").lower()
     ]
 
     if len(recent_failures) >= 3:
@@ -365,7 +379,7 @@ async def _generate_recommendations(
 
     # Check for coverage drops
     metrics = _extract_quality_metrics(result)
-    if metrics.get('coverage', 100) < 40:
+    if metrics.get("coverage", 100) < 40:
         recommendations.append(
             "📉 **Coverage Alert**: Below ratchet baseline (42%). "
             "Add tests before committing. Never reduce coverage!"
@@ -385,7 +399,7 @@ async def _track_fix_effectiveness(
     db: ReflectionDatabase,
     command: str,
     result: CrackerjackResult,
-    previous_result: CrackerjackResult | None
+    previous_result: CrackerjackResult | None,
 ) -> str:
     """Track whether AI fixes actually resolved issues."""
     if "--ai-fix" not in command:
@@ -400,11 +414,7 @@ async def _track_fix_effectiveness(
         # Store success pattern
         await db.store_conversation(
             content=f"AI fix successful for {command}",
-            metadata={
-                "fix_type": "ai_automated",
-                "success": True,
-                "command": command
-            }
+            metadata={"fix_type": "ai_automated", "success": True, "command": command},
         )
         return effectiveness
 
@@ -417,7 +427,7 @@ async def _track_fix_effectiveness(
     return ""
 ```
 
----
+______________________________________________________________________
 
 ### Priority 4: Architecture Improvements
 
@@ -427,7 +437,7 @@ async def _track_fix_effectiveness(
 
 **Recommendation**: Extract formatting into dedicated module
 
-```python
+````python
 # New file: crackerjack_formatters.py
 class CrackerjackOutputFormatter:
     """Formats crackerjack execution results for display."""
@@ -448,9 +458,7 @@ class CrackerjackOutputFormatter:
                 result.stdout[:5000]  # Limit output length
             )
         if result.stderr.strip():
-            output += "\n**Errors**:\n```\n{}\n```\n".format(
-                result.stderr[:5000]
-            )
+            output += "\n**Errors**:\n```\n{}\n```\n".format(result.stderr[:5000])
         return output
 
     @staticmethod
@@ -468,7 +476,7 @@ class CrackerjackOutputFormatter:
                 output += f"- {key.replace('_', ' ').title()}: {value}\n"
 
         return output
-```
+````
 
 #### 4.2 Testability Enhancement
 
@@ -484,7 +492,7 @@ class CrackerjackWorkflowOrchestrator:
         self,
         integration: CrackerjackIntegration,
         db: ReflectionDatabase,
-        formatter: CrackerjackOutputFormatter
+        formatter: CrackerjackOutputFormatter,
     ):
         self.integration = integration
         self.db = db
@@ -496,14 +504,17 @@ class CrackerjackWorkflowOrchestrator:
         args: str = "",
         working_directory: str = ".",
         timeout: int = 300,
-        ai_agent_mode: bool = False
+        ai_agent_mode: bool = False,
     ) -> str:
         """Execute crackerjack command with full analytics pipeline."""
 
         # 1. Execute command
         result = await self.integration.execute_crackerjack_command(
-            command, args.split() if args else None,
-            working_directory, timeout, ai_agent_mode
+            command,
+            args.split() if args else None,
+            working_directory,
+            timeout,
+            ai_agent_mode,
         )
 
         # 2. Format output
@@ -525,39 +536,44 @@ class CrackerjackWorkflowOrchestrator:
         return output
 ```
 
----
+______________________________________________________________________
 
 ## Implementation Roadmap
 
 ### Phase 1: Quick Wins (1-2 days)
+
 - [ ] Fix unused `start_date` variable
 - [ ] Enhance error messages with context
 - [ ] Add quality metrics extraction
 - [ ] Implement basic AI agent pattern detection
 
 ### Phase 2: AI Integration (3-5 days)
+
 - [ ] Implement `_analyze_with_agents()` function
 - [ ] Add proactive recommendations engine
 - [ ] Track AI fix effectiveness
 - [ ] Integrate with RefactoringAgent, SecurityAgent, TestCreationAgent
 
 ### Phase 3: Architecture Refactoring (1 week)
+
 - [ ] Extract formatting logic to `CrackerjackOutputFormatter`
 - [ ] Implement `CrackerjackWorkflowOrchestrator` with DI
 - [ ] Add comprehensive test suite
 - [ ] Update documentation
 
 ### Phase 4: Advanced Features (2 weeks)
+
 - [ ] Session-aware learning (fix pattern tracking)
 - [ ] Predictive failure analysis
 - [ ] Integration with crackerjack dashboard
 - [ ] Custom agent creation for workflow optimization
 
----
+______________________________________________________________________
 
 ## Success Metrics
 
 **Before Improvements**:
+
 - ❌ No AI agent integration
 - ❌ Generic error messages
 - ❌ No quality metrics extraction
@@ -565,6 +581,7 @@ class CrackerjackWorkflowOrchestrator:
 - ❌ Limited testability
 
 **After Improvements**:
+
 - ✅ Full AI agent integration with pattern detection
 - ✅ Context-aware error messages with troubleshooting steps
 - ✅ Automated quality metrics extraction (coverage, complexity, security)
@@ -573,52 +590,59 @@ class CrackerjackWorkflowOrchestrator:
 - ✅ Session learning tracks fix effectiveness over time
 
 **Measurable KPIs**:
+
 - **AI Fix Success Rate**: Track % of issues resolved by `--ai-fix`
 - **Time to Resolution**: Reduce debugging time with proactive recommendations
 - **Quality Trend**: Monitor coverage, complexity, security metrics over time
 - **Developer Satisfaction**: Reduce frustration with actionable guidance
 
----
+______________________________________________________________________
 
 ## Recommended Tools & Agents for Implementation
 
 ### For Code Review & Audit
+
 1. **code-reviewer** - Primary audit of current implementation
-2. **refactoring-specialist** - Identify complexity and architectural issues
-3. **security-auditor** - Review command execution security
+1. **refactoring-specialist** - Identify complexity and architectural issues
+1. **security-auditor** - Review command execution security
 
 ### For Implementation
+
 1. **python-pro** - Implement Python 3.13+ enhancements
-2. **test-specialist** - Create comprehensive test suite
-3. **documentation-specialist** - Update documentation
+1. **test-specialist** - Create comprehensive test suite
+1. **documentation-specialist** - Update documentation
 
 ### For Validation
-1. **qa-strategist** - Scenario testing and regression validation
-2. **improve-agent workflow** - Structured improvement process
-3. **agent-creation-specialist** - Design new workflow optimizer agent
 
----
+1. **qa-strategist** - Scenario testing and regression validation
+1. **improve-agent workflow** - Structured improvement process
+1. **agent-creation-specialist** - Design new workflow optimizer agent
+
+______________________________________________________________________
 
 ## Next Steps
 
 1. **Review this audit** with stakeholders
-2. **Run code-reviewer agent** on current implementation:
+
+1. **Run code-reviewer agent** on current implementation:
+
    ```bash
    # Use Task tool with code-reviewer agent
    Task tool with subagent_type="code-reviewer"
    Focus: .venv/.../session_mgmt_mcp/tools/crackerjack_tools.py
    ```
 
-3. **Prioritize improvements** based on:
+1. **Prioritize improvements** based on:
+
    - Impact (high: AI integration, medium: metrics, low: formatting)
    - Effort (quick wins first, then architecture refactoring)
    - Risk (test thoroughly before deploying)
 
-4. **Implement in phases** following roadmap above
+1. **Implement in phases** following roadmap above
 
-5. **Measure success** with KPIs and adjust strategy
+1. **Measure success** with KPIs and adjust strategy
 
----
+______________________________________________________________________
 
 ## Conclusion
 
@@ -630,6 +654,7 @@ The `crackerjack:run` workflow has a solid foundation but is **significantly und
 - **Reduces debugging time** with context-aware guidance
 
 **Estimated Impact**:
+
 - 40% reduction in debugging time
 - 60% increase in AI fix success rate
 - 100% improvement in developer experience quality
