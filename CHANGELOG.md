@@ -1,5 +1,20 @@
 ______________________________________________________________________
 
+## [0.39.8] - 2025-10-03
+
+### Testing
+
+- tests: Update CHANGELOG, pyproject, test_session_coordinator
+
+## [Unreleased] - 2025-10-03
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## [0.39.7] - 2025-10-03
 
 ### Changed
@@ -20,11 +35,12 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-03
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-03
 
