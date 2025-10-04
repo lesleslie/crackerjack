@@ -7,6 +7,58 @@ from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 from crackerjack.models.protocols import OptionsProtocol
 
 
+def validate_command(command: str, args: str) -> tuple[str, list[str]]:
+    """Validate command and detect common misuse patterns.
+
+    Args:
+        command: Semantic command name (test, lint, check, etc.)
+        args: Additional arguments as a string
+
+    Returns:
+        Tuple of (validated_command, cleaned_args_list)
+
+    Raises:
+        ValueError: If command is invalid or misused
+
+    Examples:
+        >>> validate_command("test", "")
+        ("test", [])
+        >>> validate_command("check", "--verbose")
+        ("check", ["--verbose"])
+        >>> validate_command("--ai-fix", "-t")
+        Traceback (most recent call last):
+        ...
+        ValueError: Invalid command: '--ai-fix'...
+    """
+    # Detect if user put flags in command parameter
+    if command.startswith("--") or command.startswith("-"):
+        raise ValueError(
+            f"Invalid command: {command!r}\n"
+            f"Commands should be semantic (e.g., 'test', 'lint', 'check')\n"
+            f"Use ai_agent_mode=True parameter for auto-fix, not --ai-fix in command"
+        )
+
+    # Validate against known semantic commands
+    valid_commands = {"test", "lint", "check", "format", "security", "complexity", "all"}
+    if command not in valid_commands:
+        raise ValueError(
+            f"Unknown command: {command!r}\n"
+            f"Valid commands: {', '.join(sorted(valid_commands))}"
+        )
+
+    # Parse args and detect --ai-fix misuse
+    # Handle None gracefully by converting to empty string
+    args_str = args if args is not None else ""
+    parsed_args = args_str.split() if args_str else []
+    if "--ai-fix" in parsed_args:
+        raise ValueError(
+            "Do not pass --ai-fix in args parameter\n"
+            "Use ai_agent_mode=True parameter instead"
+        )
+
+    return command, parsed_args
+
+
 class CrackerjackCLIFacade:
     def __init__(
         self,
