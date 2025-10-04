@@ -1,10 +1,10 @@
 ______________________________________________________________________
 
-## [0.40.2] - 2025-10-04
+## [0.40.3] - 2025-10-04
 
-### Documentation
+### Testing
 
-- config: Update CHANGELOG, pyproject, uv
+- test: Update 5 files
 
 ## [Unreleased] - 2025-10-04
 
@@ -14,6 +14,22 @@ ______________________________________________________________________
 ### Fixed
 - fix: resolve bug in parser
 
+
+## [0.40.2] - 2025-10-04
+
+### Documentation
+
+- config: Update CHANGELOG, pyproject, uv
+
+## [Unreleased] - 2025-10-04
+
+### Added
+
+- feat: add new feature
+
+### Fixed
+
+- fix: resolve bug in parser
 
 ## [0.40.1] - 2025-10-04
 

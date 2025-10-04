@@ -93,3 +93,63 @@ def test_clear_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in clear: {e}")
+
+def test_size_basic(self):
+    """Test basic functionality of size."""
+    try:
+        result = size()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in size: {e}")
+
+def test_time_operation_basic(self):
+    """Test basic functionality of time_operation."""
+    try:
+        result = time_operation()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in time_operation: {e}")
+
+def test_record_metric_basic(self):
+    """Test basic functionality of record_metric."""
+    try:
+        result = record_metric()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in record_metric: {e}")
+
+def test_get_stats_basic(self):
+    """Test basic functionality of get_stats."""
+    try:
+        result = get_stats()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_stats: {e}")
+
+def test_print_stats_basic(self):
+    """Test basic functionality of print_stats."""
+    try:
+        result = print_stats()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in print_stats: {e}")

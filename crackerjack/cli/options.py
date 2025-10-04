@@ -340,8 +340,6 @@ CLI_OPTIONS = {
         "-p",
         "--publish",
         callback=parse_bump_option_with_flag_support,
-        is_flag=False,
-        flag_value="interactive",
         help=(
             "Bump version and publish to PyPI (patch, minor, major, auto). "
             "Use 'interactive' to be prompted for version selection. "
