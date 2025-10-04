@@ -378,7 +378,25 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
             - is_valid: True if code passes all security checks
             - error_message: Description of security violation (empty if valid)
         """
-        # Check 1: Dangerous pattern detection (regex)
+        # Check 1: Dangerous pattern detection
+        is_valid, error_msg = self._check_dangerous_patterns(code)
+        if not is_valid:
+            return False, error_msg
+
+        # Check 2: AST validation
+        is_valid, error_msg = self._validate_ast_security(code)
+        if not is_valid:
+            return False, error_msg
+
+        # Check 3: Code length sanity check
+        is_valid, error_msg = self._check_code_size_limit(code)
+        if not is_valid:
+            return False, error_msg
+
+        return True, ""
+
+    def _check_dangerous_patterns(self, code: str) -> tuple[bool, str]:
+        """Check for dangerous code patterns using regex."""
         dangerous_patterns = [
             (r"\beval\s*\(", "eval() call detected"),
             (r"\bexec\s*\(", "exec() call detected"),
@@ -404,24 +422,13 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
             ):  # REGEX OK: security validation of AI-generated code
                 return False, f"Security violation: {message}"
 
-        # Check 2: AST validation
+        return True, ""
+
+    def _validate_ast_security(self, code: str) -> tuple[bool, str]:
+        """Validate code AST for security issues."""
         try:
             tree = ast.parse(code)
-
-            # Scan AST for dangerous nodes
-            for node in ast.walk(tree):
-                # Detect potentially dangerous imports
-                if isinstance(node, ast.Import):
-                    for alias in node.names:
-                        if alias.name in (
-                            "os",
-                            "subprocess",
-                            "sys",
-                        ) and not self._is_safe_usage(node):
-                            # Note: We're being cautious, but os/subprocess can be used safely
-                            # This is a heuristic check
-                            pass  # Allow for now, but log
-
+            self._scan_ast_for_dangerous_imports(tree)
         except SyntaxError as e:
             return (
                 False,
@@ -433,14 +440,27 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
                 f"Failed to parse generated code: {self._sanitize_error_message(str(e))}",
             )
 
-        # Check 3: Code length sanity check (prevent denial of service)
+        return True, ""
+
+    def _scan_ast_for_dangerous_imports(self, tree: ast.AST) -> None:
+        """Scan AST nodes for potentially dangerous imports."""
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name in ("os", "subprocess", "sys"):
+                        if not self._is_safe_usage(node):
+                            # Note: os/subprocess can be used safely
+                            # This is a heuristic check
+                            pass  # Allow for now, but log
+
+    def _check_code_size_limit(self, code: str) -> tuple[bool, str]:
+        """Check if generated code exceeds size limit."""
         assert self._settings is not None, "Settings not initialized"
         if len(code) > self._settings.max_file_size_bytes:
             return (
                 False,
                 f"Generated code exceeds size limit ({len(code)} > {self._settings.max_file_size_bytes})",
             )
-
         return True, ""
 
     def _sanitize_error_message(self, error_msg: str) -> str:

@@ -25,6 +25,7 @@ import os
 import shutil
 import tempfile
 import typing as t
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
@@ -165,7 +166,37 @@ class SafeFileModifier:
         """
         path = Path(file_path)
 
-        # Validation (includes symlink check and size limit)
+        # Validation
+        result = self._validate_fix_inputs(path, fixed_content)
+        if not result["success"]:
+            return result
+
+        # Read original content
+        result = self._read_original_content(path)
+        if not result["success"]:
+            return result
+        original_content = result["content"]
+
+        # Generate diff
+        diff = self._generate_diff(original_content, fixed_content, file_path)
+
+        # Dry-run mode - just return diff
+        if dry_run:
+            return self._create_dry_run_result(diff)
+
+        # Create backup if requested
+        result = self._handle_backup(path, original_content, create_backup, diff)
+        if not result["success"]:
+            return result
+        backup_path = result.get("backup_path")
+
+        # Apply the fix atomically
+        return self._atomic_write_fix(path, fixed_content, diff, backup_path, file_path)
+
+    def _validate_fix_inputs(
+        self, path: Path, fixed_content: str
+    ) -> dict[str, str | bool | None]:
+        """Validate file path and content size."""
         validation_result = self._validate_file_path(path)
         if not validation_result["valid"]:
             return {
@@ -175,7 +206,6 @@ class SafeFileModifier:
                 "backup_path": None,
             }
 
-        # Security: Validate content size
         if len(fixed_content) > self._max_file_size:
             return {
                 "success": False,
@@ -184,9 +214,13 @@ class SafeFileModifier:
                 "backup_path": None,
             }
 
-        # Read original content
+        return {"success": True}
+
+    def _read_original_content(self, path: Path) -> dict[str, str | bool | None]:
+        """Read original file content with error handling."""
         try:
             original_content = path.read_text(encoding="utf-8")
+            return {"success": True, "content": original_content}
         except UnicodeDecodeError:
             return {
                 "success": False,
@@ -202,40 +236,45 @@ class SafeFileModifier:
                 "backup_path": None,
             }
 
-        # Generate diff
-        diff = self._generate_diff(
-            original_content,
-            fixed_content,
-            file_path,
-        )
+    def _create_dry_run_result(self, diff: str) -> dict[str, str | bool | None]:
+        """Create result dictionary for dry-run mode."""
+        return {
+            "success": True,
+            "diff": diff,
+            "backup_path": None,
+            "dry_run": True,
+            "message": "Dry-run: Changes not applied",
+        }
 
-        # Dry-run mode - just return diff
-        if dry_run:
+    def _handle_backup(
+        self, path: Path, original_content: str, create_backup: bool, diff: str
+    ) -> dict[str, str | bool | Path | None]:
+        """Create backup if requested."""
+        if not create_backup:
+            return {"success": True, "backup_path": None}
+
+        try:
+            backup_path = self._create_backup(path, original_content)
+            return {"success": True, "backup_path": backup_path}
+        except Exception as e:
+            logger.error(f"Failed to create backup: {e}")
             return {
-                "success": True,
+                "success": False,
+                "error": f"Backup creation failed: {e}",
                 "diff": diff,
                 "backup_path": None,
-                "dry_run": True,
-                "message": "Dry-run: Changes not applied",
             }
 
-        # Create backup
-        backup_path = None
-        if create_backup:
-            try:
-                backup_path = self._create_backup(path, original_content)
-            except Exception as e:
-                logger.error(f"Failed to create backup: {e}")
-                return {
-                    "success": False,
-                    "error": f"Backup creation failed: {e}",
-                    "diff": diff,
-                    "backup_path": None,
-                }
-
-        # SECURITY: Atomic file write to prevent partial writes
+    def _atomic_write_fix(
+        self,
+        path: Path,
+        fixed_content: str,
+        diff: str,
+        backup_path: Path | None,
+        file_path: str,
+    ) -> dict[str, str | bool | None]:
+        """Write fix atomically with rollback on error."""
         try:
-            # Write to temporary file first
             temp_fd, temp_path_str = tempfile.mkstemp(
                 dir=path.parent,
                 prefix=f".{path.name}.",
@@ -243,18 +282,13 @@ class SafeFileModifier:
             )
 
             try:
-                # Write content to temp file
                 with os.fdopen(temp_fd, "w", encoding="utf-8") as f:
                     f.write(fixed_content)
                     f.flush()
-                    os.fsync(f.fileno())  # Ensure written to disk
+                    os.fsync(f.fileno())
 
-                # Preserve original file permissions
                 original_stat = path.stat()
                 os.chmod(temp_path_str, original_stat.st_mode)
-
-                # Atomic rename (replaces original file)
-                # This is atomic on POSIX systems
                 shutil.move(temp_path_str, path)
 
                 logger.info(f"Successfully applied fix to {file_path}")
@@ -268,15 +302,11 @@ class SafeFileModifier:
                 }
 
             except Exception:
-                # Clean up temp file on error
-                try:
-                    os.unlink(temp_path_str)
-                except Exception:
-                    pass  # Ignore cleanup errors
+                with suppress(Exception):
+                    Path(temp_path_str).unlink()
                 raise
 
         except Exception as e:
-            # Rollback on error
             if backup_path:
                 logger.warning(f"Fix failed, restoring from backup: {e}")
                 try:
