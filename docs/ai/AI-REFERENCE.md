@@ -62,6 +62,7 @@ graph TD
 ```
 
 **Key Points:**
+
 - **Use `--ai-fix`** when you have quality/test failures and want automated resolution
 - **Skip `--ai-fix`** for known issues you prefer to fix manually
 - **AI agent confidence** ≥0.7 required for automatic fixes (0.8-0.9 for critical issues)
@@ -90,7 +91,7 @@ graph TD
 
 | Level | Command | Duration | Use Case |
 |-------|---------|----------|----------|
-| **Skip** | `--skip-hooks` | <1s | Active development iteration |
+| **Skip** | `--skip-hooks` | \<1s | Active development iteration |
 | **Fast** | `--fast` or default | ~5s | Quick pre-commit check |
 | **Comprehensive** | `--comp` | ~30s | Full quality analysis |
 | **With Tests** | `--run-tests` | Variable | Complete validation |
@@ -152,6 +153,7 @@ python -m crackerjack --ai-debug --run-tests
 ```
 
 **When to transition:**
+
 - `--skip-hooks` → Fast iteration when hooks slow you down
 - Fast hooks → Standard pre-commit check
 - `--ai-fix --run-tests` → When you want automated issue resolution
@@ -216,6 +218,7 @@ python -m crackerjack --bump minor
 ```
 
 **Version Intelligence:**
+
 - AI analyzes git commits to recommend version bump
 - Detects breaking changes → suggests major
 - Detects new features → suggests minor
@@ -398,6 +401,7 @@ python -m crackerjack --run-tests --test-workers 2
 ### Issue: Tests are failing
 
 **Diagnostic Steps:**
+
 ```bash
 # 1. Check if it's a known issue
 python -m crackerjack --run-tests
@@ -413,6 +417,7 @@ python -m pytest tests/test_file.py::TestClass::test_method -v
 ```
 
 **Common Causes:**
+
 - Async tests hanging → Use synchronous config tests instead
 - Import errors → Import protocols from `models/protocols.py`
 - Coverage failing → Never reduce below baseline (use ratchet system)
@@ -420,6 +425,7 @@ python -m pytest tests/test_file.py::TestClass::test_method -v
 ### Issue: Pre-commit hooks are slow
 
 **Solutions:**
+
 ```bash
 # Option 1: Skip hooks during development
 python -m crackerjack --skip-hooks
@@ -434,6 +440,7 @@ python -m crackerjack --test-workers 2
 ### Issue: AI agents not fixing issues
 
 **Diagnostic Steps:**
+
 ```bash
 # 1. Enable AI debugging
 python -m crackerjack --ai-debug --run-tests
@@ -449,6 +456,7 @@ python -m crackerjack --ai-debug --run-tests
 ```
 
 **When AI Can't Help:**
+
 - Architecture/design issues → Manual intervention required
 - Complex business logic → Human review needed
 - Cross-cutting concerns → Comprehensive refactoring
@@ -456,6 +464,7 @@ python -m crackerjack --ai-debug --run-tests
 ### Issue: Cache problems
 
 **Solutions:**
+
 ```bash
 # Clear all caches
 python -m crackerjack --clear-cache
@@ -470,6 +479,7 @@ python -m crackerjack --cache-stats
 ### Issue: MCP server not responding
 
 **Solutions:**
+
 ```bash
 # Restart MCP server
 python -m crackerjack --restart-mcp-server
@@ -484,6 +494,7 @@ python -m crackerjack --watchdog
 ### Issue: Terminal stuck/corrupted
 
 **Recovery:**
+
 ```bash
 # Reset terminal
 stty sane; reset; exec $SHELL -l
@@ -561,31 +572,37 @@ python -m crackerjack --all interactive
 ### Command Categories
 
 **Quality Checks:**
+
 - `python -m crackerjack` → Fast hooks (~5s)
 - `python -m crackerjack --comp` → Comprehensive (~30s)
 - `python -m crackerjack --run-tests` → With tests
 
 **AI Assistance:**
+
 - `--ai-fix` → Auto-fix issues
 - `--ai-debug` → Verbose diagnostics
 - `--ai-fix --run-tests` → Full AI workflow
 
 **Development:**
+
 - `--skip-hooks` → Fast iteration
 - `--test-workers N` → Control parallelization
 - `--debug` → General debugging
 
 **Release:**
+
 - `--all VERSION` → Full release
 - `--publish VERSION` → Quick publish
 - `--bump VERSION` → Version only
 
 **Monitoring:**
+
 - `--dashboard` → Terminal UI
 - `--unified-dashboard` → Web UI
 - `--monitor` → Multi-project
 
 **Performance:**
+
 - `--benchmark` → Accurate timing
 - `--cache-stats` → Cache metrics
 - `--clear-cache` → Reset caches
@@ -612,10 +629,10 @@ Want to monitor?
 ### Key Principles
 
 1. **Always run crackerjack after editing** → Quality assurance
-2. **Use `--ai-fix` when issues arise** → Automated resolution
-3. **Use `--skip-hooks` during iteration** → Fast development
-4. **Use `--ai-debug` when confused** → Understand AI decisions
-5. **Never reduce coverage** → Ratchet system enforced
+1. **Use `--ai-fix` when issues arise** → Automated resolution
+1. **Use `--skip-hooks` during iteration** → Fast development
+1. **Use `--ai-debug` when confused** → Understand AI decisions
+1. **Never reduce coverage** → Ratchet system enforced
 
 ## Integration with Session Management
 
@@ -626,12 +643,14 @@ Want to monitor?
 - **Session End**: Auto-cleanup on `/quit`, disconnect, or crash
 
 **Benefits:**
+
 - Crackerjack metrics tracked over time
 - Test patterns and fixes remembered
 - Error resolution strategies learned
 - Command effectiveness optimized
 
 **Manual Control** (if needed):
+
 ```bash
 # Initialize session
 /session-mgmt:init
@@ -650,17 +669,19 @@ Want to monitor?
 **Previous Candidates**: pyrefly, ty (removed due to availability issues)
 
 **Evaluation Criteria**:
+
 1. Availability across environments
-2. Stability (no crashes/inconsistencies)
-3. Value added (unique issue detection)
-4. Performance (within time budgets)
-5. Integration (pre-commit compatibility)
+1. Stability (no crashes/inconsistencies)
+1. Value added (unique issue detection)
+1. Performance (within time budgets)
+1. Integration (pre-commit compatibility)
 
 **Promotion Lifecycle**:
+
 1. Experimental phase (manual stage only)
-2. Evaluation period (30-90 days)
-3. Promotion decision (move to tier if criteria met)
-4. Removal (if criteria not met)
+1. Evaluation period (30-90 days)
+1. Promotion decision (move to tier if criteria met)
+1. Removal (if criteria not met)
 
 ## Additional Resources
 
@@ -670,7 +691,7 @@ Want to monitor?
 - **Agent Capabilities**: `docs/ai/AGENT-CAPABILITIES.json` - Structured agent data
 - **Architecture**: `CLAUDE.md` - Modular DI architecture details
 
----
+______________________________________________________________________
 
 **Last Updated**: 2025-10-04
 **Version**: 1.0.0

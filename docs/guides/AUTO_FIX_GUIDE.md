@@ -7,9 +7,9 @@ This guide explains how to use crackerjack's AI-powered auto-fix workflow to aut
 The auto-fix workflow uses Claude AI to iteratively fix code issues detected by pre-commit hooks. It runs in a loop:
 
 1. **Detect**: Run quality checks (lint, type checking, tests)
-2. **Fix**: Apply AI-powered fixes to failing hooks
-3. **Verify**: Re-run checks to confirm fixes
-4. **Repeat**: Continue until all checks pass or max iterations reached
+1. **Fix**: Apply AI-powered fixes to failing hooks
+1. **Verify**: Re-run checks to confirm fixes
+1. **Repeat**: Continue until all checks pass or max iterations reached
 
 ## Prerequisites
 
@@ -39,6 +39,7 @@ ai: claude
 ### 3. Project Setup
 
 Ensure your project has:
+
 - Pre-commit hooks configured (`.pre-commit-config.yaml`)
 - Python 3.13+ environment
 - ACB with AI adapter installed: `uv add "acb[ai]"`
@@ -54,6 +55,7 @@ python -m crackerjack --ai-fix --run-tests --verbose
 ```
 
 This will:
+
 - Run all pre-commit hooks
 - Apply AI fixes for any failures
 - Re-run hooks to verify fixes
@@ -69,6 +71,7 @@ python -m crackerjack --dry-run --run-tests --verbose
 ```
 
 Dry-run mode:
+
 - Shows what fixes would be applied
 - Doesn't modify any files
 - Useful for reviewing AI suggestions
@@ -127,18 +130,11 @@ await crackerjack_run(command="test", ai_agent_mode=True)
 
 # With additional arguments
 await crackerjack_run(
-    command="check",
-    args="--verbose",
-    ai_agent_mode=True,
-    timeout=600
+    command="check", args="--verbose", ai_agent_mode=True, timeout=600
 )
 
 # Dry-run mode
-await crackerjack_run(
-    command="lint",
-    args="--dry-run --verbose",
-    ai_agent_mode=True
-)
+await crackerjack_run(command="lint", args="--dry-run --verbose", ai_agent_mode=True)
 ```
 
 ### ❌ Incorrect Usage
@@ -162,26 +158,31 @@ The MCP integration automatically translates `ai_agent_mode=True` to the appropr
 Each iteration follows this sequence:
 
 1. **Hook Execution**: Run pre-commit hooks based on command
+
    - `test/check/all`: Comprehensive hooks (slower, thorough)
    - `lint/format`: Fast hooks (quick feedback)
 
-2. **Issue Detection**: Parse hook failures
+1. **Issue Detection**: Parse hook failures
+
    - Identify failing hooks (refurb, pyright, pytest, etc.)
    - Extract error messages and context
    - Convert to Issue objects for AI processing
 
-3. **AI Fixing**: Apply fixes via Claude AI
+1. **AI Fixing**: Apply fixes via Claude AI
+
    - Send issue context to Claude API
    - Generate code fixes with confidence scores
    - Validate fixes meet minimum confidence threshold (0.7)
    - Apply fixes to files with backup creation
 
-4. **Verification**: Re-run hooks
+1. **Verification**: Re-run hooks
+
    - Confirm fixes resolved the issues
    - Detect any new issues introduced
    - Track iteration metrics (fixes applied, success rate)
 
-5. **Convergence Check**:
+1. **Convergence Check**:
+
    - **Success**: All hooks passing → Exit with success
    - **No Progress**: No fixes applied → Exit with warning
    - **Continue**: Issues remain and fixes applied → Next iteration
@@ -191,8 +192,8 @@ Each iteration follows this sequence:
 The workflow stops when:
 
 1. **All Passing**: All hooks pass successfully
-2. **No Progress**: No fixes can be applied (confidence too low)
-3. **Max Iterations**: Reached iteration limit (default: 10)
+1. **No Progress**: No fixes can be applied (confidence too low)
+1. **Max Iterations**: Reached iteration limit (default: 10)
 
 ### Issue Type Mapping
 
@@ -261,6 +262,7 @@ Error: ANTHROPIC_API_KEY environment variable not set
 ```
 
 **Solution**: Export the API key:
+
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
@@ -272,6 +274,7 @@ Error: AI adapter not configured in settings/adapters.yml
 ```
 
 **Solution**: Add to `settings/adapters.yml`:
+
 ```yaml
 ai: claude
 ```
@@ -283,6 +286,7 @@ ai: claude
 ```
 
 **Solution**:
+
 - Review the issues manually
 - The AI confidence threshold (0.7) wasn't met
 - Consider fixing complex issues manually first
@@ -295,6 +299,7 @@ ai: claude
 ```
 
 **Solution**:
+
 - Increase iteration limit: `--max-iterations 15`
 - Review remaining issues in the output
 - Some issues may require manual intervention
@@ -307,6 +312,7 @@ Error: Cannot import ClaudeCodeFixer - install ACB with AI adapter
 ```
 
 **Solution**:
+
 ```bash
 uv add "acb[ai]"
 ```
@@ -320,6 +326,7 @@ python -m crackerjack --ai-fix --verbose --run-tests
 ```
 
 This shows:
+
 - Each hook execution result
 - AI fix generation details
 - Confidence scores for each fix
@@ -375,9 +382,9 @@ python -m crackerjack --ai-fix all --max-iterations 10
 Let AI handle routine fixes, reserve manual effort for complex issues:
 
 1. Run auto-fix to handle bulk issues
-2. Review remaining failures
-3. Manually fix complex cases
-4. Run auto-fix again to clean up
+1. Review remaining failures
+1. Manually fix complex cases
+1. Run auto-fix again to clean up
 
 ## Performance Tips
 
@@ -411,21 +418,25 @@ python -m crackerjack --ai-fix --timeout 1200  # 20 minutes
 ### Components
 
 1. **AutoFixWorkflow** (`workflows/auto_fix.py`)
+
    - Orchestrates the iteration loop
    - Manages convergence detection
    - Tracks metrics and results
 
-2. **EnhancedAgentCoordinator** (`agents/enhanced_coordinator.py`)
+1. **EnhancedAgentCoordinator** (`agents/enhanced_coordinator.py`)
+
    - Coordinates fix application
    - Manages agent selection
    - Handles external agent consultation
 
-3. **ClaudeCodeFixer** (`adapters/ai/claude.py`)
+1. **ClaudeCodeFixer** (`adapters/ai/claude.py`)
+
    - Real AI integration with Claude API
    - Generates code fixes with context
    - Validates fix confidence and safety
 
-4. **AsyncHookManager** (`managers/async_hook_manager.py`)
+1. **AsyncHookManager** (`managers/async_hook_manager.py`)
+
    - Runs pre-commit hooks asynchronously
    - Parses hook results
    - Provides hook selection strategies
@@ -508,18 +519,18 @@ python -m crackerjack --ai-fix all
 The auto-fix workflow includes safety features:
 
 1. **Backup Creation**: Original files backed up before modification
-2. **Confidence Threshold**: Fixes below 0.7 confidence rejected
-3. **Dry-Run Mode**: Preview changes without applying
-4. **Git Integration**: Easy rollback with version control
+1. **Confidence Threshold**: Fixes below 0.7 confidence rejected
+1. **Dry-Run Mode**: Preview changes without applying
+1. **Git Integration**: Easy rollback with version control
 
 ### API Security
 
 Protect your Anthropic API key:
 
 1. **Never commit**: Add to `.gitignore` or use environment variables
-2. **Rotate regularly**: Update keys periodically
-3. **Monitor usage**: Track API consumption in Anthropic dashboard
-4. **Restrict access**: Use project-specific keys when possible
+1. **Rotate regularly**: Update keys periodically
+1. **Monitor usage**: Track API consumption in Anthropic dashboard
+1. **Restrict access**: Use project-specific keys when possible
 
 ## Further Reading
 
@@ -534,6 +545,6 @@ Protect your Anthropic API key:
 For issues or questions:
 
 1. Check this guide and troubleshooting section
-2. Review implementation plan for technical details
-3. Examine workflow logs with `--verbose`
-4. Report bugs with detailed reproduction steps
+1. Review implementation plan for technical details
+1. Examine workflow logs with `--verbose`
+1. Report bugs with detailed reproduction steps

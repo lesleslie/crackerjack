@@ -5,25 +5,25 @@ This document describes the complete workflow architecture for crackerjack's AI-
 ## Table of Contents
 
 1. [Overview](<#overview>)
-2. [Current Workflow (Basic Mode)](<#current-workflow-basic-mode>)
-3. [New Auto-Fix Workflow (AI Mode)](<#new-auto-fix-workflow-ai-mode>)
-4. [MCP Integration Flow](<#mcp-integration-flow>)
-5. [Component Architecture](<#component-architecture>)
-6. [Security Layers](<#security-layers>)
-7. [Iteration Loop Design](<#iteration-loop-design>)
+1. [Current Workflow (Basic Mode)](<#current-workflow-basic-mode>)
+1. [New Auto-Fix Workflow (AI Mode)](<#new-auto-fix-workflow-ai-mode>)
+1. [MCP Integration Flow](<#mcp-integration-flow>)
+1. [Component Architecture](<#component-architecture>)
+1. [Security Layers](<#security-layers>)
+1. [Iteration Loop Design](<#iteration-loop-design>)
 
----
+______________________________________________________________________
 
 ## Overview
 
 Crackerjack provides two execution modes:
 
 1. **Basic Mode**: Runs pre-commit hooks and reports failures (existing functionality)
-2. **AI Mode**: Iteratively fixes code issues using Claude AI (new implementation)
+1. **AI Mode**: Iteratively fixes code issues using Claude AI (new implementation)
 
 Both modes integrate with the MCP (Model Context Protocol) server for remote execution via session-mgmt-mcp.
 
----
+______________________________________________________________________
 
 ## Current Workflow (Basic Mode)
 
@@ -41,27 +41,29 @@ Pre-commit Hooks → Parse Results → Return to User
 ### Steps
 
 1. **User Input**: User runs `/run` or calls `crackerjack_run(command="test")`
-2. **MCP Server**: session-mgmt-mcp receives request
-3. **Input Validation**: `validate_command()` ensures semantic command format
-4. **Execution**: Crackerjack CLI runs pre-commit hooks
-5. **Parsing**: Hook output parsed using reverse-parsing algorithm
-6. **Results**: Formatted results returned to user
+1. **MCP Server**: session-mgmt-mcp receives request
+1. **Input Validation**: `validate_command()` ensures semantic command format
+1. **Execution**: Crackerjack CLI runs pre-commit hooks
+1. **Parsing**: Hook output parsed using reverse-parsing algorithm
+1. **Results**: Formatted results returned to user
 
 ### Key Components
 
 **Input Validator** (`crackerjack/cli/facade.py`):
+
 - Validates command parameter (must be semantic, not flags)
 - Rejects `--ai-fix` in wrong places
 - Uses `shlex.split()` for shell argument parsing
 - Returns `(validated_command, parsed_args)`
 
 **Hook Parser** (`session_mgmt_mcp/tools/hook_parser.py`):
+
 - Reverse parsing: `rsplit(maxsplit=1)` then `rstrip(".")`
 - Handles hook names with dots (e.g., `test.integration.api`)
 - Status markers: `✅`/`Passed` or `❌`/`Failed`
 - Returns `List[HookResult(name, passed)]`
 
----
+______________________________________________________________________
 
 ## New Auto-Fix Workflow (AI Mode)
 
@@ -103,7 +105,7 @@ for iteration in range(1, max_iterations + 1):
 - **Convergence**: Stops early if all hooks pass
 - **Partial Success**: Returns after max iterations with remaining issues
 
----
+______________________________________________________________________
 
 ## MCP Integration Flow
 
@@ -128,11 +130,12 @@ crackerjack_run(command="--ai-fix -t")
 ```
 
 **Validation Rules**:
-1. `command` must be semantic (test, lint, check, etc.)
-2. `command` cannot start with `--` or `-`
-3. `args` cannot contain `--ai-fix` (use `ai_agent_mode=True` instead)
 
----
+1. `command` must be semantic (test, lint, check, etc.)
+1. `command` cannot start with `--` or `-`
+1. `args` cannot contain `--ai-fix` (use `ai_agent_mode=True` instead)
+
+______________________________________________________________________
 
 ## Component Architecture
 
@@ -176,6 +179,7 @@ class ClaudeCodeFixer(CleanupMixin):
 ```
 
 **Security Features**:
+
 - Prompt injection prevention via `_sanitize_prompt_input()`
 - AI code validation via `_validate_ai_generated_code()`
 - Error sanitization via `_sanitize_error_message()`
@@ -207,6 +211,7 @@ class SafeFileModifier:
 ```
 
 **Security Features**:
+
 - Symlink detection (direct + path chain)
 - Path traversal prevention
 - Forbidden file patterns (`.env`, `.git/*`, SSH keys)
@@ -232,6 +237,7 @@ class ClaudeCodeBridge:
 ```
 
 **Responsibilities**:
+
 - Orchestrates AI adapter + file modifier
 - Enforces confidence thresholds
 - Handles dry-run mode
@@ -258,28 +264,33 @@ class AutoFixWorkflow:
 ```
 
 **Convergence Criteria**:
+
 - All hooks pass: Success
 - Max iterations reached: Partial success
 - No fixes applied: Cannot make progress
 
----
+______________________________________________________________________
 
 ## Security Layers
 
 The system implements defense-in-depth with **7 security layers**:
 
 ### 1. Input Validation
+
 - Validates all user inputs
 - Prevents command injection
 - Sanitizes shell arguments
 
 ### 2. Prompt Injection Prevention
+
 - Filters system instruction overrides
 - Blocks role injection attempts
 - Escapes markdown code blocks
 
 ### 3. AI Code Validation
+
 **Regex Scanning** for dangerous patterns:
+
 - `eval()`, `exec()` calls
 - `subprocess.shell=True`
 - `os.system()` commands
@@ -287,34 +298,39 @@ The system implements defense-in-depth with **7 security layers**:
 - Unsafe YAML loading
 
 **AST Parsing** for malicious constructs:
+
 - Dangerous function calls
 - Dynamic imports
 - Code compilation
 
 ### 4. Confidence Thresholds
+
 - Minimum confidence: 0.7 (70%)
 - Rejects low-confidence fixes
 - Prevents unreliable changes
 
 ### 5. File Path Validation
+
 - Symlink detection (direct + parents)
 - Path traversal prevention
 - Forbidden file patterns
 - File size limits
 
 ### 6. Atomic Operations
+
 - Write-to-temp-then-rename
 - `fsync()` before rename
 - Prevents partial writes
 - Automatic cleanup on errors
 
 ### 7. Error Sanitization
+
 - Removes file paths
 - Redacts API keys
 - Scrubs secrets
 - Prevents information leakage
 
----
+______________________________________________________________________
 
 ## Iteration Loop Design
 
@@ -351,7 +367,7 @@ while iteration < MAX_ITERATIONS and not all_passing:
 return {
     "success": all_passing,
     "iterations": iteration,
-    "final_status": "converged" if all_passing else "incomplete"
+    "final_status": "converged" if all_passing else "incomplete",
 }
 ```
 
@@ -372,6 +388,7 @@ class FixIteration:
 ### Progress Tracking
 
 Each iteration records:
+
 - Which hooks were run
 - How many issues found
 - How many fixes attempted
@@ -381,11 +398,11 @@ Each iteration records:
 ### Early Termination Conditions
 
 1. **Convergence**: All hooks pass
-2. **Max Iterations**: Reached limit (10 by default)
-3. **No Progress**: No fixes applied in iteration
-4. **Critical Failure**: Security violation or API error
+1. **Max Iterations**: Reached limit (10 by default)
+1. **No Progress**: No fixes applied in iteration
+1. **Critical Failure**: Security violation or API error
 
----
+______________________________________________________________________
 
 ## File Locations
 
@@ -416,7 +433,7 @@ session_mgmt_mcp/
     └── hook_parser.py         # Hook output parsing
 ```
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -435,11 +452,13 @@ export CRACKERJACK_MAX_FILE_SIZE=10485760  # 10MB
 ### Settings Files
 
 **`settings/adapters.yml`**:
+
 ```yaml
 ai: claude
 ```
 
 **`settings/ai.yml`** (optional overrides):
+
 ```yaml
 anthropic:
   model: claude-sonnet-4-5-20250929
@@ -449,7 +468,7 @@ anthropic:
   max_retries: 3
 ```
 
----
+______________________________________________________________________
 
 ## Usage Examples
 
@@ -486,16 +505,18 @@ python -m crackerjack test --ai-fix --dry-run
 crackerjack_run(command="test", args="--dry-run", ai_agent_mode=True)
 ```
 
----
+______________________________________________________________________
 
 ## Performance Characteristics
 
 ### Basic Mode
+
 - **Execution time**: 2-30 seconds (depends on hooks)
 - **API calls**: 0
 - **File modifications**: 0
 
 ### AI Mode (per iteration)
+
 - **Execution time**: 10-60 seconds per iteration
 - **API calls**: 1 per failed hook
 - **File modifications**: Up to N (number of failures)
@@ -504,11 +525,11 @@ crackerjack_run(command="test", args="--dry-run", ai_agent_mode=True)
 ### Optimization Strategies
 
 1. **Parallel Fixes**: Process multiple hooks concurrently
-2. **Caching**: Cache AI responses for identical issues
-3. **Batch Operations**: Group similar fixes together
-4. **Early Termination**: Stop at first convergence
+1. **Caching**: Cache AI responses for identical issues
+1. **Batch Operations**: Group similar fixes together
+1. **Early Termination**: Stop at first convergence
 
----
+______________________________________________________________________
 
 ## Monitoring & Observability
 
@@ -527,54 +548,59 @@ crackerjack_run(command="test", args="--dry-run", ai_agent_mode=True)
 - API latency and costs
 - File modification success rate
 
----
+______________________________________________________________________
 
 ## Future Enhancements
 
 ### Planned Features
 
 1. **Learning System**: Track fix success rates by issue type
-2. **Confidence Tuning**: Auto-adjust thresholds based on history
-3. **Parallel Processing**: Fix multiple issues concurrently
-4. **Response Caching**: Reuse fixes for identical issues
-5. **Custom Prompts**: Per-hook prompt customization
-6. **Integration Tests**: Verify fixes with test suite
-7. **Rollback All**: Undo all changes in iteration
+1. **Confidence Tuning**: Auto-adjust thresholds based on history
+1. **Parallel Processing**: Fix multiple issues concurrently
+1. **Response Caching**: Reuse fixes for identical issues
+1. **Custom Prompts**: Per-hook prompt customization
+1. **Integration Tests**: Verify fixes with test suite
+1. **Rollback All**: Undo all changes in iteration
 
 ### Architecture Extensions
 
 1. **Plugin System**: Custom fix providers
-2. **Multi-LLM Support**: Fallback to other AI providers
-3. **Distributed Execution**: Run iterations across machines
-4. **Incremental Fixes**: Apply fixes file-by-file
+1. **Multi-LLM Support**: Fallback to other AI providers
+1. **Distributed Execution**: Run iterations across machines
+1. **Incremental Fixes**: Apply fixes file-by-file
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Common Issues
 
 **Issue**: "Command cannot be None"
+
 - **Cause**: Invalid MCP call
 - **Fix**: Ensure `command` parameter is provided
 
 **Issue**: "Invalid command: '--ai-fix'"
+
 - **Cause**: Flags in command parameter
 - **Fix**: Use `ai_agent_mode=True` instead
 
 **Issue**: "Security violation detected"
+
 - **Cause**: AI generated dangerous code
 - **Fix**: Review AI output manually, adjust prompts
 
 **Issue**: "Low confidence, skipping fix"
+
 - **Cause**: AI not confident in fix
 - **Fix**: Manually fix or adjust confidence threshold
 
 **Issue**: "Max iterations reached"
+
 - **Cause**: Issues cannot be auto-fixed
 - **Fix**: Manually fix remaining issues
 
----
+______________________________________________________________________
 
 ## References
 
@@ -583,7 +609,7 @@ crackerjack_run(command="test", args="--dry-run", ai_agent_mode=True)
 - [ACB Framework](https://github.com/lesleslie/acb)
 - [Session-Mgmt-MCP](https://github.com/lesleslie/session-mgmt-mcp)
 
----
+______________________________________________________________________
 
 **Last Updated**: 2025-01-03
 **Version**: 2.0

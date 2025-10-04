@@ -1,5 +1,44 @@
 ______________________________________________________________________
 
+## [0.40.0] - 2025-10-04
+
+### Added
+
+- Add AI-powered auto-fix workflow with iteration loop
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2025-10-03 21:23:05
+- Crackerjack (quality: 69/100) - 2025-10-04 03:04:08
+- Crackerjack (quality: 69/100) - 2025-10-04 03:23:36
+
+### Fixed
+
+- test: Update 8 files
+
+### Internal
+
+- Cleanup working docs and update gitignore
+
+## [Unreleased] - 2025-10-04
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-04
+
+### Added
+
+- feat: add new feature
+
+### Fixed
+
+- fix: resolve bug in parser
+
 ## [Unreleased] - 2025-10-04
 
 ### Added

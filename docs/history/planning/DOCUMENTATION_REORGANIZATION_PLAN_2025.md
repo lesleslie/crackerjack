@@ -8,11 +8,12 @@
 
 **Estimated Reduction**: 50% reduction in active documentation (31 files moved to archive/deleted, ~12,000 lines consolidated).
 
----
+______________________________________________________________________
 
 ## Analysis Summary
 
 ### Current Distribution
+
 - **Root Level**: 21 files (8,925 lines) - CHAOTIC, many duplicates
 - **planning/**: 13 files (3,523 lines) - Mix of active/completed
 - **security/**: 6 files (1,685 lines) - Multiple overlapping audits
@@ -26,13 +27,13 @@
 ### Key Problems Identified
 
 1. **Phase Completion Redundancy**: 10 phase completion summaries (6,126 lines) in root - most are historical
-2. **Security Audit Duplication**: 6 security files with overlapping content
-3. **Missing AI Documentation**: AI-REFERENCE.md referenced in CLAUDE.md but doesn't exist
-4. **Pre-commit Documentation Overhead**: 5 files for a single completed feature
-5. **Root-level Clutter**: Implementation plans, audit reports mixed with user guides
-6. **Inconsistent Naming**: Mix of UPPERCASE, lowercase, kebab-case files
+1. **Security Audit Duplication**: 6 security files with overlapping content
+1. **Missing AI Documentation**: AI-REFERENCE.md referenced in CLAUDE.md but doesn't exist
+1. **Pre-commit Documentation Overhead**: 5 files for a single completed feature
+1. **Root-level Clutter**: Implementation plans, audit reports mixed with user guides
+1. **Inconsistent Naming**: Mix of UPPERCASE, lowercase, kebab-case files
 
----
+______________________________________________________________________
 
 ## Proposed Directory Structure
 
@@ -83,23 +84,27 @@ docs/
     └── [deprecated content]
 ```
 
----
+______________________________________________________________________
 
 ## Detailed File Actions
 
 ### ROOT LEVEL (21 files → 0 files)
 
 #### **USER GUIDES** (Move to `guides/`)
+
 - ✅ `ADVANCED-FEATURES.md` (876 lines) → `guides/ADVANCED-FEATURES.md`
 - ✅ `AUTO_FIX_GUIDE.md` (539 lines) → `guides/AUTO_FIX_GUIDE.md`
 
 #### **ARCHITECTURE** (Move to `architecture/`)
+
 - ✅ `WORKFLOW-ARCHITECTURE.md` (590 lines) → `architecture/WORKFLOW-ARCHITECTURE.md`
 
 #### **PLANNING** (Move to `planning/`)
+
 - ✅ `FUTURE-ENHANCEMENTS.md` (1,352 lines) → `planning/FUTURE-ENHANCEMENTS.md`
 
 #### **HISTORICAL - PHASE SUMMARIES** (Move to `history/phases/`)
+
 - 🗄️ `phase-1-completion-summary.md` (490 lines) → `history/phases/phase-01-initial-implementation.md`
 - 🗄️ `phase-2-completion-summary.md` (578 lines) → `history/phases/phase-02-ai-agent-integration.md`
 - 🗄️ `phase-3-completion-summary.md` (662 lines) → `history/phases/phase-03-recommendation-engine.md`
@@ -114,23 +119,27 @@ docs/
 **Phase Summary Consolidation**: 10 files (4,730 lines) → 6 files in `history/phases/` + 4 deleted
 
 #### **HISTORICAL - IMPLEMENTATIONS** (Move to `history/implementations/`)
+
 - 🗄️ `crackerjack-run-implementation-plan.md` (1,776 lines) → `history/implementations/crackerjack-run-workflow.md`
 - 🗄️ `phase-5-implementation-plan.md` (923 lines) → `history/implementations/phase-05-advanced-features-plan.md`
 
 #### **HISTORICAL - AUDITS** (Move to `history/audits/`)
+
 - 🗄️ `DOCUMENTATION_AUDIT_2025-10-03.md` (308 lines) → `history/audits/documentation-audit-2025-10-03.md`
 - 🗄️ `crackerjack-run-workflow-audit.md` (662 lines) → `history/audits/workflow-audit.md`
 
 #### **HISTORICAL - COMPLETED FEATURES** (Move to `history/implementations/`)
+
 - 🗄️ `SEMANTIC-SEARCH-IMPLEMENTATION.md` (288 lines) → `history/implementations/semantic-search.md`
 - 🗄️ `complexipy-refactoring-summary.md` (242 lines) → `history/implementations/complexipy-refactoring.md`
 - 🗄️ `PYTORCH-COMPATIBILITY-FIX.md` (39 lines) → DELETE (trivial, info in CHANGELOG)
 
----
+______________________________________________________________________
 
 ### SECURITY/ (6 files → 1 file)
 
 **CONSOLIDATION STRATEGY**: Create single `SECURITY_AUDIT.md` with:
+
 - Executive summary of current security posture
 - Key findings from all audits
 - Implemented mitigations
@@ -138,6 +147,7 @@ docs/
 - Links to historical audits in `history/audits/`
 
 #### **Consolidate into `security/SECURITY_AUDIT.md`**
+
 - ✅ `SECURITY-AUDIT.md` (5.6K) - Base document
 - ✅ `SECURITY_AUDIT_REPORT.md` (21K) - Merge key findings
 - ✅ `SECURITY_AUDIT_STATUS_DISCLOSURE.md` (14K) - Merge status section
@@ -147,7 +157,7 @@ docs/
 
 **Result**: 6 files (66.3K) → 1 consolidated file (~25K) + originals moved to `history/audits/security/`
 
----
+______________________________________________________________________
 
 ### PRECOMMIT-HANDLING/ (5 files → 0 files, content in systems/)
 
@@ -161,15 +171,17 @@ docs/
 
 **New**: Add pre-commit handling section to `systems/HOOK_MANAGEMENT.md` (create new system doc)
 
----
+______________________________________________________________________
 
 ### PLANNING/ (13 files → 3 files)
 
 #### **KEEP AS ACTIVE**
+
 - ✅ `EXPERIMENTAL-EVALUATION.md` → Keep (active framework)
 - ✅ `CURRENT_IMPLEMENTATION_STATUS.md` → Rename to `STATUS.md`, update regularly
 
 #### **MOVE TO HISTORY**
+
 - 🗄️ `COMPLEXITY_REFACTORING_PLAN.md` → `history/implementations/complexity-refactoring.md`
 - 🗄️ `COVERAGE_BADGE_IMPLEMENTATION_PLAN.md` → `history/implementations/coverage-badge.md`
 - 🗄️ `RESILIENT_HOOK_ARCHITECTURE_IMPLEMENTATION_SUMMARY.md` → `history/implementations/resilient-hooks-summary.md`
@@ -179,13 +191,14 @@ docs/
 - 🗄️ `TYPE_ANNOTATION_FIXING_PLAN.md` → `history/implementations/type-annotations.md`
 
 #### **MOVE TO DEVELOPMENT OR ARCHIVE**
+
 - ✅ `FEATURE_IMPLEMENTATION_PLAN.md` → `planning/ROADMAP.md` (extract active items)
 - ✅ `DOCUMENTATION_SYSTEM_ARCHITECTURE.md` → `architecture/DOCUMENTATION_SYSTEM.md`
 - ❌ `UVXUSAGE.md` → DELETE (outdated, UV usage now standard)
 - 🗄️ `ZUBAN_LSP_INTEGRATION_PLAN.md` → `history/implementations/zuban-lsp.md`
 - 🗄️ `ZUBAN_TOML_PARSING_BUG_ANALYSIS.md` → `history/investigations/zuban-toml-bug.md`
 
----
+______________________________________________________________________
 
 ### INVESTIGATION/ (2 files → 0 files)
 
@@ -194,54 +207,61 @@ docs/
 - 🗄️ `ai-fix-flag-bug-fix.md` → `history/investigations/ai-fix-flag-bug.md`
 - 🗄️ `workflow-routing-fix.md` → `history/investigations/workflow-routing-bug.md`
 
----
+______________________________________________________________________
 
 ### SYSTEMS/ (6 files → 5 files)
 
 #### **KEEP AS-IS**
+
 - ✅ `BACKUP_SYSTEM.md` → Keep
 - ✅ `CACHING_SYSTEM.md` → Keep
 - ✅ `DASHBOARD_ARCHITECTURE.md` → Keep
 - ✅ `MCP_INTEGRATION.md` → Keep
 
 #### **CONSOLIDATE**
+
 - ✅ `MONITORING_INTEGRATION.md` (350 lines) + `UNIFIED_MONITORING_ARCHITECTURE.md` (278 lines)
   → `MONITORING.md` (consolidated ~400 lines)
 
 #### **ADD NEW**
+
 - 🆕 `HOOK_MANAGEMENT.md` - Consolidate pre-commit handling info
 
----
+______________________________________________________________________
 
 ### ARCHITECTURE/ (2 files → 4 files)
 
 #### **KEEP**
+
 - ✅ `ARCHITECTURE.md` → Keep
 - ✅ `API_REFERENCE.md` → Keep
 
 #### **ADD**
+
 - ✅ `WORKFLOW-ARCHITECTURE.md` → Move from root
 - ✅ `DOCUMENTATION_SYSTEM.md` → Move from planning/
 
----
+______________________________________________________________________
 
 ### DEVELOPMENT/ (2 files → 3 files)
 
 #### **KEEP**
+
 - ✅ `IDE-SETUP.md` → Keep
 - ✅ `RUST_TOOLING_FRAMEWORK.md` → Keep
 
 #### **ADD**
+
 - 🆕 `CONTRIBUTING.md` → Create (developer workflow, testing, quality standards)
 
----
+______________________________________________________________________
 
 ### ARCHIVE/ (3 files → keep as-is)
 
 - ✅ Keep existing archived content
 - Add note: "See history/ for completed implementations and phase records"
 
----
+______________________________________________________________________
 
 ## New Content to Create
 
@@ -250,6 +270,7 @@ docs/
 **Purpose**: Command reference with decision trees for AI agent system
 
 **Content**:
+
 - Agent selection decision trees
 - Command patterns and examples
 - Confidence threshold guide
@@ -258,13 +279,14 @@ docs/
 
 **Est. Size**: 600-800 lines
 
----
+______________________________________________________________________
 
 ### 2. `ai/AGENT-CAPABILITIES.json` (CRITICAL - Referenced in CLAUDE.md)
 
 **Purpose**: Structured agent data for programmatic access
 
 **Content**:
+
 ```json
 {
   "agents": [
@@ -286,13 +308,14 @@ docs/
 
 **Est. Size**: 200-300 lines
 
----
+______________________________________________________________________
 
 ### 3. `ai/ERROR-PATTERNS.yaml` (CRITICAL - Referenced in CLAUDE.md)
 
 **Purpose**: Automated issue resolution patterns
 
 **Content**:
+
 ```yaml
 patterns:
   - pattern: "ModuleNotFoundError: No module named '(.+)'"
@@ -308,13 +331,14 @@ patterns:
 
 **Est. Size**: 400-500 lines
 
----
+______________________________________________________________________
 
 ### 4. `guides/GETTING-STARTED.md`
 
 **Purpose**: Quick start guide for new users
 
 **Content**:
+
 - Installation (5 minutes)
 - First run workflow
 - Basic commands
@@ -323,13 +347,14 @@ patterns:
 
 **Est. Size**: 300-400 lines
 
----
+______________________________________________________________________
 
 ### 5. `development/CONTRIBUTING.md`
 
 **Purpose**: Developer contribution guidelines
 
 **Content**:
+
 - Development setup
 - Testing requirements (coverage ratchet)
 - Code quality standards (complexity ≤15)
@@ -339,13 +364,14 @@ patterns:
 
 **Est. Size**: 500-600 lines
 
----
+______________________________________________________________________
 
 ### 6. `systems/HOOK_MANAGEMENT.md`
 
 **Purpose**: Consolidate pre-commit handling documentation
 
 **Content**:
+
 - Hook execution model (fast → comprehensive)
 - Skip hooks workflow
 - Hook configuration
@@ -354,13 +380,14 @@ patterns:
 
 **Est. Size**: 400-500 lines
 
----
+______________________________________________________________________
 
 ### 7. `planning/ROADMAP.md`
 
 **Purpose**: Forward-looking feature plans (active items only)
 
 **Content**:
+
 - Extract incomplete items from `FEATURE_IMPLEMENTATION_PLAN.md`
 - Remove completed features
 - Prioritize by value/effort
@@ -368,13 +395,14 @@ patterns:
 
 **Est. Size**: 400-600 lines
 
----
+______________________________________________________________________
 
 ### 8. `security/SECURITY_AUDIT.md` (Consolidated)
 
 **Purpose**: Single source of truth for security posture
 
 **Structure**:
+
 ```markdown
 # Security Audit Report
 
@@ -401,13 +429,14 @@ See `history/audits/security/` for detailed audit reports:
 
 **Est. Size**: 800-1000 lines (consolidated from 66.3K)
 
----
+______________________________________________________________________
 
 ### 9. `systems/MONITORING.md` (Consolidated)
 
 **Purpose**: Unified monitoring documentation
 
 **Content**: Merge `MONITORING_INTEGRATION.md` + `UNIFIED_MONITORING_ARCHITECTURE.md`
+
 - Remove duplicated sections
 - Consolidate architecture diagrams
 - Unified dashboard coverage
@@ -416,7 +445,7 @@ See `history/audits/security/` for detailed audit reports:
 
 **Est. Size**: 400-500 lines (down from 628)
 
----
+______________________________________________________________________
 
 ## Migration Strategy
 
@@ -436,7 +465,7 @@ touch docs/systems/HOOK_MANAGEMENT.md
 touch docs/planning/ROADMAP.md
 ```
 
----
+______________________________________________________________________
 
 ### Phase 2: Move Active Documentation (15 minutes)
 
@@ -454,7 +483,7 @@ mv docs/FUTURE-ENHANCEMENTS.md docs/planning/
 mv docs/planning/CURRENT_IMPLEMENTATION_STATUS.md docs/planning/STATUS.md
 ```
 
----
+______________________________________________________________________
 
 ### Phase 3: Archive Historical Documentation (20 minutes)
 
@@ -476,11 +505,12 @@ mv docs/complexipy-refactoring-summary.md docs/history/implementations/complexip
 # [Continue for all historical files...]
 ```
 
----
+______________________________________________________________________
 
 ### Phase 4: Consolidate Overlapping Content (45 minutes)
 
 **Security consolidation**:
+
 ```bash
 # Create consolidated security audit
 # (Manual process: extract key content from 6 files)
@@ -492,6 +522,7 @@ touch docs/security/SECURITY_AUDIT.md
 ```
 
 **Monitoring consolidation**:
+
 ```bash
 # Merge monitoring docs
 cat docs/systems/MONITORING_INTEGRATION.md docs/systems/UNIFIED_MONITORING_ARCHITECTURE.md > /tmp/monitoring_combined.md
@@ -501,6 +532,7 @@ rm docs/systems/{MONITORING_INTEGRATION,UNIFIED_MONITORING_ARCHITECTURE}.md
 ```
 
 **Pre-commit handling**:
+
 ```bash
 # Extract key content into HOOK_MANAGEMENT.md
 # Move detailed implementation to history
@@ -512,7 +544,7 @@ mv docs/precommit-handling/FINAL_PRECOMMIT_HANDLING_VERIFICATION.md \
 rmdir docs/precommit-handling
 ```
 
----
+______________________________________________________________________
 
 ### Phase 5: Delete Obsolete Content (10 minutes)
 
@@ -528,26 +560,28 @@ rm docs/planning/UVXUSAGE.md          # Outdated
 rm docs/precommit-handling/{README.md,CLEANUP_SUMMARY.md}  # Redundant
 ```
 
----
+______________________________________________________________________
 
 ### Phase 6: Create New Content (2-3 hours)
 
 **Priority order**:
-1. **AI-REFERENCE.md** (CRITICAL - 1 hour)
-2. **AGENT-CAPABILITIES.json** (CRITICAL - 30 minutes)
-3. **ERROR-PATTERNS.yaml** (CRITICAL - 45 minutes)
-4. **SECURITY_AUDIT.md** (Consolidation - 45 minutes)
-5. **MONITORING.md** (Consolidation - 30 minutes)
-6. **GETTING-STARTED.md** (30 minutes)
-7. **CONTRIBUTING.md** (45 minutes)
-8. **HOOK_MANAGEMENT.md** (30 minutes)
-9. **ROADMAP.md** (30 minutes)
 
----
+1. **AI-REFERENCE.md** (CRITICAL - 1 hour)
+1. **AGENT-CAPABILITIES.json** (CRITICAL - 30 minutes)
+1. **ERROR-PATTERNS.yaml** (CRITICAL - 45 minutes)
+1. **SECURITY_AUDIT.md** (Consolidation - 45 minutes)
+1. **MONITORING.md** (Consolidation - 30 minutes)
+1. **GETTING-STARTED.md** (30 minutes)
+1. **CONTRIBUTING.md** (45 minutes)
+1. **HOOK_MANAGEMENT.md** (30 minutes)
+1. **ROADMAP.md** (30 minutes)
+
+______________________________________________________________________
 
 ### Phase 7: Update References (30 minutes)
 
 **Files to update**:
+
 - `CLAUDE.md` - Verify AI doc references point to `docs/ai/`
 - `README.md` - Update documentation links
 - Root-level `docs/` - Create `README.md` index with new structure
@@ -560,23 +594,26 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 # Update references programmatically or manually
 ```
 
----
+______________________________________________________________________
 
 ## Quality Assurance Checklist
 
 ### Pre-Migration
+
 - [ ] Backup current `docs/` directory
 - [ ] Review all phase summaries to ensure no critical info lost
 - [ ] Identify any external references to documentation paths
 - [ ] Confirm AI documentation requirements with CLAUDE.md
 
 ### During Migration
+
 - [ ] Track all moved files in migration log
 - [ ] Verify no file overwrites during moves
 - [ ] Preserve git history (use `git mv` not `mv`)
 - [ ] Test documentation links after each phase
 
 ### Post-Migration
+
 - [ ] Verify all 3 CRITICAL AI docs created and populated
 - [ ] Run link checker on all documentation
 - [ ] Update CLAUDE.md references to new paths
@@ -584,11 +621,12 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 - [ ] Run `python -m crackerjack` to ensure no broken doc references in code
 - [ ] Create `docs/README.md` with navigation guide
 
----
+______________________________________________________________________
 
 ## Impact Assessment
 
 ### Before
+
 - **Total Files**: 61 markdown files
 - **Total Size**: 23,273 lines, 844KB
 - **Active Docs**: ~30% (rest historical/redundant)
@@ -596,6 +634,7 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 - **Maintainability**: Low (duplication, unclear ownership)
 
 ### After
+
 - **Total Files**: ~30 active docs + ~31 archived
 - **Active Size**: ~11,000 lines (50% reduction)
 - **Active Docs**: 100% current and relevant
@@ -603,26 +642,29 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 - **Maintainability**: High (consolidated, single source of truth)
 
 ### Key Improvements
-1. ✅ **AI Documentation**: Critical missing files created (AI-REFERENCE.md, etc.)
-2. ✅ **Security**: 6 overlapping audits → 1 consolidated report
-3. ✅ **Phase History**: 10 scattered summaries → organized in `history/phases/`
-4. ✅ **Root Cleanup**: 21 files → 0 files (all properly categorized)
-5. ✅ **Pre-commit**: 5 files → integrated into systems/ + history
-6. ✅ **User Guides**: Dedicated `guides/` directory with clear entry points
-7. ✅ **Developer Docs**: Complete `development/` section with contribution guide
 
----
+1. ✅ **AI Documentation**: Critical missing files created (AI-REFERENCE.md, etc.)
+1. ✅ **Security**: 6 overlapping audits → 1 consolidated report
+1. ✅ **Phase History**: 10 scattered summaries → organized in `history/phases/`
+1. ✅ **Root Cleanup**: 21 files → 0 files (all properly categorized)
+1. ✅ **Pre-commit**: 5 files → integrated into systems/ + history
+1. ✅ **User Guides**: Dedicated `guides/` directory with clear entry points
+1. ✅ **Developer Docs**: Complete `development/` section with contribution guide
+
+______________________________________________________________________
 
 ## Maintenance Going Forward
 
 ### Documentation Lifecycle
 
 **Active Documentation** (in main directories):
+
 - Review quarterly for accuracy
 - Update with each major release
 - Remove when superseded
 
 **Historical Documentation** (in `history/`):
+
 - Never delete (preserve institutional knowledge)
 - Link from active docs when relevant
 - Organize by year if volume grows
@@ -630,10 +672,10 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 ### New Documentation Rules
 
 1. **No root-level docs**: Everything goes in a category
-2. **Completion summaries**: Immediately to `history/phases/`
-3. **Implementation plans**: Start in `planning/`, move to `history/implementations/` when done
-4. **Security audits**: Update consolidated `security/SECURITY_AUDIT.md`, archive detailed reports
-5. **Bug investigations**: Document in `history/investigations/` when resolved
+1. **Completion summaries**: Immediately to `history/phases/`
+1. **Implementation plans**: Start in `planning/`, move to `history/implementations/` when done
+1. **Security audits**: Update consolidated `security/SECURITY_AUDIT.md`, archive detailed reports
+1. **Bug investigations**: Document in `history/investigations/` when resolved
 
 ### Documentation Review Cadence
 
@@ -643,27 +685,30 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 - **Semi-annually**: Review system docs (`systems/`) for outdated architecture
 - **Annually**: Comprehensive audit of all documentation
 
----
+______________________________________________________________________
 
 ## Risk Mitigation
 
 ### Risks
+
 1. **Broken Links**: Internal docs may reference old paths
-2. **Lost Content**: Critical info in "redundant" docs
-3. **User Confusion**: Changed documentation structure
-4. **Git History**: File moves may complicate blame/history
+1. **Lost Content**: Critical info in "redundant" docs
+1. **User Confusion**: Changed documentation structure
+1. **Git History**: File moves may complicate blame/history
 
 ### Mitigations
-1. **Link Checker**: Run automated link validation post-migration
-2. **Content Review**: Manual review of "delete" candidates before removal
-3. **Migration Guide**: Create temporary `docs/MIGRATION_GUIDE.md` explaining new structure
-4. **Git Moves**: Use `git mv` to preserve history, document all moves in commit message
 
----
+1. **Link Checker**: Run automated link validation post-migration
+1. **Content Review**: Manual review of "delete" candidates before removal
+1. **Migration Guide**: Create temporary `docs/MIGRATION_GUIDE.md` explaining new structure
+1. **Git Moves**: Use `git mv` to preserve history, document all moves in commit message
+
+______________________________________________________________________
 
 ## Success Criteria
 
 ### Must Have (Critical)
+
 - ✅ All 3 AI documentation files created and complete
 - ✅ Zero broken internal documentation links
 - ✅ CLAUDE.md references validated and working
@@ -671,6 +716,7 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 - ✅ Security documentation consolidated to single source of truth
 
 ### Should Have (Important)
+
 - ✅ 50%+ reduction in active documentation volume
 - ✅ Phase history organized and accessible
 - ✅ User guides discoverable in dedicated directory
@@ -678,12 +724,13 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 - ✅ Git history preserved for all moved files
 
 ### Nice to Have (Beneficial)
+
 - ✅ Automated link checker in CI/CD
 - ✅ Documentation coverage metrics
 - ✅ Search/index optimization
 - ✅ Cross-reference map between docs
 
----
+______________________________________________________________________
 
 ## Timeline
 
@@ -700,7 +747,7 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 | 7. Update references | 30 min | Links validated, index created |
 | **Total** | **5-6 hrs** | **Clean, organized, complete documentation** |
 
----
+______________________________________________________________________
 
 ## Appendix A: File Disposition Table
 
@@ -730,21 +777,23 @@ grep -r "docs/" CLAUDE.md README.md docs/*.md | grep -E "\.(md|yaml|json)" | sor
 
 *(Full table would include all 61 files - this shows pattern)*
 
----
+______________________________________________________________________
 
 ## Appendix B: Content Consolidation Guide
 
 ### Security Documentation Consolidation
 
 **Source Files** (6 files, 66.3K):
+
 1. `SECURITY-AUDIT.md` (5.6K)
-2. `SECURITY_AUDIT_REPORT.md` (21K)
-3. `SECURITY_AUDIT_STATUS_DISCLOSURE.md` (14K)
-4. `SECURITY_HARDENING_REPORT.md` (7.0K)
-5. `INPUT_VALIDATOR_SECURITY_AUDIT.md` (9.2K)
-6. `SECURITY_SUBPROCESS_HARDENING_REPORT.md` (9.5K)
+1. `SECURITY_AUDIT_REPORT.md` (21K)
+1. `SECURITY_AUDIT_STATUS_DISCLOSURE.md` (14K)
+1. `SECURITY_HARDENING_REPORT.md` (7.0K)
+1. `INPUT_VALIDATOR_SECURITY_AUDIT.md` (9.2K)
+1. `SECURITY_SUBPROCESS_HARDENING_REPORT.md` (9.5K)
 
 **Consolidation Strategy**:
+
 ```
 SECURITY_AUDIT.md (consolidated ~25K)
 ├── Executive Summary (from SECURITY-AUDIT.md)
@@ -760,19 +809,22 @@ SECURITY_AUDIT.md (consolidated ~25K)
 ```
 
 **Content Extraction**:
+
 - ❌ Remove: Duplicate executive summaries, redundant context
 - ✅ Keep: Unique findings, specific mitigations, status updates
 - 🔗 Link: Detailed audit reports in history/ for deep dives
 
----
+______________________________________________________________________
 
 ### Monitoring Documentation Consolidation
 
 **Source Files** (2 files, 628 lines):
+
 1. `MONITORING_INTEGRATION.md` (350 lines)
-2. `UNIFIED_MONITORING_ARCHITECTURE.md` (278 lines)
+1. `UNIFIED_MONITORING_ARCHITECTURE.md` (278 lines)
 
 **Consolidation Strategy**:
+
 ```
 MONITORING.md (consolidated ~400 lines)
 ├── Overview (merge both intros)
@@ -789,11 +841,12 @@ MONITORING.md (consolidated ~400 lines)
 ```
 
 **Deduplication**:
+
 - Both docs have "Architecture Overview" → merge into one section
 - Both describe dashboard features → consolidate with cross-references
 - UNIFIED has newer architecture → prefer its diagrams
 
----
+______________________________________________________________________
 
 ## Appendix C: Git Migration Commands
 
@@ -883,7 +936,7 @@ echo "6. Run link checker"
 echo "7. Commit with: git commit -m 'docs: reorganize documentation structure'"
 ```
 
----
+______________________________________________________________________
 
 ## Appendix D: Link Checker Setup
 
@@ -930,29 +983,32 @@ find docs -name "*.md" -exec markdown-link-check {} \; > link-check-report.txt
 grep "✖" link-check-report.txt || echo "All links valid!"
 ```
 
----
+______________________________________________________________________
 
 ## Recommendations
 
 ### Immediate Actions (Critical)
+
 1. **Create AI documentation** - BLOCKING for CLAUDE.md compatibility
-2. **Backup docs/** - Safety before migration
-3. **Run migration script** - Automated file moves with git history
-4. **Consolidate security** - Reduce 6 files to 1 authoritative source
+1. **Backup docs/** - Safety before migration
+1. **Run migration script** - Automated file moves with git history
+1. **Consolidate security** - Reduce 6 files to 1 authoritative source
 
 ### Short-term (This Week)
+
 5. Create user guides (GETTING-STARTED, CONTRIBUTING)
-6. Consolidate monitoring docs
-7. Update all documentation references
-8. Set up link checker in CI/CD
+1. Consolidate monitoring docs
+1. Update all documentation references
+1. Set up link checker in CI/CD
 
 ### Long-term (Ongoing)
-9. Establish documentation review cadence
-10. Create documentation contribution guidelines
-11. Implement automated staleness detection
-12. Build documentation search/index
 
----
+9. Establish documentation review cadence
+1. Create documentation contribution guidelines
+1. Implement automated staleness detection
+1. Build documentation search/index
+
+______________________________________________________________________
 
 ## Conclusion
 

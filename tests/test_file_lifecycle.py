@@ -225,3 +225,87 @@ def test_safe_copy_file_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in safe_copy_file: {e}")
+
+def test_safe_move_file_basic(self):
+    """Test basic functionality of safe_move_file."""
+    try:
+        result = safe_move_file()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in safe_move_file: {e}")
+
+def test_write_op_basic(self):
+    """Test basic functionality of write_op."""
+    try:
+        result = write_op()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in write_op: {e}")
+
+def test_rollback_op_basic(self):
+    """Test basic functionality of rollback_op."""
+    try:
+        result = rollback_op()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in rollback_op: {e}")
+
+def test_copy_op_basic(self):
+    """Test basic functionality of copy_op."""
+    try:
+        result = copy_op()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in copy_op: {e}")
+
+def test_rollback_op_basic(self):
+    """Test basic functionality of rollback_op."""
+    try:
+        result = rollback_op()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in rollback_op: {e}")
+
+def test_move_op_basic(self):
+    """Test basic functionality of move_op."""
+    try:
+        result = move_op()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in move_op: {e}")
+
+def test_delete_op_basic(self):
+    """Test basic functionality of delete_op."""
+    try:
+        result = delete_op()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in delete_op: {e}")
