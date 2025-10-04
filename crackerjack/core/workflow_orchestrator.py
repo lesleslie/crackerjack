@@ -1860,16 +1860,36 @@ class WorkflowPipeline:
     async def _run_fast_hooks_phase_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
+        iteration = self._start_iteration_tracking(options)
+
         with phase_monitor(workflow_id, "fast_hooks") as monitor:
             monitor.record_sequential_op()
-            return self._run_fast_hooks_phase(options)
+            fast_hooks_success = self._run_fast_hooks_phase(options)
+
+            # Delegate to AI workflow completion handler if AI agent enabled
+            if options.ai_agent:
+                return await self._handle_ai_workflow_completion(
+                    options, iteration, fast_hooks_success, True, workflow_id
+                )
+
+            return fast_hooks_success
 
     async def _run_comprehensive_hooks_phase_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
+        iteration = self._start_iteration_tracking(options)
+
         with phase_monitor(workflow_id, "comprehensive_hooks") as monitor:
             monitor.record_sequential_op()
-            return self._run_comprehensive_hooks_phase(options)
+            comprehensive_success = self._run_comprehensive_hooks_phase(options)
+
+            # Delegate to AI workflow completion handler if AI agent enabled
+            if options.ai_agent:
+                return await self._handle_ai_workflow_completion(
+                    options, iteration, True, comprehensive_success, workflow_id
+                )
+
+            return comprehensive_success
 
     async def _run_testing_phase_async(
         self, options: OptionsProtocol, workflow_id: str
@@ -1933,6 +1953,8 @@ class WorkflowPipeline:
     async def _execute_standard_hooks_workflow_monitored(
         self, options: OptionsProtocol, workflow_id: str
     ) -> bool:
+        iteration = self._start_iteration_tracking(options)
+
         with phase_monitor(workflow_id, "hooks") as monitor:
             self._update_hooks_status_running()
 
@@ -1941,6 +1963,11 @@ class WorkflowPipeline:
             )
             if not fast_hooks_success:
                 self._handle_hooks_completion(False)
+                # If AI agent is enabled and hooks failed, delegate to AI workflow completion
+                if options.ai_agent:
+                    return await self._handle_ai_workflow_completion(
+                        options, iteration, fast_hooks_success, False, workflow_id
+                    )
                 return False
 
             if not self._execute_monitored_cleaning_phase(options):
@@ -1953,7 +1980,15 @@ class WorkflowPipeline:
 
             hooks_success = fast_hooks_success and comprehensive_success
             self._handle_hooks_completion(hooks_success)
-            return hooks_success
+
+            # Delegate to AI workflow completion handler to check if AI fixing is needed
+            return await self._handle_ai_workflow_completion(
+                options,
+                iteration,
+                fast_hooks_success,
+                comprehensive_success,
+                workflow_id,
+            )
 
     def _execute_monitored_fast_hooks_phase(
         self, options: OptionsProtocol, monitor: t.Any

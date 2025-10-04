@@ -1,5 +1,34 @@
 ______________________________________________________________________
 
+## [Unreleased] - 2025-10-03
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [0.39.11] - 2025-10-03
+
+### Fixed
+
+- **CRITICAL:** Fixed `--ai-fix` flag completely broken due to two separate bugs:
+  1. Parameter passing bug in `_setup_debug_and_verbose_flags()` - was hardcoding `ai_fix=False` instead of preserving user's flag value
+  1. Workflow routing bug in three orchestrator functions - weren't checking `options.ai_agent` before routing to AI workflow
+- Added comprehensive unit tests for parameter passing fix (4 tests, all passing)
+- Verified complete data flow: `--ai-fix` → parameter preservation → `options.ai_agent` property → workflow routing
+- All three workflow paths now correctly delegate to AI agent when `--ai-fix` is enabled:
+  - `_execute_standard_hooks_workflow_monitored()` (default workflow)
+  - `_run_fast_hooks_phase_monitored()` (`--fast` workflow)
+  - `_run_comprehensive_hooks_phase_monitored()` (`--comp` workflow)
+
+### Documentation
+
+- Added `AI-FIX-TEST-RESULTS.md` with complete test verification and data flow analysis
+- Added `AI-FIX-IMPLEMENTATION-AND-TEST-PLAN.md` with comprehensive implementation details
+- Added `AI-FIX-QUICK-SUMMARY.md` for quick reference
+
 ## [0.39.10] - 2025-10-03
 
 ### Fixed
@@ -9,11 +38,12 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-03
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.39.9] - 2025-10-03
 
