@@ -405,7 +405,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.39.11"
+version = "0.40.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1992,7 +1992,7 @@ wheels = [
 
 [[package]]
 name = "pydantic"
-version = "2.11.9"
+version = "2.11.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-types" },
@@ -2000,9 +2000,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ff/5d/09a551ba512d7ca404d785072700d3f6727a02f6f3c24ecfd081c7cf0aa8/pydantic-2.11.9.tar.gz", hash = "sha256:6b8ffda597a14812a7975c90b82a8a2e777d9257aba3453f973acd3c032a18e2", size = 788495, upload-time = "2025-09-13T11:26:39.325Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/54/ecab642b3bed45f7d5f59b38443dcb36ef50f85af192e6ece103dbfe9587/pydantic-2.11.10.tar.gz", hash = "sha256:dc280f0982fbda6c38fada4e476dc0a4f3aeaf9c6ad4c28df68a666ec3c61423", size = 788494, upload-time = "2025-10-04T10:40:41.338Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/d3/108f2006987c58e76691d5ae5d200dd3e0f532cb4e5fa3560751c3a1feba/pydantic-2.11.9-py3-none-any.whl", hash = "sha256:c42dd626f5cfc1c6950ce6205ea58c93efa406da65f479dcb4029d5934857da2", size = 444855, upload-time = "2025-09-13T11:26:36.909Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/1f/73c53fcbfb0b5a78f91176df41945ca466e71e9d9d836e5c522abda39ee7/pydantic-2.11.10-py3-none-any.whl", hash = "sha256:802a655709d49bd004c31e865ef37da30b540786a46bfce02333e0e24b5fe29a", size = 444823, upload-time = "2025-10-04T10:40:39.055Z" },
 ]
 
 [package.optional-dependencies]
@@ -2741,7 +2741,7 @@ wheels = [
 
 [[package]]
 name = "session-mgmt-mcp"
-version = "0.6.5"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crackerjack" },
@@ -2759,9 +2759,9 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/df/d29456fa24ae134c75a6f7687f579fc7fe561d17b1b40eec24022667c0f8/session_mgmt_mcp-0.6.5.tar.gz", hash = "sha256:cf64d4df9fe97d8048b722ff639a55d2c7f17f7048f4fcaa843b2787579ae9f9", size = 681180, upload-time = "2025-10-04T00:14:18.996Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8b/13/339e2be977131e7a7487084509e121c61ac51fe8d2eac4a8d5a603cefa2e/session_mgmt_mcp-0.7.0.tar.gz", hash = "sha256:f98597d6fff94b5a84990ef11d6a3d08b985e8b273ce47e78a8b49519e0ded94", size = 678207, upload-time = "2025-10-04T11:43:56.813Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/cf/880566e55979fcb5edc078c45e48153d9530b81b6c19e43ca49ab86b8951/session_mgmt_mcp-0.6.5-py3-none-any.whl", hash = "sha256:3004b0c25e612d52f91dbd556aa5043682d565e89a789ddbf0b1c07baaa9dbf9", size = 267833, upload-time = "2025-10-04T00:14:16.977Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/9f/a0a538d2b172a18032b1e013793ed54ad98345ca6dc4d0712910b948b5d8/session_mgmt_mcp-0.7.0-py3-none-any.whl", hash = "sha256:9cf613d79c98291c8565b04fb837a0074fc0d3ba0383e2b45d34fb95064ee65f", size = 273361, upload-time = "2025-10-04T11:43:54.794Z" },
 ]
 
 [[package]]
