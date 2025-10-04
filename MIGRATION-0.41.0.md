@@ -9,6 +9,7 @@ Crackerjack v0.41.0 removes self-reference from `[dependency-groups]` following 
 ### Self-Reference Removed
 
 **Before (v0.40.3)**:
+
 ```toml
 [dependency-groups]
 dev = [
@@ -19,6 +20,7 @@ dev = [
 ```
 
 **After (v0.41.0)**:
+
 ```toml
 [dependency-groups]
 dev = [
@@ -30,9 +32,9 @@ dev = [
 ## Why This Change?
 
 1. **Eliminates Circular Dependencies**: Self-references create unnecessary complexity
-2. **UV Best Practices**: Modern UV doesn't require self-installation in dev groups
-3. **Consistency**: Aligns with ACB v0.24.0+ dependency group standards
-4. **Cleaner Installation**: Separates tool installation from development dependencies
+1. **UV Best Practices**: Modern UV doesn't require self-installation in dev groups
+1. **Consistency**: Aligns with ACB v0.24.0+ dependency group standards
+1. **Cleaner Installation**: Separates tool installation from development dependencies
 
 ## Migration Steps
 
@@ -75,10 +77,10 @@ uv add --group dev
 
 ## Questions?
 
-- See the main [README.md](README.md) for installation examples
-- Check [CHANGELOG.md](CHANGELOG.md) for detailed release notes
+- See the main [README.md](<./README.md>) for installation examples
+- Check [CHANGELOG.md](<./CHANGELOG.md>) for detailed release notes
 
----
+______________________________________________________________________
 
 **Version**: 0.41.0
 **Migration Difficulty**: Very Low (structural only)

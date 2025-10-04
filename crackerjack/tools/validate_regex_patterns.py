@@ -145,6 +145,10 @@ def validate_file(file_path: Path) -> list[tuple[int, str]]:
 
 
 def main(file_paths: list[str]) -> int:
+    if not file_paths:
+        print("✅ No Python files to validate")
+        return 0
+
     exit_code = 0
 
     for file_path_str in file_paths:
