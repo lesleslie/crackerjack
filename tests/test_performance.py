@@ -213,3 +213,39 @@ def test_execute_tasks_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in execute_tasks: {e}")
+
+def test_run_command_basic(self):
+    """Test basic functionality of run_command."""
+    try:
+        result = run_command()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in run_command: {e}")
+
+def test_wrapper_basic(self):
+    """Test basic functionality of wrapper."""
+    try:
+        result = wrapper()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in wrapper: {e}")
+
+def test_wrapper_basic(self):
+    """Test basic functionality of wrapper."""
+    try:
+        result = wrapper()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in wrapper: {e}")

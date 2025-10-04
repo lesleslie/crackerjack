@@ -1,5 +1,29 @@
 ______________________________________________________________________
 
+## [0.41.2] - 2025-10-04
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2025-10-04 12:48:19
+
+### Testing
+
+- tests: Update 5 files
+
+### Internal
+
+- Add newline at EOF and update uv.lock
+- Modernize dependency groups and fix pre-commit hook
+
+## [Unreleased] - 2025-10-04
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## [0.41.0] - 2025-01-10
 
 ### BREAKING CHANGES
