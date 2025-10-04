@@ -4,7 +4,7 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from rich.console import Console
 
 from crackerjack.errors import ValidationError
@@ -13,6 +13,8 @@ from crackerjack.services.logging import LoggingContext, get_logger
 
 
 class CrackerjackConfig(BaseModel):
+    model_config = ConfigDict(extra="allow", use_enum_values=True)
+
     package_path: Path = Field(default_factory=Path.cwd)
     cache_enabled: bool = True
     cache_size: int = 1000
@@ -78,11 +80,6 @@ class CrackerjackConfig(BaseModel):
             msg = f"Invalid log level: {v}. Must be one of {valid_levels}"
             raise ValueError(msg)
         return v.upper()
-
-    class Config:
-        extra = "allow"
-
-        use_enum_values = True
 
 
 class ConfigSource:
