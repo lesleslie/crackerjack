@@ -8,9 +8,21 @@ agents to consult with expert external agents for complex scenarios.
 
 import logging
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
+from crackerjack.services.file_modifier import SafeFileModifier
+
 from .base import AgentContext, FixResult, Issue, IssueType
+
+# Conditional import - ClaudeCodeFixer may not be available
+_claude_ai_available = False
+ClaudeCodeFixer: type[t.Any] | None = None
+
+with suppress(ImportError):
+    from crackerjack.adapters.ai.claude import ClaudeCodeFixer  # type: ignore[no-redef]
+
+    _claude_ai_available = True
 
 # Mapping of internal issue types to Claude Code external agents
 CLAUDE_CODE_AGENT_MAPPING = {
@@ -31,13 +43,23 @@ EXTERNAL_CONSULTATION_THRESHOLD = 0.8
 
 
 class ClaudeCodeBridge:
-    """Bridge for consulting Claude Code external agents."""
+    """Bridge for consulting Claude Code external agents with real AI integration."""
 
     def __init__(self, context: AgentContext) -> None:
         self.context = context
         self.logger = logging.getLogger(__name__)
         self._agent_path = Path.home() / ".claude" / "agents"
         self._consultation_cache: dict[str, dict[str, t.Any]] = {}
+
+        # Real AI integration components (if available)
+        self.ai_fixer: t.Any | None = None  # ClaudeCodeFixer instance or None
+        self.file_modifier = SafeFileModifier()
+        self._ai_available = _claude_ai_available
+
+        if not self._ai_available:
+            self.logger.warning(
+                "Claude AI adapter not available - AI-powered fixes disabled"
+            )
 
     def should_consult_external_agent(
         self, issue: Issue, internal_confidence: float
@@ -284,6 +306,185 @@ class ClaudeCodeBridge:
             "patterns": ["domain_specific_patterns"],
             "validation_steps": ["validate_domain_requirements"],
         }
+
+    async def _ensure_ai_fixer(self) -> t.Any:
+        """Lazy initialization of AI fixer adapter.
+
+        Returns:
+            Initialized ClaudeCodeFixer instance
+
+        Raises:
+            RuntimeError: If Claude AI is not available or initialization fails
+        """
+        if not self._ai_available:
+            raise RuntimeError(
+                "Claude AI adapter not available - install ACB with 'uv add acb[ai]'"
+            )
+
+        if self.ai_fixer is None:
+            if ClaudeCodeFixer is None:
+                raise RuntimeError("ClaudeCodeFixer import failed")
+
+            self.ai_fixer = ClaudeCodeFixer()
+            await self.ai_fixer.init()
+            self.logger.debug("Claude AI fixer initialized")
+
+        return self.ai_fixer
+
+    async def consult_on_issue(
+        self,
+        issue: Issue,
+        dry_run: bool = False,
+    ) -> FixResult:
+        """Consult with Claude AI to fix an issue using real AI integration.
+
+        This method replaces the simulation-based approach with real AI-powered
+        code fixing. It:
+        1. Calls the ClaudeCodeFixer adapter to generate a fix
+        2. Validates the AI response (confidence, success)
+        3. Uses SafeFileModifier to safely apply changes
+        4. Handles errors gracefully
+        5. Returns a proper FixResult
+
+        Args:
+            issue: Issue to fix
+            dry_run: If True, only generate fix without applying
+
+        Returns:
+            FixResult with fix details and success status
+        """
+        try:
+            # Initialize AI fixer if needed
+            fixer = await self._ensure_ai_fixer()
+
+            # Extract issue details for AI context
+            file_path = str(issue.file_path) if issue.file_path else "unknown"
+            issue_description = issue.message  # Issue uses 'message' not 'description'
+            code_snippet = "\n".join(issue.details) if issue.details else ""
+            fix_type = issue.type.value
+
+            self.logger.info(
+                f"Consulting Claude AI for {fix_type} issue in {file_path}"
+            )
+
+            # Call AI fixer to generate code fix
+            ai_result = await fixer.fix_code_issue(
+                file_path=file_path,
+                issue_description=issue_description,
+                code_context=code_snippet,
+                fix_type=fix_type,
+            )
+
+            # Check if AI fix was successful
+            if not ai_result.get("success"):
+                error_msg = ai_result.get("error", "Unknown AI error")
+                self.logger.error(f"AI fix failed: {error_msg}")
+
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    fixes_applied=[],
+                    remaining_issues=[issue.id],
+                    recommendations=[f"AI fix failed: {error_msg}"],
+                    files_modified=[],
+                )
+
+            # Extract AI response fields
+            fixed_code = str(ai_result.get("fixed_code", ""))
+            explanation = str(ai_result.get("explanation", "No explanation"))
+            confidence = float(ai_result.get("confidence", 0.0))
+            changes_made = ai_result.get("changes_made", [])
+            potential_side_effects = ai_result.get("potential_side_effects", [])
+
+            # Validate confidence threshold
+            min_confidence = 0.7  # Match AI fixer's default
+            if confidence < min_confidence:
+                self.logger.warning(
+                    f"AI confidence {confidence:.2f} below threshold {min_confidence}"
+                )
+
+                return FixResult(
+                    success=False,
+                    confidence=confidence,
+                    fixes_applied=[],
+                    remaining_issues=[issue.id],
+                    recommendations=[
+                        f"AI fix confidence {confidence:.2f} too low (threshold: {min_confidence})",
+                        explanation,
+                    ],
+                    files_modified=[],
+                )
+
+            # Apply fix using SafeFileModifier
+            if not dry_run and fixed_code:
+                modify_result = await self.file_modifier.apply_fix(
+                    file_path=file_path,
+                    fixed_content=fixed_code,
+                    dry_run=dry_run,
+                    create_backup=True,
+                )
+
+                if not modify_result.get("success"):
+                    error_msg = modify_result.get("error", "Unknown modification error")
+                    self.logger.error(f"File modification failed: {error_msg}")
+
+                    return FixResult(
+                        success=False,
+                        confidence=confidence,
+                        fixes_applied=[],
+                        remaining_issues=[issue.id],
+                        recommendations=[
+                            f"File modification failed: {error_msg}",
+                            explanation,
+                        ],
+                        files_modified=[],
+                    )
+
+                # Success - fix applied
+                self.logger.info(
+                    f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})"
+                )
+
+                return FixResult(
+                    success=True,
+                    confidence=confidence,
+                    fixes_applied=[f"Fixed {fix_type} in {file_path}"],
+                    remaining_issues=[],
+                    recommendations=[
+                        explanation,
+                        *[f"Change: {change}" for change in changes_made],
+                        *[
+                            f"Potential side effect: {effect}"
+                            for effect in potential_side_effects
+                        ],
+                    ],
+                    files_modified=[file_path],
+                )
+            else:
+                # Dry-run mode or no code - just report recommendation
+                return FixResult(
+                    success=True,
+                    confidence=confidence,
+                    fixes_applied=[],
+                    remaining_issues=[issue.id],
+                    recommendations=[
+                        f"AI suggests (dry-run): {explanation}",
+                        *[f"Change: {change}" for change in changes_made],
+                    ],
+                    files_modified=[],
+                )
+
+        except Exception as e:
+            self.logger.exception(f"Unexpected error in consult_on_issue: {e}")
+
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                fixes_applied=[],
+                remaining_issues=[issue.id],
+                recommendations=[f"Unexpected error: {e}"],
+                files_modified=[],
+            )
 
     def create_enhanced_fix_result(
         self, base_result: FixResult, consultations: list[dict[str, t.Any]]

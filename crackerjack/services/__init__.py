@@ -1,22 +1,9 @@
-from .cache import CacheEntry, CacheStats, CrackerjackCache, FileCache, InMemoryCache
-from .config import ConfigurationService
-from .file_hasher import FileHasher, SmartFileWatcher
-from .filesystem import FileSystemService
-from .git import GitService
-from .initialization import InitializationService
-from .security import SecurityService
+"""Services for crackerjack.
 
-__all__ = [
-    "CacheEntry",
-    "CacheStats",
-    "ConfigurationService",
-    "CrackerjackCache",
-    "FileCache",
-    "FileHasher",
-    "FileSystemService",
-    "GitService",
-    "InMemoryCache",
-    "InitializationService",
-    "SecurityService",
-    "SmartFileWatcher",
-]
+This package contains service classes that provide business logic
+and operations that are used across multiple components.
+"""
+
+from crackerjack.services.file_modifier import SafeFileModifier
+
+__all__ = ["SafeFileModifier"]

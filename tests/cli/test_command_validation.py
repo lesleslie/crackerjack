@@ -114,9 +114,23 @@ class TestCommandValidation:
     def test_args_none_handled(self) -> None:
         """Test that None args are handled safely (converted to empty list)."""
         # None should be gracefully converted to empty string -> empty list
-        command, args = validate_command("test", None)  # type: ignore[arg-type]
+        command, args = validate_command("test", None)
         assert command == "test"
         assert args == []
+
+    def test_command_none_rejected(self) -> None:
+        """Test that None command is rejected with clear error."""
+        with pytest.raises(ValueError) as exc_info:
+            validate_command(None, "")  # type: ignore[arg-type]
+
+        error_msg = str(exc_info.value)
+        assert "Command cannot be None" in error_msg
+
+    def test_shell_quoted_arguments(self) -> None:
+        """Test that shell-style quoted arguments are parsed correctly."""
+        command, args = validate_command("test", '--msg "hello world"')
+        assert command == "test"
+        assert args == ["--msg", "hello world"]  # Should be single arg, not split
 
 
 class TestValidationEdgeCases:

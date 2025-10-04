@@ -1,4 +1,5 @@
 import asyncio
+import shlex
 from pathlib import Path
 
 from rich.console import Console
@@ -6,8 +7,13 @@ from rich.console import Console
 from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 from crackerjack.models.protocols import OptionsProtocol
 
+# Valid semantic commands for crackerjack operations
+VALID_COMMANDS = {"test", "lint", "check", "format", "security", "complexity", "all"}
 
-def validate_command(command: str, args: str) -> tuple[str, list[str]]:
+
+def validate_command(
+    command: str | None, args: str | None = None
+) -> tuple[str, list[str]]:
     """Validate command and detect common misuse patterns.
 
     Args:
@@ -30,6 +36,10 @@ def validate_command(command: str, args: str) -> tuple[str, list[str]]:
         ...
         ValueError: Invalid command: '--ai-fix'...
     """
+    # CRITICAL: Check for None command first
+    if command is None:
+        raise ValueError("Command cannot be None")
+
     # Detect if user put flags in command parameter
     if command.startswith("--") or command.startswith("-"):
         raise ValueError(
@@ -39,17 +49,17 @@ def validate_command(command: str, args: str) -> tuple[str, list[str]]:
         )
 
     # Validate against known semantic commands
-    valid_commands = {"test", "lint", "check", "format", "security", "complexity", "all"}
-    if command not in valid_commands:
+    if command not in VALID_COMMANDS:
         raise ValueError(
             f"Unknown command: {command!r}\n"
-            f"Valid commands: {', '.join(sorted(valid_commands))}"
+            f"Valid commands: {', '.join(sorted(VALID_COMMANDS))}"
         )
 
     # Parse args and detect --ai-fix misuse
     # Handle None gracefully by converting to empty string
     args_str = args if args is not None else ""
-    parsed_args = args_str.split() if args_str else []
+    # Use shlex.split for proper shell argument parsing (handles quotes)
+    parsed_args = shlex.split(args_str) if args_str else []
     if "--ai-fix" in parsed_args:
         raise ValueError(
             "Do not pass --ai-fix in args parameter\n"

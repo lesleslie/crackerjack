@@ -149,6 +149,7 @@ class Options(BaseModel):
     strip_code: bool | None = None  # Replaces clean
     run_tests: bool = False  # Replaces test
     ai_fix: bool | None = None  # Replaces ai_agent
+    dry_run: bool = False  # Preview fixes without applying
     full_release: str | None = None  # Replaces all
     show_progress: bool | None = None  # Replaces track_progress
     advanced_monitor: bool | None = None  # Replaces enhanced_monitor
@@ -583,9 +584,9 @@ CLI_OPTIONS = {
         help="Port for unified dashboard server (default: 8675).",
     ),
     "max_iterations": typer.Option(
-        5,
+        10,
         "--max-iterations",
-        help="Maximum number of iterations for AI agent auto-fixing workflows (default: 5).",
+        help="Maximum auto-fix iterations (default: 10).",
     ),
     "ai_debug": typer.Option(
         False,
@@ -706,9 +707,16 @@ CLI_OPTIONS = {
         None,
         "--ai-fix",
         help=(
-            "Enable AI-powered automatic fixing of code quality issues "
-            "and test failures."
+            "Enable AI-powered auto-fixing. "
+            "Iteratively fixes code issues using Claude AI. "
+            "Requires ANTHROPIC_API_KEY environment variable. "
+            "Max 10 iterations, stops when all hooks pass."
         ),
+    ),
+    "dry_run": typer.Option(
+        False,
+        "--dry-run",
+        help="Preview fixes without modifying files (implies --ai-fix).",
     ),
     "full_release": typer.Option(
         None,
@@ -1045,6 +1053,7 @@ def create_options(
     strip_code: bool | None = None,
     run_tests: bool = False,
     ai_fix: bool | None = None,
+    dry_run: bool = False,
     full_release: str | None = None,
     show_progress: bool | None = None,
     advanced_monitor: bool | None = None,
@@ -1142,6 +1151,7 @@ def create_options(
         strip_code=strip_code,
         run_tests=run_tests,
         ai_fix=ai_fix,
+        dry_run=dry_run,
         full_release=full_release,
         show_progress=show_progress,
         advanced_monitor=advanced_monitor,

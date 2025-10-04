@@ -7,7 +7,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-![Coverage](https://img.shields.io/badge/coverage-17.9%25-red)
+![Coverage](https://img.shields.io/badge/coverage-17.7%25-red)
 
 ## 🎯 Purpose
 
@@ -169,12 +169,55 @@ The AI agent intelligently fixes:
 # Standard AI agent mode (recommended)
 python -m crackerjack --ai-fix --run-tests --verbose
 
+# Preview fixes without applying (dry-run mode)
+python -m crackerjack --dry-run --run-tests --verbose
+
+# Custom iteration limit
+python -m crackerjack --ai-fix --max-iterations 15
+
 # MCP server with WebSocket support (localhost:8675)
 python -m crackerjack --start-mcp-server
 
 # Progress monitoring via WebSocket
 python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 ```
+
+#### MCP Integration
+
+When using crackerjack via MCP tools (session-mgmt-mcp):
+
+```python
+# ✅ CORRECT - Use semantic command + ai_agent_mode parameter
+crackerjack_run(command="test", ai_agent_mode=True)
+
+# ✅ CORRECT - With additional arguments
+crackerjack_run(command="check", args="--verbose", ai_agent_mode=True, timeout=600)
+
+# ✅ CORRECT - Dry-run mode
+crackerjack_run(command="test", args="--dry-run", ai_agent_mode=True)
+
+# ❌ WRONG - Don't put flags in command parameter
+crackerjack_run(command="--ai-fix -t")  # This will error!
+
+# ❌ WRONG - Don't use --ai-fix in args
+crackerjack_run(command="test", args="--ai-fix")  # Use ai_agent_mode=True instead
+```
+
+#### Configuration
+
+Auto-fix requires:
+
+1. **Anthropic API key**: Set environment variable
+
+   ```bash
+   export ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+1. **Configuration file**: `settings/adapters.yml`
+
+   ```yaml
+   ai: claude
+   ```
 
 #### Key Benefits
 
