@@ -4,18 +4,18 @@
 **Status:** 🔧 Implementation Complete - Testing Required
 **Priority:** CRITICAL
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 The `--ai-fix` flag was completely broken due to **TWO separate bugs**:
 
 1. **Parameter Passing Bug**: `_setup_debug_and_verbose_flags()` in `__main__.py` wasn't accepting the `ai_fix` parameter
-2. **Workflow Routing Bug**: THREE workflow functions in `workflow_orchestrator.py` weren't checking for AI agent
+1. **Workflow Routing Bug**: THREE workflow functions in `workflow_orchestrator.py` weren't checking for AI agent
 
 **Both bugs have been fixed.** This document provides a comprehensive testing plan to verify the fixes work correctly before publishing.
 
----
+______________________________________________________________________
 
 ## Bugs Fixed (Implementation Complete ✅)
 
@@ -25,11 +25,13 @@ The `--ai-fix` flag was completely broken due to **TWO separate bugs**:
 **Function:** `_setup_debug_and_verbose_flags()` (lines 476-495)
 
 **Issue:**
+
 - Function didn't accept `ai_fix` as parameter
 - Hardcoded `ai_fix = False` on every call
 - Call site didn't pass user's `--ai-fix` value
 
 **Fix Applied:**
+
 ```python
 # Before
 def _setup_debug_and_verbose_flags(
@@ -37,6 +39,7 @@ def _setup_debug_and_verbose_flags(
 ) -> tuple[bool, bool]:
     ai_fix = False  # BUG!
     # ...
+
 
 # After
 def _setup_debug_and_verbose_flags(
@@ -49,15 +52,18 @@ def _setup_debug_and_verbose_flags(
 ```
 
 **Call Site Fix (Line 1466):**
+
 ```python
 # Before
 ai_fix, verbose = _setup_debug_and_verbose_flags(ai_debug, debug, verbose, options)
 
 # After
-ai_fix, verbose = _setup_debug_and_verbose_flags(ai_fix, ai_debug, debug, verbose, options)
+ai_fix, verbose = _setup_debug_and_verbose_flags(
+    ai_fix, ai_debug, debug, verbose, options
+)
 ```
 
----
+______________________________________________________________________
 
 ### Bug #2: Workflow Routing (FIXED)
 
@@ -71,6 +77,7 @@ ai_fix, verbose = _setup_debug_and_verbose_flags(ai_fix, ai_debug, debug, verbos
 **Used when:** No flags specified (most common usage)
 
 **Fix Applied:**
+
 - Added `iteration = self._start_iteration_tracking(options)`
 - Early AI agent check when fast hooks fail
 - Always delegate to `_handle_ai_workflow_completion()` at the end
@@ -81,6 +88,7 @@ ai_fix, verbose = _setup_debug_and_verbose_flags(ai_fix, ai_debug, debug, verbos
 **Used when:** `--fast` flag specified
 
 **Fix Applied:**
+
 - Added `iteration = self._start_iteration_tracking(options)`
 - Check `options.ai_agent` and delegate to `_handle_ai_workflow_completion()` if True
 
@@ -90,12 +98,13 @@ ai_fix, verbose = _setup_debug_and_verbose_flags(ai_fix, ai_debug, debug, verbos
 **Used when:** `--comp` flag specified
 
 **Fix Applied:**
+
 - Added `iteration = self._start_iteration_tracking(options)`
 - Check `options.ai_agent` and delegate to `_handle_ai_workflow_completion()` if True
 
 **Note:** `_execute_test_workflow()` already had proper AI agent checking ✅
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
@@ -122,11 +131,7 @@ def test_setup_debug_flags_preserves_ai_fix_true():
 
     # ai_fix=True should be preserved
     ai_fix, verbose = _setup_debug_and_verbose_flags(
-        ai_fix=True,
-        ai_debug=False,
-        debug=False,
-        verbose=False,
-        options=options
+        ai_fix=True, ai_debug=False, debug=False, verbose=False, options=options
     )
 
     assert ai_fix is True, "ai_fix=True should be preserved"
@@ -138,11 +143,7 @@ def test_setup_debug_flags_preserves_ai_fix_false():
 
     # ai_fix=False should be preserved
     ai_fix, verbose = _setup_debug_and_verbose_flags(
-        ai_fix=False,
-        ai_debug=False,
-        debug=False,
-        verbose=False,
-        options=options
+        ai_fix=False, ai_debug=False, debug=False, verbose=False, options=options
     )
 
     assert ai_fix is False, "ai_fix=False should be preserved"
@@ -158,7 +159,7 @@ def test_setup_debug_flags_ai_debug_implies_ai_fix():
         ai_debug=True,  # This should force it to True
         debug=False,
         verbose=False,
-        options=options
+        options=options,
     )
 
     assert ai_fix is True, "ai_debug=True should force ai_fix=True"
@@ -171,11 +172,7 @@ def test_setup_debug_flags_debug_sets_verbose():
     options = MockOptions()
 
     ai_fix, verbose = _setup_debug_and_verbose_flags(
-        ai_fix=False,
-        ai_debug=False,
-        debug=True,
-        verbose=False,
-        options=options
+        ai_fix=False, ai_debug=False, debug=True, verbose=False, options=options
     )
 
     assert verbose is True, "debug=True should set verbose=True"
@@ -222,8 +219,8 @@ def mock_options_without_ai_agent():
 @pytest.fixture
 def orchestrator():
     """Create WorkflowOrchestrator instance with minimal dependencies."""
-    with patch('crackerjack.core.workflow_orchestrator.Config'):
-        with patch('crackerjack.core.workflow_orchestrator.Console'):
+    with patch("crackerjack.core.workflow_orchestrator.Config"):
+        with patch("crackerjack.core.workflow_orchestrator.Console"):
             orch = WorkflowOrchestrator()
             orch.logger = Mock()
             orch.console = Mock()
@@ -242,14 +239,18 @@ class TestStandardWorkflowAIRouting:
         workflow_id = "test_workflow"
 
         # Mock the workflow components
-        with patch.object(orchestrator, '_start_iteration_tracking', return_value=1):
-            with patch.object(orchestrator, '_update_hooks_status_running'):
-                with patch.object(orchestrator, '_execute_monitored_fast_hooks_phase', return_value=False):
-                    with patch.object(orchestrator, '_handle_hooks_completion'):
+        with patch.object(orchestrator, "_start_iteration_tracking", return_value=1):
+            with patch.object(orchestrator, "_update_hooks_status_running"):
+                with patch.object(
+                    orchestrator,
+                    "_execute_monitored_fast_hooks_phase",
+                    return_value=False,
+                ):
+                    with patch.object(orchestrator, "_handle_hooks_completion"):
                         with patch.object(
                             orchestrator,
-                            '_handle_ai_workflow_completion',
-                            new_callable=AsyncMock
+                            "_handle_ai_workflow_completion",
+                            new_callable=AsyncMock,
                         ) as mock_ai_completion:
                             mock_ai_completion.return_value = True
 
@@ -273,14 +274,18 @@ class TestStandardWorkflowAIRouting:
         workflow_id = "test_workflow"
 
         # Mock the workflow components
-        with patch.object(orchestrator, '_start_iteration_tracking', return_value=1):
-            with patch.object(orchestrator, '_update_hooks_status_running'):
-                with patch.object(orchestrator, '_execute_monitored_fast_hooks_phase', return_value=False):
-                    with patch.object(orchestrator, '_handle_hooks_completion'):
+        with patch.object(orchestrator, "_start_iteration_tracking", return_value=1):
+            with patch.object(orchestrator, "_update_hooks_status_running"):
+                with patch.object(
+                    orchestrator,
+                    "_execute_monitored_fast_hooks_phase",
+                    return_value=False,
+                ):
+                    with patch.object(orchestrator, "_handle_hooks_completion"):
                         with patch.object(
                             orchestrator,
-                            '_handle_ai_workflow_completion',
-                            new_callable=AsyncMock
+                            "_handle_ai_workflow_completion",
+                            new_callable=AsyncMock,
                         ) as mock_ai_completion:
                             # Execute standard workflow
                             result = await orchestrator._execute_standard_hooks_workflow_monitored(
@@ -303,12 +308,14 @@ class TestFastWorkflowAIRouting:
         """Fast workflow should delegate to AI completion when ai_agent=True."""
         workflow_id = "test_workflow"
 
-        with patch.object(orchestrator, '_start_iteration_tracking', return_value=1):
-            with patch.object(orchestrator, '_run_fast_hooks_phase', return_value=False):
+        with patch.object(orchestrator, "_start_iteration_tracking", return_value=1):
+            with patch.object(
+                orchestrator, "_run_fast_hooks_phase", return_value=False
+            ):
                 with patch.object(
                     orchestrator,
-                    '_handle_ai_workflow_completion',
-                    new_callable=AsyncMock
+                    "_handle_ai_workflow_completion",
+                    new_callable=AsyncMock,
                 ) as mock_ai_completion:
                     mock_ai_completion.return_value = True
 
@@ -332,17 +339,21 @@ class TestComprehensiveWorkflowAIRouting:
         """Comprehensive workflow should delegate to AI completion when ai_agent=True."""
         workflow_id = "test_workflow"
 
-        with patch.object(orchestrator, '_start_iteration_tracking', return_value=1):
-            with patch.object(orchestrator, '_run_comprehensive_hooks_phase', return_value=False):
+        with patch.object(orchestrator, "_start_iteration_tracking", return_value=1):
+            with patch.object(
+                orchestrator, "_run_comprehensive_hooks_phase", return_value=False
+            ):
                 with patch.object(
                     orchestrator,
-                    '_handle_ai_workflow_completion',
-                    new_callable=AsyncMock
+                    "_handle_ai_workflow_completion",
+                    new_callable=AsyncMock,
                 ) as mock_ai_completion:
                     mock_ai_completion.return_value = True
 
-                    result = await orchestrator._run_comprehensive_hooks_phase_monitored(
-                        mock_options_with_ai_agent, workflow_id
+                    result = (
+                        await orchestrator._run_comprehensive_hooks_phase_monitored(
+                            mock_options_with_ai_agent, workflow_id
+                        )
                     )
 
                     mock_ai_completion.assert_called_once()
@@ -351,7 +362,7 @@ class TestComprehensiveWorkflowAIRouting:
                     assert result is True
 ```
 
----
+______________________________________________________________________
 
 ### Phase 2: Integration Tests (End-to-End Workflow)
 
@@ -467,8 +478,8 @@ async def test_ai_fix_triggers_ai_agent_workflow_on_hook_failure():
     options.verbose = True
 
     # Create orchestrator
-    with patch('crackerjack.core.workflow_orchestrator.Config'):
-        with patch('crackerjack.core.workflow_orchestrator.Console'):
+    with patch("crackerjack.core.workflow_orchestrator.Config"):
+        with patch("crackerjack.core.workflow_orchestrator.Console"):
             orchestrator = WorkflowOrchestrator()
             orchestrator.logger = Mock()
             orchestrator.console = Mock()
@@ -489,7 +500,7 @@ async def test_ai_fix_triggers_ai_agent_workflow_on_hook_failure():
             # Execute standard workflow with AI agent enabled
             workflow_id = "test_workflow"
 
-            with patch('crackerjack.core.workflow_orchestrator.phase_monitor'):
+            with patch("crackerjack.core.workflow_orchestrator.phase_monitor"):
                 result = await orchestrator._execute_standard_hooks_workflow_monitored(
                     options, workflow_id
                 )
@@ -521,8 +532,8 @@ async def test_ai_fix_not_triggered_when_hooks_pass():
     options.verbose = True
 
     # Create orchestrator
-    with patch('crackerjack.core.workflow_orchestrator.Config'):
-        with patch('crackerjack.core.workflow_orchestrator.Console'):
+    with patch("crackerjack.core.workflow_orchestrator.Config"):
+        with patch("crackerjack.core.workflow_orchestrator.Console"):
             orchestrator = WorkflowOrchestrator()
             orchestrator.logger = Mock()
             orchestrator.console = Mock()
@@ -541,12 +552,14 @@ async def test_ai_fix_not_triggered_when_hooks_pass():
             orchestrator._update_hooks_status_running = Mock()
             orchestrator._handle_hooks_completion = Mock()
             orchestrator._execute_monitored_fast_hooks_phase = Mock(return_value=True)
-            orchestrator._execute_monitored_comprehensive_phase = Mock(return_value=True)
+            orchestrator._execute_monitored_comprehensive_phase = Mock(
+                return_value=True
+            )
 
             # Execute standard workflow
             workflow_id = "test_workflow"
 
-            with patch('crackerjack.core.workflow_orchestrator.phase_monitor'):
+            with patch("crackerjack.core.workflow_orchestrator.phase_monitor"):
                 result = await orchestrator._execute_standard_hooks_workflow_monitored(
                     options, workflow_id
                 )
@@ -559,7 +572,7 @@ async def test_ai_fix_not_triggered_when_hooks_pass():
             assert result is True or isinstance(result, bool)
 ```
 
----
+______________________________________________________________________
 
 ### Phase 3: Manual Testing (Real-World Verification)
 
@@ -673,7 +686,7 @@ mcp__crackerjack__execute_crackerjack(
 # ✅ Progress tracked via job_id
 ```
 
----
+______________________________________________________________________
 
 ## Test Execution Checklist
 
@@ -719,30 +732,31 @@ mcp__crackerjack__execute_crackerjack(
 - [ ] Publish to PyPI: `python -m crackerjack --publish`
 - [ ] Test in acb project with new version
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 **All tests must pass before publishing:**
 
 1. ✅ All unit tests pass (100% coverage of fixed functions)
-2. ✅ All integration tests pass
-3. ✅ Manual testing confirms AI agent executes when `--ai-fix` is used
-4. ✅ Manual testing confirms AI fixing works with all workflow paths:
+1. ✅ All integration tests pass
+1. ✅ Manual testing confirms AI agent executes when `--ai-fix` is used
+1. ✅ Manual testing confirms AI fixing works with all workflow paths:
    - Default (no flags)
    - `--fast`
    - `--comp`
    - `--test`
-5. ✅ MCP integration test succeeds from acb project
-6. ✅ No regressions in existing functionality
+1. ✅ MCP integration test succeeds from acb project
+1. ✅ No regressions in existing functionality
 
 **If ANY test fails:**
+
 - DO NOT publish to PyPI
 - Document the failure
 - Fix the issue
 - Re-run all tests
 
----
+______________________________________________________________________
 
 ## Known Limitations and Future Work
 
@@ -750,40 +764,44 @@ mcp__crackerjack__execute_crackerjack(
 
 1. **ClaudeCodeBridge is a simulation**: The standalone CLI mode (`python -m crackerjack --ai-fix`) uses a simulated bridge that provides recommendations but doesn't actually invoke Claude Code agents via the Task tool.
 
-2. **MCP Mode is Required for Full AI Fixing**: The complete AI fixing workflow requires MCP integration where Claude Code (the MCP client) applies the fixes.
+1. **MCP Mode is Required for Full AI Fixing**: The complete AI fixing workflow requires MCP integration where Claude Code (the MCP client) applies the fixes.
 
 ### Future Enhancements
 
 1. **Enhance ClaudeCodeBridge**: Update to actually invoke Task tool for standalone CLI mode
-2. **Add More Test Coverage**: Test coverage improvements, especially for AI agent coordinator
-3. **Integration Test for MCP**: Automated integration test for MCP workflow
-4. **Performance Testing**: Measure AI fixing iteration performance
-5. **Error Recovery Testing**: Test error handling in AI fixing workflow
+1. **Add More Test Coverage**: Test coverage improvements, especially for AI agent coordinator
+1. **Integration Test for MCP**: Automated integration test for MCP workflow
+1. **Performance Testing**: Measure AI fixing iteration performance
+1. **Error Recovery Testing**: Test error handling in AI fixing workflow
 
----
+______________________________________________________________________
 
 ## Documentation Updates Required
 
 After testing completes successfully:
 
 1. **Update investigation reports**:
+
    - Mark both bugs as fixed and tested
    - Add test results summary
 
-2. **Update CHANGELOG.md**:
+1. **Update CHANGELOG.md**:
+
    - Document both bug fixes
    - List new tests added
    - Mention improved AI auto-fix reliability
 
-3. **Update README.md** (if needed):
+1. **Update README.md** (if needed):
+
    - Document `--ai-fix` flag usage
    - Add examples of AI auto-fix workflow
 
-4. **Update user guide** (if exists):
+1. **Update user guide** (if exists):
+
    - Explain AI agent workflow
    - Document when to use `--ai-fix`
 
----
+______________________________________________________________________
 
 ## Quick Test Commands
 
@@ -804,16 +822,16 @@ python -m pytest tests/ --cov=crackerjack --cov-report=term -v
 python -m pytest tests/test_workflow_orchestrator_ai_routing.py::TestStandardWorkflowAIRouting::test_standard_workflow_calls_ai_completion_when_ai_agent_enabled -v
 ```
 
----
+______________________________________________________________________
 
 **Next Steps:**
 
 1. Review this plan
-2. Create test files as specified
-3. Run tests and document results
-4. Fix any failures
-5. Publish new version only after all tests pass
-6. Test in acb project with new version
+1. Create test files as specified
+1. Run tests and document results
+1. Fix any failures
+1. Publish new version only after all tests pass
+1. Test in acb project with new version
 
 **Questions? Issues?**
 

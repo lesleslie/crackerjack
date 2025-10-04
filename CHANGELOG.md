@@ -1,13 +1,24 @@
 ______________________________________________________________________
 
+## [0.39.11] - 2025-10-03
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2025-10-03 17:08:40
+
+### Fixed
+
+- test: Update 7 files
+
 ## [Unreleased] - 2025-10-03
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.39.11] - 2025-10-03
 

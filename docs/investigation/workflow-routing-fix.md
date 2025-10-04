@@ -12,10 +12,10 @@ After fixing the `--ai-fix` parameter passing bug in `__main__.py`, testing reve
 When running `python -m crackerjack --ai-fix -v` (without `--test`, `--fast`, or `--comp` flags), the workflow would:
 
 1. ✅ Properly parse the `--ai-fix` flag
-2. ✅ Set `options.ai_fix = True` and `options.ai_agent = True`
-3. ✅ Set `AI_AGENT` environment variable
-4. ❌ **Never check for AI agent in the workflow routing**
-5. ❌ Just run hooks and exit (no AI fixing iterations)
+1. ✅ Set `options.ai_fix = True` and `options.ai_agent = True`
+1. ✅ Set `AI_AGENT` environment variable
+1. ❌ **Never check for AI agent in the workflow routing**
+1. ❌ Just run hooks and exit (no AI fixing iterations)
 
 ## Root Cause Analysis
 
@@ -38,7 +38,9 @@ def _execute_quality_phase(self, options: OptionsProtocol, workflow_id: str) -> 
         return await self._execute_test_workflow(...)  # Path 3 ✅ Checks ai_agent!
 
     # DEFAULT PATH - most common usage
-    return await self._execute_standard_hooks_workflow_monitored(...)  # Path 4 ❌ Does NOT check ai_agent!
+    return await self._execute_standard_hooks_workflow_monitored(
+        ...
+    )  # Path 4 ❌ Does NOT check ai_agent!
 ```
 
 **The Bug:** The default path (line 556) called `_execute_standard_hooks_workflow_monitored()`, which **never checked `options.ai_agent`** and just returned success/failure directly.
@@ -52,8 +54,8 @@ Only the `--test` path properly called `_handle_ai_workflow_completion()` which 
 **THREE functions needed fixes** to ensure all workflow paths check for AI agent:
 
 1. `_execute_standard_hooks_workflow_monitored()` (lines 1933-1967) - Default workflow
-2. `_run_fast_hooks_phase_monitored()` (lines 1860-1875) - `--fast` workflow
-3. `_run_comprehensive_hooks_phase_monitored()` (lines 1877-1892) - `--comp` workflow
+1. `_run_fast_hooks_phase_monitored()` (lines 1860-1875) - `--fast` workflow
+1. `_run_comprehensive_hooks_phase_monitored()` (lines 1877-1892) - `--comp` workflow
 
 Note: `_execute_test_workflow()` (line 614) already had proper AI agent checking.
 
@@ -75,7 +77,9 @@ async def _execute_standard_hooks_workflow_monitored(
             self._handle_hooks_completion(False)
             return False  # Just exit - no AI agent check!
 
-        comprehensive_success = self._execute_monitored_comprehensive_phase(options, monitor)
+        comprehensive_success = self._execute_monitored_comprehensive_phase(
+            options, monitor
+        )
 
         hooks_success = fast_hooks_success and comprehensive_success
         self._handle_hooks_completion(hooks_success)
@@ -83,9 +87,10 @@ async def _execute_standard_hooks_workflow_monitored(
 ```
 
 **Problems:**
+
 1. No iteration tracking
-2. No check for `options.ai_agent` anywhere
-3. Just returns success/failure directly without delegating to AI workflow handler
+1. No check for `options.ai_agent` anywhere
+1. Just returns success/failure directly without delegating to AI workflow handler
 
 ### After (Fixed)
 
@@ -112,7 +117,9 @@ async def _execute_standard_hooks_workflow_monitored(
             self._handle_hooks_completion(False)
             return False
 
-        comprehensive_success = self._execute_monitored_comprehensive_phase(options, monitor)
+        comprehensive_success = self._execute_monitored_comprehensive_phase(
+            options, monitor
+        )
 
         hooks_success = fast_hooks_success and comprehensive_success
         self._handle_hooks_completion(hooks_success)
@@ -124,14 +131,16 @@ async def _execute_standard_hooks_workflow_monitored(
 ```
 
 **Improvements:**
+
 1. ✅ Tracks iterations with `_start_iteration_tracking()`
-2. ✅ Early AI agent check when fast hooks fail (lines 1947-1950)
-3. ✅ **Always** delegates to `_handle_ai_workflow_completion()` (line 1965)
-4. ✅ Let the completion handler decide whether to trigger AI fixing
+1. ✅ Early AI agent check when fast hooks fail (lines 1947-1950)
+1. ✅ **Always** delegates to `_handle_ai_workflow_completion()` (line 1965)
+1. ✅ Let the completion handler decide whether to trigger AI fixing
 
 ### Fast Hooks Workflow Fix
 
 **Before:**
+
 ```python
 async def _run_fast_hooks_phase_monitored(
     self, options: OptionsProtocol, workflow_id: str
@@ -142,6 +151,7 @@ async def _run_fast_hooks_phase_monitored(
 ```
 
 **After:**
+
 ```python
 async def _run_fast_hooks_phase_monitored(
     self, options: OptionsProtocol, workflow_id: str
@@ -164,6 +174,7 @@ async def _run_fast_hooks_phase_monitored(
 ### Comprehensive Hooks Workflow Fix
 
 **Before:**
+
 ```python
 async def _run_comprehensive_hooks_phase_monitored(
     self, options: OptionsProtocol, workflow_id: str
@@ -174,6 +185,7 @@ async def _run_comprehensive_hooks_phase_monitored(
 ```
 
 **After:**
+
 ```python
 async def _run_comprehensive_hooks_phase_monitored(
     self, options: OptionsProtocol, workflow_id: str
@@ -196,9 +208,9 @@ async def _run_comprehensive_hooks_phase_monitored(
 ### All Four Workflow Paths Now Fixed
 
 1. ✅ **`--fast` flag** → `_run_fast_hooks_phase_monitored()` checks AI agent
-2. ✅ **`--comp` flag** → `_run_comprehensive_hooks_phase_monitored()` checks AI agent
-3. ✅ **`--test` flag** → `_execute_test_workflow()` already checked AI agent
-4. ✅ **Default (no flags)** → `_execute_standard_hooks_workflow_monitored()` checks AI agent
+1. ✅ **`--comp` flag** → `_run_comprehensive_hooks_phase_monitored()` checks AI agent
+1. ✅ **`--test` flag** → `_execute_test_workflow()` already checked AI agent
+1. ✅ **Default (no flags)** → `_execute_standard_hooks_workflow_monitored()` checks AI agent
 
 ## What `_handle_ai_workflow_completion()` Does
 
@@ -226,12 +238,14 @@ async def _handle_ai_workflow_completion(
 ```
 
 **Key behavior:**
+
 - If `options.ai_agent` is True → route to `_handle_ai_agent_workflow()` which runs AI fixing iterations
 - If `options.ai_agent` is False → route to `_handle_standard_workflow()` which just reports results
 
 ## Testing the Fix
 
 ### Before Fix
+
 ```bash
 $ python -m crackerjack --ai-fix -v
 # ❌ Ran hooks
@@ -240,6 +254,7 @@ $ python -m crackerjack --ai-fix -v
 ```
 
 ### After Fix
+
 ```bash
 $ python -m crackerjack --ai-fix -v
 # ✅ Runs hooks
@@ -257,6 +272,7 @@ $ python -m crackerjack --ai-fix -v
 ### Bug 1: Parameter Passing (`__main__.py`)
 
 **Function:** `_setup_debug_and_verbose_flags()` (lines 476-495)
+
 - **Issue:** Wasn't accepting `ai_fix` parameter, hardcoded to `False`
 - **Fix:** Added parameter, removed hardcoded value
 
@@ -265,14 +281,17 @@ $ python -m crackerjack --ai-fix -v
 **THREE functions weren't checking for AI agent:**
 
 1. **`_execute_standard_hooks_workflow_monitored()`** (lines 1933-1967)
+
    - Default workflow when no flags specified
    - Now delegates to `_handle_ai_workflow_completion()`
 
-2. **`_run_fast_hooks_phase_monitored()`** (lines 1860-1875)
+1. **`_run_fast_hooks_phase_monitored()`** (lines 1860-1875)
+
    - Used with `--fast` flag
    - Now checks `options.ai_agent` and delegates if True
 
-3. **`_run_comprehensive_hooks_phase_monitored()`** (lines 1877-1892)
+1. **`_run_comprehensive_hooks_phase_monitored()`** (lines 1877-1892)
+
    - Used with `--comp` flag
    - Now checks `options.ai_agent` and delegates if True
 
@@ -281,18 +300,18 @@ $ python -m crackerjack --ai-fix -v
 ## Files Modified
 
 1. `/Users/les/Projects/crackerjack/crackerjack/__main__.py` (first bug fix)
-2. `/Users/les/Projects/crackerjack/crackerjack/core/workflow_orchestrator.py` (second bug fix)
+1. `/Users/les/Projects/crackerjack/crackerjack/core/workflow_orchestrator.py` (second bug fix)
 
 ## Next Steps
 
 1. Test the complete fix: `python -m crackerjack --ai-fix -v`
-2. Verify AI agent actually executes fixing iterations
-3. Bump crackerjack version (e.g., v0.39.10 → v0.39.11)
-4. Publish to PyPI
-5. Test in acb project via MCP integration
-6. Add integration tests for both workflow paths
+1. Verify AI agent actually executes fixing iterations
+1. Bump crackerjack version (e.g., v0.39.10 → v0.39.11)
+1. Publish to PyPI
+1. Test in acb project via MCP integration
+1. Add integration tests for both workflow paths
 
----
+______________________________________________________________________
 
 **Severity:** Critical - Core AI auto-fix functionality was completely broken
 **Impact:** Affects all three execution methods (CLI, MCP tool, session-mgmt)
