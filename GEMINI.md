@@ -39,11 +39,15 @@ The project follows a modular architecture, with a clear separation of concerns 
 
 1. Install `uv` (if not already installed):
    ```bash
+   # Recommended: Official installer script
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+
+   # Alternative: Using pipx
    pipx install uv
    ```
 1. Install Crackerjack and its dependencies:
    ```bash
-   uv sync --all-groups
+   uv sync --group dev
    ```
 
 **Running the Main Workflow:**

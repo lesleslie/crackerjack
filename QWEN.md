@@ -263,7 +263,7 @@ ls ~/.cache/crackerjack/logs/debug/
 ## Contributing Guidelines
 
 1. Fork and clone the repository
-1. Run `uv sync --all-groups` to install dependencies
+1. Run `uv sync --group dev` to install dependencies
 1. Ensure `python -m crackerjack` passes all checks
 1. Submit pull request
 

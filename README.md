@@ -7,7 +7,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-![Coverage](https://img.shields.io/badge/coverage-17.7%25-red)
+![Coverage](https://img.shields.io/badge/coverage-18.38%25-red)
 
 ## 🎯 Purpose
 
@@ -92,14 +92,26 @@ Crackerjack is built on the following core principles:
 ### Install UV
 
 ```bash
+# Recommended: Official installer script
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Alternative: Using pipx
 pipx install uv
+
+# Alternative: Using Homebrew (macOS)
+brew install uv
 ```
 
 ### Install Crackerjack
 
 ```bash
+# Recommended: Using UV (fastest)
+uv tool install crackerjack
+
+# Alternative: Using pip
 pip install crackerjack
-# or
+
+# For existing project: Add as dependency
 uv add crackerjack
 ```
 
@@ -485,10 +497,10 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
 
 ### Setup MCP Server
 
-1. **Install MCP dependencies:**
+1. **Install development dependencies (includes MCP tools):**
 
    ```bash
-   uv sync --group mcp
+   uv sync --group dev
    ```
 
 1. **Start the MCP server:**
@@ -1127,7 +1139,7 @@ python -m crackerjack --start-mcp-server --verbose
 ## Contributing
 
 1. Fork and clone the repository
-1. Run `uv sync --all-groups` to install dependencies
+1. Run `uv sync --group dev` to install dependencies
 1. Ensure `python -m crackerjack` passes all checks
 1. Submit pull request
 
