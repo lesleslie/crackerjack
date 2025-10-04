@@ -1,5 +1,31 @@
 ______________________________________________________________________
 
+## [Unreleased] - 2025-10-04
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [0.41.0] - 2025-01-10
+
+### BREAKING CHANGES
+
+- **Dependency Groups Modernization**: Removed self-reference from `[dependency-groups]`
+  - ⚠️ No functional impact - structural improvement only
+  - Eliminates circular dependency when installing dev group
+  - Follows modern UV and PEP 735 best practices
+  - See [MIGRATION-0.41.0.md](<./MIGRATION-0.41.0.md>) for details
+
+### Changed
+
+- Removed `"crackerjack"` self-reference from dev dependency group
+- Updated dependency group structure for better UV compatibility
+
+______________________________________________________________________
+
 ## [0.40.3] - 2025-10-04
 
 ### Testing
@@ -9,11 +35,12 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-04
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.40.2] - 2025-10-04
 

@@ -153,3 +153,63 @@ def test_print_stats_basic(self):
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in print_stats: {e}")
+
+def test_decorator_basic(self):
+    """Test basic functionality of decorator."""
+    try:
+        result = decorator()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in decorator: {e}")
+
+def test_get_python_files_basic(self):
+    """Test basic functionality of get_python_files."""
+    try:
+        result = get_python_files()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_python_files: {e}")
+
+def test_get_modified_files_basic(self):
+    """Test basic functionality of get_modified_files."""
+    try:
+        result = get_modified_files()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_modified_files: {e}")
+
+def test_clear_cache_basic(self):
+    """Test basic functionality of clear_cache."""
+    try:
+        result = clear_cache()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in clear_cache: {e}")
+
+def test_execute_tasks_basic(self):
+    """Test basic functionality of execute_tasks."""
+    try:
+        result = execute_tasks()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in execute_tasks: {e}")

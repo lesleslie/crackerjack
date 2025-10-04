@@ -405,7 +405,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.40.2"
+version = "0.41.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -462,7 +462,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "crackerjack" },
     { name = "excalidraw-mcp" },
     { name = "session-mgmt-mcp" },
 ]
@@ -523,7 +522,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "crackerjack" },
     { name = "excalidraw-mcp", specifier = ">=0.34.0" },
     { name = "session-mgmt-mcp", specifier = ">=0.4.0" },
 ]
@@ -2741,7 +2739,7 @@ wheels = [
 
 [[package]]
 name = "session-mgmt-mcp"
-version = "0.7.0"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "crackerjack" },
@@ -2759,9 +2757,9 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8b/13/339e2be977131e7a7487084509e121c61ac51fe8d2eac4a8d5a603cefa2e/session_mgmt_mcp-0.7.0.tar.gz", hash = "sha256:f98597d6fff94b5a84990ef11d6a3d08b985e8b273ce47e78a8b49519e0ded94", size = 678207, upload-time = "2025-10-04T11:43:56.813Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/8d/37c37a471259b6458e72707661944a008154792faeb650c3e8c2ab8fc17b/session_mgmt_mcp-0.7.1.tar.gz", hash = "sha256:a0f6309e686a2bf47664d8f637d25bd727279883236a0ef74e14960b6be722d9", size = 678062, upload-time = "2025-10-04T13:27:44.589Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/9f/a0a538d2b172a18032b1e013793ed54ad98345ca6dc4d0712910b948b5d8/session_mgmt_mcp-0.7.0-py3-none-any.whl", hash = "sha256:9cf613d79c98291c8565b04fb837a0074fc0d3ba0383e2b45d34fb95064ee65f", size = 273361, upload-time = "2025-10-04T11:43:54.794Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/9a/745ca6b52d7c00f42d9b2971145c7c73da0a81421e7666647f9549f31dab/session_mgmt_mcp-0.7.1-py3-none-any.whl", hash = "sha256:30ddfae2a067e86dcb8edf4e07f741df64f45eafa75fe9e648a80b1a110420b9", size = 273362, upload-time = "2025-10-04T13:27:42.607Z" },
 ]
 
 [[package]]
