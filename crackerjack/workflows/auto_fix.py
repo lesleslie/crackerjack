@@ -134,9 +134,13 @@ class AutoFixWorkflow:
         iterations: list[FixIteration] = []
         workflow_start_time = asyncio.get_event_loop().time()
 
-        self.logger.info(f"Starting auto-fix workflow: {command} (max {max_iter} iterations)")
-        self.console.print(f"[bold cyan]🔄 Auto-Fix Workflow Started[/bold cyan]")
-        self.console.print(f"[dim]Command: {command} | Max iterations: {max_iter}[/dim]\n")
+        self.logger.info(
+            f"Starting auto-fix workflow: {command} (max {max_iter} iterations)"
+        )
+        self.console.print("[bold cyan]🔄 Auto-Fix Workflow Started[/bold cyan]")
+        self.console.print(
+            f"[dim]Command: {command} | Max iterations: {max_iter}[/dim]\n"
+        )
 
         exit_reason = "unknown"
         all_passing = False
@@ -155,7 +159,9 @@ class AutoFixWorkflow:
                 all_passing = True
                 exit_reason = "convergence"
 
-                iteration_duration = asyncio.get_event_loop().time() - iteration_start_time
+                iteration_duration = (
+                    asyncio.get_event_loop().time() - iteration_start_time
+                )
 
                 iteration = FixIteration(
                     iteration_num=i,
@@ -171,7 +177,9 @@ class AutoFixWorkflow:
                 iterations.append(iteration)
 
                 self.logger.info("✅ All hooks passing - convergence achieved!")
-                self.console.print("[bold green]✅ All hooks passing - convergence achieved![/bold green]\n")
+                self.console.print(
+                    "[bold green]✅ All hooks passing - convergence achieved![/bold green]\n"
+                )
                 break
 
             # Step 3: Apply AI fixes for failures
@@ -203,14 +211,20 @@ class AutoFixWorkflow:
             if fix_results["fixes_applied"] == 0:
                 exit_reason = "no_progress"
                 self.logger.warning("⚠️  No fixes applied - cannot make progress")
-                self.console.print("[bold yellow]⚠️  No fixes applied - cannot make progress[/bold yellow]\n")
+                self.console.print(
+                    "[bold yellow]⚠️  No fixes applied - cannot make progress[/bold yellow]\n"
+                )
                 break
 
         # Handle max iterations reached
         if not all_passing and exit_reason == "unknown":
             exit_reason = "max_iterations"
-            self.logger.warning(f"⚠️  Max iterations ({max_iter}) reached without full convergence")
-            self.console.print(f"[bold yellow]⚠️  Max iterations ({max_iter}) reached[/bold yellow]\n")
+            self.logger.warning(
+                f"⚠️  Max iterations ({max_iter}) reached without full convergence"
+            )
+            self.console.print(
+                f"[bold yellow]⚠️  Max iterations ({max_iter}) reached[/bold yellow]\n"
+            )
 
         # Calculate final statistics
         total_duration = asyncio.get_event_loop().time() - workflow_start_time
@@ -309,9 +323,7 @@ class AutoFixWorkflow:
 
             except Exception as e:
                 self.logger.exception(f"Fix failed for {failure.name}: {e}")
-                self.console.print(
-                    f"[red]❌ Error fixing {failure.name}: {e}[/red]"
-                )
+                self.console.print(f"[red]❌ Error fixing {failure.name}: {e}[/red]")
 
         return {
             "fixes_applied": fixes_applied,
@@ -347,9 +359,7 @@ class AutoFixWorkflow:
                 break
 
         # Determine severity based on hook status
-        severity = (
-            Priority.HIGH if hook_result.status == "failed" else Priority.MEDIUM
-        )
+        severity = Priority.HIGH if hook_result.status == "failed" else Priority.MEDIUM
 
         # Create issue
         issue = Issue(
@@ -390,7 +400,7 @@ class AutoFixWorkflow:
         )
 
         # Statistics
-        self.console.print(f"📊 [bold]Statistics:[/bold]")
+        self.console.print("📊 [bold]Statistics:[/bold]")
         self.console.print(f"  • Iterations: {len(result.iterations)}")
         self.console.print(f"  • Total issues found: {result.total_issues_found}")
         self.console.print(f"  • Total fixes applied: {result.total_fixes}")
@@ -399,7 +409,7 @@ class AutoFixWorkflow:
 
         # Iteration breakdown
         if result.iterations:
-            self.console.print(f"\n📋 [bold]Iteration Breakdown:[/bold]")
+            self.console.print("\n📋 [bold]Iteration Breakdown:[/bold]")
             for iteration in result.iterations:
                 status_symbol = "✅" if not iteration.hooks_failing else "❌"
                 self.console.print(

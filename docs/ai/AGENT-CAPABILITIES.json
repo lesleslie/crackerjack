@@ -1,0 +1,810 @@
+{
+  "version": "1.0.0",
+  "schema_version": "2025.1",
+  "metadata": {
+    "description": "Structured agent capabilities for crackerjack AI agent system",
+    "total_agents": 12,
+    "last_updated": "2025-10-04",
+    "confidence_range": {
+      "min": 0.7,
+      "max": 0.9,
+      "default_threshold": 0.7
+    }
+  },
+  "agents": [
+    {
+      "id": "refactoring-agent",
+      "name": "RefactoringAgent",
+      "confidence_threshold": 0.9,
+      "description": "Reduces code complexity and removes dead code through intelligent refactoring patterns",
+      "capabilities": [
+        "complexity_reduction",
+        "dead_code_removal",
+        "function_extraction",
+        "helper_method_creation",
+        "nested_condition_simplification",
+        "boolean_expression_optimization",
+        "semantic_complexity_detection"
+      ],
+      "triggers": {
+        "patterns": [
+          "cognitive complexity",
+          "too complex",
+          "nested",
+          "cyclomatic",
+          "long function",
+          "too many branches",
+          "too many conditions",
+          "unused",
+          "imported but unused",
+          "defined but not used",
+          "unreachable",
+          "dead code",
+          "never used"
+        ],
+        "conditions": [
+          "complexity > 15",
+          "unused_imports_detected",
+          "unreachable_code_detected",
+          "semantic_complexity_matches > 2"
+        ],
+        "issue_types": [
+          "COMPLEXITY",
+          "DEAD_CODE"
+        ]
+      },
+      "fixes": [
+        "Extract helper methods from complex functions",
+        "Remove unused imports and variables",
+        "Eliminate unreachable code blocks",
+        "Simplify nested conditions into helper methods",
+        "Optimize boolean expressions",
+        "Remove empty except blocks",
+        "Detect and fix redundant code patterns",
+        "Apply semantic refactoring opportunities"
+      ],
+      "metrics": {
+        "complexity_threshold": 15,
+        "min_extractable_lines": 5,
+        "max_complexity_reduction": "40%",
+        "semantic_match_threshold": 2
+      },
+      "dependencies": [
+        "semantic_enhancer",
+        "regex_patterns_service"
+      ],
+      "exclusions": [
+        "__init__",
+        "simple_getters",
+        "test_fixtures"
+      ]
+    },
+    {
+      "id": "performance-agent",
+      "name": "PerformanceAgent",
+      "confidence_threshold": 0.85,
+      "description": "Detects and optimizes performance bottlenecks including O(n²) operations and inefficient patterns",
+      "capabilities": [
+        "algorithmic_complexity_detection",
+        "loop_optimization",
+        "data_structure_optimization",
+        "caching_implementation",
+        "database_query_optimization",
+        "import_optimization",
+        "list_comprehension_conversion"
+      ],
+      "triggers": {
+        "patterns": [
+          "O(n²)",
+          "nested loop",
+          "inefficient",
+          "slow performance",
+          "bottleneck",
+          "quadratic",
+          "repeated calculation",
+          "unnecessary iteration",
+          "list.append in loop",
+          "string concatenation in loop"
+        ],
+        "conditions": [
+          "nested_loops_detected",
+          "repeated_list_operations",
+          "inefficient_data_structures",
+          "missing_caching_opportunities"
+        ],
+        "issue_types": [
+          "PERFORMANCE"
+        ]
+      },
+      "fixes": [
+        "Replace nested loops with optimized algorithms",
+        "Convert repeated list.append() to list comprehensions",
+        "Implement caching for expensive operations",
+        "Optimize database queries with proper indexing",
+        "Replace inefficient data structures (list → set/dict)",
+        "Batch repeated calculations",
+        "Use generators for large data processing",
+        "Optimize import statements"
+      ],
+      "metrics": {
+        "max_nested_loop_depth": 2,
+        "list_append_threshold": 10,
+        "cache_hit_ratio_target": 0.8,
+        "complexity_improvement_target": "50%"
+      },
+      "dependencies": [
+        "ast_analyzer",
+        "performance_helpers"
+      ],
+      "exclusions": [
+        "test_files",
+        "migration_scripts"
+      ]
+    },
+    {
+      "id": "security-agent",
+      "name": "SecurityAgent",
+      "confidence_threshold": 0.8,
+      "description": "Identifies and fixes security vulnerabilities including hardcoded paths and unsafe operations",
+      "capabilities": [
+        "path_security_validation",
+        "subprocess_safety_enforcement",
+        "regex_pattern_validation",
+        "unsafe_operation_detection",
+        "credentials_detection",
+        "injection_vulnerability_detection"
+      ],
+      "triggers": {
+        "patterns": [
+          "hardcoded path",
+          "shell=True",
+          "unsafe subprocess",
+          "regex catastrophic",
+          "eval(",
+          "exec(",
+          "pickle.loads",
+          "sql injection",
+          "command injection",
+          "path traversal",
+          "unsafe regex"
+        ],
+        "conditions": [
+          "hardcoded_paths_found",
+          "shell_true_usage",
+          "unsafe_regex_detected",
+          "eval_exec_usage",
+          "unsafe_deserialization"
+        ],
+        "issue_types": [
+          "SECURITY",
+          "REGEX_VALIDATION"
+        ]
+      },
+      "fixes": [
+        "Replace hardcoded paths with tempfile.mkdtemp()",
+        "Remove shell=True from subprocess calls",
+        "Use centralized safe regex patterns",
+        "Replace eval/exec with safer alternatives",
+        "Implement input validation and sanitization",
+        "Add path traversal protection",
+        "Use parameterized queries for SQL",
+        "Validate and sanitize user inputs"
+      ],
+      "metrics": {
+        "critical_findings_threshold": 0,
+        "max_allowed_regex_steps": 1000000,
+        "path_validation_coverage": "100%"
+      },
+      "dependencies": [
+        "regex_patterns_service",
+        "security_scanner"
+      ],
+      "exclusions": [
+        "test_mocks",
+        "example_code"
+      ]
+    },
+    {
+      "id": "documentation-agent",
+      "name": "DocumentationAgent",
+      "confidence_threshold": 0.8,
+      "description": "Maintains documentation consistency including changelogs and markdown files",
+      "capabilities": [
+        "changelog_generation",
+        "markdown_consistency",
+        "docstring_validation",
+        "api_documentation_sync",
+        "readme_updates",
+        "version_documentation"
+      ],
+      "triggers": {
+        "patterns": [
+          "missing changelog",
+          "outdated documentation",
+          "inconsistent markdown",
+          "missing docstring",
+          "api docs out of sync",
+          "readme incomplete",
+          "version mismatch in docs"
+        ],
+        "conditions": [
+          "changelog_missing_entries",
+          "markdown_style_violations",
+          "docstring_coverage < 80%",
+          "api_signature_changed"
+        ],
+        "issue_types": [
+          "DOCUMENTATION"
+        ]
+      },
+      "fixes": [
+        "Generate changelog entries from git commits",
+        "Standardize markdown formatting",
+        "Add missing docstrings with proper formatting",
+        "Update API documentation for signature changes",
+        "Synchronize README with codebase changes",
+        "Update version references across docs",
+        "Fix broken internal documentation links"
+      ],
+      "metrics": {
+        "docstring_coverage_target": 0.8,
+        "changelog_completeness": "100%",
+        "markdown_style_compliance": "100%"
+      },
+      "dependencies": [
+        "git_service",
+        "markdown_parser"
+      ],
+      "exclusions": [
+        "auto_generated_docs",
+        "vendor_docs"
+      ]
+    },
+    {
+      "id": "test-creation-agent",
+      "name": "TestCreationAgent",
+      "confidence_threshold": 0.8,
+      "description": "Creates and fixes test failures with proper fixtures and assertions",
+      "capabilities": [
+        "test_failure_diagnosis",
+        "fixture_creation",
+        "assertion_optimization",
+        "mock_implementation",
+        "test_coverage_improvement",
+        "parametrized_test_generation"
+      ],
+      "triggers": {
+        "patterns": [
+          "test failed",
+          "assertion error",
+          "fixture not found",
+          "test timeout",
+          "mock missing",
+          "test coverage below threshold",
+          "missing test case",
+          "flaky test"
+        ],
+        "conditions": [
+          "test_failures_detected",
+          "missing_fixtures",
+          "coverage_below_target",
+          "assertion_errors",
+          "timeout_issues"
+        ],
+        "issue_types": [
+          "TEST_FAILURE",
+          "DEPENDENCY",
+          "COVERAGE_IMPROVEMENT"
+        ]
+      },
+      "fixes": [
+        "Diagnose and fix test assertion failures",
+        "Create missing pytest fixtures",
+        "Implement proper mocking for dependencies",
+        "Add timeout handling for async tests",
+        "Generate test cases for uncovered code",
+        "Convert to parametrized tests for multiple scenarios",
+        "Fix flaky tests with proper setup/teardown",
+        "Resolve test dependency issues"
+      ],
+      "metrics": {
+        "coverage_target": 1.0,
+        "max_test_duration": 300,
+        "assertion_clarity_score": 0.9,
+        "fixture_reuse_ratio": 0.7
+      },
+      "dependencies": [
+        "pytest_framework",
+        "test_helpers"
+      ],
+      "exclusions": [
+        "integration_tests",
+        "manual_test_scripts"
+      ]
+    },
+    {
+      "id": "dry-agent",
+      "name": "DRYAgent",
+      "confidence_threshold": 0.8,
+      "description": "Eliminates code duplication by extracting common patterns into reusable components",
+      "capabilities": [
+        "duplication_detection",
+        "common_pattern_extraction",
+        "utility_function_creation",
+        "base_class_extraction",
+        "mixin_implementation",
+        "decorator_pattern_application"
+      ],
+      "triggers": {
+        "patterns": [
+          "duplicate code",
+          "repeated logic",
+          "copy-paste",
+          "similar functions",
+          "code smell",
+          "redundant implementation",
+          "parallel patterns"
+        ],
+        "conditions": [
+          "code_similarity > 70%",
+          "repeated_blocks >= 3",
+          "similar_function_signatures",
+          "redundant_implementations"
+        ],
+        "issue_types": [
+          "DRY_VIOLATION"
+        ]
+      },
+      "fixes": [
+        "Extract duplicate code into utility functions",
+        "Create base classes for common functionality",
+        "Implement mixins for shared behaviors",
+        "Apply decorator patterns for cross-cutting concerns",
+        "Consolidate similar functions with parameters",
+        "Extract configuration into constants",
+        "Create helper modules for repeated patterns"
+      ],
+      "metrics": {
+        "similarity_threshold": 0.7,
+        "min_duplication_lines": 5,
+        "extraction_success_rate": 0.85,
+        "max_code_duplication": "5%"
+      },
+      "dependencies": [
+        "ast_analyzer",
+        "similarity_matcher"
+      ],
+      "exclusions": [
+        "test_data",
+        "mock_implementations",
+        "example_code"
+      ]
+    },
+    {
+      "id": "formatting-agent",
+      "name": "FormattingAgent",
+      "confidence_threshold": 0.8,
+      "description": "Enforces code style and formatting standards with automatic fixes",
+      "capabilities": [
+        "code_style_enforcement",
+        "import_sorting",
+        "line_length_formatting",
+        "whitespace_normalization",
+        "docstring_formatting",
+        "type_hint_formatting"
+      ],
+      "triggers": {
+        "patterns": [
+          "style violation",
+          "formatting error",
+          "import order",
+          "line too long",
+          "trailing whitespace",
+          "inconsistent indentation",
+          "missing spaces",
+          "quote style mismatch"
+        ],
+        "conditions": [
+          "ruff_violations",
+          "import_unsorted",
+          "line_length > 88",
+          "whitespace_issues",
+          "style_inconsistency"
+        ],
+        "issue_types": [
+          "FORMATTING",
+          "IMPORT_ERROR"
+        ]
+      },
+      "fixes": [
+        "Apply Ruff auto-formatting",
+        "Sort and organize imports",
+        "Fix line length violations",
+        "Normalize whitespace and indentation",
+        "Format docstrings consistently",
+        "Standardize quote styles",
+        "Add missing trailing commas",
+        "Fix spacing around operators"
+      ],
+      "metrics": {
+        "max_line_length": 88,
+        "import_sort_compliance": "100%",
+        "style_consistency": "100%",
+        "auto_fix_rate": 0.95
+      },
+      "dependencies": [
+        "ruff_formatter",
+        "import_sorter"
+      ],
+      "exclusions": [
+        "generated_files",
+        "vendor_code"
+      ]
+    },
+    {
+      "id": "import-optimization-agent",
+      "name": "ImportOptimizationAgent",
+      "confidence_threshold": 0.85,
+      "description": "Optimizes and reorganizes import statements for better clarity and performance",
+      "capabilities": [
+        "import_cleanup",
+        "circular_import_detection",
+        "import_grouping",
+        "lazy_import_implementation",
+        "type_checking_imports",
+        "unused_import_removal"
+      ],
+      "triggers": {
+        "patterns": [
+          "import error",
+          "circular import",
+          "unused import",
+          "import not sorted",
+          "missing import",
+          "relative import issue",
+          "import order violation"
+        ],
+        "conditions": [
+          "circular_imports_detected",
+          "unused_imports > 0",
+          "import_grouping_incorrect",
+          "missing_type_checking_block"
+        ],
+        "issue_types": [
+          "IMPORT_ERROR",
+          "DEAD_CODE"
+        ]
+      },
+      "fixes": [
+        "Remove unused imports",
+        "Resolve circular import dependencies",
+        "Group imports by standard/third-party/local",
+        "Move type-only imports to TYPE_CHECKING block",
+        "Implement lazy imports for heavy modules",
+        "Fix relative import paths",
+        "Consolidate duplicate imports",
+        "Add missing __init__.py imports"
+      ],
+      "metrics": {
+        "import_cleanliness": "100%",
+        "circular_import_count": 0,
+        "type_checking_coverage": 0.9,
+        "import_load_time_reduction": "30%"
+      },
+      "dependencies": [
+        "import_analyzer",
+        "dependency_graph"
+      ],
+      "exclusions": [
+        "__init__.py",
+        "compatibility_shims"
+      ]
+    },
+    {
+      "id": "test-specialist-agent",
+      "name": "TestSpecialistAgent",
+      "confidence_threshold": 0.8,
+      "description": "Advanced testing scenarios including async tests, fixtures, and complex mocking",
+      "capabilities": [
+        "async_test_implementation",
+        "advanced_fixture_design",
+        "complex_mocking_patterns",
+        "parametrized_test_optimization",
+        "test_isolation_enforcement",
+        "edge_case_generation"
+      ],
+      "triggers": {
+        "patterns": [
+          "async test failed",
+          "fixture conflict",
+          "mock not working",
+          "test isolation issue",
+          "parametrize error",
+          "edge case missing",
+          "test flakiness",
+          "teardown failure"
+        ],
+        "conditions": [
+          "async_test_failures",
+          "fixture_scope_issues",
+          "mock_side_effects_incorrect",
+          "test_interdependency"
+        ],
+        "issue_types": [
+          "TEST_FAILURE",
+          "IMPORT_ERROR"
+        ]
+      },
+      "fixes": [
+        "Fix async/await patterns in tests",
+        "Resolve fixture scope and teardown issues",
+        "Implement advanced mocking with side_effects",
+        "Optimize parametrized test combinations",
+        "Ensure proper test isolation",
+        "Add edge case and boundary tests",
+        "Fix test cleanup and resource management",
+        "Handle test timeout scenarios"
+      ],
+      "metrics": {
+        "async_test_success_rate": 0.95,
+        "fixture_isolation_score": 1.0,
+        "mock_accuracy": 0.9,
+        "edge_case_coverage": 0.8
+      },
+      "dependencies": [
+        "pytest_asyncio",
+        "pytest_mock",
+        "hypothesis"
+      ],
+      "exclusions": [
+        "legacy_tests",
+        "manual_verification_tests"
+      ]
+    },
+    {
+      "id": "semantic-agent",
+      "name": "SemanticAgent",
+      "confidence_threshold": 0.85,
+      "description": "Semantic analysis and code comprehension using vector embeddings and intelligent refactoring",
+      "capabilities": [
+        "semantic_code_analysis",
+        "pattern_similarity_detection",
+        "context_aware_refactoring",
+        "cross_file_pattern_matching",
+        "intelligent_code_understanding",
+        "session_memory_integration"
+      ],
+      "triggers": {
+        "patterns": [
+          "semantic context needed",
+          "pattern similarity",
+          "code understanding required",
+          "cross-file refactoring",
+          "context-aware optimization",
+          "intelligent comprehension"
+        ],
+        "conditions": [
+          "similar_patterns_detected > 3",
+          "semantic_context_required",
+          "cross_file_analysis_needed",
+          "pattern_matching_confidence > 0.8"
+        ],
+        "issue_types": [
+          "SEMANTIC_CONTEXT"
+        ]
+      },
+      "fixes": [
+        "Detect semantically similar code patterns",
+        "Provide context-aware refactoring suggestions",
+        "Find cross-file code duplication",
+        "Generate intelligent code comprehension insights",
+        "Store and retrieve semantic patterns across sessions",
+        "Recommend consistent refactoring approaches",
+        "Identify architectural pattern opportunities"
+      ],
+      "metrics": {
+        "similarity_threshold": 0.8,
+        "min_semantic_matches": 3,
+        "context_accuracy": 0.85,
+        "session_memory_retention": "90 days"
+      },
+      "dependencies": [
+        "vector_embeddings",
+        "session_mgmt_mcp",
+        "semantic_enhancer"
+      ],
+      "exclusions": [
+        "auto_generated_code",
+        "obfuscated_code"
+      ]
+    },
+    {
+      "id": "architect-agent",
+      "name": "ArchitectAgent",
+      "confidence_threshold": 0.85,
+      "description": "Architecture patterns, design recommendations, and system-level optimization",
+      "capabilities": [
+        "architectural_pattern_detection",
+        "design_pattern_recommendation",
+        "system_optimization",
+        "dependency_injection_patterns",
+        "scalability_analysis",
+        "modularity_improvement"
+      ],
+      "triggers": {
+        "patterns": [
+          "architecture smell",
+          "tight coupling",
+          "god object",
+          "design pattern needed",
+          "scalability issue",
+          "modularity violation",
+          "layering problem",
+          "circular dependency"
+        ],
+        "conditions": [
+          "god_class_detected",
+          "tight_coupling > 0.7",
+          "missing_design_pattern",
+          "scalability_bottleneck",
+          "layering_violation"
+        ],
+        "issue_types": [
+          "COMPLEXITY",
+          "DRY_VIOLATION",
+          "PERFORMANCE"
+        ]
+      },
+      "fixes": [
+        "Apply appropriate design patterns (Factory, Strategy, etc.)",
+        "Implement dependency injection for loose coupling",
+        "Break down god objects into focused components",
+        "Establish proper layering and boundaries",
+        "Resolve circular dependencies",
+        "Improve modularity and separation of concerns",
+        "Optimize system architecture for scalability",
+        "Apply SOLID principles"
+      ],
+      "metrics": {
+        "coupling_threshold": 0.3,
+        "cohesion_target": 0.8,
+        "layer_violation_count": 0,
+        "pattern_application_success": 0.85
+      },
+      "dependencies": [
+        "architecture_analyzer",
+        "dependency_graph",
+        "pattern_library"
+      ],
+      "exclusions": [
+        "prototype_code",
+        "spike_solutions"
+      ]
+    },
+    {
+      "id": "enhanced-proactive-agent",
+      "name": "EnhancedProactiveAgent",
+      "confidence_threshold": 0.9,
+      "description": "Proactive prevention, predictive monitoring, and preemptive optimization",
+      "capabilities": [
+        "predictive_issue_detection",
+        "preemptive_optimization",
+        "trend_analysis",
+        "quality_degradation_prevention",
+        "automated_preventive_fixes",
+        "continuous_health_monitoring"
+      ],
+      "triggers": {
+        "patterns": [
+          "quality degradation trend",
+          "potential future issue",
+          "preventable problem",
+          "optimization opportunity",
+          "health degradation",
+          "early warning signal",
+          "risk indicator"
+        ],
+        "conditions": [
+          "quality_trend_declining",
+          "complexity_increasing_rapidly",
+          "test_coverage_decreasing",
+          "performance_degrading",
+          "tech_debt_accumulating"
+        ],
+        "issue_types": [
+          "COMPLEXITY",
+          "PERFORMANCE",
+          "COVERAGE_IMPROVEMENT",
+          "TEST_ORGANIZATION"
+        ]
+      },
+      "fixes": [
+        "Detect and prevent quality degradation before it occurs",
+        "Apply preemptive optimizations based on trend analysis",
+        "Implement automated preventive measures",
+        "Monitor and maintain code health continuously",
+        "Predict and mitigate future technical debt",
+        "Proactively improve test coverage",
+        "Prevent complexity accumulation",
+        "Early intervention for performance issues"
+      ],
+      "metrics": {
+        "prediction_accuracy": 0.85,
+        "prevention_success_rate": 0.9,
+        "early_detection_rate": 0.8,
+        "health_score_maintenance": 0.85
+      },
+      "dependencies": [
+        "ml_trend_analyzer",
+        "quality_metrics_tracker",
+        "predictive_models",
+        "health_monitor"
+      ],
+      "exclusions": [
+        "experimental_features",
+        "deprecated_modules"
+      ]
+    }
+  ],
+  "workflow_integration": {
+    "execution_order": [
+      "enhanced-proactive-agent",
+      "architect-agent",
+      "semantic-agent",
+      "refactoring-agent",
+      "performance-agent",
+      "security-agent",
+      "dry-agent",
+      "test-specialist-agent",
+      "test-creation-agent",
+      "documentation-agent",
+      "import-optimization-agent",
+      "formatting-agent"
+    ],
+    "parallel_execution_groups": [
+      [
+        "semantic-agent",
+        "architect-agent"
+      ],
+      [
+        "refactoring-agent",
+        "dry-agent"
+      ],
+      [
+        "test-specialist-agent",
+        "test-creation-agent"
+      ],
+      [
+        "import-optimization-agent",
+        "formatting-agent"
+      ]
+    ],
+    "batch_processing": {
+      "enabled": true,
+      "min_confidence": 0.7,
+      "max_iterations": 3,
+      "retry_on_failure": true
+    }
+  },
+  "selection_criteria": {
+    "primary_factors": [
+      "issue_type_match",
+      "confidence_threshold",
+      "pattern_recognition",
+      "condition_satisfaction"
+    ],
+    "secondary_factors": [
+      "agent_priority",
+      "historical_success_rate",
+      "semantic_context",
+      "session_memory"
+    ],
+    "fallback_strategy": "use_general_purpose_agent"
+  },
+  "quality_metrics": {
+    "overall_success_rate": 0.87,
+    "average_confidence": 0.85,
+    "fix_application_rate": 0.92,
+    "false_positive_rate": 0.05
+  }
+}

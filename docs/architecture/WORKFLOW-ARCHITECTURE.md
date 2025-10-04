@@ -4,13 +4,13 @@ This document describes the complete workflow architecture for crackerjack's AI-
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Current Workflow (Basic Mode)](#current-workflow-basic-mode)
-3. [New Auto-Fix Workflow (AI Mode)](#new-auto-fix-workflow-ai-mode)
-4. [MCP Integration Flow](#mcp-integration-flow)
-5. [Component Architecture](#component-architecture)
-6. [Security Layers](#security-layers)
-7. [Iteration Loop Design](#iteration-loop-design)
+1. [Overview](<#overview>)
+2. [Current Workflow (Basic Mode)](<#current-workflow-basic-mode>)
+3. [New Auto-Fix Workflow (AI Mode)](<#new-auto-fix-workflow-ai-mode>)
+4. [MCP Integration Flow](<#mcp-integration-flow>)
+5. [Component Architecture](<#component-architecture>)
+6. [Security Layers](<#security-layers>)
+7. [Iteration Loop Design](<#iteration-loop-design>)
 
 ---
 
@@ -36,7 +36,7 @@ Pre-commit Hooks → Parse Results → Return to User
 
 ### Workflow Diagram
 
-![Basic Workflow](../diagrams/basic-workflow.png)
+> **Note**: Workflow diagrams are planned for future documentation updates.
 
 ### Steps
 
@@ -75,7 +75,7 @@ Convergence or Max Iterations → Return Results
 
 ### Workflow Diagram
 
-![Auto-Fix Workflow](../diagrams/auto-fix-workflow.png)
+> **Note**: Workflow diagrams are planned for future documentation updates.
 
 ### Iteration Loop
 
@@ -109,11 +109,11 @@ for iteration in range(1, max_iterations + 1):
 
 ### Sequence Diagram: Basic Mode
 
-![MCP Basic Sequence](../diagrams/mcp-basic-sequence.png)
+> **Note**: Sequence diagrams are planned for future documentation updates.
 
 ### Sequence Diagram: AI Mode
 
-![MCP AI Sequence](../diagrams/mcp-ai-sequence.png)
+> **Note**: Sequence diagrams are planned for future documentation updates.
 
 ### MCP Parameter Validation
 

@@ -70,17 +70,17 @@ Crackerjack is built on the following core principles:
 
 ## Table of Contents
 
-- \[[#installation|Installation]\]
-- \[[#quick-start|Quick Start]\]
-- \[[#ai-auto-fix-features|AI Auto-Fix Features]\]
-- \[[#core-workflow|Core Workflow]\]
-- \[[#core-features|Core Features]\]
-- \[[#mcp-server-configuration|MCP Server Configuration]\]
-- \[[#pre-commit-hook-modes|Pre-commit Hook Modes]\]
-- \[[#command-reference|Command Reference]\]
-- \[[#style-guide|Style Guide]\]
-- \[[#publishing--version-management|Publishing & Version Management]\]
-- \[[#-troubleshooting|Troubleshooting]\]
+- [Installation](<#installation>)
+- [Quick Start](<#quick-start>)
+- [AI Auto-Fix Features](<#ai-auto-fix-features>)
+- [Core Workflow](<#core-workflow>)
+- [Core Features](<#core-features>)
+- [MCP Server Configuration](<#mcp-server-configuration>)
+- [Pre-commit Hook Modes](<#pre-commit-hook-modes>)
+- [Command Reference](<#command-reference>)
+- [Style Guide](<#style-guide>)
+- [Publishing & Version Management](<#publishing--version-management>)
+- [Troubleshooting](<#-troubleshooting>)
 
 ## Installation
 
@@ -707,7 +707,7 @@ python -m crackerjack --ai-fix
 | **Clear Caches** | `python -m crackerjack --clear-cache` | Reset all cache data |
 | **Fast Iteration** | `python -m crackerjack --skip-hooks` | Skip quality checks during dev |
 | **Documentation** | `python -m crackerjack --generate-docs` | Generate API documentation |
-| **Advanced Features** | See \[[ADVANCED-FEATURES|ADVANCED-FEATURES.md]\] | 82 enterprise/power user flags |
+| **Advanced Features** | See [ADVANCED-FEATURES.md](<./docs/guides/ADVANCED-FEATURES.md>) | 82 enterprise/power user flags |
 
 **📑 Alphabetical Flag Reference**
 
@@ -748,9 +748,9 @@ python -m crackerjack --ai-fix
 
 **🔗 Related Documentation**
 
-- **Advanced Features**: \[[ADVANCED-FEATURES|ADVANCED-FEATURES.md]\] - 82 enterprise/power user flags
-- **Developer Guide**: \[[CLAUDE|CLAUDE.md]\] - AI assistant guidelines and developer commands
-- **Phase 2 Analysis**: \[[PHASE2-CROSS-REFERENCE-ANALYSIS|docs/PHASE2-CROSS-REFERENCE-ANALYSIS.md]\] - CLI flag audit
+- **Advanced Features**: [ADVANCED-FEATURES.md](<./docs/guides/ADVANCED-FEATURES.md>) - 82 enterprise/power user flags
+- **Developer Guide**: [CLAUDE.md](<./CLAUDE.md>) - AI assistant guidelines and developer commands
+- **Phase 2 Analysis**: [PHASE2-CROSS-REFERENCE-ANALYSIS.md](<./docs/history/phases/PHASE2-CROSS-REFERENCE-ANALYSIS.md>) - CLI flag audit (archived)
 
 ______________________________________________________________________
 

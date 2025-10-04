@@ -1,0 +1,1516 @@
+# ERROR-PATTERNS.yaml
+# Automated error detection and fix patterns for Crackerjack
+# Version: 1.0.0
+# Last Updated: 2025-10-04
+
+version: "1.0.0"
+metadata:
+  description: "Structured error patterns for automated diagnosis and fixing in Crackerjack"
+  agent_count: 12
+  pattern_count: 50
+  confidence_threshold: 0.7
+
+# ============================================================================
+# CATEGORY: TEST FAILURES
+# ============================================================================
+patterns:
+  - id: pytest-assertion-failure
+    name: "Pytest Assertion Failure"
+    category: test_failure
+    severity: medium
+    detection:
+      keywords:
+        - "AssertionError"
+        - "assert"
+        - "Expected"
+        - "but got"
+      regex: "assert\\s+.+\\s+==\\s+.+|AssertionError:\\s+assert"
+      conditions:
+        - "pytest output present"
+        - "test file path in traceback"
+    diagnostics:
+      - step: "Identify failing assertion"
+        command: "grep -n 'assert' {test_file}"
+      - step: "Check test data setup"
+        command: "grep -B 5 'def test_' {test_file}"
+      - step: "Verify expected vs actual values"
+        command: "pytest {test_file}::{test_name} -vv"
+    fix_strategy:
+      agent: "TestCreationAgent"
+      confidence: 0.8
+      actions:
+        - "Analyze expected vs actual values"
+        - "Check test fixture setup"
+        - "Verify mock configurations"
+        - "Update assertion to match actual behavior if correct"
+        - "Fix implementation if test expectation is correct"
+      fallback: "Request manual review of test logic and implementation"
+    examples:
+      - error: "AssertionError: assert 5 == 10"
+        fix: "Update expected value or fix calculation logic"
+      - error: "AssertionError: assert 'foo' in result"
+        fix: "Verify result construction and expected content"
+
+  - id: pytest-async-timeout
+    name: "Async Test Timeout"
+    category: test_failure
+    severity: high
+    detection:
+      keywords:
+        - "asyncio"
+        - "timeout"
+        - "timed out"
+        - "300 seconds"
+      regex: "asyncio\\.exceptions\\.TimeoutError|timed?\\s*out.*300"
+      conditions:
+        - "async test function"
+        - "pytest-asyncio marker present"
+    diagnostics:
+      - step: "Identify async test"
+        command: "grep -n '@pytest.mark.asyncio' {test_file}"
+      - step: "Check for blocking operations"
+        command: "grep -n 'await' {test_file}"
+      - step: "Verify async fixture lifecycle"
+        command: "grep -A 10 '@pytest.fixture.*async' {test_file}"
+    fix_strategy:
+      agent: "TestSpecialistAgent"
+      confidence: 0.85
+      actions:
+        - "Convert to synchronous test if possible"
+        - "Replace complex async logic with simple config tests"
+        - "Remove blocking await operations"
+        - "Simplify test to avoid lifecycle issues"
+      fallback: "Rewrite as synchronous configuration test"
+    examples:
+      - error: "TimeoutError: test_batch_processing timed out after 300s"
+        fix: "Replace async batch test with synchronous config validation"
+      - error: "asyncio fixture hanging on cleanup"
+        fix: "Convert to simple synchronous test without async fixtures"
+
+  - id: pytest-fixture-error
+    name: "Pytest Fixture Error"
+    category: test_failure
+    severity: medium
+    detection:
+      keywords:
+        - "fixture"
+        - "not found"
+        - "ScopeMismatch"
+        - "FixtureLookupError"
+      regex: "fixture\\s+['\"]\\w+['\"]\\s+not\\s+found|FixtureLookupError"
+      conditions:
+        - "pytest execution"
+        - "conftest.py or test file involved"
+    diagnostics:
+      - step: "List available fixtures"
+        command: "pytest --fixtures {test_file}"
+      - step: "Check conftest.py"
+        command: "grep -n '@pytest.fixture' tests/conftest.py"
+      - step: "Verify fixture scope"
+        command: "grep -A 2 '@pytest.fixture' {fixture_file}"
+    fix_strategy:
+      agent: "TestCreationAgent"
+      confidence: 0.9
+      actions:
+        - "Add missing fixture to conftest.py"
+        - "Fix fixture scope mismatch"
+        - "Update fixture import paths"
+        - "Verify fixture dependencies"
+      fallback: "Create minimal fixture in test file directly"
+    examples:
+      - error: "fixture 'mock_config' not found"
+        fix: "Add @pytest.fixture def mock_config() to conftest.py"
+      - error: "ScopeMismatch: session fixture used in function scope"
+        fix: "Change fixture scope or test scope to match"
+
+  - id: pytest-import-error-in-test
+    name: "Import Error in Test"
+    category: test_failure
+    severity: high
+    detection:
+      keywords:
+        - "ImportError"
+        - "ModuleNotFoundError"
+        - "cannot import"
+      regex: "ImportError:|ModuleNotFoundError:|cannot\\s+import\\s+name"
+      conditions:
+        - "test file in traceback"
+        - "import statement present"
+    diagnostics:
+      - step: "Check import statement"
+        command: "grep -n 'from.*import\\|^import' {test_file}"
+      - step: "Verify module exists"
+        command: "python -c 'import {module}'"
+      - step: "Check dependency installation"
+        command: "uv pip list | grep {package}"
+    fix_strategy:
+      agent: "ImportOptimizationAgent"
+      confidence: 0.85
+      actions:
+        - "Fix import path (use protocol imports)"
+        - "Add missing dependency to pyproject.toml"
+        - "Resolve circular import"
+        - "Update import to use correct module path"
+      fallback: "Add package to pyproject.toml and run uv sync"
+    examples:
+      - error: "cannot import name 'TestManager' from crackerjack.managers"
+        fix: "from ..models.protocols import TestManagerProtocol"
+      - error: "ModuleNotFoundError: No module named 'pytest_mock'"
+        fix: "Add pytest-mock to [project.dependencies] in pyproject.toml"
+
+# ============================================================================
+# CATEGORY: TYPE ERRORS
+# ============================================================================
+
+  - id: mypy-incompatible-type
+    name: "Mypy Incompatible Type Error"
+    category: type_error
+    severity: medium
+    detection:
+      keywords:
+        - "error: Incompatible"
+        - "expected"
+        - "got"
+      regex: "error:\\s+Incompatible\\s+.*expected.*got"
+      conditions:
+        - "mypy or zuban output"
+        - "type annotation present"
+    diagnostics:
+      - step: "Identify type mismatch location"
+        command: "grep -n '{variable_name}' {file}"
+      - step: "Check type annotations"
+        command: "grep -B 5 -A 5 'def {function}' {file}"
+      - step: "Verify protocol compliance"
+        command: "grep 'class.*Protocol' crackerjack/models/protocols.py"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.85
+      actions:
+        - "Add missing type annotation"
+        - "Fix incorrect type hint"
+        - "Use protocol type instead of concrete class"
+        - "Add type: ignore with explanation if intentional"
+      fallback: "Add explicit type cast with runtime validation"
+    examples:
+      - error: "error: Incompatible type: expected 'Path', got 'str'"
+        fix: "Convert str to Path: Path(value)"
+      - error: "error: expected TestManagerProtocol, got TestManager"
+        fix: "from ..models.protocols import TestManagerProtocol"
+
+  - id: zuban-missing-annotation
+    name: "Zuban Missing Type Annotation"
+    category: type_error
+    severity: low
+    detection:
+      keywords:
+        - "missing type annotation"
+        - "needs type annotation"
+      regex: "missing\\s+type\\s+annotation|needs\\s+type\\s+annotation"
+      conditions:
+        - "zuban type checker output"
+        - "function or variable declaration"
+    diagnostics:
+      - step: "Find unannotated declaration"
+        command: "grep -n 'def {function}\\|{variable} =' {file}"
+      - step: "Infer type from usage"
+        command: "grep -A 10 '{variable}' {file}"
+    fix_strategy:
+      agent: "FormattingAgent"
+      confidence: 0.9
+      actions:
+        - "Add type annotation to function parameter"
+        - "Add type annotation to variable"
+        - "Add return type annotation"
+        - "Use typing module types (List, Dict, Optional)"
+      fallback: "Add Any type with TODO comment"
+    examples:
+      - error: "function parameter 'config' needs type annotation"
+        fix: "def process(config: dict[str, Any]) -> bool:"
+      - error: "variable 'results' missing type annotation"
+        fix: "results: list[str] = []"
+
+  - id: protocol-implementation-error
+    name: "Protocol Implementation Error"
+    category: type_error
+    severity: high
+    detection:
+      keywords:
+        - "Protocol"
+        - "not implemented"
+        - "missing attribute"
+      regex: "Protocol.*not\\s+implemented|missing\\s+.*attribute.*Protocol"
+      conditions:
+        - "class implements protocol"
+        - "protocol from models/protocols.py"
+    diagnostics:
+      - step: "Check protocol definition"
+        command: "grep -A 20 'class {Protocol}' crackerjack/models/protocols.py"
+      - step: "Check implementation"
+        command: "grep -A 30 'class {Class}' {file}"
+      - step: "Find missing methods"
+        command: "diff <(grep 'def ' protocol) <(grep 'def ' implementation)"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.8
+      actions:
+        - "Implement missing protocol methods"
+        - "Fix method signatures to match protocol"
+        - "Add required attributes"
+        - "Update type hints to match protocol"
+      fallback: "Create adapter class implementing protocol"
+    examples:
+      - error: "TestManager doesn't implement execute_tests from TestManagerProtocol"
+        fix: "Add async def execute_tests(self, ...) -> TestResult: ..."
+      - error: "missing attribute 'config' in HookManagerProtocol implementation"
+        fix: "Add self.config: Config attribute to __init__"
+
+# ============================================================================
+# CATEGORY: IMPORT ERRORS
+# ============================================================================
+
+  - id: circular-import
+    name: "Circular Import Detection"
+    category: import_error
+    severity: high
+    detection:
+      keywords:
+        - "circular import"
+        - "ImportError"
+        - "partially initialized"
+      regex: "circular\\s+import|partially\\s+initialized\\s+module"
+      conditions:
+        - "import chain forms cycle"
+        - "module initialization fails"
+    diagnostics:
+      - step: "Trace import chain"
+        command: "python -v -c 'import {module}' 2>&1 | grep import"
+      - step: "Find mutual imports"
+        command: "grep -r 'from.*import\\|^import' --include='*.py' | grep -E '{module1}.*{module2}|{module2}.*{module1}'"
+      - step: "Check __init__.py imports"
+        command: "grep 'from.*import' {package}/__init__.py"
+    fix_strategy:
+      agent: "ImportOptimizationAgent"
+      confidence: 0.85
+      actions:
+        - "Move imports to function scope (defer import)"
+        - "Use TYPE_CHECKING guard for type-only imports"
+        - "Extract shared types to separate module"
+        - "Refactor to break circular dependency"
+      fallback: "Use importlib.import_module() at runtime"
+    examples:
+      - error: "circular import: manager imports service imports manager"
+        fix: "from typing import TYPE_CHECKING; if TYPE_CHECKING: from ..managers import ..."
+      - error: "partially initialized module 'crackerjack.services'"
+        fix: "Move import inside function: def method(): from ..services import ..."
+
+  - id: missing-dependency
+    name: "Missing Package Dependency"
+    category: import_error
+    severity: high
+    detection:
+      keywords:
+        - "ModuleNotFoundError"
+        - "No module named"
+      regex: "ModuleNotFoundError:\\s+No\\s+module\\s+named\\s+'([^']+)'"
+      conditions:
+        - "import statement fails"
+        - "package not installed"
+    diagnostics:
+      - step: "Check if package is in pyproject.toml"
+        command: "grep '{package}' pyproject.toml"
+      - step: "Check uv installation"
+        command: "uv pip list | grep -i '{package}'"
+      - step: "Search for package name variants"
+        command: "uv pip search '{package}' | head -5"
+    fix_strategy:
+      agent: "ImportOptimizationAgent"
+      confidence: 0.95
+      actions:
+        - "Add package to pyproject.toml [project.dependencies]"
+        - "Run 'uv sync' to install"
+        - "Verify package name (e.g., pytest-asyncio not pytest_asyncio)"
+        - "Check if package needs extras (e.g., package[extra])"
+      fallback: "Manual: uv add {package}"
+    examples:
+      - error: "ModuleNotFoundError: No module named 'pytest_asyncio'"
+        fix: "Add 'pytest-asyncio>=0.21.0' to pyproject.toml dependencies"
+      - error: "ModuleNotFoundError: No module named 'aiohttp'"
+        fix: "uv add aiohttp"
+
+  - id: wrong-import-protocol
+    name: "Importing Concrete Class Instead of Protocol"
+    category: import_error
+    severity: medium
+    detection:
+      keywords:
+        - "from"
+        - "managers"
+        - "import"
+        - "Manager"
+      regex: "from\\s+\\.\\.(managers|coordinators|services).*import\\s+\\w+(Manager|Coordinator|Service)(?!Protocol)"
+      conditions:
+        - "not importing from models/protocols.py"
+        - "importing concrete implementation"
+    diagnostics:
+      - step: "Find protocol equivalent"
+        command: "grep 'class {Class}Protocol' crackerjack/models/protocols.py"
+      - step: "Check import usage"
+        command: "grep -A 5 'import {Class}' {file}"
+      - step: "Verify type annotation"
+        command: "grep '{Class}' {file} | grep -E ':\\s*{Class}|->\\s*{Class}'"
+    fix_strategy:
+      agent: "ImportOptimizationAgent"
+      confidence: 0.95
+      actions:
+        - "Replace import with protocol import"
+        - "Update type annotations to use protocol"
+        - "Verify all usages are protocol-compliant"
+      fallback: "Keep concrete import but add comment explaining why"
+    examples:
+      - error: "from ..managers.test_manager import TestManager"
+        fix: "from ..models.protocols import TestManagerProtocol"
+      - error: "from ..services.git_service import GitService"
+        fix: "from ..models.protocols import GitServiceProtocol"
+
+# ============================================================================
+# CATEGORY: COMPLEXITY ISSUES
+# ============================================================================
+
+  - id: cyclomatic-complexity-high
+    name: "Cyclomatic Complexity Too High"
+    category: complexity
+    severity: medium
+    detection:
+      keywords:
+        - "complexity"
+        - "too complex"
+        - "C901"
+      regex: "C901.*is\\s+too\\s+complex\\s+\\((\\d+)\\)|complexity\\s+of\\s+(\\d+)"
+      conditions:
+        - "complexity > 15"
+        - "function or method definition"
+    diagnostics:
+      - step: "Identify complex function"
+        command: "grep -n 'def {function}' {file}"
+      - step: "Count decision points"
+        command: "grep -c 'if\\|elif\\|for\\|while\\|except' {file}"
+      - step: "Analyze control flow"
+        command: "grep -A 50 'def {function}' {file} | grep -E 'if|elif|for|while|except'"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.9
+      actions:
+        - "Extract helper methods for logical blocks"
+        - "Use early returns to reduce nesting"
+        - "Replace complex conditions with named booleans"
+        - "Extract validation logic to separate methods"
+        - "Use dictionary dispatch instead of if/elif chains"
+      fallback: "Add # noqa: C901 with detailed comment explaining complexity"
+    examples:
+      - error: "function 'process_workflow' is too complex (22)"
+        fix: |
+          # Before: One 100-line function
+          # After: Main function + 4 helpers
+          def process_workflow(self, data):
+              if not self._validate_input(data): return False
+              processed = self._process_data(data)
+              return self._save_results(processed)
+      - error: "method has complexity of 18"
+        fix: "Break into: _validate(), _transform(), _execute(), _handle_result()"
+
+  - id: long-function
+    name: "Function Too Long"
+    category: complexity
+    severity: low
+    detection:
+      keywords:
+        - "too long"
+        - "lines"
+      regex: "function.*too\\s+long.*\\((\\d+)\\s+lines\\)"
+      conditions:
+        - "function > 50 lines"
+        - "multiple logical blocks"
+    diagnostics:
+      - step: "Count function lines"
+        command: "sed -n '/def {function}/,/^def\\|^class/p' {file} | wc -l"
+      - step: "Identify logical sections"
+        command: "grep -A 100 'def {function}' {file} | grep -E '^\\s+#|^\\s+\"\"\"'"
+      - step: "Find repeated patterns"
+        command: "grep -A 100 'def {function}' {file} | grep -o 'if.*:' | sort | uniq -c"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.85
+      actions:
+        - "Extract setup logic to _setup() helper"
+        - "Extract validation to _validate() helper"
+        - "Extract processing to _process() helper"
+        - "Extract cleanup to _cleanup() helper"
+      fallback: "Add detailed comments to mark logical sections"
+    examples:
+      - error: "function 'run_workflow' is too long (120 lines)"
+        fix: "Break into: _setup(), _run_phases(), _collect_results(), _cleanup()"
+
+  - id: deep-nesting
+    name: "Deep Nesting Detected"
+    category: complexity
+    severity: medium
+    detection:
+      keywords:
+        - "nesting"
+        - "indentation"
+        - "too deep"
+      regex: "nesting.*too\\s+deep|indentation.*level\\s+(\\d+)"
+      conditions:
+        - "nesting > 4 levels"
+        - "multiple nested blocks"
+    diagnostics:
+      - step: "Count indentation levels"
+        command: "grep -E '^\\s{16,}' {file} | head -10"
+      - step: "Find nested blocks"
+        command: "grep -B 2 -A 2 '^\\s{12,}if' {file}"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.85
+      actions:
+        - "Use early returns/continue to reduce nesting"
+        - "Extract nested blocks to helper methods"
+        - "Invert conditions to fail fast"
+        - "Replace nested if/else with guard clauses"
+      fallback: "Add explaining comments for each nesting level"
+    examples:
+      - error: "nesting level 6 in function 'validate'"
+        fix: |
+          # Before: if x: if y: if z: ...
+          # After:
+          if not x: return False
+          if not y: return False
+          if not z: return False
+          # continue with logic
+
+# ============================================================================
+# CATEGORY: SECURITY ISSUES
+# ============================================================================
+
+  - id: hardcoded-path
+    name: "Hardcoded File Path Detected"
+    category: security
+    severity: high
+    detection:
+      keywords:
+        - "hardcoded"
+        - "/tmp/"
+        - "/Users/"
+        - "C:\\"
+      regex: "Path\\(['\"]/(tmp|Users|home)/|open\\(['\"]/(tmp|Users)|['\"]C:\\\\\\\\|\\.cache['\"]"
+      conditions:
+        - "absolute path in code"
+        - "not using tempfile or Path.home()"
+    diagnostics:
+      - step: "Find hardcoded paths"
+        command: "grep -n '\"/tmp/\\|/Users/\\|C:\\\\\\|.cache\"' {file}"
+      - step: "Check for tempfile usage"
+        command: "grep -n 'import tempfile\\|from tempfile' {file}"
+      - step: "Check for platformdirs usage"
+        command: "grep -n 'import platformdirs\\|user_cache_dir' {file}"
+    fix_strategy:
+      agent: "SecurityAgent"
+      confidence: 0.9
+      actions:
+        - "Use tempfile.mkdtemp() for temp directories"
+        - "Use platformdirs.user_cache_dir() for cache"
+        - "Use Path.home() for user directories"
+        - "Use project root relative paths"
+      fallback: "Use os.environ.get() with safe defaults"
+    examples:
+      - error: "Path('/tmp/cache')"
+        fix: "from platformdirs import user_cache_dir; Path(user_cache_dir('crackerjack'))"
+      - error: "open('/Users/foo/.cache/data')"
+        fix: "import tempfile; with tempfile.NamedTemporaryFile() as f: ..."
+
+  - id: shell-true-subprocess
+    name: "Unsafe subprocess.run with shell=True"
+    category: security
+    severity: critical
+    detection:
+      keywords:
+        - "subprocess"
+        - "shell=True"
+        - "shell =True"
+      regex: "subprocess\\.(run|call|Popen|check_output).*shell\\s*=\\s*True"
+      conditions:
+        - "subprocess call present"
+        - "shell parameter is True"
+    diagnostics:
+      - step: "Find shell=True usage"
+        command: "grep -n 'shell=True' {file}"
+      - step: "Check command construction"
+        command: "grep -B 5 'shell=True' {file}"
+      - step: "Verify input sanitization"
+        command: "grep -B 10 'shell=True' {file} | grep -E 'input|user|arg'"
+    fix_strategy:
+      agent: "SecurityAgent"
+      confidence: 0.95
+      actions:
+        - "Remove shell=True"
+        - "Convert command string to list: ['cmd', 'arg1', 'arg2']"
+        - "Use shlex.split() for complex commands"
+        - "Validate and sanitize all inputs"
+      fallback: "If shell features needed, use shlex.quote() for all variables"
+    examples:
+      - error: "subprocess.run(f'git commit -m {msg}', shell=True)"
+        fix: "subprocess.run(['git', 'commit', '-m', msg], shell=False)"
+      - error: "subprocess.run(cmd_string, shell=True)"
+        fix: "import shlex; subprocess.run(shlex.split(cmd_string))"
+
+  - id: eval-exec-usage
+    name: "Dangerous eval() or exec() Usage"
+    category: security
+    severity: critical
+    detection:
+      keywords:
+        - "eval("
+        - "exec("
+        - "__import__"
+      regex: "\\b(eval|exec)\\s*\\(|__import__\\s*\\("
+      conditions:
+        - "dynamic code execution"
+        - "not in safe context"
+    diagnostics:
+      - step: "Find eval/exec usage"
+        command: "grep -n 'eval(\\|exec(' {file}"
+      - step: "Check input source"
+        command: "grep -B 10 'eval(\\|exec(' {file}"
+      - step: "Verify if user-controlled"
+        command: "grep -B 15 'eval(\\|exec(' {file} | grep -E 'input|request|arg|param'"
+    fix_strategy:
+      agent: "SecurityAgent"
+      confidence: 0.8
+      actions:
+        - "Replace eval() with ast.literal_eval() for literals"
+        - "Replace exec() with explicit function calls"
+        - "Use importlib for dynamic imports instead of __import__()"
+        - "Whitelist allowed values instead of executing"
+      fallback: "Add strict validation and sandboxing with RestrictedPython"
+    examples:
+      - error: "result = eval(user_input)"
+        fix: "import ast; result = ast.literal_eval(user_input)"
+      - error: "exec(f'import {module}')"
+        fix: "import importlib; mod = importlib.import_module(module)"
+
+  - id: unsafe-pickle
+    name: "Unsafe pickle/yaml.load Usage"
+    category: security
+    severity: high
+    detection:
+      keywords:
+        - "pickle.load"
+        - "yaml.load"
+        - "yaml.unsafe_load"
+      regex: "pickle\\.loads?\\(|yaml\\.load\\((?!.*Loader=)|yaml\\.unsafe_load"
+      conditions:
+        - "deserializing untrusted data"
+        - "no safe loader specified"
+    diagnostics:
+      - step: "Find unsafe deserialization"
+        command: "grep -n 'pickle.load\\|yaml.load(' {file}"
+      - step: "Check data source"
+        command: "grep -B 5 'pickle.load\\|yaml.load' {file}"
+    fix_strategy:
+      agent: "SecurityAgent"
+      confidence: 0.9
+      actions:
+        - "Use json.load() instead of pickle for simple data"
+        - "Use yaml.safe_load() instead of yaml.load()"
+        - "Validate data structure after loading"
+        - "Use schema validation (e.g., pydantic)"
+      fallback: "Add cryptographic signature verification before unpickling"
+    examples:
+      - error: "data = pickle.load(file)"
+        fix: "import json; data = json.load(file)"
+      - error: "config = yaml.load(file)"
+        fix: "config = yaml.safe_load(file)"
+
+# ============================================================================
+# CATEGORY: PERFORMANCE ISSUES
+# ============================================================================
+
+  - id: quadratic-loop
+    name: "O(n²) Nested Loop Pattern"
+    category: performance
+    severity: medium
+    detection:
+      keywords:
+        - "for"
+        - "in"
+        - "nested"
+      regex: "for\\s+\\w+\\s+in.*:\\s*for\\s+\\w+\\s+in"
+      conditions:
+        - "nested loops over same data"
+        - "linear search in inner loop"
+    diagnostics:
+      - step: "Find nested loops"
+        command: "grep -A 5 'for.*in.*:' {file} | grep 'for.*in.*:'"
+      - step: "Check data structure"
+        command: "grep -B 10 'for.*in.*:.*for.*in' {file}"
+      - step: "Estimate complexity"
+        command: "grep -c 'for.*in' {file}"
+    fix_strategy:
+      agent: "PerformanceAgent"
+      confidence: 0.85
+      actions:
+        - "Use set() for membership testing"
+        - "Use dict() for lookup tables"
+        - "Use list comprehension with filtering"
+        - "Use itertools for efficient iteration"
+        - "Consider using numpy for numerical operations"
+      fallback: "Add early break/continue to reduce iterations"
+    examples:
+      - error: |
+          for item in list1:
+              for other in list2:
+                  if item == other: ...
+        fix: |
+          set2 = set(list2)
+          for item in list1:
+              if item in set2: ...
+      - error: "nested loop searching for matching IDs"
+        fix: "id_map = {item.id: item for item in list2}; lookup = id_map.get(id)"
+
+  - id: inefficient-string-concat
+    name: "Inefficient String Concatenation"
+    category: performance
+    severity: low
+    detection:
+      keywords:
+        - "for"
+        - "in"
+        - "+="
+        - "str"
+      regex: "for\\s+.*\\s+in.*:\\s*\\w+\\s*\\+=\\s*(?:str|f['\"])"
+      conditions:
+        - "string concatenation in loop"
+        - "building result incrementally"
+    diagnostics:
+      - step: "Find string concatenation loops"
+        command: "grep -A 3 'for.*in' {file} | grep '+=.*str\\|+=.*f\"\\|+=.*f\\''"
+      - step: "Check loop size"
+        command: "grep -B 5 'for.*in.*:.*+=' {file}"
+    fix_strategy:
+      agent: "PerformanceAgent"
+      confidence: 0.9
+      actions:
+        - "Use list comprehension + ''.join()"
+        - "Use io.StringIO for large strings"
+        - "Use f-strings for one-time concatenation"
+      fallback: "Use += if loop is small (< 100 iterations)"
+    examples:
+      - error: |
+          result = ""
+          for item in items:
+              result += f"{item}\\n"
+        fix: "result = '\\n'.join(f'{item}' for item in items)"
+      - error: "building string in loop with +="
+        fix: "parts = []; parts.append(item); result = ''.join(parts)"
+
+  - id: list-append-in-loop
+    name: "Inefficient list.append() in Loop"
+    category: performance
+    severity: low
+    detection:
+      keywords:
+        - "for"
+        - "append"
+        - "list"
+      regex: "for\\s+.*\\s+in.*:\\s*\\w+\\.append\\("
+      conditions:
+        - "building list with append in loop"
+        - "simple transformation or filtering"
+    diagnostics:
+      - step: "Find append loops"
+        command: "grep -A 2 'for.*in' {file} | grep '\\.append('"
+      - step: "Check if simple transformation"
+        command: "grep -A 5 'for.*in.*:.*append' {file}"
+    fix_strategy:
+      agent: "PerformanceAgent"
+      confidence: 0.85
+      actions:
+        - "Use list comprehension: [transform(x) for x in items]"
+        - "Use filter() with lambda for filtering"
+        - "Use map() for simple transformations"
+      fallback: "Keep append if logic is complex or has side effects"
+    examples:
+      - error: |
+          result = []
+          for item in items:
+              result.append(item * 2)
+        fix: "result = [item * 2 for item in items]"
+      - error: |
+          filtered = []
+          for x in data:
+              if x > 10:
+                  filtered.append(x)
+        fix: "filtered = [x for x in data if x > 10]"
+
+# ============================================================================
+# CATEGORY: STYLE VIOLATIONS
+# ============================================================================
+
+  - id: ruff-import-order
+    name: "Ruff Import Ordering Violation"
+    category: style
+    severity: low
+    detection:
+      keywords:
+        - "I001"
+        - "import"
+        - "not sorted"
+      regex: "I001.*import.*not\\s+sorted|import.*should\\s+be.*before"
+      conditions:
+        - "ruff linting output"
+        - "import statements present"
+    diagnostics:
+      - step: "Show current imports"
+        command: "grep -n '^import\\|^from' {file} | head -20"
+      - step: "Check ruff config"
+        command: "grep -A 5 '\\[tool.ruff' pyproject.toml"
+    fix_strategy:
+      agent: "FormattingAgent"
+      confidence: 0.95
+      actions:
+        - "Run ruff --fix to auto-sort imports"
+        - "Organize: stdlib → third-party → local"
+        - "Alphabetize within each group"
+        - "Separate groups with blank line"
+      fallback: "Manual reordering following isort rules"
+    examples:
+      - error: "I001 import sys should be before import asyncio"
+        fix: |
+          import asyncio
+          import sys
+
+          from third_party import lib
+
+          from .local import module
+
+  - id: ruff-line-length
+    name: "Ruff Line Too Long"
+    category: style
+    severity: low
+    detection:
+      keywords:
+        - "E501"
+        - "line too long"
+        - "characters"
+      regex: "E501.*line\\s+too\\s+long.*\\((\\d+)\\s*>\\s*(\\d+)\\)"
+      conditions:
+        - "line exceeds configured max length"
+        - "not a comment or string"
+    diagnostics:
+      - step: "Find long line"
+        command: "sed -n '{line}p' {file}"
+      - step: "Check if string/comment"
+        command: "sed -n '{line}p' {file} | grep -E '#|\"\"\"|\\'\\'\\''"
+    fix_strategy:
+      agent: "FormattingAgent"
+      confidence: 0.9
+      actions:
+        - "Break into multiple lines with proper indentation"
+        - "Use parentheses for implicit line continuation"
+        - "Break long strings with implicit concatenation"
+        - "Extract to variable if expression is complex"
+      fallback: "Add # noqa: E501 if line must stay long (URLs, etc.)"
+    examples:
+      - error: "E501 line too long (120 > 100 characters)"
+        fix: |
+          # Before
+          result = some_function(arg1, arg2, arg3, arg4, arg5)
+
+          # After
+          result = some_function(
+              arg1, arg2, arg3,
+              arg4, arg5
+          )
+
+  - id: unused-import
+    name: "Unused Import Statement"
+    category: style
+    severity: low
+    detection:
+      keywords:
+        - "F401"
+        - "imported but unused"
+        - "imported but never used"
+      regex: "F401.*'([^']+)'.*imported\\s+but\\s+(unused|never\\s+used)"
+      conditions:
+        - "import present but not referenced"
+        - "not in __all__ or re-exported"
+    diagnostics:
+      - step: "Find import statement"
+        command: "grep -n 'import {module}\\|from.*import.*{name}' {file}"
+      - step: "Check usage"
+        command: "grep -v '^import\\|^from' {file} | grep '{name}'"
+      - step: "Check __all__"
+        command: "grep '__all__.*{name}' {file}"
+    fix_strategy:
+      agent: "ImportOptimizationAgent"
+      confidence: 0.95
+      actions:
+        - "Remove unused import"
+        - "Add to __all__ if intentionally exported"
+        - "Add # noqa: F401 if import has side effects"
+      fallback: "Keep if import is for type checking only"
+    examples:
+      - error: "F401 'os' imported but unused"
+        fix: "Remove: import os"
+      - error: "F401 'Protocol' imported but unused"
+        fix: "Check if used in type hints, keep with TYPE_CHECKING guard"
+
+  - id: missing-docstring
+    name: "Missing Function/Class Docstring"
+    category: style
+    severity: low
+    detection:
+      keywords:
+        - "D100"
+        - "D101"
+        - "D102"
+        - "Missing docstring"
+      regex: "D10[0-7].*Missing\\s+docstring"
+      conditions:
+        - "public function/class without docstring"
+        - "not a simple property or dunder method"
+    diagnostics:
+      - step: "Find function/class definition"
+        command: "grep -A 3 'def {name}\\|class {name}' {file}"
+      - step: "Check if public"
+        command: "grep 'def {name}\\|class {name}' {file} | grep -v '^\\s*_'"
+    fix_strategy:
+      agent: "DocumentationAgent"
+      confidence: 0.85
+      actions:
+        - "Add docstring with description, args, returns"
+        - "Use Google/NumPy/Sphinx style consistently"
+        - "Include type information in docstring"
+        - "Add examples for complex functions"
+      fallback: "Add minimal one-line docstring"
+    examples:
+      - error: "D102 Missing docstring in public method"
+        fix: |
+          def process_data(self, data: dict[str, Any]) -> bool:
+              \"\"\"Process and validate input data.
+
+              Args:
+                  data: Input dictionary to process
+
+              Returns:
+                  True if processing succeeded, False otherwise
+              \"\"\"
+
+# ============================================================================
+# CATEGORY: COVERAGE ISSUES
+# ============================================================================
+
+  - id: coverage-ratchet-failure
+    name: "Coverage Ratchet Failure"
+    category: coverage
+    severity: medium
+    detection:
+      keywords:
+        - "coverage"
+        - "decreased"
+        - "ratchet"
+        - "baseline"
+      regex: "coverage.*(?:decreased|below|less\\s+than).*baseline|ratchet.*fail"
+      conditions:
+        - "coverage below baseline"
+        - "pytest-cov output"
+    diagnostics:
+      - step: "Check current coverage"
+        command: "pytest --cov=crackerjack --cov-report=term-missing | grep TOTAL"
+      - step: "Check baseline"
+        command: "grep 'coverage_baseline' pyproject.toml"
+      - step: "Find uncovered lines"
+        command: "pytest --cov=crackerjack --cov-report=term-missing | grep -E '^crackerjack.*0%|MISS'"
+    fix_strategy:
+      agent: "TestCreationAgent"
+      confidence: 0.8
+      actions:
+        - "Never reduce coverage baseline"
+        - "Add tests for uncovered lines"
+        - "Focus on critical paths first"
+        - "Aim for incremental improvement (+2% tolerance)"
+      fallback: "Mark specific lines with # pragma: no cover if truly untestable"
+    examples:
+      - error: "Coverage decreased from 45.23% to 44.89%"
+        fix: "Add tests to restore coverage above 45.23%, ideally 47%+"
+      - error: "30 statements missing coverage in file.py"
+        fix: "Create test_file.py with tests for main code paths"
+
+  - id: missing-test-file
+    name: "Missing Test File for Module"
+    category: coverage
+    severity: medium
+    detection:
+      keywords:
+        - "no test"
+        - "missing test"
+        - "0% coverage"
+      regex: "tests/test_\\w+\\.py.*not\\s+found|0%\\s+coverage.*crackerjack/\\w+"
+      conditions:
+        - "source file exists without corresponding test"
+        - "coverage 0% for module"
+    diagnostics:
+      - step: "Check if test file exists"
+        command: "ls tests/test_{module}.py 2>/dev/null || echo 'not found'"
+      - step: "Find source file structure"
+        command: "grep -n '^def\\|^class' crackerjack/{module}.py"
+      - step: "Check imports"
+        command: "grep '^from\\|^import' crackerjack/{module}.py"
+    fix_strategy:
+      agent: "TestCreationAgent"
+      confidence: 0.85
+      actions:
+        - "Create tests/test_{module}.py"
+        - "Add basic structure: fixtures, test class, setup"
+        - "Test public API functions/methods"
+        - "Add integration tests for main workflows"
+      fallback: "Add minimal smoke test to verify imports work"
+    examples:
+      - error: "crackerjack/new_feature.py has 0% coverage"
+        fix: |
+          # Create tests/test_new_feature.py
+          import pytest
+          from crackerjack.new_feature import MainClass
+
+          class TestMainClass:
+              def test_initialization(self):
+                  obj = MainClass()
+                  assert obj is not None
+
+  - id: uncovered-error-path
+    name: "Error Handling Path Not Covered"
+    category: coverage
+    severity: medium
+    detection:
+      keywords:
+        - "except"
+        - "not covered"
+        - "missing branch"
+      regex: "except.*:.*# branch.*not\\s+covered|except.*MISS"
+      conditions:
+        - "exception handler exists"
+        - "handler not executed in tests"
+    diagnostics:
+      - step: "Find exception handlers"
+        command: "grep -n 'except' {file}"
+      - step: "Check if tested"
+        command: "grep -r 'pytest.raises\\|mock.*side_effect' tests/"
+      - step: "Identify exception types"
+        command: "grep -A 2 'except' {file} | grep -E 'except\\s+\\w+'"
+    fix_strategy:
+      agent: "TestCreationAgent"
+      confidence: 0.8
+      actions:
+        - "Add test with pytest.raises() for expected errors"
+        - "Use mock.side_effect to trigger exceptions"
+        - "Test both success and failure paths"
+        - "Verify error messages and logging"
+      fallback: "Add # pragma: no cover if error is truly unreachable"
+    examples:
+      - error: "except FileNotFoundError: # not covered"
+        fix: |
+          def test_file_not_found_error(self, mocker):
+              mocker.patch('pathlib.Path.open', side_effect=FileNotFoundError)
+              with pytest.raises(FileNotFoundError):
+                  process_file(Path('missing.txt'))
+
+# ============================================================================
+# CATEGORY: HOOK FAILURES
+# ============================================================================
+
+  - id: precommit-hook-timeout
+    name: "Pre-commit Hook Timeout"
+    category: hook_failure
+    severity: high
+    detection:
+      keywords:
+        - "timeout"
+        - "timed out"
+        - "pre-commit"
+        - "hook"
+      regex: "hook.*timed?\\s*out|pre-commit.*timeout"
+      conditions:
+        - "hook execution exceeds limit"
+        - "pre-commit framework"
+    diagnostics:
+      - step: "Check hook configuration"
+        command: "grep -A 5 'id:.*{hook}' .pre-commit-config.yaml"
+      - step: "Check recent changes"
+        command: "git diff --stat HEAD~1"
+      - step: "Test hook manually"
+        command: "pre-commit run {hook} --all-files"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.75
+      actions:
+        - "Skip hook during iteration: --skip-hooks"
+        - "Reduce scope: run only on changed files"
+        - "Increase timeout in .pre-commit-config.yaml"
+        - "Optimize hook performance (cache, parallelization)"
+      fallback: "Skip problematic hook temporarily, file issue for fix"
+    examples:
+      - error: "mypy hook timed out after 300 seconds"
+        fix: "Use --skip-hooks for dev, optimize mypy cache for CI"
+      - error: "ruff hook timeout on 1000+ files"
+        fix: "Run on staged files only: git diff --cached --name-only"
+
+  - id: precommit-install-failure
+    name: "Pre-commit Hook Installation Failure"
+    category: hook_failure
+    severity: high
+    detection:
+      keywords:
+        - "pre-commit"
+        - "install"
+        - "failed"
+        - "error"
+      regex: "pre-commit.*install.*(?:failed|error)|hook.*installation.*failed"
+      conditions:
+        - "pre-commit install or update fails"
+        - "hook environment issue"
+    diagnostics:
+      - step: "Check pre-commit config"
+        command: "pre-commit validate-config"
+      - step: "Check hook repos"
+        command: "pre-commit clean && pre-commit install --install-hooks"
+      - step: "Check Python version"
+        command: "python --version && grep python .pre-commit-config.yaml"
+    fix_strategy:
+      agent: "FormattingAgent"
+      confidence: 0.8
+      actions:
+        - "Run pre-commit clean to clear cache"
+        - "Update hook versions in .pre-commit-config.yaml"
+        - "Check Python version compatibility"
+        - "Verify network access to hook repositories"
+      fallback: "Remove problematic hook, investigate separately"
+    examples:
+      - error: "failed to install hook from https://github.com/..."
+        fix: "pre-commit clean && pre-commit autoupdate && pre-commit install"
+      - error: "hook requires Python 3.10 but 3.9 installed"
+        fix: "Update to Python 3.10+ or pin hook to compatible version"
+
+  - id: hook-config-error
+    name: "Hook Configuration Error"
+    category: hook_failure
+    severity: medium
+    detection:
+      keywords:
+        - "config"
+        - "error"
+        - "invalid"
+        - "yaml"
+      regex: "(?:config|yaml).*(?:error|invalid)|invalid.*configuration"
+      conditions:
+        - ".pre-commit-config.yaml syntax error"
+        - "hook parameter issue"
+    diagnostics:
+      - step: "Validate YAML syntax"
+        command: "python -c 'import yaml; yaml.safe_load(open(\".pre-commit-config.yaml\"))'"
+      - step: "Validate pre-commit config"
+        command: "pre-commit validate-config"
+      - step: "Check hook args"
+        command: "grep -A 10 'id:.*{hook}' .pre-commit-config.yaml"
+    fix_strategy:
+      agent: "FormattingAgent"
+      confidence: 0.9
+      actions:
+        - "Fix YAML indentation"
+        - "Correct hook ID or repo URL"
+        - "Fix invalid arguments"
+        - "Update to current hook schema"
+      fallback: "Revert to known-good config, apply changes incrementally"
+    examples:
+      - error: "invalid YAML: unexpected indent"
+        fix: "Fix indentation in .pre-commit-config.yaml (use 2 spaces)"
+      - error: "unknown hook 'ruf' (should be 'ruff')"
+        fix: "Correct hook id in config"
+
+# ============================================================================
+# CATEGORY: MCP SERVER ISSUES
+# ============================================================================
+
+  - id: mcp-connection-refused
+    name: "MCP Server Connection Refused"
+    category: mcp_server
+    severity: high
+    detection:
+      keywords:
+        - "connection refused"
+        - "MCP"
+        - "8000"
+        - "failed to connect"
+      regex: "connection\\s+refused.*8000|MCP.*(?:connection|connect).*(?:refused|failed)"
+      conditions:
+        - "MCP server not responding"
+        - "client cannot connect"
+    diagnostics:
+      - step: "Check if server running"
+        command: "lsof -i :8000 || echo 'not running'"
+      - step: "Check server logs"
+        command: "tail -50 logs/mcp_server.log"
+      - step: "Check server process"
+        command: "ps aux | grep 'crackerjack.*mcp'"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.85
+      actions:
+        - "Restart server: --restart-mcp-server"
+        - "Check port not in use: lsof -i :8000"
+        - "Start watchdog: --watchdog"
+        - "Check firewall/network settings"
+      fallback: "Use different port: MCP_PORT=8001 --start-mcp-server"
+    examples:
+      - error: "Connection refused to localhost:8000"
+        fix: "python -m crackerjack --restart-mcp-server"
+      - error: "MCP server failed to start"
+        fix: "Check logs, then: pkill -9 -f mcp; --start-mcp-server"
+
+  - id: mcp-websocket-disconnect
+    name: "MCP WebSocket Disconnection"
+    category: mcp_server
+    severity: medium
+    detection:
+      keywords:
+        - "websocket"
+        - "disconnect"
+        - "closed"
+        - "MCP"
+      regex: "websocket.*(?:disconnect|closed)|MCP.*connection.*(?:lost|dropped)"
+      conditions:
+        - "active WebSocket connection lost"
+        - "progress monitoring interrupted"
+    diagnostics:
+      - step: "Check connection status"
+        command: "curl -s http://localhost:8000/health"
+      - step: "Check server uptime"
+        command: "ps -o etime= -p $(pgrep -f 'mcp_server')"
+      - step: "Check recent errors"
+        command: "grep -i 'error\\|exception' logs/mcp_server.log | tail -20"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.8
+      actions:
+        - "Reconnect WebSocket client"
+        - "Check network stability"
+        - "Increase WebSocket timeout"
+        - "Enable keepalive pings"
+      fallback: "Use HTTP polling instead of WebSocket"
+    examples:
+      - error: "WebSocket connection closed unexpectedly"
+        fix: "Implement auto-reconnect with exponential backoff"
+      - error: "MCP progress stream disconnected"
+        fix: "Resume from last checkpoint using job_id"
+
+  - id: mcp-job-stuck
+    name: "MCP Job Stuck/Not Progressing"
+    category: mcp_server
+    severity: medium
+    detection:
+      keywords:
+        - "stuck"
+        - "hanging"
+        - "not progressing"
+        - "job"
+      regex: "job.*(?:stuck|hang|frozen|not\\s+progress)"
+      conditions:
+        - "job status unchanged for >5 minutes"
+        - "no progress updates"
+    diagnostics:
+      - step: "Check job status"
+        command: "curl -s http://localhost:8000/jobs/{job_id}"
+      - step: "Check server CPU/memory"
+        command: "ps aux | grep mcp_server | head -1"
+      - step: "Check for deadlock"
+        command: "kill -SIGUSR1 $(pgrep -f mcp_server) # trigger thread dump"
+    fix_strategy:
+      agent: "RefactoringAgent"
+      confidence: 0.75
+      actions:
+        - "Cancel job: POST /jobs/{job_id}/cancel"
+        - "Check for resource exhaustion"
+        - "Restart with --watchdog for auto-recovery"
+        - "Review job complexity and timeout settings"
+      fallback: "Restart server and resubmit job"
+    examples:
+      - error: "Job {job_id} stuck at 'running tests' for 15 minutes"
+        fix: "Cancel job, check test hangs, rerun with --test-workers 1"
+      - error: "MCP job consuming 100% CPU indefinitely"
+        fix: "Kill job, investigate infinite loop, add timeout"
+
+  - id: mcp-memory-leak
+    name: "MCP Server Memory Leak"
+    category: mcp_server
+    severity: high
+    detection:
+      keywords:
+        - "memory"
+        - "leak"
+        - "growing"
+        - "MCP"
+      regex: "memory.*(?:leak|grow|increase)|RSS.*(?:high|exceed)"
+      conditions:
+        - "memory usage continuously increasing"
+        - "not released after job completion"
+    diagnostics:
+      - step: "Monitor memory usage"
+        command: "ps -o rss,vsz,cmd -p $(pgrep -f mcp_server)"
+      - step: "Check job history"
+        command: "curl -s http://localhost:8000/jobs | jq '.[] | .id'"
+      - step: "Check cache size"
+        command: "du -sh ~/.cache/crackerjack"
+    fix_strategy:
+      agent: "PerformanceAgent"
+      confidence: 0.7
+      actions:
+        - "Clear job history: DELETE /jobs (keep recent)"
+        - "Implement job result cleanup"
+        - "Add memory limits to job execution"
+        - "Restart server periodically"
+      fallback: "Schedule server restart: --watchdog with memory threshold"
+    examples:
+      - error: "MCP server RSS growing from 200MB to 2GB"
+        fix: "Implement job cleanup after completion, limit history to 100 jobs"
+      - error: "Memory not released after batch processing"
+        fix: "Add explicit cleanup in job completion handler"
+
+# ============================================================================
+# CATEGORY: REGEX SAFETY ISSUES
+# ============================================================================
+
+  - id: dangerous-regex-pattern
+    name: "Dangerous Raw Regex Pattern"
+    category: security
+    severity: critical
+    detection:
+      keywords:
+        - "re.sub"
+        - "re.match"
+        - "\\g<"
+        - "regex"
+      regex: "re\\.(sub|match|search|findall).*\\\\g\\s*<|r['\"].*\\\\g\\s*<"
+      conditions:
+        - "raw regex with group references"
+        - "not using centralized registry"
+    diagnostics:
+      - step: "Find raw regex usage"
+        command: "grep -n 're\\.sub\\|re\\.match\\|re\\.search' {file}"
+      - step: "Check for group references"
+        command: "grep '\\\\g<\\|\\\\1\\|\\\\2' {file}"
+      - step: "Verify registry import"
+        command: "grep 'from.*regex_patterns import' {file}"
+    fix_strategy:
+      agent: "SecurityAgent"
+      confidence: 0.95
+      actions:
+        - "Use SAFE_PATTERNS registry instead of raw regex"
+        - "Register pattern in regex_patterns.py if new"
+        - "Use pattern.apply() method for safe execution"
+        - "Add validation and error handling"
+      fallback: "Wrap in try/except with detailed error message"
+    examples:
+      - error: 'text = re.sub(r"(\\w+) - (\\w+)", r"\\g<1>-\\g<2>", text)'
+        fix: |
+          from crackerjack.services.regex_patterns import SAFE_PATTERNS
+          text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
+      - error: "Using raw regex for commit message formatting"
+        fix: "Add pattern to registry, use SAFE_PATTERNS['format_commit'].apply()"
+
+  - id: unregistered-regex-pattern
+    name: "Regex Pattern Not in Central Registry"
+    category: security
+    severity: high
+    detection:
+      keywords:
+        - "re.compile"
+        - "re.sub"
+        - "regex"
+      regex: "re\\.(?:compile|sub|match|search|findall)\\s*\\("
+      conditions:
+        - "regex defined in code"
+        - "not imported from regex_patterns"
+    diagnostics:
+      - step: "Find local regex definitions"
+        command: "grep -n 're\\.compile\\|re\\.sub\\|re\\.match' {file}"
+      - step: "Check registry"
+        command: "grep 'SAFE_PATTERNS\\[' crackerjack/services/regex_patterns.py"
+      - step: "Verify imports"
+        command: "grep 'from.*regex_patterns' {file}"
+    fix_strategy:
+      agent: "SecurityAgent"
+      confidence: 0.9
+      actions:
+        - "Register pattern in SAFE_PATTERNS registry"
+        - "Update code to use registry pattern"
+        - "Add validation and error handling to registry"
+        - "Document pattern purpose and safety"
+      fallback: "Add comprehensive error handling around raw regex"
+    examples:
+      - error: "pattern = re.compile(r'^(feat|fix):\\s+')"
+        fix: |
+          # In regex_patterns.py:
+          SAFE_PATTERNS["conventional_commit"] = SafePattern(
+              pattern=r"^(feat|fix):\\s+",
+              replacement=None,
+              description="Match conventional commit prefixes"
+          )
+
+          # In code:
+          from crackerjack.services.regex_patterns import SAFE_PATTERNS
+          if SAFE_PATTERNS["conventional_commit"].match(message):
+              ...
+
+# ============================================================================
+# AGENT ROUTING RULES
+# ============================================================================
+
+agent_routing:
+  - condition: "complexity > 15 OR deep_nesting"
+    agent: "RefactoringAgent"
+    confidence_threshold: 0.9
+
+  - condition: "O(n²) OR inefficient_loop OR string_concat"
+    agent: "PerformanceAgent"
+    confidence_threshold: 0.85
+
+  - condition: "hardcoded_path OR shell=True OR eval/exec OR pickle"
+    agent: "SecurityAgent"
+    confidence_threshold: 0.8
+
+  - condition: "test_failure OR fixture_error OR async_timeout"
+    agent: "TestCreationAgent"
+    confidence_threshold: 0.8
+
+  - condition: "circular_import OR missing_dependency OR wrong_protocol_import"
+    agent: "ImportOptimizationAgent"
+    confidence_threshold: 0.85
+
+  - condition: "type_error OR protocol_violation OR missing_annotation"
+    agent: "RefactoringAgent"
+    confidence_threshold: 0.85
+
+  - condition: "style_violation OR import_order OR line_length"
+    agent: "FormattingAgent"
+    confidence_threshold: 0.95
+
+  - condition: "missing_docstring OR outdated_docs"
+    agent: "DocumentationAgent"
+    confidence_threshold: 0.8
+
+  - condition: "coverage_below_baseline OR missing_test_file"
+    agent: "TestCreationAgent"
+    confidence_threshold: 0.8
+
+  - condition: "hook_timeout OR hook_config_error"
+    agent: "RefactoringAgent"
+    confidence_threshold: 0.75
+
+  - condition: "mcp_connection OR websocket_disconnect OR job_stuck"
+    agent: "RefactoringAgent"
+    confidence_threshold: 0.75
+
+  - condition: "dangerous_regex OR unregistered_regex"
+    agent: "SecurityAgent"
+    confidence_threshold: 0.95
+
+# ============================================================================
+# AUTO-FIX WORKFLOW
+# ============================================================================
+
+auto_fix_workflow:
+  1_detect:
+    - "Parse error output (test failures, linter output, logs)"
+    - "Extract error type, location, context"
+    - "Match against error patterns using keywords + regex"
+
+  2_diagnose:
+    - "Execute diagnostic commands from matched pattern"
+    - "Gather additional context (code, config, history)"
+    - "Determine root cause and scope"
+
+  3_route:
+    - "Select appropriate agent based on error category"
+    - "Check confidence threshold (≥0.7 for auto-fix)"
+    - "Prepare context and instructions for agent"
+
+  4_fix:
+    - "Execute fix strategy from pattern"
+    - "Apply changes using selected agent"
+    - "Validate fix (run tests, linters)"
+
+  5_verify:
+    - "Re-run original failing command"
+    - "Confirm error resolved"
+    - "Check for regressions"
+
+  6_fallback:
+    - "If auto-fix fails, use fallback strategy"
+    - "Provide detailed error report to user"
+    - "Suggest manual intervention steps"
+
+# ============================================================================
+# CONFIDENCE SCORING
+# ============================================================================
+
+confidence_calculation:
+  factors:
+    - pattern_match_strength: 0.0 - 1.0
+    - diagnostic_clarity: 0.0 - 1.0
+    - fix_determinism: 0.0 - 1.0
+    - historical_success_rate: 0.0 - 1.0
+    - code_complexity: 0.0 - 1.0 (inverse)
+
+  formula: |
+    confidence = (
+        0.3 * pattern_match_strength +
+        0.2 * diagnostic_clarity +
+        0.3 * fix_determinism +
+        0.15 * historical_success_rate +
+        0.05 * (1 - code_complexity)
+    )
+
+  thresholds:
+    critical: 0.95  # Security, data loss risk
+    high: 0.85      # Performance, correctness
+    medium: 0.8     # Quality, maintainability
+    low: 0.7        # Style, documentation
+
+  auto_fix_enabled: confidence >= 0.7
+
+# ============================================================================
+# INTEGRATION WITH CRACKERJACK
+# ============================================================================
+
+integration:
+  command_flags:
+    - "--ai-fix: Enable batch auto-fixing using these patterns"
+    - "--ai-debug: Verbose output showing pattern matching and agent selection"
+
+  workflow:
+    1: "Collect all errors from: tests, linters, hooks, MCP"
+    2: "Match errors against patterns (parallel processing)"
+    3: "Group by agent (batch similar fixes together)"
+    4: "Execute fixes with appropriate confidence threshold"
+    5: "Re-run validation, iterate if needed (max 3 iterations)"
+
+  error_pattern_updates:
+    - "Track fix success/failure rates"
+    - "Update confidence scores based on historical data"
+    - "Add new patterns from unhandled errors"
+    - "Refine regex and detection logic"
+
+  agent_learning:
+    - "Capture successful fix strategies"
+    - "Update agent instructions with proven patterns"
+    - "Build knowledge base of domain-specific solutions"
+    - "Improve routing logic based on outcomes"

@@ -157,9 +157,9 @@ Remember: It's better to ask for clarification than to make assumptions that cou
 
 ## AI Documentation References
 
-- **[AI-REFERENCE.md](docs/ai/AI-REFERENCE.md)** - Command reference with decision trees
-- **\[[AGENT-CAPABILITIES.json]\]** - Structured agent data
-- **\[[ERROR-PATTERNS.yaml]\]** - Automated issue resolution patterns
+- **[AI-REFERENCE.md](<./docs/ai/AI-REFERENCE.md>)** - Command reference with decision trees
+- **[AGENT-CAPABILITIES.json](<./docs/ai/AGENT-CAPABILITIES.json>)** - Structured agent data
+- **[ERROR-PATTERNS.yaml](<./docs/ai/ERROR-PATTERNS.yaml>)** - Automated issue resolution patterns
 
 ## Essential Commands
 

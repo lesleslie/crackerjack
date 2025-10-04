@@ -399,7 +399,9 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
         ]
 
         for pattern, message in dangerous_patterns:
-            if re.search(pattern, code):
+            if re.search(
+                pattern, code
+            ):  # REGEX OK: security validation of AI-generated code
                 return False, f"Security violation: {message}"
 
         # Check 2: AST validation
@@ -456,12 +458,20 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
             Sanitized error message safe for logging/display
         """
         # Remove absolute paths
-        error_msg = re.sub(r"/[\w\-./ ]+/", "<path>/", error_msg)
-        error_msg = re.sub(r"[A-Z]:\\[\w\-\\ ]+\\", "<path>\\", error_msg)
+        error_msg = re.sub(
+            r"/[\w\-./ ]+/", "<path>/", error_msg
+        )  # REGEX OK: sanitizing Unix paths in error messages
+        error_msg = re.sub(
+            r"[A-Z]:\\[\w\-\\ ]+\\", "<path>\\", error_msg
+        )  # REGEX OK: sanitizing Windows paths in error messages
 
         # Remove potential secrets (basic pattern matching)
-        error_msg = re.sub(r"sk-[a-zA-Z0-9]{20,}", "<api-key>", error_msg)
-        error_msg = re.sub(r'["\'][\w\-]{32,}["\']', "<secret>", error_msg)
+        error_msg = re.sub(
+            r"sk-[a-zA-Z0-9]{20,}", "<api-key>", error_msg
+        )  # REGEX OK: masking OpenAI API keys in error messages
+        error_msg = re.sub(
+            r'["\'][\w\-]{32,}["\']', "<secret>", error_msg
+        )  # REGEX OK: masking generic secrets in error messages
 
         return error_msg
 
@@ -490,7 +500,9 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
         ]
 
         for pattern in injection_patterns:
-            sanitized = re.sub(pattern, "[FILTERED]", sanitized)
+            sanitized = re.sub(
+                pattern, "[FILTERED]", sanitized
+            )  # REGEX OK: preventing prompt injection attacks
 
         # Escape markdown code blocks to prevent context breaking
         sanitized = sanitized.replace("```", "'''")

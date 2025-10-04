@@ -174,7 +174,7 @@ HOOKS_REGISTRY: dict[str, list[HookMetadata]] = {
             "stages": None,
             "args": None,
             "files": None,
-            "exclude": r"uv\.lock|pyproject\.toml|tests/.*|docs/.*|.*\.md",
+            "exclude": r"uv\.lock|pyproject\.toml|tests/.*|docs/.*|\.claude/.*|.*\.md",
             "additional_dependencies": None,
             "types_or": None,
             "language": None,
