@@ -18,10 +18,11 @@ ACB Patterns:
 from __future__ import annotations
 
 import json
+import logging
 import typing as t
 from contextlib import suppress
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from acb.depends import depends
 from pydantic import Field
@@ -38,8 +39,11 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
+MODULE_ID = UUID("01937d86-4f2a-7b3c-8d9e-f3b4d3c2b1a0")  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
 class BanditSettings(ToolAdapterSettings):
@@ -96,12 +100,25 @@ class BanditAdapter(BaseToolAdapter):
             settings: Optional settings override
         """
         super().__init__(settings=settings)
+        logger.debug(
+            "BanditAdapter initialized",
+            extra={"has_settings": settings is not None}
+        )
 
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
             self.settings = BanditSettings()
+            logger.info("Using default BanditSettings")
         await super().init()
+        logger.debug(
+            "BanditAdapter initialization complete",
+            extra={
+                "severity": self.settings.severity_level,
+                "confidence": self.settings.confidence_level,
+                "exclude_tests": self.settings.exclude_tests,
+            }
+        )
 
     @property
     def adapter_name(self) -> str:
@@ -166,6 +183,17 @@ class BanditAdapter(BaseToolAdapter):
         # Add targets
         cmd.extend([str(f) for f in files])
 
+        logger.info(
+            "Built Bandit command",
+            extra={
+                "file_count": len(files),
+                "severity": self.settings.severity_level,
+                "confidence": self.settings.confidence_level,
+                "recursive": self.settings.recursive,
+                "exclude_tests": self.settings.exclude_tests,
+                "skip_rules_count": len(self.settings.skip_rules),
+            }
+        )
         return cmd
 
     async def parse_output(
@@ -181,12 +209,21 @@ class BanditAdapter(BaseToolAdapter):
             List of parsed issues
         """
         if not result.raw_output:
+            logger.debug("No output to parse")
             return []
 
         try:
             data = json.loads(result.raw_output)
-        except json.JSONDecodeError:
+            logger.debug(
+                "Parsed Bandit JSON output",
+                extra={"results_count": len(data.get("results", []))}
+            )
+        except json.JSONDecodeError as e:
             # Fallback to text parsing if JSON fails
+            logger.warning(
+                "JSON parse failed, falling back to text parsing",
+                extra={"error": str(e), "output_preview": result.raw_output[:200]}
+            )
             return self._parse_text_output(result.raw_output)
 
         issues = []
@@ -233,6 +270,14 @@ class BanditAdapter(BaseToolAdapter):
             )
             issues.append(issue)
 
+        logger.info(
+            "Parsed Bandit output",
+            extra={
+                "total_issues": len(issues),
+                "high_severity": sum(1 for i in issues if i.severity == "error"),
+                "files_affected": len(set(str(i.file_path) for i in issues)),
+            }
+        )
         return issues
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
@@ -280,6 +325,13 @@ class BanditAdapter(BaseToolAdapter):
                 except (IndexError, ValueError):
                     pass
 
+        logger.info(
+            "Parsed Bandit text output (fallback)",
+            extra={
+                "total_issues": len(issues),
+                "files_with_issues": len(set(str(i.file_path) for i in issues if i.file_path)),
+            }
+        )
         return issues
 
     def _get_check_type(self) -> QACheckType:

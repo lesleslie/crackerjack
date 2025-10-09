@@ -17,10 +17,11 @@ ACB Patterns:
 from __future__ import annotations
 
 import json
+import logging
 import typing as t
 from contextlib import suppress
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from acb.depends import depends
 from pydantic import Field
@@ -37,8 +38,11 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
+MODULE_ID = UUID("01937d86-7c3d-8e4f-9a5b-c6d7e8f9a0b1")  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
 class RefurbSettings(ToolAdapterSettings):
@@ -90,12 +94,26 @@ class RefurbAdapter(BaseToolAdapter):
             settings: Optional settings override
         """
         super().__init__(settings=settings)
+        logger.debug(
+            "RefurbAdapter initialized",
+            extra={"has_settings": settings is not None}
+        )
 
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
             self.settings = RefurbSettings()
+            logger.info("Using default RefurbSettings")
         await super().init()
+        logger.debug(
+            "RefurbAdapter initialization complete",
+            extra={
+                "enable_all": self.settings.enable_all,
+                "enable_checks_count": len(self.settings.enable_checks),
+                "disable_checks_count": len(self.settings.disable_checks),
+                "has_python_version": self.settings.python_version is not None,
+            }
+        )
 
     @property
     def adapter_name(self) -> str:
@@ -156,6 +174,16 @@ class RefurbAdapter(BaseToolAdapter):
         # Add targets
         cmd.extend([str(f) for f in files])
 
+        logger.info(
+            "Built Refurb command",
+            extra={
+                "file_count": len(files),
+                "enable_all": self.settings.enable_all,
+                "enable_checks_count": len(self.settings.enable_checks),
+                "disable_checks_count": len(self.settings.disable_checks),
+                "explain": self.settings.explain,
+            }
+        )
         return cmd
 
     async def parse_output(
@@ -171,10 +199,15 @@ class RefurbAdapter(BaseToolAdapter):
             List of parsed issues
         """
         if not result.raw_output:
+            logger.debug("No output to parse")
             return []
 
         issues = []
         lines = result.raw_output.strip().split("\n")
+        logger.debug(
+            "Parsing Refurb text output",
+            extra={"line_count": len(lines)}
+        )
 
         for line in lines:
             # Refurb format: "file.py:10:5 [FURB101]: Use dict comprehension..."
@@ -230,6 +263,14 @@ class RefurbAdapter(BaseToolAdapter):
             except (ValueError, IndexError):
                 continue
 
+        logger.info(
+            "Parsed Refurb output",
+            extra={
+                "total_issues": len(issues),
+                "files_affected": len(set(str(i.file_path) for i in issues)),
+                "unique_codes": len(set(i.code for i in issues if i.code)),
+            }
+        )
         return issues
 
     def _get_check_type(self) -> QACheckType:

@@ -18,10 +18,11 @@ ACB Patterns:
 from __future__ import annotations
 
 import json
+import logging
 import typing as t
 from contextlib import suppress
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from acb.depends import depends
 from pydantic import Field
@@ -38,8 +39,11 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
+MODULE_ID = UUID("01937d86-5a1b-7c2d-9e3f-a4b5c6d7e8f9")  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
 class GitleaksSettings(ToolAdapterSettings):
@@ -95,12 +99,26 @@ class GitleaksAdapter(BaseToolAdapter):
             settings: Optional settings override
         """
         super().__init__(settings=settings)
+        logger.debug(
+            "GitleaksAdapter initialized",
+            extra={"has_settings": settings is not None}
+        )
 
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
             self.settings = GitleaksSettings()
+            logger.info("Using default GitleaksSettings")
         await super().init()
+        logger.debug(
+            "GitleaksAdapter initialization complete",
+            extra={
+                "scan_mode": self.settings.scan_mode,
+                "redact": self.settings.redact,
+                "no_git": self.settings.no_git,
+                "has_config": self.settings.config_file is not None,
+            }
+        )
 
     @property
     def adapter_name(self) -> str:
@@ -174,6 +192,17 @@ class GitleaksAdapter(BaseToolAdapter):
         if self.settings.verbose:
             cmd.append("--verbose")
 
+        logger.info(
+            "Built Gitleaks command",
+            extra={
+                "file_count": len(files),
+                "scan_mode": self.settings.scan_mode,
+                "redact": self.settings.redact,
+                "no_git": self.settings.no_git,
+                "has_config": self.settings.config_file is not None,
+                "has_baseline": self.settings.baseline_file is not None,
+            }
+        )
         return cmd
 
     async def parse_output(
@@ -189,15 +218,22 @@ class GitleaksAdapter(BaseToolAdapter):
             List of parsed issues
         """
         if not result.raw_output:
+            logger.debug("No output to parse")
             return []
 
         try:
             data = json.loads(result.raw_output)
-        except json.JSONDecodeError:
+            findings = data if isinstance(data, list) else [data]
+            logger.debug(
+                "Parsed Gitleaks JSON output",
+                extra={"findings_count": len(findings)}
+            )
+        except json.JSONDecodeError as e:
+            logger.warning(
+                "JSON parse failed",
+                extra={"error": str(e), "output_preview": result.raw_output[:200]}
+            )
             return []
-
-        # Gitleaks can return a list of findings or a single finding
-        findings = data if isinstance(data, list) else [data]
 
         issues = []
 
@@ -253,6 +289,14 @@ class GitleaksAdapter(BaseToolAdapter):
             )
             issues.append(issue)
 
+        logger.info(
+            "Parsed Gitleaks output",
+            extra={
+                "total_issues": len(issues),
+                "high_entropy": sum(1 for i in issues if i.severity == "error"),
+                "files_affected": len(set(str(i.file_path) for i in issues)),
+            }
+        )
         return issues
 
     def _get_check_type(self) -> QACheckType:

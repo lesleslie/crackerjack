@@ -17,10 +17,11 @@ ACB Patterns:
 from __future__ import annotations
 
 import json
+import logging
 import typing as t
 from contextlib import suppress
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from acb.depends import depends
 from pydantic import Field
@@ -37,8 +38,11 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
+MODULE_ID = UUID("01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a0")  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
 class ZubanSettings(ToolAdapterSettings):
@@ -92,12 +96,26 @@ class ZubanAdapter(BaseToolAdapter):
             settings: Optional settings override
         """
         super().__init__(settings=settings)
+        logger.debug(
+            "ZubanAdapter initialized",
+            extra={"has_settings": settings is not None}
+        )
 
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
             self.settings = ZubanSettings()
+            logger.info("Using default ZubanSettings")
         await super().init()
+        logger.debug(
+            "ZubanAdapter initialization complete",
+            extra={
+                "strict_mode": self.settings.strict_mode,
+                "incremental": self.settings.incremental,
+                "follow_imports": self.settings.follow_imports,
+                "has_cache_dir": self.settings.cache_dir is not None,
+            }
+        )
 
     @property
     def adapter_name(self) -> str:
@@ -163,6 +181,16 @@ class ZubanAdapter(BaseToolAdapter):
         # Add targets
         cmd.extend([str(f) for f in files])
 
+        logger.info(
+            "Built Zuban command",
+            extra={
+                "file_count": len(files),
+                "strict_mode": self.settings.strict_mode,
+                "incremental": self.settings.incremental,
+                "follow_imports": self.settings.follow_imports,
+                "has_cache_dir": self.settings.cache_dir is not None,
+            }
+        )
         return cmd
 
     async def parse_output(
@@ -178,12 +206,20 @@ class ZubanAdapter(BaseToolAdapter):
             List of parsed issues
         """
         if not result.raw_output:
+            logger.debug("No output to parse")
             return []
 
         try:
             data = json.loads(result.raw_output)
-        except json.JSONDecodeError:
-            # Fallback to text parsing if JSON fails
+            logger.debug(
+                "Parsed Zuban JSON output",
+                extra={"files_count": len(data.get("files", []))}
+            )
+        except json.JSONDecodeError as e:
+            logger.warning(
+                "JSON parse failed, falling back to text parsing",
+                extra={"error": str(e), "output_preview": result.raw_output[:200]}
+            )
             return self._parse_text_output(result.raw_output)
 
         issues = []
@@ -220,6 +256,15 @@ class ZubanAdapter(BaseToolAdapter):
                 )
                 issues.append(issue)
 
+        logger.info(
+            "Parsed Zuban output",
+            extra={
+                "total_issues": len(issues),
+                "errors": sum(1 for i in issues if i.severity == "error"),
+                "warnings": sum(1 for i in issues if i.severity == "warning"),
+                "files_affected": len(set(str(i.file_path) for i in issues)),
+            }
+        )
         return issues
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
@@ -272,6 +317,13 @@ class ZubanAdapter(BaseToolAdapter):
             except (ValueError, IndexError):
                 continue
 
+        logger.info(
+            "Parsed Zuban text output (fallback)",
+            extra={
+                "total_issues": len(issues),
+                "files_with_issues": len(set(str(i.file_path) for i in issues)),
+            }
+        )
         return issues
 
     def _get_check_type(self) -> QACheckType:
