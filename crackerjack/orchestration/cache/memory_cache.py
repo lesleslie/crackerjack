@@ -52,9 +52,7 @@ class MemoryCacheAdapter:
 
     Example:
         ```python
-        cache = MemoryCacheAdapter(
-            settings=MemoryCacheSettings(max_entries=50)
-        )
+        cache = MemoryCacheAdapter(settings=MemoryCacheSettings(max_entries=50))
         await cache.init()
 
         # Cache operations work identically to ToolProxyCacheAdapter
@@ -83,7 +81,7 @@ class MemoryCacheAdapter:
             extra={
                 "max_entries": self.settings.max_entries,
                 "default_ttl": self.settings.default_ttl,
-            }
+            },
         )
 
     async def init(self) -> None:
@@ -99,7 +97,7 @@ class MemoryCacheAdapter:
             extra={
                 "max_entries": self.settings.max_entries,
                 "default_ttl": self.settings.default_ttl,
-            }
+            },
         )
 
     async def get(self, key: str) -> HookResult | None:
@@ -132,16 +130,13 @@ class MemoryCacheAdapter:
                             "key": key,
                             "hook_name": result.hook_name,
                             "status": result.status,
-                        }
+                        },
                     )
                     return result
                 else:
                     # Expired - remove from cache
                     del self._cache[key]
-                    logger.debug(
-                        "Cache entry expired",
-                        extra={"key": key}
-                    )
+                    logger.debug("Cache entry expired", extra={"key": key})
 
             logger.debug("Cache miss", extra={"key": key})
             return None
@@ -152,7 +147,7 @@ class MemoryCacheAdapter:
                 extra={
                     "key": key,
                     "error": str(e),
-                }
+                },
             )
             return None
 
@@ -188,7 +183,7 @@ class MemoryCacheAdapter:
                     extra={
                         "evicted_key": evicted_key,
                         "cache_size": len(self._cache),
-                    }
+                    },
                 )
 
             self._cache[key] = (result, expiry)
@@ -203,7 +198,7 @@ class MemoryCacheAdapter:
                     "status": result.status,
                     "ttl": ttl_sec,
                     "cache_size": len(self._cache),
-                }
+                },
             )
 
         except Exception as e:
@@ -212,7 +207,7 @@ class MemoryCacheAdapter:
                 extra={
                     "key": key,
                     "error": str(e),
-                }
+                },
             )
 
     def compute_key(
@@ -252,7 +247,7 @@ class MemoryCacheAdapter:
                 except Exception as e:
                     logger.warning(
                         f"Failed to hash file {file_path}: {e}",
-                        extra={"file": str(file_path), "error": str(e)}
+                        extra={"file": str(file_path), "error": str(e)},
                     )
                     continue
 
@@ -267,7 +262,7 @@ class MemoryCacheAdapter:
                     "file_count": len(files),
                     "config_hash": config_hash,
                     "content_hash": content_hash,
-                }
+                },
             )
 
             return cache_key
@@ -278,7 +273,7 @@ class MemoryCacheAdapter:
                 extra={
                     "hook_name": hook.name,
                     "error": str(e),
-                }
+                },
             )
             return f"{hook.name}:error"
 
@@ -288,10 +283,7 @@ class MemoryCacheAdapter:
             self._cache.clear()
             logger.info("Memory cache cleared")
         except Exception as e:
-            logger.error(
-                "Failed to clear cache",
-                extra={"error": str(e)}
-            )
+            logger.error("Failed to clear cache", extra={"error": str(e)})
 
     async def get_stats(self) -> dict[str, t.Any]:
         """Get cache statistics.
@@ -304,8 +296,7 @@ class MemoryCacheAdapter:
         try:
             total_entries = len(self._cache)
             expired_entries = sum(
-                1 for _, expiry in self._cache.values()
-                if time.time() >= expiry
+                1 for _, expiry in self._cache.values() if time.time() >= expiry
             )
             active_entries = total_entries - expired_entries
 
@@ -317,18 +308,12 @@ class MemoryCacheAdapter:
                 "default_ttl": self.settings.default_ttl,
             }
 
-            logger.debug(
-                "Memory cache statistics",
-                extra=stats
-            )
+            logger.debug("Memory cache statistics", extra=stats)
 
             return stats
 
         except Exception as e:
-            logger.error(
-                "Failed to get cache statistics",
-                extra={"error": str(e)}
-            )
+            logger.error("Failed to get cache statistics", extra={"error": str(e)})
             return {}
 
     @property
@@ -345,4 +330,5 @@ class MemoryCacheAdapter:
 # ACB Registration (REQUIRED at module level)
 with suppress(Exception):
     from acb.depends import depends
+
     depends.set(MemoryCacheAdapter)

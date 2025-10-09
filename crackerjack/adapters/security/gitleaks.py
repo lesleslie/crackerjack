@@ -25,7 +25,6 @@ from pathlib import Path
 from uuid import UUID
 
 from acb.depends import depends
-from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
@@ -39,7 +38,9 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = UUID("01937d86-5a1b-7c2d-9e3f-a4b5c6d7e8f9")  # Static UUID7 for reproducible module identity
+MODULE_ID = UUID(
+    "01937d86-5a1b-7c2d-9e3f-a4b5c6d7e8f9"
+)  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
 
 # Module-level logger for structured logging
@@ -100,8 +101,7 @@ class GitleaksAdapter(BaseToolAdapter):
         """
         super().__init__(settings=settings)
         logger.debug(
-            "GitleaksAdapter initialized",
-            extra={"has_settings": settings is not None}
+            "GitleaksAdapter initialized", extra={"has_settings": settings is not None}
         )
 
     async def init(self) -> None:
@@ -117,7 +117,7 @@ class GitleaksAdapter(BaseToolAdapter):
                 "redact": self.settings.redact,
                 "no_git": self.settings.no_git,
                 "has_config": self.settings.config_file is not None,
-            }
+            },
         )
 
     @property
@@ -201,7 +201,7 @@ class GitleaksAdapter(BaseToolAdapter):
                 "no_git": self.settings.no_git,
                 "has_config": self.settings.config_file is not None,
                 "has_baseline": self.settings.baseline_file is not None,
-            }
+            },
         )
         return cmd
 
@@ -225,13 +225,12 @@ class GitleaksAdapter(BaseToolAdapter):
             data = json.loads(result.raw_output)
             findings = data if isinstance(data, list) else [data]
             logger.debug(
-                "Parsed Gitleaks JSON output",
-                extra={"findings_count": len(findings)}
+                "Parsed Gitleaks JSON output", extra={"findings_count": len(findings)}
             )
         except json.JSONDecodeError as e:
             logger.warning(
                 "JSON parse failed",
-                extra={"error": str(e), "output_preview": result.raw_output[:200]}
+                extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )
             return []
 
@@ -295,7 +294,7 @@ class GitleaksAdapter(BaseToolAdapter):
                 "total_issues": len(issues),
                 "high_entropy": sum(1 for i in issues if i.severity == "error"),
                 "files_affected": len(set(str(i.file_path) for i in issues)),
-            }
+            },
         )
         return issues
 

@@ -55,6 +55,11 @@ class OrchestrationConfig:
     enable_adaptive_execution: bool = True  # Use adaptive strategy (dependency-aware)
     max_concurrent_strategies: int = 2  # Usually 2 (fast + comprehensive)
 
+    # Phase 8: Direct tool invocation settings
+    use_precommit_legacy: bool = (
+        True  # Use pre-commit wrapper (True) or direct invocation (False)
+    )
+
     # Config file path (set during load)
     config_file_path: Path | None = field(default=None, repr=False)
 
@@ -92,7 +97,9 @@ class OrchestrationConfig:
             cache_backend=orch_data.get("cache_backend", cls.cache_backend),
             cache_ttl=orch_data.get("cache_ttl", cls.cache_ttl),
             cache_max_entries=orch_data.get("cache_max_entries", cls.cache_max_entries),
-            max_parallel_hooks=orch_data.get("max_parallel_hooks", cls.max_parallel_hooks),
+            max_parallel_hooks=orch_data.get(
+                "max_parallel_hooks", cls.max_parallel_hooks
+            ),
             default_timeout=orch_data.get("default_timeout", cls.default_timeout),
             stop_on_critical_failure=orch_data.get(
                 "stop_on_critical_failure", cls.stop_on_critical_failure
@@ -112,6 +119,9 @@ class OrchestrationConfig:
             ),
             max_concurrent_strategies=orch_data.get(
                 "max_concurrent_strategies", cls.max_concurrent_strategies
+            ),
+            use_precommit_legacy=orch_data.get(
+                "use_precommit_legacy", cls.use_precommit_legacy
             ),
             config_file_path=config_path,
         )
@@ -135,6 +145,7 @@ class OrchestrationConfig:
             CRACKERJACK_ENABLE_STRATEGY_PARALLELISM: 'true'/'false'
             CRACKERJACK_ENABLE_ADAPTIVE_EXECUTION: 'true'/'false'
             CRACKERJACK_MAX_CONCURRENT_STRATEGIES: integer
+            CRACKERJACK_USE_PRECOMMIT_LEGACY: 'true'/'false'
 
         Returns:
             OrchestrationConfig with environment settings
@@ -173,7 +184,9 @@ class OrchestrationConfig:
             enable_caching=get_bool("CRACKERJACK_ENABLE_CACHING", cls.enable_caching),
             cache_backend=get_str("CRACKERJACK_CACHE_BACKEND", cls.cache_backend),
             cache_ttl=get_int("CRACKERJACK_CACHE_TTL", cls.cache_ttl),
-            cache_max_entries=get_int("CRACKERJACK_CACHE_MAX_ENTRIES", cls.cache_max_entries),
+            cache_max_entries=get_int(
+                "CRACKERJACK_CACHE_MAX_ENTRIES", cls.cache_max_entries
+            ),
             max_parallel_hooks=get_int(
                 "CRACKERJACK_MAX_PARALLEL_HOOKS", cls.max_parallel_hooks
             ),
@@ -182,13 +195,17 @@ class OrchestrationConfig:
                 "CRACKERJACK_STOP_ON_CRITICAL_FAILURE", cls.stop_on_critical_failure
             ),
             enable_strategy_parallelism=get_bool(
-                "CRACKERJACK_ENABLE_STRATEGY_PARALLELISM", cls.enable_strategy_parallelism
+                "CRACKERJACK_ENABLE_STRATEGY_PARALLELISM",
+                cls.enable_strategy_parallelism,
             ),
             enable_adaptive_execution=get_bool(
                 "CRACKERJACK_ENABLE_ADAPTIVE_EXECUTION", cls.enable_adaptive_execution
             ),
             max_concurrent_strategies=get_int(
                 "CRACKERJACK_MAX_CONCURRENT_STRATEGIES", cls.max_concurrent_strategies
+            ),
+            use_precommit_legacy=get_bool(
+                "CRACKERJACK_USE_PRECOMMIT_LEGACY", cls.use_precommit_legacy
             ),
         )
 
@@ -222,7 +239,9 @@ class OrchestrationConfig:
         return config
 
     @classmethod
-    def _merge(cls, base: OrchestrationConfig, override: OrchestrationConfig) -> OrchestrationConfig:
+    def _merge(
+        cls, base: OrchestrationConfig, override: OrchestrationConfig
+    ) -> OrchestrationConfig:
         """Merge two configurations, with override taking precedence.
 
         Args:
@@ -257,7 +276,9 @@ class OrchestrationConfig:
                 else base.cache_backend
             ),
             cache_ttl=(
-                override.cache_ttl if override.cache_ttl != defaults.cache_ttl else base.cache_ttl
+                override.cache_ttl
+                if override.cache_ttl != defaults.cache_ttl
+                else base.cache_ttl
             ),
             cache_max_entries=(
                 override.cache_max_entries
@@ -276,12 +297,14 @@ class OrchestrationConfig:
             ),
             stop_on_critical_failure=(
                 override.stop_on_critical_failure
-                if override.stop_on_critical_failure != defaults.stop_on_critical_failure
+                if override.stop_on_critical_failure
+                != defaults.stop_on_critical_failure
                 else base.stop_on_critical_failure
             ),
             enable_dependency_resolution=(
                 override.enable_dependency_resolution
-                if override.enable_dependency_resolution != defaults.enable_dependency_resolution
+                if override.enable_dependency_resolution
+                != defaults.enable_dependency_resolution
                 else base.enable_dependency_resolution
             ),
             log_cache_stats=(
@@ -296,18 +319,26 @@ class OrchestrationConfig:
             ),
             enable_strategy_parallelism=(
                 override.enable_strategy_parallelism
-                if override.enable_strategy_parallelism != defaults.enable_strategy_parallelism
+                if override.enable_strategy_parallelism
+                != defaults.enable_strategy_parallelism
                 else base.enable_strategy_parallelism
             ),
             enable_adaptive_execution=(
                 override.enable_adaptive_execution
-                if override.enable_adaptive_execution != defaults.enable_adaptive_execution
+                if override.enable_adaptive_execution
+                != defaults.enable_adaptive_execution
                 else base.enable_adaptive_execution
             ),
             max_concurrent_strategies=(
                 override.max_concurrent_strategies
-                if override.max_concurrent_strategies != defaults.max_concurrent_strategies
+                if override.max_concurrent_strategies
+                != defaults.max_concurrent_strategies
                 else base.max_concurrent_strategies
+            ),
+            use_precommit_legacy=(
+                override.use_precommit_legacy
+                if override.use_precommit_legacy != defaults.use_precommit_legacy
+                else base.use_precommit_legacy
             ),
             config_file_path=override.config_file_path or base.config_file_path,
         )
@@ -339,13 +370,19 @@ class OrchestrationConfig:
             errors.append(f"cache_ttl must be positive, got {self.cache_ttl}")
 
         if self.cache_max_entries < 1:
-            errors.append(f"cache_max_entries must be positive, got {self.cache_max_entries}")
+            errors.append(
+                f"cache_max_entries must be positive, got {self.cache_max_entries}"
+            )
 
         if self.max_parallel_hooks < 1:
-            errors.append(f"max_parallel_hooks must be positive, got {self.max_parallel_hooks}")
+            errors.append(
+                f"max_parallel_hooks must be positive, got {self.max_parallel_hooks}"
+            )
 
         if self.default_timeout < 1:
-            errors.append(f"default_timeout must be positive, got {self.default_timeout}")
+            errors.append(
+                f"default_timeout must be positive, got {self.default_timeout}"
+            )
 
         if self.max_concurrent_strategies < 1:
             errors.append(
@@ -391,6 +428,7 @@ class OrchestrationConfig:
                 "enable_strategy_parallelism": self.enable_strategy_parallelism,
                 "enable_adaptive_execution": self.enable_adaptive_execution,
                 "max_concurrent_strategies": self.max_concurrent_strategies,
+                "use_precommit_legacy": self.use_precommit_legacy,
             }
         }
 

@@ -18,12 +18,17 @@ __all__ = [
     "MemoryCacheAdapter",
 ]
 
+
 # Lazy imports
 def __getattr__(name: str):
     if name == "ToolProxyCacheAdapter":
-        from crackerjack.orchestration.cache.tool_proxy_cache import ToolProxyCacheAdapter
+        from crackerjack.orchestration.cache.tool_proxy_cache import (
+            ToolProxyCacheAdapter,
+        )
+
         return ToolProxyCacheAdapter
     elif name == "MemoryCacheAdapter":
         from crackerjack.orchestration.cache.memory_cache import MemoryCacheAdapter
+
         return MemoryCacheAdapter
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

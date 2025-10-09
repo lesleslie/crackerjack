@@ -13,9 +13,7 @@ ACB Patterns:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import re
 import subprocess
 import typing as t
 from contextlib import suppress
@@ -25,7 +23,6 @@ from uuid import UUID, uuid4
 
 import tomli
 import yaml
-from acb.config import Settings
 from acb.depends import depends
 from pydantic import Field, validator
 
@@ -297,9 +294,7 @@ class UtilityCheckAdapter(QAAdapterBase):
             return []
 
         # Use config patterns if available, otherwise use settings patterns
-        patterns = (
-            config.file_patterns if config else self.settings.file_patterns
-        )
+        patterns = config.file_patterns if config else self.settings.file_patterns
         exclude_patterns = (
             config.exclude_patterns if config else self.settings.exclude_patterns
         )
@@ -449,7 +444,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                         "pattern": self.settings.pattern,
                         "error": str(e),
                         "error_type": type(e).__name__,
-                    }
+                    },
                 )
                 continue
 
@@ -492,11 +487,13 @@ class UtilityCheckAdapter(QAAdapterBase):
                     "Failed to check file for EOF newline",
                     extra={
                         "file_path": str(file_path),
-                        "check_type": self.settings.check_type.value if self.settings else "unknown",
+                        "check_type": self.settings.check_type.value
+                        if self.settings
+                        else "unknown",
                         "auto_fix": self.settings.auto_fix if self.settings else False,
                         "error": str(e),
                         "error_type": type(e).__name__,
-                    }
+                    },
                 )
                 continue
 
@@ -568,6 +565,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                     tomli.loads(content)
                 elif parser_type == "json":
                     import json
+
                     json.loads(content)
 
             except Exception as e:
@@ -578,11 +576,13 @@ class UtilityCheckAdapter(QAAdapterBase):
                     "Failed to validate file syntax",
                     extra={
                         "file_path": str(file_path),
-                        "check_type": self.settings.check_type.value if self.settings else "unknown",
+                        "check_type": self.settings.check_type.value
+                        if self.settings
+                        else "unknown",
                         "parser_type": parser_type,
                         "error": str(e),
                         "error_type": type(e).__name__,
-                    }
+                    },
                 )
 
         elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
@@ -647,11 +647,13 @@ class UtilityCheckAdapter(QAAdapterBase):
                     "Failed to check file size",
                     extra={
                         "file_path": str(file_path),
-                        "check_type": self.settings.check_type.value if self.settings else "unknown",
+                        "check_type": self.settings.check_type.value
+                        if self.settings
+                        else "unknown",
                         "max_size_bytes": max_size,
                         "error": str(e),
                         "error_type": type(e).__name__,
-                    }
+                    },
                 )
                 continue
 
@@ -805,7 +807,13 @@ class UtilityCheckAdapter(QAAdapterBase):
 
             # Configure file patterns based on check type
             if check_type == UtilityCheckType.TEXT_PATTERN:
-                file_patterns = ["**/*.py", "**/*.yaml", "**/*.toml", "**/*.json", "**/*.md"]
+                file_patterns = [
+                    "**/*.py",
+                    "**/*.yaml",
+                    "**/*.toml",
+                    "**/*.json",
+                    "**/*.md",
+                ]
                 stage = "fast"
                 is_formatter = self.settings.auto_fix
             elif check_type == UtilityCheckType.EOF_NEWLINE:
@@ -849,13 +857,21 @@ class UtilityCheckAdapter(QAAdapterBase):
             check_type=self._get_check_type(),
             enabled=True,
             file_patterns=file_patterns,
-            exclude_patterns=["**/.*", "**/.git/**", "**/.venv/**", "**/node_modules/**", "**/__pycache__/**"],
+            exclude_patterns=[
+                "**/.*",
+                "**/.git/**",
+                "**/.venv/**",
+                "**/node_modules/**",
+                "**/__pycache__/**",
+            ],
             timeout_seconds=60,  # Utility checks should be fast
             parallel_safe=True,
             is_formatter=is_formatter,
             stage=stage,
             settings={
-                "check_type": self.settings.check_type.value if self.settings else "text_pattern",
+                "check_type": self.settings.check_type.value
+                if self.settings
+                else "text_pattern",
                 "auto_fix": self.settings.auto_fix if self.settings else False,
             },
         )

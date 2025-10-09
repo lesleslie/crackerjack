@@ -24,7 +24,6 @@ from pathlib import Path
 from uuid import UUID
 
 from acb.depends import depends
-from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
@@ -38,7 +37,9 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = UUID("01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a0")  # Static UUID7 for reproducible module identity
+MODULE_ID = UUID(
+    "01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a0"
+)  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
 
 # Module-level logger for structured logging
@@ -97,8 +98,7 @@ class ZubanAdapter(BaseToolAdapter):
         """
         super().__init__(settings=settings)
         logger.debug(
-            "ZubanAdapter initialized",
-            extra={"has_settings": settings is not None}
+            "ZubanAdapter initialized", extra={"has_settings": settings is not None}
         )
 
     async def init(self) -> None:
@@ -114,7 +114,7 @@ class ZubanAdapter(BaseToolAdapter):
                 "incremental": self.settings.incremental,
                 "follow_imports": self.settings.follow_imports,
                 "has_cache_dir": self.settings.cache_dir is not None,
-            }
+            },
         )
 
     @property
@@ -189,7 +189,7 @@ class ZubanAdapter(BaseToolAdapter):
                 "incremental": self.settings.incremental,
                 "follow_imports": self.settings.follow_imports,
                 "has_cache_dir": self.settings.cache_dir is not None,
-            }
+            },
         )
         return cmd
 
@@ -213,12 +213,12 @@ class ZubanAdapter(BaseToolAdapter):
             data = json.loads(result.raw_output)
             logger.debug(
                 "Parsed Zuban JSON output",
-                extra={"files_count": len(data.get("files", []))}
+                extra={"files_count": len(data.get("files", []))},
             )
         except json.JSONDecodeError as e:
             logger.warning(
                 "JSON parse failed, falling back to text parsing",
-                extra={"error": str(e), "output_preview": result.raw_output[:200]}
+                extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )
             return self._parse_text_output(result.raw_output)
 
@@ -263,7 +263,7 @@ class ZubanAdapter(BaseToolAdapter):
                 "errors": sum(1 for i in issues if i.severity == "error"),
                 "warnings": sum(1 for i in issues if i.severity == "warning"),
                 "files_affected": len(set(str(i.file_path) for i in issues)),
-            }
+            },
         )
         return issues
 
@@ -291,7 +291,9 @@ class ZubanAdapter(BaseToolAdapter):
             try:
                 file_path = Path(parts[0].strip())
                 line_number = int(parts[1].strip())
-                column_number = int(parts[2].strip()) if parts[2].strip().isdigit() else None
+                column_number = (
+                    int(parts[2].strip()) if parts[2].strip().isdigit() else None
+                )
 
                 # Parse severity and message
                 severity_and_message = parts[3].strip() if len(parts) > 3 else ""
@@ -301,9 +303,9 @@ class ZubanAdapter(BaseToolAdapter):
                 severity = "error"
                 if severity_and_message.lower().startswith("warning"):
                     severity = "warning"
-                    message = severity_and_message[len("warning"):].strip()
+                    message = severity_and_message[len("warning") :].strip()
                 elif severity_and_message.lower().startswith("error"):
-                    message = severity_and_message[len("error"):].strip()
+                    message = severity_and_message[len("error") :].strip()
 
                 issue = ToolIssue(
                     file_path=file_path,
@@ -322,7 +324,7 @@ class ZubanAdapter(BaseToolAdapter):
             extra={
                 "total_issues": len(issues),
                 "files_with_issues": len(set(str(i.file_path) for i in issues)),
-            }
+            },
         )
         return issues
 

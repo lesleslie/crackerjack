@@ -14,9 +14,7 @@ ACB Patterns:
 from __future__ import annotations
 
 import asyncio
-import json
 import shutil
-import subprocess
 import typing as t
 from abc import abstractmethod
 from dataclasses import dataclass, field
@@ -132,6 +130,7 @@ class BaseToolAdapter(QAAdapterBase):
         MODULE_ID = uuid.uuid7()
         MODULE_STATUS = "stable"
 
+
         class RuffAdapter(BaseToolAdapter):
             settings: RuffSettings | None = None
 
@@ -150,12 +149,15 @@ class BaseToolAdapter(QAAdapterBase):
                 cmd.extend([str(f) for f in files])
                 return cmd
 
-            async def parse_output(self, result: ToolExecutionResult) -> list[ToolIssue]:
+            async def parse_output(
+                self, result: ToolExecutionResult
+            ) -> list[ToolIssue]:
                 # Parse ruff JSON output
                 if not result.raw_output:
                     return []
                 data = json.loads(result.raw_output)
                 return [self._parse_ruff_issue(issue) for issue in data]
+
 
         with suppress(Exception):
             depends.set(RuffAdapter)
@@ -273,7 +275,7 @@ class BaseToolAdapter(QAAdapterBase):
 
         try:
             exec_result = await self._execute_tool(command, target_files, start_time)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return self._create_result(
                 status=QAResultStatus.ERROR,
                 message=f"Tool execution timed out after {self.settings.timeout_seconds}s",
@@ -340,9 +342,7 @@ class BaseToolAdapter(QAAdapterBase):
 
             # Non-zero exit code doesn't always mean failure
             # Some tools return 1 when they find issues
-            success = process.returncode == 0 or (
-                process.returncode == 1 and stdout
-            )
+            success = process.returncode == 0 or (process.returncode == 1 and stdout)
 
             return ToolExecutionResult(
                 success=success,
@@ -354,7 +354,7 @@ class BaseToolAdapter(QAAdapterBase):
                 files_processed=target_files,
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Kill the process if it times out
             if process:
                 try:
@@ -403,7 +403,7 @@ class BaseToolAdapter(QAAdapterBase):
             # Return first line of version output
             return version_output.strip().split("\n")[0]
 
-        except (asyncio.TimeoutError, FileNotFoundError, Exception):
+        except (TimeoutError, FileNotFoundError, Exception):
             return None
 
     async def health_check(self) -> dict[str, t.Any]:

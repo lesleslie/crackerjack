@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import typing as t
-from pathlib import Path
 
 from crackerjack.config.hooks import HookDefinition, SecurityLevel
 from crackerjack.models.task import HookResult
@@ -36,10 +35,7 @@ class SequentialExecutionStrategy:
     Example:
         ```python
         strategy = SequentialExecutionStrategy()
-        results = await strategy.execute(
-            hooks=[hook1, hook2, hook3],
-            timeout=300
-        )
+        results = await strategy.execute(hooks=[hook1, hook2, hook3], timeout=300)
         ```
     """
 
@@ -62,7 +58,7 @@ class SequentialExecutionStrategy:
             extra={
                 "default_timeout": default_timeout,
                 "stop_on_critical_failure": stop_on_critical_failure,
-            }
+            },
         )
 
     async def execute(
@@ -70,7 +66,8 @@ class SequentialExecutionStrategy:
         hooks: list[HookDefinition],
         max_parallel: int | None = None,  # Ignored for sequential
         timeout: int | None = None,
-        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None = None,
+        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]]
+        | None = None,
     ) -> list[HookResult]:
         """Execute hooks sequentially.
 
@@ -95,7 +92,7 @@ class SequentialExecutionStrategy:
                 "hook_count": len(hooks),
                 "timeout": timeout_sec,
                 "stop_on_critical_failure": self.stop_on_critical_failure,
-            }
+            },
         )
 
         results = []
@@ -110,13 +107,12 @@ class SequentialExecutionStrategy:
                         "total_hooks": len(hooks),
                         "timeout": hook_timeout,
                         "security_level": hook.security_level.value,
-                    }
+                    },
                 )
 
                 if executor_callable:
                     result = await asyncio.wait_for(
-                        executor_callable(hook),
-                        timeout=hook_timeout
+                        executor_callable(hook), timeout=hook_timeout
                     )
                 else:
                     # Placeholder if no executor provided
@@ -130,7 +126,7 @@ class SequentialExecutionStrategy:
                         "hook": hook.name,
                         "status": result.status,
                         "duration": result.duration,
-                    }
+                    },
                 )
 
                 # Check for critical failure early exit
@@ -143,17 +139,17 @@ class SequentialExecutionStrategy:
                             "security_level": hook.security_level.value,
                             "executed_hooks": len(results),
                             "remaining_hooks": remaining_hooks,
-                        }
+                        },
                     )
                     break
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     f"Hook {hook.name} timed out",
                     extra={
                         "hook": hook.name,
                         "timeout": hook_timeout,
-                    }
+                    },
                 )
                 result = HookResult(
                     hook_name=hook.name,
@@ -174,7 +170,7 @@ class SequentialExecutionStrategy:
                         "hook": hook.name,
                         "exception": str(e),
                         "exception_type": type(e).__name__,
-                    }
+                    },
                 )
                 result = HookResult(
                     hook_name=hook.name,
@@ -197,7 +193,7 @@ class SequentialExecutionStrategy:
                 "passed": sum(1 for r in results if r.status == "passed"),
                 "failed": sum(1 for r in results if r.status == "failed"),
                 "errors": sum(1 for r in results if r.status in ("timeout", "error")),
-            }
+            },
         )
 
         return results

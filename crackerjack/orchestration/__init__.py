@@ -26,12 +26,15 @@ __all__ = [
     "HookOrchestratorSettings",
 ]
 
+
 # Lazy imports to avoid circular dependencies
 def __getattr__(name: str):
     if name == "HookOrchestratorAdapter":
         from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
+
         return HookOrchestratorAdapter
     elif name == "HookOrchestratorSettings":
         from crackerjack.orchestration.hook_orchestrator import HookOrchestratorSettings
+
         return HookOrchestratorSettings
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

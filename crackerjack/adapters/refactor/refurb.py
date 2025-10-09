@@ -16,7 +16,6 @@ ACB Patterns:
 
 from __future__ import annotations
 
-import json
 import logging
 import typing as t
 from contextlib import suppress
@@ -38,7 +37,9 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = UUID("01937d86-7c3d-8e4f-9a5b-c6d7e8f9a0b1")  # Static UUID7 for reproducible module identity
+MODULE_ID = UUID(
+    "01937d86-7c3d-8e4f-9a5b-c6d7e8f9a0b1"
+)  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
 
 # Module-level logger for structured logging
@@ -95,8 +96,7 @@ class RefurbAdapter(BaseToolAdapter):
         """
         super().__init__(settings=settings)
         logger.debug(
-            "RefurbAdapter initialized",
-            extra={"has_settings": settings is not None}
+            "RefurbAdapter initialized", extra={"has_settings": settings is not None}
         )
 
     async def init(self) -> None:
@@ -112,7 +112,7 @@ class RefurbAdapter(BaseToolAdapter):
                 "enable_checks_count": len(self.settings.enable_checks),
                 "disable_checks_count": len(self.settings.disable_checks),
                 "has_python_version": self.settings.python_version is not None,
-            }
+            },
         )
 
     @property
@@ -182,7 +182,7 @@ class RefurbAdapter(BaseToolAdapter):
                 "enable_checks_count": len(self.settings.enable_checks),
                 "disable_checks_count": len(self.settings.disable_checks),
                 "explain": self.settings.explain,
-            }
+            },
         )
         return cmd
 
@@ -204,10 +204,7 @@ class RefurbAdapter(BaseToolAdapter):
 
         issues = []
         lines = result.raw_output.strip().split("\n")
-        logger.debug(
-            "Parsing Refurb text output",
-            extra={"line_count": len(lines)}
-        )
+        logger.debug("Parsing Refurb text output", extra={"line_count": len(lines)})
 
         for line in lines:
             # Refurb format: "file.py:10:5 [FURB101]: Use dict comprehension..."
@@ -236,14 +233,14 @@ class RefurbAdapter(BaseToolAdapter):
                     first_part = remaining.split()[0]
                     if first_part.isdigit():
                         column_number = int(first_part)
-                        message_part = remaining[len(first_part):].strip()
+                        message_part = remaining[len(first_part) :].strip()
 
                 # Extract code and message
                 if "[" in message_part and "]" in message_part:
                     code_start = message_part.index("[")
                     code_end = message_part.index("]")
-                    code = message_part[code_start + 1:code_end]
-                    message = message_part[code_end + 1:].strip()
+                    code = message_part[code_start + 1 : code_end]
+                    message = message_part[code_end + 1 :].strip()
                     if message.startswith(":"):
                         message = message[1:].strip()
                 else:
@@ -269,7 +266,7 @@ class RefurbAdapter(BaseToolAdapter):
                 "total_issues": len(issues),
                 "files_affected": len(set(str(i.file_path) for i in issues)),
                 "unique_codes": len(set(i.code for i in issues if i.code)),
-            }
+            },
         )
         return issues
 

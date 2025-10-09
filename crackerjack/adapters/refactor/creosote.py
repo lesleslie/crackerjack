@@ -16,7 +16,6 @@ ACB Patterns:
 
 from __future__ import annotations
 
-import json
 import logging
 import typing as t
 from contextlib import suppress
@@ -38,7 +37,9 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = UUID("01937d86-8d4e-9f5a-b6c7-d8e9f0a1b2c3")  # Static UUID7 for reproducible module identity
+MODULE_ID = UUID(
+    "01937d86-8d4e-9f5a-b6c7-d8e9f0a1b2c3"
+)  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
 
 # Module-level logger for structured logging
@@ -93,8 +94,7 @@ class CreosoteAdapter(BaseToolAdapter):
         """
         super().__init__(settings=settings)
         logger.debug(
-            "CreosoteAdapter initialized",
-            extra={"has_settings": settings is not None}
+            "CreosoteAdapter initialized", extra={"has_settings": settings is not None}
         )
 
     async def init(self) -> None:
@@ -109,7 +109,7 @@ class CreosoteAdapter(BaseToolAdapter):
                 "has_config_file": self.settings.config_file is not None,
                 "exclude_deps_count": len(self.settings.exclude_deps),
                 "scan_paths_count": len(self.settings.paths),
-            }
+            },
         )
 
     @property
@@ -166,7 +166,7 @@ class CreosoteAdapter(BaseToolAdapter):
                 "has_config_file": self.settings.config_file is not None,
                 "exclude_deps_count": len(self.settings.exclude_deps),
                 "scan_paths_count": len(self.settings.paths),
-            }
+            },
         )
         return cmd
 
@@ -188,10 +188,7 @@ class CreosoteAdapter(BaseToolAdapter):
 
         issues = []
         lines = result.raw_output.strip().split("\n")
-        logger.debug(
-            "Parsing Creosote text output",
-            extra={"line_count": len(lines)}
-        )
+        logger.debug("Parsing Creosote text output", extra={"line_count": len(lines)})
 
         # Creosote output format:
         # "Found unused dependencies:"
@@ -199,7 +196,9 @@ class CreosoteAdapter(BaseToolAdapter):
         # "  another-package"
 
         parsing_unused = False
-        config_file = self.settings.config_file if self.settings else Path("pyproject.toml")
+        config_file = (
+            self.settings.config_file if self.settings else Path("pyproject.toml")
+        )
 
         for line in lines:
             line = line.strip()
@@ -234,7 +233,7 @@ class CreosoteAdapter(BaseToolAdapter):
             extra={
                 "total_unused": len(issues),
                 "config_file": str(config_file),
-            }
+            },
         )
         return issues
 

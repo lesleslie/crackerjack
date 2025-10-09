@@ -95,10 +95,12 @@ class QAAdapterBase:
         MODULE_ID = uuid.UUID("01937d86-5f2a-7b3c-9d1e-a2b3c4d5e6f7")
         MODULE_STATUS = "stable"
 
+
         class RuffLintSettings(QABaseSettings):
             select_rules: list[str] = []
             ignore_rules: list[str] = []
             fix_enabled: bool = False
+
 
         class RuffLintAdapter(QAAdapterBase):
             settings: RuffLintSettings | None = None
@@ -119,6 +121,7 @@ class QAAdapterBase:
             async def check(self, files=None, config=None):
                 # Implementation here
                 return QAResult(...)
+
 
         # Register at module level (REQUIRED by ACB)
         with suppress(Exception):

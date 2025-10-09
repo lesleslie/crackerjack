@@ -272,7 +272,9 @@ class RuffAdapter(BaseToolAdapter):
                 message=item.get("message", ""),
                 code=item.get("code"),
                 severity="error" if item.get("code", "").startswith("E") else "warning",
-                suggestion=item.get("fix", {}).get("message") if item.get("fix") else None,
+                suggestion=item.get("fix", {}).get("message")
+                if item.get("fix")
+                else None,
             )
             issues.append(issue)
 
@@ -302,7 +304,9 @@ class RuffAdapter(BaseToolAdapter):
             try:
                 file_path = Path(parts[0].strip())
                 line_number = int(parts[1].strip())
-                column_number = int(parts[2].strip()) if parts[2].strip().isdigit() else None
+                column_number = (
+                    int(parts[2].strip()) if parts[2].strip().isdigit() else None
+                )
 
                 # Parse code and message
                 message_part = parts[3].strip()
@@ -313,7 +317,7 @@ class RuffAdapter(BaseToolAdapter):
                     code_candidate = message_part.split()[0]
                     if code_candidate.strip():
                         code = code_candidate
-                        message = message_part[len(code):].strip()
+                        message = message_part[len(code) :].strip()
 
                 issue = ToolIssue(
                     file_path=file_path,
@@ -433,7 +437,12 @@ class RuffAdapter(BaseToolAdapter):
             check_type=self._get_check_type(),
             enabled=True,
             file_patterns=["**/*.py"],
-            exclude_patterns=["**/.*", "**/__pycache__/**", "**/build/**", "**/dist/**"],
+            exclude_patterns=[
+                "**/.*",
+                "**/__pycache__/**",
+                "**/build/**",
+                "**/dist/**",
+            ],
             timeout_seconds=60,
             is_formatter=self.settings.mode == "format" if self.settings else False,
             parallel_safe=True,

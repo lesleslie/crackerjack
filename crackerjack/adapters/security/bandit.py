@@ -39,7 +39,9 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = UUID("01937d86-4f2a-7b3c-8d9e-f3b4d3c2b1a0")  # Static UUID7 for reproducible module identity
+MODULE_ID = UUID(
+    "01937d86-4f2a-7b3c-8d9e-f3b4d3c2b1a0"
+)  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
 
 # Module-level logger for structured logging
@@ -101,8 +103,7 @@ class BanditAdapter(BaseToolAdapter):
         """
         super().__init__(settings=settings)
         logger.debug(
-            "BanditAdapter initialized",
-            extra={"has_settings": settings is not None}
+            "BanditAdapter initialized", extra={"has_settings": settings is not None}
         )
 
     async def init(self) -> None:
@@ -117,7 +118,7 @@ class BanditAdapter(BaseToolAdapter):
                 "severity": self.settings.severity_level,
                 "confidence": self.settings.confidence_level,
                 "exclude_tests": self.settings.exclude_tests,
-            }
+            },
         )
 
     @property
@@ -192,7 +193,7 @@ class BanditAdapter(BaseToolAdapter):
                 "recursive": self.settings.recursive,
                 "exclude_tests": self.settings.exclude_tests,
                 "skip_rules_count": len(self.settings.skip_rules),
-            }
+            },
         )
         return cmd
 
@@ -216,13 +217,13 @@ class BanditAdapter(BaseToolAdapter):
             data = json.loads(result.raw_output)
             logger.debug(
                 "Parsed Bandit JSON output",
-                extra={"results_count": len(data.get("results", []))}
+                extra={"results_count": len(data.get("results", []))},
             )
         except json.JSONDecodeError as e:
             # Fallback to text parsing if JSON fails
             logger.warning(
                 "JSON parse failed, falling back to text parsing",
-                extra={"error": str(e), "output_preview": result.raw_output[:200]}
+                extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )
             return self._parse_text_output(result.raw_output)
 
@@ -266,7 +267,7 @@ class BanditAdapter(BaseToolAdapter):
                 code=item.get("test_id"),
                 severity=severity,
                 suggestion=f"Confidence: {item.get('issue_confidence', 'UNKNOWN')}, "
-                          f"See: {item.get('more_info', '')}",
+                f"See: {item.get('more_info', '')}",
             )
             issues.append(issue)
 
@@ -276,7 +277,7 @@ class BanditAdapter(BaseToolAdapter):
                 "total_issues": len(issues),
                 "high_severity": sum(1 for i in issues if i.severity == "error"),
                 "files_affected": len(set(str(i.file_path) for i in issues)),
-            }
+            },
         )
         return issues
 
@@ -329,8 +330,10 @@ class BanditAdapter(BaseToolAdapter):
             "Parsed Bandit text output (fallback)",
             extra={
                 "total_issues": len(issues),
-                "files_with_issues": len(set(str(i.file_path) for i in issues if i.file_path)),
-            }
+                "files_with_issues": len(
+                    set(str(i.file_path) for i in issues if i.file_path)
+                ),
+            },
         )
         return issues
 

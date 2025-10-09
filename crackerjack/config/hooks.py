@@ -32,8 +32,30 @@ class HookDefinition:
     manual_stage: bool = False
     config_path: Path | None = None
     security_level: SecurityLevel = SecurityLevel.MEDIUM
+    use_precommit_legacy: bool = True  # Phase 8.2: Backward compatibility flag
 
     def get_command(self) -> list[str]:
+        """Get the command to execute this hook.
+
+        Returns the appropriate command based on use_precommit_legacy flag:
+        - If use_precommit_legacy=True: Returns pre-commit wrapper command (legacy mode)
+        - If use_precommit_legacy=False: Returns direct tool command (Phase 8+ mode)
+
+        Returns:
+            List of command arguments for subprocess execution
+        """
+        # Phase 8.2: Direct invocation mode (new behavior)
+        if not self.use_precommit_legacy:
+            from crackerjack.config.tool_commands import get_tool_command
+
+            try:
+                return get_tool_command(self.name)
+            except KeyError:
+                # Fallback to pre-commit if tool not in registry
+                # This ensures graceful degradation during migration
+                pass
+
+        # Legacy mode: Use pre-commit wrapper (Phase 1-7 behavior)
         import shutil
         from pathlib import Path
 
@@ -72,6 +94,7 @@ FAST_HOOKS = [
         timeout=30,
         retry_on_failure=True,
         security_level=SecurityLevel.HIGH,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="trailing-whitespace",
@@ -79,6 +102,7 @@ FAST_HOOKS = [
         is_formatting=True,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="end-of-file-fixer",
@@ -86,36 +110,43 @@ FAST_HOOKS = [
         is_formatting=True,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="check-yaml",
         command=[],
         security_level=SecurityLevel.MEDIUM,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="check-toml",
         command=[],
         security_level=SecurityLevel.MEDIUM,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="check-added-large-files",
         command=[],
         security_level=SecurityLevel.HIGH,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="uv-lock",
         command=[],
         security_level=SecurityLevel.HIGH,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="gitleaks",
         command=[],
         security_level=SecurityLevel.CRITICAL,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="codespell",
         command=[],
         security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="ruff-check",
@@ -123,6 +154,7 @@ FAST_HOOKS = [
         is_formatting=True,
         retry_on_failure=True,
         security_level=SecurityLevel.MEDIUM,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="ruff-format",
@@ -130,6 +162,7 @@ FAST_HOOKS = [
         is_formatting=True,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="mdformat",
@@ -137,6 +170,7 @@ FAST_HOOKS = [
         is_formatting=True,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
 ]
 
@@ -148,6 +182,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="bandit",
@@ -156,6 +191,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="skylos",
@@ -164,6 +200,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="refurb",
@@ -172,6 +209,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="creosote",
@@ -180,6 +218,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="complexipy",
@@ -188,6 +227,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
 ]
 

@@ -62,65 +62,29 @@ class AsyncHookManager:
         return asyncio.run(self.run_comprehensive_hooks_async())
 
     async def install_hooks_async(self) -> bool:
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "uv",
-                "run",
-                "pre-commit",
-                "install",
-                cwd=self.pkg_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+        """Install git hooks (async version).
 
-            _, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
-
-            if process.returncode == 0:
-                self.console.print("[green]✅[/ green] Pre-commit hooks installed")
-                return True
-            error_msg = stderr.decode() if stderr else "Unknown error"
-            self.console.print(
-                f"[red]❌[/ red] Failed to install hooks: {error_msg}",
-            )
-            return False
-
-        except TimeoutError:
-            self.console.print("[red]❌[/ red] Hook installation timed out")
-            return False
-        except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error installing hooks: {e}")
-            return False
+        Phase 8.5: This method is deprecated. Direct tool invocation doesn't require
+        pre-commit hook installation. Returns True with informational message.
+        """
+        self.console.print(
+            "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation"
+        )
+        return True
 
     def install_hooks(self) -> bool:
         return asyncio.run(self.install_hooks_async())
 
     async def update_hooks_async(self) -> bool:
-        try:
-            process = await asyncio.create_subprocess_exec(
-                "uv",
-                "run",
-                "pre-commit",
-                "autoupdate",
-                cwd=self.pkg_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+        """Update hooks to latest versions (async version).
 
-            _, stderr = await asyncio.wait_for(process.communicate(), timeout=60)
-
-            if process.returncode == 0:
-                self.console.print("[green]✅[/ green] Pre-commit hooks updated")
-                return True
-            error_msg = stderr.decode() if stderr else "Unknown error"
-            self.console.print(f"[red]❌[/ red] Failed to update hooks: {error_msg}")
-            return False
-
-        except TimeoutError:
-            self.console.print("[red]❌[/ red] Hook update timed out")
-            return False
-        except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error updating hooks: {e}")
-            return False
+        Phase 8.5: This method is deprecated. Direct tool invocation uses UV for
+        dependency management. Returns True with informational message.
+        """
+        self.console.print(
+            "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution"
+        )
+        return True
 
     def update_hooks(self) -> bool:
         return asyncio.run(self.update_hooks_async())

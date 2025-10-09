@@ -23,7 +23,6 @@ from pathlib import Path
 from uuid import UUID
 
 from acb.depends import depends
-from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
@@ -37,7 +36,9 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = UUID("01937d86-9e5f-a6b7-c8d9-e0f1a2b3c4d5")  # Static UUID7 for reproducible module identity
+MODULE_ID = UUID(
+    "01937d86-9e5f-a6b7-c8d9-e0f1a2b3c4d5"
+)  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
 
 # Module-level logger for structured logging
@@ -94,7 +95,7 @@ class ComplexipyAdapter(BaseToolAdapter):
         super().__init__(settings=settings)
         logger.debug(
             "ComplexipyAdapter initialized",
-            extra={"has_settings": settings is not None}
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -110,7 +111,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                 "include_cognitive": self.settings.include_cognitive,
                 "include_maintainability": self.settings.include_maintainability,
                 "sort_by": self.settings.sort_by,
-            }
+            },
         )
 
     @property
@@ -175,7 +176,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                 "max_complexity": self.settings.max_complexity,
                 "include_cognitive": self.settings.include_cognitive,
                 "include_maintainability": self.settings.include_maintainability,
-            }
+            },
         )
         return cmd
 
@@ -199,12 +200,12 @@ class ComplexipyAdapter(BaseToolAdapter):
             data = json.loads(result.raw_output)
             logger.debug(
                 "Parsed Complexipy JSON output",
-                extra={"files_count": len(data.get("files", []))}
+                extra={"files_count": len(data.get("files", []))},
             )
         except json.JSONDecodeError as e:
             logger.warning(
                 "JSON parse failed, falling back to text parsing",
-                extra={"error": str(e), "output_preview": result.raw_output[:200]}
+                extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )
             return self._parse_text_output(result.raw_output)
 
@@ -247,7 +248,9 @@ class ComplexipyAdapter(BaseToolAdapter):
                 if self.settings.include_maintainability:
                     message_parts.append(f"Maintainability: {maintainability:.1f}")
 
-                message = f"Function '{func.get('name', 'unknown')}' - " + ", ".join(message_parts)
+                message = f"Function '{func.get('name', 'unknown')}' - " + ", ".join(
+                    message_parts
+                )
 
                 # Severity based on complexity level
                 if complexity > self.settings.max_complexity * 2:
@@ -271,7 +274,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                 "total_issues": len(issues),
                 "high_complexity": sum(1 for i in issues if i.severity == "error"),
                 "files_affected": len(set(str(i.file_path) for i in issues)),
-            }
+            },
         )
         return issues
 
@@ -318,7 +321,9 @@ class ComplexipyAdapter(BaseToolAdapter):
                                 line_number=line_number,
                                 message=f"Function '{func_name}' has complexity {complexity}",
                                 code="COMPLEXITY",
-                                severity="warning" if complexity <= self.settings.max_complexity * 2 else "error",
+                                severity="warning"
+                                if complexity <= self.settings.max_complexity * 2
+                                else "error",
                             )
                             issues.append(issue)
 
@@ -330,7 +335,7 @@ class ComplexipyAdapter(BaseToolAdapter):
             extra={
                 "total_issues": len(issues),
                 "files_with_issues": len(set(str(i.file_path) for i in issues)),
-            }
+            },
         )
         return issues
 

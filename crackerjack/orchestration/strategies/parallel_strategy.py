@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import typing as t
-from pathlib import Path
 
 from crackerjack.config.hooks import HookDefinition
 from crackerjack.models.task import HookResult
@@ -36,10 +35,7 @@ class ParallelExecutionStrategy:
     Example:
         ```python
         strategy = ParallelExecutionStrategy(max_parallel=3)
-        results = await strategy.execute(
-            hooks=[hook1, hook2, hook3],
-            timeout=300
-        )
+        results = await strategy.execute(hooks=[hook1, hook2, hook3], timeout=300)
         ```
     """
 
@@ -63,7 +59,7 @@ class ParallelExecutionStrategy:
             extra={
                 "max_parallel": max_parallel,
                 "default_timeout": default_timeout,
-            }
+            },
         )
 
     async def execute(
@@ -71,7 +67,8 @@ class ParallelExecutionStrategy:
         hooks: list[HookDefinition],
         max_parallel: int | None = None,
         timeout: int | None = None,
-        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None = None,
+        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]]
+        | None = None,
     ) -> list[HookResult]:
         """Execute hooks in parallel with resource limits.
 
@@ -100,7 +97,7 @@ class ParallelExecutionStrategy:
                 "hook_count": len(hooks),
                 "max_parallel": max_par,
                 "timeout": timeout_sec,
-            }
+            },
         )
 
         async def execute_with_limit(hook: HookDefinition) -> HookResult:
@@ -113,13 +110,12 @@ class ParallelExecutionStrategy:
                         extra={
                             "hook": hook.name,
                             "timeout": hook_timeout,
-                        }
+                        },
                     )
 
                     if executor_callable:
                         result = await asyncio.wait_for(
-                            executor_callable(hook),
-                            timeout=hook_timeout
+                            executor_callable(hook), timeout=hook_timeout
                         )
                     else:
                         # Placeholder if no executor provided
@@ -131,17 +127,17 @@ class ParallelExecutionStrategy:
                             "hook": hook.name,
                             "status": result.status,
                             "duration": result.duration,
-                        }
+                        },
                     )
                     return result
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning(
                         f"Hook {hook.name} timed out",
                         extra={
                             "hook": hook.name,
                             "timeout": hook_timeout,
-                        }
+                        },
                     )
                     return HookResult(
                         hook_name=hook.name,
@@ -156,7 +152,7 @@ class ParallelExecutionStrategy:
                             "hook": hook.name,
                             "exception": str(e),
                             "exception_type": type(e).__name__,
-                        }
+                        },
                     )
                     return HookResult(
                         hook_name=hook.name,
@@ -183,7 +179,7 @@ class ParallelExecutionStrategy:
                         "hook": hook.name,
                         "exception": str(result),
                         "exception_type": type(result).__name__,
-                    }
+                    },
                 )
                 final_results.append(self._error_result(hook, result))
 
@@ -193,8 +189,10 @@ class ParallelExecutionStrategy:
                 "total_hooks": len(final_results),
                 "passed": sum(1 for r in final_results if r.status == "passed"),
                 "failed": sum(1 for r in final_results if r.status == "failed"),
-                "errors": sum(1 for r in final_results if r.status in ("timeout", "error")),
-            }
+                "errors": sum(
+                    1 for r in final_results if r.status in ("timeout", "error")
+                ),
+            },
         )
 
         return final_results

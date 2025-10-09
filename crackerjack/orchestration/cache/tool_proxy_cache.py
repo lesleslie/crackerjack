@@ -78,7 +78,9 @@ class ToolProxyCacheAdapter:
         """
         self.settings = settings or ToolProxyCacheSettings()
         self._cache_dir = cache_dir or Path.cwd() / ".crackerjack" / "cache"
-        self._cache: dict[str, tuple[HookResult, float]] = {}  # key -> (result, expiry_timestamp)
+        self._cache: dict[
+            str, tuple[HookResult, float]
+        ] = {}  # key -> (result, expiry_timestamp)
         self._initialized = False
 
         logger.debug(
@@ -87,7 +89,7 @@ class ToolProxyCacheAdapter:
                 "cache_dir": str(self._cache_dir),
                 "default_ttl": self.settings.default_ttl,
                 "enable_compression": self.settings.enable_compression,
-            }
+            },
         )
 
     async def init(self) -> None:
@@ -105,7 +107,7 @@ class ToolProxyCacheAdapter:
                 extra={
                     "cache_dir": str(self._cache_dir),
                     "default_ttl": self.settings.default_ttl,
-                }
+                },
             )
         except Exception as e:
             logger.error(
@@ -113,7 +115,7 @@ class ToolProxyCacheAdapter:
                 extra={
                     "error": str(e),
                     "cache_dir": str(self._cache_dir),
-                }
+                },
             )
             raise
 
@@ -144,16 +146,13 @@ class ToolProxyCacheAdapter:
                             "key": key,
                             "hook_name": result.hook_name,
                             "status": result.status,
-                        }
+                        },
                     )
                     return result
                 else:
                     # Expired - remove from cache
                     del self._cache[key]
-                    logger.debug(
-                        "Cache entry expired",
-                        extra={"key": key}
-                    )
+                    logger.debug("Cache entry expired", extra={"key": key})
 
             logger.debug("Cache miss", extra={"key": key})
             return None
@@ -164,7 +163,7 @@ class ToolProxyCacheAdapter:
                 extra={
                     "key": key,
                     "error": str(e),
-                }
+                },
             )
             return None
 
@@ -200,7 +199,7 @@ class ToolProxyCacheAdapter:
                     "hook_name": result.hook_name,
                     "status": result.status,
                     "ttl": ttl_sec,
-                }
+                },
             )
 
         except Exception as e:
@@ -209,7 +208,7 @@ class ToolProxyCacheAdapter:
                 extra={
                     "key": key,
                     "error": str(e),
-                }
+                },
             )
 
     def compute_key(
@@ -249,7 +248,7 @@ class ToolProxyCacheAdapter:
                 except Exception as e:
                     logger.warning(
                         f"Failed to hash file {file_path}: {e}",
-                        extra={"file": str(file_path), "error": str(e)}
+                        extra={"file": str(file_path), "error": str(e)},
                     )
                     continue
 
@@ -264,7 +263,7 @@ class ToolProxyCacheAdapter:
                     "file_count": len(files),
                     "config_hash": config_hash,
                     "content_hash": content_hash,
-                }
+                },
             )
 
             return cache_key
@@ -275,7 +274,7 @@ class ToolProxyCacheAdapter:
                 extra={
                     "hook_name": hook.name,
                     "error": str(e),
-                }
+                },
             )
             # Fallback to simple key
             return f"{hook.name}:error"
@@ -286,10 +285,7 @@ class ToolProxyCacheAdapter:
             self._cache.clear()
             logger.info("Cache cleared")
         except Exception as e:
-            logger.error(
-                "Failed to clear cache",
-                extra={"error": str(e)}
-            )
+            logger.error("Failed to clear cache", extra={"error": str(e)})
 
     async def get_stats(self) -> dict[str, t.Any]:
         """Get cache statistics.
@@ -302,8 +298,7 @@ class ToolProxyCacheAdapter:
         try:
             total_entries = len(self._cache)
             expired_entries = sum(
-                1 for _, expiry in self._cache.values()
-                if time.time() >= expiry
+                1 for _, expiry in self._cache.values() if time.time() >= expiry
             )
             active_entries = total_entries - expired_entries
 
@@ -315,18 +310,12 @@ class ToolProxyCacheAdapter:
                 "default_ttl": self.settings.default_ttl,
             }
 
-            logger.debug(
-                "Cache statistics",
-                extra=stats
-            )
+            logger.debug("Cache statistics", extra=stats)
 
             return stats
 
         except Exception as e:
-            logger.error(
-                "Failed to get cache statistics",
-                extra={"error": str(e)}
-            )
+            logger.error("Failed to get cache statistics", extra={"error": str(e)})
             return {}
 
     @property
@@ -343,4 +332,5 @@ class ToolProxyCacheAdapter:
 # ACB Registration (REQUIRED at module level)
 with suppress(Exception):
     from acb.depends import depends
+
     depends.set(ToolProxyCacheAdapter)

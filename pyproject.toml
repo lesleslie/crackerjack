@@ -39,7 +39,6 @@ dependencies = [
     "mcp>=1.12.2",
     "nltk>=3.9.1",
     "numpy>=2.2.1",
-    "pre-commit>=4.2",
     "pydantic>=2.11.7",
     "pyleak>=0.1.14",
     "pyright>=1.1.403",

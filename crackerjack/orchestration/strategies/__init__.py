@@ -18,12 +18,19 @@ __all__ = [
     "SequentialExecutionStrategy",
 ]
 
+
 # Lazy imports
 def __getattr__(name: str):
     if name == "ParallelExecutionStrategy":
-        from crackerjack.orchestration.strategies.parallel_strategy import ParallelExecutionStrategy
+        from crackerjack.orchestration.strategies.parallel_strategy import (
+            ParallelExecutionStrategy,
+        )
+
         return ParallelExecutionStrategy
     elif name == "SequentialExecutionStrategy":
-        from crackerjack.orchestration.strategies.sequential_strategy import SequentialExecutionStrategy
+        from crackerjack.orchestration.strategies.sequential_strategy import (
+            SequentialExecutionStrategy,
+        )
+
         return SequentialExecutionStrategy
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -189,7 +189,9 @@ class CodespellAdapter(BaseToolAdapter):
                     continue
 
                 file_path = Path(parts[0].strip())
-                line_number = int(parts[1].strip()) if parts[1].strip().isdigit() else None
+                line_number = (
+                    int(parts[1].strip()) if parts[1].strip().isdigit() else None
+                )
 
                 # Parse error and suggestion
                 error_part = parts[2].strip() if len(parts) > 2 else line

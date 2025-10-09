@@ -1,4 +1,3 @@
-import subprocess
 import typing as t
 from pathlib import Path
 
@@ -121,7 +120,20 @@ class HookManagerImpl:
         if self.orchestration_enabled:
             import asyncio
 
-            return asyncio.run(self._run_fast_hooks_orchestrated())
+            # Check if we're already in an event loop (e.g., during testing)
+            try:
+                asyncio.get_running_loop()
+                # We're in an event loop, run in thread
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run, self._run_fast_hooks_orchestrated()
+                    )
+                    return future.result()
+            except RuntimeError:
+                # No event loop running, safe to use asyncio.run()
+                return asyncio.run(self._run_fast_hooks_orchestrated())
 
         # Legacy executor path (Phase 1-2)
         strategy = self.config_loader.load_strategy("fast")
@@ -137,7 +149,20 @@ class HookManagerImpl:
         if self.orchestration_enabled:
             import asyncio
 
-            return asyncio.run(self._run_comprehensive_hooks_orchestrated())
+            # Check if we're already in an event loop (e.g., during testing)
+            try:
+                asyncio.get_running_loop()
+                # We're in an event loop, run in thread
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run, self._run_comprehensive_hooks_orchestrated()
+                    )
+                    return future.result()
+            except RuntimeError:
+                # No event loop running, safe to use asyncio.run()
+                return asyncio.run(self._run_comprehensive_hooks_orchestrated())
 
         # Legacy executor path (Phase 1-2)
         strategy = self.config_loader.load_strategy("comprehensive")
@@ -148,20 +173,36 @@ class HookManagerImpl:
         execution_result = self.executor.execute_strategy(strategy)
         return execution_result.results
 
+    async def _run_hooks_parallel(self) -> list[HookResult]:
+        """Run fast and comprehensive strategies in parallel (async helper)."""
+        import asyncio
+
+        fast_task = self._run_fast_hooks_orchestrated()
+        comp_task = self._run_comprehensive_hooks_orchestrated()
+
+        fast_results, comp_results = await asyncio.gather(fast_task, comp_task)
+        return fast_results + comp_results
+
     def run_hooks(self) -> list[HookResult]:
         # Phase 5-7: Enable strategy-level parallelism when orchestration is enabled
-        if self.orchestration_enabled and self._orchestration_config.enable_strategy_parallelism:
+        if (
+            self.orchestration_enabled
+            and self._orchestration_config.enable_strategy_parallelism
+        ):
             import asyncio
 
-            # Execute both strategies concurrently (Tier 1 parallelism)
-            fast_task = self._run_fast_hooks_orchestrated()
-            comp_task = self._run_comprehensive_hooks_orchestrated()
+            # Check if we're already in an event loop (e.g., during testing)
+            try:
+                asyncio.get_running_loop()
+                # We're in an event loop, use nest_asyncio or run in thread
+                import concurrent.futures
 
-            fast_results, comp_results = asyncio.run(
-                asyncio.gather(fast_task, comp_task)
-            )
-
-            return fast_results + comp_results
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, self._run_hooks_parallel())
+                    return future.result()
+            except RuntimeError:
+                # No event loop running, safe to use asyncio.run()
+                return asyncio.run(self._run_hooks_parallel())
 
         # Legacy path: Sequential execution (backward compatibility)
         fast_results = self.run_fast_hooks()
@@ -260,17 +301,12 @@ class HookManagerImpl:
                 pass  # Config path handled at manager level
 
     def validate_hooks_config(self) -> bool:
-        try:
-            result = subprocess.run(
-                ["uv", "run", "pre-commit", "validate-config"],
-                cwd=self.pkg_path,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            return result.returncode == 0
-        except Exception:
-            return False
+        """Validate hooks configuration.
+
+        Phase 8.5: This method is deprecated. Direct tool invocation doesn't require
+        pre-commit config validation. Always returns True for backward compatibility.
+        """
+        return True
 
     def get_hook_ids(self) -> list[str]:
         fast_strategy = self.config_loader.load_strategy("fast")
@@ -280,46 +316,26 @@ class HookManagerImpl:
         return [hook.name for hook in all_hooks]
 
     def install_hooks(self) -> bool:
-        try:
-            result = subprocess.run(
-                ["uv", "run", "pre-commit", "install"],
-                check=False,
-                cwd=self.pkg_path,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode == 0:
-                self.console.print("[green]✅[/ green] Pre-commit hooks installed")
-                return True
-            self.console.print(
-                f"[red]❌[/ red] Failed to install hooks: {result.stderr}",
-            )
-            return False
-        except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error installing hooks: {e}")
-            return False
+        """Install git hooks.
+
+        Phase 8.5: This method is deprecated. Direct tool invocation doesn't require
+        pre-commit hook installation. Returns True with informational message.
+        """
+        self.console.print(
+            "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation"
+        )
+        return True
 
     def update_hooks(self) -> bool:
-        try:
-            result = subprocess.run(
-                ["uv", "run", "pre-commit", "autoupdate"],
-                check=False,
-                cwd=self.pkg_path,
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-            if result.returncode == 0:
-                self.console.print("[green]✅[/ green] Pre-commit hooks updated")
-                return True
-            self.console.print(
-                f"[red]❌[/ red] Failed to update hooks: {result.stderr}",
-            )
-            return False
-        except Exception as e:
-            self.console.print(f"[red]❌[/ red] Error updating hooks: {e}")
-            return False
+        """Update hooks to latest versions.
+
+        Phase 8.5: This method is deprecated. Direct tool invocation uses UV for
+        dependency management. Returns True with informational message.
+        """
+        self.console.print(
+            "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution"
+        )
+        return True
 
     def get_hook_summary(self, results: list[HookResult]) -> dict[str, t.Any]:
         if not results:

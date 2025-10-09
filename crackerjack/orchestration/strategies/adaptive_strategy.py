@@ -83,7 +83,7 @@ class AdaptiveExecutionStrategy:
                 "max_parallel": max_parallel,
                 "default_timeout": default_timeout,
                 "stop_on_critical_failure": stop_on_critical_failure,
-            }
+            },
         )
 
     async def execute(
@@ -91,7 +91,8 @@ class AdaptiveExecutionStrategy:
         hooks: list[HookDefinition],
         max_parallel: int | None = None,
         timeout: int | None = None,
-        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None = None,
+        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]]
+        | None = None,
     ) -> list[HookResult]:
         """Execute hooks in dependency-aware waves.
 
@@ -117,7 +118,7 @@ class AdaptiveExecutionStrategy:
                 "hook_count": len(hooks),
                 "max_parallel": max_par,
                 "timeout": timeout_sec,
-            }
+            },
         )
 
         # Compute execution waves using topological sort
@@ -128,10 +129,14 @@ class AdaptiveExecutionStrategy:
             extra={
                 "wave_count": len(waves),
                 "waves": [
-                    {"wave_idx": idx, "hook_count": len(wave), "hooks": [h.name for h in wave]}
+                    {
+                        "wave_idx": idx,
+                        "hook_count": len(wave),
+                        "hooks": [h.name for h in wave],
+                    }
                     for idx, wave in enumerate(waves, 1)
                 ],
-            }
+            },
         )
 
         # Execute each wave in parallel, waves sequentially
@@ -144,7 +149,7 @@ class AdaptiveExecutionStrategy:
                     "total_waves": len(waves),
                     "hooks_in_wave": len(wave_hooks),
                     "hook_names": [h.name for h in wave_hooks],
-                }
+                },
             )
 
             # Execute this wave in parallel
@@ -163,12 +168,16 @@ class AdaptiveExecutionStrategy:
                     "wave_idx": wave_idx,
                     "passed": sum(1 for r in wave_results if r.status == "passed"),
                     "failed": sum(1 for r in wave_results if r.status == "failed"),
-                    "errors": sum(1 for r in wave_results if r.status in ("timeout", "error")),
-                }
+                    "errors": sum(
+                        1 for r in wave_results if r.status in ("timeout", "error")
+                    ),
+                },
             )
 
             # Check for critical failures that should stop execution
-            if self.stop_on_critical_failure and self._has_critical_failure(wave_hooks, wave_results):
+            if self.stop_on_critical_failure and self._has_critical_failure(
+                wave_hooks, wave_results
+            ):
                 remaining_hooks = sum(len(w) for w in waves[wave_idx:])
                 logger.warning(
                     "Critical failure detected, stopping execution",
@@ -176,7 +185,7 @@ class AdaptiveExecutionStrategy:
                         "completed_waves": wave_idx,
                         "remaining_waves": len(waves) - wave_idx,
                         "remaining_hooks": remaining_hooks,
-                    }
+                    },
                 )
                 break
 
@@ -188,8 +197,10 @@ class AdaptiveExecutionStrategy:
                 "total_waves": len(waves),
                 "passed": sum(1 for r in all_results if r.status == "passed"),
                 "failed": sum(1 for r in all_results if r.status == "failed"),
-                "errors": sum(1 for r in all_results if r.status in ("timeout", "error")),
-            }
+                "errors": sum(
+                    1 for r in all_results if r.status in ("timeout", "error")
+                ),
+            },
         )
 
         return all_results
@@ -229,7 +240,7 @@ class AdaptiveExecutionStrategy:
             "Computed in-degree map",
             extra={
                 "in_degree": {name: degree for name, degree in in_degree.items()},
-            }
+            },
         )
 
         # Compute waves
@@ -247,7 +258,7 @@ class AdaptiveExecutionStrategy:
                     extra={
                         "remaining_hooks": list(remaining_hooks),
                         "iteration": iteration,
-                    }
+                    },
                 )
                 # Add all remaining hooks to final wave as fallback
                 waves.append([hook_map[name] for name in remaining_hooks])
@@ -255,9 +266,7 @@ class AdaptiveExecutionStrategy:
 
             # Find all hooks with zero dependencies in this wave
             ready_hooks = [
-                hook_map[name]
-                for name in remaining_hooks
-                if in_degree[name] == 0
+                hook_map[name] for name in remaining_hooks if in_degree[name] == 0
             ]
 
             if not ready_hooks:
@@ -267,10 +276,9 @@ class AdaptiveExecutionStrategy:
                     extra={
                         "remaining_hooks": list(remaining_hooks),
                         "in_degrees": {
-                            name: in_degree[name]
-                            for name in remaining_hooks
+                            name: in_degree[name] for name in remaining_hooks
                         },
-                    }
+                    },
                 )
                 raise ValueError(
                     f"Circular dependency detected in hooks: {list(remaining_hooks)}"
@@ -285,7 +293,7 @@ class AdaptiveExecutionStrategy:
                     "wave_idx": len(waves),
                     "hooks": [h.name for h in ready_hooks],
                     "remaining_count": len(remaining_hooks) - len(ready_hooks),
-                }
+                },
             )
 
             # Remove these hooks from remaining
@@ -304,7 +312,7 @@ class AdaptiveExecutionStrategy:
                                 "dependent": dependent_name,
                                 "completed_dependency": hook.name,
                                 "new_in_degree": in_degree[dependent_name],
-                            }
+                            },
                         )
 
         logger.debug(
@@ -312,7 +320,7 @@ class AdaptiveExecutionStrategy:
             extra={
                 "wave_count": len(waves),
                 "total_hooks": sum(len(wave) for wave in waves),
-            }
+            },
         )
 
         return waves
@@ -350,21 +358,20 @@ class AdaptiveExecutionStrategy:
                         extra={
                             "hook": hook.name,
                             "timeout": hook_timeout,
-                        }
+                        },
                     )
 
                     if executor_callable:
                         result = await asyncio.wait_for(
-                            executor_callable(hook),
-                            timeout=hook_timeout
+                            executor_callable(hook), timeout=hook_timeout
                         )
                     else:
                         # Placeholder if no executor provided
                         result = HookResult(
-                            id=hook.name, name=hook.name,
+                            id=hook.name,
+                            name=hook.name,
                             status="passed",
                             duration=0.0,
-                            
                         )
 
                     logger.debug(
@@ -373,23 +380,23 @@ class AdaptiveExecutionStrategy:
                             "hook": hook.name,
                             "status": result.status,
                             "duration": result.duration,
-                        }
+                        },
                     )
                     return result
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning(
                         f"Hook {hook.name} timed out",
                         extra={
                             "hook": hook.name,
                             "timeout": hook_timeout,
-                        }
+                        },
                     )
                     return HookResult(
-                        id=hook.name, name=hook.name,
+                        id=hook.name,
+                        name=hook.name,
                         status="timeout",
                         duration=hook_timeout,
-                        
                     )
                 except Exception as e:
                     logger.error(
@@ -398,13 +405,13 @@ class AdaptiveExecutionStrategy:
                             "hook": hook.name,
                             "exception": str(e),
                             "exception_type": type(e).__name__,
-                        }
+                        },
                     )
                     return HookResult(
-                        id=hook.name, name=hook.name,
+                        id=hook.name,
+                        name=hook.name,
                         status="error",
                         duration=0.0,
-                        
                     )
 
         # Create tasks for all hooks in this wave
@@ -425,14 +432,14 @@ class AdaptiveExecutionStrategy:
                         "hook": hook.name,
                         "exception": str(result),
                         "exception_type": type(result).__name__,
-                    }
+                    },
                 )
                 final_results.append(
                     HookResult(
-                        id=hook.name, name=hook.name,
+                        id=hook.name,
+                        name=hook.name,
                         status="error",
                         duration=0.0,
-                        
                     )
                 )
 
@@ -461,7 +468,7 @@ class AdaptiveExecutionStrategy:
                             "hook": hook.name,
                             "status": result.status,
                             "security_level": "critical",
-                        }
+                        },
                     )
                     return True
 
@@ -485,6 +492,6 @@ class AdaptiveExecutionStrategy:
             # Circular dependency detected, fall back to sequential
             logger.error(
                 f"Failed to compute waves: {e}, falling back to sequential execution",
-                extra={"error": str(e)}
+                extra={"error": str(e)},
             )
             return [[hook] for hook in hooks]  # Sequential fallback

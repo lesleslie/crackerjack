@@ -22,7 +22,6 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from acb.depends import depends
-from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
