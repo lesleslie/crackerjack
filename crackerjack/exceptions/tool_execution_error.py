@@ -8,7 +8,6 @@ from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.syntax import Syntax
 
 
 class ToolExecutionError(Exception):
@@ -72,7 +71,9 @@ class ToolExecutionError(Exception):
 
         # Duration if available
         if self.duration is not None:
-            content_parts.append(f"[bold yellow]Duration:[/bold yellow] {self.duration:.2f}s")
+            content_parts.append(
+                f"[bold yellow]Duration:[/bold yellow] {self.duration:.2f}s"
+            )
 
         # Working directory if available
         if self.cwd:
@@ -157,13 +158,17 @@ class ToolExecutionError(Exception):
 
         if "permission denied" in combined_output:
             messages.append("→ Check file permissions or run with appropriate access")
-        elif "command not found" in combined_output or "no such file" in combined_output:
+        elif (
+            "command not found" in combined_output or "no such file" in combined_output
+        ):
             messages.append(f"→ Ensure '{self.tool}' is installed and in PATH")
         elif "timeout" in combined_output or "timed out" in combined_output:
             messages.append("→ Tool execution timed out - consider increasing timeout")
         elif "syntaxerror" in combined_output or "syntax error" in combined_output:
             messages.append("→ Check code syntax in files being analyzed")
-        elif "importerror" in combined_output or "modulenotfounderror" in combined_output:
+        elif (
+            "importerror" in combined_output or "modulenotfounderror" in combined_output
+        ):
             messages.append("→ Check Python dependencies are installed (try: uv sync)")
         elif "typeerror" in combined_output or "type error" in combined_output:
             messages.append("→ Fix type annotation errors in your code")

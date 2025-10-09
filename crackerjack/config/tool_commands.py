@@ -21,7 +21,15 @@ TOOL_COMMANDS: dict[str, list[str]] = {
         "-m",
         "crackerjack.tools.validate_regex_patterns",
     ],
-    "skylos": ["uv", "run", "skylos", "check", "crackerjack"],
+    "skylos": [
+        "uv",
+        "run",
+        "skylos",
+        "check",
+        "crackerjack",
+        "--exclude",
+        "tests",
+    ],  # Phase 10.4.2: Harmonized with .pre-commit-config.yaml
     "zuban": [
         "uv",
         "run",
