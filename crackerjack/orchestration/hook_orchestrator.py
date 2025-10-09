@@ -27,6 +27,8 @@ from crackerjack.models.task import HookResult
 
 if t.TYPE_CHECKING:
     from crackerjack.executors.hook_executor import HookExecutor
+    from crackerjack.orchestration.cache.tool_proxy_cache import ToolProxyCacheAdapter
+    from crackerjack.orchestration.cache.memory_cache import MemoryCacheAdapter
 
 # ACB Module Registration (REQUIRED)
 MODULE_ID = UUID("01937d86-ace0-7000-8000-000000000003")  # Static UUID7 for reproducible module identity
@@ -86,23 +88,29 @@ class HookOrchestratorAdapter:
         self,
         settings: HookOrchestratorSettings | None = None,
         hook_executor: HookExecutor | None = None,
+        cache_adapter: ToolProxyCacheAdapter | MemoryCacheAdapter | None = None,
     ) -> None:
         """Initialize Hook Orchestrator.
 
         Args:
             settings: Optional settings override
             hook_executor: Optional HookExecutor for legacy mode delegation
+            cache_adapter: Optional cache adapter (auto-selected from settings.cache_backend if not provided)
         """
         self.settings = settings or HookOrchestratorSettings()
         self._hook_executor = hook_executor
+        self._cache_adapter = cache_adapter
         self._dependency_graph: dict[str, list[str]] = {}
         self._initialized = False
+        self._cache_hits = 0
+        self._cache_misses = 0
 
         logger.debug(
             "HookOrchestratorAdapter initialized",
             extra={
                 "has_settings": settings is not None,
                 "has_executor": hook_executor is not None,
+                "has_cache": cache_adapter is not None,
             }
         )
 
@@ -115,6 +123,31 @@ class HookOrchestratorAdapter:
         # Build dependency graph for hook execution order
         self._build_dependency_graph()
 
+        # Initialize cache adapter if caching enabled
+        if self.settings.enable_caching and not self._cache_adapter:
+            logger.debug(
+                "Initializing cache adapter",
+                extra={"cache_backend": self.settings.cache_backend}
+            )
+
+            # Auto-select cache backend
+            if self.settings.cache_backend == "tool_proxy":
+                from crackerjack.orchestration.cache.tool_proxy_cache import ToolProxyCacheAdapter
+                self._cache_adapter = ToolProxyCacheAdapter()
+            elif self.settings.cache_backend == "memory":
+                from crackerjack.orchestration.cache.memory_cache import MemoryCacheAdapter
+                self._cache_adapter = MemoryCacheAdapter()
+            else:
+                logger.warning(
+                    f"Unknown cache backend: {self.settings.cache_backend}, disabling caching"
+                )
+                self.settings.enable_caching = False
+
+        # Initialize cache if provided
+        if self._cache_adapter:
+            await self._cache_adapter.init()
+            logger.debug("Cache adapter initialized")
+
         self._initialized = True
         logger.info(
             "HookOrchestratorAdapter initialization complete",
@@ -124,6 +157,7 @@ class HookOrchestratorAdapter:
                 "enable_dependency_resolution": self.settings.enable_dependency_resolution,
                 "execution_mode": self.settings.execution_mode,
                 "dependency_count": len(self._dependency_graph),
+                "cache_backend": self.settings.cache_backend if self.settings.enable_caching else "disabled",
             }
         )
 
@@ -466,7 +500,7 @@ class HookOrchestratorAdapter:
         return results
 
     async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
-        """Execute a single hook (ACB adapter call).
+        """Execute a single hook (ACB adapter call) with caching.
 
         This is a placeholder for Phase 8+ implementation.
         Will call adapter.check() directly via depends.get().
@@ -475,7 +509,7 @@ class HookOrchestratorAdapter:
             hook: Hook definition to execute
 
         Returns:
-            HookResult from adapter execution
+            HookResult from adapter execution or cache
         """
         logger.debug(
             f"Executing hook: {hook.name}",
@@ -486,6 +520,35 @@ class HookOrchestratorAdapter:
             }
         )
 
+        # Check cache if enabled
+        if self.settings.enable_caching and self._cache_adapter:
+            # Compute cache key (using empty file list for now - Phase 8 will provide real files)
+            cache_key = self._cache_adapter.compute_key(hook, files=[])
+
+            # Try to get cached result
+            cached_result = await self._cache_adapter.get(cache_key)
+            if cached_result:
+                self._cache_hits += 1
+                logger.debug(
+                    f"Cache hit for hook {hook.name}",
+                    extra={
+                        "hook": hook.name,
+                        "cache_key": cache_key,
+                        "cache_hits": self._cache_hits,
+                    }
+                )
+                return cached_result
+
+            self._cache_misses += 1
+            logger.debug(
+                f"Cache miss for hook {hook.name}",
+                extra={
+                    "hook": hook.name,
+                    "cache_key": cache_key,
+                    "cache_misses": self._cache_misses,
+                }
+            )
+
         # TODO Phase 8: Implement direct adapter execution
         # Example:
         # if hook.name == "bandit":
@@ -494,12 +557,26 @@ class HookOrchestratorAdapter:
         #     return self._convert_to_hook_result(result)
 
         # Placeholder for Phase 3-7
-        return HookResult(
+        result = HookResult(
             hook_name=hook.name,
             status="passed",
             duration=0.0,
             output="[ACB mode placeholder - Phase 8 implementation pending]",
         )
+
+        # Cache result if caching enabled
+        if self.settings.enable_caching and self._cache_adapter:
+            await self._cache_adapter.set(cache_key, result)
+            logger.debug(
+                f"Cached result for hook {hook.name}",
+                extra={
+                    "hook": hook.name,
+                    "cache_key": cache_key,
+                    "status": result.status,
+                }
+            )
+
+        return result
 
     def _error_result(self, hook: HookDefinition, error: Exception) -> HookResult:
         """Create error HookResult from exception.
@@ -517,6 +594,37 @@ class HookOrchestratorAdapter:
             duration=0.0,
             output=f"Exception: {type(error).__name__}: {error}",
         )
+
+    async def get_cache_stats(self) -> dict[str, t.Any]:
+        """Get cache statistics including hit/miss ratios.
+
+        Returns:
+            Dictionary with cache statistics
+        """
+        stats = {
+            "caching_enabled": self.settings.enable_caching,
+            "cache_backend": self.settings.cache_backend if self.settings.enable_caching else "disabled",
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "total_requests": self._cache_hits + self._cache_misses,
+            "hit_ratio": (
+                self._cache_hits / (self._cache_hits + self._cache_misses)
+                if (self._cache_hits + self._cache_misses) > 0
+                else 0.0
+            ),
+        }
+
+        # Get adapter-specific stats if available
+        if self._cache_adapter:
+            adapter_stats = await self._cache_adapter.get_stats()
+            stats["adapter_stats"] = adapter_stats
+
+        logger.debug(
+            "Cache statistics",
+            extra=stats
+        )
+
+        return stats
 
 
 # ACB Registration (REQUIRED at module level)
