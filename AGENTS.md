@@ -1,32 +1,25 @@
-______________________________________________________________________
-
-## id: 01K6K1ATWK012TB0ND8A2YZD8F
-
 # Repository Guidelines
 
 ## Project Structure & Module Organization
 
-Crackerjack's core package lives under `crackerjack/`, where agents, the orchestrator, and CLI entrypoints are defined. Documentation and public guides sit in `docs/`, `README.md`, and `CLAUDE.md`, while reusable automation lives in `scripts/` and `tools/`. Tests mirror the package layout in `tests/` and leverage `test_docs_site/` for documentation fixtures. Use `examples/` and `example.mcp.json` when demonstrating integrations, and keep contributions aligned with the DRY/KISS/YAGNI philosophy.
+Crackerjack's agent runtime lives in `crackerjack/`, housing orchestrator logic, agent classes, and CLI entrypoints. Automation scripts reside in `scripts/` and `tools/`, while documentation is maintained in `docs/`, `README.md`, and `CLAUDE.md`. Tests mirror the package in `tests/`, with documentation fixtures under `test_docs_site/`, and integration examples available in `examples/` alongside `example.mcp.json`.
 
 ## Build, Test, and Development Commands
 
-- `uv sync --group dev` installs runtime, testing, and MCP dependencies.
-- `uv run pre-commit run --all-files` validates formatting, linting, and security hooks before you push.
-- `/crackerjack:run --debug` executes the full agent workflow locally; prefer this over raw `python -m` invocations.
-- `uv run python -m crackerjack --help` observes CLI entrypoints when adjusting commands or docs.
+`uv sync --group dev` installs runtime, testing, and MCP dependencies. `uv run pre-commit run --all-files` enforces formatting, linting, and security hooks before pushing. `/crackerjack:run --debug` executes the full multi-agent workflow locally and should precede manual Python invocations. `uv run python -m crackerjack --help` enumerates CLI entrypoints when adjusting interface behavior.
 
 ## Coding Style & Naming Conventions
 
-Target Python 3.13 with 4-space indentation, full type annotations, and descriptive but concise identifiers. `ruff` owns style, import order, and formatting (`uv run ruff check --fix` and `uv run ruff format`), holding line length to 88 and cognitive complexity to ≤15. Favor self-documenting code; reserve comments for intent or non-obvious trade-offs. Name test files `test_<feature>.py`, fixtures descriptively, and end agent classes with `*Agent` to match the architecture.
+Target Python 3.13 with 4-space indentation and explicit type annotations. Keep identifiers concise yet descriptive, and maintain Ruff's cognitive complexity guidance of ≤15. Run `uv run ruff check --fix` for linting and `uv run ruff format` to enforce 88-character lines and import order. Name tests `test_<feature>.py`, fixtures descriptively, and finish agent class names with `*Agent`.
 
 ## Testing Guidelines
 
-Run `uv run pytest` for the default suite and add `--maxfail=1` while iterating. Follow up with `/crackerjack:run` to ensure the multi-agent iteration protocol still converges. Maintain ≥42% coverage; audit `coverage.json` or `htmlcov/` when adding modules and expand tests if thresholds slip. Leverage existing markers (`chaos`, `ai_generated`, `breakthrough`) to isolate heavyweight scenarios, and keep shared fixtures in `tests/conftest.py`.
+Execute `uv run pytest` for the default suite, adding `--maxfail=1` during iteration. Follow with `/crackerjack:run` to confirm the agent loop converges. Preserve ≥42% coverage by reviewing `coverage.json` or `htmlcov/` and expanding tests when metrics drop. Use markers `chaos`, `ai_generated`, and `breakthrough` to isolate expensive scenarios, and share fixtures via `tests/conftest.py`.
 
 ## Commit & Pull Request Guidelines
 
-Adopt the `type(scope): summary` convention from history—examples include `fix(agents): guard iteration retry` or `test(tests): update scenarios`. Keep commits tightly scoped, reference tickets or MCP jobs when relevant, and note any agent or workflow impacts. Pull requests need a concise motivation, implementation notes, and validation proof (commands run, test outcomes, screenshots for docs/UI tweaks). Link issues and flag required follow-up work.
+Adopt the `type(scope): summary` message pattern (e.g., `fix(agents): guard iteration retry`). Keep commits tight, reference tickets or MCP jobs, and note agent or workflow impacts. PRs should state motivation, implementation notes, validation evidence (commands run, screenshots for docs/UI changes), link issues, and flag follow-up tasks.
 
 ## Agent-Aware Workflow
 
-Favor MCP tooling in day-to-day work: start quality sweeps with `/crackerjack:run`, monitor progress via `get_job_progress`, and sanity-check the environment with `/crackerjack:status`. Document new agents or capabilities here, update `.mcp.json` when wiring servers, and ensure structured outputs (`test-results.xml`, `coverage.json`) stay current after changes.
+Rely on MCP tooling where possible: kick off quality sweeps with `/crackerjack:run`, monitor progress through `get_job_progress`, and verify readiness with `/crackerjack:status`. Update `.mcp.json` whenever wiring new servers, document fresh agent capabilities here, and keep structured outputs (`test-results.xml`, `coverage.json`) current after major changes.
