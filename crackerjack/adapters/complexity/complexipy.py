@@ -16,10 +16,11 @@ ACB Patterns:
 from __future__ import annotations
 
 import json
+import logging
 import typing as t
 from contextlib import suppress
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from acb.depends import depends
 from pydantic import Field
@@ -36,8 +37,11 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
+MODULE_ID = UUID("01937d86-9e5f-a6b7-c8d9-e0f1a2b3c4d5")  # Static UUID7 for reproducible module identity
 MODULE_STATUS = "stable"
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
 class ComplexipySettings(ToolAdapterSettings):
@@ -88,12 +92,26 @@ class ComplexipyAdapter(BaseToolAdapter):
             settings: Optional settings override
         """
         super().__init__(settings=settings)
+        logger.debug(
+            "ComplexipyAdapter initialized",
+            extra={"has_settings": settings is not None}
+        )
 
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
             self.settings = ComplexipySettings()
+            logger.info("Using default ComplexipySettings")
         await super().init()
+        logger.debug(
+            "ComplexipyAdapter initialization complete",
+            extra={
+                "max_complexity": self.settings.max_complexity,
+                "include_cognitive": self.settings.include_cognitive,
+                "include_maintainability": self.settings.include_maintainability,
+                "sort_by": self.settings.sort_by,
+            }
+        )
 
     @property
     def adapter_name(self) -> str:
@@ -150,6 +168,15 @@ class ComplexipyAdapter(BaseToolAdapter):
         # Add targets
         cmd.extend([str(f) for f in files])
 
+        logger.info(
+            "Built Complexipy command",
+            extra={
+                "file_count": len(files),
+                "max_complexity": self.settings.max_complexity,
+                "include_cognitive": self.settings.include_cognitive,
+                "include_maintainability": self.settings.include_maintainability,
+            }
+        )
         return cmd
 
     async def parse_output(
@@ -165,12 +192,20 @@ class ComplexipyAdapter(BaseToolAdapter):
             List of parsed issues
         """
         if not result.raw_output:
+            logger.debug("No output to parse")
             return []
 
         try:
             data = json.loads(result.raw_output)
-        except json.JSONDecodeError:
-            # Fallback to text parsing
+            logger.debug(
+                "Parsed Complexipy JSON output",
+                extra={"files_count": len(data.get("files", []))}
+            )
+        except json.JSONDecodeError as e:
+            logger.warning(
+                "JSON parse failed, falling back to text parsing",
+                extra={"error": str(e), "output_preview": result.raw_output[:200]}
+            )
             return self._parse_text_output(result.raw_output)
 
         issues = []
@@ -230,6 +265,14 @@ class ComplexipyAdapter(BaseToolAdapter):
                 )
                 issues.append(issue)
 
+        logger.info(
+            "Parsed Complexipy output",
+            extra={
+                "total_issues": len(issues),
+                "high_complexity": sum(1 for i in issues if i.severity == "error"),
+                "files_affected": len(set(str(i.file_path) for i in issues)),
+            }
+        )
         return issues
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
@@ -282,6 +325,13 @@ class ComplexipyAdapter(BaseToolAdapter):
                 except (ValueError, IndexError):
                     continue
 
+        logger.info(
+            "Parsed Complexipy text output (fallback)",
+            extra={
+                "total_issues": len(issues),
+                "files_with_issues": len(set(str(i.file_path) for i in issues)),
+            }
+        )
         return issues
 
     def _get_check_type(self) -> QACheckType:

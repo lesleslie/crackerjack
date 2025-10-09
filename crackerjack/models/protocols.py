@@ -515,3 +515,136 @@ class QAOrchestratorProtocol(t.Protocol):
             Adapter if found, None otherwise
         """
         ...
+
+
+# ==================== Hook Orchestration Protocols (Phase 3) ====================
+
+
+@t.runtime_checkable
+class ExecutionStrategyProtocol(t.Protocol):
+    """Protocol for hook execution strategies.
+
+    Implementations:
+    - ParallelExecutionStrategy: Concurrent execution with resource limits
+    - SequentialExecutionStrategy: One-at-a-time execution for dependencies
+    """
+
+    async def execute(
+        self,
+        hooks: list[t.Any],  # HookDefinition
+        max_parallel: int = 3,
+        timeout: int = 300,
+    ) -> list[t.Any]:  # list[HookResult]
+        """Execute hooks according to strategy.
+
+        Args:
+            hooks: List of hook definitions to execute
+            max_parallel: Maximum concurrent executions (ignored for sequential)
+            timeout: Default timeout per hook in seconds
+
+        Returns:
+            List of HookResult objects
+        """
+        ...
+
+    def get_execution_order(
+        self,
+        hooks: list[t.Any],  # HookDefinition
+    ) -> list[list[t.Any]]:  # list[list[HookDefinition]]
+        """Return batches of hooks for execution.
+
+        Sequential strategy returns one hook per batch.
+        Parallel strategy groups independent hooks into batches.
+
+        Args:
+            hooks: List of hook definitions
+
+        Returns:
+            List of hook batches for execution
+        """
+        ...
+
+
+@t.runtime_checkable
+class CacheStrategyProtocol(t.Protocol):
+    """Protocol for result caching strategies.
+
+    Implementations:
+    - ToolProxyCacheAdapter: Bridges to existing tool_proxy cache
+    - RedisCacheAdapter: Redis-backed caching (Phase 4+)
+    - MemoryCacheAdapter: In-memory LRU cache for testing
+    """
+
+    async def get(self, key: str) -> t.Any | None:  # HookResult | None
+        """Retrieve cached result.
+
+        Args:
+            key: Cache key (computed from hook + file content)
+
+        Returns:
+            Cached HookResult if found, None otherwise
+        """
+        ...
+
+    async def set(self, key: str, result: t.Any, ttl: int = 3600) -> None:
+        """Cache result with TTL.
+
+        Args:
+            key: Cache key
+            result: HookResult to cache
+            ttl: Time-to-live in seconds
+        """
+        ...
+
+    def compute_key(self, hook: t.Any, files: list[Path]) -> str:
+        """Compute cache key from hook and file content.
+
+        Key format: {hook_name}:{config_hash}:{content_hash}
+
+        Args:
+            hook: HookDefinition
+            files: List of files being checked
+
+        Returns:
+            Cache key string
+        """
+        ...
+
+
+@t.runtime_checkable
+class HookOrchestratorProtocol(t.Protocol):
+    """Protocol for hook orchestration.
+
+    The orchestrator manages hook lifecycle, dependency resolution,
+    and execution strategies. Supports dual execution mode for migration.
+    """
+
+    async def init(self) -> None:
+        """Initialize orchestrator and build dependency graph."""
+        ...
+
+    async def execute_strategy(
+        self,
+        strategy: t.Any,  # HookStrategy
+        execution_mode: str | None = None,
+    ) -> list[t.Any]:  # list[HookResult]
+        """Execute hook strategy with specified mode.
+
+        Args:
+            strategy: HookStrategy (fast or comprehensive)
+            execution_mode: "legacy" (pre-commit CLI) or "acb" (direct adapters)
+
+        Returns:
+            List of HookResult objects
+        """
+        ...
+
+    @property
+    def module_id(self) -> t.Any:  # UUID
+        """Reference to module-level MODULE_ID."""
+        ...
+
+    @property
+    def adapter_name(self) -> str:
+        """Human-readable adapter name."""
+        ...
