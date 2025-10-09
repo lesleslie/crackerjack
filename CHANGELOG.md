@@ -13,11 +13,12 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-08
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.41.2] - 2025-10-04
 

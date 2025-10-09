@@ -389,3 +389,129 @@ class FileSystemServiceProtocol(t.Protocol):
     def mkdir(self, path: str | Path, parents: bool = False) -> None: ...
 
     def ensure_directory(self, path: str | Path) -> None: ...
+
+
+@t.runtime_checkable
+class QAAdapterProtocol(t.Protocol):
+    """Protocol for quality assurance adapters (ACB-based).
+
+    All QA adapters must implement this protocol to ensure compatibility
+    with the QA orchestration system.
+    """
+
+    settings: t.Any | None  # QABaseSettings
+
+    async def init(self) -> None:
+        """Initialize adapter (ACB standard method)."""
+        ...
+
+    async def check(
+        self,
+        files: list[Path] | None = None,
+        config: t.Any | None = None,
+    ) -> t.Any:
+        """Execute the quality assurance check.
+
+        Args:
+            files: List of files to check (None = all matching files)
+            config: Optional configuration override for this check
+
+        Returns:
+            QAResult containing the check execution results
+        """
+        ...
+
+    async def validate_config(self, config: t.Any) -> bool:
+        """Validate that the provided configuration is valid.
+
+        Args:
+            config: Configuration to validate
+
+        Returns:
+            True if configuration is valid, False otherwise
+        """
+        ...
+
+    def get_default_config(self) -> t.Any:
+        """Get the default configuration for this adapter.
+
+        Returns:
+            QACheckConfig with sensible defaults for this check
+        """
+        ...
+
+    async def health_check(self) -> dict[str, t.Any]:
+        """Check adapter health (ACB standard method).
+
+        Returns:
+            Dictionary with health status and metadata
+        """
+        ...
+
+    @property
+    def adapter_name(self) -> str:
+        """Human-readable adapter name."""
+        ...
+
+    @property
+    def module_id(self) -> t.Any:
+        """Reference to module-level MODULE_ID (UUID)."""
+        ...
+
+
+@t.runtime_checkable
+class QAOrchestratorProtocol(t.Protocol):
+    """Protocol for QA orchestration service.
+
+    Coordinates multiple QA adapters, handles parallel execution,
+    caching, and result aggregation.
+    """
+
+    async def run_checks(
+        self,
+        stage: str = "fast",
+        files: list[Path] | None = None,
+    ) -> list[t.Any]:
+        """Run QA checks for specified stage.
+
+        Args:
+            stage: Execution stage ('fast' or 'comprehensive')
+            files: Optional list of files to check
+
+        Returns:
+            List of QAResult objects
+        """
+        ...
+
+    async def run_all_checks(
+        self,
+        files: list[Path] | None = None,
+    ) -> dict[str, t.Any]:
+        """Run all registered QA checks.
+
+        Args:
+            files: Optional list of files to check
+
+        Returns:
+            Dictionary mapping adapter names to results
+        """
+        ...
+
+    def register_adapter(self, adapter: QAAdapterProtocol) -> None:
+        """Register a QA adapter.
+
+        Args:
+            adapter: QA adapter to register
+        """
+        ...
+
+    def get_adapter(self, name: str) -> QAAdapterProtocol | None:
+        """Get registered adapter by name.
+
+        Args:
+            name: Adapter name
+
+        Returns:
+            Adapter if found, None otherwise
+        """
+        ...
