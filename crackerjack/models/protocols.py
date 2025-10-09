@@ -44,6 +44,9 @@ class OptionsProtocol(t.Protocol):
     track_progress: bool = False
     fast: bool = False
     comp: bool = False
+    fast_iteration: bool = False
+    tool: str | None = None
+    changed_only: bool = False
     enterprise_batch: str | None = None
     monitor_dashboard: str | None = None
     skip_config_merge: bool = False

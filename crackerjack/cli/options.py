@@ -88,6 +88,9 @@ class Options(BaseModel):
     skip_hooks: bool = False
     fast: bool = False
     comp: bool = False
+    fast_iteration: bool = False  # Phase 10.2.4: Skip comprehensive hooks
+    tool: str | None = None  # Phase 10.2.4: Run only specific tool
+    changed_only: bool = False  # Phase 10.2.4: Run on changed files only
     async_mode: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
@@ -403,6 +406,21 @@ CLI_OPTIONS = {
             "Run only comprehensive hooks (type checking, security, "
             "complexity analysis)."
         ),
+    ),
+    "fast_iteration": typer.Option(
+        False,
+        "--fast-iteration",
+        help="Skip comprehensive hooks during active development (formatters only).",
+    ),
+    "tool": typer.Option(
+        None,
+        "--tool",
+        help="Run only the specified tool (e.g., 'ruff-check', 'zuban').",
+    ),
+    "changed_only": typer.Option(
+        False,
+        "--changed-only",
+        help="Run quality checks only on files changed in git.",
     ),
     "create_pr": typer.Option(
         False,
@@ -975,6 +993,9 @@ def create_options(
     skip_hooks: bool,
     fast: bool,
     comp: bool,
+    fast_iteration: bool,
+    tool: str | None,
+    changed_only: bool,
     create_pr: bool,
     async_mode: bool,
     experimental_hooks: bool,
@@ -1073,6 +1094,9 @@ def create_options(
         skip_hooks=skip_hooks,
         fast=fast,
         comp=comp,
+        fast_iteration=fast_iteration,
+        tool=tool,
+        changed_only=changed_only,
         create_pr=create_pr,
         async_mode=async_mode,
         experimental_hooks=experimental_hooks,

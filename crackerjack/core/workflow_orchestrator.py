@@ -547,6 +547,8 @@ class WorkflowPipeline:
 
         if hasattr(options, "fast") and options.fast:
             return await self._run_fast_hooks_phase_monitored(options, workflow_id)
+        if hasattr(options, "fast_iteration") and options.fast_iteration:
+            return await self._run_fast_hooks_phase_monitored(options, workflow_id)
         if hasattr(options, "comp") and options.comp:
             return await self._run_comprehensive_hooks_phase_monitored(
                 options, workflow_id
