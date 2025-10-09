@@ -11,27 +11,16 @@ from uuid import UUID
 
 import pytest
 
-from crackerjack.adapters.qa import (
-    BanditAdapter,
-    BanditSettings,
-    CodespellAdapter,
-    CodespellSettings,
-    ComplexipyAdapter,
-    ComplexipySettings,
-    CreosoteAdapter,
-    CreosoteSettings,
-    GitleaksAdapter,
-    GitleaksSettings,
-    MdformatAdapter,
-    MdformatSettings,
-    RefurbAdapter,
-    RefurbSettings,
-    RuffAdapter,
-    RuffSettings,
-    ZubanAdapter,
-    ZubanSettings,
-)
-from crackerjack.adapters.qa.tool_adapter_base import BaseToolAdapter
+from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
+from crackerjack.adapters.format.mdformat import MdformatAdapter, MdformatSettings
+from crackerjack.adapters.lint.codespell import CodespellAdapter, CodespellSettings
+from crackerjack.adapters.security.bandit import BanditAdapter, BanditSettings
+from crackerjack.adapters.security.gitleaks import GitleaksAdapter, GitleaksSettings
+from crackerjack.adapters.type.zuban import ZubanAdapter, ZubanSettings
+from crackerjack.adapters.refactor.refurb import RefurbAdapter, RefurbSettings
+from crackerjack.adapters.refactor.creosote import CreosoteAdapter, CreosoteSettings
+from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter, ComplexipySettings
+from crackerjack.adapters._tool_adapter_base import BaseToolAdapter
 from crackerjack.models.qa_config import QACheckConfig
 from crackerjack.models.qa_results import QACheckType
 
@@ -442,28 +431,23 @@ class TestToolAdapterModuleRegistration:
 
     def test_all_modules_have_registration(self):
         """Test all adapter modules have MODULE_ID and MODULE_STATUS."""
-        from crackerjack.adapters.qa import (
-            bandit_adapter,
-            codespell_adapter,
-            complexipy_adapter,
-            creosote_adapter,
-            gitleaks_adapter,
-            mdformat_adapter,
-            refurb_adapter,
-            ruff_adapter,
-            zuban_adapter,
-        )
+        from crackerjack.adapters.format import ruff, mdformat
+        from crackerjack.adapters.lint import codespell
+        from crackerjack.adapters.security import bandit, gitleaks
+        from crackerjack.adapters.type import zuban
+        from crackerjack.adapters.refactor import refurb, creosote
+        from crackerjack.adapters.complexity import complexipy
 
         modules = [
-            ruff_adapter,
-            bandit_adapter,
-            gitleaks_adapter,
-            zuban_adapter,
-            refurb_adapter,
-            complexipy_adapter,
-            creosote_adapter,
-            codespell_adapter,
-            mdformat_adapter,
+            ruff,
+            bandit,
+            gitleaks,
+            zuban,
+            refurb,
+            complexipy,
+            creosote,
+            codespell,
+            mdformat,
         ]
 
         for module in modules:

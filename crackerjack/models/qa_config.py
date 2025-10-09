@@ -35,7 +35,7 @@ class QACheckConfig(BaseModel):
         description="Whether this check is enabled",
     )
     file_patterns: list[str] = Field(
-        default_factory=lambda: ["**/*.py"],
+        default_factory=list,
         description="Glob patterns for files to check",
     )
     exclude_patterns: list[str] = Field(
@@ -43,7 +43,8 @@ class QACheckConfig(BaseModel):
         description="Glob patterns for files to exclude",
     )
     timeout_seconds: int = Field(
-        default=60,
+        default=300,  # 5 minutes default
+        gt=0,  # Must be positive
         description="Maximum execution time in seconds",
     )
     retry_on_failure: bool = Field(
@@ -91,6 +92,7 @@ class QAOrchestratorConfig(BaseModel):
     )
     max_parallel_checks: int = Field(
         default=4,
+        gt=0,  # Must be positive
         description="Maximum number of checks to run in parallel",
     )
     enable_caching: bool = Field(

@@ -26,11 +26,11 @@ class QACheckType(str, Enum):
 
     LINT = "lint"
     FORMAT = "format"
-    TYPE_CHECK = "type_check"
+    TYPE = "type"  # Type checking (pyright, mypy, zuban)
     SECURITY = "security"
-    TEST = "test"
+    COMPLEXITY = "complexity"  # Code complexity analysis
     REFACTOR = "refactor"
-    UTILITY = "utility"
+    TEST = "test"
 
 
 class QAResult(BaseModel):
@@ -95,8 +95,12 @@ class QAResult(BaseModel):
 
     @property
     def is_success(self) -> bool:
-        """Check if the result indicates success."""
-        return self.status == QAResultStatus.SUCCESS
+        """Check if the result indicates success.
+
+        Warnings are considered successful - they indicate potential issues
+        but don't fail the quality check.
+        """
+        return self.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
 
     @property
     def is_failure(self) -> bool:

@@ -41,13 +41,19 @@ MODULE_METADATA = AdapterMetadata(
     provider="anthropic",
     version="1.0.0",
     acb_min_version="0.19.0",
+    author="Crackerjack Team",
+    created_date="2025-01-01",
+    last_modified="2025-01-09",
     status=AdapterStatus.STABLE,
     capabilities=[
         AdapterCapability.ASYNC_OPERATIONS,
         AdapterCapability.ENCRYPTION,  # API key encryption support
     ],
     required_packages=["anthropic>=0.25.0"],
+    optional_packages={},
     description="Claude AI integration for code fixing with retry logic and confidence scoring",
+    settings_class="crackerjack.adapters.ai.claude.ClaudeCodeFixerSettings",
+    custom={},
 )
 
 

@@ -10,9 +10,6 @@ Key ACB Patterns:
 - Concrete base class for shared implementation
 - Settings extend acb.config.Settings with validators
 - Async init() method for lazy initialization
-"""
-
-"""Base adapter for ACB Quality Assurance framework following crackerjack patterns.
 
 CRITICAL: Imports protocols from models.protocols, not local definitions.
 """

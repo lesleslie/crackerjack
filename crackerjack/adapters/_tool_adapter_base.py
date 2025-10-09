@@ -22,7 +22,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from crackerjack.adapters.qa._base import QAAdapterBase, QABaseSettings
+from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QABaseSettings
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
 
 if t.TYPE_CHECKING:
@@ -546,7 +546,7 @@ class BaseToolAdapter(QAAdapterBase):
         if "format" in tool_lower or "fmt" in tool_lower:
             return QACheckType.FORMAT
         elif any(x in tool_lower for x in ["type", "pyright", "mypy", "zuban"]):
-            return QACheckType.TYPE_CHECK
+            return QACheckType.TYPE
         elif any(x in tool_lower for x in ["bandit", "safety", "gitleaks", "semgrep"]):
             return QACheckType.SECURITY
         elif any(x in tool_lower for x in ["test", "pytest", "unittest"]):

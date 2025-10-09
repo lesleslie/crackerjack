@@ -26,6 +26,7 @@ rm -rf crackerjack/models_qa/
 ```
 
 **Update `models/__init__.py`:**
+
 ```python
 from .config import (
     AIConfig,
@@ -48,6 +49,7 @@ __all__ = [
 ```
 
 **Update imports in `adapters/qa/base.py`:**
+
 ```python
 # Change from:
 from crackerjack.models_qa.config import QACheckConfig
@@ -151,10 +153,7 @@ class QAOrchestrator:
 
         if parallel:
             # Run all checks concurrently
-            tasks = [
-                adapter.check(files=files)
-                for adapter in self._adapters.values()
-            ]
+            tasks = [adapter.check(files=files) for adapter in self._adapters.values()]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Filter out exceptions and convert to error results
@@ -174,7 +173,9 @@ class QAOrchestrator:
                     results.append(result)
 
                     if fail_fast and result.status == QAResultStatus.FAILURE:
-                        logger.warning(f"Stopping due to failure in {adapter.MODULE_ID}")
+                        logger.warning(
+                            f"Stopping due to failure in {adapter.MODULE_ID}"
+                        )
                         break
                 except Exception as e:
                     results.append(self._create_error_result(adapter, e))
@@ -186,9 +187,7 @@ class QAOrchestrator:
         return results
 
     def _create_error_result(
-        self,
-        adapter: QAAdapterProtocol,
-        error: Exception
+        self, adapter: QAAdapterProtocol, error: Exception
     ) -> QAResult:
         """Create an error result for a failed adapter.
 
@@ -241,6 +240,7 @@ class QAOrchestrator:
 ```
 
 **Add to `services/__init__.py`:**
+
 ```python
 from .qa_orchestrator import QAOrchestrator
 
@@ -259,6 +259,7 @@ __all__ = [
 ```python
 from acb.adapters import AdapterCapability, AdapterMetadata, AdapterStatus
 from acb.cleanup import CleanupMixin
+
 
 class QAAdapterBase(AdapterBase, CleanupMixin):
     """Base class for quality assurance adapters with enhanced ACB features.
@@ -385,8 +386,7 @@ class RuffFormatAdapter(QAAdapterBase):
         # Determine files to check
         files_to_check = files or self._discover_python_files()
         files_to_check = [
-            f for f in files_to_check
-            if self._should_check_file(f, check_config)
+            f for f in files_to_check if self._should_check_file(f, check_config)
         ]
 
         if not files_to_check:
@@ -454,7 +454,8 @@ class RuffFormatAdapter(QAAdapterBase):
         # Basic validation - check that ruff is available
         try:
             result = await asyncio.create_subprocess_exec(
-                "ruff", "--version",
+                "ruff",
+                "--version",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
@@ -480,6 +481,7 @@ class RuffFormatAdapter(QAAdapterBase):
 ```
 
 **Update `adapters/qa/__init__.py`:**
+
 ```python
 """Quality Assurance adapters."""
 
@@ -505,6 +507,7 @@ __all__ = [
 from crackerjack.adapters.qa.ruff_format import RuffFormatAdapter
 from crackerjack.services.qa_orchestrator import QAOrchestrator
 from crackerjack.models.qa_config import QAOrchestratorConfig
+
 
 async def run_qa_checks(files: list[Path] | None = None):
     """Run all QA checks."""
@@ -546,14 +549,10 @@ from uuid import UUID
 from crackerjack.adapters.qa.base import (
     QAAdapterBase,
     QABaseSettings,
-    QAAdapterProtocol
+    QAAdapterProtocol,
 )
 from crackerjack.models.qa_config import QACheckConfig
-from crackerjack.models.qa_results import (
-    QAResult,
-    QAResultStatus,
-    QACheckType
-)
+from crackerjack.models.qa_results import QAResult, QAResultStatus, QACheckType
 
 
 class TestQAAdapterSettings:
@@ -638,22 +637,13 @@ class TestQAAdapterBase:
         )
 
         # Should check regular Python files
-        assert adapter._should_check_file(
-            Path("src/main.py"),
-            config
-        )
+        assert adapter._should_check_file(Path("src/main.py"), config)
 
         # Should not check test files
-        assert not adapter._should_check_file(
-            Path("tests/test_main.py"),
-            config
-        )
+        assert not adapter._should_check_file(Path("tests/test_main.py"), config)
 
         # Should not check non-Python files
-        assert not adapter._should_check_file(
-            Path("README.md"),
-            config
-        )
+        assert not adapter._should_check_file(Path("README.md"), config)
 
     def test_implements_protocol(self):
         """Test adapter implements QAAdapterProtocol."""
@@ -715,7 +705,7 @@ class TestQAOrchestrator:
         results = await orchestrator.run_checks(parallel=True)
 
         assert len(results) == 1
-        assert all(hasattr(r, 'status') for r in results)
+        assert all(hasattr(r, "status") for r in results)
 
     @pytest.mark.asyncio
     async def test_run_checks_sequential(self, orchestrator):
@@ -725,7 +715,7 @@ class TestQAOrchestrator:
         results = await orchestrator.run_checks(parallel=False)
 
         assert len(results) == 1
-        assert all(hasattr(r, 'status') for r in results)
+        assert all(hasattr(r, "status") for r in results)
 
     @pytest.mark.asyncio
     async def test_no_adapters_warning(self, orchestrator, caplog):
@@ -739,6 +729,7 @@ class TestQAOrchestrator:
 ## Summary Checklist
 
 ### Phase 1: Foundation ✅
+
 - [ ] Move `models_qa/` → `models/qa_*.py`
 - [ ] Update imports in `adapters/qa/base.py`
 - [ ] Update `models/__init__.py` exports
@@ -746,17 +737,20 @@ class TestQAOrchestrator:
 - [ ] Update `services/__init__.py`
 
 ### Phase 2: Enhancement 📝
+
 - [ ] Add `CleanupMixin` to `QAAdapterBase`
 - [ ] Add lifecycle methods (`init()`, `cleanup()`)
 - [ ] Create example `RuffFormatAdapter`
 - [ ] Update `adapters/qa/__init__.py`
 
 ### Phase 3: Integration 📝
+
 - [ ] Wire up in main workflow
 - [ ] Add CLI flags for QA checks
 - [ ] Integrate with existing coordinators
 
 ### Phase 4: Testing ✅
+
 - [ ] Unit tests for `QAAdapterBase`
 - [ ] Unit tests for `QABaseSettings`
 - [ ] Integration tests for `QAOrchestrator`
@@ -765,10 +759,10 @@ class TestQAOrchestrator:
 ## Next Steps
 
 1. **Execute Phase 1** (required architectural changes)
-2. **Run tests** to ensure no regressions
-3. **Execute Phase 2** (enhanced patterns)
-4. **Implement additional adapters** (Pyright, Skylos, etc.)
-5. **Integrate with existing workflow**
+1. **Run tests** to ensure no regressions
+1. **Execute Phase 2** (enhanced patterns)
+1. **Implement additional adapters** (Pyright, Skylos, etc.)
+1. **Integrate with existing workflow**
 
 ## References
 

@@ -16,22 +16,26 @@ The proposed ACB-based Quality Assurance framework demonstrates **excellent arch
 ### ✅ What You Got Right
 
 1. **Adapter Pattern Compliance**
+
    - Correct inheritance from `acb.config.AdapterBase`
    - Proper use of `MODULE_ID` (UUID7) and `MODULE_STATUS`
    - Abstract methods match ACB protocols: `check()`, `validate_config()`, `get_default_config()`
    - DI registration via `depends.set(self)` with proper error suppression
 
-2. **Settings Pattern**
+1. **Settings Pattern**
+
    - `QABaseSettings` extends `acb.config.Settings` correctly
    - Proper use of Pydantic validation with sensible defaults
    - Configuration inheritance pattern matches FastBlocks approach
 
-3. **Protocol Definition**
+1. **Protocol Definition**
+
    - `@runtime_checkable` decorator usage is correct
    - Protocol methods match implementation requirements
    - Proper separation of interface and implementation
 
-4. **Directory Structure**
+1. **Directory Structure**
+
    - `adapters/qa/` follows existing `adapters/ai/` pattern
    - Subdirectory organization is consistent with crackerjack conventions
    - Separation of concerns (adapters vs models) is maintained
@@ -41,6 +45,7 @@ The proposed ACB-based Quality Assurance framework demonstrates **excellent arch
 ## 1. Models Directory Structure
 
 **Current:**
+
 ```
 crackerjack/
 ├── models/          # Existing models
@@ -48,6 +53,7 @@ crackerjack/
 ```
 
 **✅ RECOMMENDED:**
+
 ```
 crackerjack/
 └── models/
@@ -60,12 +66,14 @@ crackerjack/
 ```
 
 **Rationale:**
+
 - **Consistency:** Crackerjack uses a single `models/` directory for all data models
 - **Discoverability:** All models in one place reduces cognitive load
 - **Import simplicity:** `from crackerjack.models import QAResult` vs `from crackerjack.models_qa.results import QAResult`
 - **Precedent:** The existing codebase has `models/semantic_models.py`, `models/config_adapter.py` showing the pattern of keeping related models together
 
 **Migration Steps:**
+
 ```bash
 # Move models into main models directory
 mv crackerjack/models_qa/results.py crackerjack/models/qa_results.py
@@ -74,6 +82,7 @@ rm -rf crackerjack/models_qa/
 ```
 
 **Update `models/__init__.py`:**
+
 ```python
 from .qa_results import QAResult, QAResultStatus, QACheckType
 from .qa_config import QACheckConfig, QAOrchestratorConfig
@@ -107,6 +116,7 @@ crackerjack/adapters/
 ```
 
 **No changes needed.** This follows the established pattern:
+
 - Domain-specific adapters in subdirectories (`ai/`, `qa/`)
 - Tool-specific adapters at top level (rust tools)
 - Base classes and protocols in subdirectory `base.py` files
@@ -118,12 +128,14 @@ crackerjack/adapters/
 Create `services/qa_orchestrator.py` rather than making orchestration an adapter.
 
 **Rationale:**
+
 - **Separation of Concerns:** Orchestrators coordinate multiple adapters; they don't perform checks themselves
 - **Existing Pattern:** Crackerjack has rich `services/` layer (67+ service files)
 - **Dependency Management:** Services can depend on multiple adapters without circular dependencies
 - **Testing:** Services are easier to test than adapters due to looser coupling
 
 **Structure:**
+
 ```python
 # services/qa_orchestrator.py
 from pathlib import Path
@@ -133,6 +145,7 @@ from crackerjack.adapters.qa.base import QAAdapterProtocol
 from crackerjack.models.qa_results import QAResult
 from crackerjack.models.qa_config import QAOrchestratorConfig
 from acb.depends import depends
+
 
 class QAOrchestrator:
     """Orchestrates execution of multiple QA adapters.
@@ -150,9 +163,7 @@ class QAOrchestrator:
         self._adapters[adapter.MODULE_ID] = adapter
 
     async def run_checks(
-        self,
-        files: list[Path] | None = None,
-        parallel: bool = True
+        self, files: list[Path] | None = None, parallel: bool = True
     ) -> list[QAResult]:
         """Run all registered QA checks."""
         # Implementation here
@@ -160,6 +171,7 @@ class QAOrchestrator:
 ```
 
 **Why NOT an adapter:**
+
 - Orchestrators don't have a single check type (LINT, FORMAT, etc.)
 - Orchestrators don't produce a single QAResult
 - Orchestrators coordinate, they don't implement business logic
@@ -178,6 +190,7 @@ def __init__(self) -> None:
 ```
 
 **Validation:**
+
 - ✅ Calls `super().__init__()` first
 - ✅ Uses `suppress(Exception)` to handle missing DI container gracefully
 - ✅ Registers with `depends.set(self)` for DI resolution
@@ -201,6 +214,7 @@ def __init__(self) -> None:
 ### 📝 Suggested Enhancements
 
 1. **Add Adapter Metadata** (like ClaudeCodeFixer):
+
    ```python
    from acb.adapters import AdapterMetadata, AdapterStatus, AdapterCapability
 
@@ -218,21 +232,26 @@ def __init__(self) -> None:
    )
    ```
 
-2. **Consider CleanupMixin** for resource management:
+1. **Consider CleanupMixin** for resource management:
+
    ```python
    from acb.cleanup import CleanupMixin
 
+
    class QAAdapterBase(AdapterBase, CleanupMixin):
        """Base class with automatic resource cleanup."""
+
        pass
    ```
 
-3. **Add Lifecycle Methods** for async initialization:
+1. **Add Lifecycle Methods** for async initialization:
+
    ```python
    async def init(self) -> None:
        """Async initialization (called after __init__)."""
        # Initialize async resources here
        pass
+
 
    async def cleanup(self) -> None:
        """Cleanup async resources."""
@@ -262,6 +281,7 @@ class RuffFormatAdapter(QAAdapterBase):
 ```
 
 **Benefits:**
+
 - Defers expensive initialization until first use
 - Allows dependency injection to complete before resource allocation
 - Matches pattern in `adapters/ai/claude.py`
@@ -275,9 +295,7 @@ class RuffFormatAdapter(QAAdapterBase):
         return await self._check_impl(files, config)
 
     async def _check_impl(
-        self,
-        files: list[Path] | None,
-        config: QACheckConfig | None
+        self, files: list[Path] | None, config: QACheckConfig | None
     ) -> QAResult:
         """Private implementation (internal logic)."""
         # Actual implementation here
@@ -285,6 +303,7 @@ class RuffFormatAdapter(QAAdapterBase):
 ```
 
 **Benefits:**
+
 - Clear separation of public API vs internal implementation
 - Makes it easier to add cross-cutting concerns (logging, metrics)
 - Matches ClaudeCodeFixer pattern
@@ -294,6 +313,7 @@ class RuffFormatAdapter(QAAdapterBase):
 ### ✅ Compatible with Existing Systems
 
 **WorkflowOrchestrator Integration:**
+
 ```python
 # In __main__.py or orchestration layer
 from crackerjack.services.qa_orchestrator import QAOrchestrator
@@ -310,11 +330,13 @@ results = await orchestrator.run_checks()
 ```
 
 **Session Integration:**
+
 - QA results can be tracked in `SessionTracker` (already exists in `models/task.py`)
 - `QAResult` can be converted to `HookResult` for compatibility
 - Execution times feed into performance benchmarks
 
 **AI Agent Integration:**
+
 - `QAResult.details` provides context for AI agents
 - `QAResult.files_checked` identifies targets for AI fixing
 - `QAResult.issues_found` triggers appropriate agent selection
@@ -324,11 +346,13 @@ results = await orchestrator.run_checks()
 ### Priority 1: Must Do (Architecture)
 
 1. ✅ **Move models to `models/` directory** (from `models_qa/`)
+
    - Update imports in `adapters/qa/base.py`
    - Update `models/__init__.py` exports
    - Remove `models_qa/` directory
 
-2. ✅ **Create `services/qa_orchestrator.py`** (not as adapter)
+1. ✅ **Create `services/qa_orchestrator.py`** (not as adapter)
+
    - Implement adapter registration
    - Implement parallel/sequential execution
    - Handle result aggregation
@@ -336,21 +360,25 @@ results = await orchestrator.run_checks()
 ### Priority 2: Should Do (Enhancement)
 
 3. 📝 **Add `MODULE_METADATA`** to base class or concrete adapters
+
    - Provides better adapter discovery
    - Enables version tracking
    - Documents dependencies clearly
 
-4. 📝 **Consider `CleanupMixin`** for resource management
+1. 📝 **Consider `CleanupMixin`** for resource management
+
    - Add `init()` and `cleanup()` lifecycle methods
    - Implement async resource handling
 
 ### Priority 3: Nice to Have (Polish)
 
 5. 📝 **Implement lazy client initialization** pattern
+
    - Add `_ensure_client()` methods
    - Defer resource allocation
 
-6. 📝 **Add public/private method delegation**
+1. 📝 **Add public/private method delegation**
+
    - Separate API from implementation
    - Enable cross-cutting concerns
 
@@ -361,6 +389,7 @@ results = await orchestrator.run_checks()
 Your ACB-based QA framework architecture is **excellent** and demonstrates strong understanding of both ACB patterns and the crackerjack codebase structure. The only significant change needed is consolidating models into the main `models/` directory, which is a simple refactoring that improves consistency.
 
 The framework is:
+
 - ✅ **ACB Compliant:** Follows all critical ACB adapter patterns
 - ✅ **Consistent:** Matches existing crackerjack architecture
 - ✅ **Extensible:** Easy to add new QA adapters
@@ -371,7 +400,7 @@ The framework is:
 
 **Recommendation:** Proceed with implementation after Priority 1 refactorings.
 
----
+______________________________________________________________________
 
 ## Appendix: Quick Reference
 
@@ -439,10 +468,13 @@ MODULE_METADATA = AdapterMetadata(
     description="Code formatting checks using Ruff",
 )
 
+
 class RuffFormatSettings(QABaseSettings):
     """Ruff-specific settings."""
+
     line_length: int = 88
     target_version: str = "py313"
+
 
 class RuffFormatAdapter(QAAdapterBase):
     """Ruff code formatting adapter."""
@@ -455,9 +487,7 @@ class RuffFormatAdapter(QAAdapterBase):
         self.settings = RuffFormatSettings()
 
     async def check(
-        self,
-        files: list[Path] | None = None,
-        config: QACheckConfig | None = None
+        self, files: list[Path] | None = None, config: QACheckConfig | None = None
     ) -> QAResult:
         """Run Ruff format check."""
         # Implementation here

@@ -10,28 +10,31 @@
 Crackerjack currently uses pre-commit hooks for quality assurance checks. We need to migrate to an ACB (Anthropic Component Base) adapter-based architecture to:
 
 1. **Improve maintainability** - Modular, testable adapter pattern
-2. **Enable extensibility** - Easy to add new quality checks
-3. **Support async operations** - Better performance with parallel execution
-4. **Standardize patterns** - Follow FastBlocks ACB reference architecture
-5. **Facilitate AI integration** - Structured results for AI agents
+1. **Enable extensibility** - Easy to add new quality checks
+1. **Support async operations** - Better performance with parallel execution
+1. **Standardize patterns** - Follow FastBlocks ACB reference architecture
+1. **Facilitate AI integration** - Structured results for AI agents
 
 ## Decision
 
 We will implement a **three-layer ACB-based QA framework**:
 
 ### Layer 1: Adapters (Check Execution)
+
 - **Location:** `crackerjack/adapters/qa/`
 - **Responsibility:** Execute individual quality checks (lint, format, type-check, etc.)
 - **Pattern:** Inherit from `QAAdapterBase`, implement `check()`, `validate_config()`, `get_default_config()`
 - **Registration:** Automatic via `depends.set(self)` in `__init__`
 
 ### Layer 2: Services (Orchestration)
+
 - **Location:** `crackerjack/services/qa_orchestrator.py`
 - **Responsibility:** Coordinate multiple QA adapters, aggregate results
 - **Pattern:** Service class that uses adapters (not an adapter itself)
 - **Execution:** Support parallel and sequential check execution
 
 ### Layer 3: Models (Data)
+
 - **Location:** `crackerjack/models/qa_*.py`
 - **Responsibility:** Define data structures (`QAResult`, `QACheckConfig`, etc.)
 - **Pattern:** Pydantic models with validation and helper methods
@@ -39,28 +42,36 @@ We will implement a **three-layer ACB-based QA framework**:
 ## Alternatives Considered
 
 ### Alternative 1: Keep Pre-commit Hooks
+
 **Rejected because:**
+
 - Hard to extend with new checks
 - Limited to synchronous execution
 - Difficult to integrate with AI agents
 - No structured result format
 
 ### Alternative 2: Make Orchestrator an Adapter
+
 **Rejected because:**
+
 - Orchestrators don't have a single check type
 - Orchestrators don't produce single results
 - Violates single responsibility principle
 - Creates awkward protocol violations
 
 ### Alternative 3: Separate `models_qa/` Directory
+
 **Rejected because:**
+
 - Crackerjack uses single `models/` directory
 - Reduces discoverability
 - Complicates imports
 - Inconsistent with existing patterns
 
 ### Alternative 4: Synchronous-Only Execution
+
 **Rejected because:**
+
 - Blocks event loop during checks
 - Prevents parallel execution
 - Poor performance at scale
@@ -69,6 +80,7 @@ We will implement a **three-layer ACB-based QA framework**:
 ## Consequences
 
 ### Positive
+
 - ✅ **Modular architecture** - Each adapter is independent and testable
 - ✅ **ACB compliance** - Follows Anthropic's official patterns
 - ✅ **Extensibility** - New checks require ~50 lines of code
@@ -78,12 +90,14 @@ We will implement a **three-layer ACB-based QA framework**:
 - ✅ **Maintainability** - Clear separation of concerns
 
 ### Negative
+
 - ⚠️ **Learning curve** - Developers need to understand ACB patterns
 - ⚠️ **Initial effort** - Migration requires ~7 hours of development
 - ⚠️ **Dependencies** - Requires ACB package installation
 - ⚠️ **Testing complexity** - Need both unit and integration tests
 
 ### Neutral
+
 - 📝 **Documentation** - Comprehensive docs created (16,000+ words)
 - 📝 **Migration path** - Clear 4-phase implementation plan
 - 📝 **Backward compatibility** - Can run parallel to pre-commit during transition
@@ -91,6 +105,7 @@ We will implement a **three-layer ACB-based QA framework**:
 ## Implementation
 
 ### Directory Structure
+
 ```
 crackerjack/
 ├── adapters/
@@ -110,6 +125,7 @@ crackerjack/
 ### Key Classes
 
 **QAAdapterBase:**
+
 ```python
 class QAAdapterBase(AdapterBase):
     MODULE_ID: UUID              # Static UUID7 for identification
@@ -121,6 +137,7 @@ class QAAdapterBase(AdapterBase):
 ```
 
 **QAOrchestrator:**
+
 ```python
 class QAOrchestrator:
     def register_adapter(adapter: QAAdapterProtocol)
@@ -129,13 +146,14 @@ class QAOrchestrator:
 ```
 
 **QAResult:**
+
 ```python
 @dataclass
 class QAResult:
     check_id: UUID
     check_name: str
-    check_type: QACheckType      # LINT, FORMAT, TYPE_CHECK, etc.
-    status: QAResultStatus       # SUCCESS, FAILURE, WARNING, etc.
+    check_type: QACheckType  # LINT, FORMAT, TYPE_CHECK, etc.
+    status: QAResultStatus  # SUCCESS, FAILURE, WARNING, etc.
     message: str
     details: str
     files_checked: list[Path]
@@ -146,6 +164,7 @@ class QAResult:
 ## Validation
 
 ### ACB Pattern Compliance
+
 - ✅ Inherits from `acb.config.AdapterBase`
 - ✅ Static `MODULE_ID` (UUID7) and `MODULE_STATUS`
 - ✅ Settings extend `acb.config.Settings`
@@ -155,6 +174,7 @@ class QAResult:
 - ✅ Type safety with full annotations
 
 ### Integration with Existing Codebase
+
 - ✅ Follows `adapters/ai/` organizational pattern
 - ✅ Integrates with existing `services/` layer
 - ✅ Uses existing `models/` directory structure
@@ -174,21 +194,25 @@ class QAResult:
 ## Timeline
 
 ### Phase 1: Foundation (Required - 1 hour)
+
 - Move models to `models/` directory
 - Create `QAOrchestrator` service
 - Update imports
 
 ### Phase 2: Enhancement (Recommended - 2 hours)
+
 - Add `CleanupMixin` for resource management
 - Add `AdapterMetadata` for discovery
 - Create example adapters
 
 ### Phase 3: Integration (Recommended - 2 hours)
+
 - Wire up in main workflow
 - Add CLI flags
 - Integrate with coordinators
 
 ### Phase 4: Testing (Required - 2 hours)
+
 - Unit tests for base adapter
 - Integration tests for orchestrator
 - Example adapter tests
@@ -198,18 +222,21 @@ class QAResult:
 ## Success Metrics
 
 **Technical Metrics:**
+
 - Zero breaking changes to existing workflows
 - Test coverage ≥ 80% for new code
 - All type checks pass (zuban/pyright)
 - Performance within 10% of pre-commit baseline
 
 **Quality Metrics:**
+
 - At least 3 concrete adapters implemented
 - Documentation reviewed by 2+ developers
 - All linters pass (ruff, bandit, etc.)
 - Coverage ratchet maintained
 
 **Adoption Metrics:**
+
 - Migration completed within 1 sprint
 - Zero critical bugs in production
 - Developer feedback score ≥ 4/5
@@ -227,6 +254,7 @@ class QAResult:
 ## Decision Log
 
 **2025-10-09:** Initial architectural review completed
+
 - Approved three-layer architecture (adapters/services/models)
 - Rejected separate `models_qa/` directory
 - Rejected orchestrator-as-adapter pattern
@@ -236,7 +264,7 @@ class QAResult:
 **Approval:** Architecture Council
 **Next Review:** 2025-11-09 (30 days) or after Phase 4 completion
 
----
+______________________________________________________________________
 
 ## Appendix A: Example Concrete Adapter
 
@@ -246,9 +274,11 @@ from uuid import UUID
 from crackerjack.adapters.qa.base import QAAdapterBase, QABaseSettings
 from crackerjack.models.qa_results import QAResult, QAResultStatus, QACheckType
 
+
 class RuffFormatSettings(QABaseSettings):
     line_length: int = 88
     check_mode: bool = False  # Auto-fix if False
+
 
 class RuffFormatAdapter(QAAdapterBase):
     MODULE_ID = UUID("01937d86-5f2a-7b3c-9d1e-a2b3c4d5e6f0")
@@ -308,24 +338,27 @@ for result in results:
 ## Appendix C: Testing Strategy
 
 **Unit Tests:**
+
 - Test `QAAdapterBase` base functionality
 - Test `QABaseSettings` validation
 - Test file pattern matching (`_should_check_file`)
 - Test each concrete adapter in isolation
 
 **Integration Tests:**
+
 - Test `QAOrchestrator` with multiple adapters
 - Test parallel vs sequential execution
 - Test error handling and recovery
 - Test result aggregation
 
 **End-to-End Tests:**
+
 - Test full workflow with real files
 - Test CLI integration
 - Test AI agent integration
 - Test performance benchmarks
 
----
+______________________________________________________________________
 
 **Signed:** Architecture Council (Claude Code)
 **Date:** 2025-10-09

@@ -210,10 +210,10 @@ class TestQAOrchestratorConfig:
 
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
-            fast_checks=[fast_check],
-            comprehensive_checks=[comp_check],
+            checks=[fast_check, comp_check],  # Pass via checks parameter
         )
 
+        # Properties filter checks by stage
         assert len(config.fast_checks) == 1
         assert len(config.comprehensive_checks) == 1
         assert config.fast_checks[0].stage == "fast"

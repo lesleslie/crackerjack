@@ -10,20 +10,17 @@ from uuid import UUID
 
 import pytest
 
-from crackerjack.adapters.qa import (
-    BanditAdapter,
-    CodespellAdapter,
-    ComplexipyAdapter,
-    CreosoteAdapter,
-    GitleaksAdapter,
-    MdformatAdapter,
-    QAAdapterBase,
-    QAAdapterProtocol,
-    RefurbAdapter,
-    RuffAdapter,
-    UtilityCheckAdapter,
-    ZubanAdapter,
-)
+from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QAAdapterProtocol
+from crackerjack.adapters.format.ruff import RuffAdapter
+from crackerjack.adapters.format.mdformat import MdformatAdapter
+from crackerjack.adapters.lint.codespell import CodespellAdapter
+from crackerjack.adapters.security.bandit import BanditAdapter
+from crackerjack.adapters.security.gitleaks import GitleaksAdapter
+from crackerjack.adapters.type.zuban import ZubanAdapter
+from crackerjack.adapters.refactor.refurb import RefurbAdapter
+from crackerjack.adapters.refactor.creosote import CreosoteAdapter
+from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
+from crackerjack.adapters.utility.checks import UtilityCheckAdapter
 from crackerjack.models.protocols import QAAdapterProtocol as ProtocolDef
 
 
@@ -160,7 +157,7 @@ class TestQAAdapterInstantiation:
 
     def test_ruff_adapter_instantiation(self):
         """Test RuffAdapter can be instantiated."""
-        from crackerjack.adapters.qa.ruff_adapter import RuffSettings
+        from crackerjack.adapters.format.ruff import RuffSettings
 
         settings = RuffSettings(mode="check")
         adapter = RuffAdapter(settings=settings)
@@ -171,7 +168,7 @@ class TestQAAdapterInstantiation:
 
     def test_bandit_adapter_instantiation(self):
         """Test BanditAdapter can be instantiated."""
-        from crackerjack.adapters.qa.bandit_adapter import BanditSettings
+        from crackerjack.adapters.security.bandit import BanditSettings
 
         settings = BanditSettings()
         adapter = BanditAdapter(settings=settings)
@@ -182,7 +179,7 @@ class TestQAAdapterInstantiation:
 
     def test_utility_check_adapter_instantiation(self):
         """Test UtilityCheckAdapter can be instantiated."""
-        from crackerjack.adapters.qa.utility_check import (
+        from crackerjack.adapters.utility.checks import (
             UtilityCheckSettings,
             UtilityCheckType,
         )
@@ -238,7 +235,7 @@ class TestQAAdapterConfiguration:
 
     def test_utility_check_default_configs(self):
         """Test UtilityCheckAdapter provides configs for different check types."""
-        from crackerjack.adapters.qa.utility_check import UtilityCheckType
+        from crackerjack.adapters.utility.checks import UtilityCheckType
 
         # Test each check type has appropriate configuration
         check_types = [
@@ -260,30 +257,25 @@ class TestQAAdapterModuleRegistration:
 
     def test_adapters_have_module_id(self):
         """Verify all adapters have MODULE_ID at module level."""
-        from crackerjack.adapters.qa import (
-            bandit_adapter,
-            codespell_adapter,
-            complexipy_adapter,
-            creosote_adapter,
-            gitleaks_adapter,
-            mdformat_adapter,
-            refurb_adapter,
-            ruff_adapter,
-            utility_check,
-            zuban_adapter,
-        )
+        from crackerjack.adapters.format import ruff, mdformat
+        from crackerjack.adapters.lint import codespell
+        from crackerjack.adapters.security import bandit, gitleaks
+        from crackerjack.adapters.type import zuban
+        from crackerjack.adapters.refactor import refurb, creosote
+        from crackerjack.adapters.complexity import complexipy
+        from crackerjack.adapters.utility import checks
 
         modules = [
-            bandit_adapter,
-            codespell_adapter,
-            complexipy_adapter,
-            creosote_adapter,
-            gitleaks_adapter,
-            mdformat_adapter,
-            refurb_adapter,
-            ruff_adapter,
-            utility_check,
-            zuban_adapter,
+            bandit,
+            codespell,
+            complexipy,
+            creosote,
+            gitleaks,
+            mdformat,
+            refurb,
+            ruff,
+            checks,
+            zuban,
         ]
 
         for module in modules:
@@ -307,7 +299,7 @@ class TestQABaseSettings:
 
     def test_settings_extend_pydantic(self):
         """Verify settings classes use Pydantic BaseModel."""
-        from crackerjack.adapters.qa.ruff_adapter import RuffSettings
+        from crackerjack.adapters.format.ruff import RuffSettings
         from pydantic import BaseModel
 
         assert issubclass(RuffSettings, BaseModel), (
@@ -316,7 +308,7 @@ class TestQABaseSettings:
 
     def test_settings_field_validators(self):
         """Test settings have proper field validators."""
-        from crackerjack.adapters.qa.ruff_adapter import RuffSettings
+        from crackerjack.adapters.format.ruff import RuffSettings
 
         # Valid settings
         settings = RuffSettings(mode="check")
@@ -328,7 +320,7 @@ class TestQABaseSettings:
 
     def test_settings_with_defaults(self):
         """Test settings have sensible defaults."""
-        from crackerjack.adapters.qa.bandit_adapter import BanditSettings
+        from crackerjack.adapters.security.bandit import BanditSettings
 
         settings = BanditSettings()
 

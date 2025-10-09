@@ -75,6 +75,7 @@ dependencies = [
     "types-pyyaml>=6.0.12.12",
     "types-psutil>=6.0.0.12",
     "types-aiofiles>=24.1.0.20240626",
+    "acb>=0.25.2",
 ]
 
 [project.license]
@@ -262,6 +263,10 @@ pythonVersion = "3.13"
 keyring-provider = "subprocess"
 publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
+
+[tool.uv.sources.acb]
+path = "../acb"
+editable = true
 
 [tool.vulture]
 min_confidence = 86

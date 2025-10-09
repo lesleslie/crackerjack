@@ -10,7 +10,7 @@ from uuid import UUID
 
 import pytest
 
-from crackerjack.adapters.qa.utility_check import (
+from crackerjack.adapters.utility.checks import (
     UtilityCheckAdapter,
     UtilityCheckSettings,
     UtilityCheckType,
@@ -172,13 +172,13 @@ class TestUtilityCheckModuleRegistration:
 
     def test_module_has_required_attributes(self):
         """Test utility_check module has MODULE_ID and MODULE_STATUS."""
-        from crackerjack.adapters.qa import utility_check
+        from crackerjack.adapters.utility import checks
 
-        assert hasattr(utility_check, "MODULE_ID")
-        assert isinstance(utility_check.MODULE_ID, UUID)
+        assert hasattr(checks, "MODULE_ID")
+        assert isinstance(checks.MODULE_ID, UUID)
 
-        assert hasattr(utility_check, "MODULE_STATUS")
-        assert isinstance(utility_check.MODULE_STATUS, str)
+        assert hasattr(checks, "MODULE_STATUS")
+        assert isinstance(checks.MODULE_STATUS, str)
 
 
 class TestUtilityCheckTypes:

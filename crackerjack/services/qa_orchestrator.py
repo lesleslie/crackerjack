@@ -14,8 +14,8 @@ ACB Patterns:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
-import json
 import typing as t
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -23,7 +23,7 @@ from pathlib import Path
 import yaml
 from acb.depends import depends
 
-from crackerjack.models.protocols import QAAdapterProtocol, QAOrchestratorProtocol
+from crackerjack.models.protocols import QAAdapterProtocol
 from crackerjack.models.qa_config import QACheckConfig, QAOrchestratorConfig
 from crackerjack.models.qa_results import QAResult, QAResultStatus
 
@@ -339,13 +339,9 @@ class QAOrchestrator:
         """
         total_checks = len(results)
         success_count = sum(1 for r in results if r.is_success)
-        failure_count = sum(
-            1 for r in results if r.status == QAResultStatus.FAILURE
-        )
+        failure_count = sum(1 for r in results if r.status == QAResultStatus.FAILURE)
         error_count = sum(1 for r in results if r.status == QAResultStatus.ERROR)
-        warning_count = sum(
-            1 for r in results if r.status == QAResultStatus.WARNING
-        )
+        warning_count = sum(1 for r in results if r.status == QAResultStatus.WARNING)
 
         total_issues = sum(r.issues_found for r in results)
         total_fixed = sum(r.issues_fixed for r in results)
@@ -466,5 +462,5 @@ class QAOrchestrator:
 
 
 # Register orchestrator with ACB dependency injection
-with t.suppress(Exception):
+with contextlib.suppress(Exception):
     depends.set(QAOrchestrator)

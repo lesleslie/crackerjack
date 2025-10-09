@@ -20,9 +20,11 @@ from uuid import UUID
 from crackerjack.adapters.qa.base import QAAdapterBase, QABaseSettings
 from crackerjack.models.qa_results import QAResult, QAResultStatus, QACheckType
 
+
 class MyCheckSettings(QABaseSettings):
     # Add custom settings here
     pass
+
 
 class MyCheckAdapter(QAAdapterBase):
     MODULE_ID = UUID("01937d86-xxxx-xxxx-xxxx-xxxxxxxxxxxx")  # Generate unique UUID7
@@ -47,6 +49,7 @@ class MyCheckAdapter(QAAdapterBase):
 
     def get_default_config(self):
         from crackerjack.models.qa_config import QACheckConfig
+
         return QACheckConfig(
             enabled=True,
             timeout_seconds=60,
@@ -74,22 +77,22 @@ crackerjack/
 ```python
 # Base classes and protocols
 from crackerjack.adapters.qa.base import (
-    QAAdapterBase,           # Inherit from this
-    QABaseSettings,          # Inherit for settings
-    QAAdapterProtocol,       # Type hints only
+    QAAdapterBase,  # Inherit from this
+    QABaseSettings,  # Inherit for settings
+    QAAdapterProtocol,  # Type hints only
 )
 
 # Result models
 from crackerjack.models.qa_results import (
-    QAResult,                # Return from check()
-    QAResultStatus,          # SUCCESS, FAILURE, WARNING, ERROR, SKIPPED
-    QACheckType,             # LINT, FORMAT, TYPE_CHECK, SECURITY, TEST, etc.
+    QAResult,  # Return from check()
+    QAResultStatus,  # SUCCESS, FAILURE, WARNING, ERROR, SKIPPED
+    QACheckType,  # LINT, FORMAT, TYPE_CHECK, SECURITY, TEST, etc.
 )
 
 # Configuration
 from crackerjack.models.qa_config import (
-    QACheckConfig,           # Per-check config
-    QAOrchestratorConfig,    # Orchestrator config
+    QACheckConfig,  # Per-check config
+    QAOrchestratorConfig,  # Orchestrator config
 )
 
 # ACB imports (optional enhancements)
@@ -110,8 +113,7 @@ async def check(self, files=None, config=None):
 
     # Filter by patterns
     files_to_check = [
-        f for f in files_to_check
-        if self._should_check_file(f, check_config)
+        f for f in files_to_check if self._should_check_file(f, check_config)
     ]
 
     if not files_to_check:
@@ -129,6 +131,7 @@ async def check(self, files=None, config=None):
 ```python
 import asyncio
 import subprocess
+
 
 async def check(self, files=None, config=None):
     cmd = ["tool-name", "--flag", *files]
@@ -173,6 +176,7 @@ async def check(self, files=None, config=None):
 ```python
 import time
 
+
 async def check(self, files=None, config=None):
     start_time = time.time()
 
@@ -205,6 +209,7 @@ MODULE_METADATA = AdapterMetadata(
     description="Brief description of what this adapter does",
 )
 
+
 class MyCheckAdapter(QAAdapterBase):
     MODULE_ID = MODULE_METADATA.module_id
     MODULE_STATUS = "stable"
@@ -215,20 +220,19 @@ class MyCheckAdapter(QAAdapterBase):
 
 ```python
 QAResult(
-    check_id=UUID,              # REQUIRED: Your adapter's MODULE_ID
-    check_name=str,             # REQUIRED: Human-readable name (e.g., "ruff-format")
-    check_type=QACheckType,     # REQUIRED: LINT, FORMAT, TYPE_CHECK, etc.
-    status=QAResultStatus,      # REQUIRED: SUCCESS, FAILURE, WARNING, ERROR, SKIPPED
-
-    message=str,                # Optional: Summary message
-    details=str,                # Optional: Detailed output (stdout/stderr)
-    files_checked=list[Path],   # Optional: Files that were checked
+    check_id=UUID,  # REQUIRED: Your adapter's MODULE_ID
+    check_name=str,  # REQUIRED: Human-readable name (e.g., "ruff-format")
+    check_type=QACheckType,  # REQUIRED: LINT, FORMAT, TYPE_CHECK, etc.
+    status=QAResultStatus,  # REQUIRED: SUCCESS, FAILURE, WARNING, ERROR, SKIPPED
+    message=str,  # Optional: Summary message
+    details=str,  # Optional: Detailed output (stdout/stderr)
+    files_checked=list[Path],  # Optional: Files that were checked
     files_modified=list[Path],  # Optional: Files modified (formatters)
-    issues_found=int,           # Optional: Number of issues found
-    issues_fixed=int,           # Optional: Number of issues auto-fixed
-    execution_time_ms=float,    # Optional: How long it took
-    timestamp=datetime,         # Optional: When it ran (auto-set)
-    metadata=dict,              # Optional: Any custom data
+    issues_found=int,  # Optional: Number of issues found
+    issues_fixed=int,  # Optional: Number of issues auto-fixed
+    execution_time_ms=float,  # Optional: How long it took
+    timestamp=datetime,  # Optional: When it ran (auto-set)
+    metadata=dict,  # Optional: Any custom data
 )
 ```
 
@@ -236,24 +240,24 @@ QAResult(
 
 ```python
 class QACheckType(str, Enum):
-    LINT = "lint"               # Style/quality checks (ruff, pylint)
-    FORMAT = "format"           # Code formatting (black, ruff format)
-    TYPE_CHECK = "type_check"   # Type checking (mypy, pyright, zuban)
-    SECURITY = "security"       # Security scanning (bandit, safety)
-    TEST = "test"               # Test execution (pytest)
-    REFACTOR = "refactor"       # Refactoring suggestions
-    UTILITY = "utility"         # Other checks
+    LINT = "lint"  # Style/quality checks (ruff, pylint)
+    FORMAT = "format"  # Code formatting (black, ruff format)
+    TYPE_CHECK = "type_check"  # Type checking (mypy, pyright, zuban)
+    SECURITY = "security"  # Security scanning (bandit, safety)
+    TEST = "test"  # Test execution (pytest)
+    REFACTOR = "refactor"  # Refactoring suggestions
+    UTILITY = "utility"  # Other checks
 ```
 
 ## QAResultStatus Enum
 
 ```python
 class QAResultStatus(str, Enum):
-    SUCCESS = "success"         # Check passed
-    FAILURE = "failure"         # Check failed (issues found)
-    WARNING = "warning"         # Issues found but not critical
-    SKIPPED = "skipped"         # Check was skipped
-    ERROR = "error"             # Check failed to run (exception)
+    SUCCESS = "success"  # Check passed
+    FAILURE = "failure"  # Check failed (issues found)
+    WARNING = "warning"  # Issues found but not critical
+    SKIPPED = "skipped"  # Check was skipped
+    ERROR = "error"  # Check failed to run (exception)
 ```
 
 ## Registration Example
@@ -281,6 +285,7 @@ import pytest
 from crackerjack.adapters.qa.my_check import MyCheckAdapter
 from crackerjack.models.qa_results import QAResultStatus
 
+
 class TestMyCheckAdapter:
     @pytest.fixture
     def adapter(self):
@@ -304,6 +309,7 @@ class TestMyCheckAdapter:
 ## Common Mistakes to Avoid
 
 ❌ **Don't hardcode file paths:**
+
 ```python
 # Bad
 files = [Path("/absolute/path/to/file.py")]
@@ -313,6 +319,7 @@ files = list(Path.cwd().rglob("*.py"))
 ```
 
 ❌ **Don't forget error handling:**
+
 ```python
 # Bad
 result = await subprocess.check_output(cmd)
@@ -325,6 +332,7 @@ except Exception as e:
 ```
 
 ❌ **Don't block the event loop:**
+
 ```python
 # Bad
 time.sleep(5)
@@ -334,6 +342,7 @@ await asyncio.sleep(5)
 ```
 
 ❌ **Don't return raw exceptions:**
+
 ```python
 # Bad
 async def check(self, ...):
@@ -360,6 +369,7 @@ from uuid import UUID
 # Generate: https://www.uuidtools.com/v7
 # Or use Python: pip install uuid7
 from uuid7 import uuid7
+
 MODULE_ID = uuid7()
 ```
 
@@ -368,18 +378,18 @@ MODULE_ID = uuid7()
 ```python
 # Include patterns
 file_patterns = [
-    "**/*.py",          # All Python files
-    "src/**/*.ts",      # TypeScript in src/
+    "**/*.py",  # All Python files
+    "src/**/*.ts",  # TypeScript in src/
     "tests/unit/**/*",  # All files in tests/unit/
 ]
 
 # Exclude patterns
 exclude_patterns = [
-    "**/migrations/**",     # Django migrations
-    "**/.venv/**",          # Virtual environments
-    "**/node_modules/**",   # Node packages
-    "**/__pycache__/**",    # Python cache
-    "**/test_*.py",         # Test files
+    "**/migrations/**",  # Django migrations
+    "**/.venv/**",  # Virtual environments
+    "**/node_modules/**",  # Node packages
+    "**/__pycache__/**",  # Python cache
+    "**/test_*.py",  # Test files
 ]
 ```
 
@@ -447,8 +457,7 @@ class BanditSecurityAdapter(QAAdapterBase):
         check_config = config or self.get_default_config()
         files_to_check = files or self._discover_python_files()
         files_to_check = [
-            f for f in files_to_check
-            if self._should_check_file(f, check_config)
+            f for f in files_to_check if self._should_check_file(f, check_config)
         ]
 
         if not files_to_check:
@@ -456,9 +465,10 @@ class BanditSecurityAdapter(QAAdapterBase):
 
         cmd = [
             "bandit",
-            "-f", "json",
+            "-f",
+            "json",
             "-ll",  # Report severity/confidence
-            "-r",   # Recursive
+            "-r",  # Recursive
             *[str(f) for f in files_to_check],
         ]
 
@@ -484,6 +494,7 @@ class BanditSecurityAdapter(QAAdapterBase):
             else:
                 # Parse JSON output for issue count
                 import json
+
                 try:
                     output = json.loads(stdout.decode())
                     issue_count = len(output.get("results", []))
@@ -518,7 +529,8 @@ class BanditSecurityAdapter(QAAdapterBase):
         """Validate that Bandit is available."""
         try:
             result = await asyncio.create_subprocess_exec(
-                "bandit", "--version",
+                "bandit",
+                "--version",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )

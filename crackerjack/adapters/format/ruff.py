@@ -20,12 +20,12 @@ import json
 import typing as t
 from contextlib import suppress
 from pathlib import Path
-from uuid import UUID, uuid7
+from uuid import UUID, uuid4
 
 from acb.depends import depends
 from pydantic import Field
 
-from crackerjack.adapters.qa.tool_adapter_base import (
+from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
     ToolAdapterSettings,
     ToolExecutionResult,
@@ -37,11 +37,11 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 # ACB Module Registration (REQUIRED)
-MODULE_ID = uuid7()
+MODULE_ID = uuid4()
 MODULE_STATUS = "stable"
 
 
-class RuffMode(str, t.get_args(t.Literal["check", "format"])):
+class RuffMode(str):
     """Ruff execution modes."""
 
     CHECK = "check"
