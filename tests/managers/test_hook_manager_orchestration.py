@@ -1,9 +1,9 @@
-"""Integration tests for HookManager with HookOrchestratorAdapter (Phase 3).
+"""Integration tests for HookManager with HookOrchestratorAdapter (Phase 3-4).
 
 Tests the integration between HookManagerImpl and HookOrchestratorAdapter to ensure:
 - Orchestrator initialization on first use
 - Dual execution paths (legacy vs orchestrated)
-- Configuration propagation
+- Configuration propagation (Phase 4)
 - Statistics tracking
 - Backward compatibility with existing workflows
 """
@@ -18,6 +18,7 @@ from rich.console import Console
 
 from crackerjack.managers.hook_manager import HookManagerImpl
 from crackerjack.models.task import HookResult
+from crackerjack.orchestration.config import OrchestrationConfig
 
 
 @pytest.fixture
@@ -55,8 +56,8 @@ class TestHookManagerOrchestrationIntegration:
 
         assert manager.orchestration_enabled is True
         assert manager.orchestration_mode == "acb"
-        assert manager._enable_caching is True
-        assert manager._cache_backend == "memory"
+        assert manager._orchestration_config.enable_caching is True
+        assert manager._orchestration_config.cache_backend == "memory"
         assert manager._orchestrator is None  # Lazy init
 
     @pytest.mark.asyncio
@@ -262,3 +263,128 @@ class TestBackwardCompatibility:
         assert summary["total"] == 2
         assert summary["passed"] == 1
         assert summary["failed"] == 1
+
+
+class TestPhase4ConfigurationIntegration:
+    """Test Phase 4 configuration system integration (Phase 4)."""
+
+    def test_initialization_with_config_object(self, console: Console, pkg_path: Path):
+        """Test initialization with OrchestrationConfig object."""
+        config = OrchestrationConfig(
+            enable_orchestration=True,
+            orchestration_mode="legacy",
+            enable_caching=False,
+            cache_backend="tool_proxy",
+            max_parallel_hooks=8,
+        )
+
+        manager = HookManagerImpl(
+            console=console, pkg_path=pkg_path, orchestration_config=config
+        )
+
+        assert manager.orchestration_enabled is True
+        assert manager.orchestration_mode == "legacy"
+        assert manager._orchestration_config.enable_caching is False
+        assert manager._orchestration_config.cache_backend == "tool_proxy"
+        assert manager._orchestration_config.max_parallel_hooks == 8
+
+    def test_initialization_from_config_file(self, console: Console, tmp_path: Path):
+        """Test initialization loads from .crackerjack.yaml."""
+        config_path = tmp_path / ".crackerjack.yaml"
+        config_content = """
+orchestration:
+  enable: true
+  mode: acb
+  enable_caching: true
+  cache_backend: memory
+  cache_ttl: 7200
+  max_parallel_hooks: 8
+"""
+        config_path.write_text(config_content)
+
+        manager = HookManagerImpl(console=console, pkg_path=tmp_path)
+
+        # Should load from file
+        assert manager.orchestration_enabled is True
+        assert manager.orchestration_mode == "acb"
+        assert manager._orchestration_config.cache_ttl == 7200
+        assert manager._orchestration_config.max_parallel_hooks == 8
+
+    def test_legacy_parameters_still_work(self, console: Console, pkg_path: Path):
+        """Test that legacy parameter passing still works."""
+        manager = HookManagerImpl(
+            console=console,
+            pkg_path=pkg_path,
+            enable_orchestration=True,
+            orchestration_mode="legacy",
+            enable_caching=False,
+            cache_backend="tool_proxy",
+        )
+
+        assert manager.orchestration_enabled is True
+        assert manager.orchestration_mode == "legacy"
+        assert manager._orchestration_config.enable_caching is False
+        assert manager._orchestration_config.cache_backend == "tool_proxy"
+
+    def test_config_object_takes_precedence(self, console: Console, pkg_path: Path):
+        """Test that config object takes precedence over legacy parameters."""
+        config = OrchestrationConfig(
+            enable_orchestration=True,
+            orchestration_mode="acb",
+        )
+
+        manager = HookManagerImpl(
+            console=console,
+            pkg_path=pkg_path,
+            orchestration_config=config,
+            # These should be ignored
+            enable_orchestration=False,
+            orchestration_mode="legacy",
+        )
+
+        # Config object should win
+        assert manager.orchestration_enabled is True
+        assert manager.orchestration_mode == "acb"
+
+    def test_get_execution_info_uses_config(self, console: Console, pkg_path: Path):
+        """Test that get_execution_info uses config object."""
+        config = OrchestrationConfig(
+            enable_orchestration=True,
+            orchestration_mode="acb",
+            enable_caching=True,
+            cache_backend="memory",
+        )
+
+        manager = HookManagerImpl(
+            console=console, pkg_path=pkg_path, orchestration_config=config
+        )
+
+        info = manager.get_execution_info()
+
+        assert info["orchestration_enabled"] is True
+        assert info["orchestration_mode"] == "acb"
+        assert info["caching_enabled"] is True
+        assert info["cache_backend"] == "memory"
+
+    @pytest.mark.asyncio
+    async def test_orchestrator_uses_config_settings(self, console: Console, pkg_path: Path):
+        """Test that orchestrator receives settings from config object."""
+        config = OrchestrationConfig(
+            enable_orchestration=True,
+            orchestration_mode="acb",
+            enable_caching=True,
+            cache_backend="memory",
+            max_parallel_hooks=8,
+        )
+
+        manager = HookManagerImpl(
+            console=console, pkg_path=pkg_path, orchestration_config=config
+        )
+
+        await manager._init_orchestrator()
+
+        assert manager._orchestrator is not None
+        assert manager._orchestrator.settings.execution_mode == "acb"
+        assert manager._orchestrator.settings.enable_caching is True
+        assert manager._orchestrator.settings.cache_backend == "memory"
+        assert manager._orchestrator.settings.max_parallel_hooks == 8

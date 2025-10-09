@@ -8,6 +8,7 @@ from crackerjack.config.hooks import HookConfigLoader
 from crackerjack.executors.hook_executor import HookExecutor
 from crackerjack.executors.lsp_aware_hook_executor import LSPAwareHookExecutor
 from crackerjack.models.task import HookResult
+from crackerjack.orchestration.config import OrchestrationConfig
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
@@ -22,6 +23,8 @@ class HookManagerImpl:
         quiet: bool = False,
         enable_lsp_optimization: bool = False,
         enable_tool_proxy: bool = True,
+        orchestration_config: OrchestrationConfig | None = None,
+        # Legacy parameters for backward compatibility
         enable_orchestration: bool = False,
         orchestration_mode: str = "acb",
         enable_caching: bool = True,
@@ -44,12 +47,28 @@ class HookManagerImpl:
         self.lsp_optimization_enabled = enable_lsp_optimization
         self.tool_proxy_enabled = enable_tool_proxy
 
-        # Orchestration configuration (Phase 3)
-        self.orchestration_enabled = enable_orchestration
-        self.orchestration_mode = orchestration_mode
+        # Orchestration configuration (Phase 4 - config system integration)
+        if orchestration_config is not None:
+            # Use provided config object
+            self._orchestration_config = orchestration_config
+        elif enable_orchestration:
+            # Legacy path: construct config from individual parameters
+            self._orchestration_config = OrchestrationConfig(
+                enable_orchestration=enable_orchestration,
+                orchestration_mode=orchestration_mode,
+                enable_caching=enable_caching,
+                cache_backend=cache_backend,
+            )
+        else:
+            # Try to load from file, fall back to defaults
+            self._orchestration_config = OrchestrationConfig.load(
+                pkg_path / ".crackerjack.yaml"
+            )
+
+        # Expose properties for backward compatibility
+        self.orchestration_enabled = self._orchestration_config.enable_orchestration
+        self.orchestration_mode = self._orchestration_config.orchestration_mode
         self._orchestrator: HookOrchestratorAdapter | None = None
-        self._enable_caching = enable_caching
-        self._cache_backend = cache_backend
 
     def set_config_path(self, config_path: Path) -> None:
         self._config_path = config_path
@@ -59,17 +78,10 @@ class HookManagerImpl:
         if self._orchestrator is not None:
             return  # Already initialized
 
-        from crackerjack.orchestration.hook_orchestrator import (
-            HookOrchestratorAdapter,
-            HookOrchestratorSettings,
-        )
+        from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
 
-        settings = HookOrchestratorSettings(
-            execution_mode=self.orchestration_mode,
-            enable_caching=self._enable_caching,
-            cache_backend=self._cache_backend,
-            max_parallel_hooks=4,  # Default reasonable parallelism
-        )
+        # Use config system to create orchestrator settings
+        settings = self._orchestration_config.to_orchestrator_settings()
 
         self._orchestrator = HookOrchestratorAdapter(
             settings=settings,
@@ -137,6 +149,21 @@ class HookManagerImpl:
         return execution_result.results
 
     def run_hooks(self) -> list[HookResult]:
+        # Phase 5-7: Enable strategy-level parallelism when orchestration is enabled
+        if self.orchestration_enabled and self._orchestration_config.enable_strategy_parallelism:
+            import asyncio
+
+            # Execute both strategies concurrently (Tier 1 parallelism)
+            fast_task = self._run_fast_hooks_orchestrated()
+            comp_task = self._run_comprehensive_hooks_orchestrated()
+
+            fast_results, comp_results = asyncio.run(
+                asyncio.gather(fast_task, comp_task)
+            )
+
+            return fast_results + comp_results
+
+        # Legacy path: Sequential execution (backward compatibility)
         fast_results = self.run_fast_hooks()
         comprehensive_results = self.run_comprehensive_hooks()
         return fast_results + comprehensive_results
@@ -158,10 +185,22 @@ class HookManagerImpl:
             "lsp_optimization_enabled": self.lsp_optimization_enabled,
             "tool_proxy_enabled": self.tool_proxy_enabled,
             "executor_type": type(self.executor).__name__,
-            "orchestration_enabled": self.orchestration_enabled,
-            "orchestration_mode": self.orchestration_mode if self.orchestration_enabled else None,
-            "caching_enabled": self._enable_caching if self.orchestration_enabled else False,
-            "cache_backend": self._cache_backend if self.orchestration_enabled else None,
+            "orchestration_enabled": self._orchestration_config.enable_orchestration,
+            "orchestration_mode": (
+                self._orchestration_config.orchestration_mode
+                if self._orchestration_config.enable_orchestration
+                else None
+            ),
+            "caching_enabled": (
+                self._orchestration_config.enable_caching
+                if self._orchestration_config.enable_orchestration
+                else False
+            ),
+            "cache_backend": (
+                self._orchestration_config.cache_backend
+                if self._orchestration_config.enable_orchestration
+                else None
+            ),
         }
 
         # Get LSP-specific info if available

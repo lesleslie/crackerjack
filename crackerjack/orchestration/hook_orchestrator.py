@@ -48,6 +48,8 @@ class HookOrchestratorSettings(BaseModel):
     retry_on_failure: bool = False
     cache_backend: str = Field(default="tool_proxy", pattern="^(tool_proxy|redis|memory)$")
     execution_mode: str = Field(default="legacy", pattern="^(legacy|acb)$")
+    # Phase 5-7: Triple parallelism settings
+    enable_adaptive_execution: bool = True  # Use adaptive strategy (dependency-aware)
 
 
 class HookOrchestratorAdapter:
@@ -309,28 +311,42 @@ class HookOrchestratorAdapter:
             "Using ACB direct adapter execution mode",
             extra={
                 "strategy_name": strategy.name,
-                "enable_dependency_resolution": self.settings.enable_dependency_resolution,
+                "enable_adaptive_execution": self.settings.enable_adaptive_execution,
             }
         )
 
-        # Resolve dependencies if enabled
-        if self.settings.enable_dependency_resolution:
-            ordered_hooks = self._resolve_dependencies(strategy.hooks)
-            logger.debug(
-                "Dependency resolution complete",
+        # NEW Phase 5-7: Use adaptive strategy for dependency-aware parallel execution
+        if self.settings.enable_adaptive_execution:
+            from crackerjack.orchestration.strategies.adaptive_strategy import (
+                AdaptiveExecutionStrategy,
+            )
+
+            logger.info(
+                "Using adaptive execution strategy with dependency-aware batching",
                 extra={
-                    "original_count": len(strategy.hooks),
-                    "ordered_count": len(ordered_hooks),
+                    "strategy_name": strategy.name,
+                    "max_parallel": strategy.max_workers or self.settings.max_parallel_hooks,
+                    "dependency_graph_size": len(self._dependency_graph),
                 }
             )
-        else:
-            ordered_hooks = strategy.hooks
 
-        # Execute based on parallelization strategy
-        if strategy.parallel:
-            results = await self._execute_parallel(ordered_hooks, strategy.max_workers)
+            execution_strategy = AdaptiveExecutionStrategy(
+                dependency_graph=self._dependency_graph,
+                max_parallel=strategy.max_workers or self.settings.max_parallel_hooks,
+                default_timeout=self.settings.default_timeout,
+                stop_on_critical_failure=True,
+            )
+
+            results = await execution_strategy.execute(
+                hooks=strategy.hooks,
+                executor_callable=self._execute_single_hook,
+            )
+        elif strategy.parallel:
+            # Fallback to simple parallel execution without dependency resolution
+            results = await self._execute_parallel(strategy.hooks, strategy.max_workers)
         else:
-            results = await self._execute_sequential(ordered_hooks)
+            # Sequential execution
+            results = await self._execute_sequential(strategy.hooks)
 
         logger.info(
             "ACB mode execution complete",
@@ -558,10 +574,10 @@ class HookOrchestratorAdapter:
 
         # Placeholder for Phase 3-7
         result = HookResult(
-            hook_name=hook.name,
+            id=hook.name,
+            name=hook.name,
             status="passed",
             duration=0.0,
-            output="[ACB mode placeholder - Phase 8 implementation pending]",
         )
 
         # Cache result if caching enabled
@@ -589,10 +605,10 @@ class HookOrchestratorAdapter:
             HookResult with error status
         """
         return HookResult(
-            hook_name=hook.name,
+            id=hook.name,
+            name=hook.name,
             status="error",
             duration=0.0,
-            output=f"Exception: {type(error).__name__}: {error}",
         )
 
     async def get_cache_stats(self) -> dict[str, t.Any]:
