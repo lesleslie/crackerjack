@@ -2,8 +2,12 @@
 
 Phase 10.4.3: Integrates ToolProfiler, IncrementalExecutor, and ToolFilter
 for optimized hook execution with performance tracking and caching.
+
+Phase 10.4.5: Adds execution optimization with fast-first ordering and
+parallel execution for independent tools.
 """
 
+import concurrent.futures
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -75,6 +79,27 @@ class EnhancedHookExecutor:
         )
         self.filter: ToolFilter | None = None
 
+    def optimize_hook_order(self, hooks: list[HookDefinition]) -> list[HookDefinition]:
+        """Sort hooks by execution time (fastest first).
+
+        Phase 10.4.5: Enables fail-fast feedback by running fastest tools first.
+
+        Args:
+            hooks: List of hooks to optimize
+
+        Returns:
+            Hooks sorted by mean execution time (fastest first)
+        """
+
+        def get_exec_time(hook: HookDefinition) -> float:
+            """Get mean execution time for a hook from profiler."""
+            if hook.name in self.profiler.results:
+                return self.profiler.results[hook.name].mean_time
+            # Unknown tools run last (use timeout as estimate)
+            return float(hook.timeout)
+
+        return sorted(hooks, key=get_exec_time)
+
     def execute_hooks(
         self,
         hooks: list[HookDefinition],
@@ -84,8 +109,13 @@ class EnhancedHookExecutor:
         file_patterns: list[str] | None = None,
         exclude_patterns: list[str] | None = None,
         force_rerun: bool = False,
+        optimize_order: bool = True,
+        parallel: bool = False,
+        max_workers: int = 3,
     ) -> ExecutionSummary:
-        """Execute hooks with filtering, caching, and profiling.
+        """Execute hooks with filtering, caching, profiling, and optimization.
+
+        Phase 10.4.5: Adds fast-first ordering and parallel execution.
 
         Args:
             hooks: List of hook definitions to execute
@@ -94,6 +124,9 @@ class EnhancedHookExecutor:
             file_patterns: File glob patterns to include
             exclude_patterns: File glob patterns to exclude
             force_rerun: Skip cache and rerun all hooks
+            optimize_order: Sort hooks by execution time (fastest first)
+            parallel: Run independent hooks in parallel
+            max_workers: Maximum parallel workers (default: 3)
 
         Returns:
             ExecutionSummary with results and statistics
@@ -118,41 +151,56 @@ class EnhancedHookExecutor:
         # Only run filtered tools
         hooks_to_run = [h for h in hooks if h.name in tool_result.filtered_tools]
 
-        # 3. Execute each hook with single-execution profiling
+        # 3. Optimize hook order (Phase 10.4.5)
+        if optimize_order:
+            hooks_to_run = self.optimize_hook_order(hooks_to_run)
+
+        # 4. Execute hooks (serial or parallel)
         results: list[HookResult] = []
         hooks_succeeded = 0
         hooks_failed = 0
 
-        for hook in hooks_to_run:
-            # Execute with timing
-            hook_start_time = time.perf_counter()
-            hook_result = self._execute_single_hook(
-                hook,
+        if parallel:
+            # Parallel execution (Phase 10.4.5)
+            results = self._execute_parallel(
+                hooks_to_run,
                 force_rerun=force_rerun,
+                max_workers=max_workers,
             )
-            hook_end_time = time.perf_counter()
-
-            # Update profiler with single execution metrics
-            if hook.name not in self.profiler.results:
-                from crackerjack.services.profiler import ProfileResult
-
-                self.profiler.results[hook.name] = ProfileResult(
-                    tool_name=hook.name,
-                    runs=0,
+            hooks_succeeded = sum(1 for r in results if r.success)
+            hooks_failed = sum(1 for r in results if not r.success)
+        else:
+            # Serial execution (original behavior)
+            for hook in hooks_to_run:
+                # Execute with timing
+                hook_start_time = time.perf_counter()
+                hook_result = self._execute_single_hook(
+                    hook,
+                    force_rerun=force_rerun,
                 )
+                hook_end_time = time.perf_counter()
 
-            profile_result = self.profiler.results[hook.name]
-            profile_result.runs += 1
-            profile_result.execution_times.append(hook_end_time - hook_start_time)
+                # Update profiler with single execution metrics
+                if hook.name not in self.profiler.results:
+                    from crackerjack.services.profiler import ProfileResult
 
-            results.append(hook_result)
+                    self.profiler.results[hook.name] = ProfileResult(
+                        tool_name=hook.name,
+                        runs=0,
+                    )
 
-            if hook_result.success:
-                hooks_succeeded += 1
-            else:
-                hooks_failed += 1
+                profile_result = self.profiler.results[hook.name]
+                profile_result.runs += 1
+                profile_result.execution_times.append(hook_end_time - hook_start_time)
 
-        # 4. Calculate statistics
+                results.append(hook_result)
+
+                if hook_result.success:
+                    hooks_succeeded += 1
+                else:
+                    hooks_failed += 1
+
+        # 5. Calculate statistics
         total_execution_time = time.perf_counter() - start_time
         total_hooks = len(hooks)
         hooks_run = len(hooks_to_run)
@@ -204,7 +252,7 @@ class EnhancedHookExecutor:
         ):
             # Use incremental executor for file-level caching
             def tool_func(file_path: Path) -> bool:
-                command = hook.get_command() + [str(file_path)]
+                command = hook.build_command(files=[file_path])
                 result = subprocess.run(
                     command,
                     capture_output=True,
@@ -270,6 +318,75 @@ class EnhancedHookExecutor:
                     execution_time=0.0,
                 )
 
+    def _execute_parallel(
+        self,
+        hooks: list[HookDefinition],
+        force_rerun: bool = False,
+        max_workers: int = 3,
+    ) -> list[HookResult]:
+        """Execute hooks in parallel using thread pool.
+
+        Phase 10.4.5: Enables concurrent execution of independent hooks.
+
+        Args:
+            hooks: List of hooks to execute
+            force_rerun: Skip cache and rerun
+            max_workers: Maximum concurrent workers
+
+        Returns:
+            List of HookResult objects
+        """
+        import time
+
+        results: list[HookResult] = []
+
+        def execute_with_profiling(hook: HookDefinition) -> HookResult:
+            """Execute a single hook with profiling."""
+            hook_start_time = time.perf_counter()
+            hook_result = self._execute_single_hook(hook, force_rerun=force_rerun)
+            hook_end_time = time.perf_counter()
+
+            # Update profiler with single execution metrics
+            if hook.name not in self.profiler.results:
+                from crackerjack.services.profiler import ProfileResult
+
+                self.profiler.results[hook.name] = ProfileResult(
+                    tool_name=hook.name,
+                    runs=0,
+                )
+
+            profile_result = self.profiler.results[hook.name]
+            profile_result.runs += 1
+            profile_result.execution_times.append(hook_end_time - hook_start_time)
+
+            return hook_result
+
+        # Execute hooks in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all hooks
+            future_to_hook = {
+                executor.submit(execute_with_profiling, hook): hook for hook in hooks
+            }
+
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_hook):
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    hook = future_to_hook[future]
+                    results.append(
+                        HookResult(
+                            hook_name=hook.name,
+                            success=False,
+                            output="",
+                            error=f"Parallel execution error: {e}",
+                            execution_time=0.0,
+                        )
+                    )
+
+        return results
+
     def _get_files_for_hook(self, hook: HookDefinition) -> list[Path]:
         """Get list of files to process for a hook.
 
@@ -279,9 +396,73 @@ class EnhancedHookExecutor:
         Returns:
             List of file paths to process
         """
-        # TODO: Phase 10.4.4: Implement file discovery and filtering
-        # For now, return empty list (project-level execution)
-        return []
+        # Only discover files for file-level tools
+        if not (hasattr(hook, "accepts_file_paths") and hook.accepts_file_paths):
+            return []
+
+        # Discover files based on tool type
+        file_patterns = self._get_file_patterns_for_tool(hook.name)
+        all_files: list[Path] = []
+
+        for pattern in file_patterns:
+            all_files.extend(Path.cwd().rglob(pattern))
+
+        # Apply filters if available
+        if self.filter:
+            filter_result = self.filter.filter_files(
+                tool_name=hook.name,
+                all_files=all_files,
+            )
+            return filter_result.filtered_files
+
+        return all_files
+
+    def _get_file_patterns_for_tool(self, tool_name: str) -> list[str]:
+        """Get file glob patterns for a specific tool.
+
+        Args:
+            tool_name: Name of the tool
+
+        Returns:
+            List of glob patterns (e.g., ["*.py"] for Python tools)
+        """
+        # Map tools to file patterns
+        python_tools = {
+            "ruff-check",
+            "ruff-format",
+            "bandit",
+        }
+        markdown_tools = {"mdformat"}
+        yaml_tools = {"check-yaml"}
+        toml_tools = {"check-toml"}
+        all_text_tools = {
+            "trailing-whitespace",
+            "end-of-file-fixer",
+            "codespell",
+        }
+
+        if tool_name in python_tools:
+            return ["*.py"]
+        elif tool_name in markdown_tools:
+            return ["*.md"]
+        elif tool_name in yaml_tools:
+            return ["*.yaml", "*.yml"]
+        elif tool_name in toml_tools:
+            return ["*.toml"]
+        elif tool_name in all_text_tools:
+            # All text files except common binaries
+            return [
+                "*.py",
+                "*.md",
+                "*.yaml",
+                "*.yml",
+                "*.toml",
+                "*.txt",
+                "*.json",
+            ]
+        else:
+            # Default to Python files
+            return ["*.py"]
 
     def generate_report(self, summary: ExecutionSummary) -> str:
         """Generate human-readable execution report.

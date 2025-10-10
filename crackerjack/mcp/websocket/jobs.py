@@ -5,13 +5,21 @@ import typing as t
 import uuid
 from contextlib import suppress
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
+from uuid import UUID, uuid4
 
+from acb.depends import depends
 from rich.console import Console
 
 from crackerjack.core.timeout_manager import TimeoutStrategy, get_timeout_manager
 from crackerjack.services.input_validator import get_input_validator
 from crackerjack.services.secure_path_utils import SecurePathValidator
+
+# Phase 9.3: ACB Integration - Module registration for dependency injection
+# Note: Currently using file-based JSON storage for job tracking
+# Future enhancement: Consider ACB SQL adapter for scalability if needed
+MODULE_ID: Final[UUID] = uuid4()
+MODULE_STATUS: Final[str] = "stable"
 
 console = Console()
 
@@ -380,4 +388,19 @@ class JobManager:
 
     def cleanup(self) -> None:
         self.is_running = False
-        console.print("[blue]Job manager cleanup completed[/ blue]")
+        console.print("[blue]Job manager cleanup completed[/blue]")
+
+    @property
+    def module_id(self) -> UUID:
+        """Reference to module-level MODULE_ID for ACB integration."""
+        return MODULE_ID
+
+    @property
+    def module_status(self) -> str:
+        """Module status for ACB integration."""
+        return MODULE_STATUS
+
+
+# Phase 9.3: ACB Integration - Register JobManager with dependency injection system
+with suppress(Exception):
+    depends.set(JobManager)

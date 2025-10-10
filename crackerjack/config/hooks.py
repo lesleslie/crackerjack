@@ -33,6 +33,7 @@ class HookDefinition:
     config_path: Path | None = None
     security_level: SecurityLevel = SecurityLevel.MEDIUM
     use_precommit_legacy: bool = True  # Phase 8.2: Backward compatibility flag
+    accepts_file_paths: bool = False  # Phase 10.4.4: Can tool process individual files?
 
     def get_command(self) -> list[str]:
         """Get the command to execute this hook.
@@ -75,6 +76,34 @@ class HookDefinition:
         cmd.extend([self.name, "--all-files"])
         return cmd
 
+    def build_command(self, files: list[Path] | None = None) -> list[str]:
+        """Build command with optional file paths for targeted execution.
+
+        Phase 10.4.4: Enables incremental execution on specific files when supported.
+
+        Args:
+            files: Optional list of file paths to process. If None, processes all files.
+
+        Returns:
+            Command list with file paths appended if tool accepts them.
+
+        Example:
+            >>> hook = HookDefinition(
+            ...     name="ruff-check",
+            ...     command=["ruff", "check"],
+            ...     accepts_file_paths=True,
+            ... )
+            >>> hook.build_command([Path("foo.py"), Path("bar.py")])
+            ["ruff", "check", "foo.py", "bar.py"]
+        """
+        base_cmd = self.get_command().copy()
+
+        # Append file paths if tool accepts them and files are provided
+        if files and self.accepts_file_paths:
+            base_cmd.extend([str(f) for f in files])
+
+        return base_cmd
+
 
 @dataclass
 class HookStrategy:
@@ -104,6 +133,7 @@ FAST_HOOKS = [
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level fixer
     ),
     HookDefinition(
         name="end-of-file-fixer",
@@ -113,6 +143,7 @@ FAST_HOOKS = [
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level fixer
     ),
     HookDefinition(
         name="check-yaml",
@@ -120,6 +151,7 @@ FAST_HOOKS = [
         timeout=10,  # Phase 10.4.1: Profiled P95=0.53s, safety=3x
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level validator
     ),
     HookDefinition(
         name="check-toml",
@@ -127,6 +159,7 @@ FAST_HOOKS = [
         timeout=79,  # Phase 10.4.1: Profiled P95=26.58s, safety=3x
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level validator
     ),
     HookDefinition(
         name="check-added-large-files",
@@ -155,6 +188,7 @@ FAST_HOOKS = [
         timeout=10,  # Phase 10.4.1: Profiled P95=1.33s, safety=3x
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level spell checker
     ),
     HookDefinition(
         name="ruff-check",
@@ -164,6 +198,7 @@ FAST_HOOKS = [
         retry_on_failure=True,
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level Python linter
     ),
     HookDefinition(
         name="ruff-format",
@@ -173,6 +208,7 @@ FAST_HOOKS = [
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level Python formatter
     ),
     HookDefinition(
         name="mdformat",
@@ -182,6 +218,7 @@ FAST_HOOKS = [
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level Markdown formatter
     ),
 ]
 
@@ -203,6 +240,7 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level security scanner
     ),
     HookDefinition(
         name="skylos",

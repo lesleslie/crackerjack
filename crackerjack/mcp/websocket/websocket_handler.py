@@ -1,6 +1,7 @@
 import asyncio
 import typing as t
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -13,15 +14,91 @@ from .jobs import JobManager
 console = Console()
 
 
+# Phase 9.4: WebSocket Security Configuration
+@dataclass
+class WebSocketSecurityConfig:
+    """Security configuration for WebSocket connections.
+
+    Phase 9.4: Enhanced security hardening for MCP WebSocket server.
+    """
+
+    # Message limits
+    max_message_size: int = 1024 * 1024  # 1MB max message size
+    max_messages_per_connection: int = 10000  # Max messages before forcing reconnect
+    max_concurrent_connections: int = 100  # Limit concurrent WebSocket connections
+
+    # Origin validation (localhost only for MCP)
+    allowed_origins: set[str] | None = None  # None = allow all (default for local dev)
+
+    # Rate limiting
+    messages_per_second: int = 100  # Max messages per second per connection
+
+    def __post_init__(self) -> None:
+        """Initialize allowed origins with secure defaults."""
+        if self.allowed_origins is None:
+            # Default: only allow localhost connections
+            self.allowed_origins = {
+                "http://localhost",
+                "http://127.0.0.1",
+                "https://localhost",
+                "https://127.0.0.1",
+            }
+
+    def validate_origin(self, origin: str | None) -> bool:
+        """Validate WebSocket origin header.
+
+        Args:
+            origin: Origin header value
+
+        Returns:
+            True if origin is allowed, False otherwise
+        """
+        if not origin:
+            # Allow connections without origin (local tools)
+            return True
+
+        # Check against allowed origins
+        for allowed in self.allowed_origins or set():
+            if origin.startswith(allowed):
+                return True
+
+        console.print(
+            f"[red]Rejected WebSocket connection from unauthorized origin: {origin}[/red]"
+        )
+        return False
+
+
 class WebSocketHandler:
-    def __init__(self, job_manager: JobManager, progress_dir: Path) -> None:
+    def __init__(
+        self,
+        job_manager: JobManager,
+        progress_dir: Path,
+        security_config: WebSocketSecurityConfig | None = None,
+    ) -> None:
         self.job_manager = job_manager
         self.progress_dir = progress_dir
         self.timeout_manager = get_timeout_manager()
+        self.security_config = security_config or WebSocketSecurityConfig()
+        self._connection_count = 0
 
     async def handle_connection(self, websocket: WebSocket, job_id: str) -> None:
+        # Phase 9.4: Security validations
         if not self.job_manager.validate_job_id(job_id):
             await websocket.close(code=1008, reason="Invalid job ID")
+            return
+
+        # Check origin header
+        origin = websocket.headers.get("origin")
+        if not self.security_config.validate_origin(origin):
+            await websocket.close(code=1008, reason="Unauthorized origin")
+            return
+
+        # Check connection limit
+        if self._connection_count >= self.security_config.max_concurrent_connections:
+            await websocket.close(code=1008, reason="Connection limit reached")
+            console.print(
+                f"[yellow]Connection limit reached: {self._connection_count}[/yellow]"
+            )
             return
 
         try:
@@ -45,8 +122,11 @@ class WebSocketHandler:
 
     async def _establish_connection(self, websocket: WebSocket, job_id: str) -> None:
         await websocket.accept()
+        self._connection_count += 1  # Phase 9.4: Track concurrent connections
         self.job_manager.add_connection(job_id, websocket)
-        console.print(f"[green]WebSocket connected for job: {job_id}[/green]")
+        console.print(
+            f"[green]WebSocket connected for job: {job_id} (connections: {self._connection_count})[/green]"
+        )
 
     async def _send_initial_progress(self, websocket: WebSocket, job_id: str) -> None:
         try:
@@ -80,7 +160,9 @@ class WebSocketHandler:
 
     async def _handle_message_loop(self, websocket: WebSocket, job_id: str) -> None:
         message_count = 0
-        max_messages = 10000
+        max_messages = (
+            self.security_config.max_messages_per_connection
+        )  # Phase 9.4: Use config
 
         while message_count < max_messages:
             try:
@@ -159,6 +241,12 @@ class WebSocketHandler:
     async def _cleanup_connection(self, job_id: str, websocket: WebSocket) -> None:
         try:
             self.job_manager.remove_connection(job_id, websocket)
+            self._connection_count = max(
+                0, self._connection_count - 1
+            )  # Phase 9.4: Decrement count
+            console.print(
+                f"[yellow]WebSocket disconnected for job: {job_id} (connections: {self._connection_count})[/yellow]"
+            )
         except Exception as e:
             console.print(f"[red]Error removing connection for {job_id}: {e}[/red]")
 

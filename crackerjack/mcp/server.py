@@ -1,6 +1,7 @@
 from .server_core import (
     MCP_AVAILABLE,
     MCPOptions,
+    MCPServerService,
     create_mcp_server,
     main,
 )
@@ -8,6 +9,7 @@ from .server_core import (
 __all__ = [
     "MCP_AVAILABLE",
     "MCPOptions",
+    "MCPServerService",
     "create_mcp_server",
     "main",
 ]

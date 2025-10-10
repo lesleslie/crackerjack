@@ -5,6 +5,14 @@ import typing as t
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Final
+from uuid import UUID, uuid4
+
+from acb.depends import depends
+
+# Phase 9.2: ACB Integration - Module registration for dependency injection
+MODULE_ID: Final[UUID] = uuid4()
+MODULE_STATUS: Final[str] = "stable"
 
 
 @dataclass
@@ -327,3 +335,18 @@ class ErrorCache:
             fixes_data = [result.to_dict() for result in self.fix_results]
             with self.fixes_file.open("w") as f:
                 json.dump(fixes_data, f, indent=2)
+
+    @property
+    def module_id(self) -> UUID:
+        """Reference to module-level MODULE_ID for ACB integration."""
+        return MODULE_ID
+
+    @property
+    def module_status(self) -> str:
+        """Module status for ACB integration."""
+        return MODULE_STATUS
+
+
+# Phase 9.2: ACB Integration - Register ErrorCache with dependency injection system
+with suppress(Exception):
+    depends.set(ErrorCache)

@@ -1,9 +1,12 @@
 import subprocess
 import time
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from typing import Final
+from uuid import UUID, uuid4
 
+from acb.depends import depends
 from rich.console import Console
 
 from ..ui.server_panels import create_server_panels
@@ -22,6 +25,10 @@ except ImportError:
     FastMCP = None  # type: ignore[misc,assignment,no-redef]
 
 MCP_AVAILABLE: Final[bool] = _mcp_available
+
+# Phase 9.1: ACB Integration - Module registration for dependency injection
+MODULE_ID: Final[UUID] = uuid4()
+MODULE_STATUS: Final[str] = "stable"
 
 from .context import (
     MCPServerConfig,
@@ -183,7 +190,7 @@ def handle_mcp_server_command(
 
         try:
             result = subprocess.run(
-                ["pkill", "- f", "crackerjack - mcp-server"],
+                ["pkill", "-f", "crackerjack-mcp-server"],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -394,3 +401,59 @@ if __name__ == "__main__":
             http_port = int(sys.argv[port_idx + 1])
 
     main(project_path, websocket_port, http_mode, http_port)
+
+
+# Phase 9.1: ACB Integration - Service wrapper for dependency injection
+class MCPServerService:
+    """Service wrapper for MCP server to enable ACB dependency injection.
+
+    This class wraps the MCP server creation and management functions,
+    providing a clean interface for dependency injection via ACB.
+    """
+
+    def __init__(self) -> None:
+        """Initialize MCP server service."""
+        self.module_id = MODULE_ID
+        self.module_status = MODULE_STATUS
+
+    def create_server(self, config: dict[str, t.Any] | None = None) -> t.Any | None:
+        """Create MCP server instance with optional configuration.
+
+        Args:
+            config: Server configuration dictionary
+
+        Returns:
+            FastMCP server instance or None if MCP unavailable
+        """
+        return create_mcp_server(config)
+
+    def start_server(
+        self,
+        project_path: str = ".",
+        websocket_port: int | None = None,
+        http_mode: bool = False,
+        http_port: int | None = None,
+    ) -> None:
+        """Start MCP server with specified configuration.
+
+        Args:
+            project_path: Path to project directory
+            websocket_port: Optional WebSocket server port
+            http_mode: Enable HTTP mode instead of STDIO
+            http_port: Optional HTTP server port
+        """
+        main(project_path, websocket_port, http_mode, http_port)
+
+    @property
+    def is_available(self) -> bool:
+        """Check if MCP server functionality is available.
+
+        Returns:
+            True if FastMCP library is installed and available
+        """
+        return MCP_AVAILABLE
+
+
+# Phase 9.1: ACB Integration - Register service with dependency injection system
+with suppress(Exception):
+    depends.set(MCPServerService)
