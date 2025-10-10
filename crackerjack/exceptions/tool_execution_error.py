@@ -130,9 +130,10 @@ class ToolExecutionError(Exception):
             Formatted output string
         """
         # Remove ANSI color codes for cleaner display
-        from crackerjack.services.regex_patterns import SAFE_PATTERNS
+        import re
 
-        ansi_escape = SAFE_PATTERNS["ansi_escape_codes"].pattern
+        # Standard ANSI escape sequence pattern (not security-critical, safe to use directly)
+        ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
 
         formatted_lines = []
         for line in lines:

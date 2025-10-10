@@ -50,10 +50,21 @@ class HookManagerImpl:
         # Get settings from ACB dependency injection
         self._settings = depends.get(CrackerjackSettings)
 
-        # Expose properties for backward compatibility
-        self.orchestration_enabled = self._settings.enable_orchestration
-        self.orchestration_mode = self._settings.orchestration_mode
+        # Expose properties - constructor params override settings for testing/flexibility
+        self.orchestration_enabled = enable_orchestration if enable_orchestration else self._settings.enable_orchestration
+        self.orchestration_mode = orchestration_mode if orchestration_mode else self._settings.orchestration_mode
         self._orchestrator: HookOrchestratorAdapter | None = None
+
+        # Store orchestration config for backward compatibility
+        if orchestration_config:
+            self._orchestration_config = orchestration_config
+        else:
+            # Create default config from constructor params
+            from crackerjack.orchestration.hook_orchestrator import HookOrchestratorSettings
+            self._orchestration_config = HookOrchestratorSettings(
+                enable_caching=enable_caching,
+                cache_backend=cache_backend,
+            )
 
     def set_config_path(self, config_path: Path) -> None:
         self._config_path = config_path
