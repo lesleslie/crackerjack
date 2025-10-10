@@ -391,6 +391,7 @@ Crackerjack is built on the **ACB (Asynchronous Component Base)** framework, pro
 ### What is ACB?
 
 [ACB](https://github.com/lesleslie/acb) is a lightweight dependency injection framework that enables:
+
 - **Module-level registration** via `depends.set()` for clean dependency management
 - **Runtime-checkable protocols** ensuring type safety across all components
 - **Async-first design** with lifecycle management and timeout strategies
@@ -429,6 +430,7 @@ Results Aggregation
 **Location:** `crackerjack/adapters/`
 
 ACB-registered adapters for all quality checks:
+
 - **Format:** Ruff formatting, mdformat
 - **Lint:** Codespell, complexity analysis
 - **Security:** Bandit security scanning, Gitleaks secret detection
@@ -443,6 +445,7 @@ ACB-registered adapters for all quality checks:
 **Location:** `crackerjack/orchestration/hook_orchestrator.py`
 
 Features:
+
 - **Dual execution mode:** Legacy (pre-commit CLI) + ACB (direct adapters)
 - **Dependency resolution:** Intelligent hook ordering (e.g., format before lint)
 - **Adaptive strategies:** Fast, comprehensive, or dependency-aware execution
@@ -453,10 +456,12 @@ Features:
 **Location:** `crackerjack/orchestration/cache/`
 
 Two caching strategies:
+
 - **ToolProxyCache:** Content-based caching with file hash verification
 - **MemoryCache:** In-memory LRU cache for testing
 
 Benefits:
+
 - **70% cache hit rate** in typical workflows
 - **Content-aware invalidation:** Only re-runs when files actually change
 - **Configurable TTL:** Default 3600s (1 hour)
@@ -466,6 +471,7 @@ Benefits:
 **Location:** `crackerjack/mcp/`
 
 ACB-registered services:
+
 - **MCPServerService:** FastMCP server for AI agent integration
 - **ErrorCache:** Pattern tracking for AI fix recommendations
 - **JobManager:** WebSocket job tracking and progress streaming
@@ -476,11 +482,13 @@ ACB-registered services:
 Crackerjack has migrated from pre-commit subprocess calls to direct ACB adapter execution:
 
 **Old Approach (Pre-commit):**
+
 ```bash
 pre-commit run ruff --all-files  # Subprocess overhead
 ```
 
 **New Approach (ACB):**
+
 ```bash
 python -m crackerjack --fast  # Direct Python API, 70% faster
 ```
@@ -492,6 +500,7 @@ python -m crackerjack --fast  # Direct Python API, 70% faster
 Crackerjack has consolidated its configuration system using **ACB Settings** (Pydantic BaseSettings):
 
 **Before (11 config files, ~1,808 LOC):**
+
 ```python
 from crackerjack.models.config import WorkflowOptions, HookConfig
 from crackerjack.orchestration.config import OrchestrationConfig
@@ -499,6 +508,7 @@ from crackerjack.orchestration.config import OrchestrationConfig
 ```
 
 **After (1 settings file, ~300 LOC):**
+
 ```python
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
@@ -508,8 +518,9 @@ settings = depends.get(CrackerjackSettings)
 ```
 
 **Benefits:**
+
 - **83% LOC reduction** in configuration code
-- **Automatic environment variable loading** (CRACKERJACK_* prefix)
+- **Automatic environment variable loading** (CRACKERJACK\_\* prefix)
 - **Type validation** via Pydantic
 - **Single source of truth** for all settings
 - **Backward compatible** - Public API unchanged (`create_workflow_options()`)
@@ -530,6 +541,7 @@ from crackerjack.adapters._qa_adapter_base import QAAdapterBase
 MODULE_ID = uuid.UUID("01937d86-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 MODULE_STATUS = "stable"
 
+
 class CustomAdapter(QAAdapterBase):
     @property
     def adapter_name(self) -> str:
@@ -543,6 +555,7 @@ class CustomAdapter(QAAdapterBase):
         # Your quality check logic here
         return QAResult(passed=True, issues=[])
 
+
 # Register with DI container
 with suppress(Exception):
     depends.set(CustomAdapter)
@@ -551,16 +564,19 @@ with suppress(Exception):
 ### Performance Optimization
 
 #### Intelligent Caching
+
 - **Content-based keys:** `{hook_name}:{config_hash}:{content_hash}`
 - **File hash verification:** Detects actual file changes, not just timestamps
 - **LRU eviction:** Automatic cleanup of old entries
 
 #### Parallel Execution
+
 - **Dependency-aware scheduling:** Runs independent hooks in parallel
 - **Semaphore control:** Prevents resource exhaustion
 - **Async I/O:** 76% faster for I/O-bound operations
 
 #### Timeout Strategies
+
 - **Graceful degradation:** Continues execution even if one hook times out
 - **Configurable limits:** Default 60s per hook, 300s overall
 - **Context managers:** Automatic cleanup on timeout
@@ -568,11 +584,11 @@ with suppress(Exception):
 ### ACB Benefits
 
 1. **Type Safety:** Runtime-checkable protocols ensure correctness
-2. **Testability:** Easy mocking with `depends.get()`
-3. **Maintainability:** Clear separation between adapters and orchestration
-4. **Observability:** Structured logging with context fields
-5. **Security:** Input validation, timeout protection, origin validation
-6. **Performance:** 47% faster overall execution with intelligent caching
+1. **Testability:** Easy mocking with `depends.get()`
+1. **Maintainability:** Clear separation between adapters and orchestration
+1. **Observability:** Structured logging with context fields
+1. **Security:** Input validation, timeout protection, origin validation
+1. **Performance:** 47% faster overall execution with intelligent caching
 
 ### Documentation
 

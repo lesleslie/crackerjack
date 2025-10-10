@@ -8,11 +8,12 @@
 
 **Risk Level**: Medium - Core orchestration logic, but well-tested with existing patterns to follow.
 
----
+______________________________________________________________________
 
 ## Current Architecture Analysis
 
 ### File Structure
+
 ```
 workflow_orchestrator.py (2,173 lines)
 ├── WorkflowPipeline (1,978 lines)
@@ -44,15 +45,15 @@ workflow_orchestrator.py (2,173 lines)
 ### Key Responsibilities Identified
 
 1. **Workflow Orchestration** - High-level execution flow
-2. **LSP Server Lifecycle** - Zuban LSP auto-start/stop
-3. **AI Agent Coordination** - Issue collection and fixing
-4. **Security Validation** - Security gates for publishing
-5. **Quality Intelligence** - Anomaly detection and recommendations
-6. **Performance Analytics** - Benchmarking and reporting
-7. **Phase Execution** - Hooks, tests, cleaning, publishing
-8. **MCP Integration** - State management and progress tracking
+1. **LSP Server Lifecycle** - Zuban LSP auto-start/stop
+1. **AI Agent Coordination** - Issue collection and fixing
+1. **Security Validation** - Security gates for publishing
+1. **Quality Intelligence** - Anomaly detection and recommendations
+1. **Performance Analytics** - Benchmarking and reporting
+1. **Phase Execution** - Hooks, tests, cleaning, publishing
+1. **MCP Integration** - State management and progress tracking
 
----
+______________________________________________________________________
 
 ## Proposed Architecture
 
@@ -89,11 +90,13 @@ graph TB
 ### New Classes to Create
 
 #### 1. `LspServerCoordinator` (Low Risk)
+
 **Location**: `crackerjack/core/lsp_server_coordinator.py`
 
 **Responsibility**: Manage Zuban LSP server lifecycle (start, stop, status checks)
 
 **Methods to Extract** (8 methods):
+
 - `_initialize_zuban_lsp`
 - `_should_skip_zuban_lsp`
 - `_is_zuban_lsp_already_running`
@@ -104,6 +107,7 @@ graph TB
 - `_register_lsp_cleanup_handler`
 
 **Interface**:
+
 ```python
 class LspServerCoordinator:
     def initialize_lsp_server(self, options: OptionsProtocol) -> None
@@ -113,18 +117,21 @@ class LspServerCoordinator:
 ```
 
 **Dependencies**:
+
 - `SessionCoordinator` (for cleanup registration)
 - `HookManager` (for LSP optimization config)
 - Server manager utilities
 
----
+______________________________________________________________________
 
 #### 2. `IssueClassifier` (Medium Risk)
+
 **Location**: `crackerjack/agents/issue_classifier.py`
 
 **Responsibility**: Parse and classify issues for AI agent routing
 
 **Methods to Extract** (15 methods):
+
 - `_parse_issues_for_agents`
 - `_classify_issue`
 - `_check_high_priority_issues`
@@ -139,9 +146,10 @@ class LspServerCoordinator:
 - `_check_complexity_error`
 - `_check_type_error`
 - `_check_security_error`
-- (all check_* methods)
+- (all check\_\* methods)
 
 **Interface**:
+
 ```python
 class IssueClassifier:
     def classify_issue(self, issue_str: str) -> tuple[IssueType, Priority]
@@ -151,14 +159,16 @@ class IssueClassifier:
 
 **Dependencies**: Issue/Priority enums only (no external services)
 
----
+______________________________________________________________________
 
 #### 3. `AIFixingCoordinator` (High Risk - Already Exists!)
+
 **Location**: `crackerjack/core/autofix_coordinator.py` (USE EXISTING)
 
 **Current Issue**: WorkflowPipeline duplicates AI fixing logic instead of using AutofixCoordinator
 
 **Methods to REFACTOR** (25 methods - delegate to AutofixCoordinator):
+
 - `_run_ai_agent_fixing_phase` → `autofix_coordinator.run_ai_fixing`
 - `_collect_issues_from_failures` → `autofix_coordinator.collect_issues`
 - `_setup_agent_coordinator` → `autofix_coordinator.setup_agents`
@@ -167,14 +177,16 @@ class IssueClassifier:
 
 **Action**: Refactor to use existing `AutofixCoordinator` instead of creating new class
 
----
+______________________________________________________________________
 
 #### 4. `SecurityGateValidator` (High Risk)
+
 **Location**: `crackerjack/security/security_gate_validator.py`
 
 **Responsibility**: Validate security gates for publishing workflows
 
 **Methods to Extract** (12 methods):
+
 - `_check_security_gates_for_publishing`
 - `_handle_security_gate_failure`
 - `_display_security_gate_failure_message`
@@ -189,6 +201,7 @@ class IssueClassifier:
 - `_show_security_audit_warning`
 
 **Interface**:
+
 ```python
 class SecurityGateValidator:
     def check_security_gates(self, options: OptionsProtocol) -> tuple[bool, bool]
@@ -200,24 +213,28 @@ class SecurityGateValidator:
 ```
 
 **Dependencies**:
+
 - `SecurityAuditor` (existing)
 - `SessionCoordinator` (for hook results)
 - AI fixing coordinator
 
----
+______________________________________________________________________
 
 #### 5. `QualityIntelligenceAdvisor` (Low Risk)
+
 **Location**: `crackerjack/advisors/quality_intelligence_advisor.py`
 
 **Responsibility**: Provide quality recommendations based on anomaly/pattern analysis
 
 **Methods to Extract** (8 methods):
+
 - `_make_quality_intelligence_decision`
 - `_build_quality_recommendations`
 - `_analyze_anomalies`
 - `_analyze_patterns`
 
 **Interface**:
+
 ```python
 class QualityIntelligenceAdvisor:
     def get_workflow_recommendation(
@@ -228,17 +245,20 @@ class QualityIntelligenceAdvisor:
 ```
 
 **Dependencies**:
+
 - `QualityIntelligenceService` (existing)
 - `EnhancedQualityBaselineService` (existing)
 
----
+______________________________________________________________________
 
 #### 6. `PerformanceAnalyzer` (Low Risk)
+
 **Location**: `crackerjack/analytics/performance_analyzer.py`
 
 **Responsibility**: Generate and display performance benchmark reports
 
 **Methods to Extract** (10 methods):
+
 - `_generate_performance_benchmark_report`
 - `_gather_performance_metrics`
 - `_display_benchmark_results`
@@ -247,6 +267,7 @@ class QualityIntelligenceAdvisor:
 - `_display_cache_efficiency`
 
 **Interface**:
+
 ```python
 class PerformanceAnalyzer:
     async def generate_benchmark_report(
@@ -257,22 +278,26 @@ class PerformanceAnalyzer:
 ```
 
 **Dependencies**:
+
 - `PerformanceBenchmarkService` (existing)
 - `PerformanceCache` (existing)
 - `MemoryOptimizer` (existing)
 
----
+______________________________________________________________________
 
 #### 7. `McpStateCoordinator` (Low Risk)
+
 **Location**: `crackerjack/mcp/mcp_state_coordinator.py`
 
 **Responsibility**: Manage MCP state updates and progress tracking
 
 **Methods to Extract** (5 methods):
+
 - `_update_mcp_status`
 - `_handle_test_failures`
 
 **Interface**:
+
 ```python
 class McpStateCoordinator:
     def update_stage_status(self, stage: str, status: str) -> None
@@ -281,22 +306,26 @@ class McpStateCoordinator:
 ```
 
 **Dependencies**:
+
 - MCP state manager (existing)
 - `SessionCoordinator` (for test manager access)
 
----
+______________________________________________________________________
 
 #### 8. `WorkflowPhaseExecutor` (Medium Risk)
+
 **Location**: `crackerjack/core/workflow_phase_executor.py`
 
 **Responsibility**: Execute workflow phases with proper monitoring
 
 **Methods to Extract** (30+ methods):
+
 - All `_run_*_phase` methods
 - All `_execute_*_workflow` methods
 - Phase monitoring wrappers
 
 **Interface**:
+
 ```python
 class WorkflowPhaseExecutor:
     async def execute_quality_phase(
@@ -314,19 +343,21 @@ class WorkflowPhaseExecutor:
 ```
 
 **Dependencies**:
+
 - `PhaseCoordinator` (existing)
 - Performance monitoring
 - AI fixing coordinator
 
----
+______________________________________________________________________
 
 ### Simplified WorkflowPipeline (After Refactoring)
 
 **Remaining Responsibilities**:
+
 1. High-level workflow orchestration
-2. Coordinator composition
-3. Workflow execution flow
-4. Error handling and recovery
+1. Coordinator composition
+1. Workflow execution flow
+1. Error handling and recovery
 
 **Estimated LOC**: ~300-400 lines (85% reduction)
 
@@ -367,153 +398,183 @@ class WorkflowPipeline:
         return success
 ```
 
----
+______________________________________________________________________
 
 ## Migration Plan
 
 ### Phase 1: Low-Risk Extractions (Week 1)
+
 **Goal**: Extract utility coordinators with minimal coupling
 
 1. **Day 1-2**: Extract `LspServerCoordinator`
+
    - Create new class with tests
    - Update WorkflowPipeline to use it
    - Verify LSP auto-start still works
 
-2. **Day 3**: Extract `McpStateCoordinator`
+1. **Day 3**: Extract `McpStateCoordinator`
+
    - Simple delegation pattern
    - Update MCP state tracking tests
 
-3. **Day 4**: Extract `PerformanceAnalyzer`
+1. **Day 4**: Extract `PerformanceAnalyzer`
+
    - Move benchmark logic
    - Verify dashboard still works
 
-4. **Day 5**: Extract `QualityIntelligenceAdvisor`
+1. **Day 5**: Extract `QualityIntelligenceAdvisor`
+
    - Wrap quality intelligence service
    - Test recommendations
 
 **Success Criteria**:
+
 - All existing tests pass
 - No functional changes
 - Code coverage maintained (≥10.11%)
 
----
+______________________________________________________________________
 
 ### Phase 2: Issue Classification (Week 2)
+
 **Goal**: Centralize issue parsing logic
 
 1. **Day 1-3**: Extract `IssueClassifier`
+
    - Create comprehensive test suite
    - Move all classification methods
    - Ensure all issue types handled
 
-2. **Day 4-5**: Integrate with AutofixCoordinator
+1. **Day 4-5**: Integrate with AutofixCoordinator
+
    - Update issue collection to use classifier
    - Verify AI agent routing works
 
 **Success Criteria**:
+
 - Issue classification accuracy maintained
 - AI agents still route correctly
 - Test coverage improved for classification
 
----
+______________________________________________________________________
 
 ### Phase 3: Security Gates (Week 3)
+
 **Goal**: Isolate security validation logic
 
 **High Risk - Requires Careful Testing**
 
 1. **Day 1-2**: Extract `SecurityGateValidator`
+
    - Create tests for all security scenarios
    - Mock SecurityAuditor for testing
 
-2. **Day 3-4**: Integration testing
+1. **Day 3-4**: Integration testing
+
    - Test publishing workflows
    - Test AI-assisted security fixes
    - Verify gate blocking works
 
-3. **Day 5**: Production validation
+1. **Day 5**: Production validation
+
    - Manual testing of full publishing flow
    - Verify security audit reports
 
 **Success Criteria**:
+
 - Publishing still blocks on security failures
 - AI fixing resolves security issues correctly
 - Audit warnings display properly
 
----
+______________________________________________________________________
 
 ### Phase 4: AI Fixing Refactor (Week 4)
+
 **Goal**: Use existing AutofixCoordinator instead of duplicating
 
 **Highest Risk - Core Functionality**
 
 1. **Day 1-2**: Analyze differences between implementations
+
    - Document what WorkflowPipeline does differently
    - Identify missing features in AutofixCoordinator
 
-2. **Day 3**: Enhance AutofixCoordinator
+1. **Day 3**: Enhance AutofixCoordinator
+
    - Add missing verification logic
    - Add issue collection methods
 
-3. **Day 4**: Refactor WorkflowPipeline
+1. **Day 4**: Refactor WorkflowPipeline
+
    - Replace AI fixing methods with coordinator calls
    - Update tests
 
-4. **Day 5**: Integration testing
+1. **Day 5**: Integration testing
+
    - Test full AI fixing workflow
    - Verify iteration limits work
    - Test with real failures
 
 **Success Criteria**:
+
 - AI fixing success rate maintained
 - Verification logic works correctly
 - No duplicate code between pipeline and coordinator
 
----
+______________________________________________________________________
 
 ### Phase 5: Phase Execution (Week 5)
+
 **Goal**: Extract phase execution logic
 
 1. **Day 1-3**: Extract `WorkflowPhaseExecutor`
+
    - Create comprehensive test suite
    - Move all phase execution methods
 
-2. **Day 4-5**: Final integration
+1. **Day 4-5**: Final integration
+
    - Update WorkflowPipeline to minimal orchestrator
    - Verify all workflows still work
    - Performance testing
 
 **Success Criteria**:
+
 - All phase executions work correctly
 - Parallel execution maintained
 - Performance not degraded
 
----
+______________________________________________________________________
 
 ### Phase 6: Cleanup & Documentation (Week 6)
+
 **Goal**: Polish and document new architecture
 
 1. **Day 1-2**: Code cleanup
+
    - Remove dead code
    - Optimize imports
    - Run full quality checks
 
-2. **Day 3**: Documentation
+1. **Day 3**: Documentation
+
    - Update architecture docs
    - Create coordinator usage guide
    - Document migration
 
-3. **Day 4-5**: Final testing
+1. **Day 4-5**: Final testing
+
    - Full regression testing
    - Performance benchmarks
    - Coverage verification
 
 **Success Criteria**:
+
 - All crackerjack quality checks pass
 - Documentation complete
 - Coverage ≥10.11%
 
----
+______________________________________________________________________
 
 ## Risk Assessment
 
@@ -529,34 +590,38 @@ class WorkflowPipeline:
 ### Mitigation Strategies
 
 1. **Feature Flags**: Use environment variables to toggle new vs old implementations
+
    ```python
    USE_NEW_SECURITY_VALIDATOR = os.getenv("CRACKERJACK_NEW_SECURITY", "0") == "1"
    ```
 
-2. **Parallel Testing**: Run both old and new implementations, compare results
+1. **Parallel Testing**: Run both old and new implementations, compare results
+
    ```python
    old_result = old_security_check()
    new_result = new_security_validator.check()
    assert old_result == new_result, "Security validation mismatch!"
    ```
 
-3. **Incremental Rollout**: Deploy one coordinator at a time with full testing
+1. **Incremental Rollout**: Deploy one coordinator at a time with full testing
 
-4. **Rollback Plan**: Keep old implementation for 2 weeks after each phase
+1. **Rollback Plan**: Keep old implementation for 2 weeks after each phase
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
 ### Unit Tests
 
 **For Each New Class**:
+
 - Test all public methods
 - Test edge cases and error handling
 - Mock external dependencies
 - Aim for 80%+ coverage per class
 
 **Example for LspServerCoordinator**:
+
 ```python
 def test_lsp_initialization_when_disabled():
     coordinator = LspServerCoordinator(console, pkg_path)
@@ -566,6 +631,7 @@ def test_lsp_initialization_when_disabled():
 
     # Verify no LSP process started
     assert not find_zuban_lsp_processes()
+
 
 def test_lsp_skips_when_already_running():
     # Start LSP manually
@@ -581,12 +647,14 @@ def test_lsp_skips_when_already_running():
 ### Integration Tests
 
 **For Each Phase**:
+
 1. Test coordinator integration with WorkflowPipeline
-2. Test real workflows end-to-end
-3. Verify state transitions
-4. Test error recovery
+1. Test real workflows end-to-end
+1. Verify state transitions
+1. Test error recovery
 
 **Example for Phase 1**:
+
 ```python
 async def test_complete_workflow_with_lsp():
     orchestrator = WorkflowOrchestrator(console, pkg_path)
@@ -605,6 +673,7 @@ async def test_complete_workflow_with_lsp():
 ### Regression Tests
 
 **Critical Workflows to Test**:
+
 - [ ] Standard workflow (`--run-tests`)
 - [ ] AI fixing workflow (`--ai-fix --run-tests`)
 - [ ] Publishing workflow (`--all patch`)
@@ -614,7 +683,7 @@ async def test_complete_workflow_with_lsp():
 - [ ] LSP auto-start/stop
 - [ ] Coverage improvement (`--boost-coverage`)
 
----
+______________________________________________________________________
 
 ## Performance Considerations
 
@@ -630,18 +699,18 @@ async def test_complete_workflow_with_lsp():
 ### Optimization Strategies
 
 1. **Lazy Loading**: Use `create_lazy_service` for heavy coordinators
+
    ```python
    self._security_validator = create_lazy_service(
-       lambda: SecurityGateValidator(session, phases),
-       "security_validator"
+       lambda: SecurityGateValidator(session, phases), "security_validator"
    )
    ```
 
-2. **Shared Instances**: Reuse coordinators across workflow runs
+1. **Shared Instances**: Reuse coordinators across workflow runs
 
-3. **Caching**: Leverage existing performance cache for coordinator results
+1. **Caching**: Leverage existing performance cache for coordinator results
 
----
+______________________________________________________________________
 
 ## Success Metrics
 
@@ -649,8 +718,8 @@ async def test_complete_workflow_with_lsp():
 
 | Metric | Current | Target | Measurement |
 |--------|---------|--------|-------------|
-| **Lines per Class** | 1,978 | <400 | LOC analysis |
-| **Methods per Class** | 175 | <20 | Method count |
+| **Lines per Class** | 1,978 | \<400 | LOC analysis |
+| **Methods per Class** | 175 | \<20 | Method count |
 | **Cyclomatic Complexity** | 15+ | ≤13 | complexipy |
 | **Test Coverage** | 10.11% | ≥10.11% | pytest --cov |
 | **Import Depth** | 5 | 3 | Import graph |
@@ -661,11 +730,12 @@ async def test_complete_workflow_with_lsp():
 - **Change Impact Radius**: Current entire file → Target single class
 - **Onboarding Time**: Current 2 days → Target 4 hours
 
----
+______________________________________________________________________
 
 ## Appendix A: Method Migration Checklist
 
 ### LspServerCoordinator (8 methods)
+
 - [ ] `_initialize_zuban_lsp` → `initialize_lsp_server`
 - [ ] `_should_skip_zuban_lsp` → `should_skip_lsp`
 - [ ] `_is_zuban_lsp_already_running` → `is_lsp_running`
@@ -676,12 +746,14 @@ async def test_complete_workflow_with_lsp():
 - [ ] `_register_lsp_cleanup_handler` → `register_cleanup`
 
 ### IssueClassifier (15 methods)
+
 - [ ] All `_check_*_error` methods → `check_error_type`
 - [ ] All `_is_*_issue` methods → `classify_issue_type`
 - [ ] `_classify_issue` → `classify_issue`
 - [ ] `_parse_issues_for_agents` → `parse_issues`
 
 ### SecurityGateValidator (12 methods)
+
 - [ ] `_check_security_gates_for_publishing` → `check_security_gates`
 - [ ] `_handle_security_gate_failure` → `handle_gate_failure`
 - [ ] `_check_security_critical_failures` → `check_critical_failures`
@@ -689,22 +761,25 @@ async def test_complete_workflow_with_lsp():
 - [ ] (all security-related methods)
 
 ### QualityIntelligenceAdvisor (8 methods)
+
 - [ ] `_make_quality_intelligence_decision` → `get_recommendation`
 - [ ] `_build_quality_recommendations` → `build_recommendations`
 - [ ] `_analyze_anomalies` → `analyze_anomalies`
 - [ ] `_analyze_patterns` → `analyze_patterns`
 
 ### PerformanceAnalyzer (10 methods)
+
 - [ ] `_generate_performance_benchmark_report` → `generate_report`
 - [ ] `_gather_performance_metrics` → `gather_metrics`
 - [ ] `_display_benchmark_results` → `display_results`
 - [ ] (all performance methods)
 
 ### McpStateCoordinator (5 methods)
+
 - [ ] `_update_mcp_status` → `update_stage_status`
 - [ ] `_handle_test_failures` → `handle_test_failures`
 
----
+______________________________________________________________________
 
 ## Appendix B: Dependency Graph
 
@@ -738,7 +813,7 @@ graph LR
     style SEC fill:#ffebee
 ```
 
----
+______________________________________________________________________
 
 ## Appendix C: File Organization
 
@@ -763,17 +838,17 @@ crackerjack/
     └── mcp_state_coordinator.py (NEW)
 ```
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 1. **Review & Approve**: Review this strategy with team
-2. **Create Issues**: Break down into trackable tasks
-3. **Set Timeline**: Confirm 6-week timeline or adjust
-4. **Begin Phase 1**: Start with low-risk extractions
-5. **Iterate**: Adjust strategy based on learnings
+1. **Create Issues**: Break down into trackable tasks
+1. **Set Timeline**: Confirm 6-week timeline or adjust
+1. **Begin Phase 1**: Start with low-risk extractions
+1. **Iterate**: Adjust strategy based on learnings
 
----
+______________________________________________________________________
 
 **Document Version**: 1.0
 **Created**: 2025-10-09

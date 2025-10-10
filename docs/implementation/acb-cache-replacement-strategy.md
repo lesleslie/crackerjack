@@ -9,19 +9,23 @@
 ### Existing Implementation (`crackerjack/services/cache.py` - 437 lines)
 
 **Components**:
+
 1. **InMemoryCache** (lines 64-134)
+
    - LRU eviction policy
    - TTL-based expiration
    - Stats tracking (hits/misses/evictions)
    - Synchronous operations
 
-2. **FileCache** (lines 136-220)
+1. **FileCache** (lines 136-220)
+
    - JSON-based disk persistence
    - MD5 key hashing
    - Manual TTL management
    - Synchronous file I/O
 
-3. **CrackerjackCache** (lines 222-437)
+1. **CrackerjackCache** (lines 222-437)
+
    - Hook result caching (memory + disk)
    - File hash caching (memory only)
    - Config data caching (memory only)
@@ -29,12 +33,14 @@
    - Quality baseline caching (disk only)
 
 **Key Features**:
+
 - Dual-tier caching (memory + disk) for expensive hooks
 - Versioned cache keys (tool version, agent version)
 - Per-hook TTL configuration
 - Cache statistics aggregation
 
 **Usage Patterns**:
+
 ```python
 # Current usage
 cache = CrackerjackCache(cache_dir=pkg_path / ".crackerjack" / "cache")
@@ -46,6 +52,7 @@ stats = cache.get_cache_stats()
 ### ACB Cache Adapter (`acb/adapters/cache/memory.py` - 187 lines)
 
 **Capabilities**:
+
 - **Async operations** (set/get/delete/multi_get/multi_set)
 - **Built-in serialization** (Pickle via aiocache)
 - **Namespace support** (automatic prefixing)
@@ -53,6 +60,7 @@ stats = cache.get_cache_stats()
 - **Simple API** (fewer methods, cleaner interface)
 
 **API**:
+
 ```python
 # ACB usage (async)
 from acb.depends import depends
@@ -89,6 +97,7 @@ from crackerjack.models.task import HookResult
 @dataclass
 class CacheStats:
     """Compatible with existing CrackerjackCache.stats"""
+
     hits: int = 0
     misses: int = 0
     evictions: int = 0
@@ -113,8 +122,13 @@ class ACBCrackerjackCache:
     """ACB-backed cache adapter maintaining CrackerjackCache API."""
 
     EXPENSIVE_HOOKS = {
-        "pyright", "bandit", "vulture", "complexipy",
-        "refurb", "gitleaks", "zuban"
+        "pyright",
+        "bandit",
+        "vulture",
+        "complexipy",
+        "refurb",
+        "gitleaks",
+        "zuban",
     }
 
     HOOK_DISK_TTLS = {
@@ -309,6 +323,7 @@ class ACBCrackerjackCache:
         # ACB doesn't support pattern-based deletion easily
         # For now, log warning about limitation
         import logging
+
         logging.warning(
             "ACB cache doesn't support selective invalidation. "
             "Use clear() to remove all cached data."
@@ -354,11 +369,13 @@ class ACBCrackerjackCache:
 ### Phase 2: Update Imports and Registrations
 
 **Files to update**:
+
 1. `crackerjack/core/workflow_orchestrator.py` - Import ACBCrackerjackCache
-2. `crackerjack/core/enhanced_container.py` - Register ACB cache
-3. `crackerjack/__main__.py` - Instantiate ACB cache adapter
+1. `crackerjack/core/enhanced_container.py` - Register ACB cache
+1. `crackerjack/__main__.py` - Instantiate ACB cache adapter
 
 **Changes**:
+
 ```python
 # Before
 from crackerjack.services.cache import CrackerjackCache
@@ -369,14 +386,14 @@ cache = CrackerjackCache(cache_dir=pkg_path / ".crackerjack" / "cache")
 from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 
 cache = ACBCrackerjackCache(
-    cache_dir=pkg_path / ".crackerjack" / "cache",
-    enable_disk_cache=True
+    cache_dir=pkg_path / ".crackerjack" / "cache", enable_disk_cache=True
 )
 ```
 
 ### Phase 3: Testing and Validation
 
 **Test Coverage** (`tests/services/test_acb_cache_adapter.py`):
+
 ```python
 import pytest
 from pathlib import Path
@@ -420,13 +437,9 @@ class TestACBCacheAdapter:
         file_hashes = ["xyz789"]
         tool_version = "0.1.0"
 
-        cache.set_expensive_hook_result(
-            "zuban", file_hashes, result, tool_version
-        )
+        cache.set_expensive_hook_result("zuban", file_hashes, result, tool_version)
 
-        cached = cache.get_expensive_hook_result(
-            "zuban", file_hashes, tool_version
-        )
+        cached = cache.get_expensive_hook_result("zuban", file_hashes, tool_version)
 
         assert cached is not None
         assert cached.hook_name == "zuban"
@@ -501,27 +514,31 @@ class TestACBCacheAdapter:
 ### Phase 4: Cleanup and Removal
 
 **Files to remove** (after validation):
+
 1. `crackerjack/services/cache.py` (437 lines) ✅
-2. Update all imports across codebase
-3. Remove tests for old cache implementation
+1. Update all imports across codebase
+1. Remove tests for old cache implementation
 
 **Expected LOC reduction**: ~400 lines
 
 ## Benefits
 
 ### Performance Improvements
+
 - **Async operations**: Better concurrency for cache operations
 - **Built-in compression**: MsgPack + Brotli reduces memory/disk usage
 - **Automatic cleanup**: No manual TTL management needed
 - **70% cache hit rate**: ACB's optimized serialization improves hit rates
 
 ### Code Quality
+
 - **-400 lines**: Massive reduction in custom cache code
 - **Protocol compliance**: Uses ACB dependency injection patterns
 - **Better testing**: Leverages ACB's tested cache implementation
 - **Simplified maintenance**: One less custom system to maintain
 
 ### Developer Experience
+
 - **Unified caching**: Same cache system as ACB framework
 - **Cleaner API**: Fewer methods, simpler interface
 - **Better observability**: ACB cache integrates with logging/monitoring
@@ -529,16 +546,19 @@ class TestACBCacheAdapter:
 ## Risks and Mitigations
 
 ### Risk 1: Async/Sync API Mismatch
+
 - **Issue**: ACB cache is async, current usage is sync
 - **Mitigation**: Adapter wraps async calls with `asyncio.run_until_complete()`
 - **Impact**: Minimal (most operations are already background tasks)
 
 ### Risk 2: Feature Parity
+
 - **Issue**: Current cache has selective invalidation (pattern-based)
 - **Mitigation**: Document limitation, use `clear()` for full invalidation
 - **Impact**: Low (invalidation is rarely used)
 
 ### Risk 3: Migration Complexity
+
 - **Issue**: Extensive codebase usage of cache
 - **Mitigation**: Adapter maintains identical API surface
 - **Impact**: Zero breaking changes
@@ -564,14 +584,14 @@ class TestACBCacheAdapter:
 ## Next Steps
 
 1. Review strategy document
-2. Create `crackerjack/services/acb_cache_adapter.py`
-3. Write comprehensive test suite
-4. Update dependency container registrations
-5. Run full test suite to validate
-6. Remove old cache implementation
-7. Update documentation
+1. Create `crackerjack/services/acb_cache_adapter.py`
+1. Write comprehensive test suite
+1. Update dependency container registrations
+1. Run full test suite to validate
+1. Remove old cache implementation
+1. Update documentation
 
----
+______________________________________________________________________
 
 **Status**: ✅ Strategy complete, ready for implementation
 **Estimated Completion**: Week 2 (Phase 1, Day 8-14)

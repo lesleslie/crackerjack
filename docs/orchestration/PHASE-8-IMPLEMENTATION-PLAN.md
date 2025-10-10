@@ -10,7 +10,7 @@
 
 **Risk Level:** HIGH - This is a breaking architectural change affecting the entire hook execution pipeline
 
----
+______________________________________________________________________
 
 ## Current Architecture Analysis
 
@@ -33,26 +33,30 @@ Actual Tool (ruff, zuban, gitleaks, etc.)
 ### Problems with Current Architecture
 
 1. **Unnecessary Indirection**
+
    - Every tool invocation goes through pre-commit
    - Adds latency and complexity
    - Limits control over tool execution
 
-2. **Configuration Duplication**
+1. **Configuration Duplication**
+
    - Tool configs in both `.pre-commit-config.yaml` AND native configs
    - Examples: `pyproject.toml` (ruff, bandit), `mypy.ini` (zuban)
    - Risk of config drift
 
-3. **Limited Orchestration Control**
+1. **Limited Orchestration Control**
+
    - Pre-commit controls execution order
    - Can't fully leverage crackerjack's triple parallelism
    - Can't implement custom retry/caching strategies per tool
 
-4. **Dependency Overhead**
+1. **Dependency Overhead**
+
    - Requires pre-commit installation
    - Maintains `.pre-commit-config.yaml`
    - Updates require pre-commit compatibility
 
----
+______________________________________________________________________
 
 ## Target Architecture
 
@@ -75,26 +79,30 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 ### Benefits of New Architecture
 
 1. **Direct Control**
+
    - No intermediary framework
    - Full control over execution environment
    - Direct error handling
 
-2. **Single Source of Truth**
+1. **Single Source of Truth**
+
    - Tool configurations in native files only
    - No config duplication
    - Easier maintenance
 
-3. **Enhanced Orchestration**
+1. **Enhanced Orchestration**
+
    - Full triple parallelism capabilities
    - Custom retry logic per tool
    - Advanced caching strategies
 
-4. **Reduced Dependencies**
+1. **Reduced Dependencies**
+
    - Remove pre-commit from requirements
    - Simpler installation
    - Fewer breaking changes from upstream
 
----
+______________________________________________________________________
 
 ## Implementation Strategy
 
@@ -105,33 +113,52 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 **Tasks:**
 
 1. **Create Tool Registry**
+
    ```python
    # crackerjack/config/tool_commands.py
 
    TOOL_COMMANDS = {
        "validate-regex-patterns": [
-           "uv", "run", "python", "-m",
-           "crackerjack.tools.validate_regex_patterns"
+           "uv",
+           "run",
+           "python",
+           "-m",
+           "crackerjack.tools.validate_regex_patterns",
        ],
        "trailing-whitespace": [
-           "uv", "run", "python", "-m",
-           "crackerjack.tools.trailing_whitespace"  # NEW: native implementation
+           "uv",
+           "run",
+           "python",
+           "-m",
+           "crackerjack.tools.trailing_whitespace",  # NEW: native implementation
        ],
        "end-of-file-fixer": [
-           "uv", "run", "python", "-m",
-           "crackerjack.tools.end_of_file_fixer"  # NEW: native implementation
+           "uv",
+           "run",
+           "python",
+           "-m",
+           "crackerjack.tools.end_of_file_fixer",  # NEW: native implementation
        ],
        "check-yaml": [
-           "uv", "run", "python", "-m",
-           "crackerjack.tools.check_yaml"  # NEW: native implementation
+           "uv",
+           "run",
+           "python",
+           "-m",
+           "crackerjack.tools.check_yaml",  # NEW: native implementation
        ],
        "check-toml": [
-           "uv", "run", "python", "-m",
-           "crackerjack.tools.check_toml"  # NEW: native implementation
+           "uv",
+           "run",
+           "python",
+           "-m",
+           "crackerjack.tools.check_toml",  # NEW: native implementation
        ],
        "check-added-large-files": [
-           "uv", "run", "python", "-m",
-           "crackerjack.tools.check_large_files"  # NEW: native implementation
+           "uv",
+           "run",
+           "python",
+           "-m",
+           "crackerjack.tools.check_large_files",  # NEW: native implementation
        ],
        "uv-lock": ["uv", "lock", "--check"],
        "gitleaks": ["gitleaks", "detect", "--no-banner", "-v"],
@@ -139,18 +166,45 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
        "ruff-check": ["uv", "run", "ruff", "check", "."],
        "ruff-format": ["uv", "run", "ruff", "format", "."],
        "mdformat": ["uv", "run", "mdformat", "."],
-       "zuban": ["uv", "run", "zuban", "check", "--config-file", "mypy.ini", "./crackerjack"],
-       "bandit": ["uv", "run", "bandit", "-c", "pyproject.toml", "-r", "-ll", "crackerjack"],
+       "zuban": [
+           "uv",
+           "run",
+           "zuban",
+           "check",
+           "--config-file",
+           "mypy.ini",
+           "./crackerjack",
+       ],
+       "bandit": [
+           "uv",
+           "run",
+           "bandit",
+           "-c",
+           "pyproject.toml",
+           "-r",
+           "-ll",
+           "crackerjack",
+       ],
        "skylos": ["skylos", "crackerjack", "--exclude", "tests"],
        "refurb": ["uv", "run", "refurb", "crackerjack"],
        "creosote": ["uv", "run", "creosote"],
-       "complexipy": ["uv", "run", "complexipy", "-d", "low", "--max-complexity-allowed", "15", "crackerjack"],
+       "complexipy": [
+           "uv",
+           "run",
+           "complexipy",
+           "-d",
+           "low",
+           "--max-complexity-allowed",
+           "15",
+           "crackerjack",
+       ],
    }
    ```
 
-2. **Implement Native Tools for Pre-commit Hooks**
+1. **Implement Native Tools for Pre-commit Hooks**
 
    Need to create Python implementations for hooks currently provided by `pre-commit-hooks`:
+
    - `trailing-whitespace`: Remove trailing whitespace from files
    - `end-of-file-fixer`: Ensure files end with newline
    - `check-yaml`: Validate YAML syntax
@@ -163,7 +217,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 
    **Testing:** Unit tests for each tool in `tests/tools/`
 
-3. **Update HookDefinition**
+1. **Update HookDefinition**
+
    ```python
    @dataclass
    class HookDefinition:
@@ -178,6 +233,7 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 
            # Fallback: use tool registry
            from crackerjack.config.tool_commands import TOOL_COMMANDS
+
            if self.name in TOOL_COMMANDS:
                return TOOL_COMMANDS[self.name]
 
@@ -185,6 +241,7 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ```
 
 **Deliverables:**
+
 - ✅ `crackerjack/config/tool_commands.py` - Tool command registry
 - ✅ `crackerjack/tools/trailing_whitespace.py` - Native implementation
 - ✅ `crackerjack/tools/end_of_file_fixer.py` - Native implementation
@@ -195,11 +252,12 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 - ✅ Updated `HookDefinition.get_command()` method
 
 **Success Criteria:**
+
 - All 17 hooks have direct tool commands defined
 - Native tools pass unit tests
 - `HookDefinition.get_command()` returns tool commands (not pre-commit commands)
 
----
+______________________________________________________________________
 
 ### Phase 8.2: Backward Compatibility Layer (Week 1, Days 3-4)
 
@@ -208,6 +266,7 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 **Tasks:**
 
 1. **Add Legacy Mode Flag**
+
    ```python
    @dataclass
    class OrchestrationConfig:
@@ -215,7 +274,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
        use_precommit_legacy: bool = False  # NEW: Enable pre-commit mode
    ```
 
-2. **Implement Legacy Pre-commit Execution**
+1. **Implement Legacy Pre-commit Execution**
+
    ```python
    # In HookDefinition
    def get_command(self) -> list[str]:
@@ -225,6 +285,7 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
        else:
            # NEW: Direct tool invocation
            return self._get_direct_command()
+
 
    def _get_precommit_command(self) -> list[str]:
        """Legacy pre-commit command generation."""
@@ -237,28 +298,31 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
        cmd.extend([self.name, "--all-files"])
        return cmd
 
+
    def _get_direct_command(self) -> list[str]:
        """Direct tool command (new default)."""
        if self.command:
            return self.command
        from crackerjack.config.tool_commands import TOOL_COMMANDS
+
        return TOOL_COMMANDS[self.name]
    ```
 
-3. **Environment Variable Override**
+1. **Environment Variable Override**
+
    ```python
    # Support CRACKERJACK_USE_PRECOMMIT=1 for easy rollback
    @classmethod
    def from_env(cls) -> OrchestrationConfig:
        # ... existing env loading ...
        use_precommit_legacy = get_bool(
-           "CRACKERJACK_USE_PRECOMMIT",
-           cls.use_precommit_legacy
+           "CRACKERJACK_USE_PRECOMMIT", cls.use_precommit_legacy
        )
        return cls(..., use_precommit_legacy=use_precommit_legacy)
    ```
 
-4. **Update Tests for Both Modes**
+1. **Update Tests for Both Modes**
+
    ```python
    @pytest.mark.parametrize("use_precommit", [True, False])
    def test_hook_execution_compatibility(use_precommit: bool):
@@ -270,17 +334,19 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ```
 
 **Deliverables:**
+
 - ✅ `use_precommit_legacy` flag in OrchestrationConfig
 - ✅ Legacy/direct mode switching in `HookDefinition.get_command()`
 - ✅ Environment variable support for mode selection
 - ✅ Parametrized tests for both execution modes
 
 **Success Criteria:**
+
 - Both legacy (pre-commit) and direct modes work correctly
 - Mode can be switched via config or environment variable
 - All existing tests pass in both modes
 
----
+______________________________________________________________________
 
 ### Phase 8.3: Configuration Migration (Week 1, Day 5)
 
@@ -305,7 +371,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    | skylos | `.pre-commit-config.yaml` (args) | None | ⚠️ Add to pyproject.toml |
    | gitleaks | `.pre-commit-config.yaml` (exclude) | `.gitleaksignore` | ✅ Use native |
 
-2. **Migrate Configurations to pyproject.toml**
+1. **Migrate Configurations to pyproject.toml**
+
    ```toml
    # pyproject.toml additions
 
@@ -329,7 +396,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    exclude = ["tests"]
    ```
 
-3. **Create Migration Script**
+1. **Create Migration Script**
+
    ```bash
    # scripts/migrate_from_precommit.py
 
@@ -339,23 +407,26 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    # Creates backup of .pre-commit-config.yaml
    ```
 
-4. **Update Documentation**
+1. **Update Documentation**
+
    - Update README.md: Remove pre-commit installation instructions
    - Update CONTRIBUTING.md: Document direct tool configuration
    - Add MIGRATION-GUIDE.md: Step-by-step migration for existing users
 
 **Deliverables:**
+
 - ✅ Consolidated tool configurations in `pyproject.toml`
 - ✅ Migration script: `scripts/migrate_from_precommit.py`
 - ✅ Updated documentation
 - ✅ `.pre-commit-config.yaml` marked as deprecated
 
 **Success Criteria:**
+
 - All tool configurations consolidated in native config files
 - No loss of configuration during migration
 - Migration script tested on sample projects
 
----
+______________________________________________________________________
 
 ### Phase 8.4: Hook Definition Updates (Week 2, Days 1-2)
 
@@ -364,11 +435,18 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 **Tasks:**
 
 1. **Update Fast Hooks**
+
    ```python
    FAST_HOOKS = [
        HookDefinition(
            name="validate-regex-patterns",
-           command=["uv", "run", "python", "-m", "crackerjack.tools.validate_regex_patterns"],
+           command=[
+               "uv",
+               "run",
+               "python",
+               "-m",
+               "crackerjack.tools.validate_regex_patterns",
+           ],
            is_formatting=True,
            timeout=30,
            retry_on_failure=True,
@@ -385,12 +463,21 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ]
    ```
 
-2. **Update Comprehensive Hooks**
+1. **Update Comprehensive Hooks**
+
    ```python
    COMPREHENSIVE_HOOKS = [
        HookDefinition(
            name="zuban",
-           command=["uv", "run", "zuban", "check", "--config-file", "mypy.ini", "./crackerjack"],
+           command=[
+               "uv",
+               "run",
+               "zuban",
+               "check",
+               "--config-file",
+               "mypy.ini",
+               "./crackerjack",
+           ],
            timeout=30,
            stage=HookStage.COMPREHENSIVE,
            security_level=SecurityLevel.CRITICAL,
@@ -399,7 +486,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ]
    ```
 
-3. **Remove Pre-commit Detection Logic**
+1. **Remove Pre-commit Detection Logic**
+
    ```python
    # REMOVE THIS METHOD from HookDefinition:
    def get_command(self) -> list[str]:
@@ -411,7 +499,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
        # ... etc
    ```
 
-4. **Simplify get_command()**
+1. **Simplify get_command()**
+
    ```python
    def get_command(self) -> list[str]:
        """Return the command to execute this hook."""
@@ -419,17 +508,19 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ```
 
 **Deliverables:**
+
 - ✅ Updated `FAST_HOOKS` with direct commands
 - ✅ Updated `COMPREHENSIVE_HOOKS` with direct commands
 - ✅ Simplified `HookDefinition.get_command()` method
 - ✅ Removed pre-commit-specific logic
 
 **Success Criteria:**
+
 - All hooks defined with direct tool commands
 - No references to pre-commit in hook definitions
 - `get_command()` is simple and maintainable
 
----
+______________________________________________________________________
 
 ### Phase 8.5: Dependency Cleanup (Week 2, Day 3)
 
@@ -438,6 +529,7 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 **Tasks:**
 
 1. **Remove from pyproject.toml**
+
    ```toml
    # REMOVE:
    [tool.uv]
@@ -448,7 +540,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ]
    ```
 
-2. **Remove Pre-commit Config File**
+1. **Remove Pre-commit Config File**
+
    ```bash
    # Rename for backup (don't delete immediately)
    mv .pre-commit-config.yaml .pre-commit-config.yaml.bak
@@ -457,7 +550,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    echo ".pre-commit-config.yaml.bak" >> .gitignore
    ```
 
-3. **Update Installation Scripts**
+1. **Update Installation Scripts**
+
    ```bash
    # scripts/setup.sh
 
@@ -467,7 +561,8 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    # No longer needed with direct tool invocation
    ```
 
-4. **Update CI/CD Pipelines**
+1. **Update CI/CD Pipelines**
+
    ```yaml
    # .github/workflows/quality.yml
 
@@ -485,17 +580,19 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ```
 
 **Deliverables:**
+
 - ✅ Removed `pre-commit` from `pyproject.toml`
 - ✅ Archived `.pre-commit-config.yaml`
 - ✅ Updated setup/installation scripts
 - ✅ Updated CI/CD pipelines
 
 **Success Criteria:**
+
 - `uv sync` no longer installs pre-commit
 - Project runs successfully without pre-commit
 - CI/CD passes without pre-commit
 
----
+______________________________________________________________________
 
 ### Phase 8.6: Testing & Validation (Week 2, Days 4-5)
 
@@ -504,13 +601,16 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 **Tasks:**
 
 1. **Update Existing Tests**
+
    - Review all tests that mock/interact with pre-commit
    - Update to test direct tool invocation
    - Ensure integration tests cover new execution path
 
-2. **Add Direct Invocation Tests**
+1. **Add Direct Invocation Tests**
+
    ```python
    # tests/config/test_tool_commands.py
+
 
    def test_all_hooks_have_commands():
        """Ensure all hooks have direct tool commands defined."""
@@ -520,6 +620,7 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
        all_hooks = FAST_HOOKS + COMPREHENSIVE_HOOKS
        for hook in all_hooks:
            assert hook.name in TOOL_COMMANDS or hook.command
+
 
    def test_tool_commands_are_valid():
        """Ensure all tool commands are executable."""
@@ -531,19 +632,21 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
            assert shutil.which(cmd[0]) is not None, f"{name}: {cmd[0]} not found"
    ```
 
-3. **End-to-End Integration Tests**
+1. **End-to-End Integration Tests**
+
    ```python
    def test_full_workflow_without_precommit():
        """Test complete workflow without pre-commit dependency."""
        # Ensure pre-commit is not installed/available
-       with patch('shutil.which', return_value=None):
+       with patch("shutil.which", return_value=None):
            manager = HookManagerImpl()
            results = manager.run_hooks()
            assert len(results) > 0
            # Should still work via direct tool invocation
    ```
 
-4. **Performance Comparison**
+1. **Performance Comparison**
+
    ```python
    def test_direct_invocation_faster_than_precommit():
        """Verify direct invocation is faster than pre-commit wrapper."""
@@ -552,17 +655,19 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ```
 
 **Deliverables:**
+
 - ✅ Updated test suite for direct invocation
 - ✅ New tests for tool command registry
 - ✅ Integration tests without pre-commit
 - ✅ Performance benchmarks
 
 **Success Criteria:**
+
 - All tests pass without pre-commit installed
 - Direct invocation is faster than pre-commit mode
 - Test coverage maintained or improved
 
----
+______________________________________________________________________
 
 ### Phase 8.7: Documentation & Migration Guide (Week 2, Day 6)
 
@@ -571,12 +676,14 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 **Tasks:**
 
 1. **Update Main README**
+
    - Remove pre-commit installation section
    - Add "Tool Configuration" section
    - Update quick start guide
 
-2. **Create Migration Guide**
-   ```markdown
+1. **Create Migration Guide**
+
+   ````markdown
    # MIGRATION-GUIDE-PHASE-8.md
 
    ## Upgrading from Pre-commit to Direct Tool Invocation
@@ -592,19 +699,22 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    1. **Backup your configuration**
       ```bash
       cp .pre-commit-config.yaml .pre-commit-config.yaml.bak
-      ```
+   ````
 
    2. **Run migration script**
+
       ```bash
       uv run python scripts/migrate_from_precommit.py
       ```
 
-   3. **Test the migration**
+   1. **Test the migration**
+
       ```bash
       uv run python -m crackerjack --run-tests
       ```
 
-   4. **Remove pre-commit**
+   1. **Remove pre-commit**
+
       ```bash
       uv remove pre-commit
       ```
@@ -612,6 +722,7 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ### Rollback Plan
 
    If you encounter issues:
+
    ```bash
    # Enable legacy mode temporarily
    export CRACKERJACK_USE_PRECOMMIT=1
@@ -621,21 +732,28 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ```
 
    ### Breaking Changes
+
    - `.pre-commit-config.yaml` no longer used
    - Tool configurations must be in native files
    - `pre-commit install` no longer required
 
    ### Support
+
    - Report issues: [GitHub Issues](link)
    - Discussion: [GitHub Discussions](link)
+
    ```
 
-3. **Update Architecture Documentation**
+   ```
+
+1. **Update Architecture Documentation**
+
    - Document new direct invocation architecture
    - Update architecture diagrams
    - Add performance benchmarks
 
-4. **Create Upgrade Checklist**
+1. **Create Upgrade Checklist**
+
    ```markdown
    ## Phase 8 Upgrade Checklist
 
@@ -652,38 +770,43 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
    ```
 
 **Deliverables:**
+
 - ✅ Updated README.md
 - ✅ MIGRATION-GUIDE-PHASE-8.md
 - ✅ Updated architecture documentation
 - ✅ Upgrade checklist
 
 **Success Criteria:**
+
 - Clear migration path documented
 - All breaking changes documented
 - Rollback procedure available
 - User can complete migration independently
 
----
+______________________________________________________________________
 
 ## Risk Assessment & Mitigation
 
 ### High Risks
 
 1. **Breaking Change for Existing Users**
+
    - **Risk:** Projects using crackerjack with pre-commit stop working
    - **Mitigation:**
      - Provide backward compatibility mode (`use_precommit_legacy`)
      - Clear migration guide with rollback instructions
      - Gradual rollout with deprecation warnings
 
-2. **Tool Configuration Loss**
+1. **Tool Configuration Loss**
+
    - **Risk:** Tool configurations not properly migrated from pre-commit
    - **Mitigation:**
      - Automated migration script with validation
      - Manual review checklist
      - Backup original configurations
 
-3. **Performance Regression**
+1. **Performance Regression**
+
    - **Risk:** Direct invocation slower than pre-commit caching
    - **Mitigation:**
      - Implement crackerjack's own tool result caching
@@ -693,13 +816,15 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 ### Medium Risks
 
 4. **Native Tool Implementation Bugs**
+
    - **Risk:** New Python implementations of pre-commit hooks have bugs
    - **Mitigation:**
      - Comprehensive unit tests for each tool
      - Integration tests comparing old vs new behavior
      - Gradual rollout with canary testing
 
-5. **CI/CD Pipeline Breakage**
+1. **CI/CD Pipeline Breakage**
+
    - **Risk:** CI pipelines break after removing pre-commit
    - **Mitigation:**
      - Test in isolated CI environment first
@@ -715,11 +840,12 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
      - FAQ section
      - Example migrations
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 ### Must Have (P0)
+
 - ✅ All hooks execute via direct tool invocation
 - ✅ Zero test failures after migration
 - ✅ Backward compatibility mode available
@@ -727,41 +853,47 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 - ✅ Documentation complete
 
 ### Should Have (P1)
+
 - ✅ Performance improvement measured and documented
 - ✅ All tool configurations in native files
 - ✅ CI/CD templates updated
 - ✅ Native implementations for pre-commit-hooks
 
 ### Nice to Have (P2)
+
 - ⚠️ Automated configuration validation
 - ⚠️ Tool result caching (future enhancement)
 - ⚠️ Telemetry for adoption tracking
 
----
+______________________________________________________________________
 
 ## Rollout Plan
 
 ### Phase 1: Internal Testing (Week 2, Day 7)
+
 - Test on crackerjack codebase itself
 - Validate all hooks work correctly
 - Measure performance improvements
 
 ### Phase 2: Beta Testing (Week 3, Day 1-2)
+
 - Release beta version with both modes
 - Gather feedback from early adopters
 - Fix critical issues
 
 ### Phase 3: General Release (Week 3, Day 3)
+
 - Release as minor version (e.g., 0.X.0)
 - Include deprecation warnings for pre-commit mode
 - Provide migration guide
 
 ### Phase 4: Legacy Deprecation (Week 4)
+
 - Announce timeline for removing legacy mode
 - Final migration support
 - Remove legacy code in next major version
 
----
+______________________________________________________________________
 
 ## Performance Targets
 
@@ -781,50 +913,58 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 | Config parsing | ~1s | ~0.1s | **~90% reduction** |
 | Hook resolution | ~1s | ~0s | **~100% reduction** |
 
----
+______________________________________________________________________
 
 ## Dependencies
 
 ### New Dependencies (None)
+
 - All tools already in `pyproject.toml` as direct dependencies
 - No new external dependencies required
 
 ### Removed Dependencies
+
 - `pre-commit>=3.5.0` - No longer required
 
 ### Tool Version Compatibility
+
 - Ensure all tools work when invoked directly
 - May need to update tool versions for direct invocation compatibility
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
 ### Unit Tests
+
 - Test each native tool implementation individually
 - Test tool command registry
 - Test backward compatibility mode
 
 ### Integration Tests
+
 - Test full workflow without pre-commit
 - Test migration script
 - Test configuration loading
 
 ### Performance Tests
+
 - Benchmark direct invocation vs pre-commit
 - Measure overhead reduction
 - Validate performance targets
 
 ### Regression Tests
+
 - Ensure all existing functionality preserved
 - Verify all hooks produce same results
 - Check error handling
 
----
+______________________________________________________________________
 
 ## Monitoring & Rollback
 
 ### Monitoring
+
 - Track execution times before/after
 - Monitor error rates
 - Collect user feedback
@@ -832,6 +972,7 @@ Tool Directly (ruff, zuban, gitleaks, etc.)
 ### Rollback Procedures
 
 **Immediate Rollback (Critical Issues)**
+
 ```bash
 # Enable legacy mode via environment variable
 export CRACKERJACK_USE_PRECOMMIT=1
@@ -842,13 +983,14 @@ uv add pre-commit>=3.5.0
 ```
 
 **Gradual Rollback (User Issues)**
+
 ```yaml
 # Add to .crackerjack.yaml
 orchestration:
   use_precommit_legacy: true
 ```
 
----
+______________________________________________________________________
 
 ## Timeline Summary
 
@@ -867,11 +1009,12 @@ orchestration:
 
 **Total Duration:** 2-3 weeks
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 Phase 8 represents a significant architectural improvement:
+
 - **Removes unnecessary indirection** from pre-commit framework
 - **Simplifies configuration** with single source of truth
 - **Improves performance** by ~30% across all scenarios
@@ -879,6 +1022,7 @@ Phase 8 represents a significant architectural improvement:
 - **Maintains backward compatibility** during transition period
 
 The migration is carefully planned with:
+
 - Comprehensive testing strategy
 - Clear rollback procedures
 - Detailed documentation

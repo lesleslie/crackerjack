@@ -31,12 +31,14 @@
 ### ⚠️ Hooks Needing Timeout Increase
 
 These hooks may timeout prematurely:
+
 - **check-toml**: 60s → 79s
 - **zuban**: 30s → 32s
 
 ### ✅ Hooks With Excessive Timeouts
 
 These hooks can fail faster:
+
 - **validate-regex-patterns**: 30s → 10s
 - **trailing-whitespace**: 60s → 10s
 - **end-of-file-fixer**: 60s → 10s
@@ -59,22 +61,22 @@ These hooks can fail faster:
 Update `crackerjack/config/hooks.py` with recommended timeout values:
 
 ```python
-timeout=19,  # Phase 10.4.1: Profiled P95=6.52s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=0.27s, safety=3x
-timeout=79,  # Phase 10.4.1: Profiled P95=26.58s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=0.53s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=1.33s, safety=3x
-timeout=13,  # Phase 10.4.1: Profiled P95=4.49s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=3.62s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=0.38s, safety=3x
-timeout=11,  # Phase 10.4.1: Profiled P95=3.82s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=0.80s, safety=3x
-timeout=15,  # Phase 10.4.1: Profiled P95=5.15s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=3.16s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=1.53s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=2.76s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=0.38s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=1.99s, safety=3x
-timeout=10,  # Phase 10.4.1: Profiled P95=0.66s, safety=3x
-timeout=32,  # Phase 10.4.1: Profiled P95=10.97s, safety=3x
+timeout = (19,)  # Phase 10.4.1: Profiled P95=6.52s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=0.27s, safety=3x
+timeout = (79,)  # Phase 10.4.1: Profiled P95=26.58s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=0.53s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=1.33s, safety=3x
+timeout = (13,)  # Phase 10.4.1: Profiled P95=4.49s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=3.62s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=0.38s, safety=3x
+timeout = (11,)  # Phase 10.4.1: Profiled P95=3.82s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=0.80s, safety=3x
+timeout = (15,)  # Phase 10.4.1: Profiled P95=5.15s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=3.16s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=1.53s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=2.76s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=0.38s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=1.99s, safety=3x
+timeout = (10,)  # Phase 10.4.1: Profiled P95=0.66s, safety=3x
+timeout = (32,)  # Phase 10.4.1: Profiled P95=10.97s, safety=3x
 ```

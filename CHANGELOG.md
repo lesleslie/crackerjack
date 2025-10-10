@@ -3,20 +3,22 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-09
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-09
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.41.3] - 2025-10-08
 

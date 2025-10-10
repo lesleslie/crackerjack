@@ -16,6 +16,7 @@ Phase 5 successfully completed with **Option A** decision: Keep WorkflowOptions 
 **Analysis of `crackerjack/api.py`**:
 
 1. **Public API Method** (lines 350-390):
+
 ```python
 def create_workflow_options(
     self,
@@ -61,6 +62,7 @@ def create_workflow_options(
 **Key Finding**: This is an **explicit public API contract** that external consumers depend on.
 
 2. **Internal Helper Method** (lines 421-439):
+
 ```python
 def _create_options(self, **kwargs: t.Any) -> t.Any:
     class Options:
@@ -98,11 +100,13 @@ def _create_options(self, **kwargs: t.Any) -> t.Any:
 ### What Option A Means
 
 **Keep Forever**:
+
 - `models/config.py` - WorkflowOptions and nested config classes (public API contract)
 - Adapter in `core_tools.py` - `_adapt_settings_to_protocol()` and `_AdaptedOptions`
 - Category A test files (6 total) - Validate public API structure and adapter compatibility
 
 **Files That Serve Their Purpose**:
+
 ```
 ✅ tests/test_workflow_options.py              # Tests WorkflowOptions structure (public API)
 ✅ tests/test_workflow_options_comprehensive.py # Comprehensive public API validation
@@ -113,6 +117,7 @@ def _create_options(self, **kwargs: t.Any) -> t.Any:
 ```
 
 **Already Migrated to ACB Settings** (Category B):
+
 ```
 ✅ tests/test_core_modules.py          # ACB DI pattern (35 passed, 1 skipped)
 ✅ tests/test_core_comprehensive.py    # ACB DI pattern (32 passed)
@@ -124,6 +129,7 @@ def _create_options(self, **kwargs: t.Any) -> t.Any:
 ### Test Suite Validation ✅
 
 **Targeted Validation** (full suite timed out after 2 minutes):
+
 ```bash
 pytest tests/test_acb_settings_integration.py \
        tests/test_core_comprehensive.py \
@@ -132,6 +138,7 @@ pytest tests/test_acb_settings_integration.py \
 ```
 
 **Results**:
+
 - **77 tests passed** ✅
 - **1 test skipped** (known ACB DI async issue in test_core_modules.py)
 - **Zero failures** ✅
@@ -191,6 +198,7 @@ class TestAdapterPropertyBehavior:
 ```
 
 **Coverage**: 9 tests validating:
+
 - ACB DI loading
 - Settings-to-protocol conversion
 - WorkflowOrchestrator compatibility
@@ -204,7 +212,7 @@ class TestAdapterPropertyBehavior:
 **Discovery**: Two distinct options creation patterns in `api.py`:
 
 1. **Public API** (`create_workflow_options`): Returns typed `WorkflowOptions` for external consumers
-2. **Internal Helper** (`_create_options`): Creates duck-typed options for internal workflow execution
+1. **Internal Helper** (`_create_options`): Creates duck-typed options for internal workflow execution
 
 **Compatibility Matrix**:
 
@@ -218,20 +226,18 @@ class TestAdapterPropertyBehavior:
 ## Architecture: Public vs Internal Config
 
 ### Public API Layer (External Consumers)
+
 ```python
 # External consumers use typed WorkflowOptions
 from crackerjack.api import CrackerjackAPI
 
 api = CrackerjackAPI()
-options = api.create_workflow_options(
-    clean=True,
-    test=True,
-    verbose=True
-)
+options = api.create_workflow_options(clean=True, test=True, verbose=True)
 # Returns WorkflowOptions (typed, nested structure)
 ```
 
 ### Internal Config Layer (Crackerjack Internals)
+
 ```python
 # Internal usage via ACB Settings + adapter
 from acb.depends import depends
@@ -244,6 +250,7 @@ options = _adapt_settings_to_protocol(settings)
 ```
 
 ### Compatibility Layer (Bridge)
+
 ```python
 class _AdaptedOptions:
     """Adapter: CrackerjackSettings → OptionsProtocol."""
@@ -278,6 +285,7 @@ class _AdaptedOptions:
 **Corrected Findings**: All files previously identified for removal serve critical purposes:
 
 ### Category A - Public API Validation (Keep)
+
 - `test_workflow_options.py` - Tests public API structure
 - `test_workflow_options_comprehensive.py` - Comprehensive public API validation
 - `test_models_config.py` - Tests config classes (public API)
@@ -286,13 +294,16 @@ class _AdaptedOptions:
 - `test_models_config_adapter_coverage.py` - Tests backward compatibility
 
 ### Category B - Internal Usage (Migrated)
+
 - `test_core_modules.py` - ✅ Migrated to ACB Settings
 - `test_core_comprehensive.py` - ✅ Migrated to ACB Settings
 
 ### New Files (Created)
+
 - `test_acb_settings_integration.py` - ✅ Integration tests for ACB Settings
 
 **Why No Removals**:
+
 - Cannot remove public API validation until Option B (deprecation) is chosen
 - Option A decision means WorkflowOptions is permanent fixture
 - All Category A tests validate public API contract (critical for external consumers)
@@ -300,6 +311,7 @@ class _AdaptedOptions:
 ## Migration Success Metrics
 
 ### Before ACB Settings Migration
+
 - **Configuration Files**: 11 files (~1,808 LOC)
 - **Import Complexity**: High (multiple patterns, nested configs)
 - **Env Var Support**: Manual parsing in each service
@@ -307,9 +319,10 @@ class _AdaptedOptions:
 - **Test Fixtures**: Nested WorkflowOptions (hard to customize)
 
 ### After ACB Settings Migration (Phase 5 Complete)
+
 - **Configuration Files**: 1 settings file (CrackerjackSettings ~300 LOC) + 1 public API file (WorkflowOptions)
 - **Import Complexity**: Low (single DI import: `depends.get(CrackerjackSettings)`)
-- **Env Var Support**: Automatic (CRACKERJACK_* prefix via Pydantic)
+- **Env Var Support**: Automatic (CRACKERJACK\_\* prefix via Pydantic)
 - **Validation**: Unified (Pydantic BaseSettings with full validation)
 - **Test Fixtures**: Simple adapter pattern (easy to customize via `model_copy()`)
 
@@ -327,6 +340,7 @@ class _AdaptedOptions:
 ## Key Technical Patterns (Final)
 
 ### 1. ACB Dependency Injection
+
 ```python
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
@@ -336,16 +350,18 @@ settings = depends.get(CrackerjackSettings)
 ```
 
 ### 2. Custom Configuration Pattern
+
 ```python
 # CRITICAL: Must modify BEFORE adapting (adapter has read-only properties)
 settings = depends.get(CrackerjackSettings)
 custom_settings = settings.model_copy()  # Create mutable copy
-custom_settings.clean = True              # Modify settings
-custom_settings.run_tests = True          # Note: field renamed
+custom_settings.clean = True  # Modify settings
+custom_settings.run_tests = True  # Note: field renamed
 options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
 ```
 
 ### 3. Adapter Property Mapping
+
 ```python
 # Settings field → Adapter property (backward compatibility)
 settings.run_tests → adapter.test
@@ -359,6 +375,7 @@ settings.verbose → adapter.verbose
 ```
 
 ### 4. Public API Usage (External Consumers)
+
 ```python
 from crackerjack.api import CrackerjackAPI
 
@@ -370,18 +387,21 @@ options = api.create_workflow_options(clean=True, test=True)
 ## Documentation Updates Required
 
 ### 1. README.md Updates 📋 NEXT
+
 - Add ACB Settings Migration completion notice
 - Document new configuration patterns (ACB DI vs public API)
 - Update "Configuration" section with CrackerjackSettings examples
 - Add migration guide for users extending Crackerjack
 
 ### 2. Migration Guide Creation 📋
+
 - Create `docs/migration/acb-settings-migration-guide.md`
 - Explain dual configuration system (public vs internal)
 - Provide examples for common customization scenarios
 - Document when to use WorkflowOptions vs CrackerjackSettings
 
 ### 3. API Documentation 📋
+
 - Update docstrings in `api.py` to clarify WorkflowOptions usage
 - Document that WorkflowOptions is the stable public API
 - Add examples of `create_workflow_options()` usage
@@ -415,37 +435,42 @@ options = api.create_workflow_options(clean=True, test=True)
 ## Lessons Learned
 
 ### What Went Well ✅
+
 1. **Adapter pattern eliminated breaking changes** - No disruption to public API
-2. **Phase 4 strategy overestimated scope** - Only 2 files needed migration (vs predicted 18)
-3. **ACB DI integration seamless** - `depends.get()` pattern worked flawlessly
-4. **Pydantic validation caught issues early** - Type safety prevented runtime errors
-5. **Documentation-first approach** - Phase docs helped guide implementation
+1. **Phase 4 strategy overestimated scope** - Only 2 files needed migration (vs predicted 18)
+1. **ACB DI integration seamless** - `depends.get()` pattern worked flawlessly
+1. **Pydantic validation caught issues early** - Type safety prevented runtime errors
+1. **Documentation-first approach** - Phase docs helped guide implementation
 
 ### Challenges Overcome 🎯
+
 1. **Adapter read-only properties** - Discovered need for pre-modification pattern (`model_copy()` before adapt)
-2. **Field rename mapping** - Learned adapter exposes old property names (`.test` not `.run_tests`)
-3. **Test scope prediction** - Grep couldn't distinguish API validation from internal usage
-4. **Public API decision** - Required deep analysis of `api.py` to understand contract
+1. **Field rename mapping** - Learned adapter exposes old property names (`.test` not `.run_tests`)
+1. **Test scope prediction** - Grep couldn't distinguish API validation from internal usage
+1. **Public API decision** - Required deep analysis of `api.py` to understand contract
 
 ### Key Discoveries 💡
+
 1. **Two distinct options patterns**: Public API (typed WorkflowOptions) vs Internal (duck-typed Options)
-2. **Adapter serves dual purpose**: Backward compatibility + internal protocol implementation
-3. **No files safe to remove**: All WorkflowOptions usage validates public API (critical to keep)
-4. **Flat vs nested tradeoff**: CrackerjackSettings is flat (easier), WorkflowOptions is nested (typed)
+1. **Adapter serves dual purpose**: Backward compatibility + internal protocol implementation
+1. **No files safe to remove**: All WorkflowOptions usage validates public API (critical to keep)
+1. **Flat vs nested tradeoff**: CrackerjackSettings is flat (easier), WorkflowOptions is nested (typed)
 
 ## Next Steps
 
 ### Immediate (Phase 5 Remaining)
+
 1. ✅ Public API decision made (Option A)
-2. 📋 Update README.md with migration completion
-3. 📋 Create migration guide for users
-4. 📋 Create release notes
+1. 📋 Update README.md with migration completion
+1. 📋 Create migration guide for users
+1. 📋 Create release notes
 
 ### Future Enhancements (Post-Migration)
+
 1. **Improve `_create_options()` helper** - Consider using CrackerjackSettings internally
-2. **Add deprecation warnings** - If moving to Option B in future (multi-year timeline)
-3. **Documentation polish** - Add more examples of custom configuration patterns
-4. **Performance monitoring** - Track ACB DI overhead vs old manual config
+1. **Add deprecation warnings** - If moving to Option B in future (multi-year timeline)
+1. **Documentation polish** - Add more examples of custom configuration patterns
+1. **Performance monitoring** - Track ACB DI overhead vs old manual config
 
 ## Conclusion
 
@@ -462,6 +487,7 @@ The migration successfully modernized Crackerjack's internal configuration syste
 - **Clear separation** between public API contract and internal implementation
 
 **Final Metrics**:
+
 - **83% LOC reduction** in internal configuration
 - **82% file reduction** (11 → 2 files)
 - **100% test compatibility** (86 tests passing, 1 known skip)
@@ -469,7 +495,7 @@ The migration successfully modernized Crackerjack's internal configuration syste
 
 The migration achieved all success criteria in minimum estimated time with production-quality results.
 
----
+______________________________________________________________________
 
 **Author**: Claude Code (AI Agent)
 **Phase**: 5 of 5 (Final Validation & Decision)

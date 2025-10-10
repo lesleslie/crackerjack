@@ -18,6 +18,7 @@ async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
 ```
 
 This means tests can use **either**:
+
 - `WorkflowOptions` (old nested config) - implements OptionsProtocol
 - `CrackerjackSettings` + adapter (new flat config) - converts to OptionsProtocol
 
@@ -30,12 +31,14 @@ The adapter pattern from Phase 2 (`_adapt_settings_to_protocol()` in `mcp/tools/
 **Reasoning**: These tests serve specific purposes that require old config classes.
 
 #### 1. **`tests/orchestration/test_config.py`** - File-Based Config System
+
 - **Purpose**: Tests the NEWER `OrchestrationConfig` from `orchestration/config.py`
 - **Why Keep**: This is the file/environment-based config system (discovered in Phase 3)
 - **Not Related**: Different from old `WorkflowOptions` - this is a separate, newer system
 - **Tests**: `.from_file()`, `.from_env()`, `.load()`, validation, conversion
 
 #### 2. **`tests/test_models_comprehensive.py`** - Old Config Structure Tests
+
 - **Purpose**: Tests `WorkflowOptions` nested structure (cleaning, testing, publishing, git, execution)
 - **Why Keep**: Validates public API backward compatibility
 - **Related To**: `api.create_workflow_options()` returns `WorkflowOptions` for external consumers
@@ -45,6 +48,7 @@ The adapter pattern from Phase 2 (`_adapt_settings_to_protocol()` in `mcp/tools/
   - Individual config tests (CleaningConfig, TestConfig, etc.)
 
 #### 3. **`tests/test_unified_api.py`** - Public API Tests
+
 - **Lines to Keep**: 101-115 - Tests `api.create_workflow_options()` returns `WorkflowOptions`
 - **Purpose**: Validates public API contract
 - **Why Keep**: External code depends on this returning `WorkflowOptions`
@@ -65,6 +69,7 @@ def workflow_options():
 ```
 
 **Files with fixtures**:
+
 - `tests/test_core_modules.py:54-56`
 - `tests/test_core_comprehensive.py`
 - `tests/test_large_modules_coverage.py`
@@ -87,6 +92,7 @@ def test_something():
 ```
 
 **Instances Found**:
+
 - `test_modernized_code.py`: lines 325, 386, 396
 - `test_unified_api.py`: line 188 (mock test - low priority)
 - `test_models_comprehensive.py`: lines 86, 92, 285 (keep - testing structure)
@@ -97,8 +103,10 @@ def test_something():
 ### Standard Fixture Migration
 
 **Before**:
+
 ```python
 from crackerjack.models.config import WorkflowOptions
+
 
 @pytest.fixture
 def workflow_options():
@@ -106,10 +114,12 @@ def workflow_options():
 ```
 
 **After**:
+
 ```python
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
 from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
+
 
 @pytest.fixture
 def workflow_options():
@@ -120,6 +130,7 @@ def workflow_options():
 ### Custom Configuration Migration
 
 **Before**:
+
 ```python
 options = WorkflowOptions()
 options.cleaning.clean = True
@@ -127,6 +138,7 @@ options.testing.test = True
 ```
 
 **After**:
+
 ```python
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
@@ -147,6 +159,7 @@ options = _adapt_settings_to_protocol(custom_settings)
 ### Field Mapping Reference
 
 **Critical Renames** (from Phase 2 docs):
+
 - `options.testing.test` → `settings.run_tests` ⚠️ **MOST IMPORTANT**
 - `options.publishing.publish` → `settings.publish_version`
 - `options.publishing.bump` → `settings.bump_version`
@@ -154,6 +167,7 @@ options = _adapt_settings_to_protocol(custom_settings)
 - `options.hooks.skip_hooks` → `settings.skip_hooks`
 
 **Flattened Access** (nesting removed):
+
 - `options.cleaning.*` → `settings.*`
 - `options.execution.*` → `settings.*`
 - `options.git.*` → `settings.*`
@@ -166,30 +180,34 @@ See `docs/implementation/acb-settings-field-mapping.md` for complete mapping.
 ### Step 1: Update Shared Fixtures (High Impact)
 
 Identify and update common fixtures in:
+
 1. `tests/conftest.py` (if exists)
-2. `tests/test_core_modules.py` - Used by many tests
-3. `tests/test_core_comprehensive.py` - Core test suite
+1. `tests/test_core_modules.py` - Used by many tests
+1. `tests/test_core_comprehensive.py` - Core test suite
 
 **Benefit**: Each fixture update cascades to 5-10+ tests automatically.
 
 ### Step 2: Update Individual Test Files
 
 For each file in Category B:
+
 1. Update imports (remove `WorkflowOptions`, add ACB DI imports)
-2. Update fixtures to use adapter pattern
-3. Update direct instantiations
-4. Fix field access (nested → flat, handle renames)
-5. Run tests for that file to verify
+1. Update fixtures to use adapter pattern
+1. Update direct instantiations
+1. Fix field access (nested → flat, handle renames)
+1. Run tests for that file to verify
 
 **Order by dependency**:
-1. Core tests first (test_core_*.py)
-2. Manager tests (tests/managers/)
-3. Integration tests (test_workflow_*, test_session_*)
-4. Coverage tests (test_*_coverage.py)
+
+1. Core tests first (test_core\_\*.py)
+1. Manager tests (tests/managers/)
+1. Integration tests (test_workflow\_*, test_session\_*)
+1. Coverage tests (test\_\*\_coverage.py)
 
 ### Step 3: Verification
 
 After each file migration:
+
 ```bash
 # Test specific file
 pytest tests/test_file.py -v
@@ -211,14 +229,16 @@ from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
 from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
 
+
 def test_acb_settings_loading():
     """Test CrackerjackSettings loads via ACB DI."""
     settings = depends.get(CrackerjackSettings)
 
     assert settings is not None
     assert isinstance(settings, CrackerjackSettings)
-    assert hasattr(settings, 'skip_hooks')
-    assert hasattr(settings, 'run_tests')
+    assert hasattr(settings, "skip_hooks")
+    assert hasattr(settings, "run_tests")
+
 
 def test_settings_to_protocol_conversion():
     """Test CrackerjackSettings converts to OptionsProtocol."""
@@ -226,9 +246,10 @@ def test_settings_to_protocol_conversion():
     options = _adapt_settings_to_protocol(settings)
 
     # Verify OptionsProtocol interface
-    assert hasattr(options, 'skip_hooks')
-    assert hasattr(options, 'verbose')
-    assert hasattr(options, 'dry_run')
+    assert hasattr(options, "skip_hooks")
+    assert hasattr(options, "verbose")
+    assert hasattr(options, "dry_run")
+
 
 def test_workflow_orchestrator_accepts_settings():
     """Test WorkflowOrchestrator works with CrackerjackSettings."""
@@ -239,10 +260,7 @@ def test_workflow_orchestrator_accepts_settings():
     settings = depends.get(CrackerjackSettings)
     options = _adapt_settings_to_protocol(settings)
 
-    orchestrator = WorkflowOrchestrator(
-        console=Console(),
-        pkg_path=Path.cwd()
-    )
+    orchestrator = WorkflowOrchestrator(console=Console(), pkg_path=Path.cwd())
 
     # Should accept OptionsProtocol (no type error)
     # Note: actual execution will be mocked in real test
@@ -252,22 +270,26 @@ def test_workflow_orchestrator_accepts_settings():
 ## Files Requiring Migration
 
 **Priority 1: Core Fixtures (3 files)**
+
 - `tests/test_core_modules.py` - Line 54-56 fixture
 - `tests/test_core_comprehensive.py` - Line 28 fixture
 - `tests/test_models_config_adapter_coverage.py` - Lines 136, 147 fixtures
 
 **Priority 2: Manager Tests (3 files)**
+
 - `tests/managers/test_hook_manager_triple_parallel.py`
 - `tests/managers/test_hook_manager_orchestration.py`
 - `tests/test_managers_consolidated.py`
 
 **Priority 3: Integration Tests (6 files)**
+
 - `tests/test_workflow_pipeline.py`
 - `tests/test_workflow_orchestrator_ai_routing.py`
 - `tests/test_session_coordinator_*.py` (multiple files)
 - `tests/test_stage_workflow_execution_order.py`
 
 **Priority 4: Coverage/Other (6 files)**
+
 - `tests/test_modernized_code.py` - Lines 325, 386, 396
 - `tests/test_large_modules_coverage.py` - Lines 54, 65
 - `tests/test_unified_api.py` - Line 188 (low priority mock)
@@ -278,10 +300,11 @@ def test_workflow_orchestrator_accepts_settings():
 ## Files NOT Requiring Migration
 
 **Keep As-Is** (3 test files + 1 validation):
+
 1. `tests/orchestration/test_config.py` - Tests file-based config system ✅
-2. `tests/test_models_comprehensive.py` - Tests WorkflowOptions structure ✅
-3. `tests/test_unified_api.py` (lines 101-115 only) - Tests public API ✅
-4. `tests/test_unified_config.py` - Likely tests unified config (needs review)
+1. `tests/test_models_comprehensive.py` - Tests WorkflowOptions structure ✅
+1. `tests/test_unified_api.py` (lines 101-115 only) - Tests public API ✅
+1. `tests/test_unified_config.py` - Likely tests unified config (needs review)
 
 ## Success Criteria
 
@@ -296,19 +319,25 @@ def test_workflow_orchestrator_accepts_settings():
 ## Risk Mitigation
 
 ### Risk 1: Field Rename Misses
+
 **Mitigation**:
+
 - Use grep to find all `.test` access patterns
 - Cross-reference with field mapping doc
 - Test each file after migration
 
 ### Risk 2: Adapter Import Errors
+
 **Mitigation**:
+
 - `_adapt_settings_to_protocol` is in `mcp/tools/core_tools.py`
 - Import verified in Phase 2 (tool_proxy.py uses it)
 - Add import to shared conftest.py if needed
 
 ### Risk 3: Breaking Public API Tests
+
 **Mitigation**:
+
 - Keep Category A tests unchanged
 - Document why they remain
 - Only migrate Category B (internal usage)
@@ -316,14 +345,15 @@ def test_workflow_orchestrator_accepts_settings():
 ## Next Steps After Phase 4
 
 **Phase 5: Cleanup & Validation** (1-2 hours estimated)
+
 1. **Decision Point**: Keep or deprecate `api.create_workflow_options()` public API
    - Option A: Keep WorkflowOptions ONLY for public API (minimal file)
    - Option B: Deprecate public API, provide migration guide
-2. Remove `crackerjack/models/config.py` if Option B chosen
-3. **KEEP** `crackerjack/orchestration/config.py` (different purpose - file-based config)
-4. **KEEP** `execution_strategies.OrchestrationConfig` (actively used)
-5. Final validation sweep
-6. Update documentation
+1. Remove `crackerjack/models/config.py` if Option B chosen
+1. **KEEP** `crackerjack/orchestration/config.py` (different purpose - file-based config)
+1. **KEEP** `execution_strategies.OrchestrationConfig` (actively used)
+1. Final validation sweep
+1. Update documentation
 
 ## Time Estimate
 
@@ -342,7 +372,7 @@ def test_workflow_orchestrator_accepts_settings():
 - **Field Mapping**: `docs/implementation/acb-settings-field-mapping.md`
 - **Migration Plan**: `docs/ACB-SETTINGS-MIGRATION-PLAN.md`
 
----
+______________________________________________________________________
 
 **Phase 4 Status**: ✅ **STRATEGY COMPLETE - READY FOR IMPLEMENTATION**
 **Next Action**: Begin Step 1 - Update shared fixtures in core test files

@@ -12,6 +12,7 @@ Successfully implemented execution optimization with fast-first hook ordering an
 ### 1. Fast-First Hook Ordering (`crackerjack/services/enhanced_hook_executor.py`)
 
 #### New Method: `optimize_hook_order()`
+
 ```python
 def optimize_hook_order(self, hooks: list[HookDefinition]) -> list[HookDefinition]:
     """Sort hooks by execution time (fastest first).
@@ -38,6 +39,7 @@ def optimize_hook_order(self, hooks: list[HookDefinition]) -> list[HookDefinitio
 **Purpose:** Sorts hooks by profiled execution time (fastest first) to enable fail-fast feedback. Unknown tools use timeout as fallback estimate and run last.
 
 **Benefits:**
+
 - **Early Failure Detection**: Detect formatting/linting failures in 5s instead of waiting 30s
 - **Faster Iteration**: Developers get feedback from fast checks before slow analysis runs
 - **Intelligent Ordering**: Uses real profiling data, not arbitrary order
@@ -45,6 +47,7 @@ def optimize_hook_order(self, hooks: list[HookDefinition]) -> list[HookDefinitio
 ### 2. Parallel Execution Support (`crackerjack/services/enhanced_hook_executor.py`)
 
 #### New Method: `_execute_parallel()`
+
 ```python
 def _execute_parallel(
     self,
@@ -119,6 +122,7 @@ def _execute_parallel(
 **Purpose:** Enables concurrent hook execution with proper profiling and exception handling.
 
 **Benefits:**
+
 - **30-50% Wall-Clock Reduction**: Independent hooks run concurrently
 - **Graceful Exception Handling**: Individual failures don't crash entire execution
 - **Profiling Maintained**: Execution time tracking works correctly in parallel context
@@ -127,6 +131,7 @@ def _execute_parallel(
 ### 3. Enhanced `execute_hooks()` Method
 
 #### Updated Signature (lines 103-115)
+
 ```python
 def execute_hooks(
     self,
@@ -144,6 +149,7 @@ def execute_hooks(
 ```
 
 #### Integration Logic (lines 154-171)
+
 ```python
 # 3. Optimize hook order (Phase 10.4.5)
 if optimize_order:
@@ -174,42 +180,52 @@ else:
 ## Key Architectural Decisions
 
 ### Fast-First Ordering Strategy
+
 **Decision:** Use ToolProfiler's mean_time for sorting, with timeout as fallback.
 
 **Rationale:**
+
 - Profiler tracks real execution times from previous runs
 - Timeout provides reasonable estimate for never-run tools
 - Simple sorting algorithm with minimal overhead
 
 **Benefits:**
+
 - Data-driven ordering (not arbitrary)
 - Automatic improvement as profiler learns
 - Unknown tools safely run last
 
 ### Parallel Execution Design
+
 **Decision:** Use ThreadPoolExecutor with configurable max_workers (default: 3).
 
 **Rationale:**
+
 - Most hooks are I/O-bound (subprocess calls), so threads work well
 - Limiting workers prevents resource exhaustion
 - ThreadPoolExecutor handles exception propagation gracefully
 
 **Benefits:**
+
 - Simple implementation (built-in library)
 - Good performance for I/O-bound tasks
 - Easy to reason about and debug
 
 ### Backward Compatibility
+
 **Decision:**
+
 - `optimize_order=True` by default (safe improvement)
 - `parallel=False` by default (opt-in for safety)
 
 **Rationale:**
+
 - Fast-first ordering is always beneficial (no downsides)
 - Parallel execution may have edge cases, so opt-in initially
 - Existing code continues to work without changes
 
 **Benefits:**
+
 - Zero breaking changes
 - Users get fast-first ordering automatically
 - Parallel execution available when explicitly enabled
@@ -217,21 +233,25 @@ else:
 ## Integration Points
 
 ### ToolProfiler Integration
+
 - `optimize_hook_order()` reads `profiler.results[hook_name].mean_time`
 - Profiling continues to work in both serial and parallel execution
 - Execution time tracking maintained per hook
 
 ### IncrementalExecutor Integration
+
 - File-level caching works with both serial and parallel execution
 - Cache hit rate metrics tracked correctly
 - Unchanged files skip execution as expected
 
 ### ToolFilter Integration
+
 - Filtering applied before optimization (lines 138-152)
 - Only filtered hooks are sorted and executed
 - Filter effectiveness metrics unchanged
 
 ### Phase 10.4.4 File Path Handling
+
 - File-level execution benefits from parallel execution
 - 9 file-level tools can run concurrently on different files
 - Combined with fast-first ordering for maximum efficiency
@@ -239,6 +259,7 @@ else:
 ## Test Results
 
 All 14 tests passing ✅:
+
 ```bash
 $ python -m pytest tests/test_enhanced_hook_executor.py -v
 ================================ 14 passed ================================
@@ -251,22 +272,26 @@ $ python -m pytest tests/test_enhanced_hook_executor.py -v
 ### Expected Improvements
 
 **Scenario 1: Fast-First Ordering (Serial Execution)**
+
 - Before: trailing-whitespace (0.3s) runs after complexipy (4.5s)
 - After: trailing-whitespace runs first, complexipy runs last
 - **Benefit:** Detect formatting failures in 0.3s instead of waiting 4.5s
 
 **Scenario 2: Parallel Execution (3 workers)**
+
 - Before: 3 hooks × 3s each = 9s wall-clock time
 - After: 3 hooks running concurrently = ~3s wall-clock time
 - **Speedup:** ~3x wall-clock reduction (theoretical max)
 
 **Scenario 3: Combined Optimizations**
+
 - Fast-first ordering: Failures detected early
 - Parallel execution: Independent hooks run concurrently
 - File-level caching (Phase 10.4.4): Unchanged files skipped
 - **Combined Benefit:** 30-50% wall-clock reduction + fail-fast feedback
 
 **Scenario 4: Single-File Change (All Optimizations)**
+
 - Phase 10.4.4: ~150x speedup on file-level execution (1 file vs 150 files)
 - Phase 10.4.5: +30-50% wall-clock reduction from parallelization
 - **Total Impact:** ~200x speedup for single-file changes
@@ -274,6 +299,7 @@ $ python -m pytest tests/test_enhanced_hook_executor.py -v
 ## Files Modified
 
 ### Modified
+
 1. `crackerjack/services/enhanced_hook_executor.py` (lines 10, 1-8, 82-101, 103-115, 154-171, 321-388)
    - Added `import concurrent.futures`
    - Updated module docstring with Phase 10.4.5 notes
@@ -283,6 +309,7 @@ $ python -m pytest tests/test_enhanced_hook_executor.py -v
    - Implemented `_execute_parallel()` method
 
 ### Created
+
 - `docs/PHASE-10.4.5-COMPLETION.md` (this document)
 
 ## Phase 10.4 Completion Summary
@@ -290,25 +317,30 @@ $ python -m pytest tests/test_enhanced_hook_executor.py -v
 Phase 10.4 is now **COMPLETE** ✅ with all 5 sub-phases implemented:
 
 ### Phase 10.4.1: Timeout Calibration ✅
+
 - Data-driven timeouts based on profiling
 - Reduced timeout waste (bandit: 300s→19s, refurb: 300s→15s)
 
 ### Phase 10.4.2: Command Harmonization ✅
+
 - Fixed tool command mismatches (skylos, bandit, complexipy)
 - Ensured registry and execution alignment
 
 ### Phase 10.4.3: Phase 10.3 Infrastructure Integration ✅
+
 - Wired ToolProfiler, IncrementalExecutor, ToolFilter
 - Single-execution profiling (not wasteful multi-run)
 - Comprehensive reporting with metrics
 
 ### Phase 10.4.4: File Path Handling ✅
+
 - Added `accepts_file_paths` field (9 file-level tools)
 - Implemented `build_command()` for dynamic file targeting
 - File discovery and filtering integration
 - **Performance:** ~150x speedup on single-file changes
 
 ### Phase 10.4.5: Execution Optimization ✅ (This Phase)
+
 - Fast-first hook ordering (fail-fast feedback)
 - Parallel execution support (30-50% wall-clock reduction)
 - Backward-compatible defaults
@@ -326,8 +358,9 @@ Phase 10.4 is now **COMPLETE** ✅ with all 5 sub-phases implemented:
 ## Next Steps: Phase 10.5 (Future Work)
 
 **CLI Integration** - Expose optimization features to users:
+
 1. Add `--parallel` flag for parallel execution
-2. Add `--serial` flag to explicitly disable parallelization
-3. Add `--max-workers N` flag for concurrency control
-4. Add `--no-optimize` flag to disable fast-first ordering
-5. Update CLI documentation with performance recommendations
+1. Add `--serial` flag to explicitly disable parallelization
+1. Add `--max-workers N` flag for concurrency control
+1. Add `--no-optimize` flag to disable fast-first ordering
+1. Update CLI documentation with performance recommendations

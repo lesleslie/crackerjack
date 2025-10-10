@@ -12,6 +12,7 @@ Successfully implemented file-level execution capabilities to enable targeted ho
 ### 1. HookDefinition Extensions (`crackerjack/config/hooks.py`)
 
 #### New Field: `accepts_file_paths`
+
 ```python
 @dataclass
 class HookDefinition:
@@ -22,6 +23,7 @@ class HookDefinition:
 **Purpose:** Distinguishes file-level tools (can process individual files) from project-level tools (need whole codebase context).
 
 #### New Method: `build_command()`
+
 ```python
 def build_command(self, files: list[Path] | None = None) -> list[str]:
     """Build command with optional file paths for targeted execution.
@@ -35,8 +37,9 @@ def build_command(self, files: list[Path] | None = None) -> list[str]:
         Command list with file paths appended if tool accepts them.
 
     Example:
-        >>> hook = HookDefinition(name="ruff-check", command=["ruff", "check"],
-        ...                       accepts_file_paths=True)
+        >>> hook = HookDefinition(
+        ...     name="ruff-check", command=["ruff", "check"], accepts_file_paths=True
+        ... )
         >>> hook.build_command([Path("foo.py"), Path("bar.py")])
         ["ruff", "check", "foo.py", "bar.py"]
     """
@@ -54,9 +57,11 @@ def build_command(self, files: list[Path] | None = None) -> list[str]:
 ### 2. File-Level vs Project-Level Tool Classification
 
 #### File-Level Tools (accepts_file_paths=True) - 9 tools
+
 Tools that can analyze individual files for faster incremental execution:
 
 **FAST_HOOKS:**
+
 - `trailing-whitespace` - File-level whitespace fixer
 - `end-of-file-fixer` - File-level EOF fixer
 - `check-yaml` - File-level YAML validator
@@ -67,18 +72,22 @@ Tools that can analyze individual files for faster incremental execution:
 - `mdformat` - File-level Markdown formatter
 
 **COMPREHENSIVE_HOOKS:**
+
 - `bandit` - File-level security scanner
 
 #### Project-Level Tools (accepts_file_paths=False) - 13 tools
+
 Tools that require whole codebase context:
 
 **FAST_HOOKS:**
+
 - `validate-regex-patterns` - Project-wide pattern validation
 - `check-added-large-files` - Git-level check
 - `uv-lock` - Dependency resolution (project-level)
 - `gitleaks` - Secret scanning (entire git history)
 
 **COMPREHENSIVE_HOOKS:**
+
 - `zuban` - Type checker (needs import graph)
 - `skylos` - Dead code detector (needs call graph)
 - `refurb` - Modernization suggestions (needs context)
@@ -88,6 +97,7 @@ Tools that require whole codebase context:
 ### 3. EnhancedHookExecutor File Discovery (`crackerjack/services/enhanced_hook_executor.py`)
 
 #### Method: `_get_files_for_hook()`
+
 ```python
 def _get_files_for_hook(self, hook: HookDefinition) -> list[Path]:
     """Get list of files to process for a hook.
@@ -123,6 +133,7 @@ def _get_files_for_hook(self, hook: HookDefinition) -> list[Path]:
 **Purpose:** Discovers relevant files for file-level tools and applies ToolFilter for changed-only detection.
 
 #### Method: `_get_file_patterns_for_tool()`
+
 ```python
 def _get_file_patterns_for_tool(self, tool_name: str) -> list[str]:
     """Get file glob patterns for a specific tool.
@@ -159,6 +170,7 @@ def _get_file_patterns_for_tool(self, tool_name: str) -> list[str]:
 **Purpose:** Maps tools to their target file patterns for accurate discovery.
 
 #### Updated: `_execute_single_hook()`
+
 ```python
 # Use incremental executor for file-level caching
 def tool_func(file_path: Path) -> bool:
@@ -178,44 +190,54 @@ def tool_func(file_path: Path) -> bool:
 ## Key Architectural Decisions
 
 ### File Discovery Strategy
+
 **Decision:** Use `Path.cwd().rglob(pattern)` for file discovery with ToolFilter integration.
 
 **Rationale:**
+
 - Simple and efficient for small/medium codebases
 - Integrates seamlessly with existing ToolFilter (changed-only detection)
 - Pattern-based approach allows easy customization per tool
 
 **Benefits:**
+
 - Automatic changed-only filtering via `--changed-only` flag
 - File pattern filtering via `--file-patterns` flag
 - Consistent with existing filter infrastructure
 
 ### Tool Classification Criteria
+
 **File-Level Tools:** Can analyze individual files in isolation
+
 - Examples: ruff-check (lints single .py file), mdformat (formats single .md file)
 
 **Project-Level Tools:** Require whole codebase context
+
 - Examples: zuban (needs import graph), gitleaks (scans git history)
 
 ## Integration Points
 
 ### ToolFilter Integration
+
 - File discovery automatically applies ToolFilter for changed-only detection
 - `--changed-only` flag limits execution to files with changed hashes
 - `--file-patterns` and `--exclude-patterns` flags further refine file selection
 
 ### IncrementalExecutor Integration
+
 - File-level tools now benefit from file hash-based caching
 - Unchanged files skip execution (cache hit)
 - Changed files execute and update cache
 
 ### ToolProfiler Integration
+
 - Execution time tracking works for both file-level and project-level tools
 - Cache hit rate metrics tracked per file
 
 ## Test Results
 
 All 14 tests passing ✅:
+
 ```bash
 $ python -m pytest tests/test_enhanced_hook_executor.py -v
 ================================ 14 passed ================================
@@ -226,19 +248,23 @@ $ python -m pytest tests/test_enhanced_hook_executor.py -v
 ## Performance Impact
 
 ### Expected Improvements
+
 With file-level execution and caching:
 
 **Scenario 1: Change 1 Python file**
+
 - Before: ruff-check runs on ~150 files (~3s)
 - After: ruff-check runs on 1 file (~0.02s)
 - **Speedup:** ~150x faster
 
 **Scenario 2: No changes (100% cache hit)**
+
 - Before: ruff-check runs on ~150 files (~3s)
 - After: All files cached (~0.1s)
 - **Speedup:** ~30x faster
 
 **Scenario 3: Project-level tools (zuban, skylos)**
+
 - Before: Runs on entire codebase
 - After: Runs on entire codebase (no change - needs context)
 - **Speedup:** None (intentional - these tools need project context)
@@ -246,26 +272,31 @@ With file-level execution and caching:
 ## Files Modified
 
 ### Modified
+
 1. `crackerjack/config/hooks.py` (lines 36, 79-102, 133, 143, 151, 159, 188, 198, 208, 218, 240)
+
    - Added `accepts_file_paths` field
    - Implemented `build_command()` method
    - Marked 9 file-level tools with `accepts_file_paths=True`
 
-2. `crackerjack/services/enhanced_hook_executor.py` (lines 207, 273-348)
+1. `crackerjack/services/enhanced_hook_executor.py` (lines 207, 273-348)
+
    - Updated `_execute_single_hook()` to use `build_command()`
    - Implemented `_get_files_for_hook()` for file discovery
    - Implemented `_get_file_patterns_for_tool()` for pattern mapping
 
 ### Created
+
 - `docs/PHASE-10.4.4-COMPLETION.md` (this document)
 
 ## Next Steps: Phase 10.4.5
 
 **Execution Optimization** - Fast-first ordering and parallelization:
+
 1. Implement `optimize_hook_order()` function (fastest tools first)
-2. Implement parallel execution for independent tools
-3. Add `--parallel` / `--serial` CLI flags
-4. Measure performance gains from optimizations
+1. Implement parallel execution for independent tools
+1. Add `--parallel` / `--serial` CLI flags
+1. Measure performance gains from optimizations
 
 ## Impact
 

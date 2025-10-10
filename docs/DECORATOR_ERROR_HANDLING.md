@@ -7,6 +7,7 @@ Crackerjack provides a comprehensive set of composable decorators for error hand
 ```python
 from crackerjack.decorators import retry, with_timeout, handle_errors
 
+
 @retry(max_attempts=3)
 @with_timeout(seconds=30)
 async def fetch_data(url: str) -> dict:
@@ -21,6 +22,7 @@ async def fetch_data(url: str) -> dict:
 Automatically retry operations with exponential backoff.
 
 **Signature:**
+
 ```python
 @retry(
     max_attempts: int = 3,
@@ -33,6 +35,7 @@ Automatically retry operations with exponential backoff.
 ```
 
 **Parameters:**
+
 - `max_attempts`: Maximum retry attempts (default: 3)
 - `backoff`: Exponential backoff multiplier (default: 2.0)
 - `max_delay`: Maximum delay between retries in seconds (default: 60.0)
@@ -41,8 +44,10 @@ Automatically retry operations with exponential backoff.
 - `console`: Optional Rich Console for output
 
 **Example:**
+
 ```python
 from crackerjack.errors import NetworkError
+
 
 @retry(max_attempts=5, backoff=2.0, exceptions=[NetworkError])
 async def fetch_package_info(package: str) -> dict:
@@ -52,6 +57,7 @@ async def fetch_package_info(package: str) -> dict:
 ```
 
 **Behavior:**
+
 - Uses exponential backoff: `delay = min(backoff ** attempt, max_delay)`
 - Shows progress via Rich console
 - Re-raises exception after final attempt
@@ -62,6 +68,7 @@ async def fetch_package_info(package: str) -> dict:
 Enforce execution timeout with automatic cancellation.
 
 **Signature:**
+
 ```python
 @with_timeout(
     seconds: float,
@@ -70,10 +77,12 @@ Enforce execution timeout with automatic cancellation.
 ```
 
 **Parameters:**
+
 - `seconds`: Timeout duration
 - `error_message`: Optional custom error message
 
 **Example:**
+
 ```python
 @with_timeout(seconds=30, error_message="Database query timed out")
 async def slow_query() -> list:
@@ -81,9 +90,11 @@ async def slow_query() -> list:
 ```
 
 **Raises:**
+
 - `CrackerjackTimeoutError` on timeout
 
 **Notes:**
+
 - Async functions use `asyncio.wait_for` for clean cancellation
 - Sync functions use `signal.alarm` (Unix only)
 - Provides recovery suggestions in error
@@ -93,6 +104,7 @@ async def slow_query() -> list:
 Centralized error handling with transformation and fallback.
 
 **Signature:**
+
 ```python
 @handle_errors(
     error_types: list[type[Exception]] | None = None,
@@ -104,6 +116,7 @@ Centralized error handling with transformation and fallback.
 ```
 
 **Parameters:**
+
 - `error_types`: Exception types to handle (None = all)
 - `fallback`: Fallback value or callable
 - `transform_to`: Transform to CrackerjackError subclass
@@ -111,13 +124,13 @@ Centralized error handling with transformation and fallback.
 - `suppress`: Suppress errors (no re-raise)
 
 **Example:**
+
 ```python
 from crackerjack.errors import FileError
 
+
 @handle_errors(
-    error_types=[OSError, PermissionError],
-    transform_to=FileError,
-    fallback={}
+    error_types=[OSError, PermissionError], transform_to=FileError, fallback={}
 )
 def load_config(path: Path) -> dict:
     # OS errors transformed to FileError
@@ -127,6 +140,7 @@ def load_config(path: Path) -> dict:
 ```
 
 **Example with callable fallback:**
+
 ```python
 @handle_errors(fallback=lambda: {"default": True})
 def get_settings() -> dict:
@@ -139,6 +153,7 @@ def get_settings() -> dict:
 Log errors with context before re-raising.
 
 **Signature:**
+
 ```python
 @log_errors(
     logger: Any | None = None,
@@ -149,15 +164,19 @@ Log errors with context before re-raising.
 ```
 
 **Parameters:**
+
 - `logger`: Logger instance (uses console if None)
 - `level`: Log level (error, warning, info, debug)
 - `include_traceback`: Include full traceback
 - `console`: Optional Rich Console
 
 **Example:**
+
 ```python
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 @log_errors(logger=logger, level="error", include_traceback=True)
 async def critical_operation() -> bool:
@@ -166,6 +185,7 @@ async def critical_operation() -> bool:
 ```
 
 **Logged Context:**
+
 - Function name and module
 - Error type and message
 - Full exception chain
@@ -176,6 +196,7 @@ async def critical_operation() -> bool:
 Gracefully handle failures with fallback values.
 
 **Signature:**
+
 ```python
 @graceful_degradation(
     fallback_value: Any = None,
@@ -185,11 +206,13 @@ Gracefully handle failures with fallback values.
 ```
 
 **Parameters:**
+
 - `fallback_value`: Value to return on error (can be callable)
 - `warn`: Show warning on fallback (default: True)
 - `console`: Optional Rich Console
 
 **Example:**
+
 ```python
 @graceful_degradation(fallback_value=[], warn=True)
 def load_optional_plugins(plugin_dir: Path) -> list[str]:
@@ -199,6 +222,7 @@ def load_optional_plugins(plugin_dir: Path) -> list[str]:
 ```
 
 **Use Cases:**
+
 - Optional features
 - Non-critical operations
 - Degraded functionality acceptable
@@ -208,6 +232,7 @@ def load_optional_plugins(plugin_dir: Path) -> list[str]:
 Validate function arguments before execution.
 
 **Signature:**
+
 ```python
 @validate_args(
     validators: dict[str, Callable | list[Callable]] | None = None,
@@ -217,11 +242,13 @@ Validate function arguments before execution.
 ```
 
 **Parameters:**
+
 - `validators`: Dict of parameter name -> validator function(s)
 - `type_check`: Enable type checking from annotations
 - `allow_none`: Parameters that can be None
 
 **Example:**
+
 ```python
 @validate_args(
     validators={
@@ -241,9 +268,11 @@ def register_user(email: str, age: int) -> bool:
 ```
 
 **Raises:**
+
 - `ValidationError` with detailed context
 
 **Features:**
+
 - Multiple validators per parameter
 - Automatic type checking from annotations
 - Detailed error messages
@@ -253,6 +282,7 @@ def register_user(email: str, age: int) -> bool:
 Detect and cache error patterns for analysis.
 
 **Signature:**
+
 ```python
 @cache_errors(
     cache_dir: Path | None = None,
@@ -262,11 +292,13 @@ Detect and cache error patterns for analysis.
 ```
 
 **Parameters:**
+
 - `cache_dir`: Cache directory (default: ~/.cache/crackerjack-mcp)
 - `error_type`: Override error type classification
 - `auto_analyze`: Auto-analyze errors for patterns
 
 **Example:**
+
 ```python
 @cache_errors(error_type="lint", auto_analyze=True)
 async def run_linter(files: list[Path]) -> dict:
@@ -276,6 +308,7 @@ async def run_linter(files: list[Path]) -> dict:
 ```
 
 **Integration:**
+
 - Uses Crackerjack's `ErrorCache`
 - Tracks error frequency
 - Enables AI auto-fix suggestions
@@ -298,6 +331,7 @@ async def robust_operation() -> dict:
 ```
 
 **Order Matters:**
+
 - Decorators execute from bottom to top
 - Outermost decorator gets first chance to handle
 - Inner decorators execute on success of outer
@@ -305,6 +339,7 @@ async def robust_operation() -> dict:
 **Recommended Stacks:**
 
 **For network operations:**
+
 ```python
 @with_timeout(seconds=30)
 @retry(max_attempts=5, exceptions=[NetworkError])
@@ -312,6 +347,7 @@ async def robust_operation() -> dict:
 ```
 
 **For critical operations:**
+
 ```python
 @log_errors()
 @validate_args(validators={...})
@@ -319,6 +355,7 @@ async def robust_operation() -> dict:
 ```
 
 **For optional features:**
+
 ```python
 @graceful_degradation(fallback_value=[])
 @with_timeout(seconds=5)
@@ -331,6 +368,7 @@ Decorators complement the existing `ErrorHandlingMixin`:
 ```python
 from crackerjack.mixins.error_handling import ErrorHandlingMixin
 from crackerjack.decorators import retry, log_errors
+
 
 class QualityManager(ErrorHandlingMixin):
     def __init__(self):
@@ -350,6 +388,7 @@ class QualityManager(ErrorHandlingMixin):
 **When to Use Each:**
 
 **Use Decorators:**
+
 - Function-level error handling
 - Retry logic
 - Timeout enforcement
@@ -357,6 +396,7 @@ class QualityManager(ErrorHandlingMixin):
 - Composable error handling
 
 **Use Mixin:**
+
 - Class-level error handling utilities
 - Common error logging patterns
 - Tool validation
@@ -371,13 +411,16 @@ class QualityManager(ErrorHandlingMixin):
 @retry(max_attempts=3, exceptions=[NetworkError])
 async def fetch_data(): ...
 
+
 # Long operations - timeout
 @with_timeout(seconds=30)
 async def slow_query(): ...
 
+
 # Optional features - graceful degradation
 @graceful_degradation(fallback_value=[])
 def load_plugins(): ...
+
 
 # Critical operations - validation + error handling
 @validate_args(validators={...})
@@ -413,6 +456,7 @@ def critical_operation(): ...
 @graceful_degradation(fallback_value=[])
 def optional_feature(): ...
 
+
 # Bad - silent failures
 @graceful_degradation(fallback_value=[], warn=False)
 def optional_feature(): ...
@@ -424,6 +468,7 @@ def optional_feature(): ...
 # Good - validate at entry
 @validate_args(validators={"email": lambda e: "@" in e})
 def register_user(email: str): ...
+
 
 # Bad - validation deep in function
 def register_user(email: str):
@@ -463,6 +508,7 @@ def register_user(email: str): ...
 ```python
 from unittest.mock import AsyncMock, patch
 
+
 @pytest.mark.asyncio
 async def test_with_decorators():
     @retry(max_attempts=2)
@@ -498,18 +544,18 @@ def test_retry_logic():
 ### From ErrorHandlingMixin Methods
 
 **Before:**
+
 ```python
 class Manager(ErrorHandlingMixin):
     def process_file(self, path: Path) -> bool:
         try:
             result = do_something(path)
         except Exception as e:
-            return self.handle_file_operation_error(
-                e, path, "process", critical=True
-            )
+            return self.handle_file_operation_error(e, path, "process", critical=True)
 ```
 
 **After:**
+
 ```python
 class Manager:
     @handle_errors(
@@ -534,16 +580,18 @@ class Manager:
 ### Issue: Decorators Not Working
 
 **Check:**
+
 1. Import from correct module
-2. Decorator order (bottom to top)
-3. Async/sync function compatibility
+1. Decorator order (bottom to top)
+1. Async/sync function compatibility
 
 ### Issue: Validation Always Fails
 
 **Check:**
+
 1. Validator function signature (`param -> bool`)
-2. Type annotations match actual types
-3. `allow_none` configuration
+1. Type annotations match actual types
+1. `allow_none` configuration
 
 ### Issue: Timeout Not Working (Sync)
 
@@ -558,6 +606,7 @@ See `examples/decorator_usage.py` for comprehensive real-world examples.
 ## API Reference
 
 All decorators support:
+
 - ✅ Synchronous functions
 - ✅ Asynchronous functions
 - ✅ Type hints
@@ -566,6 +615,7 @@ All decorators support:
 - ✅ Logging integration
 
 For detailed API documentation, see source docstrings in:
+
 - `crackerjack/decorators/retry.py`
 - `crackerjack/decorators/timeout.py`
 - `crackerjack/decorators/error_handling.py`

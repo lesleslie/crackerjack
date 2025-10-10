@@ -11,6 +11,7 @@
 ## Architecture Overview
 
 ### Current State (Phase 4)
+
 ```
 HookManager
   ├─> run_fast_hooks() → sequential
@@ -23,6 +24,7 @@ HookOrchestratorAdapter
 ```
 
 ### Target State (Phase 5-7)
+
 ```
 HookManager
   ├─> run_fast_hooks() ─┐
@@ -38,6 +40,7 @@ HookOrchestratorAdapter
 ## Three Tiers of Parallelism
 
 ### Tier 1: Strategy-Level Parallelism
+
 **Scope**: Multiple HookStrategy executions in parallel
 
 ```python
@@ -52,25 +55,31 @@ results = await asyncio.gather(fast_task, comprehensive_task)
 ```
 
 **Benefits**:
+
 - Fast hooks (5s) and comprehensive hooks (30s) run simultaneously
 - Total execution time: max(fast, comprehensive) instead of sum(fast + comprehensive)
 - ~40% time savings (5s + 30s = 35s → max(5s, 30s) = 30s)
 
 ### Tier 2: Hook-Level Parallelism
+
 **Scope**: Multiple hooks within a strategy execute in parallel (already implemented)
 
 **Current Implementation**:
+
 - `ParallelExecutionStrategy`: Uses asyncio.Semaphore for resource limiting
 - `SequentialExecutionStrategy`: One-at-a-time with early exit
 
 **Enhancement Needed**:
+
 - **Adaptive Execution**: Mix parallel and sequential based on dependency graph
 - **Dependency Batching**: Group independent hooks into concurrent batches
 
 ### Tier 3: Adapter-Level Parallelism
+
 **Scope**: Multiple QA adapters checking different files simultaneously (Phase 8+)
 
 **Example**:
+
 ```python
 # Within a single hook execution
 bandit_adapter = await depends.get(BanditAdapter)
@@ -93,11 +102,13 @@ results = await asyncio.gather(*tasks)
 **File**: `crackerjack/managers/hook_manager.py`
 
 **Changes**:
+
 1. Make `run_fast_hooks()` return coroutine when orchestration enabled
-2. Make `run_comprehensive_hooks()` return coroutine when orchestration enabled
-3. Update `run_hooks()` to execute both strategies concurrently
+1. Make `run_comprehensive_hooks()` return coroutine when orchestration enabled
+1. Update `run_hooks()` to execute both strategies concurrently
 
 **Implementation**:
+
 ```python
 def run_hooks(self) -> list[HookResult]:
     """Execute fast and comprehensive hooks in parallel."""
@@ -108,9 +119,7 @@ def run_hooks(self) -> list[HookResult]:
         fast_task = self._run_fast_hooks_orchestrated()
         comp_task = self._run_comprehensive_hooks_orchestrated()
 
-        fast_results, comp_results = asyncio.run(
-            asyncio.gather(fast_task, comp_task)
-        )
+        fast_results, comp_results = asyncio.run(asyncio.gather(fast_task, comp_task))
 
         return fast_results + comp_results
 
@@ -121,6 +130,7 @@ def run_hooks(self) -> list[HookResult]:
 ```
 
 **Testing Requirements**:
+
 - Verify both strategies execute concurrently
 - Measure execution time improvement (should be ~max(fast, comp) not sum)
 - Ensure results are correctly combined
@@ -133,15 +143,17 @@ def run_hooks(self) -> list[HookResult]:
 **Purpose**: Dynamically mix parallel and sequential execution based on dependency graph
 
 **Algorithm**:
+
 1. Analyze dependency graph to identify independent groups
-2. Create execution waves:
+1. Create execution waves:
    - Wave 1: All hooks with zero dependencies (parallel)
    - Wave 2: Hooks whose dependencies completed (parallel within wave)
    - Wave N: Repeat until all hooks executed
-3. Each wave executes hooks in parallel
-4. Waves execute sequentially (respect dependencies)
+1. Each wave executes hooks in parallel
+1. Waves execute sequentially (respect dependencies)
 
 **Example**:
+
 ```python
 # Dependency graph:
 # gitleaks → bandit
@@ -155,11 +167,13 @@ def run_hooks(self) -> list[HookResult]:
 ```
 
 **Benefits**:
+
 - Maximizes parallelism while respecting dependencies
 - Better than pure parallel (respects dependencies)
 - Better than pure sequential (parallel where possible)
 
 **Implementation**:
+
 ```python
 class AdaptiveExecutionStrategy:
     """Adaptive execution with dependency-aware batching."""
@@ -179,7 +193,8 @@ class AdaptiveExecutionStrategy:
         hooks: list[HookDefinition],
         max_parallel: int | None = None,
         timeout: int | None = None,
-        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None = None,
+        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]]
+        | None = None,
     ) -> list[HookResult]:
         """Execute hooks in dependency-aware waves."""
         if not hooks:
@@ -198,7 +213,7 @@ class AdaptiveExecutionStrategy:
                     "total_waves": len(waves),
                     "hooks_in_wave": len(wave_hooks),
                     "hook_names": [h.name for h in wave_hooks],
-                }
+                },
             )
 
             # Execute this wave in parallel
@@ -243,16 +258,14 @@ class AdaptiveExecutionStrategy:
         while remaining_hooks:
             # Find all hooks with zero dependencies in this wave
             ready_hooks = [
-                hook_map[name]
-                for name in remaining_hooks
-                if in_degree[name] == 0
+                hook_map[name] for name in remaining_hooks if in_degree[name] == 0
             ]
 
             if not ready_hooks:
                 # Circular dependency detected
                 logger.error(
                     "Circular dependency detected",
-                    extra={"remaining_hooks": list(remaining_hooks)}
+                    extra={"remaining_hooks": list(remaining_hooks)},
                 )
                 # Add all remaining hooks to final wave as fallback
                 waves.append([hook_map[name] for name in remaining_hooks])
@@ -287,8 +300,7 @@ class AdaptiveExecutionStrategy:
             async with semaphore:
                 if executor_callable:
                     return await asyncio.wait_for(
-                        executor_callable(hook),
-                        timeout=hook.timeout or timeout
+                        executor_callable(hook), timeout=hook.timeout or timeout
                     )
                 else:
                     return HookResult(
@@ -330,11 +342,13 @@ class AdaptiveExecutionStrategy:
 **File**: `crackerjack/orchestration/hook_orchestrator.py`
 
 **Changes**:
+
 1. Import `AdaptiveExecutionStrategy`
-2. Update `_execute_acb_mode()` to use adaptive strategy
-3. Add configuration option for strategy selection
+1. Update `_execute_acb_mode()` to use adaptive strategy
+1. Add configuration option for strategy selection
 
 **Implementation**:
+
 ```python
 async def _execute_acb_mode(self, strategy: HookStrategy) -> list[HookResult]:
     """Execute hooks via direct adapter calls (ACB-powered)."""
@@ -343,7 +357,7 @@ async def _execute_acb_mode(self, strategy: HookStrategy) -> list[HookResult]:
         extra={
             "strategy_name": strategy.name,
             "enable_dependency_resolution": self.settings.enable_dependency_resolution,
-        }
+        },
     )
 
     # NEW: Use adaptive strategy for optimal parallelism
@@ -375,7 +389,7 @@ async def _execute_acb_mode(self, strategy: HookStrategy) -> list[HookResult]:
             "passed": sum(1 for r in results if r.status == "passed"),
             "failed": sum(1 for r in results if r.status == "failed"),
             "errors": sum(1 for r in results if r.status in ("timeout", "error")),
-        }
+        },
     )
 
     return results
@@ -387,6 +401,7 @@ async def _execute_acb_mode(self, strategy: HookStrategy) -> list[HookResult]:
 
 **Changes**:
 Add new configuration options:
+
 ```python
 @dataclass
 class OrchestrationConfig:
@@ -394,8 +409,8 @@ class OrchestrationConfig:
 
     # Triple parallelism settings (Phase 5-7)
     enable_strategy_parallelism: bool = True  # Run fast + comprehensive concurrently
-    enable_adaptive_execution: bool = True    # Use adaptive strategy (dependency-aware)
-    max_concurrent_strategies: int = 2        # Usually 2 (fast + comprehensive)
+    enable_adaptive_execution: bool = True  # Use adaptive strategy (dependency-aware)
+    max_concurrent_strategies: int = 2  # Usually 2 (fast + comprehensive)
 ```
 
 ### Task 5: Testing
@@ -403,37 +418,45 @@ class OrchestrationConfig:
 **New File**: `tests/orchestration/test_adaptive_strategy.py`
 
 **Test Coverage**:
+
 1. **Wave Computation**:
+
    - Test zero dependencies (all in wave 1)
    - Test simple dependencies (A → B creates 2 waves)
    - Test diamond dependencies (A → B,C → D creates 3 waves)
    - Test circular dependency detection
 
-2. **Execution**:
+1. **Execution**:
+
    - Test parallel execution within waves
    - Test sequential execution between waves
    - Test timeout handling per hook
    - Test exception isolation (one hook fails, wave continues)
 
-3. **Critical Failures**:
+1. **Critical Failures**:
+
    - Test early exit on critical hook failure
    - Test continuation on non-critical failures
 
 **New File**: `tests/managers/test_hook_manager_triple_parallel.py`
 
 **Test Coverage**:
+
 1. **Strategy-Level Parallelism**:
+
    - Test concurrent execution of fast + comprehensive
    - Measure execution time (should be ~max not sum)
    - Test result combining (fast + comprehensive)
    - Test error handling (one strategy fails)
 
-2. **Configuration**:
+1. **Configuration**:
+
    - Test enable_strategy_parallelism flag
    - Test enable_adaptive_execution flag
    - Test max_concurrent_strategies limit
 
-3. **Integration**:
+1. **Integration**:
+
    - Test full workflow with triple parallelism enabled
    - Compare performance with/without parallelism
    - Test with various dependency graphs
@@ -441,6 +464,7 @@ class OrchestrationConfig:
 ## Performance Expectations
 
 ### Current Performance (Sequential)
+
 ```
 run_hooks() execution time:
   = fast_hooks (5s) + comprehensive_hooks (30s)
@@ -448,6 +472,7 @@ run_hooks() execution time:
 ```
 
 ### Phase 5-7 Performance (Triple Parallel)
+
 ```
 run_hooks() execution time:
   = max(fast_hooks (5s), comprehensive_hooks (30s))
@@ -457,6 +482,7 @@ Speedup: 35s → 30s = 14% improvement
 ```
 
 **Additional Improvements**:
+
 - Within comprehensive_hooks: parallel where possible
 - Example: gitleaks, zuban, ruff-format, ruff-check all run in wave 1
 - Wave 1 duration: max(gitleaks, zuban, ruff-format, ruff-check) ≈ 8s (instead of 20s sequential)
@@ -465,31 +491,37 @@ Speedup: 35s → 30s = 14% improvement
 ## Rollout Strategy
 
 ### Step 1: Implement Adaptive Strategy (Week 4, Day 1-2)
+
 - Create `adaptive_strategy.py`
 - Write unit tests for wave computation
 - Verify dependency-aware batching
 
 ### Step 2: Integrate into Orchestrator (Week 4, Day 3)
+
 - Update `_execute_acb_mode()` to use adaptive strategy
 - Add configuration options
 - Test orchestrator with adaptive execution
 
 ### Step 3: Enable Strategy-Level Parallelism (Week 4, Day 4)
+
 - Update `run_hooks()` in HookManager
 - Add configuration flag
 - Test concurrent strategy execution
 
 ### Step 4: Comprehensive Testing (Week 4, Day 5)
+
 - Integration tests for triple parallelism
 - Performance benchmarking
 - Error handling scenarios
 
 ### Step 5: Documentation & Monitoring (Week 5, Day 1-2)
+
 - Update CLAUDE.md with parallelism details
 - Add logging for parallelism metrics
 - Document configuration options
 
 ### Step 6: Validation & Tuning (Week 5, Day 3-5)
+
 - Run full test suite with parallelism enabled
 - Tune max_parallel_hooks for optimal performance
 - Identify and fix any race conditions
@@ -497,34 +529,40 @@ Speedup: 35s → 30s = 14% improvement
 ## Risk Mitigation
 
 ### Risk 1: Race Conditions
+
 **Mitigation**: Use asyncio.Semaphore for resource limiting, no shared mutable state
 
 ### Risk 2: Resource Exhaustion
+
 **Mitigation**: Configurable limits (max_parallel_hooks, max_concurrent_strategies)
 
 ### Risk 3: Dependency Resolution Bugs
+
 **Mitigation**: Comprehensive unit tests for wave computation, fallback to sequential
 
 ### Risk 4: Debugging Complexity
+
 **Mitigation**: Structured logging with wave/hook context, execution timeline visualization
 
 ### Risk 5: Performance Regression
+
 **Mitigation**: Benchmarking suite, A/B comparison with sequential execution
 
 ## Success Criteria
 
 1. ✅ All existing tests pass with parallelism enabled
-2. ✅ New tests for adaptive strategy pass (>90% coverage)
-3. ✅ Integration tests for strategy-level parallelism pass
-4. ✅ Performance improvement ≥30% over sequential execution
-5. ✅ No race conditions or deadlocks detected
-6. ✅ Graceful degradation when parallelism fails
-7. ✅ Configuration options work as expected
-8. ✅ Logging provides clear execution visibility
+1. ✅ New tests for adaptive strategy pass (>90% coverage)
+1. ✅ Integration tests for strategy-level parallelism pass
+1. ✅ Performance improvement ≥30% over sequential execution
+1. ✅ No race conditions or deadlocks detected
+1. ✅ Graceful degradation when parallelism fails
+1. ✅ Configuration options work as expected
+1. ✅ Logging provides clear execution visibility
 
 ## Next Steps
 
 After Phase 5-7 completion:
+
 - **Phase 8**: Pre-commit Infrastructure Removal (replace subprocess with direct adapter calls)
 - **Phase 9**: MCP Server Enhancement (expose orchestration capabilities)
 - **Phase 10**: Final Integration & Testing (production readiness)

@@ -5,7 +5,7 @@
 **Crackerjack Version:** 0.41.3
 **Review Scope:** Comprehensive integration assessment and optimization recommendations
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -33,7 +33,7 @@ Crackerjack has established ACB foundations but is **significantly underutilizin
 
 **Legend:** ✅ Excellent | 🟡 Partial | 🔴 Missing/Poor
 
----
+______________________________________________________________________
 
 ## 1. Current ACB Integration Assessment
 
@@ -42,6 +42,7 @@ Crackerjack has established ACB foundations but is **significantly underutilizin
 #### ✅ QA Adapter Foundation (7/10)
 
 **Strengths:**
+
 - Proper ACB adapter base classes (`QAAdapterBase`, `QABaseSettings`)
 - Correct `MODULE_ID` (UUID7) and `MODULE_STATUS` at module level
 - `depends.set()` registration with graceful error suppression
@@ -49,6 +50,7 @@ Crackerjack has established ACB foundations but is **significantly underutilizin
 - LSP adapter consolidation shows good architectural thinking
 
 **Example: Current ACB-Compliant Adapter**
+
 ```python
 # crackerjack/adapters/format/ruff.py
 from acb.depends import depends
@@ -57,6 +59,7 @@ from uuid import UUID
 
 MODULE_ID = UUID("01937d86-5f2a-7b3c-9d1e-a2b3c4d5e6f7")  # Static UUID7
 MODULE_STATUS = "stable"
+
 
 class RuffAdapter(QAAdapterBase):
     settings: RuffSettings | None = None
@@ -70,12 +73,14 @@ class RuffAdapter(QAAdapterBase):
     def module_id(self) -> UUID:
         return MODULE_ID
 
+
 # ACB registration with error suppression
 with suppress(Exception):
     depends.set(RuffAdapter)
 ```
 
 **Issues:**
+
 - ⚠️ Limited to QA adapters only - managers/services not using ACB patterns
 - ⚠️ No `depends.inject` usage for automatic dependency injection
 - ⚠️ Adapters extend custom base instead of ACB's `AdapterBase`
@@ -83,11 +88,13 @@ with suppress(Exception):
 #### ✅ Async-First Design (8/10)
 
 **Strengths:**
+
 - Consistent async/await throughout codebase
 - Proper lifecycle management with `async def init()`
 - Context managers for resource cleanup
 
 **Gaps:**
+
 - Not leveraging ACB's `CleanupMixin` for automatic resource management
 - Custom async patterns instead of ACB's proven implementations
 
@@ -96,9 +103,11 @@ with suppress(Exception):
 #### 🔴 ACB Configuration System Unused (2/10)
 
 **Current State:**
+
 ```python
 # crackerjack uses custom config classes everywhere
 from pydantic import BaseModel
+
 
 class QAOrchestratorConfig(BaseModel):
     project_root: Path
@@ -107,15 +116,19 @@ class QAOrchestratorConfig(BaseModel):
 ```
 
 **ACB Approach:**
+
 ```python
 from acb.config import Settings, Config
 from acb.depends import depends
 
+
 class QAOrchestratorSettings(Settings):  # Extends ACB Settings
     """ACB automatically handles env vars, validation, secrets"""
+
     project_root: Path = Path.cwd()
     max_parallel_checks: int = 4
     enable_caching: bool = True
+
 
 # ACB Config auto-discovers settings
 config = depends.get(Config)
@@ -123,6 +136,7 @@ qa_settings = config.get_settings(QAOrchestratorSettings)
 ```
 
 **Impact:**
+
 - Manual config loading in 20+ files
 - No centralized config management
 - No auto-discovery of settings from environment
@@ -131,11 +145,17 @@ qa_settings = config.get_settings(QAOrchestratorSettings)
 #### 🔴 Dependency Injection Underutilized (3/10)
 
 **Current State:**
+
 ```python
 # Manual DI everywhere
 class WorkflowPipeline:
-    def __init__(self, console: Console, pkg_path: Path,
-                 session: SessionCoordinator, phases: PhaseCoordinator):
+    def __init__(
+        self,
+        console: Console,
+        pkg_path: Path,
+        session: SessionCoordinator,
+        phases: PhaseCoordinator,
+    ):
         self.console = console
         self.pkg_path = pkg_path
         self.session = session
@@ -147,6 +167,7 @@ class WorkflowPipeline:
 ```
 
 **ACB Approach:**
+
 ```python
 from acb.depends import depends
 
@@ -166,6 +187,7 @@ class WorkflowPipeline:
 ```
 
 **Impact:**
+
 - 61+ files with manual DI boilerplate
 - Complex constructor chains
 - Difficult to test and mock
@@ -174,16 +196,19 @@ class WorkflowPipeline:
 #### 🔴 Custom Cache Instead of ACB Cache (4/10)
 
 **Current State:**
+
 ```python
 # crackerjack/orchestration/cache/memory_cache.py
 class MemoryCacheAdapter:
     """Custom LRU cache implementation"""
+
     def __init__(self, settings: MemoryCacheSettings | None = None):
         self.settings = settings or MemoryCacheSettings()
         self._cache: OrderedDict[str, tuple[HookResult, float]] = OrderedDict()
 ```
 
 **ACB Approach:**
+
 ```python
 from acb.adapters import import_adapter
 from acb.depends import depends
@@ -191,6 +216,7 @@ from acb.depends import depends
 # ACB provides production-ready cache adapters
 Cache = import_adapter("cache")  # Redis, Memory, or File-based
 cache = depends.get(Cache)
+
 
 @depends.inject
 async def get_hook_result(key: str, cache: Cache = depends()) -> HookResult:
@@ -202,6 +228,7 @@ async def get_hook_result(key: str, cache: Cache = depends()) -> HookResult:
 ```
 
 **Impact:**
+
 - ~400 lines of custom cache code
 - Manual TTL/LRU logic
 - No Redis/distributed cache support out-of-box
@@ -210,6 +237,7 @@ async def get_hook_result(key: str, cache: Cache = depends()) -> HookResult:
 #### 🔴 No ACB Actions Usage (1/10)
 
 **Current State:**
+
 ```python
 # Custom utility functions scattered across services
 from crackerjack.services.filesystem import FileSystemService
@@ -218,6 +246,7 @@ content = FileSystemService.clean_trailing_whitespace_and_newlines(text)
 ```
 
 **ACB Approach:**
+
 ```python
 from acb.actions.transform import clean_text
 from acb.actions.encode import encode, decode
@@ -230,23 +259,26 @@ file_hash = await hash.blake3(content.encode())
 ```
 
 **Impact:**
+
 - Custom utility services needed
 - Duplicated common operations
 - No standardized utility patterns
 
----
+______________________________________________________________________
 
 ## 2. ACB Features Not Leveraged
 
 ### 2.1 Universal Query Interface (Critical Gap)
 
 **What It Provides:**
+
 - Database-agnostic query interface
 - Support for SQLModel, Pydantic, Dataclasses
 - Simple, Repository, Specification, and Advanced query patterns
 - Built-in caching integration
 
 **Current Crackerjack Approach:**
+
 ```python
 # Custom storage abstractions
 class QualityBaselineService:
@@ -261,16 +293,19 @@ class QualityBaselineService:
 ```
 
 **ACB Universal Query Approach:**
+
 ```python
 from acb.adapters.models._hybrid import ACBQuery
 from acb.depends import depends
 from sqlmodel import SQLModel, Field
+
 
 class QualityBaseline(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     coverage_percent: float
     complexity_score: float
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 class QualityBaselineService:
     def __init__(self):
@@ -287,6 +322,7 @@ class QualityBaselineService:
 ```
 
 **Benefits:**
+
 - Database agnostic (SQLite → PostgreSQL seamless migration)
 - Built-in caching
 - Query optimization
@@ -296,17 +332,18 @@ class QualityBaselineService:
 ### 2.2 Event-Driven Patterns (Not Used)
 
 **What ACB Provides:**
+
 - Message passing between components
 - Event bus for loose coupling
 - Async event handlers
 - Lifecycle hooks
 
 **Crackerjack Orchestration Complexity:**
+
 ```python
 # Current: Tight coupling between layers
 class WorkflowOrchestrator:
-    def __init__(self, session: SessionCoordinator,
-                 phases: PhaseCoordinator):
+    def __init__(self, session: SessionCoordinator, phases: PhaseCoordinator):
         self.session = session
         self.phases = phases
 
@@ -319,6 +356,7 @@ class WorkflowOrchestrator:
 ```
 
 **ACB Event-Driven Approach:**
+
 ```python
 from acb.events import EventBus, event_handler
 from acb.depends import depends
@@ -326,15 +364,18 @@ from acb.depends import depends
 # Loosely coupled event-driven workflow
 bus = depends.get(EventBus)
 
+
 @event_handler("workflow.started")
 async def on_workflow_start(event):
     await session_coordinator.start()
     await bus.emit("session.ready")
 
+
 @event_handler("session.ready")
 async def on_session_ready(event):
     await hook_manager.run_fast_hooks()
     await bus.emit("fast_hooks.complete")
+
 
 @event_handler("fast_hooks.complete")
 async def on_fast_hooks_done(event):
@@ -344,6 +385,7 @@ async def on_fast_hooks_done(event):
 ```
 
 **Benefits:**
+
 - Decoupled components
 - Easy to add new phases
 - Better testability
@@ -352,9 +394,11 @@ async def on_fast_hooks_done(event):
 ### 2.3 Adapter Lifecycle Management
 
 **ACB Pattern:**
+
 ```python
 from acb.cleanup import CleanupMixin
 from acb.depends import depends
+
 
 class ZubanLSPAdapter(CleanupMixin):
     """ACB automatically manages resources"""
@@ -368,6 +412,7 @@ class ZubanLSPAdapter(CleanupMixin):
 ```
 
 **Crackerjack Current:**
+
 ```python
 # Manual resource tracking
 class LSPManager:
@@ -386,6 +431,7 @@ class LSPManager:
 ### 2.4 ACB Actions System (Completely Unused)
 
 **Available ACB Actions:**
+
 ```python
 from acb.actions.compress import compress, decompress
 from acb.actions.encode import encode, decode
@@ -410,26 +456,30 @@ is_valid_url = validate.url("https://example.com")
 ```
 
 **Crackerjack Equivalent:**
+
 ```python
 # Custom implementations scattered everywhere
 import hashlib
 import base64
 import json
 
+
 def hash_content(content: str) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
+
 
 def encode_json(data: dict) -> str:
     return json.dumps(data)
 ```
 
----
+______________________________________________________________________
 
 ## 3. Infrastructure Improvement Opportunities
 
 ### 3.1 Simplify Coordinator/Manager/Service Layers
 
 **Current Architecture:**
+
 ```
 WorkflowOrchestrator
 ├── SessionCoordinator
@@ -447,6 +497,7 @@ WorkflowOrchestrator
 ```
 
 **ACB-Optimized Architecture:**
+
 ```
 WorkflowOrchestrator (ACB EventBus)
 ├── SessionAdapter (ACB Adapter)
@@ -462,6 +513,7 @@ WorkflowOrchestrator (ACB EventBus)
 ```
 
 **Reduction:**
+
 - **61 service/manager files → ~20 ACB adapters**
 - **~15,000 LOC → ~6,000 LOC** (60% reduction)
 - **Complexity ≤15** maintained via ACB patterns
@@ -469,24 +521,27 @@ WorkflowOrchestrator (ACB EventBus)
 ### 3.2 Configuration Consolidation
 
 **Current State:**
+
 ```python
 # 10+ config files:
-- crackerjack/config/hooks.py
-- crackerjack/config/global_lock_config.py
-- crackerjack/models/config.py
-- crackerjack/models/config_adapter.py
-- crackerjack/models/qa_config.py
-- crackerjack/orchestration/config.py
-- crackerjack/dynamic_config.py
-- crackerjack/services/config.py
-- crackerjack/services/config_merge.py
+-crackerjack / config / hooks.py
+-crackerjack / config / global_lock_config.py
+-crackerjack / models / config.py
+-crackerjack / models / config_adapter.py
+-crackerjack / models / qa_config.py
+-crackerjack / orchestration / config.py
+-crackerjack / dynamic_config.py
+-crackerjack / services / config.py
+-crackerjack / services / config_merge.py
 ```
 
 **ACB Consolidated:**
+
 ```python
 # Single config system using ACB
 from acb.config import Config, Settings
 from acb.depends import depends
+
 
 # crackerjack/config/settings.py
 class CrackerjackSettings(Settings):
@@ -508,12 +563,14 @@ class CrackerjackSettings(Settings):
     mcp_http_port: int = 8676
     mcp_websocket_port: int = 8675
 
+
 # All services use:
 config = depends.get(Config)
 settings = config.get_settings(CrackerjackSettings)
 ```
 
 **Benefits:**
+
 - 1 config file instead of 10
 - Auto environment variable loading
 - Centralized validation
@@ -522,6 +579,7 @@ settings = config.get_settings(CrackerjackSettings)
 ### 3.3 Replace Custom Caching
 
 **Migration Path:**
+
 ```python
 # Step 1: Import ACB cache adapter
 from acb.adapters import import_adapter
@@ -529,13 +587,12 @@ from acb.depends import depends
 
 Cache = import_adapter("cache")  # Gets configured cache (Redis/Memory/File)
 
+
 # Step 2: Replace custom MemoryCacheAdapter
 @depends.inject
 class HookOrchestrator:
     async def execute_hook(
-        self,
-        hook: HookDefinition,
-        cache: Cache = depends()
+        self, hook: HookDefinition, cache: Cache = depends()
     ) -> HookResult:
         cache_key = self._generate_cache_key(hook)
 
@@ -548,24 +605,27 @@ class HookOrchestrator:
         await cache.set(cache_key, result, ttl=3600)
         return result
 
+
 # Step 3: Configure in settings/adapters.yml
 # cache: redis  # or memory, file
 # redis_url: redis://localhost:6379/0
 ```
 
 **Wins:**
+
 - Remove 400+ LOC of custom cache code
 - Get Redis support for free
 - Distributed caching for parallel builds
 - ACB handles connection pooling, retries
 
----
+______________________________________________________________________
 
 ## 4. Adapter System Optimization
 
 ### 4.1 QA Adapter Organization (Current: Good, Can Improve)
 
 **Current Structure:**
+
 ```
 adapters/
 ├── format/          # Ruff, mdformat
@@ -581,7 +641,9 @@ adapters/
 **Optimization Recommendations:**
 
 #### ✅ Keep: Category-Based Organization
+
 The subdirectory structure is excellent for:
+
 - Logical grouping by check type
 - Easy discovery of related adapters
 - Clear separation of concerns
@@ -589,6 +651,7 @@ The subdirectory structure is excellent for:
 #### 🔄 Improve: Consistent ACB Compliance
 
 **Add ACB AdapterMetadata to All Adapters:**
+
 ```python
 # Example: crackerjack/adapters/lint/codespell.py
 from acb.adapters import AdapterMetadata, AdapterStatus, AdapterCapability
@@ -611,6 +674,7 @@ MODULE_METADATA = AdapterMetadata(
 ```
 
 **Benefits:**
+
 - Standardized adapter metadata
 - Auto-discovery of capabilities
 - Version compatibility checking
@@ -619,6 +683,7 @@ MODULE_METADATA = AdapterMetadata(
 ### 4.2 LSP Adapter Consolidation Review
 
 **Recent Consolidation:**
+
 ```
 crackerjack/adapters/lsp/
 ├── __init__.py
@@ -630,22 +695,27 @@ crackerjack/adapters/lsp/
 **ACB Perspective: ✅ Excellent**
 
 This follows ACB patterns well:
+
 - Dedicated module for related adapters
 - Base class for shared functionality
 - Clear separation of concerns
 
 **Further ACB Alignment:**
+
 ```python
 # crackerjack/adapters/lsp/base.py
 from acb.config import AdapterBase, Settings
 from acb.cleanup import CleanupMixin
 
+
 class LSPBaseSettings(Settings):
     """ACB Settings for LSP configuration"""
+
     host: str = "127.0.0.1"
     port: int = 8677
     timeout: float = 10.0
     auto_start: bool = True
+
 
 class LSPAdapterBase(AdapterBase, CleanupMixin):
     """ACB-compliant LSP adapter base"""
@@ -669,6 +739,7 @@ class LSPAdapterBase(AdapterBase, CleanupMixin):
 ### 4.3 Adapter Registration Completeness
 
 **Current Registration Pattern:**
+
 ```python
 # At end of each adapter file
 from contextlib import suppress
@@ -688,15 +759,17 @@ from acb.depends import depends
 from acb.adapters import register_adapter
 from contextlib import suppress
 
+
 class RuffAdapter(QAAdapterBase):
     async def health_check(self) -> dict[str, Any]:
         """ACB health check for adapter status"""
         try:
             # Verify ruff is available
             result = await asyncio.create_subprocess_exec(
-                "ruff", "--version",
+                "ruff",
+                "--version",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
             stdout, _ = await result.communicate()
 
@@ -713,19 +786,21 @@ class RuffAdapter(QAAdapterBase):
                 "error": str(e),
             }
 
+
 # Register with ACB
 with suppress(Exception):
     depends.set(RuffAdapter)
     register_adapter(RuffAdapter, MODULE_METADATA)  # ACB adapter registry
 ```
 
----
+______________________________________________________________________
 
 ## 5. Performance Optimization via ACB
 
 ### 5.1 Lazy Loading with ACB Patterns
 
 **Current Eager Loading:**
+
 ```python
 class WorkflowPipeline:
     def __init__(self):
@@ -737,8 +812,10 @@ class WorkflowPipeline:
 ```
 
 **ACB Lazy Loading:**
+
 ```python
 from acb.depends import depends
+
 
 class WorkflowPipeline:
     """Services lazy-loaded on first use"""
@@ -758,9 +835,11 @@ class WorkflowPipeline:
 ```
 
 **Or Use ACB's Lazy Initializer:**
+
 ```python
 from acb.core.performance import LazyInitializer
 from acb.depends import depends
+
 
 class WorkflowPipeline:
     def __init__(self):
@@ -769,14 +848,14 @@ class WorkflowPipeline:
     async def run_workflow(self):
         # Services initialized only when needed
         monitor = await self.lazy.get_or_create(
-            "performance_monitor",
-            lambda: depends.get(PerformanceMonitor)
+            "performance_monitor", lambda: depends.get(PerformanceMonitor)
         )
 ```
 
 ### 5.2 ACB Caching for Expensive Operations
 
 **Current:**
+
 ```python
 # Manual caching logic
 class QualityIntelligenceService:
@@ -794,17 +873,15 @@ class QualityIntelligenceService:
 ```
 
 **ACB Approach:**
+
 ```python
 from acb.depends import depends
 from acb.adapters import import_adapter
 
+
 class QualityIntelligenceService:
     @depends.inject
-    async def analyze_trends(
-        self,
-        data: dict,
-        cache: Cache = depends()
-    ):
+    async def analyze_trends(self, data: dict, cache: Cache = depends()):
         cache_key = f"quality_trends:{await hash.blake3(str(data))}"
 
         # ACB cache handles TTL, eviction, distribution
@@ -820,6 +897,7 @@ class QualityIntelligenceService:
 ### 5.3 Parallel Execution with ACB Async Patterns
 
 **Current Sequential:**
+
 ```python
 async def run_all_checks(self):
     fast_results = await self.run_checks(stage="fast")
@@ -827,6 +905,7 @@ async def run_all_checks(self):
 ```
 
 **ACB Parallel:**
+
 ```python
 async def run_all_checks(self):
     # ACB async patterns for parallel execution
@@ -834,18 +913,20 @@ async def run_all_checks(self):
     comp_task = asyncio.create_task(self.run_checks(stage="comprehensive"))
 
     fast_results, comprehensive_results = await asyncio.gather(
-        fast_task, comp_task,
-        return_exceptions=True  # ACB error handling pattern
+        fast_task,
+        comp_task,
+        return_exceptions=True,  # ACB error handling pattern
     )
 ```
 
----
+______________________________________________________________________
 
 ## 6. Migration Recommendations
 
 ### Phase 1: Foundation (Week 1-2) - Low Risk, High Value
 
 #### 1.1 Adopt ACB Configuration System
+
 ```python
 # Priority: HIGH | Effort: LOW | Risk: LOW
 
@@ -855,10 +936,13 @@ async def run_all_checks(self):
 # File: crackerjack/config/settings.py
 from acb.config import Settings
 
+
 class CrackerjackSettings(Settings):
     """Single source of truth for all settings"""
+
     # Consolidate all existing config here
     # ACB handles env vars, validation, secrets
+
 
 # Benefits:
 # - Immediate: 60% reduction in config code
@@ -867,18 +951,21 @@ class CrackerjackSettings(Settings):
 ```
 
 **Migration Steps:**
+
 1. Create `CrackerjackSettings` class
-2. Move settings from 10 files to this class
-3. Update imports to use `depends.get(Config)`
-4. Remove old config files
-5. Update tests
+1. Move settings from 10 files to this class
+1. Update imports to use `depends.get(Config)`
+1. Remove old config files
+1. Update tests
 
 **Success Metrics:**
+
 - Config files: 10 → 1
 - LOC: ~2,000 → ~300
 - Import complexity: High → Low
 
 #### 1.2 Replace Custom Cache with ACB Cache
+
 ```python
 # Priority: HIGH | Effort: MEDIUM | Risk: LOW
 
@@ -897,18 +984,21 @@ Cache = import_adapter("cache")
 ```
 
 **Migration Steps:**
+
 1. Configure ACB cache in `settings/adapters.yml`
-2. Update `HookOrchestrator` to use ACB cache
-3. Update `QualityBaselineService` to use ACB cache
-4. Run tests to verify behavior
-5. Remove custom cache files
+1. Update `HookOrchestrator` to use ACB cache
+1. Update `QualityBaselineService` to use ACB cache
+1. Run tests to verify behavior
+1. Remove custom cache files
 
 **Success Metrics:**
+
 - Custom cache code: 400 LOC → 0
 - Cache backends: 1 (memory) → 3 (memory/redis/file)
 - Bugs: Lower (production-tested code)
 
 #### 1.3 Add `depends.inject` to Core Services
+
 ```python
 # Priority: HIGH | Effort: MEDIUM | Risk: LOW
 
@@ -932,12 +1022,14 @@ class WorkflowPipeline:
 ```
 
 **Migration Steps:**
+
 1. Add `depends.set()` for all services
-2. Add `@depends.inject` to 20 core methods
-3. Remove manual DI from constructors
-4. Update tests with `depends.override()`
+1. Add `@depends.inject` to 20 core methods
+1. Remove manual DI from constructors
+1. Update tests with `depends.override()`
 
 **Success Metrics:**
+
 - DI boilerplate: ~500 LOC → ~50 LOC
 - Test complexity: Medium → Low
 - Coupling: High → Low
@@ -945,6 +1037,7 @@ class WorkflowPipeline:
 ### Phase 2: Data Layer (Week 3-4) - Medium Risk, High Value
 
 #### 2.1 Adopt ACB Universal Query Interface
+
 ```python
 # Priority: MEDIUM | Effort: HIGH | Risk: MEDIUM
 
@@ -954,38 +1047,44 @@ class WorkflowPipeline:
 from acb.adapters.models._hybrid import ACBQuery
 from sqlmodel import SQLModel, Field
 
+
 class QualityBaseline(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     coverage_percent: float
     complexity_score: float
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+
 class QualityBaselineService:
     def __init__(self):
         self.query = depends.get("query") or ACBQuery()
 
     async def get_latest(self) -> QualityBaseline:
-        return await self.query.for_model(QualityBaseline) \
-            .advanced \
-            .order_by_desc("timestamp") \
-            .limit(1) \
+        return (
+            await self.query.for_model(QualityBaseline)
+            .advanced.order_by_desc("timestamp")
+            .limit(1)
             .first()
+        )
 ```
 
 **Migration Steps:**
+
 1. Define SQLModel schemas for data
-2. Initialize ACB query interface
-3. Migrate JSON files to SQLite
-4. Update services to use ACB queries
-5. Add query tests
+1. Initialize ACB query interface
+1. Migrate JSON files to SQLite
+1. Update services to use ACB queries
+1. Add query tests
 
 **Success Metrics:**
+
 - Database agnostic: ✅ (easy PostgreSQL migration)
 - Query complexity: Medium → Low
 - Type safety: Partial → Full
 - Caching: Manual → Automatic
 
 #### 2.2 Implement ACB Actions for Utilities
+
 ```python
 # Priority: LOW | Effort: LOW | Risk: LOW
 
@@ -1000,12 +1099,14 @@ from acb.actions.validate import validate
 ```
 
 **Migration Steps:**
+
 1. Identify utility functions
-2. Map to ACB actions
-3. Replace custom implementations
-4. Remove utility service files
+1. Map to ACB actions
+1. Replace custom implementations
+1. Remove utility service files
 
 **Success Metrics:**
+
 - Utility code: ~300 LOC → 0
 - Consistency: Low → High
 - Tested: Partial → Full
@@ -1013,6 +1114,7 @@ from acb.actions.validate import validate
 ### Phase 3: Architecture (Week 5-8) - High Risk, Very High Value
 
 #### 3.1 Event-Driven Workflow Orchestration
+
 ```python
 # Priority: LOW | Effort: VERY HIGH | Risk: HIGH
 
@@ -1024,10 +1126,12 @@ from acb.depends import depends
 
 bus = depends.get(EventBus)
 
+
 @event_handler("workflow.started")
 async def on_workflow_start(event):
     await session.start()
     await bus.emit("session.ready")
+
 
 @event_handler("session.ready")
 async def on_session_ready(event):
@@ -1036,20 +1140,23 @@ async def on_session_ready(event):
 ```
 
 **Migration Steps:**
+
 1. Design event schema
-2. Implement EventBus integration
-3. Refactor coordinators to emit events
-4. Add event handlers
-5. Extensive integration testing
-6. Gradual rollout (feature flag)
+1. Implement EventBus integration
+1. Refactor coordinators to emit events
+1. Add event handlers
+1. Extensive integration testing
+1. Gradual rollout (feature flag)
 
 **Success Metrics:**
+
 - Coupling: High → Low
 - Complexity: ~15,000 LOC → ~6,000 LOC
 - Testability: Medium → High
 - Extensibility: Low → Very High
 
 #### 3.2 Adapter-Based Service Layer
+
 ```python
 # Priority: MEDIUM | Effort: HIGH | Risk: MEDIUM
 
@@ -1066,19 +1173,21 @@ async def on_session_ready(event):
 ```
 
 **Migration Steps:**
+
 1. Identify core services
-2. Convert to ACB adapters
-3. Implement adapter protocols
-4. Add ACB metadata
-5. Test adapter lifecycle
-6. Remove old service files
+1. Convert to ACB adapters
+1. Implement adapter protocols
+1. Add ACB metadata
+1. Test adapter lifecycle
+1. Remove old service files
 
 **Success Metrics:**
+
 - Service files: 61 → 20
 - Code: ~15,000 LOC → ~6,000 LOC
 - Patterns: Inconsistent → ACB standard
 
----
+______________________________________________________________________
 
 ## 7. Best Practices Guide for ACB in Crackerjack
 
@@ -1121,10 +1230,13 @@ MODULE_METADATA = AdapterMetadata(
     description="Brief description",
 )
 
+
 class ToolSettings(Settings):
     """ACB Settings for this tool"""
+
     enabled: bool = True
     timeout: int = 60
+
 
 class ToolAdapter(QAAdapterBase, CleanupMixin):
     """ACB-compliant adapter for Tool"""
@@ -1165,6 +1277,7 @@ class ToolAdapter(QAAdapterBase, CleanupMixin):
             "version": MODULE_METADATA.version,
         }
 
+
 # ACB registration
 with suppress(Exception):
     depends.set(ToolAdapter)
@@ -1176,11 +1289,10 @@ with suppress(Exception):
 # ✅ GOOD: Use depends.inject decorator
 from acb.depends import depends
 
+
 @depends.inject
 async def process_hooks(
-    hooks: list[HookDefinition],
-    cache: Cache = depends(),
-    config: Config = depends()
+    hooks: list[HookDefinition], cache: Cache = depends(), config: Config = depends()
 ) -> list[HookResult]:
     """Dependencies auto-injected by ACB"""
     settings = config.get_settings(HookSettings)
@@ -1195,6 +1307,7 @@ async def process_hooks(
         results.append(result)
 
     return results
+
 
 # ❌ BAD: Manual dependency creation
 async def process_hooks(hooks: list[HookDefinition]) -> list[HookResult]:
@@ -1211,16 +1324,20 @@ async def process_hooks(hooks: list[HookDefinition]) -> list[HookResult]:
 from acb.config import Settings
 from acb.depends import depends
 
+
 class HookSettings(Settings):
     """ACB auto-discovers from env vars"""
+
     timeout: int = 300  # CRACKERJACK_HOOK_TIMEOUT
     max_workers: int = 4  # CRACKERJACK_MAX_WORKERS
     cache_enabled: bool = True  # CRACKERJACK_CACHE_ENABLED
+
 
 @depends.inject
 async def run_hooks(config: Config = depends()):
     settings = config.get_settings(HookSettings)
     # Use settings.timeout, settings.max_workers, etc.
+
 
 # ❌ BAD: Manual config loading
 def run_hooks():
@@ -1271,14 +1388,20 @@ class CustomCache:
 import pytest
 from acb.depends import depends
 
+
 @pytest.fixture
 def mock_cache():
     """Mock cache for testing"""
+
     class MockCache:
-        async def get(self, key): return None
-        async def set(self, key, value, ttl): pass
+        async def get(self, key):
+            return None
+
+        async def set(self, key, value, ttl):
+            pass
 
     return MockCache()
+
 
 @pytest.mark.asyncio
 async def test_process_hooks(mock_cache):
@@ -1286,6 +1409,7 @@ async def test_process_hooks(mock_cache):
     with depends.override(Cache, mock_cache):
         result = await process_hooks(hooks)
         assert result is not None
+
 
 # ❌ BAD: Manual mocking without ACB
 async def test_process_hooks(monkeypatch):
@@ -1296,7 +1420,7 @@ async def test_process_hooks(monkeypatch):
     # More complex than necessary
 ```
 
----
+______________________________________________________________________
 
 ## 8. Detailed Impact Analysis
 
@@ -1316,31 +1440,36 @@ async def test_process_hooks(monkeypatch):
 ### 8.2 Qualitative Benefits
 
 #### Developer Experience
+
 - **Before:** Complex DI, manual config, scattered utilities
 - **After:** Auto-injection, centralized config, standard utilities
 - **Impact:** ⬆️ Faster onboarding, fewer bugs, better IDE support
 
 #### Maintainability
+
 - **Before:** 61 service files, 10 config files, custom implementations
 - **After:** ~20 adapters, 1 config, ACB standard patterns
 - **Impact:** ⬆️ Easier to understand, faster to modify, less code to test
 
 #### Extensibility
+
 - **Before:** Tight coupling, hard to add new phases
 - **After:** Event-driven, adapters plug in easily
 - **Impact:** ⬆️ New features easier, better modularity
 
 #### Performance
+
 - **Before:** Eager loading, manual caching, sequential
 - **After:** Lazy loading, ACB caching, parallel
 - **Impact:** ⬆️ Faster startup, better resource usage, scalable
 
 #### Quality
+
 - **Before:** Custom code, partial testing, reinventing wheels
 - **After:** Production-tested ACB components, comprehensive testing
 - **Impact:** ⬆️ Fewer bugs, higher confidence, better reliability
 
----
+______________________________________________________________________
 
 ## 9. Risk Assessment
 
@@ -1357,21 +1486,24 @@ async def test_process_hooks(monkeypatch):
 ### 9.2 Mitigation Strategies
 
 #### Phase 1 (Low Risk)
+
 - **Config migration:** Feature flag to switch between old/new config
 - **Cache migration:** Parallel run with verification
 - **Testing:** Override mechanism for gradual adoption
 
 #### Phase 2 (Medium Risk)
+
 - **Data migration:** Export/import with validation
 - **Query interface:** Adapter pattern for gradual switch
 - **Rollback:** Keep old code for 1 release
 
 #### Phase 3 (High Risk)
+
 - **Event system:** Parallel run with old orchestration
 - **Service migration:** One service at a time
 - **Monitoring:** Comprehensive metrics, alerts
 
----
+______________________________________________________________________
 
 ## 10. Conclusion and Next Steps
 
@@ -1380,11 +1512,13 @@ async def test_process_hooks(monkeypatch):
 Crackerjack has a **solid ACB foundation** with QA adapters but is **missing 70% of ACB's value**:
 
 ✅ **What's Working:**
+
 - QA adapter structure and registration
 - Async-first design
 - LSP adapter consolidation
 
 🔴 **Critical Gaps:**
+
 - No ACB configuration system
 - Limited dependency injection
 - Custom cache instead of ACB
@@ -1393,51 +1527,56 @@ Crackerjack has a **solid ACB foundation** with QA adapters but is **missing 70%
 - No event-driven patterns
 
 💡 **Biggest Opportunities:**
+
 1. **60% code reduction** via ACB adapter patterns
-2. **Unified data access** via ACB query interface
-3. **Simplified orchestration** via ACB event system
-4. **Production-tested components** via ACB cache/actions
+1. **Unified data access** via ACB query interface
+1. **Simplified orchestration** via ACB event system
+1. **Production-tested components** via ACB cache/actions
 
 ### 10.2 Recommended Priority
 
 **Immediate (This Quarter):**
+
 1. ✅ Adopt ACB configuration system (Week 1-2)
-2. ✅ Replace custom cache with ACB cache (Week 1-2)
-3. ✅ Add `depends.inject` to core services (Week 1-2)
+1. ✅ Replace custom cache with ACB cache (Week 1-2)
+1. ✅ Add `depends.inject` to core services (Week 1-2)
 
 **Short-Term (Next Quarter):**
-4. Implement ACB universal query interface (Week 3-6)
-5. Add ACB actions for utilities (Week 3-4)
-6. Complete adapter metadata for all adapters (Week 5-6)
+4\. Implement ACB universal query interface (Week 3-6)
+5\. Add ACB actions for utilities (Week 3-4)
+6\. Complete adapter metadata for all adapters (Week 5-6)
 
 **Long-Term (6-12 Months):**
-7. Event-driven orchestration (Major refactor)
-8. Full adapter-based architecture (Major refactor)
+7\. Event-driven orchestration (Major refactor)
+8\. Full adapter-based architecture (Major refactor)
 
 ### 10.3 Next Actions
 
 #### For Team Lead:
+
 1. Review this document with team
-2. Prioritize Phase 1 items
-3. Allocate developer time (2-3 weeks)
-4. Set success metrics
-5. Plan training on ACB patterns
+1. Prioritize Phase 1 items
+1. Allocate developer time (2-3 weeks)
+1. Set success metrics
+1. Plan training on ACB patterns
 
 #### For Developers:
+
 1. Read ACB documentation (acb.readthedocs.io)
-2. Review best practices section (#7)
-3. Start with config migration (easiest win)
-4. Pair program on first adapter migration
-5. Update tests as you migrate
+1. Review best practices section (#7)
+1. Start with config migration (easiest win)
+1. Pair program on first adapter migration
+1. Update tests as you migrate
 
 #### For Project:
-1. Create migration branch
-2. Implement Phase 1 items
-3. Run full test suite
-4. Measure improvements
-5. Document learnings
 
----
+1. Create migration branch
+1. Implement Phase 1 items
+1. Run full test suite
+1. Measure improvements
+1. Document learnings
+
+______________________________________________________________________
 
 ## Appendices
 
@@ -1451,6 +1590,7 @@ Crackerjack has a **solid ACB foundation** with QA adapters but is **missing 70%
 ### B. Crackerjack-Specific ACB Patterns
 
 See `docs/ACB-PATTERNS.md` (to be created) for:
+
 - QA adapter templates
 - LSP adapter patterns
 - Testing strategies
@@ -1460,18 +1600,20 @@ See `docs/ACB-PATTERNS.md` (to be created) for:
 ### C. Performance Benchmarks
 
 Run benchmarks before/after migration:
+
 ```bash
 python -m crackerjack --benchmark
 python -m crackerjack --cache-stats
 ```
 
 Compare:
+
 - Startup time
 - Memory usage
 - Cache hit rates
 - Build duration
 
----
+______________________________________________________________________
 
 **Review Status:** Initial draft
 **Next Review:** After Phase 1 completion

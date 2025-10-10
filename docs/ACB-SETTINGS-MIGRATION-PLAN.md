@@ -32,16 +32,19 @@ Consolidate 11 configuration files (~1,808 LOC) into a single ACB Settings class
 ### Configuration Patterns Found
 
 #### Pattern 1: Dataclass Workflow Options (models/config.py)
+
 ```python
 @dataclass
 class CleaningConfig:
     clean: bool = True
     update_docs: bool = False
 
+
 @dataclass
 class HookConfig:
     skip_hooks: bool = False
     experimental_hooks: bool = False
+
 
 @dataclass
 class WorkflowOptions:
@@ -51,6 +54,7 @@ class WorkflowOptions:
 ```
 
 #### Pattern 2: Pydantic QA Config (models/qa_config.py)
+
 ```python
 class QACheckConfig(BaseModel):
     check_id: UUID
@@ -58,6 +62,7 @@ class QACheckConfig(BaseModel):
     check_type: QACheckType
     enabled: bool = True
     # ... validation, properties
+
 
 class QAOrchestratorConfig(BaseModel):
     project_root: Path
@@ -67,6 +72,7 @@ class QAOrchestratorConfig(BaseModel):
 ```
 
 #### Pattern 3: Custom Orchestration Config (orchestration/config.py)
+
 ```python
 @dataclass
 class OrchestrationConfig:
@@ -93,6 +99,7 @@ class OrchestrationConfig:
 from acb.config import Settings
 from pathlib import Path
 from pydantic import Field
+
 
 class CrackerjackSettings(Settings):
     """Single source of truth for all Crackerjack settings.
@@ -214,7 +221,9 @@ class CrackerjackSettings(Settings):
 
     # === Global Settings ===
     global_lock_timeout: int = 30
-    lock_directory: Path = Field(default_factory=lambda: Path.home() / ".crackerjack" / "locks")
+    lock_directory: Path = Field(
+        default_factory=lambda: Path.home() / ".crackerjack" / "locks"
+    )
 
     class Config:
         env_prefix = "CRACKERJACK_"  # Auto-loads CRACKERJACK_VERBOSE, etc.
@@ -250,18 +259,21 @@ settings = depends.get(CrackerjackSettings)
 ### Phase 1: Create ACB Settings Class (2-3 hours)
 
 1. **Create settings module**
+
    ```bash
    # Create new settings file
    touch crackerjack/config/settings.py
    ```
 
-2. **Consolidate all settings**
+1. **Consolidate all settings**
+
    - Copy all dataclass fields from `models/config.py`
    - Copy all Pydantic fields from `models/qa_config.py`
    - Copy all settings from `orchestration/config.py`
    - Add env_prefix and defaults
 
-3. **Register with ACB**
+1. **Register with ACB**
+
    ```python
    # In crackerjack/config/__init__.py
    from acb.depends import depends
@@ -274,13 +286,15 @@ settings = depends.get(CrackerjackSettings)
 ### Phase 2: Update Import Patterns (3-4 hours)
 
 1. **Find all config imports**
+
    ```bash
    grep -r "from crackerjack.models.config import" crackerjack/
    grep -r "from crackerjack.orchestration.config import" crackerjack/
    grep -r "from crackerjack.models.qa_config import" crackerjack/
    ```
 
-2. **Replace with ACB dependency injection**
+1. **Replace with ACB dependency injection**
+
    ```python
    # Before
    config = WorkflowOptions()
@@ -293,7 +307,8 @@ settings = depends.get(CrackerjackSettings)
        ...
    ```
 
-3. **Update DI containers**
+1. **Update DI containers**
+
    - Modify `enhanced_container.py` to use CrackerjackSettings
    - Modify `container.py` to use CrackerjackSettings
    - Update all factory lambdas
@@ -301,22 +316,25 @@ settings = depends.get(CrackerjackSettings)
 ### Phase 3: Migrate Service Classes (2-3 hours)
 
 1. **ConfigurationService → ACB Settings**
+
    - Remove manual env var parsing
    - Remove YAML loading logic
    - Keep only business logic (if any)
 
-2. **ConfigMergeService → ACB Config Layers**
+1. **ConfigMergeService → ACB Config Layers**
+
    ```python
    # ACB handles merging automatically via layers
    from acb.config import Config
 
    config = Config(
        settings=CrackerjackSettings,
-       layers=["env", "file", "defaults"]  # Priority order
+       layers=["env", "file", "defaults"],  # Priority order
    )
    ```
 
-3. **UnifiedConfigurationService → Deprecate**
+1. **UnifiedConfigurationService → Deprecate**
+
    - ACB Settings already provides unified interface
    - Move any custom logic to settings class methods
 
@@ -325,18 +343,20 @@ settings = depends.get(CrackerjackSettings)
 **Summary**: Successfully migrated test fixtures from WorkflowOptions to CrackerjackSettings with adapter pattern. Discovered strategy document overestimated scope - only 2 files needed migration (vs predicted 18).
 
 **Results**:
+
 - ✅ Category A (Keep As-Is): 6 files validating public API/WorkflowOptions structure
 - ✅ Category B (Migrated): 2 files (test_core_modules.py, test_core_comprehensive.py)
 - ✅ Cleanup: 1 file (test_workflow_pipeline.py - removed unused import)
 - ✅ New: 1 integration test file (test_acb_settings_integration.py)
 
 **Key Pattern Established**:
+
 ```python
 # Custom configuration pattern (critical discovery)
 settings = depends.get(CrackerjackSettings)
 custom_settings = settings.model_copy()  # Create mutable copy
-custom_settings.clean = True              # Modify before adapting
-custom_settings.run_tests = True         # Note: field renamed
+custom_settings.clean = True  # Modify before adapting
+custom_settings.run_tests = True  # Note: field renamed
 options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
 ```
 
@@ -351,32 +371,37 @@ options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
 **Decision: Option A - Keep WorkflowOptions for Public API**
 
 **Rationale**:
+
 1. **WorkflowOptions is a public API contract** - `api.create_workflow_options()` (lines 350-390) explicitly exposes typed configuration to external consumers
-2. **Adapter pattern is working well** - Successfully migrated all internal usage to CrackerjackSettings with seamless compatibility
-3. **Minimal disruption** - No breaking changes to downstream users
-4. **Clear separation**: Public API (`WorkflowOptions`) vs Internal Config (`CrackerjackSettings`)
+1. **Adapter pattern is working well** - Successfully migrated all internal usage to CrackerjackSettings with seamless compatibility
+1. **Minimal disruption** - No breaking changes to downstream users
+1. **Clear separation**: Public API (`WorkflowOptions`) vs Internal Config (`CrackerjackSettings`)
 
 **Files to Keep**:
+
 - `models/config.py` - Public API contract (WorkflowOptions)
 - Adapter in `core_tools.py` - Internal compatibility layer
 - All Category A tests - Public API validation
 
 **Validation Results**:
+
 - ✅ All migrated tests passing (77 tests)
 - ✅ Integration tests passing (9 tests)
 - ✅ Public API analysis complete
 - ✅ No files safe to remove (all serve purpose)
 
 **Tasks**:
+
 1. ✅ Make public API decision (Option A selected)
-2. 📋 Update documentation (README, migration guides) - NEXT
-3. ✅ Run targeted test suite validation
-4. 📋 Create Phase 5 completion summary
-5. 📋 Create release notes
+1. 📋 Update documentation (README, migration guides) - NEXT
+1. ✅ Run targeted test suite validation
+1. 📋 Create Phase 5 completion summary
+1. 📋 Create release notes
 
 ## Success Metrics
 
 ### Before
+
 - **Files:** 11 configuration files
 - **Lines of Code:** ~1,808
 - **Import Complexity:** High (multiple patterns)
@@ -385,14 +410,16 @@ options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
 - **Secrets Handling:** Risky (plain strings)
 
 ### After
+
 - **Files:** 1 settings file
 - **Lines of Code:** ~300 (83% reduction)
 - **Import Complexity:** Low (single source)
-- **Env Var Support:** Automatic (CRACKERJACK_* prefix)
+- **Env Var Support:** Automatic (CRACKERJACK\_\* prefix)
 - **Validation:** Built-in (Pydantic)
 - **Secrets Handling:** Safe (auto-masked)
 
 ### Impact
+
 - **Maintainability:** ⬆️⬆️⬆️ Much easier to understand/modify
 - **Type Safety:** ⬆️⬆️ Full Pydantic validation
 - **Developer Experience:** ⬆️⬆️⬆️ Single import, auto-completion
@@ -402,19 +429,22 @@ options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
 ## Risk Mitigation
 
 ### Low Risk Items
+
 - ✅ ACB Settings is Pydantic-based (already using Pydantic in QA configs)
 - ✅ Gradual migration possible (keep old files during transition)
 - ✅ Backward compatibility via adapter pattern if needed
 
 ### Medium Risk Items
+
 - ⚠️ DI container updates (need careful testing)
 - ⚠️ Service class removal (verify no custom logic lost)
 
 ### Mitigation Strategies
+
 1. **Create backup branch** before starting
-2. **Run full test suite** after each phase
-3. **Keep old imports working** via temporary adapters
-4. **Comprehensive logging** during migration
+1. **Run full test suite** after each phase
+1. **Keep old imports working** via temporary adapters
+1. **Comprehensive logging** during migration
 
 ## Timeline
 
@@ -433,24 +463,28 @@ options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
 ## Phase Completion Summary
 
 ### Phase 1: ACB Settings Class ✅
+
 - Created `CrackerjackSettings` (flat structure, 97 fields)
 - Integrated with ACB DI via `depends.get()`
-- Environment variable support (CRACKERJACK_* prefix)
+- Environment variable support (CRACKERJACK\_\* prefix)
 - **Doc**: `docs/implementation/acb-settings-implementation-summary.md`
 
 ### Phase 2: MCP Tool Proxy Migration ✅
+
 - Migrated tool_proxy.py to use ACB Settings
 - Created adapter pattern for WorkflowOrchestrator compatibility
 - Established field mapping (test→run_tests, publish→publish_version, etc.)
 - **Doc**: `docs/implementation/acb-settings-phase2-complete.md`
 
 ### Phase 3: Code Analysis & Planning ✅
+
 - Discovered 3 distinct config systems (not just WorkflowOptions)
 - Identified migration strategy (adapter pattern vs removal)
 - Prevented breaking changes to file-based config system
 - **Doc**: `docs/implementation/acb-settings-phase3-analysis.md`
 
 ### Phase 4: Test Updates ✅
+
 - Migrated 2 core test files (not 18 as predicted)
 - Established custom configuration pattern (model_copy before adapt)
 - Created integration tests for ACB Settings
@@ -458,6 +492,7 @@ options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
 - **Doc**: `docs/implementation/acb-settings-phase4-complete.md`
 
 ### Phase 5: Final Validation 📋 NEXT
+
 - Decision: Public API strategy (Option A recommended)
 - Documentation updates
 - Performance validation
@@ -471,7 +506,7 @@ options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
 - **Phase 3 Analysis**: `docs/implementation/acb-settings-phase3-analysis.md`
 - **Phase 4 Complete**: `docs/implementation/acb-settings-phase4-complete.md`
 
----
+______________________________________________________________________
 
 **Author:** Claude Code (AI Agent)
 **Date:** 2025-10-09

@@ -7,6 +7,7 @@ This document maps old configuration patterns to the new unified `CrackerjackSet
 ## Import Pattern Changes
 
 ### Before (OLD)
+
 ```python
 from crackerjack.models.config import WorkflowOptions
 from crackerjack.orchestration.config import OrchestrationConfig
@@ -14,6 +15,7 @@ from crackerjack.models.qa_config import QACheckConfig
 ```
 
 ### After (NEW)
+
 ```python
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
@@ -29,6 +31,7 @@ settings = depends.get(CrackerjackSettings)
 #### Nested Access Pattern Changes
 
 **Cleaning Config**
+
 ```python
 # OLD
 options.cleaning.clean              → settings.clean
@@ -39,6 +42,7 @@ options.cleaning.auto_compress_docs → settings.auto_compress_docs
 ```
 
 **Hook Config**
+
 ```python
 # OLD
 options.hooks.skip_hooks             → settings.skip_hooks
@@ -50,6 +54,7 @@ options.hooks.enable_lsp_optimization → settings.enable_lsp_optimization
 ```
 
 **Test Config**
+
 ```python
 # OLD
 options.testing.test         → settings.run_tests  # ⚠️ RENAMED!
@@ -59,6 +64,7 @@ options.testing.test_timeout → settings.test_timeout
 ```
 
 **Publishing Config**
+
 ```python
 # OLD
 options.publishing.publish          → settings.publish_version
@@ -69,6 +75,7 @@ options.publishing.skip_version_check → settings.skip_version_check
 ```
 
 **Git Config**
+
 ```python
 # OLD
 options.git.commit    → settings.commit
@@ -76,6 +83,7 @@ options.git.create_pr → settings.create_pr
 ```
 
 **AI Config**
+
 ```python
 # OLD
 options.ai.ai_agent         → settings.ai_agent
@@ -86,6 +94,7 @@ options.ai.ai_agent_autofix → settings.ai_agent_autofix
 ```
 
 **Execution Config**
+
 ```python
 # OLD
 options.execution.interactive       → settings.interactive
@@ -95,12 +104,14 @@ options.execution.no_config_updates → settings.no_config_updates
 ```
 
 **Progress Config**
+
 ```python
 # OLD
 options.progress.enabled → settings.progress_enabled
 ```
 
 **Cleanup Config**
+
 ```python
 # OLD
 options.cleanup.auto_cleanup        → settings.auto_cleanup
@@ -109,6 +120,7 @@ options.cleanup.keep_coverage_files → settings.keep_coverage_files
 ```
 
 **Enterprise Config**
+
 ```python
 # OLD
 options.enterprise.enabled      → settings.enterprise_enabled
@@ -117,6 +129,7 @@ options.enterprise.organization → settings.organization
 ```
 
 **MCP Server Config**
+
 ```python
 # OLD
 options.mcp_server.http_port      → settings.mcp_http_port
@@ -126,6 +139,7 @@ options.mcp_server.http_enabled   → settings.mcp_http_enabled
 ```
 
 **Zuban LSP Config**
+
 ```python
 # OLD
 options.zuban_lsp.enabled    → settings.zuban_enabled
@@ -138,6 +152,7 @@ options.zuban_lsp.timeout    → settings.zuban_timeout
 ### OrchestrationConfig → CrackerjackSettings
 
 **Direct Field Mapping (No Nesting)**
+
 ```python
 # OLD
 config.enable_orchestration        → settings.enable_orchestration
@@ -161,6 +176,7 @@ config.use_precommit_legacy        → settings.use_precommit_legacy
 ### QACheckConfig → CrackerjackSettings
 
 **QA Framework Settings**
+
 ```python
 # OLD
 qa_config.max_parallel_checks   → settings.qa_max_parallel_checks
@@ -174,8 +190,10 @@ qa_config.enable_incremental    → settings.qa_enable_incremental
 ### Example 1: MCP Tools
 
 **Before:**
+
 ```python
 from crackerjack.models.config import WorkflowOptions
+
 
 def my_tool():
     options = WorkflowOptions()
@@ -186,9 +204,11 @@ def my_tool():
 ```
 
 **After:**
+
 ```python
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
+
 
 def my_tool():
     settings = depends.get(CrackerjackSettings)
@@ -201,8 +221,10 @@ def my_tool():
 ### Example 2: Hook Manager
 
 **Before:**
+
 ```python
 from crackerjack.orchestration.config import OrchestrationConfig
+
 
 class HookManager:
     def __init__(self):
@@ -212,9 +234,11 @@ class HookManager:
 ```
 
 **After:**
+
 ```python
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
+
 
 class HookManager:
     def __init__(self):
@@ -226,8 +250,10 @@ class HookManager:
 ### Example 3: QA Adapters
 
 **Before:**
+
 ```python
 from crackerjack.models.qa_config import QACheckConfig
+
 
 class MyAdapter:
     def __init__(self):
@@ -237,9 +263,11 @@ class MyAdapter:
 ```
 
 **After:**
+
 ```python
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
+
 
 class MyAdapter:
     def __init__(self):
@@ -251,20 +279,27 @@ class MyAdapter:
 ## Common Pitfalls
 
 ### 1. Renamed Fields
+
 ⚠️ `options.testing.test` → `settings.run_tests` (field renamed!)
 
 ### 2. Removed Nesting
+
 All nested configs are now flat:
+
 - ❌ `settings.hooks.skip_hooks`
 - ✅ `settings.skip_hooks`
 
 ### 3. DI Pattern
+
 Always use `depends.get()` instead of direct instantiation:
+
 - ❌ `settings = CrackerjackSettings()`
 - ✅ `settings = depends.get(CrackerjackSettings)`
 
 ### 4. Type Changes
+
 Some fields had type changes:
+
 - `publish/bump/all` changed from `t.Any | None` to `str | None`
 
 ## Migration Checklist
@@ -283,28 +318,33 @@ Some fields had type changes:
 ## Files to Migrate
 
 ### High Priority (Core Functionality)
+
 1. `crackerjack/managers/hook_manager.py` - OrchestrationConfig
-2. `crackerjack/mcp/tools/core_tools.py` - WorkflowOptions (2 imports)
-3. `crackerjack/mcp/tools/utility_tools.py` - WorkflowOptions
-4. `crackerjack/executors/tool_proxy.py` - Options
+1. `crackerjack/mcp/tools/core_tools.py` - WorkflowOptions (2 imports)
+1. `crackerjack/mcp/tools/utility_tools.py` - WorkflowOptions
+1. `crackerjack/executors/tool_proxy.py` - Options
 
 ### Medium Priority (Adapters)
+
 5. All QA adapter files in `crackerjack/adapters/` (13 files)
 
 ### Low Priority (Backup Files)
+
 6. `crackerjack/mcp/tools/execution_tools_backup.py` - Consider removal
 
 ## Testing Strategy
 
 After each file migration:
+
 1. Run: `python -c "from crackerjack.config import CrackerjackSettings; from acb.depends import depends; print(depends.get(CrackerjackSettings))"`
-2. Run: `python -m crackerjack --help` (verify CLI works)
-3. Run: `python -m pytest tests/ -v` (run relevant tests)
+1. Run: `python -m crackerjack --help` (verify CLI works)
+1. Run: `python -m pytest tests/ -v` (run relevant tests)
 
 ## Rollback Plan
 
 If migration fails:
+
 1. Revert changes to affected files
-2. Check git diff to see what was changed
-3. Fix issues one file at a time
-4. Re-run verification tests
+1. Check git diff to see what was changed
+1. Fix issues one file at a time
+1. Re-run verification tests

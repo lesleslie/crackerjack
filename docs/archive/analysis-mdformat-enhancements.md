@@ -3,6 +3,7 @@
 ## Issue 1: Reduce `build_command()` complexity (Current: ~10, Target: ≤6 per helper)
 
 ### Current Implementation (40 lines, complexity ~10)
+
 ```python
 def build_command(
     self,
@@ -101,6 +102,7 @@ def _build_wrap_options(self) -> list[str]:
 ```
 
 **Benefits:**
+
 - `build_command()`: Complexity 3 (down from ~10) ✅
 - `_build_wrap_options()`: Complexity 5 ✅
 - All functions now ≤6 complexity
@@ -108,11 +110,12 @@ def _build_wrap_options(self) -> list[str]:
 - Easier to test wrap mode independently
 - More maintainable
 
----
+______________________________________________________________________
 
 ## Issue 2: Reduce `parse_output()` complexity (Current: ~11, Target: ≤7 per helper)
 
 ### Current Implementation (54 lines, complexity ~11)
+
 ```python
 async def parse_output(
     self,
@@ -281,6 +284,7 @@ def _is_markdown_file(self, file_path: Path) -> bool:
 ```
 
 **Benefits:**
+
 - `parse_output()`: Complexity 2 (down from ~11) ✅
 - `_parse_output_lines()`: Complexity 3 ✅
 - `_parse_output_line()`: Complexity 3 ✅
@@ -292,25 +296,29 @@ def _is_markdown_file(self, file_path: Path) -> bool:
 - Easier to test and debug
 - More readable
 
----
+______________________________________________________________________
 
 ## Summary of Changes
 
 **Files Modified:** 1
+
 - `crackerjack/adapters/format/mdformat.py`
 
 **Methods Added:** 5 new helper methods
+
 1. `_build_wrap_options()` - Extract wrap mode logic
-2. `_parse_output_lines()` - Parse all output lines
-3. `_parse_output_line()` - Parse single output line
-4. `_create_issues_for_files()` - Create issues from file list
-5. `_is_markdown_file()` - Check if file is markdown
+1. `_parse_output_lines()` - Parse all output lines
+1. `_parse_output_line()` - Parse single output line
+1. `_create_issues_for_files()` - Create issues from file list
+1. `_is_markdown_file()` - Check if file is markdown
 
 **Methods Modified:** 2
+
 1. `build_command()` - Simplified to use wrap options helper
-2. `parse_output()` - Simplified to use parsing helpers
+1. `parse_output()` - Simplified to use parsing helpers
 
 **Complexity Improvements:**
+
 - `build_command()`: 10 → 3 (-7) ✅
 - `parse_output()`: 11 → 2 (-9) ✅
 - New helpers: All ≤5 complexity ✅

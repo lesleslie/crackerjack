@@ -3,8 +3,11 @@
 ## Issue 1: Reduce `build_command()` complexity (Current: ~13, Target: ≤8 per helper)
 
 ### Current Implementation (61 lines, complexity ~13)
+
 ```python
-def build_command(self, files: list[Path], config: QACheckConfig | None = None) -> list[str]:
+def build_command(
+    self, files: list[Path], config: QACheckConfig | None = None
+) -> list[str]:
     if not self.settings:
         raise RuntimeError("Settings not initialized")
 
@@ -119,6 +122,7 @@ def _build_format_options(self) -> list[str]:
 ```
 
 **Benefits:**
+
 - `build_command()`: Complexity 3 (down from ~13) ✅
 - `_build_check_options()`: Complexity 6 ✅
 - `_build_format_options()`: Complexity 4 ✅
@@ -127,11 +131,12 @@ def _build_format_options(self) -> list[str]:
 - Easier to test independently
 - More maintainable
 
----
+______________________________________________________________________
 
 ## Issue 2: Reduce `_parse_check_text()` complexity (Current: ~11, Target: ≤8)
 
 ### Current Implementation (51 lines, complexity ~11)
+
 ```python
 def _parse_check_text(self, output: str) -> list[ToolIssue]:
     """Parse Ruff check text output (fallback)."""
@@ -151,7 +156,9 @@ def _parse_check_text(self, output: str) -> list[ToolIssue]:
             # 30+ lines of parsing and validation logic
             file_path = Path(parts[0].strip())
             line_number = int(parts[1].strip())
-            column_number = int(parts[2].strip()) if parts[2].strip().isdigit() else None
+            column_number = (
+                int(parts[2].strip()) if parts[2].strip().isdigit() else None
+            )
 
             # Parse code and message
             message_part = parts[3].strip()
@@ -162,7 +169,7 @@ def _parse_check_text(self, output: str) -> list[ToolIssue]:
                 code_candidate = message_part.split()[0]
                 if code_candidate.strip():
                     code = code_candidate
-                    message = message_part[len(code):].strip()
+                    message = message_part[len(code) :].strip()
 
             issue = ToolIssue(
                 file_path=file_path,
@@ -270,11 +277,12 @@ def _extract_code_and_message(self, text: str) -> tuple[str | None, str]:
         return None, text
 
     code = code_candidate
-    message = text[len(code):].strip()
+    message = text[len(code) :].strip()
     return code, message
 ```
 
 **Benefits:**
+
 - `_parse_check_text()`: Complexity 2 (down from ~11) ✅
 - `_parse_text_line()`: Complexity 3 ✅
 - `_extract_location()`: Complexity 1 ✅
@@ -284,25 +292,29 @@ def _extract_code_and_message(self, text: str) -> tuple[str | None, str]:
 - Easier to test and debug
 - More readable and maintainable
 
----
+______________________________________________________________________
 
 ## Summary of Changes
 
 **Files Modified:** 1
+
 - `crackerjack/adapters/format/ruff.py`
 
 **Methods Added:** 6 new helper methods
+
 1. `_build_check_options()` - Extract lint mode options
-2. `_build_format_options()` - Extract format mode options
-3. `_parse_text_line()` - Parse single output line
-4. `_extract_location()` - Extract file location
-5. `_extract_code_and_message()` - Extract error code/message
+1. `_build_format_options()` - Extract format mode options
+1. `_parse_text_line()` - Parse single output line
+1. `_extract_location()` - Extract file location
+1. `_extract_code_and_message()` - Extract error code/message
 
 **Methods Modified:** 2
+
 1. `build_command()` - Simplified to use helpers
-2. `_parse_check_text()` - Simplified to use helpers
+1. `_parse_check_text()` - Simplified to use helpers
 
 **Complexity Improvements:**
+
 - `build_command()`: 13 → 3 (-10) ✅
 - `_parse_check_text()`: 11 → 2 (-9) ✅
 - New helpers: All ≤6 complexity ✅

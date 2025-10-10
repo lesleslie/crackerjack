@@ -331,6 +331,7 @@ Future decorators can be added to the system:
 ```
 
 All following the same patterns:
+
 - Type-safe
 - Async/sync support
 - Composable

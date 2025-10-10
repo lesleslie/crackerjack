@@ -583,13 +583,15 @@ settings = await CrackerjackSettings.load_async()
 ```
 
 **Configuration Files**:
+
 - `settings/crackerjack.yaml` - Base configuration (committed to git)
 - `settings/local.yaml` - Local overrides (gitignored, for development)
 
 **Priority Order** (highest to lowest):
+
 1. `settings/local.yaml` - Local developer overrides
-2. `settings/crackerjack.yaml` - Base project configuration
-3. Default values in `CrackerjackSettings` class
+1. `settings/crackerjack.yaml` - Base project configuration
+1. Default values in `CrackerjackSettings` class
 
 **Usage Examples**:
 
@@ -606,6 +608,7 @@ ai_debug: true
 from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
 
+
 @depends.inject
 def my_function(settings: CrackerjackSettings = depends()):
     if settings.verbose:
@@ -613,9 +616,9 @@ def my_function(settings: CrackerjackSettings = depends()):
 ```
 
 **Implementation Details**:
+
 - Settings automatically loaded during module initialization
 - Unknown YAML fields silently ignored (no validation errors)
 - Type validation via Pydantic
 - Async initialization available for ACB secret loading
 - All 60+ configuration fields supported
-

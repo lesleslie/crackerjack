@@ -11,32 +11,38 @@ Phase 8.3 consolidates tool configurations from `.pre-commit-config.yaml` into n
 These tools already have complete configuration in `pyproject.toml` and require **no migration**:
 
 1. **Ruff** (`[tool.ruff]`)
+
    - Target version: Python 3.13
    - Line length: 88
    - Linting rules: complexity (max 15), imports, upgrades
    - Format settings: docstring formatting enabled
 
-2. **Bandit** (`[tool.bandit]`)
+1. **Bandit** (`[tool.bandit]`)
+
    - Target: `crackerjack/`
    - Skips: B101, B110, B112, B404, B603, B607
    - Exclusions: `tests/`, `test_*.py`
 
-3. **Complexipy** (`[tool.complexipy]`)
+1. **Complexipy** (`[tool.complexipy]`)
+
    - Pattern: `**/*.py`
    - Max complexity: 15
    - Exclusions: `**/tests/**`, `**/test_*.py`
 
-4. **Codespell** (`[tool.codespell]`)
+1. **Codespell** (`[tool.codespell]`)
+
    - Skip paths: `*/data/*`, `htmlcov/*`, `tests/*`
    - Quiet level: 3
    - Custom ignore words list
 
-5. **Zuban** (`[tool.zuban]`)
+1. **Zuban** (`[tool.zuban]`)
+
    - Strict mode: enabled
    - Error codes: shown
    - Config file: `mypy.ini` (separate file, intentional)
 
-6. **Pytest** (`[tool.pytest.ini_options]`)
+1. **Pytest** (`[tool.pytest.ini_options]`)
+
    - Asyncio mode: auto
    - Timeout: 300s
    - Coverage integration
@@ -46,20 +52,20 @@ These tools already have complete configuration in `pyproject.toml` and require 
 These tools work with sensible defaults and don't require explicit configuration:
 
 1. **Gitleaks**: Uses built-in rules for secret detection
-2. **UV Lock**: No configuration needed (reads `pyproject.toml`)
-3. **MDFormat**: Works with defaults, uses `mdformat-ruff` plugin
-4. **Refurb**: Python modernization with sensible defaults
-5. **Creosote**: Dependency checking with automatic detection
+1. **UV Lock**: No configuration needed (reads `pyproject.toml`)
+1. **MDFormat**: Works with defaults, uses `mdformat-ruff` plugin
+1. **Refurb**: Python modernization with sensible defaults
+1. **Creosote**: Dependency checking with automatic detection
 
 ### Native Tool Configurations 🆕
 
 Our Phase 8.1 native tools have minimal configuration needs:
 
 1. **trailing-whitespace**: No config needed (automatic detection)
-2. **end-of-file-fixer**: No config needed (ensures single newline)
-3. **check-yaml**: No config needed (syntax validation only)
-4. **check-toml**: No config needed (syntax validation only)
-5. **check-added-large-files**: Default 500KB threshold (configurable via `--maxkb`)
+1. **end-of-file-fixer**: No config needed (ensures single newline)
+1. **check-yaml**: No config needed (syntax validation only)
+1. **check-toml**: No config needed (syntax validation only)
+1. **check-added-large-files**: Default 500KB threshold (configurable via `--maxkb`)
 
 ## Configuration Migration Status
 
@@ -128,21 +134,21 @@ number = true  # Number ordered lists
 
 1. **All critical tools already configured**: Ruff, bandit, complexipy, codespell, zuban all have complete `pyproject.toml` configurations
 
-2. **Default configurations are appropriate**: Tools like gitleaks, uv-lock, mdformat, refurb, creosote work perfectly with defaults
+1. **Default configurations are appropriate**: Tools like gitleaks, uv-lock, mdformat, refurb, creosote work perfectly with defaults
 
-3. **Native tools need no config**: Our Phase 8.1 implementations have sensible built-in defaults
+1. **Native tools need no config**: Our Phase 8.1 implementations have sensible built-in defaults
 
-4. **Zero duplication**: No settings are duplicated between files
+1. **Zero duplication**: No settings are duplicated between files
 
-5. **Discovery is excellent**: All configurations are in `pyproject.toml` or use obvious defaults
+1. **Discovery is excellent**: All configurations are in `pyproject.toml` or use obvious defaults
 
 ### What Phase 8.3 Actually Needs
 
 Instead of migrating configurations, Phase 8.3 should focus on:
 
 1. **Verification**: Confirm all tool configs work with direct invocation
-2. **Documentation**: Update docs to reference `pyproject.toml` sections
-3. **Testing**: Validate tools read configs correctly when invoked directly
+1. **Documentation**: Update docs to reference `pyproject.toml` sections
+1. **Testing**: Validate tools read configs correctly when invoked directly
 
 ## Verification Checklist
 
@@ -196,6 +202,7 @@ uv run python -m crackerjack.tools.check_added_large_files
 ### Expected Outcomes
 
 Each command should:
+
 - ✅ Execute successfully
 - ✅ Read configuration from `pyproject.toml` (where applicable)
 - ✅ Produce same results as pre-commit wrapper version
@@ -234,6 +241,6 @@ crackerjack/
 
 **Phase 8.4**: Update hook definitions in `hooks.py` to use direct commands with `use_precommit_legacy=False`, enabling direct tool invocation for all hooks.
 
----
+______________________________________________________________________
 
 **Status**: ✅ **COMPLETE** - No migration required, all configurations already optimal

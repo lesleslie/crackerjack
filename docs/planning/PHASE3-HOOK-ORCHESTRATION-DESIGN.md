@@ -5,18 +5,19 @@
 **Duration**: 10 days (with 2 parallel streams)
 **Dependencies**: Phase 2 (All adapters with MODULE_ID + logging) ✅
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 Phase 3 transforms the current pre-commit-based hook system into an ACB-powered orchestration layer with async execution, intelligent caching, and dependency resolution. This phase **DOES NOT** remove pre-commit infrastructure - that happens in Phase 8. Instead, we build the ACB orchestration layer **alongside** the existing system.
 
 **Key Deliverables**:
-1. **HookOrchestrator** - ACB component managing hook lifecycle and execution
-2. **Execution Strategies** - Async parallel execution with resource management
-3. **Cache Integration** - Content-based caching for performance optimization
 
----
+1. **HookOrchestrator** - ACB component managing hook lifecycle and execution
+1. **Execution Strategies** - Async parallel execution with resource management
+1. **Cache Integration** - Content-based caching for performance optimization
+
+______________________________________________________________________
 
 ## Current Architecture Analysis
 
@@ -46,6 +47,7 @@ Hook Execution Flow:
 ```
 
 **Key Observations**:
+
 - ✅ Well-defined HookResult, HookStrategy, HookDefinition models
 - ✅ Already has parallel execution capability
 - ✅ LSP optimization infrastructure exists
@@ -54,17 +56,17 @@ Hook Execution Flow:
 - ❌ Limited caching (tool_proxy only)
 - ❌ No ACB module registration
 
----
+______________________________________________________________________
 
 ## Target Architecture (ACB Integration)
 
 ### Design Principles
 
 1. **Non-Disruptive Integration**: ACB layer sits alongside existing system
-2. **Gradual Migration Path**: One adapter at a time can switch to ACB
-3. **Dual Execution Mode**: Support both pre-commit CLI and direct adapter calls
-4. **Cache-First Strategy**: Leverage existing tool_proxy caching
-5. **Protocol-Based DI**: Use ACB's dependency injection
+1. **Gradual Migration Path**: One adapter at a time can switch to ACB
+1. **Dual Execution Mode**: Support both pre-commit CLI and direct adapter calls
+1. **Cache-First Strategy**: Leverage existing tool_proxy caching
+1. **Protocol-Based DI**: Use ACB's dependency injection
 
 ### Architecture Overview
 
@@ -114,7 +116,7 @@ Hook Execution Flow:
                   └─────────────────────┘
 ```
 
----
+______________________________________________________________________
 
 ## Phase 3 Detailed Tasks
 
@@ -126,7 +128,7 @@ Hook Execution Flow:
 
 #### A. HookOrchestratorAdapter (NEW)
 
-```python
+````python
 # Location: crackerjack/orchestration/hook_orchestrator.py
 from __future__ import annotations
 
@@ -180,7 +182,7 @@ class HookOrchestratorAdapter:
         orchestrator = await depends.get(HookOrchestratorAdapter)
         results = await orchestrator.execute_strategy(
             strategy=fast_strategy,
-            execution_mode="legacy"  # or "acb"
+            execution_mode="legacy",  # or "acb"
         )
         ```
     """
@@ -192,7 +194,7 @@ class HookOrchestratorAdapter:
         self._dependency_graph: dict[str, list[str]] = {}
         logger.debug(
             "HookOrchestratorAdapter initialized",
-            extra={"has_settings": settings is not None}
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -203,7 +205,7 @@ class HookOrchestratorAdapter:
                 "max_parallel_hooks": self.settings.max_parallel_hooks,
                 "enable_caching": self.settings.enable_caching,
                 "enable_dependency_resolution": self.settings.enable_dependency_resolution,
-            }
+            },
         )
 
     @property
@@ -232,7 +234,7 @@ class HookOrchestratorAdapter:
                 "hook_count": len(strategy.hooks),
                 "execution_mode": execution_mode,
                 "parallel": strategy.parallel,
-            }
+            },
         )
 
         if execution_mode == "legacy":
@@ -264,7 +266,9 @@ class HookOrchestratorAdapter:
         else:
             return await self._execute_sequential(ordered_hooks)
 
-    def _resolve_dependencies(self, hooks: list[HookDefinition]) -> list[HookDefinition]:
+    def _resolve_dependencies(
+        self, hooks: list[HookDefinition]
+    ) -> list[HookDefinition]:
         """Resolve hook dependencies and return execution order.
 
         Dependency rules:
@@ -288,10 +292,14 @@ class HookOrchestratorAdapter:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Convert exceptions to error HookResults
-        return [r if isinstance(r, HookResult) else self._error_result(h, r)
-                for h, r in zip(hooks, results)]
+        return [
+            r if isinstance(r, HookResult) else self._error_result(h, r)
+            for h, r in zip(hooks, results)
+        ]
 
-    async def _execute_sequential(self, hooks: list[HookDefinition]) -> list[HookResult]:
+    async def _execute_sequential(
+        self, hooks: list[HookDefinition]
+    ) -> list[HookResult]:
         """Execute hooks sequentially."""
         results = []
         for hook in hooks:
@@ -324,13 +332,14 @@ class HookOrchestratorAdapter:
 # ACB Registration
 with suppress(Exception):
     depends.set(HookOrchestratorAdapter)
-```
+````
 
 #### B. Integration with Existing HookManager
 
 ```python
 # Location: crackerjack/managers/hook_manager.py
 # MODIFICATION: Add orchestrator delegation
+
 
 class HookManagerImpl:
     def __init__(
@@ -351,7 +360,10 @@ class HookManagerImpl:
         self.orchestrator: HookOrchestratorAdapter | None = None
         if use_acb_orchestrator:
             from acb.depends import depends
-            from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
+            from crackerjack.orchestration.hook_orchestrator import (
+                HookOrchestratorAdapter,
+            )
+
             self.orchestrator = depends.get(HookOrchestratorAdapter)
 
         # Keep existing executor for legacy mode
@@ -367,8 +379,7 @@ class HookManagerImpl:
         if self.orchestrator:
             # Use ACB orchestrator (Phase 8+)
             return await self.orchestrator.execute_strategy(
-                strategy=strategy,
-                execution_mode="acb"
+                strategy=strategy, execution_mode="acb"
             )
         else:
             # Use legacy executor (Phase 3-7)
@@ -377,19 +388,21 @@ class HookManagerImpl:
 ```
 
 **Implementation Steps**:
+
 1. ✅ Create `crackerjack/orchestration/` directory
-2. ✅ Implement `HookOrchestratorAdapter` with MODULE_ID and logging
-3. ✅ Add `use_acb_orchestrator` flag to HookManagerImpl
-4. ✅ Implement legacy mode delegation
-5. ⏳ Implement dependency resolution graph
-6. ⏳ Add comprehensive logging throughout execution flow
+1. ✅ Implement `HookOrchestratorAdapter` with MODULE_ID and logging
+1. ✅ Add `use_acb_orchestrator` flag to HookManagerImpl
+1. ✅ Implement legacy mode delegation
+1. ⏳ Implement dependency resolution graph
+1. ⏳ Add comprehensive logging throughout execution flow
 
 **Testing Requirements**:
+
 - Unit tests for HookOrchestratorAdapter initialization
 - Integration tests for legacy mode delegation
 - Dependency resolution tests (gitleaks→bandit, zuban→refurb)
 
----
+______________________________________________________________________
 
 ### 3.2 Execution Strategies Implementation
 
@@ -404,6 +417,7 @@ class HookManagerImpl:
 # ADD: Execution strategy protocol
 
 from typing import Protocol, runtime_checkable
+
 
 @runtime_checkable
 class ExecutionStrategyProtocol(Protocol):
@@ -430,6 +444,7 @@ class ExecutionStrategyProtocol(Protocol):
 
 ```python
 # Location: crackerjack/orchestration/strategies/parallel_strategy.py
+
 
 class ParallelExecutionStrategy:
     """Parallel execution strategy with resource limits.
@@ -464,8 +479,7 @@ class ParallelExecutionStrategy:
             async with self.semaphore:
                 try:
                     return await asyncio.wait_for(
-                        self._execute_hook(hook),
-                        timeout=hook.timeout or timeout_sec
+                        self._execute_hook(hook), timeout=hook.timeout or timeout_sec
                     )
                 except asyncio.TimeoutError:
                     return HookResult(
@@ -485,6 +499,7 @@ class ParallelExecutionStrategy:
 
 ```python
 # Location: crackerjack/orchestration/strategies/sequential_strategy.py
+
 
 class SequentialExecutionStrategy:
     """Sequential execution strategy for dependent hooks.
@@ -506,16 +521,18 @@ class SequentialExecutionStrategy:
         for hook in hooks:
             try:
                 result = await asyncio.wait_for(
-                    self._execute_hook(hook),
-                    timeout=hook.timeout or timeout
+                    self._execute_hook(hook), timeout=hook.timeout or timeout
                 )
                 results.append(result)
 
                 # Early exit on critical failures
-                if result.status == "failed" and hook.security_level == SecurityLevel.CRITICAL:
+                if (
+                    result.status == "failed"
+                    and hook.security_level == SecurityLevel.CRITICAL
+                ):
                     logger.warning(
                         f"Critical hook {hook.name} failed, stopping execution",
-                        extra={"hook": hook.name, "security_level": "CRITICAL"}
+                        extra={"hook": hook.name, "security_level": "CRITICAL"},
                     )
                     break
             except asyncio.TimeoutError:
@@ -525,20 +542,22 @@ class SequentialExecutionStrategy:
 ```
 
 **Implementation Steps**:
+
 1. ✅ Create `crackerjack/orchestration/strategies/` directory
-2. ✅ Implement ExecutionStrategyProtocol in protocols.py
-3. ✅ Implement ParallelExecutionStrategy
-4. ✅ Implement SequentialExecutionStrategy
-5. ⏳ Add strategy selection logic in HookOrchestrator
-6. ⏳ Performance benchmarking (parallel vs sequential)
+1. ✅ Implement ExecutionStrategyProtocol in protocols.py
+1. ✅ Implement ParallelExecutionStrategy
+1. ✅ Implement SequentialExecutionStrategy
+1. ⏳ Add strategy selection logic in HookOrchestrator
+1. ⏳ Performance benchmarking (parallel vs sequential)
 
 **Testing Requirements**:
+
 - Parallel execution with 3 concurrent hooks
 - Timeout handling (individual hook timeouts)
 - Exception isolation (one hook fails, others continue)
 - Sequential execution order verification
 
----
+______________________________________________________________________
 
 ### 3.3 Cache Integration
 
@@ -551,6 +570,7 @@ class SequentialExecutionStrategy:
 ```python
 # Location: crackerjack/models/protocols.py
 # ADD: Cache strategy protocol
+
 
 @runtime_checkable
 class CacheStrategyProtocol(Protocol):
@@ -573,6 +593,7 @@ class CacheStrategyProtocol(Protocol):
 
 ```python
 # Location: crackerjack/orchestration/cache/tool_proxy_cache.py
+
 
 class ToolProxyCacheAdapter:
     """Adapter for existing tool_proxy caching infrastructure.
@@ -607,9 +628,7 @@ class ToolProxyCacheAdapter:
                 file_hash = hashlib.sha256(content).hexdigest()[:8]
                 content_parts.append(f"{file_path.name}:{file_hash}")
 
-        content_hash = hashlib.sha256(
-            ":".join(content_parts).encode()
-        ).hexdigest()[:8]
+        content_hash = hashlib.sha256(":".join(content_parts).encode()).hexdigest()[:8]
 
         cache_key = f"{hook.name}:{config_hash}:{content_hash}"
         logger.debug(
@@ -618,7 +637,7 @@ class ToolProxyCacheAdapter:
                 "hook": hook.name,
                 "file_count": len(files),
                 "cache_key": cache_key,
-            }
+            },
         )
         return cache_key
 
@@ -639,6 +658,7 @@ class ToolProxyCacheAdapter:
 # Location: crackerjack/orchestration/hook_orchestrator.py
 # MODIFY: Add caching to _execute_single_hook
 
+
 async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
     """Execute a single hook with caching."""
 
@@ -651,13 +671,13 @@ async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
         if cached_result:
             logger.debug(
                 f"Cache HIT for {hook.name}",
-                extra={"hook": hook.name, "cache_key": cache_key}
+                extra={"hook": hook.name, "cache_key": cache_key},
             )
             return cached_result
 
         logger.debug(
             f"Cache MISS for {hook.name}",
-            extra={"hook": hook.name, "cache_key": cache_key}
+            extra={"hook": hook.name, "cache_key": cache_key},
         )
 
     # Execute hook
@@ -671,24 +691,27 @@ async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
 ```
 
 **Implementation Steps**:
+
 1. ✅ Implement CacheStrategyProtocol in protocols.py
-2. ✅ Create ToolProxyCacheAdapter bridging to existing tool_proxy
-3. ✅ Implement content hashing for cache keys
-4. ⏳ Add cache integration to HookOrchestrator
-5. ⏳ Add cache statistics tracking (hits/misses/hit rate)
-6. ⏳ Performance benchmarking (cache impact on execution time)
+1. ✅ Create ToolProxyCacheAdapter bridging to existing tool_proxy
+1. ✅ Implement content hashing for cache keys
+1. ⏳ Add cache integration to HookOrchestrator
+1. ⏳ Add cache statistics tracking (hits/misses/hit rate)
+1. ⏳ Performance benchmarking (cache impact on execution time)
 
 **Testing Requirements**:
+
 - Cache key computation (same content = same key)
 - Cache hit/miss scenarios
 - Cache invalidation (file content changes)
 - Performance metrics (cache hit rate >80%)
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 **Phase 3 Complete When**:
+
 - ✅ HookOrchestratorAdapter registered in ACB
 - ✅ Legacy mode delegation functional (pre-commit CLI still works)
 - ✅ Dual execution mode implemented (legacy + ACB paths)
@@ -696,18 +719,20 @@ async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
 - ✅ Cache integration with tool_proxy operational
 - ✅ Comprehensive logging at all execution points
 - ✅ Test coverage >85% for orchestration layer
-- ✅ Performance benchmarks show <5% overhead vs current system
+- ✅ Performance benchmarks show \<5% overhead vs current system
 
 **Review Gates**:
-1. `architecture-council` (Opus) - Design patterns, scalability, ACB compliance
-2. `performance-engineer` (Sonnet) - Async performance, resource management
-3. `test-specialist` (Sonnet) - Test coverage, integration test quality
 
----
+1. `architecture-council` (Opus) - Design patterns, scalability, ACB compliance
+1. `performance-engineer` (Sonnet) - Async performance, resource management
+1. `test-specialist` (Sonnet) - Test coverage, integration test quality
+
+______________________________________________________________________
 
 ## Dependencies & Risks
 
 **Dependencies**:
+
 - ✅ Phase 2: All adapters with MODULE_ID + logging (COMPLETED)
 - ⏳ Existing HookExecutor continues to function during migration
 
@@ -721,43 +746,48 @@ async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
 | Cache invalidation bugs | Medium | Medium | Comprehensive cache key testing, content hashing |
 
 **Mitigation Strategies**:
-1. **Async/Sync Mixing**: Keep HookOrchestrator fully async, provide sync wrappers for compatibility
-2. **Performance**: Benchmark after each component (orchestrator, strategies, cache)
-3. **Integration**: Maintain full backward compatibility with existing HookManager API
-4. **Cache**: Extensive unit tests for cache key computation, use cryptographic hashes
 
----
+1. **Async/Sync Mixing**: Keep HookOrchestrator fully async, provide sync wrappers for compatibility
+1. **Performance**: Benchmark after each component (orchestrator, strategies, cache)
+1. **Integration**: Maintain full backward compatibility with existing HookManager API
+1. **Cache**: Extensive unit tests for cache key computation, use cryptographic hashes
+
+______________________________________________________________________
 
 ## Timeline
 
 **Sequential Foundation** (Day 1-2):
+
 - Hook Orchestrator design (architecture-council)
 - Protocol definitions (ExecutionStrategy, CacheStrategy)
 
 **Parallel Group 3A** (Day 3-7):
+
 - Stream A: Execution strategies (performance-engineer + python-pro #1)
 - Stream B: Cache integration (python-pro #2)
 
 **Parallel Group 3B** (Day 8-10):
+
 - Stream A: Integration tests (test-specialist)
 - Stream B: Performance benchmarking (performance-engineer)
 
 **Estimated Duration**: 10 days
 **Time Saved vs Sequential**: 5 days (33% reduction)
 
----
+______________________________________________________________________
 
 ## Next Phase
 
 **Phase 4: Configuration Management** begins after Phase 3 review gates pass.
 
 Key handoff:
+
 - HookOrchestrator is operational in legacy mode
 - All adapters can be called directly (MODULE_ID + logging complete)
 - Configuration system will use ACB settings validation
 - Phase 8 will complete the migration by removing pre-commit CLI
 
----
+______________________________________________________________________
 
 **Document Status**: 📝 Draft for Architecture Council Review
 **Last Updated**: 2025-01-09

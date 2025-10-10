@@ -17,11 +17,13 @@ These hooks have different commands in the two locations:
 ### `bandit`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'bandit', '-c', 'pyproject.toml', '-r', 'crackerjack']
+["uv", "run", "bandit", "-c", "pyproject.toml", "-r", "crackerjack"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 ['-c', 'pyproject.toml', '-r', '-ll']
 ```
@@ -29,11 +31,13 @@ These hooks have different commands in the two locations:
 ### `check-added-large-files`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'python', '-m', 'crackerjack.tools.check_added_large_files']
+["uv", "run", "python", "-m", "crackerjack.tools.check_added_large_files"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -41,11 +45,13 @@ These hooks have different commands in the two locations:
 ### `check-toml`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'python', '-m', 'crackerjack.tools.check_toml']
+["uv", "run", "python", "-m", "crackerjack.tools.check_toml"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -53,11 +59,13 @@ These hooks have different commands in the two locations:
 ### `check-yaml`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'python', '-m', 'crackerjack.tools.check_yaml']
+["uv", "run", "python", "-m", "crackerjack.tools.check_yaml"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -65,11 +73,13 @@ These hooks have different commands in the two locations:
 ### `codespell`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'codespell']
+["uv", "run", "codespell"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -77,11 +87,13 @@ These hooks have different commands in the two locations:
 ### `complexipy`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'complexipy', 'crackerjack', '--max-complexity', '15']
+["uv", "run", "complexipy", "crackerjack", "--max-complexity", "15"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 ['-d', 'low', '--max-complexity-allowed', '15']
 ```
@@ -89,11 +101,13 @@ These hooks have different commands in the two locations:
 ### `creosote`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'creosote', '--venv', '.venv']
+["uv", "run", "creosote", "--venv", ".venv"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -101,11 +115,13 @@ These hooks have different commands in the two locations:
 ### `end-of-file-fixer`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'python', '-m', 'crackerjack.tools.end_of_file_fixer']
+["uv", "run", "python", "-m", "crackerjack.tools.end_of_file_fixer"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -113,11 +129,13 @@ These hooks have different commands in the two locations:
 ### `gitleaks`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'gitleaks', 'detect', '--no-git', '-v']
+["uv", "run", "gitleaks", "detect", "--no-git", "-v"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -125,11 +143,13 @@ These hooks have different commands in the two locations:
 ### `mdformat`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'mdformat', '--check', '.']
+["uv", "run", "mdformat", "--check", "."]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -137,11 +157,13 @@ These hooks have different commands in the two locations:
 ### `refurb`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'refurb', 'crackerjack']
+["uv", "run", "refurb", "crackerjack"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -149,11 +171,13 @@ These hooks have different commands in the two locations:
 ### `ruff-check`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'ruff', 'check', '.']
+["uv", "run", "ruff", "check", "."]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -161,11 +185,13 @@ These hooks have different commands in the two locations:
 ### `ruff-format`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'ruff', 'format', '.']
+["uv", "run", "ruff", "format", "."]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```
@@ -173,11 +199,13 @@ These hooks have different commands in the two locations:
 ### `trailing-whitespace`
 
 **tool_commands.py:**
+
 ```python
-['uv', 'run', 'python', '-m', 'crackerjack.tools.trailing_whitespace']
+["uv", "run", "python", "-m", "crackerjack.tools.trailing_whitespace"]
 ```
 
 **.pre-commit-config.yaml:**
+
 ```yaml
 []
 ```

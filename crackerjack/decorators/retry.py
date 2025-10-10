@@ -10,6 +10,31 @@ from rich.console import Console
 from .utils import is_async_function
 
 
+def _calculate_delay(attempt: int, backoff: float, max_delay: float) -> float:
+    """Calculate delay with exponential backoff."""
+    return min(backoff**attempt, max_delay)
+
+
+def _show_retry_message(
+    func_name: str,
+    attempt: int,
+    max_attempts: int,
+    delay: float,
+    error_type: str,
+    console: Console,
+) -> None:
+    """Show retry attempt message."""
+    console.print(
+        f"[yellow]⟳ Retry {attempt}/{max_attempts - 1} for {func_name} "
+        f"after {delay:.1f}s (error: {error_type})[/yellow]"
+    )
+
+
+def _show_failure_message(func_name: str, max_attempts: int, console: Console) -> None:
+    """Show final failure message."""
+    console.print(f"[red]❌ {func_name} failed after {max_attempts} attempts[/red]")
+
+
 def retry(
     max_attempts: int = 3,
     backoff: float = 2.0,
@@ -51,13 +76,11 @@ def retry(
         - Shows progress indication via Rich console
         - Preserves original exception on final failure
     """
-    if exceptions is None:
-        retry_exceptions: tuple[type[Exception], ...] = (Exception,)
-    else:
-        retry_exceptions = (
-            tuple(exceptions) if isinstance(exceptions, list) else exceptions
-        )
-
+    retry_exceptions = (
+        (Exception,)
+        if exceptions is None
+        else (tuple(exceptions) if isinstance(exceptions, list) else exceptions)
+    )
     _console = console or Console()
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
@@ -65,40 +88,29 @@ def retry(
 
             @wraps(func)
             async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                last_exception: Exception | None = None
-
                 for attempt in range(1, max_attempts + 1):
                     try:
                         return await func(*args, **kwargs)
                     except retry_exceptions as e:
-                        last_exception = e
-
                         if attempt == max_attempts:
-                            # Final attempt failed
-                            _console.print(
-                                f"[red]❌ {func.__name__} failed after {max_attempts} attempts[/red]"
-                            )
+                            _show_failure_message(func.__name__, max_attempts, _console)
                             raise
 
-                        # Calculate delay with exponential backoff
-                        delay = min(backoff**attempt, max_delay)
-
-                        # Show retry message
-                        _console.print(
-                            f"[yellow]⟳ Retry {attempt}/{max_attempts - 1} for {func.__name__} "
-                            f"after {delay:.1f}s (error: {type(e).__name__})[/yellow]"
+                        delay = _calculate_delay(attempt, backoff, max_delay)
+                        _show_retry_message(
+                            func.__name__,
+                            attempt,
+                            max_attempts,
+                            delay,
+                            type(e).__name__,
+                            _console,
                         )
 
-                        # Call retry callback if provided
                         if on_retry:
                             on_retry(e, attempt)
 
-                        # Wait before retry
                         await asyncio.sleep(delay)
 
-                # Should never reach here, but satisfy type checker
-                if last_exception:
-                    raise last_exception
                 raise RuntimeError("Retry logic error")
 
             return async_wrapper
@@ -107,25 +119,22 @@ def retry(
 
             @wraps(func)
             def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                last_exception: Exception | None = None
-
                 for attempt in range(1, max_attempts + 1):
                     try:
                         return func(*args, **kwargs)
                     except retry_exceptions as e:
-                        last_exception = e
-
                         if attempt == max_attempts:
-                            _console.print(
-                                f"[red]❌ {func.__name__} failed after {max_attempts} attempts[/red]"
-                            )
+                            _show_failure_message(func.__name__, max_attempts, _console)
                             raise
 
-                        delay = min(backoff**attempt, max_delay)
-
-                        _console.print(
-                            f"[yellow]⟳ Retry {attempt}/{max_attempts - 1} for {func.__name__} "
-                            f"after {delay:.1f}s (error: {type(e).__name__})[/yellow]"
+                        delay = _calculate_delay(attempt, backoff, max_delay)
+                        _show_retry_message(
+                            func.__name__,
+                            attempt,
+                            max_attempts,
+                            delay,
+                            type(e).__name__,
+                            _console,
                         )
 
                         if on_retry:
@@ -133,8 +142,6 @@ def retry(
 
                         time.sleep(delay)
 
-                if last_exception:
-                    raise last_exception
                 raise RuntimeError("Retry logic error")
 
             return sync_wrapper

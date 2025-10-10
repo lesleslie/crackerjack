@@ -9,6 +9,46 @@ from ..errors import CrackerjackError
 from .utils import format_exception_chain, get_function_context, is_async_function
 
 
+def _handle_exception(
+    e: Exception,
+    func: t.Callable[..., t.Any],
+    transform_to: type[CrackerjackError] | None,
+    fallback: t.Any,
+    suppress: bool,
+    console: Console,
+) -> t.Any:
+    """Helper to handle exception with transformation and fallback logic."""
+    context = get_function_context(func)
+
+    # Log error with context
+    console.print(
+        f"[red]❌ Error in {context['function_name']}: {type(e).__name__}: {e}[/red]"
+    )
+
+    # Transform to CrackerjackError if requested
+    if transform_to:
+        transformed = transform_to(
+            message=str(e),
+            details={
+                "original_error": type(e).__name__,
+                "function": context["function_name"],
+                "module": context["module"],
+            },
+        )
+        if not suppress:
+            raise transformed from e
+
+    # Use fallback if provided
+    if fallback is not None:
+        return fallback() if callable(fallback) else fallback
+
+    # Re-raise if not suppressed and no transform
+    if not suppress:
+        raise
+
+    return None
+
+
 def handle_errors(
     error_types: list[type[Exception]] | None = None,
     fallback: t.Any = None,
@@ -63,41 +103,9 @@ def handle_errors(
                 try:
                     return await func(*args, **kwargs)
                 except _error_types as e:
-                    # Get function context for error reporting
-                    context = get_function_context(func)
-
-                    # Log error with context
-                    _console.print(
-                        f"[red]❌ Error in {context['function_name']}: "
-                        f"{type(e).__name__}: {e}[/red]"
+                    return _handle_exception(
+                        e, func, transform_to, fallback, suppress, _console
                     )
-
-                    # Transform to CrackerjackError if requested
-                    if transform_to:
-                        transformed = transform_to(
-                            message=str(e),
-                            details={
-                                "original_error": type(e).__name__,
-                                "function": context["function_name"],
-                                "module": context["module"],
-                            },
-                        )
-                        if not suppress:
-                            raise transformed from e
-                        # Suppressed, use fallback
-
-                    # Use fallback if provided
-                    if fallback is not None:
-                        if callable(fallback):
-                            return fallback()
-                        return fallback
-
-                    # Re-raise if not suppressed and no transform
-                    if not suppress:
-                        raise
-
-                    # Suppressed with no fallback
-                    return None
 
             return async_wrapper
 
@@ -108,34 +116,9 @@ def handle_errors(
                 try:
                     return func(*args, **kwargs)
                 except _error_types as e:
-                    context = get_function_context(func)
-
-                    _console.print(
-                        f"[red]❌ Error in {context['function_name']}: "
-                        f"{type(e).__name__}: {e}[/red]"
+                    return _handle_exception(
+                        e, func, transform_to, fallback, suppress, _console
                     )
-
-                    if transform_to:
-                        transformed = transform_to(
-                            message=str(e),
-                            details={
-                                "original_error": type(e).__name__,
-                                "function": context["function_name"],
-                                "module": context["module"],
-                            },
-                        )
-                        if not suppress:
-                            raise transformed from e
-
-                    if fallback is not None:
-                        if callable(fallback):
-                            return fallback()
-                        return fallback
-
-                    if not suppress:
-                        raise
-
-                    return None
 
             return sync_wrapper
 

@@ -6,16 +6,16 @@
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [What Changed](#what-changed)
-3. [Migration Benefits](#migration-benefits)
-4. [Breaking Changes](#breaking-changes)
-5. [Step-by-Step Migration](#step-by-step-migration)
-6. [Code Examples](#code-examples)
-7. [Troubleshooting](#troubleshooting)
-8. [FAQ](#faq)
+1. [Overview](<#overview>)
+1. [What Changed](<#what-changed>)
+1. [Migration Benefits](<#migration-benefits>)
+1. [Breaking Changes](<#breaking-changes>)
+1. [Step-by-Step Migration](<#step-by-step-migration>)
+1. [Code Examples](<#code-examples>)
+1. [Troubleshooting](<#troubleshooting>)
+1. [FAQ](<#faq>)
 
----
+______________________________________________________________________
 
 ## Overview
 
@@ -24,6 +24,7 @@ Crackerjack has migrated from a **pre-commit CLI-based architecture** to an **AC
 ### What is ACB?
 
 [ACB](https://github.com/lesleslie/acb) is a lightweight dependency injection framework for Python that provides:
+
 - **Module-level dependency registration** via `depends.set()`
 - **Runtime-checkable protocols** for type safety
 - **Async-first design** with lifecycle management
@@ -32,6 +33,7 @@ Crackerjack has migrated from a **pre-commit CLI-based architecture** to an **AC
 ### Migration Timeline
 
 The migration was completed across 10 phases over 8 weeks:
+
 - **Phases 1-7:** Core infrastructure, adapters, orchestration, configuration
 - **Phase 8:** Pre-commit infrastructure removal
 - **Phase 9:** MCP server enhancement
@@ -39,7 +41,7 @@ The migration was completed across 10 phases over 8 weeks:
 
 **Status:** ✅ **Production Ready** (as of 2025-10-09)
 
----
+______________________________________________________________________
 
 ## What Changed
 
@@ -62,6 +64,7 @@ Results aggregation
 ```
 
 **Issues:**
+
 - Heavy subprocess overhead
 - No intelligent caching
 - Limited parallelization
@@ -87,6 +90,7 @@ Results aggregation
 ```
 
 **Benefits:**
+
 - **47% faster** overall execution
 - **70% cache hit rate** for repeated runs
 - **76% faster** async workflows
@@ -96,22 +100,25 @@ Results aggregation
 ### Removed Components
 
 1. **`.pre-commit-config.yaml`** - Replaced by ACB adapters
-2. **Pre-commit subprocess calls** - Direct Python API usage
-3. **Sequential hook execution** - Parallel async execution
+1. **Pre-commit subprocess calls** - Direct Python API usage
+1. **Sequential hook execution** - Parallel async execution
 
 ### New Components
 
 1. **Adapters** (`crackerjack/adapters/`)
+
    - QA adapters (format, lint, security, type, refactor, complexity, utility)
    - Tool adapters for Rust-based tools (Zuban, Skylos)
    - AI adapter (Claude integration)
 
-2. **Orchestrators** (`crackerjack/orchestration/`)
+1. **Orchestrators** (`crackerjack/orchestration/`)
+
    - `HookOrchestratorAdapter`: Strategy execution, dependency resolution
    - Execution strategies (fast, comprehensive, adaptive)
    - Cache adapters (ToolProxyCache, MemoryCache)
 
-3. **MCP Integration** (`crackerjack/mcp/`)
+1. **MCP Integration** (`crackerjack/mcp/`)
+
    - `MCPServerService`: ACB-registered MCP server
    - `ErrorCache`: AI fix pattern tracking
    - `JobManager`: WebSocket job tracking
@@ -120,14 +127,16 @@ Results aggregation
 ### Modified Components
 
 1. **Configuration** (`crackerjack/config/`)
+
    - Migrated to Pydantic settings with validators
    - ACB-compatible settings classes extending `acb.config.Settings`
 
-2. **Models** (`crackerjack/models/`)
+1. **Models** (`crackerjack/models/`)
+
    - Added protocol definitions in `models/protocols.py`
    - Runtime-checkable protocols for all major interfaces
 
----
+______________________________________________________________________
 
 ## Migration Benefits
 
@@ -157,7 +166,7 @@ Results aggregation
 - **Better error messages:** Structured error reporting
 - **AI integration:** Automated fixing with confidence scoring
 
----
+______________________________________________________________________
 
 ## Breaking Changes
 
@@ -166,11 +175,13 @@ Results aggregation
 **Impact:** Direct `pre-commit run` commands will fail
 
 **Before:**
+
 ```bash
 pre-commit run ruff --all-files
 ```
 
 **After:**
+
 ```bash
 python -m crackerjack --fast  # Fast hooks (formatting, linting)
 python -m crackerjack --comp  # Comprehensive hooks (all quality checks)
@@ -183,6 +194,7 @@ python -m crackerjack --comp  # Comprehensive hooks (all quality checks)
 **Impact:** `.pre-commit-config.yaml` settings must migrate to `pyproject.toml`
 
 **Before (`.pre-commit-config.yaml`):**
+
 ```yaml
 - repo: https://github.com/astral-sh/ruff-pre-commit
   hooks:
@@ -191,6 +203,7 @@ python -m crackerjack --comp  # Comprehensive hooks (all quality checks)
 ```
 
 **After (`pyproject.toml`):**
+
 ```toml
 [tool.crackerjack.hooks.ruff]
 enabled = true
@@ -198,6 +211,7 @@ auto_fix = true
 ```
 
 **Migration Script:** (Run once)
+
 ```bash
 python -m crackerjack --migrate-config
 ```
@@ -207,11 +221,13 @@ python -m crackerjack --migrate-config
 **Impact:** Custom adapters or extensions must update imports
 
 **Before:**
+
 ```python
 from crackerjack.adapters.qa.base import QAAdapterBase
 ```
 
 **After:**
+
 ```python
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase
 from crackerjack.models.protocols import QAAdapterProtocol
@@ -224,18 +240,20 @@ from crackerjack.models.protocols import QAAdapterProtocol
 **Impact:** Tests now run via pytest directly (no pre-commit integration)
 
 **Before:**
+
 ```bash
 pre-commit run pytest --all-files
 ```
 
 **After:**
+
 ```bash
 python -m crackerjack --run-tests
 # or directly:
 python -m pytest
 ```
 
----
+______________________________________________________________________
 
 ## Step-by-Step Migration
 
@@ -275,6 +293,7 @@ python -m crackerjack --show-config
 ```
 
 This will:
+
 - Parse existing `.pre-commit-config.yaml` (if backup exists)
 - Extract hook configurations
 - Write equivalent settings to `pyproject.toml`
@@ -296,12 +315,14 @@ python -m crackerjack --run-tests
 #### Step 5: Update CI/CD Pipelines
 
 **Before (`.github/workflows/quality.yml`):**
+
 ```yaml
 - name: Run pre-commit
   run: pre-commit run --all-files
 ```
 
 **After:**
+
 ```yaml
 - name: Run quality checks
   run: python -m crackerjack --comp --run-tests
@@ -329,7 +350,7 @@ python -m crackerjack --init
 # - Run initial quality checks
 ```
 
----
+______________________________________________________________________
 
 ## Code Examples
 
@@ -450,7 +471,7 @@ if __name__ == "__main__":
 ```python
 # pyproject.toml
 
-[tool.crackerjack.hooks.custom-lint]
+[tool.crackerjack.hooks.custom - lint]
 enabled = true
 stage = "comprehensive"  # or "fast" or "manual"
 timeout = 60
@@ -500,13 +521,14 @@ async def test_lint_clean_file(adapter, tmp_path):
     assert len(result.issues) == 0
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Issue: "Module not found: acb"
 
 **Solution:**
+
 ```bash
 uv pip install acb>=0.25.2
 ```
@@ -516,6 +538,7 @@ uv pip install acb>=0.25.2
 **Cause:** Importing from wrong location
 
 **Solution:**
+
 ```python
 # ❌ Wrong
 from crackerjack.adapters.qa.base import QAAdapterProtocol
@@ -529,6 +552,7 @@ from crackerjack.models.protocols import QAAdapterProtocol
 **Cause:** Duplicate MODULE_ID UUID
 
 **Solution:**
+
 ```bash
 # Generate unique UUID
 uuidgen
@@ -542,6 +566,7 @@ MODULE_ID = uuid.UUID("01937d86-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 **Cause:** Old `.git/hooks/pre-commit` script
 
 **Solution:**
+
 ```bash
 # Remove old hook
 rm .git/hooks/pre-commit
@@ -555,6 +580,7 @@ python -m crackerjack --install-hooks
 **Cause:** Async tests without proper timeout handling
 
 **Solution:**
+
 ```python
 # Add timeout to pytest configuration
 # pyproject.toml
@@ -569,6 +595,7 @@ timeout = 300  # 5 minutes
 **Cause:** Cache directory permissions or configuration issue
 
 **Solution:**
+
 ```bash
 # Check cache directory
 ls -la .crackerjack/cache
@@ -580,7 +607,7 @@ python -m crackerjack --clear-cache
 python -m crackerjack --fast
 ```
 
----
+______________________________________________________________________
 
 ## FAQ
 
@@ -591,9 +618,10 @@ python -m crackerjack --fast
 ### Q: What happens to my custom pre-commit hooks?
 
 **A:** You have three options:
+
 1. Migrate to ACB adapters (recommended)
-2. Keep as standalone pre-commit hooks
-3. Call via subprocess from crackerjack
+1. Keep as standalone pre-commit hooks
+1. Call via subprocess from crackerjack
 
 ### Q: Can I still use pre-commit for other tools (e.g., commitlint)?
 
@@ -602,6 +630,7 @@ python -m crackerjack --fast
 ### Q: How do I debug ACB dependency injection issues?
 
 **A:** Use the `--ai-debug` flag:
+
 ```bash
 python -m crackerjack --ai-debug --run-tests
 ```
@@ -615,6 +644,7 @@ This enables verbose logging for DI container operations.
 ### Q: Can I mix legacy and ACB execution modes?
 
 **A:** Yes, temporarily. Set in `pyproject.toml`:
+
 ```toml
 [tool.crackerjack.orchestration]
 execution_mode = "legacy"  # or "acb"
@@ -625,11 +655,12 @@ execution_mode = "legacy"  # or "acb"
 ### Q: How do I contribute a new adapter?
 
 **A:** Follow the pattern in `/docs/ACB-ADAPTER-TEMPLATE.md`:
+
 1. Extend `QAAdapterBase` or `ToolAdapterBase`
-2. Define MODULE_ID and MODULE_STATUS
-3. Register with `depends.set(YourAdapter)`
-4. Add tests
-5. Submit PR
+1. Define MODULE_ID and MODULE_STATUS
+1. Register with `depends.set(YourAdapter)`
+1. Add tests
+1. Submit PR
 
 ### Q: What's the minimum Python version?
 
@@ -638,6 +669,7 @@ execution_mode = "legacy"  # or "acb"
 ### Q: Is ACB compatible with other DI frameworks?
 
 **A:** ACB is standalone but integrates with:
+
 - Pydantic (for settings)
 - FastAPI (for web services)
 - asyncio (for async execution)
@@ -645,6 +677,7 @@ execution_mode = "legacy"  # or "acb"
 ### Q: How do I rollback if ACB causes issues?
 
 **A:** Restore pre-commit config from backup:
+
 ```bash
 git checkout HEAD -- .pre-commit-config.yaml
 pre-commit install
@@ -652,7 +685,7 @@ pre-commit install
 
 Then file an issue on GitHub!
 
----
+______________________________________________________________________
 
 ## Additional Resources
 
@@ -662,18 +695,18 @@ Then file an issue on GitHub!
 - **Code Review Report:** Contact maintainers for latest audit
 - **Migration Support:** Open an issue on GitHub
 
----
+______________________________________________________________________
 
 ## Support
 
 Need help with migration?
 
 1. **Check troubleshooting section** above
-2. **Search existing issues:** [GitHub Issues](https://github.com/lesleslie/crackerjack/issues)
-3. **Ask on discussions:** [GitHub Discussions](https://github.com/lesleslie/crackerjack/discussions)
-4. **Open new issue:** Provide error output and `pyproject.toml`
+1. **Search existing issues:** [GitHub Issues](https://github.com/lesleslie/crackerjack/issues)
+1. **Ask on discussions:** [GitHub Discussions](https://github.com/lesleslie/crackerjack/discussions)
+1. **Open new issue:** Provide error output and `pyproject.toml`
 
----
+______________________________________________________________________
 
 **Last Updated:** 2025-10-09
 **Migration Status:** ✅ Production Ready

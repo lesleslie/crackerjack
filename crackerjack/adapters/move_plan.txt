@@ -2,7 +2,7 @@
 qa/ruff_adapter.py -> format/ruff.py (format mode)
 qa/mdformat_adapter.py -> format/mdformat.py
 
-# Lint adapters  
+# Lint adapters
 qa/ruff_adapter.py -> lint/ruff.py (check mode, symlink or copy)
 qa/codespell_adapter.py -> lint/codespell.py
 

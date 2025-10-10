@@ -3,27 +3,32 @@
 ## Problem Analysis
 
 **Current Issue:**
+
 - Attempting to call `CrackerjackSettings.from_yaml()` which doesn't exist
 - Synchronous `depends.set()` call times out with ACB async initialization
 - Module-level registration conflicts with async requirements
 
 **Root Causes:**
+
 1. ACB Settings doesn't provide `from_yaml()` - must manually load YAML
-2. ACB Settings initialization can be async (`create_async()`) or sync (constructor)
-3. Module-level code (`__init__.py`) executes synchronously
-4. YAML configuration must be loaded and passed to Settings constructor
+1. ACB Settings initialization can be async (`create_async()`) or sync (constructor)
+1. Module-level code (`__init__.py`) executes synchronously
+1. YAML configuration must be loaded and passed to Settings constructor
 
 ## ACB Settings Patterns
 
 ### Pattern 1: Synchronous Initialization (Recommended for Module-Level)
+
 ```python
 from acb.config import Settings
 from pathlib import Path
 import yaml
 
+
 class MySettings(Settings):
     field1: str = "default"
     field2: int = 42
+
 
 # Load YAML data
 yaml_path = Path("settings/config.yaml")
@@ -38,6 +43,7 @@ settings = MySettings(**relevant_data)
 ```
 
 ### Pattern 2: Async Initialization (For Application Runtime)
+
 ```python
 async def load_settings() -> MySettings:
     yaml_path = Path("settings/config.yaml")
@@ -51,6 +57,7 @@ async def load_settings() -> MySettings:
 ```
 
 ### Pattern 3: Multi-File Configuration Layering
+
 ```python
 def load_layered_config(settings_class: type[Settings]) -> Settings:
     """Load configuration from multiple YAML files with priority."""
@@ -58,9 +65,9 @@ def load_layered_config(settings_class: type[Settings]) -> Settings:
 
     # Priority order (lowest to highest)
     config_files = [
-        settings_dir / "base.yaml",           # Base configuration
-        settings_dir / "crackerjack.yaml",    # Main config
-        settings_dir / "local.yaml",          # Local overrides (gitignored)
+        settings_dir / "base.yaml",  # Base configuration
+        settings_dir / "crackerjack.yaml",  # Main config
+        settings_dir / "local.yaml",  # Local overrides (gitignored)
     ]
 
     # Merge YAML data
@@ -72,7 +79,9 @@ def load_layered_config(settings_class: type[Settings]) -> Settings:
                 merged_data.update(file_data)
 
     # Filter to relevant fields
-    relevant_data = {k: v for k, v in merged_data.items() if k in settings_class.model_fields}
+    relevant_data = {
+        k: v for k, v in merged_data.items() if k in settings_class.model_fields
+    }
 
     return settings_class(**relevant_data)
 ```
@@ -82,22 +91,26 @@ def load_layered_config(settings_class: type[Settings]) -> Settings:
 ### Implementation Strategy
 
 1. **Create Settings Loader Utility** (`crackerjack/config/loader.py`)
+
    - Encapsulates YAML loading logic
    - Supports multi-file configuration layering
    - Handles missing files gracefully
    - Filters data to match Settings fields
 
-2. **Update Settings Class** (`crackerjack/config/settings.py`)
+1. **Update Settings Class** (`crackerjack/config/settings.py`)
+
    - Keep existing CrackerjackSettings definition
    - Add class method for convenient loading
    - Document YAML configuration pattern
 
-3. **Update Module Initialization** (`crackerjack/config/__init__.py`)
+1. **Update Module Initialization** (`crackerjack/config/__init__.py`)
+
    - Use synchronous loader for module-level registration
    - Register with ACB dependency injection
    - Provide async alternative for runtime usage
 
-4. **Create Settings Directory Structure**
+1. **Create Settings Directory Structure**
+
    ```
    settings/
    ├── crackerjack.yaml      # Base configuration (committed)
@@ -108,6 +121,7 @@ def load_layered_config(settings_class: type[Settings]) -> Settings:
 ### File Changes
 
 #### 1. Create `crackerjack/config/loader.py`
+
 ```python
 """Settings loader for ACB configuration with YAML support."""
 
@@ -157,8 +171,7 @@ def load_settings(
 
     # Filter to only fields defined in the Settings class
     relevant_data = {
-        k: v for k, v in merged_data.items()
-        if k in settings_class.model_fields
+        k: v for k, v in merged_data.items() if k in settings_class.model_fields
     }
 
     # Synchronous initialization
@@ -201,8 +214,7 @@ async def load_settings_async(
 
     # Filter to relevant fields
     relevant_data = {
-        k: v for k, v in merged_data.items()
-        if k in settings_class.model_fields
+        k: v for k, v in merged_data.items() if k in settings_class.model_fields
     }
 
     # Async initialization (loads secrets, etc.)
@@ -210,6 +222,7 @@ async def load_settings_async(
 ```
 
 #### 2. Update `crackerjack/config/settings.py`
+
 ```python
 # Add class method for convenient loading
 @classmethod
@@ -227,7 +240,9 @@ def load(cls, settings_dir: Path | None = None) -> "CrackerjackSettings":
         - settings/local.yaml (local overrides, gitignored)
     """
     from .loader import load_settings
+
     return load_settings(cls, settings_dir)
+
 
 @classmethod
 async def load_async(cls, settings_dir: Path | None = None) -> "CrackerjackSettings":
@@ -240,10 +255,12 @@ async def load_async(cls, settings_dir: Path | None = None) -> "CrackerjackSetti
         Initialized CrackerjackSettings instance with async init complete
     """
     from .loader import load_settings_async
+
     return await load_settings_async(cls, settings_dir)
 ```
 
 #### 3. Update `crackerjack/config/__init__.py`
+
 ```python
 from .hooks import (
     COMPREHENSIVE_STRATEGY,
@@ -280,17 +297,20 @@ __all__ = [
 ### Testing Strategy
 
 1. **Unit Tests for Loader**
+
    - Test YAML loading with valid configuration
    - Test missing file handling (should use defaults)
    - Test configuration layering (local.yaml overrides crackerjack.yaml)
    - Test field filtering (ignore unknown YAML keys)
 
-2. **Integration Tests**
+1. **Integration Tests**
+
    - Test dependency injection registration
    - Test settings retrieval via `depends.get(CrackerjackSettings)`
    - Test async loading pattern
 
-3. **Edge Cases**
+1. **Edge Cases**
+
    - Empty YAML files
    - Malformed YAML (should fail gracefully)
    - Missing settings directory (should use defaults)
@@ -299,25 +319,30 @@ __all__ = [
 ### Migration Notes
 
 **Breaking Changes:**
+
 - None (only fixing broken `from_yaml()` call)
 
 **Compatibility:**
+
 - Existing YAML files (`settings/crackerjack.yaml`) work without changes
 - Defaults in `CrackerjackSettings` remain as fallbacks
 - Command-line argument overrides still work (handled by argparse)
 
 **Dependencies:**
+
 - PyYAML (already in pyproject.toml)
 - ACB 0.19.0+ (already installed)
 
 ### Documentation Updates
 
 1. **CLAUDE.md**
+
    - Document settings loading pattern
    - Add example of local.yaml overrides
    - Explain configuration priority
 
-2. **README.md**
+1. **README.md**
+
    - Add configuration section
    - Document environment-specific settings
    - Show YAML configuration examples
@@ -336,10 +361,10 @@ __all__ = [
 ## Success Criteria
 
 1. ✅ Settings load from YAML files without timeout
-2. ✅ ACB dependency injection works (`depends.get(CrackerjackSettings)`)
-3. ✅ Configuration layering works (local.yaml overrides crackerjack.yaml)
-4. ✅ Unknown YAML fields ignored (no validation errors)
-5. ✅ Default values used when YAML files missing
-6. ✅ Both sync and async loading patterns available
-7. ✅ All existing tests pass
-8. ✅ No breaking changes to existing functionality
+1. ✅ ACB dependency injection works (`depends.get(CrackerjackSettings)`)
+1. ✅ Configuration layering works (local.yaml overrides crackerjack.yaml)
+1. ✅ Unknown YAML fields ignored (no validation errors)
+1. ✅ Default values used when YAML files missing
+1. ✅ Both sync and async loading patterns available
+1. ✅ All existing tests pass
+1. ✅ No breaking changes to existing functionality
