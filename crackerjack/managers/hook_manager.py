@@ -25,8 +25,8 @@ class HookManagerImpl:
         enable_tool_proxy: bool = True,
         # Legacy parameters kept for backward compatibility (deprecated)
         orchestration_config: t.Any = None,
-        enable_orchestration: bool = False,
-        orchestration_mode: str = "acb",
+        enable_orchestration: bool | None = None,
+        orchestration_mode: str | None = None,
         enable_caching: bool = True,
         cache_backend: str = "memory",
     ) -> None:
@@ -50,21 +50,68 @@ class HookManagerImpl:
         # Get settings from ACB dependency injection
         self._settings = depends.get(CrackerjackSettings)
 
-        # Expose properties - constructor params override settings for testing/flexibility
-        self.orchestration_enabled = enable_orchestration if enable_orchestration else self._settings.enable_orchestration
-        self.orchestration_mode = orchestration_mode if orchestration_mode else self._settings.orchestration_mode
-        self._orchestrator: HookOrchestratorAdapter | None = None
-
-        # Store orchestration config for backward compatibility
+        # Load orchestration config with priority:
+        # 1. Explicit orchestration_config param (highest - for testing)
+        # 2. Project .crackerjack.yaml file (middle - for project-specific settings)
+        # 3. Create from constructor params + DI settings (lowest - for defaults)
         if orchestration_config:
+            # Explicit config object provided
             self._orchestration_config = orchestration_config
-        else:
-            # Create default config from constructor params
-            from crackerjack.orchestration.hook_orchestrator import HookOrchestratorSettings
-            self._orchestration_config = HookOrchestratorSettings(
-                enable_caching=enable_caching,
-                cache_backend=cache_backend,
+            # Extract orchestration settings from config object if not explicitly provided
+            # Priority: explicit params > config object > DI settings
+            self.orchestration_enabled = (
+                enable_orchestration
+                if enable_orchestration is not None
+                else orchestration_config.enable_orchestration
             )
+            self.orchestration_mode = (
+                orchestration_mode
+                if orchestration_mode is not None
+                else orchestration_config.orchestration_mode
+            )
+        else:
+            # Try to load from project config file
+            from crackerjack.orchestration.config import OrchestrationConfig
+
+            config_path = pkg_path / ".crackerjack.yaml"
+            if config_path.exists():
+                # Load from file
+                loaded_config = OrchestrationConfig.load(config_path)
+                self._orchestration_config = loaded_config
+                # Extract orchestration settings with param override
+                self.orchestration_enabled = (
+                    enable_orchestration
+                    if enable_orchestration is not None
+                    else loaded_config.enable_orchestration
+                )
+                self.orchestration_mode = (
+                    orchestration_mode
+                    if orchestration_mode is not None
+                    else loaded_config.orchestration_mode
+                )
+            else:
+                # Create default config from constructor params
+                from crackerjack.orchestration.hook_orchestrator import (
+                    HookOrchestratorSettings,
+                )
+
+                self._orchestration_config = HookOrchestratorSettings(
+                    enable_caching=enable_caching,
+                    cache_backend=cache_backend,
+                )
+                # Use constructor params or fall back to DI settings, then to hardcoded defaults
+                self.orchestration_enabled = (
+                    enable_orchestration
+                    if enable_orchestration is not None
+                    else self._settings.enable_orchestration
+                )
+                self.orchestration_mode = (
+                    orchestration_mode
+                    if orchestration_mode is not None
+                    else (self._settings.orchestration_mode or "acb")
+                )
+
+        self._orchestrator: HookOrchestratorAdapter | None = None
 
     def set_config_path(self, config_path: Path) -> None:
         self._config_path = config_path
