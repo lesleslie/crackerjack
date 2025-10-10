@@ -40,6 +40,7 @@ class PhaseCoordinator(ErrorHandlingMixin):
         console: Console,
         pkg_path: Path,
         session: SessionCoordinator,
+        # Dependencies provided by WorkflowOrchestrator via depends.get()
         filesystem: FileSystemInterface,
         git_service: GitInterface,
         hook_manager: HookManager,
@@ -51,6 +52,7 @@ class PhaseCoordinator(ErrorHandlingMixin):
         self.pkg_path = pkg_path
         self.session = session
 
+        # Dependencies injected via ACB's depends.get() from WorkflowOrchestrator
         self.filesystem = filesystem
         self.git_service = git_service
         self.hook_manager = hook_manager

@@ -2063,7 +2063,7 @@ class WorkflowOrchestrator:
             verbose=self.verbose,
         )
 
-        # Import protocols for type annotations
+        # Import protocols for retrieving dependencies via ACB
         from crackerjack.models.protocols import (
             ConfigMergeServiceProtocol,
             FileSystemInterface,
@@ -2077,7 +2077,7 @@ class WorkflowOrchestrator:
 
         self.logger = get_logger("crackerjack.orchestrator")
 
-        # Create coordinators - dependencies auto-injected via ACB
+        # Create coordinators - dependencies retrieved via ACB's depends.get()
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
         self.phases = PhaseCoordinator(
             console=self.console,
