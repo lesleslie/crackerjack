@@ -6,14 +6,14 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from .rust_tool_adapter import BaseRustToolAdapter, Issue, ToolResult
+from ._base import BaseRustToolAdapter, Issue, ToolResult
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.execution_strategies import ExecutionContext
     from crackerjack.services.lsp_client import LSPClient
 
 # Import the LSP client wrapper
-from .lsp_client import ZubanLSPClient
+from ._client import ZubanLSPClient
 
 
 @dataclass

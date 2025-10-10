@@ -5,9 +5,9 @@ import time
 import typing as t
 from pathlib import Path
 
-from .rust_tool_adapter import BaseRustToolAdapter, ToolResult
-from .skylos_adapter import SkylosAdapter
-from .zuban_adapter import ZubanAdapter
+from ._base import BaseRustToolAdapter, ToolResult
+from .skylos import SkylosAdapter
+from .zuban import ZubanAdapter
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.execution_strategies import ExecutionContext

@@ -4,7 +4,7 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from .rust_tool_adapter import BaseRustToolAdapter, Issue, ToolResult
+from ._base import BaseRustToolAdapter, Issue, ToolResult
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.execution_strategies import ExecutionContext
