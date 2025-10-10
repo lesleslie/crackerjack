@@ -1,8 +1,8 @@
 # ACB Settings Migration Plan
 
-**Status:** Phase 1, Week 1 (Day 1-2)
+**Status:** ✅ Phase 1-4 Complete (75% done, Phase 5 remaining)
 **Priority:** HIGH
-**Effort:** 1-2 days
+**Effort:** 1-2 days (1.5 days actual)
 **Risk:** LOW (ACB Settings is production-tested)
 
 ## Executive Summary
@@ -320,53 +320,58 @@ settings = depends.get(CrackerjackSettings)
    - ACB Settings already provides unified interface
    - Move any custom logic to settings class methods
 
-### Phase 4: Update Tests (2-3 hours)
+### Phase 4: Update Tests ✅ COMPLETE (1.5 hours actual)
 
-1. **Test settings access**
-   ```python
-   def test_settings_from_env(monkeypatch):
-       monkeypatch.setenv("CRACKERJACK_VERBOSE", "true")
-       settings = CrackerjackSettings()
-       assert settings.verbose is True
-   ```
+**Summary**: Successfully migrated test fixtures from WorkflowOptions to CrackerjackSettings with adapter pattern. Discovered strategy document overestimated scope - only 2 files needed migration (vs predicted 18).
 
-2. **Test DI integration**
-   ```python
-   def test_settings_via_depends():
-       from acb.depends import depends
-       settings = depends.get(CrackerjackSettings)
-       assert isinstance(settings, CrackerjackSettings)
-   ```
+**Results**:
+- ✅ Category A (Keep As-Is): 6 files validating public API/WorkflowOptions structure
+- ✅ Category B (Migrated): 2 files (test_core_modules.py, test_core_comprehensive.py)
+- ✅ Cleanup: 1 file (test_workflow_pipeline.py - removed unused import)
+- ✅ New: 1 integration test file (test_acb_settings_integration.py)
 
-3. **Update existing config tests**
-   - Migrate tests from old config files
-   - Simplify tests (ACB handles validation)
+**Key Pattern Established**:
+```python
+# Custom configuration pattern (critical discovery)
+settings = depends.get(CrackerjackSettings)
+custom_settings = settings.model_copy()  # Create mutable copy
+custom_settings.clean = True              # Modify before adapting
+custom_settings.run_tests = True         # Note: field renamed
+options = _adapt_settings_to_protocol(custom_settings)  # Then adapt
+```
 
-### Phase 5: Remove Old Files (1 hour)
+**Test Results**: 86 passed, 1 skipped (known ACB DI async issue)
 
-1. **Safe removal order**
-   ```bash
-   # 1. Remove service classes (replaced by ACB)
-   rm crackerjack/services/config.py
-   rm crackerjack/services/config_merge.py
-   rm crackerjack/services/config_integrity.py
-   rm crackerjack/services/config_template.py
-   rm crackerjack/services/unified_config.py
+**Documentation**: See `docs/implementation/acb-settings-phase4-complete.md` for complete details
 
-   # 2. Remove old config models
-   rm crackerjack/models/config.py
-   rm crackerjack/models/config_adapter.py
-   rm crackerjack/orchestration/config.py
-   rm crackerjack/dynamic_config.py
-   rm crackerjack/config/global_lock_config.py
+### Phase 5: Final Validation & Decision (1-2 hours) - NEXT
 
-   # 3. Keep QA config temporarily (gradual migration)
-   # Will migrate in Phase 2
-   ```
+**Status**: Ready to begin
 
-2. **Update protocols**
-   - Remove `ConfigurationServiceProtocol` (replaced by CrackerjackSettings)
-   - Keep only business logic protocols
+**Decision Point: Public API Strategy**
+
+**Option A: Keep WorkflowOptions for Public API** (RECOMMENDED)
+- Maintain `api.create_workflow_options()` returning WorkflowOptions
+- Keep adapter layer for internal WorkflowOrchestrator usage
+- Minimal disruption to external consumers
+- Files to keep: `models/config.py`, adapter in `core_tools.py`, public API tests
+
+**Option B: Deprecate Public API**
+- Add deprecation warnings to `api.create_workflow_options()`
+- Provide migration guide for external consumers
+- Set deprecation timeline (e.g., 6 months)
+- Eventually remove WorkflowOptions and old config tests
+
+**Files Actually Safe to Remove**: NONE
+- All WorkflowOptions usage validates public API or adapter compatibility
+- Cannot remove until public API decision made (Option A = keep, Option B = deprecate then remove)
+
+**Tasks**:
+1. Make public API decision (Option A recommended)
+2. Update documentation (README, migration guides)
+3. Run full test suite validation
+4. Performance regression check
+5. Create release notes
 
 ## Success Metrics
 
@@ -412,26 +417,62 @@ settings = depends.get(CrackerjackSettings)
 
 ## Timeline
 
-| Phase | Task | Duration | Day |
-|-------|------|----------|-----|
-| 1 | Create ACB Settings class | 2-3 hours | Day 1 AM |
-| 2 | Update import patterns | 3-4 hours | Day 1 PM |
-| 3 | Migrate service classes | 2-3 hours | Day 2 AM |
-| 4 | Update tests | 2-3 hours | Day 2 PM |
-| 5 | Remove old files & verify | 1 hour | Day 2 PM |
+| Phase | Task | Estimated | Actual | Status |
+|-------|------|-----------|--------|--------|
+| 1 | Create ACB Settings class | 2-3 hours | 2 hours | ✅ Complete |
+| 2 | Update import patterns | 3-4 hours | 3 hours | ✅ Complete |
+| 3 | Migrate service classes | 2-3 hours | 2.5 hours | ✅ Complete |
+| 4 | Update tests | 2-3 hours | 1.5 hours | ✅ Complete |
+| 5 | Final validation & decision | 1-2 hours | - | 📋 Next |
 
-**Total:** 10-14 hours (1.5-2 days)
+**Estimated Total:** 10-14 hours (1.5-2 days)
+**Actual (Phases 1-4):** 9 hours (1.1 days)
+**Remaining (Phase 5):** 1-2 hours
 
-## Next Steps
+## Phase Completion Summary
 
-1. ✅ Review this plan with team/stakeholders
-2. Create feature branch: `feature/acb-settings-migration`
-3. Start Phase 1: Create CrackerjackSettings class
-4. Incremental commits per phase
-5. Full regression testing before merge
+### Phase 1: ACB Settings Class ✅
+- Created `CrackerjackSettings` (flat structure, 97 fields)
+- Integrated with ACB DI via `depends.get()`
+- Environment variable support (CRACKERJACK_* prefix)
+- **Doc**: `docs/implementation/acb-settings-implementation-summary.md`
+
+### Phase 2: MCP Tool Proxy Migration ✅
+- Migrated tool_proxy.py to use ACB Settings
+- Created adapter pattern for WorkflowOrchestrator compatibility
+- Established field mapping (test→run_tests, publish→publish_version, etc.)
+- **Doc**: `docs/implementation/acb-settings-phase2-complete.md`
+
+### Phase 3: Code Analysis & Planning ✅
+- Discovered 3 distinct config systems (not just WorkflowOptions)
+- Identified migration strategy (adapter pattern vs removal)
+- Prevented breaking changes to file-based config system
+- **Doc**: `docs/implementation/acb-settings-phase3-analysis.md`
+
+### Phase 4: Test Updates ✅
+- Migrated 2 core test files (not 18 as predicted)
+- Established custom configuration pattern (model_copy before adapt)
+- Created integration tests for ACB Settings
+- **Results**: 86 tests passing, 1 skipped
+- **Doc**: `docs/implementation/acb-settings-phase4-complete.md`
+
+### Phase 5: Final Validation 📋 NEXT
+- Decision: Public API strategy (Option A recommended)
+- Documentation updates
+- Performance validation
+- Release notes
+
+## References
+
+- **Field Mapping**: `docs/implementation/acb-settings-field-mapping.md`
+- **Phase 1 Complete**: `docs/implementation/acb-settings-implementation-summary.md`
+- **Phase 2 Complete**: `docs/implementation/acb-settings-phase2-complete.md`
+- **Phase 3 Analysis**: `docs/implementation/acb-settings-phase3-analysis.md`
+- **Phase 4 Complete**: `docs/implementation/acb-settings-phase4-complete.md`
 
 ---
 
 **Author:** Claude Code (AI Agent)
 **Date:** 2025-10-09
+**Last Updated**: Phase 4 completion
 **Based on:** ACB-INTEGRATION-REVIEW.md, COMPREHENSIVE-IMPROVEMENT-PLAN.md

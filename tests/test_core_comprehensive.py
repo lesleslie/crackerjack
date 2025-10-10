@@ -4,13 +4,16 @@ from unittest.mock import Mock, patch
 import pytest
 from rich.console import Console
 
+from acb.depends import depends
+
+from crackerjack.config import CrackerjackSettings
 from crackerjack.core.container import DependencyContainer
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.core.workflow_orchestrator import (
     WorkflowOrchestrator,
     WorkflowPipeline,
 )
-from crackerjack.models.config import WorkflowOptions
+from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
 
 
 @pytest.fixture
@@ -25,7 +28,9 @@ def pkg_path(tmp_path):
 
 @pytest.fixture
 def workflow_options():
-    return WorkflowOptions()
+    """Provide OptionsProtocol using ACB Settings + adapter pattern."""
+    settings = depends.get(CrackerjackSettings)
+    return _adapt_settings_to_protocol(settings)
 
 
 class TestDependencyContainer:
@@ -234,7 +239,11 @@ class TestWorkflowOrchestrator:
         assert version == "unknown"
 
     async def test_process_clean_only(self, orchestrator, workflow_options) -> None:
-        workflow_options.cleaning.clean = True
+        # Create modified settings copy and adapt
+        settings = depends.get(CrackerjackSettings)
+        custom_settings = settings.model_copy()
+        custom_settings.clean = True
+        options = _adapt_settings_to_protocol(custom_settings)
 
         with patch.object(orchestrator.session, "start_session") as mock_start:
             with patch.object(orchestrator.session, "end_session") as mock_end:
@@ -243,10 +252,10 @@ class TestWorkflowOrchestrator:
                     "run_complete_workflow",
                     return_value=True,
                 ) as mock_workflow:
-                    result = await orchestrator.process(workflow_options)
+                    result = await orchestrator.process(options)
 
                     mock_start.assert_called_once_with("process_workflow")
-                    mock_workflow.assert_called_once_with(workflow_options)
+                    mock_workflow.assert_called_once_with(options)
                     mock_end.assert_called_once_with(success=True)
                     assert result is True
 
@@ -255,7 +264,11 @@ class TestWorkflowOrchestrator:
         orchestrator,
         workflow_options,
     ) -> None:
-        workflow_options.testing.test = True
+        # Create modified settings copy and adapt
+        settings = depends.get(CrackerjackSettings)
+        custom_settings = settings.model_copy()
+        custom_settings.run_tests = True  # Note: renamed from 'test'
+        options = _adapt_settings_to_protocol(custom_settings)
 
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
@@ -264,9 +277,9 @@ class TestWorkflowOrchestrator:
                     "run_complete_workflow",
                     return_value=True,
                 ) as mock_workflow:
-                    result = await orchestrator.process(workflow_options)
+                    result = await orchestrator.process(options)
 
-                    mock_workflow.assert_called_once_with(workflow_options)
+                    mock_workflow.assert_called_once_with(options)
                     mock_end.assert_called_once_with(success=True)
                     assert result is True
 
@@ -275,7 +288,11 @@ class TestWorkflowOrchestrator:
         orchestrator,
         workflow_options,
     ) -> None:
-        workflow_options.publishing.publish = "patch"
+        # Create modified settings copy and adapt
+        settings = depends.get(CrackerjackSettings)
+        custom_settings = settings.model_copy()
+        custom_settings.publish_version = "patch"  # Note: renamed from 'publish'
+        options = _adapt_settings_to_protocol(custom_settings)
 
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
@@ -284,14 +301,18 @@ class TestWorkflowOrchestrator:
                     "run_complete_workflow",
                     return_value=True,
                 ) as mock_workflow:
-                    result = await orchestrator.process(workflow_options)
+                    result = await orchestrator.process(options)
 
-                    mock_workflow.assert_called_once_with(workflow_options)
+                    mock_workflow.assert_called_once_with(options)
                     mock_end.assert_called_once_with(success=True)
                     assert result is True
 
     async def test_process_with_commit(self, orchestrator, workflow_options) -> None:
-        workflow_options.git.commit = True
+        # Create modified settings copy and adapt
+        settings = depends.get(CrackerjackSettings)
+        custom_settings = settings.model_copy()
+        custom_settings.commit = True
+        options = _adapt_settings_to_protocol(custom_settings)
 
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
@@ -300,14 +321,18 @@ class TestWorkflowOrchestrator:
                     "run_complete_workflow",
                     return_value=True,
                 ) as mock_workflow:
-                    result = await orchestrator.process(workflow_options)
+                    result = await orchestrator.process(options)
 
-                    mock_workflow.assert_called_once_with(workflow_options)
+                    mock_workflow.assert_called_once_with(options)
                     mock_end.assert_called_once_with(success=True)
                     assert result is True
 
     async def test_process_phase_failure(self, orchestrator, workflow_options) -> None:
-        workflow_options.testing.test = True
+        # Create modified settings copy and adapt
+        settings = depends.get(CrackerjackSettings)
+        custom_settings = settings.model_copy()
+        custom_settings.run_tests = True  # Note: renamed from 'test'
+        options = _adapt_settings_to_protocol(custom_settings)
 
         with patch.object(orchestrator.session, "start_session"):
             with patch.object(orchestrator.session, "end_session") as mock_end:
@@ -316,9 +341,9 @@ class TestWorkflowOrchestrator:
                     "run_complete_workflow",
                     return_value=False,
                 ) as mock_workflow:
-                    result = await orchestrator.process(workflow_options)
+                    result = await orchestrator.process(options)
 
-                    mock_workflow.assert_called_once_with(workflow_options)
+                    mock_workflow.assert_called_once_with(options)
                     mock_end.assert_called_once_with(success=False)
                     assert result is False
 
@@ -410,10 +435,13 @@ class TestWorkflowPipeline:
             assert result is False
 
     async def test_execute_workflow_options_forwarding(self, pipeline) -> None:
-        options = WorkflowOptions()
-        options.cleaning.clean = True
-        options.testing.test = True
-        options.execution.verbose = True
+        # Create options using ACB Settings pattern
+        settings = depends.get(CrackerjackSettings)
+        custom_settings = settings.model_copy()
+        custom_settings.clean = True
+        custom_settings.run_tests = True
+        custom_settings.verbose = True
+        options = _adapt_settings_to_protocol(custom_settings)
 
         async def mock_workflow(opts) -> bool:
             return True
@@ -427,6 +455,7 @@ class TestWorkflowPipeline:
 
             mock_run.assert_called_once_with(options)
             passed_options = mock_run.call_args[0][0]
-            assert passed_options.cleaning.clean is True
-            assert passed_options.testing.test is True
-            assert passed_options.execution.verbose is True
+            # Note: Adapter exposes .test property (maps to settings.run_tests internally)
+            assert passed_options.clean is True
+            assert passed_options.test is True  # Adapter property
+            assert passed_options.verbose is True

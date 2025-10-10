@@ -344,12 +344,19 @@ class ToolProxy:
     def _create_zuban_adapter(self) -> t.Any | None:
         """Create Zuban adapter instance."""
         try:
+            from acb.depends import depends
+
             from crackerjack.adapters.zuban_adapter import ZubanAdapter
-            from crackerjack.models.config import Options
+            from crackerjack.config import CrackerjackSettings
             from crackerjack.orchestration.execution_strategies import ExecutionContext
 
-            # Create minimal context for adapter
-            options = Options()
+            # Create minimal context for adapter using ACB settings
+            settings = depends.get(CrackerjackSettings)
+
+            # Import adapter from core_tools that converts settings to OptionsProtocol
+            from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
+
+            options = _adapt_settings_to_protocol(settings)
             context = ExecutionContext(pkg_path=Path.cwd(), options=options)
             return ZubanAdapter(context)
         except (ImportError, Exception):
@@ -358,11 +365,19 @@ class ToolProxy:
     def _create_skylos_adapter(self) -> t.Any | None:
         """Create Skylos adapter instance."""
         try:
+            from acb.depends import depends
+
             from crackerjack.adapters.skylos_adapter import SkylosAdapter
-            from crackerjack.models.config import Options
+            from crackerjack.config import CrackerjackSettings
             from crackerjack.orchestration.execution_strategies import ExecutionContext
 
-            options = Options()
+            # Create minimal context for adapter using ACB settings
+            settings = depends.get(CrackerjackSettings)
+
+            # Import adapter from core_tools that converts settings to OptionsProtocol
+            from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
+
+            options = _adapt_settings_to_protocol(settings)
             context = ExecutionContext(pkg_path=Path.cwd(), options=options)
             return SkylosAdapter(context)
         except (ImportError, Exception):

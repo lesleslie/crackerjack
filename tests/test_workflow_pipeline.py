@@ -10,7 +10,6 @@ from rich.console import Console
 from crackerjack.core.phase_coordinator import PhaseCoordinator
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.core.workflow_orchestrator import WorkflowPipeline
-from crackerjack.models.config import WorkflowOptions
 
 
 class TestWorkflowPipeline:
