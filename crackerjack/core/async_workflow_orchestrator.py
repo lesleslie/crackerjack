@@ -612,6 +612,7 @@ class AsyncWorkflowOrchestrator:
         verbose: bool = False,
         debug: bool = False,
     ) -> None:
+        # Initialize console and pkg_path first
         self.console = console or Console(force_terminal=True)
         self.pkg_path = pkg_path or Path.cwd()
         self.dry_run = dry_run
@@ -619,8 +620,19 @@ class AsyncWorkflowOrchestrator:
         self.verbose = verbose
         self.debug = debug
 
-        self._initialize_logging()
+        # Configure ACB dependency injection (replaces enhanced_container)
+        from acb.depends import depends
 
+        from .acb_di_config import configure_acb_dependencies
+
+        configure_acb_dependencies(
+            console=self.console,
+            pkg_path=self.pkg_path,
+            dry_run=self.dry_run,
+            verbose=self.verbose,
+        )
+
+        # Import protocols for retrieving dependencies via ACB
         from crackerjack.models.protocols import (
             ConfigMergeServiceProtocol,
             FileSystemInterface,
@@ -630,25 +642,22 @@ class AsyncWorkflowOrchestrator:
             TestManagerProtocol,
         )
 
-        from .enhanced_container import create_enhanced_container
+        self._initialize_logging()
 
-        self.container = create_enhanced_container(
-            console=self.console,
-            pkg_path=self.pkg_path,
-            dry_run=self.dry_run,
-        )
+        self.logger = logging.getLogger("crackerjack.async_orchestrator")
 
+        # Create coordinators - dependencies retrieved via ACB's depends.get()
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
         self.phases = PhaseCoordinator(
             console=self.console,
             pkg_path=self.pkg_path,
             session=self.session,
-            filesystem=self.container.get(FileSystemInterface),
-            git_service=self.container.get(GitInterface),
-            hook_manager=self.container.get(HookManager),
-            test_manager=self.container.get(TestManagerProtocol),
-            publish_manager=self.container.get(PublishManager),
-            config_merge_service=self.container.get(ConfigMergeServiceProtocol),
+            filesystem=depends.get(FileSystemInterface),
+            git_service=depends.get(GitInterface),
+            hook_manager=depends.get(HookManager),
+            test_manager=depends.get(TestManagerProtocol),
+            publish_manager=depends.get(PublishManager),
+            config_merge_service=depends.get(ConfigMergeServiceProtocol),
         )
 
         self.async_pipeline = AsyncWorkflowPipeline(
@@ -657,8 +666,6 @@ class AsyncWorkflowOrchestrator:
             session=self.session,
             phases=self.phases,
         )
-
-        self.logger = logging.getLogger("crackerjack.async_orchestrator")
 
     def _initialize_logging(self) -> None:
         from crackerjack.services.log_manager import get_log_manager

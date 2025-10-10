@@ -140,10 +140,11 @@ class ParallelExecutionStrategy:
                         },
                     )
                     return HookResult(
-                        hook_name=hook.name,
+                        id=hook.name,
+                        name=hook.name,
                         status="timeout",
                         duration=hook_timeout,
-                        output=f"Hook timed out after {hook_timeout}s",
+                        issues_found=[f"Hook timed out after {hook_timeout}s"],
                     )
                 except Exception as e:
                     logger.error(
@@ -155,10 +156,11 @@ class ParallelExecutionStrategy:
                         },
                     )
                     return HookResult(
-                        hook_name=hook.name,
+                        id=hook.name,
+                        name=hook.name,
                         status="error",
                         duration=0.0,
-                        output=f"Exception: {type(e).__name__}: {e}",
+                        issues_found=[f"Exception: {type(e).__name__}: {e}"],
                     )
 
         # Create tasks for all hooks
@@ -216,17 +218,18 @@ class ParallelExecutionStrategy:
     def _placeholder_result(self, hook: HookDefinition) -> HookResult:
         """Create placeholder result when no executor provided."""
         return HookResult(
-            hook_name=hook.name,
+            id=hook.name,
+            name=hook.name,
             status="passed",
             duration=0.0,
-            output="[Placeholder - no executor provided]",
         )
 
     def _error_result(self, hook: HookDefinition, error: Exception) -> HookResult:
         """Create error HookResult from exception."""
         return HookResult(
-            hook_name=hook.name,
+            id=hook.name,
+            name=hook.name,
             status="error",
             duration=0.0,
-            output=f"Exception: {type(error).__name__}: {error}",
+            issues_found=[f"Exception: {type(error).__name__}: {error}"],
         )

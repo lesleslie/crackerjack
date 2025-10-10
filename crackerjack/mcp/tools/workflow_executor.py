@@ -205,12 +205,8 @@ async def _create_advanced_orchestrator(
     from pathlib import Path
 
     from crackerjack.core.async_workflow_orchestrator import AsyncWorkflowOrchestrator
-    from crackerjack.core.enhanced_container import EnhancedDependencyContainer
 
-    container = EnhancedDependencyContainer()
-
-    await _register_core_services(container, Path(working_dir))
-
+    # AsyncWorkflowOrchestrator now uses ACB DI internally
     orchestrator = AsyncWorkflowOrchestrator(
         pkg_path=Path(working_dir),
         verbose=kwargs.get("verbose", False),

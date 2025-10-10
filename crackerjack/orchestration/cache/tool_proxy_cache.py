@@ -144,7 +144,7 @@ class ToolProxyCacheAdapter:
                         "Cache hit",
                         extra={
                             "key": key,
-                            "hook_name": result.hook_name,
+                            "hook_name": result.name,
                             "status": result.status,
                         },
                     )
@@ -196,7 +196,7 @@ class ToolProxyCacheAdapter:
                 "Cache write",
                 extra={
                     "key": key,
-                    "hook_name": result.hook_name,
+                    "hook_name": result.name,
                     "status": result.status,
                     "ttl": ttl_sec,
                 },
@@ -228,13 +228,13 @@ class ToolProxyCacheAdapter:
             Cache key string
         """
         try:
-            # Hash hook configuration
+            # Hash hook configuration (Phase 8+ direct invocation API)
             config_data = {
                 "name": hook.name,
-                "entry": hook.entry,
-                "args": hook.args or [],
-                "files": hook.files or "",
-                "exclude": hook.exclude or "",
+                "command": hook.command,  # Direct tool invocation command
+                "timeout": hook.timeout,
+                "stage": hook.stage.value if hasattr(hook.stage, 'value') else str(hook.stage),
+                "security_level": hook.security_level.value if hasattr(hook.security_level, 'value') else str(hook.security_level),
             }
             config_json = json.dumps(config_data, sort_keys=True)
             config_hash = hashlib.sha256(config_json.encode()).hexdigest()[:16]

@@ -526,7 +526,7 @@ ______________________________________________________________________
 - Protocol-based abstractions
 - Service layer architecture
 - Dependency injection
-- Agent-based extensibility (12 specialized agents)
+- Agent-based extensibility (9 specialized agents)
 
 **Centralized Utilities:**
 

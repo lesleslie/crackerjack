@@ -314,20 +314,6 @@ class TestCoreImports:
         except ImportError as e:
             pytest.skip(f"Workflow orchestrator imports failed: {e}")
 
-    def test_enhanced_container(self) -> None:
-        try:
-            from crackerjack.core.enhanced_container import (
-                EnhancedContainer,
-                ServiceDescriptor,
-                ServiceLifetime,
-            )
-
-            assert EnhancedContainer is not None
-            assert ServiceLifetime is not None
-            assert ServiceDescriptor is not None
-        except ImportError as e:
-            pytest.skip(f"Enhanced container imports failed: {e}")
-
     def test_session_coordinator(self) -> None:
         try:
             from crackerjack.core.session_coordinator import SessionCoordinator

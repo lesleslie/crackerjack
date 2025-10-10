@@ -1,5 +1,14 @@
 ______________________________________________________________________
 
+## [Unreleased] - 2025-10-10
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## [Unreleased] - 2025-10-09
 
 ### Added

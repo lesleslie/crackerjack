@@ -410,43 +410,6 @@ class TestDependencyContainer:
             container.get(FileSystemInterface)
 
 
-class TestEnhancedContainer:
-    def test_enhanced_container_basic(self) -> None:
-        from crackerjack.core.enhanced_container import (
-            EnhancedDependencyContainer,
-            ServiceLifetime,
-            create_enhanced_container,
-        )
-
-        container = EnhancedDependencyContainer("test")
-        assert container.name == "test"
-
-        assert ServiceLifetime.SINGLETON.value == "singleton"
-        assert ServiceLifetime.TRANSIENT.value == "transient"
-        assert ServiceLifetime.SCOPED.value == "scoped"
-
-        enhanced = create_enhanced_container()
-        assert isinstance(enhanced, EnhancedDependencyContainer)
-
-    def test_service_descriptor_basic(self) -> None:
-        from crackerjack.core.enhanced_container import (
-            ServiceDescriptor,
-            ServiceLifetime,
-        )
-
-        class TestService:
-            pass
-
-        descriptor = ServiceDescriptor(
-            interface=TestService,
-            implementation=TestService,
-            lifetime=ServiceLifetime.SINGLETON,
-        )
-        assert descriptor.interface == TestService
-        assert descriptor.implementation == TestService
-        assert descriptor.created_count == 0
-
-
 class TestCLIModulesBasic:
     def test_cli_options_import(self) -> None:
         import crackerjack.cli.options as cli_options_module

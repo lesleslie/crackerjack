@@ -390,31 +390,41 @@ class HookOrchestratorAdapter:
         3. Process hooks in layers, removing satisfied dependencies
         4. Hooks without dependencies execute in original order
         """
-        # Build hook name to hook object mapping
+        # Build hook name to hook object mapping with original indices
         hook_map = {hook.name: hook for hook in hooks}
+        hook_indices = {hook.name: idx for idx, hook in enumerate(hooks)}
 
         # Build in-degree map (how many dependencies each hook has)
+        # Only count dependencies that are actually present in the hooks list
         in_degree = {hook.name: 0 for hook in hooks}
         for hook_name in hook_map:
             if hook_name in self._dependency_graph:
-                in_degree[hook_name] = len(self._dependency_graph[hook_name])
+                # Only count dependencies that are in the current hooks list
+                deps_in_list = [
+                    dep for dep in self._dependency_graph[hook_name] if dep in hook_map
+                ]
+                in_degree[hook_name] = len(deps_in_list)
 
         # Queue of hooks ready to execute (zero dependencies)
+        # Maintain original order for hooks with same in-degree
         ready_queue = [hook for hook in hooks if in_degree[hook.name] == 0]
         ordered = []
 
         # Process hooks in dependency order
         while ready_queue:
-            # Take next ready hook
+            # Take next ready hook (first in original order)
             current_hook = ready_queue.pop(0)
             ordered.append(current_hook)
 
             # Update in-degrees for dependent hooks
             for hook_name, deps in self._dependency_graph.items():
-                if current_hook.name in deps:
+                if current_hook.name in deps and hook_name in in_degree:
                     in_degree[hook_name] -= 1
                     if in_degree[hook_name] == 0 and hook_name in hook_map:
                         ready_queue.append(hook_map[hook_name])
+
+            # Re-sort ready_queue by original index to maintain stable order
+            ready_queue.sort(key=lambda h: hook_indices[h.name])
 
         logger.debug(
             "Resolved hook dependencies",

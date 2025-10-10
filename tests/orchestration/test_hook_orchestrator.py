@@ -30,28 +30,28 @@ def sample_hooks() -> list[HookDefinition]:
     """Create sample hook definitions for testing."""
     return [
         HookDefinition(
-            id="ruff-format",
             name="ruff-format",
-            entry="ruff format",
-            language="python",
+            command=["uv", "run", "ruff", "format"],
+            timeout=60,
             stage=HookStage.FAST,
             security_level=SecurityLevel.LOW,
+            use_precommit_legacy=False,
         ),
         HookDefinition(
-            id="ruff-check",
             name="ruff-check",
-            entry="ruff check",
-            language="python",
+            command=["uv", "run", "ruff", "check"],
+            timeout=60,
             stage=HookStage.FAST,
             security_level=SecurityLevel.MEDIUM,
+            use_precommit_legacy=False,
         ),
         HookDefinition(
-            id="bandit",
             name="bandit",
-            entry="bandit",
-            language="python",
+            command=["uv", "run", "bandit", "-c", "pyproject.toml", "-r", "crackerjack"],
+            timeout=60,
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.HIGH,
+            use_precommit_legacy=False,
         ),
     ]
 
@@ -61,36 +61,36 @@ def dependent_hooks() -> list[HookDefinition]:
     """Create hooks with dependencies for testing resolution."""
     return [
         HookDefinition(
-            id="gitleaks",
             name="gitleaks",
-            entry="gitleaks",
-            language="python",
+            command=["uv", "run", "gitleaks", "detect"],
+            timeout=60,
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.CRITICAL,
+            use_precommit_legacy=False,
         ),
         HookDefinition(
-            id="bandit",
             name="bandit",
-            entry="bandit",
-            language="python",
+            command=["uv", "run", "bandit", "-c", "pyproject.toml", "-r", "crackerjack"],
+            timeout=60,
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.HIGH,
+            use_precommit_legacy=False,
         ),
         HookDefinition(
-            id="zuban",
             name="zuban",
-            entry="zuban",
-            language="python",
+            command=["uv", "run", "zuban"],
+            timeout=60,
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.MEDIUM,
+            use_precommit_legacy=False,
         ),
         HookDefinition(
-            id="refurb",
             name="refurb",
-            entry="refurb",
-            language="python",
+            command=["uv", "run", "refurb", "."],
+            timeout=60,
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.LOW,
+            use_precommit_legacy=False,
         ),
     ]
 
@@ -122,23 +122,23 @@ def mock_hook_executor():
     """Create mock HookExecutor for testing legacy mode."""
     executor = MagicMock()
     executor.execute_strategy.return_value = HookExecutionResult(
+        strategy_name="fast",
         results=[
             HookResult(
-                hook_name="ruff-format",
+                id="ruff-format",
+                name="ruff-format",
                 status="passed",
                 duration=1.0,
-                output="Formatted",
             ),
             HookResult(
-                hook_name="ruff-check",
+                id="ruff-check",
+                name="ruff-check",
                 status="passed",
                 duration=2.0,
-                output="Checked",
             ),
         ],
-        passed_count=2,
-        failed_count=0,
         total_duration=3.0,
+        success=True,
     )
     return executor
 
@@ -238,8 +238,8 @@ class TestHookOrchestratorLegacyMode:
 
         # Verify results were returned
         assert len(results) == 2
-        assert results[0].hook_name == "ruff-format"
-        assert results[1].hook_name == "ruff-check"
+        assert results[0].name == "ruff-format"
+        assert results[1].name == "ruff-check"
 
     @pytest.mark.asyncio
     async def test_legacy_mode_without_executor_raises(self, fast_strategy: HookStrategy):
@@ -269,7 +269,8 @@ class TestHookOrchestratorACBMode:
         # Should return placeholder results
         assert len(results) == 2
         assert all(r.status == "passed" for r in results)
-        assert all("placeholder" in r.output.lower() for r in results)
+        # Placeholder results have no issues_found
+        assert all((r.issues_found is None or len(r.issues_found) == 0) for r in results)
 
     @pytest.mark.asyncio
     async def test_acb_mode_with_caching(self, fast_strategy: HookStrategy):

@@ -26,28 +26,28 @@ def sample_hooks() -> list[HookDefinition]:
     """Create sample hook definitions for testing."""
     return [
         HookDefinition(
-            id="hook1",
             name="hook1",
-            entry="hook1",
-            language="python",
+            command=["python", "-m", "hook1"],
+            timeout=60,
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.LOW,
+            use_precommit_legacy=False,
         ),
         HookDefinition(
-            id="hook2",
             name="hook2",
-            entry="hook2",
-            language="python",
+            command=["python", "-m", "hook2"],
+            timeout=60,
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.MEDIUM,
+            use_precommit_legacy=False,
         ),
         HookDefinition(
-            id="hook3",
             name="hook3",
-            entry="hook3",
-            language="python",
+            command=["python", "-m", "hook3"],
+            timeout=60,
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.HIGH,
+            use_precommit_legacy=False,
         ),
     ]
 
@@ -56,12 +56,12 @@ def sample_hooks() -> list[HookDefinition]:
 def critical_hook() -> HookDefinition:
     """Create critical security hook for testing early exit."""
     return HookDefinition(
-        id="critical_hook",
         name="critical_hook",
-        entry="critical_hook",
-        language="python",
+        command=["python", "-m", "critical_hook"],
+        timeout=60,
         stage=HookStage.COMPREHENSIVE,
         security_level=SecurityLevel.CRITICAL,
+        use_precommit_legacy=False,
     )
 
 
@@ -94,10 +94,10 @@ class TestParallelExecutionStrategy:
         async def mock_executor(hook: HookDefinition) -> HookResult:
             await asyncio.sleep(0.1)  # Simulate work
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=0.1,
-                output=f"Success: {hook.name}",
             )
 
         results = await strategy.execute(
@@ -107,7 +107,7 @@ class TestParallelExecutionStrategy:
 
         assert len(results) == 3
         assert all(r.status == "passed" for r in results)
-        assert [r.hook_name for r in results] == ["hook1", "hook2", "hook3"]
+        assert [r.name for r in results] == ["hook1", "hook2", "hook3"]
 
     @pytest.mark.asyncio
     async def test_timeout_handling(self, sample_hooks: list[HookDefinition]):
@@ -118,10 +118,10 @@ class TestParallelExecutionStrategy:
         async def slow_executor(hook: HookDefinition) -> HookResult:
             await asyncio.sleep(10)  # This will timeout
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=10.0,
-                output="Should not reach here",
             )
 
         # Override timeout for specific hook
@@ -134,7 +134,7 @@ class TestParallelExecutionStrategy:
 
         assert len(results) == 1
         assert results[0].status == "timeout"
-        assert "timed out" in results[0].output.lower()
+        assert results[0].issues_found and any("timed out" in issue.lower() for issue in results[0].issues_found)
 
     @pytest.mark.asyncio
     async def test_exception_isolation(self, sample_hooks: list[HookDefinition]):
@@ -151,10 +151,10 @@ class TestParallelExecutionStrategy:
                 raise ValueError("Simulated error")
 
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=0.1,
-                output=f"Success: {hook.name}",
             )
 
         results = await strategy.execute(
@@ -189,21 +189,21 @@ class TestParallelExecutionStrategy:
             current_concurrent -= 1
 
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=0.1,
-                output="Done",
             )
 
         # Create 5 hooks
         hooks = [
             HookDefinition(
-                id=f"hook{i}",
                 name=f"hook{i}",
-                entry=f"hook{i}",
-                language="python",
+                command=["python", "-m", f"hook{i}"],
+                timeout=60,
                 stage=HookStage.COMPREHENSIVE,
                 security_level=SecurityLevel.LOW,
+                use_precommit_legacy=False,
             )
             for i in range(5)
         ]
@@ -263,10 +263,10 @@ class TestSequentialExecutionStrategy:
             execution_order.append(hook.name)
             await asyncio.sleep(0.05)
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=0.05,
-                output=f"Success: {hook.name}",
             )
 
         results = await strategy.execute(
@@ -297,17 +297,17 @@ class TestSequentialExecutionStrategy:
 
             if hook.name == "critical_hook":
                 return HookResult(
-                    hook_name=hook.name,
+                    id=hook.name,
+                    name=hook.name,
                     status="failed",
                     duration=0.1,
-                    output="Critical failure",
                 )
 
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=0.1,
-                output="Success",
             )
 
         results = await strategy.execute(
@@ -334,17 +334,17 @@ class TestSequentialExecutionStrategy:
         async def mock_executor(hook: HookDefinition) -> HookResult:
             if hook.name == "critical_hook":
                 return HookResult(
-                    hook_name=hook.name,
+                    id=hook.name,
+                    name=hook.name,
                     status="failed",
                     duration=0.1,
-                    output="Critical failure",
                 )
 
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=0.1,
-                output="Success",
             )
 
         results = await strategy.execute(
@@ -363,10 +363,10 @@ class TestSequentialExecutionStrategy:
         async def slow_executor(hook: HookDefinition) -> HookResult:
             await asyncio.sleep(10)
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=10.0,
-                output="Should not reach here",
             )
 
         sample_hooks[0].timeout = 0.1
@@ -389,10 +389,10 @@ class TestSequentialExecutionStrategy:
                 raise RuntimeError("Simulated error")
 
             return HookResult(
-                hook_name=hook.name,
+                id=hook.name,
+                name=hook.name,
                 status="passed",
                 duration=0.1,
-                output="Success",
             )
 
         results = await strategy.execute(
