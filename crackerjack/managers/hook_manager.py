@@ -229,20 +229,21 @@ class HookManagerImpl:
             "lsp_optimization_enabled": self.lsp_optimization_enabled,
             "tool_proxy_enabled": self.tool_proxy_enabled,
             "executor_type": type(self.executor).__name__,
-            "orchestration_enabled": self._settings.enable_orchestration,
+            # Use instance properties which may override settings via constructor params
+            "orchestration_enabled": self.orchestration_enabled,
             "orchestration_mode": (
-                self._settings.orchestration_mode
-                if self._settings.enable_orchestration
+                self.orchestration_mode
+                if self.orchestration_enabled
                 else None
             ),
             "caching_enabled": (
-                self._settings.enable_caching
-                if self._settings.enable_orchestration
+                self._orchestration_config.enable_caching
+                if self.orchestration_enabled
                 else False
             ),
             "cache_backend": (
-                self._settings.cache_backend
-                if self._settings.enable_orchestration
+                self._orchestration_config.cache_backend
+                if self.orchestration_enabled
                 else None
             ),
         }
