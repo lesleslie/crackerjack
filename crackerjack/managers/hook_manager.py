@@ -55,20 +55,12 @@ class HookManagerImpl:
         # 2. Project .crackerjack.yaml file (middle - for project-specific settings)
         # 3. Create from constructor params + DI settings (lowest - for defaults)
         if orchestration_config:
-            # Explicit config object provided
+            # Explicit config object provided - use its values directly
+            # Legacy parameters (enable_orchestration, orchestration_mode) are ignored
+            # when an explicit config object is provided
             self._orchestration_config = orchestration_config
-            # Extract orchestration settings from config object if not explicitly provided
-            # Priority: explicit params > config object > DI settings
-            self.orchestration_enabled = (
-                enable_orchestration
-                if enable_orchestration is not None
-                else orchestration_config.enable_orchestration
-            )
-            self.orchestration_mode = (
-                orchestration_mode
-                if orchestration_mode is not None
-                else orchestration_config.orchestration_mode
-            )
+            self.orchestration_enabled = orchestration_config.enable_orchestration
+            self.orchestration_mode = orchestration_config.orchestration_mode
         else:
             # Try to load from project config file
             from crackerjack.orchestration.config import OrchestrationConfig
@@ -126,13 +118,23 @@ class HookManagerImpl:
             HookOrchestratorSettings,
         )
 
-        # Create orchestrator settings from CrackerjackSettings
+        # Create orchestrator settings from orchestration config
+        # Handle both OrchestrationConfig (uses orchestration_mode) and
+        # HookOrchestratorSettings (uses execution_mode)
+        execution_mode = getattr(
+            self._orchestration_config,
+            "execution_mode",
+            getattr(self._orchestration_config, "orchestration_mode", "acb"),
+        )
+
         orchestrator_settings = HookOrchestratorSettings(
-            execution_mode=self._settings.orchestration_mode,
-            enable_caching=self._settings.enable_caching,
-            cache_backend=self._settings.cache_backend,
-            max_parallel_hooks=self._settings.max_parallel_hooks,
-            enable_adaptive_execution=self._settings.enable_adaptive_execution,
+            execution_mode=execution_mode,
+            enable_caching=self._orchestration_config.enable_caching,
+            cache_backend=self._orchestration_config.cache_backend,
+            max_parallel_hooks=self._orchestration_config.max_parallel_hooks,
+            enable_adaptive_execution=getattr(
+                self._orchestration_config, "enable_adaptive_execution", True
+            ),
         )
 
         self._orchestrator = HookOrchestratorAdapter(
@@ -238,7 +240,11 @@ class HookManagerImpl:
 
     def run_hooks(self) -> list[HookResult]:
         # Phase 5-7: Enable strategy-level parallelism when orchestration is enabled
-        if self.orchestration_enabled and self._settings.enable_strategy_parallelism:
+        # Use config's enable_strategy_parallelism setting (defaults to True if not set)
+        enable_parallelism = getattr(
+            self._orchestration_config, "enable_strategy_parallelism", True
+        )
+        if self.orchestration_enabled and enable_parallelism:
             import asyncio
 
             # Check if we're already in an event loop (e.g., during testing)
