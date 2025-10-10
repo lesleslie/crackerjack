@@ -1,0 +1,20 @@
+# Local Settings Override Example
+# Copy this file to local.yaml and customize for your local development environment.
+# local.yaml is gitignored and will not be committed.
+
+# Example: Enable verbose logging locally
+# verbose: true
+
+# Example: Use more test workers
+# test_workers: 8
+
+# Example: Skip hooks during rapid development
+# skip_hooks: true
+
+# Example: Enable AI debugging
+# ai_debug: true
+# ai_debug_verbose: true
+
+# Example: Enable dashboard
+# dashboard_enabled: true
+# dashboard_port: 8678

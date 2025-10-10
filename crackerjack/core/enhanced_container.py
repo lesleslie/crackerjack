@@ -9,6 +9,8 @@ from typing import Any, TypeVar
 
 from rich.console import Console
 
+from crackerjack.managers.hook_manager import HookManagerImpl
+from crackerjack.managers.publish_manager import PublishManagerImpl
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
     ConfigurationServiceProtocol,
@@ -445,8 +447,6 @@ class ServiceCollectionBuilder:
             factory=lambda: GitService(console=console, pkg_path=pkg_path),
         )
 
-        from crackerjack.managers.hook_manager import HookManagerImpl
-
         self.container.register_transient(
             HookManager,
             factory=lambda: HookManagerImpl(
@@ -460,8 +460,6 @@ class ServiceCollectionBuilder:
             TestManagerProtocol,
             factory=lambda: TestManagementImpl(console=console, pkg_path=pkg_path),
         )
-
-        from crackerjack.managers.publish_manager import PublishManagerImpl
 
         self.container.register_transient(
             PublishManager,

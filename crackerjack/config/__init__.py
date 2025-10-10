@@ -7,6 +7,12 @@ from .hooks import (
     HookStrategy,
     RetryPolicy,
 )
+from .settings import CrackerjackSettings
+
+# Register settings with ACB dependency injection
+from acb.depends import depends
+
+depends.set(CrackerjackSettings, CrackerjackSettings())
 
 __all__ = [
     "COMPREHENSIVE_STRATEGY",
@@ -16,4 +22,5 @@ __all__ = [
     "HookStage",
     "HookStrategy",
     "RetryPolicy",
+    "CrackerjackSettings",
 ]

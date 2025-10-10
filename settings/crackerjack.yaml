@@ -1,0 +1,151 @@
+# Crackerjack Base Configuration
+# This file contains default settings for all environments.
+# Override settings in local.yaml (gitignored) or environment-specific files.
+
+# === Workflow Settings ===
+
+# Cleaning
+clean: true
+update_docs: false
+force_update_docs: false
+compress_docs: false
+auto_compress_docs: false
+
+# Hooks
+skip_hooks: false
+update_precommit: false
+experimental_hooks: false
+enable_pyrefly: false
+enable_ty: false
+enable_lsp_optimization: false
+
+# Testing
+run_tests: false
+benchmark: false
+test_workers: 0  # 0 = auto-detect
+test_timeout: 0  # 0 = use default
+
+# Publishing
+publish_version: null
+bump_version: null
+all_workflow: null
+no_git_tags: false
+skip_version_check: false
+
+# Git
+commit: false
+create_pr: false
+
+# AI Agent
+ai_agent: false
+start_mcp_server: false
+max_iterations: 5
+autofix: true
+ai_agent_autofix: false
+
+# Execution
+interactive: false
+verbose: false
+async_mode: false
+no_config_updates: false
+
+# Progress
+progress_enabled: false
+
+# Cleanup
+auto_cleanup: true
+keep_debug_logs: 5
+keep_coverage_files: 10
+
+# Enterprise
+enterprise_enabled: false
+license_key: null
+organization: null
+
+# MCP Server
+mcp_http_port: 8676
+mcp_http_host: "127.0.0.1"
+mcp_websocket_port: 8675
+mcp_http_enabled: false
+
+# Zuban LSP
+zuban_enabled: true
+zuban_auto_start: true
+zuban_port: 8677
+zuban_mode: "stdio"
+zuban_timeout: 30
+
+# === Orchestration Settings ===
+
+# Core orchestration
+enable_orchestration: false
+orchestration_mode: "acb"  # 'legacy' or 'acb'
+
+# Cache settings
+enable_caching: true
+cache_backend: "memory"  # 'memory' or 'tool_proxy'
+cache_ttl: 3600  # seconds
+cache_max_entries: 100  # memory cache only
+
+# Execution settings
+max_parallel_hooks: 4
+default_timeout: 600  # seconds
+stop_on_critical_failure: true
+
+# Advanced orchestration
+enable_dependency_resolution: true
+log_cache_stats: false
+log_execution_timing: false
+
+# Triple parallelism (Phase 5-7)
+enable_strategy_parallelism: true  # Run fast + comprehensive concurrently
+enable_adaptive_execution: true  # Use adaptive strategy (dependency-aware)
+max_concurrent_strategies: 2  # Usually 2 (fast + comprehensive)
+
+# Phase 8: Direct tool invocation
+use_precommit_legacy: true  # Use pre-commit wrapper (true) or direct (false)
+
+# === QA Framework Settings ===
+
+# Core QA settings
+qa_max_parallel_checks: 4
+qa_fail_fast: false
+qa_run_formatters_first: true
+qa_enable_incremental: true
+
+# === Global Settings ===
+
+# Global locking
+global_lock_timeout: 30
+
+# === Monitoring & Dashboard Settings ===
+
+# Dashboard
+dashboard_enabled: false
+dashboard_port: 8678
+dashboard_host: "127.0.0.1"
+
+# Monitoring
+monitoring_enabled: false
+monitoring_interval: 60  # seconds
+
+# === Advanced Features ===
+
+# Code stripping
+strip_code: false
+strip_patterns: []
+
+# AI debugging
+ai_debug: false
+ai_debug_verbose: false
+
+# Watchdog
+watchdog_enabled: false
+watchdog_interval: 30  # seconds
+
+# Coverage
+coverage_enabled: false
+coverage_status: false
+
+# Workflow visualization
+show_workflow: false

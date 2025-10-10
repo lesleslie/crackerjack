@@ -141,3 +141,4 @@ venv/
 /.obsidian/
 /.smart-env/
 /.backups/
+settings/local.yaml

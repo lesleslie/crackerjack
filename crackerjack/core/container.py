@@ -3,6 +3,8 @@ from pathlib import Path
 
 from rich.console import Console
 
+from crackerjack.managers.hook_manager import HookManagerImpl
+from crackerjack.managers.publish_manager import PublishManagerImpl
 from crackerjack.models.protocols import (
     FileSystemInterface,
     GitInterface,
@@ -60,8 +62,6 @@ class DependencyContainer:
             lambda: GitService(console=console, pkg_path=pkg_path),
         )
 
-        from crackerjack.managers.hook_manager import HookManagerImpl
-
         self.register_transient(
             HookManager,
             lambda: HookManagerImpl(
@@ -75,8 +75,6 @@ class DependencyContainer:
             TestManagerProtocol,
             lambda: TestManagementImpl(console=console, pkg_path=pkg_path),
         )
-
-        from crackerjack.managers.publish_manager import PublishManagerImpl
 
         self.register_transient(
             PublishManager,
