@@ -159,7 +159,9 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
     if stage in {"fast", "comprehensive"}:
         settings_dict["skip_hooks"] = False
     elif stage == "tests":
-        settings_dict["run_tests"] = True  # Note: field renamed from 'test' to 'run_tests'
+        settings_dict["run_tests"] = (
+            True  # Note: field renamed from 'test' to 'run_tests'
+        )
     elif stage == "cleaning":
         settings_dict["clean"] = True
     elif stage == "init":

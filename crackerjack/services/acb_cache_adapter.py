@@ -175,7 +175,11 @@ class ACBCrackerjackCache:
             Cached hook result or None if not found
         """
         # If version specified, check versioned cache directly
-        if tool_version and self.enable_disk_cache and hook_name in self.EXPENSIVE_HOOKS:
+        if (
+            tool_version
+            and self.enable_disk_cache
+            and hook_name in self.EXPENSIVE_HOOKS
+        ):
             cache_key = self._get_versioned_hook_cache_key(
                 hook_name, file_hashes, tool_version
             )
