@@ -7,7 +7,16 @@ from rich.console import Console
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
 from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
-from crackerjack.models.protocols import OptionsProtocol
+from crackerjack.models.protocols import (
+    LoggerProtocol,
+    MemoryOptimizerProtocol,
+    OptionsProtocol,
+    PerformanceBenchmarkProtocol,
+    PerformanceCacheProtocol,
+    PerformanceMonitorProtocol,
+    QualityBaselineProtocol,
+    QualityIntelligenceProtocol,
+)
 from crackerjack.services.debug import (
     AIAgentDebugger,
     NoOpDebugger,
@@ -58,24 +67,26 @@ class WorkflowPipeline:
         self._mcp_state_manager: t.Any = None
         self._last_security_audit: t.Any = None
 
-        self.logger = get_logger("crackerjack.pipeline")
+        self.logger: LoggerProtocol = get_logger("crackerjack.pipeline")
         self._debugger: AIAgentDebugger | NoOpDebugger | None = None
 
-        self._performance_monitor = get_performance_monitor()
-        self._memory_optimizer = get_memory_optimizer()
-        self._cache = get_performance_cache()
+        self._performance_monitor: PerformanceMonitorProtocol = (
+            get_performance_monitor()
+        )
+        self._memory_optimizer: MemoryOptimizerProtocol = get_memory_optimizer()
+        self._cache: PerformanceCacheProtocol = get_performance_cache()
 
         # Initialize quality intelligence for advanced decision making
-        self._quality_intelligence: QualityIntelligenceService | None
+        self._quality_intelligence: QualityIntelligenceProtocol | None
         try:
-            quality_baseline = EnhancedQualityBaselineService()
+            quality_baseline: QualityBaselineProtocol = EnhancedQualityBaselineService()
             self._quality_intelligence = QualityIntelligenceService(quality_baseline)
         except Exception:
             # Fallback gracefully if quality intelligence is not available
             self._quality_intelligence = None
 
         # Initialize performance benchmarking for workflow analysis
-        self._performance_benchmarks: PerformanceBenchmarkService | None
+        self._performance_benchmarks: PerformanceBenchmarkProtocol | None
         try:
             self._performance_benchmarks = PerformanceBenchmarkService(
                 console, pkg_path
@@ -2032,6 +2043,7 @@ class WorkflowOrchestrator:
         verbose: bool = False,
         debug: bool = False,
     ) -> None:
+        # Initialize console and pkg_path first
         self.console = console or Console(force_terminal=True)
         self.pkg_path = pkg_path or Path.cwd()
         self.dry_run = dry_run
@@ -2039,6 +2051,19 @@ class WorkflowOrchestrator:
         self.verbose = verbose
         self.debug = debug
 
+        # Configure ACB dependency injection (replaces enhanced_container)
+        from acb.depends import depends
+
+        from .acb_di_config import configure_acb_dependencies
+
+        configure_acb_dependencies(
+            console=self.console,
+            pkg_path=self.pkg_path,
+            dry_run=self.dry_run,
+            verbose=self.verbose,
+        )
+
+        # Import protocols for type annotations
         from crackerjack.models.protocols import (
             ConfigMergeServiceProtocol,
             FileSystemInterface,
@@ -2052,26 +2077,18 @@ class WorkflowOrchestrator:
 
         self.logger = get_logger("crackerjack.orchestrator")
 
-        from .enhanced_container import create_enhanced_container
-
-        self.container = create_enhanced_container(
-            console=self.console,
-            pkg_path=self.pkg_path,
-            dry_run=self.dry_run,
-            verbose=self.verbose,
-        )
-
+        # Create coordinators - dependencies auto-injected via ACB
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
         self.phases = PhaseCoordinator(
             console=self.console,
             pkg_path=self.pkg_path,
             session=self.session,
-            filesystem=self.container.get(FileSystemInterface),
-            git_service=self.container.get(GitInterface),
-            hook_manager=self.container.get(HookManager),
-            test_manager=self.container.get(TestManagerProtocol),
-            publish_manager=self.container.get(PublishManager),
-            config_merge_service=self.container.get(ConfigMergeServiceProtocol),
+            filesystem=depends.get(FileSystemInterface),
+            git_service=depends.get(GitInterface),
+            hook_manager=depends.get(HookManager),
+            test_manager=depends.get(TestManagerProtocol),
+            publish_manager=depends.get(PublishManager),
+            config_merge_service=depends.get(ConfigMergeServiceProtocol),
         )
 
         self.pipeline = WorkflowPipeline(

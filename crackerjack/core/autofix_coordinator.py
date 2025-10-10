@@ -3,6 +3,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from crackerjack.models.protocols import LoggerProtocol
 from crackerjack.services.logging import get_logger
 
 
@@ -10,7 +11,7 @@ class AutofixCoordinator:
     def __init__(self, console: Console, pkg_path: Path) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        self.logger = get_logger("crackerjack.autofix")
+        self.logger: LoggerProtocol = get_logger("crackerjack.autofix")
 
         setattr(self.logger, "name", "crackerjack.autofix")
 

@@ -13,7 +13,9 @@ from crackerjack.models.protocols import (
     FileSystemInterface,
     GitInterface,
     HookManager,
+    MemoryOptimizerProtocol,
     OptionsProtocol,
+    PerformanceCacheProtocol,
     PublishManager,
     TestManagerProtocol,
 )
@@ -22,6 +24,8 @@ from crackerjack.services.memory_optimizer import (
     get_memory_optimizer,
 )
 from crackerjack.services.parallel_executor import (
+    AsyncCommandExecutor,
+    ParallelHookExecutor,
     get_async_executor,
     get_parallel_executor,
 )
@@ -71,11 +75,11 @@ class PhaseCoordinator(ErrorHandlingMixin):
 
         self.logger = logging.getLogger("crackerjack.phases")
 
-        self._memory_optimizer = get_memory_optimizer()
-        self._parallel_executor = get_parallel_executor()
-        self._async_executor = get_async_executor()
-        self._git_cache = get_git_cache()
-        self._filesystem_cache = get_filesystem_cache()
+        self._memory_optimizer: MemoryOptimizerProtocol = get_memory_optimizer()
+        self._parallel_executor: ParallelHookExecutor = get_parallel_executor()
+        self._async_executor: AsyncCommandExecutor = get_async_executor()
+        self._git_cache: PerformanceCacheProtocol = get_git_cache()
+        self._filesystem_cache: PerformanceCacheProtocol = get_filesystem_cache()
 
         self._lazy_autofix = create_lazy_service(
             lambda: AutofixCoordinator(console=console, pkg_path=pkg_path),

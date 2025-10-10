@@ -651,3 +651,145 @@ class HookOrchestratorProtocol(t.Protocol):
     def adapter_name(self) -> str:
         """Human-readable adapter name."""
         ...
+
+
+# ==================== Performance & Quality Protocols ====================
+
+
+@t.runtime_checkable
+class PerformanceMonitorProtocol(t.Protocol):
+    """Protocol for performance monitoring."""
+
+    def start_workflow(self, workflow_id: str) -> None:
+        """Start monitoring a workflow."""
+        ...
+
+    def end_workflow(
+        self, workflow_id: str, success: bool = True
+    ) -> t.Any:  # WorkflowPerformance
+        """End workflow monitoring and return performance data."""
+        ...
+
+    def start_phase(self, workflow_id: str, phase_name: str) -> None:
+        """Start monitoring a phase."""
+        ...
+
+    def end_phase(
+        self, workflow_id: str, phase_name: str, success: bool = True
+    ) -> t.Any:  # PhasePerformance
+        """End phase monitoring and return performance data."""
+        ...
+
+    def get_performance_summary(self, last_n_workflows: int = 10) -> dict[str, t.Any]:
+        """Get performance summary for recent workflows."""
+        ...
+
+    def get_benchmark_trends(self) -> dict[str, dict[str, t.Any]]:
+        """Get benchmark trend analysis."""
+        ...
+
+
+@t.runtime_checkable
+class MemoryOptimizerProtocol(t.Protocol):
+    """Protocol for memory optimization."""
+
+    def record_checkpoint(self, name: str = "") -> float:
+        """Record a memory checkpoint and return current usage."""
+        ...
+
+    def get_stats(self) -> dict[str, t.Any]:
+        """Get memory optimization statistics."""
+        ...
+
+
+@t.runtime_checkable
+class PerformanceCacheProtocol(t.Protocol):
+    """Protocol for performance caching."""
+
+    def get(self, key: str) -> t.Any | None:
+        """Get cached value."""
+        ...
+
+    def set(self, key: str, value: t.Any, ttl: int = 3600) -> None:
+        """Set cached value with TTL."""
+        ...
+
+    def invalidate(self, key: str) -> bool:
+        """Invalidate cache entry."""
+        ...
+
+    def clear_all(self) -> None:
+        """Clear all cache entries."""
+        ...
+
+
+@t.runtime_checkable
+class QualityIntelligenceProtocol(t.Protocol):
+    """Protocol for quality intelligence analysis."""
+
+    def analyze(self, metrics: dict[str, t.Any]) -> dict[str, t.Any]:
+        """Analyze quality metrics."""
+        ...
+
+    def get_recommendations(self) -> list[dict[str, t.Any]]:
+        """Get quality improvement recommendations."""
+        ...
+
+    def predict_quality_trend(self) -> dict[str, t.Any]:
+        """Predict quality trend."""
+        ...
+
+
+@t.runtime_checkable
+class QualityBaselineProtocol(t.Protocol):
+    """Protocol for quality baseline tracking."""
+
+    def get_baseline(self) -> dict[str, t.Any]:
+        """Get current baseline metrics."""
+        ...
+
+    def update_baseline(self, metrics: dict[str, t.Any]) -> bool:
+        """Update baseline with new metrics."""
+        ...
+
+    def compare(self, current: dict[str, t.Any]) -> dict[str, t.Any]:
+        """Compare current metrics against baseline."""
+        ...
+
+
+@t.runtime_checkable
+class ParallelExecutorProtocol(t.Protocol):
+    """Protocol for parallel task execution."""
+
+    async def execute_parallel(
+        self,
+        tasks: list[t.Any],
+        max_workers: int = 3,
+    ) -> list[t.Any]:
+        """Execute tasks in parallel."""
+        ...
+
+    def get_results(self) -> list[t.Any]:
+        """Get execution results."""
+        ...
+
+
+@t.runtime_checkable
+class PerformanceBenchmarkProtocol(t.Protocol):
+    """Protocol for performance benchmarking."""
+
+    def run_benchmark(self, operation: str) -> dict[str, t.Any]:
+        """Run benchmark for operation."""
+        ...
+
+    def get_report(self) -> dict[str, t.Any]:
+        """Get benchmark report."""
+        ...
+
+    def compare_benchmarks(
+        self,
+        baseline: dict[str, t.Any],
+        current: dict[str, t.Any],
+    ) -> dict[str, t.Any]:
+        """Compare two benchmark results."""
+        ...
