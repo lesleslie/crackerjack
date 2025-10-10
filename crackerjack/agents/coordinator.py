@@ -5,7 +5,7 @@ import typing as t
 from collections import defaultdict
 from itertools import starmap
 
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 from crackerjack.services.debug import get_ai_agent_debugger
 
 from .base import (
@@ -39,7 +39,7 @@ ISSUE_TYPE_TO_AGENTS = {
 
 class AgentCoordinator:
     def __init__(
-        self, context: AgentContext, cache: CrackerjackCache | None = None
+        self, context: AgentContext, cache: ACBCrackerjackCache | None = None
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
@@ -49,7 +49,7 @@ class AgentCoordinator:
         self.tracker = get_agent_tracker()
         self.debugger = get_ai_agent_debugger()
         self.proactive_mode = True
-        self.cache = cache or CrackerjackCache()
+        self.cache = cache or ACBCrackerjackCache()
 
     def initialize_agents(self) -> None:
         self.agents = agent_registry.create_all(self.context)

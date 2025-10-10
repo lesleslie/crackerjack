@@ -11,7 +11,7 @@ import yaml
 from rich.console import Console
 
 from crackerjack.agents.coordinator import AgentCoordinator
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +57,11 @@ class DualOutputGenerator:
         self,
         project_path: Path | None = None,
         console: Console | None = None,
-        cache: CrackerjackCache | None = None,
+        cache: ACBCrackerjackCache | None = None,
     ):
         self.project_path = project_path or Path.cwd()
         self.console = console or Console()
-        self.cache = cache or CrackerjackCache()
+        self.cache = cache or ACBCrackerjackCache()
 
         # Documentation paths
         self.ai_reference_path = self.project_path / "ai" / "AI-REFERENCE.md"

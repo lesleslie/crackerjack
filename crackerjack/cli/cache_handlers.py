@@ -5,20 +5,18 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 
 
 def handle_clear_cache(console: Console) -> None:
     """Clear all caches and display results."""
     try:
-        cache = CrackerjackCache()
+        cache = ACBCrackerjackCache()
 
         # Clear memory caches and get cleanup stats
         cleanup_results = cache.cleanup_all()
 
-        # Clear disk cache completely
-        if cache.enable_disk_cache and cache.cache_dir:
-            cache.disk_cache.clear()
+        # Note: ACBCrackerjackCache uses memory-only caching (no disk cache to clear)
 
         # Calculate total items cleared
         total_cleared = sum(cleanup_results.values())
@@ -47,7 +45,7 @@ def handle_clear_cache(console: Console) -> None:
 def handle_cache_stats(console: Console) -> None:
     """Display detailed cache statistics."""
     try:
-        cache = CrackerjackCache()
+        cache = ACBCrackerjackCache()
         stats = cache.get_cache_stats()
 
         main_table = _create_cache_stats_table()
@@ -175,7 +173,7 @@ def _generate_performance_insights(hit_rate: float, total_size: float) -> list[s
     return insights
 
 
-def _display_cache_directory_info(console: Console, cache: CrackerjackCache) -> None:
+def _display_cache_directory_info(console: Console, cache: ACBCrackerjackCache) -> None:
     """Display cache directory information."""
     if not (cache.enable_disk_cache and cache.cache_dir):
         return

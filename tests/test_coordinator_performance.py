@@ -13,7 +13,7 @@ from rich.console import Console
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
 from crackerjack.agents.coordinator import AgentCoordinator
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 
 
 async def create_test_issues(count: int = 20) -> list[Issue]:
@@ -55,7 +55,7 @@ async def test_coordinator_performance():
         project_path=Path("."),
         config={},
     )
-    cache = CrackerjackCache()
+    cache = ACBCrackerjackCache()
     coordinator = AgentCoordinator(context, cache)
 
     # Test with different issue counts

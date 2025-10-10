@@ -3,7 +3,7 @@ import typing as t
 from dataclasses import asdict, dataclass
 from datetime import datetime
 
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 
 
 @dataclass
@@ -38,8 +38,8 @@ class QualityMetrics:
 class QualityBaselineService:
     """Service for tracking and persisting quality baselines across sessions."""
 
-    def __init__(self, cache: CrackerjackCache | None = None) -> None:
-        self.cache = cache or CrackerjackCache()
+    def __init__(self, cache: ACBCrackerjackCache | None = None) -> None:
+        self.cache = cache or ACBCrackerjackCache()
 
     def get_current_git_hash(self) -> str | None:
         """Get current git commit hash."""

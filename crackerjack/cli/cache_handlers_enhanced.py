@@ -10,7 +10,7 @@ from rich.progress import Progress
 from rich.table import Table
 from rich.text import Text
 
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 
 
 @dataclass
@@ -47,8 +47,8 @@ class CacheOptimizationSuggestion:
 class EnhancedCacheHandlers:
     """Enhanced cache handlers with advanced features."""
 
-    def __init__(self, cache: CrackerjackCache | None = None):
-        self.cache = cache or CrackerjackCache()
+    def __init__(self, cache: ACBCrackerjackCache | None = None):
+        self.cache = cache or ACBCrackerjackCache()
 
     def handle_clear_cache(self, console: Console, selective: bool = False) -> None:
         """Enhanced cache clearing with selective options."""

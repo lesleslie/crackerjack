@@ -18,7 +18,7 @@ from crackerjack.monitoring.metrics_collector import (
     MetricsCollector,
     UnifiedDashboardMetrics,
 )
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class CrackerjackMonitoringServer:
 
         # Core services
         self.app = FastAPI(title="Crackerjack Monitoring", version="1.0.0")
-        self.cache = CrackerjackCache()
+        self.cache = ACBCrackerjackCache()
         self.metrics_collector = MetricsCollector(self.cache)
         self.websocket_manager = MonitoringWebSocketManager()
         self.ai_watchdog = AIAgentWatchdog()

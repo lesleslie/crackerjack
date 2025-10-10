@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 
-from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
 from crackerjack.services.quality_baseline import QualityBaselineService, QualityMetrics
 
 
@@ -144,7 +144,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
 
     def __init__(
         self,
-        cache: CrackerjackCache | None = None,
+        cache: ACBCrackerjackCache | None = None,
         alert_thresholds: dict[str, float] | None = None,
     ) -> None:
         super().__init__(cache)
