@@ -28,9 +28,20 @@ Usage:
 import typing as t
 from pathlib import Path
 
+from acb.adapters import import_adapter
 from acb.depends import depends
 from rich.console import Console
 
+from crackerjack.data.repository import (
+    DependencyMonitorRepository,
+    HealthMetricsRepository,
+    QualityBaselineRepository,
+)
+from crackerjack.events import (
+    WorkflowEventBus,
+    WorkflowEventTelemetry,
+    register_default_subscribers,
+)
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
     CoverageRatchetProtocol,
@@ -177,6 +188,53 @@ def configure_acb_dependencies(
 
     cache = ACBCrackerjackCache()
     ACBDependencyRegistry.register(ACBCrackerjackCache, cache)
+
+    # Register SQL adapter for data access using state-backed SQLite storage
+    import os
+
+    default_state_dir = Path.home() / ".crackerjack" / "state"
+    default_state_dir.mkdir(parents=True, exist_ok=True)
+    default_db_path = default_state_dir / "crackerjack.db"
+    default_db_url = f"sqlite:///{default_db_path}"
+
+    os.environ.setdefault("SQL_DATABASE_URL", default_db_url)
+    os.environ.setdefault("DATABASE_URL", default_db_url)
+
+    SQLAdapter = import_adapter("sql")
+    try:
+        sql_adapter = depends.get(SQLAdapter)
+    except Exception:
+        sql_adapter = SQLAdapter()
+        ACBDependencyRegistry.register(SQLAdapter, sql_adapter)
+    else:
+        ACBDependencyRegistry.register(SQLAdapter, sql_adapter)
+
+    try:
+        sql_settings = sql_adapter.config.sql  # type: ignore[attr-defined]
+        configured_url = getattr(sql_settings, "database_url", None)
+        if configured_url in (None, "sqlite:///:memory:", ""):
+            sql_settings.database_url = default_db_url
+            if hasattr(sql_settings, "_setup_drivers"):
+                sql_settings._setup_drivers()  # type: ignore[attr-defined]
+            if hasattr(sql_settings, "_setup_urls"):
+                sql_settings._setup_urls()  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+    event_bus = WorkflowEventBus()
+    telemetry_state_file = default_state_dir / "workflow_events.json"
+    telemetry = WorkflowEventTelemetry(state_file=telemetry_state_file)
+    register_default_subscribers(event_bus, telemetry)
+    ACBDependencyRegistry.register(WorkflowEventBus, event_bus)
+    ACBDependencyRegistry.register(WorkflowEventTelemetry, telemetry)
+
+    baseline_repository = QualityBaselineRepository(sql_adapter)
+    ACBDependencyRegistry.register(QualityBaselineRepository, baseline_repository)
+    health_repository = HealthMetricsRepository(sql_adapter)
+    ACBDependencyRegistry.register(HealthMetricsRepository, health_repository)
+    dependency_repository = DependencyMonitorRepository(sql_adapter)
+    ACBDependencyRegistry.register(DependencyMonitorRepository, dependency_repository)
+
 
 
 def get_console() -> Console:

@@ -17,6 +17,7 @@ from .base import (
     agent_registry,
 )
 from .tracker import get_agent_tracker
+from .error_middleware import agent_error_boundary
 
 # Static mapping for O(1) agent lookup by issue type
 ISSUE_TYPE_TO_AGENTS = {
@@ -292,39 +293,27 @@ class AgentCoordinator:
             metadata={"issue_type": issue.type.value, "severity": issue.severity.value},
         )
 
-        try:
-            # Use cached analysis for better performance
-            result = await self._cached_analyze_and_fix(agent, issue)
-            if result.success:
-                self.logger.info(f"{agent.name} successfully fixed issue")
-            else:
-                self.logger.warning(f"{agent.name} failed to fix issue")
+        result = await self._execute_agent(agent, issue)
+        if result.success:
+            self.logger.info(f"{agent.name} successfully fixed issue")
+        else:
+            self.logger.warning(f"{agent.name} failed to fix issue")
 
-            self.tracker.track_agent_complete(agent.name, result)
+        self.tracker.track_agent_complete(agent.name, result)
 
-            self.debugger.log_agent_activity(
-                agent_name=agent.name,
-                activity="processing_completed",
-                issue_id=issue.id,
-                confidence=result.confidence,
-                result={
-                    "success": result.success,
-                    "remaining_issues": len(result.remaining_issues),
-                },
-                metadata={"fix_applied": result.success},
-            )
+        self.debugger.log_agent_activity(
+            agent_name=agent.name,
+            activity="processing_completed",
+            issue_id=issue.id,
+            confidence=result.confidence,
+            result={
+                "success": result.success,
+                "remaining_issues": len(result.remaining_issues),
+            },
+            metadata={"fix_applied": result.success},
+        )
 
-            return result
-        except Exception as e:
-            self.logger.exception(f"{agent.name} threw exception: {e}")
-            error_result = FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"{agent.name} failed with exception: {e}"],
-            )
-
-            self.tracker.track_agent_complete(agent.name, error_result)
-            return error_result
+        return result
 
     def _group_issues_by_type(
         self,
@@ -346,6 +335,11 @@ class AgentCoordinator:
         """Get cache key for agent-issue combination."""
         issue_hash = self._create_issue_hash(issue)
         return f"{agent_name}:{issue_hash}"
+
+    @agent_error_boundary
+    async def _execute_agent(self, agent: SubAgent, issue: Issue) -> FixResult:
+        """Execute agent analysis with centralized error handling."""
+        return await self._cached_analyze_and_fix(agent, issue)
 
     async def _cached_analyze_and_fix(self, agent: SubAgent, issue: Issue) -> FixResult:
         """Analyze and fix issue with intelligent caching."""

@@ -233,8 +233,12 @@ class ToolProxyCacheAdapter:
                 "name": hook.name,
                 "command": hook.command,  # Direct tool invocation command
                 "timeout": hook.timeout,
-                "stage": hook.stage.value if hasattr(hook.stage, 'value') else str(hook.stage),
-                "security_level": hook.security_level.value if hasattr(hook.security_level, 'value') else str(hook.security_level),
+                "stage": hook.stage.value
+                if hasattr(hook.stage, "value")
+                else str(hook.stage),
+                "security_level": hook.security_level.value
+                if hasattr(hook.security_level, "value")
+                else str(hook.security_level),
             }
             config_json = json.dumps(config_data, sort_keys=True)
             config_hash = hashlib.sha256(config_json.encode()).hexdigest()[:16]

@@ -5,6 +5,7 @@
 from .base import AgentContext, FixResult, Issue, IssueType, Priority, SubAgent
 from .coordinator import AgentCoordinator
 from .tracker import AgentTracker, get_agent_tracker, reset_agent_tracker
+from .error_middleware import agent_error_boundary
 
 __all__ = [
     "AgentContext",
@@ -28,6 +29,7 @@ __all__ = [
     "semantic_agent",
     "test_creation_agent",
     "test_specialist_agent",
+    "agent_error_boundary",
 ]
 
 
@@ -53,6 +55,7 @@ def __getattr__(name: str):
 
     if name in agent_modules:
         import importlib
+
         module = importlib.import_module(f".{name}", package="crackerjack.agents")
         globals()[name] = module  # Cache for future access
         return module

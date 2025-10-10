@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import typing as t
+from collections import Counter
 from contextlib import suppress
 from uuid import UUID
 
@@ -22,6 +23,7 @@ from acb.depends import depends
 from pydantic import BaseModel, Field
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy
+from crackerjack.events import WorkflowEvent, WorkflowEventBus
 from crackerjack.models.task import HookResult
 
 if t.TYPE_CHECKING:
@@ -93,6 +95,7 @@ class HookOrchestratorAdapter:
         settings: HookOrchestratorSettings | None = None,
         hook_executor: HookExecutor | None = None,
         cache_adapter: ToolProxyCacheAdapter | MemoryCacheAdapter | None = None,
+        event_bus: WorkflowEventBus | None = None,
     ) -> None:
         """Initialize Hook Orchestrator.
 
@@ -108,6 +111,7 @@ class HookOrchestratorAdapter:
         self._initialized = False
         self._cache_hits = 0
         self._cache_misses = 0
+        self._event_bus = event_bus or self._resolve_event_bus()
 
         logger.debug(
             "HookOrchestratorAdapter initialized",
@@ -117,6 +121,14 @@ class HookOrchestratorAdapter:
                 "has_cache": cache_adapter is not None,
             },
         )
+
+    def _resolve_event_bus(self) -> WorkflowEventBus | None:
+        """Resolve workflow event bus from dependency injection."""
+        try:
+            return depends.get(WorkflowEventBus)
+        except Exception:
+            logger.debug("Workflow event bus not available during orchestrator setup")
+            return None
 
     async def init(self) -> None:
         """Initialize orchestrator and build dependency graph."""
@@ -249,14 +261,45 @@ class HookOrchestratorAdapter:
             },
         )
 
-        if mode == "legacy":
-            return await self._execute_legacy_mode(strategy)
-        elif mode == "acb":
-            return await self._execute_acb_mode(strategy)
-        else:
-            raise ValueError(
-                f"Invalid execution mode: {mode}. Must be 'legacy' or 'acb'"
+        await self._publish_event(
+            WorkflowEvent.HOOK_STRATEGY_STARTED,
+            {
+                "strategy": strategy.name,
+                "execution_mode": mode,
+                "hook_count": len(strategy.hooks),
+            },
+        )
+
+        try:
+            if mode == "legacy":
+                results = await self._execute_legacy_mode(strategy)
+            elif mode == "acb":
+                results = await self._execute_acb_mode(strategy)
+            else:
+                raise ValueError(
+                    f"Invalid execution mode: {mode}. Must be 'legacy' or 'acb'"
+                )
+        except Exception as exc:
+            await self._publish_event(
+                WorkflowEvent.HOOK_STRATEGY_FAILED,
+                {
+                    "strategy": strategy.name,
+                    "execution_mode": mode,
+                    "error": str(exc),
+                },
             )
+            raise
+
+        await self._publish_event(
+            WorkflowEvent.HOOK_STRATEGY_COMPLETED,
+            {
+                "strategy": strategy.name,
+                "execution_mode": mode,
+                "summary": self._summarize_results(results),
+            },
+        )
+
+        return results
 
     async def _execute_legacy_mode(self, strategy: HookStrategy) -> list[HookResult]:
         """Execute hooks via pre-commit CLI (existing HookExecutor).
@@ -559,6 +602,15 @@ class HookOrchestratorAdapter:
             },
         )
 
+        await self._publish_event(
+            WorkflowEvent.HOOK_EXECUTION_STARTED,
+            {
+                "hook": hook.name,
+                "stage": hook.stage.value,
+                "security_level": hook.security_level.value,
+            },
+        )
+
         # Check cache if enabled
         if self.settings.enable_caching and self._cache_adapter:
             # Compute cache key (using empty file list for now - Phase 8 will provide real files)
@@ -574,6 +626,16 @@ class HookOrchestratorAdapter:
                         "hook": hook.name,
                         "cache_key": cache_key,
                         "cache_hits": self._cache_hits,
+                    },
+                )
+                await self._publish_event(
+                    WorkflowEvent.HOOK_EXECUTION_COMPLETED,
+                    {
+                        "hook": hook.name,
+                        "stage": hook.stage.value,
+                        "status": cached_result.status,
+                        "duration": cached_result.duration,
+                        "cached": True,
                     },
                 )
                 return cached_result
@@ -595,25 +657,47 @@ class HookOrchestratorAdapter:
         #     result = await adapter.check(files=[...])
         #     return self._convert_to_hook_result(result)
 
-        # Placeholder for Phase 3-7
-        result = HookResult(
-            id=hook.name,
-            name=hook.name,
-            status="passed",
-            duration=0.0,
-        )
+        try:
+            # Placeholder for Phase 3-7
+            result = HookResult(
+                id=hook.name,
+                name=hook.name,
+                status="passed",
+                duration=0.0,
+            )
 
-        # Cache result if caching enabled
-        if self.settings.enable_caching and self._cache_adapter:
-            await self._cache_adapter.set(cache_key, result)
-            logger.debug(
-                f"Cached result for hook {hook.name}",
-                extra={
+            # Cache result if caching enabled
+            if self.settings.enable_caching and self._cache_adapter:
+                await self._cache_adapter.set(cache_key, result)
+                logger.debug(
+                    f"Cached result for hook {hook.name}",
+                    extra={
+                        "hook": hook.name,
+                        "cache_key": cache_key,
+                        "status": result.status,
+                    },
+                )
+        except Exception as exc:
+            await self._publish_event(
+                WorkflowEvent.HOOK_EXECUTION_FAILED,
+                {
                     "hook": hook.name,
-                    "cache_key": cache_key,
-                    "status": result.status,
+                    "stage": hook.stage.value,
+                    "error": str(exc),
                 },
             )
+            raise
+
+        await self._publish_event(
+            WorkflowEvent.HOOK_EXECUTION_COMPLETED,
+            {
+                "hook": hook.name,
+                "stage": hook.stage.value,
+                "status": result.status,
+                "duration": result.duration,
+                "cached": False,
+            },
+        )
 
         return result
 
@@ -663,6 +747,31 @@ class HookOrchestratorAdapter:
         logger.debug("Cache statistics", extra=stats)
 
         return stats
+
+    async def _publish_event(
+        self,
+        event: WorkflowEvent,
+        payload: dict[str, t.Any],
+    ) -> None:
+        """Publish an event to the workflow bus if available."""
+        if not self._event_bus:
+            return
+
+        try:
+            await self._event_bus.publish(event, payload)
+        except Exception as exc:
+            logger.debug(
+                "Failed to publish orchestrator event",
+                extra={"event": event.value, "error": str(exc)},
+            )
+
+    def _summarize_results(self, results: list[HookResult]) -> dict[str, t.Any]:
+        """Summarize hook results for telemetry payloads."""
+        counts = Counter(result.status for result in results)
+        return {
+            "counts": dict(counts),
+            "total": len(results),
+        }
 
 
 # ACB Registration (REQUIRED at module level)

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crackerjack Monitoring Dashboard</title>
+    <style>{css_styles}</style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connection-status">Connecting...</div>
+
+    <div class="header">
+        <h1>🔧 Crackerjack Monitoring Dashboard</h1>
+        <p>Real-time project monitoring and analytics</p>
+    </div>
+
+    <div class="dashboard">
+        <div class="card">
+            <h3>System Health</h3>
+            <div class="metric">
+                <span class="metric-label">CPU Usage</span>
+                <span class="metric-value" id="cpu">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Memory</span>
+                <span class="metric-value" id="memory">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Uptime</span>
+                <span class="metric-value" id="uptime">--</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Quality Metrics</h3>
+            <div class="metric">
+                <span class="metric-label">Success Rate</span>
+                <span class="metric-value" id="success-rate">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Issues Fixed</span>
+                <span class="metric-value" id="issues-fixed">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Test Coverage</span>
+                <span class="metric-value" id="coverage">--</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Workflow Status</h3>
+            <div class="metric">
+                <span class="metric-label">Jobs Completed</span>
+                <span class="metric-value" id="jobs-completed">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Avg Duration</span>
+                <span class="metric-value" id="avg-duration">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Throughput</span>
+                <span class="metric-value" id="throughput">--</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>AI Agents</h3>
+            <div class="metric">
+                <span class="metric-label">Active Agents</span>
+                <span class="metric-value" id="active-agents">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Total Fixes</span>
+                <span class="metric-value" id="total-fixes">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Cache Hit Rate</span>
+                <span class="metric-value" id="cache-hit-rate">--</span>
+            </div>
+        </div>
+
+        <div class="card" style="grid-column: 1/-1;">
+            <h3>Activity Log</h3>
+            <div id="logs"></div>
+        </div>
+    </div>
+
+    <script>{javascript_code}</script>
+</body>
+</html>

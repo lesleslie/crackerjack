@@ -2727,7 +2727,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
 
 
 def validate_all_patterns() -> dict[str, bool]:
-    validate_results: dict[str, bool] = {}
+    results: dict[str, bool] = {}
     for name, pattern in SAFE_PATTERNS.items():
         try:
             pattern._validate()
@@ -2735,7 +2735,7 @@ def validate_all_patterns() -> dict[str, bool]:
         except ValueError as e:
             results[name] = False
             print(f"Pattern '{name}' failed validation: {e}")
-    return validate_results
+    return results
 
 
 def find_pattern_for_text(text: str) -> list[str]:

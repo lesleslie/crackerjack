@@ -3,6 +3,22 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-10
 
 ### Added
+- docs: adapter migration guidance and telemetry dashboard design notes
+- docs: workflow session controller ADR
+
+### Changed
+- refactor: externalize monitoring dashboard templates and share renderer utilities
+- feat: add retry/backoff support to workflow event bus with telemetry benchmark (avg ~1.12k events/s)
+- chore: reorganize service modules into quality/monitoring/ai subpackages with
+  compatibility shims and SQLite-backed telemetry/state
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-10
+
+### Added
 - feat: add new feature
 
 ### Fixed

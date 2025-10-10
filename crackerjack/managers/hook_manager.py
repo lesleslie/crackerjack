@@ -285,9 +285,7 @@ class HookManagerImpl:
             # Use instance properties which may override settings via constructor params
             "orchestration_enabled": self.orchestration_enabled,
             "orchestration_mode": (
-                self.orchestration_mode
-                if self.orchestration_enabled
-                else None
+                self.orchestration_mode if self.orchestration_enabled else None
             ),
             "caching_enabled": (
                 self._orchestration_config.enable_caching

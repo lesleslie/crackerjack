@@ -8,7 +8,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from crackerjack.models.semantic_models import SearchQuery, SemanticConfig
-from crackerjack.services.vector_store import VectorStore
+from crackerjack.services.ai.vector_store import VectorStore
 
 console = Console()
 

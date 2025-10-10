@@ -9,7 +9,7 @@ from rich.console import Console
 from .options import Options
 
 if t.TYPE_CHECKING:
-    from crackerjack.services.config_template import (
+    from crackerjack.services.quality.config_template import (
         ConfigTemplateService,
         ConfigUpdateInfo,
     )
@@ -143,7 +143,10 @@ def handle_restart_websocket_server(port: int = 8675) -> None:
 
 
 def handle_stop_mcp_server() -> None:
-    from crackerjack.services.server_manager import list_server_status, stop_all_servers
+    from crackerjack.services.monitoring.server_manager import (
+        list_server_status,
+        stop_all_servers,
+    )
 
     console = Console()
     console.print("[bold red]🛑 Stopping MCP Servers[/ bold red]")
@@ -158,7 +161,7 @@ def handle_stop_mcp_server() -> None:
 
 
 def handle_restart_mcp_server(websocket_port: int | None = None) -> None:
-    from crackerjack.services.server_manager import restart_mcp_server
+    from crackerjack.services.monitoring.server_manager import restart_mcp_server
 
     console = Console()
     if restart_mcp_server(websocket_port, console):
@@ -170,7 +173,9 @@ def handle_restart_mcp_server(websocket_port: int | None = None) -> None:
 
 def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
     """Start Zuban LSP server."""
-    from crackerjack.services.zuban_lsp_service import create_zuban_lsp_service
+    from crackerjack.services.monitoring.zuban_lsp_service import (
+        create_zuban_lsp_service,
+    )
 
     console = Console()
     console.print("[bold cyan]🚀 Starting Zuban LSP Server[/bold cyan]")
@@ -195,7 +200,7 @@ def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
 
 def handle_stop_zuban_lsp() -> None:
     """Stop Zuban LSP server."""
-    from crackerjack.services.server_manager import stop_zuban_lsp
+    from crackerjack.services.monitoring.server_manager import stop_zuban_lsp
 
     console = Console()
     console.print("[bold red]🛑 Stopping Zuban LSP Server[/bold red]")
@@ -211,7 +216,7 @@ def handle_stop_zuban_lsp() -> None:
 
 def handle_restart_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
     """Restart Zuban LSP server."""
-    from crackerjack.services.server_manager import restart_zuban_lsp
+    from crackerjack.services.monitoring.server_manager import restart_zuban_lsp
 
     console = Console()
     if restart_zuban_lsp(console):
@@ -365,7 +370,7 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
 
 def handle_config_updates(options: Options) -> None:
     """Handle configuration update commands."""
-    from crackerjack.services.config_template import ConfigTemplateService
+    from crackerjack.services.quality.config_template import ConfigTemplateService
 
     console = Console()
     pkg_path = Path.cwd()
