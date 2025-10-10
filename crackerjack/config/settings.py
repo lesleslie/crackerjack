@@ -102,7 +102,9 @@ class CrackerjackSettings(Settings):
 
     # Enterprise
     enterprise_enabled: bool = False
-    license_key: str | None = Field(None, description="Enterprise license key (auto-masked in logs)")
+    license_key: str | None = Field(
+        None, description="Enterprise license key (auto-masked in logs)"
+    )
     organization: str | None = None
 
     # MCP Server
@@ -151,7 +153,9 @@ class CrackerjackSettings(Settings):
     # === QA Framework Settings ===
 
     # Core QA settings
-    project_root: Path = Field(default_factory=Path.cwd, description="Project root directory")
+    project_root: Path = Field(
+        default_factory=Path.cwd, description="Project root directory"
+    )
     qa_max_parallel_checks: int = 4
     qa_fail_fast: bool = False
     qa_run_formatters_first: bool = True
@@ -163,7 +167,7 @@ class CrackerjackSettings(Settings):
     global_lock_timeout: int = 30
     lock_directory: Path = Field(
         default_factory=lambda: Path.home() / ".crackerjack" / "locks",
-        description="Directory for global lock files"
+        description="Directory for global lock files",
     )
 
     # === Monitoring & Dashboard Settings ===
@@ -183,7 +187,7 @@ class CrackerjackSettings(Settings):
     strip_code: bool = False
     strip_patterns: list[str] = Field(
         default_factory=list,
-        description="Patterns for code stripping (e.g., 'TODO', 'DEBUG')"
+        description="Patterns for code stripping (e.g., 'TODO', 'DEBUG')",
     )
 
     # AI debugging
@@ -200,6 +204,65 @@ class CrackerjackSettings(Settings):
 
     # Workflow visualization
     show_workflow: bool = False
+
+    @classmethod
+    def load(cls, settings_dir: Path | None = None) -> CrackerjackSettings:
+        """Load settings from YAML configuration files.
+
+        This is a convenience method that wraps the loader.load_settings()
+        function for easy access from the Settings class.
+
+        Args:
+            settings_dir: Directory containing YAML files (default: ./settings)
+
+        Returns:
+            Initialized CrackerjackSettings instance with merged configuration
+
+        Configuration Files:
+            - settings/crackerjack.yaml (base configuration)
+            - settings/local.yaml (local overrides, gitignored)
+
+        Configuration Priority (highest to lowest):
+            1. settings/local.yaml (local overrides)
+            2. settings/crackerjack.yaml (main config)
+            3. Default values from this class
+
+        Example:
+            >>> settings = CrackerjackSettings.load()
+            >>> settings.verbose
+            False
+            >>> settings.max_parallel_hooks
+            4
+        """
+        from .loader import load_settings
+
+        return load_settings(cls, settings_dir)
+
+    @classmethod
+    async def load_async(cls, settings_dir: Path | None = None) -> CrackerjackSettings:
+        """Load settings asynchronously with full ACB initialization.
+
+        This method provides async initialization which includes secret loading
+        and other async setup operations from ACB.
+
+        Args:
+            settings_dir: Directory containing YAML files (default: ./settings)
+
+        Returns:
+            Initialized CrackerjackSettings instance with async init complete
+
+        Note:
+            Use this for application runtime when async context is available.
+            For module-level initialization, use synchronous load().
+
+        Example:
+            >>> settings = await CrackerjackSettings.load_async()
+            >>> settings.verbose
+            False
+        """
+        from .loader import load_settings_async
+
+        return await load_settings_async(cls, settings_dir)
 
 
 # Note: Settings registration happens in __init__.py to avoid circular imports

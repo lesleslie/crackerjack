@@ -1,3 +1,6 @@
+# Register settings with ACB dependency injection
+from acb.depends import depends
+
 from .hooks import (
     COMPREHENSIVE_STRATEGY,
     FAST_STRATEGY,
@@ -7,12 +10,13 @@ from .hooks import (
     HookStrategy,
     RetryPolicy,
 )
+from .loader import load_settings, load_settings_async
 from .settings import CrackerjackSettings
 
-# Register settings with ACB dependency injection
-from acb.depends import depends
-
-depends.set(CrackerjackSettings, CrackerjackSettings())
+# Load settings from YAML files (synchronous for module-level initialization)
+# Configuration files: settings/crackerjack.yaml + settings/local.yaml (gitignored)
+# Priority: local.yaml > crackerjack.yaml > defaults
+depends.set(CrackerjackSettings, CrackerjackSettings.load())
 
 __all__ = [
     "COMPREHENSIVE_STRATEGY",
@@ -23,4 +27,6 @@ __all__ = [
     "HookStrategy",
     "RetryPolicy",
     "CrackerjackSettings",
+    "load_settings",
+    "load_settings_async",
 ]

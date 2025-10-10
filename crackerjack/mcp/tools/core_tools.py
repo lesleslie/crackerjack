@@ -1,5 +1,8 @@
 import typing as t
 
+from acb.depends import depends
+
+from crackerjack.config import CrackerjackSettings
 from crackerjack.mcp.context import MCPServerContext, get_context
 from crackerjack.mcp.rate_limiter import RateLimitMiddleware
 from crackerjack.services.input_validator import (
@@ -9,7 +12,6 @@ from crackerjack.services.input_validator import (
 
 if t.TYPE_CHECKING:
     from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
-    from crackerjack.models.config import WorkflowOptions
 
 
 async def create_task_with_subagent(
@@ -141,26 +143,36 @@ def _validate_kwargs_argument(
     return extra_kwargs
 
 
-def _configure_stage_options(stage: str) -> "WorkflowOptions":
-    from crackerjack.models.config import WorkflowOptions
+def _configure_stage_options(stage: str) -> CrackerjackSettings:
+    """Configure settings for a specific stage using ACB dependency injection.
 
-    options = WorkflowOptions()
+    Note: Returns a copy of global settings with stage-specific overrides.
+    The global settings remain unchanged.
+    """
+    # Get base settings from DI
+    base_settings = depends.get(CrackerjackSettings)
+
+    # Create a new settings instance with stage-specific values
+    # We copy the base settings and override specific fields
+    settings_dict = base_settings.model_dump()
+
     if stage in {"fast", "comprehensive"}:
-        options.hooks.skip_hooks = False
+        settings_dict["skip_hooks"] = False
     elif stage == "tests":
-        options.testing.test = True
+        settings_dict["run_tests"] = True  # Note: field renamed from 'test' to 'run_tests'
     elif stage == "cleaning":
-        options.cleaning.clean = True
+        settings_dict["clean"] = True
     elif stage == "init":
-        options.hooks.skip_hooks = True
-    return options
+        settings_dict["skip_hooks"] = True
+
+    return CrackerjackSettings(**settings_dict)
 
 
 def _execute_stage(
-    orchestrator: "WorkflowOrchestrator", stage: str, options: "WorkflowOptions"
+    orchestrator: "WorkflowOrchestrator", stage: str, settings: CrackerjackSettings
 ) -> bool:
-    # Convert WorkflowOptions to OptionsProtocol
-    adapted_options = _adapt_workflow_options_to_protocol(options)
+    # Convert CrackerjackSettings to OptionsProtocol
+    adapted_options = _adapt_settings_to_protocol(settings)
 
     if stage == "fast":
         return orchestrator.run_fast_hooks_only(adapted_options)
@@ -173,122 +185,126 @@ def _execute_stage(
     return False
 
 
-def _adapt_workflow_options_to_protocol(options: "WorkflowOptions") -> t.Any:
-    """Adapt WorkflowOptions to match OptionsProtocol."""
-    return _AdaptedOptions(options)  # type: ignore
+def _adapt_settings_to_protocol(settings: CrackerjackSettings) -> t.Any:
+    """Adapt CrackerjackSettings to match OptionsProtocol."""
+    return _AdaptedOptions(settings)  # type: ignore
 
 
 class _AdaptedOptions:
-    """Adapter class to convert WorkflowOptions to OptionsProtocol."""
+    """Adapter class to convert CrackerjackSettings to OptionsProtocol.
 
-    def __init__(self, opts: "WorkflowOptions"):
-        self.opts = opts
+    Since CrackerjackSettings uses flat field structure, this adapter
+    is much simpler than the old nested WorkflowOptions version.
+    """
+
+    def __init__(self, settings: CrackerjackSettings):
+        self.settings = settings
 
     # Git properties
     @property
     def commit(self) -> bool:
-        return getattr(self.opts.git, "commit", False)
+        return self.settings.commit
 
     @property
     def create_pr(self) -> bool:
-        return getattr(self.opts.git, "create_pr", False)
+        return self.settings.create_pr
 
     # Execution properties
     @property
     def interactive(self) -> bool:
-        return getattr(self.opts.execution, "interactive", False)
+        return self.settings.interactive
 
     @property
     def no_config_updates(self) -> bool:
-        return getattr(self.opts.execution, "no_config_updates", False)
+        return self.settings.no_config_updates
 
     @property
     def verbose(self) -> bool:
-        return getattr(self.opts.execution, "verbose", False)
+        return self.settings.verbose
 
     @property
     def async_mode(self) -> bool:
-        return getattr(self.opts.execution, "async_mode", False)
+        return self.settings.async_mode
 
     # Testing properties
     @property
     def test(self) -> bool:
-        return getattr(self.opts.testing, "test", False)
+        return self.settings.run_tests  # Note: Field renamed in CrackerjackSettings
 
     @property
     def benchmark(self) -> bool:
-        return getattr(self.opts.testing, "benchmark", False)
+        return self.settings.benchmark
 
     @property
     def test_workers(self) -> int:
-        return getattr(self.opts.testing, "test_workers", 0)
+        return self.settings.test_workers
 
     @property
     def test_timeout(self) -> int:
-        return getattr(self.opts.testing, "test_timeout", 0)
+        return self.settings.test_timeout
 
     # Publishing properties
     @property
     def publish(self) -> t.Any | None:
-        return getattr(self.opts.publishing, "publish", None)
+        return self.settings.publish_version
 
     @property
     def bump(self) -> t.Any | None:
-        return getattr(self.opts.publishing, "bump", None)
+        return self.settings.bump_version
 
     @property
     def all(self) -> t.Any | None:
-        return getattr(self.opts.publishing, "all", None)
+        return self.settings.all_workflow
 
     @property
     def no_git_tags(self) -> bool:
-        return getattr(self.opts.publishing, "no_git_tags", False)
+        return self.settings.no_git_tags
 
     @property
     def skip_version_check(self) -> bool:
-        return getattr(self.opts.publishing, "skip_version_check", False)
+        return self.settings.skip_version_check
 
     # AI properties
     @property
     def ai_agent(self) -> bool:
-        return getattr(self.opts.ai, "ai_agent", False)
+        return self.settings.ai_agent
 
     @property
     def start_mcp_server(self) -> bool:
-        return getattr(self.opts.ai, "start_mcp_server", False)
+        return self.settings.start_mcp_server
 
     # Hook properties
     @property
     def skip_hooks(self) -> bool:
-        return getattr(self.opts.hooks, "skip_hooks", False)
+        return self.settings.skip_hooks
 
     @property
     def update_precommit(self) -> bool:
-        return getattr(self.opts.hooks, "update_precommit", False)
+        return self.settings.update_precommit
 
     @property
     def experimental_hooks(self) -> bool:
-        return getattr(self.opts.hooks, "experimental_hooks", False)
+        return self.settings.experimental_hooks
 
     @property
     def enable_pyrefly(self) -> bool:
-        return getattr(self.opts.hooks, "enable_pyrefly", False)
+        return self.settings.enable_pyrefly
 
     @property
     def enable_ty(self) -> bool:
-        return getattr(self.opts.hooks, "enable_ty", False)
+        return self.settings.enable_ty
 
     # Cleaning properties
     @property
     def clean(self) -> bool:
-        return getattr(self.opts.cleaning, "clean", False)
+        return self.settings.clean
 
     # Progress properties
     @property
     def track_progress(self) -> bool:
-        return getattr(self.opts.progress, "track_progress", False)
+        return self.settings.progress_enabled
 
-    # Default/static properties
+    # Default/static properties (not in settings, keep defaults)
     @property
     def cleanup(self) -> t.Any | None:
         return None
@@ -299,7 +315,7 @@ class _AdaptedOptions:
 
     @property
     def coverage(self) -> bool:
-        return False
+        return self.settings.coverage_enabled
 
     @property
     def keep_releases(self) -> int:

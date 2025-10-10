@@ -563,3 +563,59 @@ from ..models.protocols import TestManagerProtocol
 - make sure to run `python -m crackerjack` after every editing/debugging cycle for quality checking
 - always put implementation plans in a md doc for review and reference
 - think when you need to think, think harder when you need to think harder
+
+## ACB Settings Integration
+
+**Configuration Loading**: Crackerjack uses ACB Settings with YAML-based configuration:
+
+```python
+from crackerjack.config import CrackerjackSettings
+from acb.depends import depends
+
+# Option 1: Load directly (synchronous)
+settings = CrackerjackSettings.load()
+
+# Option 2: Get from dependency injection (recommended)
+settings = depends.get(CrackerjackSettings)
+
+# Option 3: Load asynchronously (for runtime use)
+settings = await CrackerjackSettings.load_async()
+```
+
+**Configuration Files**:
+- `settings/crackerjack.yaml` - Base configuration (committed to git)
+- `settings/local.yaml` - Local overrides (gitignored, for development)
+
+**Priority Order** (highest to lowest):
+1. `settings/local.yaml` - Local developer overrides
+2. `settings/crackerjack.yaml` - Base project configuration
+3. Default values in `CrackerjackSettings` class
+
+**Usage Examples**:
+
+```yaml
+# settings/local.yaml (gitignored)
+verbose: true
+max_parallel_hooks: 8
+test_workers: 4
+ai_debug: true
+```
+
+```python
+# Access settings in code
+from acb.depends import depends
+from crackerjack.config import CrackerjackSettings
+
+@depends.inject
+def my_function(settings: CrackerjackSettings = depends()):
+    if settings.verbose:
+        print(f"Running with {settings.max_parallel_hooks} parallel hooks")
+```
+
+**Implementation Details**:
+- Settings automatically loaded during module initialization
+- Unknown YAML fields silently ignored (no validation errors)
+- Type validation via Pydantic
+- Async initialization available for ACB secret loading
+- All 60+ configuration fields supported
+

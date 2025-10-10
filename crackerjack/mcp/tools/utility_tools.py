@@ -281,17 +281,19 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
         report_format = extra_kwargs.get("report_format", "summary")
 
         try:
-            from crackerjack.models.config import WorkflowOptions
+            from acb.depends import depends
+
+            from crackerjack.config import CrackerjackSettings
 
             orchestrator = _create_analysis_orchestrator(context)
-            options = WorkflowOptions()
+            settings = depends.get(CrackerjackSettings)
             analysis_results = {}
 
             if scope in ("hooks", "all"):
-                analysis_results["hooks"] = _run_hooks_analysis(orchestrator, options)
+                analysis_results["hooks"] = _run_hooks_analysis(orchestrator, settings)
 
             if scope in ("tests", "all"):
-                analysis_results["tests"] = _run_tests_analysis(orchestrator, options)
+                analysis_results["tests"] = _run_tests_analysis(orchestrator, settings)
 
             return json.dumps(
                 {

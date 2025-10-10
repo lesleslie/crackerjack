@@ -1,13 +1,14 @@
 import typing as t
 from pathlib import Path
 
+from acb.depends import depends
 from rich.console import Console
 
+from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import HookConfigLoader
 from crackerjack.executors.hook_executor import HookExecutor
 from crackerjack.executors.lsp_aware_hook_executor import LSPAwareHookExecutor
 from crackerjack.models.task import HookResult
-from crackerjack.orchestration.config import OrchestrationConfig
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
@@ -22,8 +23,8 @@ class HookManagerImpl:
         quiet: bool = False,
         enable_lsp_optimization: bool = False,
         enable_tool_proxy: bool = True,
-        orchestration_config: OrchestrationConfig | None = None,
-        # Legacy parameters for backward compatibility
+        # Legacy parameters kept for backward compatibility (deprecated)
+        orchestration_config: t.Any = None,
         enable_orchestration: bool = False,
         orchestration_mode: str = "acb",
         enable_caching: bool = True,
@@ -46,27 +47,12 @@ class HookManagerImpl:
         self.lsp_optimization_enabled = enable_lsp_optimization
         self.tool_proxy_enabled = enable_tool_proxy
 
-        # Orchestration configuration (Phase 4 - config system integration)
-        if orchestration_config is not None:
-            # Use provided config object
-            self._orchestration_config = orchestration_config
-        elif enable_orchestration:
-            # Legacy path: construct config from individual parameters
-            self._orchestration_config = OrchestrationConfig(
-                enable_orchestration=enable_orchestration,
-                orchestration_mode=orchestration_mode,
-                enable_caching=enable_caching,
-                cache_backend=cache_backend,
-            )
-        else:
-            # Try to load from file, fall back to defaults
-            self._orchestration_config = OrchestrationConfig.load(
-                pkg_path / ".crackerjack.yaml"
-            )
+        # Get settings from ACB dependency injection
+        self._settings = depends.get(CrackerjackSettings)
 
         # Expose properties for backward compatibility
-        self.orchestration_enabled = self._orchestration_config.enable_orchestration
-        self.orchestration_mode = self._orchestration_config.orchestration_mode
+        self.orchestration_enabled = self._settings.enable_orchestration
+        self.orchestration_mode = self._settings.orchestration_mode
         self._orchestrator: HookOrchestratorAdapter | None = None
 
     def set_config_path(self, config_path: Path) -> None:
@@ -77,13 +63,22 @@ class HookManagerImpl:
         if self._orchestrator is not None:
             return  # Already initialized
 
-        from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
+        from crackerjack.orchestration.hook_orchestrator import (
+            HookOrchestratorAdapter,
+            HookOrchestratorSettings,
+        )
 
-        # Use config system to create orchestrator settings
-        settings = self._orchestration_config.to_orchestrator_settings()
+        # Create orchestrator settings from CrackerjackSettings
+        orchestrator_settings = HookOrchestratorSettings(
+            execution_mode=self._settings.orchestration_mode,
+            enable_caching=self._settings.enable_caching,
+            cache_backend=self._settings.cache_backend,
+            max_parallel_hooks=self._settings.max_parallel_hooks,
+            enable_adaptive_execution=self._settings.enable_adaptive_execution,
+        )
 
         self._orchestrator = HookOrchestratorAdapter(
-            settings=settings,
+            settings=orchestrator_settings,
             hook_executor=self.executor,  # Provide executor for legacy mode fallback
         )
 
@@ -185,10 +180,7 @@ class HookManagerImpl:
 
     def run_hooks(self) -> list[HookResult]:
         # Phase 5-7: Enable strategy-level parallelism when orchestration is enabled
-        if (
-            self.orchestration_enabled
-            and self._orchestration_config.enable_strategy_parallelism
-        ):
+        if self.orchestration_enabled and self._settings.enable_strategy_parallelism:
             import asyncio
 
             # Check if we're already in an event loop (e.g., during testing)
@@ -226,20 +218,20 @@ class HookManagerImpl:
             "lsp_optimization_enabled": self.lsp_optimization_enabled,
             "tool_proxy_enabled": self.tool_proxy_enabled,
             "executor_type": type(self.executor).__name__,
-            "orchestration_enabled": self._orchestration_config.enable_orchestration,
+            "orchestration_enabled": self._settings.enable_orchestration,
             "orchestration_mode": (
-                self._orchestration_config.orchestration_mode
-                if self._orchestration_config.enable_orchestration
+                self._settings.orchestration_mode
+                if self._settings.enable_orchestration
                 else None
             ),
             "caching_enabled": (
-                self._orchestration_config.enable_caching
-                if self._orchestration_config.enable_orchestration
+                self._settings.enable_caching
+                if self._settings.enable_orchestration
                 else False
             ),
             "cache_backend": (
-                self._orchestration_config.cache_backend
-                if self._orchestration_config.enable_orchestration
+                self._settings.cache_backend
+                if self._settings.enable_orchestration
                 else None
             ),
         }
