@@ -100,11 +100,9 @@ class ACBCrackerjackCache:
         self.stats = CacheStats()
 
         # Event loop for sync API compatibility
-        try:
-            self._loop = asyncio.get_event_loop()
-        except RuntimeError:
-            self._loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._loop)
+        # Always create a new event loop for sync operations to avoid conflicts
+        self._loop = asyncio.new_event_loop()
+        # Don't set as default to avoid interfering with other async operations
 
     def _run_async(self, coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
         """Execute async operation in sync context.
@@ -115,7 +113,16 @@ class ACBCrackerjackCache:
         Returns:
             Result of the async operation
         """
-        return self._loop.run_until_complete(coro)
+        try:
+            # Check if we're already in an async context
+            asyncio.get_running_loop()
+            # We're in an async context, we can't use run_until_complete
+            # Close the coroutine to prevent warnings and return None
+            coro.close()
+            return None
+        except RuntimeError:
+            # No running loop, safe to use run_until_complete
+            return self._loop.run_until_complete(coro)
 
     def get_hook_result(
         self,
