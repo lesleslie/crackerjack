@@ -487,6 +487,35 @@ python -m crackerjack --fast  # Direct Python API, 70% faster
 
 **Migration Guide:** See `/docs/ACB-MIGRATION-GUIDE.md` for complete details
 
+### Configuration Management (ACB Settings)
+
+Crackerjack has consolidated its configuration system using **ACB Settings** (Pydantic BaseSettings):
+
+**Before (11 config files, ~1,808 LOC):**
+```python
+from crackerjack.models.config import WorkflowOptions, HookConfig
+from crackerjack.orchestration.config import OrchestrationConfig
+# ... multiple configuration imports
+```
+
+**After (1 settings file, ~300 LOC):**
+```python
+from acb.depends import depends
+from crackerjack.config import CrackerjackSettings
+
+settings = depends.get(CrackerjackSettings)
+# Auto-loads from: env vars (CRACKERJACK_*), .env file, defaults
+```
+
+**Benefits:**
+- **83% LOC reduction** in configuration code
+- **Automatic environment variable loading** (CRACKERJACK_* prefix)
+- **Type validation** via Pydantic
+- **Single source of truth** for all settings
+- **Backward compatible** - Public API unchanged (`create_workflow_options()`)
+
+**Migration Details:** See `/docs/ACB-SETTINGS-MIGRATION-PLAN.md` for complete migration documentation
+
 ### Using ACB Dependency Injection
 
 Example: Custom QA Adapter
