@@ -217,7 +217,7 @@ class TestWorkflowOrchestrator:
     def test_init(self, orchestrator, console, pkg_path) -> None:
         assert orchestrator.console == console
         assert orchestrator.pkg_path == pkg_path
-        assert orchestrator.container is not None
+        # ACB DI migration: container attribute removed, dependencies now via depends.get()
         assert orchestrator.session is not None
         assert orchestrator.phases is not None
 
