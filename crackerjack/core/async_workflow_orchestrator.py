@@ -620,17 +620,12 @@ class AsyncWorkflowOrchestrator:
         self.verbose = verbose
         self.debug = debug
 
-        # Configure ACB dependency injection (replaces enhanced_container)
+        # Configure ACB dependency injection using native patterns
         from acb.depends import depends
 
-        from .acb_di_config import configure_acb_dependencies
-
-        configure_acb_dependencies(
-            console=self.console,
-            pkg_path=self.pkg_path,
-            dry_run=self.dry_run,
-            verbose=self.verbose,
-        )
+        # Register core dependencies directly with ACB
+        depends.set(Console, self.console)
+        depends.set(Path, self.pkg_path)
 
         # Import protocols for retrieving dependencies via ACB
         from crackerjack.models.protocols import (
@@ -641,6 +636,16 @@ class AsyncWorkflowOrchestrator:
             PublishManager,
             TestManagerProtocol,
         )
+
+        # Setup services with ACB DI (reuse from WorkflowOrchestrator)
+        from .workflow_orchestrator import WorkflowOrchestrator
+
+        # Use a temporary orchestrator instance just for service setup
+        temp_orch = WorkflowOrchestrator.__new__(WorkflowOrchestrator)
+        temp_orch.console = self.console
+        temp_orch.pkg_path = self.pkg_path
+        temp_orch.verbose = self.verbose
+        temp_orch._setup_acb_services()
 
         self._initialize_logging()
 

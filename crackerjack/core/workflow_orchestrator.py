@@ -101,7 +101,8 @@ class WorkflowPipeline:
 
         try:
             self._event_bus: WorkflowEventBus | None = depends.get(WorkflowEventBus)
-        except Exception:
+        except Exception as e:
+            print(f"WARNING: WorkflowEventBus not available: {type(e).__name__}: {e}")
             self._event_bus = None
 
         self._session_controller = SessionController(self)
@@ -468,7 +469,7 @@ class WorkflowPipeline:
                 WorkflowEvent.WORKFLOW_SESSION_INITIALIZING,
                 event_context,
             )
-            self._initialize_workflow_session(options)
+            self._session_controller.initialize(options)
             await self._publish_event(
                 WorkflowEvent.WORKFLOW_SESSION_READY,
                 event_context,
@@ -952,8 +953,8 @@ class WorkflowPipeline:
             if not self._quality_intelligence:
                 return "Quality intelligence not available"
 
-            anomalies = self._quality_intelligence.detect_anomalies()
-            patterns = self._quality_intelligence.identify_patterns()
+            anomalies = await self._quality_intelligence.detect_anomalies_async()
+            patterns = await self._quality_intelligence.identify_patterns_async()
 
             recommendations = self._build_quality_recommendations(anomalies, patterns)
             return "; ".join(recommendations)
@@ -2458,17 +2459,12 @@ class WorkflowOrchestrator:
         self.verbose = verbose
         self.debug = debug
 
-        # Configure ACB dependency injection (replaces enhanced_container)
+        # Configure ACB dependency injection using native patterns
         from acb.depends import depends
 
-        from .acb_di_config import configure_acb_dependencies
-
-        configure_acb_dependencies(
-            console=self.console,
-            pkg_path=self.pkg_path,
-            dry_run=self.dry_run,
-            verbose=self.verbose,
-        )
+        # Register core dependencies directly with ACB
+        depends.set(Console, self.console)
+        depends.set(Path, self.pkg_path)
 
         # Import protocols for retrieving dependencies via ACB
         from crackerjack.models.protocols import (
@@ -2479,6 +2475,9 @@ class WorkflowOrchestrator:
             PublishManager,
             TestManagerProtocol,
         )
+
+        # Setup services with ACB DI
+        self._setup_acb_services()
 
         self._initialize_logging()
 
@@ -2504,6 +2503,101 @@ class WorkflowOrchestrator:
             session=self.session,
             phases=self.phases,
         )
+
+    def _setup_acb_services(self) -> None:
+        """Setup all services using ACB dependency injection."""
+        from acb.adapters import import_adapter_fast
+        from acb.depends import depends
+
+        from crackerjack.data.repository import (
+            DependencyMonitorRepository,
+            HealthMetricsRepository,
+            QualityBaselineRepository,
+        )
+        from crackerjack.events import (
+            WorkflowEventBus,
+            WorkflowEventTelemetry,
+            register_default_subscribers,
+        )
+        from crackerjack.managers.hook_manager import HookManagerImpl
+        from crackerjack.managers.publish_manager import PublishManagerImpl
+        from crackerjack.managers.test_manager import TestManager
+        from crackerjack.models.protocols import (
+            ConfigMergeServiceProtocol,
+            CoverageRatchetProtocol,
+            FileSystemInterface,
+            GitInterface,
+            HookManager,
+            PublishManager,
+            SecurityServiceProtocol,
+            TestManagerProtocol,
+        )
+        from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
+        from crackerjack.services.config_merge import ConfigMergeService
+        from crackerjack.services.coverage_ratchet import CoverageRatchetService
+        from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
+        from crackerjack.services.git import GitService
+        from crackerjack.services.security import SecurityService
+
+        # Register filesystem service (foundation service)
+        filesystem = EnhancedFileSystemService()
+        depends.set(FileSystemInterface, filesystem)
+
+        # Register git service
+        git_service = GitService(self.console, self.pkg_path)
+        depends.set(GitInterface, git_service)
+
+        # Register hook manager
+        hook_manager = HookManagerImpl(self.console, self.pkg_path, verbose=self.verbose)
+        depends.set(HookManager, hook_manager)
+
+        # Register test manager
+        test_manager = TestManager(self.console, self.pkg_path)
+        depends.set(TestManagerProtocol, test_manager)
+
+        # Register publish manager
+        publish_manager = PublishManagerImpl(self.console, self.pkg_path, git_service)
+        depends.set(PublishManager, publish_manager)
+
+        # Register config merge service
+        config_merge = ConfigMergeService(self.console, filesystem, git_service)
+        depends.set(ConfigMergeServiceProtocol, config_merge)
+
+        # Register security service
+        security = SecurityService()
+        depends.set(SecurityServiceProtocol, security)
+
+        # Register coverage ratchet
+        coverage_ratchet = CoverageRatchetService(self.pkg_path, self.console)
+        depends.set(CoverageRatchetProtocol, coverage_ratchet)
+
+        # Register cache adapter
+        cache = ACBCrackerjackCache()
+        depends.set(ACBCrackerjackCache, cache)
+
+        # Setup event system
+        self._setup_event_system()
+
+    def _setup_event_system(self) -> None:
+        """Setup event bus and telemetry."""
+        from acb.depends import depends
+
+        from crackerjack.events import (
+            WorkflowEventBus,
+            WorkflowEventTelemetry,
+            register_default_subscribers,
+        )
+
+        default_state_dir = Path.home() / ".crackerjack" / "state"
+        default_state_dir.mkdir(parents=True, exist_ok=True)
+
+        event_bus = WorkflowEventBus()
+        telemetry_state_file = default_state_dir / "workflow_events.json"
+        telemetry = WorkflowEventTelemetry(state_file=telemetry_state_file)
+        register_default_subscribers(event_bus, telemetry)
+
+        depends.set(WorkflowEventBus, event_bus)
+        depends.set(WorkflowEventTelemetry, telemetry)
 
     def _initialize_logging(self) -> None:
         from crackerjack.services.log_manager import get_log_manager

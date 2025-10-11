@@ -20,7 +20,7 @@ class TestPyscnAdapter:
         with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
             adapter = PyscnAdapter()
             assert adapter.settings is None
-            
+
             await adapter.init()
             assert adapter.settings is not None
             assert isinstance(adapter.settings, PyscnSettings)
@@ -125,11 +125,11 @@ class TestPyscnAdapter:
         with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
             adapter = PyscnAdapter()
             await adapter.init()
-        
+
         # This tests the fallback method directly
         # Based on the implementation, the text format is:
         # "file.py:10:5: error: Potential security vulnerability detected"
-        # But the parsing splits on ":" with maxsplit=4, so parts[3] would be " error" 
+        # But the parsing splits on ":" with maxsplit=4, so parts[3] would be " error"
         # and parts[4] would be " Potential security vulnerability detected"
         text_output = "test.py:10:5: error: Potential security vulnerability detected"
         issues = adapter._parse_text_output(text_output)

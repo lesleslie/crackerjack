@@ -2,6 +2,11 @@
 # This file contains default settings for all environments.
 # Override settings in local.yaml (gitignored) or environment-specific files.
 
+# === SQL Database Settings ===
+sql:
+  database_url: "sqlite:///${HOME}/.crackerjack/state/crackerjack.db"
+  wal_mode: true
+
 # === Workflow Settings ===
 
 # Cleaning

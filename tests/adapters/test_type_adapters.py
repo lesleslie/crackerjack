@@ -21,7 +21,7 @@ class TestTyAdapter:
         with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
             adapter = TyAdapter()
             assert adapter.settings is None
-            
+
             await adapter.init()
             assert adapter.settings is not None
             assert isinstance(adapter.settings, TySettings)
@@ -32,7 +32,7 @@ class TestTyAdapter:
     async def test_build_command_basic(self) -> None:
         """Test building a basic ty command."""
         with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
-            settings = TySettings(use_json_output=True, strict_mode=False, 
+            settings = TySettings(use_json_output=True, strict_mode=False,
                                 ignore_missing_imports=False, follow_imports="normal",
                                 incremental=True, warn_unused_ignores=True)
             adapter = TyAdapter(settings=settings)
@@ -127,7 +127,7 @@ class TestTyAdapter:
         with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
             adapter = TyAdapter()
             await adapter.init()
-        
+
         # This tests the fallback method directly
         text_output = "test.py:10:5: error: Incompatible types in assignment"
         issues = adapter._parse_text_output(text_output)
@@ -174,7 +174,7 @@ class TestPyreflyAdapter:
         with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
             adapter = PyreflyAdapter()
             assert adapter.settings is None
-            
+
             await adapter.init()
             assert adapter.settings is not None
             assert isinstance(adapter.settings, PyreflySettings)
@@ -185,7 +185,7 @@ class TestPyreflyAdapter:
     async def test_build_command_basic(self) -> None:
         """Test building a basic pyrefly command."""
         with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
-            settings = PyreflySettings(use_json_output=True, strict_mode=False, 
+            settings = PyreflySettings(use_json_output=True, strict_mode=False,
                                      ignore_missing_imports=False, follow_imports="normal",
                                      incremental=True, warn_unused_ignores=True)
             adapter = PyreflyAdapter(settings=settings)
@@ -280,7 +280,7 @@ class TestPyreflyAdapter:
         with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
             adapter = PyreflyAdapter()
             await adapter.init()
-        
+
         # This tests the fallback method directly
         text_output = "test.py:15:3: error: Undefined variable 'x'"
         issues = adapter._parse_text_output(text_output)

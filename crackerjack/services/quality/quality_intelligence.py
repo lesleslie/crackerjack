@@ -168,10 +168,27 @@ class QualityIntelligenceService:
     def detect_anomalies(
         self, days: int = 30, metrics: list[str] | None = None
     ) -> list[QualityAnomaly]:
-        """Detect anomalies in quality metrics using statistical analysis."""
+        """Detect anomalies in quality metrics using statistical analysis (sync version)."""
         metrics = self._get_default_metrics() if metrics is None else metrics
 
         baselines = self.quality_service.get_recent_baselines(limit=days * 2)
+        if len(baselines) < self.min_data_points:
+            return []
+
+        anomalies = []
+        for metric_name in metrics:
+            metric_anomalies = self._detect_metric_anomalies(metric_name, baselines)
+            anomalies.extend(metric_anomalies)
+
+        return anomalies
+
+    async def detect_anomalies_async(
+        self, days: int = 30, metrics: list[str] | None = None
+    ) -> list[QualityAnomaly]:
+        """Detect anomalies in quality metrics using statistical analysis (async version)."""
+        metrics = self._get_default_metrics() if metrics is None else metrics
+
+        baselines = await self.quality_service.aget_recent_baselines(limit=days * 2)
         if len(baselines) < self.min_data_points:
             return []
 
@@ -339,8 +356,17 @@ class QualityIntelligenceService:
         return anomaly_type, severity
 
     def identify_patterns(self, days: int = 60) -> list[QualityPattern]:
-        """Identify patterns in quality metrics using correlation and trend analysis."""
+        """Identify patterns in quality metrics using correlation and trend analysis (sync version)."""
         baselines = self.quality_service.get_recent_baselines(limit=days * 2)
+        if len(baselines) < self.min_data_points:
+            return []
+
+        metrics_data = self._extract_metrics_data(baselines)
+        return self._find_correlation_patterns(metrics_data, days)
+
+    async def identify_patterns_async(self, days: int = 60) -> list[QualityPattern]:
+        """Identify patterns in quality metrics using correlation and trend analysis (async version)."""
+        baselines = await self.quality_service.aget_recent_baselines(limit=days * 2)
         if len(baselines) < self.min_data_points:
             return []
 

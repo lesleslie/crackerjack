@@ -60,7 +60,7 @@ class TestCompiledPatternCache:
         # Add a pattern to cache
         CompiledPatternCache.get_compiled_pattern(r"\w+")
         assert len(CompiledPatternCache._cache) > 0
-        
+
         # Clear cache
         CompiledPatternCache.clear_cache()
         assert len(CompiledPatternCache._cache) == 0
@@ -180,7 +180,7 @@ class TestValidatedPattern:
             replacement="replaced",
             test_cases=[("test", "replaced")]
         )
-        
+
         # Test with actual size limitation
         large_text = "a" * (MAX_INPUT_SIZE + 100)
         with pytest.raises(ValueError, match="Input text too large"):
@@ -234,7 +234,7 @@ class TestSafePatterns:
         """Test getting pattern description."""
         desc = get_pattern_description("fix_command_spacing")
         assert "Fix spacing in 'python -m command' patterns" in desc
-        
+
         desc = get_pattern_description("unknown_pattern")
         assert desc == "Unknown pattern"
 
@@ -320,7 +320,7 @@ class TestSafePatterns:
         # Add something to the cache
         CompiledPatternCache.get_compiled_pattern(r"\w+")
         assert len(CompiledPatternCache._cache) > 0
-        
+
         # Clear all caches
         clear_all_caches()
         assert len(CompiledPatternCache._cache) == 0
