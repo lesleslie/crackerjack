@@ -17,62 +17,7 @@ def register_utility_tools(mcp_app: t.Any) -> None:
     _register_analyze_tool(mcp_app)
 
 
-def _clean_file_if_old(
-    file_path: Path, cutoff_time: float, dry_run: bool, file_type: str
-) -> dict[str, t.Any] | None:
-    with suppress(OSError):
-        if file_path.stat().st_mtime < cutoff_time:
-            file_size = file_path.stat().st_size
-            if not dry_run:
-                file_path.unlink()
-            return {"path": str(file_path), "size": file_size, "type": file_type}
-    return None
-
-
-def _clean_temp_files(
-    cutoff_time: float, dry_run: bool
-) -> tuple[list[dict[str, t.Any]], int]:
-    import tempfile
-
-    cleaned_files = []
-    total_size = 0
-    temp_dir = Path(tempfile.gettempdir())
-
-    patterns = ("crackerjack-*.log", "crackerjack - task - error-*.log", ".coverage.*")
-    for pattern in patterns:
-        for file_path in temp_dir.glob(pattern):
-            file_info = _clean_file_if_old(file_path, cutoff_time, dry_run, "temp")
-            if file_info:
-                cleaned_files.append(file_info)
-                total_size += file_info["size"]
-
-    return cleaned_files, total_size
-
-
-def _clean_progress_files(
-    context: t.Any, cutoff_time: float, dry_run: bool
-) -> tuple[list[dict[str, t.Any]], int]:
-    cleaned_files = []
-    total_size = 0
-
-    if context.progress_dir.exists():
-        for progress_file in context.progress_dir.glob("*.json"):
-            file_info = _clean_file_if_old(
-                progress_file, cutoff_time, dry_run, "progress"
-            )
-            if file_info:
-                cleaned_files.append(file_info)
-                total_size += file_info["size"]
-
-    return cleaned_files, total_size
-
-
-def _parse_cleanup_options(kwargs: str) -> tuple[dict[str, t.Any], str | None]:
-    try:
-        extra_kwargs: dict[str, t.Any] = json.loads(kwargs) if kwargs.strip() else {}
-        return extra_kwargs, None
-    except json.JSONDecodeError as e:
-        return {}, f"Invalid JSON in kwargs: {e}"
+from acb.actions.system import clean_temp_files
 
 
 def _register_clean_tool(mcp_app: t.Any) -> None:
@@ -87,10 +32,22 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
             return _create_error_response(clean_config["error"])
 
         try:
-            cleanup_results = _execute_cleanup_operations(context, clean_config)
+            patterns = []
+            if clean_config["scope"] in ("temp", "all"):
+                patterns.extend(["crackerjack-*.log", "crackerjack - task - error-*.log", ".coverage.*"])
+            if clean_config["scope"] in ("progress", "all"):
+                patterns.append("*.json")
+
+            cleanup_results = await clean_temp_files(
+                older_than_hours=clean_config["older_than_hours"],
+                dry_run=clean_config["dry_run"],
+                patterns=patterns,
+                directories=[context.progress_dir] if clean_config["scope"] in ("progress", "all") else None
+            )
             return _create_cleanup_response(clean_config, cleanup_results)
         except Exception as e:
             return _create_error_response(f"Cleanup failed: {e}")
+
 
 
 def _parse_clean_configuration(args: str, kwargs: str) -> dict[str, t.Any]:
@@ -156,51 +113,7 @@ def _create_cleanup_response(
     )
 
 
-def _handle_config_list(context: t.Any) -> dict[str, t.Any]:
-    return {
-        "project_path": str(context.config.project_path),
-        "rate_limiter": {
-            "enabled": context.rate_limiter is not None,
-            "config": context.rate_limiter.config.__dict__
-            if context.rate_limiter
-            else None,
-        },
-        "progress_dir": str(context.progress_dir),
-        "websocket_port": getattr(context, "websocket_server_port", None),
-    }
-
-
-def _handle_config_get(context: t.Any, key: str) -> dict[str, t.Any]:
-    value = getattr(context.config, key, None)
-    if value is None:
-        value = getattr(context, key, "Key not found")
-
-    return {
-        "success": True,
-        "command": "config_crackerjack",
-        "action": "get",
-        "key": key,
-        "value": str(value),
-    }
-
-
-def _handle_config_validate(context: t.Any) -> dict[str, t.Any]:
-    validation_results = {
-        "project_path_exists": context.config.project_path.exists(),
-        "progress_dir_writable": context.progress_dir.exists()
-        and context.progress_dir.is_dir(),
-        "rate_limiter_configured": context.rate_limiter is not None,
-    }
-
-    all_valid = all(validation_results.values())
-
-    return {
-        "success": True,
-        "command": "config_crackerjack",
-        "action": "validate",
-        "valid": all_valid,
-        "checks": validation_results,
-    }
+from acb.actions.config import get_config_value, get_config_values, validate_config
 
 
 def _register_config_tool(mcp_app: t.Any) -> None:
@@ -219,17 +132,11 @@ def _register_config_tool(mcp_app: t.Any) -> None:
 
         try:
             if action == "list[t.Any]":
-                config_info = _handle_config_list(context)
-                result = {
-                    "success": True,
-                    "command": "config_crackerjack",
-                    "action": "list[t.Any]",
-                    "configuration": config_info,
-                }
+                result = await get_config_values()
             elif action == "get" and len(args_parts) > 1:
-                result = _handle_config_get(context, args_parts[1])
+                result = await get_config_value(args_parts[1])
             elif action == "validate":
-                result = _handle_config_validate(context)
+                result = await validate_config()
             else:
                 return _create_error_response(
                     f"Invalid action '{action}'. Valid actions: list[t.Any], get < key >, validate"
@@ -241,29 +148,8 @@ def _register_config_tool(mcp_app: t.Any) -> None:
             return _create_error_response(f"Config operation failed: {e}")
 
 
-def _run_hooks_analysis(orchestrator: t.Any, options: t.Any) -> dict[str, t.Any]:
-    fast_result = orchestrator.run_fast_hooks_only(options)
-    comprehensive_result = orchestrator.run_comprehensive_hooks_only(options)
 
-    return {
-        "fast_hooks": "passed" if fast_result else "failed",
-        "comprehensive_hooks": "passed" if comprehensive_result else "failed",
-    }
-
-
-def _run_tests_analysis(orchestrator: t.Any, options: t.Any) -> dict[str, t.Any]:
-    test_result = orchestrator.run_testing_phase(options)
-    return {"status": "passed" if test_result else "failed"}
-
-
-def _create_analysis_orchestrator(context: t.Any) -> t.Any:
-    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
-
-    return WorkflowOrchestrator(
-        console=context.console,
-        pkg_path=context.config.project_path,
-        dry_run=True,
-    )
+from acb.actions.project import analyze_project
 
 
 def _register_analyze_tool(mcp_app: t.Any) -> None:
@@ -281,19 +167,7 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
         report_format = extra_kwargs.get("report_format", "summary")
 
         try:
-            from acb.depends import depends
-
-            from crackerjack.config import CrackerjackSettings
-
-            orchestrator = _create_analysis_orchestrator(context)
-            settings = depends.get(CrackerjackSettings)
-            analysis_results = {}
-
-            if scope in ("hooks", "all"):
-                analysis_results["hooks"] = _run_hooks_analysis(orchestrator, settings)
-
-            if scope in ("tests", "all"):
-                analysis_results["tests"] = _run_tests_analysis(orchestrator, settings)
+            analysis_results = await analyze_project(scope=scope, report_format=report_format)
 
             return json.dumps(
                 {
@@ -310,3 +184,4 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
 
         except Exception as e:
             return _create_error_response(f"Analysis failed: {e}")
+

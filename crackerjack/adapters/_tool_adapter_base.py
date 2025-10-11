@@ -115,6 +115,9 @@ class ToolAdapterSettings(QABaseSettings):
     include_warnings: bool = True
 
 
+from acb.adapters import AdapterMetadata
+
+
 class BaseToolAdapter(QAAdapterBase):
     """Base adapter for external CLI tools in QA framework.
 
@@ -165,6 +168,7 @@ class BaseToolAdapter(QAAdapterBase):
     """
 
     settings: ToolAdapterSettings | None = None
+    metadata: AdapterMetadata | None = None
 
     def __init__(self, settings: ToolAdapterSettings | None = None) -> None:
         """Initialize tool adapter.
@@ -422,6 +426,7 @@ class BaseToolAdapter(QAAdapterBase):
             "tool_name": self.tool_name,
             "tool_available": tool_available,
             "tool_version": tool_version,
+            "metadata": self.metadata.dict() if self.metadata else None,
         }
 
     def _convert_to_qa_result(

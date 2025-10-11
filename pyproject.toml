@@ -75,6 +75,8 @@ dependencies = [
     "types-psutil>=6.0.0.12",
     "types-aiofiles>=24.1.0.20240626",
     "acb>=0.25.2",
+    "scipy-stubs==1.16.2.3",
+    "session-mgmt-mcp>=0.4.0",
 ]
 
 [project.license]
@@ -266,20 +268,6 @@ check-url = "https://pypi.org/simple/"
 [tool.uv.sources.acb]
 path = "../acb"
 editable = true
-
-[tool.vulture]
-min_confidence = 86
-paths = [
-    "crackerjack",
-]
-exclude = [
-    "tests/",
-    "test_*.py",
-    "*_test.py",
-]
-ignore_names = [
-    "cls",
-]
 
 [tool.creosote]
 paths = [

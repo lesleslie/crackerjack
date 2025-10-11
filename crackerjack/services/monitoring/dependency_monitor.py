@@ -9,9 +9,8 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from rich.console import Console
-
 from acb.depends import depends
+from rich.console import Console
 
 from crackerjack.data.repository import DependencyMonitorRepository
 from crackerjack.models.protocols import FileSystemInterface
@@ -59,7 +58,7 @@ class DependencyMonitorService:
 
     def _run_async(self, coro: t.Awaitable[t.Any]) -> t.Any:
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.run(coro)
         msg = (

@@ -194,7 +194,9 @@ class HealthMetricsService:
                             "test_coverage_trend": list(legacy.test_coverage_trend),
                             "dependency_age": dict(legacy.dependency_age),
                             "config_completeness": legacy.config_completeness,
-                            "last_updated": datetime.utcfromtimestamp(legacy.last_updated),
+                            "last_updated": datetime.utcfromtimestamp(
+                                legacy.last_updated
+                            ),
                         },
                     )
                 return legacy or ProjectHealth()

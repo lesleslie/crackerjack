@@ -16,8 +16,8 @@ from .base import (
     SubAgent,
     agent_registry,
 )
-from .tracker import get_agent_tracker
 from .error_middleware import agent_error_boundary
+from .tracker import get_agent_tracker
 
 # Static mapping for O(1) agent lookup by issue type
 ISSUE_TYPE_TO_AGENTS = {

@@ -380,7 +380,6 @@ class CrackerjackMonitoringServer:
         return render_monitoring_dashboard()
 
 
-
 # Convenience function for quick server startup
 async def start_crackerjack_monitoring_server(
     port: int = 8675, host: str = "localhost"

@@ -70,6 +70,9 @@ class QABaseSettings(Settings):
 # See crackerjack/models/protocols.py for protocol definition
 
 
+from acb.adapters import AdapterMetadata
+
+
 class QAAdapterBase:
     """Concrete base class for quality assurance adapters.
 
@@ -130,6 +133,7 @@ class QAAdapterBase:
     """
 
     settings: QABaseSettings | None = None
+    metadata: AdapterMetadata | None = None
 
     def __init__(self) -> None:
         """Initialize adapter instance.
@@ -237,6 +241,7 @@ class QAAdapterBase:
             "adapter": self.adapter_name,
             "module_id": str(self.module_id) if self._initialized else "unknown",
             "settings_loaded": self.settings is not None,
+            "metadata": self.metadata.dict() if self.metadata else None,
         }
 
     def _should_check_file(self, file_path: Path, config: QACheckConfig) -> bool:

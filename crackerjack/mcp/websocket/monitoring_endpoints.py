@@ -32,6 +32,7 @@ from crackerjack.services.quality_intelligence import (
 )
 from crackerjack.ui.dashboard_renderer import render_monitoring_dashboard
 
+
 class TelemetryEventModel(BaseModel):
     event_type: str
     timestamp: datetime
@@ -105,6 +106,7 @@ class HealthResponseModel(BaseModel):
     status: str
     data: UnifiedMetricsModel
     timestamp: datetime
+
 
 from .jobs import JobManager
 
@@ -965,8 +967,6 @@ def _register_metrics_api_endpoints(
         return await _handle_export_data_request(quality_service, days, format)
 
 
-
-
 def _derive_health_status(metrics: UnifiedMetrics) -> str:
     """Derive a coarse health status string from unified metrics."""
     if metrics.error_count > 5 or metrics.quality_score < 40:
@@ -974,6 +974,7 @@ def _derive_health_status(metrics: UnifiedMetrics) -> str:
     if metrics.error_count > 0 or metrics.quality_score < 60:
         return "warning"
     return "healthy"
+
 
 async def _handle_quality_trends_request(
     quality_service: EnhancedQualityBaselineService, days: int

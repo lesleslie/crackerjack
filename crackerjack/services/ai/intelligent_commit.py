@@ -7,7 +7,6 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.models.protocols import GitInterface
-
 from crackerjack.services.regex_patterns import CompiledPatternCache
 
 

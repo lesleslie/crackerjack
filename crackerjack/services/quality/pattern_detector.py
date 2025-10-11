@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from crackerjack.agents.base import Issue, IssueType, Priority
+
 from .pattern_cache import CachedPattern, PatternCache
 
 DetectorMethod = Callable[[Path, str, ast.AST], Awaitable[list["AntiPattern"]]]

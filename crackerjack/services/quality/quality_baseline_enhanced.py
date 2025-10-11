@@ -8,7 +8,10 @@ from enum import Enum
 from pathlib import Path
 
 from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
-from crackerjack.services.quality_baseline import QualityBaselineService, QualityMetrics
+from crackerjack.services.quality.quality_baseline import (
+    QualityBaselineService,
+    QualityMetrics,
+)
 
 
 class TrendDirection(str, Enum):

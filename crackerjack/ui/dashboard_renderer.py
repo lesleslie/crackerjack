@@ -5,7 +5,6 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-
 _TEMPLATE_DIR = Path(__file__).with_suffix("").parent / "templates"
 
 

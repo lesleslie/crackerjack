@@ -37,32 +37,23 @@ from crackerjack.services.performance_monitor import (
     get_performance_monitor,
     phase_monitor,
 )
-from crackerjack.services.quality_baseline_enhanced import (
+from crackerjack.services.quality.quality_baseline_enhanced import (
     EnhancedQualityBaselineService,
 )
-from crackerjack.services.quality_intelligence import QualityIntelligenceService
+from crackerjack.services.quality.quality_intelligence import QualityIntelligenceService
 
 from .phase_coordinator import PhaseCoordinator
-from .session_coordinator import SessionCoordinator
-from .session_controller import SessionController
-
-
-def version() -> str:
-    try:
-        import importlib.metadata
-
-        return importlib.metadata.version("crackerjack")
-    except Exception:
-        return "unknown"
+from session_mgmt_mcp import SessionManager
 
 
 class WorkflowPipeline:
+    @depends.inject
     def __init__(
         self,
-        console: Console,
-        pkg_path: Path,
-        session: SessionCoordinator,
-        phases: PhaseCoordinator,
+        console: Console = depends(),
+        pkg_path: Path = depends(),
+        session: SessionManager = depends(),
+        phases: PhaseCoordinator = depends(),
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -129,59 +120,16 @@ class WorkflowPipeline:
 
         await self._publish_event(WorkflowEvent.WORKFLOW_STARTED, event_context)
 
-        use_event_bus = self._event_bus is not None
-
         try:
             with LoggingContext(
                 "workflow_execution",
                 testing=getattr(options, "test", False),
                 skip_hooks=getattr(options, "skip_hooks", False),
             ):
-                start_time = time.time()
-
-                if use_event_bus:
-                    return await self._run_event_driven_workflow(
-                        options,
-                        workflow_id,
-                        event_context,
-                        start_time,
-                    )
-
                 await self._publish_event(
                     WorkflowEvent.WORKFLOW_SESSION_INITIALIZING,
                     event_context,
                 )
-                self._session_controller.initialize(options)
-                await self._publish_event(
-                    WorkflowEvent.WORKFLOW_SESSION_READY,
-                    event_context,
-                )
-
-                success = await self._execute_workflow_with_timing(
-                    options, start_time, workflow_id
-                )
-
-                workflow_perf = self._performance_monitor.end_workflow(
-                    workflow_id, success
-                )
-                self.logger.info(
-                    f"Workflow performance: {workflow_perf.performance_score: .1f} score, "
-                    f"{workflow_perf.total_duration_seconds: .2f}s duration"
-                )
-
-                await self._publish_event(
-                    WorkflowEvent.WORKFLOW_COMPLETED
-                    if success
-                    else WorkflowEvent.WORKFLOW_FAILED,
-                    {
-                        **event_context,
-                        "success": success,
-                        "duration_seconds": workflow_perf.total_duration_seconds,
-                    },
-                )
-
-                return success
-
         except KeyboardInterrupt:
             self._performance_monitor.end_workflow(workflow_id, False)
             await self._publish_event(
@@ -207,6 +155,286 @@ class WorkflowPipeline:
 
             self._memory_optimizer.optimize_memory()
             await self._cache.stop()
+
+    def _unsubscribe_all_subscriptions(self, subscriptions: list[str]) -> None:
+        """Unsubscribe from all event subscriptions."""
+        for subscription_id in list(subscriptions):
+            if self._event_bus:
+                self._event_bus.unsubscribe(subscription_id)
+            subscriptions.remove(subscription_id)
+
+    async def _finalize_workflow(
+        self,
+        start_time: float,
+        workflow_id: str,
+        success: bool,
+        completion_future: asyncio.Future[bool],
+        subscriptions: list[str],
+        payload: dict[str, t.Any] | None = None,
+    ) -> EventHandlerResult:
+        """Finalize the workflow execution."""
+        if completion_future.done():
+            return EventHandlerResult(success=success)
+
+        self.session.finalize_session(start_time, success)
+        duration = time.time() - start_time
+        self._log_workflow_completion(success, duration)
+        self._log_workflow_completion_debug(success, duration)
+
+        workflow_perf = self._performance_monitor.end_workflow(workflow_id, success)
+        self.logger.info(
+            f"Workflow performance: {workflow_perf.performance_score: .1f} score, "
+            f"{workflow_perf.total_duration_seconds: .2f}s duration"
+        )
+
+        await self._generate_performance_benchmark_report(
+            workflow_id, duration, success
+        )
+
+        self._unsubscribe_all_subscriptions(subscriptions)
+        completion_future.set_result(success)
+
+        return EventHandlerResult(success=success)
+
+    async def _publish_workflow_failure(self, event_context: dict[str, t.Any], stage: str, error: Exception | None = None) -> None:
+        """Publish workflow failure event."""
+        payload: dict[str, t.Any] = {
+            **event_context,
+            "stage": stage,
+        }
+        if error is not None:
+            payload["error"] = str(error)
+            payload["error_type"] = type(error).__name__
+
+        await self._publish_event(WorkflowEvent.WORKFLOW_FAILED, payload)
+
+    async def _handle_session_ready(
+        self,
+        event: Event,
+        state_flags: dict[str, bool],
+        workflow_id: str,
+        options: OptionsProtocol,
+    ) -> EventHandlerResult:
+        """Handle session ready event."""
+        if state_flags["configuration"]:
+            return EventHandlerResult(success=True)
+        state_flags["configuration"] = True
+
+        try:
+            await self._publish_event(
+                WorkflowEvent.CONFIG_PHASE_STARTED,
+                {"workflow_id": workflow_id},
+            )
+            config_success = await asyncio.to_thread(
+                self.phases.run_configuration_phase,
+                options,
+            )
+            await self._publish_event(
+                WorkflowEvent.CONFIG_PHASE_COMPLETED,
+                {
+                    "workflow_id": workflow_id,
+                    "success": config_success,
+                },
+            )
+            if not config_success:
+                await self._publish_workflow_failure(
+                    {"workflow_id": workflow_id}, 
+                    "configuration"
+                )
+            return EventHandlerResult(success=config_success)
+        except Exception as exc:  # pragma: no cover - defensive
+            await self._publish_workflow_failure(
+                {"workflow_id": workflow_id}, 
+                "configuration", 
+                exc
+            )
+            return EventHandlerResult(success=False, error_message=str(exc))
+
+    async def _handle_config_completed(
+        self,
+        event: Event,
+        state_flags: dict[str, bool],
+        workflow_id: str,
+        options: OptionsProtocol,
+    ) -> EventHandlerResult:
+        """Handle configuration completed event."""
+        if not event.payload.get("success", False):
+            return EventHandlerResult(success=False)
+        if state_flags["quality"]:
+            return EventHandlerResult(success=True)
+        state_flags["quality"] = True
+
+        try:
+            await self._publish_event(
+                WorkflowEvent.QUALITY_PHASE_STARTED,
+                {"workflow_id": workflow_id},
+            )
+            quality_success = await self._execute_quality_phase(
+                options, workflow_id
+            )
+            await self._publish_event(
+                WorkflowEvent.QUALITY_PHASE_COMPLETED,
+                {
+                    "workflow_id": workflow_id,
+                    "success": quality_success,
+                },
+            )
+            if not quality_success:
+                await self._publish_workflow_failure(
+                    {"workflow_id": workflow_id}, 
+                    "quality"
+                )
+            return EventHandlerResult(success=quality_success)
+        except Exception as exc:  # pragma: no cover - defensive
+            await self._publish_workflow_failure(
+                {"workflow_id": workflow_id}, 
+                "quality", 
+                exc
+            )
+            return EventHandlerResult(success=False, error_message=str(exc))
+
+    async def _handle_quality_completed(
+        self,
+        event: Event,
+        state_flags: dict[str, bool],
+        workflow_id: str,
+        options: OptionsProtocol,
+        publish_requested: bool,
+    ) -> EventHandlerResult:
+        """Handle quality phase completed event."""
+        if not event.payload.get("success", False):
+            return EventHandlerResult(success=False)
+        if state_flags["publishing"]:
+            return EventHandlerResult(success=True)
+        state_flags["publishing"] = True
+
+        try:
+            if publish_requested:
+                await self._publish_event(
+                    WorkflowEvent.PUBLISH_PHASE_STARTED,
+                    {"workflow_id": workflow_id},
+                )
+                publishing_success = await self._execute_publishing_workflow(
+                    options, workflow_id
+                )
+                await self._publish_event(
+                    WorkflowEvent.PUBLISH_PHASE_COMPLETED,
+                    {
+                        "workflow_id": workflow_id,
+                        "success": publishing_success,
+                    },
+                )
+                if not publishing_success:
+                    await self._publish_workflow_failure(
+                        {"workflow_id": workflow_id}, 
+                        "publishing"
+                    )
+                    return EventHandlerResult(success=False)
+            else:
+                await self._publish_event(
+                    WorkflowEvent.PUBLISH_PHASE_COMPLETED,
+                    {
+                        "workflow_id": workflow_id,
+                        "success": True,
+                        "skipped": True,
+                    },
+                )
+            return EventHandlerResult(success=True)
+        except Exception as exc:  # pragma: no cover - defensive
+            await self._publish_workflow_failure(
+                {"workflow_id": workflow_id}, 
+                "publishing", 
+                exc
+            )
+            return EventHandlerResult(success=False, error_message=str(exc))
+
+    async def _handle_publish_completed(
+        self,
+        event: Event,
+        state_flags: dict[str, bool],
+        workflow_id: str,
+        options: OptionsProtocol,
+        commit_requested: bool,
+        publish_requested: bool,
+        event_context: dict[str, t.Any],
+    ) -> EventHandlerResult:
+        """Handle publishing completed event."""
+        if publish_requested and not event.payload.get("success", False):
+            return EventHandlerResult(success=False)
+        if state_flags["commit"]:
+            return EventHandlerResult(success=True)
+        state_flags["commit"] = True
+
+        try:
+            if commit_requested:
+                await self._publish_event(
+                    WorkflowEvent.COMMIT_PHASE_STARTED,
+                    {"workflow_id": workflow_id},
+                )
+                commit_success = await self._execute_commit_workflow(
+                    options, workflow_id
+                )
+                await self._publish_event(
+                    WorkflowEvent.COMMIT_PHASE_COMPLETED,
+                    {
+                        "workflow_id": workflow_id,
+                        "success": commit_success,
+                    },
+                )
+                if not commit_success:
+                    await self._publish_workflow_failure(
+                        {"workflow_id": workflow_id}, 
+                        "commit"
+                    )
+                    return EventHandlerResult(success=False)
+            else:
+                await self._publish_event(
+                    WorkflowEvent.COMMIT_PHASE_COMPLETED,
+                    {
+                        "workflow_id": workflow_id,
+                        "success": True,
+                        "skipped": True,
+                    },
+                )
+
+            await self._publish_event(
+                WorkflowEvent.WORKFLOW_COMPLETED,
+                {**event_context, "success": True},
+            )
+            return EventHandlerResult(success=True)
+        except Exception as exc:  # pragma: no cover - defensive
+            await self._publish_workflow_failure(
+                {"workflow_id": workflow_id}, 
+                "commit", 
+                exc
+            )
+            return EventHandlerResult(success=False, error_message=str(exc))
+
+    async def _handle_workflow_completed(
+        self,
+        event: Event,
+        start_time: float,
+        workflow_id: str,
+        completion_future: asyncio.Future[bool],
+        subscriptions: list[str],
+    ) -> EventHandlerResult:
+        """Handle workflow completed event."""
+        return await self._finalize_workflow(
+            start_time, workflow_id, True, completion_future, subscriptions, event.payload
+        )
+
+    async def _handle_workflow_failed(
+        self,
+        event: Event,
+        start_time: float,
+        workflow_id: str,
+        completion_future: asyncio.Future[bool],
+        subscriptions: list[str],
+    ) -> EventHandlerResult:
+        """Handle workflow failed event."""
+        return await self._finalize_workflow(
+            start_time, workflow_id, False, completion_future, subscriptions, event.payload
+        )
 
     async def _run_event_driven_workflow(
         self,
@@ -234,233 +462,54 @@ class WorkflowPipeline:
             "commit": False,
         }
 
-        def unsubscribe_all() -> None:
-            for subscription_id in list(subscriptions):
-                self._event_bus.unsubscribe(subscription_id)
-                subscriptions.remove(subscription_id)
-
-        async def finalize(
-            success: bool,
-            payload: dict[str, t.Any] | None = None,
-        ) -> EventHandlerResult:
-            if completion_future.done():
-                return EventHandlerResult(success=success)
-
-            self.session.finalize_session(start_time, success)
-            duration = time.time() - start_time
-            self._log_workflow_completion(success, duration)
-            self._log_workflow_completion_debug(success, duration)
-
-            workflow_perf = self._performance_monitor.end_workflow(
-                workflow_id, success
-            )
-            self.logger.info(
-                f"Workflow performance: {workflow_perf.performance_score: .1f} score, "
-                f"{workflow_perf.total_duration_seconds: .2f}s duration"
-            )
-
-            await self._generate_performance_benchmark_report(
-                workflow_id, duration, success
-            )
-
-            unsubscribe_all()
-            completion_future.set_result(success)
-
-            return EventHandlerResult(success=success)
-
-        async def publish_failure(stage: str, error: Exception | None = None) -> None:
-            payload: dict[str, t.Any] = {
-                **event_context,
-                "stage": stage,
-            }
-            if error is not None:
-                payload["error"] = str(error)
-                payload["error_type"] = type(error).__name__
-
-            await self._publish_event(WorkflowEvent.WORKFLOW_FAILED, payload)
-
-        async def on_session_ready(event: Event) -> EventHandlerResult:
-            if state_flags["configuration"]:
-                return EventHandlerResult(success=True)
-            state_flags["configuration"] = True
-
-            try:
-                await self._publish_event(
-                    WorkflowEvent.CONFIG_PHASE_STARTED,
-                    {"workflow_id": workflow_id},
-                )
-                config_success = await asyncio.to_thread(
-                    self.phases.run_configuration_phase,
-                    options,
-                )
-                await self._publish_event(
-                    WorkflowEvent.CONFIG_PHASE_COMPLETED,
-                    {
-                        "workflow_id": workflow_id,
-                        "success": config_success,
-                    },
-                )
-                if not config_success:
-                    await publish_failure("configuration")
-                return EventHandlerResult(success=config_success)
-            except Exception as exc:  # pragma: no cover - defensive
-                await publish_failure("configuration", exc)
-                return EventHandlerResult(success=False, error_message=str(exc))
-
-        async def on_config_completed(event: Event) -> EventHandlerResult:
-            if not event.payload.get("success", False):
-                return EventHandlerResult(success=False)
-            if state_flags["quality"]:
-                return EventHandlerResult(success=True)
-            state_flags["quality"] = True
-
-            try:
-                await self._publish_event(
-                    WorkflowEvent.QUALITY_PHASE_STARTED,
-                    {"workflow_id": workflow_id},
-                )
-                quality_success = await self._execute_quality_phase(
-                    options, workflow_id
-                )
-                await self._publish_event(
-                    WorkflowEvent.QUALITY_PHASE_COMPLETED,
-                    {
-                        "workflow_id": workflow_id,
-                        "success": quality_success,
-                    },
-                )
-                if not quality_success:
-                    await publish_failure("quality")
-                return EventHandlerResult(success=quality_success)
-            except Exception as exc:  # pragma: no cover - defensive
-                await publish_failure("quality", exc)
-                return EventHandlerResult(success=False, error_message=str(exc))
-
-        async def on_quality_completed(event: Event) -> EventHandlerResult:
-            if not event.payload.get("success", False):
-                return EventHandlerResult(success=False)
-            if state_flags["publishing"]:
-                return EventHandlerResult(success=True)
-            state_flags["publishing"] = True
-
-            try:
-                if publish_requested:
-                    await self._publish_event(
-                        WorkflowEvent.PUBLISH_PHASE_STARTED,
-                        {"workflow_id": workflow_id},
-                    )
-                    publishing_success = await self._execute_publishing_workflow(
-                        options, workflow_id
-                    )
-                    await self._publish_event(
-                        WorkflowEvent.PUBLISH_PHASE_COMPLETED,
-                        {
-                            "workflow_id": workflow_id,
-                            "success": publishing_success,
-                        },
-                    )
-                    if not publishing_success:
-                        await publish_failure("publishing")
-                        return EventHandlerResult(success=False)
-                else:
-                    await self._publish_event(
-                        WorkflowEvent.PUBLISH_PHASE_COMPLETED,
-                        {
-                            "workflow_id": workflow_id,
-                            "success": True,
-                            "skipped": True,
-                        },
-                    )
-                return EventHandlerResult(success=True)
-            except Exception as exc:  # pragma: no cover - defensive
-                await publish_failure("publishing", exc)
-                return EventHandlerResult(success=False, error_message=str(exc))
-
-        async def on_publish_completed(event: Event) -> EventHandlerResult:
-            if publish_requested and not event.payload.get("success", False):
-                return EventHandlerResult(success=False)
-            if state_flags["commit"]:
-                return EventHandlerResult(success=True)
-            state_flags["commit"] = True
-
-            try:
-                if commit_requested:
-                    await self._publish_event(
-                        WorkflowEvent.COMMIT_PHASE_STARTED,
-                        {"workflow_id": workflow_id},
-                    )
-                    commit_success = await self._execute_commit_workflow(
-                        options, workflow_id
-                    )
-                    await self._publish_event(
-                        WorkflowEvent.COMMIT_PHASE_COMPLETED,
-                        {
-                            "workflow_id": workflow_id,
-                            "success": commit_success,
-                        },
-                    )
-                    if not commit_success:
-                        await publish_failure("commit")
-                        return EventHandlerResult(success=False)
-                else:
-                    await self._publish_event(
-                        WorkflowEvent.COMMIT_PHASE_COMPLETED,
-                        {
-                            "workflow_id": workflow_id,
-                            "success": True,
-                            "skipped": True,
-                        },
-                    )
-
-                await self._publish_event(
-                    WorkflowEvent.WORKFLOW_COMPLETED,
-                    {**event_context, "success": True},
-                )
-                return EventHandlerResult(success=True)
-            except Exception as exc:  # pragma: no cover - defensive
-                await publish_failure("commit", exc)
-                return EventHandlerResult(success=False, error_message=str(exc))
-
-        async def on_workflow_completed(event: Event) -> EventHandlerResult:
-            return await finalize(True, event.payload)
-
-        async def on_workflow_failed(event: Event) -> EventHandlerResult:
-            return await finalize(False, event.payload)
-
+        # Subscribe to events
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.WORKFLOW_SESSION_READY,
-                on_session_ready,
+                lambda event: self._handle_session_ready(
+                    event, state_flags, workflow_id, options
+                ),
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.CONFIG_PHASE_COMPLETED,
-                on_config_completed,
+                lambda event: self._handle_config_completed(
+                    event, state_flags, workflow_id, options
+                ),
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.QUALITY_PHASE_COMPLETED,
-                on_quality_completed,
+                lambda event: self._handle_quality_completed(
+                    event, state_flags, workflow_id, options, publish_requested
+                ),
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.PUBLISH_PHASE_COMPLETED,
-                on_publish_completed,
+                lambda event: self._handle_publish_completed(
+                    event, state_flags, workflow_id, options, 
+                    commit_requested, publish_requested, event_context
+                ),
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.WORKFLOW_COMPLETED,
-                on_workflow_completed,
+                lambda event: self._handle_workflow_completed(
+                    event, start_time, workflow_id, completion_future, subscriptions
+                ),
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.WORKFLOW_FAILED,
-                on_workflow_failed,
+                lambda event: self._handle_workflow_failed(
+                    event, start_time, workflow_id, completion_future, subscriptions
+                ),
             )
         )
 
@@ -475,12 +524,15 @@ class WorkflowPipeline:
                 event_context,
             )
         except Exception as exc:  # pragma: no cover - defensive
-            await publish_failure("session_initialization", exc)
-            await finalize(False)
+            await self._publish_workflow_failure(
+                event_context, "session_initialization", exc
+            )
+            await self._finalize_workflow(
+                start_time, workflow_id, False, completion_future, subscriptions
+            )
             return False
 
         return await completion_future
-
 
     def _log_workflow_startup_debug(self, options: OptionsProtocol) -> None:
         if not self._should_debug():
@@ -2506,19 +2558,8 @@ class WorkflowOrchestrator:
 
     def _setup_acb_services(self) -> None:
         """Setup all services using ACB dependency injection."""
-        from acb.adapters import import_adapter_fast
         from acb.depends import depends
 
-        from crackerjack.data.repository import (
-            DependencyMonitorRepository,
-            HealthMetricsRepository,
-            QualityBaselineRepository,
-        )
-        from crackerjack.events import (
-            WorkflowEventBus,
-            WorkflowEventTelemetry,
-            register_default_subscribers,
-        )
         from crackerjack.managers.hook_manager import HookManagerImpl
         from crackerjack.managers.publish_manager import PublishManagerImpl
         from crackerjack.managers.test_manager import TestManager
@@ -2548,7 +2589,9 @@ class WorkflowOrchestrator:
         depends.set(GitInterface, git_service)
 
         # Register hook manager
-        hook_manager = HookManagerImpl(self.console, self.pkg_path, verbose=self.verbose)
+        hook_manager = HookManagerImpl(
+            self.console, self.pkg_path, verbose=self.verbose
+        )
         depends.set(HookManager, hook_manager)
 
         # Register test manager

@@ -1368,6 +1368,27 @@ def main(
     semantic_stats: bool = CLI_OPTIONS["semantic_stats"],
     remove_from_index: str | None = CLI_OPTIONS["remove_from_index"],
 ) -> None:
+    from acb.main import get_app as get_acb
+    from acb.depends import depends
+    from acb.config import Config
+    from crackerjack.config.settings import CrackerjackSettings
+
+    # Initialize acb
+    acb = get_acb()
+    acb.setup(
+        app_name="crackerjack",
+        app_version="0.41.3",
+        app_description="Crackerjack: Your Python project setup and style enforcement tool.",
+        settings_class=CrackerjackSettings,
+    )
+
+    # Get the config from acb
+    config = depends.get(Config)
+    settings = config.get_settings(CrackerjackSettings)
+
+    # Make the settings available via depends.set()
+    depends.set(settings)
+    
     options = create_options(
         commit,
         interactive,
@@ -1461,7 +1482,6 @@ def main(
         # New semantic parameters use defaults
         run_tests=run_tests,
     )
-
     # Add semantic search options to the options object
     options.index = index
     options.search = search

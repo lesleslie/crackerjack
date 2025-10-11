@@ -4,8 +4,8 @@
 
 from .base import AgentContext, FixResult, Issue, IssueType, Priority, SubAgent
 from .coordinator import AgentCoordinator
-from .tracker import AgentTracker, get_agent_tracker, reset_agent_tracker
 from .error_middleware import agent_error_boundary
+from .tracker import AgentTracker, get_agent_tracker, reset_agent_tracker
 
 __all__ = [
     "AgentContext",

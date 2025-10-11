@@ -26,7 +26,9 @@ from acb.events._base import EventSubscription
 
 logger = logging.getLogger(__name__)
 
-HandlerCallable = t.Callable[[Event], t.Awaitable[EventHandlerResult] | EventHandlerResult]
+HandlerCallable = t.Callable[
+    [Event], t.Awaitable[EventHandlerResult] | EventHandlerResult
+]
 
 
 class WorkflowEvent(str, Enum):
@@ -76,9 +78,7 @@ class _SubscriptionEntry:
 
     subscription: EventSubscription
     description: str | None = None
-    semaphore: asyncio.Semaphore = field(
-        default_factory=lambda: asyncio.Semaphore(1)
-    )
+    semaphore: asyncio.Semaphore = field(default_factory=lambda: asyncio.Semaphore(1))
     max_retries: int = 0
     retry_backoff: float = 0.5
 
@@ -237,7 +237,9 @@ class WorkflowEventBus:
                     EventHandlerResult(
                         success=False,
                         error_message=str(result),
-                        metadata={"subscription_id": str(entry.subscription.subscription_id)},
+                        metadata={
+                            "subscription_id": str(entry.subscription.subscription_id)
+                        },
                     )
                 )
                 continue
@@ -247,7 +249,9 @@ class WorkflowEventBus:
             results.append(
                 EventHandlerResult(
                     success=success,
-                    metadata={"subscription_id": str(entry.subscription.subscription_id)},
+                    metadata={
+                        "subscription_id": str(entry.subscription.subscription_id)
+                    },
                 )
             )
 
@@ -311,7 +315,9 @@ class WorkflowEventBus:
                         logger.exception(
                             "Workflow event handler failed after retries",
                             extra={
-                                "subscription_id": str(entry.subscription.subscription_id),
+                                "subscription_id": str(
+                                    entry.subscription.subscription_id
+                                ),
                                 "description": entry.description,
                                 "event_type": event.metadata.event_type,
                                 "attempts": attempt,

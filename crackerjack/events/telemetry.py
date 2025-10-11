@@ -8,9 +8,9 @@ import typing as t
 from collections import Counter, deque
 from contextlib import suppress
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
-from datetime import datetime
 
 from acb.events import Event, EventHandlerResult
 
@@ -34,8 +34,12 @@ class WorkflowEventTelemetry:
     _counts: Counter[str] = field(default_factory=Counter, init=False)
     _history: deque[HistoryEntry] = field(init=False)
     _last_error: HistoryEntry | None = field(default=None, init=False)
-    _persist_task: asyncio.Task[None] | None = field(default=None, init=False, repr=False)
-    _rollup_task: asyncio.Task[None] | None = field(default=None, init=False, repr=False)
+    _persist_task: asyncio.Task[None] | None = field(
+        default=None, init=False, repr=False
+    )
+    _rollup_task: asyncio.Task[None] | None = field(
+        default=None, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         self._history = deque(maxlen=self.max_history)
